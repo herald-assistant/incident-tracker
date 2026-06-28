@@ -275,7 +275,7 @@ describe('FlowExplorerPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('COMPLETED');
     expect(compiled.textContent).toContain('AI result ready');
-    expect(compiled.textContent).toContain('Prompt po przygotowaniu deterministic context');
+    expect(compiled.querySelector('details.flow-explorer-prompt-preview')).toBeNull();
   });
 
   it('should start a risk detection job from the selected endpoint', () => {
@@ -360,7 +360,7 @@ describe('FlowExplorerPageComponent', () => {
     expect(usage?.getAttribute('aria-label')).toContain('Dollars: $0.00');
   });
 
-  it('should copy the completed Flow Explorer result without action controls', async () => {
+  it('should copy the completed Flow Explorer result as clean markdown', async () => {
     const clipboard = mockRichClipboard();
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
@@ -376,13 +376,17 @@ describe('FlowExplorerPageComponent', () => {
       await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
       fixture.detectChanges();
 
-      const clipboardItems = clipboard.write.mock.calls[0]?.[0] as TestClipboardItem[] | undefined;
-      const copiedText = await readBlobText(clipboardItems?.[0]?.items['text/plain']);
+      const copiedText = clipboard.writeText.mock.calls[0]?.[0] as string | undefined;
 
-      expect(clipboard.write).toHaveBeenCalledTimes(1);
-      expect(copiedText).toContain('The endpoint reads the requested customer');
-      expect(copiedText).toContain('Functional flow');
+      expect(clipboard.writeText).toHaveBeenCalledTimes(1);
+      expect(copiedText).toContain('# GET /api/customers/{id}');
+      expect(copiedText).toContain('## Overview');
+      expect(copiedText).toContain('## Functional flow');
       expect(copiedText).not.toContain('Copy result');
+      expect(copiedText).not.toContain('CustomerController.getCustomer L12-L24');
+      expect(copiedText).not.toContain('Confirm expected status code for inactive customers.');
+      expect(copiedText).not.toContain('No runtime database records were queried.');
+      expect(copiedText).not.toContain('Sprawdz, czy nieaktywny klient powinien blokowac ten flow.');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
     } finally {
       clipboard.restore();
@@ -833,10 +837,6 @@ function mockFileDownload(): {
   };
 }
 
-interface TestClipboardItem {
-  readonly items: Record<string, Blob>;
-}
-
 function mockRichClipboard(): {
   write: ReturnType<typeof vi.fn>;
   writeText: ReturnType<typeof vi.fn>;
@@ -845,8 +845,8 @@ function mockRichClipboard(): {
   const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   const originalClipboardItem = Object.getOwnPropertyDescriptor(globalThis, 'ClipboardItem');
   const write = vi.fn(() => Promise.resolve());
-  const writeText = vi.fn(() => Promise.resolve());
-  class FlowExplorerTestClipboardItem implements TestClipboardItem {
+  const writeText = vi.fn<(value: string) => Promise<void>>(() => Promise.resolve());
+  class FlowExplorerTestClipboardItem {
     constructor(readonly items: Record<string, Blob>) {}
   }
 
@@ -879,23 +879,6 @@ function restoreProperty(
     return;
   }
   delete (target as Record<string, unknown>)[propertyName];
-}
-
-function readBlobText(blob: Blob | undefined): Promise<string> {
-  if (!blob) {
-    return Promise.resolve('');
-  }
-  const blobWithText = blob as Blob & { text?: () => Promise<string> };
-  if (typeof blobWithText.text === 'function') {
-    return blobWithText.text();
-  }
-
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(blob);
-  });
 }
 
 function setTextareaValue(nativeElement: HTMLElement, value: string): void {

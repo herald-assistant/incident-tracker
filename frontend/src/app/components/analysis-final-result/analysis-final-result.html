@@ -6,18 +6,37 @@
         <h3>{{ status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza' }}</h3>
       </div>
 
-      @if (hasMeaningfulValue(analysisResult.confidence)) {
-        <div
-          class="final-analysis__confidence"
-          [attr.aria-label]="'Confidence: ' + analysisResult.confidence"
+      <div class="final-analysis__actions">
+        @if (hasMeaningfulValue(analysisResult.confidence)) {
+          <div
+            class="final-analysis__confidence"
+            [attr.aria-label]="'Confidence: ' + analysisResult.confidence"
+          >
+            <span class="result-card-label">Confidence</span>
+            <code class="problem-badge final-analysis__confidence-value">
+              {{ analysisResult.confidence }}
+            </code>
+          </div>
+        }
+
+        <button
+          class="secondary-button final-analysis__copy-button"
+          type="button"
+          [attr.aria-label]="resultCopied() ? 'Skopiowano wynik analizy' : 'Kopiuj wynik analizy'"
+          [title]="resultCopied() ? 'Skopiowano' : 'Kopiuj wynik jako markdown'"
+          (click)="copyResultMarkdown()"
         >
-          <span class="result-card-label">Confidence</span>
-          <code class="problem-badge final-analysis__confidence-value">
-            {{ analysisResult.confidence }}
-          </code>
-        </div>
-      }
+          <span class="material-symbols-outlined" aria-hidden="true">
+            {{ resultCopied() ? 'task_alt' : 'content_copy' }}
+          </span>
+          <span>{{ resultCopied() ? 'Copied' : 'Copy result' }}</span>
+        </button>
+      </div>
     </div>
+
+    @if (copyError()) {
+      <p class="form-error">{{ copyError() }}</p>
+    }
 
     @if (hasMeaningfulValue(analysisResult.detectedProblem)) {
       <div class="analysis-highlights">

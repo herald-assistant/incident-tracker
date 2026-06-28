@@ -36,11 +36,12 @@ import {
   normalizeFlowExplorerJob,
   parseImportedFlowExplorerAnalysis
 } from '../../utils/flow-explorer-import-export.utils';
+import { buildFlowExplorerResultMarkdown } from '../../utils/flow-explorer-result-markdown.utils';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
-import { copyElementToClipboard, copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
+import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import {
   AnalysisAiCostEstimate,
   estimateAnalysisAiCost,
@@ -868,8 +869,13 @@ export class FlowExplorerPageComponent implements OnInit {
     downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), payload);
   }
 
-  protected async copyFlowExplorerResult(resultElement: HTMLElement): Promise<void> {
-    const copied = await copyElementToClipboard(resultElement);
+  protected async copyFlowExplorerResult(): Promise<void> {
+    const result = this.job()?.result;
+    if (!result) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(buildFlowExplorerResultMarkdown(result));
     if (!copied) {
       this.jobError.set('Nie udalo sie skopiowac wyniku Flow Explorera do schowka.');
       return;

@@ -8,6 +8,14 @@
   align-items: flex-start;
 }
 
+.final-analysis__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .final-analysis__confidence {
   display: flex;
   flex: 0 0 auto;
@@ -25,6 +33,14 @@
   padding: 5px 8px;
   font-size: 0.82rem;
   line-height: 1.2;
+}
+
+.final-analysis__copy-button {
+  min-height: 36px;
+}
+
+.final-analysis__copy-button .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .analysis-result-tabs {
@@ -103,6 +119,11 @@
 }
 
 @media (max-width: 860px) {
+  .final-analysis__actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .final-analysis__confidence {
     align-items: flex-start;
     text-align: left;

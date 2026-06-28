@@ -839,16 +839,6 @@
                   <p>{{ snapshot.errorMessage }}</p>
                 </div>
               }
-
-              @if (snapshot.preparedPrompt) {
-                <details class="flow-explorer-prompt-preview">
-                  <summary>
-                    <span class="material-symbols-outlined" aria-hidden="true">notes</span>
-                    <span>Prepared prompt preview</span>
-                  </summary>
-                  <pre>{{ snapshot.preparedPrompt }}</pre>
-                </details>
-              }
             }
             </div>
             </details>
@@ -859,11 +849,10 @@
           <div class="flow-explorer-analysis-grid">
             <div class="flow-explorer-analysis-main">
         @if (snapshot.result; as result) {
-          <section
-            class="analysis-card flow-explorer-result"
-            aria-label="Flow Explorer result"
-            #flowExplorerResultElement
-          >
+            <section
+              class="analysis-card flow-explorer-result"
+              aria-label="Flow Explorer result"
+            >
             <details class="flow-explorer-collapsible" open>
             <summary class="section-heading flow-explorer-result__heading flow-explorer-collapsible__summary">
               <div>
@@ -882,7 +871,7 @@
                   data-clipboard-exclude
                   [attr.aria-label]="resultCopied() ? 'Skopiowano wynik Flow Explorera' : 'Kopiuj caly wynik Flow Explorera'"
                   [title]="resultCopied() ? 'Skopiowano' : 'Kopiuj caly wynik'"
-                  (click)="$event.preventDefault(); $event.stopPropagation(); copyFlowExplorerResult(flowExplorerResultElement)"
+                  (click)="$event.preventDefault(); $event.stopPropagation(); copyFlowExplorerResult()"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">
                     {{ resultCopied() ? 'task_alt' : 'content_copy' }}

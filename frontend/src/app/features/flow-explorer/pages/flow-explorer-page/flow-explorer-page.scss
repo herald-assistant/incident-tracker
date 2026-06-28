@@ -724,38 +724,6 @@ article.flow-explorer-select-option {
   overflow-wrap: anywhere;
 }
 
-.flow-explorer-prompt-preview {
-  display: grid;
-  gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.flow-explorer-prompt-preview summary {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-height: 42px;
-  padding: 0 12px;
-  color: var(--text-main);
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.flow-explorer-prompt-preview pre {
-  max-height: 360px;
-  margin: 0;
-  overflow: auto;
-  padding: 12px;
-  border-top: 1px solid var(--border);
-  color: var(--text-main);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 .flow-explorer-result__heading {
   align-items: start;
 }
