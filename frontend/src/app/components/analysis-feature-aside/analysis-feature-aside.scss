@@ -97,15 +97,21 @@
   font-size: 0.62rem;
   font-weight: 800;
   line-height: 1;
+  overflow: visible;
 }
 
 .analysis-feature-aside__badge--loading::after {
   content: "";
   position: absolute;
-  inset: -4px;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
   border: 2px solid rgba(12, 102, 228, 0.18);
   border-top-color: var(--primary);
-  border-radius: 999px;
+  border-radius: 50%;
+  pointer-events: none;
   animation: analysis-feature-aside-spin 0.85s linear infinite;
 }
 

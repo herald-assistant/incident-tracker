@@ -131,6 +131,59 @@ class FlowExplorerJobControllerTest {
     }
 
     @Test
+    void shouldStartFlowExplorerJobWithLowercaseSectionModes() throws Exception {
+        when(flowExplorerJobService.startJob(any(FlowExplorerJobStartRequest.class)))
+                .thenReturn(snapshot("job-123"));
+
+        mockMvc.perform(post("/api/flow-explorer/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "systemId": "crm-service",
+                                  "endpointId": "GET:/api/customers/{id}",
+                                  "sectionModes": [
+                                    {"id": "FUNCTIONAL_FLOW", "mode": "deep"},
+                                    {"id": "VALIDATIONS", "mode": "compact"},
+                                    {"id": "PERSISTENCE", "mode": "off"},
+                                    {"id": "INTEGRATIONS", "mode": "compact"}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isAccepted());
+
+        verify(flowExplorerJobService).startJob(new FlowExplorerJobStartRequest(
+                "crm-service",
+                "GET:/api/customers/{id}",
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
+                                FlowExplorerResultSectionMode.DEEP
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.VALIDATIONS,
+                                FlowExplorerResultSectionMode.COMPACT
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.PERSISTENCE,
+                                FlowExplorerResultSectionMode.OFF
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.INTEGRATIONS,
+                                FlowExplorerResultSectionMode.COMPACT
+                        )
+                ),
+                null,
+                null,
+                null
+        ));
+    }
+
+    @Test
     void shouldRejectMissingEndpointSelector() throws Exception {
         mockMvc.perform(post("/api/flow-explorer/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
