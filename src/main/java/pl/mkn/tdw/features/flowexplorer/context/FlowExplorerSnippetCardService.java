@@ -391,7 +391,7 @@ public class FlowExplorerSnippetCardService {
         content.append(chunk.content() != null ? chunk.content().strip() : "");
         if (chunk.returnedEndLine() > 0 && chunk.totalLines() > chunk.returnedEndLine()) {
             content.append(System.lineSeparator())
-                    .append("// ... omitted unrelated or later lines ...");
+                    .append("// ... omitted later lines ...");
         }
         return content.toString().strip();
     }

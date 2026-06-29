@@ -129,6 +129,8 @@ class FlowExplorerSnippetCardServiceTest {
 
         assertEquals(1, result.cards().size());
         assertTrue(result.cards().get(0).content().contains("// ... omitted earlier lines ..."));
+        assertTrue(result.cards().get(0).content().contains("// ... omitted later lines ..."));
+        assertFalse(result.cards().get(0).content().contains("omitted unrelated"));
         assertTrue(result.cards().get(0).content().contains("public void selectedMethod"));
         assertTrue(result.limitations().stream()
                 .anyMatch(limitation -> limitation.contains("Method slice returned NOT_FOUND")));

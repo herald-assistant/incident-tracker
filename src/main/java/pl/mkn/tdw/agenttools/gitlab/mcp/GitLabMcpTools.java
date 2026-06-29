@@ -713,7 +713,8 @@ public class GitLabMcpTools {
                     Read a focused Java class slice for one or more methods from a GitLab repository in the resolved GitLab group and explicit branchRef.
                     Provide methodSelectors with methodName and optional lineStart. When lineStart is omitted, all overloads with that
                     method name are returned. The tool parses the Java file and returns package, relevant imports, the declaring class
-                    header, fields used by returned methods, selected methods and optional private local helper methods. Unrelated
+                    header, fields used by returned methods, selected methods and optional local methods called through unscoped
+                    or this-scoped calls. Other
                     fields/methods are replaced with omission markers. Prefer this over full file reads or raw chunks when method-level context is enough.
                     """
     )
@@ -730,7 +731,7 @@ public class GitLabMcpTools {
             String declaringTypeName,
             @ToolParam(description = "Methods to slice. Each selector requires methodName and can optionally provide lineStart to narrow to one overload.")
             List<GitLabJavaMethodSliceMethodSelector> methodSelectors,
-            @ToolParam(required = false, description = "Include private helper methods called by returned methods. Defaults to true.")
+            @ToolParam(required = false, description = "Include local methods called by returned methods through unscoped or this-scoped calls. Defaults to true.")
             Boolean includeDirectPrivateHelpers,
             @ToolParam(required = false, description = "Include fields used by returned methods/helper methods. Defaults to true.")
             Boolean includeRelevantFields,

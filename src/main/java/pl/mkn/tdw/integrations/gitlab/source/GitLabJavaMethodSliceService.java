@@ -270,15 +270,15 @@ public class GitLabJavaMethodSliceService {
         while (cursor < included.size() && included.size() < maxIncludedMethods) {
             var sourceMethod = new ArrayList<>(included.values()).get(cursor);
             cursor++;
-            var calledNames = directMethodCallNames(sourceMethod);
+            var localCalls = directLocalMethodCalls(sourceMethod);
             for (var method : immediateMethods) {
                 if (included.size() >= maxIncludedMethods) {
                     break;
                 }
-                if (!method.isPrivate() || included.containsKey(methodKey(method))) {
+                if (included.containsKey(methodKey(method))) {
                     continue;
                 }
-                if (calledNames.contains(method.getNameAsString())) {
+                if (localCalls.contains(new LocalMethodCall(method.getNameAsString(), method.getParameters().size()))) {
                     included.put(methodKey(method), method);
                 }
             }
@@ -291,13 +291,19 @@ public class GitLabJavaMethodSliceService {
                 .toList();
     }
 
-    private Set<String> directMethodCallNames(MethodDeclaration method) {
-        var names = new LinkedHashSet<String>();
+    private Set<LocalMethodCall> directLocalMethodCalls(MethodDeclaration method) {
+        var calls = new LinkedHashSet<LocalMethodCall>();
         method.findAll(MethodCallExpr.class).stream()
                 .filter(call -> call.findAncestor(MethodDeclaration.class).orElse(null) == method)
-                .map(call -> call.getNameAsString())
-                .forEach(names::add);
-        return names;
+                .filter(this::isLocalMethodCall)
+                .map(call -> new LocalMethodCall(call.getNameAsString(), call.getArguments().size()))
+                .forEach(calls::add);
+        return calls;
+    }
+
+    private boolean isLocalMethodCall(MethodCallExpr call) {
+        var scope = call.getScope().orElse(null);
+        return scope == null || scope instanceof ThisExpr;
     }
 
     private List<FieldDeclaration> includedFields(
@@ -526,7 +532,7 @@ public class GitLabJavaMethodSliceService {
             if (!includedImports.isEmpty()) {
                 content.append(System.lineSeparator());
             }
-            content.append("// ... omitted unrelated imports (").append(omittedImportCount).append(") ...")
+            content.append("// ... omitted imports (").append(omittedImportCount).append(") ...")
                     .append(System.lineSeparator());
         }
         if (!compilationUnit.getImports().isEmpty()) {
@@ -541,7 +547,7 @@ public class GitLabJavaMethodSliceService {
         for (var field : allFields) {
             if (includedFieldKeys.contains(fieldKey(field))) {
                 if (omittedFieldRun) {
-                    content.append(indent("// ... omitted unrelated fields ...")).append(System.lineSeparator()).append(System.lineSeparator());
+                    content.append(indent("// ... omitted fields ...")).append(System.lineSeparator()).append(System.lineSeparator());
                     omittedFieldRun = false;
                 }
                 content.append(indent(field.toString().strip())).append(System.lineSeparator()).append(System.lineSeparator());
@@ -550,7 +556,7 @@ public class GitLabJavaMethodSliceService {
             }
         }
         if (omittedFieldRun) {
-            content.append(indent("// ... omitted unrelated fields ...")).append(System.lineSeparator()).append(System.lineSeparator());
+            content.append(indent("// ... omitted fields ...")).append(System.lineSeparator()).append(System.lineSeparator());
         }
 
         var includedMethodKeys = includedMethods.stream().map(this::methodKey).collect(java.util.stream.Collectors.toSet());
@@ -558,7 +564,7 @@ public class GitLabJavaMethodSliceService {
         for (var method : immediateMethods(declaringType)) {
             if (includedMethodKeys.contains(methodKey(method))) {
                 if (omittedMethodRun) {
-                    content.append(indent("// ... omitted unrelated methods ...")).append(System.lineSeparator()).append(System.lineSeparator());
+                    content.append(indent("// ... omitted methods ...")).append(System.lineSeparator()).append(System.lineSeparator());
                     omittedMethodRun = false;
                 }
                 content.append(indent(method.toString().strip())).append(System.lineSeparator()).append(System.lineSeparator());
@@ -567,7 +573,7 @@ public class GitLabJavaMethodSliceService {
             }
         }
         if (omittedMethodRun) {
-            content.append(indent("// ... omitted unrelated methods ...")).append(System.lineSeparator());
+            content.append(indent("// ... omitted methods ...")).append(System.lineSeparator());
         }
 
         content.append("}");
@@ -823,5 +829,8 @@ public class GitLabJavaMethodSliceService {
     }
 
     private record RenderResult(String content, boolean truncated) {
+    }
+
+    private record LocalMethodCall(String methodName, int argumentCount) {
     }
 }

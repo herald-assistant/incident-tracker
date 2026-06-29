@@ -23,7 +23,7 @@ class GitLabJavaMethodSliceServiceTest {
     private final GitLabJavaMethodSliceService service = new GitLabJavaMethodSliceService(new SliceRepositoryPort());
 
     @Test
-    void shouldRenderFocusedMethodSliceWithRelevantFieldsImportsAndHelper() {
+    void shouldRenderFocusedMethodSliceWithRelevantFieldsImportsAndLocalCallees() {
         var response = service.readMethodSlice(new GitLabJavaMethodSliceRequest(
                 "CRM",
                 "orders",
@@ -46,7 +46,10 @@ class GitLabJavaMethodSliceServiceTest {
         assertTrue(response.includedFields().contains("clock"));
         assertFalse(response.includedFields().contains("noiseClient"));
         assertTrue(response.includedMethods().stream().anyMatch(method -> "createOrder".equals(method.methodName())));
+        assertTrue(response.includedMethods().stream().anyMatch(method -> "prepareEntity".equals(method.methodName())));
+        assertTrue(response.includedMethods().stream().anyMatch(method -> "resultFrom".equals(method.methodName())));
         assertTrue(response.includedMethods().stream().anyMatch(method -> "map".equals(method.methodName())));
+        assertFalse(response.includedMethods().stream().anyMatch(method -> "record".equals(method.methodName())));
 
         var content = response.content();
         var normalizedContent = content.replace("\r\n", "\n");
@@ -70,10 +73,14 @@ class GitLabJavaMethodSliceServiceTest {
         assertTrue(content.contains("private final AuditClient auditClient;"));
         assertFalse(content.contains("private final NoiseClient noiseClient;"));
         assertTrue(content.contains("public OrderResult createOrder"));
+        assertTrue(content.contains("OrderEntity prepareEntity"));
+        assertTrue(content.contains("protected OrderResult resultFrom"));
         assertTrue(content.contains("private OrderEntity map"));
+        assertFalse(content.contains("private void record"));
         assertFalse(content.contains("public void unrelated"));
-        assertTrue(content.contains("// ... omitted unrelated fields ..."));
-        assertTrue(content.contains("// ... omitted unrelated methods ..."));
+        assertTrue(content.contains("// ... omitted fields ..."));
+        assertTrue(content.contains("// ... omitted methods ..."));
+        assertFalse(content.contains("omitted unrelated"));
     }
 
     @Test
@@ -225,18 +232,30 @@ class GitLabJavaMethodSliceServiceTest {
                         private final NoiseClient noiseClient;
 
                         public OrderResult createOrder(OrderRequest request) {
-                            var entity = map(request);
+                            var entity = prepareEntity(request);
                             orderRepository.save(entity);
                             auditClient.record(entity.id(), Instant.now(clock));
-                            return new OrderResult(entity.id());
+                            return resultFrom(entity);
                         }
 
                         public OrderResult createOrder(String externalId) {
                             return new OrderResult(externalId);
                         }
 
+                        OrderEntity prepareEntity(OrderRequest request) {
+                            return map(request);
+                        }
+
+                        protected OrderResult resultFrom(OrderEntity entity) {
+                            return new OrderResult(entity.id());
+                        }
+
                         private OrderEntity map(OrderRequest request) {
                             return new OrderEntity(request.customerId());
+                        }
+
+                        private void record(String id, Instant at) {
+                            noiseClient.call(id + at.toString());
                         }
 
                         public void unrelated() {
