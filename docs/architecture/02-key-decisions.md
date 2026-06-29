@@ -559,9 +559,13 @@ Decyzje:
   `GET /analysis/jobs/{analysisId}`,
 - initial analysis uruchamia `sessionTarget=NEW`, a follow-up kontynuuje
   zapisana sesje SDK przez `sessionTarget=EXISTING(copilotSessionId)`,
-- follow-up wysyla do SDK tylko tresc wiadomosci operatora; kontekst rozmowy,
-  evidence i poprzednie tool evidence pochodza z historii sesji Copilota, a
-  nie z ponownie renderowanego promptu,
+- Incident Analysis follow-up wysyla do SDK tylko tresc wiadomosci operatora;
+  kontekst rozmowy, evidence i poprzednie tool evidence pochodza z historii
+  sesji Copilota, a nie z ponownie renderowanego promptu,
+- Flow Explorer follow-up ma feature-owned chat prompt i skill
+  `flow-explorer-follow-up-chat`, zeby odpowiedz domyslnie byla Markdownem,
+  nie initial JSON result contract, i zeby poglebianie przez tools oraz jezyk
+  domenowy byly jawna czescia kontraktu rozmowy,
 - przy resume backend ponownie przekazuje aktualne tools, skille, hidden
   context, hooks, permission handler, model i `reasoningEffort`,
 - GitLab i Database tools nadal sa session-bound przez hidden `ToolContext`;

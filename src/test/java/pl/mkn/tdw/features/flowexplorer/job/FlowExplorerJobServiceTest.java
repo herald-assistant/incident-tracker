@@ -302,7 +302,10 @@ class FlowExplorerJobServiceTest {
         assertEquals("ASSISTANT", afterChatStart.chatMessages().get(1).role());
         assertEquals("COMPLETED", afterChatStart.chatMessages().get(1).status());
         assertEquals("Walidacja jest w CustomerService.validate.", afterChatStart.chatMessages().get(1).content());
-        assertEquals("Gdzie jest walidacja?", afterChatStart.chatMessages().get(1).prompt());
+        assertTrue(afterChatStart.chatMessages().get(1).prompt().contains("# Flow Explorer follow-up chat"));
+        assertTrue(afterChatStart.chatMessages().get(1).prompt().contains("Domyslnie odpowiedz w Markdown"));
+        assertTrue(afterChatStart.chatMessages().get(1).prompt().contains("Nie zwracaj pelnego JSON"));
+        assertTrue(afterChatStart.chatMessages().get(1).prompt().contains("Gdzie jest walidacja?"));
         assertEquals(1, afterChatStart.chatMessages().get(1).toolEvidenceSections().size());
         assertEquals("gitlab", afterChatStart.chatMessages().get(1).toolEvidenceSections().get(0).provider());
 
@@ -315,7 +318,11 @@ class FlowExplorerJobServiceTest {
                 eq("initial-session-1"),
                 any(AnalysisAiAuthRef.class)
         );
-        assertEquals("Gdzie jest walidacja?", promptCaptor.getValue().prompt());
+        assertTrue(promptCaptor.getValue().prompt().contains("# Flow Explorer follow-up chat"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Nie zakladaj, ze initial analysis przeczytala cala implementacje"));
+        assertTrue(promptCaptor.getValue().prompt().contains("domyslnie uzyj dostepnych Flow Explorer tools"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Docelowy odbiorca to analityk albo tester"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Gdzie jest walidacja?"));
         assertTrue(promptCaptor.getValue().artifacts().isEmpty());
         assertTrue(promptCaptor.getValue().artifactContents().isEmpty());
     }

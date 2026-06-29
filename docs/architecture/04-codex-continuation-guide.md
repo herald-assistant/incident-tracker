@@ -350,7 +350,15 @@ w inputach; follow-up wystawia je zawsze, jesli capability jest zarejestrowana.
 Initial analysis tworzy nowa sesje Copilota, a follow-up kontynuuje zapisana
 sesje przez `copilotSessionId`. Przy resume aplikacja ponownie przekazuje
 aktualne tools, skille, hidden context, hooks, permission handler, model i
-`reasoningEffort`; sama wiadomosc operatora jest jedynym nowym promptem.
+`reasoningEffort`.
+
+Dla Incident Analysis sama wiadomosc operatora jest jedynym nowym promptem,
+bo kontrakt rozmowy jest oddzielony od kontraktu initial result. Dla Flow
+Explorera follow-up owija wiadomosc operatora w feature-owned follow-up chat
+prompt i skill `flow-explorer-follow-up-chat`: domyslnie odpowiedz ma byc
+Markdownem, nie pelnym `flow-explorer-result-contract`, ma poglebiac odpowiedz
+przez dostepne tools i utrzymywac jezyk domenowy czytelny dla analityka albo
+testera.
 
 Tool evidence z follow-up powinno byc przypisane do konkretnej odpowiedzi
 chatu, a nie mieszane z deterministycznym pipeline evidence.

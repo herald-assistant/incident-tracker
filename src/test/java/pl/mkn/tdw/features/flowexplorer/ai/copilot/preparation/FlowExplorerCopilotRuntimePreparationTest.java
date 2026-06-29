@@ -197,7 +197,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
-    void shouldBuildFollowUpSessionConfigWithoutResultContractSkill() {
+    void shouldBuildFollowUpSessionConfigWithChatSkillWithoutResultContractSkill() {
         var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
         var factory = sessionConfigRequestFactory();
@@ -212,6 +212,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals(List.of(tool), request.tools());
         assertEquals(List.of(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT), request.availableToolNames());
         assertSkillDirectories(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
+        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
+        assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-orchestrator");
         assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-result-contract");
     }
 
@@ -314,6 +316,9 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 runRequest.sessionConfigRequest().skillDirectories(),
                 FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames()
         );
+        assertSelectedSkillIncluded(runRequest.sessionConfigRequest().skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
+        assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-orchestrator");
         assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-result-contract");
 
         verify(toolFactory).createToolDefinitions(

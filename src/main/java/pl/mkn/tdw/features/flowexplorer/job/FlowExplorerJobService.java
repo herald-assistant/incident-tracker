@@ -12,7 +12,7 @@ import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import org.springframework.stereotype.Service;
-import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
+import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextRequest;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextService;
@@ -25,7 +25,6 @@ import pl.mkn.tdw.features.flowexplorer.job.state.FlowExplorerJobState;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +36,7 @@ public class FlowExplorerJobService {
     private final Map<String, FlowExplorerJobState> jobs = new ConcurrentHashMap<>();
     private final FlowExplorerContextService flowExplorerContextService;
     private final FlowExplorerPromptPreparationService promptPreparationService;
+    private final FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService;
     private final FlowExplorerCopilotRunRequestAssembler runRequestAssembler;
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
@@ -59,6 +59,7 @@ public class FlowExplorerJobService {
         this(
                 flowExplorerContextService,
                 promptPreparationService,
+                new FlowExplorerFollowUpPromptPreparationService(),
                 runRequestAssembler,
                 runPreparationService,
                 executionGateway,
@@ -91,6 +92,7 @@ public class FlowExplorerJobService {
         this(
                 flowExplorerContextService,
                 promptPreparationService,
+                new FlowExplorerFollowUpPromptPreparationService(),
                 runRequestAssembler,
                 runPreparationService,
                 executionGateway,
@@ -107,6 +109,7 @@ public class FlowExplorerJobService {
     public FlowExplorerJobService(
             FlowExplorerContextService flowExplorerContextService,
             FlowExplorerPromptPreparationService promptPreparationService,
+            FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService,
             FlowExplorerCopilotRunRequestAssembler runRequestAssembler,
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
@@ -119,6 +122,9 @@ public class FlowExplorerJobService {
     ) {
         this.flowExplorerContextService = flowExplorerContextService;
         this.promptPreparationService = promptPreparationService;
+        this.followUpPromptPreparationService = followUpPromptPreparationService != null
+                ? followUpPromptPreparationService
+                : new FlowExplorerFollowUpPromptPreparationService();
         this.runRequestAssembler = runRequestAssembler;
         this.runPreparationService = runPreparationService;
         this.executionGateway = executionGateway;
@@ -220,10 +226,10 @@ public class FlowExplorerJobService {
             FlowExplorerFollowUpChatRequest chatRequest
     ) {
         try {
-            var promptPreparation = new FlowExplorerPromptPreparation(
-                    chatRequest.message() != null ? chatRequest.message().trim() : "",
-                    List.of(),
-                    Map.of()
+            var promptPreparation = followUpPromptPreparationService.prepare(
+                    chatRequest.initialRequest(),
+                    chatRequest.contextSnapshot(),
+                    chatRequest.message()
             );
             var runAssembly = runRequestAssembler.assembleFollowUp(
                     "flow-explorer-follow-up-" + assistantMessageId,

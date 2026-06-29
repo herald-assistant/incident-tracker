@@ -27,6 +27,10 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 FlowExplorerCopilotRuntimeSkillNames.RESULT_CONTRACT_SKILL_NAME
         );
         assertEquals(
+                "flow-explorer-follow-up-chat",
+                FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME
+        );
+        assertEquals(
                 "flow-explorer-goal-deep-discovery",
                 FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME
         );
@@ -43,12 +47,13 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "flow-explorer-gitlab-tools",
                 "flow-explorer-operational-context-tools",
                 "flow-explorer-result-contract",
+                "flow-explorer-follow-up-chat",
                 "flow-explorer-goal-deep-discovery",
                 "flow-explorer-goal-test-scenarios",
                 "flow-explorer-goal-risk-detection"
         ), FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
         assertEquals(List.of(
-                "flow-explorer-orchestrator",
+                "flow-explorer-follow-up-chat",
                 "flow-explorer-gitlab-tools",
                 "flow-explorer-operational-context-tools"
         ), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
@@ -91,6 +96,14 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Jezyk I Odbiorca",
                 "## Source References",
                 "## Confidence I Visibility Limits",
+                "## Antywzorce"
+        ));
+        assertSkillContainsSections("flow-explorer-follow-up-chat", List.of(
+                "## Rola",
+                "## Format Odpowiedzi",
+                "## Poglebianie Przez Tools",
+                "## Jezyk I Odbiorca",
+                "## Widocznosc I Zrodla",
                 "## Antywzorce"
         ));
         assertSkillContainsSections("flow-explorer-goal-deep-discovery", List.of(
@@ -147,6 +160,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         var gitLabTools = Files.readString(SKILLS_ROOT.resolve("flow-explorer-gitlab-tools").resolve("SKILL.md"));
         var deepDiscovery = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-deep-discovery").resolve("SKILL.md"));
         var resultContract = Files.readString(SKILLS_ROOT.resolve("flow-explorer-result-contract").resolve("SKILL.md"));
+        var followUpChat = Files.readString(SKILLS_ROOT.resolve("flow-explorer-follow-up-chat").resolve("SKILL.md"));
         var operationalContextTools = Files.readString(
                 SKILLS_ROOT.resolve("flow-explorer-operational-context-tools").resolve("SKILL.md"));
 
@@ -233,6 +247,13 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(resultContract.contains("Nie pomijaj kolumn parenta ani kompozycji"));
         assertTrue(resultContract.contains("bezposrednio mapowanego na kolumne"));
         assertTrue(resultContract.contains("`tool:gitlab_build_java_method_use_case_context`"));
+
+        assertTrue(followUpChat.contains("Domyslnie odpowiadaj w Markdown"));
+        assertTrue(followUpChat.contains("Nie zwracaj pelnego JSON `flow-explorer-result-contract`"));
+        assertTrue(followUpChat.contains("Nie zakladaj, ze initial analysis przeczytala cala implementacje"));
+        assertTrue(followUpChat.contains("Domyslnie uzyj dostepnych tools przed odpowiedzia"));
+        assertTrue(followUpChat.contains("Docelowy odbiorca to analityk albo tester"));
+        assertTrue(followUpChat.contains("Nie zaczynaj od nazw klas, metod, beanow, plikow ani tooli"));
 
         assertTrue(operationalContextTools.contains("### SOURCE Dla Persistence Deep"));
         assertTrue(operationalContextTools.contains("nazwac `SOURCE` biznesowo"));

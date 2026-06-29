@@ -10,6 +10,7 @@ final class FlowExplorerCopilotRuntimeSkillNames {
     static final String GITLAB_TOOLS_SKILL_NAME = "flow-explorer-gitlab-tools";
     static final String OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME = "flow-explorer-operational-context-tools";
     static final String RESULT_CONTRACT_SKILL_NAME = "flow-explorer-result-contract";
+    static final String FOLLOW_UP_CHAT_SKILL_NAME = "flow-explorer-follow-up-chat";
     static final String DEEP_DISCOVERY_SKILL_NAME = "flow-explorer-goal-deep-discovery";
     static final String TEST_SCENARIOS_SKILL_NAME = "flow-explorer-goal-test-scenarios";
     static final String RISK_DETECTION_SKILL_NAME = "flow-explorer-goal-risk-detection";
@@ -39,6 +40,7 @@ final class FlowExplorerCopilotRuntimeSkillNames {
                 GITLAB_TOOLS_SKILL_NAME,
                 OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME,
                 RESULT_CONTRACT_SKILL_NAME,
+                FOLLOW_UP_CHAT_SKILL_NAME,
                 DEEP_DISCOVERY_SKILL_NAME,
                 TEST_SCENARIOS_SKILL_NAME,
                 RISK_DETECTION_SKILL_NAME
@@ -47,7 +49,7 @@ final class FlowExplorerCopilotRuntimeSkillNames {
 
     static List<String> followUpSkillNames() {
         return List.of(
-                STARTER_SKILL_NAME,
+                FOLLOW_UP_CHAT_SKILL_NAME,
                 GITLAB_TOOLS_SKILL_NAME,
                 OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME
         );

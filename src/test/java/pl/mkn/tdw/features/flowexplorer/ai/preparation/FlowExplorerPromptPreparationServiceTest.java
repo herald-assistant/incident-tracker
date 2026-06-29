@@ -23,6 +23,8 @@ class FlowExplorerPromptPreparationServiceTest {
     private final FlowExplorerPromptPreparationService service = new FlowExplorerPromptPreparationService(
             new FlowExplorerArtifactService(new ObjectMapper())
     );
+    private final FlowExplorerFollowUpPromptPreparationService followUpService =
+            new FlowExplorerFollowUpPromptPreparationService();
 
     @Test
     void shouldRenderCanonicalPromptWithManifestSnippetCardsAndSchema() {
@@ -107,6 +109,32 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
         assertTrue(prompt.contains("MUST: flow-explorer-goal-deep-discovery"));
         assertTrue(prompt.contains("Obowiazuje dla celu DEEP_DISCOVERY"));
+    }
+
+    @Test
+    void shouldRenderFollowUpPromptAsMarkdownChatWithExplorationGuidance() {
+        var preparation = followUpService.prepare(
+                deepDiscoveryRequest(),
+                contextSnapshot(),
+                "Doprecyzuj walidacje i sprawdz, czy initial wynik niczego nie pominal."
+        );
+        var prompt = preparation.prompt();
+
+        assertTrue(preparation.artifacts().isEmpty());
+        assertTrue(preparation.artifactContents().isEmpty());
+        assertTrue(prompt.contains("# Flow Explorer follow-up chat"));
+        assertTrue(prompt.contains("Domyslnie odpowiedz w Markdown"));
+        assertTrue(prompt.contains("Nie zwracaj pelnego JSON `flow-explorer-result-contract`"));
+        assertTrue(prompt.contains("Nie zakladaj, ze initial analysis przeczytala cala implementacje endpointu"));
+        assertTrue(prompt.contains("domyslnie uzyj dostepnych Flow Explorer tools przed odpowiedzia"));
+        assertTrue(prompt.contains("Docelowy odbiorca to analityk albo tester"));
+        assertTrue(prompt.contains("Nie zaczynaj odpowiedzi od nazw klas, metod, beanow"));
+        assertTrue(prompt.contains("systemId: crm-service"));
+        assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
+        assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
+        assertTrue(prompt.contains("Doprecyzuj walidacje"));
+        assertFalse(prompt.contains("## Required JSON response contract"));
+        assertFalse(prompt.contains("\"sections\""));
     }
 
     private static FlowExplorerContextSnapshot contextSnapshot() {

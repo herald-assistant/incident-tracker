@@ -24,6 +24,7 @@ import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponse;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunAssembly;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotToolAccessPolicy;
+import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
@@ -53,6 +54,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
@@ -79,6 +81,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         var handler = new FlowExplorerLocalRunChatHandler(
                 objectMapper,
                 assembler,
+                new FlowExplorerFollowUpPromptPreparationService(),
                 preparationService,
                 executionGateway,
                 new CopilotRunAuthMapper(),
@@ -129,7 +132,10 @@ class FlowExplorerLocalRunChatHandlerTest {
         );
 
         assertEquals("LOCAL_TOKEN", tokenResolver.auth.mode().name());
-        assertEquals("Gdzie jest walidacja?", promptCaptor.getValue().prompt());
+        assertTrue(promptCaptor.getValue().prompt().contains("# Flow Explorer follow-up chat"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Domyslnie odpowiedz w Markdown"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Nie zwracaj pelnego JSON"));
+        assertTrue(promptCaptor.getValue().prompt().contains("Gdzie jest walidacja?"));
         assertEquals("crm-service", requestCaptor.getValue().systemId());
         assertEquals("GET", requestCaptor.getValue().httpMethod());
         assertEquals("/api/customers/{id}", requestCaptor.getValue().endpointPath());
@@ -153,7 +159,8 @@ class FlowExplorerLocalRunChatHandlerTest {
         assertEquals("Gdzie jest walidacja?", updatedJob.chatMessages().get(0).content());
         assertEquals("ASSISTANT", updatedJob.chatMessages().get(1).role());
         assertEquals("Odpowiedz lokalna.", updatedJob.chatMessages().get(1).content());
-        assertEquals("Gdzie jest walidacja?", updatedJob.chatMessages().get(1).prompt());
+        assertTrue(updatedJob.chatMessages().get(1).prompt().contains("# Flow Explorer follow-up chat"));
+        assertTrue(updatedJob.chatMessages().get(1).prompt().contains("Gdzie jest walidacja?"));
         assertEquals(1, updatedJob.chatMessages().get(1).toolEvidenceSections().size());
         assertEquals(1, updatedJob.chatMessages().get(1).aiActivityEvents().size());
         assertEquals("follow-up-session-1", result.record().continuation().copilotSessionId());
@@ -166,6 +173,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         var handler = new FlowExplorerLocalRunChatHandler(
                 objectMapper,
                 mock(FlowExplorerCopilotRunRequestAssembler.class),
+                new FlowExplorerFollowUpPromptPreparationService(),
                 mock(CopilotRunPreparationService.class),
                 mock(CopilotSdkExecutionGateway.class),
                 new CopilotRunAuthMapper(),

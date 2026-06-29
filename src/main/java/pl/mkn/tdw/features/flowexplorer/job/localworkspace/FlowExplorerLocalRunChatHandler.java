@@ -14,6 +14,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotReauthRequiredExc
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
+import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStateSnapshot;
@@ -50,6 +51,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
 
     private final ObjectMapper objectMapper;
     private final FlowExplorerCopilotRunRequestAssembler runRequestAssembler;
+    private final FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService;
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final CopilotRunAuthMapper runAuthMapper;
@@ -76,7 +78,11 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
         var userMessageId = UUID.randomUUID().toString();
         var assistantMessageId = UUID.randomUUID().toString();
         var startedAt = Instant.now();
-        var promptPreparation = new FlowExplorerPromptPreparation(userMessage, List.of(), java.util.Map.of());
+        var promptPreparation = followUpPromptPreparationService.prepare(
+                startRequest(snapshot),
+                snapshot.contextSnapshot(),
+                userMessage
+        );
         var captured = new CapturedAssistantState();
         var response = executeChat(
                 snapshot,
@@ -92,6 +98,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 userMessageId,
                 assistantMessageId,
                 userMessage,
+                promptPreparation.prompt(),
                 response,
                 captured,
                 startedAt,
@@ -253,6 +260,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
             String userMessageId,
             String assistantMessageId,
             String message,
+            String assistantPrompt,
             CopilotExecutionResult response,
             CapturedAssistantState captured,
             Instant startedAt,
@@ -287,7 +295,7 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 captured.toolEvidenceSections(),
                 captured.aiActivityEvents(),
                 captured.toolFeedback(),
-                message
+                assistantPrompt
         ));
 
         return new FlowExplorerJobStateSnapshot(
