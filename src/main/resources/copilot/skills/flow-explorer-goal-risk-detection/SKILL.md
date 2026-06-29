@@ -155,13 +155,23 @@ Oprocz compact dodaj:
 
 ## Integrations
 
+Sekcja `INTEGRATIONS` w `RISK_DETECTION` ocenia tylko ryzyka na granicach poza
+analizowanym komponentem/systemem. Nie traktuj jako ryzyka integracji
+wewnetrznych eventow domenowych, listenerow bez brokera, mapperow ani
+komunikacji miedzy klasami. Jezeli taki mechanizm nie opuszcza komponentu,
+ryzyko nalezy do functional flow albo nie nalezy do wyniku.
+
 ### compact
 
 Zwroc:
 
-- ryzyka zaleznosci od systemu zewnetrznego, kolejki, eventu albo handoffu,
-- co moze pojsc zle przy braku odpowiedzi, bledzie downstream/upstream albo
-  niekompletnej konfiguracji,
+- ryzyka dla kazdego widocznego zewnetrznego systemu, path, destination,
+  topic, queue, bindingu albo handoffu,
+- co moze pojsc zle przy braku odpowiedzi, bledzie downstream/upstream,
+  niekompletnej konfiguracji, nieznanym payloadzie, brakujacym naglowku albo
+  niedookreslonym kontrakcie eventu,
+- oznaczenie, czy target jest faktem z operational context, inferencja z
+  kodu/configu czy luka widocznosci,
 - operational context hints: system, owner, handoff route, jezeli pomagaja,
 - visibility limit, jezeli integracji nie widac.
 
@@ -169,10 +179,14 @@ Zwroc:
 
 Oprocz compact dodaj:
 
-- ryzyka timeoutow, retry, duplikacji eventu, opoznien i niespojnosci statusu,
-- ryzyka kontraktu danych przekazywanych do integracji,
+- ryzyka timeoutow, retry, fallbacku, DLQ, duplikacji eventu, opoznien,
+  niespojnosci statusu i idempotencji,
+- ryzyka kontraktu danych przekazywanych do integracji: payload, request body,
+  query/path params, naglowki, content type, event headers, routing key albo
+  destination,
 - ryzyka odpowiedzialnosci: ktory system/zespol powinien potwierdzic zachowanie,
-- co trzeba zamockowac albo zasymulowac, zeby ryzyko przetestowac,
+- co trzeba zamockowac albo zasymulowac, zeby ryzyko przetestowac dla
+  konkretnego systemu/path/destination,
 - pytania otwarte dla integracji, jezeli evidence nie pokazuje pelnego handoffu.
 
 ## Format Sekcji

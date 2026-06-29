@@ -94,6 +94,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "## Sekcje I Kolejnosc",
                 "## Functional Flow Contract",
                 "## Jezyk I Odbiorca",
+                "## Persistence Deep Contract",
+                "## Integration Boundary Contract",
                 "## Source References",
                 "## Confidence I Visibility Limits",
                 "## Antywzorce"
@@ -159,6 +161,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         var orchestrator = Files.readString(SKILLS_ROOT.resolve("flow-explorer-orchestrator").resolve("SKILL.md"));
         var gitLabTools = Files.readString(SKILLS_ROOT.resolve("flow-explorer-gitlab-tools").resolve("SKILL.md"));
         var deepDiscovery = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-deep-discovery").resolve("SKILL.md"));
+        var testScenarios = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-test-scenarios").resolve("SKILL.md"));
+        var riskDetection = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-risk-detection").resolve("SKILL.md"));
         var resultContract = Files.readString(SKILLS_ROOT.resolve("flow-explorer-result-contract").resolve("SKILL.md"));
         var followUpChat = Files.readString(SKILLS_ROOT.resolve("flow-explorer-follow-up-chat").resolve("SKILL.md"));
         var operationalContextTools = Files.readString(
@@ -210,6 +214,15 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(gitLabTools.contains("`@Bean Consumer<T>`"));
         assertTrue(gitLabTools.contains("`spring.cloud.stream.bindings.<binding>.*`"));
         assertTrue(gitLabTools.contains("YAML/properties traktuj jako resolver"));
+        assertTrue(gitLabTools.contains("szukaj tylko granic poza analizowany komponent/system"));
+        assertTrue(gitLabTools.contains("Dla `COMPACT` przygotuj liste wszystkich zewnetrznych systemow/kanalow"));
+        assertTrue(gitLabTools.contains("Dla `DEEP` domknij kontrakt: path/destination, payload"));
+        assertTrue(gitLabTools.contains("`@FeignClient` czytaj interfejs/klase klienta"));
+        assertTrue(gitLabTools.contains("method-level mapping"));
+        assertTrue(gitLabTools.contains("Dla `RestClient`, `WebClient` i `RestTemplate` ustal metode HTTP"));
+        assertTrue(gitLabTools.contains("Dla `StreamBridge.send(...)` ustal binding name"));
+        assertTrue(gitLabTools.contains("Consumer/listener traktuj jako `INTEGRATIONS` tylko wtedy"));
+        assertTrue(gitLabTools.contains("YAML/properties dla integracji czytaj po nazwach z kodu"));
         assertTrue(gitLabTools.contains("`TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`"));
         assertTrue(gitLabTools.contains("`.github/copilot-instructions.md`"));
         assertTrue(gitLabTools.contains("tylko jako repository guidance"));
@@ -223,8 +236,25 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(deepDiscovery.contains("biznesowa nazwa systemu albo komponentu"));
         assertTrue(deepDiscovery.contains("Nie koncz `PERSISTENCE=DEEP` bez ustalenia `SOURCE`"));
         assertTrue(deepDiscovery.contains("szczegoly implementacyjne nie sa trescia tabeli wynikowej"));
+        assertTrue(deepDiscovery.contains("Sekcja `INTEGRATIONS` w `DEEP_DISCOVERY` opisuje tylko integracje poza"));
+        assertTrue(deepDiscovery.contains("wszystkie widoczne zewnetrzne systemy, kanaly albo handoffy"));
+        assertTrue(deepDiscovery.contains("dokladny kontrakt HTTP albo asynchroniczny"));
+        assertTrue(deepDiscovery.contains("naglowki, content type, correlation id"));
+        assertTrue(deepDiscovery.contains("timeouty, retry, fallback, DLQ"));
+
+        assertTrue(testScenarios.contains("Sekcja `INTEGRATIONS` w `TEST_SCENARIOS` dotyczy tylko testowania zaleznosci"));
+        assertTrue(testScenarios.contains("dla kazdego widocznego zewnetrznego systemu albo kanalu"));
+        assertTrue(testScenarios.contains("adres/path/destination/topic/queue/binding"));
+        assertTrue(testScenarios.contains("request/response, payload eventu, naglowki"));
+        assertTrue(testScenarios.contains("setup danych i stubow dla HTTP path/URL template"));
+
+        assertTrue(riskDetection.contains("Sekcja `INTEGRATIONS` w `RISK_DETECTION` ocenia tylko ryzyka na granicach"));
+        assertTrue(riskDetection.contains("ryzyka dla kazdego widocznego zewnetrznego systemu"));
+        assertTrue(riskDetection.contains("nieznanym payloadzie, brakujacym naglowku"));
+        assertTrue(riskDetection.contains("query/path params, naglowki, content type"));
 
         assertTrue(resultContract.contains("## Persistence Deep Contract"));
+        assertTrue(resultContract.contains("## Integration Boundary Contract"));
         assertTrue(resultContract.contains("`FUNCTIONAL_FLOW` ma tytul `Functional flow`"));
         assertTrue(resultContract.contains("**Cel funkcjonalny:**"));
         assertTrue(resultContract.contains("**Flow krok po kroku:**"));
@@ -246,6 +276,15 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(resultContract.contains("`@Embedded`, `@Embeddable` i `@AttributeOverride(s)`"));
         assertTrue(resultContract.contains("Nie pomijaj kolumn parenta ani kompozycji"));
         assertTrue(resultContract.contains("bezposrednio mapowanego na kolumne"));
+        assertTrue(resultContract.contains("opisuje wylacznie komunikacje"));
+        assertTrue(resultContract.contains("Nie wypelniaj sekcji architektura wewnetrzna"));
+        assertTrue(resultContract.contains("| System/target | Typ | Adres/kanal/path | Moment w flow |"));
+        assertTrue(resultContract.contains("HTTP method + path, URL template, destination, topic"));
+        assertTrue(resultContract.contains("`@FeignClient`, `contextId`, property prefix"));
+        assertTrue(resultContract.contains("`INTEGRATIONS=deep` zawiera wszystko z compact"));
+        assertTrue(resultContract.contains("`Headers/auth/metadane`"));
+        assertTrue(resultContract.contains("timeout, retry"));
+        assertTrue(resultContract.contains("DLQ, idempotencja"));
         assertTrue(resultContract.contains("`tool:gitlab_build_java_method_use_case_context`"));
 
         assertTrue(followUpChat.contains("Domyslnie odpowiadaj w Markdown"));

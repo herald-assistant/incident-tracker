@@ -91,9 +91,17 @@ sciezki po calym repozytorium.
   `@MappedSuperclass`, `@Embedded`/kompozycji i metod encji uzytych w flow,
   az dojdziesz do pol bezposrednio mapowanych na kolumny. Dla `DEEP` przygotuj
   `TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`.
-- `INTEGRATIONS`: najpierw kod klienta, adaptera, mappera request/response,
-  publikacji eventu albo consumera. Konfiguracje czytaj dopiero, gdy kod
-  wskaze nazwe klienta, binding, destination albo property placeholder.
+- `INTEGRATIONS`: szukaj tylko granic poza analizowany komponent/system.
+  Najpierw ustal konkretny target, transport, adres/kanal i moment wywolania w
+  flow endpointu. Czytaj kod klienta, adaptera, mappera request/response,
+  publikacji eventu, consumera albo konfiguracje tylko wtedy, gdy sa powiazane
+  z analizowanym flow. Nie rozwijaj wewnetrznych eventow, listenerow,
+  mediatorow ani architektury port/adapters jako integracji, jezeli nie widac
+  zewnetrznego systemu, brokera, queue/topic/destination/bindingu albo handoffu.
+  Dla `COMPACT` przygotuj liste wszystkich zewnetrznych systemow/kanalow z
+  celem i adresem. Dla `DEEP` domknij kontrakt: path/destination, payload,
+  headers/metadane, response/error handling, timeout/retry/DLQ/idempotencje i
+  source refs.
 
 ## Heurystyki Java/Spring
 
@@ -132,14 +140,46 @@ Integracje:
 
 - Dla HTTP spodziewaj sie `@FeignClient`, `RestClient`, `WebClient` albo
   `RestTemplate`.
+- Dla `@FeignClient` czytaj interfejs/klase klienta oraz adnotacje:
+  `name`, `contextId`, `url`, `path`, `configuration`, method-level mapping,
+  `consumes`, `produces`, `@RequestHeader`, `@RequestParam`, `@PathVariable` i
+  `@RequestBody`. Jezeli nazwa systemu nie wynika z operational context,
+  inferuj ja z `name`, `contextId`, property prefixu albo nazwy klienta.
+- Dla `RestClient`, `WebClient` i `RestTemplate` ustal metode HTTP, URI
+  template, base URL/property, body, headers, content type, response mapping i
+  error handling. Czytaj builder/config tylko wtedy, gdy rozstrzyga base URL,
+  timeout, retry, interceptor, auth albo default headers.
+- Dla request/response mapperow czytaj wasko pola, ktore buduja payload,
+  query params, path variables, headers albo mapuja odpowiedz na decyzje
+  endpointu. Nie opisuj mappera jako integracji; mapper jest evidence dla
+  kontraktu integracyjnego.
 - Dla publikacji eventow spodziewaj sie `StreamBridge.send(...)` i nazwy
   bindingu w stalej, property albo argumencie metody.
+- Dla `StreamBridge.send(...)` ustal binding name, destination/topic/queue z
+  `spring.cloud.stream.bindings.<binding>.destination`, payload type, pola
+  payloadu, event headers, contentType, partition/routing, producer config,
+  retry i DLQ, jezeli sa widoczne. Jezeli argument bindingu jest stala,
+  przeczytaj definicje stalej; jezeli jest property, przeczytaj waski fragment
+  YAML/properties.
 - Dla konsumpcji spodziewaj sie `@Bean Consumer<T>`, `Consumer<T>`,
   `Consumer<Message<T>>`, `Function<T,R>`, `Supplier<T>`,
   `@RabbitListener`, `@EventListener` albo `@TransactionalEventListener`.
+- Consumer/listener traktuj jako `INTEGRATIONS` tylko wtedy, gdy jest wejscem
+  analizowanego flow albo widocznym handoffem z zewnetrznego kanalu. Jezeli
+  listener obsluguje wewnetrzne zdarzenie domenowe bez brokera/destination,
+  zostaw go w functional flow albo pomin z `INTEGRATIONS`.
+- Dla `@RabbitListener` i podobnych adnotacji ustal queue/exchange/routing key,
+  payload, headers, retry/DLQ i sposob odrzucenia albo ponowienia, jezeli sa
+  widoczne.
 - YAML/properties traktuj jako resolver `spring.cloud.function.definition`,
   `spring.cloud.stream.bindings.<binding>.*`, destination, group, binder,
   contentType, retry albo DLQ, nie jako pierwsze zrodlo flow.
+- YAML/properties dla integracji czytaj po nazwach z kodu: client name,
+  property placeholder, binding, destination, topic, queue albo prefix. Nie
+  skanuj calej konfiguracji dla integracji niepowiazanych z endpointem.
+- Jezeli kod/config pokazuje target, ktorego nie ma w operational context,
+  nazwij go przez inferencje z dostepnych identyfikatorow i dodaj limit
+  widocznosci zamiast zastepowac go opisem klasy technicznej.
 
 ## Zasady Kosztowe
 

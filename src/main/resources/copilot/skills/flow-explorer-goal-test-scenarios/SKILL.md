@@ -141,23 +141,39 @@ Oprocz compact dodaj:
 
 ## Integrations
 
+Sekcja `INTEGRATIONS` w `TEST_SCENARIOS` dotyczy tylko testowania zaleznosci
+poza analizowanym komponentem/systemem. Nie tworz przypadkow testowych dla
+wewnetrznych eventow, listenerow, mapperow ani komunikacji miedzy klasami, chyba
+ze evidence pokazuje zewnetrzny broker, destination, topic, queue, binding albo
+handoff do innego systemu.
+
 ### compact
 
 Zwróć:
 
-- czy test wymaga systemu zewnetrznego, kolejki, eventu albo mocka/stuba,
-- co trzeba zasymulowac, jezeli integracja jest widoczna,
-- co wpisac jako limit, jezeli integracji nie widac w evidence.
+- dla kazdego widocznego zewnetrznego systemu albo kanalu: nazwe, typ
+  integracji, adres/path/destination/topic/queue/binding i cel w testowanym
+  flow,
+- czy test wymaga realnego systemu, mocka/stuba, kolejki, eventu, fixture albo
+  kontraktu testowego,
+- co trzeba zasymulowac: request/response, payload eventu, naglowki, status,
+  timeout, blad albo brak odpowiedzi, jezeli sa widoczne,
+- co wpisac jako limit, jezeli nie widac adresu, payloadu, naglowkow albo
+  zachowania bledow integracji.
 
 ### deep
 
 Oprocz compact dodaj:
 
-- przypadki sukcesu i bledu integracji,
-- timeout, brak odpowiedzi, blad downstream/upstream albo retry, jezeli sa
-  widoczne,
-- dane przekazywane w handoffie,
-- potrzebe mocka/stuba/fixture dla systemu zewnetrznego,
+- przypadki sukcesu i bledu dla kazdego konkretnego kontraktu zewnetrznego,
+- setup danych i stubow dla HTTP path/URL template, destination/topic/queue,
+  bindingu, payloadu, naglowkow i statusow,
+- timeout, brak odpowiedzi, blad downstream/upstream, retry, fallback, DLQ,
+  duplikacje eventu albo idempotencje, jezeli sa widoczne,
+- dane przekazywane w handoffie, w tym pola payloadu/eventu istotne dla
+  asercji testowej,
+- potrzebe mocka/stuba/fixture dla systemu zewnetrznego wraz z tym, co ma
+  zwrocic albo odebrac,
 - operational context hints: system, owner, handoff route, jezeli pomagaja
   zorganizowac test.
 

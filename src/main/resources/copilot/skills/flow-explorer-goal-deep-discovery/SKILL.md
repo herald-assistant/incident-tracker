@@ -193,22 +193,45 @@ Evidence trzymaj w `sourceRefs`, a nie w kolumnach `SOURCE` lub
 
 ## Integrations
 
+Sekcja `INTEGRATIONS` w `DEEP_DISCOVERY` opisuje tylko integracje poza
+analizowany komponent/system. Nie wypelniaj jej architektura wewnetrzna,
+wewnetrznymi eventami domenowymi, listenerami bez brokera ani komunikacja
+miedzy klasami. Jezeli endpoint nie pokazuje integracji zewnetrznej, napisz to
+wprost i dodaj limit widocznosci, zamiast opisywac mechanike implementacji.
+
 ### compact
 
 Zwróć:
 
-- widoczne wywolania downstream/upstream, kolejki, eventy albo handoffy,
-- cel integracji w flow endpointu,
-- co dzieje sie, gdy integracja nie jest widoczna albo nie ma jej w initial
-  evidence.
+- wszystkie widoczne zewnetrzne systemy, kanaly albo handoffy biorace udzial w
+  flow endpointu,
+- nazwe systemu z operational context albo inferowana z kodu/configu, np.
+  `@FeignClient name`, property prefix, klasa klienta, binding, destination,
+  topic albo queue,
+- typ integracji: REST downstream/upstream, event publish/consume, queue,
+  stream, file/handoff albo inny widoczny mechanizm,
+- konkretny adres, path, destination, topic, queue, binding albo property
+  placeholder, jezeli jest widoczny,
+- cel integracji i biznesowy opis danych albo sygnalu przekazywanego przez
+  endpoint,
+- oznaczenie `Fakt z evidence`, `Inferencja` albo `Luka widocznosci`.
 
 ### deep
 
 Oprocz compact dodaj:
 
-- kierunek integracji i moment wywolania w flow,
-- dane albo sygnaly przekazywane do systemu zewnetrznego,
-- odpowiedzi/timeouty/bledy integracji, jezeli widoczne,
+- kierunek integracji i moment wywolania w flow, razem z warunkiem, ktory ja
+  uruchamia,
+- dokladny kontrakt HTTP albo asynchroniczny: method/path/URL template,
+  destination/topic/queue/binding, routing key albo exchange,
+- dane albo sygnaly przekazywane do systemu zewnetrznego, w tym przykladowy
+  payload albo pola payloadu z mappera/request DTO/event DTO,
+- naglowki, content type, correlation id, auth/metadane i parametry, jezeli sa
+  widoczne; bez wartosci sekretow,
+- odpowiedzi, statusy, timeouty, retry, fallback, DLQ, idempotencje,
+  deduplikacje i bledy integracji, jezeli widoczne,
+- brak widocznosci dla payloadu, naglowkow, retry albo adresu, jezeli nie da
+  sie ich potwierdzic waskim czytaniem kodu/configu,
 - zaleznosci operational context: proces, system, bounded context, owner,
   jezeli pomagaja zrozumiec handoff,
 - source refs z kodu albo tools dla kazdej istotnej integracji.

@@ -243,6 +243,100 @@ byc tylko w `sourceRefs` albo `sourceReferences`. Jezeli nie potrafisz
 potwierdzic zrodla po dostepnym kodzie i tools, wpisz limit widocznosci albo
 pytanie otwarte zamiast technicznego placeholdera.
 
+## Integration Boundary Contract
+
+Sekcja `INTEGRATIONS` ma tytul `Integrations` i opisuje wylacznie komunikacje
+poza analizowany komponent albo system w kontekscie wybranego endpointu. Jej
+celem nie jest architektura wewnetrzna, porty/adapters, wewnetrzne eventy
+domenowe, wywolania miedzy beanami ani techniczny call graph.
+
+Do `INTEGRATIONS` wpisuj tylko:
+
+- request HTTP albo inny request/response do zewnetrznego systemu,
+- publikacje eventu, komunikat na brokerze, kolejke, topic, stream albo
+  binding, jezeli sygnal opuszcza analizowany komponent/system,
+- konsumpcje eventu/komunikatu tylko wtedy, gdy analizowany endpoint jest
+  wyzwalany przez taki kanal albo widoczny flow endpointu zalezy od takiego
+  handoffu,
+- plik, scheduler, zlecenie asynchroniczne albo inny handoff, jezeli jest
+  granica do zewnetrznej odpowiedzialnosci,
+- operational-context handoff potwierdzony w evidence dla tego konkretnego
+  endpointu.
+
+Nie wpisuj do `INTEGRATIONS`:
+
+- wewnetrznych eventow domenowych, listenerow, mediatorow albo callbackow,
+  jezeli nie widac zewnetrznego brokera, destination, topic, queue, bindingu
+  albo handoffu poza komponent,
+- klas klientow, adapterow, mapperow, portow ani beanow jako glownej tresci,
+- integracji znanych z operational context, jezeli nie ma evidence, ze biora
+  udzial w analizowanym endpoint flow,
+- ogolnej architektury komponentu albo komunikacji miedzy modulami.
+
+Jezeli implementacja sugeruje integracje, ale operational context nie zna
+systemu, nazwij target przez inferencje z kodu albo konfiguracji: nazwa
+`@FeignClient`, `contextId`, property prefix, host placeholder, klasa klienta,
+binding, destination, topic, queue, exchange albo routing key. Oznacz taka
+nazwe jako `Inferencja` i dodaj limit widocznosci albo pytanie otwarte, jezeli
+nazwa moze byc niepelna.
+
+### Compact
+
+`INTEGRATIONS=compact` ma wymienic wszystkie zewnetrzne systemy albo kanaly
+widoczne w flow endpointu. Compact nie moze zastapic konkretow zdaniem typu
+"endpoint komunikuje sie z integracjami".
+
+Formatuj `sections[].markdown` jako krotka tabele:
+
+| System/target | Typ | Adres/kanal/path | Moment w flow | Co jest wysylane albo odbierane | Cel | Pewnosc |
+| --- | --- | --- | --- | --- | --- | --- |
+
+W kolumnach uzywaj:
+
+- `System/target`: nazwa z operational context albo inferowana z kodu/config,
+- `Typ`: np. `REST downstream`, `REST upstream`, `EVENT_PUBLISH`,
+  `EVENT_CONSUME`, `QUEUE`, `STREAM`, `FILE/HANDOFF`, `OTHER`,
+- `Adres/kanal/path`: HTTP method + path, URL template, destination, topic,
+  queue, binding albo property placeholder; jezeli brak konkretu, wpisz
+  precyzyjny limit widocznosci,
+- `Moment w flow`: krok endpointu, w ktorym integracja jest uzywana,
+- `Co jest wysylane albo odbierane`: biznesowy opis danych, sygnalu albo
+  payloadu bez listy klas implementacyjnych,
+- `Cel`: po co endpoint komunikuje sie z tym targetem,
+- `Pewnosc`: `Fakt z evidence`, `Inferencja` albo `Luka widocznosci`.
+
+Jezeli nie widac zadnej integracji zewnetrznej w flow endpointu, napisz to
+wprost: "Brak widocznej integracji zewnetrznej w analizowanym endpoint flow."
+Nie wypelniaj sekcji architektura wewnetrzna.
+
+### Deep
+
+`INTEGRATIONS=deep` zawiera wszystko z compact oraz osobny szczegolowy blok dla
+kazdej integracji. Dla kazdego systemu albo kanalu pokaz:
+
+- `System/target i kierunek`: nazwa, direction, owner/handoff z operational
+  context, jezeli widoczne,
+- `Transport i adres`: HTTP method, path, URL template, base URL property,
+  destination, topic, queue, binding, exchange albo routing key,
+- `Moment w flow`: warunek albo krok, ktory wyzwala integracje,
+- `Request/event/payload`: przykladowy albo zrekonstruowany payload z polami
+  biznesowymi; oznacz inferencje i nie wypisuj sekretow,
+- `Headers/auth/metadane`: nazwy naglowkow, content type, correlation id,
+  auth scheme albo event headers, jezeli widoczne; bez wartosci sekretow,
+- `Response i error handling`: statusy, response fields, timeout, retry,
+  fallback, DLQ, idempotencja, duplikacja eventu albo brak widocznosci tych
+  mechanizmow,
+- `Konfiguracja`: property keys, profile, bindingi albo klient konfiguracyjny,
+  jezeli sa potrzebne do ustalenia adresu lub zachowania,
+- `Source refs`: pliki, metody, artifact albo tool refs potwierdzajace
+  kontrakt.
+
+W deep nie wolno poprzestac na stwierdzeniu, ze uzywany jest `FeignClient`,
+`RestClient`, `WebClient`, `RestTemplate`, `StreamBridge`, `Consumer` albo
+listener. Te nazwy sa wskazowkami evidence, a wynik ma pokazac konkretny
+zewnetrzny kontrakt: target, adres/kanal, dane, moment, cel i ograniczenia
+widocznosci.
+
 ## Source References
 
 Preferuj source refs w formie:
