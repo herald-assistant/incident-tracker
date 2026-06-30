@@ -89,6 +89,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
             return List.of(
                     "Use when you know a file but need class structure, annotations, inheritance, fields or method names before choosing the next focused read.",
                     "Use typeSummaries, constructorSummaries, methodSummaries and fieldSummaries because annotations are attached to the Java element where they appear.",
+                    "For Flow Explorer PERSISTENCE=DEEP, recursively close every updated table: follow inheritance, embeddables, @OneToOne/@OneToMany/@ManyToMany/@ElementCollection/@JoinTable and collection element types.",
                     "For JPA/Hibernate persistence, prefer entity/repository annotations before migration files unless mapping is incomplete or inconsistent.",
                     "Follow with gitlab_build_java_method_use_case_context when continuing flow, or gitlab_read_java_method_slice when method body is needed.",
                     "Always provide reason as one short Polish sentence for the operator."
@@ -98,6 +99,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
                 || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(normalizedToolName)) {
             return List.of(
                     "Fallback when method context, method slice or outline does not fit, parser context is missing or a line range is the only grounded input.",
+                    "For Flow Explorer PERSISTENCE=DEEP, use chunks to close exact ORM/DDL gaps for every table and column touched by the endpoint; do not stop at join-table IDs.",
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Keep ranges tight and tied to a specific goal or sectionModes gap.",
                     "Always provide reason as one short Polish sentence for the operator."

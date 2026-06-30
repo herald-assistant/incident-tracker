@@ -103,6 +103,8 @@ class FlowExplorerToolDescriptionCustomizerTest {
         );
 
         assertTrue(description.contains("class structure, annotations, inheritance"));
+        assertTrue(description.contains("recursively close every updated table"));
+        assertTrue(description.contains("@OneToMany/@ManyToMany/@ElementCollection/@JoinTable"));
         assertTrue(description.contains("JPA/Hibernate persistence"));
         assertTrue(description.contains("migration files"));
         assertTrue(description.contains("gitlab_build_java_method_use_case_context"));
@@ -112,6 +114,19 @@ class FlowExplorerToolDescriptionCustomizerTest {
         assertTrue(description.contains("constructorSummaries"));
         assertTrue(description.contains("methodSummaries"));
         assertTrue(description.contains("annotations are attached to the Java element"));
+    }
+
+    @Test
+    void shouldAppendPersistenceDeepGuidanceForFileChunks() {
+        var description = customizer.customize(
+                FLOW_EXPLORER_CONTEXT,
+                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                "Reads repository file chunk."
+        );
+
+        assertTrue(description.contains("close exact ORM/DDL gaps"));
+        assertTrue(description.contains("every table and column touched by the endpoint"));
+        assertTrue(description.contains("do not stop at join-table IDs"));
     }
 
     @Test

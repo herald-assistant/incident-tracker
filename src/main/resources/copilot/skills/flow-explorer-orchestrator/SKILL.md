@@ -131,6 +131,14 @@ zgodnie z `sectionModes`.
 
 Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
 
+Wyjatek: gdy `sectionModes.PERSISTENCE=DEEP` i endpoint tworzy, aktualizuje,
+usuwa albo relacyjnie zmienia dane, kompletne mapowanie persistence jest
+must-have niezaleznie od `reasoningEffort`. Nie koncz analizy persistence na
+ogolnym limicie glebokosci flow ani na pierwszym context builderze. Uzyj
+focused GitLab reads/search, aby rekurencyjnie domknac wszystkie tabele i
+kolumny dotkniete przez endpoint, zgodnie ze skillem
+`flow-explorer-result-contract`.
+
 ## Algorytm Pracy
 
 1. Przeczytaj `context-snapshot.json` i `compact-flow-manifest.md`.
@@ -189,6 +197,10 @@ Jezeli `reasoningEffort` jest puste albo domyslne, traktuj je jak `medium`.
 - Nie powtarzaj odczytu kodu, ktory jest juz w `snippet-cards.md`.
 - Nie dociagaj DTO/modeli/mapperow, jezeli nie zmieniaja odpowiedzi dla
   wybranego goal/section mode.
+- Wyjatek od powyzszego: dla `PERSISTENCE=DEEP` dociagaj DTO, formularze,
+  mappery, encje, klasy bazowe, embeddables, join tables i DDL tak dlugo, jak
+  sa potrzebne do wypisania wszystkich kolumn kazdej tabeli aktualizowanej
+  przez endpoint.
 - Gdy znana klasa/metoda wymaga kontynuacji use case flow, zaleznosci albo
   downstream path, preferuj `gitlab_build_java_method_use_case_context`.
 - Gdy potrzebujesz przeczytac konkretna tresc znanej metody, warunek, helper

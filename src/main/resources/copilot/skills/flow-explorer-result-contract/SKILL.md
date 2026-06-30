@@ -254,6 +254,15 @@ Gdy aktywna sekcja `PERSISTENCE` ma `mode=deep` i endpoint zapisuje dane,
 | TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |
 | --- | --- | --- | --- |
 
+Tabela jest exhaustive persistence table closure dla analizowanego endpointu:
+ma wypisac wszystkie kolumny kazdej tabeli tworzonej, aktualizowanej, usuwanej
+albo zmienianej relacyjnie w ramach tego endpoint flow. Nie wystarczy pokazac
+tylko glowna tabele encji ani tylko join table z identyfikatorami. Dla kazdej
+zapisywanej relacji, kolekcji albo kompozycji zejdz rekurencyjnie do tabeli
+docelowej i wypisz jej kolumny rowniez wtedy, gdy wymaga to dodatkowych
+focused reads po formularzu, mapperze, encji, klasie bazowej, embeddable albo
+DDL.
+
 Tabela ma obejmowac kolumny widoczne przez mapowanie ORM analizowanego flow, a
 nie tylko pola zadeklarowane bezposrednio w lokalnej klasie encji. Uwzglednij
 kolumny z:
@@ -261,6 +270,9 @@ kolumny z:
 - klas bazowych i `@MappedSuperclass`, itp,
 - `@Embedded`, `@Embeddable` i `@AttributeOverride(s)`,
 - relacji `@JoinColumn`/`@JoinColumns`,
+- kolekcji `@OneToMany`, `@ManyToMany`, `@ElementCollection` i
+  `@JoinTable`, razem z kolumnami tabeli laczacej oraz kolumnami tabeli
+  elementu kolekcji,
 - metod encji albo obiektow zlozonych uzytych w flow, jezeli metoda odczytuje
   albo wylicza wartosc z pola mapowanego na kolumne.
 
@@ -268,6 +280,30 @@ Nie pomijaj kolumn parenta ani kompozycji tylko dlatego, ze flow odwoluje sie do
 nich przez metode, getter albo helper. Jezeli nie udalo sie dojsc do typu
 bezposrednio mapowanego na kolumne, wpisz konkretny brak w `visibilityLimits`
 sekcji `PERSISTENCE`.
+
+Nie koncz `PERSISTENCE=DEEP` na technicznym limicie depth z context buildera.
+`maxDepth reached`, nierozwiazany interface, `More than one implementation`
+albo join table bez tabeli docelowej oznacza konkretna luke eksploracyjna.
+W takiej sytuacji uzyj waskich GitLab reads/search zgodnie ze skillem
+`flow-explorer-gitlab-tools`, az domkniesz kolumny wszystkich aktualizowanych
+tabel albo nazwiesz precyzyjny, twardy limit widocznosci. Limit widocznosci
+jest akceptowalny dopiero po pokazaniu, ktorej tabeli, kolumny, typu elementu
+kolekcji, mappera albo DDL nie udalo sie potwierdzic.
+
+Checklist przed zapisem sekcji `PERSISTENCE`:
+
+- dla kazdej operacji create/update/delete/link/unlink wskaz tabele dotkniete
+  przez endpoint,
+- dla kazdego pola requestu zapisywanego jako kolekcja `List<XForm>` albo
+  `Set<XForm>` znajdz odpowiadajacy typ domenowy/encje `X`, mapper oraz tabele
+  `X`,
+- dla kazdego `@JoinTable` wypisz kolumny join table oraz kolumny tabeli
+  docelowej elementu kolekcji; same `*_ID` nie domykaja mapowania,
+- dla kazdej encji potomnej wypisz kolumny parenta, klasy bazowej,
+  embeddables, join columns i tabel potomnych bioracych udzial w zapisie,
+- dla kazdej kolumny ustaw `SOURCE`; jezeli `SOURCE` nie jest znany, nie
+  wpisuj wiersza jako pewnego faktu, tylko dociagnij evidence albo dodaj
+  konkretny limit widocznosci.
 
 `SOURCE` jest polem kontrolowanym. Dozwolone wartosci to tylko:
 

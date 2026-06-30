@@ -88,9 +88,13 @@ sciezki po calym repozytorium.
 - `PERSISTENCE`: Spring Data/JPA/Hibernate first. Ustal repository method,
   query predicate, entity annotations, status fields, transaction boundary i
   source wartosci. Dla `DEEP` obowiazkowo uwzglednij kolumny z dziedziczenia,
-  `@MappedSuperclass`, `@Embedded`/kompozycji i metod encji uzytych w flow,
-  az dojdziesz do pol bezposrednio mapowanych na kolumny. Dla `DEEP` przygotuj
-  `TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS`.
+  `@MappedSuperclass`, `@Embedded`/kompozycji, kolekcji
+  `@OneToMany`/`@ManyToMany`/`@ElementCollection`/`@JoinTable` i metod encji
+  uzytych w flow, az dojdziesz do wszystkich tabel i pol bezposrednio
+  mapowanych na kolumny. Dla `DEEP` przygotuj `TABLE_NAME | COLUMN | SOURCE |
+  SOURCE DETAILS` jako exhaustive persistence table closure: wszystkie kolumny
+  kazdej tabeli tworzonej, aktualizowanej, usuwanej albo relacyjnie zmienianej
+  przez endpoint.
 - `INTEGRATIONS`: szukaj tylko granic poza analizowany komponent/system.
   Najpierw ustal konkretny target, transport, adres/kanal i moment wywolania w
   flow endpointu. Czytaj kod klienta, adaptera, mappera request/response,
@@ -108,13 +112,24 @@ sciezki po calym repozytorium.
 Persistence:
 
 - `@Entity`, `@Table`, `@Column`, `@JoinColumn`, `@Embedded`,
-  `@AttributeOverride`, `@Enumerated` i `JpaRepository` sa pierwszym zrodlem
+  `@AttributeOverride`, `@Enumerated`, `@OneToMany`, `@ManyToMany`,
+  `@ElementCollection`, `@JoinTable` i `JpaRepository` sa pierwszym zrodlem
   mapowania ORM.
 - Mapowanie kolumn czytaj gleboko przez `extends`, `@MappedSuperclass`,
   `@Embeddable`, `@Embedded`, kompozycje i akcesory encji. Nie wolno pominac
   kolumn tylko dlatego, ze pole jest w klasie bazowej albo wartosc jest
   pobierana przez metode obiektu zlozonego, np. `entity.getBase().getValue()`,
   `entity.getAudit().changedBy()` albo helper na parent entity.
+- Mapowanie kolekcji czytaj rekurencyjnie. Gdy widzisz `List<X>`, `Set<X>`,
+  `List<XForm>`, `Set<XForm>`, `@OneToMany`, `@ManyToMany`,
+  `@ElementCollection` albo `@JoinTable`, nie zatrzymuj sie na polu kolekcji.
+  Doczytaj typ elementu, formularz/request DTO, mapper z `XForm` do `X`, encje
+  `X`, klasy bazowe `X`, embeddables `X`, join table i DDL/ORM tabeli
+  docelowej. W raporcie musza znalezc sie kolumny join table oraz kolumny
+  tabeli elementu kolekcji.
+- Join table z samymi identyfikatorami, np. `OWNER_ID` i `ELEMENT_ID`, nie
+  domyka persistence deep. To tylko wskaznik relacji; po nim trzeba zejsc do
+  tabeli elementu i wypisac jej kolumny wraz ze zrodlem wartosci.
 - Jezeli metoda flow odwoluje sie do metody encji, a ta metoda zwraca albo
   wylicza wartosc z pol parenta/kompozycji, traktuj te pola jako czesc
   persistence mapping i ustal odpowiadajace im kolumny.
@@ -122,6 +137,12 @@ Persistence:
   sie dopiero przy typach prostych mapowanych na kolumny, join columns,
   embedded attributes albo przy jawnym `visibilityLimits`, ze dalsze mapowanie
   nie jest widoczne.
+- Dla `PERSISTENCE=DEEP` nie koncz na `maxDepth reached`, `More than one
+  implementation matched`, nierozwiazanym interface ani pierwszym wyniku
+  context buildera. To sygnal do kolejnego waskiego read/search po konkretnym
+  typie, mapperze, pliku albo DDL, dopoki nie domkniesz wszystkich tabel
+  zmienianych przez endpoint albo nie wpiszesz precyzyjnego limitu
+  widocznosci.
 - Liquibase/Flyway/DDL czytaj w sytuacji niespojnosci,
   gdy nie mozna ustalic typu pola, nazwy kolumny, tabeli albo relacji na podstawie kodu.
 - Nie czytaj migracji dla samego potwierdzenia nazw tabel i kolumn.

@@ -155,6 +155,15 @@ endpoint tworzy, aktualizuje albo usuwa dane. Pokaz biznesowe mapowanie ORM:
 ktora tabela i kolumna sa zapisywane oraz skad pochodzi zapisywana wartosc.
 Nie pokazuj listy klas implementacyjnych jako rezultatu analizy.
 
+`persistence.deep` jest wymaganiem exhaustive persistence table closure.
+Wypisz wszystkie kolumny kazdej tabeli tworzonej, aktualizowanej, usuwanej
+albo relacyjnie zmienianej przez endpoint. Jezeli zapis przechodzi przez
+dziedziczenie, `@Embedded`, kolekcje, join table albo tabele potomne, zejdz po
+tym modelu rekurencyjnie. Nie zatrzymuj sie na pierwszej tabeli encji ani na
+samej tabeli laczacej: dla `@JoinTable`, `@OneToMany`, `@ManyToMany`,
+`@ElementCollection`, `List<XForm>` albo `Set<XForm>` musisz ustalic rowniez
+tabele elementu kolekcji oraz jej kolumny.
+
 Minimalny format tabeli w `persistence.deep`:
 
 | TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |
@@ -184,6 +193,13 @@ czytaj kolejne waskie fragmenty kodu zwiazane z flow, az potwierdzisz zrodlo
 albo trafisz na twardy limit widocznosci. Dopiero wtedy dodaj
 `visibilityLimits` albo `openQuestions`; nie wpisuj technicznego placeholdera
 w `SOURCE`.
+
+Nie traktuj `maxDepth reached`, nierozwiazanej implementacji interface'u ani
+ambiguous method resolution jako konca analizy persistence. To jest sygnal, ze
+trzeba uzyc focused GitLab reads/search po konkretnym typie, mapperze, encji,
+formularzu albo changelogu. Limit widocznosci wpisz dopiero wtedy, gdy po
+takim doczytaniu nadal nie da sie potwierdzic tabeli, kolumn albo zrodla
+wartosci.
 
 Mapowanie ORM, DDL albo query moze sluzyc do ustalenia `TABLE_NAME` i `COLUMN`,
 ale szczegoly implementacyjne nie sa trescia tabeli wynikowej. Nie wstawiaj do
