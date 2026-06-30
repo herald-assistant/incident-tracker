@@ -11,6 +11,8 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
@@ -18,8 +20,10 @@ import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunAssembly;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotToolAccessPolicy;
+import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparationService;
+import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportMapper;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextCoverage;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextRequest;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextService;
@@ -37,6 +41,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobChatUnavailableException;
 import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobNotFoundException;
+import pl.mkn.tdw.features.flowexplorer.job.localworkspace.FlowExplorerLocalRunPersistence;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
@@ -59,7 +64,9 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -270,6 +277,38 @@ class FlowExplorerJobServiceTest {
         assertEquals("COLLECTING_CONTEXT", started.status());
         assertEquals("DETERMINISTIC_CONTEXT", started.currentStepCode());
         assertNotNull(queuedTask.get());
+    }
+
+    @Test
+    void shouldPersistCollectingSnapshotWhenJobStarts() {
+        var queuedTask = new java.util.concurrent.atomic.AtomicReference<Runnable>();
+        var localRunPersistence = mock(FlowExplorerLocalRunPersistence.class);
+        var service = new FlowExplorerJobService(
+                contextService,
+                promptPreparationService,
+                new FlowExplorerFollowUpPromptPreparationService(),
+                runRequestAssembler,
+                runPreparationService,
+                executionGateway,
+                responseParser,
+                new FlowExplorerReportMapper(),
+                queuedTask::set,
+                () -> AnalysisAiAuthRef.localToken(null),
+                new CopilotRunAuthMapper(),
+                auth -> new CopilotAccessToken("test-token", null, null, false),
+                localRunPersistence
+        );
+
+        var started = service.startJob(request());
+
+        assertEquals("COLLECTING_CONTEXT", started.status());
+        verify(localRunPersistence).persistRunSnapshot(
+                argThat(snapshot -> snapshot != null
+                        && started.jobId().equals(snapshot.jobId())
+                        && "COLLECTING_CONTEXT".equals(snapshot.status())),
+                isNull(),
+                isNull()
+        );
     }
 
     @Test

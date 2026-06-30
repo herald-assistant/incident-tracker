@@ -113,6 +113,10 @@ export interface FlowExplorerExportState {
   continuationEnabled?: boolean;
 }
 
+export interface FlowExplorerImportOptions {
+  requireCompleted?: boolean;
+}
+
 export function buildFlowExplorerExportEnvelope(
   job: FlowExplorerJobStateSnapshot,
   exportedAt: string
@@ -198,7 +202,7 @@ export function buildFlowExplorerExportDiagnostics(
   };
 }
 
-export function parseImportedFlowExplorerAnalysis(payload: unknown): {
+export function parseImportedFlowExplorerAnalysis(payload: unknown, options: FlowExplorerImportOptions = {}): {
   exportedAt: string;
   job: FlowExplorerJobStateSnapshot;
 } {
@@ -226,7 +230,9 @@ export function parseImportedFlowExplorerAnalysis(payload: unknown): {
   }
 
   const job = normalizeFlowExplorerJob(envelopePayload['job']);
-  assertCompletedExportableJob(job);
+  if (options.requireCompleted ?? true) {
+    assertCompletedExportableJob(job);
+  }
 
   return {
     exportedAt: normalizeString(payloadObject['exportedAt']),

@@ -76,6 +76,28 @@ describe('flow-explorer-import-export utils', () => {
     ).toThrow('Import i eksport wspiera tylko zakończone Flow Explorer analizy COMPLETED.');
   });
 
+  it('should restore a local in-progress Flow Explorer snapshot without requiring a report', () => {
+    const envelope = buildFlowExplorerExportEnvelope(flowExplorerJob(), '2026-06-18T10:00:00Z');
+    envelope.payload.job = flowExplorerJob({
+      status: 'ANALYZING',
+      currentStepCode: 'AI_ANALYSIS',
+      currentStepLabel: 'AI endpoint documentation',
+      completedAt: '',
+      result: null,
+      report: null
+    });
+
+    expect(() => parseImportedFlowExplorerAnalysis(envelope)).toThrow(
+      'Import i eksport wspiera tylko zakończone Flow Explorer analizy COMPLETED.'
+    );
+
+    const imported = parseImportedFlowExplorerAnalysis(envelope, { requireCompleted: false });
+
+    expect(imported.job.status).toBe('ANALYZING');
+    expect(imported.job.report).toBeNull();
+    expect(imported.job.result).toBeNull();
+  });
+
   it('should reject completed exports without the canonical report', () => {
     expect(() =>
       buildFlowExplorerExportEnvelope(

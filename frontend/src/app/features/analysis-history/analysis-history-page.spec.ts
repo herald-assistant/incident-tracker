@@ -33,6 +33,7 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Catalog corr-123');
     expect(fixture.nativeElement.textContent).toContain('Flow /customers goal');
     expect(fixture.nativeElement.textContent).toContain('Zakończona');
+    expect(fixture.nativeElement.textContent).toContain('Budowanie kontekstu');
   });
 
   it('should filter runs only by name and feature', async () => {
@@ -214,6 +215,15 @@ function listRuns(): LocalAnalysisRunListItemResponse[] {
       createdAt: '2026-05-02T09:00:00Z',
       updatedAt: '2026-05-02T09:04:00Z',
       completedAt: '2026-05-02T09:04:00Z'
+    },
+    {
+      analysisId: 'analysis-3',
+      feature: 'flow-explorer',
+      name: 'Flow active context',
+      status: 'COLLECTING_CONTEXT',
+      createdAt: '2026-05-02T11:00:00Z',
+      updatedAt: '2026-05-02T11:00:30Z',
+      completedAt: ''
     }
   ];
 }

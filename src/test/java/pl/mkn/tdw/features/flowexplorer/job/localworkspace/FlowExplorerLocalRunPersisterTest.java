@@ -92,18 +92,26 @@ class FlowExplorerLocalRunPersisterTest {
     }
 
     @Test
-    void shouldSkipNonCompletedSnapshots() {
+    void shouldPersistRunningSnapshotWithContinuationDisabled() {
         var store = new CapturingLocalAnalysisRunStore();
         var persister = new FlowExplorerLocalRunPersister(objectMapper, store);
 
-        persister.persistCompletedInitialRun(
-                completedSnapshot("FAILED"),
-                AnalysisAiAuthRef.localToken(null),
-                "copilot-session-1"
-        );
+        persister.persistRunSnapshot(runningSnapshot());
 
-        assertNull(store.savedEntry);
-        assertNull(store.savedRecord);
+        assertNotNull(store.savedEntry);
+        assertNotNull(store.savedRecord);
+        assertEquals("flow-job-1", store.savedEntry.analysisId());
+        assertEquals("flow-explorer", store.savedEntry.feature());
+        assertEquals("ANALYZING", store.savedEntry.status());
+        assertNull(store.savedEntry.completedAt());
+        assertFalse(store.savedRecord.continuation().enabled());
+        assertNull(store.savedRecord.continuation().authMode());
+        assertNull(store.savedRecord.continuation().authPrincipalRef());
+        assertNull(store.savedRecord.continuation().copilotSessionId());
+        assertEquals(UPDATED_AT.toString(), store.savedRecord.exportEnvelope().path("exportedAt").asText());
+        assertEquals("ANALYZING", store.savedRecord.exportEnvelope().at("/payload/job/status").asText());
+        assertTrue(store.savedRecord.exportEnvelope().at("/payload/job/report").isMissingNode()
+                || store.savedRecord.exportEnvelope().at("/payload/job/report").isNull());
     }
 
     @Test
@@ -164,6 +172,40 @@ class FlowExplorerLocalRunPersisterTest {
                         new AnalysisAiUsage(10, 5, 0, 0, 15, 0.01, 1000, 1, "gpt-5.4", null, null, null)
                 ),
                 report()
+        );
+    }
+
+    private FlowExplorerJobStateSnapshot runningSnapshot() {
+        return new FlowExplorerJobStateSnapshot(
+                "flow-job-1",
+                "crm-service",
+                "crm-api:GET:/api/customers/{id}",
+                "GET",
+                "/api/customers/{id}",
+                "main",
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
+                sectionModes(),
+                "gpt-5.4",
+                "medium",
+                "ANALYZING",
+                "AI_ANALYSIS",
+                "AI endpoint documentation",
+                null,
+                null,
+                CREATED_AT,
+                UPDATED_AT,
+                null,
+                List.of(),
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "Prepared prompt",
+                null,
+                null
         );
     }
 

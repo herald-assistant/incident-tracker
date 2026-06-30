@@ -655,6 +655,32 @@ describe('FlowExplorerPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Walidacja jest w CustomerService.validate.');
   });
 
+  it('should resume polling when opening an in-progress local Flow Explorer run', () => {
+    vi.mocked(historyApi.getRun).mockReturnValueOnce(
+      of(
+        localFlowExplorerRunDetail({
+          status: 'ANALYZING',
+          currentStepCode: 'AI_ANALYSIS',
+          currentStepLabel: 'AI endpoint documentation',
+          completedAt: '',
+          result: null,
+          report: null
+        })
+      )
+    );
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    (fixture.componentInstance as unknown as {
+      loadLocalFlowExplorerRun(analysisId: string): void;
+    }).loadLocalFlowExplorerRun('flow-job-1');
+    fixture.detectChanges();
+
+    expect(historyApi.getRun).toHaveBeenCalledWith('flow-job-1');
+    expect(flowExplorerApi.getJob).toHaveBeenCalledWith('flow-job-1');
+    expect(fixture.nativeElement.textContent).toContain('Flow Explorer: GET /api/customers/{id}');
+  });
+
   it('should keep run action disabled until endpoint is selected', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
@@ -1056,10 +1082,30 @@ function localFlowExplorerRunDetail(
     status: job.status,
     createdAt: '2026-06-18T10:00:00Z',
     updatedAt: '2026-06-18T10:03:00Z',
-    completedAt: '2026-06-18T10:03:00Z',
-    exportEnvelope: buildFlowExplorerExportEnvelope(job, '2026-06-18T10:03:00Z'),
+    completedAt: job.completedAt,
+    exportEnvelope: flowExplorerLocalRunEnvelope(job),
     continuationEnabled: true
   };
+}
+
+function flowExplorerLocalRunEnvelope(job: FlowExplorerJobStateSnapshot): unknown {
+  if (job.status === 'COMPLETED' && job.report) {
+    return buildFlowExplorerExportEnvelope(job, '2026-06-18T10:03:00Z');
+  }
+
+  const envelope = buildFlowExplorerExportEnvelope(
+    jobSnapshot({
+      status: 'COMPLETED',
+      currentStepCode: 'COMPLETED',
+      currentStepLabel: 'AI result ready',
+      preparedPrompt: 'local canonical prompt',
+      result: flowExplorerResult(),
+      report: flowExplorerReport()
+    }),
+    '2026-06-18T10:03:00Z'
+  );
+  envelope.payload.job = job;
+  return envelope;
 }
 
 function defaultSectionModes(): FlowExplorerJobStateSnapshot['sectionModes'] {

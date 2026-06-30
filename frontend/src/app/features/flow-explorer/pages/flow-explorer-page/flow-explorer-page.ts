@@ -1210,8 +1210,8 @@ export class FlowExplorerPageComponent implements OnInit {
 
   private startPolling(jobId: string): void {
     this.stopPolling();
-    this.refreshJob(jobId);
     this.pollingTimer = setInterval(() => this.refreshJob(jobId), POLL_INTERVAL_MS);
+    this.refreshJob(jobId);
   }
 
   private refreshJob(jobId: string): void {
@@ -1333,7 +1333,9 @@ export class FlowExplorerPageComponent implements OnInit {
         throw new Error(`Lokalny run ${detail.analysisId} nie jest runem Flow Explorera.`);
       }
 
-      const imported = parseImportedFlowExplorerAnalysis(detail.exportEnvelope);
+      const imported = parseImportedFlowExplorerAnalysis(detail.exportEnvelope, {
+        requireCompleted: false
+      });
       this.applyJobSnapshot(imported.job, {
         origin: 'local',
         exportedAt: imported.exportedAt,
@@ -1343,6 +1345,9 @@ export class FlowExplorerPageComponent implements OnInit {
         continuationEnabled: detail.continuationEnabled
       });
       this.syncImportedControls(imported.job);
+      if (!this.isTerminalJobStatus(imported.job.status) || this.hasActiveChat(imported.job)) {
+        this.startPolling(imported.job.jobId || detail.analysisId);
+      }
     } catch (error) {
       this.jobError.set(
         error instanceof Error

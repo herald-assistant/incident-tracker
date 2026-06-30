@@ -151,6 +151,7 @@ public class FlowExplorerJobService {
         var job = new FlowExplorerJobState(jobId, request, authRef);
         job.markContextStarted();
         jobs.put(jobId, job);
+        persistRunSnapshot(job);
         applicationTaskExecutor.execute(() -> runJob(jobId, job, request, authRef));
 
         return job.snapshot();
@@ -174,6 +175,7 @@ public class FlowExplorerJobService {
             ));
             var promptPreparation = promptPreparationService.prepare(request, contextSnapshot);
             job.markAiStarted(contextSnapshot, promptPreparation.prompt());
+            persistRunSnapshot(job);
 
             var runAssembly = runRequestAssembler.assemble(
                     jobId,
@@ -183,8 +185,14 @@ public class FlowExplorerJobService {
                     authRef
             );
             var preparedSession = runPreparationService.prepare(runAssembly.runRequest())
-                    .withEvidenceSink(job::markAiToolEvidenceUpdated)
-                    .withActivitySink(job::markAiActivity);
+                    .withEvidenceSink(section -> {
+                        job.markAiToolEvidenceUpdated(section);
+                        persistRunSnapshot(job);
+                    })
+                    .withActivitySink(event -> {
+                        job.markAiActivity(event);
+                        persistRunSnapshot(job);
+                    });
             var executionResult = executionGateway.execute(preparedSession);
             var aiResponse = responseFromReportOrAssistant(executionResult, request);
 
@@ -195,7 +203,7 @@ public class FlowExplorerJobService {
                     executionResult.sessionId(),
                     executionResult.report()
             );
-            persistCompletedInitialRun(job, authRef, executionResult.sessionId());
+            persistRunSnapshot(job, authRef, executionResult.sessionId());
         } catch (RuntimeException exception) {
             log.error(
                     "Flow Explorer job failed jobId={} systemId={} endpointId={} message={}",
@@ -211,6 +219,7 @@ public class FlowExplorerJobService {
                             ? exception.getMessage()
                             : "Unexpected Flow Explorer analysis failure."
             );
+            persistRunSnapshot(job);
         }
     }
 
@@ -293,20 +302,25 @@ public class FlowExplorerJobService {
         }
     }
 
-    private void persistCompletedInitialRun(
+    private void persistRunSnapshot(FlowExplorerJobState job) {
+        persistRunSnapshot(job, null, null);
+    }
+
+    private void persistRunSnapshot(
             FlowExplorerJobState job,
             AnalysisAiAuthRef authRef,
             String copilotSessionId
     ) {
         var snapshot = job.snapshot();
         try {
-            localRunPersistence.persistCompletedInitialRun(snapshot, authRef, copilotSessionId);
+            localRunPersistence.persistRunSnapshot(snapshot, authRef, copilotSessionId);
         } catch (RuntimeException exception) {
             log.warn(
-                    "Failed to persist completed local Flow Explorer run jobId={} systemId={} endpointId={} reason={}",
+                    "Failed to persist local Flow Explorer run snapshot jobId={} systemId={} endpointId={} status={} reason={}",
                     snapshot.jobId(),
                     snapshot.systemId(),
                     snapshot.endpointId(),
+                    snapshot.status(),
                     exception.getMessage()
             );
         }

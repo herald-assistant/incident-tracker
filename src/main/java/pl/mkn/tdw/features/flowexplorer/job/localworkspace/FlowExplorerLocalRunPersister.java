@@ -18,22 +18,20 @@ public class FlowExplorerLocalRunPersister implements FlowExplorerLocalRunPersis
 
     static final String FEATURE = "flow-explorer";
 
-    private static final String COMPLETED = "COMPLETED";
-
     private final ObjectMapper objectMapper;
     private final LocalAnalysisRunStore localAnalysisRunStore;
 
     @Override
-    public void persistCompletedInitialRun(
+    public void persistRunSnapshot(
             FlowExplorerJobStateSnapshot snapshot,
             AnalysisAiAuthRef authRef,
             String copilotSessionId
     ) {
-        if (snapshot == null || !COMPLETED.equals(snapshot.status())) {
+        if (snapshot == null) {
             return;
         }
 
-        var exportEnvelope = FlowExplorerExportEnvelope.from(snapshot, snapshot.completedAt());
+        var exportEnvelope = FlowExplorerExportEnvelope.from(snapshot, exportTimestamp(snapshot));
         var record = LocalAnalysisRunRecord.v1(
                 objectMapper.valueToTree(exportEnvelope),
                 continuation(authRef, copilotSessionId)
@@ -86,11 +84,22 @@ public class FlowExplorerLocalRunPersister implements FlowExplorerLocalRunPersis
             String copilotSessionId
     ) {
         var resolvedAuthRef = authRef != null ? authRef : AnalysisAiAuthRef.localToken(null);
+        var continuationEnabled = StringUtils.hasText(copilotSessionId);
         return new LocalAnalysisRunContinuation(
-                StringUtils.hasText(copilotSessionId),
+                continuationEnabled,
                 null,
-                resolvedAuthRef.mode(),
-                resolvedAuthRef.principalId()
+                continuationEnabled ? resolvedAuthRef.mode() : null,
+                continuationEnabled ? resolvedAuthRef.principalId() : null
         ).withLatestCopilotSession(copilotSessionId);
+    }
+
+    private java.time.Instant exportTimestamp(FlowExplorerJobStateSnapshot snapshot) {
+        if (snapshot.completedAt() != null) {
+            return snapshot.completedAt();
+        }
+        if (snapshot.updatedAt() != null) {
+            return snapshot.updatedAt();
+        }
+        return snapshot.createdAt();
     }
 }

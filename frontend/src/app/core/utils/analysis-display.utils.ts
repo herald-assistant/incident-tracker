@@ -13,6 +13,7 @@ const TERMINAL_STATUSES = new Set<AnalysisJobStatus>(['COMPLETED', 'FAILED', 'NO
 const STATUS_LABELS: Record<string, string> = {
   QUEUED: 'Oczekuje',
   COLLECTING_EVIDENCE: 'Zbieranie danych',
+  COLLECTING_CONTEXT: 'Budowanie kontekstu',
   ANALYZING: 'Analiza',
   COMPLETED: 'Zakończona',
   FAILED: 'Błąd',
@@ -72,7 +73,7 @@ export function statusClassName(status: string | null | undefined): string {
     return 'status-pill--error';
   }
 
-  if (status === 'COLLECTING_EVIDENCE' || status === 'ANALYZING') {
+  if (status === 'COLLECTING_EVIDENCE' || status === 'COLLECTING_CONTEXT' || status === 'ANALYZING') {
     return 'status-pill--running';
   }
 
