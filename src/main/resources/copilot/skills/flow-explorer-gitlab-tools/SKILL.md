@@ -124,9 +124,9 @@ Persistence:
   `List<XForm>`, `Set<XForm>`, `@OneToMany`, `@ManyToMany`,
   `@ElementCollection` albo `@JoinTable`, nie zatrzymuj sie na polu kolekcji.
   Doczytaj typ elementu, formularz/request DTO, mapper z `XForm` do `X`, encje
-  `X`, klasy bazowe `X`, embeddables `X`, join table i DDL/ORM tabeli
-  docelowej. W raporcie musza znalezc sie kolumny join table oraz kolumny
-  tabeli elementu kolekcji.
+  `X`, klasy bazowe `X`, embeddables `X` i adnotacje ORM tabeli docelowej. W
+  raporcie musza znalezc sie kolumny join table oraz kolumny tabeli elementu
+  kolekcji.
 - Join table z samymi identyfikatorami, np. `OWNER_ID` i `ELEMENT_ID`, nie
   domyka persistence deep. To tylko wskaznik relacji; po nim trzeba zejsc do
   tabeli elementu i wypisac jej kolumny wraz ze zrodlem wartosci.
@@ -140,12 +140,25 @@ Persistence:
 - Dla `PERSISTENCE=DEEP` nie koncz na `maxDepth reached`, `More than one
   implementation matched`, nierozwiazanym interface ani pierwszym wyniku
   context buildera. To sygnal do kolejnego waskiego read/search po konkretnym
-  typie, mapperze, pliku albo DDL, dopoki nie domkniesz wszystkich tabel
-  zmienianych przez endpoint albo nie wpiszesz precyzyjnego limitu
-  widocznosci.
-- Liquibase/Flyway/DDL czytaj w sytuacji niespojnosci,
-  gdy nie mozna ustalic typu pola, nazwy kolumny, tabeli albo relacji na podstawie kodu.
-- Nie czytaj migracji dla samego potwierdzenia nazw tabel i kolumn.
+  typie, mapperze, encji, klasie bazowej albo embeddable, dopoki nie domkniesz
+  wszystkich tabel zmienianych przez endpoint albo nie wpiszesz precyzyjnego
+  limitu widocznosci.
+- Nie czytaj DDL, Liquibase, Flyway, changelogow ani migracji SQL dla Flow
+  Explorer persistence. Nie uzywaj GitLab tools do weryfikacji tabel, kolumn
+  ani mapowan ORM w DDL. Nazwy tabel i kolumn wyprowadzaj code-first z
+  implementacji Java, Spring Data/JPA oraz adnotacji Hibernate/JPA:
+  `@Entity`, `@Table`, `@Column`, `@JoinColumn`, `@JoinTable`,
+  `@CollectionTable`, `@AttributeOverride(s)`, `@Embedded`,
+  `@MappedSuperclass` i nazw pol/encji.
+- Jezeli adnotacje nie podaja nazwy fizycznej tabeli albo kolumny, wnioskuj ja
+  z konwencji Hibernate/Spring naming. Nie oznaczaj tego w `visibilityLimits`,
+  `openQuestions`, `gaps` ani opisie sekcji jako osobnej inferencji; to
+  normalna interpretacja kodu ORM. Nie dociagaj DDL tylko po to, zeby
+  potwierdzic te nazwe.
+- `@Column` jest opcjonalne w `@Entity`. Pole albo property mapowane przez
+  JPA/Hibernate traktuj jako kolumne takze bez jawnego `@Column`, o ile nie
+  jest wylaczone z persistence, np. przez `@Transient`, `transient` albo
+  niemapowany access pattern.
 
 Dziedziczenie i strategie:
 

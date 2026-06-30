@@ -138,6 +138,9 @@ ogolnym limicie glebokosci flow ani na pierwszym context builderze. Uzyj
 focused GitLab reads/search, aby rekurencyjnie domknac wszystkie tabele i
 kolumny dotkniete przez endpoint, zgodnie ze skillem
 `flow-explorer-result-contract`.
+Nie uzywaj DDL, Liquibase, Flyway, changelogow ani migracji SQL do domykania
+`PERSISTENCE=DEEP`; nazwy tabel i kolumn wyprowadzaj z implementacji Java oraz
+adnotacji Spring Data/JPA/Hibernate, a nie z bazy.
 
 ## Algorytm Pracy
 
@@ -198,9 +201,9 @@ kolumny dotkniete przez endpoint, zgodnie ze skillem
 - Nie dociagaj DTO/modeli/mapperow, jezeli nie zmieniaja odpowiedzi dla
   wybranego goal/section mode.
 - Wyjatek od powyzszego: dla `PERSISTENCE=DEEP` dociagaj DTO, formularze,
-  mappery, encje, klasy bazowe, embeddables, join tables i DDL tak dlugo, jak
-  sa potrzebne do wypisania wszystkich kolumn kazdej tabeli aktualizowanej
-  przez endpoint.
+  mappery, encje, klasy bazowe, embeddables, join tables i adnotacje ORM tak
+  dlugo, jak sa potrzebne do wypisania wszystkich kolumn kazdej tabeli
+  aktualizowanej przez endpoint. Nie dociagaj DDL ani migracji.
 - Gdy znana klasa/metoda wymaga kontynuacji use case flow, zaleznosci albo
   downstream path, preferuj `gitlab_build_java_method_use_case_context`.
 - Gdy potrzebujesz przeczytac konkretna tresc znanej metody, warunek, helper

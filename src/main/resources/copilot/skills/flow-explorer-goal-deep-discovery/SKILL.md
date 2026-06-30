@@ -197,15 +197,27 @@ w `SOURCE`.
 Nie traktuj `maxDepth reached`, nierozwiazanej implementacji interface'u ani
 ambiguous method resolution jako konca analizy persistence. To jest sygnal, ze
 trzeba uzyc focused GitLab reads/search po konkretnym typie, mapperze, encji,
-formularzu albo changelogu. Limit widocznosci wpisz dopiero wtedy, gdy po
-takim doczytaniu nadal nie da sie potwierdzic tabeli, kolumn albo zrodla
-wartosci.
+formularzu, klasie bazowej albo embeddable. Limit widocznosci wpisz dopiero
+wtedy, gdy po takim doczytaniu nadal nie da sie wyprowadzic tabeli, kolumn
+albo zrodla wartosci z implementacji ORM.
 
-Mapowanie ORM, DDL albo query moze sluzyc do ustalenia `TABLE_NAME` i `COLUMN`,
-ale szczegoly implementacyjne nie sa trescia tabeli wynikowej. Nie wstawiaj do
+Nie czytaj i nie weryfikuj DDL, Liquibase, Flyway, changelogow ani migracji SQL
+dla `PERSISTENCE=DEEP`. Nazwy tabel, kolumn, join tables i join columns
+wyprowadzaj code-first z implementacji Java, Spring Data/JPA oraz adnotacji
+Hibernate/JPA. Jezeli nazwa fizyczna nie jest jawna w adnotacji, wnioskuj ja z
+nazwy encji/pola i konwencji Hibernate/Spring naming. Nie oznaczaj takiej
+interpretacji w `visibilityLimits`, `openQuestions`, `gaps` ani meta sekcji,
+bo jest to normalny wniosek z kodu ORM. `@Column` jest opcjonalne w `@Entity`:
+pole albo property mapowane przez JPA/Hibernate jest kolumna rowniez bez jawnej
+adnotacji `@Column`, o ile nie jest wylaczone z persistence. Nie dociagaj DDL
+tylko po to, zeby potwierdzic taka nazwe.
+
+Mapowanie ORM albo query moze sluzyc do ustalenia `TABLE_NAME` i `COLUMN`, ale
+szczegoly implementacyjne nie sa trescia tabeli wynikowej. Nie wstawiaj do
 tabeli adnotacji, nazw klas, metod ani frameworkowych szczegolow persistence.
 Evidence trzymaj w `sourceRefs`, a nie w kolumnach `SOURCE` lub
-`SOURCE DETAILS`.
+`SOURCE DETAILS`; nie uzywaj DDL ani migracji jako evidence dla mapowania
+persistence.
 
 ## Integrations
 

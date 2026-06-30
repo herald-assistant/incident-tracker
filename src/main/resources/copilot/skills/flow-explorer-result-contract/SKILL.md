@@ -260,8 +260,21 @@ albo zmienianej relacyjnie w ramach tego endpoint flow. Nie wystarczy pokazac
 tylko glowna tabele encji ani tylko join table z identyfikatorami. Dla kazdej
 zapisywanej relacji, kolekcji albo kompozycji zejdz rekurencyjnie do tabeli
 docelowej i wypisz jej kolumny rowniez wtedy, gdy wymaga to dodatkowych
-focused reads po formularzu, mapperze, encji, klasie bazowej, embeddable albo
-DDL.
+focused reads po formularzu, mapperze, encji, klasie bazowej albo embeddable.
+
+Nie czytaj i nie weryfikuj DDL, Liquibase, Flyway, changelogow ani migracji SQL
+dla `PERSISTENCE=DEEP`. Flow Explorer ma byc code-first: nazwy tabel, kolumn,
+join tables i join columns wyprowadzaj z implementacji klas, Spring Data/JPA
+oraz adnotacji Hibernate/JPA, np. `@Table`, `@Column`, `@JoinColumn`,
+`@JoinTable`, `@CollectionTable`, `@AttributeOverride(s)`, `@Embedded`,
+`@Enumerated`, `@Entity` i `@MappedSuperclass`. Jezeli nazwa fizyczna nie jest
+jawnie zadeklarowana w adnotacji, wnioskuj ja z nazwy encji/pola i konwencji
+Hibernate/Spring naming. Taka interpretacja z kodu i standardowych konwencji
+ORM jest normalnym elementem wyniku: nie wpisuj jej do `visibilityLimits`,
+`openQuestions`, `gaps` ani meta sekcji/raportu. `@Column` jest opcjonalne w
+`@Entity`: pole albo property mapowane przez JPA/Hibernate traktuj jako kolumne
+rowniez wtedy, gdy nie ma jawnej adnotacji `@Column`, o ile nie jest wylaczone
+z persistence.
 
 Tabela ma obejmowac kolumny widoczne przez mapowanie ORM analizowanego flow, a
 nie tylko pola zadeklarowane bezposrednio w lokalnej klasie encji. Uwzglednij
@@ -270,6 +283,8 @@ kolumny z:
 - klas bazowych i `@MappedSuperclass`, itp,
 - `@Embedded`, `@Embeddable` i `@AttributeOverride(s)`,
 - relacji `@JoinColumn`/`@JoinColumns`,
+- pol i property encji mapowanych przez JPA/Hibernate domyslnie, nawet bez
+  jawnego `@Column`,
 - kolekcji `@OneToMany`, `@ManyToMany`, `@ElementCollection` i
   `@JoinTable`, razem z kolumnami tabeli laczacej oraz kolumnami tabeli
   elementu kolekcji,
@@ -288,7 +303,7 @@ W takiej sytuacji uzyj waskich GitLab reads/search zgodnie ze skillem
 `flow-explorer-gitlab-tools`, az domkniesz kolumny wszystkich aktualizowanych
 tabel albo nazwiesz precyzyjny, twardy limit widocznosci. Limit widocznosci
 jest akceptowalny dopiero po pokazaniu, ktorej tabeli, kolumny, typu elementu
-kolekcji, mappera albo DDL nie udalo sie potwierdzic.
+kolekcji albo mappera nie udalo sie potwierdzic z implementacji ORM.
 
 Checklist przed zapisem sekcji `PERSISTENCE`:
 
@@ -301,6 +316,8 @@ Checklist przed zapisem sekcji `PERSISTENCE`:
   docelowej elementu kolekcji; same `*_ID` nie domykaja mapowania,
 - dla kazdej encji potomnej wypisz kolumny parenta, klasy bazowej,
   embeddables, join columns i tabel potomnych bioracych udzial w zapisie,
+- nie uzywaj DDL ani migracji jako source refs dla mapowania persistence; source
+  refs maja wskazywac klasy, pola, metody, mappery albo tool reads kodu,
 - dla kazdej kolumny ustaw `SOURCE`; jezeli `SOURCE` nie jest znany, nie
   wpisuj wiersza jako pewnego faktu, tylko dociagnij evidence albo dodaj
   konkretny limit widocznosci.

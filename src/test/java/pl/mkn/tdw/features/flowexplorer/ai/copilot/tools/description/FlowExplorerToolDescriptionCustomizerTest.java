@@ -105,8 +105,11 @@ class FlowExplorerToolDescriptionCustomizerTest {
         assertTrue(description.contains("class structure, annotations, inheritance"));
         assertTrue(description.contains("recursively close every updated table"));
         assertTrue(description.contains("@OneToMany/@ManyToMany/@ElementCollection/@JoinTable"));
-        assertTrue(description.contains("JPA/Hibernate persistence"));
-        assertTrue(description.contains("migration files"));
+        assertTrue(description.contains("do not read DDL/Liquibase/Flyway/changelog files"));
+        assertTrue(description.contains("infer table and column names from Java implementation"));
+        assertTrue(description.contains("ORM naming conventions"));
+        assertTrue(description.contains("Treat @Column as optional"));
+        assertTrue(description.contains("do not report standard ORM naming inference as a visibility limit"));
         assertTrue(description.contains("gitlab_build_java_method_use_case_context"));
         assertTrue(description.contains("gitlab_read_java_method_slice"));
         assertTrue(description.contains("fieldSummaries"));
@@ -124,9 +127,10 @@ class FlowExplorerToolDescriptionCustomizerTest {
                 "Reads repository file chunk."
         );
 
-        assertTrue(description.contains("close exact ORM/DDL gaps"));
+        assertTrue(description.contains("close exact ORM annotation gaps"));
         assertTrue(description.contains("every table and column touched by the endpoint"));
         assertTrue(description.contains("do not stop at join-table IDs"));
+        assertTrue(description.contains("Do not use chunks to read DDL/Liquibase/Flyway/changelog files"));
     }
 
     @Test
