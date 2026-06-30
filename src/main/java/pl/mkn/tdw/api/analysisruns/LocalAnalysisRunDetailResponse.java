@@ -8,6 +8,7 @@ public record LocalAnalysisRunDetailResponse(
         String analysisId,
         String feature,
         String name,
+        String status,
         Instant createdAt,
         Instant updatedAt,
         Instant completedAt,

@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import {
   AnalysisAiUsage,
@@ -103,6 +103,7 @@ export class AnalysisConsoleComponent {
   private readonly githubAuth = inject(GithubAuthService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly responsePanel = viewChild<ElementRef<HTMLElement>>('responsePanel');
 
@@ -281,6 +282,15 @@ export class AnalysisConsoleComponent {
         const localRunId = params.get('localRunId')?.trim() ?? '';
         if (localRunId) {
           this.loadLocalAnalysisRun(localRunId);
+          return;
+        }
+
+        const analysisId = params.get('analysisId')?.trim() ?? '';
+        if (
+          analysisId &&
+          !(this.activeAnalysisId === analysisId && this.job()?.analysisId === analysisId)
+        ) {
+          this.loadLiveAnalysis(analysisId);
         }
       });
     this.destroyRef.onDestroy(() => {
@@ -339,6 +349,7 @@ export class AnalysisConsoleComponent {
             exportedAt: '',
             fileName: ''
           });
+          this.rememberLiveAnalysisId(job.analysisId);
 
           if (!isTerminalStatus(job.status)) {
             this.schedulePoll(job.analysisId);
@@ -413,13 +424,7 @@ export class AnalysisConsoleComponent {
         fileName: file.name
       });
 
-      if (imported.job.correlationId) {
-        this.correlationIdControl.setValue(imported.job.correlationId);
-      }
-      this.aiModelControl.setValue(imported.job.aiModel || '');
-      this.selectedAiModel.set(imported.job.aiModel || '');
-      this.reasoningEffortControl.setValue(imported.job.reasoningEffort || '');
-      this.syncReasoningEffortSelection();
+      this.syncControlsFromJob(imported.job);
 
       this.scrollResponseIntoView();
     } catch (error) {
@@ -744,13 +749,54 @@ export class AnalysisConsoleComponent {
       });
   }
 
+  private loadLiveAnalysis(analysisId: string): void {
+    this.stopPolling();
+    this.activeAnalysisId = analysisId;
+    this.isLoading.set(true);
+    this.placeholderMode.set('idle');
+    this.transportError.set(null);
+    this.job.set(null);
+    this.exportState.set(null);
+    this.chatError.set('');
+    this.clearFormError();
+
+    this.analysisApi
+      .getAnalysis(analysisId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isLoading.set(false))
+      )
+      .subscribe({
+        next: (job) => {
+          this.applyJob(job, {
+            origin: 'live',
+            exportedAt: '',
+            fileName: ''
+          });
+          this.syncControlsFromJob(job);
+
+          if (this.shouldKeepPolling(job)) {
+            this.schedulePoll(analysisId);
+          }
+
+          this.scrollResponseIntoView();
+        },
+        error: (error) => {
+          this.renderTransportError(
+            error,
+            'Nie udało się odtworzyć analizy z backendu.'
+          );
+        }
+      });
+  }
+
   private applyLocalAnalysisRun(detail: LocalAnalysisRunDetailResponse): void {
     try {
       if (detail.feature !== 'incident-analysis') {
         throw new Error(`Lokalny run ${detail.analysisId} nie jest runem Incident Analysis.`);
       }
 
-      const imported = parseImportedAnalysis(detail.exportEnvelope);
+      const imported = parseImportedAnalysis(detail.exportEnvelope, { requireTerminal: false });
       this.activeAnalysisId = detail.analysisId;
       this.applyJob(imported.job, {
         origin: 'local',
@@ -762,13 +808,11 @@ export class AnalysisConsoleComponent {
         sourceEnvelope: detail.exportEnvelope
       });
 
-      if (imported.job.correlationId) {
-        this.correlationIdControl.setValue(imported.job.correlationId);
+      this.syncControlsFromJob(imported.job);
+
+      if (this.shouldKeepPolling(imported.job)) {
+        this.pollAnalysis(detail.analysisId);
       }
-      this.aiModelControl.setValue(imported.job.aiModel || '');
-      this.selectedAiModel.set(imported.job.aiModel || '');
-      this.reasoningEffortControl.setValue(imported.job.reasoningEffort || '');
-      this.syncReasoningEffortSelection();
 
       this.scrollResponseIntoView();
     } catch (error) {
@@ -846,6 +890,38 @@ export class AnalysisConsoleComponent {
     this.reasoningEffortControl.enable({ emitEvent: false });
     if (currentEffort && !availableEfforts.includes(currentEffort)) {
       this.reasoningEffortControl.setValue('', { emitEvent: false });
+    }
+  }
+
+  private syncControlsFromJob(job: AnalysisJobStateSnapshot): void {
+    if (job.correlationId) {
+      this.correlationIdControl.setValue(job.correlationId);
+    }
+    this.aiModelControl.setValue(job.aiModel || '');
+    this.selectedAiModel.set(job.aiModel || '');
+    this.reasoningEffortControl.setValue(job.reasoningEffort || '');
+    this.syncReasoningEffortSelection();
+  }
+
+  private rememberLiveAnalysisId(analysisId: string): void {
+    if (!analysisId) {
+      return;
+    }
+
+    try {
+      void this.router
+        .navigate([], {
+          relativeTo: this.route,
+          queryParams: {
+            analysisId,
+            localRunId: null
+          },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        })
+        .catch(() => undefined);
+    } catch {
+      // URL persistence is helpful for browser restore, but it must not block the analysis itself.
     }
   }
 

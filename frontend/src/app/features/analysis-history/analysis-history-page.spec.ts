@@ -32,6 +32,7 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(historyApi.exportRun).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Catalog corr-123');
     expect(fixture.nativeElement.textContent).toContain('Flow /customers goal');
+    expect(fixture.nativeElement.textContent).toContain('Zakończona');
   });
 
   it('should filter runs only by name and feature', async () => {
@@ -200,6 +201,7 @@ function listRuns(): LocalAnalysisRunListItemResponse[] {
       analysisId: 'analysis-1',
       feature: 'incident-analysis',
       name: 'Catalog corr-123',
+      status: 'COMPLETED',
       createdAt: '2026-05-02T10:00:00Z',
       updatedAt: '2026-05-02T10:04:00Z',
       completedAt: '2026-05-02T10:04:00Z'
@@ -208,6 +210,7 @@ function listRuns(): LocalAnalysisRunListItemResponse[] {
       analysisId: 'analysis-2',
       feature: 'flow-explorer',
       name: 'Flow /customers goal',
+      status: 'COMPLETED',
       createdAt: '2026-05-02T09:00:00Z',
       updatedAt: '2026-05-02T09:04:00Z',
       completedAt: '2026-05-02T09:04:00Z'

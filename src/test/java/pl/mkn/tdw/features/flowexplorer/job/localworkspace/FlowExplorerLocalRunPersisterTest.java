@@ -61,6 +61,7 @@ class FlowExplorerLocalRunPersisterTest {
         assertEquals("flow-job-1", store.savedEntry.analysisId());
         assertEquals("flow-explorer", store.savedEntry.feature());
         assertEquals("GET /api/customers/{id} / DEEP_DISCOVERY", store.savedEntry.name());
+        assertEquals("COMPLETED", store.savedEntry.status());
         assertEquals(CREATED_AT, store.savedEntry.createdAt());
         assertEquals(UPDATED_AT, store.savedEntry.updatedAt());
         assertEquals(COMPLETED_AT, store.savedEntry.completedAt());

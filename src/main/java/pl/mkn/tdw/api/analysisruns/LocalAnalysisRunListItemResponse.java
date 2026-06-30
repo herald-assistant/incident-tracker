@@ -6,6 +6,7 @@ public record LocalAnalysisRunListItemResponse(
         String analysisId,
         String feature,
         String name,
+        String status,
         Instant createdAt,
         Instant updatedAt,
         Instant completedAt

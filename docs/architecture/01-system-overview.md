@@ -79,6 +79,9 @@ Na dzisiaj projekt ma:
 - follow-up chat dla zakonczonego joba przez
   `POST /analysis/jobs/{analysisId}/chat/messages`, ktory kontynuuje zapisana
   sesje Copilota i wysyla do niej tresc wiadomosci operatora,
+- shared/operator API `/analysis/runs` dla lokalnej historii runow; snapshot
+  runu jest zapisywany od startu joba i aktualizowany w trakcie pracy backendu,
+  zeby UI moglo odtworzyc input i ostatni znany stan bez ponownego klikania,
 - endpoint shared/operator API `GET /analysis/ai/options`, ktory zwraca
   katalog modeli i dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby
   frontend nie trzymal lokalnej listy modeli,
@@ -138,6 +141,12 @@ Na dzisiaj projekt ma:
   Asynchroniczne polecenie lub pytanie do AI po zakonczonej analizie. Backend
   reuse'uje evidence, wynik, historie rozmowy, model/reasoning oraz hidden
   scope tools z oryginalnego joba.
+- `GET /analysis/runs`
+  Shared/operator API lokalnej historii runow z lekkiego `index.json`. Lista
+  niesie status ostatniego snapshotu i nie laduje pelnych `run.json`.
+- `GET /analysis/runs/{analysisId}`
+  Odczyt pelnego lokalnego `run.json`, uzywany przez ekran historii do
+  odtworzenia formularza i ostatniego znanego stanu runu.
 - `GET /analysis/ai/options`
   Shared/operator API z katalogiem modeli AI dla UI. Backend pobiera go z
   Copilot SDK i zwraca `reasoningEffort` tylko dla modeli, ktore SDK opisuje

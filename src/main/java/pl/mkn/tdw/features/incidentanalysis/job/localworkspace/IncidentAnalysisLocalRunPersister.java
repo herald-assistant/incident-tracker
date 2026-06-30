@@ -13,6 +13,8 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
+import java.time.Instant;
+
 @Component
 @RequiredArgsConstructor
 public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalRunPersistence {
@@ -24,21 +26,30 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
     private final LocalAnalysisRunStore localAnalysisRunStore;
 
     @Override
+    public void persistRunSnapshot(
+            AnalysisJobStateSnapshot snapshot,
+            InitialAnalysisRequest aiRequest,
+            String copilotSessionId
+    ) {
+        if (snapshot == null) {
+            return;
+        }
+
+        var exportEnvelope = IncidentAnalysisExportEnvelope.from(snapshot, exportTimestamp(snapshot));
+        var record = LocalAnalysisRunRecord.v1(
+                objectMapper.valueToTree(exportEnvelope),
+                continuation(snapshot, aiRequest, copilotSessionId)
+        );
+        localAnalysisRunStore.save(indexEntry(snapshot), record);
+    }
+
+    @Override
     public void persistCompletedInitialRun(
             AnalysisJobStateSnapshot snapshot,
             InitialAnalysisRequest aiRequest,
             String copilotSessionId
     ) {
-        if (snapshot == null || !COMPLETED.equals(snapshot.status())) {
-            return;
-        }
-
-        var exportEnvelope = IncidentAnalysisExportEnvelope.from(snapshot, snapshot.completedAt());
-        var record = LocalAnalysisRunRecord.v1(
-                objectMapper.valueToTree(exportEnvelope),
-                continuation(aiRequest, copilotSessionId)
-        );
-        localAnalysisRunStore.save(indexEntry(snapshot), record);
+        persistRunSnapshot(snapshot, aiRequest, copilotSessionId);
     }
 
     private LocalAnalysisRunIndexEntry indexEntry(AnalysisJobStateSnapshot snapshot) {
@@ -49,6 +60,7 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
                 "runs/" + snapshot.analysisId() + "/run.json",
                 FEATURE,
                 displayName(snapshot),
+                snapshot.status(),
                 snapshot.createdAt(),
                 snapshot.updatedAt(),
                 snapshot.completedAt()
@@ -62,15 +74,30 @@ public class IncidentAnalysisLocalRunPersister implements IncidentAnalysisLocalR
     }
 
     private LocalAnalysisRunContinuation continuation(
+            AnalysisJobStateSnapshot snapshot,
             InitialAnalysisRequest aiRequest,
             String copilotSessionId
     ) {
+        if (!COMPLETED.equals(snapshot.status()) || aiRequest == null) {
+            return new LocalAnalysisRunContinuation(false, null, null, null, null, null, null);
+        }
+
         var authRef = aiRequest != null ? aiRequest.authRef() : AnalysisAiAuthRef.localToken(null);
         return new LocalAnalysisRunContinuation(
-                true,
+                StringUtils.hasText(copilotSessionId),
                 aiRequest != null ? aiRequest.gitLabGroup() : null,
                 authRef != null ? authRef.mode() : null,
                 authRef != null ? authRef.principalId() : null
         ).withLatestCopilotSession(copilotSessionId);
+    }
+
+    private Instant exportTimestamp(AnalysisJobStateSnapshot snapshot) {
+        if (snapshot.completedAt() != null) {
+            return snapshot.completedAt();
+        }
+        if (snapshot.updatedAt() != null) {
+            return snapshot.updatedAt();
+        }
+        return snapshot.createdAt();
     }
 }

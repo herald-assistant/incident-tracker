@@ -11,7 +11,12 @@ import {
   LocalAnalysisRunListItemResponse
 } from '../../core/models/analysis.models';
 import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-history-api.service';
-import { formatDateTime } from '../../core/utils/analysis-display.utils';
+import {
+  formatDateTime,
+  formatStatus,
+  isTerminalStatus,
+  statusClassName
+} from '../../core/utils/analysis-display.utils';
 import {
   downloadJsonFile,
   formatFileTimestamp,
@@ -126,6 +131,11 @@ export class AnalysisHistoryPageComponent {
   }
 
   exportRun(run: LocalAnalysisRunListItemResponse): void {
+    if (!this.canExportRun(run)) {
+      this.exportError.set('Eksport pliku JSON jest dostępny po zakończeniu runu.');
+      return;
+    }
+
     this.exportingAnalysisId.set(run.analysisId);
     this.exportError.set('');
 
@@ -243,6 +253,18 @@ export class AnalysisHistoryPageComponent {
     return formatDateTime(value) || 'n/a';
   }
 
+  protected statusLabel(status: string): string {
+    return formatStatus(status);
+  }
+
+  protected statusClass(status: string): string {
+    return statusClassName(status);
+  }
+
+  protected canExportRun(run: LocalAnalysisRunListItemResponse): boolean {
+    return isTerminalStatus(run.status);
+  }
+
   protected trackRun(_: number, run: LocalAnalysisRunListItemResponse): string {
     return run.analysisId;
   }
@@ -252,6 +274,7 @@ export class AnalysisHistoryPageComponent {
       analysisId: detail.analysisId,
       feature: detail.feature,
       name: detail.name,
+      status: detail.status,
       createdAt: detail.createdAt,
       updatedAt: detail.updatedAt,
       completedAt: detail.completedAt
@@ -277,6 +300,7 @@ function normalizeRuns(
       analysisId: run.analysisId || '',
       feature: run.feature || '',
       name: run.name || run.analysisId || '',
+      status: run.status || (run.completedAt ? 'COMPLETED' : 'UNKNOWN'),
       createdAt: run.createdAt || '',
       updatedAt: run.updatedAt || '',
       completedAt: run.completedAt || ''

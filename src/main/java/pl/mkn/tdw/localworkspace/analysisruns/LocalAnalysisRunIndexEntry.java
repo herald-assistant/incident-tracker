@@ -9,6 +9,7 @@ public record LocalAnalysisRunIndexEntry(
         String runPath,
         String feature,
         String name,
+        String status,
         Instant createdAt,
         Instant updatedAt,
         Instant completedAt
@@ -20,6 +21,7 @@ public record LocalAnalysisRunIndexEntry(
         runPath = required("runPath", runPath);
         feature = required("feature", feature);
         name = blankToDefault(name, analysisId);
+        status = defaultStatus(status, completedAt);
         createdAt = createdAt != null ? createdAt : Instant.now();
         updatedAt = updatedAt != null ? updatedAt : createdAt;
     }
@@ -32,6 +34,7 @@ public record LocalAnalysisRunIndexEntry(
                 runPath,
                 feature,
                 newName,
+                status,
                 createdAt,
                 updatedAt,
                 completedAt
@@ -46,6 +49,7 @@ public record LocalAnalysisRunIndexEntry(
                 runPath,
                 feature,
                 name,
+                status,
                 createdAt,
                 updatedAt,
                 completedAt
@@ -60,6 +64,22 @@ public record LocalAnalysisRunIndexEntry(
                 runPath,
                 feature,
                 name,
+                status,
+                createdAt,
+                updatedAt,
+                completedAt
+        );
+    }
+
+    public LocalAnalysisRunIndexEntry withStatus(String status, Instant updatedAt, Instant completedAt) {
+        return new LocalAnalysisRunIndexEntry(
+                analysisId,
+                schema,
+                version,
+                runPath,
+                feature,
+                name,
+                status,
                 createdAt,
                 updatedAt,
                 completedAt
@@ -75,5 +95,12 @@ public record LocalAnalysisRunIndexEntry(
 
     private static String blankToDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value.trim();
+    }
+
+    private static String defaultStatus(String status, Instant completedAt) {
+        if (status != null && !status.isBlank()) {
+            return status.trim();
+        }
+        return completedAt != null ? "COMPLETED" : "UNKNOWN";
     }
 }

@@ -62,8 +62,8 @@
           <span class="material-symbols-outlined" aria-hidden="true">history</span>
           <h3>No local analyses</h3>
           <p>
-            Completed local runs will appear here after an initial run or a completed follow-up
-            answer is saved by the backend.
+            Local runs appear here after an analysis is started and are updated by the backend while
+            the job is still available.
           </p>
           <a class="primary-button analysis-history-empty__action" routerLink="/incident-analysis">
             <span class="material-symbols-outlined" aria-hidden="true">troubleshoot</span>
@@ -120,11 +120,16 @@
                   <span class="analysis-history-run__content">
                     <span class="analysis-history-run__title-row">
                       <strong>{{ run.name }}</strong>
+                      <span [attr.class]="'status-pill ' + statusClass(run.status)">
+                        {{ statusLabel(run.status) }}
+                      </span>
                       <span class="analysis-history-run__feature">{{ featureLabel(run.feature) }}</span>
                     </span>
                     <span class="analysis-history-run__meta">
                       <span>Created {{ dateTime(run.createdAt) }}</span>
-                      <span>Completed {{ dateTime(run.completedAt) }}</span>
+                      @if (run.completedAt) {
+                        <span>Completed {{ dateTime(run.completedAt) }}</span>
+                      }
                       <span>Updated {{ dateTime(run.updatedAt) }}</span>
                     </span>
                     <span class="analysis-history-run__id">{{ run.analysisId }}</span>
@@ -146,7 +151,8 @@
                   <button
                     class="secondary-button"
                     type="button"
-                    [disabled]="exportingAnalysisId() === run.analysisId"
+                    [disabled]="exportingAnalysisId() === run.analysisId || !canExportRun(run)"
+                    [attr.title]="canExportRun(run) ? null : 'Eksport jest dostępny po zakończeniu runu.'"
                     (click)="exportRun(run)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">download</span>

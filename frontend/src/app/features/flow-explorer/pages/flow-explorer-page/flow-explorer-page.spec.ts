@@ -1053,6 +1053,7 @@ function localFlowExplorerRunDetail(
     analysisId: 'flow-job-1',
     feature: 'flow-explorer',
     name: 'GET /api/customers/{id} Deep Discovery',
+    status: job.status,
     createdAt: '2026-06-18T10:00:00Z',
     updatedAt: '2026-06-18T10:03:00Z',
     completedAt: '2026-06-18T10:03:00Z',

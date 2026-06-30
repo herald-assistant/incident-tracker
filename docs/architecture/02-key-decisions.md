@@ -693,9 +693,13 @@ przekazanego przez `tdw.workspace.directory`. Domyslny launcher ustawia
 Decyzje MVP:
 
 - `index.json` jest lekkim read modelem dla ekranu `Analysis History`; lista
-  historii nie laduje wszystkich `run.json`,
+  historii nie laduje wszystkich `run.json` i niesie status ostatniego
+  snapshotu runu,
 - pelny lokalny rekord jest w `runs/<analysisId>/run.json` i jest ladowany
   dopiero przy otwarciu, eksporcie albo kontynuacji konkretnego runu,
+- run moze byc zapisany juz po utworzeniu joba (`QUEUED`) i potem nadpisywany
+  kolejnymi snapshotami progressu; jest to stan operator UI/history, a nie
+  kolejka workerow ani gwarancja wznowienia po restarcie backendu,
 - `tokens.json` lezy obok `index.json`, przechowuje lokalne access tokeny
   zapisane z UI i nie jest czescia exportu,
 - stan Copilota jest pod `${tdw.workspace.directory}/copilot`, zeby

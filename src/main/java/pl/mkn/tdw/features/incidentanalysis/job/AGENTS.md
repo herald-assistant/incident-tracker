@@ -49,8 +49,11 @@ Nie obejmuje:
   nie w deterministycznych `evidenceSections`.
 - Obsluga bledow ma pozostac czytelna dla UI i mapowac znane przypadki, np.
   brak danych vs. ogolna awaria analizy.
-- Dopoki nie ma osobnej decyzji architektonicznej, stan jobow pozostaje prosty
-  i lokalny dla procesu aplikacji. Nie wprowadzaj persistence "przy okazji".
+- Wykonanie live joba pozostaje proste i lokalne dla procesu aplikacji:
+  zamkniecie backendu nadal przerywa mozliwosc pollingu `GET /analysis/jobs`.
+  Local workspace zapisuje snapshoty runu od startu jako historie/operator
+  resume UI, ale nie jest durable queue ani mechanizmem wznowienia workerow po
+  restarcie backendu.
 
 ## Testy
 

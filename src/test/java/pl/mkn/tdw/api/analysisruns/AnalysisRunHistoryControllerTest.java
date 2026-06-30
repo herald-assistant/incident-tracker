@@ -48,6 +48,7 @@ class AnalysisRunHistoryControllerTest {
                 .andExpect(jsonPath("$.runs[0].analysisId").value("analysis-1"))
                 .andExpect(jsonPath("$.runs[0].feature").value("incident-analysis"))
                 .andExpect(jsonPath("$.runs[0].name").value("corr-123"))
+                .andExpect(jsonPath("$.runs[0].status").value("COMPLETED"))
                 .andExpect(jsonPath("$.runs[0].createdAt").value(CREATED_AT.toString()))
                 .andExpect(jsonPath("$.runs[0].updatedAt").value(UPDATED_AT.toString()))
                 .andExpect(jsonPath("$.runs[0].completedAt").value(COMPLETED_AT.toString()))
@@ -66,6 +67,7 @@ class AnalysisRunHistoryControllerTest {
                 .andExpect(jsonPath("$.analysisId").value("analysis-1"))
                 .andExpect(jsonPath("$.feature").value("incident-analysis"))
                 .andExpect(jsonPath("$.name").value("corr-123"))
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.exportEnvelope.schema").value("tdw.analysis-export"))
                 .andExpect(jsonPath("$.exportEnvelope.version").value(6))
                 .andExpect(jsonPath("$.exportEnvelope.payload.job.analysisId").value("analysis-1"))
@@ -223,6 +225,7 @@ class AnalysisRunHistoryControllerTest {
                 analysisId,
                 feature,
                 name,
+                "COMPLETED",
                 CREATED_AT,
                 UPDATED_AT,
                 COMPLETED_AT
@@ -234,6 +237,7 @@ class AnalysisRunHistoryControllerTest {
                 analysisId,
                 "incident-analysis",
                 name,
+                "COMPLETED",
                 CREATED_AT,
                 UPDATED_AT,
                 COMPLETED_AT,

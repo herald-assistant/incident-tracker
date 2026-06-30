@@ -20,14 +20,23 @@ import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisExecutionListener;
 public final class AnalysisJobStateListener implements AnalysisExecutionListener {
 
     private final AnalysisJobState job;
+    private final Runnable onStateChanged;
 
     public AnalysisJobStateListener(AnalysisJobState job) {
+        this(job, () -> {
+        });
+    }
+
+    public AnalysisJobStateListener(AnalysisJobState job, Runnable onStateChanged) {
         this.job = job;
+        this.onStateChanged = onStateChanged != null ? onStateChanged : () -> {
+        };
     }
 
     @Override
     public void onProviderStarted(AnalysisEvidenceProvider provider, AnalysisContext context) {
         job.markEvidenceStepStarted(provider.descriptor());
+        onStateChanged.run();
     }
 
     @Override
@@ -37,11 +46,13 @@ public final class AnalysisJobStateListener implements AnalysisExecutionListener
             AnalysisContext updatedContext
     ) {
         job.markEvidenceStepCompleted(provider.descriptor(), section);
+        onStateChanged.run();
     }
 
     @Override
     public void onAiStarted(InitialAnalysisRequest request, AnalysisContext context) {
         job.markAiStarted();
+        onStateChanged.run();
     }
 
     @Override
@@ -51,15 +62,18 @@ public final class AnalysisJobStateListener implements AnalysisExecutionListener
             AnalysisContext context
     ) {
         job.markAiPromptPrepared(preparedPrompt);
+        onStateChanged.run();
     }
 
     @Override
     public void onAiToolEvidenceUpdated(AnalysisEvidenceSection section) {
         job.markAiToolEvidenceUpdated(section);
+        onStateChanged.run();
     }
 
     @Override
     public void onAiActivity(AnalysisAiActivityEvent event) {
         job.markAiActivity(event);
+        onStateChanged.run();
     }
 }

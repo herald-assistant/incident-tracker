@@ -186,6 +186,25 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Lokalny run został otwarty z historii.');
   });
 
+  it('should restore a live analysis from the analysis id route', async () => {
+    const { fixture, analysisApi } = await createComponent(
+      connectedStatus(),
+      of(modelOptions()),
+      {
+        analysisId: 'analysis-1',
+        liveJob: completedJob()
+      }
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(analysisApi.getAnalysis).toHaveBeenCalledWith('analysis-1');
+    expect(fixture.componentInstance.correlationIdControl.value).toBe('corr-123');
+    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu katalogowego.');
+  });
+
   it('should continue a local run through the analysis history API', async () => {
     const updatedDetail = localRunDetail(completedJobWithChat());
     const { fixture, analysisApi, historyApi } = await createComponent(
@@ -385,6 +404,8 @@ describe('AnalysisConsoleComponent auth flow', () => {
     aiModelOptions$: Observable<AnalysisAiModelOptionsResponse> = of(modelOptions()),
     routeOptions: {
       localRunId?: string;
+      analysisId?: string;
+      liveJob?: AnalysisJobStateSnapshot;
       localRunDetail?: LocalAnalysisRunDetailResponse;
       localChatResponse?: LocalAnalysisRunDetailResponse;
     } = {}
@@ -392,7 +413,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     const analysisApi = {
       getAiModelOptions: vi.fn(() => aiModelOptions$),
       startAnalysis: vi.fn(() => of(queuedJob())),
-      getAnalysis: vi.fn(() => of(queuedJob())),
+      getAnalysis: vi.fn(() => of(routeOptions.liveJob ?? queuedJob())),
       sendChatMessage: vi.fn(() => of(queuedJob()))
     };
     const historyApi = {
@@ -416,7 +437,11 @@ describe('AnalysisConsoleComponent auth flow', () => {
           useValue: {
             queryParamMap: of(
               convertToParamMap(
-                routeOptions.localRunId ? { localRunId: routeOptions.localRunId } : {}
+                routeOptions.localRunId
+                  ? { localRunId: routeOptions.localRunId }
+                  : routeOptions.analysisId
+                    ? { analysisId: routeOptions.analysisId }
+                    : {}
               )
             )
           }
@@ -597,6 +622,7 @@ function localRunDetail(job: AnalysisJobStateSnapshot = completedJob()): LocalAn
     analysisId: 'analysis-1',
     feature: 'incident-analysis',
     name: 'Catalog corr-123',
+    status: job.status,
     createdAt: '2026-05-02T10:00:00Z',
     updatedAt: '2026-05-02T10:05:00Z',
     completedAt: '2026-05-02T10:05:00Z',

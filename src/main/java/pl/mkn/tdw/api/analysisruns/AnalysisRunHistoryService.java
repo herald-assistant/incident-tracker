@@ -186,6 +186,7 @@ public class AnalysisRunHistoryService {
                 entry.analysisId(),
                 entry.feature(),
                 entry.name(),
+                entry.status(),
                 entry.createdAt(),
                 entry.updatedAt(),
                 entry.completedAt()
@@ -200,6 +201,7 @@ public class AnalysisRunHistoryService {
                 entry.analysisId(),
                 entry.feature(),
                 entry.name(),
+                entry.status(),
                 entry.createdAt(),
                 entry.updatedAt(),
                 entry.completedAt(),

@@ -95,6 +95,7 @@ public class AnalysisJobService {
         );
 
         jobs.put(analysisId, job);
+        persistRunSnapshot(job);
         applicationTaskExecutor.execute(() -> runAnalysis(job, request, authRef));
 
         return job.snapshot();
@@ -122,12 +123,13 @@ public class AnalysisJobService {
                     request.correlationId(),
                     request.aiOptions(),
                     authRef,
-                    new AnalysisJobStateListener(job)
+                    new AnalysisJobStateListener(job, () -> persistRunSnapshot(job))
             );
             job.markCompleted(execution);
-            persistCompletedInitialRun(job, execution);
+            persistCompletedRunSnapshot(job, execution);
         } catch (AnalysisDataNotFoundException exception) {
             job.markNotFound("ANALYSIS_DATA_NOT_FOUND", exception.getMessage());
+            persistRunSnapshot(job);
         } catch (RuntimeException exception) {
             log.error(
                     "Analysis job failed correlationId={} errorCode=ANALYSIS_FAILED message={}",
@@ -141,13 +143,29 @@ public class AnalysisJobService {
                             ? exception.getMessage()
                             : "Unexpected analysis failure."
             );
+            persistRunSnapshot(job);
         }
     }
 
-    private void persistCompletedInitialRun(AnalysisJobState job, AnalysisExecution execution) {
+    private void persistRunSnapshot(AnalysisJobState job) {
         var snapshot = job.snapshot();
         try {
-            localRunPersistence.persistCompletedInitialRun(
+            localRunPersistence.persistRunSnapshot(snapshot);
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Failed to persist local analysis run snapshot analysisId={} correlationId={} status={} reason={}",
+                    snapshot.analysisId(),
+                    snapshot.correlationId(),
+                    snapshot.status(),
+                    exception.getMessage()
+            );
+        }
+    }
+
+    private void persistCompletedRunSnapshot(AnalysisJobState job, AnalysisExecution execution) {
+        var snapshot = job.snapshot();
+        try {
+            localRunPersistence.persistRunSnapshot(
                     snapshot,
                     execution.aiRequest(),
                     execution.aiResponse() != null ? execution.aiResponse().copilotSessionId() : null

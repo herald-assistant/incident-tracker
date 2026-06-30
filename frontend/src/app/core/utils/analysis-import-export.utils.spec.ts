@@ -55,6 +55,24 @@ describe('analysis import/export utils', () => {
   it('should reject raw job snapshots without export envelope', () => {
     expect(() => parseImportedAnalysis(completedJob())).toThrow('Nie rozpoznano formatu importu.');
   });
+
+  it('should allow non-terminal snapshots when parsing a local workspace run', () => {
+    const queuedJob = {
+      ...completedJob(),
+      status: 'ANALYZING',
+      completedAt: '',
+      result: null,
+      report: null
+    };
+
+    const imported = parseImportedAnalysis(
+      buildExportEnvelope(queuedJob, '2026-05-02T10:02:00Z'),
+      { requireTerminal: false }
+    );
+
+    expect(imported.job.status).toBe('ANALYZING');
+    expect(imported.job.result).toBeNull();
+  });
 });
 
 function completedJob(): AnalysisJobStateSnapshot {

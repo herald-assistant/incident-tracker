@@ -91,6 +91,13 @@ albo widoki utrzymaniowe dla operatora.
 Prepared analysis gwarantuje, ze prompt widoczny w UI/debug jest tym samym
 promptem, ktory poszedl do Copilota.
 
+`AnalysisJobService` po utworzeniu `AnalysisJobState` zapisuje pierwszy
+snapshot lokalnego runu w local workspace jako `QUEUED`, a listener progresu
+nadpisuje ten sam `runs/<analysisId>/run.json` kolejnymi snapshotami. Dzieki
+temu operator moze zamknac UI i wrocic do ostatniego znanego stanu, o ile
+backend dalej dziala. Nie jest to durable worker queue: po restarcie backendu
+plik pozostaje historia UI/exportu, ale sam background job nie jest wznawiany.
+
 Ownership jest po stronie kodu, ktory wywolal `prepare(request)`.
 `AnalysisOrchestrator` uzywa try-with-resources i zamyka prepared analysis po
 zakonczeniu kroku AI. `analyze(prepared, listener)` oraz gateway SDK nie

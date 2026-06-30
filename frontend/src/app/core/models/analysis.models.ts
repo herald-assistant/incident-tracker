@@ -283,6 +283,7 @@ export interface LocalAnalysisRunListItemResponse {
   analysisId: string;
   feature: string;
   name: string;
+  status: string;
   createdAt: string;
   updatedAt: string;
   completedAt: string;

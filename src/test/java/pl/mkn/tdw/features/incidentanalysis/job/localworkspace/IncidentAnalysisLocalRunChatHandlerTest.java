@@ -234,6 +234,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                 "runs/" + analysisId + "/run.json",
                 "incident-analysis",
                 "corr-123",
+                "COMPLETED",
                 CREATED_AT,
                 COMPLETED_AT,
                 COMPLETED_AT

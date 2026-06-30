@@ -151,6 +151,7 @@ class LocalWorkspaceStoreTest {
                 "runs/" + analysisId + "/run.json",
                 feature,
                 name,
+                "COMPLETED",
                 CREATED_AT,
                 UPDATED_AT,
                 COMPLETED_AT

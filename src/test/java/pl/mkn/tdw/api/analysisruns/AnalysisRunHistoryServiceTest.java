@@ -54,6 +54,7 @@ class AnalysisRunHistoryServiceTest {
         assertEquals("analysis-1", response.runs().get(0).analysisId());
         assertEquals("incident-analysis", response.runs().get(0).feature());
         assertEquals("corr-123", response.runs().get(0).name());
+        assertEquals("COMPLETED", response.runs().get(0).status());
         assertEquals(CREATED_AT, response.runs().get(0).createdAt());
         assertEquals(UPDATED_AT, response.runs().get(0).updatedAt());
         assertEquals(COMPLETED_AT, response.runs().get(0).completedAt());
@@ -311,6 +312,7 @@ class AnalysisRunHistoryServiceTest {
                 "runs/" + analysisId + "/run.json",
                 feature,
                 name,
+                "COMPLETED",
                 CREATED_AT,
                 UPDATED_AT,
                 COMPLETED_AT

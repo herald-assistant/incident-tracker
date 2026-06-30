@@ -131,20 +131,26 @@ class AnalysisJobServiceTest {
         );
 
         var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
-        persistenceTaskExecutor.runNext();
-
         assertEquals(1, persistence.snapshots.size());
         assertEquals(started.analysisId(), persistence.snapshots.get(0).analysisId());
-        assertEquals("COMPLETED", persistence.snapshots.get(0).status());
-        assertNotNull(persistence.snapshots.get(0).report());
-        assertEquals("session-aware-report-timeout-123", persistence.snapshots.get(0).report().reportId());
+        assertEquals("QUEUED", persistence.snapshots.get(0).status());
+
+        persistenceTaskExecutor.runNext();
+
+        var completedSnapshot = persistence.lastSnapshot();
+        assertEquals(started.analysisId(), completedSnapshot.analysisId());
+        assertEquals("COMPLETED", completedSnapshot.status());
+        assertNotNull(completedSnapshot.report());
+        assertEquals("session-aware-report-timeout-123", completedSnapshot.report().reportId());
+        assertEquals(1, persistence.requests.size());
         assertEquals("timeout-123", persistence.requests.get(0).correlationId());
         assertEquals("CRM/runtime", persistence.requests.get(0).gitLabGroup());
+        assertEquals(1, persistence.copilotSessionIds.size());
         assertEquals("copilot-session-1", persistence.copilotSessionIds.get(0));
     }
 
     @Test
-    void shouldNotPersistFailedInitialAnalysisRun() {
+    void shouldPersistFailedInitialAnalysisRun() {
         var persistence = new CapturingLocalRunPersistence();
         var failingTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobService(
@@ -154,11 +160,19 @@ class AnalysisJobServiceTest {
                 persistence
         );
 
-        service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        assertEquals(1, persistence.snapshots.size());
+        assertEquals("QUEUED", persistence.snapshots.get(0).status());
+
         failingTaskExecutor.runNext();
 
-        assertTrue(persistence.snapshots.isEmpty());
+        var failedSnapshot = persistence.lastSnapshot();
+        assertEquals(started.analysisId(), failedSnapshot.analysisId());
+        assertEquals("FAILED", failedSnapshot.status());
+        assertEquals("ANALYSIS_FAILED", failedSnapshot.errorCode());
+        assertEquals("AI gateway timeout", failedSnapshot.errorMessage());
         assertTrue(persistence.requests.isEmpty());
+        assertTrue(persistence.copilotSessionIds.isEmpty());
     }
 
     @Test
@@ -570,14 +584,22 @@ class AnalysisJobServiceTest {
         private final List<String> copilotSessionIds = new java.util.ArrayList<>();
 
         @Override
-        public void persistCompletedInitialRun(
+        public void persistRunSnapshot(
                 pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStateSnapshot snapshot,
                 InitialAnalysisRequest aiRequest,
                 String copilotSessionId
         ) {
             snapshots.add(snapshot);
-            requests.add(aiRequest);
-            copilotSessionIds.add(copilotSessionId);
+            if (aiRequest != null) {
+                requests.add(aiRequest);
+            }
+            if (copilotSessionId != null) {
+                copilotSessionIds.add(copilotSessionId);
+            }
+        }
+
+        private pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStateSnapshot lastSnapshot() {
+            return snapshots.get(snapshots.size() - 1);
         }
     }
 

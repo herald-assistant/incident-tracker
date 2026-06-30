@@ -50,6 +50,7 @@ class IncidentAnalysisLocalRunPersisterTest {
         assertEquals("analysis-1", store.savedEntry.analysisId());
         assertEquals("incident-analysis", store.savedEntry.feature());
         assertEquals("corr-123", store.savedEntry.name());
+        assertEquals("COMPLETED", store.savedEntry.status());
         assertEquals(CREATED_AT, store.savedEntry.createdAt());
         assertEquals(UPDATED_AT, store.savedEntry.updatedAt());
         assertEquals(COMPLETED_AT, store.savedEntry.completedAt());
@@ -79,14 +80,21 @@ class IncidentAnalysisLocalRunPersisterTest {
     }
 
     @Test
-    void shouldSkipNonCompletedSnapshots() {
+    void shouldPersistNonCompletedSnapshotWithContinuationDisabled() {
         var store = new CapturingLocalAnalysisRunStore();
         var persister = new IncidentAnalysisLocalRunPersister(objectMapper, store);
 
-        persister.persistCompletedInitialRun(completedSnapshot("FAILED"), aiRequest());
+        persister.persistRunSnapshot(failedSnapshot());
 
-        assertNull(store.savedEntry);
-        assertNull(store.savedRecord);
+        assertNotNull(store.savedEntry);
+        assertNotNull(store.savedRecord);
+        assertEquals("analysis-1", store.savedEntry.analysisId());
+        assertEquals("FAILED", store.savedEntry.status());
+        assertEquals(COMPLETED_AT, store.savedEntry.completedAt());
+        assertFalse(store.savedRecord.continuation().enabled());
+        assertEquals("FAILED", store.savedRecord.exportEnvelope().at("/payload/job/status").asText());
+        assertEquals("AI gateway timeout", store.savedRecord.exportEnvelope().at("/payload/job/errorMessage").asText());
+        assertEquals("corr-123", store.savedRecord.exportEnvelope().at("/payload/job/correlationId").asText());
     }
 
     private AnalysisJobStateSnapshot completedSnapshot(String status) {
@@ -128,6 +136,34 @@ class IncidentAnalysisLocalRunPersisterTest {
                         "Final prompt"
                 ),
                 report()
+        );
+    }
+
+    private AnalysisJobStateSnapshot failedSnapshot() {
+        return new AnalysisJobStateSnapshot(
+                "analysis-1",
+                "corr-123",
+                "gpt-5.4",
+                "medium",
+                "FAILED",
+                null,
+                null,
+                "dev3",
+                "main",
+                "ANALYSIS_FAILED",
+                "AI gateway timeout",
+                CREATED_AT,
+                UPDATED_AT,
+                COMPLETED_AT,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "Prepared prompt",
+                null,
+                null
         );
     }
 

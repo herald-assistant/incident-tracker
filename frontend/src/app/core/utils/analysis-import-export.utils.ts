@@ -39,6 +39,20 @@ export function buildExportEnvelope(
 export function parseImportedAnalysis(payload: unknown): {
   exportedAt: string;
   job: AnalysisJobStateSnapshot;
+};
+export function parseImportedAnalysis(
+  payload: unknown,
+  options: { requireTerminal: false }
+): {
+  exportedAt: string;
+  job: AnalysisJobStateSnapshot;
+};
+export function parseImportedAnalysis(
+  payload: unknown,
+  options: { requireTerminal?: boolean } = {}
+): {
+  exportedAt: string;
+  job: AnalysisJobStateSnapshot;
 } {
   const payloadObject = asObject(payload);
   if (!payloadObject) {
@@ -68,7 +82,7 @@ export function parseImportedAnalysis(payload: unknown): {
     throw new Error('Plik nie zawiera statusu analizy.');
   }
 
-  if (!isTerminalStatus(job.status)) {
+  if (options.requireTerminal !== false && !isTerminalStatus(job.status)) {
     throw new Error('Import wspiera tylko zakończone analizy.');
   }
 

@@ -219,6 +219,7 @@ class FlowExplorerLocalRunChatHandlerTest {
                 "runs/" + analysisId + "/run.json",
                 "flow-explorer",
                 "GET /api/customers/{id} / DEEP_DISCOVERY",
+                "COMPLETED",
                 CREATED_AT,
                 COMPLETED_AT,
                 COMPLETED_AT

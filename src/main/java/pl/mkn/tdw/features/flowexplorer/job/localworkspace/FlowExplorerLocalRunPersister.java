@@ -49,6 +49,7 @@ public class FlowExplorerLocalRunPersister implements FlowExplorerLocalRunPersis
                 "runs/" + snapshot.jobId() + "/run.json",
                 FEATURE,
                 displayName(snapshot),
+                snapshot.status(),
                 snapshot.createdAt(),
                 snapshot.updatedAt(),
                 snapshot.completedAt()
