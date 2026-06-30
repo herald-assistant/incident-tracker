@@ -281,6 +281,9 @@ export class AnalysisConsoleComponent {
       .subscribe((params) => {
         const localRunId = params.get('localRunId')?.trim() ?? '';
         if (localRunId) {
+          if (this.activeAnalysisId === localRunId && this.job()?.analysisId === localRunId) {
+            return;
+          }
           this.loadLocalAnalysisRun(localRunId);
           return;
         }
@@ -347,9 +350,10 @@ export class AnalysisConsoleComponent {
           this.applyJob(job, {
             origin: 'live',
             exportedAt: '',
-            fileName: ''
+            fileName: '',
+            localRunId: job.analysisId
           });
-          this.rememberLiveAnalysisId(job.analysisId);
+          this.rememberLocalRunId(job.analysisId);
 
           if (!isTerminalStatus(job.status)) {
             this.schedulePoll(job.analysisId);
@@ -903,7 +907,7 @@ export class AnalysisConsoleComponent {
     this.syncReasoningEffortSelection();
   }
 
-  private rememberLiveAnalysisId(analysisId: string): void {
+  private rememberLocalRunId(analysisId: string): void {
     if (!analysisId) {
       return;
     }
@@ -913,8 +917,8 @@ export class AnalysisConsoleComponent {
         .navigate([], {
           relativeTo: this.route,
           queryParams: {
-            analysisId,
-            localRunId: null
+            localRunId: analysisId,
+            analysisId: null
           },
           queryParamsHandling: 'merge',
           replaceUrl: true

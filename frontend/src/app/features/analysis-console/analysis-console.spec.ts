@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { Observable, of, Subject, throwError } from 'rxjs';
 
 import {
@@ -113,6 +113,27 @@ describe('AnalysisConsoleComponent auth flow', () => {
     const startAnalysisCalls = analysisApi.startAnalysis.mock.calls as unknown as Array<[unknown]>;
     expect(JSON.stringify(startAnalysisCalls[0][0])).not.toContain('token');
     expect(JSON.stringify(startAnalysisCalls[0][0])).not.toContain('githubAuthCode');
+  });
+
+  it('should switch the route to the local run immediately after starting analysis', async () => {
+    const { fixture, router } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    component.correlationIdControl.setValue('corr-123');
+    component.submit(new Event('submit'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: {
+        localRunId: 'analysis-1',
+        analysisId: null
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   });
 
   it('should hide form header after starting analysis', async () => {
@@ -456,7 +477,8 @@ describe('AnalysisConsoleComponent auth flow', () => {
       fixture: TestBed.createComponent(AnalysisConsoleComponent),
       analysisApi,
       historyApi,
-      githubAuth
+      githubAuth,
+      router: TestBed.inject(Router)
     };
   }
 });
