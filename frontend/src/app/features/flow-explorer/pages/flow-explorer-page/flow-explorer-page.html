@@ -848,7 +848,7 @@
         @if (job(); as snapshot) {
           <div class="flow-explorer-analysis-grid">
             <div class="flow-explorer-analysis-main">
-        @if (snapshot.result; as result) {
+        @if (displayResult(); as result) {
             <section
               class="analysis-card flow-explorer-result"
               aria-label="Flow Explorer result"
@@ -857,13 +857,16 @@
             <summary class="section-heading flow-explorer-result__heading flow-explorer-collapsible__summary">
               <div>
                 <p class="section-eyebrow">AI result</p>
-                <h2>{{ result.httpMethod }} {{ result.endpointPath }}</h2>
+                <h2>{{ result.title }}</h2>
+                @if (hasText(result.subTitle)) {
+                  <p class="field-hint">{{ result.subTitle }}</p>
+                }
               </div>
               <div class="flow-explorer-result__badges">
                 <span [class]="jobStatusPillClass(result.status)">{{ result.status }}</span>
                 <span class="status-pill status-pill--queued">{{ result.goal || analysisGoal() }}</span>
-                <span [class]="confidencePillClass(result.aiResponse?.confidence || '')">
-                  {{ result.aiResponse?.confidence || 'confidence n/a' }}
+                <span [class]="confidencePillClass(result.confidence)">
+                  {{ result.confidence || 'confidence n/a' }}
                 </span>
                 <button
                   class="secondary-button flow-explorer-result__copy-button"
@@ -882,40 +885,105 @@
             </summary>
 
             <div class="flow-explorer-collapsible__body">
-            @if (result.aiResponse; as ai) {
+            @if (result.overview; as overview) {
               <section class="flow-explorer-result-block" aria-label="Overview">
                 <div class="flow-explorer-result-block__heading">
                   <span class="material-symbols-outlined" aria-hidden="true">summarize</span>
                   <div>
                     <span class="field-label">Overview</span>
-                    <h3>{{ result.httpMethod }} {{ result.endpointPath }}</h3>
+                    <h3>{{ overview.title }}</h3>
                   </div>
-                  <span [class]="confidencePillClass(ai.overview.confidence || ai.confidence)">
-                    {{ ai.overview.confidence || ai.confidence || 'confidence n/a' }}
+                  <span [class]="confidencePillClass(overview.meta.confidence || result.confidence)">
+                    {{ overview.meta.confidence || result.confidence || 'confidence n/a' }}
                   </span>
                 </div>
                 <app-markdown-content
                   class="flow-explorer-markdown"
-                  [content]="ai.overview.markdown || 'AI did not provide an overview.'"
+                  [content]="overview.markdown || 'AI did not provide an overview.'"
                 ></app-markdown-content>
-                @if (hasItems(ai.overview.sourceRefs)) {
+                @if (hasDisplayMeta(overview.meta)) {
                   <div class="flow-explorer-section-metadata">
-                    <details class="flow-explorer-reference-list">
-                      <summary>
-                        <span class="material-symbols-outlined" aria-hidden="true">notes</span>
-                        <span>References</span>
-                        <small>{{ ai.overview.sourceRefs.length }}</small>
-                      </summary>
-                      <div class="flow-explorer-chip-list">
-                        @for (sourceRef of ai.overview.sourceRefs; track $index) {
-                          <span class="panel-chip">{{ sourceRef }}</span>
-                        }
-                      </div>
-                    </details>
+                    @if (hasItems(overview.meta.references)) {
+                      <details class="flow-explorer-reference-list">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">notes</span>
+                          <span>References</span>
+                          <small>{{ overview.meta.references.length }}</small>
+                        </summary>
+                        <div class="flow-explorer-chip-list">
+                          @for (reference of overview.meta.references; track $index) {
+                            <span class="panel-chip flow-explorer-reference-chip">
+                              <strong>{{ reference.label }}</strong>
+                              @if (hasText(reference.details)) {
+                                <small>{{ reference.details }}</small>
+                              }
+                            </span>
+                          }
+                        </div>
+                      </details>
+                    }
+                    @if (hasItems(overview.meta.visibilityLimits)) {
+                      <details class="flow-explorer-meta-detail">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
+                          <span>Visibility limits</span>
+                          <small>{{ overview.meta.visibilityLimits.length }}</small>
+                        </summary>
+                        <ul class="flow-explorer-meta-list">
+                          @for (limit of overview.meta.visibilityLimits; track $index) {
+                            <li>{{ limit }}</li>
+                          }
+                        </ul>
+                      </details>
+                    }
+                    @if (hasItems(overview.meta.openQuestions)) {
+                      <details class="flow-explorer-meta-detail">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">help</span>
+                          <span>Open questions</span>
+                          <small>{{ overview.meta.openQuestions.length }}</small>
+                        </summary>
+                        <ul class="flow-explorer-meta-list">
+                          @for (question of overview.meta.openQuestions; track $index) {
+                            <li>{{ question }}</li>
+                          }
+                        </ul>
+                      </details>
+                    }
+                    @if (hasItems(overview.meta.gaps)) {
+                      <details class="flow-explorer-meta-detail">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">rule</span>
+                          <span>Gaps</span>
+                          <small>{{ overview.meta.gaps.length }}</small>
+                        </summary>
+                        <ul class="flow-explorer-meta-list">
+                          @for (gap of overview.meta.gaps; track $index) {
+                            <li>{{ gap }}</li>
+                          }
+                        </ul>
+                      </details>
+                    }
+                    @if (hasItems(overview.meta.warnings)) {
+                      <details class="flow-explorer-meta-detail">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                          <span>Warnings</span>
+                          <small>{{ overview.meta.warnings.length }}</small>
+                        </summary>
+                        <ul class="flow-explorer-meta-list">
+                          @for (warning of overview.meta.warnings; track $index) {
+                            <li>{{ warning }}</li>
+                          }
+                        </ul>
+                      </details>
+                    }
                   </div>
                 }
               </section>
+            }
 
+            @if (resultSections().length > 0) {
               <div class="flow-explorer-section-stack">
                 @for (section of resultSections(); track section.id) {
                   <section class="flow-explorer-result-block" [attr.aria-label]="section.title">
@@ -926,51 +994,89 @@
                       <h3>{{ section.title }}</h3>
                     </div>
                     <span [class]="sectionModePillClass(section.mode)">{{ sectionModeLabel(section.mode) }}</span>
+                    @if (hasText(section.meta.confidence)) {
+                      <span [class]="confidencePillClass(section.meta.confidence)">
+                        {{ section.meta.confidence }}
+                      </span>
+                    }
                   </div>
                   <app-markdown-content
                     class="flow-explorer-markdown"
                     [content]="section.markdown || 'No confirmed details for this section.'"
                   ></app-markdown-content>
-                  @if (hasItems(section.sourceRefs) || hasItems(section.visibilityLimits) || hasItems(section.openQuestions)) {
+                  @if (hasDisplayMeta(section.meta)) {
                     <div class="flow-explorer-section-metadata">
-                    @if (hasItems(section.sourceRefs)) {
+                    @if (hasItems(section.meta.references)) {
                       <details class="flow-explorer-reference-list">
                         <summary>
                           <span class="material-symbols-outlined" aria-hidden="true">notes</span>
                           <span>References</span>
-                          <small>{{ section.sourceRefs.length }}</small>
+                          <small>{{ section.meta.references.length }}</small>
                         </summary>
                         <div class="flow-explorer-chip-list">
-                          @for (sourceRef of section.sourceRefs; track $index) {
-                            <span class="panel-chip">{{ sourceRef }}</span>
+                          @for (reference of section.meta.references; track $index) {
+                            <span class="panel-chip flow-explorer-reference-chip">
+                              <strong>{{ reference.label }}</strong>
+                              @if (hasText(reference.details)) {
+                                <small>{{ reference.details }}</small>
+                              }
+                            </span>
                           }
                         </div>
                       </details>
                     }
-                    @if (hasItems(section.visibilityLimits)) {
+                    @if (hasItems(section.meta.visibilityLimits)) {
                       <details class="flow-explorer-meta-detail">
                         <summary>
                           <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
                           <span>Visibility limits</span>
-                          <small>{{ section.visibilityLimits.length }}</small>
+                          <small>{{ section.meta.visibilityLimits.length }}</small>
                         </summary>
                         <ul class="flow-explorer-meta-list">
-                          @for (limit of section.visibilityLimits; track $index) {
+                          @for (limit of section.meta.visibilityLimits; track $index) {
                             <li>{{ limit }}</li>
                           }
                         </ul>
                       </details>
                     }
-                    @if (hasItems(section.openQuestions)) {
+                    @if (hasItems(section.meta.openQuestions)) {
                       <details class="flow-explorer-meta-detail">
                         <summary>
                           <span class="material-symbols-outlined" aria-hidden="true">help</span>
                           <span>Open questions</span>
-                          <small>{{ section.openQuestions.length }}</small>
+                          <small>{{ section.meta.openQuestions.length }}</small>
                         </summary>
                         <ul class="flow-explorer-meta-list">
-                          @for (question of section.openQuestions; track $index) {
+                          @for (question of section.meta.openQuestions; track $index) {
                             <li>{{ question }}</li>
+                          }
+                        </ul>
+                      </details>
+                    }
+                    @if (hasItems(section.meta.gaps)) {
+                      <details class="flow-explorer-meta-detail">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">rule</span>
+                          <span>Gaps</span>
+                          <small>{{ section.meta.gaps.length }}</small>
+                        </summary>
+                        <ul class="flow-explorer-meta-list">
+                          @for (gap of section.meta.gaps; track $index) {
+                            <li>{{ gap }}</li>
+                          }
+                        </ul>
+                      </details>
+                    }
+                    @if (hasItems(section.meta.warnings)) {
+                      <details class="flow-explorer-meta-detail">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                          <span>Warnings</span>
+                          <small>{{ section.meta.warnings.length }}</small>
+                        </summary>
+                        <ul class="flow-explorer-meta-list">
+                          @for (warning of section.meta.warnings; track $index) {
+                            <li>{{ warning }}</li>
                           }
                         </ul>
                       </details>
@@ -980,8 +1086,9 @@
                   </section>
                 }
               </div>
+            }
 
-              @if (hasItems(ai.followUpPrompts)) {
+              @if (hasItems(result.followUpPrompts)) {
                 <section class="flow-explorer-result-block flow-explorer-follow-up-prompts" aria-label="Co sprawdzić dalej">
                   <div class="flow-explorer-result-block__heading">
                     <span class="material-symbols-outlined" aria-hidden="true">travel_explore</span>
@@ -989,10 +1096,10 @@
                       <span class="field-label">Dalsze pytania</span>
                       <h3>Co sprawdzić dalej</h3>
                     </div>
-                    <span class="panel-chip">{{ followUpPromptCountLabel(ai.followUpPrompts.length) }}</span>
+                    <span class="panel-chip">{{ followUpPromptCountLabel(result.followUpPrompts.length) }}</span>
                   </div>
                   <ol class="flow-explorer-follow-up-prompts__list">
-                    @for (prompt of ai.followUpPrompts; track $index) {
+                    @for (prompt of result.followUpPrompts; track $index) {
                       <li class="flow-explorer-follow-up-prompt">
                         <span class="flow-explorer-follow-up-prompt__index">{{ $index + 1 }}</span>
                         <p>{{ prompt }}</p>
@@ -1014,7 +1121,7 @@
                 </section>
               }
 
-              @if (hasItems(ai.globalVisibilityLimits) || hasItems(ai.globalOpenQuestions) || hasItems(ai.sourceReferences)) {
+              @if (hasDisplayMeta(result.appendix)) {
                 <section class="flow-explorer-result-block flow-explorer-result-block--appendix" aria-label="Analysis appendix">
                   <details class="flow-explorer-result-appendix">
                     <summary>
@@ -1024,44 +1131,75 @@
                         <strong>Limits, questions and references</strong>
                       </div>
                       <span class="flow-explorer-result-appendix__counts">
-                        @if (hasItems(ai.globalVisibilityLimits)) {
-                          <span>{{ ai.globalVisibilityLimits.length }} limits</span>
+                        @if (hasItems(result.appendix.visibilityLimits)) {
+                          <span>{{ result.appendix.visibilityLimits.length }} limits</span>
                         }
-                        @if (hasItems(ai.globalOpenQuestions)) {
-                          <span>{{ ai.globalOpenQuestions.length }} questions</span>
+                        @if (hasItems(result.appendix.openQuestions)) {
+                          <span>{{ result.appendix.openQuestions.length }} questions</span>
                         }
-                        @if (hasItems(ai.sourceReferences)) {
-                          <span>{{ ai.sourceReferences.length }} references</span>
+                        @if (hasItems(result.appendix.gaps)) {
+                          <span>{{ result.appendix.gaps.length }} gaps</span>
+                        }
+                        @if (hasItems(result.appendix.warnings)) {
+                          <span>{{ result.appendix.warnings.length }} warnings</span>
+                        }
+                        @if (hasItems(result.appendix.references)) {
+                          <span>{{ result.appendix.references.length }} references</span>
                         }
                       </span>
                     </summary>
                     <div class="flow-explorer-result-appendix__body">
-                      @if (hasItems(ai.globalVisibilityLimits)) {
+                      @if (hasItems(result.appendix.visibilityLimits)) {
                         <div class="flow-explorer-result-appendix__group">
                           <h4>Visibility limits</h4>
                           <ul class="flow-explorer-meta-list">
-                            @for (limit of ai.globalVisibilityLimits; track $index) {
+                            @for (limit of result.appendix.visibilityLimits; track $index) {
                               <li>{{ limit }}</li>
                             }
                           </ul>
                         </div>
                       }
-                      @if (hasItems(ai.globalOpenQuestions)) {
+                      @if (hasItems(result.appendix.openQuestions)) {
                         <div class="flow-explorer-result-appendix__group">
                           <h4>Open questions</h4>
                           <ul class="flow-explorer-meta-list">
-                            @for (question of ai.globalOpenQuestions; track $index) {
+                            @for (question of result.appendix.openQuestions; track $index) {
                               <li>{{ question }}</li>
                             }
                           </ul>
                         </div>
                       }
-                      @if (hasItems(ai.sourceReferences)) {
+                      @if (hasItems(result.appendix.gaps)) {
+                        <div class="flow-explorer-result-appendix__group">
+                          <h4>Gaps</h4>
+                          <ul class="flow-explorer-meta-list">
+                            @for (gap of result.appendix.gaps; track $index) {
+                              <li>{{ gap }}</li>
+                            }
+                          </ul>
+                        </div>
+                      }
+                      @if (hasItems(result.appendix.warnings)) {
+                        <div class="flow-explorer-result-appendix__group">
+                          <h4>Warnings</h4>
+                          <ul class="flow-explorer-meta-list">
+                            @for (warning of result.appendix.warnings; track $index) {
+                              <li>{{ warning }}</li>
+                            }
+                          </ul>
+                        </div>
+                      }
+                      @if (hasItems(result.appendix.references)) {
                         <div class="flow-explorer-result-appendix__group flow-explorer-result-appendix__group--references">
                           <h4>All references</h4>
                           <div class="flow-explorer-chip-list">
-                            @for (sourceReference of ai.sourceReferences; track $index) {
-                              <span class="panel-chip">{{ sourceReference }}</span>
+                            @for (reference of result.appendix.references; track $index) {
+                              <span class="panel-chip flow-explorer-reference-chip">
+                                <strong>{{ reference.label }}</strong>
+                                @if (hasText(reference.details)) {
+                                  <small>{{ reference.details }}</small>
+                                }
+                              </span>
                             }
                           </div>
                         </div>
@@ -1070,10 +1208,11 @@
                   </details>
                 </section>
               }
-            } @else {
+
+            @if (!result.overview && resultSections().length === 0 && hasText(result.emptyMessage)) {
               <div class="flow-explorer-message flow-explorer-message--warning" role="status">
                 <span class="material-symbols-outlined" aria-hidden="true">info</span>
-                <p>AI returned a result, but the structured response body is not available.</p>
+                <p>{{ result.emptyMessage }}</p>
               </div>
             }
 
@@ -1099,10 +1238,6 @@
           </section>
         }
 
-        @if (snapshot.report) {
-          <app-analysis-report-panel [report]="snapshot.report"></app-analysis-report-panel>
-        }
-
             </div>
 
             <app-analysis-feature-aside
@@ -1123,7 +1258,7 @@
                   [toolFeedback]="snapshot.toolFeedback"
                   [preparedPrompt]="snapshot.preparedPrompt"
                   [result]="null"
-                  [finalResultAvailable]="!!snapshot.result"
+                  [finalResultAvailable]="!!snapshot.report"
                   [showAiWorkflow]="false"
                   [showToolFeedback]="false"
                   [staticPanels]="true"
@@ -1139,7 +1274,7 @@
                   [toolFeedback]="snapshot.toolFeedback"
                   [preparedPrompt]="snapshot.preparedPrompt"
                   [result]="null"
-                  [finalResultAvailable]="!!snapshot.result"
+                  [finalResultAvailable]="!!snapshot.report"
                   [showProgress]="false"
                   [showToolFeedback]="false"
                   [staticPanels]="true"
@@ -1177,7 +1312,7 @@
                   [toolFeedback]="snapshot.toolFeedback"
                   [preparedPrompt]="snapshot.preparedPrompt"
                   [result]="null"
-                  [finalResultAvailable]="!!snapshot.result"
+                  [finalResultAvailable]="!!snapshot.report"
                   [showProgress]="false"
                   [showAiWorkflow]="false"
                   [staticPanels]="true"

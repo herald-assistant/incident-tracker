@@ -314,7 +314,7 @@ describe('FlowExplorerPageComponent', () => {
     });
   });
 
-  it('should render structured AI result for a completed job', () => {
+  it('should render canonical report in the Flow Explorer result layout', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
@@ -335,7 +335,9 @@ describe('FlowExplorerPageComponent', () => {
     expect(markdownBlocks.length).toBe(5);
     expect(markdownBlocks[0]?.querySelector('strong')?.textContent).toBe('The endpoint');
     expect(compiled.querySelector('.flow-explorer-result-summary')).toBeNull();
-    expect(compiled.querySelector('.flow-explorer-result__heading .field-hint')).toBeNull();
+    expect(compiled.querySelector('.flow-explorer-result__heading .field-hint')?.textContent).toContain(
+      'CRM Service / main'
+    );
     expect(referenceLists.length).toBe(4);
     referenceLists.forEach((referenceList) => expect(referenceList.open).toBe(false));
     expect(referenceLists[0]?.querySelector('summary')?.textContent).toContain('References');
@@ -345,15 +347,16 @@ describe('FlowExplorerPageComponent', () => {
     );
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 limits');
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 questions');
+    expect(appendix?.querySelector('summary')?.textContent).toContain('1 gaps');
+    expect(appendix?.querySelector('summary')?.textContent).toContain('1 warnings');
     expect(appendix?.querySelector('summary')?.textContent).toContain('1 references');
-    expect(compiled.textContent).toContain('Co sprawdzić dalej');
-    expect(compiled.textContent).toContain('1 sugestia');
-    expect(compiled.textContent).toContain('Sprawdz, czy nieaktywny klient powinien blokowac ten flow.');
     expect(compiled.textContent).toContain('Functional flow');
-    expect(compiled.textContent).toContain('flow-report-1');
     expect(compiled.textContent).toContain('Flow Explorer: GET /api/customers/{id}');
     expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
+    expect(compiled.textContent).toContain('Runtime trace was not available.');
+    expect(compiled.textContent).toContain('Legacy customer status mapping needs owner confirmation.');
+    expect(compiled.querySelector('app-analysis-report-panel')).toBeNull();
     expect(compiled.textContent).toContain('Tokens');
     expect(compiled.textContent).toContain('2,820');
     expect(compiled.textContent).toContain('Credits');
@@ -384,13 +387,15 @@ describe('FlowExplorerPageComponent', () => {
       const copiedText = clipboard.writeText.mock.calls[0]?.[0] as string | undefined;
 
       expect(clipboard.writeText).toHaveBeenCalledTimes(1);
-      expect(copiedText).toContain('# GET /api/customers/{id}');
+      expect(copiedText).toContain('# Flow Explorer: GET /api/customers/{id}');
       expect(copiedText).toContain('## Overview');
       expect(copiedText).toContain('## Functional flow');
+      expect(copiedText).toContain('### Report metadata');
+      expect(copiedText).toContain('Runtime trace was not available.');
+      expect(copiedText).toContain('No runtime database records were queried.');
+      expect(copiedText).toContain('Legacy customer status mapping needs owner confirmation.');
       expect(copiedText).not.toContain('Copy result');
       expect(copiedText).not.toContain('CustomerController.getCustomer L12-L24');
-      expect(copiedText).not.toContain('Confirm expected status code for inactive customers.');
-      expect(copiedText).not.toContain('No runtime database records were queried.');
       expect(copiedText).not.toContain('Sprawdz, czy nieaktywny klient powinien blokowac ten flow.');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
     } finally {
@@ -398,33 +403,33 @@ describe('FlowExplorerPageComponent', () => {
     }
   });
 
-  it('should copy a recommended follow-up prompt', async () => {
-    const clipboard = mockRichClipboard();
+  it('should not render legacy result content when the canonical report is missing', () => {
+    vi.mocked(flowExplorerApi.getJob).mockReturnValue(
+      of(
+        jobSnapshot({
+          status: 'COMPLETED',
+          currentStepCode: 'COMPLETED',
+          currentStepLabel: 'AI result ready',
+          preparedPrompt: 'legacy prompt',
+          result: flowExplorerResult(),
+          report: null
+        })
+      )
+    );
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
-    try {
-      fixture.detectChanges();
-      selectSystem(fixture, 'CRM Service');
-      selectEndpoint(fixture, '/api/customers/{id}');
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
 
-      clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
-      fixture.detectChanges();
+    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
+    fixture.detectChanges();
 
-      const compiled = fixture.nativeElement as HTMLElement;
-      const copyButton = compiled.querySelector<HTMLButtonElement>(
-        '.flow-explorer-follow-up-prompt__copy'
-      );
-      copyButton?.click();
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-      fixture.detectChanges();
-
-      expect(clipboard.writeText).toHaveBeenCalledWith(
-        'Sprawdz, czy nieaktywny klient powinien blokowac ten flow.'
-      );
-      expect(compiled.textContent).toContain('Co sprawdzić dalej');
-    } finally {
-      clipboard.restore();
-    }
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.flow-explorer-result')).toBeNull();
+    expect(compiled.querySelector('.flow-explorer-follow-up-prompt__copy')).toBeNull();
+    expect(compiled.textContent).not.toContain('Co sprawdzić dalej');
+    expect(compiled.textContent).not.toContain('The endpoint reads the requested customer');
   });
 
   it('should export completed Flow Explorer results to a JSON file', async () => {
@@ -458,7 +463,8 @@ describe('FlowExplorerPageComponent', () => {
       currentStepCode: 'COMPLETED',
       currentStepLabel: 'AI result ready',
       preparedPrompt: 'imported canonical prompt',
-      result: flowExplorerResult()
+      result: flowExplorerResult(),
+      report: flowExplorerReport()
     });
     const fileContent = JSON.stringify(
       buildFlowExplorerExportEnvelope(exportedJob, '2026-06-18T10:00:00Z')
@@ -508,34 +514,6 @@ describe('FlowExplorerPageComponent', () => {
     expect(chatInput.disabled).toBe(true);
   });
 
-  it('should show a controlled fallback when structured AI response is missing', () => {
-    vi.mocked(flowExplorerApi.getJob).mockReturnValue(
-      of(
-        jobSnapshot({
-          status: 'COMPLETED',
-          currentStepCode: 'COMPLETED',
-          currentStepLabel: 'AI result ready',
-          result: {
-            ...flowExplorerResult(),
-            aiResponse: null
-          }
-        })
-      )
-    );
-    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
-
-    fixture.detectChanges();
-    selectSystem(fixture, 'CRM Service');
-    selectEndpoint(fixture, '/api/customers/{id}');
-
-    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Deep Discovery');
-    expect(compiled.textContent).toContain('structured response body is not available');
-  });
-
   it('should render AI activity, tool evidence and feedback trace', () => {
     vi.mocked(flowExplorerApi.getJob).mockReturnValue(
       of(
@@ -544,6 +522,7 @@ describe('FlowExplorerPageComponent', () => {
           currentStepCode: 'COMPLETED',
           currentStepLabel: 'AI result ready',
           result: flowExplorerResult(),
+          report: flowExplorerReport(),
           toolEvidenceSections: [
             {
               provider: 'GitLab',
@@ -1301,10 +1280,31 @@ function flowExplorerReport(): AnalysisReport {
     markdownSummary: 'Customer lookup pobiera profil klienta CRM.',
     sections: [
       {
+        id: 'OVERVIEW',
+        title: 'Overview',
+        order: 0,
+        markdown: '**The endpoint** reads the requested customer and returns its current CRM profile.',
+        meta: {
+          references: [
+            {
+              type: 'code',
+              label: 'CustomerController.getCustomer',
+              target: 'src/main/java/CustomerController.java:L12-L24',
+              description: 'HTTP handler for the selected endpoint.'
+            }
+          ],
+          visibilityLimits: [],
+          openQuestions: [],
+          gaps: [],
+          confidence: 'high',
+          warnings: []
+        }
+      },
+      {
         id: 'FUNCTIONAL_FLOW',
         title: 'Functional flow',
         order: 1,
-        markdown: 'The controller delegates customer lookup to the CRM service.',
+        markdown: 'The controller delegates customer lookup to the CRM service and returns the profile when it is available.',
         meta: {
           references: [
             {
@@ -1320,15 +1320,78 @@ function flowExplorerReport(): AnalysisReport {
           confidence: 'high',
           warnings: []
         }
+      },
+      {
+        id: 'VALIDATIONS',
+        title: 'Validations',
+        order: 2,
+        markdown: 'Customer id is required before the lookup can continue.',
+        meta: {
+          references: [
+            {
+              type: 'code',
+              label: 'CustomerService.getCustomer',
+              target: 'src/main/java/CustomerService.java:L30-L44',
+              description: 'Input validation before lookup.'
+            }
+          ],
+          visibilityLimits: [],
+          openQuestions: [],
+          gaps: [],
+          confidence: 'high',
+          warnings: []
+        }
+      },
+      {
+        id: 'PERSISTENCE',
+        title: 'Persistence',
+        order: 3,
+        markdown: 'CustomerRepository.findById loads the aggregate.',
+        meta: {
+          references: [
+            {
+              type: 'code',
+              label: 'CustomerRepository.findById',
+              target: 'src/main/java/CustomerRepository.java:L10-L18',
+              description: 'Repository lookup.'
+            }
+          ],
+          visibilityLimits: [],
+          openQuestions: [],
+          gaps: [],
+          confidence: 'medium',
+          warnings: []
+        }
+      },
+      {
+        id: 'INTEGRATIONS',
+        title: 'Integrations',
+        order: 4,
+        markdown: 'No external system call is visible in the initial flow.',
+        meta: {
+          references: [],
+          visibilityLimits: ['No runtime database records were queried.'],
+          openQuestions: ['Confirm expected status code for inactive customers.'],
+          gaps: ['Runtime trace was not available.'],
+          confidence: 'medium',
+          warnings: ['Legacy customer status mapping needs owner confirmation.']
+        }
       }
     ],
     meta: {
-      references: [],
+      references: [
+        {
+          type: 'code',
+          label: 'CustomerService.getCustomer',
+          target: 'src/main/java/CustomerService.java:L30-L44',
+          description: 'Primary source for customer lookup flow.'
+        }
+      ],
       visibilityLimits: ['No runtime database records were queried.'],
       openQuestions: ['Confirm expected status code for inactive customers.'],
-      gaps: [],
+      gaps: ['Runtime trace was not available.'],
       confidence: 'high',
-      warnings: []
+      warnings: ['Legacy customer status mapping needs owner confirmation.']
     }
   };
 }

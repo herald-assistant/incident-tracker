@@ -8,6 +8,10 @@ import { finalize } from 'rxjs';
 import {
   AnalysisAiUsage,
   AnalysisAiModelOptionsResponse,
+  AnalysisReport,
+  AnalysisReportMeta,
+  AnalysisReportReference,
+  AnalysisReportSection,
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
@@ -36,10 +40,9 @@ import {
   normalizeFlowExplorerJob,
   parseImportedFlowExplorerAnalysis
 } from '../../utils/flow-explorer-import-export.utils';
-import { buildFlowExplorerResultMarkdown } from '../../utils/flow-explorer-result-markdown.utils';
+import { buildFlowExplorerReportMarkdown } from '../../utils/flow-explorer-result-markdown.utils';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
-import { AnalysisReportPanelComponent } from '../../../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
@@ -64,6 +67,42 @@ interface FlowExplorerUsageStat {
   value: string;
 }
 
+interface FlowExplorerDisplayReference {
+  label: string;
+  details: string;
+}
+
+interface FlowExplorerDisplayMeta {
+  references: FlowExplorerDisplayReference[];
+  visibilityLimits: string[];
+  openQuestions: string[];
+  gaps: string[];
+  warnings: string[];
+  confidence: string;
+}
+
+interface FlowExplorerDisplaySection {
+  id: string;
+  title: string;
+  mode: string;
+  markdown: string;
+  meta: FlowExplorerDisplayMeta;
+}
+
+interface FlowExplorerDisplayResult {
+  title: string;
+  subTitle: string;
+  status: string;
+  goal: FlowExplorerAnalysisGoal;
+  confidence: string;
+  overview: FlowExplorerDisplaySection | null;
+  sections: FlowExplorerDisplaySection[];
+  appendix: FlowExplorerDisplayMeta;
+  followUpPrompts: string[];
+  usage: AnalysisAiUsage | null;
+  emptyMessage: string;
+}
+
 type FlowExplorerExportMetadata = Pick<
   FlowExplorerExportState,
   | 'origin'
@@ -72,7 +111,6 @@ type FlowExplorerExportMetadata = Pick<
   | 'localRunId'
   | 'localRunName'
   | 'continuationEnabled'
-  | 'sourceEnvelope'
 >;
 
 const POLL_INTERVAL_MS = 1500;
@@ -155,7 +193,6 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
     AnalysisFollowUpChatComponent,
-    AnalysisReportPanelComponent,
     AnalysisStepsPanelComponent,
     MarkdownContentComponent
   ],
@@ -455,11 +492,11 @@ export class FlowExplorerPageComponent implements OnInit {
     }
     return selected ? this.reasoningEffortHint(selected) : 'backend default exploration depth';
   });
-  readonly resultSections = computed(() => {
-    return (this.job()?.result?.aiResponse?.sections ?? []).filter(
-      (section) => normalizeSearch(section.mode) !== 'off'
-    );
+  readonly displayResult = computed(() => {
+    const job = this.job();
+    return job?.report ? displayResultFromReport(job, job.report) : null;
   });
+  readonly resultSections = computed(() => this.displayResult()?.sections ?? []);
   constructor() {
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -860,24 +897,24 @@ export class FlowExplorerPageComponent implements OnInit {
       return;
     }
 
-    if (exportState.origin === 'local' && exportState.sourceEnvelope) {
-      const exportedAt = exportState.exportedAt || new Date().toISOString();
-      downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), exportState.sourceEnvelope);
-      return;
-    }
-
     const exportedAt = new Date().toISOString();
     const payload = buildFlowExplorerExportEnvelope(exportState.job, exportedAt);
     downloadJsonFile(buildFlowExplorerExportFileName(exportState.job, exportedAt), payload);
   }
 
   protected async copyFlowExplorerResult(): Promise<void> {
-    const result = this.job()?.result;
-    if (!result) {
+    const job = this.job();
+    if (!job?.report) {
       return;
     }
 
-    const copied = await copyTextToClipboard(buildFlowExplorerResultMarkdown(result));
+    const markdown = buildFlowExplorerReportMarkdown(job.report, `${job.httpMethod} ${job.endpointPath}`);
+
+    if (!markdown) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(markdown);
     if (!copied) {
       this.jobError.set('Nie udalo sie skopiowac wyniku Flow Explorera do schowka.');
       return;
@@ -1040,6 +1077,21 @@ export class FlowExplorerPageComponent implements OnInit {
 
   protected hasItems(items: unknown[] | null | undefined): boolean {
     return Boolean(items?.length);
+  }
+
+  protected hasText(value: string | null | undefined): boolean {
+    return typeof value === 'string' && value.trim().length > 0;
+  }
+
+  protected hasDisplayMeta(meta: FlowExplorerDisplayMeta | null | undefined): boolean {
+    return Boolean(
+      meta &&
+        (this.hasItems(meta.references) ||
+          this.hasItems(meta.visibilityLimits) ||
+          this.hasItems(meta.openQuestions) ||
+          this.hasItems(meta.gaps) ||
+          this.hasItems(meta.warnings))
+    );
   }
 
   protected confidencePillClass(confidence: string): string {
@@ -1243,7 +1295,7 @@ export class FlowExplorerPageComponent implements OnInit {
     job: FlowExplorerJobStateSnapshot,
     metadata: FlowExplorerExportMetadata
   ): void {
-    if (job.status !== 'COMPLETED' || !job.result?.aiResponse || this.hasActiveChat(job)) {
+    if (job.status !== 'COMPLETED' || !job.report || this.hasActiveChat(job)) {
       this.exportState.set(null);
       return;
     }
@@ -1288,8 +1340,7 @@ export class FlowExplorerPageComponent implements OnInit {
         fileName: '',
         localRunId: detail.analysisId,
         localRunName: detail.name,
-        continuationEnabled: detail.continuationEnabled,
-        sourceEnvelope: detail.exportEnvelope
+        continuationEnabled: detail.continuationEnabled
       });
       this.syncImportedControls(imported.job);
     } catch (error) {
@@ -1495,6 +1546,180 @@ export class FlowExplorerPageComponent implements OnInit {
     }
   }
 
+}
+
+function displayResultFromReport(
+  job: FlowExplorerJobStateSnapshot,
+  report: AnalysisReport
+): FlowExplorerDisplayResult {
+  const sections = sortedReportSections(report.sections);
+  const overviewSection = sections.find(isOverviewReportSection) ?? null;
+  const overviewMarkdown = combineDistinctMarkdown(
+    report.markdownSummary,
+    overviewSection?.markdown ?? ''
+  );
+  const overviewMeta = displayMetaFromReport(overviewSection?.meta ?? report.meta);
+  const overview =
+    overviewSection || hasTextValue(overviewMarkdown) || hasDisplayMetaValue(overviewMeta)
+      ? {
+          id: overviewSection?.id || 'OVERVIEW',
+          title: firstText(overviewSection?.title, 'Overview'),
+          mode: 'overview',
+          markdown: overviewMarkdown,
+          meta: overviewMeta
+        }
+      : null;
+
+  return {
+    title: firstText(report.header, endpointLabel(job), 'Flow Explorer result'),
+    subTitle: cleanText(report.subHeader),
+    status: firstText(job.status, 'COMPLETED'),
+    goal: job.goal || 'DEEP_DISCOVERY',
+    confidence: firstText(report.meta?.confidence, overview?.meta.confidence, 'confidence n/a'),
+    overview,
+    sections: sections
+      .filter((section) => !isOverviewReportSection(section))
+      .map((section) => displaySectionFromReport(job, section)),
+    appendix: displayMetaFromReport(report.meta),
+    followUpPrompts: [],
+    usage: usageFromJob(job),
+    emptyMessage: ''
+  };
+}
+
+function displaySectionFromReport(
+  job: FlowExplorerJobStateSnapshot,
+  section: AnalysisReportSection
+): FlowExplorerDisplaySection {
+  return {
+    id: cleanText(section.id),
+    title: reportSectionTitle(section),
+    mode: reportSectionMode(job, section.id),
+    markdown: cleanText(section.markdown),
+    meta: displayMetaFromReport(section.meta)
+  };
+}
+
+function displayMetaFromReport(meta: AnalysisReportMeta | null | undefined): FlowExplorerDisplayMeta {
+  return {
+    references: (meta?.references ?? [])
+      .map(displayReferenceFromReport)
+      .filter((reference) => hasTextValue(reference.label) || hasTextValue(reference.details)),
+    visibilityLimits: cleanTextList(meta?.visibilityLimits),
+    openQuestions: cleanTextList(meta?.openQuestions),
+    gaps: cleanTextList(meta?.gaps),
+    warnings: cleanTextList(meta?.warnings),
+    confidence: cleanText(meta?.confidence)
+  };
+}
+
+function displayReferenceFromReport(reference: AnalysisReportReference): FlowExplorerDisplayReference {
+  const label = firstText(reference.label, reference.target, reference.type, reference.description, 'Reference');
+  const details = [reference.type, reference.target, reference.description]
+    .map(cleanText)
+    .filter((value) => hasTextValue(value) && value !== label)
+    .join(' | ');
+  return { label, details };
+}
+
+function emptyDisplayMeta(confidence = ''): FlowExplorerDisplayMeta {
+  return {
+    references: [],
+    visibilityLimits: [],
+    openQuestions: [],
+    gaps: [],
+    warnings: [],
+    confidence
+  };
+}
+
+function sortedReportSections(sections: AnalysisReportSection[] | null | undefined): AnalysisReportSection[] {
+  return [...(sections ?? [])].sort((left, right) => {
+    const leftOrder = typeof left.order === 'number' ? left.order : Number.MAX_SAFE_INTEGER;
+    const rightOrder = typeof right.order === 'number' ? right.order : Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder;
+  });
+}
+
+function isOverviewReportSection(section: AnalysisReportSection): boolean {
+  return normalizeSearch(section.id) === 'overview';
+}
+
+function reportSectionTitle(section: AnalysisReportSection): string {
+  const id = cleanText(section.id);
+  if (hasTextValue(section.title)) {
+    return section.title.trim();
+  }
+  if (isSectionId(id)) {
+    return sectionTitle(id);
+  }
+  return firstText(id, 'Section');
+}
+
+function reportSectionMode(job: FlowExplorerJobStateSnapshot, sectionId: string): FlowExplorerSectionMode {
+  const normalizedId = cleanText(sectionId).toUpperCase();
+  const assignment = job.sectionModes.find((sectionMode) => sectionMode.id === normalizedId);
+  return assignment?.mode ?? 'COMPACT';
+}
+
+function endpointLabel(job: FlowExplorerJobStateSnapshot): string {
+  return firstText(`${job.httpMethod} ${job.endpointPath}`.trim(), job.endpointId, 'Flow Explorer result');
+}
+
+function usageFromJob(job: FlowExplorerJobStateSnapshot): AnalysisAiUsage | null {
+  const aiStepUsage = job.steps.find((step) => step.code === 'AI_ANALYSIS' && step.usage)?.usage;
+  if (aiStepUsage) {
+    return aiStepUsage;
+  }
+  return [...job.steps].reverse().find((step) => step.usage)?.usage ?? null;
+}
+
+function combineDistinctMarkdown(...values: Array<string | null | undefined>): string {
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  values.forEach((value) => {
+    const markdown = cleanMarkdown(value);
+    if (!markdown) {
+      return;
+    }
+    const key = markdown.replace(/\s+/g, ' ').toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    parts.push(markdown);
+  });
+  return parts.join('\n\n');
+}
+
+function cleanMarkdown(value: string | null | undefined): string {
+  return cleanText(value).replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function cleanTextList(values: string[] | null | undefined): string[] {
+  return (values ?? []).map(cleanText).filter(hasTextValue);
+}
+
+function cleanText(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function firstText(...values: Array<string | null | undefined>): string {
+  return values.map(cleanText).find(hasTextValue) ?? '';
+}
+
+function hasTextValue(value: string | null | undefined): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function hasDisplayMetaValue(meta: FlowExplorerDisplayMeta): boolean {
+  return Boolean(
+    meta.references.length ||
+      meta.visibilityLimits.length ||
+      meta.openQuestions.length ||
+      meta.gaps.length ||
+      meta.warnings.length
+  );
 }
 
 function buildFlowExplorerUsageStats(usage: AnalysisAiUsage | null): FlowExplorerUsageStat[] {

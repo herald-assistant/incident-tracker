@@ -1037,6 +1037,35 @@ article.flow-explorer-select-option {
   white-space: normal;
 }
 
+.flow-explorer-reference-chip {
+  display: inline-grid;
+  gap: 2px;
+}
+
+.flow-explorer-reference-list .flow-explorer-reference-chip {
+  display: inline-grid;
+}
+
+.flow-explorer-reference-chip strong,
+.flow-explorer-reference-chip small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.flow-explorer-reference-chip strong {
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.flow-explorer-reference-chip small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
 .flow-explorer-result-block--references,
 .flow-explorer-result-block--appendix {
   gap: 0;
@@ -1176,6 +1205,10 @@ article.flow-explorer-select-option {
   overflow-wrap: anywhere;
   text-align: left;
   white-space: normal;
+}
+
+.flow-explorer-result-appendix__group--references .flow-explorer-reference-chip {
+  display: inline-grid;
 }
 
 .flow-explorer-result-subsection h4,

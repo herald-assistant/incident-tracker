@@ -7,10 +7,14 @@ import {
   AnalysisEvidenceReference,
   AnalysisEvidenceItem,
   AnalysisEvidenceSection,
-  AnalysisJobStepResponse
+  AnalysisJobStepResponse,
+  AnalysisReport,
+  AnalysisReportMeta,
+  AnalysisReportSection
 } from '../../../core/models/analysis.models';
 import { normalizeAnalysisReport } from '../../../core/utils/analysis-import-export.utils';
 import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
+import { buildFlowExplorerReportMarkdown } from './flow-explorer-result-markdown.utils';
 import {
   FlowExplorerAiResponse,
   FlowExplorerAnalysisGoal,
@@ -107,7 +111,6 @@ export interface FlowExplorerExportState {
   localRunId?: string;
   localRunName?: string;
   continuationEnabled?: boolean;
-  sourceEnvelope?: unknown;
 }
 
 export function buildFlowExplorerExportEnvelope(
@@ -135,9 +138,11 @@ export function buildFlowExplorerExportDiagnostics(
 ): FlowExplorerExportDiagnostics {
   assertCompletedExportableJob(job);
 
-  const result = job.result;
-  const aiResponse = result.aiResponse;
-  const resultMarkdown = renderFlowExplorerResultMarkdown(job);
+  const report = job.report;
+  const resultMarkdown = buildFlowExplorerReportMarkdown(
+    report,
+    `${job.httpMethod} ${job.endpointPath}`.trim()
+  );
   const contextSnapshot = asObject(job.contextSnapshot);
   const coverage = asObject(contextSnapshot?.['coverage']);
   const snippetCharacterCount = normalizeNumber(coverage?.['snippetCharacterCount']);
@@ -159,17 +164,13 @@ export function buildFlowExplorerExportDiagnostics(
       reasoningEffort: job.reasoningEffort
     },
     result: {
-      goal: aiResponse.goal,
-      confidence: aiResponse.confidence || aiResponse.overview.confidence,
-      sectionModes: sectionModeIndex(aiResponse.sections),
-      sourceReferenceCount: aiResponse.sourceReferences.length,
-      visibilityLimitCount:
-        aiResponse.globalVisibilityLimits.length +
-        aiResponse.sections.reduce((count, section) => count + section.visibilityLimits.length, 0),
-      openQuestionCount:
-        aiResponse.globalOpenQuestions.length +
-        aiResponse.sections.reduce((count, section) => count + section.openQuestions.length, 0),
-      followUpPromptCount: aiResponse.followUpPrompts.length
+      goal: job.goal,
+      confidence: reportConfidence(report),
+      sectionModes: reportSectionModeIndex(job),
+      sourceReferenceCount: reportReferenceCount(report),
+      visibilityLimitCount: reportMetaItemCount(report, 'visibilityLimits'),
+      openQuestionCount: reportMetaItemCount(report, 'openQuestions'),
+      followUpPromptCount: 0
     },
     context: {
       contextSnapshotIncluded: Boolean(contextSnapshot),
@@ -190,7 +191,7 @@ export function buildFlowExplorerExportDiagnostics(
       aiActivityEventCount: job.aiActivityEvents.length,
       toolFeedbackCount: job.toolFeedback.length,
       chatMessageCount: job.chatMessages.length,
-      usageIncluded: Boolean(result.usage)
+      usageIncluded: Boolean(usageFromJob(job))
     },
     artifacts: diagnosticArtifactSummary(job, resultMarkdown, snippetCharacterCount),
     resultMarkdown
@@ -547,9 +548,7 @@ function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
 }
 
 type ExportableFlowExplorerJob = FlowExplorerJobStateSnapshot & {
-  result: FlowExplorerResult & {
-    aiResponse: FlowExplorerAiResponse;
-  };
+  report: AnalysisReport;
 };
 
 function assertCompletedExportableJob(
@@ -561,73 +560,64 @@ function assertCompletedExportableJob(
   if (hasActiveChat(job)) {
     throw new Error('Import i eksport nie wspiera analiz z aktywną odpowiedzią follow-up.');
   }
-  if (!job.result || !job.result.aiResponse) {
-    throw new Error('Flow Explorer export wymaga ustrukturyzowanego wyniku AI.');
-  }
-  if (job.result.goal !== job.goal || job.result.aiResponse.goal !== job.goal) {
-    throw new Error('Flow Explorer export ma niespójny goal w jobie i wyniku AI.');
-  }
-  if (job.result.status !== 'COMPLETED') {
-    throw new Error('Flow Explorer export wymaga wyniku o statusie COMPLETED.');
+  if (!job.report) {
+    throw new Error('Flow Explorer export wymaga kanonicznego raportu analizy.');
   }
 }
 
-function renderFlowExplorerResultMarkdown(job: ExportableFlowExplorerJob): string {
-  const result = job.result;
-  const aiResponse = result.aiResponse;
-  const sectionMarkdown = aiResponse.sections
-    .map((section) =>
-      [
-        `## ${section.title}`,
-        `Mode: ${normalizeSectionMode(section.mode)}`,
-        section.markdown || 'No confirmed details.',
-        sourceRefsMarkdown(section.sourceRefs),
-        listMarkdown('Visibility limits', section.visibilityLimits),
-        listMarkdown('Open questions', section.openQuestions)
-      ]
-        .filter(Boolean)
-        .join('\n\n')
-    )
-    .join('\n\n');
-
-  return [
-    '# Flow Explorer result',
-    `Target: ${result.httpMethod} ${result.endpointPath}`,
-    `System: ${result.systemId}`,
-    `Goal: ${result.goal}`,
-    `Confidence: ${aiResponse.confidence || aiResponse.overview.confidence || 'n/a'}`,
-    '## Overview',
-    aiResponse.overview.markdown || 'No overview.',
-    sourceRefsMarkdown(aiResponse.overview.sourceRefs),
-    sectionMarkdown,
-    listMarkdown('Recommended follow-up prompts', aiResponse.followUpPrompts),
-    listMarkdown('Global visibility limits', aiResponse.globalVisibilityLimits),
-    listMarkdown('Global open questions', aiResponse.globalOpenQuestions),
-    sourceRefsMarkdown(aiResponse.sourceReferences)
-  ]
-    .filter(Boolean)
-    .join('\n\n')
-    .trim();
+function reportConfidence(report: AnalysisReport): string {
+  const overview = report.sections.find((section) => normalizeString(section.id) === 'OVERVIEW');
+  return normalizeString(report.meta?.confidence) || normalizeString(overview?.meta?.confidence);
 }
 
-function sourceRefsMarkdown(sourceRefs: string[]): string {
-  return listMarkdown('Source refs', sourceRefs);
-}
-
-function listMarkdown(title: string, items: string[]): string {
-  if (!items.length) {
-    return '';
-  }
-  return [`### ${title}`, ...items.map((item) => `- ${item}`)].join('\n');
-}
-
-function sectionModeIndex(
-  sections: FlowExplorerResultSection[]
+function reportSectionModeIndex(
+  job: ExportableFlowExplorerJob
 ): Partial<Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>> {
-  return sections.reduce((index, section) => {
-    index[section.id] = normalizeSectionMode(section.mode);
+  const modes = new Map(job.sectionModes.map((sectionMode) => [sectionMode.id, sectionMode.mode]));
+  return job.report.sections.reduce((index, section) => {
+    const id = reportFlowSectionId(section);
+    if (id) {
+      index[id] = normalizeSectionMode(modes.get(id));
+    }
     return index;
   }, {} as Partial<Record<FlowExplorerResultSectionId, FlowExplorerResultSectionMode>>);
+}
+
+function reportReferenceCount(report: AnalysisReport): number {
+  return reportMetaReferenceCount(report.meta) +
+    report.sections.reduce((count, section) => count + reportMetaReferenceCount(section.meta), 0);
+}
+
+function reportMetaReferenceCount(meta: AnalysisReportMeta | null | undefined): number {
+  return meta?.references?.length ?? 0;
+}
+
+function reportMetaItemCount(
+  report: AnalysisReport,
+  field: 'visibilityLimits' | 'openQuestions'
+): number {
+  return reportMetaListCount(report.meta, field) +
+    report.sections.reduce((count, section) => count + reportMetaListCount(section.meta, field), 0);
+}
+
+function reportMetaListCount(
+  meta: AnalysisReportMeta | null | undefined,
+  field: 'visibilityLimits' | 'openQuestions'
+): number {
+  return meta?.[field]?.length ?? 0;
+}
+
+function reportFlowSectionId(section: AnalysisReportSection): FlowExplorerResultSectionId | null {
+  const id = normalizeString(section.id);
+  return isFlowExplorerSectionId(id) ? id : null;
+}
+
+function usageFromJob(job: FlowExplorerJobStateSnapshot): AnalysisAiUsage | null {
+  const aiStepUsage = job.steps.find((step) => step.code === 'AI_ANALYSIS' && step.usage)?.usage;
+  if (aiStepUsage) {
+    return aiStepUsage;
+  }
+  return [...job.steps].reverse().find((step) => step.usage)?.usage ?? null;
 }
 
 function diagnosticClippingNotes(
@@ -655,7 +645,7 @@ function diagnosticArtifactSummary(
       name: 'flow-explorer-result.md',
       kind: 'user-facing-markdown',
       included: Boolean(resultMarkdown),
-      itemCount: 1 + job.result.aiResponse.sections.length,
+      itemCount: 1 + job.report.sections.length,
       characterCount: resultMarkdown.length
     },
     {
@@ -717,8 +707,8 @@ function diagnosticArtifactSummary(
     {
       name: 'usage',
       kind: 'token-and-cost-usage',
-      included: Boolean(job.result.usage),
-      itemCount: job.result.usage ? 1 : 0,
+      included: Boolean(usageFromJob(job)),
+      itemCount: usageFromJob(job) ? 1 : 0,
       characterCount: null
     }
   ];
