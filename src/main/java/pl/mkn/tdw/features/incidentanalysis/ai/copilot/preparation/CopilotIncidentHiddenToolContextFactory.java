@@ -8,19 +8,24 @@ import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class CopilotIncidentHiddenToolContextFactory {
+
+    private static final String REPORT_FEATURE = "incident-analysis";
 
     public Map<String, Object> fromInitialRequest(InitialAnalysisRequest request) {
         if (request == null) {
             return Map.of();
         }
 
-        return fromIncidentScope(
+        var context = fromIncidentScope(
                 request.correlationId(),
                 request.environment()
         );
+        putReportScope(context);
+        return context;
     }
 
     public Map<String, Object> fromChatRequest(AnalysisAiChatRequest request) {
@@ -42,6 +47,15 @@ public class CopilotIncidentHiddenToolContextFactory {
         putIfNotBlank(context, AgentToolContextKeys.CORRELATION_ID, correlationId);
         putIfNotBlank(context, AgentToolContextKeys.ENVIRONMENT, environment);
         return context;
+    }
+
+    private void putReportScope(Map<String, Object> context) {
+        putIfNotBlank(context, AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
+        putIfNotBlank(context, AgentToolContextKeys.REPORT_FEATURE, REPORT_FEATURE);
+        context.put(
+                AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
+                CopilotIncidentReportSectionIds.INITIAL_ALLOWED_SECTION_IDS
+        );
     }
 
     private void putIfNotBlank(Map<String, Object> context, String key, String value) {

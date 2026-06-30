@@ -39,6 +39,7 @@ import {
 import { buildFlowExplorerResultMarkdown } from '../../utils/flow-explorer-result-markdown.utils';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
+import { AnalysisReportPanelComponent } from '../../../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
@@ -154,6 +155,7 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
     AnalysisFollowUpChatComponent,
+    AnalysisReportPanelComponent,
     AnalysisStepsPanelComponent,
     MarkdownContentComponent
   ],

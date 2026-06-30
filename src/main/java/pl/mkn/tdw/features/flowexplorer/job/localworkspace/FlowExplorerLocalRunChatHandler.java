@@ -326,7 +326,8 @@ public class FlowExplorerLocalRunChatHandler implements LocalAnalysisRunChatHand
                 safeList(snapshot.toolFeedback()),
                 chatMessages,
                 snapshot.preparedPrompt(),
-                snapshot.result()
+                snapshot.result(),
+                snapshot.report()
         );
     }
 

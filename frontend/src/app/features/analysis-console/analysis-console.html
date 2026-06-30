@@ -251,6 +251,10 @@
               </section>
             }
 
+            @if (currentJob.report) {
+              <app-analysis-report-panel [report]="currentJob.report"></app-analysis-report-panel>
+            }
+
           </div>
 
           <app-analysis-feature-aside

@@ -29,6 +29,11 @@ describe('flow-explorer-import-export utils', () => {
     expect(envelope.payload.diagnostics.artifacts.map((artifact) => artifact.name)).toContain(
       'flow-explorer-result.md'
     );
+    const reportArtifact = envelope.payload.diagnostics.artifacts.find(
+      (artifact) => artifact.name === 'analysisReport'
+    );
+    expect(reportArtifact?.included).toBe(true);
+    expect(reportArtifact?.itemCount).toBe(2);
     expect(envelope.payload.diagnostics.resultMarkdown).toContain('## Functional flow');
     expect(envelope.payload.diagnostics.resultMarkdown).toContain('### Recommended follow-up prompts');
     expect(envelope.payload.diagnostics.resultMarkdown).not.toContain('class CustomerService');
@@ -37,6 +42,8 @@ describe('flow-explorer-import-export utils', () => {
     expect(imported.job.goal).toBe('DEEP_DISCOVERY');
     expect(imported.job.result?.aiResponse?.sections[0]?.title).toBe('Functional flow');
     expect(imported.job.result?.aiResponse?.sections[0]?.markdown).toContain('Flow krok po kroku');
+    expect(imported.job.report?.reportId).toBe('flow-report-1');
+    expect(imported.job.report?.sections[0]?.title).toBe('Functional flow');
     expect(imported.job.result?.aiResponse?.followUpPrompts).toEqual([
       'Sprawdz, czy nieaktywny klient powinien blokowac ten flow.'
     ]);
@@ -49,6 +56,7 @@ describe('flow-explorer-import-export utils', () => {
     expect(diagnostics.context.clippingNotes).toContain('No clipping reported by deterministic context.');
     expect(diagnostics.workflow.usageIncluded).toBe(true);
     expect(diagnostics.artifacts.find((artifact) => artifact.name === 'preparedPrompt')?.included).toBe(true);
+    expect(diagnostics.artifacts.find((artifact) => artifact.name === 'analysisReport')?.included).toBe(true);
     expect(diagnostics.resultMarkdown).toContain('CustomerRepository.findById loads the aggregate.');
   });
 
@@ -369,6 +377,43 @@ function flowExplorerJob(
         sourceReferences: [],
         confidence: 'high',
         followUpPrompts: ['Sprawdz, czy nieaktywny klient powinien blokowac ten flow.']
+      }
+    },
+    report: {
+      reportId: 'flow-report-1',
+      header: 'Flow Explorer: GET /api/customers/{id}',
+      subHeader: 'CRM Service / feature/FLOW-42',
+      markdownSummary: 'Customer lookup pobiera profil klienta bez zapisu stanu.',
+      sections: [
+        {
+          id: 'FUNCTIONAL_FLOW',
+          title: 'Functional flow',
+          order: 1,
+          markdown: 'CustomerRepository.findById loads the aggregate.',
+          meta: {
+            references: [
+              {
+                type: 'code',
+                label: 'CustomerService.getCustomer',
+                target: 'src/main/java/com/example/crm/CustomerService.java:L30-L44',
+                description: 'Main CRM lookup flow.'
+              }
+            ],
+            visibilityLimits: [],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'high',
+            warnings: []
+          }
+        }
+      ],
+      meta: {
+        references: [],
+        visibilityLimits: [],
+        openQuestions: [],
+        gaps: [],
+        confidence: 'high',
+        warnings: []
       }
     },
     ...overrides

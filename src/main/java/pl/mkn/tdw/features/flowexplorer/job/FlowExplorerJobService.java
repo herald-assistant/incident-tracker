@@ -3,17 +3,20 @@ package pl.mkn.tdw.features.flowexplorer.job;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponse;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerAiResponseParser;
 import pl.mkn.tdw.features.flowexplorer.ai.FlowExplorerFollowUpChatRequest;
 import pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation.FlowExplorerCopilotRunRequestAssembler;
-import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerFollowUpPromptPreparationService;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparationService;
+import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportMapper;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextRequest;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextService;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerChatMessageRequest;
@@ -41,6 +44,7 @@ public class FlowExplorerJobService {
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final FlowExplorerAiResponseParser responseParser;
+    private final FlowExplorerReportMapper reportMapper;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
     private final CopilotRunAuthMapper runAuthMapper;
@@ -64,6 +68,7 @@ public class FlowExplorerJobService {
                 runPreparationService,
                 executionGateway,
                 responseParser,
+                new FlowExplorerReportMapper(),
                 applicationTaskExecutor,
                 () -> AnalysisAiAuthRef.localToken(null),
                 new CopilotRunAuthMapper(),
@@ -97,6 +102,7 @@ public class FlowExplorerJobService {
                 runPreparationService,
                 executionGateway,
                 responseParser,
+                new FlowExplorerReportMapper(),
                 applicationTaskExecutor,
                 authRefResolver,
                 runAuthMapper,
@@ -114,6 +120,7 @@ public class FlowExplorerJobService {
             CopilotRunPreparationService runPreparationService,
             CopilotSdkExecutionGateway executionGateway,
             FlowExplorerAiResponseParser responseParser,
+            FlowExplorerReportMapper reportMapper,
             TaskExecutor applicationTaskExecutor,
             AnalysisAiAuthRefResolver authRefResolver,
             CopilotRunAuthMapper runAuthMapper,
@@ -129,6 +136,7 @@ public class FlowExplorerJobService {
         this.runPreparationService = runPreparationService;
         this.executionGateway = executionGateway;
         this.responseParser = responseParser;
+        this.reportMapper = reportMapper != null ? reportMapper : new FlowExplorerReportMapper();
         this.applicationTaskExecutor = applicationTaskExecutor;
         this.authRefResolver = authRefResolver;
         this.runAuthMapper = runAuthMapper;
@@ -178,13 +186,15 @@ public class FlowExplorerJobService {
                     .withEvidenceSink(job::markAiToolEvidenceUpdated)
                     .withActivitySink(job::markAiActivity);
             var executionResult = executionGateway.execute(preparedSession);
-            var aiResponse = responseParser.parse(
-                    executionResult.content(),
-                    request.goal(),
-                    request.resolvedSectionModes()
-            );
+            var aiResponse = responseFromReportOrAssistant(executionResult, request);
 
-            job.markAiCompleted(aiResponse, executionResult.usage(), promptPreparation.prompt(), executionResult.sessionId());
+            job.markAiCompleted(
+                    aiResponse,
+                    executionResult.usage(),
+                    promptPreparation.prompt(),
+                    executionResult.sessionId(),
+                    executionResult.report()
+            );
             persistCompletedInitialRun(job, authRef, executionResult.sessionId());
         } catch (RuntimeException exception) {
             log.error(
@@ -202,6 +212,22 @@ public class FlowExplorerJobService {
                             : "Unexpected Flow Explorer analysis failure."
             );
         }
+    }
+
+    private FlowExplorerAiResponse responseFromReportOrAssistant(
+            CopilotExecutionResult executionResult,
+            FlowExplorerJobStartRequest request
+    ) {
+        return reportMapper.tryMap(
+                        executionResult.report(),
+                        request.goal(),
+                        request.resolvedSectionModes()
+                )
+                .orElseGet(() -> responseParser.parse(
+                        executionResult.content(),
+                        request.goal(),
+                        request.resolvedSectionModes()
+                ));
     }
 
     public FlowExplorerJobStateSnapshot getJob(String jobId) {

@@ -4,6 +4,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
 import {
+  AnalysisReport,
   AnalysisAiModelOptionsResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
@@ -46,6 +47,7 @@ describe('FlowExplorerPageComponent', () => {
             currentStepLabel: 'AI result ready',
             preparedPrompt: 'canonical prompt',
             result: flowExplorerResult(),
+            report: flowExplorerReport(),
             chatMessages: completedChatMessages()
           })
         )
@@ -57,7 +59,8 @@ describe('FlowExplorerPageComponent', () => {
             currentStepCode: 'COMPLETED',
             currentStepLabel: 'AI result ready',
             preparedPrompt: 'canonical prompt\nsnippetCards: selected controller method',
-            result: flowExplorerResult()
+            result: flowExplorerResult(),
+            report: flowExplorerReport()
           })
         )
       )
@@ -347,6 +350,8 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('1 sugestia');
     expect(compiled.textContent).toContain('Sprawdz, czy nieaktywny klient powinien blokowac ten flow.');
     expect(compiled.textContent).toContain('Functional flow');
+    expect(compiled.textContent).toContain('flow-report-1');
+    expect(compiled.textContent).toContain('Flow Explorer: GET /api/customers/{id}');
     expect(compiled.textContent).toContain('Customer id is required before the lookup can continue.');
     expect(compiled.textContent).toContain('CustomerRepository.findById');
     expect(compiled.textContent).toContain('Tokens');
@@ -1042,6 +1047,7 @@ function jobSnapshot(overrides: Partial<FlowExplorerJobStateSnapshot> = {}): Flo
     chatMessages: [],
     preparedPrompt: '',
     result: null,
+    report: null,
     ...overrides
   };
   return {
@@ -1060,6 +1066,7 @@ function localFlowExplorerRunDetail(
     currentStepLabel: 'AI result ready',
     preparedPrompt: 'local canonical prompt',
     result: flowExplorerResult(),
+    report: flowExplorerReport(),
     ...jobOverrides
   });
 
@@ -1282,6 +1289,46 @@ function flowExplorerResult(): NonNullable<FlowExplorerJobStateSnapshot['result'
       sourceReferences: ['CustomerService.getCustomer L30-L44'],
       confidence: 'high',
       followUpPrompts: ['Sprawdz, czy nieaktywny klient powinien blokowac ten flow.']
+    }
+  };
+}
+
+function flowExplorerReport(): AnalysisReport {
+  return {
+    reportId: 'flow-report-1',
+    header: 'Flow Explorer: GET /api/customers/{id}',
+    subHeader: 'CRM Service / main',
+    markdownSummary: 'Customer lookup pobiera profil klienta CRM.',
+    sections: [
+      {
+        id: 'FUNCTIONAL_FLOW',
+        title: 'Functional flow',
+        order: 1,
+        markdown: 'The controller delegates customer lookup to the CRM service.',
+        meta: {
+          references: [
+            {
+              type: 'code',
+              label: 'CustomerService.getCustomer',
+              target: 'src/main/java/CustomerService.java:L30-L44',
+              description: 'Main CRM lookup flow.'
+            }
+          ],
+          visibilityLimits: [],
+          openQuestions: [],
+          gaps: [],
+          confidence: 'high',
+          warnings: []
+        }
+      }
+    ],
+    meta: {
+      references: [],
+      visibilityLimits: ['No runtime database records were queried.'],
+      openQuestions: ['Confirm expected status code for inactive customers.'],
+      gaps: [],
+      confidence: 'high',
+      warnings: []
     }
   };
 }

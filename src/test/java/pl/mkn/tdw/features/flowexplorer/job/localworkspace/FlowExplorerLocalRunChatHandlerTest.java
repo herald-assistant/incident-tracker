@@ -44,6 +44,9 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -163,6 +166,7 @@ class FlowExplorerLocalRunChatHandlerTest {
         assertTrue(updatedJob.chatMessages().get(1).prompt().contains("Gdzie jest walidacja?"));
         assertEquals(1, updatedJob.chatMessages().get(1).toolEvidenceSections().size());
         assertEquals(1, updatedJob.chatMessages().get(1).aiActivityEvents().size());
+        assertEquals("flow-report-1", updatedJob.report().reportId());
         assertEquals("follow-up-session-1", result.record().continuation().copilotSessionId());
         assertEquals("github-copilot-sdk", result.record().continuation().copilotRuntime());
         assertEquals("copilot-session", result.record().continuation().continuationMode());
@@ -261,7 +265,34 @@ class FlowExplorerLocalRunChatHandlerTest {
                         "Prepared prompt",
                         aiResponse(),
                         new AnalysisAiUsage(10, 5, 0, 0, 15, 0.01, 1000, 1, "gpt-5.4", null, null, null)
-                )
+                ),
+                report()
+        );
+    }
+
+    private AnalysisReport report() {
+        return new AnalysisReport(
+                "flow-report-1",
+                "Flow Explorer: GET /api/customers/{id}",
+                "crm-service | main | DEEP_DISCOVERY",
+                "",
+                List.of(
+                        new AnalysisReportSection(
+                                "OVERVIEW",
+                                "Overview",
+                                0,
+                                "Overview",
+                                AnalysisReportMeta.empty()
+                        ),
+                        new AnalysisReportSection(
+                                "FUNCTIONAL_FLOW",
+                                "Functional flow",
+                                1,
+                                "Section Functional flow",
+                                AnalysisReportMeta.empty()
+                        )
+                ),
+                AnalysisReportMeta.empty()
         );
     }
 

@@ -9,6 +9,7 @@ import {
   AnalysisEvidenceSection,
   AnalysisJobStepResponse
 } from '../../../core/models/analysis.models';
+import { normalizeAnalysisReport } from '../../../core/utils/analysis-import-export.utils';
 import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
 import {
   FlowExplorerAiResponse,
@@ -279,7 +280,8 @@ export function normalizeFlowExplorerJob(job: unknown): FlowExplorerJobStateSnap
       ? jobObject['chatMessages'].map(normalizeChatMessage)
       : [],
     preparedPrompt: normalizeString(jobObject['preparedPrompt']),
-    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result'], activeSectionIds) : null
+    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result'], activeSectionIds) : null,
+    report: asObject(jobObject['report']) ? normalizeAnalysisReport(jobObject['report']) : null
   };
 }
 
@@ -655,6 +657,13 @@ function diagnosticArtifactSummary(
       included: Boolean(resultMarkdown),
       itemCount: 1 + job.result.aiResponse.sections.length,
       characterCount: resultMarkdown.length
+    },
+    {
+      name: 'analysisReport',
+      kind: 'canonical-report-json',
+      included: Boolean(job.report),
+      itemCount: job.report ? 1 + job.report.sections.length : 0,
+      characterCount: null
     },
     {
       name: 'jobSnapshot',

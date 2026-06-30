@@ -8,6 +8,7 @@ import pl.mkn.tdw.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -211,6 +212,10 @@ public record CopilotIncidentToolAccessPolicy(
         return availableToolNames.stream().anyMatch(CopilotToolFeedbackToolNames::isFeedbackTool);
     }
 
+    public boolean reportToolsEnabled() {
+        return availableToolNames.stream().anyMatch(CopilotReportToolNames::isReportTool);
+    }
+
     private boolean hasAvailableToolPrefix(String prefix) {
         return availableToolNames.stream().anyMatch(name -> name != null && name.startsWith(prefix));
     }
@@ -248,6 +253,9 @@ public record CopilotIncidentToolAccessPolicy(
             return false;
         }
         if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
+            return true;
+        }
+        if (CopilotReportToolNames.isReportTool(toolName)) {
             return true;
         }
         if (toolName.startsWith(ElasticToolNames.PREFIX)) {
@@ -297,6 +305,9 @@ public record CopilotIncidentToolAccessPolicy(
             return false;
         }
         if (CopilotToolFeedbackToolNames.isFeedbackTool(toolName)) {
+            return true;
+        }
+        if (CopilotReportToolNames.isReportTool(toolName)) {
             return true;
         }
         if (toolName.startsWith(ElasticToolNames.PREFIX)) {

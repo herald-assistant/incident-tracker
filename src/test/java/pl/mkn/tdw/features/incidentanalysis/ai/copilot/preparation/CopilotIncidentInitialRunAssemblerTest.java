@@ -7,6 +7,8 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
@@ -42,7 +44,8 @@ class CopilotIncidentInitialRunAssemblerTest {
                 artifactService,
                 toolAccessPolicyFactory,
                 promptRenderer,
-                runRequestFactory
+                runRequestFactory,
+                new CopilotIncidentReportFactory()
         );
 
         var options = new AnalysisAiOptions("gpt-5.4", "medium");
@@ -57,7 +60,12 @@ class CopilotIncidentInitialRunAssemblerTest {
         var toolSessionContext = new CopilotToolSessionContext(
                 "run-123",
                 "analysis-run-123",
-                Map.of()
+                Map.of(
+                        AgentToolContextKeys.REPORT_ID, "report-123",
+                        AgentToolContextKeys.REPORT_FEATURE, "incident-analysis",
+                        AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
+                        CopilotIncidentReportSectionIds.INITIAL_ALLOWED_SECTION_IDS
+                )
         );
         var toolAccessPolicy = CopilotIncidentToolAccessPolicy.empty();
         var artifacts = List.of(artifact("01-incident-digest.md", "# Digest"));
@@ -83,6 +91,11 @@ class CopilotIncidentInitialRunAssemblerTest {
 
         assertEquals("corr-123", runRequest.runReference());
         assertEquals("Initial prompt", runRequest.prompt());
+        assertEquals("report-123", runRequest.initialReport().reportId());
+        assertEquals(
+                List.of("FUNCTIONAL_ANALYSIS", "TECHNICAL_HANDOFF"),
+                runRequest.initialReport().sections().stream().map(section -> section.id()).toList()
+        );
         assertSame(sessionConfigRequest, runRequest.sessionConfigRequest());
         assertEquals(Map.of("01-incident-digest.md", "# Digest"), runRequest.artifactContents());
         verify(sessionConfigRequestFactory).create(toolSessionContext.copilotSessionId(), toolAccessPolicy, options);

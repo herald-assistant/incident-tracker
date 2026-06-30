@@ -9,6 +9,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
+import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportFactory;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
@@ -24,6 +25,7 @@ public class FlowExplorerCopilotRunRequestAssembler {
     private final FlowExplorerCopilotToolAccessPolicyFactory toolAccessPolicyFactory;
     private final FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory;
     private final CopilotRunAuthMapper runAuthMapper;
+    private final FlowExplorerReportFactory reportFactory;
 
     @Autowired
     public FlowExplorerCopilotRunRequestAssembler(
@@ -31,13 +33,15 @@ public class FlowExplorerCopilotRunRequestAssembler {
             FlowExplorerCopilotToolSessionContextFactory toolSessionContextFactory,
             FlowExplorerCopilotToolAccessPolicyFactory toolAccessPolicyFactory,
             FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory,
-            CopilotRunAuthMapper runAuthMapper
+            CopilotRunAuthMapper runAuthMapper,
+            FlowExplorerReportFactory reportFactory
     ) {
         this.toolFactory = toolFactory;
         this.toolSessionContextFactory = toolSessionContextFactory;
         this.toolAccessPolicyFactory = toolAccessPolicyFactory;
         this.sessionConfigRequestFactory = sessionConfigRequestFactory;
         this.runAuthMapper = runAuthMapper;
+        this.reportFactory = reportFactory != null ? reportFactory : new FlowExplorerReportFactory();
     }
 
     public FlowExplorerCopilotRunRequestAssembler(
@@ -51,7 +55,8 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 toolSessionContextFactory,
                 toolAccessPolicyFactory,
                 sessionConfigRequestFactory,
-                new CopilotRunAuthMapper()
+                new CopilotRunAuthMapper(),
+                new FlowExplorerReportFactory()
         );
     }
 
@@ -146,7 +151,9 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 sessionConfigRequest,
                 preparation != null ? preparation.artifactContents() : null,
                 null
-        );
+        ).withInitialReport(followUp
+                ? null
+                : reportFactory.createInitialReport(request, contextSnapshot, toolSessionContext));
 
         return new FlowExplorerCopilotRunAssembly(
                 runRequest,

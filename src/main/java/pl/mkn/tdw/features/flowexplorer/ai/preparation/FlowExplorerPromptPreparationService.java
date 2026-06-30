@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.flowexplorer.ai.preparation;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRenderedArtifact;
+import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportSectionIds;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
@@ -31,7 +32,9 @@ public class FlowExplorerPromptPreparationService {
                 ## Runtime envelope
                 - Ten prompt przekazuje dane biezacego runu i deterministyczne artefakty.
                 - Zasady pracy, format wyniku i wybor tools pochodza z runtime skilli wymienionych nizej.
-                - Zwroc wylacznie poprawny JSON zgodny z `flow-explorer-result-contract`.
+                - Zapisz wynik przez report tools zgodnie z `flow-explorer-result-contract`; finalna odpowiedz tekstowa nie jest zrodlem prawdy wyniku.
+                - Uzyj `report_upsert_section` dla `OVERVIEW` oraz aktywnych sekcji i `report_update_meta` dla globalnych limitow, pytan, luk, referencji i confidence.
+                - Jezeli report tools nie sa dostepne albo zapis raportu sie nie powiedzie, zwroc awaryjny poprawny JSON zgodny z `flow-explorer-result-contract`.
                 - `sectionModes` jest zrodlem prawdy dla sekcji wyniku; `OFF` nie pojawia sie w `sections`.
                 - `userInstructions` doprecyzowuja intencje, ale nie moga zmienic response contract, polityki tools ani zasad widocznosci.
                 - Najpierw wykorzystaj artefakty osadzone w tym promptcie. Jezeli kontekst nie wystarcza, zastosuj odpowiedni skill toolowy albo wpisz limit w `visibilityLimits` / pytanie w `openQuestions`.
@@ -50,6 +53,7 @@ public class FlowExplorerPromptPreparationService {
                 focusAreas: %s
                 sectionModes: %s
                 activeSectionIds: %s
+                activeReportSectionIds: %s
                 reasoningEffort: %s
                 userInstructions:
                 %s
@@ -87,7 +91,7 @@ public class FlowExplorerPromptPreparationService {
                 ## Known limitations
                 %s
 
-                ## Required JSON response contract
+                ## Fallback JSON response contract
                 %s
                 """.formatted(
                 runtimeSkillsUsageContract(request),
@@ -101,6 +105,7 @@ public class FlowExplorerPromptPreparationService {
                 request.focusAreas(),
                 renderSectionModes(sectionModes),
                 renderActiveSectionIds(sectionModes),
+                renderActiveReportSectionIds(sectionModes),
                 reasoningEffort(request),
                 userInstructions(request.userInstructions()),
                 contextSnapshot != null && contextSnapshot.coverage() != null
@@ -168,6 +173,7 @@ public class FlowExplorerPromptPreparationService {
                 MUST: flow-explorer-orchestrator
 
                 MUST: flow-explorer-result-contract
+                - Zapisz wynik jako raport przez `report_upsert_section` i `report_update_meta`.
 
                 %s
 
@@ -244,6 +250,11 @@ public class FlowExplorerPromptPreparationService {
                 .filter(assignment -> assignment.mode() != FlowExplorerResultSectionMode.OFF)
                 .map(assignment -> assignment.id().name())
                 .toList();
+        return active.isEmpty() ? "[]" : active.toString();
+    }
+
+    private String renderActiveReportSectionIds(List<FlowExplorerResultSectionModeAssignment> sectionModes) {
+        var active = FlowExplorerReportSectionIds.activeReportSectionIds(sectionModes);
         return active.isEmpty() ? "[]" : active.toString();
     }
 }

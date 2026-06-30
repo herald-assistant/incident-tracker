@@ -23,6 +23,10 @@ describe('analysis import/export utils', () => {
     expect(imported.job.analysisId).toBe('analysis-1');
     expect(imported.job.status).toBe('COMPLETED');
     expect(imported.job.result?.detectedProblem).toBe('DOWNSTREAM_TIMEOUT');
+    expect(imported.job.report?.reportId).toBe('incident-report-1');
+    expect(imported.job.report?.sections[0]?.meta.references[0]?.target).toBe(
+      'CustomerService.getCustomer'
+    );
   });
 
   it('should reject legacy incident tracker export envelopes', () => {
@@ -91,6 +95,43 @@ function completedJob(): AnalysisJobStateSnapshot {
       visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
       prompt: 'Final prompt without GitHub tokens.',
       usage: null
+    },
+    report: {
+      reportId: 'incident-report-1',
+      header: 'DOWNSTREAM_TIMEOUT',
+      subHeader: 'Catalog / Catalog Context',
+      markdownSummary: 'Timeout downstream blokuje odczyt katalogu.',
+      sections: [
+        {
+          id: 'TECHNICAL_HANDOFF',
+          title: 'Technical handoff',
+          order: 1,
+          markdown: 'CustomerService.getCustomer powinien sprawdzic timeout klienta katalogu.',
+          meta: {
+            references: [
+              {
+                type: 'code',
+                label: 'CustomerService.getCustomer',
+                target: 'CustomerService.getCustomer',
+                description: 'Miejsce wywolania downstream.'
+              }
+            ],
+            visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'medium',
+            warnings: []
+          }
+        }
+      ],
+      meta: {
+        references: [],
+        visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
+        openQuestions: [],
+        gaps: [],
+        confidence: 'medium',
+        warnings: []
+      }
     }
   };
 }

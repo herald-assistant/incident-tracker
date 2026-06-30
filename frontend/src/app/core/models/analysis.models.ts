@@ -158,6 +158,39 @@ export interface AnalysisEvidenceReference {
   category: string;
 }
 
+export interface AnalysisReportReference {
+  type: string;
+  label: string;
+  target: string;
+  description: string;
+}
+
+export interface AnalysisReportMeta {
+  references: AnalysisReportReference[];
+  visibilityLimits: string[];
+  openQuestions: string[];
+  gaps: string[];
+  confidence: string;
+  warnings: string[];
+}
+
+export interface AnalysisReportSection {
+  id: string;
+  title: string;
+  order: number | null;
+  markdown: string;
+  meta: AnalysisReportMeta;
+}
+
+export interface AnalysisReport {
+  reportId: string;
+  header: string;
+  subHeader: string;
+  markdownSummary: string;
+  sections: AnalysisReportSection[];
+  meta: AnalysisReportMeta;
+}
+
 export interface AnalysisJobStepResponse {
   code: string;
   label: string;
@@ -214,6 +247,7 @@ export interface AnalysisJobStateSnapshot {
   chatMessages: AnalysisChatMessageResponse[];
   preparedPrompt: string;
   result: AnalysisResultResponse | null;
+  report?: AnalysisReport | null;
 }
 
 export interface ExportState {

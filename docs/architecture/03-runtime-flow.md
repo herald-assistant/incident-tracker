@@ -144,10 +144,10 @@ renderingu i konfiguracji SDK:
 
 - `CopilotIncidentToolAccessPolicyFactory` buduje initial coverage-aware policy oraz
   follow-up policy ze scope'u zakonczonej analizy,
-- `CopilotIncidentPromptRenderer` renderuje incident prompt initial, JSON-only
-  response contract, available capability groups, centralna instrukcje uzycia
-  feedbacku tooli, gdy `record_tool_feedback` jest dostepny, i embedded
-  artifacts,
+- `CopilotIncidentPromptRenderer` renderuje incident prompt initial,
+  report-first result contract, fallback JSON contract, available capability
+  groups, centralna instrukcje uzycia feedbacku tooli, gdy
+  `record_tool_feedback` jest dostepny, i embedded artifacts,
 - `CopilotIncidentToolSessionContextFactory` tworzy incidentowy
   `CopilotToolSessionContext`: run id, session id i hidden tool context dla
   initial/follow-up,
@@ -162,7 +162,8 @@ renderingu i konfiguracji SDK:
   contents,
 - `CopilotIncidentInitialRunAssembler` sklada
   `CopilotIncidentInitialRunAssembly`, ktory niesie neutralny
-  `CopilotRunRequest` oraz osobny snapshot metryk preparation,
+  `CopilotRunRequest` z `initialReport` oraz osobny snapshot metryk
+  preparation,
 - `CopilotIncidentFollowUpRunAssembler` wymaga `copilotSessionId`, wybiera
   `sessionTarget=EXISTING` i zwraca neutralny `CopilotRunRequest` z sama
   trescia wiadomosci operatora jako promptem,
@@ -189,6 +190,12 @@ UI.
 
 Runtime nie przekazuje evidence przez SDK attachments. Logical artifacts sa
 fragmentami promptu.
+
+Initial run tworzy scaffold `AnalysisReport` w feature-owned factory:
+`CopilotIncidentReportFactory` dla Incident Analysis oraz
+`FlowExplorerReportFactory` dla Flow Explorera. Ten sam `reportId` trafia do
+`CopilotRunRequest.initialReport` i hidden `ToolContext`, ale nie jest
+model-facing argumentem report tools.
 
 ## 4a. Follow-up chat po analizie
 
@@ -407,6 +414,18 @@ parametry typu `type`, `query`, `id`, `include` i prosty `reason`.
 model nie podaje publicznego scope'u analizy, tylko wskazuje target tool/call i
 jawna ocene wyniku dla operatora.
 
+Report tools sa platformowym, session-bound mechanizmem zapisu wyniku:
+`report_get_current`, `report_update_header`, `report_upsert_section` i
+`report_update_meta`. Scope raportu pochodzi z hidden `ToolContext`:
+`reportId`, `reportFeature` i `allowedReportSectionIds`. Model nie podaje
+`reportId`, a `report_upsert_section` odrzuca sekcje spoza allowlisty feature'a.
+
+Execution gateway rejestruje `CopilotPreparedSession.initialReport()` w
+`CopilotReportSessionStore` przed `sendAndWait`, zwraca ostatni snapshot w
+`CopilotExecutionResult.report()` i zawsze usuwa aktywny raport w `finally`.
+Jezeli feature nie przekaze `initialReport`, runtime zachowuje poprzedni tryb i
+`report()` w wyniku pozostaje `null`.
+
 ## 9. Tool factory
 
 `aiplatform.copilot.tools.CopilotSdkToolFactory` konwertuje Spring tools na
@@ -565,25 +584,58 @@ dostepny. Nie duplikujemy tej wzmianki w kazdym skillu, bo tool moze byc
 zarejestrowany platformowo i powinien dzialac niezaleznie od incidentowych
 playbookow.
 
-## 12. Response contract
+## 12. Report-first result contract
 
-Prompt wymaga JSON-only response. Publiczny response aplikacji nie utrzymuje
-wstecznej kompatybilnosci ze starymi polami wyniku; kontrakt jest rozdzielony
-na wynik funkcjonalny dla analityka oraz techniczny handoff dla wykonawcy:
+Initial analysis uzywa generycznego `AnalysisReport` jako kanonicznego wyniku.
+Prompt i runtime skille instruuja model, aby zapisywal wynik przez report
+tools, a nie polegal na finalnej odpowiedzi tekstowej z `sendAndWait`.
+
+Minimalny shape raportu:
+
+```text
+AnalysisReport
+- reportId
+- header
+- subHeader
+- markdownSummary
+- sections[]
+- meta
+```
+
+```text
+AnalysisReportSection
+- id
+- title
+- order
+- markdown
+- meta
+```
+
+`meta` raportu i sekcji niesie `references`, `visibilityLimits`,
+`openQuestions`, `gaps`, `confidence` i `warnings`. Model raportu mieszka w
+`shared.ai.report` i nie zna semantyki konkretnego feature'a.
+
+Incident Analysis dopuszcza sekcje:
+
+- `FUNCTIONAL_ANALYSIS`,
+- `TECHNICAL_HANDOFF`.
+
+Mapper incidentowy buduje z raportu obecny publiczny response:
 
 ```json
 {
-  "detectedProblem": "string",
-  "affectedProcess": "string or nieustalone",
-  "affectedBoundedContext": "string or nieustalone",
-  "affectedTeam": "string or nieustalone",
-  "functionalAnalysis": "markdown string in Polish, Functional Analysis v1",
-  "technicalAnalysis": "markdown string in Polish, Technical Handoff v1",
-  "confidence": "high|medium|low",
-  "visibilityLimits": ["string"]
+  "detectedProblem": "report.header",
+  "affectedProcess": "meta reference type=process",
+  "affectedBoundedContext": "meta reference type=boundedContext",
+  "affectedTeam": "meta reference type=team",
+  "functionalAnalysis": "section FUNCTIONAL_ANALYSIS markdown",
+  "technicalAnalysis": "section TECHNICAL_HANDOFF markdown",
+  "confidence": "report/section meta confidence",
+  "visibilityLimits": ["report and section limits, gaps, warnings"]
 }
 ```
 
+Publiczny response aplikacji nadal nie przywraca starych pol wyniku.
 `functionalAnalysis` ma tlumaczyc, gdzie incydent dzieje sie od strony systemu,
 procesu, bounded contextu, reguly biznesowej i wysokopoziomowej architektury.
 `technicalAnalysis` ma byc zgodne z runtime skillem
@@ -591,20 +643,24 @@ procesu, bounded contextu, reguly biznesowej i wysokopoziomowej architektury.
 obserwacje techniczne, rekomendowana poprawke albo material do handoffu poza
 analizowany system.
 
-Parser probuje caly content jako JSON, potem fenced JSON block, a potem
-kompletny obiekt JSON osadzony w tresci. Ta ostatnia tolerancja obsluguje
-przypadki, gdy model doda krotkie zdanie przed finalnym JSON-em. Jesli nie ma
-kompletnego osadzonego obiektu, pierwszy parsowalny obiekt nadal moze posluzyc
-do fallbacku czesciowo sparsowanych pol. Legacy labeled parser nie istnieje.
-Jesli brakuje wymaganych pol, fallback zachowuje czesciowo sparsowane pola i
-ustawia `AI_UNSTRUCTURED_RESPONSE` tylko wtedy, gdy brakuje `detectedProblem`.
+Flow Explorer dopuszcza `OVERVIEW` oraz aktywne sekcje goal/mode requestu, a
+`FlowExplorerReportMapper` mapuje raport na `FlowExplorerAiResponse` uzywany
+przez obecny UI.
+
+JSON parser pozostaje tylko fallbackiem diagnostycznym dla initial analysis,
+gdy report tools nie zapisza kompletnego raportu. Parser probuje caly content
+jako JSON, potem fenced JSON block, a potem kompletny obiekt JSON osadzony w
+tresci. Legacy labeled parser nie istnieje. Finalny tekst `sendAndWait` nie
+jest zrodlem prawdy, gdy `CopilotExecutionResult.report()` zawiera kompletny
+raport.
 
 ## 13. Response quality
 
 Nie ma obecnie osobnego quality gate po parsingu odpowiedzi. Runtime zachowuje
-prosty kontrakt: prompt wymaga JSON, parser mapuje wynik na publiczny response,
-a fallback obsluguje brak wymaganych pol. Dodatkowe oceny jakosci nie sa
-liczone w tle, bo operator nie ma do nich dostepu.
+prosty kontrakt: model ma zapisac raport przez report tools, feature mapper
+mapuje `AnalysisReport` na publiczny response, a JSON parser jest fallbackiem
+awaryjnym. Dodatkowe oceny jakosci nie sa liczone w tle, bo operator nie ma do
+nich dostepu.
 
 ## 14. User-visible usage i activity
 
@@ -652,6 +708,17 @@ analysis UI pokazuje panel "Feedback jakosci tooli" po analizie, a dla
 follow-up chat kompaktowy blok przy konkretnej odpowiedzi assistant.
 Import/export analizy zachowuje te dane; starsze eksporty bez `toolFeedback`
 sa normalizowane do pustych list.
+
+`report` jest opcjonalnym polem job response i trzyma ostatni snapshot
+kanonicznego `AnalysisReport`. W MVP feature-specific `result` nadal istnieje
+jako publiczny widok dla konkretnego ekranu, ale jest budowany z raportu, gdy
+runtime zwroci kompletny snapshot. Local workspace i export/import zachowuja
+`report` jako addytywne nullable pole; starsze eksporty bez raportu sa
+normalizowane do `report = null`.
+
+UI pokazuje feature-specific wynik w dotychczasowych komponentach oraz wspolny
+`AnalysisReportPanelComponent` jako widoczna warstwe kanonicznego raportu, gdy
+`report` istnieje.
 
 Finalny krok `AI_ANALYSIS` moze niesc `usage` z generycznym
 `shared.ai.AnalysisAiUsage`. UI pokazuje tam sumaryczne zuzycie tokenow oraz tooltip ze
@@ -726,5 +793,6 @@ Database config uzywa shared connections + globalnego katalogu aplikacji z
 `application-user-suffix`. Per-environment application mappings nie sa juz
 osobnym kontraktem konfiguracji.
 
-Nie ma runtime flagi wybierajacej legacy response labels. Aktualny kontrakt
-Copilota jest JSON-only.
+Nie ma runtime flagi wybierajacej legacy response labels. Aktualny initial
+result jest report-first; JSON-only response contract pozostaje fallbackiem
+diagnostycznym.

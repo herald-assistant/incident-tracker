@@ -21,6 +21,9 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
@@ -90,6 +93,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
         assertEquals("Odpowiedz lokalna.", updatedJob.chatMessages().get(3).content());
         assertEquals(1, updatedJob.chatMessages().get(3).toolEvidenceSections().size());
         assertEquals(1, updatedJob.chatMessages().get(3).aiActivityEvents().size());
+        assertEquals("incident-report-1", updatedJob.report().reportId());
         assertEquals("follow-up-session-1", result.record().continuation().copilotSessionId());
         assertEquals("github-copilot-sdk", result.record().continuation().copilotRuntime());
         assertEquals("copilot-session", result.record().continuation().continuationMode());
@@ -187,7 +191,34 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                         "medium",
                         List.of("Brak logow downstream."),
                         "Initial prompt"
-                )
+                ),
+                report()
+        );
+    }
+
+    private AnalysisReport report() {
+        return new AnalysisReport(
+                "incident-report-1",
+                "DOWNSTREAM_TIMEOUT",
+                "dev3 | main",
+                "",
+                List.of(
+                        new AnalysisReportSection(
+                                "FUNCTIONAL_ANALYSIS",
+                                "Functional analysis",
+                                1,
+                                "Analiza funkcjonalna.",
+                                AnalysisReportMeta.empty()
+                        ),
+                        new AnalysisReportSection(
+                                "TECHNICAL_HANDOFF",
+                                "Technical handoff",
+                                2,
+                                "Analiza techniczna.",
+                                AnalysisReportMeta.empty()
+                        )
+                ),
+                AnalysisReportMeta.empty()
         );
     }
 

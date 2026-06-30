@@ -14,6 +14,11 @@ import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncide
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentReportSectionIds;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.util.List;
 
@@ -114,6 +119,36 @@ class CopilotInitialAnalysisProviderTest {
 
         verify(preparationService).prepare(request);
         verify(executionGateway).execute(same(preparedRequest));
+    }
+
+    @Test
+    void shouldMapReportSnapshotBeforeAssistantJsonFallback() {
+        var preparationService = mock(CopilotIncidentInitialPreparationService.class);
+        var executionGateway = mock(CopilotSdkExecutionGateway.class);
+        var provider = provider(preparationService, executionGateway);
+
+        var request = new InitialAnalysisRequest("corr-report", "dev1", "main", "CRM/runtime", List.of());
+        var preparedRequest = mock(CopilotPreparedSession.class);
+
+        when(preparationService.prepare(request)).thenReturn(preparedAnalysis(request, preparedRequest));
+        when(preparedRequest.prompt()).thenReturn("Prepared prompt for report");
+        when(executionGateway.execute(same(preparedRequest)))
+                .thenReturn(new CopilotExecutionResult("Report saved.", null, "session-report", report()));
+
+        var response = analyze(provider, request);
+
+        assertEquals("copilot-sdk", response.providerName());
+        assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
+        assertEquals("Rozliczenie klienta", response.affectedProcess());
+        assertEquals("Catalog Context", response.affectedBoundedContext());
+        assertEquals("Core Integration Team", response.affectedTeam());
+        assertEquals("Functional report section.", response.functionalAnalysis());
+        assertEquals("Technical handoff section.", response.technicalAnalysis());
+        assertEquals("medium", response.confidence());
+        assertEquals(List.of("Limited log window."), response.visibilityLimits());
+        assertEquals("Prepared prompt for report", response.prompt());
+        assertEquals("session-report", response.copilotSessionId());
+        assertEquals("report-1", response.report().reportId());
     }
 
     @Test
@@ -249,6 +284,43 @@ class CopilotInitialAnalysisProviderTest {
 
     private CopilotExecutionResult executionResult(String content) {
         return new CopilotExecutionResult(content, null);
+    }
+
+    private AnalysisReport report() {
+        return new AnalysisReport(
+                "report-1",
+                "DOWNSTREAM_TIMEOUT",
+                "Incident",
+                "",
+                List.of(
+                        new AnalysisReportSection(
+                                CopilotIncidentReportSectionIds.FUNCTIONAL_ANALYSIS,
+                                "Functional analysis",
+                                1,
+                                "Functional report section.",
+                                AnalysisReportMeta.empty()
+                        ),
+                        new AnalysisReportSection(
+                                CopilotIncidentReportSectionIds.TECHNICAL_HANDOFF,
+                                "Technical handoff",
+                                2,
+                                "Technical handoff section.",
+                                AnalysisReportMeta.empty()
+                        )
+                ),
+                new AnalysisReportMeta(
+                        List.of(
+                                new AnalysisReportReference("process", "Rozliczenie klienta", null, null),
+                                new AnalysisReportReference("boundedContext", "Catalog Context", null, null),
+                                new AnalysisReportReference("team", "Core Integration Team", null, null)
+                        ),
+                        List.of("Limited log window."),
+                        List.of(),
+                        List.of(),
+                        "medium",
+                        List.of()
+                )
+        );
     }
 
     private CopilotInitialAnalysisPreparation preparedAnalysis(

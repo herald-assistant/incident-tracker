@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 
 @Component
@@ -20,6 +21,7 @@ public class CopilotIncidentInitialRunAssembler {
     private final CopilotIncidentToolAccessPolicyFactory toolAccessPolicyFactory;
     private final CopilotIncidentPromptRenderer promptRenderer;
     private final CopilotIncidentRunRequestFactory runRequestFactory;
+    private final CopilotIncidentReportFactory reportFactory;
 
     public CopilotIncidentInitialRunAssembly assemble(InitialAnalysisRequest request) {
         var toolSessionContext = toolSessionContextFactory.fromInitialRequest(request);
@@ -40,7 +42,7 @@ public class CopilotIncidentInitialRunAssembler {
                         prompt,
                         sessionConfigRequest,
                         renderedArtifacts
-                )
+                ).withInitialReport(reportFactory.createInitialReport(request, toolSessionContext))
         );
     }
 }

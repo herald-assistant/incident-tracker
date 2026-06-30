@@ -20,6 +20,7 @@ public class CopilotPreparedSessionFactory {
                 new MessageOptions().setPrompt(request.prompt()),
                 request.prompt(),
                 request.artifactContents(),
+                request.initialReport(),
                 request.evidenceSink(),
                 request.activitySink()
         );

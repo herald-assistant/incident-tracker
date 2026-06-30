@@ -14,8 +14,10 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGatewa
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.response.CopilotResponseDtos.StructuredAnalysisResponse;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 @Service
 @Slf4j
@@ -25,6 +27,20 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
     private final CopilotIncidentInitialPreparationService preparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final CopilotResponseParser responseParser;
+    private final CopilotIncidentReportMapper reportMapper;
+
+    public CopilotInitialAnalysisProvider(
+            CopilotIncidentInitialPreparationService preparationService,
+            CopilotSdkExecutionGateway executionGateway,
+            CopilotResponseParser responseParser
+    ) {
+        this(
+                preparationService,
+                executionGateway,
+                responseParser,
+                new CopilotIncidentReportMapper()
+        );
+    }
 
     @Override
     public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {
@@ -66,20 +82,43 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
         var executionResult = executionGateway.execute(
                 withRuntimeSinks(preparedSession, toolEvidenceListener, activityListener)
         );
-        var parseResult = responseParser.parse(executionResult.content());
-        var response = toAiResponse(
-                parseResult.response(),
+        var reportResponse = reportMapper.tryMap(
+                executionResult.report(),
                 preparedSession.prompt(),
                 executionResult.usage(),
                 executionResult.sessionId()
         );
+        var reportResponseUsed = reportResponse.isPresent();
+        InitialAnalysisResponse response;
+        boolean structuredResponse;
+        if (reportResponseUsed) {
+            response = reportResponse.get();
+            structuredResponse = true;
+        }
+        else {
+            var parseResult = responseParser.parse(executionResult.content());
+            log.info(
+                    "Copilot response parse correlationId={} parsedKeys={} structuredResponse={} fallbackResponseUsed={}",
+                    request.correlationId(),
+                    parseResult.parsedFields(),
+                    parseResult.structuredResponse(),
+                    parseResult.fallbackResponseUsed()
+            );
+            response = toAiResponse(
+                    parseResult.response(),
+                    preparedSession.prompt(),
+                    executionResult.usage(),
+                    executionResult.sessionId(),
+                    executionResult.report()
+            );
+            structuredResponse = parseResult.structuredResponse();
+        }
 
         log.info(
-                "Copilot response parse correlationId={} parsedKeys={} structuredResponse={} fallbackResponseUsed={}",
+                "Copilot report mapping correlationId={} reportPresent={} reportResponseUsed={}",
                 request.correlationId(),
-                parseResult.parsedFields(),
-                parseResult.structuredResponse(),
-                parseResult.fallbackResponseUsed()
+                executionResult.report() != null,
+                reportResponseUsed
         );
 
         log.info(
@@ -87,7 +126,7 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
                 request.correlationId(),
                 (System.nanoTime() - analysisStart) / 1_000_000,
                 response.detectedProblem(),
-                parseResult.structuredResponse()
+                structuredResponse
         );
 
         return response;
@@ -112,7 +151,8 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
             StructuredAnalysisResponse structuredResponse,
             String prompt,
             AnalysisAiUsage usage,
-            String copilotSessionId
+            String copilotSessionId,
+            AnalysisReport report
     ) {
         return new InitialAnalysisResponse(
                 "copilot-sdk",
@@ -126,7 +166,8 @@ public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
                 structuredResponse.visibilityLimits(),
                 prompt,
                 usage,
-                copilotSessionId
+                copilotSessionId,
+                report
         );
     }
 }

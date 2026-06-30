@@ -26,9 +26,10 @@ Analiza ma wyjasnic na podstawie evidence:
 - jaka akcja powinna zostac wykonana,
 - co pozostaje poza aktualna widocznoscia.
 
-Finalny wynik nadal musi trzymac aktualny kontrakt odpowiedzi incydentu. Ten
+Finalny wynik nadal musi trzymac aktualny kontrakt odpowiedzi incydentu, ale
+zrodlem prawdy initial analysis jest raport zapisany przez report tools. Ten
 orkiestrator okresla, jak dojsc do wyniku; skille kontraktu okreslaja ksztalt
-sekcji:
+sekcji raportu mapowanych na pola publiczne:
 
 - `incident-functional-analysis` dla `functionalAnalysis`,
 - `incident-technical-handoff` dla `technicalAnalysis`.
@@ -435,9 +436,35 @@ Gdy uzywasz operational context do handoffu albo ownershipu:
 
 ### 9. Zbuduj Wymagany Kontrakt Wyniku
 
-Zwroc finalny wynik w aktualnym kontrakcie incident analysis.
+Zapisz finalny wynik w aktualnym kontrakcie incident analysis przez report
+tools.
 
-Glowne pola Markdown musza przestrzegac:
+Uzyj:
+
+- `report_update_header`: `header` to `detectedProblem`; `subHeader` moze
+  zawierac krotki material diagnostyczny, ale nie zastepuje pol publicznych,
+- `report_upsert_section` z `id=FUNCTIONAL_ANALYSIS`: tresc sekcji
+  `functionalAnalysis` zgodna z Functional Analysis v1,
+- `report_upsert_section` z `id=TECHNICAL_HANDOFF`: tresc sekcji
+  `technicalAnalysis` zgodna z Technical Handoff v1,
+- `report_update_meta`: globalne `confidence`, `visibilityLimits`, `gaps`,
+  `warnings` oraz `references`.
+
+W `report_update_meta.references` zapisz affected fields jako referencje:
+
+- `type=process`, `label=<affectedProcess>`,
+- `type=boundedContext`, `label=<affectedBoundedContext>`,
+- `type=team`, `label=<affectedTeam>`.
+
+Nie przekazuj `reportId` do report tools. Backend wybiera aktywny raport z
+hidden `ToolContext`.
+
+Po zapisie uzyj `report_get_current`, zeby sprawdzic, ze istnieja sekcje
+`FUNCTIONAL_ANALYSIS` i `TECHNICAL_HANDOFF`. Finalna odpowiedz tekstowa moze
+byc krotkim statusem. Jezeli report tools sa niedostepne albo zapis sie nie
+powiedzie, zwroc fallback JSON w aktualnym kontrakcie incident analysis.
+
+Glowne pola Markdown mapowane z raportu musza przestrzegac:
 
 - `functionalAnalysis`: Functional Analysis v1,
 - `technicalAnalysis`: Technical Handoff v1.
@@ -482,4 +509,6 @@ Nie:
 - wymuszaj code root cause, gdy evidence wskazuje downstream albo outside
   visibility,
 - zwracaj finalnego wyniku przed zmapowaniem flow, punktu awarii, klasy,
-  evidence i akcji.
+  evidence i akcji,
+- koncz initial analysis bez zapisania raportu przez report tools, jezeli te
+  tools sa dostepne.

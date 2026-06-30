@@ -4,7 +4,8 @@ import {
   AnalysisJobStepResponse,
   AnalysisAiToolFeedback,
   AnalysisAiUsage,
-  AnalysisEvidenceSection
+  AnalysisEvidenceSection,
+  AnalysisReport
 } from '../../../core/models/analysis.models';
 
 export type FlowExplorerAnalysisGoal =
@@ -203,6 +204,7 @@ export interface FlowExplorerJobStateSnapshot {
   chatMessages: AnalysisChatMessageResponse[];
   preparedPrompt: string;
   result: FlowExplorerResult | null;
+  report?: AnalysisReport | null;
 }
 
 export interface FlowExplorerResult {

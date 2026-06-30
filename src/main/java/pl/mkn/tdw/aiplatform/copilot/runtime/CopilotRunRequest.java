@@ -2,6 +2,7 @@ package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.Collections;
@@ -17,6 +18,7 @@ public record CopilotRunRequest(
         String prompt,
         CopilotSessionConfigRequest sessionConfigRequest,
         Map<String, String> artifactContents,
+        AnalysisReport initialReport,
         Consumer<AnalysisEvidenceSection> evidenceSink,
         Consumer<AnalysisAiActivityEvent> activitySink
 ) {
@@ -52,7 +54,9 @@ public record CopilotRunRequest(
                 prompt,
                 sessionConfigRequest,
                 artifactContents,
-                evidenceSink
+                null,
+                evidenceSink,
+                NO_OP_ACTIVITY_SINK
         );
     }
 
@@ -72,6 +76,7 @@ public record CopilotRunRequest(
                 prompt,
                 sessionConfigRequest,
                 artifactContents,
+                null,
                 evidenceSink,
                 NO_OP_ACTIVITY_SINK
         );
@@ -102,6 +107,44 @@ public record CopilotRunRequest(
                 prompt,
                 sessionConfigRequest,
                 artifactContents,
+                null,
+                evidenceSink,
+                activitySink
+        );
+    }
+
+    public CopilotRunRequest(
+            String runReference,
+            CopilotRunAuth auth,
+            CopilotSessionTarget sessionTarget,
+            String prompt,
+            CopilotSessionConfigRequest sessionConfigRequest,
+            Map<String, String> artifactContents,
+            Consumer<AnalysisEvidenceSection> evidenceSink,
+            Consumer<AnalysisAiActivityEvent> activitySink
+    ) {
+        this(
+                runReference,
+                auth,
+                sessionTarget,
+                prompt,
+                sessionConfigRequest,
+                artifactContents,
+                null,
+                evidenceSink,
+                activitySink
+        );
+    }
+
+    public CopilotRunRequest withInitialReport(AnalysisReport initialReport) {
+        return new CopilotRunRequest(
+                runReference,
+                auth,
+                sessionTarget,
+                prompt,
+                sessionConfigRequest,
+                artifactContents,
+                initialReport,
                 evidenceSink,
                 activitySink
         );

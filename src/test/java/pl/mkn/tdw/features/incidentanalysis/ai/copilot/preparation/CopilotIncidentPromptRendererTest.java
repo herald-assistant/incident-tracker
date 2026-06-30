@@ -66,9 +66,15 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("- environment: dev3"));
         assertTrue(prompt.contains("- gitLabBranch: main"));
         assertTrue(prompt.contains("- gitLabGroup: CRM/runtime"));
-        assertTrue(prompt.contains("Return only valid JSON."));
-        assertTrue(prompt.contains("The final answer must start with `{` and end with `}`."));
-        assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before the JSON."));
+        assertTrue(prompt.contains("Save the final result through report tools."));
+        assertTrue(prompt.contains("report_update_header"));
+        assertTrue(prompt.contains("report_upsert_section"));
+        assertTrue(prompt.contains("report_update_meta"));
+        assertTrue(prompt.contains("report_get_current"));
+        assertTrue(prompt.contains("Do not provide `reportId` to report tools"));
+        assertTrue(prompt.contains("Fallback only when report tools are unavailable or saving fails"));
+        assertTrue(prompt.contains("Return only valid JSON. The final answer must start with `{` and end with `}`."));
+        assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before fallback JSON."));
         assertTrue(prompt.contains("\"functionalAnalysis\": \"markdown string in Polish, Functional Analysis v1\""));
         assertTrue(prompt.contains("\"technicalAnalysis\": \"markdown string in Polish, Technical Handoff v1\""));
         assertTrue(prompt.contains("- `00-incident-manifest.json`: Artifact index and analysis context"));

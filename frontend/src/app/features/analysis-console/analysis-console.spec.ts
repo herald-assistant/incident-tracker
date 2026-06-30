@@ -8,6 +8,7 @@ import { Observable, of, Subject, throwError } from 'rxjs';
 import {
   AnalysisAiModelOptionsResponse,
   AnalysisJobStateSnapshot,
+  AnalysisReport,
   GitHubAuthStatus,
   LocalAnalysisRunDetailResponse
 } from '../../core/models/analysis.models';
@@ -180,6 +181,8 @@ describe('AnalysisConsoleComponent auth flow', () => {
 
     expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
     expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu katalogowego.');
+    expect(fixture.nativeElement.textContent).toContain('incident-report-1');
+    expect(fixture.nativeElement.textContent).toContain('Technical handoff');
     expect(fixture.nativeElement.textContent).not.toContain('Lokalny run został otwarty z historii.');
   });
 
@@ -530,6 +533,61 @@ function completedJob(): AnalysisJobStateSnapshot {
       visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
       prompt: 'Prepared prompt without tokens.',
       usage: null
+    },
+    report: incidentReport()
+  };
+}
+
+function incidentReport(): AnalysisReport {
+  return {
+    reportId: 'incident-report-1',
+    header: 'DOWNSTREAM_TIMEOUT',
+    subHeader: 'Catalog / Catalog Context',
+    markdownSummary: 'Timeout downstream blokuje odczyt katalogu.',
+    sections: [
+      {
+        id: 'FUNCTIONAL_ANALYSIS',
+        title: 'Functional analysis',
+        order: 1,
+        markdown: 'Analiza funkcjonalna procesu katalogowego.',
+        meta: {
+          references: [],
+          visibilityLimits: [],
+          openQuestions: [],
+          gaps: [],
+          confidence: 'medium',
+          warnings: []
+        }
+      },
+      {
+        id: 'TECHNICAL_HANDOFF',
+        title: 'Technical handoff',
+        order: 2,
+        markdown: 'Analiza techniczna timeoutu w kliencie katalogu.',
+        meta: {
+          references: [
+            {
+              type: 'code',
+              label: 'CatalogClient.call',
+              target: 'src/main/java/CatalogClient.java:L42',
+              description: 'Wywolanie downstream.'
+            }
+          ],
+          visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
+          openQuestions: [],
+          gaps: [],
+          confidence: 'medium',
+          warnings: []
+        }
+      }
+    ],
+    meta: {
+      references: [],
+      visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
+      openQuestions: [],
+      gaps: [],
+      confidence: 'medium',
+      warnings: []
     }
   };
 }

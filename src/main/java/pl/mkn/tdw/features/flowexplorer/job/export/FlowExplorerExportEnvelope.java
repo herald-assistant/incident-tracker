@@ -217,6 +217,15 @@ public record FlowExplorerExportEnvelope(
                         aiResponse != null ? 1 + safeList(aiResponse.sections()).size() : 0,
                         resultMarkdown.length()
                 ),
+                new DiagnosticArtifactSummary(
+                        "analysisReport",
+                        "canonical-report-json",
+                        snapshot != null && snapshot.report() != null,
+                        snapshot != null && snapshot.report() != null
+                                ? 1 + safeList(snapshot.report().sections()).size()
+                                : 0,
+                        null
+                ),
                 new DiagnosticArtifactSummary("jobSnapshot", "diagnostic-json", snapshot != null, 1, null),
                 new DiagnosticArtifactSummary(
                         "contextSnapshot",

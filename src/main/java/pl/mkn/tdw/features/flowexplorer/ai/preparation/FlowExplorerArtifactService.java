@@ -96,7 +96,7 @@ public class FlowExplorerArtifactService {
         ));
         artifacts.add(artifact(
                 RESPONSE_CONTRACT_ARTIFACT,
-                "Required Flow Explorer JSON response contract",
+                "Fallback Flow Explorer JSON response contract",
                 "response-contract",
                 null,
                 "application/json",

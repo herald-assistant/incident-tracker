@@ -19,7 +19,14 @@ import org.mockito.MockedConstruction;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
+import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportSessionStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.io.Closeable;
 import java.time.Duration;
@@ -31,7 +38,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -396,6 +406,87 @@ class CopilotSdkExecutionGatewayTest {
     }
 
     @Test
+    void shouldReturnLatestReportSnapshotAndUnregisterReportAfterExecution() {
+        var properties = new CopilotSdkProperties();
+        var reportStore = new CopilotReportSessionStore();
+        var gateway = executionGateway(properties, new CopilotToolEvidenceSessionStore(), reportStore);
+        var preparedRequest = new CopilotPreparedSession(
+                "report-run",
+                new CopilotClientOptions(),
+                new SessionConfig(),
+                new MessageOptions().setPrompt("Generate report"),
+                "Generate report",
+                Map.of()
+        ).withInitialReport(report("report-1"));
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(any(SessionConfig.class))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn("session-report");
+            when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
+                    .thenAnswer(invocation -> {
+                        assertTrue(reportStore.current("report-1").isPresent());
+                        reportStore.upsertSection(
+                                "report-1",
+                                new AnalysisReportSection(
+                                        "OVERVIEW",
+                                        "Overview",
+                                        1,
+                                        "Report updated by tool.",
+                                        AnalysisReportMeta.empty()
+                                )
+                        );
+                        return CompletableFuture.completedFuture(assistantMessage("Report saved."));
+                    });
+        })) {
+            var response = gateway.execute(preparedRequest);
+
+            assertEquals("Report saved.", response.content());
+            assertNotNull(response.report());
+            assertEquals("report-1", response.report().reportId());
+            assertEquals("Report updated by tool.", response.report().sections().get(0).markdown());
+            assertFalse(reportStore.current("report-1").isPresent());
+        }
+    }
+
+    @Test
+    void shouldUnregisterReportWhenSendAndWaitFails() {
+        var properties = new CopilotSdkProperties();
+        var reportStore = new CopilotReportSessionStore();
+        var gateway = executionGateway(properties, new CopilotToolEvidenceSessionStore(), reportStore);
+        var preparedRequest = new CopilotPreparedSession(
+                "report-failure-run",
+                new CopilotClientOptions(),
+                new SessionConfig(),
+                new MessageOptions().setPrompt("Generate report"),
+                "Generate report",
+                Map.of()
+        ).withInitialReport(report("report-1"));
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(any(SessionConfig.class))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn("session-report-failure");
+            when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
+                    .thenAnswer(invocation -> {
+                        assertTrue(reportStore.current("report-1").isPresent());
+                        return CompletableFuture.failedFuture(new RuntimeException("model failed"));
+                    });
+        })) {
+            assertThrows(CopilotSdkInvocationException.class, () -> gateway.execute(preparedRequest));
+            assertFalse(reportStore.current("report-1").isPresent());
+        }
+    }
+
+    @Test
     void shouldNotClosePreparedRequestAfterExecution() {
         var properties = new CopilotSdkProperties();
         var gateway = executionGateway(
@@ -425,6 +516,37 @@ class CopilotSdkExecutionGatewayTest {
         }
 
         verify(preparedRequest, never()).close();
+    }
+
+    private CopilotSdkExecutionGateway executionGateway(
+            CopilotSdkProperties properties,
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore
+    ) {
+        return executionGateway(properties, toolEvidenceSessionStore, new CopilotReportSessionStore());
+    }
+
+    private CopilotSdkExecutionGateway executionGateway(
+            CopilotSdkProperties properties,
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
+            CopilotReportSessionStore reportStore
+    ) {
+        return new CopilotSdkExecutionGateway(
+                properties,
+                toolEvidenceSessionStore,
+                new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
+                reportStore
+        );
+    }
+
+    private AnalysisReport report(String reportId) {
+        return new AnalysisReport(
+                reportId,
+                "Header",
+                "Sub header",
+                "Summary",
+                List.of(),
+                AnalysisReportMeta.empty()
+        );
     }
 
     private AssistantMessageEvent assistantMessage(String content) {

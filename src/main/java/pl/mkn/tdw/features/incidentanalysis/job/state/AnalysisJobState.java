@@ -12,6 +12,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisEvidenceProviderDescriptor;
@@ -64,6 +65,7 @@ public final class AnalysisJobState {
     private Instant updatedAt;
     private Instant completedAt;
     private AnalysisResultResponse result;
+    private AnalysisReport report;
     private InitialAnalysisRequest completedAiRequest;
 
     public AnalysisJobState(
@@ -160,6 +162,9 @@ public final class AnalysisJobState {
         this.completedAiRequest = execution.aiRequest();
         this.latestCopilotSessionId = execution.aiResponse() != null
                 ? execution.aiResponse().copilotSessionId()
+                : null;
+        this.report = execution.aiResponse() != null
+                ? execution.aiResponse().report()
                 : null;
         markCompleted(execution.result());
     }
@@ -335,7 +340,8 @@ public final class AnalysisJobState {
                 List.copyOf(toolFeedback),
                 chatMessages.stream().map(ChatMessageState::snapshot).toList(),
                 preparedPrompt,
-                result
+                result,
+                report
         );
     }
 

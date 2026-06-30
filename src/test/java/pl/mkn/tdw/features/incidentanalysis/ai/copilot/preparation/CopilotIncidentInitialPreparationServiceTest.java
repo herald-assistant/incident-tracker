@@ -17,6 +17,7 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialRunAssembler;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
@@ -112,6 +113,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                     Set.of(
                             "gitlab_find_class_references",
                             "gitlab_find_flow_context",
+                            "gitlab_build_java_method_use_case_context",
                             "gitlab_list_available_repositories",
                             "gitlab_read_java_method_slice",
                             "gitlab_read_repository_file_chunk",
@@ -122,7 +124,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                     ),
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
-            assertEquals(8, prepared.session().sessionConfig().getTools().size());
+            assertEquals(9, prepared.session().sessionConfig().getTools().size());
             assertSelectedSkillRoot(
                     prepared.session().sessionConfig().getSkillDirectories(),
                     CopilotIncidentRuntimeSkillNames.allSkillNames()
@@ -192,15 +194,21 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(prompt.contains("`elastic_fetch_http_call_logs` uses the current hidden correlationId only when `path` is omitted"));
             assertTrue(prompt.contains("If visibility is incomplete, state exactly what remains unverified and what the next verification step is."));
             assertTrue(prompt.contains("Return the analysis in Polish."));
+            assertTrue(prompt.contains("Save the final result through report tools."));
+            assertTrue(prompt.contains("Use `report_update_header` for `detectedProblem`"));
+            assertTrue(prompt.contains("Do not provide `reportId` to report tools"));
+            assertTrue(prompt.contains("Return fallback JSON only if report tools are unavailable or saving the report fails."));
+            assertTrue(prompt.contains("The source of truth is the structured report saved through report tools."));
+            assertTrue(prompt.contains("Use `report_update_header` with `header = detectedProblem`."));
             assertTrue(prompt.contains("Return only valid JSON."));
             assertTrue(prompt.contains("The final answer must start with `{` and end with `}`."));
-            assertTrue(prompt.contains("Do not wrap it in Markdown."));
-            assertTrue(prompt.contains("Do not add prose before or after JSON."));
-            assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before the JSON."));
+            assertTrue(prompt.contains("Do not wrap fallback JSON in Markdown."));
+            assertTrue(prompt.contains("Do not add prose before or after fallback JSON."));
+            assertTrue(prompt.contains("Do not add status text such as \"I have all the evidence needed\" before fallback JSON."));
             assertTrue(prompt.contains("Use concise professional Markdown in string values where the schema says markdown string."));
             assertTrue(prompt.contains("Use `code spans` for technical identifiers"));
             assertTrue(prompt.contains("Never join multiple points with pipe separators like \"|\"."));
-            assertTrue(prompt.contains("Required schema:"));
+            assertTrue(prompt.contains("Fallback JSON schema:"));
             assertTrue(prompt.contains("\"detectedProblem\": \"string\""));
             assertTrue(prompt.contains("\"functionalAnalysis\": \"markdown string in Polish, Functional Analysis v1\""));
             assertTrue(prompt.contains("\"technicalAnalysis\": \"markdown string in Polish, Technical Handoff v1\""));
@@ -559,7 +567,8 @@ class CopilotIncidentInitialPreparationServiceTest {
                 artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
-                new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper())
+                new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper()),
+                new CopilotIncidentReportFactory()
         );
     }
 

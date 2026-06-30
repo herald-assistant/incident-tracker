@@ -1,22 +1,58 @@
 ---
 name: flow-explorer-result-contract
-description: Kontrakt odpowiedzi Flow Explorera - JSON-only, Overview plus aktywne sekcje sectionModes, compact/deep, source refs, confidence, visibility limits i gotowe follow-up prompts.
+description: Kontrakt wyniku Flow Explorera - AnalysisReport zapisywany przez report tools, Overview plus aktywne sekcje sectionModes, compact/deep, source refs, confidence, visibility limits i fallback JSON.
 ---
 
 # Skill Kontraktu Wyniku Flow Explorera
 
-Uzywaj tego skilla przed finalna odpowiedzia. Wynik musi byc jednym poprawnym
-obiektem JSON. Nie zwracaj Markdown poza stringami pol `markdown`.
+Uzywaj tego skilla przed zapisaniem raportu. Zrodlem prawdy initial analysis
+jest `AnalysisReport` zapisany przez report tools. Finalna odpowiedz tekstowa
+moze byc krotkim statusem i nie jest zrodlem prawdy wyniku.
+
+Nie podawaj `reportId` w argumentach tooli. Backend przekazuje scope raportu
+przez hidden `ToolContext`.
+
+Fallback JSON zwracaj tylko wtedy, gdy report tools nie sa dostepne albo zapis
+raportu sie nie powiedzie.
 
 ## Rola
 
 Ten skill nie diagnozuje kodu i nie wybiera tools. Pilnuje finalnego ksztaltu
-odpowiedzi Flow Explorera, zeby UI moglo pokazac `Overview` oraz tylko te
-sekcje, ktore uzytkownik wlaczyl w `sectionModes`.
+raportu Flow Explorera, zeby UI moglo pokazac `Overview` oraz tylko te sekcje,
+ktore uzytkownik wlaczyl w `sectionModes`.
 
-## Wymagany JSON Contract
+## Wymagany Report Contract
 
-Zwroc dokladnie jeden obiekt JSON zgodny z polami:
+Zapisz raport przez tools w tej kolejnosci:
+
+1. `report_upsert_section` dla `id=OVERVIEW`.
+2. `report_upsert_section` dla kazdej aktywnej sekcji z `sectionModes`, w
+   kolejnosci `FUNCTIONAL_FLOW`, `VALIDATIONS`, `PERSISTENCE`, `INTEGRATIONS`.
+3. `report_update_meta` dla globalnych `references`, `visibilityLimits`,
+   `openQuestions`, `gaps`, `confidence` i ewentualnych `warnings`.
+4. `report_get_current`, zeby sprawdzic, czy zapisany raport zawiera `OVERVIEW`
+   i wszystkie aktywne sekcje.
+
+Kazde `report_upsert_section` musi miec:
+
+- `id`: `OVERVIEW` albo aktywne id sekcji,
+- `title`: czytelny tytul sekcji,
+- `order`: `0` dla `OVERVIEW`, potem `1..n` dla aktywnych sekcji,
+- `markdown`: glowna tresc sekcji,
+- `meta.references`: source refs tej sekcji,
+- `meta.visibilityLimits`: ograniczenia tylko tej sekcji,
+- `meta.openQuestions`: pytania tylko tej sekcji,
+- `meta.gaps`: luki tylko tej sekcji,
+- `meta.confidence`: `high`, `medium` albo `low`.
+
+`OVERVIEW` jest sekcja raportu, ale w publicznym UI zostanie pokazany jako
+osobny blok `overview`. Pozostale aktywne sekcje raportu zostana pokazane jako
+`sections`.
+
+## Fallback JSON Contract
+
+Jezeli report tools nie sa dostepne albo zapis raportu sie nie powiedzie,
+zwroc dokladnie jeden obiekt JSON zgodny z polami:
 
 ```json
 {
@@ -52,9 +88,12 @@ na poziomie calej odpowiedzi.
 
 ## Follow-Up Prompts
 
-`followUpPrompts` to gotowe, proste prompty do follow-up chatu. Maja pomoc
-uzytkownikowi przejsc od wyniku `medium`, limitow widocznosci albo pytan
-otwartych do nastepnego konkretnego kroku.
+MVP raportu nie ma osobnego pola `followUpPrompts`. Kierunki dalszej rozmowy
+zapisuj jako `openQuestions` albo `gaps` w meta raportu lub meta sekcji.
+
+W fallback JSON `followUpPrompts` to gotowe, proste prompty do follow-up chatu.
+Maja pomoc uzytkownikowi przejsc od wyniku `medium`, limitow widocznosci albo
+pytan otwartych do nastepnego konkretnego kroku.
 
 Zwroc 3-5 promptow. Kazdy prompt ma byc samodzielnym pytaniem albo poleceniem,
 ktore uzytkownik moze skopiowac bez edycji. Pisz po polsku, nietechnicznie i
@@ -79,9 +118,10 @@ wskazania endpointu, pola API, statusu, eventu, tabeli albo systemu.
 
 ## Sekcje I Kolejnosc
 
-`sections` musi miec dokladnie tyle elementow, ile sekcji aktywnych wynika z
-`sectionModes`. Sekcje aktywne to tylko tryby `COMPACT` i `DEEP`. Sekcja z
-trybem `OFF` ma nie pojawic sie w tablicy `sections`.
+Raport musi miec `OVERVIEW` oraz dokladnie tyle sekcji merytorycznych, ile
+sekcji aktywnych wynika z `sectionModes`. Sekcje aktywne to tylko tryby
+`COMPACT` i `DEEP`. Sekcja z trybem `OFF` ma nie pojawic sie w raporcie ani w
+fallback JSON `sections`.
 
 Zachowaj kolejnosc aktywnych sekcji wedlug stalego porzadku:
 
@@ -90,13 +130,13 @@ Zachowaj kolejnosc aktywnych sekcji wedlug stalego porzadku:
 3. `PERSISTENCE` / `Persistence`
 4. `INTEGRATIONS` / `Integrations`
 
-Kazda sekcja musi miec `mode` zgodny z `sectionModes` z promptu:
+Kazda aktywna sekcja musi odpowiadac `mode` z `sectionModes` z promptu:
 
 - `deep`, gdy `sectionModes.<SECTION>=DEEP`,
 - `compact`, gdy `sectionModes.<SECTION>=COMPACT`.
 
-Nie zwracaj sekcji `OFF`. Nie ustawiaj `mode` na `off`. `OFF` nie jest
-slabszym `compact`, tylko decyzja uzytkownika, ze dana sekcja nie jest
+Nie zapisuj sekcji `OFF`. W fallback JSON nie ustawiaj `mode` na `off`. `OFF`
+nie jest slabszym `compact`, tylko decyzja uzytkownika, ze dana sekcja nie jest
 oczekiwana w wyniku.
 
 `compact` nie znaczy powierzchownie. Compact ma zawierac najwazniejsze fakty,
@@ -112,8 +152,8 @@ chronologiczny flow endpointu: co system robi po kolei, jakie decyzje/warunki
 sa widoczne w implementacji, jaki jest efekt dla procesu, uzytkownika albo
 danych oraz gdzie termin domenowy jest potwierdzony albo tylko inferowany.
 
-`sections[].markdown` dla `FUNCTIONAL_FLOW` zawsze formatuj jako te same
-punkty, w tej kolejnosci:
+`markdown` sekcji `FUNCTIONAL_FLOW` zawsze formatuj jako te same punkty, w tej
+kolejnosci:
 
 - **Cel funkcjonalny:** po co endpoint istnieje z perspektywy procesu albo
   uzytkownika.
@@ -209,7 +249,7 @@ jako potwierdzonego slownika domeny.
 ## Persistence Deep Contract
 
 Gdy aktywna sekcja `PERSISTENCE` ma `mode=deep` i endpoint zapisuje dane,
-`sections[].markdown` dla tej sekcji musi zawierac biznesowa tabele mapowania:
+`markdown` tej sekcji musi zawierac biznesowa tabele mapowania:
 
 | TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |
 | --- | --- | --- | --- |
@@ -286,7 +326,7 @@ nazwa moze byc niepelna.
 widoczne w flow endpointu. Compact nie moze zastapic konkretow zdaniem typu
 "endpoint komunikuje sie z integracjami".
 
-Formatuj `sections[].markdown` jako krotka tabele:
+Formatuj `markdown` sekcji jako krotka tabele:
 
 | System/target | Typ | Adres/kanal/path | Moment w flow | Co jest wysylane albo odbierane | Cel | Pewnosc |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -371,7 +411,7 @@ w sekcji opisuje brak tylko dla tej sekcji.
 
 Nie:
 
-- zwracaj Markdown zamiast JSON,
+- koncz initial analysis bez zapisu raportu przez report tools,
 - wpisuj "brak" jako confidence,
 - ukrywaj limity widocznosci,
 - mieszaj source refs z hipotezami,

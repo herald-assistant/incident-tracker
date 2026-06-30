@@ -2,8 +2,10 @@ package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
+import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportSectionIds;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
@@ -49,11 +51,15 @@ public class FlowExplorerCopilotToolSessionContextFactory {
         return new CopilotToolSessionContext(
                 normalizedRunReference,
                 normalizeCopilotSessionId(copilotSessionId, normalizedRunReference),
-                hiddenContext(contextSnapshot, followUp)
+                hiddenContext(request, contextSnapshot, followUp)
         );
     }
 
-    private Map<String, Object> hiddenContext(FlowExplorerContextSnapshot contextSnapshot, boolean followUp) {
+    private Map<String, Object> hiddenContext(
+            FlowExplorerJobStartRequest request,
+            FlowExplorerContextSnapshot contextSnapshot,
+            boolean followUp
+    ) {
         var context = new LinkedHashMap<String, Object>();
         context.put(FlowExplorerCopilotToolContextKeys.FEATURE, FlowExplorerCopilotToolContextKeys.FEATURE_VALUE);
         context.put(
@@ -70,6 +76,16 @@ public class FlowExplorerCopilotToolSessionContextFactory {
                 FlowExplorerCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED,
                 repositoryScopeResolved(contextSnapshot)
         );
+        if (!followUp) {
+            context.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
+            context.put(AgentToolContextKeys.REPORT_FEATURE, FlowExplorerCopilotToolContextKeys.FEATURE_VALUE);
+            context.put(
+                    AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
+                    FlowExplorerReportSectionIds.activeReportSectionIds(
+                            request != null ? request.resolvedSectionModes() : null
+                    )
+            );
+        }
         return context;
     }
 

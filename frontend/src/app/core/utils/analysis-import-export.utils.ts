@@ -9,6 +9,10 @@ import {
   AnalysisExportEnvelope,
   AnalysisJobStateSnapshot,
   AnalysisJobStepResponse,
+  AnalysisReport,
+  AnalysisReportMeta,
+  AnalysisReportReference,
+  AnalysisReportSection,
   AnalysisResultResponse
 } from '../models/analysis.models';
 import { isTerminalStatus } from './analysis-display.utils';
@@ -114,7 +118,57 @@ export function normalizeAnalysisJob(job: unknown): AnalysisJobStateSnapshot {
       ? jobObject['chatMessages'].map(normalizeChatMessage)
       : [],
     preparedPrompt: normalizeString(jobObject['preparedPrompt']),
-    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null
+    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null,
+    report: asObject(jobObject['report']) ? normalizeAnalysisReport(jobObject['report']) : null
+  };
+}
+
+export function normalizeAnalysisReport(report: unknown): AnalysisReport {
+  const reportObject = asObject(report);
+  return {
+    reportId: normalizeString(reportObject?.['reportId']),
+    header: normalizeString(reportObject?.['header']),
+    subHeader: normalizeString(reportObject?.['subHeader']),
+    markdownSummary: normalizeString(reportObject?.['markdownSummary']),
+    sections: Array.isArray(reportObject?.['sections'])
+      ? reportObject['sections'].map(normalizeAnalysisReportSection)
+      : [],
+    meta: normalizeAnalysisReportMeta(reportObject?.['meta'])
+  };
+}
+
+function normalizeAnalysisReportSection(section: unknown): AnalysisReportSection {
+  const sectionObject = asObject(section);
+  return {
+    id: normalizeString(sectionObject?.['id']),
+    title: normalizeString(sectionObject?.['title']),
+    order: normalizeNullableNumber(sectionObject?.['order']),
+    markdown: normalizeString(sectionObject?.['markdown']),
+    meta: normalizeAnalysisReportMeta(sectionObject?.['meta'])
+  };
+}
+
+function normalizeAnalysisReportMeta(meta: unknown): AnalysisReportMeta {
+  const metaObject = asObject(meta);
+  return {
+    references: Array.isArray(metaObject?.['references'])
+      ? metaObject['references'].map(normalizeAnalysisReportReference)
+      : [],
+    visibilityLimits: normalizeStringArray(metaObject?.['visibilityLimits']),
+    openQuestions: normalizeStringArray(metaObject?.['openQuestions']),
+    gaps: normalizeStringArray(metaObject?.['gaps']),
+    confidence: normalizeString(metaObject?.['confidence']),
+    warnings: normalizeStringArray(metaObject?.['warnings'])
+  };
+}
+
+function normalizeAnalysisReportReference(reference: unknown): AnalysisReportReference {
+  const referenceObject = asObject(reference);
+  return {
+    type: normalizeString(referenceObject?.['type']),
+    label: normalizeString(referenceObject?.['label']),
+    target: normalizeString(referenceObject?.['target']),
+    description: normalizeString(referenceObject?.['description'])
   };
 }
 

@@ -6,6 +6,7 @@ import pl.mkn.tdw.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 
 import java.util.List;
 import java.util.Set;
@@ -37,7 +38,11 @@ public record FlowExplorerCopilotToolAccessPolicy(
             OperationalContextToolNames.LIST_ENTITIES,
             OperationalContextToolNames.SEARCH,
             OperationalContextToolNames.GET_ENTITY,
-            CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK
+            CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
+            CopilotReportToolNames.GET_CURRENT,
+            CopilotReportToolNames.UPSERT_SECTION,
+            CopilotReportToolNames.UPDATE_HEADER,
+            CopilotReportToolNames.UPDATE_META
     );
 
     public FlowExplorerCopilotToolAccessPolicy {
@@ -80,6 +85,10 @@ public record FlowExplorerCopilotToolAccessPolicy(
 
     public boolean toolFeedbackEnabled() {
         return availableToolNames.stream().anyMatch(CopilotToolFeedbackToolNames::isFeedbackTool);
+    }
+
+    public boolean reportToolsEnabled() {
+        return availableToolNames.stream().anyMatch(CopilotReportToolNames::isReportTool);
     }
 
     private boolean hasAvailableToolPrefix(String prefix) {

@@ -25,6 +25,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.session.CopilotToolSessionValidationPolicy;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportSessionStore;
 import pl.mkn.tdw.common.JsonPayloadReader;
 
 import java.util.List;
@@ -117,7 +118,8 @@ public final class CopilotTestFixtures {
         return new CopilotSdkExecutionGateway(
                 properties,
                 toolEvidenceSessionStore,
-                new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties())
+                new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
+                new CopilotReportSessionStore()
         );
     }
 }

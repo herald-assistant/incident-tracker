@@ -5,6 +5,7 @@ import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.Collections;
@@ -21,6 +22,7 @@ public record CopilotPreparedSession(
         MessageOptions messageOptions,
         String prompt,
         Map<String, String> artifactContents,
+        AnalysisReport initialReport,
         Consumer<AnalysisEvidenceSection> evidenceSink,
         Consumer<AnalysisAiActivityEvent> activitySink
 ) implements AutoCloseable {
@@ -47,6 +49,7 @@ public record CopilotPreparedSession(
                 messageOptions,
                 prompt,
                 artifactContents,
+                null,
                 NO_OP_EVIDENCE_SINK,
                 NO_OP_ACTIVITY_SINK
         );
@@ -71,6 +74,34 @@ public record CopilotPreparedSession(
                 messageOptions,
                 prompt,
                 artifactContents,
+                null,
+                evidenceSink,
+                activitySink
+        );
+    }
+
+    public CopilotPreparedSession(
+            String runReference,
+            CopilotSessionTarget sessionTarget,
+            CopilotClientOptions clientOptions,
+            SessionConfig sessionConfig,
+            ResumeSessionConfig resumeSessionConfig,
+            MessageOptions messageOptions,
+            String prompt,
+            Map<String, String> artifactContents,
+            Consumer<AnalysisEvidenceSection> evidenceSink,
+            Consumer<AnalysisAiActivityEvent> activitySink
+    ) {
+        this(
+                runReference,
+                sessionTarget,
+                clientOptions,
+                sessionConfig,
+                resumeSessionConfig,
+                messageOptions,
+                prompt,
+                artifactContents,
+                null,
                 evidenceSink,
                 activitySink
         );
@@ -99,6 +130,7 @@ public record CopilotPreparedSession(
                 messageOptions,
                 prompt,
                 artifactContents,
+                initialReport,
                 evidenceSink,
                 activitySink
         );
@@ -114,6 +146,23 @@ public record CopilotPreparedSession(
                 messageOptions,
                 prompt,
                 artifactContents,
+                initialReport,
+                evidenceSink,
+                activitySink
+        );
+    }
+
+    public CopilotPreparedSession withInitialReport(AnalysisReport initialReport) {
+        return new CopilotPreparedSession(
+                runReference,
+                sessionTarget,
+                clientOptions,
+                sessionConfig,
+                resumeSessionConfig,
+                messageOptions,
+                prompt,
+                artifactContents,
+                initialReport,
                 evidenceSink,
                 activitySink
         );

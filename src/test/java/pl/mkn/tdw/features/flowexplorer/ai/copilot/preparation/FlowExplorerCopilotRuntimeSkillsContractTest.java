@@ -89,7 +89,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         ));
         assertSkillContainsSections("flow-explorer-result-contract", List.of(
                 "## Rola",
-                "## Wymagany JSON Contract",
+                "## Wymagany Report Contract",
+                "## Fallback JSON Contract",
                 "## Follow-Up Prompts",
                 "## Sekcje I Kolejnosc",
                 "## Functional Flow Contract",
@@ -176,7 +177,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("Hidden `ToolContext` jest tylko techniczna mechanika runtime"));
         assertTrue(orchestrator.contains("Nie przekazuj `gitLabGroup` do tools"));
         assertTrue(orchestrator.contains("`sectionModes` sa zrodlem prawdy dla sekcji wyniku"));
-        assertTrue(orchestrator.contains("`OFF` oznacza: nie zwracaj tej sekcji w `sections`"));
+        assertTrue(orchestrator.contains("`OFF` oznacza: nie zapisuj tej sekcji w raporcie"));
         assertTrue(orchestrator.contains("`focusAreas` nie sa celem"));
         assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
         assertTrue(orchestrator.contains("`.github/copilot-instructions.md`, jezeli jest dostepny"));
@@ -186,6 +187,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertTrue(orchestrator.contains("focused GitLab read dokladnej sciezki"));
         assertTrue(orchestrator.contains("preferuj `gitlab_build_java_method_use_case_context`"));
         assertTrue(orchestrator.contains("uzyj `gitlab_read_java_method_slice`"));
+        assertTrue(orchestrator.contains("Zapisz `OVERVIEW` i aktywne sekcje przez `report_upsert_section`"));
+        assertTrue(orchestrator.contains("Zapisz globalne meta raportu przez `report_update_meta`"));
 
         assertTrue(gitLabTools.contains("GitLab tools nie czytaja functional scope'u z hidden `ToolContext`"));
         assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
@@ -255,6 +258,12 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
 
         assertTrue(resultContract.contains("## Persistence Deep Contract"));
         assertTrue(resultContract.contains("## Integration Boundary Contract"));
+        assertTrue(resultContract.contains("Zrodlem prawdy initial analysis"));
+        assertTrue(resultContract.contains("Nie podawaj `reportId` w argumentach tooli"));
+        assertTrue(resultContract.contains("`report_upsert_section` dla `id=OVERVIEW`"));
+        assertTrue(resultContract.contains("`report_update_meta` dla globalnych"));
+        assertTrue(resultContract.contains("`report_get_current`, zeby sprawdzic"));
+        assertTrue(resultContract.contains("Fallback JSON zwracaj tylko wtedy"));
         assertTrue(resultContract.contains("`FUNCTIONAL_FLOW` ma tytul `Functional flow`"));
         assertTrue(resultContract.contains("**Cel funkcjonalny:**"));
         assertTrue(resultContract.contains("**Flow krok po kroku:**"));

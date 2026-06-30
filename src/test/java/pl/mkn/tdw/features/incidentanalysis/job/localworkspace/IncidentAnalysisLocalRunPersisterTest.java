@@ -13,6 +13,9 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.time.Instant;
 import java.util.List;
@@ -68,6 +71,8 @@ class IncidentAnalysisLocalRunPersisterTest {
         assertEquals("analysis-job", exportEnvelope.at("/payload/type").asText());
         assertEquals("analysis-1", exportEnvelope.at("/payload/job/analysisId").asText());
         assertEquals("corr-123", exportEnvelope.at("/payload/job/correlationId").asText());
+        assertEquals("incident-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
+        assertEquals("DOWNSTREAM_TIMEOUT", exportEnvelope.at("/payload/job/report/header").asText());
         assertEquals("Prepared prompt", exportEnvelope.at("/payload/job/preparedPrompt").asText());
         assertFalse(exportEnvelope.toString().contains("operator-session-1"));
         assertFalse(exportEnvelope.toString().contains("copilot-session-1"));
@@ -121,7 +126,34 @@ class IncidentAnalysisLocalRunPersisterTest {
                         "medium",
                         List.of("Limited downstream visibility."),
                         "Final prompt"
-                )
+                ),
+                report()
+        );
+    }
+
+    private AnalysisReport report() {
+        return new AnalysisReport(
+                "incident-report-1",
+                "DOWNSTREAM_TIMEOUT",
+                "dev3 | main",
+                "",
+                List.of(
+                        new AnalysisReportSection(
+                                "FUNCTIONAL_ANALYSIS",
+                                "Functional analysis",
+                                1,
+                                "Functional analysis",
+                                AnalysisReportMeta.empty()
+                        ),
+                        new AnalysisReportSection(
+                                "TECHNICAL_HANDOFF",
+                                "Technical handoff",
+                                2,
+                                "Technical analysis",
+                                AnalysisReportMeta.empty()
+                        )
+                ),
+                AnalysisReportMeta.empty()
         );
     }
 

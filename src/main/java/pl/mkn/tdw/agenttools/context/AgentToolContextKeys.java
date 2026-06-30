@@ -11,6 +11,9 @@ public final class AgentToolContextKeys {
     public static final String ENVIRONMENT = "environment";
     public static final String GITLAB_BRANCH = "gitLabBranch";
     public static final String GITLAB_GROUP = "gitLabGroup";
+    public static final String REPORT_ID = "reportId";
+    public static final String REPORT_FEATURE = "reportFeature";
+    public static final String ALLOWED_REPORT_SECTION_IDS = "allowedReportSectionIds";
 
     private AgentToolContextKeys() {
     }

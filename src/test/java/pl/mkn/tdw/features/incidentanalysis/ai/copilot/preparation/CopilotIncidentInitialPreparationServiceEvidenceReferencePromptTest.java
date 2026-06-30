@@ -9,6 +9,7 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialRunAssembler;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentRunRequestFactory;
@@ -63,7 +64,8 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                         artifactService(new ObjectMapper()),
                         new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator()),
                         new CopilotIncidentPromptRenderer(),
-                        new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper())
+                        new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper()),
+                        new CopilotIncidentReportFactory()
                 ),
                 new CopilotRunPreparationService(
                         new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))

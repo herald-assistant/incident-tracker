@@ -12,7 +12,9 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportSessionStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -31,16 +33,19 @@ public class CopilotSdkExecutionGateway {
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
     private final CopilotToolBudgetRegistry toolBudgetRegistry;
+    private final CopilotReportSessionStore reportSessionStore;
 
     @Autowired
     public CopilotSdkExecutionGateway(
             CopilotSdkProperties properties,
             CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotToolBudgetRegistry toolBudgetRegistry
+            CopilotToolBudgetRegistry toolBudgetRegistry,
+            CopilotReportSessionStore reportSessionStore
     ) {
         this.properties = properties;
         this.toolEvidenceSessionStore = toolEvidenceSessionStore;
         this.toolBudgetRegistry = toolBudgetRegistry;
+        this.reportSessionStore = reportSessionStore;
     }
 
     public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
@@ -65,6 +70,7 @@ public class CopilotSdkExecutionGateway {
                         logDuration(sessionOperation, runReference, nanosToMillis(openSessionStart));
                         var sessionSummary = newSessionLogSummary(runReference);
                         var sessionId = resolvedSessionId(session, preparedSession);
+                        var reportId = registerReport(preparedSession.initialReport());
 
                         toolEvidenceSessionStore.registerSession(
                                 sessionId,
@@ -97,9 +103,15 @@ public class CopilotSdkExecutionGateway {
                             }
 
                             logSessionSummary(sessionId, sessionSummary, nanosToMillis(overallStart));
-                            return new CopilotExecutionResult(content, usageAccumulator.snapshot(), sessionId);
+                            return new CopilotExecutionResult(
+                                    content,
+                                    usageAccumulator.snapshot(),
+                                    sessionId,
+                                    currentReport(reportId)
+                            );
                         } finally {
                             toolEvidenceSessionStore.unregisterSession(sessionId);
+                            unregisterReport(reportId);
                             toolBudgetRegistry.unregisterSession(sessionId).ifPresent(snapshot -> log.info(
                                     "Copilot tool budget summary sessionId={} totalCalls={} softLimitExceeded={} deniedToolCalls={} rawSqlAttempts={}",
                                     snapshot.sessionId(),
@@ -134,6 +146,22 @@ public class CopilotSdkExecutionGateway {
             );
             throw new CopilotSdkInvocationException(buildFailureMessage(rootCause), exception);
         }
+    }
+
+    private String registerReport(AnalysisReport initialReport) {
+        if (initialReport == null) {
+            return null;
+        }
+        reportSessionStore.register(initialReport);
+        return initialReport.reportId();
+    }
+
+    private AnalysisReport currentReport(String reportId) {
+        return reportSessionStore.current(reportId).orElse(null);
+    }
+
+    private void unregisterReport(String reportId) {
+        reportSessionStore.unregister(reportId);
     }
 
     private String resolvedSessionId(CopilotSession session, CopilotPreparedSession preparedSession) {

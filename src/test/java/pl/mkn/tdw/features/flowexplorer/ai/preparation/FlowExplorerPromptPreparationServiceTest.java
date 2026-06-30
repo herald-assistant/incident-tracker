@@ -42,7 +42,10 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Runtime envelope"));
         assertTrue(prompt.contains("Ten prompt przekazuje dane biezacego runu"));
         assertTrue(prompt.contains("Zasady pracy, format wyniku i wybor tools pochodza z runtime skilli"));
-        assertTrue(prompt.contains("Zwroc wylacznie poprawny JSON zgodny z `flow-explorer-result-contract`"));
+        assertTrue(prompt.contains("Zapisz wynik przez report tools zgodnie z `flow-explorer-result-contract`"));
+        assertTrue(prompt.contains("report_upsert_section"));
+        assertTrue(prompt.contains("report_update_meta"));
+        assertTrue(prompt.contains("awaryjny poprawny JSON"));
         assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
         assertTrue(prompt.contains("`userInstructions` doprecyzowuja intencje"));
         assertTrue(prompt.contains("Najpierw wykorzystaj artefakty osadzone w tym promptcie"));
@@ -58,6 +61,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("COULD: record_tool_feedback"));
         assertTrue(prompt.contains("sectionModes"));
         assertTrue(prompt.contains("activeSectionIds"));
+        assertTrue(prompt.contains("activeReportSectionIds: [OVERVIEW, FUNCTIONAL_FLOW, VALIDATIONS, PERSISTENCE, INTEGRATIONS]"));
         assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("Context clipping notes"));
         assertFalse(prompt.contains("preferuj `gitlab_read_java_method_slice`"));

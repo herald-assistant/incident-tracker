@@ -294,7 +294,8 @@ public class IncidentAnalysisLocalRunChatHandler implements LocalAnalysisRunChat
                 safeList(snapshot.toolFeedback()),
                 chatMessages,
                 snapshot.preparedPrompt(),
-                snapshot.result()
+                snapshot.result(),
+                snapshot.report()
         );
     }
 

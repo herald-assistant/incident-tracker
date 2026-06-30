@@ -49,6 +49,10 @@ Obecnie obejmuje:
   platformowy tool `record_tool_feedback` oraz listener eventow invocation,
   ktory publikuje feedback jako sekcje `ai/tool-feedback` przez evidence
   store; nie dodawaj tu osobnego session store ani osobnego sinka runtime.
+- `copilot/tools/report/`
+  platformowe report tools i session-bound store generycznego raportu
+  analitycznego; trzyma tylko ostatni snapshot per `reportId` i nie zawiera
+  semantyki konkretnego feature'a ani promptu.
 
 Nie obejmuje:
 

@@ -59,6 +59,9 @@ public class CopilotIncidentPromptRenderer {
                 - If GitLab or Operational Context tools are not enabled, use the attached artifacts and state the visibility limit instead of guessing.
                 - `functionalAnalysis` must avoid implementation-first language. Mention code identifiers only when they help anchor the system/process explanation.
                 - `technicalAnalysis` must follow Technical Handoff v1 from the runtime `incident-technical-handoff` skill after loading it through the `skill` tool when that tool is available.
+                - Save the final result through report tools. Use `report_update_header` for `detectedProblem`, `report_upsert_section` for `FUNCTIONAL_ANALYSIS` and `TECHNICAL_HANDOFF`, `report_update_meta` for affected process, bounded context, team, confidence and visibility limits, then verify with `report_get_current`.
+                - Do not provide `reportId` to report tools; the active report is selected from hidden ToolContext.
+                - Return fallback JSON only if report tools are unavailable or saving the report fails.
                 - If `DB_CODE_GROUNDING_NEEDED` is listed, do not start broad DB table/column discovery from guesses.
                 - Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom, you must either cite deterministic GitLab evidence that already identifies the entity/repository mapping, call an enabled GitLab tool to try to find that mapping, or state that GitLab grounding is unavailable and use DB discovery as a fallback.
                 - Use deterministic GitLab evidence or enabled GitLab tools to identify the entity, repository predicate, likely table/column names and direct relations that should guide DB diagnostics.
@@ -90,7 +93,7 @@ public class CopilotIncidentPromptRenderer {
                 renderGitLabGroup(request.gitLabGroup()),
                 runtimeSkillHardRules(sessionConfigRequest),
                 feedbackGuidance(toolAccessPolicy),
-                jsonResponseContract(),
+                reportResponseContract(),
                 formatRuntimeSkills(sessionConfigRequest),
                 formatArtifacts(renderedArtifacts),
                 formatEmbeddedArtifacts(renderedArtifacts),
@@ -98,20 +101,30 @@ public class CopilotIncidentPromptRenderer {
         );
     }
 
-    private String jsonResponseContract() {
+    private String reportResponseContract() {
         return """
                 Return the analysis in Polish.
-                Return only valid JSON.
-                The final answer must start with `{` and end with `}`.
-                Do not wrap it in Markdown.
-                Do not add prose before or after JSON.
-                Do not add status text such as "I have all the evidence needed" before the JSON.
+                The source of truth is the structured report saved through report tools.
+                Use `report_update_header` with `header = detectedProblem`.
+                Use `report_upsert_section` with `id = FUNCTIONAL_ANALYSIS` for Functional Analysis v1.
+                Use `report_upsert_section` with `id = TECHNICAL_HANDOFF` for Technical Handoff v1.
+                Use `report_update_meta` for:
+                - references with type `process`, `boundedContext` and `team` for affected process, bounded context and team,
+                - `confidence`,
+                - `visibilityLimits`, `gaps` and `warnings`.
+                Use `report_get_current` before the final assistant message to verify both sections are saved.
+                Final assistant text may be a short status, because backend reads the report snapshot.
+
+                Fallback only when report tools are unavailable or saving fails:
+                Return only valid JSON. The final answer must start with `{` and end with `}`.
+                Do not wrap fallback JSON in Markdown. Do not add prose before or after fallback JSON.
+                Do not add status text such as "I have all the evidence needed" before fallback JSON.
                 Use concise professional Markdown in string values where the schema says markdown string.
                 Use `code spans` for technical identifiers such as classes, methods, exceptions, IDs, branches, files, queues, endpoints, or DB objects.
                 Use real markdown bullets separated by newline characters inside markdown string values when listing multiple points.
                 Never join multiple points with pipe separators like "|".
 
-                Required schema:
+                Fallback JSON schema:
                 {
                   "detectedProblem": "string",
                   "affectedProcess": "string or nieustalone",

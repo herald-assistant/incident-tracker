@@ -40,6 +40,10 @@ import pl.mkn.tdw.features.flowexplorer.job.error.FlowExplorerJobNotFoundExcepti
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -129,6 +133,33 @@ class FlowExplorerJobServiceTest {
                 any(AnalysisAiAuthRef.class)
         );
         verify(runPreparationService).prepare(runRequest);
+    }
+
+    @Test
+    void shouldCompleteJobFromReportSnapshotBeforeAssistantJsonFallback() {
+        var request = request();
+        var contextSnapshot = contextSnapshot();
+        var promptPreparation = promptPreparation();
+        var runRequest = runRequest();
+        var preparedSession = preparedSession(runRequest);
+        var usage = usage();
+        givenContextPromptAndRun(request, contextSnapshot, promptPreparation, runRequest, preparedSession);
+        when(executionGateway.execute(any(CopilotPreparedSession.class)))
+                .thenReturn(new CopilotExecutionResult("Report saved.", usage, "initial-session-1", report()));
+
+        var started = flowExplorerJobService.startJob(request);
+
+        assertEquals("COMPLETED", started.status());
+        assertEquals("Tester chce poznac endpoint z raportu.", started.result().aiResponse().overview().markdown());
+        assertEquals("high", started.result().aiResponse().confidence());
+        assertEquals(4, started.result().aiResponse().sections().size());
+        assertEquals("Flow zapisany przez report tool.", started.result().aiResponse().sections().get(0).markdown());
+        assertEquals(List.of("crm-service:CustomerController.java:L12-L24"),
+                started.result().aiResponse().sourceReferences());
+        assertNotNull(started.report());
+        assertEquals("report-1", started.report().reportId());
+        assertEquals("Flow Explorer: GET /api/customers/{id}", started.report().header());
+        assertSame(usage, started.result().usage());
     }
 
     @Test
@@ -528,6 +559,58 @@ class FlowExplorerJobServiceTest {
                   "confidence": "high"
                 }
                 """.formatted(functionalFlowMarkdownJson());
+    }
+
+    private static AnalysisReport report() {
+        return new AnalysisReport(
+                "report-1",
+                "Flow Explorer: GET /api/customers/{id}",
+                "crm-service | feature/FLOW-42 | DEEP_DISCOVERY",
+                "",
+                List.of(
+                        new AnalysisReportSection(
+                                "OVERVIEW",
+                                "Overview",
+                                0,
+                                "Tester chce poznac endpoint z raportu.",
+                                reportMeta("high")
+                        ),
+                        reportSection(FlowExplorerResultSectionId.FUNCTIONAL_FLOW, "Flow zapisany przez report tool."),
+                        reportSection(FlowExplorerResultSectionId.VALIDATIONS, "Walidacje zapisane przez report tool."),
+                        reportSection(FlowExplorerResultSectionId.PERSISTENCE, "Persistence zapisany przez report tool."),
+                        reportSection(FlowExplorerResultSectionId.INTEGRATIONS, "Integracje zapisane przez report tool.")
+                ),
+                reportMeta("high")
+        );
+    }
+
+    private static AnalysisReportSection reportSection(
+            FlowExplorerResultSectionId sectionId,
+            String markdown
+    ) {
+        return new AnalysisReportSection(
+                sectionId.name(),
+                sectionId.title(),
+                sectionId.ordinal() + 1,
+                markdown,
+                AnalysisReportMeta.empty()
+        );
+    }
+
+    private static AnalysisReportMeta reportMeta(String confidence) {
+        return new AnalysisReportMeta(
+                List.of(new AnalysisReportReference(
+                        "code",
+                        "CustomerController",
+                        "crm-service:CustomerController.java:L12-L24",
+                        "Endpoint handler"
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                confidence,
+                List.of()
+        );
     }
 
     private static String functionalFlowMarkdownJson() {

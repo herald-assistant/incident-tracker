@@ -16,6 +16,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.feedback.CopilotToolFeedbackToolNames;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.flowexplorer.ai.preparation.FlowExplorerPromptPreparation;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextCoverage;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
@@ -27,6 +28,9 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerSectionModeRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.nio.file.Files;
@@ -37,6 +41,9 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -60,6 +67,10 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var databaseTool = tool(DatabaseToolNames.COUNT_ROWS);
         var elasticTool = tool(ElasticToolNames.SEARCH_LOGS_BY_CORRELATION_ID);
         var feedbackTool = tool(CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK);
+        var reportGetCurrentTool = tool(CopilotReportToolNames.GET_CURRENT);
+        var reportUpsertSectionTool = tool(CopilotReportToolNames.UPSERT_SECTION);
+        var reportUpdateHeaderTool = tool(CopilotReportToolNames.UPDATE_HEADER);
+        var reportUpdateMetaTool = tool(CopilotReportToolNames.UPDATE_META);
 
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(
                 databaseTool,
@@ -67,7 +78,11 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 javaMethodContextTool,
                 elasticTool,
                 operationalContextTool,
-                feedbackTool
+                feedbackTool,
+                reportGetCurrentTool,
+                reportUpsertSectionTool,
+                reportUpdateHeaderTool,
+                reportUpdateMetaTool
         ));
 
         assertEquals(
@@ -75,11 +90,27 @@ class FlowExplorerCopilotRuntimePreparationTest {
                         GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                         GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
                         OperationalContextToolNames.SEARCH,
-                        CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK
+                        CopilotToolFeedbackToolNames.RECORD_TOOL_FEEDBACK,
+                        CopilotReportToolNames.GET_CURRENT,
+                        CopilotReportToolNames.UPSERT_SECTION,
+                        CopilotReportToolNames.UPDATE_HEADER,
+                        CopilotReportToolNames.UPDATE_META
                 ),
                 policy.availableToolNames()
         );
-        assertEquals(List.of(gitLabTool, javaMethodContextTool, operationalContextTool, feedbackTool), policy.enabledTools());
+        assertEquals(
+                List.of(
+                        gitLabTool,
+                        javaMethodContextTool,
+                        operationalContextTool,
+                        feedbackTool,
+                        reportGetCurrentTool,
+                        reportUpsertSectionTool,
+                        reportUpdateHeaderTool,
+                        reportUpdateMetaTool
+                ),
+                policy.enabledTools()
+        );
         assertTrue(policy.localWorkspaceAccessBlocked());
         assertTrue(policy.gitLabToolsRegistered());
         assertTrue(policy.operationalContextToolsRegistered());
@@ -88,6 +119,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertTrue(policy.gitLabToolsEnabled());
         assertTrue(policy.operationalContextToolsEnabled());
         assertTrue(policy.toolFeedbackEnabled());
+        assertTrue(policy.reportToolsEnabled());
         assertFalse(policy.databaseToolsEnabled());
         assertFalse(policy.elasticToolsEnabled());
     }
@@ -108,7 +140,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals("flow-explorer-job-123", sessionContext.copilotSessionId());
         assertEquals("job-123", hiddenContext.get(AgentToolContextKeys.ANALYSIS_RUN_ID));
         assertEquals("flow-explorer-job-123", hiddenContext.get(AgentToolContextKeys.COPILOT_SESSION_ID));
-        assertEquals(6, hiddenContext.size());
+        assertEquals(9, hiddenContext.size());
         assertEquals(
                 FlowExplorerCopilotToolContextKeys.FEATURE_VALUE,
                 hiddenContext.get(FlowExplorerCopilotToolContextKeys.FEATURE)
@@ -119,9 +151,33 @@ class FlowExplorerCopilotRuntimePreparationTest {
         );
         assertEquals(true, hiddenContext.get(FlowExplorerCopilotToolContextKeys.ENDPOINT_CONTEXT_EMBEDDED));
         assertEquals(true, hiddenContext.get(FlowExplorerCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED));
+        assertInstanceOf(String.class, hiddenContext.get(AgentToolContextKeys.REPORT_ID));
+        assertTrue(((String) hiddenContext.get(AgentToolContextKeys.REPORT_ID)).startsWith("report-"));
+        assertEquals("flow-explorer", hiddenContext.get(AgentToolContextKeys.REPORT_FEATURE));
+        assertEquals(
+                List.of("OVERVIEW", "FUNCTIONAL_FLOW", "VALIDATIONS", "PERSISTENCE", "INTEGRATIONS"),
+                hiddenContext.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS)
+        );
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.CORRELATION_ID));
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_GROUP));
         assertFalse(hiddenContext.containsKey(AgentToolContextKeys.GITLAB_BRANCH));
+    }
+
+    @Test
+    void shouldLimitFlowExplorerReportSectionsToActiveSections() {
+        var contextFactory = new FlowExplorerCopilotToolSessionContextFactory();
+
+        var sessionContext = contextFactory.create(
+                "job-123",
+                requestWithSectionModes(),
+                contextSnapshot(),
+                preparation()
+        );
+
+        assertEquals(
+                List.of("OVERVIEW", "FUNCTIONAL_FLOW", "PERSISTENCE"),
+                sessionContext.hiddenContext().get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS)
+        );
     }
 
     @Test
@@ -251,6 +307,18 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals("job-123", runRequest.runReference());
         assertEquals("Flow Explorer canonical prompt", runRequest.prompt());
         assertEquals(preparation().artifactContents(), runRequest.artifactContents());
+        assertNotNull(runRequest.initialReport());
+        assertEquals(
+                assembly.toolSessionContext().hiddenContext().get(AgentToolContextKeys.REPORT_ID),
+                runRequest.initialReport().reportId()
+        );
+        assertEquals("Flow Explorer: GET /api/customers/{id}", runRequest.initialReport().header());
+        assertEquals(
+                List.of("OVERVIEW", "FUNCTIONAL_FLOW", "VALIDATIONS", "PERSISTENCE", "INTEGRATIONS"),
+                runRequest.initialReport().sections().stream()
+                        .map(section -> section.id())
+                        .toList()
+        );
         assertSame(assembly.toolSessionContext(), contextCaptor.getValue());
         assertEquals(
                 List.of(
@@ -304,6 +372,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var hiddenContext = assembly.toolSessionContext().hiddenContext();
 
         assertEquals("follow-up-123", runRequest.runReference());
+        assertNull(runRequest.initialReport());
         assertEquals(CopilotSessionTarget.Type.EXISTING, runRequest.sessionTarget().type());
         assertEquals("initial-copilot-session-123", runRequest.sessionTarget().sessionId());
         assertEquals("initial-copilot-session-123", assembly.toolSessionContext().copilotSessionId());
@@ -405,6 +474,39 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "Skup sie na ryzykach regresji CRM.",
                 "gpt-5.4",
                 "high"
+        );
+    }
+
+    private static FlowExplorerJobStartRequest requestWithSectionModes() {
+        return new FlowExplorerJobStartRequest(
+                "crm-service",
+                "crm-service:GET:/api/customers/{id}",
+                null,
+                null,
+                "feature/FLOW-42",
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(),
+                List.of(
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
+                                FlowExplorerResultSectionMode.DEEP
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.VALIDATIONS,
+                                FlowExplorerResultSectionMode.OFF
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.PERSISTENCE,
+                                FlowExplorerResultSectionMode.COMPACT
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.INTEGRATIONS,
+                                FlowExplorerResultSectionMode.OFF
+                        )
+                ),
+                "Skup sie na jezyku zrozumialym dla testera.",
+                "gpt-5.4",
+                "medium"
         );
     }
 

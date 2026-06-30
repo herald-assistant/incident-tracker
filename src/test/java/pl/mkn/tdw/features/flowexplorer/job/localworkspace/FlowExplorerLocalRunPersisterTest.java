@@ -20,6 +20,9 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.time.Instant;
 import java.util.List;
@@ -80,6 +83,8 @@ class FlowExplorerLocalRunPersisterTest {
         assertEquals("flow-job-1", exportEnvelope.at("/payload/job/jobId").asText());
         assertEquals("GET", exportEnvelope.at("/payload/job/httpMethod").asText());
         assertEquals("/api/customers/{id}", exportEnvelope.at("/payload/job/endpointPath").asText());
+        assertEquals("flow-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
+        assertEquals("Flow Explorer: GET /api/customers/{id}", exportEnvelope.at("/payload/job/report/header").asText());
         assertEquals("flow-explorer-goal-result-v1", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
         assertFalse(exportEnvelope.toString().contains("operator-session-1"));
         assertFalse(exportEnvelope.toString().contains("copilot-session-1"));
@@ -156,7 +161,34 @@ class FlowExplorerLocalRunPersisterTest {
                         "Prepared prompt",
                         aiResponse(),
                         new AnalysisAiUsage(10, 5, 0, 0, 15, 0.01, 1000, 1, "gpt-5.4", null, null, null)
-                )
+                ),
+                report()
+        );
+    }
+
+    private AnalysisReport report() {
+        return new AnalysisReport(
+                "flow-report-1",
+                "Flow Explorer: GET /api/customers/{id}",
+                "crm-service | main | DEEP_DISCOVERY",
+                "",
+                List.of(
+                        new AnalysisReportSection(
+                                "OVERVIEW",
+                                "Overview",
+                                0,
+                                "Overview",
+                                AnalysisReportMeta.empty()
+                        ),
+                        new AnalysisReportSection(
+                                "FUNCTIONAL_FLOW",
+                                "Functional flow",
+                                1,
+                                "Section Functional flow",
+                                AnalysisReportMeta.empty()
+                        )
+                ),
+                AnalysisReportMeta.empty()
         );
     }
 

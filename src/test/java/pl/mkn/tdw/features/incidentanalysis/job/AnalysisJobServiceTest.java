@@ -26,6 +26,10 @@ import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisPreparation;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisProvider;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
@@ -101,6 +105,9 @@ class AnalysisJobServiceTest {
                 completed.preparedPrompt()
         );
         assertNotNull(completed.result());
+        assertNotNull(completed.report());
+        assertEquals("test-report-timeout-123", completed.report().reportId());
+        assertEquals("DOWNSTREAM_TIMEOUT", completed.report().header());
         assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
         assertEquals(
                 "Analiza funkcjonalna: incydent dotyka procesu katalogowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
@@ -129,6 +136,8 @@ class AnalysisJobServiceTest {
         assertEquals(1, persistence.snapshots.size());
         assertEquals(started.analysisId(), persistence.snapshots.get(0).analysisId());
         assertEquals("COMPLETED", persistence.snapshots.get(0).status());
+        assertNotNull(persistence.snapshots.get(0).report());
+        assertEquals("session-aware-report-timeout-123", persistence.snapshots.get(0).report().reportId());
         assertEquals("timeout-123", persistence.requests.get(0).correlationId());
         assertEquals("CRM/runtime", persistence.requests.get(0).gitLabGroup());
         assertEquals("copilot-session-1", persistence.copilotSessionIds.get(0));
@@ -608,9 +617,57 @@ class AnalysisJobServiceTest {
                     List.of(),
                     prepared.prompt(),
                     null,
-                    copilotSessionId
+                    copilotSessionId,
+                    report(
+                            "session-aware-report-" + prepared.request().correlationId(),
+                            "DOWNSTREAM_TIMEOUT",
+                            "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
+                            "Analiza techniczna: session id Copilota zostal przekazany do lokalnej persystencji."
+                    )
             );
         }
+    }
+
+    private static AnalysisReport report(
+            String reportId,
+            String header,
+            String functionalAnalysis,
+            String technicalAnalysis
+    ) {
+        return new AnalysisReport(
+                reportId,
+                header,
+                "Incident test report",
+                "",
+                List.of(
+                        new AnalysisReportSection(
+                                "FUNCTIONAL_ANALYSIS",
+                                "Functional analysis",
+                                1,
+                                functionalAnalysis,
+                                AnalysisReportMeta.empty()
+                        ),
+                        new AnalysisReportSection(
+                                "TECHNICAL_HANDOFF",
+                                "Technical handoff",
+                                2,
+                                technicalAnalysis,
+                                AnalysisReportMeta.empty()
+                        )
+                ),
+                new AnalysisReportMeta(
+                        List.of(
+                                new AnalysisReportReference("process", "Catalog profile lookup", null, null),
+                                new AnalysisReportReference("boundedContext", "Catalog Context", null, null),
+                                new AnalysisReportReference("team", "Core Integration Team", null, null)
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        "medium",
+                        List.of()
+                )
+        );
     }
 
     private static final class FailingInitialAnalysisProvider implements InitialAnalysisProvider {

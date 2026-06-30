@@ -249,36 +249,51 @@ fakty sesji, logi, deployment/runtime, code highlights i znane luki evidence.
 `itemId` sa generowane tylko podczas renderowania artefaktow Copilota i
 pojawiaja sie w manifest, JSON artifacts i markdown artifacts.
 
-## 10. Kontrakt odpowiedzi AI jest JSON-only
+## 10. Initial result jest report-first
 
-Copilot ma zwracac tylko poprawny JSON, bez Markdown fence i bez prozy poza
-JSON. Parser obsluguje:
+Kanonicznym wynikiem initial analysis jest generyczny `AnalysisReport` z
+`shared.ai.report`, a nie finalna tresc odpowiedzi tekstowej Copilota.
+Backend tworzy `reportId` przy skladaniu runu, przekazuje scaffold raportu do
+`CopilotRunRequest.initialReport`, a runtime rejestruje go w
+`CopilotReportSessionStore` na czas pojedynczego `sendAndWait`.
 
-- caly content jako JSON,
-- fenced JSON block jako tolerancje dla modelu,
-- pierwszy kompletny obiekt JSON osadzony w tresci jako tolerancje dla krotkiej
-  prozy przed JSON-em; jesli nie ma kompletnego obiektu, pierwszy parsowalny
-  obiekt nadal moze posluzyc do fallbacku czesciowo sparsowanych pol,
-- fallback strukturalny, gdy wymaganych pol nie da sie sparsowac.
+Model zapisuje wynik przez platformowe report tools:
 
-Legacy labeled response parser zostal usuniety. Brak wymaganych pol powoduje
-fallback z `detectedProblem=AI_UNSTRUCTURED_RESPONSE`, ale pola juz
-sparsowane z JSON sa zachowywane.
+- `report_update_header`,
+- `report_upsert_section`,
+- `report_update_meta`,
+- `report_get_current`.
 
-Wymagane pola dla obecnego publicznego response to:
+Report tools sa session-bound. Model-facing schema nie przyjmuje `reportId`;
+scope pochodzi z hidden `ToolContext`, razem z feature name i lista
+dozwolonych sekcji. Tool odrzuca sekcje spoza `allowedReportSectionIds`.
 
-- `detectedProblem`
-- `functionalAnalysis`
-- `technicalAnalysis`
+Po zakonczeniu `sendAndWait` execution gateway zwraca ostatni snapshot raportu
+w `CopilotExecutionResult.report()`. Feature mapuje ten raport na swoj
+publiczny kontrakt:
 
-JSON niesie tez pola pomocnicze: `affectedProcess`,
-`affectedBoundedContext`, `affectedTeam`, `confidence` i
-`visibilityLimits`.
+- Incident Analysis mapuje `header` na `detectedProblem`, sekcje
+  `FUNCTIONAL_ANALYSIS` i `TECHNICAL_HANDOFF` na obecne pola
+  `functionalAnalysis` i `technicalAnalysis`, a meta references na affected
+  process/bounded context/team oraz visibility limits.
+- Flow Explorer mapuje `OVERVIEW` i aktywne sekcje raportu na
+  `FlowExplorerAiResponse`, zachowujac feature-specific widok dla UI.
 
-`functionalAnalysis` jest pisane dla analityka biznesowo-systemowego i musi
-uzywac operational context do osadzenia incydentu w systemie, procesie,
+JSON-only response contract pozostaje tylko fallbackiem diagnostycznym, gdy
+raport nie zostal zapisany albo jest niekompletny. Legacy labeled response
+parser pozostaje usuniety. Finalna proza z `sendAndWait` moze byc przydatna w
+diagnostyce, ale nie jest zrodlem prawdy initial result.
+
+`AnalysisReport` jest neutralny i nie zna semantyki incydentu ani Flow
+Explorera. Feature decyduje o dozwolonych sekcjach, required sections,
+promptach, skillach i mapowaniu raportu na publiczny response. W MVP nie
+wersjonujemy raportu; job state, local workspace i export trzymaja ostatni
+snapshot raportu obok feature-specific `result`.
+
+`functionalAnalysis` nadal jest pisane dla analityka biznesowo-systemowego i
+musi uzywac operational context do osadzenia incydentu w systemie, procesie,
 bounded context, logice funkcjonalnej i regule handoffu. `technicalAnalysis`
-jest pisane jako Technical Handoff v1 dla osoby lub zespolu, ktory ma problem
+nadal jest Technical Handoff v1 dla osoby lub zespolu, ktory ma problem
 naprawic, zweryfikowac albo przekazac do innego Tribe/administracji/infra.
 
 ## 11. Ukryty quality gate jest usuniety

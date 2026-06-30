@@ -14,8 +14,8 @@ Obecnie obejmuje:
   `AnalysisAiAuthRefResolver`) oraz user-visible activity trace
   (`AnalysisAiActivityEvent`, `AnalysisAiActivityListener`). Ten pakiet moze
   tez zawierac neutralne kontrakty zasilajace wspolne elementy UI feature'ow,
-  np. kroki joba/runu i follow-up chat, o ile nie niosa semantyki jednego
-  konkretnego feature'a.
+  np. kroki joba/runu, follow-up chat i generyczny raport analityczny, o ile
+  nie niosa semantyki jednego konkretnego feature'a.
 - `evidence/`
   generyczny model evidence wspolny dla evidence pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`,

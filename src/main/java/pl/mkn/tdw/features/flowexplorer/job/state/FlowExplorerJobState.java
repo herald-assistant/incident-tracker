@@ -21,6 +21,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedbackEvidenceMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisChatMessageResponse;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
@@ -68,6 +69,7 @@ public final class FlowExplorerJobState {
     private String copilotSessionId;
     private FlowExplorerContextSnapshot contextSnapshot;
     private FlowExplorerResultResponse result;
+    private AnalysisReport report;
 
     public FlowExplorerJobState(String jobId, FlowExplorerJobStartRequest request) {
         this(jobId, request, AnalysisAiAuthRef.localToken(null));
@@ -172,6 +174,16 @@ public final class FlowExplorerJobState {
             String prompt,
             String copilotSessionId
     ) {
+        markAiCompleted(aiResponse, usage, prompt, copilotSessionId, null);
+    }
+
+    public synchronized void markAiCompleted(
+            FlowExplorerAiResponse aiResponse,
+            AnalysisAiUsage usage,
+            String prompt,
+            String copilotSessionId,
+            AnalysisReport report
+    ) {
         var now = Instant.now();
         status = STATUS_COMPLETED;
         currentStepCode = null;
@@ -179,6 +191,7 @@ public final class FlowExplorerJobState {
         updatedAt = now;
         completedAt = now;
         preparedPrompt = prompt;
+        this.report = report;
         rememberCopilotSession(copilotSessionId);
         completeStep(
                 STEP_AI_ANALYSIS,
@@ -365,7 +378,8 @@ public final class FlowExplorerJobState {
                 List.copyOf(toolFeedback),
                 chatMessages.stream().map(ChatMessageState::snapshot).toList(),
                 preparedPrompt,
-                result
+                result,
+                report
         );
     }
 

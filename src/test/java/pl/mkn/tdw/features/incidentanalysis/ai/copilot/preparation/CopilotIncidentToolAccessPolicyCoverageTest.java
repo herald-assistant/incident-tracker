@@ -4,6 +4,7 @@ import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -314,6 +315,23 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
+    void shouldAlwaysEnableReportToolsForInitialAnalysisWhenRegistered() {
+        var policy = policy(
+                request("dev3", List.of(sufficientElasticSection())),
+                tools(
+                        CopilotReportToolNames.GET_CURRENT,
+                        CopilotReportToolNames.UPSERT_SECTION,
+                        CopilotReportToolNames.UPDATE_HEADER,
+                        CopilotReportToolNames.UPDATE_META,
+                        "db_find_tables"
+                )
+        );
+
+        assertEquals(Set.copyOf(CopilotReportToolNames.allToolNames()), Set.copyOf(policy.availableToolNames()));
+        assertTrue(policy.reportToolsEnabled());
+    }
+
+    @Test
     void shouldCreateFollowUpPolicyFromResolvedChatScope() {
         var policy = policyFactory.createForFollowUp(
                 chatRequest("dev3", "CRM/runtime", "release/2026.04"),
@@ -384,6 +402,24 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
 
         assertEquals(Set.of("record_tool_feedback"), Set.copyOf(policy.availableToolNames()));
         assertTrue(policy.toolFeedbackEnabled());
+    }
+
+    @Test
+    void shouldAlwaysEnableReportToolsForFollowUpWhenRegistered() {
+        var policy = policyFactory.createForFollowUp(
+                chatRequest(null, null, null),
+                tools(
+                        CopilotReportToolNames.GET_CURRENT,
+                        CopilotReportToolNames.UPSERT_SECTION,
+                        CopilotReportToolNames.UPDATE_HEADER,
+                        CopilotReportToolNames.UPDATE_META,
+                        "gitlab_find_flow_context",
+                        "db_find_tables"
+                )
+        );
+
+        assertEquals(Set.copyOf(CopilotReportToolNames.allToolNames()), Set.copyOf(policy.availableToolNames()));
+        assertTrue(policy.reportToolsEnabled());
     }
 
     private CopilotIncidentToolAccessPolicy policy(

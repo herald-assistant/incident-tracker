@@ -335,6 +335,32 @@ Takie endpointy traktuj jako shared/operator API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.
 
+### Initial analysis result report-first
+
+Initial analysis nie traktuje juz finalnej odpowiedzi tekstowej/JSON z
+`sendAndWait` jako zrodla prawdy. Feature tworzy scaffold `AnalysisReport`,
+backend przekazuje go jako `CopilotRunRequest.initialReport`, a runtime
+rejestruje go w `CopilotReportSessionStore` na czas pojedynczego
+`sendAndWait`.
+
+Model ma zapisac wynik przez report tools:
+
+- `report_update_header`,
+- `report_upsert_section`,
+- `report_update_meta`,
+- `report_get_current`.
+
+`reportId`, feature i dozwolone sekcje pochodza z hidden `ToolContext`; nie
+dodawaj `reportId` do model-facing schema tooli. Po wykonaniu runtime zwraca
+ostatni snapshot w `CopilotExecutionResult.report()`, a feature mapper buduje z
+niego publiczny `result`. JSON parser zostaje tylko fallbackiem diagnostycznym,
+gdy raportu nie ma albo jest niekompletny.
+
+Incident Analysis ma sekcje `FUNCTIONAL_ANALYSIS` i `TECHNICAL_HANDOFF`.
+Flow Explorer ma `OVERVIEW` oraz aktywne sekcje wynikajace z goal/mode
+requestu. UI pokazuje dotychczasowy feature-specific result oraz wspolny
+`AnalysisReportPanelComponent`, jezeli snapshot joba zawiera `report`.
+
 ### Follow-up chat
 
 Kontynuacja po wyniku poczatkowej analizy ma osobny kontrakt AI:
