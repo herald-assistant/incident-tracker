@@ -7,6 +7,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
 import java.util.List;
@@ -32,26 +33,28 @@ public class FlowExplorerCopilotSessionConfigRequestFactory {
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
             AnalysisAiOptions options,
-            FlowExplorerAnalysisGoal goal
+            FlowExplorerAnalysisGoal goal,
+            List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
         return create(
                 copilotSessionId,
                 toolAccessPolicy,
                 options,
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(goal)
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(goal, sectionModes)
         );
     }
 
     public CopilotSessionConfigRequest createForFollowUp(
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
-            AnalysisAiOptions options
+            AnalysisAiOptions options,
+            List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
         return create(
                 copilotSessionId,
                 toolAccessPolicy,
                 options,
-                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames()
+                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(sectionModes)
         );
     }
 

@@ -148,7 +148,7 @@ Javie; potwierdz je w upstream docs/protocol i dopiero potem mapuj na
 - `agenttools.operationalcontext`
 - `agenttools.operationalcontext.mcp`
 - `features.incidentanalysis.evidence.provider.operationalcontext`
-- `src/main/resources/copilot/skills/incident-operational-context-tools`
+- `src/main/resources/copilot/skills/incident-operational-grounding`
 
 ## Jak rozwijac projekt bez psucia kierunku
 
@@ -382,7 +382,7 @@ Dla Incident Analysis sama wiadomosc operatora jest jedynym nowym promptem,
 bo kontrakt rozmowy jest oddzielony od kontraktu initial result. Dla Flow
 Explorera follow-up owija wiadomosc operatora w feature-owned follow-up chat
 prompt i skill `flow-explorer-follow-up-chat`: domyslnie odpowiedz ma byc
-Markdownem, nie pelnym `flow-explorer-result-contract`, ma poglebiac odpowiedz
+Markdownem, nie pelnym `flow-explorer-write-report`, ma poglebiac odpowiedz
 przez dostepne tools i utrzymywac jezyk domenowy czytelny dla analityka albo
 testera.
 
@@ -426,7 +426,7 @@ wewnatrz callbacka toola.
 Operational Context tools sa katalogowym browse/search/detail nad
 `integrations.operationalcontext`: `opctx_get_scope`, `opctx_list_entities`,
 `opctx_search`, `opctx_get_entity`. Incidentowe zasady korzystania z nich sa w
-`incident-operational-context-tools` i w
+`incident-operational-grounding` i w
 `features.incidentanalysis.ai.copilot` policy/guidance, a nie w neutralnym
 MCP mapperze.
 

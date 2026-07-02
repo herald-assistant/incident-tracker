@@ -24,9 +24,10 @@ follow-upow. Orkiestrator uzywa go po researchu flow, klasyfikacji bledu i
 zebraniu evidence potrzebnego do naprawy, weryfikacji albo przekazania poza
 analizowany system.
 
-Nie zaczynaj diagnostyki od nowa. Ten skill syntetyzuje ustalenia w gotowy
-handoff i moze dociagnac tylko brakujacy, konkretny szczegol, jezeli bez niego
-odbiorca nie moze zaczac dzialania.
+Nie zaczynaj diagnostyki od nowa. W initial analysis ten skill syntetyzuje
+ustalenia w gotowy handoff i nie uruchamia samodzielnie pelnej eksploracji.
+W follow-upie moze dociagnac tylko brakujacy, konkretny szczegol, jezeli bez
+niego odbiorca nie moze zaczac dzialania.
 
 ## Wejscie Oczekiwane Od Orkiestratora
 
@@ -73,6 +74,43 @@ Handoff ma pomoc odbiorcy odpowiedziec:
 - jaki obszar kodu, danych, integracji, runtime albo ownershipu jest dotkniety,
 - jaka konkretna akcja jest oczekiwana,
 - jak sprawdzic, ze problem zostal naprawiony albo dobrze przekazany.
+
+## Kontrakt Wyniku
+
+Wynikiem jest Markdown `Technical Handoff v1` zapisany w sekcji
+`TECHNICAL_HANDOFF` raportu i mapowany na publiczne pole `technicalAnalysis`.
+Korzystaj z:
+
+- `IncidentDiagnosisLedger`,
+- `CodeGroundingSummary`,
+- `DataDiagnosticSummary`,
+- `OperationalGroundingSummary`,
+- runtime/log/downstream evidence,
+- visibility limits i source refs przekazanych przez orkiestratora.
+
+## Readiness Gate
+
+Przed wypelnieniem `technicalAnalysis` sprawdz, czy material wystarcza do
+konkretnego handoffu: odbiorca, pierwsza akcja, target techniczny, evidence,
+verification path i limitations.
+
+Jezeli w initial analysis brakuje rozstrzygalnego artifactu, nie tworz
+pozornie kompletnego handoffu. Zwroc do orkiestratora:
+
+```text
+IncidentResultReadinessFeedback
+missingArtifact: CodeGroundingSummary | DataDiagnosticSummary | OperationalGroundingSummary | IncidentDiagnosisLedger | logOrRuntimeEvidenceSummary
+neededFor: technicalAnalysis | handoff | confidence | visibilityLimits
+suggestedSkill: incident-code-grounding | incident-data-diagnostics | incident-operational-grounding | runtime/log/downstream visibility
+minimumNextQuestion: <jedno waskie pytanie potrzebne do technicznego handoffu>
+reason: <dlaczego bez tego odbiorca nie moze zaczac dzialania>
+```
+
+Jezeli brak nie jest rozstrzygalny w aktualnej sesji, wypelnij Technical
+Handoff v1 z jawnym `Brak danych w evidence`, `Nie ustalono` albo
+`Hipoteza, wymaga potwierdzenia`. W follow-upie wolno uzyc tools tylko dla
+jednego konkretnego brakujacego szczegolu; jesli wymaga to nowej diagnozy,
+wroc do limitation albo popros orkiestrator o odpowiedni skill.
 
 ## Minimalny Poziom Jakosci
 
@@ -150,12 +188,17 @@ zespol nie jest w pelni ustalony.
 
 ## Zasady Evidence
 
-Uzywaj zakonczonych artefaktow incydentu, finalnego wyniku analizy,
-poprzedniego tool evidence, historii chatu i nowych tool results z aktualnego
-requestu.
+W initial analysis uzywaj materialu przekazanego przez orkiestrator:
+artefaktow incydentu, summary artifacts, source refs i visibility limits. Nie
+uruchamiaj wtedy samodzielnie tools; rozstrzygalny brak zwroc jako
+`IncidentResultReadinessFeedback`.
 
-Mozesz uzyc tools tylko wtedy, gdy bez tego handoffowi brakuje konkretnego
-wymaganego szczegolu i capability jest dostepne w sesji.
+W follow-upie uzywaj zakonczonych artefaktow incydentu, finalnego wyniku
+analizy, poprzedniego tool evidence, historii chatu i nowych tool results z
+aktualnego requestu.
+
+W follow-upie mozesz uzyc tools tylko wtedy, gdy bez tego handoffowi brakuje
+konkretnego wymaganego szczegolu i capability jest dostepne w sesji.
 
 Uzywaj:
 
@@ -355,6 +398,35 @@ Dopasuj akcje do odbiorcy:
 
 Jezeli uzytkownik prosi o krotka wersje, zachowaj ta sama kolejnosc logiczna,
 ale skondensuj tresc zamiast zmieniac kontrakt.
+
+## Walidacja
+
+Stosuj `Quality Gate` jako obowiazkowa walidacje handoffu. Dodatkowo sprawdz:
+
+- odbiorca i pierwsza akcja sa konkretne albo oznaczone jako `Nie ustalono`,
+- root cause jest faktem tylko przy wystarczajacym evidence,
+- DB, downstream, runtime i ownership claims nie sa zgadywane,
+- testy i Definition of Done daja odbiorcy jasny sposob zamkniecia sprawy.
+
+## Fallbacki
+
+Jezeli brakuje evidence:
+
+- zachowaj strukture Technical Handoff v1,
+- wpisz `Brak danych w evidence`, `Hipoteza, wymaga potwierdzenia` albo
+  `Nie ustalono`,
+- nie usuwaj sekcji,
+- skieruj dalsza akcje do warstwy, ktora moze dostarczyc brakujacy dowod.
+
+## Artefakty Handoffu
+
+Przekaz do raportu:
+
+- Markdown `Technical Handoff v1`,
+- source refs dla evidence,
+- lista konkretnych plikow, metod, tabel, endpointow, runtime targets albo
+  downstream boundaries, jezeli sa ugruntowane,
+- Definition of Done dla odbiorcy technicznego.
 
 ## Antywzorce
 

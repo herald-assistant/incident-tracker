@@ -2,7 +2,7 @@
 name: configuration-or-environment-feature-flag
 expectedClassification: configuration_or_environment
 starterSkill: incident-analysis-orchestrator
-specializedSkill: incident-operational-context-tools
+specializedSkill: incident-operational-grounding
 ---
 
 # Fixture: Configuration Or Environment - Feature Flag
@@ -16,7 +16,7 @@ Fixture testuje kontrakt routingu:
 
 1. Najpierw research flow przez `incident-analysis-orchestrator`.
 2. Potem klasyfikacja jako `configuration_or_environment`.
-3. Potem przejscie do `incident-operational-context-tools`.
+3. Potem przejscie do `incident-operational-grounding`.
 4. Na koncu wynik w polach `functionalAnalysis` i `technicalAnalysis`.
 
 ## Minimalne Evidence
@@ -34,7 +34,7 @@ Fixture testuje kontrakt routingu:
    `catalog refresh job -> tax strategy selection -> missing tax profile`.
 2. Sprawdz, czy evidence wskazuje property, feature flag, deployment albo env
    drift.
-3. Zaladuj `incident-operational-context-tools`, jezeli potrzebny jest system,
+3. Zaladuj `incident-operational-grounding`, jezeli potrzebny jest system,
    owner, process albo config routing.
 4. Jezeli roznica konfiguracji najlepiej tlumaczy przerwanie, utrzymaj
    `configuration_or_environment`.

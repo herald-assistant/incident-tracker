@@ -2,7 +2,7 @@
 name: code-query-or-repository-logic-derived-query
 expectedClassification: code_query_or_repository_logic
 starterSkill: incident-analysis-orchestrator
-specializedSkill: incident-analysis-gitlab-tools
+specializedSkill: incident-code-grounding
 ---
 
 # Fixture: Code Query Or Repository Logic - Derived Query
@@ -16,7 +16,7 @@ Fixture testuje kontrakt routingu:
 
 1. Najpierw research flow przez `incident-analysis-orchestrator`.
 2. Potem klasyfikacja jako `code_query_or_repository_logic`.
-3. Potem przejscie do `incident-analysis-gitlab-tools`.
+3. Potem przejscie do `incident-code-grounding`.
 4. Na koncu wynik w polach `functionalAnalysis` i `technicalAnalysis`.
 
 ## Minimalne Evidence
@@ -32,7 +32,7 @@ Fixture testuje kontrakt routingu:
 
 1. Zbadaj flow use case'u przed klasyfikacja:
    `request -> entitlement service -> repository predicate -> no entitlement`.
-2. Zaladuj `incident-analysis-gitlab-tools`.
+2. Zaladuj `incident-code-grounding`.
 3. Przeczytaj repository method, derived query albo `@Query`.
 4. Porownaj predykat z business key i evidence.
 5. Jesli kod uzywa zlego pola, join albo status filter, utrzymaj

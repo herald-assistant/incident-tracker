@@ -1,9 +1,9 @@
 ---
-name: flow-explorer-result-contract
+name: flow-explorer-write-report
 description: Kontrakt wyniku Flow Explorera - AnalysisReport zapisywany przez report tools, Overview plus aktywne sekcje sectionModes, compact/deep, source refs, confidence, visibility limits i fallback JSON.
 ---
 
-# Skill Kontraktu Wyniku Flow Explorera
+# Flow Explorer Write Report
 
 Uzywaj tego skilla przed zapisaniem raportu. Zrodlem prawdy initial analysis
 jest `AnalysisReport` zapisany przez report tools. Finalna odpowiedz tekstowa
@@ -15,11 +15,82 @@ przez hidden `ToolContext`.
 Fallback JSON zwracaj tylko wtedy, gdy report tools nie sa dostepne albo zapis
 raportu sie nie powiedzie.
 
+## Cel
+
+Zapisz finalny raport Flow Explorera przez report tools albo, awaryjnie, zwroc
+fallback JSON zgodny z kontraktem.
+
 ## Rola
 
 Ten skill nie diagnozuje kodu i nie wybiera tools. Pilnuje finalnego ksztaltu
 raportu Flow Explorera, zeby UI moglo pokazac `Overview` oraz tylko te sekcje,
-ktore uzytkownik wlaczyl w `sectionModes`.
+ktore uzytkownik wlaczyl w `sectionModes`. Jezeli handoff z orkiestratora jest
+zbyt plytki, a brak wyglada na rozstrzygalny przez wyspecjalizowany skill, nie
+zapisuj raportu; zwroc `ReportReadinessFeedback`.
+
+## Wejscia
+
+Przyjmij od orkiestratora:
+
+- `EndpointFlowSummary`,
+- `GoalGuidance`,
+- opcjonalny `CodeGroundingSummary`,
+- opcjonalny `OperationalGroundingSummary`,
+- opcjonalny `PersistenceMappingSummary`,
+- opcjonalny `IntegrationBoundarySummary`,
+- `sectionModes`, `goal`, source refs, visibility limits, open questions,
+  gaps i confidence.
+
+## Procedura
+
+1. Wykonaj `Readiness Gate`.
+2. Zbuduj `OVERVIEW`.
+3. Zbuduj tylko aktywne sekcje z `sectionModes`.
+4. Dla aktywnego `PERSISTENCE` uzyj `PersistenceMappingSummary`, jezeli endpoint
+   czyta albo zmienia dane.
+5. Dla aktywnego `INTEGRATIONS` uzyj `IntegrationBoundarySummary`, jezeli flow
+   ma zewnetrzne granice.
+6. Zapisz sekcje przez `report_upsert_section`.
+7. Zapisz meta przez `report_update_meta`.
+8. Potwierdz raport przez `report_get_current`.
+9. Jezeli tools nie dzialaja, zwroc fallback JSON.
+
+## Kontrakt Wyniku
+
+Preferowany wynik to `AnalysisReport` zapisany przez report tools. Fallbackiem
+jest pojedynczy JSON zgodny z `Fallback JSON Contract`.
+
+## Readiness Gate
+
+Przed pierwszym `report_upsert_section` sprawdz, czy handoff pozwala zapisac
+raport bez zgadywania.
+
+Zapisz raport tylko wtedy, gdy:
+
+- `EndpointFlowSummary` wystarcza do `OVERVIEW` i aktywnych sekcji flow,
+- `GoalGuidance` jest dostepne albo `goal` nie wymaga dodatkowego akcentu,
+- aktywne `PERSISTENCE` ma `PersistenceMappingSummary`, jezeli endpoint czyta
+  albo zmienia dane,
+- aktywne `INTEGRATIONS` ma `IntegrationBoundarySummary`, jezeli flow ma
+  zewnetrzne granice,
+- mocne twierdzenia maja source refs albo jawne `visibilityLimits`.
+
+Jezeli brak jest rozstrzygalny przez focused code/opctx/section skill, nie
+zapisuj czesciowego raportu i nie uzupelniaj tresci z pamieci. Zwroc do
+orkiestratora `ReportReadinessFeedback`:
+
+```text
+status: not_ready
+missingArtifact: CodeGroundingSummary | OperationalGroundingSummary | PersistenceMappingSummary | IntegrationBoundarySummary | GoalGuidance
+neededFor: OVERVIEW | FUNCTIONAL_FLOW | VALIDATIONS | PERSISTENCE | INTEGRATIONS | report_meta
+suggestedSkill: flow-explorer-code-grounding | flow-explorer-operational-grounding | flow-explorer-map-persistence-section | flow-explorer-map-integrations-section | goal_skill
+minimumNextQuestion: <najmniejsze pytanie evidence, ktore moze zmienic raport>
+reason: <dlaczego obecny handoff jest za plytki>
+```
+
+Jezeli brak nie jest rozstrzygalny dostepnymi tools albo specjalistycznymi
+skillami, zapisz raport z jawnym `visibilityLimits`, `openQuestions` albo
+`gaps`.
 
 ## Wymagany Report Contract
 
@@ -246,189 +317,38 @@ albo glossary go nie potwierdza, mozesz uzyc roboczej nazwy jako inferencji.
 Dodaj wtedy limit widocznosci albo pytanie otwarte i nie prezentuj tej nazwy
 jako potwierdzonego slownika domeny.
 
-## Persistence Deep Contract
+## Persistence Mapping Input
 
-Gdy aktywna sekcja `PERSISTENCE` ma `mode=deep` i endpoint zapisuje dane,
-`markdown` tej sekcji musi zawierac biznesowa tabele mapowania:
+Ten skill nie domyka samodzielnie sekcji `PERSISTENCE`. Jezeli `PERSISTENCE`
+ma tryb `COMPACT` albo `DEEP`, najpierw uzyj
+`flow-explorer-map-persistence-section` i przekaz do raportu
+`PersistenceMappingSummary`.
+
+Sekcja `PERSISTENCE.markdown` w trybie `DEEP` ma wtedy zawierac tabele:
 
 | TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |
 | --- | --- | --- | --- |
 
-Tabela jest exhaustive persistence table closure dla analizowanego endpointu:
-ma wypisac wszystkie kolumny kazdej tabeli tworzonej, aktualizowanej, usuwanej
-albo zmienianej relacyjnie w ramach tego endpoint flow. Nie wystarczy pokazac
-tylko glowna tabele encji ani tylko join table z identyfikatorami. Dla kazdej
-zapisywanej relacji, kolekcji albo kompozycji zejdz rekurencyjnie do tabeli
-docelowej i wypisz jej kolumny rowniez wtedy, gdy wymaga to dodatkowych
-focused reads po formularzu, mapperze, encji, klasie bazowej albo embeddable.
+Jezeli `PersistenceMappingSummary` jest czesciowe, wpisz jego braki do
+`meta.visibilityLimits`, `meta.openQuestions` albo `meta.gaps` tej sekcji.
+Nie uzupelniaj brakujacych tabel, kolumn ani zrodel wartosci przez zgadywanie.
 
-Nie czytaj i nie weryfikuj DDL, Liquibase, Flyway, changelogow ani migracji SQL
-dla `PERSISTENCE=DEEP`. Flow Explorer ma byc code-first: nazwy tabel, kolumn,
-join tables i join columns wyprowadzaj z implementacji klas, Spring Data/JPA
-oraz adnotacji Hibernate/JPA, np. `@Table`, `@Column`, `@JoinColumn`,
-`@JoinTable`, `@CollectionTable`, `@AttributeOverride(s)`, `@Embedded`,
-`@Enumerated`, `@Entity` i `@MappedSuperclass`. Jezeli nazwa fizyczna nie jest
-jawnie zadeklarowana w adnotacji, wnioskuj ja z nazwy encji/pola i konwencji
-Hibernate/Spring naming. Taka interpretacja z kodu i standardowych konwencji
-ORM jest normalnym elementem wyniku: nie wpisuj jej do `visibilityLimits`,
-`openQuestions`, `gaps` ani meta sekcji/raportu. `@Column` jest opcjonalne w
-`@Entity`: pole albo property mapowane przez JPA/Hibernate traktuj jako kolumne
-rowniez wtedy, gdy nie ma jawnej adnotacji `@Column`, o ile nie jest wylaczone
-z persistence.
+## Integration Boundary Input
 
-Tabela ma obejmowac kolumny widoczne przez mapowanie ORM analizowanego flow, a
-nie tylko pola zadeklarowane bezposrednio w lokalnej klasie encji. Uwzglednij
-kolumny z:
+Ten skill nie domyka samodzielnie sekcji `INTEGRATIONS`. Jezeli aktywna sekcja
+`INTEGRATIONS` ma tryb `COMPACT` albo `DEEP`, najpierw uzyj
+`flow-explorer-map-integrations-section` i przekaz do raportu
+`IntegrationBoundarySummary`.
 
-- klas bazowych i `@MappedSuperclass`, itp,
-- `@Embedded`, `@Embeddable` i `@AttributeOverride(s)`,
-- relacji `@JoinColumn`/`@JoinColumns`,
-- pol i property encji mapowanych przez JPA/Hibernate domyslnie, nawet bez
-  jawnego `@Column`,
-- kolekcji `@OneToMany`, `@ManyToMany`, `@ElementCollection` i
-  `@JoinTable`, razem z kolumnami tabeli laczacej oraz kolumnami tabeli
-  elementu kolekcji,
-- metod encji albo obiektow zlozonych uzytych w flow, jezeli metoda odczytuje
-  albo wylicza wartosc z pola mapowanego na kolumne.
-
-Nie pomijaj kolumn parenta ani kompozycji tylko dlatego, ze flow odwoluje sie do
-nich przez metode, getter albo helper. Jezeli nie udalo sie dojsc do typu
-bezposrednio mapowanego na kolumne, wpisz konkretny brak w `visibilityLimits`
-sekcji `PERSISTENCE`.
-
-Nie koncz `PERSISTENCE=DEEP` na technicznym limicie depth z context buildera.
-`maxDepth reached`, nierozwiazany interface, `More than one implementation`
-albo join table bez tabeli docelowej oznacza konkretna luke eksploracyjna.
-W takiej sytuacji uzyj waskich GitLab reads/search zgodnie ze skillem
-`flow-explorer-gitlab-tools`, az domkniesz kolumny wszystkich aktualizowanych
-tabel albo nazwiesz precyzyjny, twardy limit widocznosci. Limit widocznosci
-jest akceptowalny dopiero po pokazaniu, ktorej tabeli, kolumny, typu elementu
-kolekcji albo mappera nie udalo sie potwierdzic z implementacji ORM.
-
-Checklist przed zapisem sekcji `PERSISTENCE`:
-
-- dla kazdej operacji create/update/delete/link/unlink wskaz tabele dotkniete
-  przez endpoint,
-- dla kazdego pola requestu zapisywanego jako kolekcja `List<XForm>` albo
-  `Set<XForm>` znajdz odpowiadajacy typ domenowy/encje `X`, mapper oraz tabele
-  `X`,
-- dla kazdego `@JoinTable` wypisz kolumny join table oraz kolumny tabeli
-  docelowej elementu kolekcji; same `*_ID` nie domykaja mapowania,
-- dla kazdej encji potomnej wypisz kolumny parenta, klasy bazowej,
-  embeddables, join columns i tabel potomnych bioracych udzial w zapisie,
-- nie uzywaj DDL ani migracji jako source refs dla mapowania persistence; source
-  refs maja wskazywac klasy, pola, metody, mappery albo tool reads kodu,
-- dla kazdej kolumny ustaw `SOURCE`; jezeli `SOURCE` nie jest znany, nie
-  wpisuj wiersza jako pewnego faktu, tylko dociagnij evidence albo dodaj
-  konkretny limit widocznosci.
-
-`SOURCE` jest polem kontrolowanym. Dozwolone wartosci to tylko:
-
-- `GENERATED`,
-- `REQUEST`,
-- `CALCULATED`,
-- biznesowa nazwa systemu albo komponentu zewnetrznego, gdy wartosc pochodzi z
-  dedykowanego systemu.
-
-Nie wpisuj w `SOURCE` ani `SOURCE DETAILS` nazw klas, metod, beanow,
-frameworkow, repozytoriow ani szczegolow implementacyjnych. Te informacje moga
-byc tylko w `sourceRefs` albo `sourceReferences`. Jezeli nie potrafisz
-potwierdzic zrodla po dostepnym kodzie i tools, wpisz limit widocznosci albo
-pytanie otwarte zamiast technicznego placeholdera.
-
-## Integration Boundary Contract
-
-Sekcja `INTEGRATIONS` ma tytul `Integrations` i opisuje wylacznie komunikacje
-poza analizowany komponent albo system w kontekscie wybranego endpointu. Jej
-celem nie jest architektura wewnetrzna, porty/adapters, wewnetrzne eventy
-domenowe, wywolania miedzy beanami ani techniczny call graph.
-
-Do `INTEGRATIONS` wpisuj tylko:
-
-- request HTTP albo inny request/response do zewnetrznego systemu,
-- publikacje eventu, komunikat na brokerze, kolejke, topic, stream albo
-  binding, jezeli sygnal opuszcza analizowany komponent/system,
-- konsumpcje eventu/komunikatu tylko wtedy, gdy analizowany endpoint jest
-  wyzwalany przez taki kanal albo widoczny flow endpointu zalezy od takiego
-  handoffu,
-- plik, scheduler, zlecenie asynchroniczne albo inny handoff, jezeli jest
-  granica do zewnetrznej odpowiedzialnosci,
-- operational-context handoff potwierdzony w evidence dla tego konkretnego
-  endpointu.
-
-Nie wpisuj do `INTEGRATIONS`:
-
-- wewnetrznych eventow domenowych, listenerow, mediatorow albo callbackow,
-  jezeli nie widac zewnetrznego brokera, destination, topic, queue, bindingu
-  albo handoffu poza komponent,
-- klas klientow, adapterow, mapperow, portow ani beanow jako glownej tresci,
-- integracji znanych z operational context, jezeli nie ma evidence, ze biora
-  udzial w analizowanym endpoint flow,
-- ogolnej architektury komponentu albo komunikacji miedzy modulami.
-
-Jezeli implementacja sugeruje integracje, ale operational context nie zna
-systemu, nazwij target przez inferencje z kodu albo konfiguracji: nazwa
-`@FeignClient`, `contextId`, property prefix, host placeholder, klasa klienta,
-binding, destination, topic, queue, exchange albo routing key. Oznacz taka
-nazwe jako `Inferencja` i dodaj limit widocznosci albo pytanie otwarte, jezeli
-nazwa moze byc niepelna.
-
-### Compact
-
-`INTEGRATIONS=compact` ma wymienic wszystkie zewnetrzne systemy albo kanaly
-widoczne w flow endpointu. Compact nie moze zastapic konkretow zdaniem typu
-"endpoint komunikuje sie z integracjami".
-
-Formatuj `markdown` sekcji jako krotka tabele:
+Dla `COMPACT` sekcja powinna zawierac tabele:
 
 | System/target | Typ | Adres/kanal/path | Moment w flow | Co jest wysylane albo odbierane | Cel | Pewnosc |
 | --- | --- | --- | --- | --- | --- | --- |
 
-W kolumnach uzywaj:
-
-- `System/target`: nazwa z operational context albo inferowana z kodu/config,
-- `Typ`: np. `REST downstream`, `REST upstream`, `EVENT_PUBLISH`,
-  `EVENT_CONSUME`, `QUEUE`, `STREAM`, `FILE/HANDOFF`, `OTHER`,
-- `Adres/kanal/path`: HTTP method + path, URL template, destination, topic,
-  queue, binding albo property placeholder; jezeli brak konkretu, wpisz
-  precyzyjny limit widocznosci,
-- `Moment w flow`: krok endpointu, w ktorym integracja jest uzywana,
-- `Co jest wysylane albo odbierane`: biznesowy opis danych, sygnalu albo
-  payloadu bez listy klas implementacyjnych,
-- `Cel`: po co endpoint komunikuje sie z tym targetem,
-- `Pewnosc`: `Fakt z evidence`, `Inferencja` albo `Luka widocznosci`.
-
-Jezeli nie widac zadnej integracji zewnetrznej w flow endpointu, napisz to
-wprost: "Brak widocznej integracji zewnetrznej w analizowanym endpoint flow."
-Nie wypelniaj sekcji architektura wewnetrzna.
-
-### Deep
-
-`INTEGRATIONS=deep` zawiera wszystko z compact oraz osobny szczegolowy blok dla
-kazdej integracji. Dla kazdego systemu albo kanalu pokaz:
-
-- `System/target i kierunek`: nazwa, direction, owner/handoff z operational
-  context, jezeli widoczne,
-- `Transport i adres`: HTTP method, path, URL template, base URL property,
-  destination, topic, queue, binding, exchange albo routing key,
-- `Moment w flow`: warunek albo krok, ktory wyzwala integracje,
-- `Request/event/payload`: przykladowy albo zrekonstruowany payload z polami
-  biznesowymi; oznacz inferencje i nie wypisuj sekretow,
-- `Headers/auth/metadane`: nazwy naglowkow, content type, correlation id,
-  auth scheme albo event headers, jezeli widoczne; bez wartosci sekretow,
-- `Response i error handling`: statusy, response fields, timeout, retry,
-  fallback, DLQ, idempotencja, duplikacja eventu albo brak widocznosci tych
-  mechanizmow,
-- `Konfiguracja`: property keys, profile, bindingi albo klient konfiguracyjny,
-  jezeli sa potrzebne do ustalenia adresu lub zachowania,
-- `Source refs`: pliki, metody, artifact albo tool refs potwierdzajace
-  kontrakt.
-
-W deep nie wolno poprzestac na stwierdzeniu, ze uzywany jest `FeignClient`,
-`RestClient`, `WebClient`, `RestTemplate`, `StreamBridge`, `Consumer` albo
-listener. Te nazwy sa wskazowkami evidence, a wynik ma pokazac konkretny
-zewnetrzny kontrakt: target, adres/kanal, dane, moment, cel i ograniczenia
-widocznosci.
+Dla `DEEP` dodaj osobny blok na kazda zewnetrzna granice z summary: target,
+transport/adres, payload, headers/metadane, response/error handling,
+konfiguracja, owner/handoff i source refs. Jezeli nie ma widocznej integracji
+zewnetrznej, napisz to wprost zamiast zostawiac pusta sekcje.
 
 ## Source References
 
@@ -459,6 +379,36 @@ Ustaw:
 
 `globalVisibilityLimits` opisuje ograniczenia calej analizy. `visibilityLimits`
 w sekcji opisuje brak tylko dla tej sekcji.
+
+## Walidacja
+
+Przed zakonczeniem sprawdz:
+
+- raport zawiera `OVERVIEW` i tylko aktywne sekcje z `sectionModes`,
+- sekcje `OFF` nie zostaly zapisane ani w raporcie, ani w fallback JSON,
+- aktywne `PERSISTENCE` opiera sie na `PersistenceMappingSummary`, jezeli endpoint czyta albo zmienia dane,
+- aktywne `INTEGRATIONS` opieraja sie na `IntegrationBoundarySummary`, jezeli flow ma zewnetrzne granice,
+- source refs wskazuja artefakty, tool results albo konkretne pliki/linie,
+- mocne twierdzenia sa faktami z evidence albo sa oznaczone jako inference/visibility limit,
+- `report_get_current` potwierdza zapis sekcji i meta.
+
+## Fallbacki
+
+Jezeli report tools nie sa dostepne albo zapis raportu sie nie powiedzie,
+zwroc fallback JSON z sekcji `Fallback JSON Contract`.
+
+Jezeli wymagany summary artifact jest niepelny albo niedostepny, nie generuj
+brakujacej tresci z pamieci. Uzyj tego, co jest potwierdzone, a braki wpisz do
+`visibilityLimits`, `openQuestions` albo `gaps`.
+
+## Artefakty Handoffu
+
+Po poprawnym zapisie wystaw dla runtime/UI:
+
+- `AnalysisReport` z `OVERVIEW` i aktywnymi sekcjami,
+- globalne `references`, `visibilityLimits`, `openQuestions`, `gaps`,
+  `confidence` i `warnings`,
+- fallback JSON tylko jako awaryjny wynik diagnostyczny.
 
 ## Antywzorce
 

@@ -14,6 +14,11 @@ wysokopoziomowa architekture i ownership, ale nie zna kodu.
 Celem jest pomoc analitykowi zrozumiec, gdzie incydent znajduje sie w systemie
 i jak go poprawnie przekazac dalej. Nie pisz tutaj developerskiego handoffu.
 
+## Cel
+
+Wypelnij `functionalAnalysis` w formacie Functional Analysis v1 na podstawie
+ustalen orkiestratora, bez ponownego diagnozowania root cause.
+
 ## Rola Wobec Orkiestratora
 
 Ten skill jest kontraktem wyniku dla `functionalAnalysis`. Orkiestrator uzywa
@@ -55,6 +60,41 @@ Jezeli te informacje sa potrzebne, wroc do orkiestratora albo do
 Ten skill wypelnia tylko pole `functionalAnalysis`: system, proces, bounded
 context, normalny flow, miejsce przerwania, znaczenie funkcjonalne, handoff i
 ograniczenia widocznosci z perspektywy analityka.
+
+## Kontrakt Wyniku
+
+Wynikiem jest Markdown `Functional Analysis v1` zapisany w sekcji
+`FUNCTIONAL_ANALYSIS` raportu i mapowany na publiczne pole `functionalAnalysis`.
+Korzystaj z:
+
+- `IncidentDiagnosisLedger`,
+- `OperationalGroundingSummary`,
+- `CodeGroundingSummary` albo `DataDiagnosticSummary` tylko w zakresie
+  tlumaczenia skutku funkcjonalnego,
+- visibility limits i source refs przekazanych przez orkiestratora.
+
+## Readiness Gate
+
+Przed wypelnieniem `functionalAnalysis` sprawdz, czy material wystarcza do
+uczciwego opisania systemu/procesu, miejsca przerwania flow, skutku
+funkcjonalnego, handoffu i ograniczen widocznosci.
+
+Jezeli brakuje evidence, ale brak jest rozstrzygalny przez diagnostyczny skill,
+nie dopowiadaj sekcji i nie uruchamiaj tools samodzielnie. Zwroc do
+orkiestratora:
+
+```text
+IncidentResultReadinessFeedback
+missingArtifact: OperationalGroundingSummary | CodeGroundingSummary | DataDiagnosticSummary | IncidentDiagnosisLedger | logOrRuntimeEvidenceSummary
+neededFor: functionalAnalysis | confidence | visibilityLimits
+suggestedSkill: incident-operational-grounding | incident-code-grounding | incident-data-diagnostics | runtime/log/downstream visibility
+minimumNextQuestion: <jedno waskie pytanie potrzebne do funkcjonalnej interpretacji>
+reason: <dlaczego bez tego sekcja bylaby zgadywaniem>
+```
+
+Jezeli brak nie jest rozstrzygalny w aktualnej sesji, wypelnij sekcje z
+`Nie ustalono`, `Brak danych w evidence` albo `Hipoteza, wymaga potwierdzenia`
+i wpisz limitation zamiast zwracac feedback w petli.
 
 ## Minimalny Poziom Jakosci
 
@@ -159,6 +199,33 @@ nie jest potwierdzony, napisz to wprost.>
   normalny flow biznesowo-systemowy, potem jego przerwanie.
 - Jezeli problem lezy poza analizowanym systemem, napisz, jakie evidence trzeba
   przekazac do odbierajacego systemu albo zespolu.
+
+## Walidacja
+
+Sprawdz:
+
+- wynik da sie zrozumiec bez kodu Java,
+- process, bounded context i owner nie sa zgadywane,
+- root cause claim jest oznaczony jako fakt albo hipoteza,
+- braki widocznosci sa jawne,
+- nie ma instrukcji implementacyjnych ani Technical Handoff v1 w tej sekcji.
+
+## Fallbacki
+
+Jezeli brakuje kontekstu funkcjonalnego:
+
+- zachowaj strukture sekcji,
+- uzyj `Nie ustalono`, `Brak danych w evidence` albo
+  `Hipoteza, wymaga potwierdzenia`,
+- obniz confidence przez meta raportu zamiast dopowiadac proces albo ownera.
+
+## Artefakty Handoffu
+
+Przekaz do raportu:
+
+- Markdown `Functional Analysis v1`,
+- source refs i visibility limits dotyczace funkcjonalnej interpretacji,
+- pytania otwarte dla analityka albo wlasciciela procesu.
 
 ## Antywzorce
 

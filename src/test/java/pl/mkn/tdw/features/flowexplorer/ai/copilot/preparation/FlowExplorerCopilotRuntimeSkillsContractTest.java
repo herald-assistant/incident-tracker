@@ -1,6 +1,10 @@
 package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,137 +21,110 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
     @Test
     void shouldDeclareExpectedFlowExplorerRuntimeSkills() {
         assertEquals("flow-explorer-orchestrator", FlowExplorerCopilotRuntimeSkillNames.STARTER_SKILL_NAME);
-        assertEquals("flow-explorer-gitlab-tools", FlowExplorerCopilotRuntimeSkillNames.GITLAB_TOOLS_SKILL_NAME);
-        assertEquals(
-                "flow-explorer-operational-context-tools",
-                FlowExplorerCopilotRuntimeSkillNames.OPERATIONAL_CONTEXT_TOOLS_SKILL_NAME
-        );
-        assertEquals(
-                "flow-explorer-result-contract",
-                FlowExplorerCopilotRuntimeSkillNames.RESULT_CONTRACT_SKILL_NAME
-        );
-        assertEquals(
-                "flow-explorer-follow-up-chat",
-                FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME
-        );
-        assertEquals(
-                "flow-explorer-goal-deep-discovery",
-                FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME
-        );
-        assertEquals(
-                "flow-explorer-goal-test-scenarios",
-                FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME
-        );
-        assertEquals(
-                "flow-explorer-goal-risk-detection",
-                FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME
-        );
+        assertEquals("flow-explorer-code-grounding", FlowExplorerCopilotRuntimeSkillNames.CODE_GROUNDING_SKILL_NAME);
+        assertEquals("flow-explorer-operational-grounding",
+                FlowExplorerCopilotRuntimeSkillNames.OPERATIONAL_GROUNDING_SKILL_NAME);
+        assertEquals("flow-explorer-map-persistence-section",
+                FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME);
+        assertEquals("flow-explorer-map-integrations-section",
+                FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME);
+        assertEquals("flow-explorer-write-report", FlowExplorerCopilotRuntimeSkillNames.WRITE_REPORT_SKILL_NAME);
+        assertEquals("flow-explorer-follow-up-chat", FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
+        assertEquals("flow-explorer-deep-discovery", FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME);
+        assertEquals("flow-explorer-test-scenario-design",
+                FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME);
+        assertEquals("flow-explorer-risk-assessment", FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME);
+
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
-                "flow-explorer-gitlab-tools",
-                "flow-explorer-operational-context-tools",
-                "flow-explorer-result-contract",
+                "flow-explorer-code-grounding",
+                "flow-explorer-operational-grounding",
+                "flow-explorer-map-persistence-section",
+                "flow-explorer-map-integrations-section",
+                "flow-explorer-write-report",
                 "flow-explorer-follow-up-chat",
-                "flow-explorer-goal-deep-discovery",
-                "flow-explorer-goal-test-scenarios",
-                "flow-explorer-goal-risk-detection"
+                "flow-explorer-deep-discovery",
+                "flow-explorer-test-scenario-design",
+                "flow-explorer-risk-assessment"
         ), FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
         assertEquals(List.of(
                 "flow-explorer-follow-up-chat",
-                "flow-explorer-gitlab-tools",
-                "flow-explorer-operational-context-tools"
+                "flow-explorer-code-grounding",
+                "flow-explorer-operational-grounding",
+                "flow-explorer-map-persistence-section",
+                "flow-explorer-map-integrations-section"
         ), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
     }
 
     @Test
+    void shouldExposeSectionSkillsForInitialSessionsWhenSectionsAreActive() {
+        for (var goal : FlowExplorerAnalysisGoal.values()) {
+            var fallbackSkillNames = FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(goal);
+
+            assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
+            assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
+            assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.WRITE_REPORT_SKILL_NAME));
+        }
+
+        var persistenceOnly = FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of(
+                        sectionMode(FlowExplorerResultSectionId.PERSISTENCE, FlowExplorerResultSectionMode.COMPACT),
+                        sectionMode(FlowExplorerResultSectionId.INTEGRATIONS, FlowExplorerResultSectionMode.OFF)
+                )
+        );
+        assertTrue(persistenceOnly.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
+        assertFalse(persistenceOnly.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
+
+        var integrationsOnly = FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(List.of(
+                sectionMode(FlowExplorerResultSectionId.PERSISTENCE, FlowExplorerResultSectionMode.OFF),
+                sectionMode(FlowExplorerResultSectionId.INTEGRATIONS, FlowExplorerResultSectionMode.DEEP)
+        ));
+        assertFalse(integrationsOnly.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
+        assertTrue(integrationsOnly.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
+    }
+
+    private static FlowExplorerResultSectionModeAssignment sectionMode(
+            FlowExplorerResultSectionId id,
+            FlowExplorerResultSectionMode mode
+    ) {
+        return new FlowExplorerResultSectionModeAssignment(id, id.title(), mode);
+    }
+
+    @Test
     void shouldKeepFlowExplorerSkillFilesAlignedWithRuntimeContract() throws Exception {
-        assertSkillContainsSections("flow-explorer-orchestrator", List.of(
-                "## Rola",
-                "## Wejscie Sesji",
-                "## Sterowanie Analiza",
-                "## Algorytm Pracy",
-                "## Zasady Kosztowe",
-                "## Kiedy Uzyc Tools",
-                "## Antywzorce"
-        ));
-        assertSkillContainsSections("flow-explorer-gitlab-tools", List.of(
-                "## Rola",
-                "## Scope Tooli",
-                "## Algorytm",
-                "## Algorytmy Sekcji",
-                "## Heurystyki Java/Spring",
-                "## Zasady Kosztowe",
-                "## Wklad Do Wyniku",
-                "## Stop"
-        ));
-        assertSkillContainsSections("flow-explorer-operational-context-tools", List.of(
-                "## Rola Wobec Orkiestratora",
-                "## Dozwolone Tools",
-                "## Kiedy Uzyc",
-                "## Zasady Interpretacji",
-                "## Wklad Do Wyniku"
-        ));
-        assertSkillContainsSections("flow-explorer-result-contract", List.of(
-                "## Rola",
-                "## Wymagany Report Contract",
-                "## Fallback JSON Contract",
-                "## Follow-Up Prompts",
-                "## Sekcje I Kolejnosc",
-                "## Functional Flow Contract",
-                "## Jezyk I Odbiorca",
-                "## Persistence Deep Contract",
-                "## Integration Boundary Contract",
-                "## Source References",
-                "## Confidence I Visibility Limits",
-                "## Antywzorce"
-        ));
-        assertSkillContainsSections("flow-explorer-follow-up-chat", List.of(
-                "## Rola",
-                "## Format Odpowiedzi",
-                "## Poglebianie Przez Tools",
-                "## Jezyk I Odbiorca",
-                "## Widocznosc I Zrodla",
-                "## Antywzorce"
-        ));
-        assertSkillContainsSections("flow-explorer-goal-deep-discovery", List.of(
-                "## Cel",
-                "## Zasada Ogolna",
-                "## Overview",
-                "## Functional flow",
-                "## Validations",
-                "## Persistence",
-                "## Integrations",
-                "## Compact Vs Deep",
-                "## Antywzorce"
-        ));
-        assertSkillContainsSections("flow-explorer-goal-test-scenarios", List.of(
-                "## Cel",
-                "## Zasada Ogolna",
-                "## Overview",
-                "## Functional flow",
-                "## Validations",
-                "## Persistence",
-                "## Integrations",
-                "## Format Sekcji",
-                "## Antywzorce"
-        ));
-        assertSkillContainsSections("flow-explorer-goal-risk-detection", List.of(
-                "## Cel",
-                "## Zasada Ogolna",
-                "## Overview",
-                "## Functional flow",
-                "## Validations",
-                "## Persistence",
-                "## Integrations",
-                "## Format Sekcji",
-                "## Antywzorce"
-        ));
+        for (var skillName : FlowExplorerCopilotRuntimeSkillNames.allSkillNames()) {
+            assertSkillContainsCoreSections(skillName);
+        }
+
+        assertSkillContainsAny("flow-explorer-orchestrator", List.of("## Wejscia"));
+        assertSkillContainsAny("flow-explorer-orchestrator", List.of("## Algorytm Pracy"));
+        assertSkillContainsAny("flow-explorer-code-grounding", List.of("## Scope Tooli"));
+        assertSkillContainsAny("flow-explorer-write-report", List.of("## Wymagany Report Contract"));
+        assertSkillContainsAny("flow-explorer-follow-up-chat", List.of("## Format Odpowiedzi"));
+    }
+
+    @Test
+    void shouldRemoveLegacyFlowExplorerSkillDirectories() {
+        for (var legacySkillName : List.of(
+                legacyFlowSkill("gitlab", "tools"),
+                legacyFlowSkill("operational-context", "tools"),
+                legacyFlowSkill("result", "contract"),
+                legacyFlowSkill("goal", "deep-discovery"),
+                legacyFlowSkill("goal", "test-scenarios"),
+                legacyFlowSkill("goal", "risk-detection"),
+                legacyFlowSkill("map", "persistence-deep"),
+                legacyFlowSkill("map", "integration-boundaries")
+        )) {
+            assertFalse(Files.exists(SKILLS_ROOT.resolve(legacySkillName)),
+                    () -> "Legacy runtime skill directory should not exist: " + legacySkillName);
+        }
     }
 
     @Test
     void shouldKeepFlowExplorerSkillsFeatureScopedAndFreeFromLocalSecrets() throws Exception {
         for (var skillName : FlowExplorerCopilotRuntimeSkillNames.allSkillNames()) {
-            var content = Files.readString(SKILLS_ROOT.resolve(skillName).resolve("SKILL.md"));
+            var content = skillContent(skillName);
 
             assertFalse(content.contains("incident-analysis"), () -> "Incident skill reference leaked into " + skillName);
             assertFalse(content.contains("C:\\"), () -> "Local Windows path leaked into " + skillName);
@@ -158,198 +135,180 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
     }
 
     @Test
-    void shouldDescribeExplicitGitLabToolScopeForFlowExplorer() throws Exception {
-        var orchestrator = Files.readString(SKILLS_ROOT.resolve("flow-explorer-orchestrator").resolve("SKILL.md"));
-        var gitLabTools = Files.readString(SKILLS_ROOT.resolve("flow-explorer-gitlab-tools").resolve("SKILL.md"));
-        var deepDiscovery = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-deep-discovery").resolve("SKILL.md"));
-        var testScenarios = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-test-scenarios").resolve("SKILL.md"));
-        var riskDetection = Files.readString(SKILLS_ROOT.resolve("flow-explorer-goal-risk-detection").resolve("SKILL.md"));
-        var resultContract = Files.readString(SKILLS_ROOT.resolve("flow-explorer-result-contract").resolve("SKILL.md"));
-        var followUpChat = Files.readString(SKILLS_ROOT.resolve("flow-explorer-follow-up-chat").resolve("SKILL.md"));
-        var operationalContextTools = Files.readString(
-                SKILLS_ROOT.resolve("flow-explorer-operational-context-tools").resolve("SKILL.md"));
+    void shouldSplitCodeGroundingPersistenceMappingIntegrationMappingAndReportWriting() throws Exception {
+        var orchestrator = skillContent("flow-explorer-orchestrator");
+        var codeGrounding = skillContent("flow-explorer-code-grounding");
+        var persistenceMapping = skillContent("flow-explorer-map-persistence-section");
+        var integrationMapping = skillContent("flow-explorer-map-integrations-section");
+        var writeReport = skillContent("flow-explorer-write-report");
+        var deepDiscovery = skillContent("flow-explorer-deep-discovery");
+        var testScenarioDesign = skillContent("flow-explorer-test-scenario-design");
+        var riskAssessment = skillContent("flow-explorer-risk-assessment");
+        var followUpChat = skillContent("flow-explorer-follow-up-chat");
 
-        assertTrue(orchestrator.contains("`branchRef`"));
-        assertTrue(orchestrator.contains("`applicationName`"));
-        assertTrue(orchestrator.contains("`flow-explorer/canonical-tool-inputs.md`"));
-        assertTrue(orchestrator.contains("`compact-flow-manifest.md` jest kanoniczna lista"));
-        assertTrue(orchestrator.contains("Nie zgaduj `projectName`, `projectPath`"));
-        assertTrue(orchestrator.contains("Hidden `ToolContext` jest tylko techniczna mechanika runtime"));
-        assertTrue(orchestrator.contains("Nie przekazuj `gitLabGroup` do tools"));
-        assertTrue(orchestrator.contains("`sectionModes` sa zrodlem prawdy dla sekcji wyniku"));
-        assertTrue(orchestrator.contains("`OFF` oznacza: nie zapisuj tej sekcji w raporcie"));
-        assertTrue(orchestrator.contains("`focusAreas` nie sa celem"));
-        assertTrue(orchestrator.contains("`reasoningEffort` okresla glebokosc eksploracji"));
-        assertTrue(orchestrator.contains("`.github/copilot-instructions.md`, jezeli jest dostepny"));
-        assertTrue(orchestrator.contains("repozytoryjny material pomocniczy"));
-        assertTrue(orchestrator.contains("`goal`, `sectionModes`,"));
-        assertTrue(orchestrator.contains("maja bezwzgledne pierwszenstwo"));
-        assertTrue(orchestrator.contains("focused GitLab read dokladnej sciezki"));
-        assertTrue(orchestrator.contains("preferuj `gitlab_build_java_method_use_case_context`"));
-        assertTrue(orchestrator.contains("uzyj `gitlab_read_java_method_slice`"));
-        assertTrue(orchestrator.contains("Zapisz `OVERVIEW` i aktywne sekcje przez `report_upsert_section`"));
-        assertTrue(orchestrator.contains("Zapisz globalne meta raportu przez `report_update_meta`"));
+        assertContainsAll(orchestrator, List.of(
+                "PersistenceMappingSummary",
+                "IntegrationBoundarySummary",
+                "flow-explorer-map-persistence-section",
+                "flow-explorer-map-integrations-section",
+                "flow-explorer-write-report",
+                "## Zasady Decyzji Orkiestratora",
+                "`Information gain`",
+                "`Result readiness`",
+                "Readiness Gate I Petla Zwrotna",
+                "`needs_deeper_evidence`",
+                "ReportReadinessFeedback",
+                "## Kontrakt Orkiestracji",
+                "Finalny kontrakt nalezy do",
+                "nie opisuje formatu raportu"
+        ));
+        assertFalse(orchestrator.contains("report_upsert_section"));
+        assertFalse(orchestrator.contains("report_get_current"));
+        assertFalse(orchestrator.contains("Fallback JSON"));
+        assertFalse(orchestrator.contains("sekcje `OFF`"));
+        assertContainsAll(codeGrounding, List.of(
+                "CodeGroundingSummary",
+                "Focused code grounding",
+                "Dostarcza tylko code evidence",
+                "`flow-explorer-map-persistence-section`",
+                "`flow-explorer-map-integrations-section`",
+                "nie domykaj tabel, kolumn, `SOURCE`",
+                "## Petla Evidence",
+                "jedno waskie poglebienie"
+        ));
+        assertFalse(codeGrounding.contains("TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS"));
+        assertFalse(codeGrounding.contains("exhaustive persistence table closure"));
+        assertFalse(codeGrounding.contains("Dla `DEEP` domknij kontrakt: path/destination, payload"));
+        assertFalse(codeGrounding.contains("Pelny kontrakt granic"));
 
-        assertTrue(gitLabTools.contains("GitLab tools nie czytaja functional scope'u z hidden `ToolContext`"));
-        assertTrue(gitLabTools.contains("`flow-explorer/canonical-tool-inputs.md`"));
-        assertTrue(gitLabTools.contains("`filePath` i `methodSelectors`"));
-        assertTrue(gitLabTools.contains("Nie zaczynaj od `gitlab_read_repository_file`"));
-        assertTrue(gitLabTools.contains("Po `truncated=true` nie wnioskuj o dalszej czesci pliku"));
-        assertTrue(gitLabTools.contains("`totalLines`, `returnedStartLine` i"));
-        assertTrue(gitLabTools.contains("`branchRef`, `applicationName` i `projectName`"));
-        assertTrue(gitLabTools.contains("`gitlab_build_java_method_use_case_context`"));
-        assertTrue(gitLabTools.contains("z `maxResults`"));
-        assertTrue(gitLabTools.contains("Nie przekazuj `gitLabGroup`"));
-        assertTrue(gitLabTools.contains("## Algorytm"));
-        assertTrue(gitLabTools.contains("## Algorytmy Sekcji"));
-        assertTrue(gitLabTools.contains("Spring Data/JPA/Hibernate first"));
-        assertTrue(gitLabTools.contains("Nie czytaj DDL, Liquibase, Flyway, changelogow ani migracji SQL"));
-        assertTrue(gitLabTools.contains("Nie uzywaj GitLab tools do weryfikacji tabel, kolumn"));
-        assertTrue(gitLabTools.contains("Nazwy tabel i kolumn wyprowadzaj code-first"));
-        assertTrue(gitLabTools.contains("`@Entity`, `@Table`, `@Column`"));
-        assertTrue(gitLabTools.contains("Nie oznaczaj tego w `visibilityLimits`,"));
-        assertTrue(gitLabTools.contains("`@Column` jest opcjonalne w `@Entity`"));
-        assertTrue(gitLabTools.contains("obowiazkowo uwzglednij kolumny z dziedziczenia"));
-        assertTrue(gitLabTools.contains("`@MappedSuperclass`, `@Embedded`/kompozycji"));
-        assertTrue(gitLabTools.contains("`@OneToMany`/`@ManyToMany`/`@ElementCollection`/`@JoinTable`"));
-        assertTrue(gitLabTools.contains("exhaustive persistence table closure"));
-        assertTrue(gitLabTools.contains("Mapowanie kolekcji czytaj rekurencyjnie"));
-        assertTrue(gitLabTools.contains("Join table z samymi identyfikatorami"));
-        assertTrue(gitLabTools.contains("Mapowanie kolumn czytaj gleboko przez `extends`"));
-        assertTrue(gitLabTools.contains("Nie wolno pominac"));
-        assertTrue(gitLabTools.contains("metode obiektu zlozonego"));
-        assertTrue(gitLabTools.contains("typach prostych mapowanych na kolumny"));
-        assertTrue(gitLabTools.contains("nie koncz na `maxDepth reached`"));
-        assertTrue(gitLabTools.contains("`List<Interface>`"));
-        assertTrue(deepDiscovery.contains("Nie czytaj i nie weryfikuj DDL, Liquibase, Flyway"));
-        assertTrue(deepDiscovery.contains("wyprowadzaj code-first z implementacji Java"));
-        assertTrue(deepDiscovery.contains("Nie oznaczaj takiej"));
-        assertTrue(deepDiscovery.contains("`@Column` jest opcjonalne w `@Entity`"));
-        assertTrue(resultContract.contains("Nie czytaj i nie weryfikuj DDL, Liquibase, Flyway"));
-        assertTrue(resultContract.contains("Taka interpretacja z kodu i standardowych konwencji"));
-        assertTrue(resultContract.contains("nie wpisuj jej do `visibilityLimits`"));
-        assertTrue(resultContract.contains("`@Column` jest opcjonalne w"));
-        assertTrue(resultContract.contains("nie uzywaj DDL ani migracji jako source refs"));
-        assertTrue(orchestrator.contains("Nie uzywaj DDL, Liquibase, Flyway"));
-        assertTrue(orchestrator.contains("Nie dociagaj DDL ani migracji"));
-        assertTrue(gitLabTools.contains("`@FeignClient`"));
-        assertTrue(gitLabTools.contains("`StreamBridge.send(...)`"));
-        assertTrue(gitLabTools.contains("`@Bean Consumer<T>`"));
-        assertTrue(gitLabTools.contains("`spring.cloud.stream.bindings.<binding>.*`"));
-        assertTrue(gitLabTools.contains("YAML/properties traktuj jako resolver"));
-        assertTrue(gitLabTools.contains("szukaj tylko granic poza analizowany komponent/system"));
-        assertTrue(gitLabTools.contains("Dla `COMPACT` przygotuj liste wszystkich zewnetrznych systemow/kanalow"));
-        assertTrue(gitLabTools.contains("Dla `DEEP` domknij kontrakt: path/destination, payload"));
-        assertTrue(gitLabTools.contains("`@FeignClient` czytaj interfejs/klase klienta"));
-        assertTrue(gitLabTools.contains("method-level mapping"));
-        assertTrue(gitLabTools.contains("Dla `RestClient`, `WebClient` i `RestTemplate` ustal metode HTTP"));
-        assertTrue(gitLabTools.contains("Dla `StreamBridge.send(...)` ustal binding name"));
-        assertTrue(gitLabTools.contains("Consumer/listener traktuj jako `INTEGRATIONS` tylko wtedy"));
-        assertTrue(gitLabTools.contains("YAML/properties dla integracji czytaj po nazwach z kodu"));
-        assertTrue(gitLabTools.contains("`TABLE_NAME | COLUMN | SOURCE |"));
-        assertTrue(gitLabTools.contains("SOURCE DETAILS` jako exhaustive persistence table closure"));
-        assertTrue(gitLabTools.contains("`.github/copilot-instructions.md`"));
-        assertTrue(gitLabTools.contains("tylko jako repository guidance"));
-        assertFalse(gitLabTools.contains("`gitLabGroup` i `gitLabBranch` pochodza z hidden ToolContext"));
+        assertContainsAll(persistenceMapping, List.of(
+                "PersistenceMappingSummary",
+                "`PERSISTENCE` jest aktywne w trybie `COMPACT` albo `DEEP`",
+                "| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |",
+                "Nie uzywaj DDL, Liquibase, Flyway",
+                "join tables i kolekcje maja domkniete tabele elementow",
+                "## Petla Poglebiania",
+                "Nie finalizuj wyniku `DEEP` jako `COMPACT`"
+        ));
+        assertContainsAll(integrationMapping, List.of(
+                "IntegrationBoundarySummary",
+                "`sectionModes.INTEGRATIONS` ma tryb `COMPACT` albo `DEEP`",
+                "| System/target | Typ | Adres/kanal/path | Moment w flow |",
+                "path/destination, payload albo jawny visibility limit",
+                "rzeczywista granica zewnetrzna",
+                "## Petla Poglebiania",
+                "Nie finalizuj wyniku `DEEP` jako `COMPACT`"
+        ));
+        assertContainsAll(writeReport, List.of(
+                "AnalysisReport",
+                "Persistence Mapping Input",
+                "Integration Boundary Input",
+                "report_get_current",
+                "## Readiness Gate",
+                "ReportReadinessFeedback",
+                "zapisuj czesciowego raportu"
+        ));
+        assertFalse(writeReport.contains("## Persistence Deep Contract"));
+        assertFalse(writeReport.contains("## Integration Boundary Contract"));
 
-        assertTrue(deepDiscovery.contains("| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |"));
-        assertTrue(deepDiscovery.contains("`persistence.deep` jest wymaganiem exhaustive persistence table closure"));
-        assertTrue(deepDiscovery.contains("Wypisz wszystkie kolumny kazdej tabeli"));
-        assertTrue(deepDiscovery.contains("Nie zatrzymuj sie na pierwszej tabeli encji ani na"));
-        assertTrue(deepDiscovery.contains("`@JoinTable`, `@OneToMany`, `@ManyToMany`"));
-        assertTrue(deepDiscovery.contains("`SOURCE` jest obowiazkowe"));
-        assertTrue(deepDiscovery.contains("`GENERATED`"));
-        assertTrue(deepDiscovery.contains("`REQUEST`"));
-        assertTrue(deepDiscovery.contains("`CALCULATED`"));
-        assertTrue(deepDiscovery.contains("biznesowa nazwa systemu albo komponentu"));
-        assertTrue(deepDiscovery.contains("Nie koncz `PERSISTENCE=DEEP` bez ustalenia `SOURCE`"));
-        assertTrue(deepDiscovery.contains("Nie traktuj `maxDepth reached`"));
-        assertTrue(deepDiscovery.contains("szczegoly implementacyjne nie sa trescia tabeli wynikowej"));
-        assertTrue(deepDiscovery.contains("Sekcja `INTEGRATIONS` w `DEEP_DISCOVERY` opisuje tylko integracje poza"));
-        assertTrue(deepDiscovery.contains("wszystkie widoczne zewnetrzne systemy, kanaly albo handoffy"));
-        assertTrue(deepDiscovery.contains("dokladny kontrakt HTTP albo asynchroniczny"));
-        assertTrue(deepDiscovery.contains("naglowki, content type, correlation id"));
-        assertTrue(deepDiscovery.contains("timeouty, retry, fallback, DLQ"));
+        for (var goalSkill : List.of(deepDiscovery, testScenarioDesign, riskAssessment)) {
+            assertTrue(goalSkill.contains("GoalGuidance"));
+            assertTrue(goalSkill.contains("PersistenceMappingSummary"));
+            assertTrue(goalSkill.contains("IntegrationBoundarySummary"));
+            assertTrue(goalSkill.contains("soczewka celu"));
+            assertFalse(goalSkill.contains("exhaustive persistence table closure"));
+            assertFalse(goalSkill.contains("Nie traktuj `maxDepth reached`"));
+            assertFalse(goalSkill.contains("## Functional flow"));
+            assertFalse(goalSkill.contains("## Validations"));
+            assertFalse(goalSkill.contains("### compact"));
+            assertFalse(goalSkill.contains("### deep"));
+            assertFalse(goalSkill.contains("| TABLE_NAME | COLUMN | SOURCE | SOURCE DETAILS |"));
+            assertFalse(goalSkill.contains("path/destination, payload"));
+        }
 
-        assertTrue(testScenarios.contains("Sekcja `INTEGRATIONS` w `TEST_SCENARIOS` dotyczy tylko testowania zaleznosci"));
-        assertTrue(testScenarios.contains("dla kazdego widocznego zewnetrznego systemu albo kanalu"));
-        assertTrue(testScenarios.contains("adres/path/destination/topic/queue/binding"));
-        assertTrue(testScenarios.contains("request/response, payload eventu, naglowki"));
-        assertTrue(testScenarios.contains("setup danych i stubow dla HTTP path/URL template"));
-
-        assertTrue(riskDetection.contains("Sekcja `INTEGRATIONS` w `RISK_DETECTION` ocenia tylko ryzyka na granicach"));
-        assertTrue(riskDetection.contains("ryzyka dla kazdego widocznego zewnetrznego systemu"));
-        assertTrue(riskDetection.contains("nieznanym payloadzie, brakujacym naglowku"));
-        assertTrue(riskDetection.contains("query/path params, naglowki, content type"));
-
-        assertTrue(resultContract.contains("## Persistence Deep Contract"));
-        assertTrue(resultContract.contains("## Integration Boundary Contract"));
-        assertTrue(resultContract.contains("Zrodlem prawdy initial analysis"));
-        assertTrue(resultContract.contains("Nie podawaj `reportId` w argumentach tooli"));
-        assertTrue(resultContract.contains("`report_upsert_section` dla `id=OVERVIEW`"));
-        assertTrue(resultContract.contains("`report_update_meta` dla globalnych"));
-        assertTrue(resultContract.contains("`report_get_current`, zeby sprawdzic"));
-        assertTrue(resultContract.contains("Fallback JSON zwracaj tylko wtedy"));
-        assertTrue(resultContract.contains("`FUNCTIONAL_FLOW` ma tytul `Functional flow`"));
-        assertTrue(resultContract.contains("**Cel funkcjonalny:**"));
-        assertTrue(resultContract.contains("**Flow krok po kroku:**"));
-        assertTrue(resultContract.contains("**Koordynacja i routing:**"));
-        assertTrue(resultContract.contains("**Kalkulacje i reguly funkcjonalne:**"));
-        assertTrue(resultContract.contains("**Rozgalezienia zalezne od kontekstu:**"));
-        assertTrue(resultContract.contains("**Handoffy i efekty uboczne:**"));
-        assertTrue(resultContract.contains("**Akcent goal:**"));
-        assertTrue(resultContract.contains("Kazdy z tych punktow ma byc czytelny jako lista albo kroki"));
-        assertTrue(resultContract.contains("Poziom szczegolow ma wynikac ze zlozonosci flow"));
-        assertTrue(resultContract.contains("Techniczne typy, statusy, enumy, stale i wartosci graniczne"));
-        assertTrue(resultContract.contains("gdy maja znaczenie funkcjonalne"));
-        assertTrue(resultContract.contains("UI pokazuje je osobno jako zwijane elementy"));
-        assertTrue(resultContract.contains("`SOURCE` jest polem kontrolowanym"));
-        assertTrue(resultContract.contains("Dozwolone wartosci to tylko"));
-        assertTrue(resultContract.contains("Nie wpisuj w `SOURCE` ani `SOURCE DETAILS` nazw klas"));
-        assertTrue(resultContract.contains("Tabela ma obejmowac kolumny widoczne przez mapowanie ORM"));
-        assertTrue(resultContract.contains("exhaustive persistence table closure"));
-        assertTrue(resultContract.contains("wszystkie kolumny kazdej tabeli tworzonej, aktualizowanej, usuwanej"));
-        assertTrue(resultContract.contains("zapisywanej relacji, kolekcji albo kompozycji zejdz rekurencyjnie"));
-        assertTrue(resultContract.contains("klas bazowych i `@MappedSuperclass`"));
-        assertTrue(resultContract.contains("`@Embedded`, `@Embeddable` i `@AttributeOverride(s)`"));
-        assertTrue(resultContract.contains("`@OneToMany`, `@ManyToMany`, `@ElementCollection` i"));
-        assertTrue(resultContract.contains("same `*_ID` nie domykaja mapowania"));
-        assertTrue(resultContract.contains("dla kazdego pola requestu zapisywanego jako kolekcja"));
-        assertTrue(resultContract.contains("Nie pomijaj kolumn parenta ani kompozycji"));
-        assertTrue(resultContract.contains("bezposrednio mapowanego na kolumne"));
-        assertTrue(resultContract.contains("opisuje wylacznie komunikacje"));
-        assertTrue(resultContract.contains("Nie wypelniaj sekcji architektura wewnetrzna"));
-        assertTrue(resultContract.contains("| System/target | Typ | Adres/kanal/path | Moment w flow |"));
-        assertTrue(resultContract.contains("HTTP method + path, URL template, destination, topic"));
-        assertTrue(resultContract.contains("`@FeignClient`, `contextId`, property prefix"));
-        assertTrue(resultContract.contains("`INTEGRATIONS=deep` zawiera wszystko z compact"));
-        assertTrue(resultContract.contains("`Headers/auth/metadane`"));
-        assertTrue(resultContract.contains("timeout, retry"));
-        assertTrue(resultContract.contains("DLQ, idempotencja"));
-        assertTrue(resultContract.contains("`tool:gitlab_build_java_method_use_case_context`"));
-
-        assertTrue(followUpChat.contains("Domyslnie odpowiadaj w Markdown"));
-        assertTrue(followUpChat.contains("Nie zwracaj pelnego JSON `flow-explorer-result-contract`"));
-        assertTrue(followUpChat.contains("Nie zakladaj, ze initial analysis przeczytala cala implementacje"));
-        assertTrue(followUpChat.contains("Domyslnie uzyj dostepnych tools przed odpowiedzia"));
-        assertTrue(followUpChat.contains("Docelowy odbiorca to analityk albo tester"));
-        assertTrue(followUpChat.contains("Nie zaczynaj od nazw klas, metod, beanow, plikow ani tooli"));
-
-        assertTrue(operationalContextTools.contains("### SOURCE Dla Persistence Deep"));
-        assertTrue(operationalContextTools.contains("nazwac `SOURCE` biznesowo"));
-        assertTrue(operationalContextTools.contains("Nie wpisuj jako `SOURCE` nazw"));
+        assertContainsAll(followUpChat, List.of(
+                "flow-explorer-map-persistence-section",
+                "flow-explorer-map-integrations-section"
+        ));
     }
 
-    private static void assertSkillContainsSections(String skillName, List<String> requiredSections) throws Exception {
-        var skillFile = SKILLS_ROOT.resolve(skillName).resolve("SKILL.md");
+    @Test
+    void shouldDescribeExplicitGitLabAndOperationalToolScopeForFlowExplorer() throws Exception {
+        var orchestrator = skillContent("flow-explorer-orchestrator");
+        var codeGrounding = skillContent("flow-explorer-code-grounding");
+        var operationalGrounding = skillContent("flow-explorer-operational-grounding");
 
-        assertTrue(Files.exists(skillFile), () -> "Missing runtime skill: " + skillName);
+        assertContainsAll(orchestrator, List.of(
+                "`flow-explorer/canonical-tool-inputs.md`",
+                "Nie przekazuj `gitLabGroup` do tools",
+                "`sectionModes` sluzy orkiestratorowi tylko do decyzji",
+                "`reasoningEffort` ogranicza glebokosc orkiestracji",
+                "Hidden `ToolContext` jest techniczna mechanika runtime",
+                "`Goal alignment`"
+        ));
+        assertFalse(orchestrator.contains("report_upsert_section"));
+        assertFalse(orchestrator.contains("`sectionModes` sa zrodlem prawdy dla sekcji wyniku"));
+        assertContainsAll(codeGrounding, List.of(
+                "GitLab tools nie czytaja functional scope'u z hidden `ToolContext`",
+                "`branchRef`, `applicationName` i `projectName`",
+                "`filePath` i `methodSelectors`",
+                "Nie zaczynaj od `gitlab_read_repository_file`",
+                "Po `truncated=true` nie wnioskuj o dalszej czesci pliku",
+                "Nie przekazuj `gitLabGroup`"
+        ));
+        assertContainsAll(operationalGrounding, List.of(
+                "OperationalGroundingSummary",
+                "Operational context nie jest dowodem",
+                "## Petla Katalogowa",
+                "jedno waskie",
+                "biznesowa nazwe systemu",
+                "Nie wpisuj jako `SOURCE` nazw",
+                "nie formatuj sekcji `PERSISTENCE`"
+        ));
+    }
 
-        var content = Files.readString(skillFile);
+    private static void assertSkillContainsCoreSections(String skillName) throws Exception {
+        var content = skillContent(skillName);
 
         assertTrue(content.contains("name: " + skillName), () -> "Missing frontmatter name for " + skillName);
-        for (var section : requiredSections) {
-            assertTrue(content.contains(section), () -> "Missing section '" + section + "' in " + skillName);
+        assertContainsAll(content, List.of(
+                "## Cel",
+                "## Walidacja",
+                "## Fallbacki",
+                "## Artefakty Handoffu"
+        ));
+        if ("flow-explorer-orchestrator".equals(skillName)) {
+            assertTrue(content.contains("## Kontrakt Orkiestracji"),
+                    () -> "Missing orchestration contract in " + skillName);
+            assertFalse(content.contains("## Kontrakt Wyniku"),
+                    () -> "Orchestrator must not own final result contract");
+        } else {
+            assertTrue(content.contains("## Kontrakt Wyniku"),
+                    () -> "Missing result contract in " + skillName);
+        }
+        assertSkillContainsAny(skillName, List.of("## Wejscia", "## Wejscie Sesji"));
+        assertSkillContainsAny(skillName, List.of("## Procedura", "## Algorytm", "## Algorytm Pracy"));
+    }
+
+    private static void assertSkillContainsAny(String skillName, List<String> expectedSections) throws Exception {
+        var content = skillContent(skillName);
+        assertTrue(expectedSections.stream().anyMatch(content::contains),
+                () -> "Missing one of sections " + expectedSections + " in " + skillName);
+    }
+
+    private static String skillContent(String skillName) throws Exception {
+        var skillFile = SKILLS_ROOT.resolve(skillName).resolve("SKILL.md");
+        assertTrue(Files.exists(skillFile), () -> "Missing runtime skill: " + skillName);
+        return Files.readString(skillFile);
+    }
+
+    private static String legacyFlowSkill(String middle, String suffix) {
+        return "flow-explorer-" + middle + "-" + suffix;
+    }
+
+    private static void assertContainsAll(String content, List<String> expectedFragments) {
+        for (var expectedFragment : expectedFragments) {
+            assertTrue(content.contains(expectedFragment), () -> "Missing expected fragment: " + expectedFragment);
         }
     }
 }

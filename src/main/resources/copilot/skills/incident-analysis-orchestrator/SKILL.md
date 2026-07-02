@@ -1,6 +1,6 @@
 ---
 name: incident-analysis-orchestrator
-description: Glowny starter analizy incydentu - najpierw rozpoznaje flow use case'u do poziomu wymaganego przez kontrakt wyniku, potem klasyfikuje blad, uruchamia specjalistyczne playbooki, syntetyzuje akcje i zwraca kontrakt analizy.
+description: Glowny starter analizy incydentu - koordynuje diagnoze, utrzymuje ledger decyzji, wybiera specjalistyczne skille i przekazuje material do skilli wyniku bez dublowania ich procedur.
 ---
 
 # Skill Orkiestratora Analizy Incydentu
@@ -8,109 +8,30 @@ description: Glowny starter analizy incydentu - najpierw rozpoznaje flow use cas
 Uzywaj tego skilla jako pierwszego runtime skilla dla kazdej poczatkowej
 analizy incydentu.
 
-Ten skill steruje kolejnoscia diagnozy. Nie klasyfikuj root cause na podstawie
-samej nazwy exceptiona. Najpierw zrozum use case i flow, ktore bylo wykonywane,
-potem zlokalizuj przerwanie, potem sklasyfikuj blad, a dopiero potem uzyj
-specjalistycznych playbookow diagnostycznych.
-
 ## Cel
 
-Analiza ma wyjasnic na podstawie evidence:
+Doprowadz evidence do stanu, w ktorym skille wyniku moga przygotowac
+`functionalAnalysis` i `technicalAnalysis`. Orkiestrator steruje kolejnoscia
+pracy, utrzymuje `IncidentDiagnosisLedger` i wybiera specjalistyczne skille.
+Nie opisuje szczegolowych procedur GitLab, DB, operational context, report
+tools ani formatu finalnych sekcji.
 
-- jaki use case, request, event, job, proces albo operacja systemowa byla
-  wykonywana,
-- jak dziala istotny fragment flow,
-- gdzie flow zostalo przerwane,
-- jaka klasa bledu najlepiej tlumaczy to przerwanie,
-- jakie evidence potwierdza, oslabia albo obala klasyfikacje,
-- jaka akcja powinna zostac wykonana,
-- co pozostaje poza aktualna widocznoscia.
+## Rola
 
-Finalny wynik nadal musi trzymac aktualny kontrakt odpowiedzi incydentu, ale
-zrodlem prawdy initial analysis jest raport zapisany przez report tools. Ten
-orkiestrator okresla, jak dojsc do wyniku; skille kontraktu okreslaja ksztalt
-sekcji raportu mapowanych na pola publiczne:
+Twoim zadaniem jest:
 
-- `incident-functional-analysis` dla `functionalAnalysis`,
-- `incident-technical-handoff` dla `technicalAnalysis`.
+- przeczytac manifest i dolaczone artefakty,
+- rozpoznac symptom, dotkniety flow i pierwsze braki widocznosci,
+- utrzymywac ledger hipotez i decyzji,
+- kierowac konkretne luki do wlasciwych skilli specjalistycznych,
+- prowadzic petle zwrotna, gdy skill wyniku wskaze rozstrzygalny brak,
+- zatrzymac eksploracje, gdy material jest wystarczajacy dla skilli wyniku,
+- przekazac uporzadkowany handoff do `incident-functional-analysis` i
+  `incident-technical-handoff`.
 
-## Ekspercki Model Pracy
+## Wejscia
 
-Traktuj analize jak procedure dobrego eksperta, nie jak zgadywanie etykiety.
-Twoim zadaniem jest odtworzyc normalny flow, porownac go z flow zaobserwowanym
-w evidence, znalezc punkt rozjazdu i dopiero wtedy rozstrzygac hipotezy.
-
-Utrzymuj roboczy ledger analizy:
-
-```text
-expectedFlow: co normalnie powinno sie wydarzyc
-observedFlow: co evidence pokazuje w tym incydencie
-divergencePoint: pierwszy konkretny punkt rozjazdu
-hypotheses:
-  - class: data_missing | code_query_or_repository_logic | ...
-    mechanism: jaki warunek/input/dane/call powoduje przerwanie
-    owningLayer: DB | code | integration | runtime | config | operational-context | outside
-    supportingEvidence: co hipoteze wspiera
-    contradictingEvidence: co hipoteze obala albo oslabia
-    distinguishingTest: najmniejszy test, ktory zmieni decyzje
-    nextSkillOrTool: gdzie wykonac test
-    confidence: confirmed | strong_hypothesis | weak_hypothesis | rejected
-causalChain: trigger -> operation -> condition -> boundary -> symptom -> impact
-actionability: kto / co / gdzie / jak zweryfikowac
-```
-
-### Zasady Trafnosci Eksperta
-
-- Mechanism-first: brak mechanizmu oznacza brak root cause. Nie wystarczy
-  exception name, stack frame albo nazwa klasy.
-- Hypothesis tournament: utrzymuj 2-4 konkurujace hipotezy, dopoki test
-  rozrozniajacy ich nie potwierdzi, nie oslabi albo nie obali.
-- Negative evidence: dla kazdej waznej hipotezy nazwij, jaki dowod by ja
-  obalil, i sprawdz, czy taki dowod juz istnieje.
-- Owning-layer proof: klasa moze byc `confirmed` tylko przez dowod z warstwy,
-  ktora jest wlascicielem tego typu przyczyny.
-- Information gain: przed kazdym tool call powiedz, jaka decyzja zmieni sie po
-  wyniku. Jezeli odpowiedz brzmi tylko "dowiem sie wiecej", nie wywoluj toola.
-- Fixability test: finalna analiza jest gotowa dopiero, gdy odbiorca wie, kto
-  ma zadzialac, jaki obiekt/plik/tabela/endpoint sprawdzic i jak potwierdzic
-  fix albo routing.
-
-### Owning-Layer Proof
-
-| Klasa | Warstwa potwierdzajaca | Bez tego najwyzej |
-|---|---|---|
-| `data_missing`, `data_predicate_mismatch`, `data_orphan_or_stale_reference`, `data_duplicate_or_non_unique` | DB evidence albo jawny brak DB visibility | `strong_hypothesis` |
-| `code_mapping_or_type_conversion`, `code_query_or_repository_logic`, `code_validation_or_business_rule` | code evidence z konkretnego pliku/metody/predykatu/reguly | `strong_hypothesis` |
-| `integration_downstream_failure` | downstream/log/HTTP boundary evidence | `strong_hypothesis` |
-| `async_or_process_state` | event/outbox/process state evidence albo code evidence handlera | `strong_hypothesis` |
-| `runtime_or_platform` | runtime/platform evidence z czasu incydentu | `strong_hypothesis` |
-| `configuration_or_environment` | config/deployment/environment evidence | `strong_hypothesis` |
-| `outside_visibility_or_handoff` | lokalny boundary + brak visibility + handoff route | `strong_hypothesis` |
-| `inconclusive` | jawne braki evidence po minimalnym researchu | `confirmed` |
-
-Operational context potwierdza routing, ownership, glossary, process i scope.
-Nie potwierdza samodzielnie root cause.
-
-### Macierz Diagnostyki Roznicowej
-
-| Obserwowany punkt rozjazdu | Konkurujace klasy | Test rozrozniajacy | Regula przeklasyfikowania |
-|---|---|---|---|
-| repository empty result | `data_missing`, `data_predicate_mismatch`, `code_query_or_repository_logic` | code predicate + DB key-only vs full-predicate | key-only = 0 -> `data_missing`; key-only > 0 i full = 0 -> `data_predicate_mismatch`; predicate w kodzie bledny -> `code_query_or_repository_logic` |
-| entity/reference lookup fails | `data_missing`, `data_orphan_or_stale_reference`, `outside_visibility_or_handoff` | parent row + referenced row + owner/source check | parent exists i reference missing/stale -> `data_orphan_or_stale_reference`; source poza systemem -> `outside_visibility_or_handoff` |
-| non-unique result | `data_duplicate_or_non_unique`, `code_query_or_repository_logic` | duplicate count + expected uniqueness rule | duplicates w danych -> `data_duplicate_or_non_unique`; query zbyt szerokie -> `code_query_or_repository_logic` |
-| mapper/type/null failure | `code_mapping_or_type_conversion`, `data_predicate_mismatch`, `integration_downstream_failure` | mapper expected vs actual value/source | mapper nie obsluguje wartosci -> `code_mapping_or_type_conversion`; downstream contract/value invalid -> `integration_downstream_failure` |
-| business rejection | `code_validation_or_business_rule`, `data_predicate_mismatch`, `outside_visibility_or_handoff` | rule code + object state + owner | rule zgodna, stan danych blokuje -> data class; rule bledna -> `code_validation_or_business_rule`; decision poza systemem -> `outside_visibility_or_handoff` |
-| downstream HTTP failure | `integration_downstream_failure`, `configuration_or_environment`, `runtime_or_platform` | boundary status/path + config/runtime evidence | 4xx/5xx downstream z boundary evidence -> `integration_downstream_failure`; env flag/URL/credential drift -> `configuration_or_environment`; local runtime abnormal -> `runtime_or_platform` |
-| async/outbox stuck | `async_or_process_state`, `integration_downstream_failure`, `data_missing` | event row state + last error + retry timeline | stuck/exhausted row -> `async_or_process_state`; last error downstream -> integration; missing required row -> data class |
-| pod/restart/metric abnormal | `runtime_or_platform`, `configuration_or_environment`, `inconclusive` | runtime status in incident window + deploy/config evidence | abnormal runtime signal -> `runtime_or_platform`; config drift -> `configuration_or_environment`; unavailable/no match -> limitation |
-
-## Algorytm Orkiestracji
-
-### 1. Przeczytaj Kontekst Sesji
-
-Zacznij od `00-incident-manifest.json` i dolaczonych artefaktow.
-
-Ustal:
+Zacznij od `00-incident-manifest.json` i dolaczonych artefaktow. Ustal:
 
 - `correlationId`,
 - `environment`,
@@ -122,393 +43,216 @@ Ustal:
 - runtime skille z `runtimeSkills.diagnosticSkillNames` i
   `runtimeSkills.resultSkillNames`.
 
-Traktuj artefakty jako podstawowe zrodlo prawdy.
+Traktuj artefakty jako podstawowe zrodlo prawdy. Nie wymyslaj brakujacego
+systemu, brancha, ownera, repozytorium, procesu, bounded contextu, tabeli,
+kolejki, endpointu ani downstream systemu.
 
-Traktuj te wartosci jako stale dla aktualnej sesji:
+## Ekspercki Model Pracy
 
-- `correlationId`,
-- `environment`,
-- `gitLabBranch`,
-- `gitLabGroup`.
+Najpierw zrozum wykonywany use case i punkt rozjazdu, potem wybierz
+specjalistyczny skill. Nie klasyfikuj root cause z samej nazwy exceptiona,
+stack frame albo etykiety toola.
 
-Nie wymyslaj brakujacego systemu, brancha, ownera, repozytorium, procesu,
-bounded contextu, tabeli, kolejki, endpointu ani downstream systemu.
-
-Sprawdz w manifest `toolPolicy.enabledCapabilityGroups` i
-`toolPolicy.disabledCapabilityGroups`, zanim zalozysz, ze GitLab,
-Elasticsearch, Operational Context albo DB tools sa dostepne.
-
-Jezeli capability group jest wylaczone, bo rownowazne artefakty sa juz
-dolaczone, uzyj tych artefaktow bez narzekania na brak toola.
-
-### 2. Zbuduj Fingerprint Incydentu
-
-Przed diagnoza wyciagnij kompaktowy fingerprint:
-
-- widoczny objaw,
-- failing service, container, deployment albo runtime component,
-- timestamp albo okno incydentu,
-- typ triggera: request, event, job, scheduler, listener albo integration call,
-- przetwarzany obiekt biznesowy albo techniczny,
-- widoczny endpoint, message, operation, repository, class, method albo
-  downstream call,
-- pierwszy widoczny punkt awarii,
-- znany skutek funkcjonalny,
-- brakujaca widocznosc.
-
-Fingerprint nie jest root cause. To mapa startowa do researchu flow.
-
-### 3. Zbadaj Flow Dotknietego Use Case'u
-
-Przed klasyfikacja bledu odtworz flow use case'u na tyle gleboko, aby dalo sie
-uczciwie zbudowac oba kontrakty wyniku.
-
-Research musi wystarczyc, zeby:
-
-- `functionalAnalysis` wyjasnilo kontekst systemu/procesu, affected bounded
-  context, operacje biznesowa albo systemowa, znaczenie integracji lub
-  handoffu, skutek funkcjonalny i limity widocznosci,
-- `technicalAnalysis` wyjasnilo techniczny punkt wejscia, flow wykonania,
-  punkt awarii, bezposrednich collaboratorow, evidence, najlepiej wsparta
-  przyczyne albo hipoteze, oczekiwana akcje, testy i weryfikacje.
-
-Nie mapuj calego systemu ani niezwiazanych flow. Jednoczesnie nie zatrzymuj sie
-na lokalnym exceptionie, jezeli wynik funkcjonalny albo techniczny bylby zbyt
-plytki, zeby dalo sie go przekazac albo na nim dzialac.
-
-Zbuduj najmniejsze flow wystarczajace dla wyniku:
+Utrzymuj roboczy `IncidentDiagnosisLedger`:
 
 ```text
-trigger / request / event
-  -> entry point
-    -> business or system operation
-      -> validation / decision / lookup / mapping
-        -> DB / integration / async / runtime boundary
-          -> observed failure point
+expectedFlow: <co normalnie powinno sie wydarzyc>
+observedFlow: <co evidence pokazuje w tym incydencie>
+divergencePoint: <pierwszy konkretny punkt rozjazdu albo Nie ustalono>
+hypotheses:
+  - class: <candidate class>
+    mechanism: <warunek/input/dane/call/config/boundary>
+    owningLayer: <DB|code|integration|runtime|config|operational-context|outside|unknown>
+    supportingEvidence: <source refs>
+    contradictingEvidence: <source refs albo brak>
+    distinguishingQuestion: <najmniejsza decyzja do rozstrzygniecia>
+    nextSkillOrTool: <skill/tool albo result>
+    confidence: confirmed | strong_hypothesis | weak_hypothesis | rejected
+causalChain: <trigger -> operation -> condition -> boundary -> symptom -> impact>
+actionability: <kto/co/gdzie/jak zweryfikowac>
+visibilityLimits: <jawne braki>
 ```
 
-Nazwij oba flow:
+`IncidentDiagnosisLedger` nie jest publicznym DTO. To handoff sterujacy praca
+skilli i porzadkujacy decyzje.
 
-```text
-expectedFlow: happy path albo expected system path
-observedFlow: path potwierdzony przez evidence
-divergencePoint: pierwszy punkt, gdzie observedFlow odchodzi od expectedFlow
-```
+## Zasady Decyzji Orkiestratora
 
-Uzywaj:
+Te reguly opisuja sposob prowadzenia diagnozy, nie procedury konkretnych
+etapow:
 
-- najpierw artefaktow incydentu,
-- operational context do kanonicznego systemu, procesu, bounded contextu,
-  ownershipu, scope repozytoriow, glossary i handoff hints,
-- GitLab tools do punktu wejscia, serwisu, repozytorium, mappera, walidatora,
-  klienta integracji, listenera, schedulera, outboxa albo bezposrednich
-  collaboratorow,
-- DB tools dopiero po tym, jak kod albo evidence ugruntuje istotne dane,
-  tabele albo predykat, gdy to mozliwe,
-- Elasticsearch albo runtime evidence do czasu logow, porownania HTTP,
-  czestotliwosci i interpretacji runtime signals.
+- `Mechanism-first`: root cause wymaga mechanizmu, nie samej nazwy exceptiona,
+  stack frame albo etykiety toola.
+- `Hypothesis tournament`: utrzymuj konkurujace hipotezy, dopoki
+  specjalistyczny krok nie potwierdzi, nie oslabi albo nie obali jednej z nich.
+- `Negative evidence`: dla waznej hipotezy nazwij, jaki dowod moglby ja
+  oslabic, i uwzglednij go w ledgerze, jezeli jest widoczny.
+- `Owning-layer proof`: hipoteza moze byc `confirmed` tylko wtedy, gdy proof
+  pochodzi z warstwy wlascicielskiej; szczegoly proof dostarcza odpowiedni
+  skill specjalistyczny.
+- `Information gain`: przed kolejnym krokiem nazwij decyzje, ktora zmieni jego
+  wynik; jezeli krok tylko "dowie sie wiecej", nie uruchamiaj go.
+- `Result readiness`: nie przekazuj materialu do skilli wyniku, dopoki
+  wymagany artifact diagnostyczny ma status `needs_deeper_evidence`.
+- `Feedback loop`: jezeli skill wyniku zwroci
+  `IncidentResultReadinessFeedback`, potraktuj go jako powrot do orkiestracji,
+  nie jako finalny wynik.
+- `Fixability test`: zatrzymaj sie dopiero, gdy skille wyniku dostana material,
+  z ktorego da sie wskazac odbiorce, target, pierwsza akcje i sposob
+  weryfikacji albo jawny limitation.
 
-Gdy artefakt `dynatrace/runtime-signals` zawiera strukturalne status lines,
-interpretuj je literalnie:
+## Granice Odpowiedzialnosci
 
-- `collection status: COLLECTED` z component status
-  `MATCHED, NO_RELEVANT_SIGNALS` oznacza brak Dynatrace-confirmed abnormal
-  runtime signal dla tego komponentu w oknie incydentu.
-- `collection status: UNAVAILABLE`, `DISABLED` albo `SKIPPED` oznacza brak
-  widocznosci runtime, nie zdrowy runtime.
-- `collection status: COLLECTED` z `correlation status: NO_MATCH` oznacza, ze
-  Dynatrace jest niekonkluzywny dla tego incydentu.
-- Preferuj component-level summary lines z Dynatrace zamiast raw metric detail,
-  chyba ze raw detail realnie wzmacnia evidence.
+Szczegoly etapow naleza do dedykowanych skilli:
 
-Zatrzymaj research flow dopiero wtedy, gdy dotkniety use case, punkt awarii,
-ownership albo handoff route oraz konkretna nastepna akcja techniczna sa
-wystarczajaco jasne dla wymaganego kontraktu wyniku, albo gdy brakujaca
-informacja jest poza aktualna widocznoscia.
+- `incident-code-grounding`: code flow, predicates, mapping, validation,
+  integration clients i technical code evidence,
+- `incident-operational-grounding`: system, process, bounded context, owner,
+  code scope i handoff route,
+- `incident-data-diagnostics`: DB/data/process-state checks,
+- `incident-functional-analysis`: format i jezyk `functionalAnalysis`,
+- `incident-technical-handoff`: format i tresc `technicalAnalysis`.
 
-### 4. Zlokalizuj Awaria Na Flow
-
-Oznacz, gdzie flow zostalo przerwane:
-
-- input albo request validation,
-- business rule albo functional decision,
-- repository lookup albo entity loading,
-- data predicate albo filter,
-- mapping, conversion albo null handling,
-- write albo persistence,
-- async, outbox albo event processing,
-- downstream albo integration call,
-- runtime, deployment albo configuration,
-- ownership boundary albo outside current visibility.
-
-Jezeli punkt awarii nie jest ustalony, napisz to wprost i kontynuuj z najlepiej
-wsparta hipoteza.
-
-### 5. Sklasyfikuj Typ Bledu
-
-Klasyfikuj incydent dopiero po researchu flow i nazwaniu `divergencePoint`.
-Nie wybieraj od razu jednej ulubionej klasy. Najpierw zbuduj turniej hipotez:
-
-- wybierz 2-4 klasy, ktore realnie tlumacza ten sam punkt rozjazdu,
-- dla kazdej opisz mechanizm, owning layer i evidence,
-- dla kazdej nazwij evidence, ktore ja obala albo oslabia,
-- wybierz test rozrozniajacy o najwiekszym information gain.
-
-Uzyj jednej albo kilku klas:
-
-- `data_missing`,
-- `data_predicate_mismatch`,
-- `data_orphan_or_stale_reference`,
-- `data_duplicate_or_non_unique`,
-- `code_mapping_or_type_conversion`,
-- `code_query_or_repository_logic`,
-- `code_validation_or_business_rule`,
-- `integration_downstream_failure`,
-- `async_or_process_state`,
-- `runtime_or_platform`,
-- `configuration_or_environment`,
-- `outside_visibility_or_handoff`,
-- `inconclusive`.
-
-Dla kazdej aktywnej klasy utrzymuj:
-
-- evidence wspierajace,
-- evidence sprzeczne,
-- brakujace evidence,
-- confidence: `confirmed`, `strong_hypothesis`, `weak_hypothesis` albo
-  `rejected`.
-
-Nie oznaczaj klasy jako confirmed, jezeli evidence nie wspiera bezposrednio
-mechanizmu albo nie pochodzi z owning layer dla tej klasy.
-
-Zawsze oddzielaj:
-
-- bezposrednio potwierdzone evidence,
-- najlepiej wsparta hipoteze,
-- niezweryfikowane zalozenia,
-- limity widocznosci,
-- dotkniete flow,
-- konkretna nastepna akcje.
-
-Uzywaj mocnego jezyka root cause tylko wtedy, gdy kilka niezaleznych sygnalow
-wskazuje na ten sam mechanizm, np. logs, runtime signal, code path, DB/data
-evidence albo grounded operational context. Gdy evidence jest slabsze, opisz
-diagnoze jako wsparta hipoteze.
-
-### 6. Wybierz Specjalistyczny Playbook
-
-Uzyj klasyfikacji, zeby wybrac nastepny skill albo strategie tooli.
-
-- Uzyj `incident-data-diagnostics` dla missing data, predicate mismatch,
-  orphan/stale reference, duplicates, stuck outbox albo process data.
-- Uzyj `incident-analysis-gitlab-tools` dla code flow, repository predicates,
-  mapping, validation, integration clients, event/listener/job flow i
-  technical grounding.
-- Uzyj `incident-operational-context-tools` dla system/process/bounded-context
-  grounding, repository scope, ownership i handoff route.
-- Uzyj Elasticsearch/log tools dla request timing, stack traces, frequency,
-  HTTP path/status comparison i correlation evidence.
-- Uzyj runtime/Dynatrace evidence dla component health, deployment, metrics i
-  problem signals, gdy sa dostepne.
-- Uzyj `incident-functional-analysis` do sformatowania wyniku dla analityka.
-- Uzyj `incident-technical-handoff` do sformatowania akcji technicznej albo
-  handoffu.
-
-Preferuj nastepny tool call, ktory najlepiej rozroznia konkurujace hipotezy.
-Nie wywoluj tooli tylko dlatego, ze sa dostepne.
-
-### 7. Wykonaj Testy Rozrozniajace
-
-Dla kazdej waznej hipotezy zapytaj:
-
-```text
-Jaki najmniejszy nastepny dowod potwierdzi, oslabi albo obali te hipoteze?
-Co zrobie inaczej, jezeli wynik bedzie pozytywny, negatywny albo niekonkluzywny?
-```
-
-Przyklady:
-
-- Dla repository/entity errors: ugruntuj entity/repository w kodzie, potem
-  porownaj DB key-only count z full predicate count.
-- Dla downstream HTTP errors: porownaj failing path/status z ostatnimi udanymi
-  i nieudanymi wywolaniami tej samej rodziny endpointow.
-- Dla mapper/type errors: przeczytaj mapper/repository method i potwierdz
-  expected vs actual type albo null behavior.
-- Dla async/outbox symptoms: sprawdz event/process row state, retry count,
-  error code i timestamps.
-- Dla runtime/config symptoms: sprawdz, czy runtime evidence zostalo zebrane i
-  czy zawiera konkretne abnormal signals.
-
-Gdy lokalne logi albo kod pokazuja tylko opaque HTTP failure z innego systemu,
-a Elasticsearch HTTP diagnostic tools sa wlaczone:
-
-- uzyj ugruntowanej sciezki albo stabilnego prefixu sciezki z logow, user input
-  albo poprzedniego evidence,
-- najpierw zrob summary ostatnich calli dla tej samej rodziny endpointow,
-- pobierz konkretne comparison calls tylko wtedy, gdy status/path samples moga
-  zmienic diagnoze,
-- porownaj status, method, caller service, timestamp cluster, message hints,
-  null/empty values, constraint-like wording i request/response shape clues,
-- traktuj wynik jako supporting evidence, nie proof, chyba ze logi zawieraja
-  jawnie accepted/rejected value albo downstream reason.
-
-Nie wymyslaj endpoint paths.
-
-Zatrzymaj eksploracje, gdy kolejne sprawdzenia tylko powtorza istniejace
-evidence albo wymagaja widocznosci poza aktualna sesja.
-
-Po kazdym tescie zaktualizuj turniej hipotez:
-
-- `confirmed`: owning-layer proof potwierdza mechanizm,
-- `strong_hypothesis`: kilka sygnalow jest spojnych, ale brakuje owning-layer
-  proof,
-- `weak_hypothesis`: jeden sygnal bez rozroznienia,
-- `rejected`: test rozrozniajacy przeczy hipotezie.
-
-Jezeli test obala aktualna klase, przeklasyfikuj zamiast bronic pierwszej
-hipotezy.
-
-### 8. Zsyntetyzuj Przyczyne I Rozwiazanie
-
-Przed finalnym wynikiem zbuduj causal chain:
-
-```text
-trigger
-  -> use-case operation
-    -> condition / input / data / config
-      -> failing component or boundary
-        -> observed symptom
-          -> functional impact
-```
-
-Potem zmapuj diagnoze na akcje:
-
-- data issue: konkretny row/key/table/predicate/status/tenant/reference do
-  weryfikacji albo korekty,
-- code issue: konkretny file/class/method/logic do zmiany i testy do dodania,
-- integration issue: downstream owner, request/response/status/timestamp
-  evidence i pytanie do odpowiedzi,
-- runtime/platform issue: namespace/pod/service/image/config/metric/log
-  verification,
-- outside visibility: dokladne brakujace evidence i kto moze je dostarczyc.
-
-Nie przedstawiaj poprawki jako potwierdzonej, jezeli root cause jest tylko
-hipoteza.
-
-Wykonaj fixability test. Wynik nie jest gotowy, jezeli nie da sie odpowiedziec:
-
-- kto ma zadzialac,
-- jaki object, key, state, endpoint, table, file albo method jest targetem,
-- co dokladnie trzeba zmienic, sprawdzic, odtworzyc albo przekazac,
-- jaki test albo obserwacja potwierdzi fix albo poprawny handoff.
-
-Nie wymuszaj code-level root cause, gdy kod pokazuje tylko miejsce ujawnienia
-bledu, a evidence wskazuje na downstream system, data state, configuration,
-messaging layer, infrastructure albo komponent innego zespolu.
-
-Proponowana akcja musi byc konkretna i wykonalna. Unikaj ogolnikow:
-
-- "sprawdzic logi",
-- "zweryfikowac aplikacje",
-- "przeanalizowac baze",
-- "skontaktowac sie z zespolem".
-
-Preferuj:
-
-- kto ma zadzialac,
-- jaki object, key, state, endpoint, table, file albo method trzeba sprawdzic,
-- ktory system, data area albo integration trzeba zweryfikowac,
-- jaka zmiana, korekta danych albo handoff jest prawdopodobnie potrzebny,
-- jak potwierdzic fix albo routing.
-
-Gdy uzywasz operational context do handoffu albo ownershipu:
-
-- traktuj `codeSearchScopes`, `codeSearchProjects` i kilka repository projects
-  jako jeden implementation search scope dla dopasowanego semantic target,
-- zaczynaj od repozytoriow `primary-implementation` albo priority `1`, a potem
-  przechodz do supporting libraries, generated clients, integration adapters,
-  legacy modules albo collaborators tylko gdy jest to potrzebne,
-- nie nazywaj konkretnego process, bounded context albo team, jezeli artefakty
-  incydentu albo tool results nie wspieraja dopasowania katalogowego,
-- gdy ownership jest niejednoznaczny, wpisz `nieustalone`,
-- podaj, dlaczego handoff jest potrzebny, jakie evidence przekazac i co
-  odbiorca ma sprawdzic jako pierwsze.
-
-### 9. Zbuduj Wymagany Kontrakt Wyniku
-
-Zapisz finalny wynik w aktualnym kontrakcie incident analysis przez report
+Orkiestrator moze wymagac proof z warstwy wlascicielskiej, ale nie opisuje
+konkretnych DB checks, GitLab reads, opctx browse, sekcji Markdown ani report
 tools.
 
-Uzyj:
+## Algorytm Orkiestracji
 
-- `report_update_header`: `header` to `detectedProblem`; `subHeader` moze
-  zawierac krotki material diagnostyczny, ale nie zastepuje pol publicznych,
-- `report_upsert_section` z `id=FUNCTIONAL_ANALYSIS`: tresc sekcji
-  `functionalAnalysis` zgodna z Functional Analysis v1,
-- `report_upsert_section` z `id=TECHNICAL_HANDOFF`: tresc sekcji
-  `technicalAnalysis` zgodna z Technical Handoff v1,
-- `report_update_meta`: globalne `confidence`, `visibilityLimits`, `gaps`,
-  `warnings` oraz `references`.
+1. Przeczytaj manifest i ustal dostepne capability groups.
+2. Zbuduj krotki fingerprint incydentu: symptom, trigger, runtime/service,
+   czas, widoczny endpoint/message/operation i pierwsza luka widocznosci.
+3. Zbuduj albo zaktualizuj `IncidentDiagnosisLedger`.
+4. Ustal, ktora decyzja blokuje wynik dla `incident-functional-analysis` albo
+   `incident-technical-handoff`.
+5. Wybierz najmniejszy specjalistyczny krok, ktory moze zmienic te decyzje.
+6. Po wyniku specjalistycznego skilla zaktualizuj ledger: potwierdzone fakty,
+   inferencje, hipotezy odrzucone i limitations.
+7. Wykonaj readiness gate dla `functionalAnalysis` i `technicalAnalysis`.
+8. Jezeli readiness gate zwraca `needs_deeper_evidence`, uruchom kolejny waski
+   krok diagnostyczny wskazany przez brakujacy artifact.
+9. Powtarzaj tylko, gdy kolejny krok ma realny information gain dla wyniku.
+10. Gdy ledger jest wystarczajacy albo dalsza widocznosc jest niedostepna,
+   przekaz material do skilli wyniku.
 
-W `report_update_meta.references` zapisz affected fields jako referencje:
+## Readiness Gate I Petla Zwrotna
 
-- `type=process`, `label=<affectedProcess>`,
-- `type=boundedContext`, `label=<affectedBoundedContext>`,
-- `type=team`, `label=<affectedTeam>`.
+Przed `incident-functional-analysis` i `incident-technical-handoff` ustaw status
+kazdego potrzebnego artifactu:
 
-Nie przekazuj `reportId` do report tools. Backend wybiera aktywny raport z
-hidden `ToolContext`.
+- `ready`: artifact jest wystarczajacy dla wyniku,
+- `needs_deeper_evidence`: brakuje zakresu albo szczegolu, a istnieje waski
+  krok diagnostyczny, ktory moze to rozstrzygnac,
+- `visibility_limited`: brak jest realny, ale dalsze proof wymaga
+  niedostepnego toola, innego systemu albo odbiorcy zewnetrznego,
+- `not_applicable`: artifact nie jest potrzebny dla tego incydentu.
 
-Po zapisie uzyj `report_get_current`, zeby sprawdzic, ze istnieja sekcje
-`FUNCTIONAL_ANALYSIS` i `TECHNICAL_HANDOFF`. Finalna odpowiedz tekstowa moze
-byc krotkim statusem. Jezeli report tools sa niedostepne albo zapis sie nie
-powiedzie, zwroc fallback JSON w aktualnym kontrakcie incident analysis.
+Nie przekazuj materialu do skilli wyniku, gdy wymagany artifact ma status
+`needs_deeper_evidence`. Uruchom wtedy tylko jeden najwezszy kolejny krok:
+`incident-code-grounding`, `incident-operational-grounding`,
+`incident-data-diagnostics` albo jawny runtime/log/downstream check, jezeli
+capability jest dostepna.
 
-Glowne pola Markdown mapowane z raportu musza przestrzegac:
+Jezeli `incident-functional-analysis` albo `incident-technical-handoff` zwroci
+`IncidentResultReadinessFeedback`, wroc do orkiestracji:
 
-- `functionalAnalysis`: Functional Analysis v1,
-- `technicalAnalysis`: Technical Handoff v1.
+```text
+IncidentResultReadinessFeedback
+missingArtifact: CodeGroundingSummary | OperationalGroundingSummary | DataDiagnosticSummary | IncidentDiagnosisLedger | logOrRuntimeEvidenceSummary
+neededFor: functionalAnalysis | technicalAnalysis | handoff | confidence | visibilityLimits
+suggestedSkill: incident-code-grounding | incident-operational-grounding | incident-data-diagnostics | runtime/log/downstream visibility
+minimumNextQuestion: <jedno waskie pytanie, ktore zmieni wynik>
+reason: <dlaczego bez tego wynik bylby zgadywaniem albo zbyt plytki>
+```
 
-Zachowaj tez:
+Po feedbacku wykonaj tylko krok odpowiadajacy `minimumNextQuestion`, zaktualizuj
+ledger i ponow readiness gate. Jezeli krok nie jest dostepny albo nie daje
+proof, oznacz brak jako `visibility_limited` i dopiero wtedy przekaz limitation
+do skilli wyniku.
 
-- `detectedProblem`,
-- `affectedProcess`,
-- `affectedBoundedContext`,
-- `affectedTeam`,
-- `confidence`,
-- `visibilityLimits`,
-- `prompt`,
-- `usage`.
+## Kiedy Uzyc Skilli
 
-Nie przywracaj wycofanych pol: `summary`, `recommendedAction`, `rationale`,
-`affectedFunction` ani `evidenceReferences`.
+- `incident-code-grounding`: gdy brak dotyczy zachowania kodu albo lokalizacji
+  technicznej.
+- `incident-operational-grounding`: gdy brak dotyczy systemu, procesu, ownera,
+  scope'u albo handoffu.
+- `incident-data-diagnostics`: gdy hipoteza wymaga DB/data proof.
+- `incident-functional-analysis`: zawsze do przygotowania
+  `functionalAnalysis`.
+- `incident-technical-handoff`: zawsze do przygotowania `technicalAnalysis`.
+
+Elasticsearch, runtime/Dynatrace albo inne tools traktuj jako capability
+diagnostyczne, ale ich szczegolowe procedury nie mieszkaja w orkiestratorze.
+
+## Kontrakt Orkiestracji
+
+Orkiestrator przekazuje do skilli wyniku:
+
+```text
+IncidentDiagnosisLedger
+CodeGroundingSummary?
+OperationalGroundingSummary?
+DataDiagnosticSummary?
+logOrRuntimeEvidenceSummary?
+sourceRefs
+visibilityLimits
+confidenceCandidates
+```
+
+To nie jest finalny publiczny kontrakt odpowiedzi. Finalne pola i strukture
+sekcji definiuja `incident-functional-analysis` oraz
+`incident-technical-handoff`.
+
+## Walidacja
+
+Przed przekazaniem do skilli wyniku sprawdz:
+
+- ledger rozdziela fakty, hipotezy, odrzucone wyjasnienia i limitations,
+- kazde mocne twierdzenie ma source ref albo jest oznaczone jako hipoteza,
+- specjalistyczne summary artifacts sa dostepne albo brak jest jawny,
+- zaden wymagany artifact nie ma statusu `needs_deeper_evidence`,
+- proponowana akcja jest wystarczajaco konkretna dla result skilli,
+- orkiestrator nie zawiera instrukcji finalnego formatu ani report tools.
+
+## Fallbacki
+
+Jezeli specjalistyczny skill albo tool nie jest dostepny, nie udawaj proof.
+Zachowaj czesciowy ledger, obniz confidence i przekaz limitation do skilli
+wyniku. Fallback finalnej odpowiedzi nalezy do skilli wyniku i platformowego
+report runtime, nie do orkiestratora.
+
+## Artefakty Handoffu
+
+Pozostaw:
+
+- `IncidentDiagnosisLedger`,
+- dostepne summary artifacts,
+- source refs,
+- visibility limits,
+- pytania otwarte,
+- sugerowany nastepny odbiorca albo `Nie ustalono`.
 
 ## Warunki Zatrzymania
 
 Zatrzymaj diagnostyke, gdy:
 
-- flow use case'u jest wystarczajaco jasne dla obu kontraktow wyniku,
-- punkt awarii jest zlokalizowany,
-- jedna klasa bledu jest confirmed albo jest najsilniejsza uczciwa hipoteza,
-- proponowana akcja jest konkretna,
-- pozostale pytania wymagaja innego zespolu, systemu albo srodowiska,
-- dalsze tool calls bylyby spekulacyjne.
-
-Jezeli confidence pozostaje ograniczone, napisz to wprost.
+- flow use case'u jest wystarczajaco jasne dla skilli wyniku,
+- punkt rozjazdu jest ustalony albo ma jawny limitation,
+- jedna hipoteza jest confirmed/strong albo dalsze proof wymaga innej
+  widocznosci,
+- proponowana akcja albo handoff jest konkretny,
+- kolejne tool calls bylyby browsingiem albo powtorzeniem evidence.
 
 ## Antywzorce
 
 Nie:
 
 - klasyfikuj root cause z samej nazwy exceptiona,
-- pomijaj use-case flow research,
-- zatrzymuj sie na lokalnym exceptionie, gdy kontrakty wyniku bylyby plytkie,
-- przegladaj tools bez pytania rozrozniajacego,
-- uzywaj operational context jako dowodu awarii,
-- diagnozuj data issue bez DB evidence,
+- opisuj procedur DB/GitLab/opctx w orkiestratorze,
+- definiuj formatu `functionalAnalysis` albo `technicalAnalysis` w
+  orkiestratorze,
+- opisuj report tools ani fallback JSON w orkiestratorze,
+- diagnozuj data issue bez DB/data proof albo jawnego limitation,
 - wymuszaj code root cause, gdy evidence wskazuje downstream albo outside
   visibility,
-- zwracaj finalnego wyniku przed zmapowaniem flow, punktu awarii, klasy,
-  evidence i akcji,
-- koncz initial analysis bez zapisania raportu przez report tools, jezeli te
-  tools sa dostepne.
+- omijaj skille wyniku przy finalnej odpowiedzi.

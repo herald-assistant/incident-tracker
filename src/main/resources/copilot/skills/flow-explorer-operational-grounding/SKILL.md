@@ -1,12 +1,18 @@
 ---
-name: flow-explorer-operational-context-tools
+name: flow-explorer-operational-grounding
 description: Playbook uzycia opctx tools w Flow Explorerze - system, proces, bounded context, ownership, glossary i handoff bez traktowania katalogu jako dowodu zachowania kodu.
 ---
 
-# Skill Operational Context Tools Dla Flow Explorera
+# Flow Explorer Operational Grounding
 
 Uzywaj tego skilla, gdy Flow Explorer potrzebuje katalogowego kontekstu systemu,
 procesu, ownershipu albo handoffu.
+
+## Cel
+
+Zbuduj `OperationalGroundingSummary`: katalogowe nazwy i relacje potrzebne do
+opisania endpointu jezykiem procesu, systemu, bounded contextu, ownershipu,
+glossary i handoffu.
 
 ## Rola Wobec Orkiestratora
 
@@ -22,6 +28,33 @@ Operational context pomaga nazwac:
 
 Operational context nie jest dowodem, ze kod faktycznie wykonuje dana logike.
 Zachowanie endpointu potwierdzaj artefaktami albo GitLab tools.
+
+## Wejscia
+
+Korzystaj z `applicationName`, `systemId`, endpoint scope, operational clues z
+artefaktow, aktualnego `goal`, `sectionModes` oraz konkretnej luki katalogowej.
+
+## Procedura
+
+1. Zacznij od artefaktow i kanonicznego systemu.
+2. Wybierz najmniejszy `opctx_*` tool call.
+3. Potwierdz glossary, ownera, proces, context, code scope albo handoff.
+4. Zwroc `OperationalGroundingSummary` albo limitation.
+
+## Petla Katalogowa
+
+Po kazdym `opctx_*` result sprawdz, czy katalog rozstrzyga pytanie:
+
+- jezeli nazwa, owner, glossary term, handoff albo system sa potwierdzone,
+  zwroc `OperationalGroundingSummary`,
+- jezeli wynik jest niejednoznaczny, ale zawiera konkretny `system`, entity id,
+  glossary term albo relation do doczytania, wykonaj jedno waskie
+  doprecyzowanie,
+- jezeli dalszy lookup bylby szerokim skanem katalogu, zwroc limitation,
+- jezeli luka dotyczy jakosci katalogu, uzyj `record_tool_feedback`, jezeli
+  tool jest dostepny.
+
+Nie oznaczaj nazwy jako confirmed, gdy katalog tylko sugeruje dopasowanie.
 
 ## Dozwolone Tools
 
@@ -105,20 +138,22 @@ Operational context moze wzbogacic:
 Formuluj to prostym jezykiem dla analityka/testera. Oddzielaj "katalog mowi"
 od "kod potwierdza".
 
-### SOURCE Dla Persistence Deep
+### Biznesowe Nazwy Zrodel Danych
 
-Gdy `sectionModes.PERSISTENCE=DEEP`, operational context moze byc potrzebny do
-nadania biznesowej nazwy zrodlu zapisywanych danych. Jezeli GitLab pokazuje, ze
-wartosc zapisywana do bazy pochodzi z integracji, klienta, adaptera albo
-odpowiedzi innego komponentu, uzyj katalogu, glossary, handoffu albo relacji
-systemu, zeby nazwac `SOURCE` biznesowo.
+Gdy `flow-explorer-map-persistence-section` prosi o nazwanie zrodla wartosci,
+operational context moze pomoc przetlumaczyc techniczny sygnal z kodu na
+biznesowa nazwe systemu, komponentu zewnetrznego, handoffu albo glossary term.
 
-W tabeli wyniku `SOURCE` musi byc `GENERATED`, `REQUEST`, `CALCULATED` albo
-biznesowa nazwa systemu/komponentu zewnetrznego. Nie wpisuj jako `SOURCE` nazw
-klas, beanow, klientow technicznych, repozytoriow ani endpointow. Jezeli
-katalog nie rozstrzyga technicznej nazwy integracji do nazwy biznesowej,
-oznacz to jako `visibilityLimit` albo `openQuestion` i zglos luke przez
-`record_tool_feedback`, jezeli feedback tool jest dostepny.
+Zasada dla `OperationalGroundingSummary`:
+
+- `SOURCE` moze byc `GENERATED`, `REQUEST`, `CALCULATED` albo biznesowa nazwa
+  systemu/komponentu zewnetrznego,
+- Nie wpisuj jako `SOURCE` nazw klas, beanow, klientow technicznych,
+  repozytoriow ani endpointow,
+- jezeli katalog nie rozstrzyga technicznej nazwy do nazwy biznesowej, zwroc
+  visibility limit albo open question,
+- nie formatuj sekcji `PERSISTENCE`; przekaz tylko nazwe, source ref i limit do
+  skilla sekcyjnego.
 
 ## Kiedy Wrocic Do Orkiestratora
 
@@ -128,3 +163,52 @@ Wroc, gdy:
 - potrzebne jest dalsze czytanie kodu,
 - katalog nie rozstrzyga ownershipu albo procesu,
 - dodatkowe `opctx_*` calls nie zmienia odpowiedzi.
+
+## Kontrakt Wyniku
+
+Zwroc `OperationalGroundingSummary`:
+
+```text
+system: <kanoniczny system albo Nie ustalono>
+process: <proces albo Nie ustalono>
+boundedContext: <bounded context albo Nie ustalono>
+ownerOrHandoff: <team/route albo Nie ustalono>
+glossaryTerms:
+  - term: <pojecie>
+    status: confirmed | inferred | missing
+codeSearchScope:
+  - <project/scope hint, jezeli potrzebny>
+integrationHints:
+  - <system/handoff/boundary hint>
+sourceRefs:
+  - <tool:opctx_* albo artifact>
+visibilityLimits:
+  - <konkretny brak katalogu>
+```
+
+## Walidacja
+
+Sprawdz:
+
+- kazda nazwa systemu, procesu, contextu albo ownera ma katalogowy source ref,
+- operational context nie zostal uzyty jako dowod zachowania kodu,
+- glossary term jest oznaczony jako confirmed, inferred albo missing,
+- braki katalogu trafiaja do `visibilityLimits` albo feedback toola.
+
+## Fallbacki
+
+Jezeli katalog nie rozstrzyga:
+
+- uzyj nazwy roboczej tylko jako inferencji,
+- wpisz `Nie ustalono` dla ownera/procesu zamiast zgadywac,
+- zwroc czesciowy `OperationalGroundingSummary`,
+- zglos luke przez `record_tool_feedback`, jezeli feedback tool jest dostepny.
+
+## Artefakty Handoffu
+
+Przekaz:
+
+- `OperationalGroundingSummary`,
+- source refs dla `flow-explorer-write-report`,
+- wskazanie, czy potrzebne jest dalsze code grounding albo handoff poza
+  analizowany system.

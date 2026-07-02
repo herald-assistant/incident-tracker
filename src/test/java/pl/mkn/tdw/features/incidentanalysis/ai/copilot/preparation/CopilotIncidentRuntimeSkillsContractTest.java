@@ -18,8 +18,8 @@ class CopilotIncidentRuntimeSkillsContractTest {
     void shouldUseOrchestratorAsStarterSkillWithoutLegacyCoreSkill() {
         assertEquals("incident-analysis-orchestrator", CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME);
         assertEquals(List.of(
-                "incident-operational-context-tools",
-                "incident-analysis-gitlab-tools",
+                "incident-operational-grounding",
+                "incident-code-grounding",
                 "incident-data-diagnostics"
         ), CopilotIncidentRuntimeSkillNames.DIAGNOSTIC_SKILL_NAMES);
         assertEquals(List.of(
@@ -29,15 +29,19 @@ class CopilotIncidentRuntimeSkillsContractTest {
         assertFalse(CopilotIncidentRuntimeSkillNames.DIAGNOSTIC_SKILL_NAMES.contains("incident-analysis-core"));
         assertFalse(CopilotIncidentRuntimeSkillNames.RESULT_SKILL_NAMES.contains("incident-analysis-core"));
         assertFalse(Files.exists(SKILLS_ROOT.resolve("incident-analysis-core")));
+        assertFalse(Files.exists(SKILLS_ROOT.resolve(legacyIncidentSkill("analysis", "gitlab", "tools"))));
+        assertFalse(Files.exists(SKILLS_ROOT.resolve(legacyIncidentSkill("operational", "context", "tools"))));
     }
 
     @Test
     void shouldKeepOrchestratorAlignedWithExpertIncidentAnalysisPlaybook() throws Exception {
         assertSkillContainsSections("incident-analysis-orchestrator", List.of(
                 "## Ekspercki Model Pracy",
-                "### Zasady Trafnosci Eksperta",
-                "### Owning-Layer Proof",
-                "### Macierz Diagnostyki Roznicowej"
+                "## Zasady Decyzji Orkiestratora",
+                "## Granice Odpowiedzialnosci",
+                "## Algorytm Orkiestracji",
+                "## Readiness Gate I Petla Zwrotna",
+                "## Kontrakt Orkiestracji"
         ));
 
         var content = Files.readString(SKILLS_ROOT
@@ -45,27 +49,41 @@ class CopilotIncidentRuntimeSkillsContractTest {
                 .resolve("SKILL.md"));
 
         assertContainsAll(content, List.of(
-                "expectedFlow: co normalnie powinno sie wydarzyc",
-                "observedFlow: co evidence pokazuje w tym incydencie",
-                "divergencePoint: pierwszy konkretny punkt rozjazdu",
-                "Hypothesis tournament",
-                "Negative evidence",
-                "Owning-layer proof",
-                "Information gain",
-                "Fixability test",
-                "zrodlem prawdy initial analysis jest raport zapisany przez report tools",
-                "`report_update_header`",
-                "`report_upsert_section` z `id=FUNCTIONAL_ANALYSIS`",
-                "`report_upsert_section` z `id=TECHNICAL_HANDOFF`",
-                "`report_update_meta`",
-                "`report_get_current`",
-                "Nie przekazuj `reportId` do report tools",
-                "repository empty result",
-                "key-only = 0 -> `data_missing`",
-                "key-only > 0 i full = 0 -> `data_predicate_mismatch`",
-                "predicate w kodzie bledny -> `code_query_or_repository_logic`",
-                "Jezeli test obala aktualna klase, przeklasyfikuj"
+                "expectedFlow: <co normalnie powinno sie wydarzyc>",
+                "IncidentDiagnosisLedger",
+                "CodeGroundingSummary",
+                "OperationalGroundingSummary",
+                "DataDiagnosticSummary",
+                "observedFlow: <co evidence pokazuje w tym incydencie>",
+                "divergencePoint: <pierwszy konkretny punkt rozjazdu albo Nie ustalono>",
+                "incident-code-grounding",
+                "incident-operational-grounding",
+                "incident-data-diagnostics",
+                "incident-functional-analysis",
+                "incident-technical-handoff",
+                "`Hypothesis tournament`",
+                "`Negative evidence`",
+                "`Owning-layer proof`",
+                "`Information gain`",
+                "`Result readiness`",
+                "`Feedback loop`",
+                "`Fixability test`",
+                "`needs_deeper_evidence`",
+                "`visibility_limited`",
+                "IncidentResultReadinessFeedback",
+                "minimumNextQuestion",
+                "konkretnych DB checks, GitLab reads, opctx browse, sekcji Markdown ani report",
+                "Finalne pola i strukture",
+                "Fallback finalnej odpowiedzi nalezy do skilli wyniku",
+                "omijaj skille wyniku przy finalnej odpowiedzi"
         ));
+        assertFalse(content.contains("report_update_header"));
+        assertFalse(content.contains("report_upsert_section"));
+        assertFalse(content.contains("report_update_meta"));
+        assertFalse(content.contains("report_get_current"));
+        assertFalse(content.contains("Fallback JSON"));
+        assertFalse(content.contains("### Macierz Diagnostyki Roznicowej"));
+        assertFalse(content.contains("### Owning-Layer Proof"));
     }
 
     @Test
@@ -77,22 +95,43 @@ class CopilotIncidentRuntimeSkillsContractTest {
                 "## Hipotezy, Ktore Skill Ma Potwierdzic Albo Obalic",
                 "## Testy Rozrozniajace",
                 "## Wklad Do Wyniku",
+                "## Kontrakt Wyniku",
+                "## Walidacja",
+                "## Fallbacki",
+                "## Artefakty Handoffu",
                 "## Kiedy Wrocic Do Orkiestratora"
         );
 
         for (var skillName : List.of(
-                "incident-analysis-gitlab-tools",
+                "incident-code-grounding",
                 "incident-data-diagnostics",
-                "incident-operational-context-tools"
+                "incident-operational-grounding"
         )) {
             assertSkillContainsSections(skillName, requiredSections);
         }
+
+        assertContainsAll(Files.readString(SKILLS_ROOT.resolve("incident-code-grounding").resolve("SKILL.md")), List.of(
+                "## Petla Code Evidence",
+                "waskie poglebienie",
+                "Nie finalizuj `CodeGroundingSummary` jako gotowego `technicalAnalysis`"
+        ));
+        assertContainsAll(Files.readString(SKILLS_ROOT.resolve("incident-data-diagnostics").resolve("SKILL.md")), List.of(
+                "## Petla DB Diagnostics",
+                "wykonaj jedno waskie poglebienie",
+                "Nie potwierdzaj data issue bez DB evidence"
+        ));
+        assertContainsAll(Files.readString(SKILLS_ROOT.resolve("incident-operational-grounding").resolve("SKILL.md")), List.of(
+                "## Petla Katalogowa",
+                "wykonaj jedno waskie poglebienie",
+                "Operational context jest groundingiem",
+                "routingiem, nie dowodem root cause"
+        ));
     }
 
     @Test
     void shouldDescribeExplicitGitLabToolScopeForIncidentAnalysis() throws Exception {
         var content = Files.readString(SKILLS_ROOT
-                .resolve("incident-analysis-gitlab-tools")
+                .resolve("incident-code-grounding")
                 .resolve("SKILL.md"));
 
         assertContainsAll(content, List.of(
@@ -125,7 +164,12 @@ class CopilotIncidentRuntimeSkillsContractTest {
                 "## Rola Wobec Orkiestratora",
                 "## Wejscie Oczekiwane Od Orkiestratora",
                 "## Czego Ten Skill Nie Diagnozuje",
-                "## Wklad Do Wyniku"
+                "## Wklad Do Wyniku",
+                "## Kontrakt Wyniku",
+                "## Readiness Gate",
+                "## Walidacja",
+                "## Fallbacki",
+                "## Artefakty Handoffu"
         );
 
         for (var skillName : List.of(
@@ -133,7 +177,28 @@ class CopilotIncidentRuntimeSkillsContractTest {
                 "incident-technical-handoff"
         )) {
             assertSkillContainsSections(skillName, requiredSections);
+            var content = Files.readString(SKILLS_ROOT.resolve(skillName).resolve("SKILL.md"));
+            assertContainsAll(content, List.of(
+                    "IncidentResultReadinessFeedback",
+                    "missingArtifact",
+                    "minimumNextQuestion"
+            ));
         }
+
+        var functional = Files.readString(SKILLS_ROOT.resolve("incident-functional-analysis").resolve("SKILL.md"));
+        assertContainsAll(functional, List.of(
+                "nie uruchamiaj tools samodzielnie",
+                "functionalAnalysis"
+        ));
+
+        var technical = Files.readString(SKILLS_ROOT.resolve("incident-technical-handoff").resolve("SKILL.md"));
+        assertContainsAll(technical, List.of(
+                "W initial analysis",
+                "W follow-upie moze dociagnac tylko brakujacy, konkretny szczegol",
+                "uruchamiaj wtedy samodzielnie tools",
+                "nie tworz",
+                "pozornie kompletnego handoffu"
+        ));
     }
 
     private static void assertSkillContainsSections(String skillName, List<String> requiredSections) throws Exception {
@@ -153,5 +218,9 @@ class CopilotIncidentRuntimeSkillsContractTest {
         for (var expectedFragment : expectedFragments) {
             assertTrue(content.contains(expectedFragment), () -> "Missing expected fragment: " + expectedFragment);
         }
+    }
+
+    private static String legacyIncidentSkill(String... parts) {
+        return "incident-" + String.join("-", parts);
     }
 }

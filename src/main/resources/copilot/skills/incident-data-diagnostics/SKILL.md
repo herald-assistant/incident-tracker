@@ -28,6 +28,12 @@ Liquibase zwykle utrzymuja schema i code aligned. Dlatego najpierw sprawdzaj
 przyczyny data-related. Schema i mapping checks sa dopuszczalne, gdy evidence
 wyraznie na nie wskazuje.
 
+## Cel
+
+Potwierdz albo obal hipoteze danych przez najmniejszy potrzebny DB check i
+zwroc `DataDiagnosticSummary`: finding, table/key/predicate, evidence,
+visibility limits oraz nastepny krok.
+
 ## Rola Wobec Orkiestratora
 
 Ten skill jest diagnostycznym playbookiem danych wybieranym przez
@@ -100,10 +106,31 @@ Dobierz najmniejszy DB check, ktory rozroznia aktywne hipotezy:
 Jesli code grounding jest wymagany, a nieudany, napisz to w `reason` DB
 fallbacku.
 
+## Petla DB Diagnostics
+
+Po kazdym DB checku ocen, czy hipoteza danych jest potwierdzona, odrzucona czy
+nadal nierozstrzygnieta.
+
+- Jezeli DB evidence potwierdza albo obala hipoteze, zwroc
+  `DataDiagnosticSummary` i zakoncz eksploracje.
+- Jezeli wynik jest zbyt plytki, ale pokazuje konkretny nastepny typed check
+  (`key-only`, `full-predicate`, `group_count`, `orphan`, `duplicate`,
+  `process state` albo jedna relacje), wykonaj jedno waskie poglebienie.
+- Jezeli brakuje entity/table/predicate hints i da sie je uzyskac z kodu,
+  wroc do orkiestratora z potrzeba `incident-code-grounding` zamiast robic
+  broad DB discovery.
+- Jezeli dalszy DB call bylby przegladaniem danych albo zgadywaniem schema,
+  zwroc limitation.
+
+Nie potwierdzaj data issue bez DB evidence. Gdy wynik jest tylko poszlaka,
+ustaw finding jako `inconclusive` albo `rejected` i nazwij brakujaca warstwe
+proof.
+
 ## Wklad Do Wyniku
 
 Po uzyciu tego skilla zwroc do orkiestratora:
 
+- `DataDiagnosticSummary`,
 - `technicalAnalysis`: application/schema scope, table, key, predicate, status,
   tenant/context, relation albo process-state finding oraz konkretna akcja dla
   Data/DBA/Developer,
@@ -115,6 +142,29 @@ Po uzyciu tego skilla zwroc do orkiestratora:
 - `confidence`: confirmed tylko przy DB evidence; strong_hypothesis przy mocnym
   DB sygnale i braku sprzecznosci; weak_hypothesis gdy brakuje kluczowego
   checku.
+
+## Kontrakt Wyniku
+
+Zwroc `DataDiagnosticSummary`:
+
+```text
+dataHypothesis: <candidate data class>
+dbChecks:
+  - question: <co rozroznial check>
+    toolOrEvidence: <db tool/artifact>
+    result: <count/group/orphan/sample summary>
+finding:
+  class: data_missing | data_predicate_mismatch | data_orphan_or_stale_reference | data_duplicate_or_non_unique | async_or_process_state | rejected | inconclusive
+  mechanism: <jak dane blokuja flow albo dlaczego hipoteza odpada>
+targets:
+  - table: <TABLE albo Nie ustalono>
+    keyOrPredicate: <key/predicate/status/context>
+action:
+  owner: <Data/DBA/Developer/Other albo Nie ustalono>
+  firstCheck: <konkretna weryfikacja albo korekta>
+visibilityLimits:
+  - <brak DB/code/runtime/downstream visibility>
+```
 
 ## Kiedy Wrocic Do Orkiestratora
 
@@ -128,6 +178,35 @@ Wroc do orkiestratora, gdy:
 
 Jesli dane wygladaja poprawnie, napisz wprost: `DB evidence nie tlumaczy
 incydentu` i wskaz, ktora klasa bledu powinna byc sprawdzona dalej.
+
+## Walidacja
+
+Sprawdz:
+
+- data issue nie jest `confirmed` bez DB evidence,
+- key-only vs full predicate jest uzyte, gdy symptom dotyczy missing/empty
+  result,
+- table/application scope jest ugruntowany albo limitation jest jawny,
+- DB findings sa opisane operator-friendly i bez raw row dump,
+- dalszy krok jest konkretny.
+
+## Fallbacki
+
+Jezeli DB tools nie sa dostepne albo scope jest niepewny:
+
+- zwroc czesciowy `DataDiagnosticSummary`,
+- nie udawaj DB verification,
+- wskaz brakujacy code grounding, schema/application scope albo ownera,
+- przekaz hipoteze z nizszym confidence do orkiestratora.
+
+## Artefakty Handoffu
+
+Przekaz:
+
+- `DataDiagnosticSummary`,
+- table/key/predicate/status/context albo limitation,
+- minimalny DB/data action dla Data/DBA/Developer,
+- informacje, czy DB evidence potwierdza, obala albo nie rozstrzyga hipotezy.
 
 ## Regula Sesji
 

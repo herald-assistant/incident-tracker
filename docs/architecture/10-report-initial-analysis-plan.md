@@ -241,7 +241,7 @@ Implementacja:
   zrodlo wyniku, a dotychczasowy `FlowExplorerAiResponseParser` zostawia jako
   fallback diagnostyczny dla braku albo niekompletnego raportu.
 - Prompt initial Flow Explorera i runtime skille `flow-explorer-orchestrator`
-  oraz `flow-explorer-result-contract` zostaly przestawione na report tools:
+  oraz `flow-explorer-write-report` zostaly przestawione na report tools:
   `report_upsert_section`, `report_update_meta`, `report_get_current`.
 - Fallback JSON contract zostal zachowany tylko jako tryb awaryjny, gdy report
   tools nie sa dostepne albo zapis raportu sie nie powiedzie.

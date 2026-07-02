@@ -7,8 +7,8 @@ final class CopilotIncidentRuntimeSkillNames {
     static final String STARTER_SKILL_NAME = "incident-analysis-orchestrator";
 
     static final List<String> DIAGNOSTIC_SKILL_NAMES = List.of(
-            "incident-operational-context-tools",
-            "incident-analysis-gitlab-tools",
+            "incident-operational-grounding",
+            "incident-code-grounding",
             "incident-data-diagnostics"
     );
 

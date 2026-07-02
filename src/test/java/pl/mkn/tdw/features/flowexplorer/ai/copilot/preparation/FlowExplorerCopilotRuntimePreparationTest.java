@@ -190,7 +190,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "flow-explorer-job-123",
                 policy,
                 request().aiOptions(),
-                request().goal()
+                request().goal(),
+                request().resolvedSectionModes()
         );
 
         assertEquals("flow-explorer-job-123", request.sessionId());
@@ -219,7 +220,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "flow-explorer-job-123",
                 policy,
                 testScenariosRequest().aiOptions(),
-                testScenariosRequest().goal()
+                testScenariosRequest().goal(),
+                testScenariosRequest().resolvedSectionModes()
         );
 
         assertSkillDirectories(
@@ -240,7 +242,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "flow-explorer-job-123",
                 policy,
                 riskDetectionRequest().aiOptions(),
-                riskDetectionRequest().goal()
+                riskDetectionRequest().goal(),
+                riskDetectionRequest().resolvedSectionModes()
         );
 
         assertSkillDirectories(
@@ -261,7 +264,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var request = factory.createForFollowUp(
                 "flow-explorer-follow-up-123",
                 policy,
-                request().aiOptions()
+                request().aiOptions(),
+                request().resolvedSectionModes()
         );
 
         assertEquals("flow-explorer-follow-up-123", request.sessionId());
@@ -270,7 +274,28 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertSkillDirectories(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
         assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
         assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-orchestrator");
-        assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-result-contract");
+        assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-write-report");
+    }
+
+    @Test
+    void shouldIncludeSectionSkillsOnlyForActiveSectionModes() {
+        var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
+        var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
+        var factory = sessionConfigRequestFactory();
+        var startRequest = requestWithSectionModes();
+
+        var request = factory.create(
+                "flow-explorer-job-123",
+                policy,
+                startRequest.aiOptions(),
+                startRequest.goal(),
+                startRequest.resolvedSectionModes()
+        );
+
+        assertSelectedSkillIncluded(request.skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME);
+        assertSelectedSkillMissing(request.skillDirectories(),
+                FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME);
     }
 
     @Test
@@ -388,7 +413,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertSelectedSkillIncluded(runRequest.sessionConfigRequest().skillDirectories(),
                 FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
         assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-orchestrator");
-        assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-result-contract");
+        assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-write-report");
 
         verify(toolFactory).createToolDefinitions(
                 assembly.toolSessionContext(),

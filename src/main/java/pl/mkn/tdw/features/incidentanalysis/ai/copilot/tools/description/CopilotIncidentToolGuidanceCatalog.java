@@ -30,7 +30,7 @@ public class CopilotIncidentToolGuidanceCatalog {
     );
 
     private static final List<String> GITLAB_SCOPE_GUIDANCE = List.of(
-            "Follow incident-analysis-gitlab-tools: use GitLab calls only to close a concrete incident evidence gap.",
+            "Follow incident-code-grounding: use GitLab calls only to close a concrete incident evidence gap.",
             "Pass branchRef explicitly from the incident gitLabBranch or a previous GitLab tool result.",
             "Pass known projectName values from deterministic evidence, operational context or previous GitLab tool results.",
             "Do not pass gitLabGroup; the backend resolves GitLab group through operational context or configuration.",

@@ -2,7 +2,7 @@
 name: integration-downstream-failure-catalog-timeout
 expectedClassification: integration_downstream_failure
 starterSkill: incident-analysis-orchestrator
-specializedSkill: incident-analysis-gitlab-tools
+specializedSkill: incident-code-grounding
 ---
 
 # Fixture: Integration Downstream Failure - Catalog Timeout
@@ -16,7 +16,7 @@ Fixture testuje kontrakt routingu:
 
 1. Najpierw research flow przez `incident-analysis-orchestrator`.
 2. Potem klasyfikacja jako `integration_downstream_failure`.
-3. Potem przejscie do `incident-analysis-gitlab-tools`.
+3. Potem przejscie do `incident-code-grounding`.
 4. Na koncu wynik w polach `functionalAnalysis` i `technicalAnalysis`.
 
 ## Minimalne Evidence
@@ -32,7 +32,7 @@ Fixture testuje kontrakt routingu:
 
 1. Zbadaj flow use case'u przed klasyfikacja:
    `order request -> product lookup -> catalog client -> downstream 503`.
-2. Zaladuj `incident-analysis-gitlab-tools`.
+2. Zaladuj `incident-code-grounding`.
 3. Przeczytaj klienta integracji, endpoint, timeout/retry i error handling.
 4. Uzyj log/HTTP comparison tylko, gdy moze rozroznic local vs downstream.
 5. Jesli lokalny kod poprawnie wywoluje downstream, a evidence wskazuje 5xx,

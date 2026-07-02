@@ -322,7 +322,7 @@ describe('AnalysisStepsPanelComponent', () => {
           toolCallId: 'tool-call-skill-1',
           toolName: 'skill',
           arguments: {
-            skill: 'flow-explorer-gitlab-tools'
+            skill: 'flow-explorer-code-grounding'
           }
         }
       },
@@ -343,10 +343,10 @@ describe('AnalysisStepsPanelComponent', () => {
           toolCallId: 'tool-call-skill-1',
           success: true,
           resultContentPreview:
-            'Skill "flow-explorer-gitlab-tools" loaded successfully. Follow the instructions in the skill context.',
+            'Skill "flow-explorer-code-grounding" loaded successfully. Follow the instructions in the skill context.',
           toolTelemetry: {
             restrictedProperties: {
-              skillName: 'flow-explorer-gitlab-tools'
+              skillName: 'flow-explorer-code-grounding'
             }
           }
         }
@@ -362,10 +362,10 @@ describe('AnalysisStepsPanelComponent', () => {
 
     expect(skillItem).not.toBeNull();
     expect(skillItem?.querySelector('.ai-work-item__text')?.textContent).toContain(
-      'Copilot wywołał skill flow-explorer-gitlab-tools.'
+      'Copilot wywołał skill flow-explorer-code-grounding.'
     );
     expect(skillItem?.querySelector('.ai-work-item__details-title')?.textContent).toContain(
-      'skill flow-explorer-gitlab-tools'
+      'skill flow-explorer-code-grounding'
     );
   });
 

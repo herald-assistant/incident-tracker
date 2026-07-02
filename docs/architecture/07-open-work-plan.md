@@ -78,7 +78,7 @@ kodu.
 
 Cel: zmniejszyc ryzyko, ze model opisze inferencje jako potwierdzony fakt.
 
-- Dostosowac runtime skill `flow-explorer-result-contract`.
+- Dostosowac runtime skill `flow-explorer-write-report`.
 - Dostosowac parser/DTO, jezeli kontrakt wymaga strukturalnej zmiany.
 - Wprowadzic walidacje albo quality flags dla zbyt pewnych twierdzen.
 - Wymagac source reference dla mocnych twierdzen albo oznaczenia ich jako

@@ -42,8 +42,8 @@ class CopilotIncidentAnalysisFixturesTest {
 
     private static final List<String> ALLOWED_SPECIALIZED_SKILLS = List.of(
             "incident-data-diagnostics",
-            "incident-analysis-gitlab-tools",
-            "incident-operational-context-tools",
+            "incident-code-grounding",
+            "incident-operational-grounding",
             "none"
     );
 

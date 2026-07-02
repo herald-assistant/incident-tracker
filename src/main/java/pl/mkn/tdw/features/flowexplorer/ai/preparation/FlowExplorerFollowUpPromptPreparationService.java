@@ -34,14 +34,15 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 ## Runtime envelope
                 - To jest turn follow-up chat po zakonczonym wyniku Flow Explorera, a nie ponowne wygenerowanie initial result.
                 - Domyslnie odpowiedz w Markdown jak zwykla odpowiedz AI w rozmowie.
-                - Nie zwracaj pelnego JSON `flow-explorer-result-contract` ani obiektu z `goal`, `overview` i `sections`, chyba ze uzytkownik w tej wiadomosci wyraznie prosi o JSON albo regeneracje pelnego wyniku Flow Explorera.
+                - Nie zwracaj pelnego JSON `flow-explorer-write-report` ani obiektu z `goal`, `overview` i `sections`, chyba ze uzytkownik w tej wiadomosci wyraznie prosi o JSON albo regeneracje pelnego wyniku Flow Explorera.
                 - Jezeli uzytkownik prosi o inna forme, np. tabele, checklist, JSON, liste testow albo krotkie podsumowanie, zastosuj te forme tylko dla tej odpowiedzi chatu.
                 - Zasady rozmowy pochodza ze skilla `flow-explorer-follow-up-chat`; uzyj go przed odpowiedzia.
 
                 ## Follow-up exploration policy
                 - Nie zakladaj, ze initial analysis przeczytala cala implementacje endpointu. Initial result i snippet cards sa punktem startowym, nie pelnym dowodem.
                 - Gdy pytanie dotyczy poglebienia, potwierdzenia, doprecyzowania, doszczegolowienia, walidacji, persistence, integracji, edge case albo korekty initial wyniku, domyslnie uzyj dostepnych Flow Explorer tools przed odpowiedzia.
-                - Dla kodu uzywaj focused GitLab reads/search zgodnie ze skillem `flow-explorer-gitlab-tools`; dla nazw domenowych, procesu, bounded contextu, ownershipu, glossary albo handoffu uzywaj `flow-explorer-operational-context-tools`.
+                - Dla kodu uzywaj focused GitLab reads/search zgodnie ze skillem `flow-explorer-code-grounding`; dla nazw domenowych, procesu, bounded contextu, ownershipu, glossary albo handoffu uzywaj `flow-explorer-operational-grounding`.
+                - Dla sekcji persistence uzywaj `flow-explorer-map-persistence-section`; dla zewnetrznych systemow, eventow, kolejek, payloadow albo handoffow uzywaj `flow-explorer-map-integrations-section`.
                 - Jezeli tool jest niedostepny, odrzucony albo nie daje wystarczajacego materialu, odpowiedz najlepiej jak sie da i jawnie nazwij ograniczenie widocznosci.
 
                 ## Audience and language

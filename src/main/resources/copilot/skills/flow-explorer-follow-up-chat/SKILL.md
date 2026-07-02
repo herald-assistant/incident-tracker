@@ -9,6 +9,22 @@ Uzywaj tego skilla dla kazdej odpowiedzi w follow-up chat Flow Explorera.
 Ten skill steruje formatem rozmowy po initial result i ma pierwszenstwo nad
 initial JSON result contract w zakresie formatu odpowiedzi chatu.
 
+## Cel
+
+Odpowiedz na konkretne pytanie follow-up, poglebiajac initial result przez
+dostepne Flow Explorer tools tylko wtedy, gdy moze to zmienic odpowiedz.
+
+## Wejscia
+
+Korzystaj z:
+
+- poprzedniego `AnalysisReport` i meta raportu,
+- promptu follow-up z aktualnej wiadomosci uzytkownika,
+- artefaktow i source refs z initial runu,
+- `CodeGroundingSummary`, `OperationalGroundingSummary`,
+  `PersistenceMappingSummary` albo `IntegrationBoundarySummary`, jezeli sa
+  dostepne w rozmowie lub trzeba je zbudowac dla odpowiedzi.
+
 ## Rola
 
 Follow-up chat sluzy do poglebiania, potwierdzania, doprecyzowania i
@@ -24,12 +40,19 @@ Twoim zadaniem jest:
 - pokazac ograniczenia widocznosci, jezeli potwierdzenie nie jest mozliwe,
 - zachowac czytelnosc dla analityka albo testera.
 
+## Procedura
+
+1. Odczytaj aktualne pytanie i scope initial result.
+2. Ustal, czy odpowiedz wymaga toola.
+3. Jezeli tak, wybierz najmniejszy code/opctx/persistence/integration skill.
+4. Odpowiedz w Markdown, oddzielajac fakty, inferencje i limitations.
+
 ## Format Odpowiedzi
 
 Domyslnie odpowiadaj w Markdown, tak jak zwykla odpowiedz AI w rozmowie:
 krotkie akapity, listy, tabela albo checklist tylko wtedy, gdy pomagaja.
 
-Nie zwracaj pelnego JSON `flow-explorer-result-contract`, obiektu z polami
+Nie zwracaj pelnego JSON `flow-explorer-write-report`, obiektu z polami
 `goal`, `overview`, `sections`, `sourceReferences` ani finalnego kontraktu
 initial result, chyba ze uzytkownik wyraznie poprosi o JSON albo regeneracje
 pelnego wyniku Flow Explorera.
@@ -56,9 +79,14 @@ Domyslnie uzyj dostepnych tools przed odpowiedzia, gdy pytanie:
 
 Uzywaj:
 
-- `flow-explorer-gitlab-tools` dla focused code reads/search,
-- `flow-explorer-operational-context-tools` dla procesu, bounded contextu,
+- `flow-explorer-code-grounding` dla focused code reads/search,
+- `flow-explorer-operational-grounding` dla procesu, bounded contextu,
   systemu, glossary, ownershipu albo handoffu,
+- `flow-explorer-map-persistence-section`, gdy pytanie wymaga persistence,
+  tabel, kolumn,
+  source wartosci albo setupu danych dla persistence deep,
+- `flow-explorer-map-integrations-section`, gdy pytanie wymaga targetu,
+  path/destination, payloadu, headers, retry, DLQ albo ownera integracji,
 - `record_tool_feedback`, gdy tool result ujawnia luke w katalogu albo scope.
 
 Nie wykonuj szerokiego przegladania repozytorium. Czytaj najmniejszy fragment,
@@ -101,6 +129,53 @@ Dobra odpowiedz follow-up:
 - nie ukrywa, ze initial result mogl miec niepelny zakres,
 - mowi, co nadal wymaga doprecyzowania, jezeli pytanie wykracza poza dostepne
   evidence.
+
+## Kontrakt Wyniku
+
+Domyslny wynik to Markdown chat response:
+
+```text
+answer: <odpowiedz w jezyku analityka/testera>
+checkedEvidence:
+  - <co sprawdzono, jezeli uzyto tools>
+sourceRefs:
+  - <artifact/tool/projectName:path:Lx-Ly, tylko gdy przydatne>
+visibilityLimits:
+  - <czego nie da sie potwierdzic>
+nextQuestion:
+  - <opcjonalne pytanie doprecyzowujace>
+```
+
+Nie aktualizuj initial report i nie zwracaj fallback JSON, chyba ze uzytkownik
+wyraznie prosi o JSON/regeneracje.
+
+## Walidacja
+
+Przed odpowiedzia sprawdz:
+
+- odpowiedz odpowiada na aktualne pytanie, a nie regeneruje initial result,
+- gdy pytanie wymaga potwierdzenia kodem, uzyto focused code grounding albo
+  wpisano limitation,
+- persistence/integration details nie sa zgadywane bez odpowiedniego summary,
+- fakty, inferencje i luki widocznosci sa rozdzielone.
+
+## Fallbacki
+
+Jezeli tool jest niedostepny, odrzucony albo nie rozstrzyga pytania:
+
+- odpowiedz na podstawie dostepnego reportu i artefaktow,
+- nazwij dokladnie brakujacy source albo widocznosc,
+- zaproponuj nastepne pytanie albo kierunek follow-upu bez obiecywania
+  pewnego wyniku.
+
+## Artefakty Handoffu
+
+W follow-up pozostaw:
+
+- krotkie source refs dla nowego evidence,
+- ewentualny `CodeGroundingSummary`, `OperationalGroundingSummary`,
+  `PersistenceMappingSummary` albo `IntegrationBoundarySummary`,
+- visibility limits dla pytania uzytkownika.
 
 ## Antywzorce
 

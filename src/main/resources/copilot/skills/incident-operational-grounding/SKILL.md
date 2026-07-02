@@ -1,9 +1,9 @@
 ---
-name: incident-operational-context-tools
+name: incident-operational-grounding
 description: Playbook analizy incydentu dla neutralnych tools katalogu operational context: grounding systemow, procesow, bounded contextow, ownershipu, code scope i handoffu.
 ---
 
-# Operational Context Tools W Analizie Incydentu
+# Incident Operational Grounding
 
 Uzywaj tego skilla, gdy operational context tools sa dostepne w sesji analizy
 incydentu.
@@ -14,6 +14,12 @@ procesow, integracji, bounded contexts, teamow, glossary terms i handoff rules.
 Katalog jest przydatny do ugruntowania nazw, relacji, ownershipu, code scope,
 DB targeting hints i handoff guidance. Nie jest samodzielnym dowodem root
 cause.
+
+## Cel
+
+Zbuduj `OperationalGroundingSummary`: katalogowe nazwy systemu, procesu,
+bounded contextu, ownershipu, code-search scope, DB hints i handoff route
+potrzebne do incident analysis.
 
 ## Rola Wobec Orkiestratora
 
@@ -85,6 +91,26 @@ Dobierz najmniejszy katalogowy check, ktory rozroznia aktywne potrzeby:
 - glossary/bounded context rozroznia znaczenie biznesowe dla
   `functionalAnalysis`.
 
+## Petla Katalogowa
+
+Po kazdym wyniku `opctx_*` sprawdz, czy katalog rozstrzygnal waska potrzebe
+orkiestratora: nazwe systemu, procesu, bounded contextu, ownera, code-search
+scope, DB hint albo handoff route.
+
+- Jezeli wynik potwierdza routing albo scope i jest wsparty evidence
+  incydentu, zwroc `OperationalGroundingSummary`.
+- Jezeli wynik jest niepelny, ale wskazuje konkretna encje, id, relacje,
+  source ref albo handoff rule, wykonaj jedno waskie poglebienie
+  `opctx_get_entity`.
+- Jezeli potrzebne byloby szerokie browse katalogu, zwroc limitation i
+  `Nie ustalono` dla niepewnych pol.
+- Jezeli katalog wskazuje kilka konkurujacych encji, nie wybieraj ownera
+  na sile; zwroc ambiguity jako visibility limit.
+
+Nie oznaczaj ownershipu, procesu ani bounded contextu jako potwierdzonego na
+podstawie slabej zgodnosci nazwy. Operational context jest groundingiem i
+routingiem, nie dowodem root cause.
+
 ## Co Ten Skill Ma Dostarczyc
 
 Po uzyciu operational context zwroc do orkiestratora:
@@ -108,6 +134,28 @@ Po uzyciu operational context zwroc do orkiestratora:
 - `confidence`: katalog moze podniesc confidence w routingu, ale nie w root
   cause bez supporting logs/code/runtime/DB evidence.
 
+## Kontrakt Wyniku
+
+Zwroc `OperationalGroundingSummary`:
+
+```text
+system: <system/aplikacja albo Nie ustalono>
+process: <proces albo Nie ustalono>
+boundedContext: <bounded context albo Nie ustalono>
+affectedTeam: <team/owner albo Nie ustalono>
+handoffRoute:
+  receiver: <team/system/rola albo Nie ustalono>
+  reason: <dlaczego handoff jest uzasadniony>
+codeSearchScope:
+  - <project/scope/repository hint>
+dbTargetHints:
+  - <application/schema/table hint, jezeli ugruntowany>
+sourceRefs:
+  - <artifact/tool:opctx_*>
+visibilityLimits:
+  - <konkretny brak katalogu albo niejednoznacznosc>
+```
+
 ## Kiedy Wrocic Do Orkiestratora
 
 Wroc, gdy:
@@ -119,6 +167,35 @@ Wroc, gdy:
 
 Jesli katalog nie potwierdza ownershipu albo procesu, wpisz `nieustalone` i
 podaj limitation zamiast zgadywac.
+
+## Walidacja
+
+Sprawdz:
+
+- system, process, bounded context i team sa nazwane tylko przy wsparciu
+  incident evidence albo tool resultu,
+- operational context nie jest uzyty jako dowod root cause,
+- repository/code-search scope ma konkretny powod,
+- handoff route zawiera odbiorce, powod i pierwsza akcje albo limitation.
+
+## Fallbacki
+
+Jezeli katalog nie rozstrzyga:
+
+- zwroc czesciowy `OperationalGroundingSummary`,
+- wpisz `Nie ustalono` zamiast zgadywac,
+- nazwij brak jako `visibilityLimit`,
+- skieruj dalszy krok do GitLab, DB, runtime, downstream albo zespolu
+  wlascicielskiego.
+
+## Artefakty Handoffu
+
+Przekaz:
+
+- `OperationalGroundingSummary`,
+- handoff route i evidence package,
+- code-search albo DB targeting hints,
+- visibility limits dla `functionalAnalysis` i `technicalAnalysis`.
 
 ## Kiedy Uzywac
 

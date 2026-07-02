@@ -89,7 +89,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
             return List.of(
                     "Use when you know a file but need class structure, annotations, inheritance, fields or method names before choosing the next focused read.",
                     "Use typeSummaries, constructorSummaries, methodSummaries and fieldSummaries because annotations are attached to the Java element where they appear.",
-                    "For Flow Explorer PERSISTENCE=DEEP, recursively close every updated table: follow inheritance, embeddables, @OneToOne/@OneToMany/@ManyToMany/@ElementCollection/@JoinTable and collection element types.",
+                    "For Flow Explorer PERSISTENCE section, use this only for concrete ORM gaps requested by flow-explorer-map-persistence-section; deep mode may require full table/column/source closure.",
                     "For Flow Explorer persistence, do not read DDL/Liquibase/Flyway/changelog files; infer table and column names from Java implementation, JPA/Hibernate annotations and ORM naming conventions.",
                     "Treat @Column as optional on @Entity fields/properties; do not report standard ORM naming inference as a visibility limit or report meta.",
                     "Follow with gitlab_build_java_method_use_case_context when continuing flow, or gitlab_read_java_method_slice when method body is needed.",
@@ -100,7 +100,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
                 || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(normalizedToolName)) {
             return List.of(
                     "Fallback when method context, method slice or outline does not fit, parser context is missing or a line range is the only grounded input.",
-                    "For Flow Explorer PERSISTENCE=DEEP, use chunks to close exact ORM annotation gaps for every table and column touched by the endpoint; do not stop at join-table IDs.",
+                    "For Flow Explorer PERSISTENCE section, use chunks only to close exact ORM annotation gaps requested by flow-explorer-map-persistence-section; keep the range narrow.",
                     "Do not use chunks to read DDL/Liquibase/Flyway/changelog files for persistence mapping.",
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Keep ranges tight and tied to a specific goal or sectionModes gap.",
@@ -126,7 +126,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
             return List.of(
                     "Use only to close a concrete gap after checking canonical-tool-inputs.md, compact-flow-manifest.md and snippet-cards.md.",
                     "Use branchRef/projectName from canonical-tool-inputs.md and filePath/methods from compact-flow-manifest.md when available.",
-                    "Follow flow-explorer-gitlab-tools for tool selection; prefer focused reads over broad repository discovery.",
+                    "Follow flow-explorer-code-grounding for tool selection; let flow-explorer-map-persistence-section and flow-explorer-map-integrations-section define section-specific mapping gaps.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }

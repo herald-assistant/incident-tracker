@@ -1,9 +1,9 @@
 ---
-name: incident-analysis-gitlab-tools
+name: incident-code-grounding
 description: Playbook korzystania z GitLab tools podczas analizy incydentu: rozumienie failing code path, predykatow repozytorium, integracji, flow i technicznego handoffu.
 ---
 
-# Analiza Incydentu Z GitLab Tools
+# Incident Code Grounding
 
 Uzywaj tego skilla, gdy logs, stacktrace, deterministic GitLab evidence albo
 runtime signals sugeruja, ze do zrozumienia incydentu potrzebny jest kontekst
@@ -16,6 +16,12 @@ kodu:
 - validation path,
 - async/event flow,
 - operacja i flow potrzebne do handoffu.
+
+## Cel
+
+Ugruntuj diagnoze incydentu kodem i zwroc `CodeGroundingSummary`: najmniejszy
+flow, mechanizm, source refs i limitations potrzebne orkiestratorowi do
+rozroznienia hipotez oraz do `technicalAnalysis`.
 
 ## Rola Wobec Orkiestratora
 
@@ -90,19 +96,89 @@ potwierdzic, oslabic albo obalic:
 - dla async/process: przeczytaj listener/job/outbox handler i ustal event,
   state transition oraz miejsce retry/error handling.
 
+## Petla Code Evidence
+
+Po kazdym wyniku GitLab sprawdz, czy odpowiedzial na `distinguishingQuestion`
+z `IncidentDiagnosisLedger`.
+
+- Jezeli wynik potwierdza albo obala hipoteze kodowa, zwroc
+  `CodeGroundingSummary` i zakoncz eksploracje.
+- Jezeli wynik jest zbyt plytki, ale wskazuje konkretny plik, klase, metode,
+  collaboratora, repository predicate albo integration client, wykonaj jedno
+  waskie poglebienie przez najlepszy kolejny GitLab read.
+- Jezeli kolejne poglebienie byloby broad search, powtorzeniem tego samego
+  pytania albo czytaniem niepowiazanych kandydatow, zwroc limitation zamiast
+  kontynuowac.
+- Jezeli brak dotyczy DB, runtime, downstream albo ownershipu, ustaw `nextStep`
+  na odpowiedni kierunek i wroc do orkiestratora.
+
+Nie finalizuj `CodeGroundingSummary` jako gotowego `technicalAnalysis`.
+Dostarcz mechanizm, source refs i najkrotszy handoff material; synteza sekcji
+wyniku nalezy do `incident-technical-handoff`.
+
 ## Wklad Do Wyniku
 
 Po uzyciu tego skilla zwroc do orkiestratora material w tej postaci:
 
-- `technicalAnalysis`: repozytorium, plik, klasa/metoda, entry point,
-  execution flow, failing method, direct collaborators, predicate/mapping/call
-  i evidence dla Technical Handoff v1,
-- `functionalAnalysis`: krotkie tlumaczenie, jaka operacja biznesowo-systemowa
-  jest obslugiwana, gdzie flow sie przerywa i czy potrzebny jest handoff,
+- `CodeGroundingSummary`,
+- hints dla `technicalAnalysis`: repozytorium, plik, klasa/metoda, entry point,
+  execution flow, failing method, direct collaborators, predicate/mapping/call,
+- hints dla `functionalAnalysis`: jaka operacja biznesowo-systemowa jest
+  obslugiwana, gdzie flow sie przerywa i czy potrzebny jest handoff,
 - `visibilityLimits`: czego nie udalo sie potwierdzic w kodzie albo ktory
   fragment wymaga DB/runtime/downstream visibility,
 - `confidence`: czy code hypothesis jest confirmed, strong_hypothesis,
   weak_hypothesis albo rejected.
+
+## Kontrakt Wyniku
+
+Zwroc `CodeGroundingSummary`:
+
+```text
+incidentClue: <stack/log/evidence clue>
+codeFlow:
+  - step: <entry/collaborator/failure point>
+    sourceRef: <artifact/tool/projectName:path:Lx-Ly>
+mechanism:
+  class: <candidate error class>
+  claim: <co kod potwierdza albo obala>
+  owningLayerFit: confirmed | supports | contradicts | unknown
+handoffTargets:
+  - <file/method/repository/client/table hint/downstream hint>
+visibilityLimits:
+  - <konkretny brak code visibility>
+nextStep:
+  - db_diagnostics | operational_grounding | technical_handoff | reclassify | visibility_limit
+```
+
+## Walidacja
+
+Sprawdz:
+
+- code claim opisuje mechanizm, nie tylko nazwe klasy albo exception,
+- source refs prowadza do konkretnego artifactu, tool resultu albo pliku/linii,
+- GitLab tools byly focused i zwiazane z hipoteza,
+- jezeli kod obala hipoteze, wynik mowi, co przeklasyfikowac,
+- DB, runtime albo downstream claims nie sa udawane jako code proof.
+
+## Fallbacki
+
+Jezeli GitLab nie jest dostepny albo focused read nie rozstrzyga:
+
+- zwroc czesciowy `CodeGroundingSummary`,
+- wskaz najmniejszy brakujacy plik/metode/repozytorium,
+- ustaw code hypothesis najwyzej jako `weak_hypothesis` albo
+  `strong_hypothesis` zgodnie z evidence,
+- przekaz dalszy krok do DB/runtime/downstream/operational visibility.
+
+## Artefakty Handoffu
+
+Przekaz:
+
+- `CodeGroundingSummary`,
+- source refs do Technical Handoff v1,
+- candidate files/classes/methods dla developera,
+- DB/integration/runtime hints, jezeli kod wskazuje dalsza warstwe.
 
 ## Kiedy Wrocic Do Orkiestratora
 

@@ -20,7 +20,7 @@ class CopilotNamedSkillDirectoryResolverTest {
     @Test
     void shouldResolveNamedSkillDirectoriesFromRuntimeRoot() throws Exception {
         createSkill(tempDirectory.resolve("skills").resolve("flow-explorer-orchestrator"));
-        createSkill(tempDirectory.resolve("skills").resolve("flow-explorer-result-contract"));
+        createSkill(tempDirectory.resolve("skills").resolve("flow-explorer-write-report"));
         createSkill(tempDirectory.resolve("skills").resolve("incident-analysis-orchestrator"));
         var properties = new CopilotSdkProperties();
         properties.setSkillResourceRoots(List.of());
@@ -29,12 +29,12 @@ class CopilotNamedSkillDirectoryResolverTest {
 
         var directories = resolver.resolveSkillDirectories(List.of(
                 "flow-explorer-orchestrator",
-                "flow-explorer-result-contract"
+                "flow-explorer-write-report"
         ));
 
         assertSelectedSkillRoot(
                 directories,
-                List.of("flow-explorer-orchestrator", "flow-explorer-result-contract"),
+                List.of("flow-explorer-orchestrator", "flow-explorer-write-report"),
                 List.of("incident-analysis-orchestrator")
         );
     }

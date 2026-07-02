@@ -558,8 +558,8 @@ function addSkills(presentation) {
   const slide = presentation.slides.add();
   const skills = [
     ["starterSkillName", "incident-analysis-orchestrator", "prowadzi główną kolejność pracy AI: od zebranych faktów, przez luki widoczności, do finalnej analizy", C.tealSoft, C.teal],
-    ["diagnosticSkillNames", "incident-operational-context-tools", "uczy, kiedy użyć katalogu operacyjnego do osadzenia incydentu w systemie, procesie i handoffie", C.greenSoft, C.green],
-    ["diagnosticSkillNames", "incident-analysis-gitlab-tools", "uczy ukierunkowanego czytania kodu z GitLaba wtedy, gdy techniczny handoff potrzebuje konkretu", C.blueSoft, C.blue],
+    ["diagnosticSkillNames", "incident-operational-grounding", "uczy, kiedy użyć katalogu operacyjnego do osadzenia incydentu w systemie, procesie i handoffie", C.greenSoft, C.green],
+    ["diagnosticSkillNames", "incident-code-grounding", "uczy ukierunkowanego czytania kodu z GitLaba wtedy, gdy techniczny handoff potrzebuje konkretu", C.blueSoft, C.blue],
     ["diagnosticSkillNames", "incident-data-diagnostics", "uczy bezpiecznej weryfikacji hipotez danych przez DB tool, bez traktowania bazy jak przeglądarki danych", C.violetSoft, C.violet],
     ["resultSkillNames", "incident-functional-analysis", "pilnuje, żeby wynik był zrozumiały dla analityka biznesowo-systemowego", C.amberSoft, C.amber],
     ["resultSkillNames", "incident-technical-handoff", "pilnuje, żeby wynik techniczny dało się naprawić, zweryfikować albo przekazać dalej", C.redSoft, C.red],

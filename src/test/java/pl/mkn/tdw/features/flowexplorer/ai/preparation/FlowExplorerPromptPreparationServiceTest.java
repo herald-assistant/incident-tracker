@@ -41,11 +41,11 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
         assertTrue(prompt.contains("Runtime envelope"));
         assertTrue(prompt.contains("Ten prompt przekazuje dane biezacego runu"));
-        assertTrue(prompt.contains("Zasady pracy, format wyniku i wybor tools pochodza z runtime skilli"));
-        assertTrue(prompt.contains("Zapisz wynik przez report tools zgodnie z `flow-explorer-result-contract`"));
-        assertTrue(prompt.contains("report_upsert_section"));
-        assertTrue(prompt.contains("report_update_meta"));
-        assertTrue(prompt.contains("awaryjny poprawny JSON"));
+        assertTrue(prompt.contains("Zasady pracy, wybor tools, report tools, fallback JSON i format wyniku pochodza z runtime skilli"));
+        assertTrue(prompt.contains("`flow-explorer-write-report` jest jedynym wlascicielem finalnego `AnalysisReport`"));
+        assertFalse(prompt.contains("report_upsert_section"));
+        assertFalse(prompt.contains("report_update_meta"));
+        assertFalse(prompt.contains("awaryjny poprawny JSON"));
         assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
         assertTrue(prompt.contains("`userInstructions` doprecyzowuja intencje"));
         assertTrue(prompt.contains("Najpierw wykorzystaj artefakty osadzone w tym promptcie"));
@@ -54,16 +54,22 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Pobierz i zastosuj wymagane skille przez built-in tool `skill`"));
         assertTrue(prompt.contains("Ten prompt nie powiela playbookow"));
         assertTrue(prompt.contains("MUST: flow-explorer-orchestrator"));
-        assertTrue(prompt.contains("MUST: flow-explorer-result-contract"));
-        assertTrue(prompt.contains("MUST: flow-explorer-goal-test-scenarios"));
-        assertTrue(prompt.contains("SHOULD: flow-explorer-operational-context-tools"));
-        assertTrue(prompt.contains("SHOULD: flow-explorer-gitlab-tools"));
+        assertTrue(prompt.contains("MUST: flow-explorer-write-report"));
+        assertTrue(prompt.contains("Jedyny wlasciciel finalnego `AnalysisReport`, report tools i fallback JSON"));
+        assertTrue(prompt.contains("MUST: flow-explorer-test-scenario-design"));
+        assertTrue(prompt.contains("SHOULD: flow-explorer-operational-grounding"));
+        assertTrue(prompt.contains("SHOULD: flow-explorer-code-grounding"));
+        assertTrue(prompt.contains("SHOULD: flow-explorer-map-persistence-section"));
+        assertTrue(prompt.contains("SHOULD: flow-explorer-map-integrations-section"));
+        assertTrue(prompt.contains("`sectionModes.PERSISTENCE` nie jest `OFF`"));
+        assertTrue(prompt.contains("`sectionModes.INTEGRATIONS` nie jest `OFF`"));
         assertTrue(prompt.contains("COULD: record_tool_feedback"));
         assertTrue(prompt.contains("sectionModes"));
         assertTrue(prompt.contains("activeSectionIds"));
         assertTrue(prompt.contains("activeReportSectionIds: [OVERVIEW, FUNCTIONAL_FLOW, VALIDATIONS, PERSISTENCE, INTEGRATIONS]"));
         assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("Context clipping notes"));
+        assertTrue(prompt.contains("Response contract artifact"));
         assertFalse(prompt.contains("preferuj `gitlab_read_java_method_slice`"));
         assertFalse(prompt.contains("Tool scope guidance"));
         assertFalse(prompt.contains("GitLab tools do not read endpoint functional scope from hidden ToolContext"));
@@ -99,7 +105,7 @@ class FlowExplorerPromptPreparationServiceTest {
         var prompt = preparation.prompt();
 
         assertTrue(prompt.contains("goal: RISK_DETECTION"));
-        assertTrue(prompt.contains("MUST: flow-explorer-goal-risk-detection"));
+        assertTrue(prompt.contains("MUST: flow-explorer-risk-assessment"));
         assertTrue(prompt.contains("focusAreas: [VALIDATIONS, INTEGRATIONS]"));
         assertTrue(prompt.contains("reasoningEffort: high"));
         assertTrue(prompt.contains("Skup sie na ryzykach regresji CRM."));
@@ -111,7 +117,7 @@ class FlowExplorerPromptPreparationServiceTest {
         var prompt = preparation.prompt();
 
         assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
-        assertTrue(prompt.contains("MUST: flow-explorer-goal-deep-discovery"));
+        assertTrue(prompt.contains("MUST: flow-explorer-deep-discovery"));
         assertTrue(prompt.contains("Obowiazuje dla celu DEEP_DISCOVERY"));
     }
 
@@ -128,9 +134,11 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(preparation.artifactContents().isEmpty());
         assertTrue(prompt.contains("# Flow Explorer follow-up chat"));
         assertTrue(prompt.contains("Domyslnie odpowiedz w Markdown"));
-        assertTrue(prompt.contains("Nie zwracaj pelnego JSON `flow-explorer-result-contract`"));
+        assertTrue(prompt.contains("Nie zwracaj pelnego JSON `flow-explorer-write-report`"));
         assertTrue(prompt.contains("Nie zakladaj, ze initial analysis przeczytala cala implementacje endpointu"));
         assertTrue(prompt.contains("domyslnie uzyj dostepnych Flow Explorer tools przed odpowiedzia"));
+        assertTrue(prompt.contains("flow-explorer-map-persistence-section"));
+        assertTrue(prompt.contains("flow-explorer-map-integrations-section"));
         assertTrue(prompt.contains("Docelowy odbiorca to analityk albo tester"));
         assertTrue(prompt.contains("Nie zaczynaj odpowiedzi od nazw klas, metod, beanow"));
         assertTrue(prompt.contains("systemId: crm-service"));

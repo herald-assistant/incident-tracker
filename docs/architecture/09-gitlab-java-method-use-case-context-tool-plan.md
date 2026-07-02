@@ -268,7 +268,7 @@ UX:
 
 Zaktualizowac runtime skille po implementacji backendu i UI.
 
-### `incident-analysis-gitlab-tools`
+### `incident-code-grounding`
 
 Dodac zasade:
 
@@ -283,7 +283,7 @@ Dodac zasade:
 - dla strategii typu `List<Interface>` pozwol traversalowi rozstrzygnac
   implementacje przez registry zamiast czytac wszystkie implementacje.
 
-### `flow-explorer-gitlab-tools`
+### `flow-explorer-code-grounding`
 
 Dodac zasade:
 

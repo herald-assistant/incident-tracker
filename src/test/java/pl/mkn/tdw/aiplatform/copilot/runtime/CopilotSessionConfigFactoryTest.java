@@ -28,7 +28,7 @@ class CopilotSessionConfigFactoryTest {
         properties.setClientName("incidenttracker-test");
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
-        properties.setDisabledSkills(List.of("incident-analysis-gitlab-tools"));
+        properties.setDisabledSkills(List.of("incident-code-grounding"));
         var factory = new CopilotSessionConfigFactory(properties);
         var tools = tools("gitlab_find_flow_context", "gitlab_read_repository_file_chunk");
 
@@ -59,7 +59,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(tools, sessionConfig.getTools());
         assertEquals(List.of("gitlab_find_flow_context", "skill"), sessionConfig.getAvailableTools());
         assertEquals(List.of("C:\\runtime\\copilot_skills"), sessionConfig.getSkillDirectories());
-        assertEquals(List.of("incident-analysis-gitlab-tools"), sessionConfig.getDisabledSkills());
+        assertEquals(List.of("incident-code-grounding"), sessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", sessionConfig.getModel());
         assertEquals("medium", sessionConfig.getReasoningEffort());
         assertNull(sessionConfig.getInfiniteSessions());
@@ -71,7 +71,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(tools, resumeSessionConfig.getTools());
         assertEquals(List.of("gitlab_find_flow_context", "skill"), resumeSessionConfig.getAvailableTools());
         assertEquals(List.of("C:\\runtime\\copilot_skills"), resumeSessionConfig.getSkillDirectories());
-        assertEquals(List.of("incident-analysis-gitlab-tools"), resumeSessionConfig.getDisabledSkills());
+        assertEquals(List.of("incident-code-grounding"), resumeSessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", resumeSessionConfig.getModel());
         assertEquals("medium", resumeSessionConfig.getReasoningEffort());
         assertNull(resumeSessionConfig.getInfiniteSessions());

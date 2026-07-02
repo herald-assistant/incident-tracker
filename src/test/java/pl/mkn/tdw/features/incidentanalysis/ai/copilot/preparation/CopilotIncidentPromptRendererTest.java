@@ -98,7 +98,7 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("Do not claim that you know a skill definition, SKILL.md content, or detailed skill rules unless you loaded that skill through the `skill` tool in this session."));
         assertTrue(prompt.contains("Runtime skills:"));
         assertTrue(prompt.contains("starter skill to load before classifying the incident: `incident-analysis-orchestrator`"));
-        assertTrue(prompt.contains("diagnostic skills to load only when required by the starter algorithm: incident-operational-context-tools, incident-analysis-gitlab-tools, incident-data-diagnostics"));
+        assertTrue(prompt.contains("diagnostic skills to load only when required by the starter algorithm: incident-operational-grounding, incident-code-grounding, incident-data-diagnostics"));
         assertTrue(prompt.contains("result skills to load after diagnosis for final answer synthesis: incident-functional-analysis, incident-technical-handoff"));
         assertTrue(prompt.contains("Before the first DB table/column/schema-table query for a JPA, repository or data-access symptom"));
         assertTrue(prompt.contains("Treat `FUNCTIONAL_CONTEXT_GROUNDING_RECOMMENDED` as a targeted gap for `functionalAnalysis`"));

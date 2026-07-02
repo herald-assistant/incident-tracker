@@ -2,7 +2,7 @@
 name: code-validation-or-business-rule-status-transition
 expectedClassification: code_validation_or_business_rule
 starterSkill: incident-analysis-orchestrator
-specializedSkill: incident-analysis-gitlab-tools
+specializedSkill: incident-code-grounding
 ---
 
 # Fixture: Code Validation Or Business Rule - Status Transition
@@ -16,7 +16,7 @@ Fixture testuje kontrakt routingu:
 
 1. Najpierw research flow przez `incident-analysis-orchestrator`.
 2. Potem klasyfikacja jako `code_validation_or_business_rule`.
-3. Potem przejscie do `incident-analysis-gitlab-tools`.
+3. Potem przejscie do `incident-code-grounding`.
 4. Na koncu wynik w polach `functionalAnalysis` i `technicalAnalysis`.
 
 ## Minimalne Evidence
@@ -32,7 +32,7 @@ Fixture testuje kontrakt routingu:
 
 1. Zbadaj flow use case'u przed klasyfikacja:
    `command -> notification load -> transition decision -> validation rejection`.
-2. Zaladuj `incident-analysis-gitlab-tools`.
+2. Zaladuj `incident-code-grounding`.
 3. Przeczytaj walidator, service decision albo rule table w kodzie.
 4. Oddziel poprawne odrzucenie biznesowe od blednej implementacji reguly.
 5. Jesli mechanizm awarii to rule/validation path, utrzymaj

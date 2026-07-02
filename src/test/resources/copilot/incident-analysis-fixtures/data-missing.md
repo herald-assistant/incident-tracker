@@ -101,6 +101,6 @@ Key column: CASE_ID
 - Nie klasyfikuj tylko po nazwie exceptiona.
 - Nie finalizuj `data_missing` bez DB evidence albo jawnego braku DB
   visibility.
-- Nie uzywaj `incident-analysis-gitlab-tools` jako zamiennika DB evidence.
+- Nie uzywaj `incident-code-grounding` jako zamiennika DB evidence.
 - Nie wypelniaj starych pol `summary`, `recommendedAction`, `rationale`,
   `affectedFunction` ani `evidenceReferences`.

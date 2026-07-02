@@ -2,7 +2,7 @@
 name: outside-visibility-or-handoff-partner-rejection
 expectedClassification: outside_visibility_or_handoff
 starterSkill: incident-analysis-orchestrator
-specializedSkill: incident-operational-context-tools
+specializedSkill: incident-operational-grounding
 ---
 
 # Fixture: Outside Visibility Or Handoff - Partner Rejection
@@ -16,7 +16,7 @@ Fixture testuje kontrakt routingu:
 
 1. Najpierw research flow przez `incident-analysis-orchestrator`.
 2. Potem klasyfikacja jako `outside_visibility_or_handoff`.
-3. Potem przejscie do `incident-operational-context-tools`.
+3. Potem przejscie do `incident-operational-grounding`.
 4. Na koncu wynik w polach `functionalAnalysis` i `technicalAnalysis`.
 
 ## Minimalne Evidence
@@ -33,7 +33,7 @@ Fixture testuje kontrakt routingu:
 1. Zbadaj flow use case'u przed klasyfikacja:
    `local validation -> payload build -> partner call -> external rejection`.
 2. Zweryfikuj, czy lokalne evidence wystarcza tylko do handoffu.
-3. Zaladuj `incident-operational-context-tools` dla downstream owner, route i
+3. Zaladuj `incident-operational-grounding` dla downstream owner, route i
    handoff evidence package.
 4. Jesli root cause wymaga danych partnera, utrzymaj
    `outside_visibility_or_handoff`.

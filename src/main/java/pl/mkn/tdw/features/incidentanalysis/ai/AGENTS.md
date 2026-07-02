@@ -44,7 +44,7 @@ neutralne evidence/usage DTO w `shared.evidence` i `shared.ai`.
   `technicalAnalysis`.
 - Operational context tools sa neutralne i mieszkaja w `agenttools`. Tutaj
   moze mieszkac tylko incidentowa semantyka ich uzycia: coverage-aware policy,
-  prompt/guidance i skill `incident-operational-context-tools`.
+  prompt/guidance i skill `incident-operational-grounding`.
 - Incident guidance dla `opctx_*` ma traktowac operational context jako
   kontekst katalogowy do ownershipu, scope GitLaba/DB i handoffu, a nie jako
   samodzielny dowod root cause.
