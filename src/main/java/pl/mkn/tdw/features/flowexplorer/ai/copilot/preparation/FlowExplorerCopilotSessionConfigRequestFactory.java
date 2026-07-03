@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotModelSelection;
@@ -13,6 +14,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import java.util.List;
 
 @Component
+@Slf4j
 public class FlowExplorerCopilotSessionConfigRequestFactory {
 
     private static final String FLOW_EXPLORER_TOOL_DENIED_MESSAGE =
@@ -67,12 +69,27 @@ public class FlowExplorerCopilotSessionConfigRequestFactory {
         var policy = toolAccessPolicy != null
                 ? toolAccessPolicy
                 : FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of());
+        var skillDirectories = skillDirectoryResolver.resolveSkillDirectories(skillNames);
+
+        if (skillNames == null || skillNames.isEmpty() || skillDirectories.isEmpty()) {
+            throw new IllegalStateException(
+                    "Flow Explorer Copilot runtime skills were not resolved for session: " + copilotSessionId
+            );
+        }
+
+        log.info(
+                "Flow Explorer Copilot session skills resolved sessionId={} skillCount={} skills={} skillDirectories={}",
+                copilotSessionId,
+                skillNames.size(),
+                skillNames,
+                skillDirectories
+        );
 
         return new CopilotSessionConfigRequest(
                 copilotSessionId,
                 policy.enabledTools(),
                 policy.availableToolNames(),
-                skillDirectoryResolver.resolveSkillDirectories(skillNames),
+                skillDirectories,
                 modelSelection(options),
                 FLOW_EXPLORER_TOOL_DENIED_MESSAGE
         );

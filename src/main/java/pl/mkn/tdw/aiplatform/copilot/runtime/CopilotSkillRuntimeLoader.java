@@ -80,6 +80,13 @@ public class CopilotSkillRuntimeLoader {
             }
         }
 
+        log.info(
+                "Copilot selected runtime skills resolved selectedRoot={} skillCount={} skills={}",
+                selectedRoot,
+                normalizedSkillNames.size(),
+                normalizedSkillNames
+        );
+
         return List.of(selectedRoot.toString());
     }
 
