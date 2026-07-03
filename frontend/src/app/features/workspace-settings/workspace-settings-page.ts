@@ -30,12 +30,16 @@ export class WorkspaceSettingsPageComponent {
   readonly errorMessage = signal('');
   readonly saveMessage = signal('');
   readonly showToken = signal(false);
+  readonly showCopilotGithubToken = signal(false);
   readonly showElasticsearchAuthorizationHeader = signal(false);
   readonly showDynatraceApiToken = signal(false);
 
   readonly form = new FormGroup({
     appUi: new FormGroup({
       title: new FormControl('', { nonNullable: true })
+    }),
+    copilot: new FormGroup({
+      localGithubToken: new FormControl('', { nonNullable: true })
     }),
     gitLab: new FormGroup({
       baseUrl: new FormControl('', { nonNullable: true }),
@@ -117,6 +121,10 @@ export class WorkspaceSettingsPageComponent {
     this.showToken.update((visible) => !visible);
   }
 
+  toggleCopilotGithubTokenVisibility(): void {
+    this.showCopilotGithubToken.update((visible) => !visible);
+  }
+
   toggleElasticsearchAuthorizationHeaderVisibility(): void {
     this.showElasticsearchAuthorizationHeader.update((visible) => !visible);
   }
@@ -168,6 +176,9 @@ export class WorkspaceSettingsPageComponent {
       appUi: {
         title: settings.values.appUi.title.value
       },
+      copilot: {
+        localGithubToken: settings.values.copilot.localGithubToken.value
+      },
       gitLab: {
         baseUrl: settings.values.gitLab.baseUrl.value,
         group: settings.values.gitLab.group.value,
@@ -191,6 +202,9 @@ export class WorkspaceSettingsPageComponent {
       appUi: {
         title: this.form.controls.appUi.controls.title.value.trim()
       },
+      copilot: {
+        localGithubToken: this.form.controls.copilot.controls.localGithubToken.value.trim()
+      },
       gitLab: {
         baseUrl: this.form.controls.gitLab.controls.baseUrl.value.trim(),
         group: this.form.controls.gitLab.controls.group.value.trim(),
@@ -213,6 +227,7 @@ export class WorkspaceSettingsPageComponent {
   private fields(settings: WorkspaceSettingsResponse): WorkspaceSettingsField[] {
     return [
       settings.values.appUi.title,
+      settings.values.copilot.localGithubToken,
       settings.values.gitLab.baseUrl,
       settings.values.gitLab.group,
       settings.values.gitLab.token,

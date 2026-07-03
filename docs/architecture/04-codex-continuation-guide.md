@@ -337,13 +337,16 @@ Route `/workspace-settings` jest elementem `Platform`: pokazuje efektywne
 wartosci z `application.properties`, zapisuje lokalne override'y do
 `${tdw.workspace.directory}/settings.json` przez
 `GET/PUT /api/workspace/settings` i na starcie obejmuje `app.ui.title`,
-connection settings GitLaba, Elasticsearch i Dynatrace:
+lokalny token Copilota oraz connection settings GitLaba, Elasticsearch i
+Dynatrace:
+`analysis.ai.copilot.auth.local.github-token`,
 `analysis.gitlab.base-url`, `analysis.gitlab.group`, `analysis.gitlab.token`,
 `analysis.elasticsearch.base-url`, `analysis.elasticsearch.kibana-space-id`,
 `analysis.elasticsearch.index-pattern`,
 `analysis.elasticsearch.authorization-header`, `analysis.dynatrace.base-url`
 oraz `analysis.dynatrace.api-token`. Nie dodawaj tam flag SSL, np.
-`analysis.gitlab.ignore-ssl-errors`, ani technicznych limitow odpowiedzi.
+`analysis.gitlab.ignore-ssl-errors`, auth mode/display-name Copilota ani
+technicznych limitow odpowiedzi.
 Takie endpointy traktuj jako shared/operator API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.

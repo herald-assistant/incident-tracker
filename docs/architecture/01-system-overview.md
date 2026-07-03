@@ -76,7 +76,7 @@ Na dzisiaj projekt ma:
 - ekran `GET /workspace-settings` w sekcji `Platform` do podgladu efektywnych
   wartosci z `application.properties` i zapisu lokalnych override'ow do
   `${tdw.workspace.directory}/settings.json` dla brandu UI oraz podstawowych
-  parametrow GitLaba, Elasticsearch i Dynatrace,
+  parametrow Copilota, GitLaba, Elasticsearch i Dynatrace,
 - glowne job-based API: `POST /analysis/jobs` i
   `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
@@ -142,8 +142,9 @@ Na dzisiaj projekt ma:
   workspace'u. Ekran pokazuje efektywne wartosci z `application.properties`
   oraz zrodlo kazdego pola; zapis trafia do
   `${tdw.workspace.directory}/settings.json`. Aktualny zakres obejmuje
-  `app.ui.title`, podstawowe connection settings GitLaba, Elasticsearch i
-  Dynatrace oraz sekrety tych integracji.
+  `app.ui.title`, lokalny token Copilota
+  (`analysis.ai.copilot.auth.local.github-token`), podstawowe connection
+  settings GitLaba, Elasticsearch i Dynatrace oraz sekrety tych integracji.
 - `POST /analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
   `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
@@ -249,7 +250,8 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Shared/operator API lokalnych ustawien workspace'u. Pakiet laczy
   `application.properties` z `localworkspace.settings`, pokazuje zrodlo
   wartosci dla UI i aplikuje efektywne override'y do runtime properties
-  uzywanych przez brand UI oraz integracje GitLaba.
+  uzywanych przez brand UI, lokalny token Copilota oraz integracje GitLaba,
+  Elasticsearch i Dynatrace.
 - `pl.mkn.tdw.api.githubauth`
   Shared/operator API autoryzacji GitHub dla UI oraz backendowa operator
   session cookie. Ten pakiet zna request HTTP, ale nie przechowuje tokenow w

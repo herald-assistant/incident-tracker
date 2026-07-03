@@ -104,6 +104,87 @@
         }
       </section>
 
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsCopilotTitle">
+        <div class="workspace-settings-panel__header">
+          <div>
+            <p class="section-eyebrow">Copilot</p>
+            <h2 id="workspaceSettingsCopilotTitle">Local token</h2>
+          </div>
+        </div>
+
+        @if (settings(); as currentSettings) {
+          <div class="workspace-settings-grid">
+            <label class="workspace-settings-field" for="copilotGithubToken">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.copilot.localGithubToken.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    GitHub token
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.copilot.localGithubToken, form.controls.copilot.controls.localGithubToken.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.copilot.localGithubToken) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.copilot.localGithubToken)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.copilot.localGithubToken, form.controls.copilot.controls.localGithubToken.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.copilot.localGithubToken, form.controls.copilot.controls.localGithubToken.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for GitHub token"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.copilot.controls.localGithubToken, currentSettings.values.copilot.localGithubToken)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <span class="workspace-settings-secret-control">
+                <input
+                  id="copilotGithubToken"
+                  class="text-input"
+                  [type]="showCopilotGithubToken() ? 'text' : 'password'"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="form.controls.copilot.controls.localGithubToken"
+                />
+                <button
+                  class="secondary-button workspace-settings-icon-button"
+                  type="button"
+                  [attr.aria-label]="showCopilotGithubToken() ? 'Hide GitHub token' : 'Show GitHub token'"
+                  [matTooltip]="showCopilotGithubToken() ? 'Hide GitHub token' : 'Show GitHub token'"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
+                  (click)="toggleCopilotGithubTokenVisibility()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ showCopilotGithubToken() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </span>
+            </label>
+          </div>
+        } @else {
+          <div class="workspace-settings-placeholder">
+            <span class="workspace-settings-spinner" aria-hidden="true"></span>
+            <span>Loading settings...</span>
+          </div>
+        }
+      </section>
+
       <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsGitLabTitle">
         <div class="workspace-settings-panel__header">
           <div>

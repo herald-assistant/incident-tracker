@@ -19,6 +19,7 @@ public final class WorkspaceSettingsDtos {
 
     public record WorkspaceSettingsValuesResponse(
             WorkspaceSettingsAppUiResponse appUi,
+            WorkspaceSettingsCopilotResponse copilot,
             WorkspaceSettingsGitLabResponse gitLab,
             WorkspaceSettingsElasticsearchResponse elasticsearch,
             WorkspaceSettingsDynatraceResponse dynatrace
@@ -27,6 +28,11 @@ public final class WorkspaceSettingsDtos {
 
     public record WorkspaceSettingsAppUiResponse(
             WorkspaceSettingsFieldResponse title
+    ) {
+    }
+
+    public record WorkspaceSettingsCopilotResponse(
+            WorkspaceSettingsFieldResponse localGithubToken
     ) {
     }
 
@@ -63,6 +69,7 @@ public final class WorkspaceSettingsDtos {
 
     public record WorkspaceSettingsUpdateRequest(
             WorkspaceSettingsAppUiUpdate appUi,
+            WorkspaceSettingsCopilotUpdate copilot,
             WorkspaceSettingsGitLabUpdate gitLab,
             WorkspaceSettingsElasticsearchUpdate elasticsearch,
             WorkspaceSettingsDynatraceUpdate dynatrace
@@ -71,6 +78,11 @@ public final class WorkspaceSettingsDtos {
 
     public record WorkspaceSettingsAppUiUpdate(
             String title
+    ) {
+    }
+
+    public record WorkspaceSettingsCopilotUpdate(
+            String localGithubToken
     ) {
     }
 

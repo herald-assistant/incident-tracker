@@ -157,9 +157,11 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('tdw-data/settings.json');
+    expect(compiled.textContent).toContain('Copilot');
     expect(compiled.textContent).toContain('Elasticsearch');
     expect(compiled.textContent).toContain('Dynatrace');
     expect(compiled.querySelector('.workspace-settings-baseline')).toBeNull();
+    expect(compiled.textContent).not.toContain('analysis.ai.copilot');
     expect(compiled.textContent).not.toContain('analysis.gitlab');
     expect(compiled.textContent).not.toContain('analysis.elasticsearch');
     expect(compiled.textContent).not.toContain('analysis.dynatrace');
@@ -171,6 +173,7 @@ describe('App', () => {
     );
     expect(sourceBadges.map((badge) => badge.textContent?.trim())).toEqual([
       'DEFAULT',
+      'CUSTOM',
       'DEFAULT',
       'CUSTOM',
       'CUSTOM',
@@ -187,6 +190,7 @@ describe('App', () => {
       .map((element) => element.injector.get(MatTooltip));
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.message)).toEqual([
       'Default: ChatCLP',
+      '',
       'Default: https://gitlab.example.com',
       'Default: platform/app',
       '',
@@ -199,6 +203,7 @@ describe('App', () => {
     ]);
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.disabled)).toEqual([
       false,
+      true,
       false,
       false,
       true,
@@ -214,6 +219,7 @@ describe('App', () => {
       compiled.querySelectorAll<HTMLButtonElement>('.workspace-settings-field-reset-button')
     );
     expect(resetButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Restore default for GitHub token',
       'Restore default for Group',
       'Restore default for Token',
       'Restore default for Elasticsearch Base URL',
@@ -233,10 +239,15 @@ describe('App', () => {
       'Restore default',
       'Restore default',
       'Restore default',
+      'Restore default',
       'Restore default'
     ]);
 
-    resetButtons[0].click();
+    const groupResetButton = resetButtons.find(
+      (button) => button.getAttribute('aria-label') === 'Restore default for Group'
+    );
+    expect(groupResetButton).toBeTruthy();
+    groupResetButton?.click();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -248,6 +259,7 @@ describe('App', () => {
     expect(groupInput?.value).toBe('platform/app');
     expect(updatedSourceBadges.map((badge) => badge.textContent?.trim())).toEqual([
       'DEFAULT',
+      'CUSTOM',
       'DEFAULT',
       'DEFAULT',
       'CUSTOM',
@@ -258,7 +270,7 @@ describe('App', () => {
       'CUSTOM',
       'CUSTOM'
     ]);
-    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(6);
+    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(7);
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -527,6 +539,16 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           workspaceValue: null,
           source: 'APPLICATION_PROPERTIES',
           secret: false
+        }
+      },
+      copilot: {
+        localGithubToken: {
+          propertyKey: 'analysis.ai.copilot.auth.local.github-token',
+          value: 'ghu_copilot_secret',
+          applicationValue: '',
+          workspaceValue: 'ghu_copilot_secret',
+          source: 'WORKSPACE_SETTINGS',
+          secret: true
         }
       },
       gitLab: {

@@ -64,9 +64,11 @@ Decyzje:
   `analysis.elasticsearch.kibana-space-id`,
   `analysis.elasticsearch.index-pattern`,
   `analysis.elasticsearch.authorization-header`) oraz Dynatrace
-  (`analysis.dynatrace.base-url`, `analysis.dynatrace.api-token`).
-  Flagi SSL, np. `analysis.gitlab.ignore-ssl-errors`, i techniczne limity
-  odpowiedzi integracji pozostaja poza UI ustawien.
+  (`analysis.dynatrace.base-url`, `analysis.dynatrace.api-token`) oraz lokalny
+  token Copilota (`analysis.ai.copilot.auth.local.github-token`). MVP nie
+  wystawia `analysis.ai.copilot.auth.mode`,
+  `analysis.ai.copilot.auth.local.display-name`, flag SSL ani technicznych
+  limitow odpowiedzi integracji.
 
 Konsekwencje UI:
 

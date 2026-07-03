@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsFieldResponse;
@@ -38,6 +39,7 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.settingsPath").value("tdw-data/settings.json"))
                 .andExpect(jsonPath("$.values.appUi.title.value").value("CRM workspace"))
+                .andExpect(jsonPath("$.values.copilot.localGithubToken.value").value("ghu_secret"))
                 .andExpect(jsonPath("$.values.gitLab.group.source").value("WORKSPACE_SETTINGS"))
                 .andExpect(jsonPath("$.values.elasticsearch.indexPattern.value").value("logs-platform-*"))
                 .andExpect(jsonPath("$.values.dynatrace.baseUrl.value").value("https://dynatrace.example.com"));
@@ -53,6 +55,9 @@ class WorkspaceSettingsControllerTest {
                                 {
                                   "appUi": {
                                     "title": "CRM workspace"
+                                  },
+                                  "copilot": {
+                                    "localGithubToken": "ghu_secret"
                                   },
                                   "gitLab": {
                                     "baseUrl": "https://gitlab.example.com",
@@ -70,8 +75,9 @@ class WorkspaceSettingsControllerTest {
                                     "apiToken": "dt0c01_secret"
                                   }
                                 }
-                                """))
+                """))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.values.copilot.localGithubToken.secret").value(true))
                 .andExpect(jsonPath("$.values.gitLab.token.secret").value(true))
                 .andExpect(jsonPath("$.values.elasticsearch.authorizationHeader.secret").value(true))
                 .andExpect(jsonPath("$.values.dynatrace.apiToken.secret").value(true));
@@ -89,6 +95,14 @@ class WorkspaceSettingsControllerTest {
                                 "CRM workspace",
                                 WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                 false
+                        )),
+                        new WorkspaceSettingsCopilotResponse(new WorkspaceSettingsFieldResponse(
+                                "analysis.ai.copilot.auth.local.github-token",
+                                "ghu_secret",
+                                "",
+                                "ghu_secret",
+                                WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                true
                         )),
                         new WorkspaceSettingsGitLabResponse(
                                 new WorkspaceSettingsFieldResponse(

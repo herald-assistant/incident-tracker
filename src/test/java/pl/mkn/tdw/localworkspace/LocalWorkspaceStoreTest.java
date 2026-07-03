@@ -12,6 +12,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.settings.FileSystemLocalWorkspaceSettingsStore;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceCopilotSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
@@ -149,6 +150,7 @@ class LocalWorkspaceStoreTest {
                 LocalWorkspaceSettingsFile.SCHEMA,
                 LocalWorkspaceSettingsFile.VERSION,
                 new LocalWorkspaceAppUiSettings("CRM workspace"),
+                new LocalWorkspaceCopilotSettings("ghu_copilot_secret"),
                 new LocalWorkspaceGitLabSettings(
                         "https://gitlab.example.com",
                         "platform/backend",
@@ -172,6 +174,8 @@ class LocalWorkspaceStoreTest {
         var settingsJson = Files.readString(fixture.paths.settingsFile(), StandardCharsets.UTF_8);
         assertTrue(settingsJson.contains("\"schema\" : \"tdw.workspace-settings\""));
         assertTrue(settingsJson.contains("\"title\" : \"CRM workspace\""));
+        assertTrue(settingsJson.contains("\"copilot\""));
+        assertTrue(settingsJson.contains("\"localGithubToken\" : \"ghu_copilot_secret\""));
         assertTrue(settingsJson.contains("\"token\" : \"glpat_secret\""));
         assertTrue(settingsJson.contains("\"elasticsearch\""));
         assertTrue(settingsJson.contains("\"indexPattern\" : \"logs-*\""));
@@ -181,6 +185,7 @@ class LocalWorkspaceStoreTest {
 
         var settings = fixture.settingsStore.read();
         assertEquals("CRM workspace", settings.appUi().title());
+        assertEquals("ghu_copilot_secret", settings.copilot().localGithubToken());
         assertEquals("https://gitlab.example.com", settings.gitLab().baseUrl());
         assertEquals("platform/backend", settings.gitLab().group());
         assertEquals("glpat_secret", settings.gitLab().token());

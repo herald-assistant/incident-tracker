@@ -8,6 +8,7 @@ export interface WorkspaceSettingsResponse {
 
 export interface WorkspaceSettingsValues {
   appUi: WorkspaceSettingsAppUi;
+  copilot: WorkspaceSettingsCopilot;
   gitLab: WorkspaceSettingsGitLab;
   elasticsearch: WorkspaceSettingsElasticsearch;
   dynatrace: WorkspaceSettingsDynatrace;
@@ -15,6 +16,10 @@ export interface WorkspaceSettingsValues {
 
 export interface WorkspaceSettingsAppUi {
   title: WorkspaceSettingsField;
+}
+
+export interface WorkspaceSettingsCopilot {
+  localGithubToken: WorkspaceSettingsField;
 }
 
 export interface WorkspaceSettingsGitLab {
@@ -47,6 +52,9 @@ export interface WorkspaceSettingsField {
 export interface WorkspaceSettingsUpdateRequest {
   appUi: {
     title: string;
+  };
+  copilot: {
+    localGithubToken: string;
   };
   gitLab: {
     baseUrl: string;

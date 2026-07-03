@@ -4,13 +4,14 @@ public record LocalWorkspaceSettingsFile(
         String schema,
         int version,
         LocalWorkspaceAppUiSettings appUi,
+        LocalWorkspaceCopilotSettings copilot,
         LocalWorkspaceGitLabSettings gitLab,
         LocalWorkspaceElasticsearchSettings elasticsearch,
         LocalWorkspaceDynatraceSettings dynatrace
 ) {
 
     public static final String SCHEMA = "tdw.workspace-settings";
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
 
     public LocalWorkspaceSettingsFile {
         if (schema == null || schema.isBlank()) {
@@ -21,6 +22,9 @@ public record LocalWorkspaceSettingsFile(
         }
         if (appUi == null) {
             appUi = LocalWorkspaceAppUiSettings.empty();
+        }
+        if (copilot == null) {
+            copilot = LocalWorkspaceCopilotSettings.empty();
         }
         if (gitLab == null) {
             gitLab = LocalWorkspaceGitLabSettings.empty();
@@ -38,6 +42,7 @@ public record LocalWorkspaceSettingsFile(
                 SCHEMA,
                 VERSION,
                 LocalWorkspaceAppUiSettings.empty(),
+                LocalWorkspaceCopilotSettings.empty(),
                 LocalWorkspaceGitLabSettings.empty(),
                 LocalWorkspaceElasticsearchSettings.empty(),
                 LocalWorkspaceDynatraceSettings.empty()

@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceCopilotSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
@@ -19,6 +21,8 @@ import java.util.Objects;
 
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
@@ -37,6 +41,7 @@ public class WorkspaceSettingsService {
 
     private final LocalWorkspaceSettingsStore settingsStore;
     private final UiConfigProperties uiConfigProperties;
+    private final CopilotSdkProperties copilotSdkProperties;
     private final GitLabProperties gitLabProperties;
     private final ElasticProperties elasticProperties;
     private final DynatraceProperties dynatraceProperties;
@@ -62,6 +67,9 @@ public class WorkspaceSettingsService {
         var appUi = request != null && request.appUi() != null
                 ? request.appUi()
                 : new WorkspaceSettingsAppUiUpdate(null);
+        var copilot = request != null && request.copilot() != null
+                ? request.copilot()
+                : new WorkspaceSettingsCopilotUpdate(null);
         var gitLab = request != null && request.gitLab() != null
                 ? request.gitLab()
                 : new WorkspaceSettingsGitLabUpdate(null, null, null);
@@ -76,6 +84,12 @@ public class WorkspaceSettingsService {
                 LocalWorkspaceSettingsFile.SCHEMA,
                 LocalWorkspaceSettingsFile.VERSION,
                 new LocalWorkspaceAppUiSettings(overrideValue(appUi.title(), application().appUi().title())),
+                new LocalWorkspaceCopilotSettings(
+                        overrideValue(
+                                copilot.localGithubToken(),
+                                application().copilot().localGithubToken()
+                        )
+                ),
                 new LocalWorkspaceGitLabSettings(
                         overrideValue(gitLab.baseUrl(), application().gitLab().baseUrl()),
                         overrideValue(gitLab.group(), application().gitLab().group()),
@@ -114,6 +128,12 @@ public class WorkspaceSettingsService {
                                 app.appUi().title(),
                                 file.appUi().title(),
                                 false
+                        )),
+                        new WorkspaceSettingsCopilotResponse(field(
+                                "analysis.ai.copilot.auth.local.github-token",
+                                app.copilot().localGithubToken(),
+                                file.copilot().localGithubToken(),
+                                true
                         )),
                         new WorkspaceSettingsGitLabResponse(
                                 field("analysis.gitlab.base-url", app.gitLab().baseUrl(), file.gitLab().baseUrl(), false),
@@ -190,6 +210,10 @@ public class WorkspaceSettingsService {
         var file = settings == null ? LocalWorkspaceSettingsFile.empty() : settings;
 
         uiConfigProperties.setTitle(effectiveValue(file.appUi().title(), app.appUi().title()));
+        copilotLocalProperties().setGithubToken(effectiveValue(
+                file.copilot().localGithubToken(),
+                app.copilot().localGithubToken()
+        ));
         gitLabProperties.setBaseUrl(effectiveValue(file.gitLab().baseUrl(), app.gitLab().baseUrl()));
         gitLabProperties.setGroup(effectiveValue(file.gitLab().group(), app.gitLab().group()));
         gitLabProperties.setToken(effectiveValue(file.gitLab().token(), app.gitLab().token()));
@@ -220,6 +244,7 @@ public class WorkspaceSettingsService {
     private WorkspaceSettingsValues snapshotApplicationValues() {
         return new WorkspaceSettingsValues(
                 new AppUiSettings(normalize(uiConfigProperties.getTitle())),
+                new CopilotSettings(normalize(copilotLocalGithubToken())),
                 new GitLabSettings(
                         normalize(gitLabProperties.getBaseUrl()),
                         normalize(gitLabProperties.getGroup()),
@@ -258,12 +283,30 @@ public class WorkspaceSettingsService {
         return normalized == null ? "" : normalized;
     }
 
+    private String copilotLocalGithubToken() {
+        if (copilotSdkProperties.getAuth() == null || copilotSdkProperties.getAuth().getLocal() == null) {
+            return null;
+        }
+        return copilotSdkProperties.getAuth().getLocal().getGithubToken();
+    }
+
+    private CopilotSdkProperties.Local copilotLocalProperties() {
+        if (copilotSdkProperties.getAuth() == null) {
+            copilotSdkProperties.setAuth(new CopilotSdkProperties.Auth());
+        }
+        if (copilotSdkProperties.getAuth().getLocal() == null) {
+            copilotSdkProperties.getAuth().setLocal(new CopilotSdkProperties.Local());
+        }
+        return copilotSdkProperties.getAuth().getLocal();
+    }
+
     private String normalize(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
     private record WorkspaceSettingsValues(
             AppUiSettings appUi,
+            CopilotSettings copilot,
             GitLabSettings gitLab,
             ElasticsearchSettings elasticsearch,
             DynatraceSettings dynatrace
@@ -272,6 +315,11 @@ public class WorkspaceSettingsService {
 
     private record AppUiSettings(
             String title
+    ) {
+    }
+
+    private record CopilotSettings(
+            String localGithubToken
     ) {
     }
 
