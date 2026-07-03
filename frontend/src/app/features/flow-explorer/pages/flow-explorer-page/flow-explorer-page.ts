@@ -331,6 +331,11 @@ export class FlowExplorerPageComponent implements OnInit {
     const count = this.endpoints().length;
     return count === 1 ? '1 endpoint' : `${count} endpoints`;
   });
+  readonly endpointInventoryDateLabel = computed(() => {
+    const dataCollectedAt = this.endpointInventory()?.dataCollectedAt;
+    const formatted = formatEndpointInventoryDate(dataCollectedAt);
+    return formatted ? `Data: ${formatted}` : '';
+  });
   readonly selectedSystemLabel = computed(() => {
     const system = this.selectedSystem();
     if (system) {
@@ -689,7 +694,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.endpointState.set('idle');
   }
 
-  protected loadEndpointInventory(): void {
+  protected loadEndpointInventory(refreshCache = false): void {
     const selectedSystem = this.selectedSystem();
     if (!selectedSystem) {
       this.endpointState.set('idle');
@@ -700,9 +705,14 @@ export class FlowExplorerPageComponent implements OnInit {
     this.endpointState.set('loading');
     this.endpointError.set('');
     this.selectedEndpointId.set('');
+    this.endpointInventory.set(null);
+
+    const query = refreshCache
+      ? { branch: this.branch(), refresh: true }
+      : { branch: this.branch() };
 
     this.flowExplorerApi
-      .getEndpointInventory(selectedSystem.systemId, { branch: this.branch() })
+      .getEndpointInventory(selectedSystem.systemId, query)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (inventory) => {
@@ -1858,6 +1868,22 @@ function formatDurationMs(value: number): string {
   }
 
   return `${formatUsageTokenCount(value)} ms`;
+}
+
+function formatEndpointInventoryDate(value: string | null | undefined): string {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('pl-PL', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(date);
 }
 
 function normalizeSearch(value: string): string {

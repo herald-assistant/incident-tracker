@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.flowexplorer.api;
 
+import java.time.Instant;
 import java.util.List;
 
 public record FlowExplorerEndpointInventoryResponse(
@@ -15,6 +16,7 @@ public record FlowExplorerEndpointInventoryResponse(
         int candidateFileCount,
         int scannedFileCount,
         boolean scannedFileLimitReached,
+        Instant dataCollectedAt,
         List<RepositoryInventoryResponse> repositories,
         List<EndpointOptionResponse> endpoints,
         List<String> limitations
@@ -24,6 +26,43 @@ public record FlowExplorerEndpointInventoryResponse(
         repositories = repositories != null ? List.copyOf(repositories) : List.of();
         endpoints = endpoints != null ? List.copyOf(endpoints) : List.of();
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
+    }
+
+    public FlowExplorerEndpointInventoryResponse(
+            String systemId,
+            String requestedBranch,
+            String resolvedRef,
+            String gitLabGroup,
+            String endpointPathPrefix,
+            String httpMethod,
+            int repositoryCount,
+            int scannedRepositoryCount,
+            int endpointCount,
+            int candidateFileCount,
+            int scannedFileCount,
+            boolean scannedFileLimitReached,
+            List<RepositoryInventoryResponse> repositories,
+            List<EndpointOptionResponse> endpoints,
+            List<String> limitations
+    ) {
+        this(
+                systemId,
+                requestedBranch,
+                resolvedRef,
+                gitLabGroup,
+                endpointPathPrefix,
+                httpMethod,
+                repositoryCount,
+                scannedRepositoryCount,
+                endpointCount,
+                candidateFileCount,
+                scannedFileCount,
+                scannedFileLimitReached,
+                null,
+                repositories,
+                endpoints,
+                limitations
+        );
     }
 
     public record RepositoryInventoryResponse(

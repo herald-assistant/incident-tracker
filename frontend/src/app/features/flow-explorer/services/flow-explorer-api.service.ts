@@ -36,6 +36,8 @@ export class FlowExplorerApiService {
     for (const [key, value] of Object.entries(query)) {
       if (typeof value === 'string' && value.trim()) {
         params = params.set(key, value.trim());
+      } else if (typeof value === 'boolean' && value) {
+        params = params.set(key, String(value));
       }
     }
 

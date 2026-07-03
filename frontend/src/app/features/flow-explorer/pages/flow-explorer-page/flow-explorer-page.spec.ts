@@ -171,6 +171,7 @@ describe('FlowExplorerPageComponent', () => {
     });
     expect(compiled.textContent).toContain('feature/FLOW-42');
     expect(compiled.textContent).toContain('1 endpoint');
+    expect(compiled.textContent).toContain('Data:');
     openEndpointSelect(compiled);
     fixture.detectChanges();
     expect(compiled.textContent).toContain('GET');
@@ -212,7 +213,8 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
 
     expect(flowExplorerApi.getEndpointInventory).toHaveBeenLastCalledWith('crm-service', {
-      branch: 'release-candidate'
+      branch: 'release-candidate',
+      refresh: true
     });
   });
 
@@ -961,6 +963,7 @@ function endpointInventory(): FlowExplorerEndpointInventoryResponse {
     candidateFileCount: 7,
     scannedFileCount: 4,
     scannedFileLimitReached: false,
+    dataCollectedAt: '2026-06-18T10:00:00Z',
     repositories: [],
     endpoints: [
       {

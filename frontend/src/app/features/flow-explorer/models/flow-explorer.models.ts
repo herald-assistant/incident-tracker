@@ -74,6 +74,7 @@ export interface FlowExplorerEndpointInventoryQuery {
   branch?: string;
   endpointPathPrefix?: string;
   httpMethod?: string;
+  refresh?: boolean;
 }
 
 export interface FlowExplorerEndpointInventoryResponse {
@@ -89,6 +90,7 @@ export interface FlowExplorerEndpointInventoryResponse {
   candidateFileCount: number;
   scannedFileCount: number;
   scannedFileLimitReached: boolean;
+  dataCollectedAt: string | null;
   repositories: FlowExplorerRepositoryInventory[];
   endpoints: FlowExplorerEndpointOption[];
   limitations: string[];

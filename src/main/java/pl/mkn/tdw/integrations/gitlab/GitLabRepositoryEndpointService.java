@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -29,7 +30,7 @@ public class GitLabRepositoryEndpointService {
     private static final int MAX_CONSTANT_FILE_CHARACTERS = 80_000;
     private static final int MAX_STATIC_CONSTANT_IMPORT_DEPTH = 4;
     private static final int MAX_OPENAPI_FILE_CHARACTERS = 260_000;
-    private static final int MAX_OPENAPI_FILES = 30;
+    private static final int MAX_OPENAPI_FILES = 40;
     private static final int MAX_SIGNATURE_LINES = 8;
     private static final int MAX_DOCUMENTATION_TEXT_LENGTH = 700;
     private static final int MAX_PARAMETER_DESCRIPTION_LENGTH = 360;
@@ -140,7 +141,7 @@ public class GitLabRepositoryEndpointService {
         var endpointPathPrefix = normalizeEndpointPathPrefix(request.endpointPathPrefix());
         var httpMethod = normalizeHttpMethod(request.httpMethod());
         var maxScannedFiles = normalizeMaxScannedFiles(request.maxScannedFiles());
-        var inventory = endpointInventory(group, projectName, branch, maxScannedFiles);
+        var inventory = endpointInventory(group, projectName, branch, maxScannedFiles, request.refreshCache());
         var limitations = new ArrayList<String>(inventory.limitations());
 
         var filteredEndpoints = inventory.endpoints().stream()
@@ -161,6 +162,7 @@ public class GitLabRepositoryEndpointService {
                 branch,
                 endpointPathPrefix,
                 httpMethod,
+                inventory.dataCollectedAt(),
                 inventory.candidateFileCount(),
                 inventory.scannedFileCount(),
                 inventory.scannedFileLimitReached(),
@@ -173,15 +175,21 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
-            int maxScannedFiles
+            int maxScannedFiles,
+            boolean refreshCache
     ) {
         if (analysisCache == null) {
             return buildEndpointInventory(group, projectName, branch, maxScannedFiles);
         }
 
+        var keyParts = List.of(group, projectName, branch, maxScannedFiles);
+        if (refreshCache) {
+            analysisCache.evict("gitlab.repository-endpoint-inventory", keyParts);
+        }
+
         return analysisCache.getOrCompute(
                 "gitlab.repository-endpoint-inventory",
-                List.of(group, projectName, branch, maxScannedFiles),
+                keyParts,
                 () -> buildEndpointInventory(group, projectName, branch, maxScannedFiles)
         );
     }
@@ -294,6 +302,7 @@ public class GitLabRepositoryEndpointService {
         }
 
         return new EndpointInventory(
+                Instant.now(),
                 candidateFiles.size(),
                 scannedFiles.size(),
                 scannedFileLimitReached,
@@ -2868,6 +2877,7 @@ public class GitLabRepositoryEndpointService {
     }
 
     private record EndpointInventory(
+            Instant dataCollectedAt,
             int candidateFileCount,
             int scannedFileCount,
             boolean scannedFileLimitReached,

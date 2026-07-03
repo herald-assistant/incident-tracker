@@ -20,13 +20,15 @@ public class FlowExplorerEndpointInventoryController {
             @PathVariable String systemId,
             @RequestParam(required = false) String branch,
             @RequestParam(required = false) String endpointPathPrefix,
-            @RequestParam(required = false) String httpMethod
+            @RequestParam(required = false) String httpMethod,
+            @RequestParam(defaultValue = "false") boolean refresh
     ) {
         return flowExplorerEndpointInventoryService.endpoints(
                 systemId,
                 branch,
                 endpointPathPrefix,
-                httpMethod
+                httpMethod,
+                refresh
         );
     }
 }

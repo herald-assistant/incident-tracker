@@ -1381,12 +1381,22 @@ class GitLabRepositoryEndpointServiceTest {
                 "GET",
                 20
         ));
+        var refreshedEndpoints = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-case-service",
+                "main",
+                null,
+                null,
+                20,
+                true
+        ));
 
         assertEquals(2, allEndpoints.endpoints().size());
         assertEquals(1, getEndpoints.endpoints().size());
+        assertEquals(2, refreshedEndpoints.endpoints().size());
         assertEquals("GET", getEndpoints.endpoints().get(0).httpMethods().get(0));
-        verify(repositoryPort, times(1)).listRepositoryFiles("CRM", "crm-case-service", "main", null);
-        verify(repositoryPort, times(1)).readFile(
+        verify(repositoryPort, times(2)).listRepositoryFiles("CRM", "crm-case-service", "main", null);
+        verify(repositoryPort, times(2)).readFile(
                 "CRM",
                 "crm-case-service",
                 "main",

@@ -7,10 +7,12 @@ import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportSectionIds;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -92,7 +94,7 @@ public class FlowExplorerPromptPreparationService {
                 ## Response contract artifact
                 %s
                 """.formatted(
-                runtimeSkillsUsageContract(request),
+                runtimeSkillsUsageContract(request, sectionModes),
                 request.systemId(),
                 request.systemId(),
                 request.endpointId(),
@@ -162,7 +164,10 @@ public class FlowExplorerPromptPreparationService {
         return new FlowExplorerPromptPreparation(prompt, artifacts, artifactContents);
     }
 
-    private String runtimeSkillsUsageContract(FlowExplorerJobStartRequest request) {
+    private String runtimeSkillsUsageContract(
+            FlowExplorerJobStartRequest request,
+            List<FlowExplorerResultSectionModeAssignment> sectionModes
+    ) {
         return """
                 Dostepne runtime skills sa podlaczone jako skill directories w tej sesji.
                 Pobierz i zastosuj wymagane skille przez built-in tool `skill`; nie czekaj, az uzytkownik o nie poprosi.
@@ -181,15 +186,46 @@ public class FlowExplorerPromptPreparationService {
                 SHOULD: flow-explorer-code-grounding
                 - Gdy initial evidence nie wystarcza do primary flow albo konkretnej luki aktywnej sekcji.
 
-                SHOULD: flow-explorer-map-persistence-section
-                - Gdy `sectionModes.PERSISTENCE` nie jest `OFF`; tryb `COMPACT` albo `DEEP` decyduje o szczegolowosci sekcji.
-
-                SHOULD: flow-explorer-map-integrations-section
-                - Gdy `sectionModes.INTEGRATIONS` nie jest `OFF`; tryb `COMPACT` albo `DEEP` decyduje o szczegolowosci sekcji.
+                %s
 
                 COULD: record_tool_feedback
                 - Gdy luka w katalogu, glossary, ownerach, integracjach albo code-search scope obniza jakosc wyniku.
-                """.formatted(goalSkillUsage(request != null ? request.goal() : null));
+                """.formatted(
+                goalSkillUsage(request != null ? request.goal() : null),
+                sectionSkillUsage(sectionModes)
+        );
+    }
+
+    private String sectionSkillUsage(List<FlowExplorerResultSectionModeAssignment> sectionModes) {
+        var lines = new ArrayList<String>();
+        addSectionSkillUsage(
+                lines,
+                sectionModes,
+                FlowExplorerResultSectionId.PERSISTENCE,
+                "flow-explorer-map-persistence-section"
+        );
+        addSectionSkillUsage(
+                lines,
+                sectionModes,
+                FlowExplorerResultSectionId.INTEGRATIONS,
+                "flow-explorer-map-integrations-section"
+        );
+        return String.join(System.lineSeparator() + System.lineSeparator(), lines);
+    }
+
+    private void addSectionSkillUsage(
+            List<String> lines,
+            List<FlowExplorerResultSectionModeAssignment> sectionModes,
+            FlowExplorerResultSectionId sectionId,
+            String skillName
+    ) {
+        FlowExplorerResultSectionModeResolver.activeOnly(sectionModes).stream()
+                .filter(assignment -> assignment.id() == sectionId)
+                .findFirst()
+                .ifPresent(assignment -> lines.add("""
+                        MUST: %s
+                        - Obowiazuje, bo `sectionModes.%s` ma tryb `%s`; tryb `COMPACT` albo `DEEP` decyduje o szczegolowosci sekcji.
+                        """.formatted(skillName, sectionId.name(), assignment.mode()).stripTrailing()));
     }
 
     private String goalSkillUsage(FlowExplorerAnalysisGoal goal) {

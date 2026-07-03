@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryRespons
 import pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryResponse.EndpointSourceResponse;
 import pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryResponse.EndpointTooltipDetailsResponse;
 import pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryResponse.RepositoryInventoryResponse;
+import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryScope;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryScopeRepository;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryScopeService;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpoint;
@@ -18,6 +19,7 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointParameterDocumentation;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -30,6 +32,7 @@ public class FlowExplorerEndpointInventoryService {
 
     private final FlowExplorerRepositoryScopeService repositoryScopeService;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
+    private final FlowExplorerEndpointInventoryCache endpointInventoryCache;
 
     public FlowExplorerEndpointInventoryResponse endpoints(
             String systemId,
@@ -37,9 +40,29 @@ public class FlowExplorerEndpointInventoryService {
             String endpointPathPrefix,
             String httpMethod
     ) {
+        return endpoints(systemId, branch, endpointPathPrefix, httpMethod, false);
+    }
+
+    public FlowExplorerEndpointInventoryResponse endpoints(
+            String systemId,
+            String branch,
+            String endpointPathPrefix,
+            String httpMethod,
+            boolean refreshCache
+    ) {
         var scope = repositoryScopeService.resolve(systemId, branch);
         var normalizedEndpointPathPrefix = normalize(endpointPathPrefix);
         var normalizedHttpMethod = normalizeHttpMethod(httpMethod);
+        var cacheKey = cacheKey(scope, normalizedEndpointPathPrefix, normalizedHttpMethod);
+        if (refreshCache) {
+            endpointInventoryCache.evict(cacheKey);
+        } else {
+            var cached = endpointInventoryCache.find(cacheKey);
+            if (cached.isPresent()) {
+                return cached.get();
+            }
+        }
+
         var repositoryResponses = new ArrayList<RepositoryInventoryResponse>();
         var endpointResponses = new ArrayList<EndpointOptionResponse>();
         var limitations = new ArrayList<>(scope.limitations());
@@ -47,6 +70,7 @@ public class FlowExplorerEndpointInventoryService {
         var scannedFileCount = 0;
         var scannedFileLimitReached = false;
         var scannedRepositoryCount = 0;
+        var dataCollectedAt = (Instant) null;
 
         for (var repository : scope.repositories()) {
             try {
@@ -56,12 +80,14 @@ public class FlowExplorerEndpointInventoryService {
                         scope.resolvedRef(),
                         normalizedEndpointPathPrefix,
                         normalizedHttpMethod,
-                        null
+                        null,
+                        refreshCache
                 ));
                 scannedRepositoryCount++;
                 candidateFileCount += result.candidateFileCount();
                 scannedFileCount += result.scannedFileCount();
                 scannedFileLimitReached = scannedFileLimitReached || result.scannedFileLimitReached();
+                dataCollectedAt = oldest(dataCollectedAt, result.dataCollectedAt());
                 repositoryResponses.add(repositoryResponse(repository, scope.resolvedRef(), result));
                 endpointResponses.addAll(result.endpoints().stream()
                         .map(endpoint -> endpointOption(repository, endpoint))
@@ -93,7 +119,7 @@ public class FlowExplorerEndpointInventoryService {
                         .thenComparing(option -> option.source().projectName(), Comparator.nullsLast(String::compareTo)))
                 .toList();
 
-        return new FlowExplorerEndpointInventoryResponse(
+        var response = new FlowExplorerEndpointInventoryResponse(
                 scope.system().id(),
                 scope.requestedBranch(),
                 scope.resolvedRef(),
@@ -106,10 +132,47 @@ public class FlowExplorerEndpointInventoryService {
                 candidateFileCount,
                 scannedFileCount,
                 scannedFileLimitReached,
+                dataCollectedAt != null ? dataCollectedAt : Instant.now(),
                 repositoryResponses,
                 sortedEndpoints,
                 distinct(limitations)
         );
+        endpointInventoryCache.save(cacheKey, response);
+        return response;
+    }
+
+    private FlowExplorerEndpointInventoryCache.Key cacheKey(
+            FlowExplorerRepositoryScope scope,
+            String endpointPathPrefix,
+            String httpMethod
+    ) {
+        var repositories = scope.repositories().stream()
+                .map(repository -> String.join(":",
+                        safe(repository.repositoryId()),
+                        safe(repository.projectName()),
+                        safe(repository.projectPath())
+                ))
+                .sorted()
+                .toList();
+        return new FlowExplorerEndpointInventoryCache.Key(
+                scope.system().id(),
+                scope.requestedBranch(),
+                scope.resolvedRef(),
+                scope.gitLabGroup(),
+                repositories,
+                endpointPathPrefix,
+                httpMethod
+        );
+    }
+
+    private Instant oldest(Instant current, Instant candidate) {
+        if (candidate == null) {
+            return current;
+        }
+        if (current == null || candidate.isBefore(current)) {
+            return candidate;
+        }
+        return current;
     }
 
     private RepositoryInventoryResponse repositoryResponse(
@@ -240,5 +303,9 @@ public class FlowExplorerEndpointInventoryService {
 
     private String normalize(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private String safe(String value) {
+        return value != null ? value : "";
     }
 }

@@ -18,6 +18,18 @@ public record GitLabRepositoryEndpointListRequest(
         String httpMethod,
         @Min(value = 1, message = "maxScannedFiles must be at least 1")
         @Max(value = 250, message = "maxScannedFiles must be at most 250")
-        Integer maxScannedFiles
+        Integer maxScannedFiles,
+        boolean refreshCache
 ) {
+
+    public GitLabRepositoryEndpointListRequest(
+            String group,
+            String projectName,
+            String branch,
+            String endpointPathPrefix,
+            String httpMethod,
+            Integer maxScannedFiles
+    ) {
+        this(group, projectName, branch, endpointPathPrefix, httpMethod, maxScannedFiles, false);
+    }
 }

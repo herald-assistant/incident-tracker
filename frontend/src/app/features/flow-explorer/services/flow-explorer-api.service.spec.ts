@@ -53,6 +53,21 @@ describe('FlowExplorerApiService', () => {
     request.flush({ endpoints: [] });
   });
 
+  it('should pass endpoint inventory refresh only when requested', () => {
+    service
+      .getEndpointInventory('crm/service', {
+        branch: 'main',
+        refresh: true
+      })
+      .subscribe();
+
+    const request = http.expectOne(
+      '/api/flow-explorer/systems/crm%2Fservice/endpoints?branch=main&refresh=true'
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush({ endpoints: [] });
+  });
+
   it('should start and read jobs', () => {
     service.startJob({ systemId: 'crm-service', endpointId: 'GET /customers' }).subscribe();
 

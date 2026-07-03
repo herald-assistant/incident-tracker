@@ -12,6 +12,9 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerSnippetCard;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
+import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerSectionModeRequest;
 
 import java.util.List;
 
@@ -59,10 +62,12 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("MUST: flow-explorer-test-scenario-design"));
         assertTrue(prompt.contains("SHOULD: flow-explorer-operational-grounding"));
         assertTrue(prompt.contains("SHOULD: flow-explorer-code-grounding"));
-        assertTrue(prompt.contains("SHOULD: flow-explorer-map-persistence-section"));
-        assertTrue(prompt.contains("SHOULD: flow-explorer-map-integrations-section"));
-        assertTrue(prompt.contains("`sectionModes.PERSISTENCE` nie jest `OFF`"));
-        assertTrue(prompt.contains("`sectionModes.INTEGRATIONS` nie jest `OFF`"));
+        assertFalse(prompt.contains("SHOULD: flow-explorer-map-persistence-section"));
+        assertFalse(prompt.contains("SHOULD: flow-explorer-map-integrations-section"));
+        assertTrue(prompt.contains("MUST: flow-explorer-map-persistence-section"));
+        assertTrue(prompt.contains("MUST: flow-explorer-map-integrations-section"));
+        assertTrue(prompt.contains("`sectionModes.PERSISTENCE` ma tryb `COMPACT`"));
+        assertTrue(prompt.contains("`sectionModes.INTEGRATIONS` ma tryb `COMPACT`"));
         assertTrue(prompt.contains("COULD: record_tool_feedback"));
         assertTrue(prompt.contains("sectionModes"));
         assertTrue(prompt.contains("activeSectionIds"));
@@ -119,6 +124,18 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
         assertTrue(prompt.contains("MUST: flow-explorer-deep-discovery"));
         assertTrue(prompt.contains("Obowiazuje dla celu DEEP_DISCOVERY"));
+    }
+
+    @Test
+    void shouldOmitSectionSkillUsageWhenSectionModeIsOff() {
+        var preparation = service.prepare(requestWithPersistenceOff(), contextSnapshot());
+        var prompt = preparation.prompt();
+
+        assertTrue(prompt.contains("sectionModes: FUNCTIONAL_FLOW=DEEP, VALIDATIONS=COMPACT, PERSISTENCE=OFF, INTEGRATIONS=COMPACT"));
+        assertTrue(prompt.contains("activeSectionIds: [FUNCTIONAL_FLOW, VALIDATIONS, INTEGRATIONS]"));
+        assertFalse(prompt.contains("flow-explorer-map-persistence-section"));
+        assertTrue(prompt.contains("MUST: flow-explorer-map-integrations-section"));
+        assertTrue(prompt.contains("`sectionModes.INTEGRATIONS` ma tryb `COMPACT`"));
     }
 
     @Test
@@ -196,6 +213,39 @@ class FlowExplorerPromptPreparationServiceTest {
                 List.of(FlowExplorerFocusArea.PERSISTENCE),
                 null,
                 "Pokaz flow funkcjonalny.",
+                "gpt-5.4-mini",
+                "high"
+        );
+    }
+
+    private static FlowExplorerJobStartRequest requestWithPersistenceOff() {
+        return new FlowExplorerJobStartRequest(
+                "crm-service",
+                "crm-service:GET:/api/customers/{id}",
+                null,
+                null,
+                "feature/FLOW-42",
+                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
+                List.of(
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
+                                FlowExplorerResultSectionMode.DEEP
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.VALIDATIONS,
+                                FlowExplorerResultSectionMode.COMPACT
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.PERSISTENCE,
+                                FlowExplorerResultSectionMode.OFF
+                        ),
+                        new FlowExplorerSectionModeRequest(
+                                FlowExplorerResultSectionId.INTEGRATIONS,
+                                FlowExplorerResultSectionMode.COMPACT
+                        )
+                ),
+                "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4-mini",
                 "high"
         );

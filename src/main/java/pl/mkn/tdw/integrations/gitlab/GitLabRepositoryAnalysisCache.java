@@ -56,6 +56,10 @@ public class GitLabRepositoryAnalysisCache {
         entries.clear();
     }
 
+    public void evict(String namespace, List<?> keyParts) {
+        entries.remove(cacheKey(namespace, keyParts));
+    }
+
     private void pruneIfNeeded(Instant now) {
         if (entries.size() < maxEntries) {
             return;

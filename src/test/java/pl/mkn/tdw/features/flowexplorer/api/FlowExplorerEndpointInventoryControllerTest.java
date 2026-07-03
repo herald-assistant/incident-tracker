@@ -37,7 +37,8 @@ class FlowExplorerEndpointInventoryControllerTest {
                 "catalog-core",
                 "feature/FLOW-42",
                 "/api",
-                "get"
+                "get",
+                false
         )).thenReturn(inventory());
 
         mockMvc.perform(get("/api/flow-explorer/systems/catalog-core/endpoints")
@@ -60,7 +61,32 @@ class FlowExplorerEndpointInventoryControllerTest {
                 "catalog-core",
                 "feature/FLOW-42",
                 "/api",
-                "get"
+                "get",
+                false
+        );
+    }
+
+    @Test
+    void shouldPassRefreshFlagToEndpointInventoryService() throws Exception {
+        when(flowExplorerEndpointInventoryService.endpoints(
+                "catalog-core",
+                "main",
+                null,
+                null,
+                true
+        )).thenReturn(inventory());
+
+        mockMvc.perform(get("/api/flow-explorer/systems/catalog-core/endpoints")
+                        .param("branch", "main")
+                        .param("refresh", "true"))
+                .andExpect(status().isOk());
+
+        verify(flowExplorerEndpointInventoryService).endpoints(
+                "catalog-core",
+                "main",
+                null,
+                null,
+                true
         );
     }
 
@@ -70,7 +96,8 @@ class FlowExplorerEndpointInventoryControllerTest {
                 "missing-system",
                 null,
                 null,
-                null
+                null,
+                false
         )).thenThrow(new FlowExplorerSystemNotFoundException("missing-system"));
 
         mockMvc.perform(get("/api/flow-explorer/systems/missing-system/endpoints"))

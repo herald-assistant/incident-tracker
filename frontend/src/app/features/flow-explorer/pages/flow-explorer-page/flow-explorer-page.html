@@ -166,6 +166,9 @@
           <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
             <span class="flow-explorer-field-label">
               <span class="field-label">Endpoint</span>
+              @if (endpointInventoryDateLabel()) {
+                <span class="flow-explorer-cache-date">{{ endpointInventoryDateLabel() }}</span>
+              }
               <span
                 class="flow-explorer-label-help"
                 tabindex="0"
@@ -373,7 +376,7 @@
               class="secondary-button"
               type="button"
               [disabled]="!selectedSystem() || endpointState() === 'loading'"
-              (click)="loadEndpointInventory()"
+              (click)="loadEndpointInventory(true)"
             >
               <span class="material-symbols-outlined" aria-hidden="true">sync</span>
               <span>Load endpoints</span>

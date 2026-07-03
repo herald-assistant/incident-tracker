@@ -16,7 +16,9 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -98,6 +100,29 @@ class FlowExplorerEndpointInventoryServiceTest {
     }
 
     @Test
+    void shouldCacheEndpointInventoryAndRefreshWhenRequested() {
+        var endpointService = mock(GitLabRepositoryEndpointService.class);
+        when(endpointService.listEndpoints(any())).thenReturn(endpointList("any", List.of(endpoint()), List.of()));
+        var cache = new InMemoryEndpointInventoryCache();
+        var service = service(endpointService, "platform/backend", "release-candidate", catalog(), cache);
+
+        var first = service.endpoints("catalog-core", null, null, null);
+        var second = service.endpoints("catalog-core", null, null, null);
+
+        assertEquals(first, second);
+        verify(endpointService, times(2)).listEndpoints(any());
+
+        service.endpoints("catalog-core", null, null, null, true);
+
+        var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
+        verify(endpointService, times(4)).listEndpoints(requestCaptor.capture());
+        var captured = requestCaptor.getAllValues();
+        assertTrue(captured.subList(0, 2).stream().noneMatch(GitLabRepositoryEndpointListRequest::refreshCache));
+        assertTrue(captured.subList(2, 4).stream().allMatch(GitLabRepositoryEndpointListRequest::refreshCache));
+        assertEquals(1, cache.evictions);
+    }
+
+    @Test
     void shouldAllowRepositoriesFromConfiguredGitLabSubgroups() {
         var endpointService = mock(GitLabRepositoryEndpointService.class);
         when(endpointService.listEndpoints(argThat(request -> request != null
@@ -154,6 +179,22 @@ class FlowExplorerEndpointInventoryServiceTest {
             String defaultBranch,
             OperationalContextCatalog catalog
     ) {
+        return service(
+                endpointService,
+                gitLabGroup,
+                defaultBranch,
+                catalog,
+                FlowExplorerEndpointInventoryCache.disabled()
+        );
+    }
+
+    private static FlowExplorerEndpointInventoryService service(
+            GitLabRepositoryEndpointService endpointService,
+            String gitLabGroup,
+            String defaultBranch,
+            OperationalContextCatalog catalog,
+            FlowExplorerEndpointInventoryCache cache
+    ) {
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup(gitLabGroup);
         var flowExplorerProperties = new FlowExplorerProperties();
@@ -165,7 +206,8 @@ class FlowExplorerEndpointInventoryServiceTest {
         );
         return new FlowExplorerEndpointInventoryService(
                 scopeService,
-                endpointService
+                endpointService,
+                cache
         );
     }
 
@@ -305,5 +347,31 @@ class FlowExplorerEndpointInventoryServiceTest {
             map.put(String.valueOf(values[index]), values[index + 1]);
         }
         return map;
+    }
+
+    private static final class InMemoryEndpointInventoryCache implements FlowExplorerEndpointInventoryCache {
+
+        private final Map<Key, pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryResponse> entries =
+                new LinkedHashMap<>();
+        private int evictions;
+
+        @Override
+        public Optional<pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryResponse> find(Key key) {
+            return Optional.ofNullable(entries.get(key));
+        }
+
+        @Override
+        public void save(
+                Key key,
+                pl.mkn.tdw.features.flowexplorer.api.FlowExplorerEndpointInventoryResponse response
+        ) {
+            entries.put(key, response);
+        }
+
+        @Override
+        public void evict(Key key) {
+            evictions++;
+            entries.remove(key);
+        }
     }
 }
