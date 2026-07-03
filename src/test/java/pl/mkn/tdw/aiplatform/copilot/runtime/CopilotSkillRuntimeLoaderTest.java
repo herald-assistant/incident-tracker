@@ -99,4 +99,36 @@ class CopilotSkillRuntimeLoaderTest {
         assertEquals(List.of("C:\\external\\skills"), resolvedDirectories);
     }
 
+    @Test
+    void shouldListAvailableSkillNamesFromResolvedRoots() throws Exception {
+        var skillRoot = tempDirectory.resolve("skills");
+        writeSkill(skillRoot.resolve("zeta-skill"), "zeta-skill");
+        writeSkill(skillRoot.resolve("alpha-skill"), "alpha-skill");
+        var directSkillRoot = tempDirectory.resolve("direct-skill");
+        writeSkill(directSkillRoot, "direct-skill");
+
+        var properties = new CopilotSdkProperties();
+        properties.setSkillResourceRoots(List.of());
+        properties.setSkillDirectories(List.of(skillRoot.toString(), directSkillRoot.toString()));
+        properties.setSkillRuntimeDirectory(tempDirectory.resolve("runtime").toString());
+
+        var loader = new CopilotSkillRuntimeLoader(properties);
+
+        assertEquals(List.of("alpha-skill", "zeta-skill", "direct-skill"), loader.availableSkillNames());
+    }
+
+    private void writeSkill(Path skillDirectory, String skillName) throws Exception {
+        Files.createDirectories(skillDirectory);
+        Files.writeString(
+                skillDirectory.resolve("SKILL.md"),
+                """
+                ---
+                name: %s
+                ---
+
+                # Test Skill
+                """.formatted(skillName)
+        );
+    }
+
 }

@@ -2,6 +2,8 @@ package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
@@ -28,6 +30,22 @@ public class CopilotSkillRuntimeLoader {
     private final CopilotSdkProperties properties;
 
     private volatile List<String> cachedSkillDirectories;
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void logAvailableSkillsOnStartup() {
+        var resolvedDirectories = resolveSkillDirectories();
+        var availableSkillNames = availableSkillNames(resolvedDirectories);
+
+        log.info(
+                "Copilot runtime skills resolved runtimeDirectory={} resourceRoots={} externalDirectories={} resolvedRoots={} skillCount={} skills={}",
+                properties.getSkillRuntimeDirectory(),
+                safeList(properties.getSkillResourceRoots()),
+                safeList(properties.getSkillDirectories()),
+                resolvedDirectories,
+                availableSkillNames.size(),
+                availableSkillNames
+        );
+    }
 
     public List<String> resolveSkillDirectories() {
         var directories = cachedSkillDirectories;
@@ -65,6 +83,10 @@ public class CopilotSkillRuntimeLoader {
         return List.of(selectedRoot.toString());
     }
 
+    List<String> availableSkillNames() {
+        return availableSkillNames(resolveSkillDirectories());
+    }
+
     private List<String> loadSkillDirectories() {
         var resolvedDirectories = new ArrayList<String>();
 
@@ -77,6 +99,38 @@ public class CopilotSkillRuntimeLoader {
 
         resolvedDirectories.addAll(safeList(properties.getSkillDirectories()));
         return resolvedDirectories;
+    }
+
+    private List<String> availableSkillNames(List<String> resolvedRoots) {
+        var skillNames = new LinkedHashSet<String>();
+
+        for (var rootValue : safeList(resolvedRoots)) {
+            if (rootValue == null || rootValue.isBlank()) {
+                continue;
+            }
+
+            var root = Path.of(rootValue);
+            if (hasSkillDefinition(root) && root.getFileName() != null) {
+                skillNames.add(root.getFileName().toString());
+            }
+
+            if (!Files.isDirectory(root)) {
+                continue;
+            }
+
+            try (var paths = Files.list(root)) {
+                paths
+                        .filter(this::hasSkillDefinition)
+                        .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                        .map(path -> path.getFileName().toString())
+                        .forEach(skillNames::add);
+            }
+            catch (IOException exception) {
+                throw new IllegalStateException("Failed to list Copilot runtime skills under root: " + root, exception);
+            }
+        }
+
+        return List.copyOf(skillNames);
     }
 
     private Path resolveRequiredSkillDirectory(String skillName, List<String> resolvedRoots) {
