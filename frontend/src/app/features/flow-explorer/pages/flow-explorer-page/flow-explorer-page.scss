@@ -642,27 +642,6 @@ article.flow-explorer-select-option {
   color: var(--text-main);
 }
 
-.flow-explorer-target-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.flow-explorer-target-metrics div {
-  min-width: 0;
-  padding: 9px 11px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-alt);
-}
-
-.flow-explorer-target-metrics strong {
-  display: block;
-  min-width: 0;
-  color: var(--text-main);
-  overflow-wrap: anywhere;
-}
-
 .flow-explorer-target-preview {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1349,7 +1328,6 @@ article.flow-explorer-select-option {
 
 @media (max-width: 1180px) {
   .flow-explorer-target-grid,
-  .flow-explorer-target-metrics,
   .flow-explorer-scope-grid,
   .flow-explorer-job__grid,
   .flow-explorer-contract-grid,
@@ -1368,7 +1346,6 @@ article.flow-explorer-select-option {
 
 @media (max-width: 680px) {
   .flow-explorer-target-grid,
-  .flow-explorer-target-metrics,
   .flow-explorer-target-preview,
   .flow-explorer-select-option,
   .flow-explorer-select-option__select,

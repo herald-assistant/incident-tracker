@@ -50,10 +50,14 @@ export function defaultReasoningEffortForAiModel(
   modelId: string
 ): string {
   const availableEfforts = reasoningEffortsForAiModel(catalog, modelId);
-  const modelDefault = modelDefaultReasoningEffort(catalog, modelId);
-  const defaultEffort = modelDefault || normalizeText(catalog.defaultReasoningEffort);
+  const configuredDefault = normalizeText(catalog.defaultReasoningEffort);
+  if (configuredDefault && availableEfforts.includes(configuredDefault)) {
+    return configuredDefault;
+  }
 
-  return defaultEffort && availableEfforts.includes(defaultEffort) ? defaultEffort : '';
+  const modelDefault = modelDefaultReasoningEffort(catalog, modelId);
+
+  return modelDefault && availableEfforts.includes(modelDefault) ? modelDefault : '';
 }
 
 function normalizeModels(models: AnalysisAiModelOption[] | null | undefined): AnalysisAiModelOption[] {

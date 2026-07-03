@@ -1,12 +1,18 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideLocationMocks } from '@angular/common/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 
 import { App } from './app';
 import { routes } from './app.routes';
+import { FlowExplorerPageComponent } from './features/flow-explorer/pages/flow-explorer-page/flow-explorer-page';
+import {
+  FlowExplorerEndpointInventoryResponse,
+  FlowExplorerSystemOption
+} from './features/flow-explorer/models/flow-explorer.models';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -316,6 +322,53 @@ describe('App', () => {
     expect(router.url).toBe('/');
     expect(compiled.querySelector('app-platform-landing-page')).not.toBeNull();
   });
+
+  it('should remount an active analysis feature from the sidebar as a fresh run screen', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/flow-explorer');
+    fixture.detectChanges();
+    flushUiConfig(http);
+    flushFlowExplorerStartup(http);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const firstFlowExplorer = flowExplorerComponent(fixture);
+    firstFlowExplorer.selectSystem(firstFlowExplorer.systems()[0]);
+    fixture.detectChanges();
+    http
+      .expectOne(
+        (request) =>
+          request.url === '/api/flow-explorer/systems/crm-service/endpoints' &&
+          request.params.get('branch') === 'main'
+      )
+      .flush(flowExplorerEndpointInventory());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(firstFlowExplorer.selectedSystemId()).toBe('crm-service');
+    expect(fixture.nativeElement.textContent).toContain('CRM Service');
+
+    const flowExplorerNavLink = fixture.nativeElement.querySelector(
+      'a.app-shell__nav-item[aria-label="Flow Explorer"]'
+    ) as HTMLAnchorElement | null;
+
+    flowExplorerNavLink?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    flushFlowExplorerStartup(http);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const freshFlowExplorer = flowExplorerComponent(fixture);
+    expect(router.url).toBe('/flow-explorer');
+    expect(freshFlowExplorer).not.toBe(firstFlowExplorer);
+    expect(freshFlowExplorer.selectedSystemId()).toBe('');
+    expect(fixture.nativeElement.textContent).toContain('Select application');
+  });
 });
 
 function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Workspace'): void {
@@ -324,4 +377,85 @@ function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Works
     subtitle: title === 'Team Delivery Workspace' ? null : 'Team Delivery Workspace',
     defaultTitle: 'Team Delivery Workspace'
   });
+}
+
+type FlowExplorerComponentDriver = {
+  systems: () => FlowExplorerSystemOption[];
+  selectedSystemId: () => string;
+  selectSystem(system: FlowExplorerSystemOption): void;
+};
+
+function flowExplorerComponent(fixture: ComponentFixture<App>): FlowExplorerComponentDriver {
+  const debugElement = fixture.debugElement.query(By.directive(FlowExplorerPageComponent));
+  expect(debugElement).not.toBeNull();
+  return debugElement.componentInstance as unknown as FlowExplorerComponentDriver;
+}
+
+function flushFlowExplorerStartup(http: HttpTestingController): void {
+  http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
+  http.expectOne('/api/flow-explorer/systems').flush([flowExplorerSystem('crm-service')]);
+  http.expectOne('/analysis/ai/options').flush({
+    defaultModel: 'gpt-5.4',
+    defaultReasoningEffort: 'medium',
+    defaultReasoningEfforts: ['low', 'medium', 'high'],
+    models: []
+  });
+}
+
+function flowExplorerSystem(systemId: string): FlowExplorerSystemOption {
+  return {
+    systemId,
+    name: 'CRM Service',
+    shortName: 'CRM',
+    kind: 'internal-application',
+    lifecycleStatus: 'active',
+    operationalStatus: 'healthy',
+    criticality: 'high',
+    summary: 'Customer relationship core API.',
+    aliases: ['crm'],
+    repositoryCount: 2,
+    codeSearchScopeCount: 1,
+    ownerTeamIds: ['team-crm']
+  };
+}
+
+function flowExplorerEndpointInventory(): FlowExplorerEndpointInventoryResponse {
+  return {
+    systemId: 'crm-service',
+    requestedBranch: 'main',
+    resolvedRef: 'main',
+    gitLabGroup: 'platform/backend',
+    endpointPathPrefix: '',
+    httpMethod: '',
+    repositoryCount: 1,
+    scannedRepositoryCount: 1,
+    endpointCount: 1,
+    candidateFileCount: 1,
+    scannedFileCount: 1,
+    scannedFileLimitReached: false,
+    dataCollectedAt: '2026-06-18T10:00:00Z',
+    repositories: [],
+    endpoints: [
+      {
+        endpointId: 'crm-api:GET /api/customers/{id}',
+        method: 'GET',
+        methods: ['GET'],
+        path: '/api/customers/{id}',
+        pathExpression: '/api/customers/{id}',
+        summary: 'Customer lookup',
+        description: 'Returns customer details.',
+        operationId: 'getCustomer',
+        tags: ['customers'],
+        controllerClass: 'CustomerController',
+        handlerMethod: 'getCustomer',
+        source: null,
+        parameters: [],
+        confidence: 'high',
+        limitations: [],
+        suggestedNextReads: [],
+        tooltipDetails: null
+      }
+    ],
+    limitations: []
+  };
 }

@@ -656,25 +656,6 @@
         }
 
         @if (endpointInventory(); as inventory) {
-          <div class="flow-explorer-target-metrics" aria-label="Endpoint inventory coverage">
-            <div>
-              <span class="field-label">Resolved ref</span>
-              <strong>{{ inventory.resolvedRef || branch() }}</strong>
-            </div>
-            <div>
-              <span class="field-label">Endpoints</span>
-              <strong>{{ endpointCountLabel() }}</strong>
-            </div>
-            <div>
-              <span class="field-label">Repositories</span>
-              <strong>{{ inventory.scannedRepositoryCount }} / {{ inventory.repositoryCount }}</strong>
-            </div>
-            <div>
-              <span class="field-label">Files scanned</span>
-              <strong>{{ inventory.scannedFileCount }} / {{ inventory.candidateFileCount }}</strong>
-            </div>
-          </div>
-
           @if (inventory.limitations.length > 0 || inventory.scannedFileLimitReached) {
             <div class="flow-explorer-limitations">
               @if (inventory.scannedFileLimitReached) {

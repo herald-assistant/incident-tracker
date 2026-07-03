@@ -171,7 +171,8 @@ describe('FlowExplorerPageComponent', () => {
     expect(flowExplorerApi.getEndpointInventory).toHaveBeenCalledWith('crm-service', {
       branch: 'main'
     });
-    expect(compiled.textContent).toContain('feature/FLOW-42');
+    expect(compiled.querySelector('.flow-explorer-target-metrics')).toBeNull();
+    expect(compiled.textContent).not.toContain('feature/FLOW-42');
     expect(compiled.textContent).toContain('1 endpoint');
     expect(compiled.textContent).toContain('Data:');
     openEndpointSelect(compiled);

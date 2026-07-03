@@ -5,7 +5,6 @@ import {
   NavigationEnd,
   Router,
   RouterLink,
-  RouterLinkActive,
   RouterOutlet
 } from '@angular/router';
 import { filter } from 'rxjs';
@@ -18,6 +17,7 @@ type NavItem = {
   route?: string;
   icon: string;
   exact?: boolean;
+  reloadOnActiveClick?: boolean;
   disabled?: boolean;
 };
 
@@ -62,8 +62,18 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Analysis Features',
     items: [
-      { label: 'Incident Analysis', route: '/incident-analysis', icon: 'troubleshoot' },
-      { label: 'Flow Explorer', route: '/flow-explorer', icon: 'account_tree' },
+      {
+        label: 'Incident Analysis',
+        route: '/incident-analysis',
+        icon: 'troubleshoot',
+        reloadOnActiveClick: true
+      },
+      {
+        label: 'Flow Explorer',
+        route: '/flow-explorer',
+        icon: 'account_tree',
+        reloadOnActiveClick: true
+      },
       { label: 'Functional Logic', icon: 'schema', disabled: true },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
     ]
@@ -92,7 +102,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, AppBrandComponent],
+  imports: [RouterOutlet, RouterLink, AppBrandComponent],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss'
 })
@@ -101,6 +111,7 @@ export class AppShellComponent {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly uiConfig = inject(AppUiConfigService);
   private readonly routeContext = signal<RouteContext>(DEFAULT_CONTEXT);
+  private readonly currentUrl = signal('');
   private sidebarExpandTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly navGroups = NAV_GROUPS;
@@ -127,13 +138,17 @@ export class AppShellComponent {
 
   constructor() {
     this.uiConfig.load();
+    this.currentUrl.set(this.router.url);
     this.updateRouteContext();
     this.router.events
       .pipe(
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed()
       )
-      .subscribe(() => this.updateRouteContext());
+      .subscribe((event) => {
+        this.currentUrl.set(event.urlAfterRedirects);
+        this.updateRouteContext();
+      });
   }
 
   protected toggleSidebar(): void {
@@ -154,6 +169,29 @@ export class AppShellComponent {
       this.sidebarExpanding.set(false);
       this.sidebarExpandTimer = null;
     }, SIDEBAR_EXPAND_CONTENT_DELAY_MS);
+  }
+
+  protected navigateFromSidebar(event: MouseEvent, item: NavItem): void {
+    if (!item.route || shouldUseNativeLinkNavigation(event)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (item.reloadOnActiveClick && this.isRouteActive(item.route, true)) {
+      this.reloadActiveRoute(item.route);
+      return;
+    }
+
+    void this.router.navigateByUrl(item.route);
+  }
+
+  protected isNavItemActive(item: NavItem): boolean {
+    if (!item.route) {
+      return false;
+    }
+
+    return this.isRouteActive(item.route, Boolean(item.exact));
   }
 
   private updateRouteContext(): void {
@@ -207,6 +245,27 @@ export class AppShellComponent {
     clearTimeout(this.sidebarExpandTimer);
     this.sidebarExpandTimer = null;
   }
+
+  private isRouteActive(route: string, exact: boolean): boolean {
+    this.currentUrl();
+    return this.router.isActive(route, {
+      paths: exact ? 'exact' : 'subset',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored'
+    });
+  }
+
+  private reloadActiveRoute(route: string): void {
+    void this.router
+      .navigateByUrl('/', { skipLocationChange: true })
+      .then(() => this.router.navigateByUrl(route))
+      .catch(() => undefined);
+  }
+}
+
+function shouldUseNativeLinkNavigation(event: MouseEvent): boolean {
+  return event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey;
 }
 
 function normalizeCapabilityInfo(value: unknown): RouteCapabilityInfo | null {
