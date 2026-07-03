@@ -206,13 +206,11 @@ public class GitLabRepositoryEndpointService {
                 endpointDiscovery.repositoryTreeFiles(),
                 limitations
         );
-        var scannedOpenApiFiles = openApiFiles.stream()
-                .limit(MAX_OPENAPI_FILES)
-                .toList();
         var scannedFileLimitReached = candidateFiles.size() > scannedFiles.size();
         var endpoints = new ArrayList<GitLabRepositoryEndpoint>();
         var controllerImplementations = new ArrayList<ControllerImplementation>();
         var openApiOperations = new ArrayList<OpenApiOperation>();
+        var openApiDocumentCount = 0;
         var constantResolutionContext = new JavaStringConstantResolutionContext(endpointDiscovery.repositoryTreeFiles());
 
         for (var file : scannedFiles) {
@@ -253,7 +251,7 @@ public class GitLabRepositoryEndpointService {
             }
         }
 
-        for (var file : scannedOpenApiFiles) {
+        for (var file : openApiFiles) {
             try {
                 var content = gitLabRepositoryPort.readFile(
                         group,
@@ -262,6 +260,13 @@ public class GitLabRepositoryEndpointService {
                         file.filePath(),
                         MAX_OPENAPI_FILE_CHARACTERS
                 );
+                if (!hasOpenApiRootMarker(content.content())) {
+                    continue;
+                }
+                openApiDocumentCount++;
+                if (openApiDocumentCount > MAX_OPENAPI_FILES) {
+                    continue;
+                }
                 var fileLimitations = new ArrayList<String>();
                 if (content.truncated()) {
                     fileLimitations.add("OpenAPI contract file content was truncated before endpoint parsing.");
@@ -272,9 +277,9 @@ public class GitLabRepositoryEndpointService {
             }
         }
 
-        if (openApiFiles.size() > scannedOpenApiFiles.size()) {
-            limitations.add("OpenAPI endpoint parsing scanned the top %d of %d YAML contract files."
-                    .formatted(scannedOpenApiFiles.size(), openApiFiles.size()));
+        if (openApiDocumentCount > MAX_OPENAPI_FILES) {
+            limitations.add("OpenAPI endpoint parsing scanned the top %d of %d OpenAPI YAML files."
+                    .formatted(MAX_OPENAPI_FILES, openApiDocumentCount));
         }
 
         endpoints = new ArrayList<>(mergeOpenApiDocumentation(endpoints, openApiOperations));
@@ -2243,7 +2248,7 @@ public class GitLabRepositoryEndpointService {
                 OPENAPI_DISCOVERY_TERMS,
                 OPENAPI_SEARCH_RESULTS_PER_TERM
         ).stream()
-                .filter(file -> isOpenApiSpecFile(file.filePath()))
+                .filter(file -> isYamlFile(file.filePath()))
                 .toList();
         if (!searchedFiles.isEmpty()) {
             return sortOpenApiFiles(searchedFiles);
@@ -2253,7 +2258,7 @@ public class GitLabRepositoryEndpointService {
                 ? knownRepositoryTreeFiles
                 : repositoryTreeFiles(group, projectName, branch, limitations, "OpenAPI contract discovery");
         return sortOpenApiFiles(repositoryFiles.stream()
-                .filter(file -> file != null && isOpenApiSpecFile(file.filePath()))
+                .filter(file -> file != null && isYamlFile(file.filePath()))
                 .toList());
     }
 
@@ -2445,12 +2450,21 @@ public class GitLabRepositoryEndpointService {
         return normalized.startsWith("src/main/java/") || normalized.contains("/src/main/java/");
     }
 
-    private boolean isOpenApiSpecFile(String filePath) {
+    private boolean isYamlFile(String filePath) {
         if (!StringUtils.hasText(filePath)) {
             return false;
         }
         var normalized = filePath.toLowerCase(Locale.ROOT);
         return OPENAPI_FILE_SUFFIXES.stream().anyMatch(normalized::endsWith);
+    }
+
+    private boolean hasOpenApiRootMarker(String content) {
+        if (!StringUtils.hasText(content)) {
+            return false;
+        }
+        return content.lines()
+                .map(line -> line.replace("\uFEFF", ""))
+                .anyMatch(line -> line.startsWith("openapi:") || line.startsWith("swagger:"));
     }
 
     private boolean isTestSource(String filePath) {

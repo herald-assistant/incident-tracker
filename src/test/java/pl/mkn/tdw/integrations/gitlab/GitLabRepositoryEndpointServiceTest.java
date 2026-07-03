@@ -2,10 +2,12 @@ package pl.mkn.tdw.integrations.gitlab;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.argThat;
@@ -1180,6 +1182,134 @@ class GitLabRepositoryEndpointServiceTest {
         assertTrue(result.limitations().stream()
                 .noneMatch(limitation -> limitation.contains("production Java source files")));
         verify(repositoryPort, never()).listRepositoryFiles("CRM", "crm-customer-service", "main", null);
+    }
+
+    @Test
+    void shouldNotCountConfigurationYamlFilesAsOpenApiContractsInRepositoryTreeFallback() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var controllerPath = "src/main/java/com/example/crm/customer/api/CustomerCaseController.java";
+        var openApiPath = "src/main/resources/openapi/customer-case-api.yaml";
+        var applicationYamlPath = "src/main/resources/application.yml";
+        var liquibaseYamlPath = "src/main/resources/db/changelog/db.changelog-master.yaml";
+        var repositoryFiles = new ArrayList<GitLabRepositoryFile>();
+        repositoryFiles.add(new GitLabRepositoryFile("CRM", "crm-customer-service", "main", controllerPath));
+        repositoryFiles.add(new GitLabRepositoryFile("CRM", "crm-customer-service", "main", openApiPath));
+        repositoryFiles.add(new GitLabRepositoryFile("CRM", "crm-customer-service", "main", applicationYamlPath));
+        repositoryFiles.add(new GitLabRepositoryFile("CRM", "crm-customer-service", "main", liquibaseYamlPath));
+        for (int index = 0; index < 35; index++) {
+            repositoryFiles.add(new GitLabRepositoryFile(
+                    "CRM",
+                    "crm-customer-service",
+                    "main",
+                    "src/main/resources/db/changelog/changelog-%02d.yaml".formatted(index)
+            ));
+        }
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-customer-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                controllerPath,
+                "Matched @RestController.",
+                10
+        )));
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-customer-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-customer-service", "main", null))
+                .thenReturn(repositoryFiles);
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                controllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                controllerPath,
+                """
+                        package com.example.crm.customer.api;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.RequestMapping;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        @RestController
+                        @RequestMapping("/api/crm/customer-cases")
+                        class CustomerCaseController {
+
+                          @GetMapping("/{caseId}")
+                          CustomerCaseResponse getCase(String caseId) {
+                            return new CustomerCaseResponse(caseId);
+                          }
+                        }
+                        """,
+                false
+        ));
+        when(repositoryPort.readFile(
+                eq("CRM"),
+                eq("crm-customer-service"),
+                eq("main"),
+                anyString(),
+                eq(260_000)
+        )).thenAnswer(invocation -> {
+            var filePath = invocation.getArgument(3, String.class);
+            var content = openApiPath.equals(filePath)
+                    ? """
+                    openapi: 3.0.1
+                    info:
+                      title: CRM Customer Case API
+                      version: 1.0.0
+                    paths:
+                      /api/crm/customer-cases/{caseId}:
+                        get:
+                          summary: Pobranie sprawy klienta CRM
+                          operationId: getCase
+                    """
+                    : """
+                    databaseChangeLog:
+                      - changeSet:
+                          id: sample
+                          author: crm
+                    """;
+            return new GitLabRepositoryFileContent(
+                    "CRM",
+                    "crm-customer-service",
+                    "main",
+                    filePath,
+                    content,
+                    false
+            );
+        });
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                null,
+                null,
+                20
+        ));
+
+        assertEquals(1, result.endpoints().size());
+        assertEquals("Pobranie sprawy klienta CRM", result.endpoints().get(0).documentation().summary());
+        assertTrue(result.limitations().stream()
+                .noneMatch(limitation -> limitation.contains("OpenAPI endpoint parsing scanned the top")));
+        verify(repositoryPort).readFile("CRM", "crm-customer-service", "main", applicationYamlPath, 260_000);
+        verify(repositoryPort).readFile("CRM", "crm-customer-service", "main", liquibaseYamlPath, 260_000);
     }
 
     @Test
