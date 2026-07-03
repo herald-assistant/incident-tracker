@@ -10,6 +10,7 @@ export interface WorkspaceSettingsValues {
   appUi: WorkspaceSettingsAppUi;
   gitLab: WorkspaceSettingsGitLab;
   elasticsearch: WorkspaceSettingsElasticsearch;
+  dynatrace: WorkspaceSettingsDynatrace;
 }
 
 export interface WorkspaceSettingsAppUi {
@@ -27,6 +28,11 @@ export interface WorkspaceSettingsElasticsearch {
   kibanaSpaceId: WorkspaceSettingsField;
   indexPattern: WorkspaceSettingsField;
   authorizationHeader: WorkspaceSettingsField;
+}
+
+export interface WorkspaceSettingsDynatrace {
+  baseUrl: WorkspaceSettingsField;
+  apiToken: WorkspaceSettingsField;
 }
 
 export interface WorkspaceSettingsField {
@@ -52,5 +58,9 @@ export interface WorkspaceSettingsUpdateRequest {
     kibanaSpaceId: string;
     indexPattern: string;
     authorizationHeader: string;
+  };
+  dynatrace: {
+    baseUrl: string;
+    apiToken: string;
   };
 }

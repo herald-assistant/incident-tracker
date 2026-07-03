@@ -58,10 +58,15 @@ Decyzje:
 - `Platform` dotyczy overview i customizacji Team Delivery Workspace:
   workspace settings, personalizacji, autentykacji, konfiguracji modeli i
   podobnych ustawien.
-- Pierwszy zakres Workspace Settings obejmuje `app.ui.title`,
-  `analysis.gitlab.base-url`, `analysis.gitlab.group` i
-  `analysis.gitlab.token`. `analysis.gitlab.ignore-ssl-errors` pozostaje poza
-  UI ustawien.
+- Zakres Workspace Settings obejmuje `app.ui.title`, podstawowe connection
+  settings GitLaba (`analysis.gitlab.base-url`, `analysis.gitlab.group`,
+  `analysis.gitlab.token`), Elasticsearch (`analysis.elasticsearch.base-url`,
+  `analysis.elasticsearch.kibana-space-id`,
+  `analysis.elasticsearch.index-pattern`,
+  `analysis.elasticsearch.authorization-header`) oraz Dynatrace
+  (`analysis.dynatrace.base-url`, `analysis.dynatrace.api-token`).
+  Flagi SSL, np. `analysis.gitlab.ignore-ssl-errors`, i techniczne limity
+  odpowiedzi integracji pozostaja poza UI ustawien.
 
 Konsekwencje UI:
 

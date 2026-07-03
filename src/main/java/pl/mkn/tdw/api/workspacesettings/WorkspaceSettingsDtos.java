@@ -20,7 +20,8 @@ public final class WorkspaceSettingsDtos {
     public record WorkspaceSettingsValuesResponse(
             WorkspaceSettingsAppUiResponse appUi,
             WorkspaceSettingsGitLabResponse gitLab,
-            WorkspaceSettingsElasticsearchResponse elasticsearch
+            WorkspaceSettingsElasticsearchResponse elasticsearch,
+            WorkspaceSettingsDynatraceResponse dynatrace
     ) {
     }
 
@@ -44,6 +45,12 @@ public final class WorkspaceSettingsDtos {
     ) {
     }
 
+    public record WorkspaceSettingsDynatraceResponse(
+            WorkspaceSettingsFieldResponse baseUrl,
+            WorkspaceSettingsFieldResponse apiToken
+    ) {
+    }
+
     public record WorkspaceSettingsFieldResponse(
             String propertyKey,
             String value,
@@ -57,7 +64,8 @@ public final class WorkspaceSettingsDtos {
     public record WorkspaceSettingsUpdateRequest(
             WorkspaceSettingsAppUiUpdate appUi,
             WorkspaceSettingsGitLabUpdate gitLab,
-            WorkspaceSettingsElasticsearchUpdate elasticsearch
+            WorkspaceSettingsElasticsearchUpdate elasticsearch,
+            WorkspaceSettingsDynatraceUpdate dynatrace
     ) {
     }
 
@@ -78,6 +86,12 @@ public final class WorkspaceSettingsDtos {
             String kibanaSpaceId,
             String indexPattern,
             String authorizationHeader
+    ) {
+    }
+
+    public record WorkspaceSettingsDynatraceUpdate(
+            String baseUrl,
+            String apiToken
     ) {
     }
 }

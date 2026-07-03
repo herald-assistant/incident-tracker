@@ -5,11 +5,12 @@ public record LocalWorkspaceSettingsFile(
         int version,
         LocalWorkspaceAppUiSettings appUi,
         LocalWorkspaceGitLabSettings gitLab,
-        LocalWorkspaceElasticsearchSettings elasticsearch
+        LocalWorkspaceElasticsearchSettings elasticsearch,
+        LocalWorkspaceDynatraceSettings dynatrace
 ) {
 
     public static final String SCHEMA = "tdw.workspace-settings";
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
 
     public LocalWorkspaceSettingsFile {
         if (schema == null || schema.isBlank()) {
@@ -27,6 +28,9 @@ public record LocalWorkspaceSettingsFile(
         if (elasticsearch == null) {
             elasticsearch = LocalWorkspaceElasticsearchSettings.empty();
         }
+        if (dynatrace == null) {
+            dynatrace = LocalWorkspaceDynatraceSettings.empty();
+        }
     }
 
     public static LocalWorkspaceSettingsFile empty() {
@@ -35,7 +39,8 @@ public record LocalWorkspaceSettingsFile(
                 VERSION,
                 LocalWorkspaceAppUiSettings.empty(),
                 LocalWorkspaceGitLabSettings.empty(),
-                LocalWorkspaceElasticsearchSettings.empty()
+                LocalWorkspaceElasticsearchSettings.empty(),
+                LocalWorkspaceDynatraceSettings.empty()
         );
     }
 }

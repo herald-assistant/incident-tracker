@@ -5,9 +5,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
+import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
@@ -17,6 +19,8 @@ import java.util.Objects;
 
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsFieldResponse;
@@ -35,6 +39,7 @@ public class WorkspaceSettingsService {
     private final UiConfigProperties uiConfigProperties;
     private final GitLabProperties gitLabProperties;
     private final ElasticProperties elasticProperties;
+    private final DynatraceProperties dynatraceProperties;
 
     private WorkspaceSettingsValues applicationValues;
 
@@ -63,6 +68,9 @@ public class WorkspaceSettingsService {
         var elasticsearch = request != null && request.elasticsearch() != null
                 ? request.elasticsearch()
                 : new WorkspaceSettingsElasticsearchUpdate(null, null, null, null);
+        var dynatrace = request != null && request.dynatrace() != null
+                ? request.dynatrace()
+                : new WorkspaceSettingsDynatraceUpdate(null, null);
 
         var settings = new LocalWorkspaceSettingsFile(
                 LocalWorkspaceSettingsFile.SCHEMA,
@@ -81,6 +89,10 @@ public class WorkspaceSettingsService {
                                 elasticsearch.authorizationHeader(),
                                 application().elasticsearch().authorizationHeader()
                         )
+                ),
+                new LocalWorkspaceDynatraceSettings(
+                        overrideValue(dynatrace.baseUrl(), application().dynatrace().baseUrl()),
+                        overrideValue(dynatrace.apiToken(), application().dynatrace().apiToken())
                 )
         );
 
@@ -133,6 +145,20 @@ public class WorkspaceSettingsService {
                                         file.elasticsearch().authorizationHeader(),
                                         true
                                 )
+                        ),
+                        new WorkspaceSettingsDynatraceResponse(
+                                field(
+                                        "analysis.dynatrace.base-url",
+                                        app.dynatrace().baseUrl(),
+                                        file.dynatrace().baseUrl(),
+                                        false
+                                ),
+                                field(
+                                        "analysis.dynatrace.api-token",
+                                        app.dynatrace().apiToken(),
+                                        file.dynatrace().apiToken(),
+                                        true
+                                )
                         )
                 )
         );
@@ -180,6 +206,8 @@ public class WorkspaceSettingsService {
                 file.elasticsearch().authorizationHeader(),
                 app.elasticsearch().authorizationHeader()
         ));
+        dynatraceProperties.setBaseUrl(effectiveValue(file.dynatrace().baseUrl(), app.dynatrace().baseUrl()));
+        dynatraceProperties.setApiToken(effectiveValue(file.dynatrace().apiToken(), app.dynatrace().apiToken()));
     }
 
     private WorkspaceSettingsValues application() {
@@ -202,6 +230,10 @@ public class WorkspaceSettingsService {
                         normalize(elasticProperties.getKibanaSpaceId()),
                         normalize(elasticProperties.getIndexPattern()),
                         normalize(elasticProperties.getAuthorizationHeader())
+                ),
+                new DynatraceSettings(
+                        normalize(dynatraceProperties.getBaseUrl()),
+                        normalize(dynatraceProperties.getApiToken())
                 )
         );
     }
@@ -233,7 +265,8 @@ public class WorkspaceSettingsService {
     private record WorkspaceSettingsValues(
             AppUiSettings appUi,
             GitLabSettings gitLab,
-            ElasticsearchSettings elasticsearch
+            ElasticsearchSettings elasticsearch,
+            DynatraceSettings dynatrace
     ) {
     }
 
@@ -254,6 +287,12 @@ public class WorkspaceSettingsService {
             String kibanaSpaceId,
             String indexPattern,
             String authorizationHeader
+    ) {
+    }
+
+    private record DynatraceSettings(
+            String baseUrl,
+            String apiToken
     ) {
     }
 }

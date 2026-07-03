@@ -506,6 +506,135 @@
         }
       </section>
 
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsDynatraceTitle">
+        <div class="workspace-settings-panel__header">
+          <div>
+            <p class="section-eyebrow">Dynatrace</p>
+            <h2 id="workspaceSettingsDynatraceTitle">Runtime signals</h2>
+          </div>
+        </div>
+
+        @if (settings(); as currentSettings) {
+          <div class="workspace-settings-grid">
+            <label class="workspace-settings-field" for="dynatraceBaseUrl">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.dynatrace.baseUrl.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Base URL
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.dynatrace.baseUrl, form.controls.dynatrace.controls.baseUrl.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.dynatrace.baseUrl) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.dynatrace.baseUrl)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.dynatrace.baseUrl, form.controls.dynatrace.controls.baseUrl.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.dynatrace.baseUrl, form.controls.dynatrace.controls.baseUrl.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Dynatrace Base URL"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.dynatrace.controls.baseUrl, currentSettings.values.dynatrace.baseUrl)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <input
+                id="dynatraceBaseUrl"
+                class="text-input"
+                type="url"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.dynatrace.controls.baseUrl"
+              />
+            </label>
+
+            <label class="workspace-settings-field" for="dynatraceApiToken">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.dynatrace.apiToken.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    API token
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.dynatrace.apiToken, form.controls.dynatrace.controls.apiToken.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.dynatrace.apiToken) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.dynatrace.apiToken)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.dynatrace.apiToken, form.controls.dynatrace.controls.apiToken.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.dynatrace.apiToken, form.controls.dynatrace.controls.apiToken.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Dynatrace API token"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.dynatrace.controls.apiToken, currentSettings.values.dynatrace.apiToken)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <span class="workspace-settings-secret-control">
+                <input
+                  id="dynatraceApiToken"
+                  class="text-input"
+                  [type]="showDynatraceApiToken() ? 'text' : 'password'"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="form.controls.dynatrace.controls.apiToken"
+                />
+                <button
+                  class="secondary-button workspace-settings-icon-button"
+                  type="button"
+                  [attr.aria-label]="showDynatraceApiToken() ? 'Hide API token' : 'Show API token'"
+                  [matTooltip]="showDynatraceApiToken() ? 'Hide API token' : 'Show API token'"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
+                  (click)="toggleDynatraceApiTokenVisibility()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ showDynatraceApiToken() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </span>
+            </label>
+          </div>
+        } @else {
+          <div class="workspace-settings-placeholder">
+            <span class="workspace-settings-spinner" aria-hidden="true"></span>
+            <span>Loading settings...</span>
+          </div>
+        }
+      </section>
+
       @if (errorMessage()) {
         <p class="form-error">{{ errorMessage() }}</p>
       }

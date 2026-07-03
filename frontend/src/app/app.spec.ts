@@ -158,9 +158,11 @@ describe('App', () => {
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('tdw-data/settings.json');
     expect(compiled.textContent).toContain('Elasticsearch');
+    expect(compiled.textContent).toContain('Dynatrace');
     expect(compiled.querySelector('.workspace-settings-baseline')).toBeNull();
     expect(compiled.textContent).not.toContain('analysis.gitlab');
     expect(compiled.textContent).not.toContain('analysis.elasticsearch');
+    expect(compiled.textContent).not.toContain('analysis.dynatrace');
     expect(compiled.textContent).not.toContain('application.properties');
     expect(compiled.textContent).not.toContain('Use application.properties');
 
@@ -174,6 +176,8 @@ describe('App', () => {
       'CUSTOM',
       'CUSTOM',
       'DEFAULT',
+      'CUSTOM',
+      'CUSTOM',
       'CUSTOM',
       'CUSTOM'
     ]);
@@ -189,6 +193,8 @@ describe('App', () => {
       'Default: https://elastic.example.com',
       'Default: default',
       'Default: logs-*',
+      '',
+      'Default: https://dynatrace.example.com',
       ''
     ]);
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.disabled)).toEqual([
@@ -198,6 +204,8 @@ describe('App', () => {
       true,
       false,
       false,
+      false,
+      true,
       false,
       true
     ]);
@@ -210,13 +218,17 @@ describe('App', () => {
       'Restore default for Token',
       'Restore default for Elasticsearch Base URL',
       'Restore default for Index pattern',
-      'Restore default for Authorization header'
+      'Restore default for Authorization header',
+      'Restore default for Dynatrace Base URL',
+      'Restore default for Dynatrace API token'
     ]);
     expect(
       fixture.debugElement
         .queryAll(By.css('.workspace-settings-field-reset-button'))
         .map((element) => element.injector.get(MatTooltip).message)
     ).toEqual([
+      'Restore default',
+      'Restore default',
       'Restore default',
       'Restore default',
       'Restore default',
@@ -242,9 +254,11 @@ describe('App', () => {
       'CUSTOM',
       'DEFAULT',
       'CUSTOM',
+      'CUSTOM',
+      'CUSTOM',
       'CUSTOM'
     ]);
-    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(4);
+    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(6);
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -571,6 +585,24 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           value: 'Bearer elastic-secret',
           applicationValue: '',
           workspaceValue: 'Bearer elastic-secret',
+          source: 'WORKSPACE_SETTINGS',
+          secret: true
+        }
+      },
+      dynatrace: {
+        baseUrl: {
+          propertyKey: 'analysis.dynatrace.base-url',
+          value: 'https://dynatrace.workspace.example.com',
+          applicationValue: 'https://dynatrace.example.com',
+          workspaceValue: 'https://dynatrace.workspace.example.com',
+          source: 'WORKSPACE_SETTINGS',
+          secret: false
+        },
+        apiToken: {
+          propertyKey: 'analysis.dynatrace.api-token',
+          value: 'dt0c01_secret',
+          applicationValue: '',
+          workspaceValue: 'dt0c01_secret',
           source: 'WORKSPACE_SETTINGS',
           secret: true
         }

@@ -75,7 +75,8 @@ Na dzisiaj projekt ma:
   glossary, handoff rules, validation findings i open questions,
 - ekran `GET /workspace-settings` w sekcji `Platform` do podgladu efektywnych
   wartosci z `application.properties` i zapisu lokalnych override'ow do
-  `${tdw.workspace.directory}/settings.json`,
+  `${tdw.workspace.directory}/settings.json` dla brandu UI oraz podstawowych
+  parametrow GitLaba, Elasticsearch i Dynatrace,
 - glowne job-based API: `POST /analysis/jobs` i
   `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
@@ -140,7 +141,9 @@ Na dzisiaj projekt ma:
   Angularowy ekran `Platform / Workspace Settings` do lokalnej customizacji
   workspace'u. Ekran pokazuje efektywne wartosci z `application.properties`
   oraz zrodlo kazdego pola; zapis trafia do
-  `${tdw.workspace.directory}/settings.json`.
+  `${tdw.workspace.directory}/settings.json`. Aktualny zakres obejmuje
+  `app.ui.title`, podstawowe connection settings GitLaba, Elasticsearch i
+  Dynatrace oraz sekrety tych integracji.
 - `POST /analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
   `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
@@ -173,6 +176,7 @@ Na dzisiaj projekt ma:
 - `PUT /api/workspace/settings`
   Shared/operator API zapisu lokalnych override'ow do `settings.json`. Pusta
   wartosc albo wartosc identyczna z `application.properties` usuwa override.
+  Endpoint nie wystawia flag SSL ani limitow odpowiedzi integracji.
 - `GET /api/auth/github/status`
   Shared/operator API statusu autoryzacji Copilota. W `LOCAL_TOKEN` pokazuje
   lokalny token jako backendowy tryb dev, a w `GITHUB_APP` tworzy backendowa

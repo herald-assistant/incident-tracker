@@ -2,6 +2,7 @@ package pl.mkn.tdw.api.workspacesettings;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
+import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
@@ -11,6 +12,7 @@ import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsSource;
@@ -36,8 +38,12 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().elasticsearch().indexPattern().value()).isEqualTo("logs-*");
         assertThat(response.values().elasticsearch().authorizationHeader().value()).isEqualTo("Bearer app-token");
         assertThat(response.values().elasticsearch().authorizationHeader().secret()).isTrue();
+        assertThat(response.values().dynatrace().baseUrl().value()).isEqualTo("https://dynatrace.app");
+        assertThat(response.values().dynatrace().apiToken().value()).isEqualTo("dt0c01.app-token");
+        assertThat(response.values().dynatrace().apiToken().secret()).isTrue();
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
         assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.app");
+        assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.app");
     }
 
     @Test
@@ -57,6 +63,10 @@ class WorkspaceSettingsServiceTest {
                         "default",
                         "logs-platform-*",
                         "Bearer workspace-token"
+                ),
+                new WorkspaceSettingsDynatraceUpdate(
+                        "https://dynatrace.app",
+                        "dt0c01.workspace-token"
                 )
         ));
 
@@ -67,11 +77,17 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.store.saved.elasticsearch().kibanaSpaceId()).isNull();
         assertThat(fixture.store.saved.elasticsearch().indexPattern()).isEqualTo("logs-platform-*");
         assertThat(fixture.store.saved.elasticsearch().authorizationHeader()).isEqualTo("Bearer workspace-token");
+        assertThat(fixture.store.saved.dynatrace().baseUrl()).isNull();
+        assertThat(fixture.store.saved.dynatrace().apiToken()).isEqualTo("dt0c01.workspace-token");
         assertThat(response.values().gitLab().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().gitLab().group().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().elasticsearch().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().elasticsearch().kibanaSpaceId().source())
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
+        assertThat(response.values().dynatrace().baseUrl().source())
+                .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
+        assertThat(response.values().dynatrace().apiToken().source())
+                .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("Workspace override");
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("workspace/group");
@@ -80,6 +96,8 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.elasticProperties.getKibanaSpaceId()).isEqualTo("default");
         assertThat(fixture.elasticProperties.getIndexPattern()).isEqualTo("logs-platform-*");
         assertThat(fixture.elasticProperties.getAuthorizationHeader()).isEqualTo("Bearer workspace-token");
+        assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.app");
+        assertThat(fixture.dynatraceProperties.getApiToken()).isEqualTo("dt0c01.workspace-token");
     }
 
     @Test
@@ -94,6 +112,10 @@ class WorkspaceSettingsServiceTest {
                         "observability",
                         "logs-platform-*",
                         "Bearer workspace-token"
+                ),
+                new WorkspaceSettingsDynatraceUpdate(
+                        "https://dynatrace.workspace",
+                        "dt0c01.workspace-token"
                 )
         ));
 
@@ -105,6 +127,10 @@ class WorkspaceSettingsServiceTest {
                         "default",
                         "logs-*",
                         "Bearer app-token"
+                ),
+                new WorkspaceSettingsDynatraceUpdate(
+                        "https://dynatrace.app",
+                        "dt0c01.app-token"
                 )
         ));
 
@@ -116,12 +142,15 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.store.saved.elasticsearch().kibanaSpaceId()).isNull();
         assertThat(fixture.store.saved.elasticsearch().indexPattern()).isNull();
         assertThat(fixture.store.saved.elasticsearch().authorizationHeader()).isNull();
+        assertThat(fixture.store.saved.dynatrace().baseUrl()).isNull();
+        assertThat(fixture.store.saved.dynatrace().apiToken()).isNull();
         assertThat(response.values().appUi().title().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().elasticsearch().indexPattern().source())
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("App workspace");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("app/group");
         assertThat(fixture.elasticProperties.getIndexPattern()).isEqualTo("logs-*");
+        assertThat(fixture.dynatraceProperties.getApiToken()).isEqualTo("dt0c01.app-token");
     }
 
     private Fixture fixture() {
@@ -136,13 +165,23 @@ class WorkspaceSettingsServiceTest {
         elasticProperties.setKibanaSpaceId("default");
         elasticProperties.setIndexPattern("logs-*");
         elasticProperties.setAuthorizationHeader("Bearer app-token");
+        var dynatraceProperties = new DynatraceProperties();
+        dynatraceProperties.setBaseUrl("https://dynatrace.app");
+        dynatraceProperties.setApiToken("dt0c01.app-token");
         var store = new InMemoryLocalWorkspaceSettingsStore();
         return new Fixture(
                 uiConfigProperties,
                 gitLabProperties,
                 elasticProperties,
+                dynatraceProperties,
                 store,
-                new WorkspaceSettingsService(store, uiConfigProperties, gitLabProperties, elasticProperties)
+                new WorkspaceSettingsService(
+                        store,
+                        uiConfigProperties,
+                        gitLabProperties,
+                        elasticProperties,
+                        dynatraceProperties
+                )
         );
     }
 
@@ -150,6 +189,7 @@ class WorkspaceSettingsServiceTest {
             UiConfigProperties uiConfigProperties,
             GitLabProperties gitLabProperties,
             ElasticProperties elasticProperties,
+            DynatraceProperties dynatraceProperties,
             InMemoryLocalWorkspaceSettingsStore store,
             WorkspaceSettingsService service
     ) {

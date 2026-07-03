@@ -337,8 +337,13 @@ Route `/workspace-settings` jest elementem `Platform`: pokazuje efektywne
 wartosci z `application.properties`, zapisuje lokalne override'y do
 `${tdw.workspace.directory}/settings.json` przez
 `GET/PUT /api/workspace/settings` i na starcie obejmuje `app.ui.title`,
-`analysis.gitlab.base-url`, `analysis.gitlab.group` oraz
-`analysis.gitlab.token`. Nie dodawaj tam `analysis.gitlab.ignore-ssl-errors`.
+connection settings GitLaba, Elasticsearch i Dynatrace:
+`analysis.gitlab.base-url`, `analysis.gitlab.group`, `analysis.gitlab.token`,
+`analysis.elasticsearch.base-url`, `analysis.elasticsearch.kibana-space-id`,
+`analysis.elasticsearch.index-pattern`,
+`analysis.elasticsearch.authorization-header`, `analysis.dynatrace.base-url`
+oraz `analysis.dynatrace.api-token`. Nie dodawaj tam flag SSL, np.
+`analysis.gitlab.ignore-ssl-errors`, ani technicznych limitow odpowiedzi.
 Takie endpointy traktuj jako shared/operator API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.
@@ -450,7 +455,8 @@ Elastic ma dzisiaj jeden helper endpoint i jeden MCP tool:
 
 Oba przyjmuja tylko `correlationId`.
 `base-url`, auth, Kibana space, index pattern i limity odpowiedzi pochodza z
-`analysis.elasticsearch.*`.
+`analysis.elasticsearch.*`; Workspace Settings moze lokalnie nadpisac tylko
+connection/auth fields, a limity zostaja w `application.properties`.
 
 ### Database helper flow
 

@@ -31,6 +31,7 @@ export class WorkspaceSettingsPageComponent {
   readonly saveMessage = signal('');
   readonly showToken = signal(false);
   readonly showElasticsearchAuthorizationHeader = signal(false);
+  readonly showDynatraceApiToken = signal(false);
 
   readonly form = new FormGroup({
     appUi: new FormGroup({
@@ -46,6 +47,10 @@ export class WorkspaceSettingsPageComponent {
       kibanaSpaceId: new FormControl('', { nonNullable: true }),
       indexPattern: new FormControl('', { nonNullable: true }),
       authorizationHeader: new FormControl('', { nonNullable: true })
+    }),
+    dynatrace: new FormGroup({
+      baseUrl: new FormControl('', { nonNullable: true }),
+      apiToken: new FormControl('', { nonNullable: true })
     })
   });
 
@@ -116,6 +121,10 @@ export class WorkspaceSettingsPageComponent {
     this.showElasticsearchAuthorizationHeader.update((visible) => !visible);
   }
 
+  toggleDynatraceApiTokenVisibility(): void {
+    this.showDynatraceApiToken.update((visible) => !visible);
+  }
+
   sourceLabel(field: WorkspaceSettingsField, currentValue: string): string {
     return this.usesCustomValue(field, currentValue) ? 'CUSTOM' : 'DEFAULT';
   }
@@ -169,6 +178,10 @@ export class WorkspaceSettingsPageComponent {
         kibanaSpaceId: settings.values.elasticsearch.kibanaSpaceId.value,
         indexPattern: settings.values.elasticsearch.indexPattern.value,
         authorizationHeader: settings.values.elasticsearch.authorizationHeader.value
+      },
+      dynatrace: {
+        baseUrl: settings.values.dynatrace.baseUrl.value,
+        apiToken: settings.values.dynatrace.apiToken.value
       }
     });
   }
@@ -189,6 +202,10 @@ export class WorkspaceSettingsPageComponent {
         indexPattern: this.form.controls.elasticsearch.controls.indexPattern.value.trim(),
         authorizationHeader:
           this.form.controls.elasticsearch.controls.authorizationHeader.value.trim()
+      },
+      dynatrace: {
+        baseUrl: this.form.controls.dynatrace.controls.baseUrl.value.trim(),
+        apiToken: this.form.controls.dynatrace.controls.apiToken.value.trim()
       }
     };
   }
@@ -202,7 +219,9 @@ export class WorkspaceSettingsPageComponent {
       settings.values.elasticsearch.baseUrl,
       settings.values.elasticsearch.kibanaSpaceId,
       settings.values.elasticsearch.indexPattern,
-      settings.values.elasticsearch.authorizationHeader
+      settings.values.elasticsearch.authorizationHeader,
+      settings.values.dynatrace.baseUrl,
+      settings.values.dynatrace.apiToken
     ];
   }
 }

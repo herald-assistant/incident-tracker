@@ -12,6 +12,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.settings.FileSystemLocalWorkspaceSettingsStore;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
@@ -158,6 +159,10 @@ class LocalWorkspaceStoreTest {
                         "default",
                         "logs-*",
                         "Bearer elastic-secret"
+                ),
+                new LocalWorkspaceDynatraceSettings(
+                        "https://dynatrace.example.com",
+                        "dt0c01_secret"
                 )
         ));
 
@@ -171,6 +176,8 @@ class LocalWorkspaceStoreTest {
         assertTrue(settingsJson.contains("\"elasticsearch\""));
         assertTrue(settingsJson.contains("\"indexPattern\" : \"logs-*\""));
         assertTrue(settingsJson.contains("\"authorizationHeader\" : \"Bearer elastic-secret\""));
+        assertTrue(settingsJson.contains("\"dynatrace\""));
+        assertTrue(settingsJson.contains("\"apiToken\" : \"dt0c01_secret\""));
 
         var settings = fixture.settingsStore.read();
         assertEquals("CRM workspace", settings.appUi().title());
@@ -181,6 +188,8 @@ class LocalWorkspaceStoreTest {
         assertEquals("default", settings.elasticsearch().kibanaSpaceId());
         assertEquals("logs-*", settings.elasticsearch().indexPattern());
         assertEquals("Bearer elastic-secret", settings.elasticsearch().authorizationHeader());
+        assertEquals("https://dynatrace.example.com", settings.dynatrace().baseUrl());
+        assertEquals("dt0c01_secret", settings.dynatrace().apiToken());
     }
 
     @Test

@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsFieldResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabResponse;
@@ -38,7 +39,8 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(jsonPath("$.settingsPath").value("tdw-data/settings.json"))
                 .andExpect(jsonPath("$.values.appUi.title.value").value("CRM workspace"))
                 .andExpect(jsonPath("$.values.gitLab.group.source").value("WORKSPACE_SETTINGS"))
-                .andExpect(jsonPath("$.values.elasticsearch.indexPattern.value").value("logs-platform-*"));
+                .andExpect(jsonPath("$.values.elasticsearch.indexPattern.value").value("logs-platform-*"))
+                .andExpect(jsonPath("$.values.dynatrace.baseUrl.value").value("https://dynatrace.example.com"));
     }
 
     @Test
@@ -62,12 +64,17 @@ class WorkspaceSettingsControllerTest {
                                     "kibanaSpaceId": "default",
                                     "indexPattern": "logs-platform-*",
                                     "authorizationHeader": "Bearer secret"
+                                  },
+                                  "dynatrace": {
+                                    "baseUrl": "https://dynatrace.example.com",
+                                    "apiToken": "dt0c01_secret"
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.values.gitLab.token.secret").value(true))
-                .andExpect(jsonPath("$.values.elasticsearch.authorizationHeader.secret").value(true));
+                .andExpect(jsonPath("$.values.elasticsearch.authorizationHeader.secret").value(true))
+                .andExpect(jsonPath("$.values.dynatrace.apiToken.secret").value(true));
     }
 
     private WorkspaceSettingsResponse response() {
@@ -139,6 +146,24 @@ class WorkspaceSettingsControllerTest {
                                         "Bearer secret",
                                         "",
                                         "Bearer secret",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        true
+                                )
+                        ),
+                        new WorkspaceSettingsDynatraceResponse(
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.dynatrace.base-url",
+                                        "https://dynatrace.example.com",
+                                        "https://dynatrace.app",
+                                        "https://dynatrace.example.com",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        false
+                                ),
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.dynatrace.api-token",
+                                        "dt0c01_secret",
+                                        "",
+                                        "dt0c01_secret",
                                         WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                         true
                                 )
