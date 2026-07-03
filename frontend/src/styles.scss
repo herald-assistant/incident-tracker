@@ -53,8 +53,39 @@
   --radius-lg: 8px;
   --radius-md: 8px;
   --radius-sm: 6px;
-  --font-sans: "Aptos", "Segoe UI Variable Text", "Trebuchet MS", sans-serif;
+  --font-sans: "Google Sans", "Google Sans Text", "Product Sans", "Segoe UI Variable Text", "Segoe UI", Arial, sans-serif;
   --font-mono: "Consolas", "SFMono-Regular", monospace;
+
+  --mat-sys-body-large: 400 1rem / 1.5rem var(--font-sans);
+  --mat-sys-body-large-font: var(--font-sans);
+  --mat-sys-body-medium: 400 0.875rem / 1.25rem var(--font-sans);
+  --mat-sys-body-medium-font: var(--font-sans);
+  --mat-sys-body-small: 400 0.75rem / 1rem var(--font-sans);
+  --mat-sys-body-small-font: var(--font-sans);
+  --mat-sys-display-large: 400 3.562rem / 4rem var(--font-sans);
+  --mat-sys-display-large-font: var(--font-sans);
+  --mat-sys-display-medium: 400 2.812rem / 3.25rem var(--font-sans);
+  --mat-sys-display-medium-font: var(--font-sans);
+  --mat-sys-display-small: 400 2.25rem / 2.75rem var(--font-sans);
+  --mat-sys-display-small-font: var(--font-sans);
+  --mat-sys-headline-large: 400 2rem / 2.5rem var(--font-sans);
+  --mat-sys-headline-large-font: var(--font-sans);
+  --mat-sys-headline-medium: 400 1.75rem / 2.25rem var(--font-sans);
+  --mat-sys-headline-medium-font: var(--font-sans);
+  --mat-sys-headline-small: 400 1.5rem / 2rem var(--font-sans);
+  --mat-sys-headline-small-font: var(--font-sans);
+  --mat-sys-label-large: 500 0.875rem / 1.25rem var(--font-sans);
+  --mat-sys-label-large-font: var(--font-sans);
+  --mat-sys-label-medium: 500 0.75rem / 1rem var(--font-sans);
+  --mat-sys-label-medium-font: var(--font-sans);
+  --mat-sys-label-small: 500 0.688rem / 1rem var(--font-sans);
+  --mat-sys-label-small-font: var(--font-sans);
+  --mat-sys-title-large: 400 1.375rem / 1.75rem var(--font-sans);
+  --mat-sys-title-large-font: var(--font-sans);
+  --mat-sys-title-medium: 500 1rem / 1.5rem var(--font-sans);
+  --mat-sys-title-medium-font: var(--font-sans);
+  --mat-sys-title-small: 500 0.875rem / 1.25rem var(--font-sans);
+  --mat-sys-title-small-font: var(--font-sans);
 }
 
 *,
@@ -108,6 +139,23 @@ body {
   font-family: var(--font-sans);
   color: var(--text-main);
   background: var(--page-background);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+.cdk-overlay-container,
+.mat-mdc-tooltip,
+.mat-mdc-tooltip-surface,
+.mat-mdc-menu-panel,
+.mat-mdc-select-panel,
+.mat-mdc-dialog-container,
+.mat-mdc-snack-bar-container {
+  font-family: var(--font-sans);
 }
 
 .material-symbols-outlined {
@@ -2396,31 +2444,8 @@ body.is-column-resizing {
   user-select: none;
 }
 
-.analysis-log-tooltip,
-.analysis-log-tooltip .mat-mdc-tooltip-surface {
-  max-width: min(460px, calc(100vw - 32px));
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  border-radius: 16px;
-  background: rgba(23, 43, 77, 0.96);
-  color: #f8fbff;
-  box-shadow: 0 20px 48px rgba(9, 30, 66, 0.28);
-}
-
-.analysis-log-tooltip .mat-mdc-tooltip-surface {
-  padding: 14px 16px;
-  display: block;
-  max-height: min(360px, calc(100vh - 32px));
-  overflow: auto;
-  overscroll-behavior: contain;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  text-align: left;
-}
-
-.analysis-token-tooltip,
-.analysis-token-tooltip .mat-mdc-tooltip-surface {
+.analysis-rich-tooltip,
+.analysis-rich-tooltip .mat-mdc-tooltip-surface {
   max-width: min(560px, calc(100vw - 32px));
   white-space: pre-line;
   overflow-wrap: anywhere;
@@ -2431,7 +2456,7 @@ body.is-column-resizing {
   box-shadow: 0 18px 42px rgba(9, 30, 66, 0.18);
 }
 
-.analysis-token-tooltip .mat-mdc-tooltip-surface {
+.analysis-rich-tooltip .mat-mdc-tooltip-surface {
   display: block;
   max-height: min(420px, calc(100vh - 96px));
   padding: 12px 14px;
@@ -2440,53 +2465,6 @@ body.is-column-resizing {
   font-size: 0.82rem;
   font-weight: 600;
   line-height: 1.52;
-  text-align: left;
-}
-
-.flow-explorer-tooltip,
-.flow-explorer-tooltip .mat-mdc-tooltip-surface {
-  max-width: min(420px, calc(100vw - 32px));
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-  border: 1px solid rgba(12, 102, 228, 0.22);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--text-main);
-  box-shadow: 0 18px 42px rgba(9, 30, 66, 0.18);
-}
-
-.flow-explorer-tooltip .mat-mdc-tooltip-surface {
-  display: block;
-  max-height: min(260px, calc(100vh - 32px));
-  padding: 12px 14px;
-  overflow: auto;
-  overscroll-behavior: contain;
-  font-size: 0.82rem;
-  font-weight: 650;
-  line-height: 1.5;
-  text-align: left;
-}
-
-.analysis-json-tooltip,
-.analysis-json-tooltip .mat-mdc-tooltip-surface {
-  max-width: min(680px, calc(100vw - 32px));
-  white-space: pre;
-  overflow-wrap: normal;
-  border-radius: 12px;
-  background: rgba(23, 43, 77, 0.98);
-  color: #f8fbff;
-  box-shadow: 0 20px 48px rgba(9, 30, 66, 0.3);
-}
-
-.analysis-json-tooltip .mat-mdc-tooltip-surface {
-  padding: 14px 16px;
-  display: block;
-  max-height: min(460px, calc(100vh - 32px));
-  overflow: auto;
-  overscroll-behavior: contain;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  line-height: 1.5;
   text-align: left;
 }
 

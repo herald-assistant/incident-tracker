@@ -14,11 +14,14 @@
         <button
           class="secondary-button analysis-history-icon-button"
           type="button"
+          aria-label="Refresh"
+          matTooltip="Refresh"
+          matTooltipPosition="above"
+          [matTooltipShowDelay]="120"
           [disabled]="isListLoading()"
           (click)="loadRuns()"
         >
           <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
-          <span>Refresh</span>
         </button>
       </div>
 
@@ -93,13 +96,27 @@
                     />
                   </label>
                   <div class="analysis-history-rename__actions">
-                    <button class="primary-button" type="submit" [disabled]="isRenaming()">
+                    <button
+                      class="primary-button"
+                      type="submit"
+                      [disabled]="isRenaming()"
+                      [attr.aria-label]="isRenaming() ? 'Saving name' : 'Save name'"
+                      [matTooltip]="isRenaming() ? 'Saving name' : 'Save name'"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                    >
                       <span class="material-symbols-outlined" aria-hidden="true">check</span>
-                      <span>Save</span>
                     </button>
-                    <button class="secondary-button" type="button" (click)="cancelRename()">
+                    <button
+                      class="secondary-button"
+                      type="button"
+                      aria-label="Cancel rename"
+                      matTooltip="Cancel rename"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      (click)="cancelRename()"
+                    >
                       <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                      <span>Cancel</span>
                     </button>
                   </div>
                   @if (renameError()) {
@@ -107,15 +124,14 @@
                   }
                 </form>
               } @else {
-                <button
+                <div
                   class="analysis-history-run__main"
-                  type="button"
-                  [disabled]="openingAnalysisId() === run.analysisId"
-                  [attr.aria-label]="'Open local run ' + run.name"
-                  (click)="openRun(run)"
                 >
-                  <span class="analysis-history-run__icon material-symbols-outlined" aria-hidden="true">
-                    {{ featureIcon(run.feature) }}
+                  <span class="analysis-history-run__feature-stack">
+                    <span class="analysis-history-run__icon material-symbols-outlined" aria-hidden="true">
+                      {{ featureIcon(run.feature) }}
+                    </span>
+                    <span class="analysis-history-run__feature">{{ featureLabel(run.feature) }}</span>
                   </span>
                   <span class="analysis-history-run__content">
                     <span class="analysis-history-run__title-row">
@@ -123,7 +139,6 @@
                       <span [attr.class]="'status-pill ' + statusClass(run.status)">
                         {{ statusLabel(run.status) }}
                       </span>
-                      <span class="analysis-history-run__feature">{{ featureLabel(run.feature) }}</span>
                     </span>
                     <span class="analysis-history-run__meta">
                       <span>Created {{ dateTime(run.createdAt) }}</span>
@@ -132,40 +147,56 @@
                       }
                       <span>Updated {{ dateTime(run.updatedAt) }}</span>
                     </span>
-                    <span class="analysis-history-run__id">{{ run.analysisId }}</span>
                   </span>
-                  <span class="analysis-history-run__open">
-                    @if (openingAnalysisId() === run.analysisId) {
-                      <span class="analysis-history-spinner" aria-hidden="true"></span>
-                    } @else {
-                      <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
-                    }
-                  </span>
-                </button>
+                </div>
 
                 <div class="analysis-history-run__actions">
-                  <button class="secondary-button" type="button" (click)="startRename(run)">
+                  <button
+                    class="secondary-button"
+                    type="button"
+                    [disabled]="openingAnalysisId() === run.analysisId"
+                    [attr.aria-label]="openingAnalysisId() === run.analysisId ? 'Opening local run ' + run.name : 'Open local run ' + run.name"
+                    [matTooltip]="openingAnalysisId() === run.analysisId ? 'Opening...' : 'Open'"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                    (click)="openRun(run)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                  </button>
+                  <button
+                    class="secondary-button"
+                    type="button"
+                    [attr.aria-label]="'Rename local run ' + run.name"
+                    matTooltip="Rename"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                    (click)="startRename(run)"
+                  >
                     <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                    <span>Name</span>
                   </button>
                   <button
                     class="secondary-button"
                     type="button"
                     [disabled]="exportingAnalysisId() === run.analysisId || !canExportRun(run)"
-                    [attr.title]="canExportRun(run) ? null : 'Eksport jest dostępny po zakończeniu runu.'"
+                    [attr.aria-label]="exportingAnalysisId() === run.analysisId ? 'Exporting local run ' + run.name : 'Export local run ' + run.name"
+                    [matTooltip]="canExportRun(run) ? (exportingAnalysisId() === run.analysisId ? 'Exporting...' : 'Export') : 'Eksport jest dostępny po zakończeniu runu.'"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
                     (click)="exportRun(run)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                    <span>{{ exportingAnalysisId() === run.analysisId ? 'Exporting...' : 'Export' }}</span>
                   </button>
                   <button
                     class="secondary-button analysis-history-danger-button"
                     type="button"
                     [disabled]="deletingAnalysisId() === run.analysisId"
+                    [attr.aria-label]="deletingAnalysisId() === run.analysisId ? 'Deleting local run ' + run.name : 'Delete local run ' + run.name"
+                    [matTooltip]="deletingAnalysisId() === run.analysisId ? 'Deleting...' : 'Delete'"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
                     (click)="deleteRun(run)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                    <span>{{ deletingAnalysisId() === run.analysisId ? 'Deleting...' : 'Delete' }}</span>
                   </button>
                 </div>
               }

@@ -269,7 +269,7 @@
                     [attr.aria-label]="step.usageTooltip"
                     [matTooltip]="step.usageTooltip"
                     matTooltipPosition="above"
-                    matTooltipClass="analysis-token-tooltip"
+                    matTooltipClass="analysis-rich-tooltip"
                     [matTooltipShowDelay]="120"
                   >
                     @for (stat of step.usageStats; track stat.label) {
@@ -524,7 +524,7 @@
                                       [attr.aria-label]="'Pokaż pełne szczegóły logu ' + row.title"
                                     [matTooltip]="row.detailsTooltip"
                                     matTooltipPosition="above"
-                                    matTooltipClass="analysis-log-tooltip"
+                                    matTooltipClass="analysis-rich-tooltip"
                                     [matTooltipShowDelay]="100"
                                   >
                                     <mat-icon fontSet="material-symbols-outlined">info</mat-icon>
@@ -536,7 +536,6 @@
                                       [attr.aria-label]="'Kopiuj szczegóły logu ' + row.title"
                                       [matTooltip]="copiedRowKey() === row.key ? 'Skopiowano' : 'Kopiuj do schowka'"
                                       matTooltipPosition="above"
-                                      matTooltipClass="analysis-log-tooltip"
                                       [matTooltipShowDelay]="100"
                                       (click)="copyLogDetails(row)"
                                     >
@@ -570,7 +569,7 @@
                                   [attr.data-technical-tooltip]="event.technicalTooltip"
                                   [matTooltip]="event.technicalTooltip"
                                   matTooltipPosition="above"
-                                  matTooltipClass="analysis-json-tooltip"
+                                  matTooltipClass="analysis-rich-tooltip"
                                   [matTooltipShowDelay]="100"
                                   (click)="$event.stopPropagation()"
                                 >
@@ -1516,7 +1515,6 @@
                       [attr.aria-label]="item.displayStatusLabel"
                       [matTooltip]="item.displayStatusTooltip"
                       matTooltipPosition="above"
-                      matTooltipClass="analysis-log-tooltip"
                       [matTooltipShowDelay]="100"
                     >
                       @if (item.displayStatus === 'PENDING') {

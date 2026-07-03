@@ -24,7 +24,6 @@
                 tabindex="0"
                 aria-label="Application field help"
                 matTooltip="Aplikacja z operational context. Zmiana aplikacji odswieza liste endpointow i czysci aktualny wynik."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -113,7 +112,6 @@
                               class="flow-explorer-system-info"
                               aria-label="Application details"
                               [matTooltip]="systemTooltip(system)"
-                              matTooltipClass="flow-explorer-tooltip"
                               matTooltipPosition="right"
                               [matTooltipShowDelay]="120"
                             >
@@ -142,7 +140,6 @@
                 tabindex="0"
                 aria-label="Branch field help"
                 matTooltip="Git ref dla pobrania endpoint inventory. Zmiana ref czysci endpointy; uzyj Load endpoints."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -174,7 +171,6 @@
                 tabindex="0"
                 aria-label="Endpoint field help"
                 matTooltip="Endpoint do udokumentowania. Zmiana endpointu czysci wynik bez ponownego ladowania inventory."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -365,7 +361,6 @@
                 tabindex="0"
                 aria-label="Inventory refresh help"
                 matTooltip="Pobiera liste endpointow dla wybranej aplikacji i branch/ref."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -393,7 +388,6 @@
                 tabindex="0"
                 aria-label="Goal field help"
                 matTooltip="Ustawia cel analizy. Deep Discovery buduje kompleksowe rozpoznanie endpointu."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -446,7 +440,6 @@
                 tabindex="0"
                 aria-label="Section modes field help"
                 matTooltip="Off usuwa sekcje z oczekiwanego wyniku. Compact zwraca ja zwiezle. Deep priorytetyzuje ja w analizie."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -515,7 +508,6 @@
                 tabindex="0"
                 aria-label="AI model field help"
                 matTooltip="Model uzyty do analizy Flow Explorera. Lista pochodzi z tego samego katalogu co w Incident Trackerze."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -585,7 +577,6 @@
                 tabindex="0"
                 aria-label="Reasoning effort field help"
                 matTooltip="Steruje glebokoscia eksploracji: low bazuje glownie na artefaktach, medium uzupelnia primary flow, high moze zejsc glebiej w edge case'y."
-                matTooltipClass="flow-explorer-tooltip"
                 matTooltipPosition="right"
                 [matTooltipShowDelay]="120"
               >
@@ -688,7 +679,6 @@
               tabindex="0"
               aria-label="User instructions field help"
               matTooltip="Doprecyzowanie oczekiwanego rezultatu. Backend nadal buduje canonical prompt i kontrakt odpowiedzi."
-              matTooltipClass="flow-explorer-tooltip"
               matTooltipPosition="right"
               [matTooltipShowDelay]="120"
             >
@@ -1206,7 +1196,7 @@
                 [attr.aria-label]="usageTooltip(usage)"
                 [matTooltip]="usageTooltip(usage)"
                 matTooltipPosition="above"
-                matTooltipClass="analysis-token-tooltip"
+                matTooltipClass="analysis-rich-tooltip"
                 [matTooltipShowDelay]="100"
               >
                 @for (stat of usageStats(usage); track stat.label) {

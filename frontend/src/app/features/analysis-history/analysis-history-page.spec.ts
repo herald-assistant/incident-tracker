@@ -1,5 +1,7 @@
 import { provideLocationMocks } from '@angular/common/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatTooltip } from '@angular/material/tooltip';
+import { By } from '@angular/platform-browser';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, of } from 'rxjs';
 
@@ -34,6 +36,65 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Flow /customers goal');
     expect(fixture.nativeElement.textContent).toContain('Zakończona');
     expect(fixture.nativeElement.textContent).toContain('Budowanie kontekstu');
+    expect(fixture.nativeElement.textContent).not.toContain('analysis-1');
+  });
+
+  it('should keep history action labels in tooltips instead of visible button text', async () => {
+    const { fixture } = await createComponent();
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const runActionButtons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.analysis-history-run__actions button')
+    );
+    expect(runActionButtons).toHaveLength(12);
+    expect(runActionButtons.every((button) => button.querySelectorAll('span:not(.material-symbols-outlined)').length === 0))
+      .toBe(true);
+    expect(tooltipMessagesForIcon(fixture, 'refresh')).toContain('Refresh');
+    expect(tooltipMessagesForIcon(fixture, 'visibility')).toContain('Open');
+    expect(tooltipMessagesForIcon(fixture, 'edit')).toContain('Rename');
+    expect(tooltipMessagesForIcon(fixture, 'download')).toContain('Export');
+    expect(tooltipMessagesForIcon(fixture, 'download')).toContain(
+      'Eksport jest dostępny po zakończeniu runu.'
+    );
+    expect(tooltipMessagesForIcon(fixture, 'delete')).toContain('Delete');
+
+    fixture.componentInstance.startRename(listRuns()[0]!);
+    fixture.detectChanges();
+
+    const renameActionButtons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.analysis-history-rename__actions button')
+    );
+    expect(renameActionButtons).toHaveLength(2);
+    expect(renameActionButtons.every((button) => button.querySelectorAll('span:not(.material-symbols-outlined)').length === 0))
+      .toBe(true);
+    expect(tooltipMessagesForIcon(fixture, 'check')).toContain('Save name');
+    expect(tooltipMessagesForIcon(fixture, 'close')).toContain('Cancel rename');
+  });
+
+  it('should place the feature label under the feature icon and hide the run id', async () => {
+    const { fixture } = await createComponent();
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const firstRun = compiled.querySelector('.analysis-history-run') as HTMLElement;
+    const featureStack = firstRun.querySelector('.analysis-history-run__feature-stack');
+    const titleRow = firstRun.querySelector('.analysis-history-run__title-row');
+
+    expect(featureStack?.querySelector('.analysis-history-run__icon')?.textContent?.trim()).toBe(
+      'account_tree'
+    );
+    expect(featureStack?.querySelector('.analysis-history-run__feature')?.textContent?.trim()).toBe(
+      'Flow Explorer'
+    );
+    expect(titleRow?.querySelector('.analysis-history-run__feature')).toBeNull();
+    expect(firstRun.querySelector('.analysis-history-run__id')).toBeNull();
   });
 
   it('should filter runs only by name and feature', async () => {
@@ -195,6 +256,20 @@ describe('AnalysisHistoryPageComponent', () => {
     };
   }
 });
+
+function tooltipMessagesForIcon(
+  fixture: ComponentFixture<AnalysisHistoryPageComponent>,
+  icon: string
+): string[] {
+  return fixture.debugElement
+    .queryAll(By.directive(MatTooltip))
+    .filter(
+      (element) =>
+        element.nativeElement.querySelector('.material-symbols-outlined')?.textContent.trim() ===
+        icon
+    )
+    .map((element) => element.injector.get(MatTooltip).message);
+}
 
 function listRuns(): LocalAnalysisRunListItemResponse[] {
   return [

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -25,7 +26,7 @@ import {
 
 @Component({
   selector: 'app-analysis-history-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, MatTooltipModule],
   templateUrl: './analysis-history-page.html',
   styleUrl: './analysis-history-page.scss'
 })

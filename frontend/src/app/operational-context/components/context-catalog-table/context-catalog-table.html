@@ -6,7 +6,6 @@
         role="columnheader"
         tabindex="0"
         [matTooltip]="column.tooltip"
-        matTooltipClass="analysis-log-tooltip"
         [matTooltipShowDelay]="150"
       >
         {{ column.label }}
@@ -120,7 +119,6 @@
                           [attr.data-status]="item.status"
                           [attr.aria-label]="itemStatusLabel(item.status)"
                           [matTooltip]="itemStatusLabel(item.status)"
-                          matTooltipClass="analysis-log-tooltip"
                         >
                           {{ itemStatusIcon(item.status) }}
                         </mat-icon>

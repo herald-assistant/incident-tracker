@@ -8,7 +8,6 @@
       [class.explainable-cell--warning]="aggregate()?.severity === 'warning'"
       [class.explainable-cell--error]="aggregate()?.severity === 'error'"
       [matTooltip]="tooltip()"
-      matTooltipClass="analysis-log-tooltip"
       (click)="emitInspect($event)"
     >
       <span class="explainable-cell__summary-copy">
@@ -23,7 +22,6 @@
     <div
       class="explainable-cell explainable-cell--table explainable-cell__static"
       [matTooltip]="tooltip()"
-      matTooltipClass="analysis-log-tooltip"
     >
       <span class="explainable-cell__summary-copy">
         <span class="explainable-cell__label">{{ displayLabel() }}</span>
@@ -39,7 +37,7 @@
     [class.explainable-cell--error]="aggregate()?.severity === 'error'"
     (click)="stopInteraction($event)"
   >
-    <summary [matTooltip]="tooltip()" matTooltipClass="analysis-log-tooltip">
+    <summary [matTooltip]="tooltip()">
       <span class="explainable-cell__summary-copy">
         <span class="explainable-cell__label">{{ displayLabel() }}</span>
         <span class="explainable-cell__meta">{{ metaLabel() }}</span>
