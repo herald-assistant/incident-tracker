@@ -95,12 +95,18 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Ładowanie modeli AI...');
     expect(fixture.nativeElement.textContent).not.toContain('Ładowanie reasoning effort...');
     expect(fixture.nativeElement.querySelectorAll('.select-loader')).toHaveLength(0);
-    expect(fixture.nativeElement.textContent).toContain('Domyślny backend (gpt-5.4)');
+    expect(fixture.componentInstance.aiModelControl.value).toBe('');
+    expect(fixture.componentInstance.reasoningEffortControl.value).toBe('medium');
+    expect(fixture.nativeElement.textContent).not.toContain('Domyślny backend (gpt-5.4)');
   });
 
   it('should start analysis without GitHub tokens or OAuth fields', async () => {
     const { fixture, analysisApi } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
 
     component.correlationIdControl.setValue('corr-123');
     component.submit(new Event('submit'));
@@ -108,11 +114,45 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
       correlationId: 'corr-123',
       model: undefined,
-      reasoningEffort: undefined
+      reasoningEffort: 'medium'
     });
     const startAnalysisCalls = analysisApi.startAnalysis.mock.calls as unknown as Array<[unknown]>;
     expect(JSON.stringify(startAnalysisCalls[0][0])).not.toContain('token');
     expect(JSON.stringify(startAnalysisCalls[0][0])).not.toContain('githubAuthCode');
+  });
+
+  it('should submit listed backend defaults as regular selected AI options', async () => {
+    const { fixture, analysisApi } = await createComponent(
+      connectedStatus(),
+      of(modelOptionsWithListedDefault())
+    );
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const aiModelOptions = Array.from(
+      fixture.nativeElement.querySelectorAll('#aiModel option')
+    ) as HTMLOptionElement[];
+    const reasoningOptions = Array.from(
+      fixture.nativeElement.querySelectorAll('#reasoningEffort option')
+    ) as HTMLOptionElement[];
+
+    expect(component.aiModelControl.value).toBe('gpt-5.4');
+    expect(component.reasoningEffortControl.value).toBe('high');
+    expect(aiModelOptions.some((option) => option.value === '')).toBe(false);
+    expect(reasoningOptions.filter((option) => option.value === 'high')).toHaveLength(1);
+    expect(fixture.nativeElement.textContent).not.toContain('Domyślny backend (high)');
+
+    component.correlationIdControl.setValue('corr-123');
+    component.submit(new Event('submit'));
+
+    expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
+      correlationId: 'corr-123',
+      model: 'gpt-5.4',
+      reasoningEffort: 'high'
+    });
   });
 
   it('should switch the route to the local run immediately after starting analysis', async () => {
@@ -528,6 +568,30 @@ function modelOptions(): AnalysisAiModelOptionsResponse {
     defaultReasoningEffort: 'medium',
     defaultReasoningEfforts: ['low', 'medium', 'high'],
     models: []
+  };
+}
+
+function modelOptionsWithListedDefault(): AnalysisAiModelOptionsResponse {
+  return {
+    defaultModel: 'gpt-5.4',
+    defaultReasoningEffort: 'high',
+    defaultReasoningEfforts: ['low', 'medium', 'high'],
+    models: [
+      {
+        id: 'gpt-5.4',
+        name: 'GPT-5.4',
+        supportsReasoningEffort: true,
+        reasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'high'
+      },
+      {
+        id: 'gpt-5.4-mini',
+        name: 'GPT-5.4 mini',
+        supportsReasoningEffort: true,
+        reasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium'
+      }
+    ]
   };
 }
 

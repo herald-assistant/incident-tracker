@@ -2880,6 +2880,12 @@ body.is-column-resizing {
   background: #fff !important;
 }
 
+.ai-work-item--runtime:has(.ai-work-item__status--done) {
+  border-color: rgba(174, 46, 36, 0.32);
+  background: linear-gradient(180deg, #fff8f7 0%, #ffffff 100%) !important;
+  box-shadow: inset 4px 0 0 rgba(174, 46, 36, 0.72) !important;
+}
+
 .ai-work-item .mat-expansion-panel-header {
   height: auto !important;
   min-height: 0 !important;
@@ -2946,6 +2952,12 @@ body.is-column-resizing {
   color: #403294;
 }
 
+.ai-work-item--runtime:has(.ai-work-item__status--done) .ai-work-item__icon {
+  border-color: rgba(174, 46, 36, 0.24);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
 .ai-work-item__text {
   min-width: 0;
   color: var(--text-main);
@@ -2987,6 +2999,11 @@ body.is-column-resizing {
 .ai-work-item--message .ai-work-item__text,
 .ai-work-item--message .ai-work-item__markdown-preview .markdown-content {
   color: var(--primary-dark);
+}
+
+.ai-work-item--runtime:has(.ai-work-item__status--done) .ai-work-item__text,
+.ai-work-item--runtime:has(.ai-work-item__status--done) .ai-work-item__markdown-preview .markdown-content {
+  color: var(--danger-text);
 }
 
 .ai-work-item__markdown-full {
@@ -3034,6 +3051,11 @@ body.is-column-resizing {
 .ai-work-item__status--done {
   color: var(--success-text);
   background: var(--success-soft);
+}
+
+.ai-work-item--runtime .ai-work-item__status--done {
+  color: var(--danger-text);
+  background: var(--danger-soft);
 }
 
 .ai-work-item__status--failed {

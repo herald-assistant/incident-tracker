@@ -97,7 +97,9 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('Endpoint documentation workspace');
     expect(compiled.textContent).toContain('Select application');
     expect(compiled.textContent).toContain('2 applications');
-    expect(compiled.textContent).toContain('Default backend (gpt-5.4)');
+    expect(compiled.textContent).toContain('No model selected');
+    expect(compiled.textContent).toContain('backend default not listed');
+    expect(compiled.textContent).toContain('Medium');
     expect(compiled.textContent).not.toContain('Customer relationship core API.');
   });
 
@@ -312,7 +314,51 @@ describe('FlowExplorerPageComponent', () => {
       ],
       userInstructions: undefined,
       model: undefined,
-      reasoningEffort: undefined
+      reasoningEffort: 'medium'
+    });
+  });
+
+  it('should use listed backend defaults without adding duplicate dropdown options', () => {
+    vi.mocked(analysisApi.getAiModelOptions).mockReturnValue(of(aiModelOptionsWithListedDefault()));
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+    selectEndpoint(fixture, '/api/customers/{id}');
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    openReasoningEffortSelect(nativeElement);
+    fixture.detectChanges();
+
+    const reasoningOptions = Array.from(
+      nativeElement.querySelectorAll<HTMLButtonElement>(
+        '.flow-explorer-select__menu [role="option"]'
+      )
+    );
+
+    expect(nativeElement.textContent).toContain('GPT-5.4 (gpt-5.4)');
+    expect(reasoningOptions.filter((button) => button.textContent?.includes('High'))).toHaveLength(1);
+    expect(nativeElement.textContent).not.toContain('Default backend (high)');
+
+    clickButtonContaining(nativeElement, 'Run Flow Explorer');
+    fixture.detectChanges();
+
+    expect(flowExplorerApi.startJob).toHaveBeenCalledWith({
+      systemId: 'crm-service',
+      endpointId: 'crm-api:GET /api/customers/{id}',
+      httpMethod: 'GET',
+      endpointPath: '/api/customers/{id}',
+      branch: 'main',
+      goal: 'DEEP_DISCOVERY',
+      focusAreas: ['FUNCTIONAL_FLOW'],
+      sectionModes: [
+        { id: 'FUNCTIONAL_FLOW', mode: 'DEEP' },
+        { id: 'VALIDATIONS', mode: 'COMPACT' },
+        { id: 'PERSISTENCE', mode: 'COMPACT' },
+        { id: 'INTEGRATIONS', mode: 'COMPACT' }
+      ],
+      userInstructions: undefined,
+      model: 'gpt-5.4',
+      reasoningEffort: 'high'
     });
   });
 
@@ -1088,6 +1134,30 @@ function localFlowExplorerRunDetail(
     completedAt: job.completedAt,
     exportEnvelope: flowExplorerLocalRunEnvelope(job),
     continuationEnabled: true
+  };
+}
+
+function aiModelOptionsWithListedDefault(): AnalysisAiModelOptionsResponse {
+  return {
+    defaultModel: 'gpt-5.4',
+    defaultReasoningEffort: 'high',
+    defaultReasoningEfforts: ['low', 'medium', 'high'],
+    models: [
+      {
+        id: 'gpt-5.4',
+        name: 'GPT-5.4',
+        supportsReasoningEffort: true,
+        reasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'high'
+      },
+      {
+        id: 'gpt-5.4-mini',
+        name: 'GPT-5.4 mini',
+        supportsReasoningEffort: true,
+        reasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium'
+      }
+    ]
   };
 }
 

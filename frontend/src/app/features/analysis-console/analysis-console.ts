@@ -50,6 +50,13 @@ import {
   estimateAnalysisAiCost,
   GITHUB_AI_CREDIT_USD
 } from '../../core/utils/analysis-ai-usage-cost.utils';
+import {
+  defaultReasoningEffortForAiModel,
+  EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
+  listedDefaultAiModel,
+  normalizeAnalysisAiModelOptions,
+  reasoningEffortsForAiModel
+} from '../../core/utils/analysis-ai-model-options.utils';
 import { AnalysisFeatureAsideComponent } from '../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
@@ -57,12 +64,6 @@ import { AnalysisReportPanelComponent } from '../../components/analysis-report-p
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 
 const POLL_INTERVAL_MS = 1500;
-const EMPTY_AI_MODEL_OPTIONS: AnalysisAiModelOptionsResponse = {
-  defaultModel: '',
-  defaultReasoningEffort: '',
-  defaultReasoningEfforts: [],
-  models: []
-};
 type SelectOption = {
   value: string;
   label: string;
@@ -124,7 +125,7 @@ export class AnalysisConsoleComponent {
   readonly job = signal<AnalysisJobStateSnapshot | null>(null);
   readonly exportState = signal<ExportState | null>(null);
   readonly isAiModelOptionsLoading = signal(false);
-  readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_AI_MODEL_OPTIONS);
+  readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly selectedAiModel = signal('');
   readonly githubAuthStatus = signal<GitHubAuthStatus | null>(null);
   readonly githubAuthError = signal('');
@@ -143,13 +144,10 @@ export class AnalysisConsoleComponent {
       ];
     }
 
-    return [
-      { value: '', label: this.defaultModelLabel() },
-      ...this.aiModelCatalog().models.map((model) => ({
-        value: model.id,
-        label: this.modelLabel(model.id, model.name)
-      }))
-    ];
+    return this.aiModelCatalog().models.map((model) => ({
+      value: model.id,
+      label: this.modelLabel(model.id, model.name)
+    }));
   });
   readonly availableReasoningEfforts = computed(() =>
     this.reasoningEffortsForModel(this.selectedAiModel())
@@ -165,13 +163,10 @@ export class AnalysisConsoleComponent {
       ];
     }
 
-    return [
-      { value: '', label: this.defaultReasoningEffortLabel() },
-      ...this.availableReasoningEfforts().map((effort) => ({
-        value: effort,
-        label: this.reasoningEffortLabel(effort)
-      }))
-    ];
+    return this.availableReasoningEfforts().map((effort) => ({
+      value: effort,
+      label: this.reasoningEffortLabel(effort)
+    }));
   });
   readonly isAnalysisBlockedByAuth = computed(() => {
     const status = this.githubAuthStatus();
@@ -329,9 +324,10 @@ export class AnalysisConsoleComponent {
     this.loadingCorrelationId.set(correlationId);
     this.scrollResponseIntoView();
 
-    const aiModel = this.aiModelControl.value.trim();
+    const aiModel = this.aiModelControl.value.trim() || listedDefaultAiModel(this.aiModelCatalog());
     const reasoningEffort = this.reasoningEffortControl.enabled
       ? this.reasoningEffortControl.value.trim()
+        || defaultReasoningEffortForAiModel(this.aiModelCatalog(), aiModel)
       : '';
 
     this.analysisApi
@@ -387,7 +383,7 @@ export class AnalysisConsoleComponent {
       .subscribe({
         next: () => {
           this.isAiModelOptionsLoading.set(false);
-          this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
+          this.aiModelCatalog.set(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
           this.loadGithubAuthStatus();
         },
         error: (error) => {
@@ -681,7 +677,7 @@ export class AnalysisConsoleComponent {
             this.loadAiModelOptions();
           } else {
             this.isAiModelOptionsLoading.set(false);
-            this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
+            this.aiModelCatalog.set(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
             this.syncReasoningEffortSelection();
           }
         },
@@ -692,7 +688,8 @@ export class AnalysisConsoleComponent {
           );
           this.githubAuthError.set(transportError.message);
           this.isAiModelOptionsLoading.set(false);
-          this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
+          this.aiModelCatalog.set(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
+          this.syncAiModelSelection();
           this.syncReasoningEffortSelection();
         }
       });
@@ -708,7 +705,8 @@ export class AnalysisConsoleComponent {
       )
       .subscribe({
         next: (options) => {
-          this.aiModelCatalog.set(this.normalizeAiModelOptions(options));
+          this.aiModelCatalog.set(normalizeAnalysisAiModelOptions(options));
+          this.syncAiModelSelection();
           this.syncReasoningEffortSelection();
         },
         error: (error) => {
@@ -718,7 +716,8 @@ export class AnalysisConsoleComponent {
           );
           this.applyGithubAuthError(transportError.code);
           this.githubAuthError.set(transportError.message);
-          this.aiModelCatalog.set(EMPTY_AI_MODEL_OPTIONS);
+          this.aiModelCatalog.set(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
+          this.syncAiModelSelection();
           this.syncReasoningEffortSelection();
         }
       });
@@ -848,41 +847,23 @@ export class AnalysisConsoleComponent {
     };
   }
 
-  private normalizeAiModelOptions(
-    options: AnalysisAiModelOptionsResponse | null
-  ): AnalysisAiModelOptionsResponse {
-    if (!options) {
-      return EMPTY_AI_MODEL_OPTIONS;
+  private syncAiModelSelection(): void {
+    const currentModel = this.aiModelControl.value.trim();
+    if (currentModel) {
+      this.selectedAiModel.set(currentModel);
+      return;
     }
 
-    return {
-      defaultModel: typeof options.defaultModel === 'string' ? options.defaultModel : '',
-      defaultReasoningEffort:
-        typeof options.defaultReasoningEffort === 'string' ? options.defaultReasoningEffort : '',
-      defaultReasoningEfforts: Array.isArray(options.defaultReasoningEfforts)
-        ? options.defaultReasoningEfforts.filter((effort) => typeof effort === 'string')
-        : [],
-      models: Array.isArray(options.models)
-        ? options.models
-            .filter((model) => model && typeof model.id === 'string')
-            .map((model) => ({
-              id: model.id,
-              name: typeof model.name === 'string' ? model.name : model.id,
-              supportsReasoningEffort: Boolean(model.supportsReasoningEffort),
-              reasoningEfforts: Array.isArray(model.reasoningEfforts)
-                ? model.reasoningEfforts.filter((effort) => typeof effort === 'string')
-                : [],
-              defaultReasoningEffort:
-                typeof model.defaultReasoningEffort === 'string'
-                  ? model.defaultReasoningEffort
-                  : ''
-            }))
-        : []
-    };
+    const defaultModel = listedDefaultAiModel(this.aiModelCatalog());
+    this.aiModelControl.setValue(defaultModel, { emitEvent: false });
+    this.selectedAiModel.set(defaultModel);
   }
 
   private syncReasoningEffortSelection(): void {
-    const availableEfforts = this.reasoningEffortsForModel(this.selectedAiModel());
+    const availableEfforts = reasoningEffortsForAiModel(
+      this.aiModelCatalog(),
+      this.selectedAiModel()
+    );
     const currentEffort = this.reasoningEffortControl.value.trim();
 
     if (!availableEfforts.length) {
@@ -892,9 +873,14 @@ export class AnalysisConsoleComponent {
     }
 
     this.reasoningEffortControl.enable({ emitEvent: false });
-    if (currentEffort && !availableEfforts.includes(currentEffort)) {
-      this.reasoningEffortControl.setValue('', { emitEvent: false });
+    if (currentEffort && availableEfforts.includes(currentEffort)) {
+      return;
     }
+
+    this.reasoningEffortControl.setValue(
+      defaultReasoningEffortForAiModel(this.aiModelCatalog(), this.selectedAiModel()),
+      { emitEvent: false }
+    );
   }
 
   private syncControlsFromJob(job: AnalysisJobStateSnapshot): void {
@@ -956,23 +942,7 @@ export class AnalysisConsoleComponent {
   }
 
   private reasoningEffortsForModel(modelId: string): string[] {
-    const catalog = this.aiModelCatalog();
-    if (!modelId) {
-      return catalog.defaultReasoningEfforts;
-    }
-
-    const model = catalog.models.find((candidate) => candidate.id === modelId);
-    return model?.supportsReasoningEffort ? model.reasoningEfforts : [];
-  }
-
-  private defaultModelLabel(): string {
-    const defaultModel = this.aiModelCatalog().defaultModel;
-    return defaultModel ? `Domyślny backend (${defaultModel})` : 'Domyślny backend';
-  }
-
-  private defaultReasoningEffortLabel(): string {
-    const defaultEffort = this.aiModelCatalog().defaultReasoningEffort;
-    return defaultEffort ? `Domyślny backend (${defaultEffort})` : 'Domyślny backend';
+    return reasoningEffortsForAiModel(this.aiModelCatalog(), modelId);
   }
 
   private modelLabel(id: string, name: string): string {
