@@ -1,6 +1,6 @@
 ---
 name: incident-operational-grounding
-description: Playbook analizy incydentu dla neutralnych tools katalogu operational context: grounding systemow, procesow, bounded contextow, ownershipu, code scope i handoffu.
+description: "Playbook analizy incydentu dla neutralnych tools katalogu operational context: grounding systemow, procesow, bounded contextow, ownershipu, code scope i handoffu."
 ---
 
 # Incident Operational Grounding

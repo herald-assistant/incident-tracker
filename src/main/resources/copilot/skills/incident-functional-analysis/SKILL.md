@@ -1,6 +1,6 @@
 ---
 name: incident-functional-analysis
-description: Kontrakt Functional Analysis v1 dla pola functionalAnalysis: wynik dla analityka biznesowo-systemowego, z kontekstem systemu, procesu, bounded contextu i handoffu, bez szumu implementacyjnego.
+description: "Kontrakt Functional Analysis v1 dla pola functionalAnalysis: wynik dla analityka biznesowo-systemowego, z kontekstem systemu, procesu, bounded contextu i handoffu, bez szumu implementacyjnego."
 ---
 
 # Skill Analizy Funkcjonalnej Incydentu

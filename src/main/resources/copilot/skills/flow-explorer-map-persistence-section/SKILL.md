@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-map-persistence-section
-description: Przygotowanie sekcji PERSISTENCE Flow Explorera dla trybow COMPACT i DEEP: code-first opis danych, operacji persistence oraz table/column/source mapping, gdy wymagany jest deep.
+description: "Przygotowanie sekcji PERSISTENCE Flow Explorera dla trybow COMPACT i DEEP: code-first opis danych, operacji persistence oraz table/column/source mapping, gdy wymagany jest deep."
 ---
 
 # Flow Explorer Map Persistence Section

@@ -169,11 +169,28 @@ Kazdy runtime skill powinien zawierac:
 Skille powinny rozrozniac fakty, inferencje, hipotezy i limity widocznosci.
 Mocne twierdzenia wymagaja source refs albo jawnego oznaczenia jako hipoteza.
 
+## Frontmatter SKILL.md
+
+Kazdy `SKILL.md` musi zaczynac sie poprawnym YAML frontmatter z polami
+`name` i `description`. `name` musi byc identyczne z nazwa katalogu skilla.
+Jezeli `description` albo inne pole tekstowe zawiera dwukropek z nastepujaca
+spacja, np. `DEEP: ...`, cytuj cala wartosc YAML:
+
+```yaml
+description: "Opis z dwukropkiem: dalsza tresc"
+```
+
+Nie zostawiaj niecytowanych wartosci z takim dwukropkiem, bo Copilot SDK moze
+nie zindeksowac skilla i built-in tool `skill` zwroci `Skill not found`, mimo
+ze katalog i plik `SKILL.md` fizycznie istnieja.
+
 ## Testy I Weryfikacja
 
 Po zmianie nazw, katalogow albo doboru skilli uruchom odpowiednie testy:
 
 - contract test runtime skilli danego feature'a,
+- `CopilotRuntimeSkillFrontmatterTest`, ktory parsuje YAML frontmatter
+  wszystkich runtime skilli,
 - preparation/session config test, ktory sprawdza selected root i `skill` w
   `availableTools`,
 - prompt preparation/rendering test, ktory sprawdza aktualne nazwy w

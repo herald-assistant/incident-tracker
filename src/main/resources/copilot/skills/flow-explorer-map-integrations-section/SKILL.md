@@ -1,6 +1,6 @@
 ---
 name: flow-explorer-map-integrations-section
-description: Przygotowanie sekcji INTEGRATIONS Flow Explorera dla trybow COMPACT i DEEP: zewnetrzne systemy, kanaly, targety, transport, payload, error handling i handoff.
+description: "Przygotowanie sekcji INTEGRATIONS Flow Explorera dla trybow COMPACT i DEEP: zewnetrzne systemy, kanaly, targety, transport, payload, error handling i handoff."
 ---
 
 # Flow Explorer Map Integrations Section

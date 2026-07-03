@@ -1,6 +1,6 @@
 ---
 name: incident-code-grounding
-description: Playbook korzystania z GitLab tools podczas analizy incydentu: rozumienie failing code path, predykatow repozytorium, integracji, flow i technicznego handoffu.
+description: "Playbook korzystania z GitLab tools podczas analizy incydentu: rozumienie failing code path, predykatow repozytorium, integracji, flow i technicznego handoffu."
 ---
 
 # Incident Code Grounding
