@@ -25,6 +25,7 @@
         <javaparser.version>3.26.4</javaparser.version>
         <frontend-maven-plugin.version>1.15.4</frontend-maven-plugin.version>
         <frontend.node.version>v22.14.0</frontend.node.version>
+        <frontend.node.install.skip>false</frontend.node.install.skip>
     </properties>
 
     <dependencyManagement>
@@ -102,6 +103,7 @@
                             <goal>install-node-and-npm</goal>
                         </goals>
                         <configuration>
+                            <skip>${frontend.node.install.skip}</skip>
                             <nodeVersion>${frontend.node.version}</nodeVersion>
                         </configuration>
                     </execution>
