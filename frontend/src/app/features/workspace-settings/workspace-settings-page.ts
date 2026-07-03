@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { finalize } from 'rxjs';
 
 import {
@@ -14,7 +15,7 @@ import { WorkspaceSettingsApiService } from '../../core/services/workspace-setti
 
 @Component({
   selector: 'app-workspace-settings-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, MatTooltipModule],
   templateUrl: './workspace-settings-page.html',
   styleUrl: './workspace-settings-page.scss'
 })
@@ -100,48 +101,45 @@ export class WorkspaceSettingsPageComponent {
       });
   }
 
-  resetToApplicationProperties(): void {
-    const settings = this.settings();
-    if (!settings) {
-      return;
-    }
-
-    this.form.setValue({
-      appUi: {
-        title: settings.values.appUi.title.applicationValue
-      },
-      gitLab: {
-        baseUrl: settings.values.gitLab.baseUrl.applicationValue,
-        group: settings.values.gitLab.group.applicationValue,
-        token: settings.values.gitLab.token.applicationValue
-      }
-    });
-  }
-
   toggleTokenVisibility(): void {
     this.showToken.update((visible) => !visible);
   }
 
-  sourceLabel(field: WorkspaceSettingsField): string {
-    return field.source === 'WORKSPACE_SETTINGS' ? 'settings.json' : 'application.properties';
+  sourceLabel(field: WorkspaceSettingsField, currentValue: string): string {
+    return this.usesCustomValue(field, currentValue) ? 'CUSTOM' : 'DEFAULT';
   }
 
-  sourceClass(field: WorkspaceSettingsField): string {
-    return field.source === 'WORKSPACE_SETTINGS'
-      ? 'workspace-settings-source workspace-settings-source--workspace'
+  sourceClass(field: WorkspaceSettingsField, currentValue: string): string {
+    return this.usesCustomValue(field, currentValue)
+      ? 'workspace-settings-source workspace-settings-source--custom'
       : 'workspace-settings-source';
   }
 
-  displayValue(value: string | null | undefined): string {
-    return value && value.trim() ? value : 'not set';
+  usesCustomValue(field: WorkspaceSettingsField, currentValue: string): boolean {
+    const normalizedCurrentValue = normalizeValue(currentValue);
+    if (!normalizedCurrentValue) {
+      return false;
+    }
+    return normalizedCurrentValue !== normalizeValue(field.applicationValue);
   }
 
-  secretDisplayValue(field: WorkspaceSettingsField): string {
-    const value = field.applicationValue || '';
-    if (!value) {
-      return 'not set';
+  defaultTooltip(field: WorkspaceSettingsField): string | null {
+    const defaultValue = normalizeValue(field.applicationValue);
+    if (!defaultValue) {
+      return null;
     }
-    return 'configured';
+    return field.secret ? 'Default: configured' : `Default: ${defaultValue}`;
+  }
+
+  resetFieldToDefault(
+    event: Event,
+    control: FormControl<string>,
+    field: WorkspaceSettingsField
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+    control.setValue(field.applicationValue);
+    control.markAsDirty();
   }
 
   private applySettings(settings: WorkspaceSettingsResponse): void {
@@ -196,4 +194,8 @@ function toErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function normalizeValue(value: string | null | undefined): string {
+  return value?.trim() ?? '';
 }

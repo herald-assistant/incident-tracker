@@ -4,6 +4,7 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { By } from '@angular/platform-browser';
+import { MatTooltip } from '@angular/material/tooltip';
 import { Router, provideRouter } from '@angular/router';
 
 import { App } from './app';
@@ -156,7 +157,67 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('tdw-data/settings.json');
-    expect(compiled.textContent).toContain('application.properties');
+    expect(compiled.querySelector('.workspace-settings-baseline')).toBeNull();
+    expect(compiled.textContent).not.toContain('analysis.gitlab');
+    expect(compiled.textContent).not.toContain('application.properties');
+    expect(compiled.textContent).not.toContain('Use application.properties');
+
+    const sourceBadges = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.workspace-settings-source')
+    );
+    expect(sourceBadges.map((badge) => badge.textContent?.trim())).toEqual([
+      'DEFAULT',
+      'DEFAULT',
+      'CUSTOM',
+      'CUSTOM'
+    ]);
+
+    const sourceBadgeTooltips = fixture.debugElement
+      .queryAll(By.css('.workspace-settings-source'))
+      .map((element) => element.injector.get(MatTooltip));
+    expect(sourceBadgeTooltips.map((tooltip) => tooltip.message)).toEqual([
+      'Default: ChatCLP',
+      'Default: https://gitlab.example.com',
+      'Default: platform/app',
+      ''
+    ]);
+    expect(sourceBadgeTooltips.map((tooltip) => tooltip.disabled)).toEqual([
+      false,
+      false,
+      false,
+      true
+    ]);
+
+    const resetButtons = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.workspace-settings-field-reset-button')
+    );
+    expect(resetButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Restore default for Group',
+      'Restore default for Token'
+    ]);
+    expect(
+      fixture.debugElement
+        .queryAll(By.css('.workspace-settings-field-reset-button'))
+        .map((element) => element.injector.get(MatTooltip).message)
+    ).toEqual(['Restore default', 'Restore default']);
+
+    resetButtons[0].click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const groupInput = compiled.querySelector<HTMLInputElement>('#gitlabGroup');
+    const updatedSourceBadges = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.workspace-settings-source')
+    );
+    expect(groupInput?.value).toBe('platform/app');
+    expect(updatedSourceBadges.map((badge) => badge.textContent?.trim())).toEqual([
+      'DEFAULT',
+      'DEFAULT',
+      'DEFAULT',
+      'CUSTOM'
+    ]);
+    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(1);
   });
 
   it('should collapse the left navigation into an icon rail', async () => {

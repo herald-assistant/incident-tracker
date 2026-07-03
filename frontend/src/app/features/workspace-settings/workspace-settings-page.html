@@ -29,7 +29,9 @@
         class="secondary-button workspace-settings-icon-button"
         type="button"
         aria-label="Refresh settings"
-        title="Refresh"
+        matTooltip="Refresh"
+        matTooltipPosition="above"
+        [matTooltipShowDelay]="120"
         [disabled]="isLoading() || isSaving()"
         (click)="loadSettings()"
       >
@@ -50,12 +52,39 @@
           <label class="workspace-settings-field" for="workspaceTitle">
             <span class="workspace-settings-field__header">
               <span>
-                <span class="field-label" [attr.title]="currentSettings.values.appUi.title.propertyKey">
+                <span
+                  class="field-label"
+                  [matTooltip]="currentSettings.values.appUi.title.propertyKey"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
+                >
                   Workspace title
                 </span>
               </span>
-              <span [class]="sourceClass(currentSettings.values.appUi.title)">
-                {{ sourceLabel(currentSettings.values.appUi.title) }}
+              <span class="workspace-settings-source-controls">
+                <span
+                  [class]="sourceClass(currentSettings.values.appUi.title, form.controls.appUi.controls.title.value)"
+                  [matTooltip]="defaultTooltip(currentSettings.values.appUi.title) || ''"
+                  [matTooltipDisabled]="!defaultTooltip(currentSettings.values.appUi.title)"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
+                >
+                  {{ sourceLabel(currentSettings.values.appUi.title, form.controls.appUi.controls.title.value) }}
+                </span>
+                @if (usesCustomValue(currentSettings.values.appUi.title, form.controls.appUi.controls.title.value)) {
+                  <button
+                    class="secondary-button workspace-settings-field-reset-button"
+                    type="button"
+                    aria-label="Restore default for Workspace title"
+                    matTooltip="Restore default"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                    [disabled]="isSaving()"
+                    (click)="resetFieldToDefault($event, form.controls.appUi.controls.title, currentSettings.values.appUi.title)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                  </button>
+                }
               </span>
             </span>
             <input
@@ -66,10 +95,6 @@
               spellcheck="false"
               [formControl]="form.controls.appUi.controls.title"
             />
-            <span class="workspace-settings-baseline">
-              application.properties:
-              {{ displayValue(currentSettings.values.appUi.title.applicationValue) }}
-            </span>
           </label>
         } @else {
           <div class="workspace-settings-placeholder">
@@ -85,7 +110,6 @@
             <p class="section-eyebrow">GitLab</p>
             <h2 id="workspaceSettingsGitLabTitle">Source capability</h2>
           </div>
-          <span class="panel-chip">analysis.gitlab</span>
         </div>
 
         @if (settings(); as currentSettings) {
@@ -93,12 +117,39 @@
             <label class="workspace-settings-field" for="gitlabBaseUrl">
               <span class="workspace-settings-field__header">
                 <span>
-                  <span class="field-label" [attr.title]="currentSettings.values.gitLab.baseUrl.propertyKey">
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.gitLab.baseUrl.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
                     Base URL
                   </span>
                 </span>
-                <span [class]="sourceClass(currentSettings.values.gitLab.baseUrl)">
-                  {{ sourceLabel(currentSettings.values.gitLab.baseUrl) }}
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.gitLab.baseUrl, form.controls.gitLab.controls.baseUrl.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.gitLab.baseUrl) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.gitLab.baseUrl)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.gitLab.baseUrl, form.controls.gitLab.controls.baseUrl.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.gitLab.baseUrl, form.controls.gitLab.controls.baseUrl.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Base URL"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.gitLab.controls.baseUrl, currentSettings.values.gitLab.baseUrl)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
                 </span>
               </span>
               <input
@@ -109,21 +160,44 @@
                 spellcheck="false"
                 [formControl]="form.controls.gitLab.controls.baseUrl"
               />
-              <span class="workspace-settings-baseline">
-                application.properties:
-                {{ displayValue(currentSettings.values.gitLab.baseUrl.applicationValue) }}
-              </span>
             </label>
 
             <label class="workspace-settings-field" for="gitlabGroup">
               <span class="workspace-settings-field__header">
                 <span>
-                  <span class="field-label" [attr.title]="currentSettings.values.gitLab.group.propertyKey">
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.gitLab.group.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
                     Group
                   </span>
                 </span>
-                <span [class]="sourceClass(currentSettings.values.gitLab.group)">
-                  {{ sourceLabel(currentSettings.values.gitLab.group) }}
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.gitLab.group, form.controls.gitLab.controls.group.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.gitLab.group) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.gitLab.group)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.gitLab.group, form.controls.gitLab.controls.group.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.gitLab.group, form.controls.gitLab.controls.group.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Group"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.gitLab.controls.group, currentSettings.values.gitLab.group)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
                 </span>
               </span>
               <input
@@ -134,21 +208,44 @@
                 spellcheck="false"
                 [formControl]="form.controls.gitLab.controls.group"
               />
-              <span class="workspace-settings-baseline">
-                application.properties:
-                {{ displayValue(currentSettings.values.gitLab.group.applicationValue) }}
-              </span>
             </label>
 
             <label class="workspace-settings-field workspace-settings-field--full" for="gitlabToken">
               <span class="workspace-settings-field__header">
                 <span>
-                  <span class="field-label" [attr.title]="currentSettings.values.gitLab.token.propertyKey">
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.gitLab.token.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
                     Token
                   </span>
                 </span>
-                <span [class]="sourceClass(currentSettings.values.gitLab.token)">
-                  {{ sourceLabel(currentSettings.values.gitLab.token) }}
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.gitLab.token, form.controls.gitLab.controls.token.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.gitLab.token) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.gitLab.token)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.gitLab.token, form.controls.gitLab.controls.token.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.gitLab.token, form.controls.gitLab.controls.token.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Token"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.gitLab.controls.token, currentSettings.values.gitLab.token)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
                 </span>
               </span>
               <span class="workspace-settings-secret-control">
@@ -164,17 +261,15 @@
                   class="secondary-button workspace-settings-icon-button"
                   type="button"
                   [attr.aria-label]="showToken() ? 'Hide token' : 'Show token'"
-                  [title]="showToken() ? 'Hide token' : 'Show token'"
+                  [matTooltip]="showToken() ? 'Hide token' : 'Show token'"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
                   (click)="toggleTokenVisibility()"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">
                     {{ showToken() ? 'visibility_off' : 'visibility' }}
                   </span>
                 </button>
-              </span>
-              <span class="workspace-settings-baseline">
-                application.properties:
-                {{ secretDisplayValue(currentSettings.values.gitLab.token) }}
               </span>
             </label>
           </div>
@@ -195,15 +290,6 @@
       }
 
       <div class="workspace-settings-actions">
-        <button
-          class="secondary-button"
-          type="button"
-          [disabled]="!settings() || isSaving()"
-          (click)="resetToApplicationProperties()"
-        >
-          <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
-          <span>Use application.properties</span>
-        </button>
         <button class="primary-button" type="submit" [disabled]="!settings() || isSaving()">
           <span class="material-symbols-outlined" aria-hidden="true">
             {{ isSaving() ? 'hourglass_top' : 'save' }}

@@ -62,8 +62,7 @@
   min-width: 0;
 }
 
-.workspace-settings-status__item span:not(.material-symbols-outlined),
-.workspace-settings-baseline {
+.workspace-settings-status__item span:not(.material-symbols-outlined) {
   color: var(--text-soft);
   font-size: 0.74rem;
   font-weight: 800;
@@ -113,20 +112,24 @@
 }
 
 .workspace-settings-field__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
   min-width: 0;
 }
 
 .workspace-settings-field__header > span:first-child {
-  display: grid;
-  gap: 4px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
   min-width: 0;
 }
 
 .workspace-settings-field .field-label {
+  display: inline-flex;
+  align-items: center;
   margin: 0;
 }
 
@@ -146,15 +149,33 @@
   white-space: nowrap;
 }
 
-.workspace-settings-source--workspace {
+.workspace-settings-source--custom {
   border-color: rgba(33, 110, 78, 0.24);
   background: #f0fff6;
   color: var(--success-text);
 }
 
-.workspace-settings-baseline {
+.workspace-settings-source-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 6px;
   min-width: 0;
-  overflow-wrap: anywhere;
+}
+
+.workspace-settings-field-reset-button {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+}
+
+.workspace-settings-field-reset-button .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .workspace-settings-secret-control {
@@ -246,7 +267,6 @@
     padding: 12px;
   }
 
-  .workspace-settings-field__header,
   .workspace-settings-panel__header {
     display: grid;
   }
