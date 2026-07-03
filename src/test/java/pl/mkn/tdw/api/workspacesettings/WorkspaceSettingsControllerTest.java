@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsFieldResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsResponse;
@@ -36,7 +37,8 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.settingsPath").value("tdw-data/settings.json"))
                 .andExpect(jsonPath("$.values.appUi.title.value").value("CRM workspace"))
-                .andExpect(jsonPath("$.values.gitLab.group.source").value("WORKSPACE_SETTINGS"));
+                .andExpect(jsonPath("$.values.gitLab.group.source").value("WORKSPACE_SETTINGS"))
+                .andExpect(jsonPath("$.values.elasticsearch.indexPattern.value").value("logs-platform-*"));
     }
 
     @Test
@@ -54,11 +56,18 @@ class WorkspaceSettingsControllerTest {
                                     "baseUrl": "https://gitlab.example.com",
                                     "group": "platform/backend",
                                     "token": "glpat_secret"
+                                  },
+                                  "elasticsearch": {
+                                    "baseUrl": "https://elastic.example.com",
+                                    "kibanaSpaceId": "default",
+                                    "indexPattern": "logs-platform-*",
+                                    "authorizationHeader": "Bearer secret"
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.values.gitLab.token.secret").value(true));
+                .andExpect(jsonPath("$.values.gitLab.token.secret").value(true))
+                .andExpect(jsonPath("$.values.elasticsearch.authorizationHeader.secret").value(true));
     }
 
     private WorkspaceSettingsResponse response() {
@@ -96,6 +105,40 @@ class WorkspaceSettingsControllerTest {
                                         "glpat_secret",
                                         "",
                                         "glpat_secret",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        true
+                                )
+                        ),
+                        new WorkspaceSettingsElasticsearchResponse(
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.elasticsearch.base-url",
+                                        "https://elastic.example.com",
+                                        "https://elastic.example.com",
+                                        null,
+                                        WorkspaceSettingsSource.APPLICATION_PROPERTIES,
+                                        false
+                                ),
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.elasticsearch.kibana-space-id",
+                                        "default",
+                                        "default",
+                                        null,
+                                        WorkspaceSettingsSource.APPLICATION_PROPERTIES,
+                                        false
+                                ),
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.elasticsearch.index-pattern",
+                                        "logs-platform-*",
+                                        "logs-*",
+                                        "logs-platform-*",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        false
+                                ),
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.elasticsearch.authorization-header",
+                                        "Bearer secret",
+                                        "",
+                                        "Bearer secret",
                                         WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                         true
                                 )

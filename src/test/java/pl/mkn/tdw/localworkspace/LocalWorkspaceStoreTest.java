@@ -12,6 +12,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.settings.FileSystemLocalWorkspaceSettingsStore;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
@@ -151,6 +152,12 @@ class LocalWorkspaceStoreTest {
                         "https://gitlab.example.com",
                         "platform/backend",
                         "glpat_secret"
+                ),
+                new LocalWorkspaceElasticsearchSettings(
+                        "https://elastic.example.com",
+                        "default",
+                        "logs-*",
+                        "Bearer elastic-secret"
                 )
         ));
 
@@ -161,12 +168,19 @@ class LocalWorkspaceStoreTest {
         assertTrue(settingsJson.contains("\"schema\" : \"tdw.workspace-settings\""));
         assertTrue(settingsJson.contains("\"title\" : \"CRM workspace\""));
         assertTrue(settingsJson.contains("\"token\" : \"glpat_secret\""));
+        assertTrue(settingsJson.contains("\"elasticsearch\""));
+        assertTrue(settingsJson.contains("\"indexPattern\" : \"logs-*\""));
+        assertTrue(settingsJson.contains("\"authorizationHeader\" : \"Bearer elastic-secret\""));
 
         var settings = fixture.settingsStore.read();
         assertEquals("CRM workspace", settings.appUi().title());
         assertEquals("https://gitlab.example.com", settings.gitLab().baseUrl());
         assertEquals("platform/backend", settings.gitLab().group());
         assertEquals("glpat_secret", settings.gitLab().token());
+        assertEquals("https://elastic.example.com", settings.elasticsearch().baseUrl());
+        assertEquals("default", settings.elasticsearch().kibanaSpaceId());
+        assertEquals("logs-*", settings.elasticsearch().indexPattern());
+        assertEquals("Bearer elastic-secret", settings.elasticsearch().authorizationHeader());
     }
 
     @Test

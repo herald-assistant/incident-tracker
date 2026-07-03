@@ -157,8 +157,10 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('tdw-data/settings.json');
+    expect(compiled.textContent).toContain('Elasticsearch');
     expect(compiled.querySelector('.workspace-settings-baseline')).toBeNull();
     expect(compiled.textContent).not.toContain('analysis.gitlab');
+    expect(compiled.textContent).not.toContain('analysis.elasticsearch');
     expect(compiled.textContent).not.toContain('application.properties');
     expect(compiled.textContent).not.toContain('Use application.properties');
 
@@ -167,6 +169,10 @@ describe('App', () => {
     );
     expect(sourceBadges.map((badge) => badge.textContent?.trim())).toEqual([
       'DEFAULT',
+      'DEFAULT',
+      'CUSTOM',
+      'CUSTOM',
+      'CUSTOM',
       'DEFAULT',
       'CUSTOM',
       'CUSTOM'
@@ -179,9 +185,17 @@ describe('App', () => {
       'Default: ChatCLP',
       'Default: https://gitlab.example.com',
       'Default: platform/app',
+      '',
+      'Default: https://elastic.example.com',
+      'Default: default',
+      'Default: logs-*',
       ''
     ]);
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.disabled)).toEqual([
+      false,
+      false,
+      false,
+      true,
       false,
       false,
       false,
@@ -193,13 +207,22 @@ describe('App', () => {
     );
     expect(resetButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
       'Restore default for Group',
-      'Restore default for Token'
+      'Restore default for Token',
+      'Restore default for Elasticsearch Base URL',
+      'Restore default for Index pattern',
+      'Restore default for Authorization header'
     ]);
     expect(
       fixture.debugElement
         .queryAll(By.css('.workspace-settings-field-reset-button'))
         .map((element) => element.injector.get(MatTooltip).message)
-    ).toEqual(['Restore default', 'Restore default']);
+    ).toEqual([
+      'Restore default',
+      'Restore default',
+      'Restore default',
+      'Restore default',
+      'Restore default'
+    ]);
 
     resetButtons[0].click();
     fixture.detectChanges();
@@ -215,9 +238,13 @@ describe('App', () => {
       'DEFAULT',
       'DEFAULT',
       'DEFAULT',
+      'CUSTOM',
+      'CUSTOM',
+      'DEFAULT',
+      'CUSTOM',
       'CUSTOM'
     ]);
-    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(1);
+    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(4);
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -510,6 +537,40 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           value: 'glpat_secret',
           applicationValue: '',
           workspaceValue: 'glpat_secret',
+          source: 'WORKSPACE_SETTINGS',
+          secret: true
+        }
+      },
+      elasticsearch: {
+        baseUrl: {
+          propertyKey: 'analysis.elasticsearch.base-url',
+          value: 'https://elastic.workspace.example.com',
+          applicationValue: 'https://elastic.example.com',
+          workspaceValue: 'https://elastic.workspace.example.com',
+          source: 'WORKSPACE_SETTINGS',
+          secret: false
+        },
+        kibanaSpaceId: {
+          propertyKey: 'analysis.elasticsearch.kibana-space-id',
+          value: 'default',
+          applicationValue: 'default',
+          workspaceValue: null,
+          source: 'APPLICATION_PROPERTIES',
+          secret: false
+        },
+        indexPattern: {
+          propertyKey: 'analysis.elasticsearch.index-pattern',
+          value: 'logs-platform-*',
+          applicationValue: 'logs-*',
+          workspaceValue: 'logs-platform-*',
+          source: 'WORKSPACE_SETTINGS',
+          secret: false
+        },
+        authorizationHeader: {
+          propertyKey: 'analysis.elasticsearch.authorization-header',
+          value: 'Bearer elastic-secret',
+          applicationValue: '',
+          workspaceValue: 'Bearer elastic-secret',
           source: 'WORKSPACE_SETTINGS',
           secret: true
         }

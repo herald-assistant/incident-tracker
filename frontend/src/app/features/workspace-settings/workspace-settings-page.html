@@ -210,7 +210,7 @@
               />
             </label>
 
-            <label class="workspace-settings-field workspace-settings-field--full" for="gitlabToken">
+            <label class="workspace-settings-field" for="gitlabToken">
               <span class="workspace-settings-field__header">
                 <span>
                   <span
@@ -268,6 +268,231 @@
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">
                     {{ showToken() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </span>
+            </label>
+          </div>
+        } @else {
+          <div class="workspace-settings-placeholder">
+            <span class="workspace-settings-spinner" aria-hidden="true"></span>
+            <span>Loading settings...</span>
+          </div>
+        }
+      </section>
+
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsElasticsearchTitle">
+        <div class="workspace-settings-panel__header">
+          <div>
+            <p class="section-eyebrow">Elasticsearch</p>
+            <h2 id="workspaceSettingsElasticsearchTitle">Log capability</h2>
+          </div>
+        </div>
+
+        @if (settings(); as currentSettings) {
+          <div class="workspace-settings-grid">
+            <label class="workspace-settings-field" for="elasticsearchBaseUrl">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.elasticsearch.baseUrl.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Base URL
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.elasticsearch.baseUrl, form.controls.elasticsearch.controls.baseUrl.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.baseUrl) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.baseUrl)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.elasticsearch.baseUrl, form.controls.elasticsearch.controls.baseUrl.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.elasticsearch.baseUrl, form.controls.elasticsearch.controls.baseUrl.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Elasticsearch Base URL"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.elasticsearch.controls.baseUrl, currentSettings.values.elasticsearch.baseUrl)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <input
+                id="elasticsearchBaseUrl"
+                class="text-input"
+                type="url"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.elasticsearch.controls.baseUrl"
+              />
+            </label>
+
+            <label class="workspace-settings-field" for="elasticsearchKibanaSpace">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.elasticsearch.kibanaSpaceId.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Kibana space
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.elasticsearch.kibanaSpaceId, form.controls.elasticsearch.controls.kibanaSpaceId.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.kibanaSpaceId) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.kibanaSpaceId)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.elasticsearch.kibanaSpaceId, form.controls.elasticsearch.controls.kibanaSpaceId.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.elasticsearch.kibanaSpaceId, form.controls.elasticsearch.controls.kibanaSpaceId.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Kibana space"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.elasticsearch.controls.kibanaSpaceId, currentSettings.values.elasticsearch.kibanaSpaceId)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <input
+                id="elasticsearchKibanaSpace"
+                class="text-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.elasticsearch.controls.kibanaSpaceId"
+              />
+            </label>
+
+            <label class="workspace-settings-field" for="elasticsearchIndexPattern">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.elasticsearch.indexPattern.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Index pattern
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.elasticsearch.indexPattern, form.controls.elasticsearch.controls.indexPattern.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.indexPattern) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.indexPattern)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.elasticsearch.indexPattern, form.controls.elasticsearch.controls.indexPattern.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.elasticsearch.indexPattern, form.controls.elasticsearch.controls.indexPattern.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Index pattern"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.elasticsearch.controls.indexPattern, currentSettings.values.elasticsearch.indexPattern)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <input
+                id="elasticsearchIndexPattern"
+                class="text-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.elasticsearch.controls.indexPattern"
+              />
+            </label>
+
+            <label class="workspace-settings-field" for="elasticsearchAuthorizationHeader">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.elasticsearch.authorizationHeader.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Authorization header
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.elasticsearch.authorizationHeader, form.controls.elasticsearch.controls.authorizationHeader.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.authorizationHeader) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.authorizationHeader)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.elasticsearch.authorizationHeader, form.controls.elasticsearch.controls.authorizationHeader.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.elasticsearch.authorizationHeader, form.controls.elasticsearch.controls.authorizationHeader.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Authorization header"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.elasticsearch.controls.authorizationHeader, currentSettings.values.elasticsearch.authorizationHeader)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <span class="workspace-settings-secret-control">
+                <input
+                  id="elasticsearchAuthorizationHeader"
+                  class="text-input"
+                  [type]="showElasticsearchAuthorizationHeader() ? 'text' : 'password'"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="form.controls.elasticsearch.controls.authorizationHeader"
+                />
+                <button
+                  class="secondary-button workspace-settings-icon-button"
+                  type="button"
+                  [attr.aria-label]="showElasticsearchAuthorizationHeader() ? 'Hide authorization header' : 'Show authorization header'"
+                  [matTooltip]="showElasticsearchAuthorizationHeader() ? 'Hide authorization header' : 'Show authorization header'"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
+                  (click)="toggleElasticsearchAuthorizationHeaderVisibility()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ showElasticsearchAuthorizationHeader() ? 'visibility_off' : 'visibility' }}
                   </span>
                 </button>
               </span>

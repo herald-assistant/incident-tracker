@@ -9,6 +9,7 @@ export interface WorkspaceSettingsResponse {
 export interface WorkspaceSettingsValues {
   appUi: WorkspaceSettingsAppUi;
   gitLab: WorkspaceSettingsGitLab;
+  elasticsearch: WorkspaceSettingsElasticsearch;
 }
 
 export interface WorkspaceSettingsAppUi {
@@ -19,6 +20,13 @@ export interface WorkspaceSettingsGitLab {
   baseUrl: WorkspaceSettingsField;
   group: WorkspaceSettingsField;
   token: WorkspaceSettingsField;
+}
+
+export interface WorkspaceSettingsElasticsearch {
+  baseUrl: WorkspaceSettingsField;
+  kibanaSpaceId: WorkspaceSettingsField;
+  indexPattern: WorkspaceSettingsField;
+  authorizationHeader: WorkspaceSettingsField;
 }
 
 export interface WorkspaceSettingsField {
@@ -38,5 +46,11 @@ export interface WorkspaceSettingsUpdateRequest {
     baseUrl: string;
     group: string;
     token: string;
+  };
+  elasticsearch: {
+    baseUrl: string;
+    kibanaSpaceId: string;
+    indexPattern: string;
+    authorizationHeader: string;
   };
 }

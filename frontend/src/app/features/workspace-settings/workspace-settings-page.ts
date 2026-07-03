@@ -30,6 +30,7 @@ export class WorkspaceSettingsPageComponent {
   readonly errorMessage = signal('');
   readonly saveMessage = signal('');
   readonly showToken = signal(false);
+  readonly showElasticsearchAuthorizationHeader = signal(false);
 
   readonly form = new FormGroup({
     appUi: new FormGroup({
@@ -39,6 +40,12 @@ export class WorkspaceSettingsPageComponent {
       baseUrl: new FormControl('', { nonNullable: true }),
       group: new FormControl('', { nonNullable: true }),
       token: new FormControl('', { nonNullable: true })
+    }),
+    elasticsearch: new FormGroup({
+      baseUrl: new FormControl('', { nonNullable: true }),
+      kibanaSpaceId: new FormControl('', { nonNullable: true }),
+      indexPattern: new FormControl('', { nonNullable: true }),
+      authorizationHeader: new FormControl('', { nonNullable: true })
     })
   });
 
@@ -105,6 +112,10 @@ export class WorkspaceSettingsPageComponent {
     this.showToken.update((visible) => !visible);
   }
 
+  toggleElasticsearchAuthorizationHeaderVisibility(): void {
+    this.showElasticsearchAuthorizationHeader.update((visible) => !visible);
+  }
+
   sourceLabel(field: WorkspaceSettingsField, currentValue: string): string {
     return this.usesCustomValue(field, currentValue) ? 'CUSTOM' : 'DEFAULT';
   }
@@ -152,6 +163,12 @@ export class WorkspaceSettingsPageComponent {
         baseUrl: settings.values.gitLab.baseUrl.value,
         group: settings.values.gitLab.group.value,
         token: settings.values.gitLab.token.value
+      },
+      elasticsearch: {
+        baseUrl: settings.values.elasticsearch.baseUrl.value,
+        kibanaSpaceId: settings.values.elasticsearch.kibanaSpaceId.value,
+        indexPattern: settings.values.elasticsearch.indexPattern.value,
+        authorizationHeader: settings.values.elasticsearch.authorizationHeader.value
       }
     });
   }
@@ -165,6 +182,13 @@ export class WorkspaceSettingsPageComponent {
         baseUrl: this.form.controls.gitLab.controls.baseUrl.value.trim(),
         group: this.form.controls.gitLab.controls.group.value.trim(),
         token: this.form.controls.gitLab.controls.token.value.trim()
+      },
+      elasticsearch: {
+        baseUrl: this.form.controls.elasticsearch.controls.baseUrl.value.trim(),
+        kibanaSpaceId: this.form.controls.elasticsearch.controls.kibanaSpaceId.value.trim(),
+        indexPattern: this.form.controls.elasticsearch.controls.indexPattern.value.trim(),
+        authorizationHeader:
+          this.form.controls.elasticsearch.controls.authorizationHeader.value.trim()
       }
     };
   }
@@ -174,7 +198,11 @@ export class WorkspaceSettingsPageComponent {
       settings.values.appUi.title,
       settings.values.gitLab.baseUrl,
       settings.values.gitLab.group,
-      settings.values.gitLab.token
+      settings.values.gitLab.token,
+      settings.values.elasticsearch.baseUrl,
+      settings.values.elasticsearch.kibanaSpaceId,
+      settings.values.elasticsearch.indexPattern,
+      settings.values.elasticsearch.authorizationHeader
     ];
   }
 }
