@@ -26,7 +26,7 @@ public class FileSystemLocalAnalysisRunStore implements LocalAnalysisRunStore {
     private final LocalWorkspaceJsonFileStore jsonFileStore;
 
     @Override
-    public List<LocalAnalysisRunIndexEntry> listRuns() {
+    public synchronized List<LocalAnalysisRunIndexEntry> listRuns() {
         if (!properties.isEnabled()) {
             return List.of();
         }
@@ -40,7 +40,7 @@ public class FileSystemLocalAnalysisRunStore implements LocalAnalysisRunStore {
     }
 
     @Override
-    public Optional<LocalAnalysisRunRecord> findById(String analysisId) {
+    public synchronized Optional<LocalAnalysisRunRecord> findById(String analysisId) {
         if (!properties.isEnabled()) {
             return Optional.empty();
         }
@@ -49,7 +49,7 @@ public class FileSystemLocalAnalysisRunStore implements LocalAnalysisRunStore {
     }
 
     @Override
-    public void save(LocalAnalysisRunIndexEntry indexEntry, LocalAnalysisRunRecord record) {
+    public synchronized void save(LocalAnalysisRunIndexEntry indexEntry, LocalAnalysisRunRecord record) {
         if (!properties.isEnabled()) {
             return;
         }
@@ -60,7 +60,7 @@ public class FileSystemLocalAnalysisRunStore implements LocalAnalysisRunStore {
     }
 
     @Override
-    public void rename(String analysisId, String name) {
+    public synchronized void rename(String analysisId, String name) {
         if (!properties.isEnabled()) {
             return;
         }
@@ -73,7 +73,7 @@ public class FileSystemLocalAnalysisRunStore implements LocalAnalysisRunStore {
     }
 
     @Override
-    public void delete(String analysisId) {
+    public synchronized void delete(String analysisId) {
         if (!properties.isEnabled()) {
             return;
         }

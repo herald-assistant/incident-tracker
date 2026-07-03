@@ -19,6 +19,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -130,12 +134,61 @@ class LocalWorkspaceStoreTest {
         assertEquals("ghu_secret_token", fixture.tokenStore.findByRef("local-token").orElseThrow().accessToken());
     }
 
+    @Test
+    void shouldKeepIndexConsistentForConcurrentRunSaves() throws Exception {
+        var fixture = fixture(true, true);
+        var runCount = 24;
+        var executor = Executors.newFixedThreadPool(8);
+        var startLatch = new CountDownLatch(1);
+        var futures = new ArrayList<java.util.concurrent.Future<?>>();
+
+        try {
+            for (var index = 0; index < runCount; index++) {
+                var runIndex = index;
+                futures.add(executor.submit(() -> {
+                    startLatch.await();
+                    var analysisId = "analysis-" + runIndex;
+                    fixture.runStore.save(
+                            indexEntry(analysisId, "incident-analysis", "corr-" + runIndex),
+                            runRecord(analysisId)
+                    );
+                    return null;
+                }));
+            }
+
+            startLatch.countDown();
+            for (var future : futures) {
+                future.get(5, TimeUnit.SECONDS);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        var runs = fixture.runStore.listRuns();
+
+        assertEquals(runCount, runs.size());
+        for (var index = 0; index < runCount; index++) {
+            var analysisId = "analysis-" + index;
+            assertTrue(Files.exists(fixture.paths.runFile(analysisId)), "Run file should exist: " + analysisId);
+            assertTrue(
+                    runs.stream().anyMatch(entry -> entry.analysisId().equals(analysisId)),
+                    "Index entry should exist: " + analysisId
+            );
+        }
+    }
+
     private Fixture fixture(boolean enabled) {
+        return fixture(enabled, false);
+    }
+
+    private Fixture fixture(boolean enabled, boolean slowIndexWrites) {
         var properties = new LocalWorkspaceProperties();
         properties.setEnabled(enabled);
         properties.setDirectory(tempDir.resolve("tdw-data").toString());
         var paths = new LocalWorkspacePaths(properties);
-        var jsonFileStore = new LocalWorkspaceJsonFileStore(objectMapper);
+        var jsonFileStore = slowIndexWrites
+                ? new SlowIndexLocalWorkspaceJsonFileStore(objectMapper)
+                : new LocalWorkspaceJsonFileStore(objectMapper);
         return new Fixture(
                 paths,
                 new FileSystemLocalAnalysisRunStore(properties, paths, jsonFileStore),
@@ -185,5 +238,24 @@ class LocalWorkspaceStoreTest {
             FileSystemLocalAnalysisRunStore runStore,
             FileSystemLocalAccessTokenStore tokenStore
     ) {
+    }
+
+    private static final class SlowIndexLocalWorkspaceJsonFileStore extends LocalWorkspaceJsonFileStore {
+
+        private SlowIndexLocalWorkspaceJsonFileStore(ObjectMapper objectMapper) {
+            super(objectMapper);
+        }
+
+        @Override
+        public void writeAtomic(Path path, Object value) {
+            if ("index.json".equals(path.getFileName().toString())) {
+                try {
+                    Thread.sleep(5);
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            super.writeAtomic(path, value);
+        }
     }
 }
