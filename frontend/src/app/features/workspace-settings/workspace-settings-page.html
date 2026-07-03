@@ -1,0 +1,216 @@
+<div class="page-shell workspace-settings-page">
+  <main class="workspace-settings" aria-labelledby="workspaceSettingsTitle">
+    <section class="workspace-settings-status" aria-label="Workspace settings status">
+      <div class="workspace-settings-status__item">
+        <span class="material-symbols-outlined" aria-hidden="true">folder_open</span>
+        <div>
+          <span>settings.json</span>
+          <strong>{{ settings()?.settingsPath || 'tdw-data/settings.json' }}</strong>
+        </div>
+      </div>
+
+      <div class="workspace-settings-status__item">
+        <span class="material-symbols-outlined" aria-hidden="true">toggle_on</span>
+        <div>
+          <span>Local workspace</span>
+          <strong>{{ workspaceStatusLabel() }}</strong>
+        </div>
+      </div>
+
+      <div class="workspace-settings-status__item">
+        <span class="material-symbols-outlined" aria-hidden="true">rule_settings</span>
+        <div>
+          <span>Overrides</span>
+          <strong>{{ overrideCount() }}</strong>
+        </div>
+      </div>
+
+      <button
+        class="secondary-button workspace-settings-icon-button"
+        type="button"
+        aria-label="Refresh settings"
+        title="Refresh"
+        [disabled]="isLoading() || isSaving()"
+        (click)="loadSettings()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+      </button>
+    </section>
+
+    <form class="workspace-settings-form" novalidate (submit)="save($event)">
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsTitle">
+        <div class="workspace-settings-panel__header">
+          <div>
+            <p class="section-eyebrow">Platform</p>
+            <h2 id="workspaceSettingsTitle">Workspace identity</h2>
+          </div>
+        </div>
+
+        @if (settings(); as currentSettings) {
+          <label class="workspace-settings-field" for="workspaceTitle">
+            <span class="workspace-settings-field__header">
+              <span>
+                <span class="field-label" [attr.title]="currentSettings.values.appUi.title.propertyKey">
+                  Workspace title
+                </span>
+              </span>
+              <span [class]="sourceClass(currentSettings.values.appUi.title)">
+                {{ sourceLabel(currentSettings.values.appUi.title) }}
+              </span>
+            </span>
+            <input
+              id="workspaceTitle"
+              class="text-input"
+              type="text"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="form.controls.appUi.controls.title"
+            />
+            <span class="workspace-settings-baseline">
+              application.properties:
+              {{ displayValue(currentSettings.values.appUi.title.applicationValue) }}
+            </span>
+          </label>
+        } @else {
+          <div class="workspace-settings-placeholder">
+            <span class="workspace-settings-spinner" aria-hidden="true"></span>
+            <span>Loading settings...</span>
+          </div>
+        }
+      </section>
+
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsGitLabTitle">
+        <div class="workspace-settings-panel__header">
+          <div>
+            <p class="section-eyebrow">GitLab</p>
+            <h2 id="workspaceSettingsGitLabTitle">Source capability</h2>
+          </div>
+          <span class="panel-chip">analysis.gitlab</span>
+        </div>
+
+        @if (settings(); as currentSettings) {
+          <div class="workspace-settings-grid">
+            <label class="workspace-settings-field" for="gitlabBaseUrl">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span class="field-label" [attr.title]="currentSettings.values.gitLab.baseUrl.propertyKey">
+                    Base URL
+                  </span>
+                </span>
+                <span [class]="sourceClass(currentSettings.values.gitLab.baseUrl)">
+                  {{ sourceLabel(currentSettings.values.gitLab.baseUrl) }}
+                </span>
+              </span>
+              <input
+                id="gitlabBaseUrl"
+                class="text-input"
+                type="url"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.gitLab.controls.baseUrl"
+              />
+              <span class="workspace-settings-baseline">
+                application.properties:
+                {{ displayValue(currentSettings.values.gitLab.baseUrl.applicationValue) }}
+              </span>
+            </label>
+
+            <label class="workspace-settings-field" for="gitlabGroup">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span class="field-label" [attr.title]="currentSettings.values.gitLab.group.propertyKey">
+                    Group
+                  </span>
+                </span>
+                <span [class]="sourceClass(currentSettings.values.gitLab.group)">
+                  {{ sourceLabel(currentSettings.values.gitLab.group) }}
+                </span>
+              </span>
+              <input
+                id="gitlabGroup"
+                class="text-input"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.gitLab.controls.group"
+              />
+              <span class="workspace-settings-baseline">
+                application.properties:
+                {{ displayValue(currentSettings.values.gitLab.group.applicationValue) }}
+              </span>
+            </label>
+
+            <label class="workspace-settings-field workspace-settings-field--full" for="gitlabToken">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span class="field-label" [attr.title]="currentSettings.values.gitLab.token.propertyKey">
+                    Token
+                  </span>
+                </span>
+                <span [class]="sourceClass(currentSettings.values.gitLab.token)">
+                  {{ sourceLabel(currentSettings.values.gitLab.token) }}
+                </span>
+              </span>
+              <span class="workspace-settings-secret-control">
+                <input
+                  id="gitlabToken"
+                  class="text-input"
+                  [type]="showToken() ? 'text' : 'password'"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="form.controls.gitLab.controls.token"
+                />
+                <button
+                  class="secondary-button workspace-settings-icon-button"
+                  type="button"
+                  [attr.aria-label]="showToken() ? 'Hide token' : 'Show token'"
+                  [title]="showToken() ? 'Hide token' : 'Show token'"
+                  (click)="toggleTokenVisibility()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ showToken() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </span>
+              <span class="workspace-settings-baseline">
+                application.properties:
+                {{ secretDisplayValue(currentSettings.values.gitLab.token) }}
+              </span>
+            </label>
+          </div>
+        } @else {
+          <div class="workspace-settings-placeholder">
+            <span class="workspace-settings-spinner" aria-hidden="true"></span>
+            <span>Loading settings...</span>
+          </div>
+        }
+      </section>
+
+      @if (errorMessage()) {
+        <p class="form-error">{{ errorMessage() }}</p>
+      }
+
+      @if (saveMessage()) {
+        <p class="workspace-settings-success">{{ saveMessage() }}</p>
+      }
+
+      <div class="workspace-settings-actions">
+        <button
+          class="secondary-button"
+          type="button"
+          [disabled]="!settings() || isSaving()"
+          (click)="resetToApplicationProperties()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+          <span>Use application.properties</span>
+        </button>
+        <button class="primary-button" type="submit" [disabled]="!settings() || isSaving()">
+          <span class="material-symbols-outlined" aria-hidden="true">
+            {{ isSaving() ? 'hourglass_top' : 'save' }}
+          </span>
+          <span>{{ isSaving() ? 'Saving...' : 'Save settings' }}</span>
+        </button>
+      </div>
+    </form>
+  </main>
+</div>

@@ -74,7 +74,7 @@ class AnalysisJobControllerTest {
                         null
                 ));
 
-        mockMvc.perform(post("/analysis/jobs")
+        mockMvc.perform(post("/api/analysis/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -97,7 +97,7 @@ class AnalysisJobControllerTest {
 
     @Test
     void shouldRejectTooLongReasoningEffort() throws Exception {
-        mockMvc.perform(post("/analysis/jobs")
+        mockMvc.perform(post("/api/analysis/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -151,7 +151,7 @@ class AnalysisJobControllerTest {
                         )
                 ));
 
-        mockMvc.perform(get("/analysis/jobs/job-123"))
+        mockMvc.perform(get("/api/analysis/jobs/job-123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysisId").value("job-123"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
@@ -210,7 +210,7 @@ class AnalysisJobControllerTest {
                         null
                 ));
 
-        mockMvc.perform(post("/analysis/jobs/job-123/chat/messages")
+        mockMvc.perform(post("/api/analysis/jobs/job-123/chat/messages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -233,10 +233,50 @@ class AnalysisJobControllerTest {
         when(analysisJobService.getAnalysis("missing-job"))
                 .thenThrow(new AnalysisJobNotFoundException("missing-job"));
 
-        mockMvc.perform(get("/analysis/jobs/missing-job"))
+        mockMvc.perform(get("/api/analysis/jobs/missing-job"))
                 .andExpect(status().isNotFound());
 
         verify(analysisJobService).getAnalysis("missing-job");
+    }
+
+    @Test
+    void shouldKeepLegacyAnalysisJobsRoute() throws Exception {
+        when(analysisJobService.startAnalysis(any(AnalysisJobStartRequest.class)))
+                .thenReturn(new AnalysisJobStateSnapshot(
+                        "job-legacy",
+                        "timeout-legacy",
+                        null,
+                        null,
+                        "QUEUED",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        Instant.parse("2026-04-12T18:00:00Z"),
+                        Instant.parse("2026-04-12T18:00:00Z"),
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        null,
+                        null
+                ));
+
+        mockMvc.perform(post("/analysis/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "correlationId": "timeout-legacy"
+                                }
+                                """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.analysisId").value("job-legacy"));
+
+        verify(analysisJobService).startAnalysis(new AnalysisJobStartRequest("timeout-legacy", null, null));
     }
 
 }

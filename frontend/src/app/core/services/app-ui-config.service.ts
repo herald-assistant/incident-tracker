@@ -26,6 +26,15 @@ export class AppUiConfigService {
     }
 
     this.loaded = true;
+    this.fetchConfig();
+  }
+
+  reload(): void {
+    this.loaded = true;
+    this.fetchConfig();
+  }
+
+  private fetchConfig(): void {
     if (!this.http) {
       return;
     }

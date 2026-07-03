@@ -36,6 +36,9 @@ a nie role-based organization.
 Decyzje:
 
 - `app.ui.title` parametryzuje glowny tytul UI.
+- `app.ui.title` moze byc lokalnie nadpisane w Workspace Settings; override z
+  `${tdw.workspace.directory}/settings.json` ma pierwszenstwo przed
+  `application.properties`.
 - Gdy `app.ui.title` nie ma tekstu, frontend pokazuje tylko
   `Team Delivery Workspace`.
 - Gdy `app.ui.title` jest ustawione, jego wartosc jest tytulem, a
@@ -55,6 +58,10 @@ Decyzje:
 - `Platform` dotyczy overview i customizacji Team Delivery Workspace:
   workspace settings, personalizacji, autentykacji, konfiguracji modeli i
   podobnych ustawien.
+- Pierwszy zakres Workspace Settings obejmuje `app.ui.title`,
+  `analysis.gitlab.base-url`, `analysis.gitlab.group` i
+  `analysis.gitlab.token`. `analysis.gitlab.ignore-ssl-errors` pozostaje poza
+  UI ustawien.
 
 Konsekwencje UI:
 
@@ -702,6 +709,10 @@ Decyzje MVP:
   kolejka workerow ani gwarancja wznowienia po restarcie backendu,
 - `tokens.json` lezy obok `index.json`, przechowuje lokalne access tokeny
   zapisane z UI i nie jest czescia exportu,
+- `settings.json` lezy obok `index.json` i przechowuje lokalne override'y
+  workspace'u; gdy pole jest ustawione w tym pliku, ma pierwszenstwo przed
+  `application.properties`, a puste albo identyczne z bazowa konfiguracja pole
+  usuwa override,
 - stan Copilota jest pod `${tdw.workspace.directory}/copilot`, zeby
   `resumeSession` moglo korzystac z tego samego lokalnego workspace'u,
 - historia lokalnych runow jest shared/operator API pod `/analysis/runs`, a

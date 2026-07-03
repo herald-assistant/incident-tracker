@@ -33,6 +33,7 @@ Obecnie obejmuje:
 Historyczne `analysis.options` jest zamkniete. Aktualny split:
 
 - neutralne `AnalysisAiOptions` mieszka w `shared.ai`,
-- controller i DTO endpointu `GET /analysis/ai/options` mieszkaja w
-  `api.aioptions`,
+- controller i DTO kanonicznego endpointu `GET /api/analysis/ai/options`
+  mieszkaja w `api.aioptions`; legacy `GET /analysis/ai/options` pozostaje
+  kompatybilnym aliasem,
 - platformowy katalog modeli zostaje w `aiplatform.copilot.runtime.options`.

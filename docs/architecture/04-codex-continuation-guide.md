@@ -35,6 +35,8 @@ Przy nowej sesji najlepiej zaczac od:
   autoryzacji Copilota
 - `api.operationalcontext` jako shared/operator fasada katalogu operational
   context dla UI i utrzymania jakosci katalogu
+- `api.workspacesettings` jako shared/operator fasada lokalnych ustawien
+  workspace'u z `settings.json`
 - `api.elasticsearch`, `api.gitlab`, `api.gitlab.source` jako shared/operator
   fasady helper endpointow nad integracjami
 - `aiplatform.copilot.runtime.options`
@@ -331,6 +333,12 @@ z jawnym operatorskim `environment`, a route `/operational-context` sluzy do
 utrzymania katalogu systemow, repozytoriow, procesow, integracji i handoffu.
 Te route'y sa `Tool Workbench`, a nie feature'y produktowe ani element
 `Platform`.
+Route `/workspace-settings` jest elementem `Platform`: pokazuje efektywne
+wartosci z `application.properties`, zapisuje lokalne override'y do
+`${tdw.workspace.directory}/settings.json` przez
+`GET/PUT /api/workspace/settings` i na starcie obejmuje `app.ui.title`,
+`analysis.gitlab.base-url`, `analysis.gitlab.group` oraz
+`analysis.gitlab.token`. Nie dodawaj tam `analysis.gitlab.ignore-ssl-errors`.
 Takie endpointy traktuj jako shared/operator API nad adapterami:
 cienkie diagnostyczne warianty moga zostac przy `integrations.<capability>`,
 a stabilne powierzchnie dla wielu ekranow powinny trafic do `api.*`.

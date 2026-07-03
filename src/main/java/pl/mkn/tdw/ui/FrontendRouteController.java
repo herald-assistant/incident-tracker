@@ -1,54 +1,23 @@
 package pl.mkn.tdw.ui;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.server.ResponseStatusException;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Controller
 class FrontendRouteController {
 
     @GetMapping({
-            "/evidence",
-            "/elastic",
-            "/gitlab"
+            "/{route:^(?!api$|assets$|actuator$|error$|mcp$|sse$)[^.]+$}",
+            "/{route:^(?!api$|assets$|actuator$|error$|mcp$|sse$)[^.]+$}/{*remaining}"
     })
-    String forwardIntegrationConsoles() {
-        return "forward:/index.html";
-    }
-
-    @GetMapping({
-            "/incident-analysis",
-            "/incident-analysis/**"
-    })
-    String forwardIncidentAnalysis() {
-        return "forward:/index.html";
-    }
-
-    @GetMapping({
-            "/analysis-history",
-            "/analysis-history/**"
-    })
-    String forwardAnalysisHistory() {
-        return "forward:/index.html";
-    }
-
-    @GetMapping("/database")
-    String forwardDatabase() {
-        return "forward:/index.html";
-    }
-
-    @GetMapping({
-            "/flow-explorer",
-            "/flow-explorer/**"
-    })
-    String forwardFlowExplorer() {
-        return "forward:/index.html";
-    }
-
-    @GetMapping({
-            "/operational-context",
-            "/operational-context/**"
-    })
-    String forwardOperationalContext() {
+    String forwardFrontendRoute(HttpServletRequest request) {
+        if (request.getRequestURI().contains(".")) {
+            throw new ResponseStatusException(NOT_FOUND);
+        }
         return "forward:/index.html";
     }
 

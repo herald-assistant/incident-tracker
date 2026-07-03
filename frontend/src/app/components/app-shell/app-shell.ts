@@ -92,7 +92,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Workspace Overview', route: '/', icon: 'space_dashboard', exact: true },
       { label: 'Analysis History', route: '/analysis-history', icon: 'history' },
-      { label: 'Workspace Settings', icon: 'tune', disabled: true },
+      { label: 'Workspace Settings', route: '/workspace-settings', icon: 'tune' },
       { label: 'Personalization', icon: 'palette', disabled: true },
       { label: 'Authentication', icon: 'admin_panel_settings', disabled: true },
       { label: 'AI Models', icon: 'model_training', disabled: true }

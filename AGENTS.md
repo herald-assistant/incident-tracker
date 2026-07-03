@@ -42,8 +42,10 @@ Przed wieksza zmiana zacznij od:
 
 ## Najwazniejsze niezmienniki
 
-- `POST /analysis/jobs` jest publicznym startem analizy; przyjmuje
-  `correlationId` oraz opcjonalne preferencje AI (`model`, `reasoningEffort`).
+- `POST /api/analysis/jobs` jest kanonicznym publicznym startem analizy;
+  przyjmuje `correlationId` oraz opcjonalne preferencje AI (`model`,
+  `reasoningEffort`). Legacy aliasy `/analysis/**` pozostaja dostepne tylko
+  dla kompatybilnosci.
 - `gitLabBranch` i `environment` sa wyprowadzane z evidence, glownie z logow
   Elasticsearch.
 - `gitLabGroup` pochodzi z konfiguracji aplikacji, nie z evidence.
@@ -210,12 +212,12 @@ Zasady granic:
 ## Gdzie czego szukac
 
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/job`
-  Jobowy feature `POST /analysis/jobs`, `GET /analysis/jobs/{analysisId}` i
-  follow-up chat.
+  Jobowy feature `POST /api/analysis/jobs`,
+  `GET /api/analysis/jobs/{analysisId}` i follow-up chat.
 - `src/main/java/pl/mkn/tdw/api/aioptions`
   Shared/operator API dla katalogu modeli i endpointu
-  `GET /analysis/ai/options`, mapujace platformowy katalog Copilota na kontrakt
-  HTTP dla UI.
+  `GET /api/analysis/ai/options`, mapujace platformowy katalog Copilota na
+  kontrakt HTTP dla UI.
 - `src/main/java/pl/mkn/tdw/api/operationalcontext`
   Shared/operator API dla katalogu operational context uzywanego przez UI,
   tools, GitLab repository discovery i feature'y.

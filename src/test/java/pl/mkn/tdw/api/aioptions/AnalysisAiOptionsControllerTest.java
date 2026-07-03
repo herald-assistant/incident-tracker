@@ -46,7 +46,7 @@ class AnalysisAiOptionsControllerTest {
                 )
         ));
 
-        mockMvc.perform(get("/analysis/ai/options"))
+        mockMvc.perform(get("/api/analysis/ai/options"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.defaultModel").value("gpt-5.4"))
                 .andExpect(jsonPath("$.defaultReasoningEffort").value("medium"))
@@ -55,5 +55,19 @@ class AnalysisAiOptionsControllerTest {
                 .andExpect(jsonPath("$.models[0].supportsReasoningEffort").value(true))
                 .andExpect(jsonPath("$.models[0].reasoningEfforts[2]").value("high"))
                 .andExpect(jsonPath("$.models[1].supportsReasoningEffort").value(false));
+    }
+
+    @Test
+    void shouldKeepLegacyAiModelOptionsRoute() throws Exception {
+        when(modelOptionsProvider.modelOptions()).thenReturn(new AnalysisAiModelOptionsResponse(
+                "gpt-5.4",
+                "medium",
+                List.of("medium"),
+                List.of()
+        ));
+
+        mockMvc.perform(get("/analysis/ai/options"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.defaultModel").value("gpt-5.4"));
     }
 }

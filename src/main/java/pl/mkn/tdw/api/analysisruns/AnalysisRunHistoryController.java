@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/analysis/runs")
+@RequestMapping({
+        "/api/analysis/runs",
+        "/analysis/runs"
+})
 @RequiredArgsConstructor
 public class AnalysisRunHistoryController {
 

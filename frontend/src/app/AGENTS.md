@@ -53,7 +53,7 @@ Frontend nie jest source of truth dla:
 
 Te dane pobieraj z backendu przez shared/operator API:
 
-- `GET /analysis/ai/options`,
+- `GET /api/analysis/ai/options`,
 - `GET /api/auth/github/status`,
 - `GET /api/ui/config`.
 

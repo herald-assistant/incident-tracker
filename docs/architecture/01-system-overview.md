@@ -73,6 +73,9 @@ Na dzisiaj projekt ma:
 - ekran `GET /operational-context` w Tool Workbench do utrzymania katalogu
   systemow, repozytoriow, procesow, integracji, bounded contexts, zespolow,
   glossary, handoff rules, validation findings i open questions,
+- ekran `GET /workspace-settings` w sekcji `Platform` do podgladu efektywnych
+  wartosci z `application.properties` i zapisu lokalnych override'ow do
+  `${tdw.workspace.directory}/settings.json`,
 - glowne job-based API: `POST /analysis/jobs` i
   `GET /analysis/jobs/{analysisId}`,
   z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
@@ -87,6 +90,9 @@ Na dzisiaj projekt ma:
   frontend nie trzymal lokalnej listy modeli,
 - endpoint shared/operator API `GET /api/ui/config`, ktory zwraca runtime
   konfiguracje brandu UI z fallbackiem `Team Delivery Workspace`,
+- shared/operator API `GET /api/workspace/settings` i
+  `PUT /api/workspace/settings`, ktore laczy `application.properties` z
+  lokalnym `settings.json`; jawny override z workspace'u ma pierwszenstwo,
 - shared/operator API `GET /api/auth/github/status`,
   `GET /api/auth/github/start`, `GET /api/auth/github/callback` i
   `POST /api/auth/github/logout` dla autoryzacji Copilot SDK w trybach
@@ -130,6 +136,11 @@ Na dzisiaj projekt ma:
   operational context: katalogu systemow, repozytoriow, code-search scopes,
   procesow, integracji, bounded contexts, zespolow, glossary, handoff rules,
   validation findings i open questions.
+- `GET /workspace-settings`
+  Angularowy ekran `Platform / Workspace Settings` do lokalnej customizacji
+  workspace'u. Ekran pokazuje efektywne wartosci z `application.properties`
+  oraz zrodlo kazdego pola; zapis trafia do
+  `${tdw.workspace.directory}/settings.json`.
 - `POST /analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
   `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
@@ -156,6 +167,12 @@ Na dzisiaj projekt ma:
   tekstu, frontend pokazuje tylko `Team Delivery Workspace`; gdy property jest
   ustawione, wartosc property jest tytulem, a `Team Delivery Workspace`
   podtytulem.
+- `GET /api/workspace/settings`
+  Shared/operator API odczytu efektywnych ustawien workspace'u, wartosci bazowej
+  z `application.properties`, lokalnego override'u i zrodla pola.
+- `PUT /api/workspace/settings`
+  Shared/operator API zapisu lokalnych override'ow do `settings.json`. Pusta
+  wartosc albo wartosc identyczna z `application.properties` usuwa override.
 - `GET /api/auth/github/status`
   Shared/operator API statusu autoryzacji Copilota. W `LOCAL_TOKEN` pokazuje
   lokalny token jako backendowy tryb dev, a w `GITHUB_APP` tworzy backendowa
@@ -224,6 +241,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.tdw.api.uiconfig`
   Shared/operator API runtime konfiguracji brandu UI dla Angulara. Nie jest
   czescia incident job flow.
+- `pl.mkn.tdw.api.workspacesettings`
+  Shared/operator API lokalnych ustawien workspace'u. Pakiet laczy
+  `application.properties` z `localworkspace.settings`, pokazuje zrodlo
+  wartosci dla UI i aplikuje efektywne override'y do runtime properties
+  uzywanych przez brand UI oraz integracje GitLaba.
 - `pl.mkn.tdw.api.githubauth`
   Shared/operator API autoryzacji GitHub dla UI oraz backendowa operator
   session cookie. Ten pakiet zna request HTTP, ale nie przechowuje tokenow w
@@ -374,6 +396,8 @@ nawigacja wokol nazwy repo albo jednego feature'a. Widoczny tytul workspace'u
 pochodzi z `GET /api/ui/config`: jezeli `app.ui.title` nie jest ustawione, UI
 pokazuje tylko `Team Delivery Workspace`; jezeli jest ustawione, property jest
 glownym tytulem, a `Team Delivery Workspace` podtytulem.
+Workspace Settings moze nadpisac `app.ui.title` lokalnie w `settings.json`; po
+zapisie `GET /api/ui/config` zwraca juz efektywna wartosc z workspace'u.
 
 Shell Angulara ma:
 

@@ -7,8 +7,10 @@ UI operatorskiego.
 
 Obejmuje:
 
-- `POST /analysis/jobs` i `GET /analysis/jobs/{analysisId}`,
-- `POST /analysis/jobs/{analysisId}/chat/messages`,
+- `POST /api/analysis/jobs` i `GET /api/analysis/jobs/{analysisId}`,
+- `POST /api/analysis/jobs/{analysisId}/chat/messages`,
+- legacy aliasy `/analysis/jobs/**`, utrzymywane dla dotychczasowego
+  publicznego kontraktu,
 - `AnalysisJobService` jako glowna klasa wejscia feature'a i uruchamianie
   analizy w tle,
 - `api/` z kontrolerem oraz request/response DTO,
@@ -50,7 +52,8 @@ Nie obejmuje:
 - Obsluga bledow ma pozostac czytelna dla UI i mapowac znane przypadki, np.
   brak danych vs. ogolna awaria analizy.
 - Wykonanie live joba pozostaje proste i lokalne dla procesu aplikacji:
-  zamkniecie backendu nadal przerywa mozliwosc pollingu `GET /analysis/jobs`.
+  zamkniecie backendu nadal przerywa mozliwosc pollingu
+  `GET /api/analysis/jobs`.
   Local workspace zapisuje snapshoty runu od startu jako historie/operator
   resume UI, ale nie jest durable queue ani mechanizmem wznowienia workerow po
   restarcie backendu.

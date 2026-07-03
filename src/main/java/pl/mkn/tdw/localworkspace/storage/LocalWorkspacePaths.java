@@ -28,6 +28,10 @@ public class LocalWorkspacePaths {
         return root().resolve("tokens.json");
     }
 
+    public Path settingsFile() {
+        return root().resolve("settings.json");
+    }
+
     public Path runsDirectory() {
         return root().resolve("runs");
     }

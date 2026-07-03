@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.tdw.features.incidentanalysis.job.AnalysisJobService;
 
 @RestController
-@RequestMapping("/analysis/jobs")
+@RequestMapping({
+        "/api/analysis/jobs",
+        "/analysis/jobs"
+})
 @RequiredArgsConstructor
 public class AnalysisJobController {
 

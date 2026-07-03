@@ -24,7 +24,7 @@ describe('AnalysisRunHistoryApiService', () => {
   it('should list local analysis runs from the lightweight index API', () => {
     service.listRuns().subscribe((response) => expect(response.runs).toHaveLength(1));
 
-    const request = http.expectOne('/analysis/runs');
+    const request = http.expectOne('/api/analysis/runs');
     expect(request.request.method).toBe('GET');
     request.flush({
       runs: [
@@ -44,7 +44,7 @@ describe('AnalysisRunHistoryApiService', () => {
   it('should load a full local run only by analysis id', () => {
     service.getRun('analysis/1').subscribe((response) => expect(response.analysisId).toBe('analysis/1'));
 
-    const request = http.expectOne('/analysis/runs/analysis%2F1');
+    const request = http.expectOne('/api/analysis/runs/analysis%2F1');
     expect(request.request.method).toBe('GET');
     request.flush({ analysisId: 'analysis/1' });
   });
@@ -54,7 +54,7 @@ describe('AnalysisRunHistoryApiService', () => {
       expect((response as { schema: string }).schema).toBe('tdw.analysis-export')
     );
 
-    const request = http.expectOne('/analysis/runs/analysis%2F1/export');
+    const request = http.expectOne('/api/analysis/runs/analysis%2F1/export');
     expect(request.request.method).toBe('GET');
     request.flush({ schema: 'tdw.analysis-export', version: 6 });
   });
@@ -62,7 +62,7 @@ describe('AnalysisRunHistoryApiService', () => {
   it('should rename a local run', () => {
     service.renameRun('analysis/1', { name: 'Nowa nazwa' }).subscribe();
 
-    const request = http.expectOne('/analysis/runs/analysis%2F1/name');
+    const request = http.expectOne('/api/analysis/runs/analysis%2F1/name');
     expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual({ name: 'Nowa nazwa' });
     request.flush({ analysisId: 'analysis/1', name: 'Nowa nazwa' });
@@ -71,7 +71,7 @@ describe('AnalysisRunHistoryApiService', () => {
   it('should send a follow-up message to a local run', () => {
     service.sendChatMessage('analysis/1', { message: 'Dopytaj o repo.' }).subscribe();
 
-    const request = http.expectOne('/analysis/runs/analysis%2F1/chat/messages');
+    const request = http.expectOne('/api/analysis/runs/analysis%2F1/chat/messages');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ message: 'Dopytaj o repo.' });
     request.flush({ analysisId: 'analysis/1' });
@@ -80,7 +80,7 @@ describe('AnalysisRunHistoryApiService', () => {
   it('should delete a local run', () => {
     service.deleteRun('analysis/1').subscribe();
 
-    const request = http.expectOne('/analysis/runs/analysis%2F1');
+    const request = http.expectOne('/api/analysis/runs/analysis%2F1');
     expect(request.request.method).toBe('DELETE');
     request.flush(null);
   });

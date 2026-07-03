@@ -135,6 +135,27 @@ tools.
 10. Gdy ledger jest wystarczajacy albo dalsza widocznosc jest niedostepna,
    przekaz material do skilli wyniku.
 
+### 3. Zbadaj Flow Dotknietego Use Case'u
+
+Przed klasyfikacja bledu zbuduj minimalny flow dotknietego use case'u:
+trigger, entrypoint, lokalny komponent, decyzja/predykat, repository albo
+granica integracji oraz widoczny punkt rozjazdu. Dla missing-data fixture
+oczekiwany ksztalt roboczy to np. `HTTP request -> controller -> service ->
+repository lookup -> missing row`, ale traktuj go jako wzorzec porzadku, a nie
+dowod bez evidence.
+
+### 5. Sklasyfikuj Typ Bledu
+
+Klasyfikuj dopiero po nazwaniu flow i failure pointu. `data_missing` oznacza,
+ze aktywna hipoteza dotyczy braku wymaganego rekordu; `data_predicate_mismatch`
+oznacza, ze rekord moze istniec, ale odpada przez predykat aplikacji. Uzyj `incident-data-diagnostics` dla missing data,
+gdy hipoteza wymaga DB proof albo rozroznienia key-only/full-predicate.
+
+Handoff do skilli wyniku pozostaje jawny:
+
+- `functionalAnalysis`: Functional Analysis v1,
+- `technicalAnalysis`: Technical Handoff v1.
+
 ## Readiness Gate I Petla Zwrotna
 
 Przed `incident-functional-analysis` i `incident-technical-handoff` ustaw status

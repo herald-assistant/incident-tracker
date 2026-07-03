@@ -40,6 +40,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'workspace-settings',
+        loadComponent: () =>
+          import('./features/workspace-settings/workspace-settings-page').then(
+            (module) => module.WorkspaceSettingsPageComponent
+          ),
+        data: {
+          section: 'Platform',
+          title: 'Workspace Settings'
+        }
+      },
+      {
         path: 'flow-explorer',
         loadComponent: () =>
           import('./features/flow-explorer/pages/flow-explorer-page/flow-explorer-page').then(

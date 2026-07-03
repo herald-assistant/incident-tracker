@@ -6,7 +6,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/analysis/ai/options")
+@RequestMapping({
+        "/api/analysis/ai/options",
+        "/analysis/ai/options"
+})
 @RequiredArgsConstructor
 public class AnalysisAiOptionsController {
 

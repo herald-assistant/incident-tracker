@@ -43,7 +43,7 @@ class AnalysisRunHistoryControllerTest {
                 listItem("analysis-1", "incident-analysis", "corr-123")
         )));
 
-        mockMvc.perform(get("/analysis/runs"))
+        mockMvc.perform(get("/api/analysis/runs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runs[0].analysisId").value("analysis-1"))
                 .andExpect(jsonPath("$.runs[0].feature").value("incident-analysis"))
@@ -62,7 +62,7 @@ class AnalysisRunHistoryControllerTest {
     void shouldReturnRunDetail() throws Exception {
         when(analysisRunHistoryService.getRun("analysis-1")).thenReturn(detail("analysis-1", "corr-123", true));
 
-        mockMvc.perform(get("/analysis/runs/analysis-1"))
+        mockMvc.perform(get("/api/analysis/runs/analysis-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysisId").value("analysis-1"))
                 .andExpect(jsonPath("$.feature").value("incident-analysis"))
@@ -84,7 +84,7 @@ class AnalysisRunHistoryControllerTest {
     void shouldExportRunEnvelopeOnly() throws Exception {
         when(analysisRunHistoryService.exportRun("analysis-1")).thenReturn(exportEnvelope("analysis-1"));
 
-        mockMvc.perform(get("/analysis/runs/analysis-1/export"))
+        mockMvc.perform(get("/api/analysis/runs/analysis-1/export"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.schema").value("tdw.analysis-export"))
                 .andExpect(jsonPath("$.version").value(6))
@@ -104,7 +104,7 @@ class AnalysisRunHistoryControllerTest {
         when(analysisRunHistoryService.renameRun("analysis-1", " Awaria koszyka w dev3 "))
                 .thenReturn(detail("analysis-1", "Awaria koszyka w dev3", true));
 
-        mockMvc.perform(patch("/analysis/runs/analysis-1/name")
+        mockMvc.perform(patch("/api/analysis/runs/analysis-1/name")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -120,7 +120,7 @@ class AnalysisRunHistoryControllerTest {
 
     @Test
     void shouldRejectBlankName() throws Exception {
-        mockMvc.perform(patch("/analysis/runs/analysis-1/name")
+        mockMvc.perform(patch("/api/analysis/runs/analysis-1/name")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -141,7 +141,7 @@ class AnalysisRunHistoryControllerTest {
                 new LocalAnalysisRunChatMessageRequest("Dopytaj o repo.")
         )).thenReturn(detail("analysis-1", "corr-123", true));
 
-        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages")
+        mockMvc.perform(post("/api/analysis/runs/analysis-1/chat/messages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -160,7 +160,7 @@ class AnalysisRunHistoryControllerTest {
 
     @Test
     void shouldRejectBlankChatMessage() throws Exception {
-        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages")
+        mockMvc.perform(post("/api/analysis/runs/analysis-1/chat/messages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -181,7 +181,7 @@ class AnalysisRunHistoryControllerTest {
                 new LocalAnalysisRunChatMessageRequest("Dopytaj")
         )).thenThrow(new LocalAnalysisRunChatFailedException("Copilot unavailable."));
 
-        mockMvc.perform(post("/analysis/runs/analysis-1/chat/messages")
+        mockMvc.perform(post("/api/analysis/runs/analysis-1/chat/messages")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -197,7 +197,7 @@ class AnalysisRunHistoryControllerTest {
         when(analysisRunHistoryService.getRun("missing"))
                 .thenThrow(new LocalAnalysisRunNotFoundException("missing"));
 
-        mockMvc.perform(get("/analysis/runs/missing"))
+        mockMvc.perform(get("/api/analysis/runs/missing"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LOCAL_ANALYSIS_RUN_NOT_FOUND"));
     }
@@ -207,17 +207,28 @@ class AnalysisRunHistoryControllerTest {
         when(analysisRunHistoryService.getRun("analysis-1"))
                 .thenThrow(new LocalAnalysisRunCorruptedException("analysis-1"));
 
-        mockMvc.perform(get("/analysis/runs/analysis-1"))
+        mockMvc.perform(get("/api/analysis/runs/analysis-1"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LOCAL_ANALYSIS_RUN_CORRUPTED"));
     }
 
     @Test
     void shouldDeleteRun() throws Exception {
-        mockMvc.perform(delete("/analysis/runs/analysis-1"))
+        mockMvc.perform(delete("/api/analysis/runs/analysis-1"))
                 .andExpect(status().isNoContent());
 
         verify(analysisRunHistoryService).deleteRun("analysis-1");
+    }
+
+    @Test
+    void shouldKeepLegacyAnalysisRunsRoute() throws Exception {
+        when(analysisRunHistoryService.listRuns()).thenReturn(new LocalAnalysisRunListResponse(List.of()));
+
+        mockMvc.perform(get("/analysis/runs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.runs").isArray());
+
+        verify(analysisRunHistoryService).listRuns();
     }
 
     private LocalAnalysisRunListItemResponse listItem(String analysisId, String feature, String name) {

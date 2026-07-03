@@ -13,18 +13,21 @@ import {
   providedIn: 'root'
 })
 export class AnalysisApiService {
+  private readonly baseUrl = '/api/analysis';
   private readonly http = inject(HttpClient);
 
   startAnalysis(request: AnalysisStartRequest): Observable<AnalysisJobStateSnapshot> {
-    return this.http.post<AnalysisJobStateSnapshot>('/analysis/jobs', request);
+    return this.http.post<AnalysisJobStateSnapshot>(`${this.baseUrl}/jobs`, request);
   }
 
   getAiModelOptions(): Observable<AnalysisAiModelOptionsResponse> {
-    return this.http.get<AnalysisAiModelOptionsResponse>('/analysis/ai/options');
+    return this.http.get<AnalysisAiModelOptionsResponse>(`${this.baseUrl}/ai/options`);
   }
 
   getAnalysis(analysisId: string): Observable<AnalysisJobStateSnapshot> {
-    return this.http.get<AnalysisJobStateSnapshot>(`/analysis/jobs/${encodeURIComponent(analysisId)}`);
+    return this.http.get<AnalysisJobStateSnapshot>(
+      `${this.baseUrl}/jobs/${encodeURIComponent(analysisId)}`
+    );
   }
 
   sendChatMessage(
@@ -32,7 +35,7 @@ export class AnalysisApiService {
     request: AnalysisChatMessageRequest
   ): Observable<AnalysisJobStateSnapshot> {
     return this.http.post<AnalysisJobStateSnapshot>(
-      `/analysis/jobs/${encodeURIComponent(analysisId)}/chat/messages`,
+      `${this.baseUrl}/jobs/${encodeURIComponent(analysisId)}/chat/messages`,
       request
     );
   }

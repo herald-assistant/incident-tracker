@@ -10,6 +10,10 @@ import pl.mkn.tdw.localworkspace.analysisruns.FileSystemLocalAnalysisRunStore;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunContinuation;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
+import pl.mkn.tdw.localworkspace.settings.FileSystemLocalWorkspaceSettingsStore;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspacePaths;
 import pl.mkn.tdw.localworkspace.tokens.FileSystemLocalAccessTokenStore;
@@ -110,6 +114,7 @@ class LocalWorkspaceStoreTest {
         assertFalse(Files.exists(fixture.paths.root()));
         assertTrue(fixture.runStore.listRuns().isEmpty());
         assertTrue(fixture.tokenStore.listTokens().isEmpty());
+        assertFalse(fixture.settingsStore.enabled());
     }
 
     @Test
@@ -132,6 +137,36 @@ class LocalWorkspaceStoreTest {
         assertFalse(indexJson.contains("ghu_secret_token"));
         assertFalse(runJson.contains("ghu_secret_token"));
         assertEquals("ghu_secret_token", fixture.tokenStore.findByRef("local-token").orElseThrow().accessToken());
+    }
+
+    @Test
+    void shouldStoreWorkspaceSettingsInSettingsJson() throws Exception {
+        var fixture = fixture(true);
+
+        fixture.settingsStore.save(new LocalWorkspaceSettingsFile(
+                LocalWorkspaceSettingsFile.SCHEMA,
+                LocalWorkspaceSettingsFile.VERSION,
+                new LocalWorkspaceAppUiSettings("CRM workspace"),
+                new LocalWorkspaceGitLabSettings(
+                        "https://gitlab.example.com",
+                        "platform/backend",
+                        "glpat_secret"
+                )
+        ));
+
+        assertTrue(Files.exists(fixture.paths.settingsFile()));
+        assertFalse(Files.exists(fixture.paths.indexFile()));
+
+        var settingsJson = Files.readString(fixture.paths.settingsFile(), StandardCharsets.UTF_8);
+        assertTrue(settingsJson.contains("\"schema\" : \"tdw.workspace-settings\""));
+        assertTrue(settingsJson.contains("\"title\" : \"CRM workspace\""));
+        assertTrue(settingsJson.contains("\"token\" : \"glpat_secret\""));
+
+        var settings = fixture.settingsStore.read();
+        assertEquals("CRM workspace", settings.appUi().title());
+        assertEquals("https://gitlab.example.com", settings.gitLab().baseUrl());
+        assertEquals("platform/backend", settings.gitLab().group());
+        assertEquals("glpat_secret", settings.gitLab().token());
     }
 
     @Test
@@ -192,7 +227,8 @@ class LocalWorkspaceStoreTest {
         return new Fixture(
                 paths,
                 new FileSystemLocalAnalysisRunStore(properties, paths, jsonFileStore),
-                new FileSystemLocalAccessTokenStore(properties, paths, jsonFileStore)
+                new FileSystemLocalAccessTokenStore(properties, paths, jsonFileStore),
+                new FileSystemLocalWorkspaceSettingsStore(properties, paths, jsonFileStore)
         );
     }
 
@@ -236,7 +272,8 @@ class LocalWorkspaceStoreTest {
     private record Fixture(
             LocalWorkspacePaths paths,
             FileSystemLocalAnalysisRunStore runStore,
-            FileSystemLocalAccessTokenStore tokenStore
+            FileSystemLocalAccessTokenStore tokenStore,
+            FileSystemLocalWorkspaceSettingsStore settingsStore
     ) {
     }
 

@@ -13,20 +13,21 @@ import {
   providedIn: 'root'
 })
 export class AnalysisRunHistoryApiService {
+  private readonly baseUrl = '/api/analysis/runs';
   private readonly http = inject(HttpClient);
 
   listRuns(): Observable<LocalAnalysisRunListResponse> {
-    return this.http.get<LocalAnalysisRunListResponse>('/analysis/runs');
+    return this.http.get<LocalAnalysisRunListResponse>(this.baseUrl);
   }
 
   getRun(analysisId: string): Observable<LocalAnalysisRunDetailResponse> {
     return this.http.get<LocalAnalysisRunDetailResponse>(
-      `/analysis/runs/${encodeURIComponent(analysisId)}`
+      `${this.baseUrl}/${encodeURIComponent(analysisId)}`
     );
   }
 
   exportRun(analysisId: string): Observable<unknown> {
-    return this.http.get<unknown>(`/analysis/runs/${encodeURIComponent(analysisId)}/export`);
+    return this.http.get<unknown>(`${this.baseUrl}/${encodeURIComponent(analysisId)}/export`);
   }
 
   renameRun(
@@ -34,7 +35,7 @@ export class AnalysisRunHistoryApiService {
     request: RenameLocalAnalysisRunRequest
   ): Observable<LocalAnalysisRunDetailResponse> {
     return this.http.patch<LocalAnalysisRunDetailResponse>(
-      `/analysis/runs/${encodeURIComponent(analysisId)}/name`,
+      `${this.baseUrl}/${encodeURIComponent(analysisId)}/name`,
       request
     );
   }
@@ -44,12 +45,12 @@ export class AnalysisRunHistoryApiService {
     request: AnalysisChatMessageRequest
   ): Observable<LocalAnalysisRunDetailResponse> {
     return this.http.post<LocalAnalysisRunDetailResponse>(
-      `/analysis/runs/${encodeURIComponent(analysisId)}/chat/messages`,
+      `${this.baseUrl}/${encodeURIComponent(analysisId)}/chat/messages`,
       request
     );
   }
 
   deleteRun(analysisId: string): Observable<void> {
-    return this.http.delete<void>(`/analysis/runs/${encodeURIComponent(analysisId)}`);
+    return this.http.delete<void>(`${this.baseUrl}/${encodeURIComponent(analysisId)}`);
   }
 }

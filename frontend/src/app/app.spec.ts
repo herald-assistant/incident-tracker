@@ -102,7 +102,7 @@ describe('App', () => {
     await router.navigateByUrl('/analysis-history');
     fixture.detectChanges();
     flushUiConfig(http, 'ChatCLP');
-    http.expectOne('/analysis/runs').flush({ runs: [] });
+    http.expectOne('/api/analysis/runs').flush({ runs: [] });
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -124,6 +124,39 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('No local analyses');
+  });
+
+  it('should render the workspace settings shell on the workspace settings route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/workspace-settings');
+    fixture.detectChanges();
+    flushUiConfig(http, 'ChatCLP');
+    http.expectOne('/api/workspace/settings').flush(workspaceSettingsResponse());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="Workspace Settings"]'
+    );
+
+    expect(compiled.querySelector('app-workspace-settings-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
+      'ChatCLP'
+    );
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'Workspace Settings'
+    );
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'Workspace Settings'
+    );
+    expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
+    expect(navLink).not.toBeNull();
+    expect(compiled.textContent).toContain('tdw-data/settings.json');
+    expect(compiled.textContent).toContain('application.properties');
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -284,7 +317,7 @@ describe('App', () => {
     flushUiConfig(http, 'ChatCLP');
     http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
     http.expectOne('/api/flow-explorer/systems').flush([]);
-    http.expectOne('/analysis/ai/options').flush({
+    http.expectOne('/api/analysis/ai/options').flush({
       defaultModel: 'gpt-5.4',
       defaultReasoningEffort: 'medium',
       defaultReasoningEfforts: ['low', 'medium', 'high'],
@@ -379,6 +412,51 @@ function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Works
   });
 }
 
+function workspaceSettingsResponse(): Record<string, unknown> {
+  return {
+    workspaceEnabled: true,
+    settingsPath: 'tdw-data/settings.json',
+    values: {
+      appUi: {
+        title: {
+          propertyKey: 'app.ui.title',
+          value: 'ChatCLP',
+          applicationValue: 'ChatCLP',
+          workspaceValue: null,
+          source: 'APPLICATION_PROPERTIES',
+          secret: false
+        }
+      },
+      gitLab: {
+        baseUrl: {
+          propertyKey: 'analysis.gitlab.base-url',
+          value: 'https://gitlab.example.com',
+          applicationValue: 'https://gitlab.example.com',
+          workspaceValue: null,
+          source: 'APPLICATION_PROPERTIES',
+          secret: false
+        },
+        group: {
+          propertyKey: 'analysis.gitlab.group',
+          value: 'platform/backend',
+          applicationValue: 'platform/app',
+          workspaceValue: 'platform/backend',
+          source: 'WORKSPACE_SETTINGS',
+          secret: false
+        },
+        token: {
+          propertyKey: 'analysis.gitlab.token',
+          value: 'glpat_secret',
+          applicationValue: '',
+          workspaceValue: 'glpat_secret',
+          source: 'WORKSPACE_SETTINGS',
+          secret: true
+        }
+      }
+    }
+  };
+}
+
 type FlowExplorerComponentDriver = {
   systems: () => FlowExplorerSystemOption[];
   selectedSystemId: () => string;
@@ -394,7 +472,7 @@ function flowExplorerComponent(fixture: ComponentFixture<App>): FlowExplorerComp
 function flushFlowExplorerStartup(http: HttpTestingController): void {
   http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
   http.expectOne('/api/flow-explorer/systems').flush([flowExplorerSystem('crm-service')]);
-  http.expectOne('/analysis/ai/options').flush({
+  http.expectOne('/api/analysis/ai/options').flush({
     defaultModel: 'gpt-5.4',
     defaultReasoningEffort: 'medium',
     defaultReasoningEfforts: ['low', 'medium', 'high'],
