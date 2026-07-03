@@ -86,6 +86,11 @@ describe('AnalysisHistoryPageComponent', () => {
     const firstRun = compiled.querySelector('.analysis-history-run') as HTMLElement;
     const featureStack = firstRun.querySelector('.analysis-history-run__feature-stack');
     const titleRow = firstRun.querySelector('.analysis-history-run__title-row');
+    const meta = firstRun.querySelector('.analysis-history-run__meta');
+    const metaItems = Array.from(
+      meta?.querySelectorAll<HTMLElement>('.analysis-history-run__meta-item') ?? []
+    );
+    const actions = firstRun.querySelector('.analysis-history-run__actions');
 
     expect(featureStack?.querySelector('.analysis-history-run__icon')?.textContent?.trim()).toBe(
       'account_tree'
@@ -94,6 +99,24 @@ describe('AnalysisHistoryPageComponent', () => {
       'Flow Explorer'
     );
     expect(titleRow?.querySelector('.analysis-history-run__feature')).toBeNull();
+    expect(titleRow?.querySelector('.status-pill')).toBeNull();
+    expect(meta?.textContent).not.toContain('Created');
+    expect(meta?.textContent).not.toContain('Updated');
+    expect(metaItems.map((item) => item.querySelector('.material-symbols-outlined')?.textContent?.trim())).toEqual([
+      'add_circle',
+      'update'
+    ]);
+    expect(meta?.querySelector('.analysis-history-run__status')?.textContent?.trim()).toBe(
+      'Budowanie kontekstu'
+    );
+    expect(meta?.lastElementChild?.classList.contains('analysis-history-run__status')).toBe(true);
+    expect(actions?.querySelector('.analysis-history-run__status')).toBeNull();
+    expect(tooltipMessagesForIcon(fixture, 'add_circle').some((message) => message.startsWith('Created ')))
+      .toBe(true);
+    expect(tooltipMessagesForIcon(fixture, 'task_alt').some((message) => message.startsWith('Completed ')))
+      .toBe(true);
+    expect(tooltipMessagesForIcon(fixture, 'update').some((message) => message.startsWith('Updated ')))
+      .toBe(true);
     expect(firstRun.querySelector('.analysis-history-run__id')).toBeNull();
   });
 

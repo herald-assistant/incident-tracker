@@ -47,7 +47,7 @@
 }
 
 .analysis-history-icon-button,
-.analysis-history-run__actions .secondary-button,
+.analysis-history-run__action-buttons .secondary-button,
 .analysis-history-rename__actions .primary-button,
 .analysis-history-rename__actions .secondary-button {
   width: 38px;
@@ -64,7 +64,7 @@
 }
 
 .analysis-history-icon-button .material-symbols-outlined,
-.analysis-history-run__actions .material-symbols-outlined,
+.analysis-history-run__action-buttons .material-symbols-outlined,
 .analysis-history-empty__action .material-symbols-outlined,
 .analysis-history-rename__actions .material-symbols-outlined {
   font-size: 18px;
@@ -123,7 +123,7 @@
   display: grid;
   grid-template-columns: 96px minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
   min-width: 0;
   width: 100%;
   padding: 0;
@@ -134,7 +134,7 @@
 .analysis-history-run__feature-stack {
   display: grid;
   justify-items: center;
-  align-content: center;
+  align-content: start;
   gap: 7px;
   min-width: 0;
 }
@@ -153,7 +153,9 @@
 
 .analysis-history-run__content {
   display: grid;
-  gap: 5px;
+  grid-template-rows: auto auto;
+  align-content: space-between;
+  gap: 11px;
   min-width: 0;
 }
 
@@ -190,21 +192,54 @@
 .analysis-history-run__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  align-items: center;
+  gap: 7px 16px;
   color: var(--text-soft);
-  font-size: 0.72rem;
+  font-size: 0.64rem;
   font-weight: 700;
+}
+
+.analysis-history-run__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.analysis-history-run__meta-item .material-symbols-outlined {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.analysis-history-run__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  box-sizing: border-box;
+  min-height: 22px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-size: 0.66rem;
+  line-height: 1.1;
 }
 
 .analysis-history-run__actions {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.analysis-history-run__action-buttons {
+  display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  align-content: center;
   gap: 7px;
 }
 
-.analysis-history-run__actions .secondary-button {
+.analysis-history-run__action-buttons .secondary-button {
   width: 34px;
   height: 34px;
   min-width: 34px;
@@ -281,6 +316,10 @@
   .analysis-history-run__actions {
     justify-content: flex-start;
     padding-left: 108px;
+  }
+
+  .analysis-history-run__action-buttons {
+    justify-content: flex-start;
   }
 }
 

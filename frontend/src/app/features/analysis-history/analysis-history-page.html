@@ -136,68 +136,94 @@
                   <span class="analysis-history-run__content">
                     <span class="analysis-history-run__title-row">
                       <strong>{{ run.name }}</strong>
-                      <span [attr.class]="'status-pill ' + statusClass(run.status)">
-                        {{ statusLabel(run.status) }}
-                      </span>
                     </span>
                     <span class="analysis-history-run__meta">
-                      <span>Created {{ dateTime(run.createdAt) }}</span>
+                      <span
+                        class="analysis-history-run__meta-item"
+                        [matTooltip]="'Created ' + dateTime(run.createdAt)"
+                        matTooltipPosition="above"
+                        [matTooltipShowDelay]="120"
+                      >
+                        <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+                        <span>{{ dateTime(run.createdAt) }}</span>
+                      </span>
                       @if (run.completedAt) {
-                        <span>Completed {{ dateTime(run.completedAt) }}</span>
+                        <span
+                          class="analysis-history-run__meta-item"
+                          [matTooltip]="'Completed ' + dateTime(run.completedAt)"
+                          matTooltipPosition="above"
+                          [matTooltipShowDelay]="120"
+                        >
+                          <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+                          <span>{{ dateTime(run.completedAt) }}</span>
+                        </span>
                       }
-                      <span>Updated {{ dateTime(run.updatedAt) }}</span>
+                      <span
+                        class="analysis-history-run__meta-item"
+                        [matTooltip]="'Updated ' + dateTime(run.updatedAt)"
+                        matTooltipPosition="above"
+                        [matTooltipShowDelay]="120"
+                      >
+                        <span class="material-symbols-outlined" aria-hidden="true">update</span>
+                        <span>{{ dateTime(run.updatedAt) }}</span>
+                      </span>
+                      <span [attr.class]="'analysis-history-run__status status-pill ' + statusClass(run.status)">
+                        {{ statusLabel(run.status) }}
+                      </span>
                     </span>
                   </span>
                 </div>
 
                 <div class="analysis-history-run__actions">
-                  <button
-                    class="secondary-button"
-                    type="button"
-                    [disabled]="openingAnalysisId() === run.analysisId"
-                    [attr.aria-label]="openingAnalysisId() === run.analysisId ? 'Opening local run ' + run.name : 'Open local run ' + run.name"
-                    [matTooltip]="openingAnalysisId() === run.analysisId ? 'Opening...' : 'Open'"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                    (click)="openRun(run)"
-                  >
-                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                  </button>
-                  <button
-                    class="secondary-button"
-                    type="button"
-                    [attr.aria-label]="'Rename local run ' + run.name"
-                    matTooltip="Rename"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                    (click)="startRename(run)"
-                  >
-                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                  </button>
-                  <button
-                    class="secondary-button"
-                    type="button"
-                    [disabled]="exportingAnalysisId() === run.analysisId || !canExportRun(run)"
-                    [attr.aria-label]="exportingAnalysisId() === run.analysisId ? 'Exporting local run ' + run.name : 'Export local run ' + run.name"
-                    [matTooltip]="canExportRun(run) ? (exportingAnalysisId() === run.analysisId ? 'Exporting...' : 'Export') : 'Eksport jest dostępny po zakończeniu runu.'"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                    (click)="exportRun(run)"
-                  >
-                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                  </button>
-                  <button
-                    class="secondary-button analysis-history-danger-button"
-                    type="button"
-                    [disabled]="deletingAnalysisId() === run.analysisId"
-                    [attr.aria-label]="deletingAnalysisId() === run.analysisId ? 'Deleting local run ' + run.name : 'Delete local run ' + run.name"
-                    [matTooltip]="deletingAnalysisId() === run.analysisId ? 'Deleting...' : 'Delete'"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                    (click)="deleteRun(run)"
-                  >
-                    <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                  </button>
+                  <span class="analysis-history-run__action-buttons">
+                    <button
+                      class="secondary-button"
+                      type="button"
+                      [disabled]="openingAnalysisId() === run.analysisId"
+                      [attr.aria-label]="openingAnalysisId() === run.analysisId ? 'Opening local run ' + run.name : 'Open local run ' + run.name"
+                      [matTooltip]="openingAnalysisId() === run.analysisId ? 'Opening...' : 'Open'"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      (click)="openRun(run)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    </button>
+                    <button
+                      class="secondary-button"
+                      type="button"
+                      [attr.aria-label]="'Rename local run ' + run.name"
+                      matTooltip="Rename"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      (click)="startRename(run)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                    </button>
+                    <button
+                      class="secondary-button"
+                      type="button"
+                      [disabled]="exportingAnalysisId() === run.analysisId || !canExportRun(run)"
+                      [attr.aria-label]="exportingAnalysisId() === run.analysisId ? 'Exporting local run ' + run.name : 'Export local run ' + run.name"
+                      [matTooltip]="canExportRun(run) ? (exportingAnalysisId() === run.analysisId ? 'Exporting...' : 'Export') : 'Eksport jest dostępny po zakończeniu runu.'"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      (click)="exportRun(run)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                    </button>
+                    <button
+                      class="secondary-button analysis-history-danger-button"
+                      type="button"
+                      [disabled]="deletingAnalysisId() === run.analysisId"
+                      [attr.aria-label]="deletingAnalysisId() === run.analysisId ? 'Deleting local run ' + run.name : 'Delete local run ' + run.name"
+                      [matTooltip]="deletingAnalysisId() === run.analysisId ? 'Deleting...' : 'Delete'"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      (click)="deleteRun(run)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                    </button>
+                  </span>
                 </div>
               }
             </article>
