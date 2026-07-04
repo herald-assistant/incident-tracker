@@ -113,9 +113,24 @@ export interface AnalysisAiToolFeedback {
 }
 
 export interface AnalysisStartRequest {
-  correlationId: string;
+  source?: AnalysisLogSource;
+  correlationId?: string;
+  logFile?: File | null;
   model?: string;
   reasoningEffort?: string;
+}
+
+export type AnalysisLogSource = 'ELASTICSEARCH' | 'CSV_UPLOAD';
+
+export interface AnalysisJobLogSourceOption {
+  source: AnalysisLogSource;
+  enabled: boolean;
+  disabledReason?: string | null;
+}
+
+export interface AnalysisJobInputOptionsResponse {
+  elasticsearch: AnalysisJobLogSourceOption;
+  csvUpload: AnalysisJobLogSourceOption;
 }
 
 export interface AnalysisChatMessageRequest {

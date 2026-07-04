@@ -6,19 +6,19 @@ import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactoryTestSupport.policyFactoryWithConfiguredElastic;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotIncidentArtifactServiceDigestOrderTest {
 
     private final CopilotIncidentArtifactService artifactService = artifactService(new ObjectMapper());
     private final CopilotIncidentToolAccessPolicyFactory policyFactory =
-            new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator());
+            policyFactoryWithConfiguredElastic();
 
     @Test
     void shouldRenderManifestThenDigestThenEvidenceArtifacts() {

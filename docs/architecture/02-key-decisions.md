@@ -87,9 +87,21 @@ Konsekwencje UI:
 
 ## 1. Publiczny request analizy pozostaje minimalny
 
-`POST /analysis/jobs` jest publicznym startem analizy. Przyjmuje
-`correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
-`reasoningEffort`.
+`POST /api/analysis/jobs` jest kanonicznym publicznym startem analizy.
+Przyjmuje wybor zrodla logow oraz opcjonalne preferencje wykonania AI:
+`model` i `reasoningEffort`.
+
+Obslugiwane zrodla logow:
+
+- `source=ELASTICSEARCH` z `correlationId`,
+- `source=CSV_UPLOAD` z plikiem `logFile` wyeksportowanym z Kibana/Elastic
+  Discover.
+
+`GET /api/analysis/jobs/input-options` jest feature-owned endpointem dla UI i
+zwraca, czy start przez Elasticsearch jest dostepny. Jezeli efektywna
+konfiguracja Elasticsearch/Kibana jest niekompletna, sciezka
+`source=ELASTICSEARCH` jest blokowana, ale `source=CSV_UPLOAD` pozostaje
+dostepne.
 
 Lista dostepnych modeli dla UI pochodzi z shared/operator endpointu
 `GET /analysis/ai/options`. Endpoint mapuje metadane Copilot SDK na generyczny
@@ -102,9 +114,11 @@ sterujacych evidence scope'em do publicznego requestu.
 Konsekwencje:
 
 - `environment` jest wyprowadzany z evidence, przede wszystkim z logow
-  Elasticsearch i deployment context.
+  `elasticsearch/logs` i deployment context.
 - `gitLabBranch` jest wyprowadzany z evidence deployment/runtime.
 - `gitLabGroup` pochodzi z konfiguracji aplikacji.
+- `correlationId` jest publicznym inputem tylko dla sciezki Elasticsearch; dla
+  uploadu CSV jest wyprowadzany deterministycznie z kolumn logow.
 - uzytkownik nie moze recznie przesterowac zakresu GitLaba albo DB przez
   publiczne API analizy.
 - wybor modelu i `reasoningEffort` dotyczy tylko konfiguracji sesji AI, nie
@@ -137,7 +151,7 @@ Konsekwencje:
 
 - frontend pobiera status przez `GET /api/auth/github/status` zanim pobierze
   `GET /analysis/ai/options`,
-- `GET /analysis/ai/options`, `POST /analysis/jobs` i follow-up chat sa
+- `GET /analysis/ai/options`, `POST /api/analysis/jobs` i follow-up chat sa
   auth-aware, ale ich publiczne payloady pozostaja minimalne,
 - GitHub App access/refresh tokens pozostaja po stronie backendu, w store sa
   zaszyfrowane, a refresh token rotation jest zapisywana atomowo,
@@ -331,8 +345,10 @@ tworzy recznie nowego evaluatora.
 
 Polityka:
 
-- Elasticsearch tools sa wlaczane przy braku logow, truncation albo braku
-  stacktrace.
+- Elasticsearch tools sa wlaczane tylko przy kompletnej konfiguracji
+  Elasticsearch/Kibana i coverage gapach takich jak brak logow, truncation albo
+  brak stacktrace. Przy brakujacej konfiguracji tools `elastic_*` nie sa
+  wystawiane Copilotowi w initial analysis ani follow-up chat.
 - GitLab tools sa wlaczane przy braku code evidence albo gdy jest tylko
   symbol, stack frame, failing method lub brakuje flow context.
 - Przy resolved GitLab scope coverage dodaje luke
@@ -568,9 +584,10 @@ analizy, a nie do rozliczen finansowych.
 Refaktory w `features.incidentanalysis`, `aiplatform.copilot` i obecnych
 fasadach `features.incidentanalysis.job` / `api.aioptions` nie powinny
 wymagac wiedzy o typach SDK w UI:
-`POST /analysis/jobs` moze przyjac tylko `correlationId` oraz generyczne
-preferencje AI (`model`, `reasoningEffort`). Response pozostaje mapowany do pol
-aplikacji, a artefakty Copilota nadal sa embedded inline w promptcie.
+`POST /api/analysis/jobs` przyjmuje feature-owned wybor zrodla logow
+(`ELASTICSEARCH` albo `CSV_UPLOAD`) oraz generyczne preferencje AI (`model`,
+`reasoningEffort`). Response pozostaje mapowany do pol aplikacji, a artefakty
+Copilota nadal sa embedded inline w promptcie.
 
 Katalog modeli jest osobnym backendowym endpointem opcji AI. UI moze pokazac
 model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez
@@ -579,13 +596,13 @@ model i `reasoningEffort`, ale same listy pochodza z Copilot SDK przez
 ## 20. Follow-up chat jest kontynuacja joba
 
 Po `COMPLETED` operator moze wyslac pytanie albo polecenie przez
-`POST /analysis/jobs/{analysisId}/chat/messages`. To nie dodaje recznego
+`POST /api/analysis/jobs/{analysisId}/chat/messages`. To nie dodaje recznego
 scope'u do publicznego requestu startu analizy.
 
 Decyzje:
 
 - wiadomosc chatu jest asynchroniczna i pollowana przez ten sam
-  `GET /analysis/jobs/{analysisId}`,
+  `GET /api/analysis/jobs/{analysisId}`,
 - initial analysis uruchamia `sessionTarget=NEW`, a follow-up kontynuuje
   zapisana sesje SDK przez `sessionTarget=EXISTING(copilotSessionId)`,
 - Incident Analysis follow-up wysyla do SDK tylko tresc wiadomosci operatora;
@@ -599,7 +616,8 @@ Decyzje:
   context, hooks, permission handler, model i `reasoningEffort`,
 - GitLab i Database tools nadal sa session-bound przez hidden `ToolContext`;
   Elasticsearch korzysta z zakonczonej analizy jako scope'u sesji, ale ma
-  jeszcze zastany jawny `correlationId` w schema toola,
+  jeszcze zastany jawny `correlationId` w schema toola i jest nadal blokowany,
+  gdy konfiguracja Elasticsearch/Kibana jest niekompletna,
 - scope tools pochodzi z zakonczonej analizy: `correlationId`, `environment`,
   `gitLabBranch` i `gitLabGroup`,
 - raw SQL pozostaje wylaczony domyslnie; chat preferuje typed DB tools,
@@ -723,7 +741,7 @@ Decyzje MVP:
 - stan Copilota jest pod `${tdw.workspace.directory}/copilot`, zeby
   `resumeSession` moglo korzystac z tego samego lokalnego workspace'u,
 - historia lokalnych runow jest shared/operator API pod `/analysis/runs`, a
-  live polling joba zostaje przy `GET /analysis/jobs/{analysisId}`,
+  live polling joba zostaje przy `GET /api/analysis/jobs/{analysisId}`,
 - export lokalnego runu zwraca tylko sanitizowany `exportEnvelope`; import
   exportu jest read-only i nie tworzy kontynuowalnego runu,
 - w V1 nie ma osobnego diagnostic exportu; ewentualny tryb diagnostyczny musi
@@ -738,3 +756,21 @@ Decyzje MVP:
 Pelny backup kontynuowalnego workspace'u oznacza skopiowanie calego katalogu
 `tdw-data`, najlepiej przy zatrzymanej aplikacji. Zwykly export JSON nie jest
 backupem sesji ani tokenow.
+
+## 25. Konstruktory produkcyjne sa dla runtime, nie dla testow
+
+Klasy implementacyjne powinny pokazywac realny runtime wiring. Domyslnym
+wzorcem jest `@RequiredArgsConstructor` na finalnych zaleznosciach i jeden
+konstruktor uzywany przez Spring.
+
+Nie dodajemy recznych konstruktorow do produkcyjnej klasy tylko po to, zeby
+skrocic setup testow albo ukryc testowe defaulty. Takie konstruktory zaciemniaja
+odpowiedzialnosc klasy i utrudniaja czytanie runtime flow.
+
+Jesli test potrzebuje wygodniejszego skladania zaleznosci, uzywa creatora albo
+buildera w odpowiadajacym pakiecie `src/test/java`. Creator moze ustawiac
+testowe defaulty, mocki, no-op persistence albo synthetic adaptery, ale nie
+zmienia kontraktu konstruktora klasy implementacyjnej.
+
+Przyklad aktualnego wzorca: `AnalysisJobFacade` ma Lombokowy konstruktor
+runtime, a testy skladaja ja przez `AnalysisJobFacadeTestCreator`.

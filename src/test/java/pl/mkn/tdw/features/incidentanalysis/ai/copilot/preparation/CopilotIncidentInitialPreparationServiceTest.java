@@ -16,7 +16,6 @@ import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialRunAssembler;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
@@ -55,6 +54,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.agenttools.context.AgentToolContextKeys.GITLAB_BRANCH;
 import static pl.mkn.tdw.agenttools.context.AgentToolContextKeys.GITLAB_GROUP;
+import static pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactoryTestSupport.policyFactoryWithConfiguredElastic;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.artifactService;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.toolFactory;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
@@ -573,7 +573,7 @@ class CopilotIncidentInitialPreparationServiceTest {
     }
 
     private CopilotIncidentToolAccessPolicyFactory policyFactory() {
-        return new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator());
+        return policyFactoryWithConfiguredElastic();
     }
 
     private CopilotIncidentPromptRenderer promptRenderer() {

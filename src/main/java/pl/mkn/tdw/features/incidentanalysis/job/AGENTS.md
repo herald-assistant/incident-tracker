@@ -11,9 +11,11 @@ Obejmuje:
 - `POST /api/analysis/jobs/{analysisId}/chat/messages`,
 - legacy aliasy `/analysis/jobs/**`, utrzymywane dla dotychczasowego
   publicznego kontraktu,
-- `AnalysisJobService` jako glowna klasa wejscia feature'a i uruchamianie
+- `AnalysisJobFacade` jako glowna klasa wejscia feature'a i uruchamianie
   analizy w tle,
 - `api/` z kontrolerem oraz request/response DTO,
+- `validation/` z walidacja startu joba, dostepnoscia zrodel logow oraz
+  deterministycznym przygotowaniem wejscia logow,
 - `state/` z `AnalysisJobState`, `AnalysisJobStateListener`, statusami,
   krokami, `chatMessages` i snapshotem odpowiedzi dla frontendu,
 - `error/` z wyjatkami job API.
@@ -27,10 +29,12 @@ Nie obejmuje:
 ## Zasady modyfikacji
 
 - Job flow ma reuse'owac `AnalysisOrchestrator`. Nie skladaj analizy osobno w
-  `AnalysisJobService`.
+  `AnalysisJobFacade`.
 - Root pakietu powinien pozostac czytelny: trzymaj tu tylko glowna klase
   wejscia feature'a. Kontrakty HTTP trzymaj w `api`, projekcje w `state`, a
-  wyjatki w `error`.
+  walidacje startu w `validation`, wyjatki w `error`.
+- `AnalysisJobFacade` ma byc cienka fasada job flow. Nie dokladaj do niej
+  walidacji inputu, mapowania CSV ani regul dostepnosci integracji.
 - `AnalysisJobState` jest projekcja stanu dla UI, a nie drugim orchestratem.
   Nie dodawaj tu heurystyk incidentowych ani logiki adapterow.
 - `AnalysisJobStateListener` jest adapterem zdarzen `AnalysisExecutionListener`

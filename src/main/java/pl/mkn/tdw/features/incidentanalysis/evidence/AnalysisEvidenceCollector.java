@@ -29,7 +29,11 @@ public class AnalysisEvidenceCollector {
     private final TaskExecutor analysisEvidenceTaskExecutor;
 
     public AnalysisContext collect(String correlationId, AnalysisEvidenceCollectionListener listener) {
-        var context = AnalysisContext.initialize(correlationId);
+        return collect(AnalysisLogInput.elasticsearch(correlationId), listener);
+    }
+
+    public AnalysisContext collect(AnalysisLogInput logInput, AnalysisEvidenceCollectionListener listener) {
+        var context = AnalysisContext.initialize(logInput);
         context = runProvider(elasticLogEvidenceProvider, context, listener);
         context = runProvider(deploymentContextEvidenceProvider, context, listener);
         context = runParallelEnrichmentProviders(context, listener);

@@ -8,7 +8,6 @@ import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialRunAssembler;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
@@ -36,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactoryTestSupport.policyFactoryWithConfiguredElastic;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.artifactService;
 
 class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
@@ -62,7 +62,7 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
                         new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
                         artifactService(new ObjectMapper()),
-                        new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator()),
+                        policyFactoryWithConfiguredElastic(),
                         new CopilotIncidentPromptRenderer(),
                         new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper()),
                         new CopilotIncidentReportFactory()

@@ -43,7 +43,17 @@ public class AnalysisOrchestrator {
             AnalysisAiAuthRef authRef,
             AnalysisExecutionListener listener
     ) {
-        var context = analysisEvidenceCollector.collect(correlationId, listener);
+        return analyze(AnalysisLogInput.elasticsearch(correlationId), options, authRef, listener);
+    }
+
+    public AnalysisExecution analyze(
+            AnalysisLogInput logInput,
+            AnalysisAiOptions options,
+            AnalysisAiAuthRef authRef,
+            AnalysisExecutionListener listener
+    ) {
+        var context = analysisEvidenceCollector.collect(logInput, listener);
+        var correlationId = context.correlationId();
 
         if (!context.hasAnyEvidence()) {
             throw new AnalysisDataNotFoundException(correlationId);

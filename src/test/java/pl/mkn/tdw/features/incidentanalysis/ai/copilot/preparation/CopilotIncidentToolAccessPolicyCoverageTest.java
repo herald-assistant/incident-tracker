@@ -8,7 +8,6 @@ import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 
 import java.util.List;
 import java.util.Map;
@@ -18,11 +17,13 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactoryTestSupport.policyFactoryWithConfiguredElastic;
+import static pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactoryTestSupport.policyFactoryWithMissingElasticConfig;
 
 class CopilotIncidentToolAccessPolicyCoverageTest {
 
     private final CopilotIncidentToolAccessPolicyFactory policyFactory =
-            new CopilotIncidentToolAccessPolicyFactory(new CopilotIncidentEvidenceCoverageEvaluator());
+            policyFactoryWithConfiguredElastic();
 
     @Test
     void shouldEnableGitLabToolsWhenNoDeterministicGitLabEvidenceIsAttached() {
@@ -193,17 +194,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     @Test
     void shouldEnableElasticToolsWhenLogsAreTruncated() {
         var policy = policy(
-                request("dev3", List.of(new AnalysisEvidenceSection(
-                        "elasticsearch",
-                        "logs",
-                        List.of(item(
-                                "truncated log",
-                                attr("serviceName", "crm-catalog-service"),
-                                attr("className", "com.example.CustomerCatalogService"),
-                                attr("message", "Failed to resolve catalog item"),
-                                attr("messageTruncated", "true")
-                        ))
-                ))),
+                request("dev3", List.of(truncatedElasticSection())),
                 tools(
                         "elastic_search_logs_by_correlation_id",
                         "elastic_summarize_http_calls_by_path",
@@ -219,6 +210,39 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 ),
                 Set.copyOf(policy.availableToolNames())
         );
+    }
+
+    @Test
+    void shouldHideElasticToolsForInitialAnalysisWhenElasticConfigIsMissing() {
+        var policy = policyFactoryWithMissingElasticConfig().create(
+                request("dev3", List.of(truncatedElasticSection(), jpaExceptionSection())),
+                tools(
+                        "elastic_search_logs_by_correlation_id",
+                        "elastic_summarize_http_calls_by_path",
+                        "elastic_fetch_http_call_logs",
+                        "gitlab_find_flow_context",
+                        "db_find_tables",
+                        "opctx_search",
+                        "record_tool_feedback",
+                        CopilotReportToolNames.GET_CURRENT
+                )
+        );
+
+        assertFalse(policy.elasticToolsEnabled());
+        assertFalse(policy.availableToolNames().contains("elastic_search_logs_by_correlation_id"));
+        assertFalse(policy.availableToolNames().contains("elastic_summarize_http_calls_by_path"));
+        assertFalse(policy.availableToolNames().contains("elastic_fetch_http_call_logs"));
+        assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
+        assertTrue(policy.availableToolNames().contains("db_find_tables"));
+        assertTrue(policy.availableToolNames().contains("opctx_search"));
+        assertTrue(policy.availableToolNames().contains("record_tool_feedback"));
+        assertTrue(policy.availableToolNames().contains(CopilotReportToolNames.GET_CURRENT));
+        var elasticGroup = policy.disabledCapabilityGroups().stream()
+                .filter(group -> "elasticsearch".equals(group.get("name")))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(elasticGroup.get("reason").contains("analysis.elasticsearch.base-url"));
+        assertTrue(elasticGroup.get("reason").contains("analysis.elasticsearch.authorization-header"));
     }
 
     @Test
@@ -394,6 +418,41 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
+    void shouldHideElasticToolsForFollowUpWhenElasticConfigIsMissing() {
+        var policy = policyFactoryWithMissingElasticConfig().createForFollowUp(
+                chatRequest("dev3", "CRM/runtime", "release/2026.04"),
+                tools(
+                        "elastic_search_logs_by_correlation_id",
+                        "elastic_summarize_http_calls_by_path",
+                        "elastic_fetch_http_call_logs",
+                        "gitlab_find_flow_context",
+                        "db_find_tables",
+                        "db_execute_readonly_sql",
+                        "opctx_search",
+                        "record_tool_feedback",
+                        CopilotReportToolNames.GET_CURRENT
+                )
+        );
+
+        assertFalse(policy.elasticToolsEnabled());
+        assertFalse(policy.availableToolNames().contains("elastic_search_logs_by_correlation_id"));
+        assertFalse(policy.availableToolNames().contains("elastic_summarize_http_calls_by_path"));
+        assertFalse(policy.availableToolNames().contains("elastic_fetch_http_call_logs"));
+        assertTrue(policy.availableToolNames().contains("gitlab_find_flow_context"));
+        assertTrue(policy.availableToolNames().contains("db_find_tables"));
+        assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
+        assertTrue(policy.availableToolNames().contains("opctx_search"));
+        assertTrue(policy.availableToolNames().contains("record_tool_feedback"));
+        assertTrue(policy.availableToolNames().contains(CopilotReportToolNames.GET_CURRENT));
+        var elasticGroup = policy.disabledCapabilityGroups().stream()
+                .filter(group -> "elasticsearch".equals(group.get("name")))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(elasticGroup.get("reason").contains("analysis.elasticsearch.base-url"));
+        assertTrue(elasticGroup.get("reason").contains("analysis.elasticsearch.authorization-header"));
+    }
+
+    @Test
     void shouldAlwaysEnableToolFeedbackForFollowUpWhenRegistered() {
         var policy = policyFactory.createForFollowUp(
                 chatRequest(null, null, null),
@@ -494,6 +553,20 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                                 java.lang.IllegalStateException: failed
                                 \tat com.example.CustomerCatalogService.resolve(CustomerCatalogService.java:42)
                                 """)
+                ))
+        );
+    }
+
+    private AnalysisEvidenceSection truncatedElasticSection() {
+        return new AnalysisEvidenceSection(
+                "elasticsearch",
+                "logs",
+                List.of(item(
+                        "truncated log",
+                        attr("serviceName", "crm-catalog-service"),
+                        attr("className", "com.example.CustomerCatalogService"),
+                        attr("message", "Failed to resolve catalog item"),
+                        attr("messageTruncated", "true")
                 ))
         );
     }

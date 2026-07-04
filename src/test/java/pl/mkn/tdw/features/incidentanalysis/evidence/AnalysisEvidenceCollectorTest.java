@@ -108,6 +108,53 @@ class AnalysisEvidenceCollectorTest {
     }
 
     @Test
+    void shouldUseUploadedCsvLogsAsElasticsearchEvidenceWithoutCallingElasticPort() {
+        var collector = new AnalysisEvidenceCollector(
+                new ElasticLogEvidenceProvider(new FailingElasticLogPort()),
+                new DeploymentContextEvidenceProvider(deploymentContextResolver),
+                new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
+                new GitLabDeterministicEvidenceProvider(
+                        mock(GitLabRepositoryPort.class),
+                        gitLabProperties,
+                        mock(GitLabSourceResolveService.class),
+                        deploymentContextResolver,
+                        TestOperationalContextProjectPathResolver.empty()
+                ),
+                disabledOperationalContextEvidenceProvider(),
+                directTaskExecutor()
+        );
+
+        var context = collector.collect(
+                AnalysisLogInput.csvUpload("csv-timeout-123", List.of(new ElasticLogEntry(
+                        "2026-04-11T20:57:33.285Z",
+                        "ERROR",
+                        "svc",
+                        "c.e.s.response.TimeoutHandler",
+                        "Catalog call timed out",
+                        null,
+                        "main",
+                        "span-1",
+                        "crm-main-dev3",
+                        "pod",
+                        "backend",
+                        "r/crm-main-dev3/backend:20260411-205733-1-dev-atlas-0123456789abcdef0123456789abcdef01234567",
+                        "logs-2026",
+                        "csv-doc-1",
+                        false,
+                        false
+                ))),
+                AnalysisEvidenceCollectionListener.NO_OP
+        );
+
+        assertEquals("csv-timeout-123", context.correlationId());
+        assertEquals("elasticsearch", context.evidenceSections().get(0).provider());
+        assertEquals("logs", context.evidenceSections().get(0).category());
+        assertEquals("ERROR svc log entry", context.evidenceSections().get(0).items().get(0).title());
+        assertEquals("dev3", attributesByName(context.evidenceSections().get(1).items().get(1)).get("environment"));
+        assertEquals("dev/atlas", attributesByName(context.evidenceSections().get(1).items().get(1)).get("branch"));
+    }
+
+    @Test
     void shouldOverlapDynatraceAndGitLabCollectionAfterDeploymentContext() throws Exception {
         var blockingDynatracePort = new BlockingDynatraceIncidentPort();
         var blockingGitLabPort = new BlockingGitLabRepositoryPort();
@@ -311,6 +358,21 @@ class AnalysisEvidenceCollectorTest {
                 String correlationId
         ) {
             throw new UnsupportedOperationException("Not needed in this collector test.");
+        }
+    }
+
+    private static final class FailingElasticLogPort implements ElasticLogPort {
+
+        @Override
+        public List<ElasticLogEntry> findLogEntries(String correlationId) {
+            throw new AssertionError("CSV upload flow must not call ElasticLogPort.findLogEntries.");
+        }
+
+        @Override
+        public pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+                String correlationId
+        ) {
+            throw new AssertionError("CSV upload flow must not call ElasticLogPort.searchLogsByCorrelationId.");
         }
     }
 

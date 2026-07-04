@@ -216,6 +216,17 @@ Przyklad:
 - ignorowanie SSL utrzymujemy lokalnie dla konkretnej integracji, np. GitLaba
   albo Elasticsearch/Kibana proxy.
 
+### Konstruktory i test creators
+
+Implementacja ma byc czytelna z perspektywy runtime. Preferuj Lombokowe
+`@RequiredArgsConstructor` na finalnych zaleznosciach i nie dodawaj recznych
+konstruktorow tylko dla wygody testow.
+
+Jezeli test potrzebuje krotszego setupu, testowych defaultow, no-op persistence
+albo mockowanych adapterow, utworz creator/builder w odpowiadajacym pakiecie
+`src/test/java`. Produkcyjna klasa nie powinna niesc testowego wiring ani
+domyslnych zaleznosci.
+
 ## Czego teraz nie robic
 
 - nie wracac do centralnego rule-based flow jako glownej sciezki analizy,
@@ -227,14 +238,23 @@ Przyklad:
 
 ## Rzeczy, ktore warto wiedziec przed kolejna zmiana
 
-### `correlationId`, `environment` i `gitLabBranch`
+### Zrodlo logow, `correlationId`, `environment` i `gitLabBranch`
 
-`POST /analysis/jobs` dla UI przyjmuje `correlationId` oraz opcjonalne
-preferencje AI: `model` i `reasoningEffort`. Nie przyjmuje scope'ow evidence.
+`POST /api/analysis/jobs` dla UI przyjmuje wybor zrodla logow oraz opcjonalne
+preferencje AI: `model` i `reasoningEffort`. Dla
+`source=ELASTICSEARCH` klient podaje `correlationId`; dla
+`source=CSV_UPLOAD` klient podaje plik `logFile`, a `correlationId` jest
+wyprowadzany z kolumn CSV podczas walidacji. Request nie przyjmuje scope'ow
+evidence takich jak `environment`, `gitLabBranch` albo `gitLabGroup`.
 `environment` i `gitLabBranch` sa rozwiazywane podczas zbierania evidence przez
 osobny krok deployment context, a nie podawane przez klienta. Preferencje AI
 trafiaja do `AnalysisAiOptions` i `SessionConfig`, nie do
 deployment/GitLab/DB scope'u.
+
+UI powinno pobierac `GET /api/analysis/jobs/input-options` przed startem
+joba. Jezeli konfiguracja Elasticsearch/Kibana jest niekompletna, sciezka
+`source=ELASTICSEARCH` i pole `correlationId` sa blokowane, ale upload CSV
+pozostaje dostepny.
 
 Lista modeli i wspieranych `reasoningEffort` nie mieszka w frontendzie.
 Frontend najpierw pobiera status Copilot auth z `GET /api/auth/github/status`.
@@ -252,8 +272,8 @@ Tryby auth:
   trzyma zaszyfrowane user access/refresh tokeny powiazane z HttpOnly
   operator session cookie.
 
-Publiczne requesty `POST /analysis/jobs` i
-`POST /analysis/jobs/{analysisId}/chat/messages` nie przyjmuja tokenow,
+Publiczne requesty `POST /api/analysis/jobs` i
+`POST /api/analysis/jobs/{analysisId}/chat/messages` nie przyjmuja tokenow,
 OAuth code ani loginu GitHub. Job state moze przenosic tylko
 `AnalysisAiAuthRef`; token jest rozwiazywany tuz przed utworzeniem
 `CopilotClientOptions`, gdzie zawsze ustawiamy jawny `githubToken` oraz
@@ -296,12 +316,15 @@ przeczytaj `frontend/AGENTS.md` i najblizszy lokalny `AGENTS.md` w
 Aktualny ekran `GET /` jest overview `Team Delivery Workspace`: pokazuje
 wartosc platformy jezykiem uzytkownika, aktywne feature'y i oszczednosc czasu
 bez tlumaczenia AI, tools, runtime ani integracji. Codzienny ekran incydentowy
-jest pod `/incident-analysis` i korzysta z `POST /analysis/jobs` oraz
-`GET /analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
-Przy starcie joba operator moze zostawic domyslny backendowy model/reasoning
-albo wybrac `model` i dostepny dla niego `reasoningEffort` dla sesji AI. Opcje
-sa pobierane z backendu przez `GET /analysis/ai/options` dopiero po pozytywnym
-statusie auth.
+jest pod `/incident-analysis` i korzysta z `POST /api/analysis/jobs` oraz
+`GET /api/analysis/jobs/{analysisId}`, zeby pokazywac postep analizy.
+Przy starcie joba operator wybiera zrodlo logow: Elasticsearch po
+`correlationId` albo upload CSV. UI pobiera
+`GET /api/analysis/jobs/input-options` i blokuje sciezke Elasticsearch, gdy
+brakuje wymaganej konfiguracji, bez blokowania uploadu CSV. Operator moze tez
+zostawic domyslny backendowy model/reasoning albo wybrac `model` i dostepny
+dla niego `reasoningEffort` dla sesji AI. Opcje sa pobierane z backendu przez
+`GET /analysis/ai/options` dopiero po pozytywnym statusie auth.
 Polling joba zwraca tez `toolEvidenceSections`, czyli pliki GitLaba,
 kontekst lookupow GitLaba i wyniki DB dociagniete przez AI tools podczas kroku
 `AI_ANALYSIS`.
@@ -317,8 +340,8 @@ lifecycle tools i bledow sesji. UI merge'uje `aiActivityEvents` z
 tok AI, powiazane tools sa kolejnymi wierszami z loaderem/OK/error, a JSON
 debug jest dostepny po rozwinieciu danego wiersza.
 Po `COMPLETED` frontend pokazuje panel chatu. Wyslanie wiadomosci idzie przez
-`POST /analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
-tym samym `GET /analysis/jobs/{analysisId}` w polu `chatMessages`.
+`POST /api/analysis/jobs/{analysisId}/chat/messages`, a odpowiedz jest pollowana
+tym samym `GET /api/analysis/jobs/{analysisId}` w polu `chatMessages`.
 Follow-up odpowiedz assistant moze miec wlasne `toolFeedback`, pokazywane
 kompaktowo przy tej wiadomosci.
 Follow-up chat dziala dla live joba oraz lokalnego runu z zapisanym
@@ -460,6 +483,12 @@ Oba przyjmuja tylko `correlationId`.
 `base-url`, auth, Kibana space, index pattern i limity odpowiedzi pochodza z
 `analysis.elasticsearch.*`; Workspace Settings moze lokalnie nadpisac tylko
 connection/auth fields, a limity zostaja w `application.properties`.
+
+Brak kompletnej konfiguracji Elasticsearch/Kibana blokuje start
+`source=ELASTICSEARCH` i usuwa `elastic_*` tools z allowlisty Copilota w
+initial analysis oraz follow-up chat. Nie blokuje `source=CSV_UPLOAD`; CSV jest
+deterministycznie walidowany i mapowany do tego samego modelu logow, ktory
+potem zasila evidence `elasticsearch/logs`.
 
 ### Database helper flow
 

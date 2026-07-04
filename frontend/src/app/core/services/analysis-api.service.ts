@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import {
   AnalysisChatMessageRequest,
   AnalysisAiModelOptionsResponse,
+  AnalysisJobInputOptionsResponse,
   AnalysisJobStateSnapshot,
   AnalysisStartRequest
 } from '../models/analysis.models';
@@ -17,7 +18,11 @@ export class AnalysisApiService {
   private readonly http = inject(HttpClient);
 
   startAnalysis(request: AnalysisStartRequest): Observable<AnalysisJobStateSnapshot> {
-    return this.http.post<AnalysisJobStateSnapshot>(`${this.baseUrl}/jobs`, request);
+    return this.http.post<AnalysisJobStateSnapshot>(`${this.baseUrl}/jobs`, this.toStartFormData(request));
+  }
+
+  getInputOptions(): Observable<AnalysisJobInputOptionsResponse> {
+    return this.http.get<AnalysisJobInputOptionsResponse>(`${this.baseUrl}/jobs/input-options`);
   }
 
   getAiModelOptions(): Observable<AnalysisAiModelOptionsResponse> {
@@ -38,5 +43,23 @@ export class AnalysisApiService {
       `${this.baseUrl}/jobs/${encodeURIComponent(analysisId)}/chat/messages`,
       request
     );
+  }
+
+  private toStartFormData(request: AnalysisStartRequest): FormData {
+    const formData = new FormData();
+    formData.append('source', request.source || 'ELASTICSEARCH');
+    if (request.correlationId) {
+      formData.append('correlationId', request.correlationId);
+    }
+    if (request.logFile) {
+      formData.append('logFile', request.logFile, request.logFile.name);
+    }
+    if (request.model) {
+      formData.append('model', request.model);
+    }
+    if (request.reasoningEffort) {
+      formData.append('reasoningEffort', request.reasoningEffort);
+    }
+    return formData;
   }
 }

@@ -10,18 +10,22 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
+import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisLogInput;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisDataNotFoundException;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisExecution;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
+import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobInputOptionsResponse;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStateSnapshot;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobNotFoundException;
 import pl.mkn.tdw.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.tdw.features.incidentanalysis.job.state.AnalysisJobState;
 import pl.mkn.tdw.features.incidentanalysis.job.state.AnalysisJobStateListener;
+import pl.mkn.tdw.features.incidentanalysis.job.validation.AnalysisJobStartValidationService;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
 import java.util.Map;
 import java.util.UUID;
@@ -30,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class AnalysisJobService {
+public class AnalysisJobFacade {
 
     private final AnalysisOrchestrator analysisOrchestrator;
     private final AnalysisAiChatProvider analysisAiChatProvider;
@@ -39,56 +43,19 @@ public class AnalysisJobService {
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
     private final IncidentAnalysisLocalRunPersistence localRunPersistence;
+    private final AnalysisJobInputOptionsService inputOptionsService;
+    private final AnalysisJobStartValidationService startValidationService;
 
     private final Map<String, AnalysisJobState> jobs = new ConcurrentHashMap<>();
 
-    public AnalysisJobService(
-            AnalysisOrchestrator analysisOrchestrator,
-            AnalysisAiChatProvider analysisAiChatProvider,
-            TaskExecutor applicationTaskExecutor
-    ) {
-        this(
-                analysisOrchestrator,
-                analysisAiChatProvider,
-                applicationTaskExecutor,
-                () -> AnalysisAiAuthRef.localToken(null),
-                new CopilotRunAuthMapper(),
-                auth -> new pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken(
-                        "test-token",
-                        null,
-                        null,
-                        false
-                ),
-                IncidentAnalysisLocalRunPersistence.NO_OP
-        );
-    }
-
-    public AnalysisJobService(
-            AnalysisOrchestrator analysisOrchestrator,
-            AnalysisAiChatProvider analysisAiChatProvider,
-            TaskExecutor applicationTaskExecutor,
-            AnalysisAiAuthRefResolver authRefResolver,
-            CopilotRunAuthMapper runAuthMapper,
-            CopilotAccessTokenResolver accessTokenResolver
-    ) {
-        this(
-                analysisOrchestrator,
-                analysisAiChatProvider,
-                applicationTaskExecutor,
-                authRefResolver,
-                runAuthMapper,
-                accessTokenResolver,
-                IncidentAnalysisLocalRunPersistence.NO_OP
-        );
-    }
-
     public AnalysisJobStateSnapshot startAnalysis(AnalysisJobStartRequest request) {
+        var logInput = startValidationService.validateAndResolveLogInput(request);
         var authRef = authRefResolver.resolveForCurrentRequest();
         accessTokenResolver.resolve(runAuthMapper.toRunAuth(authRef));
         var analysisId = UUID.randomUUID().toString();
         var job = new AnalysisJobState(
                 analysisId,
-                request.correlationId(),
+                logInput.correlationId(),
                 request.aiOptions(),
                 authRef,
                 analysisOrchestrator.providerDescriptors()
@@ -96,7 +63,7 @@ public class AnalysisJobService {
 
         jobs.put(analysisId, job);
         persistRunSnapshot(job);
-        applicationTaskExecutor.execute(() -> runAnalysis(job, request, authRef));
+        applicationTaskExecutor.execute(() -> runAnalysis(job, logInput, request.aiOptions(), authRef));
 
         return job.snapshot();
     }
@@ -117,11 +84,20 @@ public class AnalysisJobService {
         return job.snapshot();
     }
 
-    private void runAnalysis(AnalysisJobState job, AnalysisJobStartRequest request, AnalysisAiAuthRef authRef) {
+    public AnalysisJobInputOptionsResponse inputOptions() {
+        return inputOptionsService.currentOptions();
+    }
+
+    private void runAnalysis(
+            AnalysisJobState job,
+            AnalysisLogInput logInput,
+            AnalysisAiOptions options,
+            AnalysisAiAuthRef authRef
+    ) {
         try {
             var execution = analysisOrchestrator.analyze(
-                    request.correlationId(),
-                    request.aiOptions(),
+                    logInput,
+                    options,
                     authRef,
                     new AnalysisJobStateListener(job, () -> persistRunSnapshot(job))
             );
@@ -133,7 +109,7 @@ public class AnalysisJobService {
         } catch (RuntimeException exception) {
             log.error(
                     "Analysis job failed correlationId={} errorCode=ANALYSIS_FAILED message={}",
-                    request.correlationId(),
+                    logInput.correlationId(),
                     exception.getMessage(),
                     exception
             );
@@ -221,4 +197,5 @@ public class AnalysisJobService {
         }
         return job;
     }
+
 }

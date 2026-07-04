@@ -126,13 +126,87 @@
 
 .analysis-start-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 1.2fr) minmax(180px, 0.75fr) minmax(180px, 0.75fr) auto;
+  grid-template-columns:
+    minmax(220px, 1fr)
+    minmax(260px, 1.15fr)
+    minmax(180px, 0.78fr)
+    minmax(180px, 0.78fr)
+    auto;
   gap: 10px;
   align-items: end;
 }
 
-.analysis-start-grid__correlation {
+.analysis-start-grid__log-input {
   min-width: 0;
+}
+
+.analysis-file-control {
+  min-width: 0;
+}
+
+.file-picker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-picker__button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.file-picker__button .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.file-picker__name,
+.file-picker__placeholder {
+  min-width: 0;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-picker__placeholder {
+  color: var(--text-soft);
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+
+.file-picker__clear {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--text-soft);
+  cursor: pointer;
+}
+
+.file-picker__clear:hover,
+.file-picker__clear:focus-visible {
+  border-color: rgba(174, 46, 36, 0.28);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.file-picker__clear:focus-visible {
+  outline: 2px solid rgba(174, 46, 36, 0.18);
+  outline-offset: 2px;
+}
+
+.file-picker__clear .material-symbols-outlined {
+  font-size: 18px;
 }
 
 .analysis-start-actions {
@@ -247,7 +321,7 @@
   }
 
   .analysis-start-grid {
-    grid-template-columns: minmax(240px, 1fr) minmax(180px, 0.8fr) minmax(180px, 0.8fr);
+    grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr) minmax(180px, 0.8fr);
   }
 
   .analysis-start-actions {
@@ -299,6 +373,14 @@
   .analysis-start-actions {
     align-items: stretch;
     flex-wrap: nowrap;
+  }
+
+  .file-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .file-picker__clear {
+    width: 100%;
   }
 
   .analysis-start-actions .primary-button,

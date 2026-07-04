@@ -42,8 +42,8 @@
         <div class="analysis-run-context analysis-run-context--starting">
           <span class="status-pill status-pill--running">Starting</span>
           <div class="analysis-run-context__item">
-            <span class="analysis-run-context__label">Correlation ID</span>
-            <span class="analysis-run-context__value">{{ loadingCorrelationId() }}</span>
+            <span class="analysis-run-context__label">{{ loadingContextLabel() }}</span>
+            <span class="analysis-run-context__value">{{ loadingInputLabel() }}</span>
           </div>
         </div>
       }
@@ -52,7 +52,7 @@
         @if (!hasActiveState()) {
           <div class="analysis-form__header analysis-start-form__intro">
             <div>
-              <label class="field-label" for="correlationId">Correlation ID</label>
+              <span class="field-label">Log source</span>
               <p class="field-hint">Run a new analysis or import an exported result.</p>
             </div>
             <p class="analysis-actions__hint">
@@ -62,20 +62,60 @@
         }
 
         <div class="analysis-start-grid">
-          <label class="field-control analysis-start-grid__correlation" for="correlationId">
-            <span class="field-label">Correlation ID</span>
-            <input
-              id="correlationId"
-              class="text-input"
-              type="text"
-              placeholder="np. timeout-123"
-              autocomplete="off"
-              spellcheck="false"
-              required
-              [formControl]="correlationIdControl"
-              (input)="clearFormError()"
-            />
-          </label>
+          @if (canUseElasticsearchInput()) {
+            <label class="field-control analysis-start-grid__log-input" for="correlationId">
+              <span class="field-label">Correlation ID</span>
+              <input
+                id="correlationId"
+                class="text-input"
+                type="text"
+                placeholder="np. timeout-123"
+                autocomplete="off"
+                spellcheck="false"
+                required
+                [formControl]="correlationIdControl"
+                (input)="clearFormError()"
+              />
+            </label>
+          }
+
+          @if (canUseCsvUploadInput()) {
+            <div class="field-control analysis-start-grid__log-input analysis-file-control">
+              <span class="field-label">CSV file</span>
+              <div class="file-picker">
+                <input
+                  #logFileInput
+                  type="file"
+                  accept=".csv,text/csv,application/csv,application/vnd.ms-excel"
+                  hidden
+                  (change)="onLogFileSelected($event)"
+                />
+                <button
+                  class="secondary-button file-picker__button"
+                  type="button"
+                  (click)="logFileInput.click()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+                  <span>{{ selectedLogFile() ? 'Change CSV' : 'Choose CSV' }}</span>
+                </button>
+                @if (selectedLogFileLabel()) {
+                  <span class="file-picker__name" [title]="selectedLogFileLabel()">
+                    {{ selectedLogFileLabel() }}
+                  </span>
+                  <button
+                    class="file-picker__clear"
+                    type="button"
+                    aria-label="Usuń plik CSV"
+                    (click)="clearSelectedLogFile(logFileInput)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                  </button>
+                } @else {
+                  <span class="file-picker__placeholder">No file</span>
+                }
+              </div>
+            </div>
+          }
 
           <label class="field-control" for="aiModel">
             <span class="field-label">Model AI</span>
@@ -127,7 +167,7 @@
             <button
               class="primary-button"
               type="submit"
-              [disabled]="isLoading() || isAnalysisBlockedByAuth()"
+              [disabled]="isLoading() || isAnalysisBlockedByAuth() || analysisStartUnavailable()"
               [class.is-loading]="isLoading()"
               [attr.aria-busy]="isLoading()"
             >

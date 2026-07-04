@@ -7,6 +7,7 @@ import { Observable, of, Subject, throwError } from 'rxjs';
 
 import {
   AnalysisAiModelOptionsResponse,
+  AnalysisJobInputOptionsResponse,
   AnalysisJobStateSnapshot,
   AnalysisReport,
   GitHubAuthStatus,
@@ -112,6 +113,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     component.submit(new Event('submit'));
 
     expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
+      source: 'ELASTICSEARCH',
       correlationId: 'corr-123',
       model: undefined,
       reasoningEffort: 'medium'
@@ -149,10 +151,97 @@ describe('AnalysisConsoleComponent auth flow', () => {
     component.submit(new Event('submit'));
 
     expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
+      source: 'ELASTICSEARCH',
       correlationId: 'corr-123',
       model: 'gpt-5.4',
       reasoningEffort: 'high'
     });
+  });
+
+  it('should show only CSV upload when Elasticsearch input is unavailable', async () => {
+    const { fixture } = await createComponent(
+      connectedStatus(),
+      of(modelOptions()),
+      { inputOptions$: of(inputOptionsWithoutElastic()) }
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance;
+    const compiled = fixture.nativeElement as HTMLElement;
+    const correlationInput = compiled.querySelector('#correlationId') as HTMLInputElement | null;
+
+    expect(component.correlationIdControl.disabled).toBe(true);
+    expect(correlationInput).toBeNull();
+    expect(compiled.querySelector('[role="group"][aria-label="Log source"]')).toBeNull();
+    expect(compiled.textContent).not.toContain('Elasticsearch/Kibana nie jest skonfigurowany.');
+    expect(compiled.textContent).toContain('CSV file');
+    expect(compiled.textContent).toContain('Choose CSV');
+  });
+
+  it('should submit CSV upload as the analysis input source', async () => {
+    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    const file = new File(['@timestamp,fields.correlationId\n2026-07-04T10:00:00Z,corr-123'], 'logi.csv', {
+      type: 'text/csv'
+    });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.onLogFileSelected({ target: input } as unknown as Event);
+    component.submit(new Event('submit'));
+
+    expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
+      source: 'CSV_UPLOAD',
+      logFile: file,
+      model: undefined,
+      reasoningEffort: 'medium'
+    });
+  });
+
+  it('should render CSV validation errors next to the start form', async () => {
+    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    const file = new File(['not,a,kibana,csv'], 'bad.csv', { type: 'text/csv' });
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+    analysisApi.startAnalysis.mockReturnValueOnce(
+      throwError(() => new HttpErrorResponse({
+        status: 400,
+        error: {
+          code: 'INCIDENT_LOG_FILE_MISSING_COLUMNS',
+          message: 'CSV log file is missing required columns.',
+          fieldErrors: []
+        }
+      }))
+    );
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.onLogFileSelected({ target: input } as unknown as Event);
+    component.submit(new Event('submit'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.transportError()).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain(
+      'CSV log file is missing required columns.'
+    );
   });
 
   it('should switch the route to the local run immediately after starting analysis', async () => {
@@ -469,9 +558,11 @@ describe('AnalysisConsoleComponent auth flow', () => {
       liveJob?: AnalysisJobStateSnapshot;
       localRunDetail?: LocalAnalysisRunDetailResponse;
       localChatResponse?: LocalAnalysisRunDetailResponse;
+      inputOptions$?: Observable<AnalysisJobInputOptionsResponse>;
     } = {}
   ) {
     const analysisApi = {
+      getInputOptions: vi.fn(() => routeOptions.inputOptions$ ?? of(inputOptions())),
       getAiModelOptions: vi.fn(() => aiModelOptions$),
       startAnalysis: vi.fn(() => of(queuedJob())),
       getAnalysis: vi.fn(() => of(routeOptions.liveJob ?? queuedJob())),
@@ -592,6 +683,36 @@ function modelOptionsWithListedDefault(): AnalysisAiModelOptionsResponse {
         defaultReasoningEffort: 'medium'
       }
     ]
+  };
+}
+
+function inputOptions(): AnalysisJobInputOptionsResponse {
+  return {
+    elasticsearch: {
+      source: 'ELASTICSEARCH',
+      enabled: true,
+      disabledReason: null
+    },
+    csvUpload: {
+      source: 'CSV_UPLOAD',
+      enabled: true,
+      disabledReason: null
+    }
+  };
+}
+
+function inputOptionsWithoutElastic(): AnalysisJobInputOptionsResponse {
+  return {
+    elasticsearch: {
+      source: 'ELASTICSEARCH',
+      enabled: false,
+      disabledReason: 'Elasticsearch/Kibana nie jest skonfigurowany.'
+    },
+    csvUpload: {
+      source: 'CSV_UPLOAD',
+      enabled: true,
+      disabledReason: null
+    }
   };
 }
 

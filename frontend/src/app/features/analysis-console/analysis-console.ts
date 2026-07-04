@@ -18,7 +18,9 @@ import {
   AnalysisAiUsage,
   AnalysisAiModelOptionsResponse,
   ApiErrorResponse,
+  AnalysisJobInputOptionsResponse,
   AnalysisJobStateSnapshot,
+  AnalysisLogSource,
   ExportState,
   GitHubAuthStatus,
   LocalAnalysisRunDetailResponse,
@@ -84,6 +86,18 @@ type ExportMetadata = Pick<
   | 'continuationEnabled'
   | 'sourceEnvelope'
 >;
+const DEFAULT_ANALYSIS_INPUT_OPTIONS: AnalysisJobInputOptionsResponse = {
+  elasticsearch: {
+    source: 'ELASTICSEARCH',
+    enabled: true,
+    disabledReason: null
+  },
+  csvUpload: {
+    source: 'CSV_UPLOAD',
+    enabled: true,
+    disabledReason: null
+  }
+};
 
 @Component({
   selector: 'app-analysis-console',
@@ -120,13 +134,17 @@ export class AnalysisConsoleComponent {
   readonly formError = signal('');
   readonly chatError = signal('');
   readonly placeholderMode = signal<'idle' | 'loading'>('idle');
-  readonly loadingCorrelationId = signal('');
+  readonly loadingLogSource = signal<AnalysisLogSource>('ELASTICSEARCH');
+  readonly loadingInputLabel = signal('');
   readonly transportError = signal<TransportErrorState | null>(null);
   readonly job = signal<AnalysisJobStateSnapshot | null>(null);
   readonly exportState = signal<ExportState | null>(null);
   readonly isAiModelOptionsLoading = signal(false);
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly selectedAiModel = signal('');
+  readonly isInputOptionsLoading = signal(false);
+  readonly inputOptions = signal<AnalysisJobInputOptionsResponse>(DEFAULT_ANALYSIS_INPUT_OPTIONS);
+  readonly selectedLogFile = signal<File | null>(null);
   readonly githubAuthStatus = signal<GitHubAuthStatus | null>(null);
   readonly githubAuthError = signal('');
   readonly githubReauthRequiredByError = signal(false);
@@ -168,6 +186,22 @@ export class AnalysisConsoleComponent {
       label: this.reasoningEffortLabel(effort)
     }));
   });
+  readonly canUseElasticsearchInput = computed(() => this.inputOptions().elasticsearch.enabled);
+  readonly canUseCsvUploadInput = computed(() => this.inputOptions().csvUpload.enabled);
+  readonly selectedLogFileLabel = computed(() => {
+    const file = this.selectedLogFile();
+    if (!file) {
+      return '';
+    }
+
+    return `${file.name} · ${formatFileSize(file.size)}`;
+  });
+  readonly analysisStartUnavailable = computed(
+    () => !this.canUseElasticsearchInput() && !this.canUseCsvUploadInput()
+  );
+  readonly loadingContextLabel = computed(() =>
+    this.loadingLogSource() === 'CSV_UPLOAD' ? 'CSV file' : 'Correlation ID'
+  );
   readonly isAnalysisBlockedByAuth = computed(() => {
     const status = this.githubAuthStatus();
     return status?.mode === 'GITHUB_APP' && (!status.connected || status.reauthRequired);
@@ -259,7 +293,11 @@ export class AnalysisConsoleComponent {
   );
   readonly placeholderDescription = computed(() => {
     if (this.placeholderMode() === 'loading') {
-      return `Analiza dla correlationId ${this.loadingCorrelationId()} została zainicjowana. Pierwsze dane pojawią się za chwilę.`;
+      if (this.loadingLogSource() === 'CSV_UPLOAD') {
+        return `Analiza z pliku ${this.loadingInputLabel()} została zainicjowana. Pierwsze dane pojawią się za chwilę.`;
+      }
+
+      return `Analiza dla correlationId ${this.loadingInputLabel()} została zainicjowana. Pierwsze dane pojawią się za chwilę.`;
     }
 
     return 'Po uruchomieniu zobaczysz postęp kroków, zebrane dane źródłowe i końcową diagnozę bez odświeżania widoku.';
@@ -270,6 +308,7 @@ export class AnalysisConsoleComponent {
   private promptCopyFeedbackHandle: number | null = null;
 
   constructor() {
+    this.loadInputOptions();
     this.loadGithubAuthStatus();
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -300,9 +339,10 @@ export class AnalysisConsoleComponent {
   submit(event: Event): void {
     event.preventDefault();
 
-    const correlationId = this.correlationIdControl.value.trim();
-    if (!correlationId) {
-      this.showFormError('Podaj correlationId, aby uruchomić analizę.');
+    const source = this.resolveLogSourceForSubmit();
+    const sourceError = this.validateLogInput(source);
+    if (sourceError) {
+      this.showFormError(sourceError);
       return;
     }
 
@@ -311,7 +351,9 @@ export class AnalysisConsoleComponent {
       return;
     }
 
-    this.correlationIdControl.setValue(correlationId);
+    if (source === 'ELASTICSEARCH') {
+      this.correlationIdControl.setValue(this.correlationIdControl.value.trim());
+    }
     this.clearFormError();
     this.stopPolling();
     this.activeAnalysisId = null;
@@ -321,7 +363,8 @@ export class AnalysisConsoleComponent {
     this.chatError.set('');
     this.isLoading.set(true);
     this.placeholderMode.set('loading');
-    this.loadingCorrelationId.set(correlationId);
+    this.loadingLogSource.set(source);
+    this.loadingInputLabel.set(this.loadingLabelForSource(source));
     this.scrollResponseIntoView();
 
     const aiModel = this.aiModelControl.value.trim() || listedDefaultAiModel(this.aiModelCatalog());
@@ -332,7 +375,10 @@ export class AnalysisConsoleComponent {
 
     this.analysisApi
       .startAnalysis({
-        correlationId,
+        source,
+        ...(source === 'ELASTICSEARCH'
+          ? { correlationId: this.correlationIdControl.value.trim() }
+          : { logFile: this.selectedLogFile() }),
         model: aiModel || undefined,
         reasoningEffort: reasoningEffort || undefined
       })
@@ -350,16 +396,15 @@ export class AnalysisConsoleComponent {
             localRunId: job.analysisId
           });
           this.rememberLocalRunId(job.analysisId);
+          if (job.correlationId) {
+            this.correlationIdControl.setValue(job.correlationId);
+          }
 
           if (!isTerminalStatus(job.status)) {
             this.schedulePoll(job.analysisId);
           }
         },
-        error: (error) =>
-          this.renderTransportError(
-            error,
-            'Nie udało się połączyć z backendem. Sprawdź, czy aplikacja działa lokalnie.'
-          )
+        error: (error) => this.handleStartError(error)
       });
   }
 
@@ -374,6 +419,20 @@ export class AnalysisConsoleComponent {
 
   connectGithub(): void {
     this.githubAuth.connect();
+  }
+
+  onLogFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    this.selectedLogFile.set(input?.files?.[0] ?? null);
+    this.clearFormError();
+  }
+
+  clearSelectedLogFile(input?: HTMLInputElement): void {
+    this.selectedLogFile.set(null);
+    if (input) {
+      input.value = '';
+    }
+    this.clearFormError();
   }
 
   logoutGithub(): void {
@@ -723,6 +782,30 @@ export class AnalysisConsoleComponent {
       });
   }
 
+  private loadInputOptions(): void {
+    this.isInputOptionsLoading.set(true);
+    this.analysisApi
+      .getInputOptions()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isInputOptionsLoading.set(false))
+      )
+      .subscribe({
+        next: (options) => {
+          this.inputOptions.set(normalizeInputOptions(options));
+          this.syncCorrelationControlState();
+        },
+        error: (error) => {
+          this.toTransportError(
+            error,
+            'Nie udało się odczytać dostępnych źródeł logów.'
+          );
+          this.inputOptions.set(DEFAULT_ANALYSIS_INPUT_OPTIONS);
+          this.syncCorrelationControlState();
+        }
+      });
+  }
+
   private loadLocalAnalysisRun(analysisId: string): void {
     this.stopPolling();
     this.activeAnalysisId = null;
@@ -883,6 +966,15 @@ export class AnalysisConsoleComponent {
     );
   }
 
+  private syncCorrelationControlState(): void {
+    if (this.inputOptions().elasticsearch.enabled) {
+      this.correlationIdControl.enable({ emitEvent: false });
+      return;
+    }
+
+    this.correlationIdControl.disable({ emitEvent: false });
+  }
+
   private syncControlsFromJob(job: AnalysisJobStateSnapshot): void {
     if (job.correlationId) {
       this.correlationIdControl.setValue(job.correlationId);
@@ -891,6 +983,52 @@ export class AnalysisConsoleComponent {
     this.selectedAiModel.set(job.aiModel || '');
     this.reasoningEffortControl.setValue(job.reasoningEffort || '');
     this.syncReasoningEffortSelection();
+  }
+
+  private validateLogInput(source: AnalysisLogSource): string {
+    const inputOptions = this.inputOptions();
+
+    if (source === 'ELASTICSEARCH') {
+      if (!inputOptions.elasticsearch.enabled) {
+        return inputOptions.elasticsearch.disabledReason || 'Start po correlationId jest niedostępny.';
+      }
+
+      if (!this.correlationIdControl.value.trim()) {
+        return 'Podaj correlationId, aby uruchomić analizę.';
+      }
+
+      return '';
+    }
+
+    if (!inputOptions.csvUpload.enabled) {
+      return inputOptions.csvUpload.disabledReason || 'Upload CSV jest niedostępny.';
+    }
+
+    if (!this.selectedLogFile()) {
+      return 'Załącz plik CSV z logami, aby uruchomić analizę.';
+    }
+
+    return '';
+  }
+
+  private resolveLogSourceForSubmit(): AnalysisLogSource {
+    if (this.selectedLogFile()) {
+      return 'CSV_UPLOAD';
+    }
+
+    if (this.inputOptions().elasticsearch.enabled) {
+      return 'ELASTICSEARCH';
+    }
+
+    return 'CSV_UPLOAD';
+  }
+
+  private loadingLabelForSource(source: AnalysisLogSource): string {
+    if (source === 'CSV_UPLOAD') {
+      return this.selectedLogFile()?.name || 'CSV';
+    }
+
+    return this.correlationIdControl.value.trim();
   }
 
   private rememberLocalRunId(analysisId: string): void {
@@ -993,6 +1131,47 @@ export class AnalysisConsoleComponent {
     this.applyGithubAuthError(transportError.code);
     this.transportError.set(transportError);
     this.scrollResponseIntoView();
+  }
+
+  private handleStartError(error: unknown): void {
+    const transportError = this.toTransportError(
+      error,
+      'Nie udało się połączyć z backendem. Sprawdź, czy aplikacja działa lokalnie.'
+    );
+    this.applyGithubAuthError(transportError.code);
+
+    if (transportError.status === 400 && this.isAnalysisInputError(transportError.code)) {
+      this.stopPolling();
+      this.activeAnalysisId = null;
+      this.exportState.set(null);
+      this.job.set(null);
+      this.transportError.set(null);
+      this.placeholderMode.set('idle');
+      this.showFormError(this.startInputErrorMessage(transportError));
+      return;
+    }
+
+    this.renderTransportError(
+      error,
+      'Nie udało się połączyć z backendem. Sprawdź, czy aplikacja działa lokalnie.'
+    );
+  }
+
+  private isAnalysisInputError(code: string): boolean {
+    return (
+      code.startsWith('INCIDENT_LOG_') ||
+      code === 'ELASTICSEARCH_LOG_SOURCE_NOT_CONFIGURED' ||
+      code === 'VALIDATION_ERROR'
+    );
+  }
+
+  private startInputErrorMessage(error: TransportErrorState): string {
+    const relevantDetails = error.details.filter((detail) => !detail.startsWith('HTTP status:'));
+    if (!relevantDetails.length) {
+      return error.message;
+    }
+
+    return `${error.message} ${relevantDetails.join(' ')}`;
   }
 
   private shouldKeepPolling(job: AnalysisJobStateSnapshot): boolean {
@@ -1195,4 +1374,33 @@ function formatDurationMs(value: number): string {
   }
 
   return `${formatTokenCount(value)} ms`;
+}
+
+function normalizeInputOptions(
+  options: AnalysisJobInputOptionsResponse | null | undefined
+): AnalysisJobInputOptionsResponse {
+  return {
+    elasticsearch: {
+      source: 'ELASTICSEARCH',
+      enabled: options?.elasticsearch?.enabled ?? DEFAULT_ANALYSIS_INPUT_OPTIONS.elasticsearch.enabled,
+      disabledReason: options?.elasticsearch?.disabledReason || null
+    },
+    csvUpload: {
+      source: 'CSV_UPLOAD',
+      enabled: options?.csvUpload?.enabled ?? DEFAULT_ANALYSIS_INPUT_OPTIONS.csvUpload.enabled,
+      disabledReason: options?.csvUpload?.disabledReason || null
+    }
+  };
+}
+
+function formatFileSize(size: number): string {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }

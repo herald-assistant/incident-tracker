@@ -26,7 +26,7 @@ public class ElasticLogEvidenceProvider implements AnalysisEvidenceProvider {
     public AnalysisEvidenceSection collect(AnalysisContext context) {
         var items = new ArrayList<AnalysisEvidenceItem>();
 
-        for (var entry : elasticLogPort.findLogEntries(context.correlationId())) {
+        for (var entry : logEntries(context)) {
             items.add(new AnalysisEvidenceItem(
                     buildTitle(entry),
                     buildAttributes(entry)
@@ -54,6 +54,14 @@ public class ElasticLogEvidenceProvider implements AnalysisEvidenceProvider {
     @Override
     public AnalysisStepPhase stepPhase() {
         return AnalysisStepPhase.SOURCE;
+    }
+
+    private List<ElasticLogEntry> logEntries(AnalysisContext context) {
+        if (context.logInput().csvUpload()) {
+            return context.logInput().uploadedLogEntries();
+        }
+
+        return elasticLogPort.findLogEntries(context.correlationId());
     }
 
     private String buildTitle(ElasticLogEntry entry) {

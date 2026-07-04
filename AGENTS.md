@@ -321,6 +321,11 @@ Zasady granic:
 - DTO preferencyjnie jako `record`.
 - Walidacja przez `@Valid` i `jakarta.validation`.
 - Wstrzykiwanie zaleznosci przez Lombok `@RequiredArgsConstructor`.
+- Klasy implementacyjne powinny miec przede wszystkim konstruktory wynikajace z
+  runtime wiring, zwykle Lombokowe. Nie dodawaj recznych konstruktorow tylko po
+  to, zeby uproscic testy; jesli test potrzebuje wygodniejszego skladania
+  zaleznosci, utworz creator/builder w odpowiadajacym pakiecie testowym pod
+  `src/test/java`.
 - Gdy Spring ma rozstrzygac po nazwie beana, preferuj nazwe pola/parametru
   identyczna z nazwa beana zamiast lokalnego `@Qualifier`.
 - HTTP po stronie integracji przez `RestClient`.

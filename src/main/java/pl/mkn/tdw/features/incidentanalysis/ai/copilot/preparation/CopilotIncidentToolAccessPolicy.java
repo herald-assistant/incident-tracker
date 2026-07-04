@@ -24,6 +24,7 @@ public record CopilotIncidentToolAccessPolicy(
         boolean gitLabToolsRegistered,
         boolean databaseToolsRegistered,
         boolean operationalContextToolsRegistered,
+        String elasticToolsDisabledReason,
         CopilotIncidentEvidenceCoverageReport evidenceCoverage
 ) {
 
@@ -50,6 +51,7 @@ public record CopilotIncidentToolAccessPolicy(
     public CopilotIncidentToolAccessPolicy {
         enabledTools = enabledTools != null ? List.copyOf(enabledTools) : List.of();
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
+        elasticToolsDisabledReason = hasText(elasticToolsDisabledReason) ? elasticToolsDisabledReason.trim() : null;
         evidenceCoverage = evidenceCoverage != null ? evidenceCoverage : CopilotIncidentEvidenceCoverageReport.empty();
     }
 
@@ -70,6 +72,30 @@ public record CopilotIncidentToolAccessPolicy(
                 gitLabToolsRegistered,
                 databaseToolsRegistered,
                 false,
+                null,
+                evidenceCoverage
+        );
+    }
+
+    public CopilotIncidentToolAccessPolicy(
+            List<ToolDefinition> enabledTools,
+            List<String> availableToolNames,
+            boolean localWorkspaceAccessBlocked,
+            boolean elasticToolsRegistered,
+            boolean gitLabToolsRegistered,
+            boolean databaseToolsRegistered,
+            boolean operationalContextToolsRegistered,
+            CopilotIncidentEvidenceCoverageReport evidenceCoverage
+    ) {
+        this(
+                enabledTools,
+                availableToolNames,
+                localWorkspaceAccessBlocked,
+                elasticToolsRegistered,
+                gitLabToolsRegistered,
+                databaseToolsRegistered,
+                operationalContextToolsRegistered,
+                null,
                 evidenceCoverage
         );
     }
@@ -83,6 +109,7 @@ public record CopilotIncidentToolAccessPolicy(
                 false,
                 false,
                 false,
+                null,
                 CopilotIncidentEvidenceCoverageReport.empty()
         );
     }
@@ -91,6 +118,15 @@ public record CopilotIncidentToolAccessPolicy(
             List<ToolDefinition> registeredTools,
             CopilotIncidentEvidenceCoverageReport evidenceCoverage
     ) {
+        return fromCoverage(registeredTools, evidenceCoverage, true, null);
+    }
+
+    public static CopilotIncidentToolAccessPolicy fromCoverage(
+            List<ToolDefinition> registeredTools,
+            CopilotIncidentEvidenceCoverageReport evidenceCoverage,
+            boolean elasticToolsConfigured,
+            String elasticToolsDisabledReason
+    ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
         var coverage = evidenceCoverage != null ? evidenceCoverage : CopilotIncidentEvidenceCoverageReport.empty();
         var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
@@ -98,7 +134,7 @@ public record CopilotIncidentToolAccessPolicy(
         var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
         var operationalContextToolsRegistered = hasToolPrefix(tools, OperationalContextToolNames.PREFIX);
         var enabledTools = tools.stream()
-                .filter(tool -> isEnabled(tool.name(), coverage))
+                .filter(tool -> isEnabled(tool.name(), coverage, elasticToolsConfigured))
                 .toList();
         var availableToolNames = enabledTools.stream()
                 .map(ToolDefinition::name)
@@ -112,6 +148,7 @@ public record CopilotIncidentToolAccessPolicy(
                 gitLabToolsRegistered,
                 databaseToolsRegistered,
                 operationalContextToolsRegistered,
+                elasticToolsConfigured ? null : elasticToolsDisabledReason,
                 coverage
         );
     }
@@ -121,13 +158,28 @@ public record CopilotIncidentToolAccessPolicy(
             boolean environmentResolved,
             boolean gitLabScopeResolved
     ) {
+        return fromFollowUpSession(registeredTools, environmentResolved, gitLabScopeResolved, true, null);
+    }
+
+    public static CopilotIncidentToolAccessPolicy fromFollowUpSession(
+            List<ToolDefinition> registeredTools,
+            boolean environmentResolved,
+            boolean gitLabScopeResolved,
+            boolean elasticToolsConfigured,
+            String elasticToolsDisabledReason
+    ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
         var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
         var gitLabToolsRegistered = hasToolPrefix(tools, GitLabToolNames.PREFIX);
         var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
         var operationalContextToolsRegistered = hasToolPrefix(tools, OperationalContextToolNames.PREFIX);
         var enabledTools = tools.stream()
-                .filter(tool -> isFollowUpEnabled(tool.name(), environmentResolved, gitLabScopeResolved))
+                .filter(tool -> isFollowUpEnabled(
+                        tool.name(),
+                        environmentResolved,
+                        gitLabScopeResolved,
+                        elasticToolsConfigured
+                ))
                 .toList();
         var availableToolNames = enabledTools.stream()
                 .map(ToolDefinition::name)
@@ -141,6 +193,7 @@ public record CopilotIncidentToolAccessPolicy(
                 gitLabToolsRegistered,
                 databaseToolsRegistered,
                 operationalContextToolsRegistered,
+                elasticToolsConfigured ? null : elasticToolsDisabledReason,
                 CopilotIncidentEvidenceCoverageReport.empty()
         );
     }
@@ -167,8 +220,7 @@ public record CopilotIncidentToolAccessPolicy(
         if (elasticToolsRegistered && !elasticToolsEnabled()) {
             groups.add(Map.of(
                     "name", "elasticsearch",
-                    "reason", "Elasticsearch coverage is %s and no log evidence gap requires additional log tools."
-                            .formatted(evidenceCoverage.elastic())
+                    "reason", elasticDisabledReason()
             ));
         }
         if (gitLabToolsRegistered && !gitLabToolsEnabled()) {
@@ -248,7 +300,19 @@ public record CopilotIncidentToolAccessPolicy(
                 .formatted(evidenceCoverage.operationalContext());
     }
 
-    private static boolean isEnabled(String toolName, CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
+    private String elasticDisabledReason() {
+        if (hasText(elasticToolsDisabledReason)) {
+            return elasticToolsDisabledReason;
+        }
+        return "Elasticsearch coverage is %s and no log evidence gap requires additional log tools."
+                .formatted(evidenceCoverage.elastic());
+    }
+
+    private static boolean isEnabled(
+            String toolName,
+            CopilotIncidentEvidenceCoverageReport evidenceCoverage,
+            boolean elasticToolsConfigured
+    ) {
         if (toolName == null || toolName.isBlank()) {
             return false;
         }
@@ -259,7 +323,7 @@ public record CopilotIncidentToolAccessPolicy(
             return true;
         }
         if (toolName.startsWith(ElasticToolNames.PREFIX)) {
-            return evidenceCoverage.elasticNeedsTooling();
+            return elasticToolsConfigured && evidenceCoverage.elasticNeedsTooling();
         }
         if (toolName.startsWith(GitLabToolNames.PREFIX)) {
             return gitLabToolEnabled(toolName, evidenceCoverage);
@@ -299,7 +363,8 @@ public record CopilotIncidentToolAccessPolicy(
     private static boolean isFollowUpEnabled(
             String toolName,
             boolean environmentResolved,
-            boolean gitLabScopeResolved
+            boolean gitLabScopeResolved,
+            boolean elasticToolsConfigured
     ) {
         if (toolName == null || toolName.isBlank()) {
             return false;
@@ -311,7 +376,7 @@ public record CopilotIncidentToolAccessPolicy(
             return true;
         }
         if (toolName.startsWith(ElasticToolNames.PREFIX)) {
-            return true;
+            return elasticToolsConfigured;
         }
         if (toolName.startsWith(GitLabToolNames.PREFIX)) {
             return gitLabScopeResolved;
@@ -323,5 +388,9 @@ public record CopilotIncidentToolAccessPolicy(
             return true;
         }
         return true;
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

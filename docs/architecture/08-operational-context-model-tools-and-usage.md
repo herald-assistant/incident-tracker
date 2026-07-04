@@ -946,9 +946,10 @@ Operational context wspiera incident analysis, ale jej nie zastepuje.
 
 Typowy przeplyw:
 
-1. Operator startuje `POST /analysis/jobs` z `correlationId` i opcjami AI.
-2. Evidence pipeline zbiera logi, deployment context, runtime signals i code
-   evidence.
+1. Operator startuje `POST /api/analysis/jobs` z wybranym zrodlem logow:
+   Elasticsearch po `correlationId` albo upload CSV, oraz opcjami AI.
+2. Evidence pipeline zbiera logi do wspolnej sekcji `elasticsearch/logs`,
+   deployment context, runtime signals i code evidence.
 3. Operational context provider dopasowuje katalog do zebranych sygnalow.
 4. Copilot dostaje digest z operational code search scope i coverage gaps.
 5. AI moze uzyc `opctx_*`, gdy potrzebuje dodatkowego katalogowego kontekstu.

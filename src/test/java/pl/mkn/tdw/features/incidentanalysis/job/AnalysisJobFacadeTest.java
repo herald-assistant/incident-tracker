@@ -2,7 +2,10 @@ package pl.mkn.tdw.features.incidentanalysis.job;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.mock.web.MockMultipartFile;
 import pl.mkn.tdw.integrations.dynatrace.TestDynatraceIncidentPort;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityService;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
@@ -48,8 +51,10 @@ import pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextEvidenceProvider;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisChatMessageRequest;
+import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobLogSource;
 import pl.mkn.tdw.features.incidentanalysis.job.api.AnalysisJobStartRequest;
 import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobChatUnavailableException;
+import pl.mkn.tdw.features.incidentanalysis.job.error.AnalysisJobInputException;
 import pl.mkn.tdw.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.tdw.features.incidentanalysis.testsupport.TestInitialAnalysisProvider;
 
@@ -67,12 +72,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-class AnalysisJobServiceTest {
+class AnalysisJobFacadeTest {
 
     private final GitLabProperties gitLabProperties = gitLabProperties();
     private final DeploymentContextResolver deploymentContextResolver = new DeploymentContextResolver();
     private final CapturingTaskExecutor taskExecutor = new CapturingTaskExecutor();
-    private final AnalysisJobService analysisJobService = analysisJobService(
+    private final AnalysisJobFacade analysisJobFacade = analysisJobFacade(
             new TestInitialAnalysisProvider(),
             new TestAnalysisChatProvider(),
             taskExecutor
@@ -80,7 +85,7 @@ class AnalysisJobServiceTest {
 
     @Test
     void shouldReturnQueuedJobThenCompleteItAfterWorkerRuns() {
-        var started = analysisJobService.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
+        var started = analysisJobFacade.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
 
         assertNotNull(started.analysisId());
         assertEquals("timeout-123", started.correlationId());
@@ -93,7 +98,7 @@ class AnalysisJobServiceTest {
 
         taskExecutor.runNext();
 
-        var completed = analysisJobService.getAnalysis(started.analysisId());
+        var completed = analysisJobFacade.getAnalysis(started.analysisId());
 
         assertEquals("COMPLETED", completed.status());
         assertEquals("dev3", completed.environment());
@@ -123,7 +128,7 @@ class AnalysisJobServiceTest {
     void shouldPersistCompletedInitialAnalysisRun() {
         var persistence = new CapturingLocalRunPersistence();
         var persistenceTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 new SessionAwareInitialAnalysisProvider("copilot-session-1"),
                 new TestAnalysisChatProvider(),
                 persistenceTaskExecutor,
@@ -153,7 +158,7 @@ class AnalysisJobServiceTest {
     void shouldPersistFailedInitialAnalysisRun() {
         var persistence = new CapturingLocalRunPersistence();
         var failingTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 new FailingInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 failingTaskExecutor,
@@ -179,7 +184,7 @@ class AnalysisJobServiceTest {
     void shouldPassSelectedAiOptionsToAnalysisFlow() {
         var provider = new CapturingOptionsInitialAnalysisProvider();
         var optionsTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(provider, new TestAnalysisChatProvider(), optionsTaskExecutor);
+        var service = analysisJobFacade(provider, new TestAnalysisChatProvider(), optionsTaskExecutor);
 
         var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", "gpt-5.4", "high"));
 
@@ -201,7 +206,7 @@ class AnalysisJobServiceTest {
         var authRef = AnalysisAiAuthRef.githubApp("operator-session-1", "octocat");
         var tokenResolver = new CapturingAccessTokenResolver("ghu_secret_operator_token");
         var authTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 provider,
                 new TestAnalysisChatProvider(),
                 authTaskExecutor,
@@ -224,7 +229,7 @@ class AnalysisJobServiceTest {
     @Test
     void shouldRejectJobBeforeQueueingWhenCopilotAuthIsMissing() {
         var authTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 new TestInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 authTaskExecutor,
@@ -242,9 +247,162 @@ class AnalysisJobServiceTest {
     }
 
     @Test
+    void shouldRejectMissingCsvFileBeforeQueueing() {
+        var csvTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobFacade(
+                new TestInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                csvTaskExecutor
+        );
+
+        var exception = assertThrows(
+                AnalysisJobInputException.class,
+                () -> service.startAnalysis(new AnalysisJobStartRequest(
+                        AnalysisJobLogSource.CSV_UPLOAD,
+                        null,
+                        null,
+                        null,
+                        null
+                ))
+        );
+
+        assertEquals("INCIDENT_LOG_FILE_MISSING", exception.code());
+        assertTrue(csvTaskExecutor.isEmpty());
+    }
+
+    @Test
+    void shouldRejectCsvWithMissingColumnsBeforeQueueing() {
+        assertCsvUploadRejectedBeforeQueueing(
+                csvFile("""
+                        "@timestamp","fields.correlationId"
+                        "2026-04-11T20:57:33.285Z","csv-timeout-123"
+                        """),
+                "INCIDENT_LOG_FILE_MISSING_COLUMNS"
+        );
+    }
+
+    @Test
+    void shouldRejectEmptyCsvBeforeQueueing() {
+        assertCsvUploadRejectedBeforeQueueing(
+                csvFile(csvHeader()),
+                "INCIDENT_LOG_FILE_EMPTY"
+        );
+    }
+
+    @Test
+    void shouldRejectCsvWithMultipleCorrelationIdsBeforeQueueing() {
+        assertCsvUploadRejectedBeforeQueueing(
+                csvFile(csvHeader()
+                        + csvRow("2026-04-11T20:57:33.285Z", "csv-timeout-123", "Catalog call timed out")
+                        + csvRow("2026-04-11T20:57:34.285Z", "csv-timeout-456", "Catalog call timed out")),
+                "INCIDENT_LOG_FILE_MULTIPLE_CORRELATION_IDS"
+        );
+    }
+
+    @Test
+    void shouldRejectCsvWithInvalidTimestampBeforeQueueing() {
+        assertCsvUploadRejectedBeforeQueueing(
+                csvFile(csvHeader() + csvRow("not-a-timestamp", "csv-timeout-123", "Catalog call timed out")),
+                "INCIDENT_LOG_FILE_INVALID_TIMESTAMP"
+        );
+    }
+
+    @Test
+    void shouldRejectInvalidCsvBeforeQueueing() {
+        assertCsvUploadRejectedBeforeQueueing(
+                csvFile(csvHeader() + "\"unterminated"),
+                "INCIDENT_LOG_FILE_INVALID_CSV"
+        );
+    }
+
+    @Test
+    void shouldStartCsvUploadWithDerivedCorrelationIdAndRouteUploadedLogs() {
+        var csvTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobFacade(
+                new TestInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                csvTaskExecutor
+        );
+        var csvFile = csvLogFile("csv-timeout-123", "Catalog call timed out");
+
+        var started = service.startAnalysis(new AnalysisJobStartRequest(
+                AnalysisJobLogSource.CSV_UPLOAD,
+                null,
+                csvFile,
+                null,
+                null
+        ));
+
+        assertEquals("csv-timeout-123", started.correlationId());
+        assertEquals("QUEUED", started.status());
+        assertFalse(csvTaskExecutor.isEmpty());
+
+        csvTaskExecutor.runNext();
+
+        var completed = service.getAnalysis(started.analysisId());
+        assertEquals("COMPLETED", completed.status());
+        assertEquals("csv-timeout-123", completed.correlationId());
+        assertEquals("dev3", completed.environment());
+        assertEquals("dev/atlas", completed.gitLabBranch());
+        assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
+        assertEquals(
+                "Catalog call timed out",
+                completed.evidenceSections().get(0).items().get(0).attributes().stream()
+                        .filter(attribute -> attribute.name().equals("message"))
+                        .findFirst()
+                        .orElseThrow()
+                        .value()
+        );
+    }
+
+    private void assertCsvUploadRejectedBeforeQueueing(MockMultipartFile csvFile, String expectedCode) {
+        var csvTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobFacade(
+                new TestInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                csvTaskExecutor
+        );
+
+        var exception = assertThrows(
+                AnalysisJobInputException.class,
+                () -> service.startAnalysis(new AnalysisJobStartRequest(
+                        AnalysisJobLogSource.CSV_UPLOAD,
+                        null,
+                        csvFile,
+                        null,
+                        null
+                ))
+        );
+
+        assertEquals(expectedCode, exception.code());
+        assertTrue(csvTaskExecutor.isEmpty());
+    }
+
+    @Test
+    void shouldRejectElasticsearchStartWhenInputOptionsDisableIt() {
+        var unavailableTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobFacade(
+                new TestInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                unavailableTaskExecutor,
+                IncidentAnalysisLocalRunPersistence.NO_OP,
+                new AnalysisJobInputOptionsService(new ElasticConnectionAvailabilityService(new ElasticProperties()))
+        );
+
+        var exception = assertThrows(
+                AnalysisJobInputException.class,
+                () -> service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null))
+        );
+
+        assertEquals("ELASTICSEARCH_LOG_SOURCE_NOT_CONFIGURED", exception.code());
+        assertTrue(exception.getMessage().contains("analysis.elasticsearch.base-url"));
+        assertTrue(unavailableTaskExecutor.isEmpty());
+    }
+
+    @Test
     void shouldExposeAiTokenUsageOnFinalAiStep() {
         var usageTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 new UsageAwareInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 usageTaskExecutor
@@ -267,12 +425,12 @@ class AnalysisJobServiceTest {
 
     @Test
     void shouldMarkJobAsNotFoundWhenEvidenceIsMissing() {
-        var started = analysisJobService.startAnalysis(new AnalysisJobStartRequest("not-found", null, null));
+        var started = analysisJobFacade.startAnalysis(new AnalysisJobStartRequest("not-found", null, null));
 
         assertEquals("QUEUED", started.status());
         taskExecutor.runNext();
 
-        var finished = analysisJobService.getAnalysis(started.analysisId());
+        var finished = analysisJobFacade.getAnalysis(started.analysisId());
 
         assertEquals("NOT_FOUND", finished.status());
         assertEquals("ANALYSIS_DATA_NOT_FOUND", finished.errorCode());
@@ -283,7 +441,7 @@ class AnalysisJobServiceTest {
     @Test
     void shouldKeepPreparedPromptWhenAiAnalysisFails() {
         var failingTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 new FailingInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 failingTaskExecutor
@@ -312,7 +470,7 @@ class AnalysisJobServiceTest {
     void shouldExposeAiToolFetchedGitLabFilesDuringPollingWhileAiStepIsRunning() throws Exception {
         var toolAwareProvider = new BlockingToolAwareInitialAnalysisProvider();
         var blockingTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 toolAwareProvider,
                 new TestAnalysisChatProvider(),
                 blockingTaskExecutor
@@ -353,7 +511,7 @@ class AnalysisJobServiceTest {
     @Test
     void shouldExposeInitialToolFeedbackInJobSnapshot() {
         var feedbackTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 new FeedbackAwareInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 feedbackTaskExecutor
@@ -374,7 +532,7 @@ class AnalysisJobServiceTest {
     void shouldRunFollowUpChatAfterCompletedAnalysis() {
         var chatProvider = new ToolAwareTestAnalysisChatProvider();
         var chatTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(new TestInitialAnalysisProvider(), chatProvider, chatTaskExecutor);
+        var service = analysisJobFacade(new TestInitialAnalysisProvider(), chatProvider, chatTaskExecutor);
 
         var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
         chatTaskExecutor.runNext();
@@ -407,7 +565,7 @@ class AnalysisJobServiceTest {
     @Test
     void shouldRejectFollowUpChatWhenCompletedAnalysisHasNoCopilotSessionId() {
         var chatTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(
+        var service = analysisJobFacade(
                 new CapturingOptionsInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
                 chatTaskExecutor
@@ -432,7 +590,7 @@ class AnalysisJobServiceTest {
     void shouldAttachToolFeedbackToFollowUpAssistantMessage() {
         var chatProvider = new FeedbackAwareTestAnalysisChatProvider();
         var chatTaskExecutor = new CapturingTaskExecutor();
-        var service = analysisJobService(new TestInitialAnalysisProvider(), chatProvider, chatTaskExecutor);
+        var service = analysisJobFacade(new TestInitialAnalysisProvider(), chatProvider, chatTaskExecutor);
 
         var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
         chatTaskExecutor.runNext();
@@ -452,12 +610,12 @@ class AnalysisJobServiceTest {
         assertEquals("adapter_result", assistantMessage.toolFeedback().get(0).improvementArea());
     }
 
-    private AnalysisJobService analysisJobService(
+    private AnalysisJobFacade analysisJobFacade(
             InitialAnalysisProvider initialAnalysisProvider,
             AnalysisAiChatProvider analysisAiChatProvider,
             TaskExecutor taskExecutor
     ) {
-        return analysisJobService(
+        return analysisJobFacade(
                 initialAnalysisProvider,
                 analysisAiChatProvider,
                 taskExecutor,
@@ -465,40 +623,58 @@ class AnalysisJobServiceTest {
         );
     }
 
-    private AnalysisJobService analysisJobService(
+    private AnalysisJobFacade analysisJobFacade(
             InitialAnalysisProvider initialAnalysisProvider,
             AnalysisAiChatProvider analysisAiChatProvider,
             TaskExecutor taskExecutor,
             IncidentAnalysisLocalRunPersistence localRunPersistence
     ) {
-        return analysisJobService(
+        return analysisJobFacade(
+                initialAnalysisProvider,
+                analysisAiChatProvider,
+                taskExecutor,
+                localRunPersistence,
+                AnalysisJobInputOptionsService.elasticsearchAvailableForTests()
+        );
+    }
+
+    private AnalysisJobFacade analysisJobFacade(
+            InitialAnalysisProvider initialAnalysisProvider,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor taskExecutor,
+            IncidentAnalysisLocalRunPersistence localRunPersistence,
+            AnalysisJobInputOptionsService inputOptionsService
+    ) {
+        return analysisJobFacade(
                 initialAnalysisProvider,
                 analysisAiChatProvider,
                 taskExecutor,
                 () -> AnalysisAiAuthRef.localToken(null),
                 auth -> new CopilotAccessToken("test-token", null, null, false),
-                localRunPersistence
+                localRunPersistence,
+                inputOptionsService
         );
     }
 
-    private AnalysisJobService analysisJobService(
+    private AnalysisJobFacade analysisJobFacade(
             InitialAnalysisProvider initialAnalysisProvider,
             AnalysisAiChatProvider analysisAiChatProvider,
             TaskExecutor taskExecutor,
             AnalysisAiAuthRefResolver authRefResolver,
             CopilotAccessTokenResolver accessTokenResolver
     ) {
-        return analysisJobService(
+        return analysisJobFacade(
                 initialAnalysisProvider,
                 analysisAiChatProvider,
                 taskExecutor,
                 authRefResolver,
                 accessTokenResolver,
-                IncidentAnalysisLocalRunPersistence.NO_OP
+                IncidentAnalysisLocalRunPersistence.NO_OP,
+                AnalysisJobInputOptionsService.elasticsearchAvailableForTests()
         );
     }
 
-    private AnalysisJobService analysisJobService(
+    private AnalysisJobFacade analysisJobFacade(
             InitialAnalysisProvider initialAnalysisProvider,
             AnalysisAiChatProvider analysisAiChatProvider,
             TaskExecutor taskExecutor,
@@ -506,7 +682,27 @@ class AnalysisJobServiceTest {
             CopilotAccessTokenResolver accessTokenResolver,
             IncidentAnalysisLocalRunPersistence localRunPersistence
     ) {
-        return new AnalysisJobService(
+        return analysisJobFacade(
+                initialAnalysisProvider,
+                analysisAiChatProvider,
+                taskExecutor,
+                authRefResolver,
+                accessTokenResolver,
+                localRunPersistence,
+                AnalysisJobInputOptionsService.elasticsearchAvailableForTests()
+        );
+    }
+
+    private AnalysisJobFacade analysisJobFacade(
+            InitialAnalysisProvider initialAnalysisProvider,
+            AnalysisAiChatProvider analysisAiChatProvider,
+            TaskExecutor taskExecutor,
+            AnalysisAiAuthRefResolver authRefResolver,
+            CopilotAccessTokenResolver accessTokenResolver,
+            IncidentAnalysisLocalRunPersistence localRunPersistence,
+            AnalysisJobInputOptionsService inputOptionsService
+    ) {
+        return AnalysisJobFacadeTestCreator.create(
                 new AnalysisOrchestrator(
                         new AnalysisEvidenceCollector(
                                 new ElasticLogEvidenceProvider(new TestElasticLogPort()),
@@ -528,10 +724,35 @@ class AnalysisJobServiceTest {
                 analysisAiChatProvider,
                 taskExecutor,
                 authRefResolver,
-                new CopilotRunAuthMapper(),
                 accessTokenResolver,
-                localRunPersistence
+                localRunPersistence,
+                inputOptionsService
         );
+    }
+
+    private static MockMultipartFile csvLogFile(String correlationId, String message) {
+        return csvFile(csvHeader() + csvRow("2026-04-11T20:57:33.285Z", correlationId, message));
+    }
+
+    private static MockMultipartFile csvFile(String content) {
+        return new MockMultipartFile(
+                "logFile",
+                "logs.csv",
+                "text/csv",
+                content.getBytes()
+        );
+    }
+
+    private static String csvHeader() {
+        return """
+                "@timestamp","_id","_ignored","_index","fields.class","fields.correlationId","fields.exception","fields.message","fields.microservice","fields.spanId","fields.thread","fields.type","kubernetes.namespace","kubernetes.pod.name","kubernetes.container.name","container.image.name"
+                """;
+    }
+
+    private static String csvRow(String timestamp, String correlationId, String message) {
+        return """
+                "%s","csv-doc-1","-","logs-2026","c.e.s.response.TimeoutHandler","%s","-","%s","svc","span-1","main","ERROR","crm-main-dev3","pod","backend","r/crm-main-dev3/backend:20260411-205733-1-dev-atlas-0123456789abcdef0123456789abcdef01234567"
+                """.formatted(timestamp, correlationId, message);
     }
 
     private static GitLabProperties gitLabProperties() {
@@ -1067,3 +1288,4 @@ class AnalysisJobServiceTest {
     }
 
 }
+

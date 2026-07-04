@@ -149,7 +149,9 @@ Cel: domknac niezawodnosc i obserwowalnosc tylko tam, gdzie jest to widoczne
 dla uzytkownika albo potrzebne do utrzymania produktu.
 
 - Dodac e2e albo manual smoke scripts dla glownych sciezek Incident Analysis i
-  Flow Explorera.
+  Flow Explorera. Incident Analysis smoke powinien obejmowac oba zrodla logow:
+  Elasticsearch po `correlationId` oraz upload CSV, lacznie z przypadkiem
+  brakujacej konfiguracji Elasticsearch/Kibana.
 - Dopracowac timeouty i retry tam, gdzie produktowo ma to sens.
 - Nie dodawac fallbacku follow-up chat poza wznowieniem tej samej sesji
   Copilota; jesli sesja nie dziala, blad ma byc jawny.

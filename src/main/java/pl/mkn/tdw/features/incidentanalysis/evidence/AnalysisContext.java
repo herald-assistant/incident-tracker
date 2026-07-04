@@ -7,11 +7,16 @@ import java.util.List;
 
 public record AnalysisContext(
         String correlationId,
+        AnalysisLogInput logInput,
         List<AnalysisEvidenceSection> evidenceSections
 ) {
 
     public static AnalysisContext initialize(String correlationId) {
-        return new AnalysisContext(correlationId, List.of());
+        return initialize(AnalysisLogInput.elasticsearch(correlationId));
+    }
+
+    public static AnalysisContext initialize(AnalysisLogInput logInput) {
+        return new AnalysisContext(logInput.correlationId(), logInput, List.of());
     }
 
     public AnalysisContext withSection(AnalysisEvidenceSection section) {
@@ -21,7 +26,7 @@ public record AnalysisContext(
 
         var updatedSections = new ArrayList<>(evidenceSections);
         updatedSections.add(section);
-        return new AnalysisContext(correlationId, List.copyOf(updatedSections));
+        return new AnalysisContext(correlationId, logInput, List.copyOf(updatedSections));
     }
 
     public boolean hasAnyEvidence() {

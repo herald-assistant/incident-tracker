@@ -7,10 +7,11 @@ laczyc deterministic context gathering, curated operational context, reusable
 agent tools i sesje AI, zeby pomagac operatorom, analitykom i developerom
 rozumiec systemy.
 
-Pierwszym produkcyjnym feature'em jest analiza incydentu na podstawie
-`correlationId`. Historyczna nazwa repo i publiczne URL-e `/analysis/*`
-pochodza z tego startu, ale docelowo nie ograniczaja produktu do incident
-trackingu.
+Pierwszym produkcyjnym feature'em jest analiza incydentu na podstawie logow:
+pobranych z Elasticsearch po `correlationId` albo zalaczonych jako CSV z
+Kibana/Elastic Discover. Historyczna nazwa repo i publiczne URL-e
+`/analysis/*` pochodza z pierwszego startu po `correlationId`, ale docelowo
+nie ograniczaja produktu do incident trackingu.
 
 Docelowy kierunek platformy:
 
@@ -26,12 +27,14 @@ Docelowy kierunek platformy:
 
 Obecny incident flow jest pierwsza realizacja tego modelu:
 
-1. operator wysyla `correlationId`,
-2. aplikacja zbiera evidence z systemow zewnetrznych,
-3. AI interpretuje evidence,
-4. AI moze dociagac dodatkowy kod z GitLaba i opcjonalnie zweryfikowac
+1. operator wybiera zrodlo logow: Elasticsearch po `correlationId` albo upload
+   CSV,
+2. aplikacja pobiera albo waliduje i mapuje logi do wspolnej sekcji evidence,
+3. aplikacja wzbogaca evidence danymi z systemow zewnetrznych,
+4. AI interpretuje evidence,
+5. AI moze dociagac dodatkowy kod z GitLaba i opcjonalnie zweryfikowac
    hipotezy danych przez Database tools,
-5. aplikacja zwraca rozdzielony wynik: `functionalAnalysis` dla analityka
+6. aplikacja zwraca rozdzielony wynik: `functionalAnalysis` dla analityka
    biznesowo-systemowego oraz `technicalAnalysis` jako konkretny handoff do
    naprawy, weryfikacji albo przekazania dalej.
 
@@ -53,6 +56,10 @@ Na dzisiaj projekt ma:
   platforma oszczedza czas w codziennej pracy,
 - ekran `GET /incident-analysis` serwowany przez Spring Boot z mozliwoscia
   importu i eksportu zapisu zakonczonej analizy jako JSON,
+- w ekranie `GET /incident-analysis` start analizy ma wybor zrodla logow:
+  Elasticsearch po `correlationId` albo upload CSV; gdy konfiguracja
+  Elasticsearch/Kibana jest niepelna, sciezka `correlationId` jest zablokowana,
+  ale CSV upload pozostaje dostepny,
 - w ekranie `GET /incident-analysis` widok promptu przygotowanego dla AI,
   mozliwy do skopiowania nawet wtedy, gdy sesja Copilota zakonczy sie bledem,
 - w ekranie `GET /incident-analysis` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
@@ -77,11 +84,15 @@ Na dzisiaj projekt ma:
   wartosci z `application.properties` i zapisu lokalnych override'ow do
   `${tdw.workspace.directory}/settings.json` dla brandu UI oraz podstawowych
   parametrow Copilota, GitLaba, Elasticsearch i Dynatrace,
-- glowne job-based API: `POST /analysis/jobs` i
-  `GET /analysis/jobs/{analysisId}`,
-  z opcjonalnym wyborem modelu AI i `reasoningEffort` przy starcie joba,
+- glowne job-based API: `POST /api/analysis/jobs` i
+  `GET /api/analysis/jobs/{analysisId}`,
+  z wyborem zrodla logow oraz opcjonalnym wyborem modelu AI i
+  `reasoningEffort` przy starcie joba; legacy aliasy `/analysis/**` pozostaja
+  tylko dla kompatybilnosci,
+- feature-owned endpoint `GET /api/analysis/jobs/input-options`, ktory mowi UI,
+  czy start przez Elasticsearch po `correlationId` jest dostepny,
 - follow-up chat dla zakonczonego joba przez
-  `POST /analysis/jobs/{analysisId}/chat/messages`, ktory kontynuuje zapisana
+  `POST /api/analysis/jobs/{analysisId}/chat/messages`, ktory kontynuuje zapisana
   sesje Copilota i wysyla do niej tresc wiadomosci operatora,
 - shared/operator API `/analysis/runs` dla lokalnej historii runow; snapshot
   runu jest zapisywany od startu joba i aktualizowany w trakcie pracy backendu,
@@ -120,7 +131,7 @@ Na dzisiaj projekt ma:
   automatyzacji pracy bez eksponowania mechaniki AI/tools.
 - `GET /incident-analysis`
   Angularowy ekran `Analysis Features / Incident Analysis` do uruchamiania
-  analizy z pola `correlationId`.
+  analizy z logow pobranych po `correlationId` albo z zalaczonego CSV.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.
@@ -145,14 +156,20 @@ Na dzisiaj projekt ma:
   `app.ui.title`, lokalny token Copilota
   (`analysis.ai.copilot.auth.local.github-token`), podstawowe connection
   settings GitLaba, Elasticsearch i Dynatrace oraz sekrety tych integracji.
-- `POST /analysis/jobs`
-  Asynchroniczny start analizy wykorzystywany przez UI Angular. Request niesie
-  `correlationId` oraz opcjonalne preferencje wykonania AI: `model` i
-  `reasoningEffort`.
-- `GET /analysis/jobs/{analysisId}`
+- `GET /api/analysis/jobs/input-options`
+  Feature-owned endpoint dla UI startu analizy. Zwraca dostepne zrodla logow i
+  powod blokady Elasticsearch, jezeli brakuje wymaganej konfiguracji
+  Elasticsearch/Kibana.
+- `POST /api/analysis/jobs`
+  Asynchroniczny start analizy wykorzystywany przez UI Angular. Request jest
+  multipart/form-data i niesie `source`, opcjonalne preferencje wykonania AI
+  (`model`, `reasoningEffort`) oraz:
+  `correlationId` dla `source=ELASTICSEARCH` albo `logFile` dla
+  `source=CSV_UPLOAD`.
+- `GET /api/analysis/jobs/{analysisId}`
   Odczyt statusu, evidence, wyniku asynchronicznej analizy i historii
   follow-up chatu.
-- `POST /analysis/jobs/{analysisId}/chat/messages`
+- `POST /api/analysis/jobs/{analysisId}/chat/messages`
   Asynchroniczne polecenie lub pytanie do AI po zakonczonej analizie. Backend
   reuse'uje evidence, wynik, historie rozmowy, model/reasoning oraz hidden
   scope tools z oryginalnego joba.
@@ -229,9 +246,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.tdw.features.incidentanalysis.flow`
   Orkiestracja runtime analizy incydentu, response i listenery postepu flow.
 - `pl.mkn.tdw.features.incidentanalysis.job`
-  Asynchroniczny feature `POST /analysis/jobs`,
-  `GET /analysis/jobs/{analysisId}` i
-  `POST /analysis/jobs/{analysisId}/chat/messages`.
+  Asynchroniczny feature `POST /api/analysis/jobs`,
+  `GET /api/analysis/jobs/{analysisId}` i
+  `POST /api/analysis/jobs/{analysisId}/chat/messages`.
 - `pl.mkn.tdw.features.incidentanalysis.job.api`
   Kontroler job API oraz request/response DTO dla UI.
 - `pl.mkn.tdw.features.incidentanalysis.job.state`
@@ -431,6 +448,11 @@ Znaczenie grup UI:
 ## Aktualny model runtime
 
 - Elasticsearch dziala przez rzeczywisty adapter REST do Kibana proxy.
+- Elastic log evidence provider ma dwa wejscia: REST search po `correlationId`
+  albo wczesniej sparsowane wpisy z uploadu CSV. W obu przypadkach publikuje
+  te sama sekcje `elasticsearch/logs`, zeby deployment context, Dynatrace,
+  GitLab deterministic, operational context i AI prompt nie rozgalezialy sie po
+  zrodle logow.
 - Dynatrace dziala przez rzeczywisty adapter REST.
 - Dynatrace nie jest wystawiany jako MCP tool dla AI.
 - Dynatrace sluzy tylko do inicjalnego wzbogacenia promptu
@@ -469,6 +491,10 @@ Znaczenie grup UI:
   provider'a opcji Copilota przez backendowy shared/operator endpoint opcji AI.
   Frontend nie jest source of truth dla mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
+- Elasticsearch tools dla Copilota sa wystawiane tylko wtedy, gdy efektywna
+  konfiguracja Elasticsearch/Kibana jest kompletna. Brak tej konfiguracji
+  blokuje tools `elastic_*` w initial analysis i follow-up chat niezaleznie od
+  coverage gaps.
 - Zuzycie tokenow jest zbierane z eventow sesji Copilota i wystawiane do UI
   jako generyczne `shared.ai.AnalysisAiUsage`, bez typow SDK w kontrakcie
   frontendu.
@@ -487,30 +513,32 @@ Znaczenie grup UI:
 
 ```mermaid
 flowchart LR
-    A["GET /"] --> L["Workspace overview landing"]
-    L --> IA["GET /incident-analysis"]
+    A["GET /"] --> HOME["Workspace overview landing"]
+    HOME --> IA["GET /incident-analysis"]
     IA --> B["Angular bundle from static resources"]
     B --> U["GET /analysis/ai/options"]
-    B --> C["POST /analysis/jobs"]
-    C --> D["AnalysisJobService"]
-    D --> E["Background analysis task"]
+    B --> IO["GET /api/analysis/jobs/input-options"]
+    B --> C["POST /api/analysis/jobs\nsource=ELASTICSEARCH|CSV_UPLOAD"]
+    C --> D["AnalysisJobFacade"]
+    D --> LOGINPUT["Resolve log input\nElastic REST or CSV import"]
+    LOGINPUT --> E["Background analysis task"]
     E --> F["AnalysisOrchestrator"]
     F --> G["AnalysisEvidenceCollector"]
-    G --> H["Elastic evidence provider"]
+    G --> H["Elastic log evidence provider\nREST or uploaded CSV"]
     G --> I["Deployment context evidence provider"]
     G --> J["Dynatrace evidence provider"]
     G --> K["GitLab deterministic evidence provider"]
-    G --> L["Operational context evidence provider"]
-    L --> M["AnalysisContext"]
+    G --> OPCTX["Operational context evidence provider"]
+    OPCTX --> M["AnalysisContext"]
     F --> N["InitialAnalysisProvider"]
     N --> O["Copilot SDK"]
-    O --> P["Elastic tools (optional during session)"]
+    O --> P["Elastic tools\noptional and config-gated"]
     O --> R["GitLab tools (optional during session)"]
     O --> Q["Database tools (optional during session)"]
     N --> S["AnalysisResultResponse"]
-    B --> T["GET /analysis/jobs/{analysisId}"]
+    B --> T["GET /api/analysis/jobs/{analysisId}"]
     T --> D
-    B --> U2["POST /analysis/jobs/{analysisId}/chat/messages"]
+    B --> U2["POST /api/analysis/jobs/{analysisId}/chat/messages"]
     U2 --> D
     D --> V["Background follow-up chat task"]
     V --> W["AnalysisAiChatProvider"]
@@ -535,6 +563,10 @@ To jest osobny, pomocniczy flow diagnostyczno-testowy:
 6. MCP tool i endpoint przyjmuja tylko `correlationId`, a adapter sam dobiera
    odpowiedni rozmiar i limity z konfiguracji,
 7. endpoint zwraca wpisy, metadata i komunikat `OK` albo czytelny blad.
+
+Ten helper nie jest wymagany dla uploadu CSV. Upload CSV jest alternatywnym
+wejsciem do incident analysis i po walidacji zasila ten sam model logow, z
+ktorego korzysta `elasticsearch/logs`.
 
 ## Dodatkowy use case GitLab source resolve
 
@@ -631,3 +663,4 @@ katalogowe, Signal Resolver, listy encji, inbox `Validation`, inbox
 `Open Questions` oraz prawy detail drawer. Drawer ma stale akcje `Copy`,
 `Open raw` i `Close`; szczegoly encji i raw preview nie powinny byc modalem
 blokujacym prace.
+

@@ -13,14 +13,25 @@ wlasny runtime flow i result contract.
 ## 1. Publiczne wejscia
 
 ```http
-POST /analysis/jobs
-GET /analysis/jobs/{analysisId}
-POST /analysis/jobs/{analysisId}/chat/messages
+POST /api/analysis/jobs
+GET /api/analysis/jobs/input-options
+GET /api/analysis/jobs/{analysisId}
+POST /api/analysis/jobs/{analysisId}/chat/messages
 GET /analysis/ai/options
 ```
 
-Job request dla UI niesie `correlationId` oraz opcjonalne preferencje wykonania
-AI: `model` i `reasoningEffort`. Pozostale scope'y sa ustalane przez backend:
+Job request dla UI jest multipart/form-data. Niesie `source`,
+opcjonalne preferencje wykonania AI (`model`, `reasoningEffort`) oraz
+wejscie wymagane przez wybrane zrodlo logow:
+
+- `source=ELASTICSEARCH` wymaga `correlationId` i kompletnej konfiguracji
+  Elasticsearch/Kibana,
+- `source=CSV_UPLOAD` wymaga `logFile`; CSV jest walidowany i mapowany
+  deterministycznie przed utworzeniem joba.
+
+`GET /api/analysis/jobs/input-options` zasila UI informacja, czy sciezka
+Elasticsearch jest dostepna. CSV upload pozostaje dostepny niezaleznie od
+konfiguracji Elasticsearch/Kibana. Pozostale scope'y sa ustalane przez backend:
 
 - `environment` z evidence runtime/deployment,
 - `gitLabBranch` z deployment context,
@@ -44,7 +55,7 @@ provider uzywa `CopilotClient.listModels()` i cache'uje wynik; jesli SDK jest
 chwilowo niedostepne, zwraca tylko skonfigurowane domysly. Neutralne
 preferencje requestu mieszkaja w `shared.ai`.
 
-`POST /analysis/jobs/{analysisId}/chat/messages` jest dostepny dopiero po
+`POST /api/analysis/jobs/{analysisId}/chat/messages` jest dostepny dopiero po
 `COMPLETED`. Request niesie tylko tresc wiadomosci operatora. Scope follow-up
 (`correlationId`, `environment`, `gitLabBranch`, `gitLabGroup`) pochodzi z
 zakonczonego joba i ukrytego requestu AI zapisanego po finalnej analizie.
@@ -63,7 +74,7 @@ W `LOCAL_TOKEN` backend uzywa skonfigurowanego tokena lokalnego. W
 zaszyfrowany GitHub App user access token dla backendowej operator session.
 Frontend nigdy nie dostaje tokena, OAuth code ani SDK-specific typu.
 
-`AnalysisJobService` przed utworzeniem joba rozwiązuje non-secret
+`AnalysisJobFacade` przed utworzeniem joba rozwiązuje non-secret
 `AnalysisAiAuthRef` dla aktualnego requestu i sprawdza, czy token da sie
 uzyskac. Do background flow trafia tylko ta referencja, nie token. Follow-up
 chat reuse'uje `authRef` zapisany w `InitialAnalysisRequest` zakonczonego joba.
@@ -78,20 +89,21 @@ albo widoki utrzymaniowe dla operatora.
 
 `AnalysisOrchestrator` wykonuje flow:
 
-1. tworzy `AnalysisContext`,
-2. uruchamia deterministic evidence collector,
-3. buduje `InitialAnalysisRequest`,
-4. wywoluje `InitialAnalysisProvider.prepare(request)`,
-5. zapisuje `prepared.prompt()` w stanie joba,
-6. uruchamia `InitialAnalysisProvider.analyze(prepared, listener)`,
-7. mapuje odpowiedz AI, tool evidence, tool feedback i activity trace do
+1. dostaje od job service feature-owned `AnalysisLogInput`,
+2. tworzy `AnalysisContext`,
+3. uruchamia deterministic evidence collector,
+4. buduje `InitialAnalysisRequest`,
+5. wywoluje `InitialAnalysisProvider.prepare(request)`,
+6. zapisuje `prepared.prompt()` w stanie joba,
+7. uruchamia `InitialAnalysisProvider.analyze(prepared, listener)`,
+8. mapuje odpowiedz AI, tool evidence, tool feedback i activity trace do
    response/job state,
-8. zamyka prepared analysis.
+9. zamyka prepared analysis.
 
 Prepared analysis gwarantuje, ze prompt widoczny w UI/debug jest tym samym
 promptem, ktory poszedl do Copilota.
 
-`AnalysisJobService` po utworzeniu `AnalysisJobState` zapisuje pierwszy
+`AnalysisJobFacade` po utworzeniu `AnalysisJobState` zapisuje pierwszy
 snapshot lokalnego runu w local workspace jako `QUEUED`, a listener progresu
 nadpisuje ten sam `runs/<analysisId>/run.json` kolejnymi snapshotami. Dzieki
 temu operator moze zamknac UI i wrocic do ostatniego znanego stanu, o ile
@@ -110,7 +122,9 @@ Evidence collector pracuje na `AnalysisContext` i zwraca liste
 
 Typowy przebieg:
 
-1. Elasticsearch log evidence po `correlationId`,
+1. log evidence w sekcji `elasticsearch/logs`:
+   - REST search Elasticsearch/Kibana po `correlationId`, albo
+   - uploaded CSV entries po walidacji i mapowaniu,
 2. deployment context resolution,
 3. po deployment context mozliwy rownolegly fan-out:
    - Dynatrace runtime signals,
@@ -121,6 +135,11 @@ Typowy przebieg:
 Provider evidence powinien izolowac adapter-specific modele. Na granicy AI
 zostaja tylko generyczne DTO z `shared.evidence`: `AnalysisEvidenceSection`,
 `AnalysisEvidenceItem` i `AnalysisEvidenceAttribute`.
+
+Nazwa sekcji `elasticsearch/logs` pozostaje wspolnym kontraktem downstream,
+nawet gdy logi przyszly z CSV. Dzieki temu deployment context, Dynatrace,
+GitLab deterministic, operational context, prompt i coverage nie rozgaleziaja
+sie po zrodle logow.
 
 ## 4. Przygotowanie Copilota
 
@@ -206,7 +225,7 @@ model-facing argumentem report tools.
 
 ## 4a. Follow-up chat po analizie
 
-Po zakonczonej analizie `AnalysisJobService` moze dopisac pare wiadomosci
+Po zakonczonej analizie `AnalysisJobFacade` moze dopisac pare wiadomosci
 chatu: user message jako `COMPLETED` i assistant message jako `IN_PROGRESS`.
 W tle uruchamiany jest osobny task, ktory wywoluje `AnalysisAiChatProvider`.
 
@@ -309,7 +328,10 @@ uzywa `CopilotIncidentEvidenceCoverageEvaluator` i przekazuje do policy gotowy
 
 Elasticsearch tools:
 
-- wlaczone, gdy brakuje logow, stacktrace albo logi sa obciete,
+- wlaczone tylko przy kompletnej konfiguracji Elasticsearch/Kibana i wtedy,
+  gdy brakuje logow, stacktrace albo logi sa obciete,
+- niewystawiane Copilotowi, gdy konfiguracja Elasticsearch/Kibana jest
+  niekompletna, niezaleznie od coverage gaps,
 - wylaczone, gdy log evidence jest wystarczajace.
 
 GitLab tools:
@@ -407,7 +429,9 @@ compaction/truncation i bledy sesji bez uzalezniania UI od typow Copilot SDK.
 `SessionHooks.onPreToolUse` blokuje lokalny workspace/filesystem/shell/terminal
 w glownym flow analizy. Integracyjne tools sa wywolywane przez Spring tool
 callbacks. GitLab i DB dostaja scope przez hidden `ToolContext`; Elastic nadal
-ma zastany model-facing `correlationId`, mimo ze jest ograniczany policy sesji.
+ma zastany model-facing `correlationId`, mimo ze jest ograniczany policy sesji
+i calkowicie usuwany z allowlisty, gdy brakuje konfiguracji
+Elasticsearch/Kibana.
 
 Model nie powinien podawac jawnie scope'ow takich jak `correlationId`,
 `gitLabGroup`, `gitLabBranch` czy `environment`. Aktualnie GitLab i DB tools
@@ -703,7 +727,7 @@ overview workspace'u z szybkim wejsciem do aktywnych feature'ow.
 `/operational-context` sa `Tool Workbench`, czyli analysis-independent
 widokami helper capability. Te route'y moga pomagac operatorowi w recznym
 debugowaniu albo zbieraniu inputu, ale nie zmieniaja publicznego requestu
-`POST /analysis/jobs` ani hidden scope'u sesji AI.
+`POST /api/analysis/jobs` ani hidden scope'u sesji AI.
 
 `toolEvidenceSections` oraz `aiActivityEvents` sa osobnymi polami job response
 i moga byc aktualizowane podczas sesji AI przez listenery. Sa jednak jednym
@@ -742,13 +766,14 @@ event details trafiaja do rozwijanych szczegolow wiersza. Follow-up chat moze
 miec wlasne `toolEvidenceSections` i `aiActivityEvents` przypisane do
 wiadomosci asystenta.
 
-Job request UI zawiera `correlationId` oraz opcjonalne preferencje AI
-(`model`, `reasoningEffort`). `gitLabGroup` pochodzi z konfiguracji, a
-`environment` i `gitLabBranch` sa wyprowadzane z evidence.
+Job request UI zawiera `source`, wejscie wybranego zrodla logow
+(`correlationId` albo `logFile`) oraz opcjonalne preferencje AI (`model`,
+`reasoningEffort`). `gitLabGroup` pochodzi z konfiguracji, a `environment` i
+`gitLabBranch` sa wyprowadzane z evidence.
 
 Job response zawiera tez `chatMessages`. UI pokazuje chat dopiero po
 `COMPLETED`; dla wiadomosci chatu z `IN_PROGRESS` polluje ten sam endpoint
-`GET /analysis/jobs/{analysisId}`. Importowany eksport analizy jest read-only,
+`GET /api/analysis/jobs/{analysisId}`. Importowany eksport analizy jest read-only,
 bo lokalny backend nie ma odpowiadajacego mu stanu joba.
 
 Job state przechowuje `InitialAnalysisRequest` z zakonczonej analizy, zeby
@@ -803,3 +828,4 @@ osobnym kontraktem konfiguracji.
 Nie ma runtime flagi wybierajacej legacy response labels. Aktualny initial
 result jest report-first; JSON-only response contract pozostaje fallbackiem
 diagnostycznym.
+
