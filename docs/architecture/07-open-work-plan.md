@@ -138,7 +138,7 @@ kontrakty i UX.
   kontrakt z `file`, `method`, `line` i `toolCallId`?
 - Czy DB tools wejda do Flow Explorera jako V2 focus area runtime data, czy
   zostana czescia osobnego feature'u natural-language data diagnostics?
-- Czy endpoint inventory ma miec jawnie udokumentowany scalony widok z wielu
+- Czy GitLab endpoint discovery ma miec jawnie udokumentowany scalony widok z wielu
   repozytoriow, czy primary repository pozostaje podstawowa perspektywa?
 - Jak opisac branch/ref resolution dla feature'ow bez incident evidence, zeby
   UI, operational context i GitLab tools mialy jeden kontrakt?

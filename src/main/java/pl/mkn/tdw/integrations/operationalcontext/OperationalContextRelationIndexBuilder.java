@@ -13,7 +13,6 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.Operati
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextReferences;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRelation;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositoryModule;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
@@ -43,10 +42,6 @@ public class OperationalContextRelationIndexBuilder {
     private static final String TEAM = "team";
     private static final String TERM = "term";
     private static final String HANDOFF_RULE = "handoff-rule";
-    private static final String MODULE = "module";
-    private static final String DATASTORE = "datastore";
-    private static final String EXTERNAL_PARTY = "external-party";
-    private static final String RUNTIME_SIGNAL = "runtime-signal";
     private static final String REPO_MAP_FILE = "repo-map.yml";
     private static final String CODE_SEARCH_SCOPES_FILE = "code-search-scopes.yml";
 
@@ -70,10 +65,7 @@ public class OperationalContextRelationIndexBuilder {
 
     private void registerEntities(BuildState state, OperationalContextCatalog catalog) {
         catalog.systems().forEach(system -> registerEntry(state, SYSTEM, system));
-        catalog.repositories().forEach(repository -> {
-            registerEntry(state, REPOSITORY, repository);
-            repository.modules().forEach(module -> registerModule(state, repository, module));
-        });
+        catalog.repositories().forEach(repository -> registerEntry(state, REPOSITORY, repository));
         catalog.codeSearchScopes().forEach(scope -> register(state, CODE_SEARCH_SCOPE, scope.id(), scope.name(), scope.lifecycleStatus(), scope.summary()));
         catalog.processes().forEach(process -> {
             registerEntry(state, PROCESS, process);
@@ -93,11 +85,6 @@ public class OperationalContextRelationIndexBuilder {
             responsibilities(state, source, system.responsibilities(), "systems.yml", SYSTEM, system.id(), "$.systems[id=" + system.id() + "].responsibilities");
             explicitRelations(state, source, system.relations(), "systems.yml", system.id(), "$.systems[id=" + system.id() + "].relations");
 
-            addRuntimeSignals(state, source, system.deployment().serviceNames(), "service-name", "systems.yml", system.id(), "deployment.serviceNames");
-            addRuntimeSignals(state, source, system.deployment().applicationNames(), "application-name", "systems.yml", system.id(), "deployment.applicationNames");
-            addRuntimeSignals(state, source, system.deployment().containerNames(), "container-name", "systems.yml", system.id(), "deployment.containerNames");
-            addRuntimeSignals(state, source, system.deployment().deploymentNames(), "deployment-name", "systems.yml", system.id(), "deployment.deploymentNames");
-
             dependencyRelations(state, source, system.values("dependencies.upstream"), "depends-on-upstream-system", "systems.yml", system.id(), "dependencies.upstream");
             dependencyRelations(state, source, system.values("dependencies.downstream"), "depends-on-downstream-system", "systems.yml", system.id(), "dependencies.downstream");
             dependencyRelations(state, source, system.values("dependencies.platformServices"), "uses-platform-service", "systems.yml", system.id(), "dependencies.platformServices");
@@ -110,24 +97,6 @@ public class OperationalContextRelationIndexBuilder {
             references(state, source, repository.references(), REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].references", true);
             responsibilities(state, source, repository.responsibilities(), REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].responsibilities");
             explicitRelations(state, source, repository.relations(), REPO_MAP_FILE, repository.id(), "$.repositories[id=" + repository.id() + "].relations");
-
-            for (var module : repository.modules()) {
-                var moduleId = moduleId(repository, module);
-                relation(
-                        state,
-                        source,
-                        "contains-module",
-                        new EntityKey(MODULE, moduleId),
-                        module.moduleType(),
-                        source,
-                        true,
-                        false,
-                        "direct-yaml",
-                        "high",
-                        sourceRef(REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].modules[id=" + moduleId + "]", "contains-module")
-                );
-                moduleReferences(state, repository, module, moduleId);
-            }
         }
     }
 
@@ -302,11 +271,6 @@ public class OperationalContextRelationIndexBuilder {
         register(state, type, entry.id(), entry.label(), lifecycleStatus(entry), entry.summary());
     }
 
-    private void registerModule(BuildState state, OperationalContextRepository repository, OperationalContextRepositoryModule module) {
-        var moduleId = moduleId(repository, module);
-        register(state, MODULE, moduleId, firstNonBlank(module.name(), module.effectiveId(), moduleId), module.lifecycleStatus(), null);
-    }
-
     private void registerProcessStep(BuildState state, OperationalContextProcess process, OperationalContextProcessStep step) {
         register(state, PROCESS_STEP, process.id() + "/" + step.id(), firstNonBlank(step.name(), step.id()), null, step.summary());
     }
@@ -332,14 +296,11 @@ public class OperationalContextRelationIndexBuilder {
         var safeReferences = references != null ? references : OperationalContextReferences.empty();
         referenceList(state, source, "references-system", SYSTEM, safeReferences.systems(), file, sourceRefEntityType, sourceEntityId, basePath + ".systems", canonical);
         referenceList(state, source, "references-repository", REPOSITORY, safeReferences.repositories(), file, sourceRefEntityType, sourceEntityId, basePath + ".repositories", canonical);
-        referenceList(state, source, "references-module", MODULE, safeReferences.modules(), file, sourceRefEntityType, sourceEntityId, basePath + ".modules", canonical);
         referenceList(state, source, "references-process", PROCESS, safeReferences.processes(), file, sourceRefEntityType, sourceEntityId, basePath + ".processes", canonical);
         referenceList(state, source, "references-bounded-context", BOUNDED_CONTEXT, safeReferences.boundedContexts(), file, sourceRefEntityType, sourceEntityId, basePath + ".boundedContexts", canonical);
         referenceList(state, source, "references-integration", INTEGRATION, safeReferences.integrations(), file, sourceRefEntityType, sourceEntityId, basePath + ".integrations", canonical);
-        referenceList(state, source, "references-term", TERM, safeReferences.terms(), file, sourceRefEntityType, sourceEntityId, basePath + ".terms", canonical);
+        termReferenceList(state, source, "references-term", safeReferences.terms(), file, sourceRefEntityType, sourceEntityId, basePath + ".terms", canonical);
         referenceList(state, source, "references-team", TEAM, safeReferences.teams(), file, sourceRefEntityType, sourceEntityId, basePath + ".teams", canonical);
-        referenceList(state, source, "references-external-party", EXTERNAL_PARTY, safeReferences.externalParties(), file, sourceRefEntityType, sourceEntityId, basePath + ".externalParties", canonical);
-        referenceList(state, source, "references-datastore", DATASTORE, safeReferences.dataStores(), file, sourceRefEntityType, sourceEntityId, basePath + ".dataStores", canonical);
         referenceList(state, source, "references-handoff-rule", HANDOFF_RULE, safeReferences.handoffRules(), file, sourceRefEntityType, sourceEntityId, basePath + ".handoffRules", canonical);
     }
 
@@ -356,14 +317,11 @@ public class OperationalContextRelationIndexBuilder {
         var safeReferences = references != null ? references : OperationalContextReferences.empty();
         markdownReferenceList(state, source, "references-system", SYSTEM, safeReferences.systems(), file, sourceRefEntityType, sourceEntityId, basePath + ".systems", canonical);
         markdownReferenceList(state, source, "references-repository", REPOSITORY, safeReferences.repositories(), file, sourceRefEntityType, sourceEntityId, basePath + ".repositories", canonical);
-        markdownReferenceList(state, source, "references-module", MODULE, safeReferences.modules(), file, sourceRefEntityType, sourceEntityId, basePath + ".modules", canonical);
         markdownReferenceList(state, source, "references-process", PROCESS, safeReferences.processes(), file, sourceRefEntityType, sourceEntityId, basePath + ".processes", canonical);
         markdownReferenceList(state, source, "references-bounded-context", BOUNDED_CONTEXT, safeReferences.boundedContexts(), file, sourceRefEntityType, sourceEntityId, basePath + ".boundedContexts", canonical);
         markdownReferenceList(state, source, "references-integration", INTEGRATION, safeReferences.integrations(), file, sourceRefEntityType, sourceEntityId, basePath + ".integrations", canonical);
-        markdownReferenceList(state, source, "references-term", TERM, safeReferences.terms(), file, sourceRefEntityType, sourceEntityId, basePath + ".terms", canonical);
+        termReferenceList(state, source, "references-term", safeReferences.terms(), file, sourceRefEntityType, sourceEntityId, basePath + ".terms", canonical);
         markdownReferenceList(state, source, "references-team", TEAM, safeReferences.teams(), file, sourceRefEntityType, sourceEntityId, basePath + ".teams", canonical);
-        markdownReferenceList(state, source, "references-external-party", EXTERNAL_PARTY, safeReferences.externalParties(), file, sourceRefEntityType, sourceEntityId, basePath + ".externalParties", canonical);
-        markdownReferenceList(state, source, "references-datastore", DATASTORE, safeReferences.dataStores(), file, sourceRefEntityType, sourceEntityId, basePath + ".dataStores", canonical);
         markdownReferenceList(state, source, "references-handoff-rule", HANDOFF_RULE, safeReferences.handoffRules(), file, sourceRefEntityType, sourceEntityId, basePath + ".handoffRules", canonical);
     }
 
@@ -434,6 +392,40 @@ public class OperationalContextRelationIndexBuilder {
                     !canonical,
                     canonical ? "direct-markdown" : "supporting-markdown-reference",
                     canonical ? "high" : "medium",
+                    sourceRef(file, sourceRefEntityType, sourceEntityId, fieldPath, relationType)
+            );
+        }
+    }
+
+    private void termReferenceList(
+            BuildState state,
+            EntityKey source,
+            String relationType,
+            List<String> targetIds,
+            String file,
+            String sourceRefEntityType,
+            String sourceEntityId,
+            String fieldPath,
+            boolean canonical
+    ) {
+        var directDerivation = file.endsWith(".md") ? "direct-markdown" : "direct-yaml";
+        var supportingDerivation = file.endsWith(".md") ? "supporting-markdown-reference" : "supporting-yaml-reference";
+        for (var targetId : safeTextList(targetIds)) {
+            var target = new EntityKey(TERM, targetId);
+            if (!state.entities.containsKey(target)) {
+                continue;
+            }
+            relation(
+                    state,
+                    source,
+                    relationType,
+                    target,
+                    null,
+                    source,
+                    canonical,
+                    !canonical,
+                    canonical ? directDerivation : supportingDerivation,
+                    canonical ? "medium" : "low",
                     sourceRef(file, sourceRefEntityType, sourceEntityId, fieldPath, relationType)
             );
         }
@@ -524,34 +516,6 @@ public class OperationalContextRelationIndexBuilder {
         }
     }
 
-    private void moduleReferences(
-            BuildState state,
-            OperationalContextRepository repository,
-            OperationalContextRepositoryModule module,
-            String moduleId
-    ) {
-        var source = new EntityKey(MODULE, moduleId);
-        references(
-                state,
-                source,
-                module.references(),
-                REPO_MAP_FILE,
-                REPOSITORY,
-                repository.id(),
-                "$.repositories[id=" + repository.id() + "].modules[id=" + moduleId + "].references",
-                true
-        );
-        responsibilities(
-                state,
-                source,
-                module.responsibilities(),
-                REPO_MAP_FILE,
-                REPOSITORY,
-                repository.id(),
-                "$.repositories[id=" + repository.id() + "].modules[id=" + moduleId + "].responsibilities"
-        );
-    }
-
     private void codeSearchRepository(
             BuildState state,
             EntityKey source,
@@ -574,21 +538,6 @@ public class OperationalContextRelationIndexBuilder {
                 "high",
                 sourceRef(CODE_SEARCH_SCOPES_FILE, CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "]", "references-repository")
         );
-        for (var moduleId : safeTextList(repository.moduleIds())) {
-            relation(
-                    state,
-                    source,
-                    "references-module",
-                    new EntityKey(MODULE, moduleId),
-                    repository.role(),
-                    source,
-                    true,
-                    false,
-                    "direct-yaml",
-                    "high",
-                    sourceRef(CODE_SEARCH_SCOPES_FILE, CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "].repositories[repoId=" + repository.repoId() + "].moduleIds", "references-module")
-            );
-        }
     }
 
     private void codeSearchRepositoryTargets(
@@ -688,6 +637,10 @@ public class OperationalContextRelationIndexBuilder {
             LinkedHashSet<String> derivedTargets
     ) {
         for (var targetId : safeTextList(targetIds)) {
+            var target = new EntityKey(targetType, targetId);
+            if (TERM.equals(targetType) && !state.entities.containsKey(target)) {
+                continue;
+            }
             if (!derivedTargets.add(relationType + "|" + targetType + "|" + targetId)) {
                 continue;
             }
@@ -695,7 +648,7 @@ public class OperationalContextRelationIndexBuilder {
                     state,
                     source,
                     relationType,
-                    new EntityKey(targetType, targetId),
+                    target,
                     null,
                     source,
                     false,
@@ -756,35 +709,6 @@ public class OperationalContextRelationIndexBuilder {
             );
         }
         referenceList(state, source, "participant-repository", REPOSITORY, participant.repositories(), "integrations.yml", integration.id(), "$.integrations[id=" + integration.id() + "].participants." + participantPath + ".repositories", true);
-        referenceList(state, source, "participant-module", MODULE, participant.modules(), "integrations.yml", integration.id(), "$.integrations[id=" + integration.id() + "].participants." + participantPath + ".modules", true);
-    }
-
-    private void addRuntimeSignals(
-            BuildState state,
-            EntityKey source,
-            List<String> signals,
-            String role,
-            String file,
-            String sourceEntityId,
-            String fieldPath
-    ) {
-        for (var signal : safeTextList(signals)) {
-            var signalId = source.id() + "/" + role + "/" + signal;
-            register(state, RUNTIME_SIGNAL, signalId, signal, null, role);
-            relation(
-                    state,
-                    source,
-                    "has-runtime-signal",
-                    new EntityKey(RUNTIME_SIGNAL, signalId),
-                    role,
-                    source,
-                    true,
-                    false,
-                    "direct-yaml",
-                    "high",
-                    sourceRef(file, SYSTEM, sourceEntityId, "$.systems[id=" + sourceEntityId + "]." + fieldPath, "has-runtime-signal")
-            );
-        }
     }
 
     private void dependencyRelations(
@@ -910,10 +834,6 @@ public class OperationalContextRelationIndexBuilder {
         return result;
     }
 
-    private String moduleId(OperationalContextRepository repository, OperationalContextRepositoryModule module) {
-        return firstNonBlank(module.effectiveId(), module.id(), module.moduleId(), repository.id() + "/module");
-    }
-
     private String lifecycleStatus(OperationalContextEntry entry) {
         if (entry instanceof OperationalContextSystem system) {
             return system.lifecycleStatus();
@@ -950,9 +870,6 @@ public class OperationalContextRelationIndexBuilder {
             case "teams" -> TEAM;
             case "terms", "glossary-term", "glossary-terms" -> TERM;
             case "handoffRules", "handoff-rules" -> HANDOFF_RULE;
-            case "modules" -> MODULE;
-            case "dataStores", "data-stores" -> DATASTORE;
-            case "externalParties", "external-parties" -> EXTERNAL_PARTY;
             default -> normalized;
         };
     }
@@ -998,9 +915,6 @@ public class OperationalContextRelationIndexBuilder {
             case "team", "teams" -> TEAM;
             case "term", "terms", "glossary-term", "glossary-terms" -> TERM;
             case "handoff-rule", "handoff-rules", "handoffRule", "handoffRules" -> HANDOFF_RULE;
-            case "module", "modules" -> MODULE;
-            case "datastore", "datastores", "data-store", "data-stores" -> DATASTORE;
-            case "external-party", "external-parties", "externalParty", "externalParties" -> EXTERNAL_PARTY;
             default -> null;
         };
     }

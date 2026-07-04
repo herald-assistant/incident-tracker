@@ -77,11 +77,9 @@ class GitLabMcpToolsTest {
                                 "system",
                                 "backend",
                                 List.of(
-                                        scopeRepository("backend-repo", "primary-implementation", 1, List.of("backend-module")),
-                                        scopeRepository("customer-repo", "workflow-collaborator", 2, List.of("customer-bootstrap"))
-                                ),
-                                List.of("com.example.crm.backend"),
-                                List.of("DecisionController")
+                                        scopeRepository("backend-repo", "primary", 1),
+                                        scopeRepository("customer-repo", "collaborator", 2)
+                                )
                         )),
                         repository(
                                 "backend-repo",
@@ -96,10 +94,7 @@ class GitLabMcpToolsTest {
                                 List.of("decision", "limit"),
                                 List.of("decision-process"),
                                 List.of("cbp"),
-                                List.of("shared-lib-repo"),
-                                List.of("com.example.crm.backend"),
-                                List.of("/crm/process/decision"),
-                                List.of("backend-module")
+                                List.of("shared-lib-repo")
                         ),
                         repository(
                                 "customer-repo",
@@ -114,10 +109,7 @@ class GitLabMcpToolsTest {
                                 List.of("customer"),
                                 List.of("customer-process"),
                                 List.of(),
-                                List.of(),
-                                List.of("com.example.crm.customer"),
-                                List.of("/crm/customer"),
-                                List.of("customer-bootstrap")
+                                List.of()
                         ),
                         repository(
                                 "outside-repo",
@@ -132,10 +124,7 @@ class GitLabMcpToolsTest {
                                 List.of(),
                                 List.of(),
                                 List.of(),
-                                List.of(),
-                                List.of("com.example.outside"),
-                                List.of("/outside"),
-                                List.of("outside-module")
+                                List.of()
                         )
                 ),
                 gitLabProperties("CRM")
@@ -168,9 +157,6 @@ class GitLabMcpToolsTest {
         assertIterableEquals(List.of("decision-process"), backend.processes());
         assertIterableEquals(List.of("cbp"), backend.integrations());
         assertIterableEquals(List.of("shared-lib-repo"), backend.relatedRepositoryIds());
-        assertIterableEquals(List.of("com.example.crm.backend"), backend.packagePrefixes());
-        assertIterableEquals(List.of("/crm/process/decision"), backend.endpointPrefixes());
-        assertIterableEquals(List.of("backend-module"), backend.modulePaths());
 
         var customer = response.repositories().get(1);
         assertEquals("PROCESSES/CRM_CUSTOMER_PROCESS", customer.projectName());
@@ -184,10 +170,9 @@ class GitLabMcpToolsTest {
                 List.of("backend", "PROCESSES/CRM_CUSTOMER_PROCESS"),
                 scope.projectNames()
         );
-        assertEquals("primary-implementation", scope.repositories().get(0).role());
-        assertEquals("workflow-collaborator", scope.repositories().get(1).role());
-        assertIterableEquals(List.of("backend-module"), scope.repositories().get(0).moduleIds());
-        assertTrue(scope.traversal().expandWhen().contains("Expand when supporting repositories are needed."));
+        assertEquals("primary", scope.repositories().get(0).role());
+        assertEquals("collaborator", scope.repositories().get(1).role());
+        assertTrue(scope.limitations().contains("Generated clients are partial in this fixture."));
     }
 
     @Test
@@ -574,10 +559,7 @@ class GitLabMcpToolsTest {
                         List.of("customer"),
                         List.of("customer-process"),
                         List.of(),
-                        List.of(),
-                        List.of("com.example.crm.customer"),
-                        List.of("/customers"),
-                        List.of("customer-process")
+                        List.of()
                 )),
                 gitLabProperties("CRM")
         );
@@ -1437,9 +1419,7 @@ class GitLabMcpToolsTest {
             String id,
             String targetType,
             String targetId,
-            List<Map<String, Object>> repositories,
-            List<String> packagePrefixes,
-            List<String> classHints
+            List<Map<String, Object>> repositories
     ) {
         var scope = new LinkedHashMap<String, Object>();
         scope.put("id", id);
@@ -1451,29 +1431,21 @@ class GitLabMcpToolsTest {
         ));
         scope.put("useFor", List.of("code-search", "incident-analysis"));
         scope.put("repositories", repositories);
-        scope.put("hints", Map.of(
-                "packagePrefixes", packagePrefixes,
-                "classHints", classHints
-        ));
-        scope.put("traversal", Map.of(
-                "rules", List.of("Read repositories in priority customer."),
-                "expandWhen", List.of("Expand when supporting repositories are needed.")
-        ));
+        scope.put("limitations", List.of("Generated clients are partial in this fixture."));
         return scope;
     }
 
     private Map<String, Object> scopeRepository(
             String repoId,
             String role,
-            int priority,
-            List<String> moduleIds
+            int priority
     ) {
         return Map.of(
                 "repoId", repoId,
                 "role", role,
                 "priority", priority,
-                "moduleIds", moduleIds,
-                "reason", "Included in test code-search scope."
+                "reason", "Included in test code-search scope.",
+                "readFor", List.of("code-navigation")
         );
     }
 
@@ -1490,10 +1462,7 @@ class GitLabMcpToolsTest {
             List<String> boundedContexts,
             List<String> processes,
             List<String> integrations,
-            List<String> relatedRepositories,
-            List<String> packagePrefixes,
-            List<String> endpointPrefixes,
-            List<String> modulePaths
+            List<String> relatedRepositories
     ) {
         var repository = new LinkedHashMap<String, Object>();
         repository.put("id", id);
@@ -1515,13 +1484,10 @@ class GitLabMcpToolsTest {
                 "integrations", integrations,
                 "repositories", relatedRepositories
         ));
-        repository.put("sourceLayout", Map.of(
-                "modulePaths", modulePaths
-        ));
         repository.put("matchSignals", Map.of(
                 "strong", Map.of(
-                        "packagePrefixes", packagePrefixes,
-                        "endpointPrefixes", endpointPrefixes
+                        "projectNames", List.of(project),
+                        "domainTerms", boundedContexts
                 )
         ));
         return repository;

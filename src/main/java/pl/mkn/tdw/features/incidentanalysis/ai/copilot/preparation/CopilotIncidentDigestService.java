@@ -126,32 +126,18 @@ public class CopilotIncidentDigestService {
                         .map(OperationalContextEvidenceView.RepositoryItem::projectPath)
                         .toList()
         ));
-        var packages = distinct(joinLists(
-                operationalContext.systems().stream()
-                        .flatMap(system -> system.sourcePackages().stream())
-                        .toList(),
-                operationalContext.repositories().stream()
-                        .flatMap(repository -> repository.sourcePackages().stream())
-                        .toList()
-        ));
-        var classHints = distinct(joinLists(
-                operationalContext.systems().stream()
-                        .flatMap(system -> system.classHints().stream())
-                        .toList(),
-                operationalContext.repositories().stream()
-                        .flatMap(repository -> repository.classHints().stream())
-                        .toList()
-        ));
         var repositoryRoles = distinct(operationalContext.systems().stream()
                 .flatMap(system -> system.codeSearchRepositoryRoles().stream())
+                .toList());
+        var repositoryReasons = distinct(operationalContext.systems().stream()
+                .flatMap(system -> system.codeSearchRepositoryReasons().stream())
                 .toList());
 
         addListValue(lines, "matched systems", systems);
         addListValue(lines, "code search scopes", scopeIds);
         addListValue(lines, "GitLab projects to search as one semantic implementation scope", projects);
         addListValue(lines, "code search repository roles", repositoryRoles.stream().limit(8).toList());
-        addListValue(lines, "package roots", packages.stream().limit(8).toList());
-        addListValue(lines, "class hints", classHints.stream().limit(8).toList());
+        addListValue(lines, "code search repository reasons", repositoryReasons.stream().limit(8).toList());
         lines.add("");
     }
 

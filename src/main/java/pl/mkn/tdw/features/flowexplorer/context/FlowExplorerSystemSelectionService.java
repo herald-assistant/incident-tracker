@@ -59,7 +59,6 @@ public class FlowExplorerSystemSelectionService {
         var codeSearchScopeRepositoryIds = codeSearchScopeRepositoryIds(catalog, system.id());
         var repositoryIds = distinct(combineValues(
                 system.references().repositories(),
-                system.codeSearchScope().repositories(),
                 codeSearchScopeRepositoryIds
         ));
         var ownerTeamIds = distinct(combineValues(
@@ -92,19 +91,7 @@ public class FlowExplorerSystemSelectionService {
         var semanticScopeCount = catalog.codeSearchScopes().stream()
                 .filter(scope -> targetsSystem(scope, system.id()))
                 .count();
-        return Math.toIntExact(semanticScopeCount + (hasInlineCodeSearchScope(system) ? 1 : 0));
-    }
-
-    private boolean hasInlineCodeSearchScope(OperationalContextSystem system) {
-        var scope = system.codeSearchScope();
-        return !scope.repositories().isEmpty()
-                || !scope.packagePrefixes().isEmpty()
-                || !scope.classHints().isEmpty()
-                || !scope.configPrefixes().isEmpty()
-                || !scope.generatedClients().isEmpty()
-                || !scope.sharedLibraries().isEmpty()
-                || !scope.searchTogetherWithSystems().isEmpty()
-                || !scope.searchNotes().isEmpty();
+        return Math.toIntExact(semanticScopeCount);
     }
 
     private List<String> codeSearchScopeRepositoryIds(OperationalContextCatalog catalog, String systemId) {

@@ -83,7 +83,7 @@ export interface OperationalContextSummaryDto {
   handoffRules: number;
   openQuestions: number;
   validationFindings: Record<string, number>;
-  catalogStatus: 'empty' | 'partial' | 'ready' | 'hasIssues' | string;
+  catalogStatus: 'ok' | 'warning' | 'error' | string;
   healthCards: ExplainableAggregateDto[];
 }
 
@@ -107,10 +107,8 @@ export interface OperationalContextRepositoryRowDto {
   owner: ExplainableValueDto<string>;
   systems: ExplainableAggregateDto;
   contexts: ExplainableAggregateDto;
-  packageRoots: ExplainableAggregateDto;
-  entrypoints: ExplainableAggregateDto;
-  runtimeMappings: ExplainableAggregateDto;
-  modules: ExplainableAggregateDto;
+  processes: ExplainableAggregateDto;
+  integrations: ExplainableAggregateDto;
   codeSearchScopes: ExplainableAggregateDto;
   codeSearchRoles: ExplainableAggregateDto;
   handoffReadiness: ExplainableAggregateDto;
@@ -124,11 +122,7 @@ export interface OperationalContextCodeSearchScopeRowDto {
   lifecycleStatus: string;
   target: ExplainableAggregateDto;
   repositories: ExplainableAggregateDto;
-  packageHints: ExplainableAggregateDto;
-  entryHints: ExplainableAggregateDto;
-  dataHints: ExplainableAggregateDto;
-  workflowHints: ExplainableAggregateDto;
-  traversal: ExplainableAggregateDto;
+  limitations: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
 }
 
@@ -154,8 +148,9 @@ export interface OperationalContextIntegrationRowDto {
   targetSystems: string;
   owner: ExplainableValueDto<string>;
   partnerTeams: ExplainableAggregateDto;
-  protocols: string;
+  category: string;
   integrationStyle: string;
+  flowDirection: string;
   processes: ExplainableAggregateDto;
   contexts: ExplainableAggregateDto;
   signals: ExplainableAggregateDto;
@@ -171,7 +166,6 @@ export interface OperationalContextBoundedContextRowDto {
   systems: ExplainableAggregateDto;
   terms: ExplainableAggregateDto;
   relations: ExplainableAggregateDto;
-  runtimeSignals: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
 }
 
@@ -311,68 +305,6 @@ export interface OperationalContextCodeSearchReadModel {
   analysisTarget: ReadModelEntityRef;
   scopes: Array<Record<string, unknown>>;
   repositories: Array<Record<string, unknown>>;
-  aggregatedHints?: Record<string, unknown>;
-  limitations: string[];
-  validationFindings: ReadModelValidationFinding[];
-}
-
-export interface OperationalContextImplementationReadModel {
-  contract: string;
-  contractVersion: number;
-  analysisTarget: ReadModelEntityRef;
-  implementations: Array<{
-    id: string;
-    implementationKind?: string;
-    lifecycleRole?: string;
-    migrationStatus?: string;
-    repository?: ReadModelEntityRef | null;
-    codeSearchScope?: ReadModelEntityRef | null;
-  }>;
-  limitations: string[];
-  validationFindings: ReadModelValidationFinding[];
-}
-
-export interface OperationalContextFlowReadModel {
-  contract: string;
-  contractVersion: number;
-  analysisTarget: ReadModelEntityRef;
-  trigger?: Record<string, unknown>;
-  steps: Array<{
-    id: string;
-    order: number;
-    name: string;
-    kind: string;
-    systems: ReadModelEntityRef[];
-    boundedContexts: ReadModelEntityRef[];
-    integrations: ReadModelEntityRef[];
-    dataStores: ReadModelEntityRef[];
-    implementations: Array<{ id: string; lifecycleRole?: string; migrationStatus?: string }>;
-  }>;
-  edges: Array<Record<string, unknown>>;
-  involvedSystems: ReadModelEntityRef[];
-  involvedBoundedContexts: ReadModelEntityRef[];
-  involvedIntegrations: ReadModelEntityRef[];
-  involvedDataStores: ReadModelEntityRef[];
-  limitations: string[];
-  validationFindings: ReadModelValidationFinding[];
-}
-
-export interface OperationalContextBlastRadiusReadModel {
-  contract: string;
-  contractVersion: number;
-  analysisTarget: ReadModelEntityRef;
-  impactedFlows: Array<{
-    flow: ReadModelEntityRef;
-    impactedSteps: Array<{ stepId: string; order: number; name: string; impactType: string }>;
-    confidence: string;
-    reasons: string[];
-  }>;
-  impactedSystems: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
-  impactedBoundedContexts: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
-  impactedIntegrations: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
-  impactedDataStores: Array<{ entity: ReadModelEntityRef; impactType: string; confidence: string }>;
-  impactedImplementations: Array<{ implementation: { id: string }; impactType: string; confidence: string }>;
-  suggestedNextEvidence: string[];
   limitations: string[];
   validationFindings: ReadModelValidationFinding[];
 }
@@ -380,9 +312,6 @@ export interface OperationalContextBlastRadiusReadModel {
 export interface OperationalContextReadModelBundle {
   relations?: OperationalContextEntityRelationsReadModelDto | null;
   codeSearch?: OperationalContextCodeSearchReadModel | null;
-  implementations?: OperationalContextImplementationReadModel | null;
-  flow?: OperationalContextFlowReadModel | null;
-  blastRadius?: OperationalContextBlastRadiusReadModel | null;
 }
 
 export type OperationalContextReadModelProfile = 'default' | 'expanded';
@@ -391,10 +320,7 @@ export type OperationalContextAiApiPreviewEndpointKey =
   | 'search'
   | 'entity'
   | 'relations'
-  | 'code-search'
-  | 'implementations'
-  | 'flow'
-  | 'blast-radius';
+  | 'code-search';
 
 export interface OperationalContextReadModelLinkDto {
   rel: string;

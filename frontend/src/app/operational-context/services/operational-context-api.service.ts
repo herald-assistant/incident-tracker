@@ -5,16 +5,13 @@ import { Observable } from 'rxjs';
 import {
   OpenQuestionDto,
   OperationalContextAiApiPreviewEndpointKey,
-  OperationalContextBlastRadiusReadModel,
   OperationalContextBoundedContextRowDto,
   OperationalContextCodeSearchReadModel,
   OperationalContextCodeSearchScopeRowDto,
   OperationalContextEntityDetailDto,
   OperationalContextEntityRelationsReadModelDto,
-  OperationalContextFlowReadModel,
   OperationalContextGlossaryRowDto,
   OperationalContextHandoffRuleRowDto,
-  OperationalContextImplementationReadModel,
   OperationalContextProfiledReadModelDto,
   OperationalContextIntegrationRowDto,
   OperationalContextProcessRowDto,
@@ -176,66 +173,6 @@ export class OperationalContextApiService {
     );
   }
 
-  getImplementationReadModel(
-    type: string,
-    id: string
-  ): Observable<OperationalContextImplementationReadModel> {
-    return this.http.get<OperationalContextImplementationReadModel>(
-      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/implementations`,
-      { params: this.entityIdParams(id) }
-    );
-  }
-
-  getProfiledImplementationReadModel(
-    type: string,
-    id: string,
-    profile: OperationalContextReadModelProfile
-  ): Observable<OperationalContextProfiledReadModelDto> {
-    return this.http.get<OperationalContextProfiledReadModelDto>(
-      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/implementations`,
-      { params: this.profiledEntityIdParams(id, profile) }
-    );
-  }
-
-  getFlowReadModel(type: string, id: string): Observable<OperationalContextFlowReadModel> {
-    return this.http.get<OperationalContextFlowReadModel>(
-      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/flow`,
-      { params: this.entityIdParams(id) }
-    );
-  }
-
-  getProfiledFlowReadModel(
-    type: string,
-    id: string,
-    profile: OperationalContextReadModelProfile
-  ): Observable<OperationalContextProfiledReadModelDto> {
-    return this.http.get<OperationalContextProfiledReadModelDto>(
-      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/flow`,
-      { params: this.profiledEntityIdParams(id, profile) }
-    );
-  }
-
-  getBlastRadiusReadModel(
-    type: string,
-    id: string
-  ): Observable<OperationalContextBlastRadiusReadModel> {
-    return this.http.get<OperationalContextBlastRadiusReadModel>(
-      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/blast-radius`,
-      { params: this.entityIdParams(id) }
-    );
-  }
-
-  getProfiledBlastRadiusReadModel(
-    type: string,
-    id: string,
-    profile: OperationalContextReadModelProfile
-  ): Observable<OperationalContextProfiledReadModelDto> {
-    return this.http.get<OperationalContextProfiledReadModelDto>(
-      `${this.baseUrl}/read-model/entities/${encodeURIComponent(type)}/blast-radius`,
-      { params: this.profiledEntityIdParams(id, profile) }
-    );
-  }
-
   getAiApiPreviewRequests(
     type: string,
     id: string,
@@ -258,10 +195,7 @@ export class OperationalContextApiService {
     return [
       ...requests,
       this.readModelPreviewRequest('relations', 'Relations', type, id, profile),
-      this.readModelPreviewRequest('code-search', 'Code search', type, id, profile),
-      this.readModelPreviewRequest('implementations', 'Implementations', type, id, profile),
-      this.readModelPreviewRequest('flow', 'Flow', type, id, profile),
-      this.readModelPreviewRequest('blast-radius', 'Blast radius', type, id, profile)
+      this.readModelPreviewRequest('code-search', 'Code search', type, id, profile)
     ];
   }
 
@@ -326,12 +260,6 @@ export class OperationalContextApiService {
         return this.getProfiledEntityRelationsReadModel(type, id, profile);
       case 'code-search':
         return this.getProfiledCodeSearchReadModel(type, id, profile);
-      case 'implementations':
-        return this.getProfiledImplementationReadModel(type, id, profile);
-      case 'flow':
-        return this.getProfiledFlowReadModel(type, id, profile);
-      case 'blast-radius':
-        return this.getProfiledBlastRadiusReadModel(type, id, profile);
     }
   }
 }

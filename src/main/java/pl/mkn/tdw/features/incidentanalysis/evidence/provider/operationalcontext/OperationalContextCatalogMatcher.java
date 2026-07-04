@@ -187,7 +187,9 @@ public class OperationalContextCatalogMatcher {
         addSignalMatches(score, signals, genericSignals(integration), 11, 7, "signal");
         addSignalMatches(score, signals, integration.references().processes(), 4, 2, "process");
         addSignalMatches(score, signals, integration.references().boundedContexts(), 5, 3, "context");
-        addSignalMatches(score, signals, integration.transport().protocols(), 4, 2, "protocol");
+        addSignalMatch(score, signals, integration.category(), 5, 3, "category");
+        addSignalMatch(score, signals, integration.integrationStyle(), 5, 3, "integrationStyle");
+        addSignalMatch(score, signals, integration.flowDirection(), 4, 2, "flowDirection");
 
         var matchedSystemIds = matchedIds(systemMatches);
         if (containsAnyId(matchedSystemIds, integration.participants().source().system())
@@ -215,18 +217,6 @@ public class OperationalContextCatalogMatcher {
         addSignalMatches(score, signals, repository.references().systems(), 6, 3, "system");
         addSignalMatches(score, signals, repository.references().processes(), 5, 3, "process");
         addSignalMatches(score, signals, repository.references().boundedContexts(), 5, 3, "context");
-        addSignalMatches(score, signals, repository.sourceLayout().sourceRoots(), 10, 6, "sourceRoot");
-        addSignalMatches(score, signals, repository.sourceLayout().modulePaths(), 8, 5, "modulePath");
-        addSignalMatches(score, signals, repository.sourceLayout().importantPaths(), 8, 5, "importantPath");
-        addSignalMatches(score, signals, repository.classHintSignals(), 7, 4, "entrypoint");
-
-        for (var module : repository.modules()) {
-            addSignalMatch(score, signals, module.effectiveId(), 10, 5, "moduleId");
-            addSignalMatch(score, signals, module.name(), 7, 3, "moduleName");
-            addSignalMatches(score, signals, module.sourceRoots(), 8, 5, "moduleSourceRoot");
-            addSignalMatches(score, signals, module.importantPaths(), 8, 5, "moduleImportantPath");
-            addSignalMatches(score, signals, module.genericSignals(), 8, 5, "moduleSignal");
-        }
 
         if (anyOverlap(repository.references().systems(), matchedIds(systemMatches))) {
             score.add(8, "referenceSystemMatches");
@@ -278,9 +268,6 @@ public class OperationalContextCatalogMatcher {
         addSignalMatches(score, signals, boundedContext.references().repositories(), 6, 3, "repository");
         addSignalMatches(score, signals, boundedContext.references().processes(), 5, 3, "process");
         addSignalMatches(score, signals, boundedContext.references().terms(), 6, 3, "term");
-        addSignalMatches(score, signals, boundedContext.operationalSignals().serviceNames(), 9, 5, "serviceName");
-        addSignalMatches(score, signals, boundedContext.operationalSignals().endpointPrefixes(), 9, 5, "endpointPrefix");
-        addSignalMatches(score, signals, boundedContext.operationalSignals().packagePrefixes(), 9, 5, "packagePrefix");
         for (var relation : boundedContext.relations()) {
             addSignalMatch(score, signals, relation.target(), 5, 3, "targetContext");
             addSignalMatches(score, signals, relation.via(), 6, 3, "relationVia");

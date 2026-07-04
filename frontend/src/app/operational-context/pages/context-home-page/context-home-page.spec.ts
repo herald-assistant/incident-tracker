@@ -66,9 +66,6 @@ describe('ContextHomePageComponent', () => {
     expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
     expect(api.getEntityRelationsReadModel).not.toHaveBeenCalled();
     expect(api.getCodeSearchReadModel).not.toHaveBeenCalled();
-    expect(api.getImplementationReadModel).not.toHaveBeenCalled();
-    expect(api.getFlowReadModel).not.toHaveBeenCalled();
-    expect(api.getBlastRadiusReadModel).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Core detail');
     expect(fixture.nativeElement.textContent).not.toContain('Read model projections');
     expect(fixture.nativeElement.textContent).toContain('AI API Preview');
@@ -125,7 +122,7 @@ describe('ContextHomePageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Search payload');
     expect(fixture.nativeElement.textContent).toContain('opctx_search(query=api-gateway)');
     expect(component.selectedTab()).toBe('signal-resolver');
-    expect(fixture.nativeElement.textContent).toContain('Resolve runtime or code signals');
+    expect(fixture.nativeElement.textContent).toContain('Resolve catalogue signals');
   });
 
   it('should reload search AI API preview when switching search profile', async () => {
@@ -335,9 +332,6 @@ async function createComponent(
     getEntity: vi.fn(() => of(entityDetail())),
     getEntityRelationsReadModel: vi.fn(() => of(relationsReadModel())),
     getCodeSearchReadModel: vi.fn(() => of(codeSearchReadModel())),
-    getImplementationReadModel: vi.fn(() => of(implementationReadModel())),
-    getFlowReadModel: vi.fn(() => of(flowReadModel())),
-    getBlastRadiusReadModel: vi.fn(() => of(blastRadiusReadModel())),
     getAiApiPreviewRequests: vi.fn(
       (
         type: string,
@@ -349,7 +343,10 @@ async function createComponent(
           aiApiPreviewRequest('entity', 'Entity detail', type, id, profile)
         ];
         if (includeReadModels) {
-          requests.push(aiApiPreviewRequest('blast-radius', 'Blast radius', type, id, profile));
+          requests.push(
+            aiApiPreviewRequest('relations', 'Relations', type, id, profile),
+            aiApiPreviewRequest('code-search', 'Code search', type, id, profile)
+          );
         }
         return requests;
       }
@@ -440,7 +437,7 @@ function emptySummary(): OperationalContextSummaryDto {
     handoffRules: 0,
     openQuestions: 0,
     validationFindings: { info: 0, warning: 0, error: 0 },
-    catalogStatus: 'empty',
+    catalogStatus: 'ok',
     healthCards: []
   };
 }
@@ -449,7 +446,7 @@ function readySummary(): OperationalContextSummaryDto {
   return {
     ...emptySummary(),
     systems: 1,
-    catalogStatus: 'ready'
+    catalogStatus: 'ok'
   };
 }
 
@@ -532,50 +529,6 @@ function codeSearchReadModel() {
   };
 }
 
-function implementationReadModel() {
-  return {
-    contract: 'operational-context.implementation-map',
-    contractVersion: 1,
-    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
-    implementations: [{ id: 'core-scope::core-repo::api' }],
-    limitations: [],
-    validationFindings: []
-  };
-}
-
-function flowReadModel() {
-  return {
-    contract: 'operational-context.flow',
-    contractVersion: 1,
-    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
-    steps: [{ id: 'receive', order: 1, name: 'Receive', kind: 'http', systems: [], boundedContexts: [], integrations: [], dataStores: [], implementations: [] }],
-    edges: [],
-    involvedSystems: [{ type: 'system', id: 'app-core', label: 'App Core' }],
-    involvedBoundedContexts: [],
-    involvedIntegrations: [],
-    involvedDataStores: [],
-    limitations: [],
-    validationFindings: []
-  };
-}
-
-function blastRadiusReadModel() {
-  return {
-    contract: 'operational-context.blast-radius',
-    contractVersion: 1,
-    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
-    impactedFlows: [{ flow: { type: 'process', id: 'core-process', label: 'core-process' }, impactedSteps: [], confidence: 'medium', reasons: [] }],
-    impactedSystems: [{ entity: { type: 'system', id: 'app-core', label: 'App Core' }, impactType: 'downstream', confidence: 'medium' }],
-    impactedBoundedContexts: [],
-    impactedIntegrations: [],
-    impactedDataStores: [],
-    impactedImplementations: [{ implementation: { id: 'core-scope::core-repo::api' }, impactType: 'downstream-code', confidence: 'medium' }],
-    suggestedNextEvidence: ['Use code-search scopes from impacted implementations to fetch targeted source code.'],
-    limitations: [],
-    validationFindings: []
-  };
-}
-
 function profiledSearchPayload(query: string, profile: OperationalContextReadModelProfile) {
   return {
     contract: 'operational-context.search',
@@ -619,7 +572,7 @@ function profiledSearchPayload(query: string, profile: OperationalContextReadMod
 }
 
 function aiApiPreviewRequest(
-  key: 'entity' | 'blast-radius',
+  key: 'entity' | 'relations' | 'code-search',
   label: string,
   type: string,
   id: string,

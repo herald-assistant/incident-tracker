@@ -259,10 +259,7 @@ public class OperationalContextToolMapper {
                 "relations", relations(system.relations()),
                 "externalOwner", system.participants().externalOwner()
         );
-        var signals = values(
-                "matchSignals", matchSignals(system.runtimeMatchSignals()),
-                "deployment", deployment(system.deployment())
-        );
+        var signals = values("matchSignals", matchSignals(system.matchSignals()));
         var codeSearch = values(
                 "codeSearchScopes", codeSearchScopes.stream()
                         .map(scope -> codeSearchScopeSummary(scope, catalog.repositories()))
@@ -307,9 +304,6 @@ public class OperationalContextToolMapper {
                 "boundedContexts", repository.references().boundedContexts(),
                 "processes", repository.references().processes(),
                 "integrations", repository.references().integrations(),
-                "packagePrefixes", repository.packagePrefixSignals(),
-                "classHints", repository.classHintSignals(),
-                "endpointHints", repository.endpointPrefixSignals(),
                 "codeSearchScopeIds", codeSearchScopes.stream().map(OperationalContextRepositorySearchScope::id).toList()
         );
         var overview = values(
@@ -323,17 +317,9 @@ public class OperationalContextToolMapper {
         var relations = values(
                 "references", references(repository.references()),
                 "responsibilities", responsibilities(repository.responsibilities()),
-                "relations", relations(repository.relations()),
-                "modules", repository.modules().stream().map(this::repositoryModule).toList()
+                "relations", relations(repository.relations())
         );
-        var signals = values(
-                "matchSignals", matchSignals(repository.matchSignals()),
-                "packagePrefixes", repository.packagePrefixSignals(),
-                "classHints", repository.classHintSignals(),
-                "endpointHints", repository.endpointPrefixSignals(),
-                "queueTopicHints", repository.queueTopicHints(),
-                "sourceLayout", sourceLayout(repository.sourceLayout())
-        );
+        var signals = values("matchSignals", matchSignals(repository.matchSignals()));
         var codeSearch = values(
                 "git", git(repository.git()),
                 "codeSearchScopes", codeSearchScopes.stream()
@@ -374,11 +360,7 @@ public class OperationalContextToolMapper {
                 "scopeType", scope.scopeType(),
                 "targetType", scope.target().type(),
                 "targetId", scope.target().id(),
-                "repositories", scope.repositories().stream().map(OperationalContextRepositorySearchRepository::repoId).toList(),
-                "packagePrefixes", scope.packagePrefixes(),
-                "classHints", scope.classHints(),
-                "endpointHints", scope.endpointHints(),
-                "queueTopicHints", scope.queueTopicHints()
+                "repositories", scope.repositories().stream().map(OperationalContextRepositorySearchRepository::repoId).toList()
         );
         var overview = values(
                 "scopeType", scope.scopeType(),
@@ -392,13 +374,7 @@ public class OperationalContextToolMapper {
         );
         var codeSearch = values(
                 "repositories", includedRepositories,
-                "packagePrefixes", scope.packagePrefixes(),
-                "classHints", scope.classHints(),
-                "endpointHints", scope.endpointHints(),
-                "queueTopicHints", scope.queueTopicHints(),
-                "database", databaseHints(scope.databaseHints()),
-                "workflow", workflowHints(scope.workflowHints()),
-                "traversal", traversal(scope.traversal())
+                "limitations", scope.limitations()
         );
         var sourceCoverage = values(
                 "limitations", scope.limitations(),
@@ -492,11 +468,9 @@ public class OperationalContextToolMapper {
                 "targetSystems", integration.participants().targetSystems(),
                 "intermediarySystems", integration.participants().intermediarySystems(),
                 "finalTargets", integration.participants().finalTargetSystems(),
-                "protocols", integration.transport().protocols(),
-                "endpointPrefixes", integration.transport().http().endpointPrefixes(),
-                "queues", integration.transport().messaging().queues(),
-                "topics", integration.transport().messaging().topics(),
-                "classHints", integration.implementation().classHints()
+                "category", integration.category(),
+                "integrationStyle", integration.integrationStyle(),
+                "flowDirection", integration.flowDirection()
         );
         var overview = values(
                 "category", integration.category(),
@@ -520,9 +494,6 @@ public class OperationalContextToolMapper {
         );
         var signals = values(
                 "matchSignals", matchSignals(integration.matchSignals()),
-                "transport", transport(integration.transport()),
-                "channels", integration.channels().stream().map(this::channel).toList(),
-                "implementation", implementation(integration.implementation()),
                 "failureModes", integration.failureModes()
         );
 
@@ -556,10 +527,7 @@ public class OperationalContextToolMapper {
                 "repositories", context.references().repositories(),
                 "processes", context.references().processes(),
                 "integrations", context.references().integrations(),
-                "terms", context.references().terms(),
-                "serviceNames", context.operationalSignals().serviceNames(),
-                "endpointPrefixes", context.operationalSignals().endpointPrefixes(),
-                "packagePrefixes", context.operationalSignals().packagePrefixes()
+                "terms", context.references().terms()
         );
 
         return entity(
@@ -581,10 +549,7 @@ public class OperationalContextToolMapper {
                         "responsibilities", responsibilities(context.responsibilities()),
                         "relations", relations(context.relations())
                 ),
-                values(
-                        "matchSignals", matchSignals(context.matchSignals()),
-                        "operationalSignals", context.operationalSignals().valuesByKey()
-                ),
+                values("matchSignals", matchSignals(context.matchSignals())),
                 Map.of(),
                 handoff(context.handoffHints()),
                 values("sourceRefs", List.of("bounded-contexts.yml#" + context.id())),
@@ -911,7 +876,7 @@ public class OperationalContextToolMapper {
                 "default",
                 List.of(
                         toolLink("list-systems", "opctx_list_entities", values("type", TYPE_SYSTEM), "Browse canonical systems first."),
-                        toolLink("search", "opctx_search", values("query", "<term-or-signal>"), "Search by endpoint, class, service, repository or domain term.")
+                        toolLink("search", "opctx_search", values("query", "<term-or-signal>"), "Search by system, repository, process, integration or domain term.")
                 ),
                 List.of("opctx_list_entities(type=<type>)", "opctx_search(query=<term-or-signal>)"),
                 List.of(
@@ -995,7 +960,7 @@ public class OperationalContextToolMapper {
                 links,
                 List.of("opctx_get_entity(type=<type>, id=<id>)", "opctx_search(query=<more-specific-signal>)"),
                 items.isEmpty()
-                        ? List.of("Search again with a system, endpoint, class, queue, table, repository or local-language term.")
+                        ? List.of("Search again with a system, repository, process, integration, team or local-language term.")
                         : List.of("Read top result details before choosing repositories or handoff route."),
                 List.of("opctx_get_entity", "opctx_search"),
                 "Increase limit only when recall matters more than a short ranked candidate set.",
@@ -1042,13 +1007,13 @@ public class OperationalContextToolMapper {
 
         var suggestedReads = new ArrayList<String>();
         if (!entity.codeSearch().isEmpty()) {
-            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[codeSearch]) to narrow repositories/modules.".formatted(entity.type(), entity.id()));
+            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[codeSearch]) to narrow repositories.".formatted(entity.type(), entity.id()));
         }
         if (!entity.relations().isEmpty()) {
             suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[relations]) to inspect upstream/downstream references.".formatted(entity.type(), entity.id()));
         }
         if (!entity.signals().isEmpty()) {
-            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[signals]) to verify runtime/code matching signals.".formatted(entity.type(), entity.id()));
+            suggestedReads.add("opctx_get_entity(type=%s, id=%s, include=[signals]) to verify catalog matching signals.".formatted(entity.type(), entity.id()));
         }
         suggestedReads.add("opctx_search(query=<more-specific-signal>) if this entity is too broad.");
 
@@ -1282,16 +1247,12 @@ public class OperationalContextToolMapper {
     private Map<String, Object> references(OperationalContextReferences references) {
         return values(
                 "systems", references.systems(),
-                "deploymentComponents", references.deploymentComponents(),
                 "repositories", references.repositories(),
-                "modules", references.modules(),
                 "processes", references.processes(),
                 "boundedContexts", references.boundedContexts(),
                 "integrations", references.integrations(),
                 "terms", references.terms(),
                 "teams", references.teams(),
-                "externalParties", references.externalParties(),
-                "dataStores", references.dataStores(),
                 "handoffRules", references.handoffRules()
         );
     }
@@ -1355,18 +1316,6 @@ public class OperationalContextToolMapper {
         );
     }
 
-    private Map<String, Object> deployment(OperationalContextDeployment deployment) {
-        return values(
-                "serviceNames", deployment.serviceNames(),
-                "applicationNames", deployment.applicationNames(),
-                "containerNames", deployment.containerNames(),
-                "deploymentNames", deployment.deploymentNames(),
-                "namespaceNames", deployment.namespaceNames(),
-                "imageNames", deployment.imageNames(),
-                "artifactNames", deployment.artifactNames()
-        );
-    }
-
     private Map<String, Object> git(OperationalContextGit git) {
         return values(
                 "provider", git.provider(),
@@ -1377,38 +1326,6 @@ public class OperationalContextToolMapper {
                 "url", git.url(),
                 "aliases", git.aliases(),
                 "inferred", git.inferred()
-        );
-    }
-
-    private Map<String, Object> sourceLayout(OperationalContextSourceLayout sourceLayout) {
-        return values(
-                "repositoryRoot", sourceLayout.repositoryRoot(),
-                "buildTool", sourceLayout.buildTool(),
-                "buildFiles", sourceLayout.buildFiles(),
-                "sourceRoots", sourceLayout.sourceRoots(),
-                "testRoots", sourceLayout.testRoots(),
-                "resourceRoots", sourceLayout.resourceRoots(),
-                "modulePaths", sourceLayout.modulePaths(),
-                "generatedSourcePaths", sourceLayout.generatedSourcePaths(),
-                "importantPaths", sourceLayout.importantPaths(),
-                "configurationFiles", sourceLayout.configurationFiles(),
-                "deploymentFiles", sourceLayout.deploymentFiles(),
-                "databaseMigrationPaths", sourceLayout.databaseMigrationPaths(),
-                "workflowDefinitionPaths", sourceLayout.workflowDefinitionPaths(),
-                "documentationPaths", sourceLayout.documentationPaths()
-        );
-    }
-
-    private Map<String, Object> repositoryModule(OperationalContextRepositoryModule module) {
-        return values(
-                "id", module.effectiveId(),
-                "name", module.name(),
-                "moduleType", module.moduleType(),
-                "lifecycleStatus", module.lifecycleStatus(),
-                "sourceRoots", module.sourceRoots(),
-                "importantPaths", module.importantPaths(),
-                "packagePrefixes", module.packagePrefixSignals(),
-                "classHints", module.classHintSignals()
         );
     }
 
@@ -1428,67 +1345,9 @@ public class OperationalContextToolMapper {
                 "system", participant.system(),
                 "boundedContext", participant.boundedContext(),
                 "repositories", participant.repositories(),
-                "modules", participant.modules(),
                 "role", participant.role(),
                 "externalOwner", participant.externalOwner(),
                 "notes", participant.notes()
-        );
-    }
-
-    private Map<String, Object> transport(OperationalContextTransport transport) {
-        return values(
-                "protocols", transport.protocols(),
-                "http", values(
-                        "methods", transport.http().methods(),
-                        "endpointPrefixes", transport.http().endpointPrefixes(),
-                        "endpointTemplates", transport.http().endpointTemplates(),
-                        "operationNames", transport.http().operationNames(),
-                        "hosts", transport.http().hosts(),
-                        "hostPatterns", transport.http().hostPatterns(),
-                        "clientNames", transport.http().clientNames(),
-                        "gatewayRoutes", transport.http().gatewayRoutes()
-                ),
-                "messaging", values(
-                        "brokers", transport.messaging().brokers(),
-                        "exchanges", transport.messaging().exchanges(),
-                        "queues", transport.messaging().queues(),
-                        "topics", transport.messaging().topics(),
-                        "routingKeys", transport.messaging().routingKeys(),
-                        "consumerGroups", transport.messaging().consumerGroups()
-                ),
-                "database", values(
-                        "datasourceNames", transport.database().datasourceNames(),
-                        "schemas", transport.database().schemas(),
-                        "tables", transport.database().tables(),
-                        "entities", transport.database().entities(),
-                        "repositories", transport.database().repositories()
-                )
-        );
-    }
-
-    private Map<String, Object> channel(OperationalContextChannel channel) {
-        return values(
-                "type", channel.type(),
-                "name", channel.name(),
-                "direction", channel.direction(),
-                "signals", channel.signals()
-        );
-    }
-
-    private Map<String, Object> implementation(OperationalContextImplementation implementation) {
-        return values(
-                "localSide", implementation.localSide(),
-                "clientTypes", implementation.clientTypes(),
-                "packagePrefixes", implementation.packagePrefixes(),
-                "modulePaths", implementation.modulePaths(),
-                "classHints", implementation.classHints(),
-                "clientClasses", implementation.clientClasses(),
-                "controllerClasses", implementation.controllerClasses(),
-                "listenerClasses", implementation.listenerClasses(),
-                "publisherClasses", implementation.publisherClasses(),
-                "schedulerClasses", implementation.schedulerClasses(),
-                "generatedClientClasses", implementation.generatedClientClasses(),
-                "configClasses", implementation.configClasses()
         );
     }
 
@@ -1510,11 +1369,6 @@ public class OperationalContextToolMapper {
                 "repositories", scope.repositories().stream()
                         .map(repository -> scopeRepository(repository, repositoriesById))
                         .toList(),
-                "packagePrefixes", scope.packagePrefixes(),
-                "classHints", scope.classHints(),
-                "endpointHints", scope.endpointHints(),
-                "queueTopicHints", scope.queueTopicHints(),
-                "traversal", traversal(scope.traversal()),
                 "limitations", scope.limitations()
         );
     }
@@ -1553,38 +1407,10 @@ public class OperationalContextToolMapper {
                 "repoId", scopeRepository.repoId(),
                 "role", scopeRepository.role(),
                 "priority", scopeRepository.priority(),
-                "moduleIds", scopeRepository.moduleIds(),
                 "reason", scopeRepository.reason(),
                 "readFor", scopeRepository.readFor(),
                 "projectName", repository != null ? repository.git().project() : null,
-                "gitLabPath", repository != null ? repository.git().projectPath() : null,
-                "packagePrefixes", repository != null ? repository.packagePrefixSignals() : List.of()
-        );
-    }
-
-    private Map<String, Object> databaseHints(OperationalContextRepositorySearchDatabaseHints hints) {
-        return values(
-                "datasourceNames", hints.datasourceNames(),
-                "hikariPools", hints.hikariPools(),
-                "schemas", hints.schemas(),
-                "tables", hints.tables(),
-                "entities", hints.entities(),
-                "migrations", hints.migrations()
-        );
-    }
-
-    private Map<String, Object> workflowHints(OperationalContextRepositorySearchWorkflowHints hints) {
-        return values(
-                "jobNames", hints.jobNames(),
-                "workflowNames", hints.workflowNames(),
-                "definitionPaths", hints.definitionPaths()
-        );
-    }
-
-    private Map<String, Object> traversal(OperationalContextRepositorySearchTraversal traversal) {
-        return values(
-                "rules", traversal.rules(),
-                "expandWhen", traversal.expandWhen()
+                "projectPath", repository != null ? repository.git().projectPath() : null
         );
     }
 

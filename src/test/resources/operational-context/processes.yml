@@ -17,8 +17,6 @@ processes:
           systems: [crm-customer-service, notification-provider]
         matchSignals:
           exact:
-            serviceNames: [crm-customer-service]
-            endpointPrefixes: [/crm/notifications]
             hosts: [api.notifications.local]
     processBoundary:
       endsWhen: [customer-support-process-completed]
@@ -26,7 +24,7 @@ processes:
       defaultRouteLabel: crm-team
       firstResponderTeamIds: [crm-team]
       partnerTeamIds: [crm-integration-team]
-      requiredEvidence: [correlationId, environment, serviceName, endpoint, exception]
+      requiredEvidence: [correlationId, environment, businessImpact, exception]
       routingNotes:
         - If the flow waits on the notification call, route first to the integration owner.
 

@@ -68,10 +68,10 @@ describe('OperationalContextApiService', () => {
   });
 
   it('should pass read model entity id as a query parameter', () => {
-    service.getBlastRadiusReadModel('bounded-context', 'core/context').subscribe();
+    service.getCodeSearchReadModel('bounded-context', 'core/context').subscribe();
 
     const request = http.expectOne(
-      '/api/operational-context/read-model/entities/bounded-context/blast-radius?id=core/context'
+      '/api/operational-context/read-model/entities/bounded-context/code-search?id=core/context'
     );
     expect(request.request.method).toBe('GET');
     request.flush({});
@@ -88,10 +88,7 @@ describe('OperationalContextApiService', () => {
     expect(requests.map((request) => request.url)).toEqual([
       '/api/operational-context/entities/bounded-context?id=core/context&profile=default',
       '/api/operational-context/read-model/entities/bounded-context/relations?id=core/context&profile=default',
-      '/api/operational-context/read-model/entities/bounded-context/code-search?id=core/context&profile=default',
-      '/api/operational-context/read-model/entities/bounded-context/implementations?id=core/context&profile=default',
-      '/api/operational-context/read-model/entities/bounded-context/flow?id=core/context&profile=default',
-      '/api/operational-context/read-model/entities/bounded-context/blast-radius?id=core/context&profile=default'
+      '/api/operational-context/read-model/entities/bounded-context/code-search?id=core/context&profile=default'
     ]);
   });
 });

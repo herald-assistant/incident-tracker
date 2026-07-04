@@ -47,8 +47,8 @@ class OperationalContextMarkdownParserTest {
 
                 Strong:
 
-                - `/crm/customers/process/**`
-                - `/crm/customers/data/**`
+                - `customer profile lifecycle`
+                - `customer profile data ownership`
 
                 Medium:
 
@@ -80,8 +80,8 @@ class OperationalContextMarkdownParserTest {
 
                 Strong:
 
-                - service `crm-customer-segment`
-                - endpoints `/crm/customer-segments/**`
+                - `customer segment routing`
+                - `segment ownership boundary`
 
                 **Canonical references**
 
@@ -99,7 +99,7 @@ class OperationalContextMarkdownParserTest {
         assertEquals("Customer profile process - handles customer profile lifecycle after validation is complete.", customer.definition());
         assertTrue(customer.synonyms().contains("customer process"));
         assertTrue(customer.matchSignals().contains("crm.customer-360.documents.ready"));
-        assertTrue(customer.matchSignals().contains("/crm/customers/process/**"));
+        assertTrue(customer.matchSignals().contains("customer profile lifecycle"));
         assertTrue(customer.matchSignals().contains("CRM-CUSTOMER-DataSource"));
         assertTrue(customer.doNotConfuseWith().contains("CPE (profile event)"));
 
@@ -107,7 +107,7 @@ class OperationalContextMarkdownParserTest {
         assertEquals("customer-segment", segment.id());
         assertEquals("Customer Segment", segment.term());
         assertEquals("Customer Domain Terms", segment.category());
-        assertTrue(segment.matchSignals().contains("service crm-customer-segment"));
+        assertTrue(segment.matchSignals().contains("customer segment routing"));
         assertTrue(segment.canonicalReferences().contains("VIP Customer"));
     }
 
@@ -179,11 +179,11 @@ class OperationalContextMarkdownParserTest {
 
                 **Applies when**
 
-                - Evidence points to notification endpoint
+                - Evidence points to notification integration failure
 
                 **Required evidence**
 
-                - endpoint
+                - integration evidence
 
                 **Expected first actions**
 
@@ -202,8 +202,8 @@ class OperationalContextMarkdownParserTest {
         assertEquals("integration-failure", rules.get(0).id());
         assertEquals("External integration failure", rules.get(0).title());
         assertEquals("CRM Integration Team", rules.get(0).routeTo());
-        assertEquals("Evidence points to notification endpoint", rules.get(0).useWhen().get(0));
-        assertEquals("endpoint", rules.get(0).requiredEvidence().get(0));
+        assertEquals("Evidence points to notification integration failure", rules.get(0).useWhen().get(0));
+        assertEquals("integration evidence", rules.get(0).requiredEvidence().get(0));
         assertEquals("Verify external call", rules.get(0).expectedFirstAction().get(0));
         assertEquals("CRM Team", rules.get(0).partnerTeams().get(0));
         assertEquals("crm-customer-service", rules.get(0).references().systems().get(0));

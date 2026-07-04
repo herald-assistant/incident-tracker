@@ -12,33 +12,17 @@ repositories:
       processes: [main-process]
       boundedContexts: [core-context]
       teams: [core-team]
-      runtimeComponents: [app-core]
     responsibilities:
       - teamId: core-team
         role: code-owner
-    sourceLayout:
-      sourceRoots: [src/main/java/com/example/app]
-      importantPaths: [src/main/java/com/example/app/core]
-    modules:
-      - moduleId: core-module
-        name: Core Module
-        sourceRoots: [src/main/java/com/example/app/core]
-        matchSignals:
-          strong:
-            packagePrefixes: [com.example.app.core]
-            classHints: [SyncGateway]
     matchSignals:
       exact:
         projectNames: [app-core-repo]
-      strong:
-        serviceNames: [app-core]
-        containerNames: [app-core]
-        packagePrefixes: [com.example.app]
-        endpointPrefixes: [/api/resources]
+      strong: {}
     handoffHints:
       defaultRouteLabel: core-team
       firstResponderTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
+      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, exception]
 
   - id: app-shared-lib-repo
     name: App Shared Library
@@ -51,28 +35,15 @@ repositories:
       processes: [main-process]
       boundedContexts: [core-context]
       teams: [core-team]
-      runtimeComponents: [app-core]
     responsibilities:
       - teamId: core-team
         role: code-owner
-    sourceLayout:
-      sourceRoots: [src/main/java/com/example/shared]
-    modules:
-      - moduleId: shared-domain-module
-        name: Shared Domain Module
-        sourceRoots: [src/main/java/com/example/shared]
-        matchSignals:
-          strong:
-            packagePrefixes: [com.example.shared]
-            classHints: [SharedPredicate, SharedLookupClient]
     matchSignals:
       exact:
         projectNames: [app-shared-lib]
-      strong:
-        packagePrefixes: [com.example.shared]
     handoffHints:
       defaultRouteLabel: core-team
       firstResponderTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, className, exception]
+      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, exception]
 
 gaps: []

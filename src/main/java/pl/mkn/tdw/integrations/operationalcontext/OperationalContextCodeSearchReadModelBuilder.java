@@ -1,29 +1,20 @@
 package pl.mkn.tdw.integrations.operationalcontext;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.CodeSearchHints;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.CodeSearchScopeView;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.DatabaseHints;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.GitView;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.ModuleView;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.RepositoryView;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.SourceLayoutView;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.TraversalView;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel.WorkflowHints;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositoryModule;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityKey;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.Provenance;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ReadModelRelation;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.SourceRef;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -34,8 +25,8 @@ public class OperationalContextCodeSearchReadModelBuilder {
 
     private static final String CODE_SEARCH_SCOPE = "code-search-scope";
     private static final String REPOSITORY = "repository";
-    private static final String MODULE = "module";
     private static final String CODE_SEARCH_SCOPES_FILE = "src/main/resources/operational-context/code-search-scopes.yml";
+    private static final String REPO_MAP_FILE = "src/main/resources/operational-context/repo-map.yml";
 
     private final OperationalContextRelationIndexBuilder relationIndexBuilder;
 
@@ -120,7 +111,6 @@ public class OperationalContextCodeSearchReadModelBuilder {
                 analysisTarget,
                 scopeViews,
                 repositories,
-                aggregateHints(scopeViews, repositories),
                 distinct(limitations),
                 distinctFindings(findings)
         );
@@ -183,14 +173,12 @@ public class OperationalContextCodeSearchReadModelBuilder {
                 scope.scopeType(),
                 targetRefs.stream().findFirst().orElse(null),
                 repositoryRefs,
-                scopeHints(scope),
-                traversal(scope),
                 scope.limitations(),
                 new Provenance(
                         true,
                         "direct-yaml",
                         "high",
-                    List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "]", "code-search-scope")),
+                        List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id(), "$.codeSearchScopes[id=" + scope.id() + "]", "code-search-scope")),
                         List.of()
                 )
         );
@@ -217,11 +205,6 @@ public class OperationalContextCodeSearchReadModelBuilder {
             return null;
         }
 
-        var modules = selectedModules(repository, scopeRepository.moduleIds()).stream()
-                .map(this::moduleView)
-                .toList();
-        var hints = repositoryHints(scope, repository, modules);
-
         return new RepositoryView(
                 repositoryRef(repository),
                 scopeRepository.role(),
@@ -229,9 +212,6 @@ public class OperationalContextCodeSearchReadModelBuilder {
                 scopeRepository.reason(),
                 scopeRepository.readFor(),
                 gitView(repository),
-                sourceLayoutView(repository),
-                modules,
-                hints,
                 new Provenance(
                         true,
                         "direct-yaml",
@@ -242,156 +222,6 @@ public class OperationalContextCodeSearchReadModelBuilder {
                         ),
                         List.of()
                 )
-        );
-    }
-
-    private List<OperationalContextRepositoryModule> selectedModules(
-            OperationalContextRepository repository,
-            List<String> moduleIds
-    ) {
-        var requested = new LinkedHashSet<>(textList(moduleIds));
-        if (requested.isEmpty()) {
-            return repository.modules();
-        }
-        return repository.modules().stream()
-                .filter(module -> requested.contains(module.effectiveId()) || requested.contains(module.id()))
-                .toList();
-    }
-
-    private ModuleView moduleView(OperationalContextRepositoryModule module) {
-        return new ModuleView(
-                module.effectiveId(),
-                module.name(),
-                module.moduleType(),
-                module.lifecycleStatus(),
-                module.source().paths(),
-                module.source().packages(),
-                module.sourceRoots(),
-                module.importantPaths(),
-                new CodeSearchHints(
-                        module.packagePrefixSignals(),
-                        module.classHintSignals(),
-                        module.endpointPrefixSignals(),
-                        List.of(),
-                        DatabaseHints.empty(),
-                        WorkflowHints.empty()
-                )
-        );
-    }
-
-    private CodeSearchHints scopeHints(OperationalContextRepositorySearchScope scope) {
-        return new CodeSearchHints(
-                scope.packagePrefixes(),
-                scope.classHints(),
-                scope.endpointHints(),
-                scope.queueTopicHints(),
-                databaseHints(scope.databaseHints(), List.of()),
-                workflowHints(scope.workflowHints(), List.of())
-        );
-    }
-
-    private CodeSearchHints repositoryHints(
-            OperationalContextRepositorySearchScope scope,
-            OperationalContextRepository repository,
-            List<ModuleView> modules
-    ) {
-        return new CodeSearchHints(
-                distinct(scope.packagePrefixes(), repository.packagePrefixSignals(), modulePackagePrefixes(modules)),
-                distinct(scope.classHints(), repository.classHintSignals(), moduleClassHints(modules)),
-                distinct(scope.endpointHints(), repository.endpointPrefixSignals()),
-                distinct(scope.queueTopicHints(), repository.queueTopicHints()),
-                databaseHints(scope.databaseHints(), repository.sourceLayout().databaseMigrationPaths()),
-                workflowHints(scope.workflowHints(), repository.sourceLayout().workflowDefinitionPaths())
-        );
-    }
-
-    private CodeSearchHints aggregateHints(
-            List<CodeSearchScopeView> scopes,
-            List<RepositoryView> repositories
-    ) {
-        return new CodeSearchHints(
-                distinctGrouped(
-                        scopes.stream().map(scope -> scope.hints().packagePrefixes()).toList(),
-                        repositories.stream().map(repository -> repository.hints().packagePrefixes()).toList()
-                ),
-                distinctGrouped(
-                        scopes.stream().map(scope -> scope.hints().classHints()).toList(),
-                        repositories.stream().map(repository -> repository.hints().classHints()).toList()
-                ),
-                distinctGrouped(
-                        scopes.stream().map(scope -> scope.hints().endpointHints()).toList(),
-                        repositories.stream().map(repository -> repository.hints().endpointHints()).toList()
-                ),
-                distinctGrouped(
-                        scopes.stream().map(scope -> scope.hints().queueTopicHints()).toList(),
-                        repositories.stream().map(repository -> repository.hints().queueTopicHints()).toList()
-                ),
-                new DatabaseHints(
-                        distinctDatabases(scopes, repositories, DatabaseField.DATASOURCE_NAMES),
-                        distinctDatabases(scopes, repositories, DatabaseField.HIKARI_POOLS),
-                        distinctDatabases(scopes, repositories, DatabaseField.SCHEMAS),
-                        distinctDatabases(scopes, repositories, DatabaseField.TABLES),
-                        distinctDatabases(scopes, repositories, DatabaseField.ENTITIES),
-                        distinctDatabases(scopes, repositories, DatabaseField.MIGRATIONS)
-                ),
-                new WorkflowHints(
-                        distinctWorkflows(scopes, repositories, WorkflowField.JOB_NAMES),
-                        distinctWorkflows(scopes, repositories, WorkflowField.WORKFLOW_NAMES),
-                        distinctWorkflows(scopes, repositories, WorkflowField.DEFINITION_PATHS)
-                )
-        );
-    }
-
-    private DatabaseHints databaseHints(
-            OperationalContextDtos.OperationalContextRepositorySearchDatabaseHints hints,
-            List<String> repositoryMigrations
-    ) {
-        return new DatabaseHints(
-                hints.datasourceNames(),
-                hints.hikariPools(),
-                hints.schemas(),
-                hints.tables(),
-                hints.entities(),
-                distinct(hints.migrations(), repositoryMigrations)
-        );
-    }
-
-    private WorkflowHints workflowHints(
-            OperationalContextDtos.OperationalContextRepositorySearchWorkflowHints hints,
-            List<String> repositoryWorkflowDefinitionPaths
-    ) {
-        return new WorkflowHints(
-                hints.jobNames(),
-                hints.workflowNames(),
-                distinct(hints.definitionPaths(), repositoryWorkflowDefinitionPaths)
-        );
-    }
-
-    private TraversalView traversal(OperationalContextRepositorySearchScope scope) {
-        var traversal = scope.traversal();
-        return new TraversalView(
-                traversal.rules(),
-                traversal.expandWhen()
-        );
-    }
-
-    private SourceLayoutView sourceLayoutView(OperationalContextRepository repository) {
-        var layout = repository.sourceLayout();
-        return new SourceLayoutView(
-                layout.repositoryRoot(),
-                layout.buildTool(),
-                layout.buildFiles(),
-                layout.sourceRoots(),
-                layout.testRoots(),
-                layout.resourceRoots(),
-                layout.modulePaths(),
-                layout.generatedSourcePaths(),
-                layout.importantPaths(),
-                layout.configurationFiles(),
-                layout.deploymentFiles(),
-                layout.databaseMigrationPaths(),
-                layout.workflowDefinitionPaths(),
-                layout.documentationPaths()
         );
     }
 
@@ -455,9 +285,7 @@ public class OperationalContextCodeSearchReadModelBuilder {
             String relationRole
     ) {
         return new SourceRef(
-                REPOSITORY.equals(entityType)
-                        ? "src/main/resources/operational-context/repo-map.yml"
-                        : CODE_SEARCH_SCOPES_FILE,
+                REPOSITORY.equals(entityType) ? REPO_MAP_FILE : CODE_SEARCH_SCOPES_FILE,
                 entityType,
                 entityId,
                 fieldPath,
@@ -482,88 +310,14 @@ public class OperationalContextCodeSearchReadModelBuilder {
         };
     }
 
-    private List<String> modulePackagePrefixes(List<ModuleView> modules) {
-        return modules.stream()
-                .map(module -> module.hints().packagePrefixes())
-                .flatMap(Collection::stream)
-                .toList();
-    }
-
-    private List<String> moduleClassHints(List<ModuleView> modules) {
-        return modules.stream()
-                .map(module -> module.hints().classHints())
-                .flatMap(Collection::stream)
-                .toList();
-    }
-
-    private List<String> distinctDatabases(
-            List<CodeSearchScopeView> scopes,
-            List<RepositoryView> repositories,
-            DatabaseField field
-    ) {
-        return distinctGrouped(
-                scopes.stream().map(scope -> databaseValues(scope.hints().databaseHints(), field)).toList(),
-                repositories.stream().map(repository -> databaseValues(repository.hints().databaseHints(), field)).toList()
-        );
-    }
-
-    private List<String> databaseValues(DatabaseHints hints, DatabaseField field) {
-        return switch (field) {
-            case DATASOURCE_NAMES -> hints.datasourceNames();
-            case HIKARI_POOLS -> hints.hikariPools();
-            case SCHEMAS -> hints.schemas();
-            case TABLES -> hints.tables();
-            case ENTITIES -> hints.entities();
-            case MIGRATIONS -> hints.migrations();
-        };
-    }
-
-    private List<String> distinctWorkflows(
-            List<CodeSearchScopeView> scopes,
-            List<RepositoryView> repositories,
-            WorkflowField field
-    ) {
-        return distinctGrouped(
-                scopes.stream().map(scope -> workflowValues(scope.hints().workflowHints(), field)).toList(),
-                repositories.stream().map(repository -> workflowValues(repository.hints().workflowHints(), field)).toList()
-        );
-    }
-
-    private List<String> workflowValues(WorkflowHints hints, WorkflowField field) {
-        return switch (field) {
-            case JOB_NAMES -> hints.jobNames();
-            case WORKFLOW_NAMES -> hints.workflowNames();
-            case DEFINITION_PATHS -> hints.definitionPaths();
-        };
-    }
-
-    @SafeVarargs
-    private final List<String> distinct(List<String>... values) {
-        var result = new LinkedHashSet<String>();
-        for (var current : values) {
-            result.addAll(textList(current));
-        }
-        return List.copyOf(result);
-    }
-
-    @SafeVarargs
-    private final List<String> distinctGrouped(List<List<String>>... groupedValues) {
-        var result = new LinkedHashSet<String>();
-        for (var group : groupedValues) {
-            for (var values : group) {
-                result.addAll(textList(values));
-            }
-        }
-        return List.copyOf(result);
-    }
-
-    private List<String> textList(List<String> values) {
+    private List<String> distinct(List<String> values) {
         if (values == null || values.isEmpty()) {
             return List.of();
         }
         return values.stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
+                .distinct()
                 .toList();
     }
 
@@ -573,20 +327,5 @@ public class OperationalContextCodeSearchReadModelBuilder {
             result.putIfAbsent(finding.code() + "|" + finding.message(), finding);
         }
         return List.copyOf(result.values());
-    }
-
-    private enum DatabaseField {
-        DATASOURCE_NAMES,
-        HIKARI_POOLS,
-        SCHEMAS,
-        TABLES,
-        ENTITIES,
-        MIGRATIONS
-    }
-
-    private enum WorkflowField {
-        JOB_NAMES,
-        WORKFLOW_NAMES,
-        DEFINITION_PATHS
     }
 }

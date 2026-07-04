@@ -262,20 +262,21 @@ Uzywaj operational context do zawezania GitLab exploration:
 - traktuj `codeSearchScope.target.type/id` jako powod, dla ktorego repository
   set nalezy czytac razem,
 - przekaz wszystkie istotne `projectName` ze scope do GitLab search/flow tools,
-- zaczynaj od repozytoriow `primary-implementation` albo priority `1`,
-- przechodz do supporting libraries, generated clients, integration adapters,
-  legacy modules albo collaborator repositories tylko wtedy, gdy evidence albo
-  `traversal.expandWhen` to uzasadnia,
-- uzywaj package prefixes, class hints, endpoint hints i queue/topic hints jako
-  focused search terms.
+- zaczynaj od repozytoriow `primary` albo priority `1`,
+- przechodz do supporting repositories tylko wtedy, gdy evidence, `reason`
+  albo `readFor` wskazuja, ze dane repozytorium nalezy czytac razem z glownym
+  targetem,
+- uzywaj `reason`, `readFor`, nazw systemow/procesow/bounded contextow oraz
+  evidence incydentu do wyboru nastepnego GitLab tool call; nie traktuj
+  operational context jako zrodla package/class/endpoint/topic inventory.
 
 Nie uznawaj kodu za niedostepny po jednym repository lookup, gdy operational
 context listuje szerszy code-search scope.
 
 ## Targetowanie DB
 
-Operational context moze pomoc wybrac application, deployment, system,
-repository albo DB hint dla DB tools.
+Operational context moze pomoc wybrac system, repository, process albo bounded
+context istotny dla DB tools.
 
 Nie dowodzi data issue. Dla JPA, repository albo data-access symptoms nadal
 najpierw ugruntuj entity/repository/table hints z deterministic GitLab evidence

@@ -73,14 +73,16 @@ class OperationalContextEvidenceProviderTest {
         assertTrue(view.systems().get(0).codeSearchRepositoryRoles().contains(
                 "app-core-code-search:app-shared-lib-repo:supporting-library:priority=2"
         ));
-        assertTrue(view.systems().get(0).sourcePackages().contains("com.example.shared"));
-        assertTrue(view.systems().get(0).classHints().contains("SharedPredicate"));
+        assertTrue(view.systems().get(0).codeSearchRepositoryReasons().contains(
+                "app-core-code-search:app-shared-lib-repo:Shared domain predicates are used by app-core."
+        ));
         assertEquals("app-core-to-partner-sync", view.integrations().get(0).integrationId());
+        assertEquals("synchronous-request", view.integrations().get(0).integrationStyle());
         assertEquals("main-process", view.processes().get(0).processId());
         assertEquals("app-core-repo", view.repositories().get(0).repositoryId());
         assertTrue(view.repositories().stream()
                 .anyMatch(repository -> repository.repositoryId().equals("app-shared-lib-repo")
-                        && repository.sourcePackages().contains("com.example.shared")));
+                        && repository.systemIds().contains("app-core")));
         assertEquals("core-context", view.boundedContexts().get(0).boundedContextId());
         assertEquals("core-team", view.teams().get(0).teamId());
         assertEquals("soap-fault", view.glossaryTerms().get(0).termId());

@@ -43,7 +43,7 @@ Przyjmij od orkiestratora:
 - aktywne klasy bledu i hipotezy,
 - evidence gaps z manifestu,
 - znane repozytoria, code-search scopes, klasy, metody, endpointy albo
-  package hints.
+  inne sygnaly kodu z evidence.
 
 Jezeli brakuje tych danych, wykonaj tylko minimalne code search potrzebne do
 ich uzyskania albo wroc do orkiestratora z prosba o doprecyzowanie flow.
@@ -219,18 +219,18 @@ wiecej niz jeden GitLab project. Operational context moze podac
 
 - glowne repozytorium serwisu,
 - biblioteki wewnetrzne,
-- shared domain modules,
-- generated clients albo integration libraries,
-- supporting modules pakowane do glownej implementacji albo przez nia wolane.
+- shared domain repositories,
+- integration libraries,
+- supporting repositories czytane razem z glownym targetem.
 
 Gdy operational context podaje `codeSearchScopeIds`, `codeSearchRepoIds`,
-`codeSearchProjects`, repository `project`, package roots albo class hints dla
-dopasowanego targetu, traktuj cala liste jako jeden implementation search
-scope.
+`codeSearchProjects`, repository `project`, repository roles albo repository
+reasons dla dopasowanego targetu, traktuj cala liste jako jeden implementation
+search scope.
 
-Jesli sa `codeSearchRepositoryRoles`, zaczynaj od `primary-implementation` albo
-priority `1`, a potem przechodz przez supporting libraries, generated clients,
-integration adapters, legacy modules albo collaborators wedlug priorytetu.
+Jesli sa `codeSearchRepositoryRoles`, zaczynaj od `primary` albo priority `1`,
+a potem przechodz przez supporting repositories wedlug priorytetu, `reason`
+albo `readFor`.
 
 Jesli ugruntowana klasa, entity, DTO, mapper, client albo repository nie zostala
 znaleziona w glownym repozytorium, nie uznawaj kodu za niedostepny po jednym
@@ -247,15 +247,16 @@ Uzyj tego szczegolnie, gdy:
 - DB grounding zalezy od entity/repository w bibliotece.
 
 Trzymaj search ograniczony: przeszukaj wskazane repozytoria konkretnymi
-class/package/method hints, przeczytaj najlepszy outline/chunk i zatrzymaj sie,
-gdy nie ma uzytecznego kodu biblioteki.
+className, method, filePath, endpoint albo error clues z evidence incydentu lub
+GitLab tool results, przeczytaj najlepszy outline/chunk i zatrzymaj sie, gdy
+nie ma uzytecznego kodu biblioteki.
 
 ## Katalog Dostepnych Repozytoriow
 
 Uzyj `gitlab_list_available_repositories`, gdy istotne repozytorium nie jest
 ugruntowane przez logs, deterministic evidence albo code references, ale
-incydent zawiera luzne clues o repozytorium, komponencie, module, package,
-endpointcie, integracji, systemie, bounded context albo procesie.
+incydent zawiera luzne clues o repozytorium, komponencie, integracji, systemie,
+bounded context albo procesie.
 
 Tool czyta katalog repozytoriow z operational context dla backendowo
 rozstrzygnietej GitLab group. Nie przeszukuje kodu i nie zmienia branch.
@@ -272,11 +273,9 @@ scope razem do search/flow/class-reference tools.
 Dopasowuj incident clues do:
 
 - repository `name`, `aliases`, `projectName`, `gitLabPath`,
-- `systems`, `runtimeComponents`, `boundedContexts`, `processes`,
-  `integrations`,
-- `packagePrefixes`, `endpointPrefixes`, `modulePaths`,
-- `codeSearchScopes[].target.type/id`, repository roles, package prefixes,
-  class hints i traversal guidance.
+- `systems`, `boundedContexts`, `processes`, `integrations`,
+- `codeSearchScopes[].target.type/id`, repository roles, priority, `reason`
+  i `readFor`.
 
 Preferuj jeden catalog call na poczatku cross-repository investigation. Nie
 powtarzaj go, chyba ze nowe evidence wskazuje inna rodzine repozytoriow.

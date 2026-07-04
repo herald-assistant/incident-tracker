@@ -25,16 +25,12 @@ class OperationalContextCodeSearchReadModelBuilderTest {
         assertEquals("crm-customer-service-scope", model.scopes().get(0).scope().id());
         assertEquals(2, model.repositories().size());
         assertEquals("crm-customer-service-repo", model.repositories().get(0).repository().id());
-        assertEquals("primary-implementation", model.repositories().get(0).role());
-        assertEquals("CRM/runtime/crm-customer-service-repo", model.repositories().get(0).git().projectPath());
-        assertTrue(model.repositories().get(0).modules().stream()
-                .anyMatch(module -> module.id().equals("customer-module")));
-        assertTrue(model.aggregatedHints().packagePrefixes().contains("com.example.crm.customer"));
-        assertTrue(model.aggregatedHints().classHints().contains("CustomerController"));
-        assertTrue(model.aggregatedHints().endpointHints().contains("/crm/customers"));
-        assertTrue(model.aggregatedHints().databaseHints().tables().contains("CUSTOMER_PROFILE"));
-        assertTrue(model.aggregatedHints().databaseHints().migrations().contains("src/main/resources/db/changelog/customer"));
-        assertTrue(model.aggregatedHints().workflowHints().definitionPaths().contains("flows/customer-support.bpmn"));
+        assertEquals("primary", model.repositories().get(0).role());
+        assertEquals("Main repository", model.repositories().get(0).reason());
+        assertTrue(model.scopes().get(0).repositories().stream()
+                .anyMatch(repository -> repository.id().equals("crm-customer-service-repo")));
+        assertEquals("CRM/customer-platform/crm-customer-service-repo", model.repositories().get(0).git().projectPath());
+        assertTrue(model.limitations().contains("Generated clients not included"));
         assertTrue(model.validationFindings().isEmpty());
     }
 
@@ -67,7 +63,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         "target", map("type", "process", "id", "customer-support-process"),
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
-                                "role", "primary-implementation",
+                                "role", "primary",
                                 "priority", 1
                         ))
                 )),
@@ -129,7 +125,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(map(
                                 "repoId", "missing-repo",
-                                "role", "primary-implementation"
+                                "role", "primary"
                         ))
                 )),
                 List.of(),
@@ -163,41 +159,17 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                                 "name", "CRM Customer Service Repository",
                                 "git", map(
                                         "provider", "gitlab",
-                                        "group", "CRM/runtime",
+                                        "group", "CRM/customer-platform",
                                         "project", "crm-customer-service-repo",
-                                        "projectPath", "CRM/runtime/crm-customer-service-repo",
+                                        "projectPath", "CRM/customer-platform/crm-customer-service-repo",
                                         "defaultBranch", "main"
                                 ),
-                                "references", map("systems", List.of("crm-customer-service")),
-                                "sourceLayout", map(
-                                        "buildTool", "maven",
-                                        "sourceRoots", List.of("src/main/java"),
-                                        "resourceRoots", List.of("src/main/resources"),
-                                        "databaseMigrationPaths", List.of("src/main/resources/db/changelog/customer"),
-                                        "workflowDefinitionPaths", List.of("flows/customer-support.bpmn")
-                                ),
-                                "packagePrefixes", List.of("com.example.crm.customer"),
-                                "classHints", List.of("CustomerService"),
-                                "endpointHints", List.of("/crm/customers"),
-                                "modules", List.of(map(
-                                        "id", "customer-module",
-                                        "name", "Customer Module",
-                                        "source", map(
-                                                "paths", List.of("customer-module/src/main/java"),
-                                                "packages", List.of("com.example.crm.customer.module")
-                                        ),
-                                        "matchSignals", map("strong", map(
-                                                "packagePrefixes", List.of("com.example.crm.customer.module"),
-                                                "classHints", List.of("CustomerController")
-                                        ))
-                                ))
+                                "references", map("systems", List.of("crm-customer-service"))
                         ),
                         map(
                                 "id", "crm-customer-shared-repo",
                                 "name", "CRM Customer Shared Repository",
-                                "git", map("projectPath", "CRM/runtime/crm-customer-shared"),
-                                "packagePrefixes", List.of("com.example.crm.shared"),
-                                "classHints", List.of("CustomerLookupClient")
+                                "git", map("projectPath", "CRM/customer-platform/crm-customer-shared")
                         )
                 ),
                 List.of(map(
@@ -207,10 +179,9 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         "repositories", List.of(
                                 map(
                                         "repoId", "crm-customer-service-repo",
-                                        "role", "primary-implementation",
+                                        "role", "primary",
                                         "priority", 1,
-                                        "moduleIds", List.of("customer-module"),
-                                        "reason", "Main implementation"
+                                        "reason", "Main repository"
                                 ),
                                 map(
                                         "repoId", "crm-customer-shared-repo",
@@ -219,24 +190,6 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                                         "reason", "Shared customer library"
                                 )
                         ),
-                        "hints", map(
-                                "packagePrefixes", List.of("com.example.scope"),
-                                "classHints", List.of("ScopeEntryPoint"),
-                                "endpointHints", List.of("/scope"),
-                                "queueTopicHints", List.of("crm.customer-profile.events"),
-                                "database", map(
-                                        "schemas", List.of("CRM_SCHEMA"),
-                                        "tables", List.of("CUSTOMER_PROFILE"),
-                                        "entities", List.of("CustomerProfileEntity")
-                                ),
-                                "workflow", map(
-                                        "workflowNames", List.of("CustomerSupportFlow")
-                                )
-                        ),
-                        "traversal", map(
-                                "rules", List.of("Read crm-customer-service-repo before crm-customer-shared-repo."),
-                                "expandWhen", List.of("Expand to crm-customer-shared-repo when shared customer rules are referenced.")
-                        ),
                         "limitations", List.of("Generated clients not included")
                 ), map(
                         "id", "customer-profile-context-scope",
@@ -244,12 +197,9 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         "target", map("type", "bounded-context", "id", "customer-profile-context"),
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
-                                "role", "primary-implementation",
+                                "role", "primary",
                                 "priority", 1
-                        )),
-                        "hints", map(
-                                "packagePrefixes", List.of("com.example.crm.customer")
-                        )
+                        ))
                 )),
                 List.of(map(
                         "id", "customer-profile-context",

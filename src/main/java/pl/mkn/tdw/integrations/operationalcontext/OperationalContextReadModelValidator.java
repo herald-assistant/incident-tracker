@@ -619,14 +619,13 @@ public class OperationalContextReadModelValidator {
         }
 
         var hasPrimaryRepository = includedRepositories.stream()
-                .anyMatch(repository -> "primary-implementation".equalsIgnoreCase(text(repository.role()))
-                        || "primary".equalsIgnoreCase(text(repository.role()))
+                .anyMatch(repository -> "primary".equalsIgnoreCase(text(repository.role()))
                         || Integer.valueOf(1).equals(repository.priority()));
         if (!includedRepositories.isEmpty() && !hasPrimaryRepository) {
             findings.add(new ValidationFinding(
                     "warning",
                     "CODE_SEARCH_SCOPE_WITHOUT_PRIMARY_REPOSITORY",
-                    "Code-search scope " + scope.id() + " has repositories but no primary implementation or priority 1 repository.",
+                    "Code-search scope " + scope.id() + " has repositories but no primary repository or priority 1 repository.",
                     List.of(scopeRef(scope, "repositories", "primary-repository"))
             ));
         }

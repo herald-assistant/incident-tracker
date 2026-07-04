@@ -1,48 +1,97 @@
 # repo-map.yml update prompt
 
-You maintain `src/main/resources/operational-context/repo-map.yml`.
-
-Return only the complete updated `repo-map.yml` content.
-
 ## Purpose
 
-`repo-map.yml` is the repository inventory. It answers: "what Git repositories,
-modules and source layouts exist, and what catalog entities do they generally
-relate to?"
+Update `repo-map.yml` as the catalog of GitLab projects and their business
+meaning. A repository entry should help an analyst or AI tool choose the right
+project to inspect after a system, process, bounded context, or integration has
+been identified.
 
-Semantic multi-repository implementation search scopes are not stored here.
-Maintain them in `code-search-scopes.yml`.
+Keep repository entries semantic and navigational. Do not describe internal file
+organization or low-level code clues here.
 
-## Top-level contract
+## YAML shape
 
 ```yaml
-schemaVersion: 1
-catalogKind: operational-context-repository-map
-repositories: []
-gaps: []
+repositories:
+  - id: customer-portal-ui
+    name: Customer Portal UI
+    shortName: Portal UI
+    repositoryType: frontend
+    lifecycleStatus: active
+    criticality: high
+    summary: User interface for customer request handling.
+    purpose: Primary project to inspect when the question concerns portal screens and user-facing behavior.
+    aliases:
+      - portal-ui
+      - customer portal frontend
+    useFor:
+      - Inspect portal-facing behavior after the system or process is identified.
+      - Confirm visible labels and user journey assumptions.
+    git:
+      provider: gitlab
+      group: business-platform
+      project: customer-portal-ui
+      projectPath: business-platform/customer-portal-ui
+      defaultBranch: main
+      url: https://gitlab.example.com/business-platform/customer-portal-ui
+      aliases:
+        - customer-portal
+      inferred: false
+    references:
+      systems:
+        - customer-portal
+      processes:
+        - customer-request-handling
+      boundedContexts:
+        - customer-requests
+      integrations:
+        - portal-to-case-management
+      teams:
+        - customer-experience-team
+      handoffRules:
+        - route-customer-request-issues
+    responsibilities:
+      - teamId: customer-experience-team
+        targetType: repository
+        targetId: customer-portal-ui
+        role: maintainer
+        scope: product behavior and review
+        status: current
+        confidence: high
+        evidence: repository ownership notes
+        source: repo-map.yml
+    matchSignals:
+      exact:
+        projects:
+          - customer-portal-ui
+      strong:
+        terms:
+          - portal UI
+      weak:
+        phrases:
+          - customer request screen
+    handoffHints:
+      defaultRouteLabel: Customer Experience maintainers
+      firstResponderTeamIds:
+        - customer-experience-team
+      requiredEvidence:
+        - affected journey or screen name
+      expectedFirstActions:
+        - Check whether the change belongs in this project or in a related service.
+    relations:
+      - type: supports
+        targetType: system
+        target: customer-portal
+        evidence: primary user-facing project for the system
 ```
 
-## repositories[]
+## Update rules
 
-Use `repositories[]` for stable facts about one Git repository:
-
-- Git coordinates and default branch,
-- repository type, lifecycle and short summary,
-- catalog references owned by the repository model,
-- source layout, build files, modules and important paths,
-- repository/package/class/endpoint/queue hints that are true for the repository,
-- module-level hints when a monorepo or modular monolith needs narrowing.
-
-Do not add `codeSearchScopes`, scope `target`, traversal policy or repository
-read-order guidance here. Do not duplicate process flow, integration
-participants, bounded-context definitions or team ownership when another catalog
-file owns that fact.
-
-## Validation
-
-- Every repository `id` must be stable kebab-case.
-- Every `references.*` id must exist in the matching catalog file when known.
-- Every `modules[].id` must be stable because `code-search-scopes.yml` may
-  reference it through `repositories[].moduleIds`.
-- If evidence is uncertain, add a durable `gaps[]` item instead of inventing a
-  stable repository/module fact.
+- Treat `git.projectPath` as the GitLab link; keep the rest business-readable.
+- Use `references` to connect a repository with systems, processes, bounded
+  contexts, integrations, teams and handoff rules.
+- Add aliases only when they help resolve a real user or tool signal.
+- Leave code reading order to `code-search-scopes.yml`.
+- If a repository is unclear, keep the entry small and add a validation finding
+  or open question outside this prompt.

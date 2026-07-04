@@ -14,20 +14,15 @@ systems:
       - teamId: core-team
         role: first-responder
     matchSignals:
-      exact:
-        serviceNames: [app-core]
-        containerNames: [app-core]
       strong:
         projectNames: [app-core-repo, app-shared-lib]
-        packagePrefixes: [com.example.app, com.example.shared]
-        endpointPrefixes: [/api/resources]
         spans: [SyncGateway.call]
         markers: [APP_CORE]
     handoffHints:
       defaultRouteLabel: core-team
       firstResponderTeamIds: [core-team]
       partnerTeamIds: [integration-team]
-      requiredEvidence: [correlationId, environment, serviceName, className, endpoint, exception]
+      requiredEvidence: [correlationId, environment, businessImpact, exception]
 
   - id: partner-service
     name: Partner Service
@@ -39,7 +34,6 @@ systems:
       teams: [integration-team]
     matchSignals:
       exact:
-        endpointPrefixes: [/partner/resource]
         hosts: [api.partner.local]
       strong:
         markers: [PARTNER]
@@ -47,6 +41,6 @@ systems:
       defaultRouteLabel: integration-team
       firstResponderTeamIds: [integration-team]
       partnerTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+      requiredEvidence: [correlationId, environment, host, exception]
 
 gaps: []

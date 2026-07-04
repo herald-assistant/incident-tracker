@@ -43,20 +43,19 @@ public record OperationalContextEvidenceView(
     static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS = "codeSearchRepositoryIds";
     static final String ATTRIBUTE_CODE_SEARCH_PROJECTS = "codeSearchProjects";
     static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES = "codeSearchRepositoryRoles";
+    static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_REASONS = "codeSearchRepositoryReasons";
     static final String ATTRIBUTE_MATCHED_BY = "matchedBy";
     static final String ATTRIBUTE_SOURCE_SYSTEM = "sourceSystem";
     static final String ATTRIBUTE_TARGET_SYSTEMS = "targetSystems";
-    static final String ATTRIBUTE_PROTOCOLS = "protocols";
+    static final String ATTRIBUTE_INTEGRATION_CATEGORY = "category";
+    static final String ATTRIBUTE_INTEGRATION_STYLE = "integrationStyle";
+    static final String ATTRIBUTE_FLOW_DIRECTION = "flowDirection";
     static final String ATTRIBUTE_HANDOFF_TARGET = "handoffTarget";
     static final String ATTRIBUTE_SYSTEM_IDS = "systemIds";
     static final String ATTRIBUTE_EXTERNAL_SYSTEM_IDS = "externalSystemIds";
     static final String ATTRIBUTE_COMPLETION_SIGNALS = "completionSignals";
     static final String ATTRIBUTE_PROJECT_PATH = "projectPath";
     static final String ATTRIBUTE_GROUP = "group";
-    static final String ATTRIBUTE_MODULE_IDS = "moduleIds";
-    static final String ATTRIBUTE_SOURCE_PATHS = "sourcePaths";
-    static final String ATTRIBUTE_SOURCE_PACKAGES = "sourcePackages";
-    static final String ATTRIBUTE_CLASS_HINTS = "classHints";
     static final String ATTRIBUTE_TERMS = "terms";
     static final String ATTRIBUTE_INTEGRATION_IDS = "integrationIds";
     static final String ATTRIBUTE_DEFINITION = "definition";
@@ -122,8 +121,7 @@ public record OperationalContextEvidenceView(
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_PROJECTS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_PACKAGES)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CLASS_HINTS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_REASONS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
                 ));
                 continue;
@@ -139,7 +137,9 @@ public record OperationalContextEvidenceView(
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_TEAM_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_TEAM_IDS)),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_EXTERNAL_OWNER),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROTOCOLS)),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_INTEGRATION_CATEGORY),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_INTEGRATION_STYLE),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_FLOW_DIRECTION),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_HANDOFF_TARGET),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
                 ));
@@ -171,10 +171,6 @@ public record OperationalContextEvidenceView(
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SYSTEM_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CONTEXT_IDS)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MODULE_IDS)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_PATHS)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_PACKAGES)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CLASS_HINTS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
                 ));
                 continue;
@@ -310,8 +306,7 @@ public record OperationalContextEvidenceView(
             List<String> codeSearchRepositoryIds,
             List<String> codeSearchProjects,
             List<String> codeSearchRepositoryRoles,
-            List<String> sourcePackages,
-            List<String> classHints,
+            List<String> codeSearchRepositoryReasons,
             List<String> matchedBy
     ) {
         public SystemItem {
@@ -324,8 +319,7 @@ public record OperationalContextEvidenceView(
             codeSearchRepositoryIds = immutable(codeSearchRepositoryIds);
             codeSearchProjects = immutable(codeSearchProjects);
             codeSearchRepositoryRoles = immutable(codeSearchRepositoryRoles);
-            sourcePackages = immutable(sourcePackages);
-            classHints = immutable(classHints);
+            codeSearchRepositoryReasons = immutable(codeSearchRepositoryReasons);
             matchedBy = immutable(matchedBy);
         }
     }
@@ -339,7 +333,9 @@ public record OperationalContextEvidenceView(
             List<String> ownerTeamIds,
             List<String> partnerTeamIds,
             String externalOwner,
-            List<String> protocols,
+            String category,
+            String integrationStyle,
+            String flowDirection,
             String handoffTarget,
             List<String> matchedBy
     ) {
@@ -347,7 +343,6 @@ public record OperationalContextEvidenceView(
             targetSystems = immutable(targetSystems);
             ownerTeamIds = immutable(ownerTeamIds);
             partnerTeamIds = immutable(partnerTeamIds);
-            protocols = immutable(protocols);
             matchedBy = immutable(matchedBy);
         }
     }
@@ -382,10 +377,6 @@ public record OperationalContextEvidenceView(
             List<String> systemIds,
             List<String> processIds,
             List<String> contextIds,
-            List<String> moduleIds,
-            List<String> sourcePaths,
-            List<String> sourcePackages,
-            List<String> classHints,
             List<String> matchedBy
     ) {
         public RepositoryItem {
@@ -393,10 +384,6 @@ public record OperationalContextEvidenceView(
             systemIds = immutable(systemIds);
             processIds = immutable(processIds);
             contextIds = immutable(contextIds);
-            moduleIds = immutable(moduleIds);
-            sourcePaths = immutable(sourcePaths);
-            sourcePackages = immutable(sourcePackages);
-            classHints = immutable(classHints);
             matchedBy = immutable(matchedBy);
         }
     }

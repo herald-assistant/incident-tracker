@@ -37,9 +37,8 @@ class CopilotIncidentDigestServiceTest {
         assertTrue(digest.contains("## Operational code search scope"));
         assertTrue(digest.contains("- code search scopes: `catalog-code-search`"));
         assertTrue(digest.contains("- GitLab projects to search as one semantic implementation scope: `crm-catalog-service`, `libs/catalog-shared`"));
-        assertTrue(digest.contains("- code search repository roles: `catalog-code-search:crm-catalog-service-repo:primary-implementation:priority=1`, `catalog-code-search:catalog-shared-repo:supporting-library:priority=2`"));
-        assertTrue(digest.contains("- package roots: `com.example.catalog.shared`"));
-        assertTrue(digest.contains("- class hints: `CatalogRules`"));
+        assertTrue(digest.contains("- code search repository roles: `catalog-code-search:crm-catalog-service-repo:primary:priority=1`, `catalog-code-search:catalog-shared-repo:supporting-library:priority=2`"));
+        assertTrue(digest.contains("- code search repository reasons: `catalog-code-search:crm-catalog-service-repo:Main catalog service repository.`, `catalog-code-search:catalog-shared-repo:Shared catalog rules.`"));
         assertTrue(digest.contains("## Runtime signals"));
         assertTrue(digest.contains("- Dynatrace collection status: `COLLECTED`"));
         assertTrue(digest.contains("- matched services: `crm-catalog-service`"));
@@ -147,17 +146,14 @@ class CopilotIncidentDigestServiceTest {
                                                 attr("codeSearchScopeIds", "catalog-code-search"),
                                                 attr("codeSearchRepositoryIds", "crm-catalog-service-repo; catalog-shared-repo"),
                                                 attr("codeSearchProjects", "crm-catalog-service; libs/catalog-shared"),
-                                                attr("codeSearchRepositoryRoles", "catalog-code-search:crm-catalog-service-repo:primary-implementation:priority=1; catalog-code-search:catalog-shared-repo:supporting-library:priority=2"),
-                                                attr("sourcePackages", "com.example.catalog.shared"),
-                                                attr("classHints", "CatalogRules")
+                                                attr("codeSearchRepositoryRoles", "catalog-code-search:crm-catalog-service-repo:primary:priority=1; catalog-code-search:catalog-shared-repo:supporting-library:priority=2"),
+                                                attr("codeSearchRepositoryReasons", "catalog-code-search:crm-catalog-service-repo:Main catalog service repository.; catalog-code-search:catalog-shared-repo:Shared catalog rules.")
                                         ),
                                         item(
                                                 "Operational repository catalog-shared-repo",
                                                 attr("repositoryId", "catalog-shared-repo"),
                                                 attr("projectPath", "libs/catalog-shared"),
-                                                attr("systemIds", "catalog"),
-                                                attr("sourcePackages", "com.example.catalog.shared"),
-                                                attr("classHints", "CatalogRules")
+                                                attr("systemIds", "catalog")
                                         )
                                 )
                         )

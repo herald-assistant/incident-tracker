@@ -44,3 +44,4 @@ Weak:
 **Status:** `open`
 
 **Summary:** Confirm whether SOAP fault terminology needs separate domain-specific subtypes.
+

@@ -17,8 +17,6 @@ boundedContexts:
         role: context-owner
     matchSignals:
       strong:
-        packagePrefixes: [com.example.app]
-        endpointPrefixes: [/api/resources]
         markers: [APP_CORE]
     relations:
       - target: partner-context
@@ -37,3 +35,4 @@ gaps:
     entityType: bounded-context
     entityId: core-context
     description: Confirm whether Core Context should include shared library semantics.
+

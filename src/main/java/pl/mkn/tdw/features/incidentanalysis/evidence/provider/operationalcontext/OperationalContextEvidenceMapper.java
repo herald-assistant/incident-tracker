@@ -74,12 +74,6 @@ public class OperationalContextEvidenceMapper {
             var repoIds = systemRepositoryIds(system);
             var codeSearch = resolveCodeSearchSelection(catalog, system, repoIds);
             var codeSearchRepositories = codeSearch.repositories();
-            var sourcePackages = new ArrayList<String>();
-            sourcePackages.addAll(repositoryPackages(codeSearchRepositories));
-            sourcePackages.addAll(codeSearch.packagePrefixes());
-            var classHints = new ArrayList<String>();
-            classHints.addAll(repositoryClassHints(codeSearchRepositories));
-            classHints.addAll(codeSearch.classHints());
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_ID, systemId);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(system.name(), system.shortName()));
@@ -93,8 +87,7 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_IDS, joined(repositoryIds(codeSearchRepositories)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_PROJECTS, joined(repositoryProjects(codeSearchRepositories)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES, joined(codeSearch.repositoryRoles()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_PACKAGES, joined(limit(deduplicate(sourcePackages), 10)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CLASS_HINTS, joined(limit(deduplicate(classHints), 10)));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_REASONS, joined(codeSearch.repositoryReasons()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational system " + firstNonBlank(system.id(), system.name()),
@@ -117,7 +110,9 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(integration)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(integration.handoffHints().partnerTeamIds()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_OWNER, integrationExternalOwner(integration));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROTOCOLS, joined(integration.transport().protocols()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_CATEGORY, integration.category());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_STYLE, integration.integrationStyle());
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_FLOW_DIRECTION, integration.flowDirection());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_HANDOFF_TARGET, integration.handoffHints().defaultRouteLabel());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
@@ -163,10 +158,6 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(repository.references().systems()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(repository.references().processes()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(repository.references().boundedContexts()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MODULE_IDS, joined(moduleIds(repository)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_PATHS, joined(limit(repositoryPaths(List.of(repository)), 10)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_PACKAGES, joined(limit(repositoryPackages(List.of(repository)), 10)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CLASS_HINTS, joined(limit(repositoryClassHints(List.of(repository)), 10)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational repository " + firstNonBlank(repository.id(), repository.git().projectPath(), repository.name()),
@@ -259,13 +250,6 @@ public class OperationalContextEvidenceMapper {
         }
     }
 
-    private List<String> moduleIds(OperationalContextRepository repository) {
-        return repository.modules().stream()
-                .map(module -> firstNonBlank(module.moduleId(), module.id()))
-                .filter(StringUtils::hasText)
-                .toList();
-    }
-
     private List<String> systemRepositoryIds(OperationalContextSystem system) {
         return system.references().repositories();
     }
@@ -284,21 +268,19 @@ public class OperationalContextEvidenceMapper {
         var selectedIds = new LinkedHashSet<String>();
         var scopeIds = new ArrayList<String>();
         var repositoryRoles = new ArrayList<String>();
-        var packagePrefixes = new ArrayList<String>();
-        var classHints = new ArrayList<String>();
+        var repositoryReasons = new ArrayList<String>();
         var seedRepoIds = new ArrayList<String>();
         seedRepoIds.addAll(repoIds);
         var matchedScopes = matchingCodeSearchScopes(catalog, system, seedRepoIds);
 
         for (var scope : matchedScopes) {
             scopeIds.add(scope.id());
-            packagePrefixes.addAll(scope.packagePrefixes());
-            classHints.addAll(scope.classHints());
             for (var scopeRepository : sortedIncludedScopeRepositories(scope)) {
                 findRepository(repositories, scopeRepository.repoId())
                         .ifPresent(repository -> {
                             addRepository(selected, selectedIds, repository);
                             repositoryRoles.add(scopeRepositoryRole(scope, scopeRepository));
+                            repositoryReasons.add(scopeRepositoryReason(scope, scopeRepository));
                         });
             }
         }
@@ -320,8 +302,7 @@ public class OperationalContextEvidenceMapper {
                 selected,
                 deduplicate(scopeIds),
                 deduplicate(repositoryRoles),
-                deduplicate(packagePrefixes),
-                deduplicate(classHints)
+                deduplicate(repositoryReasons)
         );
     }
 
@@ -366,7 +347,7 @@ public class OperationalContextEvidenceMapper {
     private List<String> primaryScopeRepositoryIds(OperationalContextRepositorySearchScope scope) {
         var primaryIds = scope.repositories().stream()
                 .filter(repository -> "primary".equalsIgnoreCase(firstNonBlank(repository.role(), ""))
-                        || "primary-implementation".equalsIgnoreCase(firstNonBlank(repository.role(), "")))
+                        || Integer.valueOf(1).equals(repository.priority()))
                 .map(OperationalContextRepositorySearchRepository::repoId)
                 .toList();
         if (!primaryIds.isEmpty()) {
@@ -402,6 +383,16 @@ public class OperationalContextEvidenceMapper {
         return String.join(":", values.stream().filter(StringUtils::hasText).toList());
     }
 
+    private String scopeRepositoryReason(
+            OperationalContextRepositorySearchScope scope,
+            OperationalContextRepositorySearchRepository repository
+    ) {
+        var reason = firstNonBlank(repository.reason(), String.join(", ", repository.readFor()));
+        return StringUtils.hasText(reason)
+                ? scope.id() + ":" + repository.repoId() + ":" + reason
+                : null;
+    }
+
     private void addRepository(
             List<OperationalContextRepository> repositories,
             LinkedHashSet<String> selectedIds,
@@ -426,37 +417,6 @@ public class OperationalContextEvidenceMapper {
             values.add(repository.git().projectPath());
             values.add(repository.git().project());
             values.add(repository.id());
-        }
-        return deduplicate(values);
-    }
-
-    private List<String> repositoryPaths(List<OperationalContextRepository> repositories) {
-        var values = new ArrayList<String>();
-        for (var repository : repositories) {
-            values.addAll(repository.sourceLayout().sourceRoots());
-            values.addAll(repository.sourceLayout().modulePaths());
-            values.addAll(repository.sourceLayout().importantPaths());
-            for (var module : repository.modules()) {
-                values.addAll(module.sourceRoots());
-                values.addAll(module.importantPaths());
-                values.addAll(module.matchSignals().valuesForKeys("paths", "pathHints"));
-            }
-        }
-        return deduplicate(values);
-    }
-
-    private List<String> repositoryPackages(List<OperationalContextRepository> repositories) {
-        var values = new ArrayList<String>();
-        for (var repository : repositories) {
-            values.addAll(repository.packagePrefixSignals());
-        }
-        return deduplicate(values);
-    }
-
-    private List<String> repositoryClassHints(List<OperationalContextRepository> repositories) {
-        var values = new ArrayList<String>();
-        for (var repository : repositories) {
-            values.addAll(repository.classHintSignals());
         }
         return deduplicate(values);
     }
@@ -574,20 +534,18 @@ public class OperationalContextEvidenceMapper {
             List<OperationalContextRepository> repositories,
             List<String> scopeIds,
             List<String> repositoryRoles,
-            List<String> packagePrefixes,
-            List<String> classHints
+            List<String> repositoryReasons
     ) {
 
         private CodeSearchSelection {
             repositories = List.copyOf(repositories);
             scopeIds = List.copyOf(scopeIds);
             repositoryRoles = List.copyOf(repositoryRoles);
-            packagePrefixes = List.copyOf(packagePrefixes);
-            classHints = List.copyOf(classHints);
+            repositoryReasons = List.copyOf(repositoryReasons);
         }
 
         private static CodeSearchSelection empty() {
-            return new CodeSearchSelection(List.of(), List.of(), List.of(), List.of(), List.of());
+            return new CodeSearchSelection(List.of(), List.of(), List.of(), List.of());
         }
     }
 

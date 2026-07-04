@@ -117,7 +117,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'name',
       'System',
-      'Kanoniczna nazwa logicznego systemu w indeksie wiedzy. To do tego bytu AI mapuje sygnaly z logow, deploymentu, repozytoriow i integracji, zeby nie mylic runtime service name z rzeczywistym systemem analizowanym.'
+      'Kanoniczna nazwa logicznego systemu w indeksie wiedzy. To do tego bytu AI mapuje sygnaly z katalogu, repozytoriow, procesow i integracji, zeby nie mylic pojedynczego technicznego sygnalu z rzeczywistym systemem analizowanym.'
     ),
     column(
       'kind',
@@ -139,7 +139,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'signals',
       'Signals',
-      'Sygnaly rozpoznania systemu, takie jak service name, container, namespace, endpoint, pakiet, klasa, queue, topic lub alias. To material do szybkiego dopasowania evidence i tool results do wlasciwego systemu.',
+      'Sygnaly rozpoznania systemu, takie jak aliasy, use cases, route hints albo terminy katalogowe. To material do szybkiego dopasowania pytania lub evidence do wlasciwego systemu bez utrzymywania inwentarza technicznego.',
       'aggregate'
     ),
     column(
@@ -159,18 +159,18 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'project',
       'Repository',
-      'Repozytorium lub projekt GitLaba, ktory moze zawierac kod systemu, biblioteki, klientow generowanych albo konfiguracje. AI uzywa tej kolumny do celowanego wyboru projektu w GitLab tools zamiast szerokiego szukania.'
+      'Repozytorium lub projekt GitLaba powiazany z systemem, procesem albo kontekstem. AI uzywa tej kolumny do celowanego wyboru projektu w GitLab tools zamiast szerokiego zgadywania.'
     ),
     column(
       'owner',
       'Owner',
-      'Maintainer lub zespol odpowiedzialny za repozytorium. To nie zawsze jest wlasciciel systemu, dlatego kolumna pomaga odroznic odpowiedzialnosc za kod od odpowiedzialnosci za runtime lub proces.',
+      'Maintainer lub zespol odpowiedzialny za repozytorium. To nie zawsze jest wlasciciel systemu, dlatego kolumna pomaga odroznic odpowiedzialnosc za kod od odpowiedzialnosci za proces albo handoff.',
       'owner'
     ),
     column(
       'systems',
       'Systems',
-      'Systemy, dla ktorych repozytorium jest istotne. Dzieki temu AI wie, czy repo jest glownym kodem systemu, biblioteka wspoldzielona, klientem, konfiguracja deploymentu czy tylko powiazanym artefaktem.',
+      'Systemy, dla ktorych repozytorium jest istotne. Dzieki temu AI wie, z jakim logicznym systemem laczyc projekt podczas dalszej analizy.',
       'aggregate'
     ),
     column(
@@ -180,27 +180,15 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'aggregate'
     ),
     column(
-      'packageRoots',
-      'Package roots',
-      'Prefixy pakietow i katalogi zrodlowe, od ktorych warto zaczynac szukanie kodu. To przyspiesza GitLab exploration i ogranicza ryzyko, ze AI wybierze podobna klase z niewlasciwego modulu.',
+      'processes',
+      'Processes',
+      'Procesy powiazane z repozytorium. Pomagaja przejsc od projektu do use caseu albo flow biznesowego bez utrzymywania szczegolow ukladu kodu.',
       'aggregate'
     ),
     column(
-      'entrypoints',
-      'Entry classes',
-      'Klasy wejsciowe, controllery, listenery, joby lub inne punkty startu przeplywu. Daja AI konkretne miejsca do rozpoczecia analizy flow zamiast przegladania repozytorium od zera.',
-      'aggregate'
-    ),
-    column(
-      'runtimeMappings',
-      'Runtime mappings',
-      'Mapowanie miedzy repozytorium a sygnalami runtime, takimi jak nazwy serwisow, kontenerow, artefaktow lub deploymentow. Pozwala przejsc od bledu w logach do projektu, w ktorym trzeba szukac implementacji.',
-      'aggregate'
-    ),
-    column(
-      'modules',
-      'Modules',
-      'Moduly wewnatrz repozytorium wraz z ich zakresem i sygnalami. Sa wazne, gdy jeden projekt zawiera kilka aplikacji, bibliotek lub adapterow i AI musi zawezic czytanie kodu.',
+      'integrations',
+      'Integrations',
+      'Integracje powiazane z repozytorium. Pomagaja ustalic, czy projekt jest czescia handoffu lub komunikacji miedzy systemami.',
       'aggregate'
     ),
     column(
@@ -212,7 +200,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'codeSearchRoles',
       'Scope roles',
-      'Rola repozytorium w danym scope, na przyklad main service, shared library, generated client albo deployment config. Pomaga AI nadac priorytet odczytom i rozumiec, czego szukac w kazdym projekcie.',
+      'Rola repozytorium w danym scope. Pomaga AI nadac priorytet odczytom i rozumiec, dlaczego projekt nalezy czytac razem z innymi repozytoriami.',
       'aggregate'
     ),
     column(
@@ -232,12 +220,12 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'name',
       'Scope',
-      'Nazwa semantycznego zakresu implementacji. Scope nie jest komponentem runtime, tylko mapa gdzie dany bounded context, proces, system albo integracja jest zaimplementowana.'
+      'Nazwa semantycznego zakresu wyszukiwania kodu. Scope nie jest komponentem uruchomieniowym, tylko mapa, ktore repozytoria czytac razem dla danego systemu, procesu, kontekstu albo integracji.'
     ),
     column(
       'scopeType',
       'Type',
-      'Rodzaj semantycznego zakresu, na przyklad bounded-context, process, system albo integration. Pomaga szybko ocenic, czy scope modeluje granice domeny, flow czy techniczny system.'
+      'Rodzaj semantycznego zakresu, na przyklad bounded-context, process, system albo integration. Pomaga szybko ocenic, jaki byt katalogowy jest targetem wspolnego czytania repozytoriow.'
     ),
     column(
       'lifecycleStatus',
@@ -247,7 +235,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'target',
       'Target',
-      'Pojedynczy kanoniczny target semantyczny, dla ktorego scope wskazuje implementacje. To jest najwazniejszy punkt review po aktualizacji code-search-scopes.yml.',
+      'Pojedynczy kanoniczny target semantyczny, dla ktorego scope wskazuje repozytoria do wspolnego przeszukania.',
       'aggregate'
     ),
     column(
@@ -257,33 +245,9 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'aggregate'
     ),
     column(
-      'packageHints',
-      'Packages',
-      'Prefixy pakietow, ktore zawezaja szukanie klas i implementacji. Przyspieszaja GitLab tools i zmniejszaja szum wynikow przy podobnych nazwach w innych modulach.',
-      'aggregate'
-    ),
-    column(
-      'entryHints',
-      'Entry hints',
-      'Endpointy, klasy, listenery, operacje lub inne wejscia do flow. Dla AI to lista dobrych punktow startowych przy rekonstrukcji requestu, procesu albo funkcji.',
-      'aggregate'
-    ),
-    column(
-      'dataHints',
-      'Data hints',
-      'Wskazowki dotyczace danych: datasource, schema, tabele, encje, migracje lub repozytoria JPA. Pomagaja AI ugruntowac diagnostyke DB w kodzie zanim uzyje narzedzi bazy danych.',
-      'aggregate'
-    ),
-    column(
-      'workflowHints',
-      'Workflows',
-      'Nazwy jobow, workflow, definicji procesu lub sciezek konfiguracji. Sa przydatne, gdy analizowany problem dotyczy przetwarzania asynchronicznego, harmonogramu albo orkiestracji.',
-      'aggregate'
-    ),
-    column(
-      'traversal',
-      'Traversal',
-      'Reguly czytania i warunki rozszerzania zakresu na biblioteki, adaptery albo legacy moduly. Pomaga AI zuzyc mniej tool calls bez gubienia istotnej implementacji.',
+      'limitations',
+      'Limitations',
+      'Jawne ograniczenia scope, na przyklad brak widocznosci partnera albo celowe pominiecie repozytoriow spoza katalogu. To material do visibility limits, nie instrukcja eksploracji kodu.',
       'aggregate'
     ),
     column(
@@ -357,7 +321,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'sourceSystem',
       'Source',
-      'System inicjujacy komunikacje lub lokalna strona integracji. Pomaga ustalic kierunek przeplywu i to, gdzie zaczac szukac klienta, publishera albo requestu.'
+      'System inicjujacy komunikacje lub lokalna strona integracji. Pomaga ustalic kierunek przeplywu i strone odpowiedzialnosci bez utrzymywania technicznego inventory.'
     ),
     column(
       'targetSystems',
@@ -365,14 +329,19 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'Systemy docelowe, w tym finalne targety za mediatorem lub gatewayem. Dzieki temu AI moze odroznic problem w systemie posrednim od problemu w docelowej usludze.'
     ),
     column(
-      'protocols',
-      'Protocols',
-      'Technologie komunikacji: HTTP, messaging, database, queue, topic, host lub inny kanal. Te sygnaly pomagaja AI dobrac wlasciwe evidence i uniknac mieszania problemow synchronicznych z asynchronicznymi.'
+      'category',
+      'Category',
+      'Ogolna kategoria integracji lub handoffu. Pomaga odroznic lokalna zaleznosc, partnera, gateway albo zewnetrzny kontrakt bez duplikowania technicznej konfiguracji.'
     ),
     column(
       'integrationStyle',
       'Style',
-      'Styl integracji, na przyklad synchroniczny request, event-driven, batch, gateway albo data access. Wplywa na interpretacje timeoutow, retry, kolejek, kolejnosci krokow i rekomendowanego handoffu.'
+      'Styl integracji, na przyklad synchroniczny request, event-driven, batch albo gateway. Wplywa na interpretacje symptomow i rekomendowanego handoffu.'
+    ),
+    column(
+      'flowDirection',
+      'Direction',
+      'Kierunek przeplywu z perspektywy systemu zrodlowego. Pomaga ustalic, czy analiza powinna isc do systemu docelowego, partnera albo procesu nadrzednego.'
     ),
     column(
       'owner',
@@ -395,13 +364,13 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'contexts',
       'Contexts',
-      'Bounded contexty powiazane z integracja. Pomagaja rozumiec semantyke kontraktu i lokalny jezyk uzywany w payloadach, endpointach lub zdarzeniach.',
+      'Bounded contexty powiazane z integracja. Pomagaja rozumiec semantyke kontraktu i lokalny jezyk uzywany w procesie albo handoffie.',
       'aggregate'
     ),
     column(
       'signals',
       'Signals',
-      'Sygnaly rozpoznania integracji, takie jak endpointy, hosty, operation names, queue, topic, routing key, klasy klientow i exception markers. To dane, po ktorych AI laczy logi i kod z wlasciwym kontraktem.',
+      'Sygnaly rozpoznania integracji utrzymywane jako jezyk katalogowy: aliasy, terminy, kontrakty, role albo wskazowki handoffu. Szczegoly techniczne powinny byc odkrywane przez dedykowane tools.',
       'aggregate'
     ),
     column(
@@ -413,7 +382,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'validation',
       'Status',
-      'Jakosc wpisu integracji. Niespojne strony, braki protokolow lub niepelne sygnaly obnizaja pewnosc AI przy diagnozie problemow komunikacyjnych.',
+      'Jakosc wpisu integracji. Niespojne strony, braki relacji albo niepelny handoff obnizaja pewnosc AI przy diagnozie problemow komunikacyjnych.',
       'aggregate'
     )
   ],
@@ -421,7 +390,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'name',
       'Context',
-      'Nazwa bounded contextu, czyli granicy znaczenia w domenie. AI uzywa jej do tlumaczenia technicznych klas i endpointow na obszar funkcjonalny, ale tylko gdy pasuje to do evidence.'
+      'Nazwa bounded contextu, czyli granicy znaczenia w domenie. AI uzywa jej do tlumaczenia sygnalow i pytan na obszar funkcjonalny, ale tylko gdy pasuje to do evidence.'
     ),
     column(
       'owner',
@@ -463,7 +432,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'ownsSystems',
       'Systems',
-      'Systemy, za ktore zespol odpowiada operacyjnie, produktowo lub technicznie. Pomaga odroznic zespol prowadzacy runtime od zespolu utrzymujacego fragment kodu.',
+      'Systemy, za ktore zespol odpowiada operacyjnie, produktowo lub technicznie. Pomaga odroznic ownera systemu od zespolu utrzymujacego powiazane repozytorium.',
       'aggregate'
     ),
     column(
@@ -552,7 +521,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'requiredEvidence',
       'Required evidence',
-      'Minimalne fakty, ktore trzeba miec przed handoffem, na przyklad logi, endpoint, payload, projekt, tabela albo system docelowy. To chroni odbiorce przed niepelna i nieakcjonowalna eskalacja.',
+      'Minimalne fakty, ktore trzeba miec przed handoffem, na przyklad scenariusz biznesowy, system docelowy, wlasciciel, logi albo znany kontekst. To chroni odbiorce przed niepelna i nieakcjonowalna eskalacja.',
       'aggregate'
     ),
     column(
@@ -591,7 +560,7 @@ const OVERVIEW_COLUMNS: ContextTableHeader[] = [
 const SIGNAL_RESOLVER_COLUMNS: ContextTableHeader[] = [
   header(
     'Match',
-    'Dopasowana encja katalogu, na przyklad system, repozytorium, integracja, proces lub termin. Pokazuje, jak surowy sygnal z runtime albo kodu zostal przypisany do kanonicznego faktu w indeksie wiedzy.'
+    'Dopasowana encja katalogu, na przyklad system, repozytorium, integracja, proces lub termin. Pokazuje, jak sygnal z pytania, relacji albo katalogu zostal przypisany do kanonicznego faktu w indeksie wiedzy.'
   ),
   header(
     'Type',
@@ -603,7 +572,7 @@ const SIGNAL_RESOLVER_COLUMNS: ContextTableHeader[] = [
   ),
   header(
     'Why matched',
-    'Wyjasnienie, ktore pola i sygnaly spowodowaly dopasowanie. Daje audytowalnosc: analityk widzi, czy wynik wynika z endpointu, pakietu, klasy, aliasu, repozytorium czy relacji katalogowej.'
+    'Wyjasnienie, ktore pola i sygnaly spowodowaly dopasowanie. Daje audytowalnosc: analityk widzi, czy wynik wynika z aliasu, repozytorium, terminu, handoffu czy relacji katalogowej.'
   ),
   header(
     'Actions',
@@ -785,8 +754,20 @@ export class ContextHomePageComponent {
   readonly statusLabel = computed(() => this.summary()?.catalogStatus || 'loading');
   readonly statusText = computed(() => this.formatStatus(this.statusLabel()));
   readonly isIncomplete = computed(() => {
-    const status = this.summary()?.catalogStatus;
-    return status === 'empty' || status === 'partial';
+    const summary = this.summary();
+    const status = summary?.catalogStatus;
+    const indexedEntities = summary
+      ? summary.systems
+        + summary.repositories
+        + summary.codeSearchScopes
+        + summary.processes
+        + summary.integrations
+        + summary.boundedContexts
+        + summary.teams
+        + summary.glossaryTerms
+        + summary.handoffRules
+      : 0;
+    return status === 'empty' || status === 'partial' || indexedEntities === 0;
   });
 
   constructor() {
@@ -1336,8 +1317,12 @@ export class ContextHomePageComponent {
 
   private formatStatus(status: string): string {
     switch (status) {
-      case 'hasIssues':
-        return 'Has issues';
+      case 'ok':
+        return 'OK';
+      case 'warning':
+        return 'Review';
+      case 'error':
+        return 'Needs fix';
       case 'ready':
         return 'Ready';
       case 'partial':

@@ -57,7 +57,7 @@ public class FlowExplorerRepositoryScopeService {
         var limitations = new ArrayList<String>();
 
         if (repositoryRefs.isEmpty()) {
-            limitations.add("Operational context system has no repository references or code-search scope repositories.");
+            limitations.add("Operational context system has no repository references or matching code-search scope repositories.");
         }
 
         for (var repositoryRef : repositoryRefs) {
@@ -145,7 +145,6 @@ public class FlowExplorerRepositoryScopeService {
     ) {
         var refsById = new LinkedHashMap<String, RepositoryRef>();
         addRepositoryRefs(refsById, system.references().repositories(), null, "system.references.repositories");
-        addRepositoryRefs(refsById, system.codeSearchScope().repositories(), null, "system.codeSearchScope.repositories");
 
         for (var scope : catalog.codeSearchScopes()) {
             if (!targetsSystem(scope, system.id())) {

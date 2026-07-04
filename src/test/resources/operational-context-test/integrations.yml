@@ -4,7 +4,9 @@ integrations:
   - id: app-core-to-partner-sync
     name: App Core to Partner Service
     summary: App Core calls Partner Service synchronously.
+    category: external-service-call
     integrationStyle: synchronous-request
+    flowDirection: outbound
     participants:
       source:
         system: app-core
@@ -13,11 +15,6 @@ integrations:
       finalTargets:
         - system: partner-service
           role: server
-    transport:
-      protocols: [SOAP]
-      http:
-        endpointPrefixes: [/partner/resource]
-        hosts: [api.partner.local]
     references:
       processes: [main-process]
       boundedContexts: [core-context, partner-context]
@@ -27,7 +24,6 @@ integrations:
         role: contract-owner
     matchSignals:
       exact:
-        endpointPrefixes: [/partner/resource]
         hosts: [api.partner.local]
       strong:
         spans: [SyncGateway.call]
@@ -37,6 +33,6 @@ integrations:
       defaultRouteLabel: Integration Team
       firstResponderTeamIds: [integration-team]
       partnerTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+      requiredEvidence: [correlationId, environment, host, exception]
 
 gaps: []

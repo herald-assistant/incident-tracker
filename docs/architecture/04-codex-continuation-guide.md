@@ -517,9 +517,10 @@ snapshotcie `AnalysisContext`, zanim przejdzie do operational context.
 Sam provider operational context nie laduje juz katalogu bezposrednio z
 resources, tylko korzysta z query-based adaptera i wystawia typed
 `OperationalContextEvidenceView` dla downstreamow. Widok systemu zawiera tez
-`codeSearchScopeIds`, `codeSearchProjects` i role repozytoriow, czyli projekty
-GitLaba skladajace sie na kod dopasowanego komponentu, lacznie z bibliotekami
-i shared modules.
+`codeSearchScopeIds`, `codeSearchProjects`, role repozytoriow, `reason` i
+`readFor`, czyli projekty GitLaba skladajace sie na kod dopasowanego
+komponentu. Konkretne klasy, endpointy i sciezki kodu sa odkrywane przez
+GitLab tools, a nie utrzymywane jako operational context.
 
 Operational context tools korzystaja z tego samego adaptera katalogu, ale nie
 sa kolejnym deterministic evidence providerem. Daja agentowi paginowany index,
@@ -534,7 +535,8 @@ Najwazniejszy produktowo-architektoniczny krok to feature, ktory nie jest
 incydentem. Najbardziej naturalne kandydaty:
 
 - flow explorer: opis end-to-end requestu/use case'u przez komponenty,
-  endpointy, kolejki, integracje, bazy danych i kod,
+  integracje, dane i kod, z endpointami i kolejkami dociaganymi przez
+  dedykowane tools wtedy, gdy sa potrzebne,
 - functional logic explorer: pytania o reguly, warianty i implementacje
   konkretnego use case'u,
 - natural-language data diagnostics: readonly pytania o dane systemu jezykiem

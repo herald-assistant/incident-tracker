@@ -14,10 +14,7 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalC
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelTruncationDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextBlastRadiusReadModel;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextFlowReadModel;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextImplementationReadModel;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
 
 import java.util.List;
@@ -102,15 +99,11 @@ class OperationalContextControllerTest {
         when(viewService.codeSearchScopes()).thenReturn(List.of(new OperationalContextCodeSearchScopeRowDto(
                 "app-core-scope",
                 "App Core Scope",
-                "bounded-context",
+                "system",
                 "active",
                 emptyAggregate("Target"),
                 emptyAggregate("Repositories"),
-                emptyAggregate("Package hints"),
-                emptyAggregate("Entry hints"),
-                emptyAggregate("Data hints"),
-                emptyAggregate("Workflow hints"),
-                emptyAggregate("Traversal"),
+                emptyAggregate("Limitations"),
                 emptyAggregate("Validation")
         )));
 
@@ -143,7 +136,7 @@ class OperationalContextControllerTest {
     }
 
     @Test
-    void shouldExposeReadModelProjectionEndpoints() throws Exception {
+    void shouldExposeCurrentReadModelProjectionEndpoints() throws Exception {
         var target = entityRef("process", "new-process");
         when(viewService.entityRelationsReadModel("process", "new-process"))
                 .thenReturn(new OperationalContextEntityRelationsReadModelDto(
@@ -157,12 +150,6 @@ class OperationalContextControllerTest {
                 ));
         when(viewService.codeSearchReadModel("process", "new-process"))
                 .thenReturn(OperationalContextCodeSearchReadModel.empty(target, List.of()));
-        when(viewService.implementationReadModel("process", "new-process"))
-                .thenReturn(OperationalContextImplementationReadModel.empty(target, List.of()));
-        when(viewService.flowReadModel("process", "new-process"))
-                .thenReturn(OperationalContextFlowReadModel.empty(target, List.of()));
-        when(viewService.blastRadiusReadModel("process", "new-process"))
-                .thenReturn(emptyBlastRadius(target));
 
         mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/relations"))
                 .andExpect(status().isOk())
@@ -172,66 +159,53 @@ class OperationalContextControllerTest {
         mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/code-search"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contract").value("operational-context.code-search"));
-
-        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/implementations"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contract").value("operational-context.implementation-map"));
-
-        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/flow"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contract").value("operational-context.flow"));
-
-        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/blast-radius"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contract").value("operational-context.blast-radius"));
     }
 
     @Test
-    void shouldExposeReadModelProjectionEndpointsWithQueryId() throws Exception {
+    void shouldExposeCurrentReadModelProjectionEndpointsWithQueryId() throws Exception {
         var target = entityRef("repository", "[CLP/backend]");
+        when(viewService.entityRelationsReadModel("repository", "[CLP/backend]"))
+                .thenReturn(new OperationalContextEntityRelationsReadModelDto(
+                        "operational-context.entity-relations",
+                        1,
+                        target,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of()
+                ));
         when(viewService.codeSearchReadModel("repository", "[CLP/backend]"))
                 .thenReturn(OperationalContextCodeSearchReadModel.empty(target, List.of()));
-        when(viewService.blastRadiusReadModel("repository", "[CLP/backend]"))
-                .thenReturn(emptyBlastRadius(target));
-        when(viewService.blastRadiusReadModel("endpoint", "/new/api"))
-                .thenReturn(emptyBlastRadius(entityRef("endpoint", "/new/api")));
+
+        mockMvc.perform(get("/api/operational-context/read-model/entities/repository/relations")
+                        .param("id", "[CLP/backend]"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisTarget.id").value("[CLP/backend]"));
 
         mockMvc.perform(get("/api/operational-context/read-model/entities/repository/code-search")
                         .param("id", "[CLP/backend]"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysisTarget.id").value("[CLP/backend]"));
-
-        mockMvc.perform(get("/api/operational-context/read-model/entities/repository/blast-radius")
-                        .param("id", "[CLP/backend]"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contract").value("operational-context.blast-radius"));
-
-        mockMvc.perform(get("/api/operational-context/read-model/blast-radius")
-                        .param("type", "endpoint")
-                        .param("id", "/new/api"))
-                .andExpect(status().isOk());
     }
 
     @Test
     void shouldRouteProfiledReadModelProjectionEndpoints() throws Exception {
-        when(viewService.flowReadModel("process", "new-process", "default"))
-                .thenReturn(profiled("operational-context.flow", entityRef("process", "new-process")));
-        when(viewService.blastRadiusReadModel("class", "NewLimitOrderController", "default"))
-                .thenReturn(profiled("operational-context.blast-radius", entityRef("class", "NewLimitOrderController")));
+        when(viewService.entityRelationsReadModel("process", "new-process", "default"))
+                .thenReturn(profiled("operational-context.entity-relations", entityRef("process", "new-process")));
+        when(viewService.codeSearchReadModel("process", "new-process", "default"))
+                .thenReturn(profiled("operational-context.code-search", entityRef("process", "new-process")));
 
-        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/flow")
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/relations")
                         .param("profile", "default"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contract").value("operational-context.flow"))
+                .andExpect(jsonPath("$.contract").value("operational-context.entity-relations"))
                 .andExpect(jsonPath("$.profile").value("default"));
 
-        mockMvc.perform(get("/api/operational-context/read-model/blast-radius")
-                        .param("type", "class")
-                        .param("id", "NewLimitOrderController")
+        mockMvc.perform(get("/api/operational-context/read-model/entities/process/new-process/code-search")
                         .param("profile", "default"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contract").value("operational-context.blast-radius"))
-                .andExpect(jsonPath("$.analysisTarget.id").value("NewLimitOrderController"));
+                .andExpect(jsonPath("$.contract").value("operational-context.code-search"))
+                .andExpect(jsonPath("$.profile").value("default"));
     }
 
     private static ExplainableAggregateDto emptyAggregate(String label) {
@@ -269,24 +243,6 @@ class OperationalContextControllerTest {
 
     private static EntityRef entityRef(String type, String id) {
         return new EntityRef(type, id, id, null, null);
-    }
-
-    private static OperationalContextBlastRadiusReadModel emptyBlastRadius(EntityRef target) {
-        return new OperationalContextBlastRadiusReadModel(
-                "operational-context.blast-radius",
-                1,
-                OperationalContextCodeSearchReadModel.ReadModelProfile.defaultProfile(),
-                target,
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of()
-        );
     }
 
     private static OperationalContextProfiledReadModelDto profiled(String contract, EntityRef target) {

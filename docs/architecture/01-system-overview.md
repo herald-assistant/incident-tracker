@@ -475,9 +475,10 @@ Znaczenie grup UI:
 - Bazowy curated operational context jest ladowany przez osobny adapter, a nie
   bezposrednio przez sam provider enrichmentu.
 - Operational context publikuje dla dopasowanego systemu jawny code search
-  scope: repozytoria/projekty, pakiety i class hints, zeby Copilot traktowal
-  repo glowne, biblioteki i shared modules jako wspolny scope kodu tego
-  systemu.
+  scope: repozytoria/projekty, role, priorytety, `reason` i `readFor`, zeby
+  Copilot traktowal repo glowne oraz powiazane repozytoria pomocnicze jako
+  wspolny scope kodu tego systemu. Konkretne klasy, endpointy i sciezki kodu
+  sa odkrywane przez GitLab tools, nie utrzymywane w katalogu.
 - Job flow reuse'uje orchestration warstwe `AnalysisOrchestrator`.
 - Job flow moze przekazac do generycznego requestu AI opcjonalny wybor
   modelu i `reasoningEffort`; nie zmienia to evidence scope'u, branchy,
@@ -600,7 +601,7 @@ Ten endpoint nie jest czescia glownego job flow analizy, ale pomaga recznie
 zweryfikowac te sama logike mapowania, z ktorej korzysta deterministic
 provider i AI-guided exploration przez tools.
 
-## Dodatkowy use case GitLab endpoint inventory
+## Dodatkowy use case GitLab endpoint discovery
 
 To jest osobny, pomocniczy flow do recznego testowania listowania endpointow
 REST udostepnianych przez konkretne repozytorium:

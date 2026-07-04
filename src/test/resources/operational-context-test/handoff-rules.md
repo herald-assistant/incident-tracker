@@ -10,14 +10,12 @@ Candidate teams: Integration Team
 
 **Applies when**
 
-- Evidence points to an external host, endpoint, or SOAP fault
 
 **Required evidence**
 
 - `correlationId`
 - `environment`
 - `host`
-- `endpoint`
 - `exception`
 
 **Expected first actions**
@@ -42,7 +40,6 @@ Candidate teams: No handoff
 
 **Required evidence**
 
-- local runtime or repo match
 
 **Expected first actions**
 
@@ -63,3 +60,4 @@ Candidate teams: No handoff
 **Description**
 
 Confirm actual routing target for partner-service synchronous failures.
+

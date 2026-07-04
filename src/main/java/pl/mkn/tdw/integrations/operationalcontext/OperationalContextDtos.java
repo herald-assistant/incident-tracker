@@ -16,17 +16,6 @@ import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.
 
 public final class OperationalContextDtos {
 
-    private static final List<String> SYSTEM_RUNTIME_SIGNAL_KEYS = List.of(
-            "serviceNames",
-            "applicationNames",
-            "containerNames",
-            "deploymentNames",
-            "namespaceNames",
-            "imageNames",
-            "artifactNames",
-            "artifactIds"
-    );
-
     private OperationalContextDtos() {
     }
 
@@ -196,8 +185,6 @@ public final class OperationalContextDtos {
             OperationalContextMatchSignals matchSignals,
             OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
-            OperationalContextDeployment deployment,
-            OperationalContextCodeSearchScope codeSearchScope,
             Map<String, Object> payload
     ) implements OperationalContextEntry {
 
@@ -210,8 +197,6 @@ public final class OperationalContextDtos {
             matchSignals = defaultMatchSignals(matchSignals);
             handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
-            deployment = deployment != null ? deployment : OperationalContextDeployment.empty();
-            codeSearchScope = codeSearchScope != null ? codeSearchScope : OperationalContextCodeSearchScope.empty();
             payload = copyMap(payload);
         }
 
@@ -220,14 +205,9 @@ public final class OperationalContextDtos {
             var values = new LinkedHashSet<String>();
             values.addAll(aliases);
             values.addAll(useFor);
-            values.addAll(runtimeMatchSignals().allValues());
-            values.addAll(deployment.allValues());
+            values.addAll(matchSignals.allValues());
             values.addAll(handoffHints.routeSignals());
             return copyTextList(values);
-        }
-
-        public OperationalContextMatchSignals runtimeMatchSignals() {
-            return matchSignals.onlyKeys(SYSTEM_RUNTIME_SIGNAL_KEYS);
         }
     }
 
@@ -245,15 +225,9 @@ public final class OperationalContextDtos {
             OperationalContextGit git,
             OperationalContextReferences references,
             List<OperationalContextResponsibility> responsibilities,
-            OperationalContextSourceLayout sourceLayout,
-            List<OperationalContextRepositoryModule> modules,
             OperationalContextMatchSignals matchSignals,
             OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
-            List<String> classHints,
-            List<String> packagePrefixes,
-            List<String> endpointHints,
-            List<String> queueTopicHints,
             Map<String, Object> payload
     ) implements OperationalContextEntry {
 
@@ -263,15 +237,9 @@ public final class OperationalContextDtos {
             git = git != null ? git : OperationalContextGit.empty();
             references = defaultReferences(references);
             responsibilities = copyList(responsibilities);
-            sourceLayout = sourceLayout != null ? sourceLayout : OperationalContextSourceLayout.empty();
-            modules = copyList(modules);
             matchSignals = defaultMatchSignals(matchSignals);
             handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
-            classHints = copyList(classHints);
-            packagePrefixes = copyList(packagePrefixes);
-            endpointHints = copyList(endpointHints);
-            queueTopicHints = copyList(queueTopicHints);
             payload = copyMap(payload);
         }
 
@@ -283,52 +251,6 @@ public final class OperationalContextDtos {
             values.add(git.project());
             values.add(git.projectPath());
             values.addAll(git.aliases());
-            values.addAll(sourceLayout.sourceRoots());
-            values.addAll(sourceLayout.modulePaths());
-            values.addAll(sourceLayout.importantPaths());
-            values.addAll(classHints);
-            values.addAll(packagePrefixes);
-            values.addAll(endpointHints);
-            values.addAll(queueTopicHints);
-            modules.forEach(module -> values.addAll(module.genericSignals()));
-            return copyTextList(values);
-        }
-
-        public List<String> packagePrefixSignals() {
-            var values = new LinkedHashSet<String>();
-            values.addAll(packagePrefixes);
-            values.addAll(matchSignals.strong().packagePrefixes());
-            values.addAll(matchSignals.medium().packagePrefixes());
-            modules.forEach(module -> values.addAll(module.packagePrefixSignals()));
-            return copyTextList(values);
-        }
-
-        public List<String> endpointPrefixSignals() {
-            var values = new LinkedHashSet<String>();
-            values.addAll(endpointHints);
-            values.addAll(matchSignals.strong().endpointPrefixes());
-            values.addAll(matchSignals.medium().endpointPrefixes());
-            modules.forEach(module -> values.addAll(module.endpointPrefixSignals()));
-            return copyTextList(values);
-        }
-
-        public List<String> modulePathSignals() {
-            var values = new LinkedHashSet<String>();
-            values.addAll(sourceLayout.modulePaths());
-            modules.forEach(module -> {
-                values.add(module.effectiveId());
-                values.addAll(module.source().paths());
-                values.addAll(module.sourceRoots());
-                values.addAll(module.importantPaths());
-            });
-            return copyTextList(values);
-        }
-
-        public List<String> classHintSignals() {
-            var values = new LinkedHashSet<String>();
-            values.addAll(classHints);
-            values.addAll(matchSignals.valuesForKeys("classHints", "entrypoints"));
-            modules.forEach(module -> values.addAll(module.classHintSignals()));
             return copyTextList(values);
         }
     }
@@ -400,9 +322,6 @@ public final class OperationalContextDtos {
             List<String> aliases,
             List<String> useFor,
             OperationalContextIntegrationParticipants participants,
-            OperationalContextTransport transport,
-            List<OperationalContextChannel> channels,
-            OperationalContextImplementation implementation,
             OperationalContextReferences references,
             List<OperationalContextResponsibility> responsibilities,
             OperationalContextMatchSignals matchSignals,
@@ -416,9 +335,6 @@ public final class OperationalContextDtos {
             aliases = copyList(aliases);
             useFor = copyList(useFor);
             participants = participants != null ? participants : OperationalContextIntegrationParticipants.empty();
-            transport = transport != null ? transport : OperationalContextTransport.empty();
-            channels = copyList(channels);
-            implementation = implementation != null ? implementation : OperationalContextImplementation.empty();
             references = defaultReferences(references);
             responsibilities = copyList(responsibilities);
             matchSignals = defaultMatchSignals(matchSignals);
@@ -431,13 +347,6 @@ public final class OperationalContextDtos {
         @Override
         public List<String> genericSignals() {
             var values = new LinkedHashSet<String>(OperationalContextEntry.super.genericSignals());
-            values.addAll(transport.allSignals());
-            channels.forEach(channel -> {
-                values.add(channel.type());
-                values.add(channel.name());
-                values.addAll(channel.signals());
-            });
-            values.addAll(implementation.classHints());
             values.addAll(failureModes);
             return copyTextList(values);
         }
@@ -457,7 +366,6 @@ public final class OperationalContextDtos {
             OperationalContextMatchSignals matchSignals,
             OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
-            OperationalContextOperationalSignals operationalSignals,
             Map<String, Object> payload
     ) implements OperationalContextEntry {
 
@@ -469,14 +377,12 @@ public final class OperationalContextDtos {
             matchSignals = defaultMatchSignals(matchSignals);
             handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
-            operationalSignals = operationalSignals != null ? operationalSignals : OperationalContextOperationalSignals.empty();
             payload = copyMap(payload);
         }
 
         @Override
         public List<String> genericSignals() {
             var values = new LinkedHashSet<String>(OperationalContextEntry.super.genericSignals());
-            values.addAll(operationalSignals.allSignals());
             relations.forEach(relation -> {
                 values.add(relation.target());
                 values.addAll(relation.via());
@@ -516,40 +422,28 @@ public final class OperationalContextDtos {
 
     public record OperationalContextReferences(
             List<String> systems,
-            List<String> deploymentComponents,
             List<String> repositories,
-            List<String> modules,
             List<String> processes,
             List<String> boundedContexts,
             List<String> integrations,
             List<String> terms,
             List<String> teams,
-            List<String> externalParties,
-            List<String> dataStores,
             List<String> handoffRules
     ) {
 
         public OperationalContextReferences {
             systems = copyList(systems);
-            deploymentComponents = copyList(deploymentComponents);
             repositories = copyList(repositories);
-            modules = copyList(modules);
             processes = copyList(processes);
             boundedContexts = copyList(boundedContexts);
             integrations = copyList(integrations);
             terms = copyList(terms);
             teams = copyList(teams);
-            externalParties = copyList(externalParties);
-            dataStores = copyList(dataStores);
             handoffRules = copyList(handoffRules);
         }
 
         public static OperationalContextReferences empty() {
             return new OperationalContextReferences(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
                     List.of(),
                     List.of(),
                     List.of(),
@@ -673,88 +567,12 @@ public final class OperationalContextDtos {
             return new OperationalContextSignalSet(filtered);
         }
 
-        public List<String> serviceNames() {
-            return values("serviceNames");
-        }
-
-        public List<String> containerNames() {
-            return values("containerNames");
-        }
-
         public List<String> projectNames() {
             return values("projectNames");
         }
 
         public List<String> projectPaths() {
             return values("projectPaths");
-        }
-
-        public List<String> packagePrefixes() {
-            return values("packagePrefixes");
-        }
-
-        public List<String> endpointPrefixes() {
-            return values("endpointPrefixes");
-        }
-
-        public List<String> endpointTemplates() {
-            return values("endpointTemplates");
-        }
-
-        public List<String> operationNames() {
-            return values("operationNames");
-        }
-
-        public List<String> hosts() {
-            return values("hosts");
-        }
-
-        public List<String> hostPatterns() {
-            return values("hostPatterns");
-        }
-
-        public List<String> queues() {
-            return values("queues");
-        }
-
-        public List<String> topics() {
-            return values("topics");
-        }
-
-        public List<String> routingKeys() {
-            return values("routingKeys");
-        }
-
-        public List<String> datasourceNames() {
-            return values("datasourceNames");
-        }
-
-        public List<String> schemas() {
-            return values("schemas");
-        }
-
-        public List<String> classHints() {
-            return values("classHints");
-        }
-
-        public List<String> logMarkers() {
-            return values("logMarkers");
-        }
-
-        public List<String> moduleIds() {
-            return values("moduleIds");
-        }
-
-        public List<String> sourceRoots() {
-            return values("sourceRoots");
-        }
-
-        public List<String> paths() {
-            return values("paths");
-        }
-
-        public List<String> pathHints() {
-            return values("pathHints");
         }
     }
 
@@ -775,135 +593,6 @@ public final class OperationalContextDtos {
 
         public static OperationalContextGit empty() {
             return new OperationalContextGit(null, null, null, null, null, null, List.of(), false);
-        }
-    }
-
-    public record OperationalContextSourceLayout(
-            String repositoryRoot,
-            String buildTool,
-            List<String> buildFiles,
-            List<String> sourceRoots,
-            List<String> testRoots,
-            List<String> resourceRoots,
-            List<String> modulePaths,
-            List<String> generatedSourcePaths,
-            List<String> importantPaths,
-            List<String> configurationFiles,
-            List<String> deploymentFiles,
-            List<String> databaseMigrationPaths,
-            List<String> workflowDefinitionPaths,
-            List<String> documentationPaths
-    ) {
-
-        public OperationalContextSourceLayout {
-            buildFiles = copyList(buildFiles);
-            sourceRoots = copyList(sourceRoots);
-            testRoots = copyList(testRoots);
-            resourceRoots = copyList(resourceRoots);
-            modulePaths = copyList(modulePaths);
-            generatedSourcePaths = copyList(generatedSourcePaths);
-            importantPaths = copyList(importantPaths);
-            configurationFiles = copyList(configurationFiles);
-            deploymentFiles = copyList(deploymentFiles);
-            databaseMigrationPaths = copyList(databaseMigrationPaths);
-            workflowDefinitionPaths = copyList(workflowDefinitionPaths);
-            documentationPaths = copyList(documentationPaths);
-        }
-
-        public static OperationalContextSourceLayout empty() {
-            return new OperationalContextSourceLayout(
-                    null,
-                    null,
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-    }
-
-    public record OperationalContextRepositoryModule(
-            String id,
-            String moduleId,
-            String name,
-            String moduleType,
-            String lifecycleStatus,
-            OperationalContextReferences references,
-            List<OperationalContextResponsibility> responsibilities,
-            OperationalContextSource source,
-            List<String> sourceRoots,
-            List<String> importantPaths,
-            OperationalContextMatchSignals matchSignals,
-            Map<String, Object> payload
-    ) {
-
-        public OperationalContextRepositoryModule {
-            references = defaultReferences(references);
-            responsibilities = copyList(responsibilities);
-            source = source != null ? source : OperationalContextSource.empty();
-            sourceRoots = copyList(sourceRoots);
-            importantPaths = copyList(importantPaths);
-            matchSignals = defaultMatchSignals(matchSignals);
-            payload = copyMap(payload);
-        }
-
-        public String effectiveId() {
-            return firstNonBlank(moduleId, id);
-        }
-
-        public List<String> genericSignals() {
-            var values = new LinkedHashSet<String>();
-            values.add(effectiveId());
-            values.add(name);
-            values.addAll(source.paths());
-            values.addAll(source.packages());
-            values.addAll(sourceRoots);
-            values.addAll(importantPaths);
-            values.addAll(matchSignals.allValues());
-            return copyTextList(values);
-        }
-
-        public List<String> packagePrefixSignals() {
-            var values = new LinkedHashSet<String>();
-            values.addAll(source.packages());
-            values.addAll(matchSignals.strong().packagePrefixes());
-            values.addAll(matchSignals.medium().packagePrefixes());
-            return copyTextList(values);
-        }
-
-        public List<String> endpointPrefixSignals() {
-            var values = new LinkedHashSet<String>();
-            values.addAll(matchSignals.strong().endpointPrefixes());
-            values.addAll(matchSignals.medium().endpointPrefixes());
-            return copyTextList(values);
-        }
-
-        public List<String> classHintSignals() {
-            return matchSignals.valuesForKeys("classHints", "entrypoints");
-        }
-    }
-
-    public record OperationalContextSource(
-            List<String> paths,
-            List<String> packages,
-            boolean generated
-    ) {
-
-        public OperationalContextSource {
-            paths = copyList(paths);
-            packages = copyList(packages);
-        }
-
-        public static OperationalContextSource empty() {
-            return new OperationalContextSource(List.of(), List.of(), false);
         }
     }
 
@@ -1035,7 +724,6 @@ public final class OperationalContextDtos {
             String system,
             String boundedContext,
             List<String> repositories,
-            List<String> modules,
             String role,
             String externalOwner,
             List<String> notes
@@ -1043,7 +731,6 @@ public final class OperationalContextDtos {
 
         public OperationalContextIntegrationParticipant {
             repositories = copyList(repositories);
-            modules = copyList(modules);
             notes = copyList(notes);
         }
 
@@ -1052,264 +739,8 @@ public final class OperationalContextDtos {
                     null,
                     null,
                     List.of(),
-                    List.of(),
                     null,
                     null,
-                    List.of()
-            );
-        }
-    }
-
-    public record OperationalContextTransport(
-            List<String> protocols,
-            OperationalContextHttpTransport http,
-            OperationalContextMessagingTransport messaging,
-            OperationalContextDatabaseTransport database
-    ) {
-
-        public OperationalContextTransport {
-            protocols = copyList(protocols);
-            http = http != null ? http : OperationalContextHttpTransport.empty();
-            messaging = messaging != null ? messaging : OperationalContextMessagingTransport.empty();
-            database = database != null ? database : OperationalContextDatabaseTransport.empty();
-        }
-
-        public static OperationalContextTransport empty() {
-            return new OperationalContextTransport(
-                    List.of(),
-                    OperationalContextHttpTransport.empty(),
-                    OperationalContextMessagingTransport.empty(),
-                    OperationalContextDatabaseTransport.empty()
-            );
-        }
-
-        public List<String> allSignals() {
-            var values = new LinkedHashSet<String>();
-            values.addAll(protocols);
-            values.addAll(http.allSignals());
-            values.addAll(messaging.allSignals());
-            values.addAll(database.allSignals());
-            return copyTextList(values);
-        }
-    }
-
-    public record OperationalContextHttpTransport(
-            List<String> methods,
-            List<String> endpointPrefixes,
-            List<String> endpointTemplates,
-            List<String> operationNames,
-            List<String> hosts,
-            List<String> hostPatterns,
-            List<String> baseUrlConfigKeys,
-            List<String> clientNames,
-            List<String> gatewayRoutes
-    ) {
-
-        public OperationalContextHttpTransport {
-            methods = copyList(methods);
-            endpointPrefixes = copyList(endpointPrefixes);
-            endpointTemplates = copyList(endpointTemplates);
-            operationNames = copyList(operationNames);
-            hosts = copyList(hosts);
-            hostPatterns = copyList(hostPatterns);
-            baseUrlConfigKeys = copyList(baseUrlConfigKeys);
-            clientNames = copyList(clientNames);
-            gatewayRoutes = copyList(gatewayRoutes);
-        }
-
-        public static OperationalContextHttpTransport empty() {
-            return new OperationalContextHttpTransport(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-
-        public List<String> allSignals() {
-            return copyTextList(List.of(
-                    methods,
-                    endpointPrefixes,
-                    endpointTemplates,
-                    operationNames,
-                    hosts,
-                    hostPatterns,
-                    baseUrlConfigKeys,
-                    clientNames,
-                    gatewayRoutes
-            ));
-        }
-    }
-
-    public record OperationalContextMessagingTransport(
-            List<String> brokers,
-            List<String> virtualHosts,
-            List<String> exchanges,
-            List<String> queues,
-            List<String> topics,
-            List<String> routingKeys,
-            List<String> bindings,
-            List<String> dlqs,
-            List<String> retryQueuesOrTopics,
-            List<String> consumerGroups,
-            List<String> partitionKeys
-    ) {
-
-        public OperationalContextMessagingTransport {
-            brokers = copyList(brokers);
-            virtualHosts = copyList(virtualHosts);
-            exchanges = copyList(exchanges);
-            queues = copyList(queues);
-            topics = copyList(topics);
-            routingKeys = copyList(routingKeys);
-            bindings = copyList(bindings);
-            dlqs = copyList(dlqs);
-            retryQueuesOrTopics = copyList(retryQueuesOrTopics);
-            consumerGroups = copyList(consumerGroups);
-            partitionKeys = copyList(partitionKeys);
-        }
-
-        public static OperationalContextMessagingTransport empty() {
-            return new OperationalContextMessagingTransport(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-
-        public List<String> allSignals() {
-            return copyTextList(List.of(
-                    brokers,
-                    virtualHosts,
-                    exchanges,
-                    queues,
-                    topics,
-                    routingKeys,
-                    bindings,
-                    dlqs,
-                    retryQueuesOrTopics,
-                    consumerGroups,
-                    partitionKeys
-            ));
-        }
-    }
-
-    public record OperationalContextDatabaseTransport(
-            List<String> datasourceNames,
-            List<String> connectionNames,
-            List<String> hikariPoolMarkers,
-            List<String> schemas,
-            List<String> tables,
-            List<String> entities,
-            List<String> repositories,
-            List<String> operations
-    ) {
-
-        public OperationalContextDatabaseTransport {
-            datasourceNames = copyList(datasourceNames);
-            connectionNames = copyList(connectionNames);
-            hikariPoolMarkers = copyList(hikariPoolMarkers);
-            schemas = copyList(schemas);
-            tables = copyList(tables);
-            entities = copyList(entities);
-            repositories = copyList(repositories);
-            operations = copyList(operations);
-        }
-
-        public static OperationalContextDatabaseTransport empty() {
-            return new OperationalContextDatabaseTransport(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-
-        public List<String> allSignals() {
-            return copyTextList(List.of(
-                    datasourceNames,
-                    connectionNames,
-                    hikariPoolMarkers,
-                    schemas,
-                    tables,
-                    entities,
-                    repositories,
-                    operations
-            ));
-        }
-    }
-
-    public record OperationalContextChannel(
-            String type,
-            String name,
-            String direction,
-            List<String> signals
-    ) {
-
-        public OperationalContextChannel {
-            signals = copyList(signals);
-        }
-    }
-
-    public record OperationalContextImplementation(
-            String localSide,
-            List<String> clientTypes,
-            List<String> packagePrefixes,
-            List<String> modulePaths,
-            List<String> classHints,
-            List<String> clientClasses,
-            List<String> controllerClasses,
-            List<String> listenerClasses,
-            List<String> publisherClasses,
-            List<String> schedulerClasses,
-            List<String> generatedClientClasses,
-            List<String> configClasses
-    ) {
-
-        public OperationalContextImplementation {
-            clientTypes = copyList(clientTypes);
-            packagePrefixes = copyList(packagePrefixes);
-            modulePaths = copyList(modulePaths);
-            classHints = copyList(classHints);
-            clientClasses = copyList(clientClasses);
-            controllerClasses = copyList(controllerClasses);
-            listenerClasses = copyList(listenerClasses);
-            publisherClasses = copyList(publisherClasses);
-            schedulerClasses = copyList(schedulerClasses);
-            generatedClientClasses = copyList(generatedClientClasses);
-            configClasses = copyList(configClasses);
-        }
-
-        public static OperationalContextImplementation empty() {
-            return new OperationalContextImplementation(
-                    null,
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
                     List.of()
             );
         }
@@ -1400,87 +831,6 @@ public final class OperationalContextDtos {
         }
     }
 
-    public record OperationalContextDeployment(
-            List<String> serviceNames,
-            List<String> applicationNames,
-            List<String> containerNames,
-            List<String> deploymentNames,
-            List<String> namespaceNames,
-            List<String> imageNames,
-            List<String> artifactNames
-    ) {
-
-        public OperationalContextDeployment {
-            serviceNames = copyList(serviceNames);
-            applicationNames = copyList(applicationNames);
-            containerNames = copyList(containerNames);
-            deploymentNames = copyList(deploymentNames);
-            namespaceNames = copyList(namespaceNames);
-            imageNames = copyList(imageNames);
-            artifactNames = copyList(artifactNames);
-        }
-
-        public static OperationalContextDeployment empty() {
-            return new OperationalContextDeployment(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-
-        public List<String> allValues() {
-            return copyTextList(
-                    serviceNames,
-                    applicationNames,
-                    containerNames,
-                    deploymentNames,
-                    namespaceNames,
-                    imageNames,
-                    artifactNames
-            );
-        }
-    }
-
-    public record OperationalContextCodeSearchScope(
-            List<String> repositories,
-            List<String> packagePrefixes,
-            List<String> classHints,
-            List<String> configPrefixes,
-            List<String> generatedClients,
-            List<String> sharedLibraries,
-            List<String> searchTogetherWithSystems,
-            List<String> searchNotes
-    ) {
-
-        public OperationalContextCodeSearchScope {
-            repositories = copyList(repositories);
-            packagePrefixes = copyList(packagePrefixes);
-            classHints = copyList(classHints);
-            configPrefixes = copyList(configPrefixes);
-            generatedClients = copyList(generatedClients);
-            sharedLibraries = copyList(sharedLibraries);
-            searchTogetherWithSystems = copyList(searchTogetherWithSystems);
-            searchNotes = copyList(searchNotes);
-        }
-
-        public static OperationalContextCodeSearchScope empty() {
-            return new OperationalContextCodeSearchScope(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-    }
-
     public record OperationalContextRepositorySearchScope(
             String id,
             String name,
@@ -1490,8 +840,6 @@ public final class OperationalContextDtos {
             OperationalContextRepositorySearchTarget target,
             List<String> useFor,
             List<OperationalContextRepositorySearchRepository> repositories,
-            OperationalContextRepositorySearchHints hints,
-            OperationalContextRepositorySearchTraversal traversal,
             List<String> limitations,
             Map<String, Object> payload
     ) {
@@ -1500,34 +848,8 @@ public final class OperationalContextDtos {
             target = target != null ? target : OperationalContextRepositorySearchTarget.empty();
             useFor = copyList(useFor);
             repositories = copyList(repositories);
-            hints = hints != null ? hints : OperationalContextRepositorySearchHints.empty();
-            traversal = traversal != null ? traversal : OperationalContextRepositorySearchTraversal.empty();
             limitations = copyList(limitations);
             payload = copyMap(payload);
-        }
-
-        public List<String> packagePrefixes() {
-            return hints.packagePrefixes();
-        }
-
-        public List<String> classHints() {
-            return hints.classHints();
-        }
-
-        public List<String> endpointHints() {
-            return hints.endpointHints();
-        }
-
-        public List<String> queueTopicHints() {
-            return hints.queueTopicHints();
-        }
-
-        public OperationalContextRepositorySearchDatabaseHints databaseHints() {
-            return hints.databaseHints();
-        }
-
-        public OperationalContextRepositorySearchWorkflowHints workflowHints() {
-            return hints.workflowHints();
         }
     }
 
@@ -1551,145 +873,12 @@ public final class OperationalContextDtos {
             String repoId,
             String role,
             Integer priority,
-            List<String> moduleIds,
             String reason,
             List<String> readFor
     ) {
 
         public OperationalContextRepositorySearchRepository {
-            moduleIds = copyList(moduleIds);
             readFor = copyList(readFor);
-        }
-    }
-
-    public record OperationalContextRepositorySearchHints(
-            List<String> packagePrefixes,
-            List<String> classHints,
-            List<String> endpointHints,
-            List<String> queueTopicHints,
-            OperationalContextRepositorySearchDatabaseHints databaseHints,
-            OperationalContextRepositorySearchWorkflowHints workflowHints
-    ) {
-
-        public OperationalContextRepositorySearchHints {
-            packagePrefixes = copyList(packagePrefixes);
-            classHints = copyList(classHints);
-            endpointHints = copyList(endpointHints);
-            queueTopicHints = copyList(queueTopicHints);
-            databaseHints = databaseHints != null
-                    ? databaseHints
-                    : OperationalContextRepositorySearchDatabaseHints.empty();
-            workflowHints = workflowHints != null
-                    ? workflowHints
-                    : OperationalContextRepositorySearchWorkflowHints.empty();
-        }
-
-        public static OperationalContextRepositorySearchHints empty() {
-            return new OperationalContextRepositorySearchHints(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    OperationalContextRepositorySearchDatabaseHints.empty(),
-                    OperationalContextRepositorySearchWorkflowHints.empty()
-            );
-        }
-    }
-
-    public record OperationalContextRepositorySearchDatabaseHints(
-            List<String> datasourceNames,
-            List<String> hikariPools,
-            List<String> schemas,
-            List<String> tables,
-            List<String> entities,
-            List<String> migrations
-    ) {
-
-        public OperationalContextRepositorySearchDatabaseHints {
-            datasourceNames = copyList(datasourceNames);
-            hikariPools = copyList(hikariPools);
-            schemas = copyList(schemas);
-            tables = copyList(tables);
-            entities = copyList(entities);
-            migrations = copyList(migrations);
-        }
-
-        public static OperationalContextRepositorySearchDatabaseHints empty() {
-            return new OperationalContextRepositorySearchDatabaseHints(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-    }
-
-    public record OperationalContextRepositorySearchWorkflowHints(
-            List<String> jobNames,
-            List<String> workflowNames,
-            List<String> definitionPaths
-    ) {
-
-        public OperationalContextRepositorySearchWorkflowHints {
-            jobNames = copyList(jobNames);
-            workflowNames = copyList(workflowNames);
-            definitionPaths = copyList(definitionPaths);
-        }
-
-        public static OperationalContextRepositorySearchWorkflowHints empty() {
-            return new OperationalContextRepositorySearchWorkflowHints(List.of(), List.of(), List.of());
-        }
-    }
-
-    public record OperationalContextRepositorySearchTraversal(
-            List<String> rules,
-            List<String> expandWhen
-    ) {
-
-        public OperationalContextRepositorySearchTraversal {
-            rules = copyList(rules);
-            expandWhen = copyList(expandWhen);
-        }
-
-        public static OperationalContextRepositorySearchTraversal empty() {
-            return new OperationalContextRepositorySearchTraversal(List.of(), List.of());
-        }
-    }
-
-    public record OperationalContextOperationalSignals(Map<String, List<String>> valuesByKey) {
-
-        public OperationalContextOperationalSignals {
-            valuesByKey = copyStringListMap(valuesByKey);
-        }
-
-        public static OperationalContextOperationalSignals empty() {
-            return new OperationalContextOperationalSignals(Map.of());
-        }
-
-        public List<String> values(String key) {
-            return valuesByKey.getOrDefault(key, List.of());
-        }
-
-        public List<String> serviceNames() {
-            return values("serviceNames");
-        }
-
-        public List<String> endpointPrefixes() {
-            return values("endpointPrefixes");
-        }
-
-        public List<String> packagePrefixes() {
-            return values("packagePrefixes");
-        }
-
-        public List<String> allSignals() {
-            return valuesByKey.values().stream()
-                    .flatMap(Collection::stream)
-                    .filter(StringUtils::hasText)
-                    .distinct()
-                    .toList();
         }
     }
 
@@ -1875,8 +1064,6 @@ public final class OperationalContextDtos {
                 matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
-                deployment(source.get("deployment")),
-                codeSearchScope(source.get("codeSearchScope")),
                 source
         );
     }
@@ -1896,15 +1083,9 @@ public final class OperationalContextDtos {
                 git(source.get("git")),
                 references(source.get("references")),
                 responsibilities(source.get("responsibilities")),
-                sourceLayout(source.get("sourceLayout")),
-                mapList(source, "modules").stream().map(OperationalContextDtos::repositoryModule).toList(),
                 matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
-                textList(source, "classHints"),
-                textList(source, "packagePrefixes"),
-                textList(source, "endpointHints"),
-                textList(source, "queueTopicHints"),
                 source
         );
     }
@@ -1921,8 +1102,6 @@ public final class OperationalContextDtos {
                 mapList(source, "repositories").stream()
                         .map(OperationalContextDtos::repositorySearchRepository)
                         .toList(),
-                repositorySearchHints(source.get("hints")),
-                repositorySearchTraversal(source.get("traversal")),
                 textList(source, "limitations"),
                 source
         );
@@ -1972,9 +1151,6 @@ public final class OperationalContextDtos {
                 textList(source, "aliases"),
                 textList(source, "useFor"),
                 integrationParticipants(source.get("participants")),
-                transport(source.get("transport")),
-                mapList(source, "channels").stream().map(OperationalContextDtos::channel).toList(),
-                implementation(source.get("implementation")),
                 references(source.get("references")),
                 responsibilities(source.get("responsibilities")),
                 matchSignals(firstValue(source, "matchSignals", "match")),
@@ -2000,7 +1176,6 @@ public final class OperationalContextDtos {
                 matchSignals(firstValue(source, "matchSignals", "match")),
                 handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
-                operationalSignals(source.get("operationalSignals")),
                 source
         );
     }
@@ -2028,16 +1203,12 @@ public final class OperationalContextDtos {
         var source = map(value);
         return new OperationalContextReferences(
                 textList(source, "systems"),
-                textList(source, "deploymentComponents"),
                 textList(source, "repositories"),
-                textList(source, "modules"),
                 textList(source, "processes"),
                 textList(source, "boundedContexts"),
                 textList(source, "integrations"),
                 textList(source, "terms"),
                 textList(source, "teams"),
-                textList(source, "externalParties"),
-                textList(source, "dataStores"),
                 textList(source, "handoffRules")
         );
     }
@@ -2106,52 +1277,6 @@ public final class OperationalContextDtos {
                 firstText(source, "url"),
                 textList(source, "aliases"),
                 Boolean.parseBoolean(firstNonBlank(firstText(source, "inferred"), "false"))
-        );
-    }
-
-    private static OperationalContextSourceLayout sourceLayout(Object value) {
-        var source = map(value);
-        return new OperationalContextSourceLayout(
-                text(source, "repositoryRoot"),
-                text(source, "buildTool"),
-                textList(source, "buildFiles"),
-                textList(source, "sourceRoots"),
-                textList(source, "testRoots"),
-                textList(source, "resourceRoots"),
-                textList(source, "modulePaths"),
-                textList(source, "generatedSourcePaths"),
-                textList(source, "importantPaths"),
-                textList(source, "configurationFiles"),
-                textList(source, "deploymentFiles"),
-                textList(source, "databaseMigrationPaths"),
-                textList(source, "workflowDefinitionPaths"),
-                textList(source, "documentationPaths")
-        );
-    }
-
-    private static OperationalContextRepositoryModule repositoryModule(Map<String, Object> source) {
-        return new OperationalContextRepositoryModule(
-                text(source, "id"),
-                text(source, "moduleId"),
-                text(source, "name"),
-                text(source, "moduleType"),
-                text(source, "lifecycleStatus"),
-                references(source.get("references")),
-                responsibilities(source.get("responsibilities")),
-                source(source.get("source")),
-                textList(source, "sourceRoots"),
-                textList(source, "importantPaths"),
-                matchSignals(firstValue(source, "matchSignals", "match")),
-                source
-        );
-    }
-
-    private static OperationalContextSource source(Object value) {
-        var source = map(value);
-        return new OperationalContextSource(
-                textList(source, "paths"),
-                textList(source, "packages"),
-                Boolean.parseBoolean(firstNonBlank(text(source, "generated"), "false"))
         );
     }
 
@@ -2232,7 +1357,6 @@ public final class OperationalContextDtos {
                     text(value),
                     null,
                     List.of(),
-                    List.of(),
                     null,
                     null,
                     List.of()
@@ -2243,93 +1367,9 @@ public final class OperationalContextDtos {
                 text(source, "system"),
                 text(source, "boundedContext"),
                 textList(source, "repositories"),
-                textList(source, "modules"),
                 text(source, "role"),
                 text(source, "externalOwner"),
                 textList(source, "notes")
-        );
-    }
-
-    private static OperationalContextTransport transport(Object value) {
-        var source = map(value);
-        return new OperationalContextTransport(
-                textList(source, "protocols"),
-                httpTransport(source.get("http")),
-                messagingTransport(source.get("messaging")),
-                databaseTransport(source.get("database"))
-        );
-    }
-
-    private static OperationalContextHttpTransport httpTransport(Object value) {
-        var source = map(value);
-        return new OperationalContextHttpTransport(
-                textList(source, "methods"),
-                textList(source, "endpointPrefixes"),
-                textList(source, "endpointTemplates"),
-                textList(source, "operationNames"),
-                textList(source, "hosts"),
-                textList(source, "hostPatterns"),
-                textList(source, "baseUrlConfigKeys"),
-                textList(source, "clientNames"),
-                textList(source, "gatewayRoutes")
-        );
-    }
-
-    private static OperationalContextMessagingTransport messagingTransport(Object value) {
-        var source = map(value);
-        return new OperationalContextMessagingTransport(
-                textList(source, "brokers"),
-                textList(source, "virtualHosts"),
-                textList(source, "exchanges"),
-                textList(source, "queues"),
-                textList(source, "topics"),
-                textList(source, "routingKeys"),
-                textList(source, "bindings"),
-                textList(source, "dlqs"),
-                textList(source, "retryQueuesOrTopics"),
-                textList(source, "consumerGroups"),
-                textList(source, "partitionKeys")
-        );
-    }
-
-    private static OperationalContextDatabaseTransport databaseTransport(Object value) {
-        var source = map(value);
-        return new OperationalContextDatabaseTransport(
-                textList(source, "datasourceNames"),
-                textList(source, "connectionNames"),
-                textList(source, "hikariPoolMarkers"),
-                textList(source, "schemas"),
-                textList(source, "tables"),
-                textList(source, "entities"),
-                textList(source, "repositories"),
-                textList(source, "operations")
-        );
-    }
-
-    private static OperationalContextChannel channel(Map<String, Object> source) {
-        return new OperationalContextChannel(
-                text(source, "type"),
-                text(source, "name"),
-                text(source, "direction"),
-                textList(source, "signals")
-        );
-    }
-
-    private static OperationalContextImplementation implementation(Object value) {
-        var source = map(value);
-        return new OperationalContextImplementation(
-                text(source, "localSide"),
-                textList(source, "clientTypes"),
-                textList(source, "packagePrefixes"),
-                textList(source, "modulePaths"),
-                textList(source, "classHints"),
-                textList(source, "clientClasses"),
-                textList(source, "controllerClasses"),
-                textList(source, "listenerClasses"),
-                textList(source, "publisherClasses"),
-                textList(source, "schedulerClasses"),
-                textList(source, "generatedClientClasses"),
-                textList(source, "configClasses")
         );
     }
 
@@ -2366,33 +1406,6 @@ public final class OperationalContextDtos {
         );
     }
 
-    private static OperationalContextDeployment deployment(Object value) {
-        var source = map(value);
-        return new OperationalContextDeployment(
-                textList(source, "serviceNames"),
-                textList(source, "applicationNames"),
-                textList(source, "containerNames"),
-                textList(source, "deploymentNames"),
-                textList(source, "namespaceNames"),
-                textList(source, "imageNames"),
-                textList(source, "artifactNames")
-        );
-    }
-
-    private static OperationalContextCodeSearchScope codeSearchScope(Object value) {
-        var source = map(value);
-        return new OperationalContextCodeSearchScope(
-                textList(source, "repositories"),
-                textList(source, "packagePrefixes"),
-                textList(source, "classHints"),
-                textList(source, "configPrefixes"),
-                textList(source, "generatedClients"),
-                textList(source, "sharedLibraries"),
-                textList(source, "searchTogetherWithSystems"),
-                textList(source, "searchNotes")
-        );
-    }
-
     private static OperationalContextRepositorySearchTarget repositorySearchTarget(Object value) {
         var source = map(value);
         return new OperationalContextRepositorySearchTarget(
@@ -2406,58 +1419,9 @@ public final class OperationalContextDtos {
                 text(source, "repoId"),
                 text(source, "role"),
                 integer(source, "priority"),
-                textList(source, "moduleIds"),
                 text(source, "reason"),
                 textList(source, "readFor")
         );
-    }
-
-    private static OperationalContextRepositorySearchHints repositorySearchHints(Object value) {
-        var source = map(value);
-        return new OperationalContextRepositorySearchHints(
-                textList(source, "packagePrefixes"),
-                textList(source, "classHints"),
-                textList(source, "endpointHints"),
-                textList(source, "queueTopicHints"),
-                repositorySearchDatabaseHints(source.get("database")),
-                repositorySearchWorkflowHints(source.get("workflow"))
-        );
-    }
-
-    private static OperationalContextRepositorySearchDatabaseHints repositorySearchDatabaseHints(Object value) {
-        var source = map(value);
-        return new OperationalContextRepositorySearchDatabaseHints(
-                textList(source, "datasourceNames"),
-                textList(source, "hikariPools"),
-                textList(source, "schemas"),
-                textList(source, "tables"),
-                textList(source, "entities"),
-                textList(source, "migrations")
-        );
-    }
-
-    private static OperationalContextRepositorySearchWorkflowHints repositorySearchWorkflowHints(Object value) {
-        var source = map(value);
-        return new OperationalContextRepositorySearchWorkflowHints(
-                textList(source, "jobNames"),
-                textList(source, "workflowNames"),
-                textList(source, "definitionPaths")
-        );
-    }
-
-    private static OperationalContextRepositorySearchTraversal repositorySearchTraversal(Object value) {
-        var source = map(value);
-        return new OperationalContextRepositorySearchTraversal(
-                textList(source, "rules"),
-                textList(source, "expandWhen")
-        );
-    }
-
-    private static OperationalContextOperationalSignals operationalSignals(Object value) {
-        var source = map(value);
-        var signals = new LinkedHashMap<String, List<String>>();
-        source.forEach((key, item) -> signals.put(key, textList(item)));
-        return new OperationalContextOperationalSignals(signals);
     }
 
     private static OperationalContextReferences defaultReferences(OperationalContextReferences value) {

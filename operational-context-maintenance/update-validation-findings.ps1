@@ -131,7 +131,7 @@ if ($warningGroups.Count -gt 0) {
 } else {
     $lines.Add("- No warning groups were reported.")
 }
-$lines.Add('- Treat `info` findings as maintenance backlog unless they block a concrete handoff or operator workflow.')
+$lines.Add('- Treat `info` findings as maintenance backlog unless they block a concrete handoff or operator task.')
 
 Add-CountTable $lines "By category" (@($records | Group-Object Category | Sort-Object @{ Expression = "Count"; Descending = $true }, Name)) "Category"
 Add-CountTable $lines "By source file" (@($records | Group-Object File | Sort-Object @{ Expression = "Count"; Descending = $true }, Name)) "Source file"

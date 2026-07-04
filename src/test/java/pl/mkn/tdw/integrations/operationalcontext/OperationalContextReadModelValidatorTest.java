@@ -192,7 +192,7 @@ class OperationalContextReadModelValidatorTest {
                         "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
-                                "role", "primary-implementation",
+                                "role", "primary",
                                 "priority", 1
                         ))
                 )),
@@ -304,7 +304,7 @@ class OperationalContextReadModelValidatorTest {
                                 "id", "no-target-scope",
                                 "repositories", List.of(map(
                                         "repoId", "missing-repo",
-                                        "role", "primary-implementation"
+                                        "role", "primary"
                                 ))
                         )
                 ),
@@ -334,7 +334,7 @@ class OperationalContextReadModelValidatorTest {
                         "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
-                                "role", "primary-implementation",
+                                "role", "primary",
                                 "priority", 1
                         ))
                 )),

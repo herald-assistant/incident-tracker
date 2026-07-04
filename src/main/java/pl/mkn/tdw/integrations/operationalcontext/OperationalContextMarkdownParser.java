@@ -372,14 +372,11 @@ final class OperationalContextMarkdownParser {
     private OperationalContextReferences operationalContextLinks(MarkdownEntry entry) {
         var systems = new ArrayList<String>();
         var repositories = new ArrayList<String>();
-        var modules = new ArrayList<String>();
         var processes = new ArrayList<String>();
         var boundedContexts = new ArrayList<String>();
         var integrations = new ArrayList<String>();
         var terms = new ArrayList<String>();
         var teams = new ArrayList<String>();
-        var externalParties = new ArrayList<String>();
-        var dataStores = new ArrayList<String>();
         var handoffRules = new ArrayList<String>();
 
         for (var value : valuesFor(entry, "operational context links", "context links")) {
@@ -390,14 +387,11 @@ final class OperationalContextMarkdownParser {
             switch (reference.type()) {
                 case "system" -> systems.add(reference.id());
                 case "repository" -> repositories.add(reference.id());
-                case "module" -> modules.add(reference.id());
                 case "process" -> processes.add(reference.id());
                 case "bounded-context" -> boundedContexts.add(reference.id());
                 case "integration" -> integrations.add(reference.id());
                 case "term" -> terms.add(reference.id());
                 case "team" -> teams.add(reference.id());
-                case "external-party" -> externalParties.add(reference.id());
-                case "datastore" -> dataStores.add(reference.id());
                 case "handoff-rule" -> handoffRules.add(reference.id());
                 default -> {
                 }
@@ -406,16 +400,12 @@ final class OperationalContextMarkdownParser {
 
         return new OperationalContextReferences(
                 distinct(systems),
-                List.of(),
                 distinct(repositories),
-                distinct(modules),
                 distinct(processes),
                 distinct(boundedContexts),
                 distinct(integrations),
                 distinct(terms),
                 distinct(teams),
-                distinct(externalParties),
-                distinct(dataStores),
                 distinct(handoffRules)
         );
     }
@@ -453,14 +443,11 @@ final class OperationalContextMarkdownParser {
         return switch (normalized) {
             case "system", "systems" -> "system";
             case "repository", "repositories", "repo", "repos" -> "repository";
-            case "module", "modules" -> "module";
             case "process", "processes" -> "process";
             case "bounded-context", "bounded-contexts", "boundedcontext", "boundedcontexts" -> "bounded-context";
             case "integration", "integrations" -> "integration";
             case "term", "terms", "glossary-term", "glossary-terms" -> "term";
             case "team", "teams" -> "team";
-            case "external-party", "external-parties", "externalparty", "externalparties" -> "external-party";
-            case "datastore", "datastores", "data-store", "data-stores" -> "datastore";
             case "handoff-rule", "handoff-rules", "handoffrule", "handoffrules" -> "handoff-rule";
             default -> null;
         };

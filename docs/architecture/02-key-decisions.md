@@ -367,8 +367,8 @@ Polityka:
 - `gitlab_list_available_repositories` jest lekkim discovery tool nad
   operational context. Pozostaje dostepny razem z focused GitLab tools, zeby
   model mogl odnalezc `projectName`/`gitLabPath` repozytorium po aliasie,
-  systemie, bounded context, pakiecie, endpointcie albo module, zanim uzyje
-  search/read tools.
+  systemie, bounded context, procesie, integracji albo code-search scope,
+  zanim uzyje search/read tools.
 - `gitlab_list_available_repositories` zwraca tez `codeSearchScopes` z
   `code-search-scopes.yml`: semantic target, role, priorytety i `projectName`
   repozytoriow, ktore nalezy przeszukiwac razem dla dopasowanego zakresu.
@@ -446,7 +446,7 @@ guidance do opisow drogich lub ryzykownych tools. Przyklady:
   GitLab lookupu pod Technical Handoff v1,
 - GitLab available-repositories/search/class/flow guidance przypomina, ze
   operational context moze wskazywac kilka repozytoriow jednego systemu;
-  biblioteki i shared modules z `codeSearchScopes` oraz kompatybilnych
+  repozytoria pomocnicze z `codeSearchScopes` oraz kompatybilnych
   `codeSearchProjects` sa czescia scope'u szukania kodu,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB tools przypominaja modelowi, ze dla JPA/repository/data-access symptomow

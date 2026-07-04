@@ -1,197 +1,76 @@
-# Operational Context: knowledge index dla analizy systemowej
+# Operational Context Model, Tools And Usage
 
-## Cel dokumentu
+Ten dokument jest kanonicznym opisem `operational-context` w projekcie.
+Opisuje aktualny model katalogu, sposob jego uzycia przez API, tools, AI
+runtime i feature'y analityczne oraz granice, ktorych nie wolno odbudowywac.
 
-Ten dokument jest kanonicznym opisem `operational-context` w projekcie. Opisuje
-zalozenia, cel, aktualna implementacje i zasady dalszego rozwoju katalogu jako
-indeksu wiedzy dla AI-augmented system analysis.
+## Cel
 
-Operational context jest reusable capability katalogowa. Incident analysis jest
-pierwszym konsumentem, ale katalog nie jest wlasnoscia feature'u incydentowego.
-Ma wspierac obecne i przyszle scenariusze:
+Operational context jest curated navigation layer dla analizy systemowej. Ma
+uzupelniac to, czego nie da sie szybko i pewnie wywnioskowac z jednego repo:
 
-- incident analysis po `correlationId`,
-- flow explorer,
-- functional logic explorer,
-- natural-language data diagnostics,
-- analiza zasiegu bledu,
-- generowanie dokumentacji technicznej i funkcjonalnej,
-- onboarding nowego analityka,
-- inne przyszle feature'y wymagajace zrozumienia systemu as-is.
+- od ktorego systemu, procesu, bounded contextu, zespolu albo repozytorium
+  zaczac,
+- do ktorego kolejnego repozytorium albo capability przejsc, gdy analiza
+  wymaga kontynuacji,
+- jak przetlumaczyc techniczny sygnal na jezyk analityka biznesowo-systemowego,
+- jaki handoff, owner, partner albo ograniczenie widocznosci jest istotne,
+- ktore pytania sa nadal otwarte i nie powinny byc zgadywane przez AI.
 
-Katalog ma byc indeksem wiedzy, a nie dumpem dokumentacji. Ma pomagac AI
-odnalezc wlasciwy obszar systemu, dobrac kod do doczytania, zrozumiec flow,
-wskazac ograniczenia widocznosci i zdecydowac, jakie tools albo repozytoria
-sa potrzebne do dalszej analizy.
+Operational context nie jest inventory kodu ani runtime. Szczegoly klas,
+endpointow, kolejek, tabel, deploymentow, plikow i konfiguracji sa odkrywane
+przez dedykowane tools oraz repozytoria zrodlowe.
 
-## Problem
+## Zasady Graniczne
 
-Analizowany krajobraz systemowy jest mieszany:
+- `system` jest kanonicznym bytem katalogowym.
+- Dane runtime, service names i deployment signals sa wlasciwosciami albo
+  sygnalami systemu, nie osobnym bytem referencyjnym.
+- Katalog moze wskazac repozytoria do wspolnego czytania, ale nie przechowuje
+  szczegolowych elementow kodu, tras API, nazw kolejek ani tabel.
+- Katalog moze opisac integracje jako relacje systemowe, ale nie przechowuje
+  szczegolowych kontraktow transportu, payloadow ani implementacji klientow.
+- `code-search-scopes.yml` wskazuje semantyczny scope repozytoriow:
+  `repoId`, `projectName`/`projectPath`, `role`, `priority`, `reason`,
+  `readFor`, limitations i validation.
+- Incident analysis jest pierwszym feature'em korzystajacym z katalogu, ale
+  model i tools pozostaja neutralne.
+- Feature-specific zasady uzycia katalogu mieszkaja w policy/guidance feature'a
+  i runtime skillach, nie w neutralnych `opctx_*` tools.
 
-- czesc systemu jest legacy,
-- czesc jest w trakcie przebudowy,
-- czesc zostala przepisana,
-- te same bounded contexty moga miec implementacje w monolicie, mikroserwisie,
-  bibliotece shared albo rownolegle w starej i nowej implementacji,
-- proces biznesowy moze przechodzic przez wiele bounded contextow i systemow,
-- support capability, np. notifications, moze byc uzywane przez wiele core
-  processow.
+## Zakres Pytan
 
-Sama wiedza z logow, stacktrace, nazw deploymentu albo pojedynczego repozytorium
-nie wystarcza. LLM nie powinien zgadywac:
+Katalog wspiera przede wszystkim pytania:
 
-- czy klasa jest w glownym repozytorium, module, bibliotece shared albo
-  wygenerowanym kliencie,
-- ktory system jest kanonicznym wlascicielem runtime signal,
-- czy znaleziony bounded context jest implementacja docelowa, zastepowana czy
-  rownolegla,
-- ktore integracje i systemy sa downstream/upstream dla konkretnego flow,
-- do jakiego zespolu albo partnera nalezy skierowac handoff.
+- "od czego zaczac analize tego problemu?",
+- "ktore repozytoria trzeba czytac razem?",
+- "jaki proces albo bounded context tlumaczy ten objaw?",
+- "kto moze byc ownerem albo pierwszym handoffem?",
+- "jak opisac ten techniczny sygnal jezykiem biznesowym?",
+- "ktore ograniczenia widocznosci trzeba pokazac uzytkownikowi?",
+- "jak przygotowac dev stories, user stories albo scenariusze testowe po
+  zrozumieniu systemu?".
 
-Operational context ma rozwiazac ten problem przez kontrolowany graf faktow,
-read modele i narzedzia, ktore dostarczaja AI kompletny, ale ograniczony
-tokenowo kontekst.
+Katalog nie odpowiada samodzielnie na pytania:
 
-## Glowna zasada modelowania
+- "jaki endpoint jest obslugiwany przez dana klase?",
+- "w jakim pliku jest konkretna implementacja?",
+- "jaka tabela albo kolumna jest uzywana?",
+- "jak wyglada deployment manifest?",
+- "jaki jest runtime root cause?".
 
-Write model i read model maja rozne role.
+Na takie pytania katalog moze jedynie wskazac repo/system/proces, od ktorego
+tool powinien zaczac dalsze czytanie.
 
-Write model odpowiada na pytanie: gdzie fakt jest utrzymywany.
+## Pliki Katalogu
 
-Read model odpowiada na pytanie: jaki kontekst dostaje FE, LLM albo tool dla
-konkretnego zadania.
+Domyslny katalog runtime znajduje sie w:
 
-Kod moze replikowac relacje w read modelu, aby input dla LLM byl kompletny bez
-wzgledu na to, od ktorej encji zaczyna analiza. YAML/MD nie powinny replikowac
-tych samych relacji recznie. Kazdy fakt powinien miec jedno miejsce
-utrzymania, a backlinki, sasiedztwo, scope'y i widoki zadaniowe powinny byc
-generowane przez kod.
-
-Konsekwencje:
-
-- fakt ma wlasciciela wedlug typu faktu, a nie wedlug typu encji,
-- `system` jest kanonicznym bytem aplikacji/uslugi,
-- runtime/deployment/service/container names sa sygnalami systemu, nie osobnym
-  bytem referencyjnym,
-- relacje zwrotne sa projekcja read modelu,
-- kazda relacja pochodna ma provenance,
-- brak danych jest reprezentowany jako open question, validation finding albo
-  limitation, a nie uzupelniany zgadywaniem.
-
-## Granice capability
-
-Operational context jest neutralna capability:
-
-- `integrations.operationalcontext` laduje katalog, buduje read modele i
-  waliduje graf,
-- `agenttools.operationalcontext` wystawia neutralne tools `opctx_*`,
-- `api.operationalcontext` wystawia operator-facing API i projekcje dla FE,
-- feature'y analityczne decyduja, kiedy i jak uzyc katalogu.
-
-Invarianty:
-
-- `integrations.operationalcontext` nie importuje feature'ow, tools, API ani
-  platformy AI.
-- `agenttools.operationalcontext` nie importuje Copilota ani incident analysis.
-- Incidentowe zasady uzycia katalogu mieszkaja w feature policy, prompt
-  guidance i skillach Copilota.
-- Tools `opctx_*` nie przyjmuja `correlationId`, `environment`, `gitLabGroup`
-  ani `gitLabBranch` jako model-facing input.
-- Jedynym wspolnym model-facing argumentem operatorskim tooli jest krotki
-  `reason`.
-- Katalog nie zawiera sekretow, tokenow, danych kontaktowych ani pelnych
-  payloadow produkcyjnych.
-
-## Potrzeby analityczne
-
-Operational context musi wspierac szeroki zestaw pytan, nie tylko incydenty.
-
-### Gdzie jest klasa, metoda albo konfiguracja
-
-Read model musi wskazac:
-
-- code-search scope,
-- glowne repozytorium,
-- biblioteki shared i generated clients,
-- priorytet repozytoriow i modulow,
-- source roots, module ids, package prefixes,
-- class hints, endpoint hints, DB hints,
-- lifecycle role implementacji,
-- powody wlaczenia repozytorium do scope'u.
-
-LLM nie powinien zgadywac, czy dana klasa jest w glownym repo, bibliotece,
-module monolitu albo implementacji zastepowanej.
-
-### Jak wyglada flow requestu albo use case'u
-
-Read model musi opisac:
-
-- trigger flow,
-- kroki uporzadkowane,
-- systemy, bounded contexty, implementacje i integracje na kazdym kroku,
-- endpointy, kolejki, topic, tabele, payload hints, klasy i moduly,
-- rozroznienie read/write, command/query, sync/async, scheduler,
-- upstream/downstream wyliczony z krokow flow.
-
-Przyklad klasy pytania:
-
-```text
-FE -> agreement process endpoint -> DB write -> notifications -> external system
+```properties
+src/main/resources/operational-context
 ```
 
-### Jaki jest zasieg bledu albo zmiany
-
-Blast-radius read model musi startowac od:
-
-- endpointu,
-- klasy,
-- tabeli,
-- kolejki/topicu,
-- integracji,
-- systemu,
-- bounded contextu,
-- procesu albo flow.
-
-Wynik powinien wskazac impacted systems, bounded contexty, integracje, procesy,
-flow, datastore i external parties, z confidence, direction, provenance i
-recommended next reads.
-
-### Jak zrozumiec proces as-is
-
-Read model musi umiec pokazac:
-
-- proces i jego kroki,
-- bounded contexty i implementacje dla procesu,
-- ktore kroki sa w monolicie, mikroserwisie, bibliotece shared albo
-  implementacji docelowej,
-- gdzie konczy sie core context, a zaczyna support/technical context,
-- code-search scopes i glossary potrzebne do analizy procesu.
-
-### Jak onboardowac nowego analityka
-
-Onboarding view powinien byc generowany z read modelu i zawierac:
-
-- najwazniejsze systemy i bounded contexty,
-- lokalny jezyk, glossary i rzeczy, ktorych nie mylic,
-- glowne procesy i flows,
-- najwazniejsze repozytoria i code-search scopes,
-- typowe awarie i handoff rules,
-- migracje, rownolegle implementacje i known gaps.
-
-### Jak generowac dokumentacje
-
-Documentation view powinien byc projekcja read modelu, nie kopia raw YAML.
-Musi pokazywac:
-
-- fakty potwierdzone,
-- fakty pochodne,
-- heurystyki,
-- ograniczenia widocznosci,
-- provenance do miejsca utrzymania faktu.
-
-## Zrodla katalogu
-
-Runtime katalogu jest ladowany z classpath resource root:
+Runtime root jest konfigurowany przez:
 
 ```properties
 analysis.operational-context.enabled=false
@@ -201,675 +80,152 @@ analysis.operational-context.enabled=false
 # analysis.operational-context.max-handoff-rules=2
 ```
 
-Domyslny katalog znajduje sie w `src/main/resources/operational-context`.
+Pliki katalogu:
 
-| Plik | Wlasciciel faktow |
+| Plik | Rola |
 | --- | --- |
-| `operational-context-index.md` | opis katalogu, reguly modelowania, quality gates i update rules |
-| `systems.yml` | kanoniczne systemy, runtime/deployment metadata, service names, aliases, local runtime signals |
-| `repo-map.yml` | repozytoria, moduly, source layout, shared libraries i generated clients |
-| `code-search-scopes.yml` | semantyczne code-search scopes, read order repozytoriow/modulow i reguly traversal |
-| `processes.yml` | procesy, kroki procesow, participants procesu, outcomes i process boundaries |
-| `integrations.yml` | kontrakty komunikacji, participants, transport, channels, implementation hints i failure modes |
-| `bounded-contexts.yml` | granice semantyczne, local language, concepts, invariants i analysis hints |
-| `teams.yml` | responsibilities, ownership roles, handoff hints i partner responsibilities |
-| `glossary.md` | terminy, aliasy, akronimy, do-not-confuse, match signals i typed canonical references |
-| `handoff-rules.md` | reguly routingu, wymagane evidence, expected first action i context links |
+| `operational-context-index.md` | opis celu katalogu, zasad modelowania, quality gates i ograniczen |
+| `systems.yml` | kanoniczne systemy, aliasy, status, summary, references, ownership, handoff i open questions |
+| `repo-map.yml` | mapa repozytoriow do GitLaba i relacji katalogowych |
+| `code-search-scopes.yml` | semantyczne grupy repozytoriow do wspolnego przeszukania |
+| `processes.yml` | procesy biznesowo-operacyjne, kroki, rezultaty i relacje |
+| `bounded-contexts.yml` | bounded contexty, jezyk lokalny, zakres odpowiedzialnosci i granice |
+| `integrations.yml` | integracje jako relacje systemowe: source, target, category, style, direction, ownership |
+| `teams.yml` | zespoly, odpowiedzialnosci, handoff i luki ownershipu |
+| `glossary.md` | slownik pojec biznesowo-systemowych |
+| `handoff-rules.md` | reguly przekazania sprawy i wymagane evidence |
 
-## Wlasciciele faktow
+## Model
 
-### `systems.yml`
+### System
 
-Utrzymuje fakty o system identity i runtime:
+`system` jest glownym targetem relacji. Powinien miec:
 
-- canonical system id,
-- aliases,
-- deployment/service/container/application names,
-- health endpoints,
-- criticality i lifecycle,
-- runtime markers,
-- platform dependencies tylko wtedy, gdy sa faktem runtime.
+- `id`, `name`, `aliases`,
+- `systemType`, `lifecycleStatus`, `criticality`,
+- `summary`,
+- `references` do procesow, repozytoriow, integracji, bounded contextow,
+  zespolow i pojec,
+- `responsibilities`, `relations`, `sourceCoverage`, `gaps` tam, gdzie sa
+  potrzebne.
 
-Nie powinien recznie utrzymywac:
+System nie powinien miec osobnego katalogu runtime names, deployment names,
+container names ani endpointow.
 
-- listy wszystkich integracji systemu,
-- listy wszystkich bounded contextow, jezeli wynikaja z innych faktow,
-- self-reference,
-- relacji system-system wynikajacych z `integrations.yml` albo flow.
+### Repository
 
-### `repo-map.yml`
+Repository opisuje, czym jest repo w krajobrazie systemu i do jakich bytow
+katalogowych sie odnosi. Powinno zawierac:
 
-Utrzymuje fakty o kodzie:
+- GitLab identity (`projectName`, `projectPath`),
+- purpose/summary,
+- status, criticality, aliases,
+- references do systemow, procesow, integracji i bounded contextow,
+- handoff/ownership/limitations.
 
-- GitLab paths,
-- repositories,
-- modules,
-- source/test/resource roots,
-- build files,
-- generated sources,
-- shared/imported libraries,
-- package/class/endpoint/DB hints.
+Repository nie opisuje ukladu katalogow, plikow build/deployment ani sciezek
+implementacji.
 
-Repozytoria nie definiuja semantycznych zakresow czytania kodu. Te zakresy
-sa utrzymywane w `code-search-scopes.yml`.
+### Code Search Scope
 
-### `code-search-scopes.yml`
+Code search scope grupuje repozytoria, ktore trzeba czytac razem. To jest
+semantyczny kontrakt wyboru repozytoriow, nie instrukcja szukania po klasach.
 
-Utrzymuje semantyczne zakresy code grounding:
+Repozytorium w scope powinno miec:
 
-- jeden `target { type, id }` na scope,
-- repozytoria i moduly czytane razem,
-- role i priorytety repozytoriow,
-- hinty techniczne i reguly traversal.
+- `repoId`,
+- `role`,
+- `priority`,
+- `reason`,
+- `readFor`,
+- `projectName` albo `projectPath`, jezeli sa znane,
+- optional limitations/validation.
 
-Scope ma obejmowac glowne repozytorium i biblioteki wymagane do analizy, aby
-LLM nie musial zgadywac, gdzie jest klasa.
+Dozwolone role powinny opisywac relacje w analizie, np. `primary`, `support`,
+`shared-library`, `migration-peer`, `external-adapter`. Nie uzywamy roli jako
+substytutu dla szczegolow implementacji.
 
-### `processes.yml`
+### Process
 
-Utrzymuje fakty procesowe:
+Process opisuje przebieg biznesowo-operacyjny:
 
-- typ procesu,
-- lifecycle,
-- participants,
-- steps,
-- process boundary,
-- outcomes,
-- failure modes,
-- relacje do flow albo bounded contextow, jezeli sa faktem procesu.
+- uczestnikow,
+- kroki i rezultaty,
+- warunki sukcesu, porazki i anulowania,
+- powiazane systemy, integracje i bounded contexty,
+- failure modes jezykiem procesu.
 
-Nie powinien recznie utrzymywac pelnego call graphu technicznego.
+Process nie przechowuje per-step endpointow, klas, pakietow ani kolejek.
 
-### `integrations.yml`
+### Bounded Context
 
-Utrzymuje fakty o kontraktach komunikacji:
+Bounded context opisuje odpowiedzialnosc domenowa i lokalny jezyk:
 
-- source participant,
-- target participant,
-- intermediaries,
-- final targets,
-- HTTP, messaging, DB, file albo event transport,
-- operation names,
-- endpoints,
-- queues/topics/routing keys,
-- local implementation hints,
-- retry/consistency/auth/failure modes.
-
-Kanonicznym miejscem relacji integracja-system i integracja-bounded-context sa
-`participants`. `references.*` nie powinny powtarzac tych samych faktow.
-
-### `bounded-contexts.yml`
-
-Utrzymuje fakty semantyczne:
-
-- local language,
-- granice domeny,
-- core/support/technical classification,
+- summary i local language,
+- includes/excludes,
+- business capabilities,
 - invariants,
-- concepts,
-- czego nie mylic,
-- analysis hints.
+- relacje do systemow, procesow, integracji i repozytoriow,
+- ownership oraz limitations.
 
-Relacje implementacyjne do systemow, repozytoriow i integracji powinny wynikac
-z implementation/code-search/integration/flow facts, jezeli sa tam
-jednoznacznie opisane.
+Bounded context moze wskazac pojecia domenowe, ale nie powinien przechowywac
+list klas encji ani Java-owych implementation hints.
 
-### `teams.yml`
+### Integration
 
-Utrzymuje ownership i routing:
+Integration opisuje zaleznosc systemowa:
 
-- responsibilities,
-- target type i target id,
-- role,
-- confidence,
-- evidence,
-- handoff hints.
+- source system i target systems,
+- category, integration style, direction,
+- criticality i data sensitivity,
+- role uczestnikow,
+- references do procesow, bounded contextow i pojec,
+- responsibility status, ownership, limitations.
 
-Ownership moze dotyczyc systemu, repozytorium, implementacji, integracji,
-procesu albo flow step. Przy migracjach ownership implementacji bywa
-precyzyjniejszy niz ownership calego bounded contextu.
+Integration nie jest katalogiem HTTP paths, queue names, topics, payloadow ani
+klientow technicznych.
 
-### `glossary.md`
+### Team, Glossary, Handoff
 
-Utrzymuje local language:
+Te pliki maja najwieksza wartosc, gdy tlumacza odpowiedzialnosc i jezyk:
 
-- terminy,
-- aliasy,
-- akronimy,
-- match signals,
-- canonical references,
-- do-not-confuse,
-- disambiguation notes.
+- `teams.yml` mowi, kto moze byc ownerem lub partnerem,
+- `glossary.md` tlumaczy pojecia i rozroznienia,
+- `handoff-rules.md` opisuje, kiedy i z jakim evidence przekazac temat.
 
-Glossary nie jest dowodem root cause i nie powinno byc glownym miejscem
-utrzymywania grafu relacji. Typed references moga wskazywac encje katalogu,
-a opisowe aliasy pozostaja free text.
+Nie nalezy uzywac ich jako miejsca na techniczne instrukcje czytania kodu.
 
-### `handoff-rules.md`
+## Loader I Read Models
 
-Utrzymuje instrukcje operacyjne:
+Katalog jest ladowany przez
+`integrations.operationalcontext.OperationalContextAdapter`.
 
-- kiedy routowac,
-- kiedy nie routowac,
-- jaka evidence jest wymagana,
-- expected first action,
-- partner labels,
-- typed `Operational context links`.
+Adapter:
 
-Handoff rules moga linkowac do encji katalogu, ale nie powinny dublowac
-relacji process/system/integration utrzymywanych gdzie indziej.
+1. normalizuje `analysis.operational-context.resource-root`,
+2. laduje pliki YAML z classpath,
+3. parsuje `glossary.md`, `handoff-rules.md` i index,
+4. mapuje encje do neutralnych DTO,
+5. buduje open questions i validation findings,
+6. udostepnia filtrowanie przez `OperationalContextQuery`.
 
-## Model danych integracji
+Aktywne read modele sa celowo waskie:
 
-Glownym modelem runtime jest `OperationalContextCatalog` z pakietu
-`integrations.operationalcontext`. Zawiera listy:
-
-- `teams`,
-- `processes`,
-- `systems`,
-- `integrations`,
-- `repositories`,
-- `codeSearchScopes`,
-- `boundedContexts`,
-- `glossaryTerms`,
-- `handoffRules`,
-- `openQuestions`,
-- `indexDocument`.
-
-Wiekszosc encji implementuje `OperationalContextEntry` i ma wspolne pola:
-
-- `id`, `name`, `shortName`, `summary`, `purpose`,
-- `aliases`, `useFor`,
-- `references`,
-- `responsibilities`,
-- `matchSignals`,
-- `handoffHints`,
-- `relations`,
-- raw `payload` jako wewnetrzny snapshot.
-
-Raw `payload` nie jest publikowany do neutralnych tools jako podstawowy sposob
-pracy modelu. Tools i API powinny eksponowac skondensowane widoki.
-
-## Ladowanie katalogu
-
-`OperationalContextAdapter` implementuje `OperationalContextPort`.
-
-Przeplyw:
-
-1. Normalizuje `analysis.operational-context.resource-root`.
-2. Laduje YAML przez `YamlMapFactoryBean`.
-3. Laduje markdown jako UTF-8.
-4. Mapuje raw mapy na typed records w `OperationalContextDtos`.
-5. Parsuje `glossary.md` i `handoff-rules.md` przez
-   `OperationalContextMarkdownParser`.
-6. Zbiera `openQuestions` z YAML/markdown gaps.
-7. Cache'uje zbudowany `OperationalContextCatalog`.
-8. Dla zapytan innych niz `OperationalContextQuery.all()` zwraca katalog
-   przefiltrowany.
-
-`OperationalContextQuery` obsluguje:
-
-- `includedEntryTypes`,
-- `filters`,
-- `includeIndexDocument`.
-
-`OperationalContextFilter` filtruje po typie encji, sciezce w payloadzie,
-wartosciach i trybie `EXACT` albo `CONTAINS`.
-
-## Relation index
-
-`OperationalContextRelationIndexBuilder` buduje graf relacji z write modelu.
-
-Odpowiedzialnosci:
-
-- normalizacja typow encji,
-- budowanie `outgoingRelations`,
-- budowanie `incomingRelations`,
-- budowanie `neighbors`,
-- deduplikacja identycznych relacji,
-- wskazanie `canonicalOwner`,
-- zachowanie `provenance`,
-- raportowanie relation-level validation findings.
-
-Podstawowe prymitywy read modelu:
-
-- `EntityKey`,
-- `EntityRef`,
-- `SourceRef`,
-- `Provenance`,
-- `ReadModelRelation`,
-- `ValidationFinding`.
-
-Read model moze pokazywac relacje z obu stron, ale write model ma utrzymywac
-fakt w jednym miejscu.
-
-## Read modele
-
-Read modele sa zadaniowymi projekcjami katalogu. Maja ograniczac tokeny i szum,
-a nie odsylac LLM do calego katalogu.
-
-### Entity relations
-
-Entity relations odpowiada na pytanie: z czym encja jest powiazana i skad to
-wiemy.
-
-W API reprezentuje to `OperationalContextEntityRelationsReadModelDto`.
-Zawiera:
-
-- analysis target,
-- outgoing relations,
-- incoming relations,
-- neighbors,
-- validation findings,
-- source references.
-
-### Code search read model
-
-`OperationalContextCodeSearchReadModel` odpowiada na pytanie: gdzie szukac kodu
-i dlaczego.
-
-Zawiera:
-
-- target analizy,
-- `ReadModelProfile`,
-- dopasowane code-search scopes,
-- repository views z role, priority i reason,
-- Git metadata,
-- source layout,
-- modules,
-- package/class/endpoint/queue/topic hints,
-- database hints,
-- workflow hints,
-- search strategy,
-- limitations,
-- validation findings,
-- provenance.
-
-Ten model jest kluczowy dla GitLab tools. Jezeli scope wskazuje kilka
-repozytoriow, AI powinno traktowac je jako jeden logiczny zakres kodu systemu.
-
-### Implementation read model
-
-`OperationalContextImplementationReadModel` odpowiada na pytanie: gdzie
-bounded context albo system jest zaimplementowany.
-
-Obecnie implementacje sa projektowane z `codeSearchScopes` z
-`code-search-scopes.yml`, repozytoriow i modulow. Model zawiera:
-
-- implementation id,
-- implementation kind,
-- lifecycle role,
-- system refs,
-- bounded context refs,
-- process refs,
-- repository refs,
-- module/package hints,
-- code-search scope refs,
-- source refs i provenance.
-
-Lifecycle roles obejmuja m.in. `primary`, `source-implementation`,
-`target-implementation`, `parallel`, `fallback`, `deprecated`,
-`being-replaced` i `supporting-library`.
-
-### Flow read model
-
-`OperationalContextFlowReadModel` odpowiada na pytanie: jak przebiega request
-albo use case.
-
-Obecnie flow jest projektowany z `processes[*].steps`, relation indexu i
-implementation read modelu. Model zawiera:
-
-- analysis target,
-- trigger,
-- ordered steps,
-- edges `next-step`,
-- involved systems,
-- bounded contexts,
-- integrations,
-- data stores,
-- implementation refs,
-- code-search scopes,
-- endpoint/queue/topic/class/DB hints,
-- integration hints,
-- validation findings i provenance.
-
-Flow read model jest podstawa dla flow explorer, documentation view i
-blast-radius analysis.
-
-### Blast-radius read model
-
-`OperationalContextBlastRadiusReadModel` odpowiada na pytanie: co moze byc
-dotkniete przez blad, zmiane albo niedostepnosc wskazanego elementu.
-
-Moze startowac od:
-
-- `process`,
-- `system`,
-- `repository`,
-- `code-search-scope`,
-- `bounded-context`,
-- `integration`,
-- `datastore`,
-- `endpoint`,
-- `class`,
-- `table`,
-- `queue`,
-- `topic`.
-
-Model zawiera impacted flows, impacted steps, impacted systems, bounded
-contexts, integrations, implementations, impact type, confidence, reasons,
-source refs i recommended next reads.
-
-### Onboarding view
-
-Onboarding nie jest osobnym wdrozonym recordem w obecnym kodzie. Jest
-docelowym profilem wykorzystania istniejacych projekcji:
-
-- entity relations,
-- code-search,
-- implementation,
-- flow,
-- blast-radius,
-- glossary,
-- handoff,
-- open questions.
-
-Nastepny etap optymalizacji powinien rozstrzygnac, czy onboarding view wymaga
-osobnego read modelu, czy wystarczy profil/kompozycja istniejacych projekcji.
-
-## Profile rozmiaru
-
-Ten sam graf wiedzy musi obslugiwac UI i LLM, wiec payload powinien miec profil
-rozmiaru:
-
-- `index` - minimalny indeks do wyboru encji i kolejnego doczytania,
-- `summary` - zwiezly kontekst do listy FE albo szybkiego promptu,
-- `default` - domyslny kontekst dla odpowiedzi LLM,
-- `expanded` - jawne doczytanie przez tool.
-
-Zasady:
-
-- LLM nie dostaje calego katalogu domyslnie.
-- Kazdy payload ma pokazac, co zostalo uciete i jakie expanded reads sa
-  dostepne.
-- Related entities powinny byc limitowane i sortowane wedlug wartosci dla
-  zadania.
-- Dane powtarzalne w YAML nie powinny byc utrzymywane recznie; powtarzalnosc w
-  read modelu jest akceptowalna, jezeli obniza koszt reasoning modelu.
-
-### Kontrakt utrzymaniowy profili
-
-Brak parametru `profile` w REST pozostaje kompatybilny z FE i zwraca widok
-expanded. Profile `default`, `summary` i `index` sa kontraktem dla LLM, tools i
-oszczednego REST. Nowe pola albo read modele powinny najpierw okreslic, w
-ktorym profilu maja wartosc.
-
-`default` powinien zawierac tylko dane, ktore pomagaja podjac kolejna decyzje:
-
-- wybrac repozytorium, modul, shared library albo generated client,
-- rozroznic `primary`, `target`, `parallel`, `legacy`, `fallback` albo
-  `support` implementation,
-- zrozumiec flow, upstream/downstream albo blast radius,
-- pokazac confidence, limitations, validation summary i provenance,
-- wskazac najmniejszy sensowny next read albo tool.
-
-`expanded` przechowuje kosztowne dane potrzebne UI, diagnostyce albo
-exhaustive analysis:
-
-- raw source preview,
-- pelne explainability groups,
-- pelne validation findings,
-- pelne sourceRef repetition,
-- wszystkie hinty code-search,
-- kompletne implementation refs per flow/blast step,
-- dlugie inventories i health cards.
-
-Nie nalezy przenosic pola do `default` tylko dlatego, ze jest dostepne w
-builderze. Pole trafia do `default`, jezeli zmienia wybor kolejnego kroku albo
-ogranicza zakres eksploracji. Jezeli pole tylko potwierdza UI table/detail
-view, zostaje w no-profile/expanded.
-
-### Affordances dla LLM
-
-Default payload ma byc samonawigowalny. To nie jest klasyczne HATEOAS dla REST,
-tylko praktyczna instrukcja dla agenta, jak doczytywac kontekst stopniowo.
-
-W default/read-model responses utrzymuj:
-
-- `links` do self, expanded i sibling read models,
-- `availableExpansions` z nazwami ciezszych widokow,
-- `suggestedNextReads` jako konkretne, male nastepne REST/tool reads,
-- `suggestedTools` jako neutralne capability names,
-- `reasonToExpand` tylko wtedy, gdy expanded ma realna wartosc,
-- `omittedBecause` i `truncation`, gdy default ucina dane,
-- `relevanceScore` i `reasonToRead` na elementach top-N,
-- `confidence`, `limitations`, `provenance` i compact `sourceRefs`.
-
-`suggestedNextReads` powinny zawierac kolejny najmniejszy read, nie liste
-wszystkiego. Dla relacji preferuj peer entity lub sibling read model
-(`code-search`, `flow`, `blast-radius`) zgodny z typem encji. Dla blast-radius
-najpierw wskaz impacted flow/implementation/code-search, a dopiero potem
-GitLab/DB exploration.
-
-### Provenance i sourceRefs
-
-Default provenance ma dawac mozliwosc sprawdzenia faktu bez powielania
-dlugiego katalogowego payloadu:
-
-- top-level `provenance.sourceRefs` powinno streszczac liczbe i rozklad refs,
-- top-level `sourceRefs` powinny byc deduplikowane i stabilne,
-- compact sourceRef powinien miec `refId`, `file`, `path`, `target`, `role`,
-- elementy list powinny zwykle niesc `sourceRefCount`, a nie pelne source refs,
-- pelne source refs i raw preview zostaja w expanded/diagnostic.
-
-Nested refs w default powinny byc lekkie. Uzywaj `type`, `id`, opcjonalnie
-`label` i `lifecycleStatus`. Nie powtarzaj `summary` w kazdym nested ref,
-jezeli summary nie zmienia next read albo blast-radius decision.
-
-### Scoring i truncation
-
-Top-N w default musi byc deterministyczny i uzasadniony. Sortuj po kombinacji:
-
-- confidence,
-- canonical/direct provenance,
-- lifecycle role i migration status,
-- relation/impact type,
-- target type przydatny dla dalszej eksploracji,
-- criticality,
-- sourceRef coverage.
-
-Kazdy scoring jest heuristic read-model logic, nie faktem write modelu. Nie
-zapisuj scoringu w YAML/MD. Szerokie sygnaly runtime (`class`, `table`,
-`queue`, `topic`) powinny miec guard i nizszy `relevanceScore`, gdy lapia zbyt
-duzo implementacji. Wtedy default powinien sugerowac doprecyzowanie sygnalu
-przed kosztownym czytaniem kodu.
-
-## Selekcja kontekstu dla LLM
-
-Minimalne profile:
-
-| Pytanie | Minimalny payload |
-| --- | --- |
-| Klasa/metoda/konfiguracja | code-search read model + implementation/entity envelope |
-| Endpoint | flow read model + code-search bundle + DB/integration hints |
-| Kolejka/topic | integration envelope + affected flows + producer/consumer code-search |
-| Proces | process envelope + flows + bounded context implementations |
-| Blad danych | blast-radius from table/entity + DB hints + code-search scopes |
-| Onboarding | onboarding composition z top-N sasiedztwem |
-| Dokumentacja | documentation view z flow, provenance i limitations |
-
-Kazdy payload dla LLM powinien zawierac:
-
-- task-specific context,
-- source refs albo provenance,
-- known gaps,
-- validation/quality signals,
-- suggested tools to fetch more evidence.
-
-## Walidacja i jakosc
-
-`OperationalContextReadModelValidator` waliduje write model i read-model graph.
-Realny runtime katalog powinien ladowac sie bez validation errors i warnings.
-
-Strict validation blokuje m.in.:
-
-- self-reference,
-- unknown relation targets,
-- bidirectional references bez uzasadnionego wlasciciela,
-- duplikacje `participants` i `references`,
-- system dependencies odtwarzalne z integracji,
-- bounded context references odtwarzalne z read modelu,
-- process participant references powtorzone w `references`,
-- code-search target references odtwarzalne z repository references,
-- team references odtwarzalne z `responsibilities`,
-- code-search scope bez repository albo target,
-- unknown code-search repository.
-
-Warning-only findings moga pozostac w kodzie jako diagnostyka dla
-syntetycznych/przyszlych przypadkow, ale realny katalog nie powinien ich
-zawierac bez swiadomej decyzji.
-
-Walidacja ma sluzyc trzem celom:
-
-- utrzymac jedno miejsce prawdy w write modelu,
-- chronic LLM przed niekompletnym lub niespojnym kontekstem,
-- pokazac operatorowi/reviewerowi, gdzie poprawic katalog.
-
-## Operational Context tools
-
-Warstwa tools mieszka w `agenttools.operationalcontext`.
-Nazwy tools:
-
-| Tool | Rola |
-| --- | --- |
-| `opctx_get_scope` | zwraca dostepne typy encji i liczniki |
-| `opctx_list_entities` | zwraca paginowany indeks encji jednego typu |
-| `opctx_search` | wyszukuje po konkretnym sygnale i zwraca ranking |
-| `opctx_get_entity` | zwraca kompaktowe szczegoly jednej encji |
-
-Tools laduja katalog przez `OperationalContextPort`. Nie przyjmuja
-incidentowego scope'u jako input. `ToolContext` sluzy do runtime metadata
-takich jak `analysisRunId`, `copilotSessionId` i `toolCallId`.
-
-### `opctx_get_scope`
-
-Input:
-
-- opcjonalny `reason`.
-
-Output:
-
-- `enabled`,
-- `entityTypes`: `type`, `label`, `count`, `listable`, `searchable`,
-  `detailAvailable`.
-
-Uzycie: odkrycie, jakie obszary katalogu sa dostepne.
-
-### `opctx_list_entities`
-
-Input:
-
-- `type`,
-- `page`,
-- `pageSize`,
-- opcjonalny `filter`,
-- opcjonalny `reason`.
-
-Output:
-
-- typ,
-- paginacja,
-- `totalItems`, `totalPages`, `truncated`,
-- lekkie karty encji z `facets` i `sourceRefs`.
-
-Uzycie: browse indeksu, gdy model nie zna jeszcze konkretnego id.
-
-### `opctx_search`
-
-Input:
-
-- `query`,
-- opcjonalne `types`,
-- `limit`,
-- opcjonalny `reason`.
-
-Output:
-
-- ranking wynikow,
-- confidence,
-- matched fields,
-- matched signals,
-- `why`,
-- source refs.
-
-Uzycie: wyszukiwanie po sygnale z evidence, kodu, tool resultu albo pytania.
-
-### `opctx_get_entity`
-
-Input:
-
-- `type`,
-- `id`,
-- opcjonalne `include`: `overview`, `relations`, `signals`, `codeSearch`,
-  `handoff`, `sourceCoverage`, `openQuestions`,
-- opcjonalny `reason`.
-
-Output:
-
-- identity,
-- overview,
+- entity detail,
 - relations,
-- signals,
-- codeSearch,
-- handoff,
-- sourceCoverage,
-- openQuestions,
-- sourceRefs.
+- code-search.
 
-Uzycie: potwierdzenie szczegolow przed finalnym wykorzystaniem ownershipu,
-handoffu, relacji albo code scope.
+Usuniete sa projekcje oparte o techniczne inventory kodu i zasiegu skutkow.
+Flow analysis, impact analysis albo technical handoff maja korzystac z
+katalogowych relacji i code-search scope, a szczegoly dociagac przez GitLab,
+DB, Elasticsearch albo inne tools.
 
-## Budzet tooli
+## Shared/Operator API
 
-Platformowy budget policy rozpoznaje `opctx_` po prefixie i przypisuje do
-grupy `operational-context`.
+Shared/operator API pod `/api/operational-context/*` jest fasada do czytania
+aktualnego katalogu przez UI i narzedzia operatorskie.
 
-Domyslne limity:
-
-```properties
-analysis.ai.copilot.tool-budget.max-operational-context-calls=4
-analysis.ai.copilot.tool-budget.max-operational-context-returned-characters=32000
-```
-
-Wyniki `opctx_*` sa katalogowym grounding/scope guidance, a nie dowodem root
-cause. Sa widoczne w aktywnosci AI jako tool calls.
-
-## GitLab tools i code grounding
-
-Operational context zasila GitLab capability.
-
-`gitlab_list_available_repositories`:
-
-- laduje wpisy `REPOSITORY`,
-- filtruje je do biezacej hidden `gitLabGroup`,
-- zwraca `projectName`, `gitLabPath`, aliases i signals,
-- zwraca `codeSearchScopes`,
-- przenosi systems, bounded contexts, processes, integrations, package
-  prefixes, endpoint prefixes i module paths.
-
-Jesli dopasowany scope zawiera kilka repozytoriow, AI ma przeszukiwac je jako
-jeden semantyczny zakres implementacji. To dotyczy szczegolnie bibliotek
-shared, generated clients i modulow wspoldzielonych.
-
-`OperationalContextRepositoryProjectPathResolver` rozwija system hints na
-GitLab project paths zgodne z configured group. Jest to neutralny helper
-adapterowy, nie logika incident analysis.
-
-## Operator API i FE
-
-Backendowa fasada mieszka w `api.operationalcontext`.
-
-Endpointy katalogowe:
+Aktywne endpointy:
 
 ```http
 GET /api/operational-context/summary
@@ -887,218 +243,169 @@ GET /api/operational-context/validation
 GET /api/operational-context/search?q=...
 GET /api/operational-context/entities/{type}?id=...
 GET /api/operational-context/entities/{type}/{id}
-```
-
-Endpointy read modelu:
-
-```http
 GET /api/operational-context/read-model/entities/{type}/{id}/relations
 GET /api/operational-context/read-model/entities/{type}/{id}/code-search
-GET /api/operational-context/read-model/entities/{type}/{id}/implementations
-GET /api/operational-context/read-model/entities/{type}/{id}/flow
-GET /api/operational-context/read-model/entities/{type}/{id}/blast-radius
 GET /api/operational-context/read-model/entities/{type}/relations?id=...
 GET /api/operational-context/read-model/entities/{type}/code-search?id=...
-GET /api/operational-context/read-model/entities/{type}/implementations?id=...
-GET /api/operational-context/read-model/entities/{type}/flow?id=...
-GET /api/operational-context/read-model/entities/{type}/blast-radius?id=...
-GET /api/operational-context/read-model/blast-radius?type=...&id=...
 ```
 
-`OperationalContextViewService` buduje:
+API nie wystawia endpointow dla implementation, flow ani blast-radius
+projekcji. UI `/operational-context` jest tylko widokiem aktualnego katalogu i
+ma dopasowywac sie do kontraktu backendu bez kompatybilnosci wstecznej.
 
-- summary counts i health cards,
-- row DTO per typ katalogu,
-- search results,
-- entity detail drawer,
-- validation findings,
-- open questions,
-- entity relations read model,
-- code-search read model,
-- implementation read model,
-- flow read model,
-- blast-radius read model.
+## Agent Tools
+
+Operational context tools sa neutralna capability pod prefixem `opctx_`:
+
+- `opctx_get_scope`,
+- `opctx_list_entities`,
+- `opctx_search`,
+- `opctx_get_entity`.
+
+Tools nie przyjmuja `correlationId`, `environment`, `gitLabGroup` ani
+`gitLabBranch` jako model-facing input. Scope katalogu pochodzi z konfiguracji
+aplikacji i adaptera.
+
+Tools sluza do:
+
+- znalezienia systemu, procesu, bounded contextu, integracji, repozytorium,
+  zespolu, terminu albo handoff clue,
+- dociagniecia kompaktowego detailu encji,
+- wskazania code-search scopes i repozytoriow do dalszych GitLab calls,
+- pokazania ograniczen widocznosci i pytan otwartych.
+
+Tools nie sluza do:
+
+- root cause detection,
+- odczytu kodu,
+- listowania endpointow albo klas,
+- wykonywania DB diagnostics,
+- odtwarzania deploymentu.
+
+Incident-specific zasady uzycia sa w feature policy i runtime skillach
+Copilota, nie w neutralnym kontrakcie tools.
+
+## GitLab I Code Search
+
+`gitlab_list_available_repositories` korzysta z operational context jako
+lekkiego discovery nad repozytoriami.
+
+Tool moze zwrocic:
+
+- `projectName`, `gitLabPath`, aliases i summary repozytorium,
+- references do systems, bounded contexts, processes i integrations,
+- `codeSearchScopes` z targetem semantycznym, rolami repozytoriow,
+  priorytetem, `reason`, `readFor` i lista projektow.
+
+Tool nie zwraca technicznych prefiksow, sciezek, hintow klas ani traversal
+rules. Po wyborze repozytorium model uzywa GitLab search/read tools do
+odkrywania faktycznego kodu.
+
+## Incident Analysis Usage
+
+W incident flow operational context jest enrichment stepem nad zebranym
+evidence.
+
+Typowe uzycie:
+
+1. Elasticsearch/Dynatrace/GitLab deterministic zbieraja fakty incydentu.
+2. Operational context matcher dopasowuje systemy, procesy, bounded contexty,
+   integracje, repozytoria, glossary i handoff.
+3. Prompt dostaje operational grounding, code-search scopes i ograniczenia.
+4. AI uzywa katalogu do `functionalAnalysis`: system, proces, jezyk lokalny,
+   owner, handoff, widocznosc.
+5. AI uzywa GitLab tools do `technicalAnalysis`, gdy trzeba znalezc konkretny
+   kod.
+6. AI uzywa DB tools tylko zgodnie z feature policy i resolved environment.
+
+Operational context moze uzasadnic, gdzie szukac dalej. Nie jest samodzielnym
+dowodem root cause ani zamiennikiem deterministic evidence.
+
+## Maintenance
+
+Prompty w `operational-context-maintenance` musza generowac tylko aktualny
+kontrakt katalogu. Nie wolno przywracac instrukcji tworzenia technicznego
+inventory.
+
+Skrypt:
+
+```powershell
+operational-context-maintenance/clean-operational-context.ps1
+```
+
+ma sluzyc do czyszczenia istniejacych katalogow z usunietych pol i sekcji.
+Domyslny tryb jest dry-run; `-Apply` zapisuje zmiany. Skrypt usuwa cale bloki
+YAML dla starych struktur oraz raportuje zakres usuniec.
+
+Po wiekszej zmianie katalogu nalezy wykonac:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\operational-context-maintenance\clean-operational-context.ps1 -DryRun
+```
+
+Komenda powinna pokazac `Removal candidates: 0`. Dodatkowy `rg` dobieraj do
+konkretnej migracji albo listy usuwanych pol z planu.
+
+## Validation
+
+Walidacja katalogu powinna pilnowac:
+
+- unknown relation targets,
+- self references,
+- duplicate references,
+- code-search scope bez targetu albo repozytorium,
+- unknown code-search repository,
+- brak owner/handoff tam, gdzie jest deklarowany responsibility status,
+- open questions dla realnych luk widocznosci.
+
+Validation nie powinna wymuszac technicznych hintow. Brak endpointu, klasy,
+tabeli albo deployment file w katalogu nie jest bledem.
+
+## UI
 
 Frontend route `/operational-context` jest widokiem `Tool Workbench /
-Operational Context`. Pozostaje shared context/catalog capability, a nie
-elementem sekcji `Platform`.
+Operational Context`.
 
 UI pokazuje:
 
-- kompaktowy status strip katalogu,
-- zakladki katalogowe i Signal Resolver,
-- listy encji dla systems, repositories, code-search scopes, processes,
-  integrations, bounded contexts, teams, glossary i handoff rules,
-- `Validation` jako inbox utrzymaniowy z filtrami i kopiowaniem maintenance
-  targetu,
-- `Open Questions` jako inbox utrzymaniowy z filtrami i kopiowaniem
-  maintenance targetu,
-- prawy detail drawer.
+- summary i validation,
+- listy encji,
+- detail encji,
+- relations,
+- code-search scopes,
+- open questions.
 
-Detail drawer doczytuje projekcje read modelu rownolegle z detalem encji, aby
-UI pokazywalo pelny kontekst bez recznej redundancji w YAML. Drawer ma stale
-akcje `Copy`, `Open raw` i `Close`; szczegoly encji, read modele i raw preview
-nie powinny byc modalem blokujacym prace operatora.
+UI nie utrzymuje kompatybilnosci ze starym payloadem i nie renderuje
+technicznych read modeli usunietych z backendu.
 
-## Incident analysis jako pierwszy konsument
+## Rozwoj Nowych Feature'ow
 
-Operational context wspiera incident analysis, ale jej nie zastepuje.
+Nowe feature'y analityczne powinny reuse'owac:
 
-Typowy przeplyw:
+- `integrations.operationalcontext`,
+- `agenttools.operationalcontext`,
+- `api.operationalcontext`,
+- `shared.ai` i neutralne evidence modele,
+- `aiplatform` dla runtime AI.
 
-1. Operator startuje `POST /api/analysis/jobs` z wybranym zrodlem logow:
-   Elasticsearch po `correlationId` albo upload CSV, oraz opcjami AI.
-2. Evidence pipeline zbiera logi do wspolnej sekcji `elasticsearch/logs`,
-   deployment context, runtime signals i code evidence.
-3. Operational context provider dopasowuje katalog do zebranych sygnalow.
-4. Copilot dostaje digest z operational code search scope i coverage gaps.
-5. AI moze uzyc `opctx_*`, gdy potrzebuje dodatkowego katalogowego kontekstu.
-6. AI moze uzyc GitLab tools, a GitLab repository discovery korzysta z
-   code-search scopes operational context.
-7. AI moze uzyc DB tools, a operational context pomaga zawesic DB hints.
-8. Odpowiedz AI moze nazwac affected process/context/team tylko wtedy, gdy
-   katalog jest zgodny z incident evidence albo tool resultami.
+Feature dostarcza wlasny prompt, policy, hidden context, result contract i
+zasady uzycia tools. Operational context daje wspolny katalog orientacyjny,
+ale nie przejmuje odpowiedzialnosci feature'a za interpretacje wyniku.
 
-Katalog nie jest samodzielnym dowodem root cause. Jest warstwa grounding,
-scope selection, handoff guidance i visibility limitations.
+## Anty-Wzorce
 
-## Techniczny przeplyw danych
+Nie przywracaj:
 
-```mermaid
-flowchart LR
-    CFG["src/main/resources/operational-context"] --> ADAPTER["integrations.operationalcontext\nOperationalContextAdapter"]
-    ADAPTER --> PORT["OperationalContextPort"]
-    PORT --> INDEX["RelationIndex + read model builders"]
-    INDEX --> VALIDATOR["OperationalContextReadModelValidator"]
+- osobnego canonical runtime component obok `system`,
+- inline scope'u kodu pod systemem,
+- repository source layout albo module inventory,
+- technicznych hintow kodu/API,
+- detailed transport/payload/operation inventory integracji,
+- technicznych projekcji implementacji, flow i impact jako operational
+  context API,
+- incident-specific semantyki w neutralnych `opctx_*` tools,
+- fallbackow czy aliasow starego kontraktu.
 
-    PORT --> EVIDENCE["features.incidentanalysis.evidence\nOperationalContextEvidenceProvider"]
-    EVIDENCE --> COPILOTDIGEST["Copilot incident digest"]
-
-    PORT --> OPCTXTOOLS["agenttools.operationalcontext.mcp\nopctx_*"]
-    OPCTXTOOLS --> AI["AI runtime"]
-
-    INDEX --> API["api.operationalcontext"]
-    API --> FE["frontend /operational-context"]
-
-    PORT --> GITLAB["agenttools.gitlab.mcp\ngitlab_list_available_repositories"]
-    GITLAB --> AI
-```
-
-## Zasady dalszej optymalizacji read modelu
-
-Kolejny etap powinien optymalizowac read model pod ilosc danych, szum i jakosc.
-Zmiany powinny byc mierzone pytaniem: czy dany fragment zwieksza skutecznosc
-analizy, czy tylko zuzywa tokeny.
-
-### Kryteria wartosci informacji
-
-Dane w read modelu sa wartosciowe, jezeli pomagaja przynajmniej w jednym z
-ponizszych:
-
-- wybor wlasciwego repozytorium, modulu albo biblioteki,
-- rozroznienie legacy, target, parallel albo supporting implementation,
-- zrozumienie flow i upstream/downstream,
-- wskazanie blast radius,
-- unikniecie pomylenia pojec lokalnego jezyka,
-- zawezenie DB/integration/code exploration,
-- uzasadnienie handoffu,
-- pokazanie ograniczen widocznosci,
-- wskazanie next reads/tools.
-
-Dane sa podejrzane jako szum, jezeli:
-
-- sa ogolnym opisem bez sygnalow dopasowania,
-- powtarzaja label encji bez dodania relacji albo ograniczenia,
-- nie maja provenance,
-- nie wplywaja na decyzje LLM, FE albo tool selection,
-- sa duplikatem informacji dostepnej z innego pola read modelu,
-- sa szerokim raw payloadem zamiast skondensowanego faktu.
-
-### Minimalny zestaw metryk
-
-Optymalizacja powinna mierzyc:
-
-- rozmiar payloadu per read model,
-- liczbe relacji i source refs per payload,
-- liczbe repeated labels/ids,
-- liczbe warnings/errors,
-- liczbe included repositories per code-search scope,
-- liczbe hints bez provenance albo bez powiazania z targetem,
-- liczbe fields nieuzywanych przez FE/tools/prompt,
-- skutecznosc odpowiedzi AI na reprezentatywnych pytaniach.
-
-### Priorytet optymalizacji
-
-1. Najpierw mierzyc payloady i szum.
-2. Potem ograniczac pola, ktore nie pomagaja w decyzjach.
-3. Potem rozdzielac profile `index`, `summary`, `default`, `expanded`.
-4. Dopiero potem zmieniac write model, jezeli read model pokazuje trwaly brak
-   wlasciciela faktu.
-
-## Jak rozwijac katalog
-
-### Nowa encja albo pole
-
-1. Umiesc fakt w pliku, ktory jest jego wlascicielem.
-2. Dodaj typed mapping w `integrations.operationalcontext`, jezeli fakt ma byc
-   czescia kontraktu.
-3. Dodaj relation/index mapping, jezeli fakt tworzy relacje.
-4. Dodaj walidacje, jezeli fakt moze byc zdublowany albo wskazywac nieistniejacy
-   target.
-5. Dodaj mapping do API albo tools tylko wtedy, gdy fakt wnosi wartosc dla FE,
-   LLM albo tool selection.
-
-### Nowy feature analityczny
-
-Feature powinien:
-
-- wybrac profil read modelu,
-- dostarczyc prompt, policy i response contract,
-- uzyc `aiplatform`, `agenttools`, `integrations`, `shared` i `common`,
-- nie duplikowac logiki grafu operational context.
-
-Incident analysis uzywa operational context przede wszystkim do
-`functionalAnalysis`: sekcja ma osadzac incydent w systemie, procesie, bounded
-context, integracjach, glossary i regule handoffu. Ten sam katalog moze tez
-pomoc w `technicalAnalysis`, ale wtedy sluzy do wskazania scope'u repozytoriow,
-punktow wejscia, wlasciciela i granic przekazania, a nie jako dowod root cause.
-
-Operational context nie powinien zawierac promptow albo zasad specyficznych dla
-feature'u. Daje indeks wiedzy i tools, a feature decyduje, jak ich uzyc.
-
-### Nowy sposob ekspozycji
-
-Neutralne ekspozycje powinny isc przez:
-
-- `integrations.operationalcontext` dla portu i read modelu,
-- `agenttools.operationalcontext` dla AI tools,
-- `api.operationalcontext` dla operator-facing API.
-
-Nie nalezy podpinac neutralnych capability bezposrednio pod incident job API.
-
-## Antywzorce
-
-- Traktowanie glossary albo handoff rule jako dowodu awarii.
-- Publikowanie raw katalogu jako domyslnego payloadu LLM.
-- Dopisywanie `correlationId`, `environment`, `gitLabGroup` albo
-  `gitLabBranch` do model-facing schema `opctx_*`.
-- Przywracanie osobnego canonical runtime component obok `system`.
-- Zgadywanie wlasciciela po pierwszym repozytorium.
-- Konczenie GitLab exploration po jednym repozytorium, gdy code-search scope
-  wskazuje biblioteki albo generated clients.
-- Przenoszenie incidentowych heurystyk do `integrations.operationalcontext`
-  albo `agenttools.operationalcontext`.
-- Dodawanie recznych backlinkow w YAML tylko po to, zeby widok FE/LLM byl
-  kompletny.
-- Utrzymywanie tego samego faktu w `participants`, `references`, `target` i
-  `responsibilities` naraz.
-- Dodawanie sekretow albo produkcyjnych payloadow do katalogu.
-
-## Najkrotsze podsumowanie
-
-Operational context jest curated knowledge index dla analizy systemowej. Laczy
-systemy, repozytoria, code-search scopes, procesy, integracje, bounded contexty,
-zespoly, terminy i handoff rules. YAML/MD sa reviewowalnym write modelem z
-jednym miejscem prawdy dla faktu. Kod buduje relation index, read modele,
-walidacje i task-specific payloady dla FE, LLM, GitLab tools, DB diagnostics,
-flow explorer, blast-radius analysis, dokumentacji i onboardingu.
+Najprostsza zasada: jezeli informacja szybko zmienia sie z kodem, deploymentem
+albo kontraktem runtime, nie nalezy jej utrzymywac w operational context.
+Katalog ma prowadzic do miejsca dalszej analizy, nie zastapic analizy.

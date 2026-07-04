@@ -29,14 +29,14 @@ class OperationalContextRepositoryProjectPathResolverTest {
     }
 
     @Test
-    void shouldNotResolveRepositoryOnlyRuntimeSignalWithoutMatchingSystemId() {
+    void shouldNotResolveRepositoryOnlySignalWithoutMatchingSystemId() {
         var resolver = resolver(
                 List.of(system("crm-customer", List.of("crm-customer-repo"))),
                 List.of(repository(
                         "backend-repo",
                         "CRM/WORKFLOWS/BACKEND",
                         "CRM",
-                        Map.of("containerNames", List.of("backend"))
+                        Map.of("markers", List.of("backend"))
                 ))
         );
 
@@ -75,7 +75,7 @@ class OperationalContextRepositoryProjectPathResolverTest {
             String id,
             String projectPath,
             String groupPath,
-            Map<String, Object> runtimeMappings
+            Map<String, Object> matchSignals
     ) {
         var repository = new LinkedHashMap<String, Object>();
         repository.put("id", id);
@@ -83,7 +83,7 @@ class OperationalContextRepositoryProjectPathResolverTest {
                 "projectPath", List.of(projectPath),
                 "group", List.of(groupPath)
         ));
-        repository.put("matchSignals", Map.of("strong", runtimeMappings));
+        repository.put("matchSignals", Map.of("strong", matchSignals));
         return repository;
     }
 }

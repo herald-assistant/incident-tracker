@@ -13,17 +13,11 @@ integrations:
       finalTargets:
         - system: notification-provider
           role: server
-    transport:
-      protocols: [HTTP]
-      http:
-        endpointPrefixes: [/crm/notifications]
-        hosts: [api.notifications.local]
     responsibilities:
       - teamId: crm-integration-team
         role: contract-owner
     matchSignals:
       exact:
-        endpointPrefixes: [/crm/notifications]
         hosts: [api.notifications.local]
       strong:
         spans: [CustomerNotificationGateway.call]
@@ -33,6 +27,6 @@ integrations:
       defaultRouteLabel: CRM Integration Team
       firstResponderTeamIds: [crm-integration-team]
       partnerTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+      requiredEvidence: [correlationId, environment, host, exception]
 
 gaps: []

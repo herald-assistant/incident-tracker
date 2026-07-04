@@ -1,9 +1,6 @@
 package pl.mkn.tdw.integrations.operationalcontext;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public record OperationalContextCodeSearchReadModel(
         String contract,
@@ -12,7 +9,6 @@ public record OperationalContextCodeSearchReadModel(
         OperationalContextRelationIndex.EntityRef analysisTarget,
         List<CodeSearchScopeView> scopes,
         List<RepositoryView> repositories,
-        CodeSearchHints aggregatedHints,
         List<String> limitations,
         List<OperationalContextRelationIndex.ValidationFinding> validationFindings
 ) {
@@ -23,7 +19,6 @@ public record OperationalContextCodeSearchReadModel(
         profile = profile != null ? profile : ReadModelProfile.defaultProfile();
         scopes = copyList(scopes);
         repositories = copyList(repositories);
-        aggregatedHints = aggregatedHints != null ? aggregatedHints : CodeSearchHints.empty();
         limitations = copyTextList(limitations);
         validationFindings = copyList(validationFindings);
     }
@@ -39,7 +34,6 @@ public record OperationalContextCodeSearchReadModel(
                 analysisTarget,
                 List.of(),
                 List.of(),
-                CodeSearchHints.empty(),
                 List.of(),
                 findings
         );
@@ -78,16 +72,12 @@ public record OperationalContextCodeSearchReadModel(
             String scopeType,
             OperationalContextRelationIndex.EntityRef target,
             List<OperationalContextRelationIndex.EntityRef> repositories,
-            CodeSearchHints hints,
-            TraversalView traversal,
             List<String> limitations,
             OperationalContextRelationIndex.Provenance provenance
     ) {
 
         public CodeSearchScopeView {
             repositories = copyList(repositories);
-            hints = hints != null ? hints : CodeSearchHints.empty();
-            traversal = traversal != null ? traversal : TraversalView.empty();
             limitations = copyTextList(limitations);
         }
     }
@@ -99,9 +89,6 @@ public record OperationalContextCodeSearchReadModel(
             String reason,
             List<String> readFor,
             GitView git,
-            SourceLayoutView sourceLayout,
-            List<ModuleView> modules,
-            CodeSearchHints hints,
             OperationalContextRelationIndex.Provenance provenance
     ) {
 
@@ -110,9 +97,6 @@ public record OperationalContextCodeSearchReadModel(
             reason = text(reason);
             readFor = copyTextList(readFor);
             git = git != null ? git : GitView.empty();
-            sourceLayout = sourceLayout != null ? sourceLayout : SourceLayoutView.empty();
-            modules = copyList(modules);
-            hints = hints != null ? hints : CodeSearchHints.empty();
         }
     }
 
@@ -130,168 +114,6 @@ public record OperationalContextCodeSearchReadModel(
         }
     }
 
-    public record SourceLayoutView(
-            String repositoryRoot,
-            String buildTool,
-            List<String> buildFiles,
-            List<String> sourceRoots,
-            List<String> testRoots,
-            List<String> resourceRoots,
-            List<String> modulePaths,
-            List<String> generatedSourcePaths,
-            List<String> importantPaths,
-            List<String> configurationFiles,
-            List<String> deploymentFiles,
-            List<String> databaseMigrationPaths,
-            List<String> workflowDefinitionPaths,
-            List<String> documentationPaths
-    ) {
-
-        public SourceLayoutView {
-            buildFiles = copyTextList(buildFiles);
-            sourceRoots = copyTextList(sourceRoots);
-            testRoots = copyTextList(testRoots);
-            resourceRoots = copyTextList(resourceRoots);
-            modulePaths = copyTextList(modulePaths);
-            generatedSourcePaths = copyTextList(generatedSourcePaths);
-            importantPaths = copyTextList(importantPaths);
-            configurationFiles = copyTextList(configurationFiles);
-            deploymentFiles = copyTextList(deploymentFiles);
-            databaseMigrationPaths = copyTextList(databaseMigrationPaths);
-            workflowDefinitionPaths = copyTextList(workflowDefinitionPaths);
-            documentationPaths = copyTextList(documentationPaths);
-        }
-
-        public static SourceLayoutView empty() {
-            return new SourceLayoutView(
-                    null,
-                    null,
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
-        }
-    }
-
-    public record ModuleView(
-            String id,
-            String name,
-            String moduleType,
-            String lifecycleStatus,
-            List<String> paths,
-            List<String> packages,
-            List<String> sourceRoots,
-            List<String> importantPaths,
-            CodeSearchHints hints
-    ) {
-
-        public ModuleView {
-            id = text(id);
-            name = text(name);
-            moduleType = text(moduleType);
-            lifecycleStatus = text(lifecycleStatus);
-            paths = copyTextList(paths);
-            packages = copyTextList(packages);
-            sourceRoots = copyTextList(sourceRoots);
-            importantPaths = copyTextList(importantPaths);
-            hints = hints != null ? hints : CodeSearchHints.empty();
-        }
-    }
-
-    public record CodeSearchHints(
-            List<String> packagePrefixes,
-            List<String> classHints,
-            List<String> endpointHints,
-            List<String> queueTopicHints,
-            DatabaseHints databaseHints,
-            WorkflowHints workflowHints
-    ) {
-
-        public CodeSearchHints {
-            packagePrefixes = copyTextList(packagePrefixes);
-            classHints = copyTextList(classHints);
-            endpointHints = copyTextList(endpointHints);
-            queueTopicHints = copyTextList(queueTopicHints);
-            databaseHints = databaseHints != null ? databaseHints : DatabaseHints.empty();
-            workflowHints = workflowHints != null ? workflowHints : WorkflowHints.empty();
-        }
-
-        public static CodeSearchHints empty() {
-            return new CodeSearchHints(
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    DatabaseHints.empty(),
-                    WorkflowHints.empty()
-            );
-        }
-    }
-
-    public record DatabaseHints(
-            List<String> datasourceNames,
-            List<String> hikariPools,
-            List<String> schemas,
-            List<String> tables,
-            List<String> entities,
-            List<String> migrations
-    ) {
-
-        public DatabaseHints {
-            datasourceNames = copyTextList(datasourceNames);
-            hikariPools = copyTextList(hikariPools);
-            schemas = copyTextList(schemas);
-            tables = copyTextList(tables);
-            entities = copyTextList(entities);
-            migrations = copyTextList(migrations);
-        }
-
-        public static DatabaseHints empty() {
-            return new DatabaseHints(List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
-        }
-    }
-
-    public record WorkflowHints(
-            List<String> jobNames,
-            List<String> workflowNames,
-            List<String> definitionPaths
-    ) {
-
-        public WorkflowHints {
-            jobNames = copyTextList(jobNames);
-            workflowNames = copyTextList(workflowNames);
-            definitionPaths = copyTextList(definitionPaths);
-        }
-
-        public static WorkflowHints empty() {
-            return new WorkflowHints(List.of(), List.of(), List.of());
-        }
-    }
-
-    public record TraversalView(
-            List<String> rules,
-            List<String> expandWhen
-    ) {
-
-        public TraversalView {
-            rules = copyTextList(rules);
-            expandWhen = copyTextList(expandWhen);
-        }
-
-        public static TraversalView empty() {
-            return new TraversalView(List.of(), List.of());
-        }
-    }
-
     static <T> List<T> copyList(List<T> values) {
         return values != null ? List.copyOf(values) : List.of();
     }
@@ -305,13 +127,6 @@ public record OperationalContextCodeSearchReadModel(
                 .filter(value -> value != null && !value.isBlank())
                 .distinct()
                 .toList();
-    }
-
-    static <K, V> Map<K, V> copyMap(Map<K, V> values) {
-        if (values == null || values.isEmpty()) {
-            return Map.of();
-        }
-        return Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 
     private static String textOrDefault(String value, String defaultValue) {

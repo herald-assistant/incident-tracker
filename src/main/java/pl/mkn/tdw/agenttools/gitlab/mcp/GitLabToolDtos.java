@@ -236,10 +236,7 @@ public final class GitLabToolDtos {
             List<String> boundedContexts,
             List<String> processes,
             List<String> integrations,
-            List<String> relatedRepositoryIds,
-            List<String> packagePrefixes,
-            List<String> endpointPrefixes,
-            List<String> modulePaths
+            List<String> relatedRepositoryIds
     ) {
         public GitLabAvailableRepository {
             aliases = aliases != null ? List.copyOf(aliases) : List.of();
@@ -248,9 +245,6 @@ public final class GitLabToolDtos {
             processes = processes != null ? List.copyOf(processes) : List.of();
             integrations = integrations != null ? List.copyOf(integrations) : List.of();
             relatedRepositoryIds = relatedRepositoryIds != null ? List.copyOf(relatedRepositoryIds) : List.of();
-            packagePrefixes = packagePrefixes != null ? List.copyOf(packagePrefixes) : List.of();
-            endpointPrefixes = endpointPrefixes != null ? List.copyOf(endpointPrefixes) : List.of();
-            modulePaths = modulePaths != null ? List.copyOf(modulePaths) : List.of();
         }
     }
 
@@ -263,22 +257,14 @@ public final class GitLabToolDtos {
             List<String> useFor,
             List<GitLabAvailableCodeSearchRepository> repositories,
             List<String> projectNames,
-            List<String> packagePrefixes,
-            List<String> classHints,
-            List<String> endpointHints,
-            List<String> queueTopicHints,
-            GitLabAvailableCodeSearchTraversal traversal
+            List<String> limitations
     ) {
         public GitLabAvailableCodeSearchScope {
             target = target != null ? target : GitLabAvailableCodeSearchTarget.empty();
             useFor = useFor != null ? List.copyOf(useFor) : List.of();
             repositories = repositories != null ? List.copyOf(repositories) : List.of();
             projectNames = projectNames != null ? List.copyOf(projectNames) : List.of();
-            packagePrefixes = packagePrefixes != null ? List.copyOf(packagePrefixes) : List.of();
-            classHints = classHints != null ? List.copyOf(classHints) : List.of();
-            endpointHints = endpointHints != null ? List.copyOf(endpointHints) : List.of();
-            queueTopicHints = queueTopicHints != null ? List.copyOf(queueTopicHints) : List.of();
-            traversal = traversal != null ? traversal : GitLabAvailableCodeSearchTraversal.empty();
+            limitations = limitations != null ? List.copyOf(limitations) : List.of();
         }
     }
 
@@ -296,28 +282,12 @@ public final class GitLabToolDtos {
             String role,
             Integer priority,
             List<String> projectNames,
-            List<String> moduleIds,
             String reason,
             List<String> readFor
     ) {
         public GitLabAvailableCodeSearchRepository {
             projectNames = projectNames != null ? List.copyOf(projectNames) : List.of();
-            moduleIds = moduleIds != null ? List.copyOf(moduleIds) : List.of();
             readFor = readFor != null ? List.copyOf(readFor) : List.of();
-        }
-    }
-
-    public record GitLabAvailableCodeSearchTraversal(
-            List<String> rules,
-            List<String> expandWhen
-    ) {
-        public GitLabAvailableCodeSearchTraversal {
-            rules = rules != null ? List.copyOf(rules) : List.of();
-            expandWhen = expandWhen != null ? List.copyOf(expandWhen) : List.of();
-        }
-
-        public static GitLabAvailableCodeSearchTraversal empty() {
-            return new GitLabAvailableCodeSearchTraversal(List.of(), List.of());
         }
     }
 

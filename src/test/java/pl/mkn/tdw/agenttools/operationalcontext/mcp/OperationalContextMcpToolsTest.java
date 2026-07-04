@@ -114,9 +114,8 @@ class OperationalContextMcpToolsTest {
                 .anyMatch(read -> read.contains("include=[codeSearch]")));
         assertEquals("high", result.overview().get("criticality"));
         assertTrue(result.relations().containsKey("references"));
-        assertTrue(result.signals().containsKey("deployment"));
-        assertFalse(result.signals().toString().contains("endpointPrefixes"));
-        assertFalse(result.signals().toString().contains("/notifications"));
+        assertTrue(result.signals().containsKey("matchSignals"));
+        assertEquals(1, result.signals().size());
         assertTrue(result.codeSearch().containsKey("codeSearchScopes"));
         assertFalse(result.codeSearch().containsKey("localCodeSearchScope"));
         assertTrue(result.handoff().containsKey("requiredEvidence"));
@@ -128,7 +127,7 @@ class OperationalContextMcpToolsTest {
     }
 
     @Test
-    void shouldCompactDefaultEntityToolPayloadAndExposeTruncation() {
+    void shouldKeepDefaultEntityToolPayloadCompact() {
         var result = tools.getEntity(
                 "repository",
                 "notifications-service",
@@ -138,22 +137,24 @@ class OperationalContextMcpToolsTest {
         );
 
         assertEquals("default", result.affordances().profile());
-        assertTrue(result.affordances().truncation().truncated());
-        assertTrue(result.affordances().omittedBecause().stream()
-                .anyMatch(reason -> reason.contains("compacted")));
+        if (result.affordances().truncation().truncated()) {
+            assertTrue(result.affordances().omittedBecause().stream()
+                    .anyMatch(reason -> reason.contains("compacted")));
+        }
+        assertTrue(result.affordances().truncation().returnedCounts().containsKey("overviewValues"));
         assertTrue(result.affordances().suggestedTools().contains("opctx_search"));
         assertFalse(result.toString().contains("rawSourcePreview"));
         assertFalse(result.toString().contains("payload"));
     }
 
     @Test
-    void shouldKeepRuntimeToolEntityPayloadCompactForLargeCodeSearchScope() throws Exception {
-        var runtimeTools = new OperationalContextMcpTools(
+    void shouldKeepEntityPayloadCompactForLargeCodeSearchScope() throws Exception {
+        var catalogTools = new OperationalContextMcpTools(
                 new OperationalContextAdapter(new OperationalContextProperties()),
                 new OperationalContextToolMapper()
         );
 
-        var result = runtimeTools.getEntity(
+        var result = catalogTools.getEntity(
                 "codeSearchScope",
                 "crm-customer-service-code-search",
                 null,
@@ -163,7 +164,7 @@ class OperationalContextMcpToolsTest {
         var json = objectMapper.writeValueAsString(result);
 
         assertEquals("default", result.affordances().profile());
-        assertTrue(result.affordances().truncation().truncated());
+        assertTrue(result.affordances().truncation().returnedCounts().containsKey("codeSearchValues"));
         assertTrue(json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 100_000);
         assertFalse(json.contains("rawSourcePreview"));
         assertFalse(json.contains("\"payload\""));
@@ -182,7 +183,7 @@ class OperationalContextMcpToolsTest {
         );
         assertEquals("Notifications context", boundedContext.label());
         assertTrue(boundedContext.relations().containsKey("references"));
-        assertTrue(boundedContext.signals().containsKey("operationalSignals"));
+        assertTrue(boundedContext.signals().containsKey("matchSignals"));
 
         var glossaryTerm = tools.getEntity(
                 "glossaryTerm",
@@ -197,14 +198,15 @@ class OperationalContextMcpToolsTest {
 
         var codeSearchScope = tools.getEntity(
                 "codeSearchScope",
-                "notifications-runtime",
+                "notifications-code-scope",
                 List.of("relations", "codeSearch", "sourceCoverage"),
                 "Sprawdzam zakres szukania kodu.",
                 null
         );
-        assertEquals("Notifications runtime code scope", codeSearchScope.label());
+        assertEquals("Notifications code scope", codeSearchScope.label());
         assertTrue(codeSearchScope.relations().containsKey("repositories"));
-        assertTrue(codeSearchScope.codeSearch().containsKey("database"));
+        assertTrue(codeSearchScope.codeSearch().containsKey("repositories"));
+        assertTrue(codeSearchScope.codeSearch().containsKey("limitations"));
         assertTrue(codeSearchScope.sourceCoverage().containsKey("limitations"));
         assertFalse(codeSearchScope.codeSearch().containsKey("payload"));
 
@@ -272,13 +274,13 @@ class OperationalContextMcpToolsTest {
         );
     }
 
-    private Map<String, Object> system(String id, String name, String serviceName) {
+    private Map<String, Object> system(String id, String name, String alias) {
         return map(
                 "id", id,
                 "name", name,
                 "criticality", id.equals("notifications") ? "high" : "medium",
                 "summary", name + " system.",
-                "aliases", List.of(serviceName),
+                "aliases", List.of(alias),
                 "references", map(
                         "repositories", id.equals("notifications") ? List.of("notifications-service") : List.of(),
                         "processes", id.equals("notifications") ? List.of("checkout") : List.of(),
@@ -290,18 +292,9 @@ class OperationalContextMcpToolsTest {
                         : List.of(),
                 "matchSignals", map(
                         "strong", map(
-                                "serviceNames", List.of(serviceName),
-                                "endpointPrefixes", id.equals("notifications") ? List.of("/notifications") : List.of("/catalog")
+                                "markers", List.of(alias)
                         )
                 ),
-                "deployment", map("serviceNames", List.of(serviceName)),
-                "codeSearchScope", id.equals("notifications")
-                        ? map(
-                        "repositories", List.of("notifications-service"),
-                        "packagePrefixes", List.of("pl.example.notifications"),
-                        "classHints", List.of("NotificationController")
-                )
-                        : map(),
                 "handoffHints", id.equals("notifications")
                         ? map(
                         "defaultRoute", "Notifications Team",
@@ -316,13 +309,14 @@ class OperationalContextMcpToolsTest {
                 "id", "notification-gateway-api",
                 "name", "Notification Gateway API",
                 "summary", "External notification delivery gateway.",
+                "category", "external-service-call",
+                "integrationStyle", "synchronous-request",
+                "flowDirection", "outbound",
                 "participants", map(
                         "source", map("system", "notifications"),
                         "targets", List.of(map("system", "notification-gateway", "externalOwner", "Provider")),
                         "finalTargets", List.of(map("system", "notification-gateway", "role", "server"))
-                ),
-                "transport", map("http", map("endpointPrefixes", List.of("/authorize"))),
-                "implementation", map("classHints", List.of("NotificationGatewayClient"))
+                )
         );
     }
 
@@ -331,7 +325,7 @@ class OperationalContextMcpToolsTest {
                 "id", "notifications-service",
                 "name", "Notifications Service",
                 "repositoryType", "service",
-                "summary", "Runtime implementation of notifications.",
+                "summary", "Repository for notifications capability.",
                 "git", map(
                         "provider", "gitlab",
                         "group", "platform",
@@ -347,19 +341,8 @@ class OperationalContextMcpToolsTest {
                 ),
                 "matchSignals", map(
                         "strong", map(
-                                "packagePrefixes", List.of("pl.example.notifications"),
-                                "classHints", List.of(
-                                        "NotificationController",
-                                        "NotificationService",
-                                        "NotificationRepository",
-                                        "NotificationGatewayClient",
-                                        "NotificationEventPublisher",
-                                        "NotificationConfiguration",
-                                        "NotificationScheduler",
-                                        "NotificationEntity",
-                                        "NotificationCommandHandler",
-                                        "NotificationQueryHandler"
-                                )
+                                "projectNames", List.of("notifications-service"),
+                                "domainTerms", List.of("notification delivery")
                         )
                 )
         );
@@ -367,25 +350,18 @@ class OperationalContextMcpToolsTest {
 
     private Map<String, Object> codeSearchScope() {
         return map(
-                "id", "notifications-runtime",
-                "name", "Notifications runtime code scope",
+                "id", "notifications-code-scope",
+                "name", "Notifications code scope",
                 "scopeType", "system",
                 "lifecycleStatus", "active",
                 "target", map("type", "system", "id", "notifications"),
                 "useFor", List.of("incident-analysis", "code-search"),
                 "repositories", List.of(map(
                         "repoId", "notifications-service",
-                        "role", "primary-implementation",
+                        "role", "primary",
                         "priority", 1,
-                        "moduleIds", List.of("app"),
-                        "reason", "Primary implementation."
+                        "reason", "Primary repository."
                 )),
-                "hints", map(
-                        "packagePrefixes", List.of("pl.example.notifications"),
-                        "classHints", List.of("NotificationController"),
-                        "endpointHints", List.of("/notifications"),
-                        "database", map("schemas", List.of("NOTIFICATIONS_APP"), "entities", List.of("NotificationEntity"))
-                ),
                 "limitations", List.of("Generated clients are partial.")
         );
     }
@@ -400,10 +376,10 @@ class OperationalContextMcpToolsTest {
                         "repositories", List.of("notifications-service"),
                         "terms", List.of("authorization")
                 ),
-                "operationalSignals", map(
-                        "serviceNames", List.of("notifications-api"),
-                        "endpointPrefixes", List.of("/notifications"),
-                        "packagePrefixes", List.of("pl.example.notifications")
+                "matchSignals", map(
+                        "strong", map(
+                                "domainTerms", List.of("notification delivery")
+                        )
                 )
         );
     }

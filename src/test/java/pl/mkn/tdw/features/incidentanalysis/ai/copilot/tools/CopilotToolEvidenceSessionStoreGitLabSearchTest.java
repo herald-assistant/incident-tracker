@@ -56,10 +56,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                               "boundedContexts": ["customer"],
                               "processes": ["customer-process"],
                               "integrations": [],
-                              "relatedRepositoryIds": [],
-                              "packagePrefixes": ["com.example.crm.customer"],
-                              "endpointPrefixes": ["/crm/customers"],
-                              "modulePaths": ["crm-customer-api"]
+                              "relatedRepositoryIds": []
                             }
                           ],
                           "codeSearchScopes": [
@@ -73,23 +70,15 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                               "repositories": [
                                 {
                                   "repositoryId": "crm-customer-api-repo",
-                                  "role": "primary-implementation",
+                                  "role": "primary",
                                   "priority": 1,
                                   "projectNames": ["crm-customer-api"],
-                                  "moduleIds": ["crm-customer-api"],
                                   "reason": "Main customers API repository.",
                                   "readFor": ["runtime-entrypoints"]
                                 }
                               ],
                               "projectNames": ["crm-customer-api"],
-                              "packagePrefixes": ["com.example.crm.customer"],
-                              "classHints": ["CustomerService"],
-                              "endpointHints": ["/crm/customers"],
-                              "queueTopicHints": [],
-                              "traversal": {
-                                "rules": ["Read crm-customer-api-repo first."],
-                                "expandWhen": []
-                              }
+                              "limitations": ["Generated clients are partial."]
                             }
                           ]
                         }

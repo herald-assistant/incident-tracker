@@ -131,10 +131,8 @@ public final class OperationalContextDtos {
             ExplainableValueDto<String> owner,
             ExplainableAggregateDto systems,
             ExplainableAggregateDto contexts,
-            ExplainableAggregateDto packageRoots,
-            ExplainableAggregateDto entrypoints,
-            ExplainableAggregateDto runtimeMappings,
-            ExplainableAggregateDto modules,
+            ExplainableAggregateDto processes,
+            ExplainableAggregateDto integrations,
             ExplainableAggregateDto codeSearchScopes,
             ExplainableAggregateDto codeSearchRoles,
             ExplainableAggregateDto handoffReadiness,
@@ -149,11 +147,7 @@ public final class OperationalContextDtos {
             String lifecycleStatus,
             ExplainableAggregateDto target,
             ExplainableAggregateDto repositories,
-            ExplainableAggregateDto packageHints,
-            ExplainableAggregateDto entryHints,
-            ExplainableAggregateDto dataHints,
-            ExplainableAggregateDto workflowHints,
-            ExplainableAggregateDto traversal,
+            ExplainableAggregateDto limitations,
             ExplainableAggregateDto validation
     ) {
     }
@@ -181,8 +175,9 @@ public final class OperationalContextDtos {
             String targetSystems,
             ExplainableValueDto<String> owner,
             ExplainableAggregateDto partnerTeams,
-            String protocols,
+            String category,
             String integrationStyle,
+            String flowDirection,
             ExplainableAggregateDto processes,
             ExplainableAggregateDto contexts,
             ExplainableAggregateDto signals,
@@ -199,7 +194,6 @@ public final class OperationalContextDtos {
             ExplainableAggregateDto systems,
             ExplainableAggregateDto terms,
             ExplainableAggregateDto relations,
-            ExplainableAggregateDto runtimeSignals,
             ExplainableAggregateDto validation
     ) {
     }

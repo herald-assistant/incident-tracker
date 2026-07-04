@@ -106,7 +106,7 @@ public class OperationalContextMcpTools {
             name = SEARCH,
             description = """
                     Searches operational context catalog entities by text and returns ranked candidates.
-                    Use this when a system name, endpoint, queue, class, repository, process, bounded context, team,
+                    Use this when a system name, repository, process, bounded context, integration, team,
                     domain term or handoff clue is already known from another source.
                     """
     )
@@ -141,7 +141,7 @@ public class OperationalContextMcpTools {
             name = GET_ENTITY,
             description = """
                     Returns compact details for one operational context entity.
-                    Use this after search or list results before relying on relationships, ownership, code-search hints,
+                    Use this after search or list results before relying on relationships, ownership, code-search scope,
                     handoff hints, recognition signals or source limitations.
                     """
     )

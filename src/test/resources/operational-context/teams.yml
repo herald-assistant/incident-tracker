@@ -15,16 +15,12 @@ teams:
         targetId: customer-profile-context
     matchSignals:
       exact:
-        serviceNames: [crm-customer-service]
-        containerNames: [crm-customer-service]
       strong:
         projectNames: [crm-customer-service-repo]
-        packagePrefixes: [com.example.crm.customer]
-        endpointPrefixes: [/crm/customers]
     handoffHints:
       defaultRouteLabel: crm-owner
       firstResponderTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, serviceName, endpoint, exception]
+      requiredEvidence: [correlationId, environment, businessImpact, exception]
 
   - id: crm-integration-team
     name: CRM Integration Team
@@ -34,12 +30,11 @@ teams:
         targetId: crm-customer-to-notification-sync
     matchSignals:
       exact:
-        endpointPrefixes: [/crm/notifications]
         hosts: [api.notifications.local]
     handoffHints:
       defaultRouteLabel: crm-integration-owner
       firstResponderTeamIds: [crm-integration-team]
       partnerTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, host, endpoint, exception]
+      requiredEvidence: [correlationId, environment, host, exception]
 
 gaps: []

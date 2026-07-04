@@ -4,7 +4,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchRepository;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchScope;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchTarget;
-import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableCodeSearchTraversal;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabAvailableRepository;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
@@ -24,9 +23,7 @@ import java.util.stream.Collectors;
 final class GitLabAvailableRepositoryMapper {
 
     private static final int MAX_ALIASES = 20;
-    private static final int MAX_PACKAGE_PREFIXES = 40;
-    private static final int MAX_ENDPOINT_PREFIXES = 40;
-    private static final int MAX_MODULE_PATHS = 40;
+    private static final int MAX_PROJECT_NAMES = 40;
     private static final int MAX_SUMMARY_CHARACTERS = 700;
     private static final int SUMMARY_LIST_PREVIEW_SIZE = 5;
 
@@ -109,10 +106,7 @@ final class GitLabAvailableRepositoryMapper {
                 boundedContexts,
                 processes,
                 integrations,
-                repository.references().repositories(),
-                packagePrefixes(repository),
-                endpointPrefixes(repository),
-                modulePaths(repository)
+                repository.references().repositories()
         );
     }
 
@@ -127,7 +121,7 @@ final class GitLabAvailableRepositoryMapper {
                 .toList();
         var projectNames = distinctLimited(repositories.stream()
                 .flatMap(repository -> repository.projectNames().stream())
-                .toList(), MAX_MODULE_PATHS);
+                .toList(), MAX_PROJECT_NAMES);
 
         return new GitLabAvailableCodeSearchScope(
                 scope.id(),
@@ -138,28 +132,8 @@ final class GitLabAvailableRepositoryMapper {
                 scope.useFor(),
                 repositories,
                 projectNames,
-                distinctLimited(scope.packagePrefixes(), MAX_PACKAGE_PREFIXES),
-                distinctLimited(scope.classHints(), MAX_PACKAGE_PREFIXES),
-                distinctLimited(scope.endpointHints(), MAX_ENDPOINT_PREFIXES),
-                distinctLimited(scope.queueTopicHints(), MAX_ENDPOINT_PREFIXES),
-                new GitLabAvailableCodeSearchTraversal(
-                        scope.traversal().rules(),
-                        scope.traversal().expandWhen()
-                )
+                scope.limitations()
         );
-    }
-
-    private static List<String> combineScopeTargets(List<String> directTargets, List<String> repositoryTargets) {
-        var result = new LinkedHashSet<String>();
-        directTargets.stream()
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .forEach(result::add);
-        repositoryTargets.stream()
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .forEach(result::add);
-        return List.copyOf(result);
     }
 
     private static GitLabAvailableCodeSearchRepository toCodeSearchRepository(
@@ -176,7 +150,6 @@ final class GitLabAvailableRepositoryMapper {
                 scopeRepository.role(),
                 scopeRepository.priority(),
                 distinctLimited(List.of(repository.projectName()), MAX_ALIASES),
-                scopeRepository.moduleIds(),
                 scopeRepository.reason(),
                 scopeRepository.readFor()
         );
@@ -232,23 +205,6 @@ final class GitLabAvailableRepositoryMapper {
         aliases.addAll(repository.matchSignals().exact().projectNames());
         aliases.addAll(repository.matchSignals().exact().projectPaths());
         return distinctLimited(aliases, MAX_ALIASES);
-    }
-
-    private static List<String> packagePrefixes(OperationalContextRepository repository) {
-        return distinctLimited(repository.packagePrefixSignals(), MAX_PACKAGE_PREFIXES);
-    }
-
-    private static List<String> endpointPrefixes(OperationalContextRepository repository) {
-        return distinctLimited(repository.endpointPrefixSignals(), MAX_ENDPOINT_PREFIXES);
-    }
-
-    private static List<String> modulePaths(OperationalContextRepository repository) {
-        var values = new ArrayList<String>();
-        values.addAll(repository.sourceLayout().modulePaths());
-        for (var module : repository.modules()) {
-            values.add(module.effectiveId());
-        }
-        return distinctLimited(values, MAX_MODULE_PATHS);
     }
 
     private static String summary(

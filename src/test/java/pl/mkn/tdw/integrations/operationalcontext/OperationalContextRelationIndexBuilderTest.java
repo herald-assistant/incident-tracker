@@ -36,7 +36,7 @@ class OperationalContextRelationIndexBuilderTest {
     }
 
     @Test
-    void shouldExposeCodeSearchScopeRelationsToRepositoriesAndModules() {
+    void shouldExposeCodeSearchScopeRelationsToRepositories() {
         var index = builder.build(sampleCatalog());
 
         var scopeRelations = index.entityRelations("code-search-scope", "crm-customer-service-scope");
@@ -44,10 +44,7 @@ class OperationalContextRelationIndexBuilderTest {
         assertTrue(scopeRelations.outgoingRelations().stream()
                 .anyMatch(relation -> relation.relationType().equals("references-repository")
                         && relation.target().id().equals("crm-customer-service-repo")
-                        && relation.role().equals("primary-implementation")));
-        assertTrue(scopeRelations.outgoingRelations().stream()
-                .anyMatch(relation -> relation.relationType().equals("references-module")
-                        && relation.target().id().equals("customer-module")));
+                        && relation.role().equals("primary")));
     }
 
     @Test
@@ -85,7 +82,10 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(),
                 List.of(map(
                         "id", "crm-customer-service",
-                        "references", map("systems", List.of("crm-customer-service", "missing-system"))
+                        "references", map(
+                                "systems", List.of("crm-customer-service", "missing-system"),
+                                "terms", List.of("free-text-term")
+                        )
                 )),
                 List.of(),
                 List.of(),
@@ -104,6 +104,53 @@ class OperationalContextRelationIndexBuilderTest {
                 .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
                         && finding.severity().equals("error")
                         && finding.message().contains("missing-system")));
+        assertFalse(index.validationFindings().stream()
+                .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
+                        && finding.message().contains("free-text-term")));
+    }
+
+    @Test
+    void shouldLinkOnlyKnownReferenceTermsAndTreatUnknownTermsAsHints() {
+        var index = builder.build(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(map(
+                        "id", "crm-customer-service",
+                        "references", map("terms", List.of("known-term", "free-text-term"))
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(new OperationalContextDtos.OperationalContextGlossaryTerm(
+                        "known-term",
+                        "Known term",
+                        "business-term",
+                        "Known term.",
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of()
+                )),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        var relations = index.entityRelations("system", "crm-customer-service").outgoingRelations();
+
+        assertTrue(relations.stream()
+                .anyMatch(relation -> relation.relationType().equals("references-term")
+                        && relation.target().type().equals("term")
+                        && relation.target().id().equals("known-term")));
+        assertFalse(relations.stream()
+                .anyMatch(relation -> relation.relationType().equals("references-term")
+                        && relation.target().id().equals("free-text-term")));
+        assertFalse(index.validationFindings().stream()
+                .anyMatch(finding -> finding.code().equals("UNKNOWN_RELATION_TARGET")
+                        && finding.message().contains("free-text-term")));
     }
 
     @Test
@@ -189,13 +236,9 @@ class OperationalContextRelationIndexBuilderTest {
                         new OperationalContextDtos.OperationalContextReferences(
                                 List.of("crm-customer-service"),
                                 List.of(),
-                                List.of(),
-                                List.of(),
                                 List.of("customer-support-process"),
                                 List.of(),
                                 List.of("crm-customer-to-notification-sync"),
-                                List.of(),
-                                List.of(),
                                 List.of(),
                                 List.of(),
                                 List.of()
@@ -260,10 +303,7 @@ class OperationalContextRelationIndexBuilderTest {
                         map(
                                 "id", "crm-customer-service",
                                 "name", "CRM Customer Service",
-                                "references", map("repositories", List.of("crm-customer-service-repo")),
-                                "deployment", map(
-                                        "serviceNames", List.of("crm-customer-service")
-                                )
+                                "references", map("repositories", List.of("crm-customer-service-repo"))
                         ),
                         map("id", "crm-support-service", "name", "Support Service"),
                         map("id", "notification-provider", "name", "Notification Provider")
@@ -281,7 +321,6 @@ class OperationalContextRelationIndexBuilderTest {
                                         "system", "crm-customer-service",
                                         "boundedContext", "customer-profile-context",
                                         "repositories", List.of("crm-customer-service-repo"),
-                                        "modules", List.of("customer-module"),
                                         "role", "consumer"
                                 ))
                         ),
@@ -292,12 +331,7 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(map(
                         "id", "crm-customer-service-repo",
                         "name", "CRM Customer Service Repository",
-                        "references", map("systems", List.of("crm-customer-service")),
-                        "modules", List.of(map(
-                                "id", "customer-module",
-                                "name", "Customer Module",
-                                "references", map("boundedContexts", List.of("customer-profile-context"))
-                        ))
+                        "references", map("systems", List.of("crm-customer-service"))
                 ), map("id", "notification-provider-repo", "name", "Notification Provider Repository")),
                 List.of(map(
                         "id", "crm-customer-service-scope",
@@ -305,9 +339,8 @@ class OperationalContextRelationIndexBuilderTest {
                         "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
-                                "role", "primary-implementation",
-                                "priority", 1,
-                                "moduleIds", List.of("customer-module")
+                                "role", "primary",
+                                "priority", 1
                         ))
                 )),
                 List.of(map(

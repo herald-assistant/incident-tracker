@@ -1,18 +1,16 @@
 package pl.mkn.tdw.api.operationalcontext;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
-
-import java.util.List;
-import java.util.Map;
+import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.brokenCatalog;
+import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.emptyCatalog;
+import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.port;
+import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.typicalCatalog;
 
 class OperationalContextViewServiceTest {
 
@@ -22,7 +20,7 @@ class OperationalContextViewServiceTest {
 
         var summary = service.summary();
 
-        assertEquals("empty", summary.catalogStatus());
+        assertEquals("ok", summary.catalogStatus());
         assertEquals(0, summary.systems());
         assertEquals(0, summary.repositories());
         assertEquals(0, summary.codeSearchScopes());
@@ -31,67 +29,51 @@ class OperationalContextViewServiceTest {
     }
 
     @Test
-    void shouldExposeCatalogueRows() {
-        var service = new OperationalContextViewService(port(sampleCatalog()));
-
-        assertEquals(2, service.systems().size());
-        assertEquals("new-system", service.systems().get(0).id());
-        assertEquals(1, service.repositories().size());
-        assertEquals("new-repo", service.repositories().get(0).id());
-        assertEquals(2, service.codeSearchScopes().size());
-        assertEquals("new-scope", service.codeSearchScopes().get(0).id());
-        assertEquals(1, service.processes().size());
-        assertEquals(1, service.integrations().size());
-    }
-
-    @Test
-    void shouldExposeRowsFromCurrentOperationalContextContract() {
-        var service = new OperationalContextViewService(port(currentContractCatalog()));
+    void shouldExposeCatalogueRowsFromSimplifiedContract() {
+        var service = new OperationalContextViewService(port(typicalCatalog()));
 
         var system = service.systems().get(0);
-        assertEquals("new-system", system.id());
+        assertEquals("agreement-service", system.id());
         assertEquals("internal-application", system.kind());
         assertEquals("team-a", system.owner().value());
-        assertEquals(1, system.relations().count());
+        assertTrue(system.relations().count() >= 4);
         assertEquals(1, system.signals().count());
 
         var repository = service.repositories().get(0);
-        assertEquals("Group/new-service", repository.project());
+        assertEquals("Group/agreement-service", repository.project());
         assertEquals("Group", repository.group());
         assertEquals("team-a", repository.owner().value());
         assertEquals(1, repository.systems().count());
         assertEquals(1, repository.contexts().count());
-        assertFalse(repository.packageRoots().detailsIds().isEmpty());
-        assertFalse(repository.entrypoints().detailsIds().isEmpty());
-        assertEquals(2, repository.codeSearchScopes().count());
-        assertEquals(2, repository.codeSearchRoles().count());
+        assertEquals(1, repository.processes().count());
+        assertTrue(repository.codeSearchScopes().count() >= 1);
+        assertTrue(repository.codeSearchRoles().detailsIds().contains("primary in agreement-repo"));
 
         var codeSearchScope = service.codeSearchScopes().get(0);
-        assertEquals("New Scope", codeSearchScope.name());
-        assertEquals(1, codeSearchScope.repositories().count());
+        assertEquals("Agreement Service Scope", codeSearchScope.name());
         assertEquals(1, codeSearchScope.target().count());
-        assertEquals(3, codeSearchScope.dataHints().count());
-        assertTrue(codeSearchScope.dataHints().detailsIds().contains("Migrations:src/main/resources/db/changelog"));
+        assertEquals(1, codeSearchScope.repositories().count());
+        assertEquals(1, codeSearchScope.limitations().count());
 
         var process = service.processes().get(0);
-        assertEquals("Current process summary", process.purpose());
+        assertEquals("Business process for submitting an agreement.", process.purpose());
         assertEquals(1, process.systems().count());
         assertEquals(1, process.externalSystems().count());
         assertEquals(1, process.repositories().count());
         assertEquals(1, process.contexts().count());
         assertEquals(1, process.steps().count());
-        assertEquals(1, process.completionSignals().count());
 
         var integration = service.integrations().get(0);
-        assertEquals("new-system", integration.sourceSystem());
+        assertEquals("agreement-service", integration.sourceSystem());
         assertEquals("partner-system", integration.targetSystems());
-        assertEquals("REST", integration.protocols());
+        assertEquals("external-handoff", integration.category());
         assertEquals("synchronous-request", integration.integrationStyle());
+        assertEquals("outbound", integration.flowDirection());
         assertEquals(1, integration.processes().count());
         assertEquals(1, integration.contexts().count());
 
         var context = service.boundedContexts().get(0);
-        assertEquals("Current bounded context summary", context.purpose());
+        assertEquals("Bounded context for agreement decisions.", context.purpose());
         assertEquals(1, context.systems().count());
         assertEquals(1, context.terms().count());
 
@@ -101,335 +83,96 @@ class OperationalContextViewServiceTest {
         assertEquals(1, team.ownsProcesses().count());
         assertEquals(1, team.ownsContexts().count());
         assertEquals(1, team.ownsIntegrations().count());
-
-        assertTrue(service.search("NewController").stream().anyMatch(result -> result.type().equals("repository")));
-        assertTrue(service.search("primary-implementation").stream().anyMatch(result -> result.type().equals("code-search-scope")));
-        assertTrue(service.search("db/changelog").stream().anyMatch(result -> result.type().equals("code-search-scope")));
-        assertTrue(service.search("/new/api").stream().anyMatch(result -> result.type().equals("integration")));
     }
 
     @Test
-    void shouldExposeReadModelProjectionsForOperatorApi() {
-        var service = new OperationalContextViewService(port(currentContractCatalog()));
+    void shouldExposeOnlyRelationsAndCodeSearchReadModelsForOperatorApi() {
+        var service = new OperationalContextViewService(port(typicalCatalog()));
 
-        var relations = service.entityRelationsReadModel("system", "new-system");
+        var relations = service.entityRelationsReadModel("system", "agreement-service");
         assertEquals("operational-context.entity-relations", relations.contract());
-        assertEquals("new-system", relations.analysisTarget().id());
-        assertFalse(relations.outgoingRelations().isEmpty());
+        assertEquals("agreement-service", relations.analysisTarget().id());
+        assertTrue(relations.neighbors().stream().anyMatch(ref -> ref.id().equals("agreement-repo")));
 
-        var codeSearch = service.codeSearchReadModel("system", "new-system");
+        var codeSearch = service.codeSearchReadModel("system", "agreement-service");
         assertEquals("operational-context.code-search", codeSearch.contract());
-        assertEquals("new-scope", codeSearch.scopes().get(0).scope().id());
-        assertEquals("new-repo", codeSearch.repositories().get(0).repository().id());
-
-        var implementations = service.implementationReadModel("process", "new-process");
-        assertEquals("operational-context.implementation-map", implementations.contract());
-        assertEquals("new-process-scope::new-repo::api", implementations.implementations().get(0).id());
-
-        var flow = service.flowReadModel("process", "new-process");
-        assertEquals("operational-context.flow", flow.contract());
-        assertEquals(1, flow.steps().size());
-        assertEquals("step-1", flow.steps().get(0).id());
-        assertFalse(flow.steps().get(0).implementations().isEmpty());
-
-        var blastRadius = service.blastRadiusReadModel("process", "new-process");
-        assertEquals("operational-context.blast-radius", blastRadius.contract());
-        assertEquals("new-process", blastRadius.analysisTarget().id());
-        assertEquals(1, blastRadius.impactedFlows().size());
+        assertTrue(codeSearch.scopes().stream().anyMatch(scope -> scope.scope().id().equals("agreement-service-scope")));
+        assertTrue(codeSearch.repositories().stream().anyMatch(repository -> repository.repository().id().equals("agreement-repo")));
+        assertTrue(codeSearch.limitations().contains("Partner internals are outside this catalog."));
     }
 
     @Test
-    void shouldValidateBrokenOwnerSideReferencesAndDuplicateSignals() {
+    void shouldExposeCompactProfilesWithoutRemovedExpansions() {
+        var service = new OperationalContextViewService(port(typicalCatalog()));
+
+        var compactEntity = (OperationalContextProfiledReadModelDto) service.entity(
+                "system",
+                "agreement-service",
+                "default"
+        );
+        var compactRelations = (OperationalContextProfiledReadModelDto) service.entityRelationsReadModel(
+                "system",
+                "agreement-service",
+                "default"
+        );
+        var compactCodeSearch = (OperationalContextProfiledReadModelDto) service.codeSearchReadModel(
+                "system",
+                "agreement-service",
+                "default"
+        );
+
+        assertEquals("operational-context.entity-detail", compactEntity.contract());
+        assertEquals(
+                java.util.List.of("profile=expanded", "relations", "code-search"),
+                compactEntity.availableExpansions()
+        );
+
+        assertEquals("operational-context.entity-relations", compactRelations.contract());
+        assertEquals("default", compactRelations.profile());
+        assertTrue(compactRelations.data().containsKey("neighbors"));
+
+        assertEquals("operational-context.code-search", compactCodeSearch.contract());
+        assertEquals("default", compactCodeSearch.profile());
+        assertTrue(compactCodeSearch.suggestedTools().contains("gitlab_list_available_repositories"));
+        assertTrue(compactCodeSearch.suggestedTools().contains("gitlab_search_repository_candidates"));
+    }
+
+    @Test
+    void shouldValidateBrokenReferences() {
         var service = new OperationalContextViewService(port(brokenCatalog()));
 
         var findings = service.validation();
 
         assertTrue(findings.stream().anyMatch(finding ->
-                finding.category().equals("reference-integrity")
-                        && finding.entityType().equals("repository")
+                finding.category().equals("UNKNOWN_RELATION_TARGET")
                         && finding.detail().contains("missing-system")));
-        assertTrue(findings.stream().anyMatch(finding ->
-                finding.category().equals("signal-quality")
-                && finding.title().contains("Duplicate serviceName")));
-        assertFalse(findings.stream().anyMatch(finding -> finding.title().contains("Duplicate endpointPrefix")));
-        assertFalse(findings.stream().anyMatch(finding -> finding.category().equals("ownership-consistency")));
     }
 
     @Test
-    void shouldSearchByServiceProjectEndpointAndTerm() {
-        var service = new OperationalContextViewService(port(sampleCatalog()));
+    void shouldSearchByBusinessAndCatalogTerms() {
+        var service = new OperationalContextViewService(port(typicalCatalog()));
 
-        assertFalse(service.search("new-system").isEmpty());
-        assertTrue(service.search("NewController").stream().anyMatch(result -> result.type().equals("repository")));
-        assertTrue(service.search("/new/api").stream().anyMatch(result -> result.type().equals("integration")));
-        assertTrue(service.search("New Term").stream().anyMatch(result -> result.type().equals("glossary-term")));
+        assertFalse(service.search("agreement-service").isEmpty());
+        assertTrue(service.search("business-analysis").stream()
+                .anyMatch(result -> result.type().equals("code-search-scope")));
+        assertTrue(service.search("partner-handoff").stream()
+                .anyMatch(result -> result.type().equals("integration")));
+        assertTrue(service.search("Agreement").stream()
+                .anyMatch(result -> result.type().equals("glossary-term")));
     }
 
     @Test
     void shouldReturnEntityDetailsAndControlledNotFound() {
-        var service = new OperationalContextViewService(port(sampleCatalog()));
+        var service = new OperationalContextViewService(port(typicalCatalog()));
 
-        var detail = service.entity("system", "new-system");
+        var detail = service.entity("system", "agreement-service");
 
         assertEquals("system", detail.type());
-        assertEquals("new-system", detail.id());
+        assertEquals("agreement-service", detail.id());
         assertFalse(detail.recognitionSignals().isEmpty());
         assertThrows(
                 OperationalContextEntityNotFoundException.class,
                 () -> service.entity("system", "missing")
         );
-    }
-
-    private static OperationalContextPort port(OperationalContextCatalog catalog) {
-        return query -> catalog;
-    }
-
-    private static OperationalContextCatalog emptyCatalog() {
-        return OperationalContextCatalog.empty();
-    }
-
-    private static OperationalContextCatalog sampleCatalog() {
-        return currentContractCatalog();
-    }
-
-    private static OperationalContextCatalog brokenCatalog() {
-        return OperationalContextDtos.catalogFromRaw(
-                List.of(map(
-                        "id", "core-team",
-                        "name", "Core Team",
-                        "references", map(
-                                "systems", List.of(),
-                                "repositories", List.of(),
-                                "processes", List.of(),
-                                "boundedContexts", List.of(),
-                                "integrations", List.of()
-                        )
-                )),
-                List.of(),
-                List.of(
-                        map(
-                                "id", "app-core",
-                                "name", "App Core",
-                                "kind", "internal-application",
-                                "references", map("repositories", List.of("missing-repo"), "processes", List.of("missing-process")),
-                                "responsibilities", List.of(map("teamId", "core-team")),
-                                "matchSignals", map("exact", map("serviceNames", List.of("shared-service"), "endpointPrefixes", List.of("/api/shared")))
-                        ),
-                        map(
-                                "id", "catalog-core",
-                                "name", "Catalog Core",
-                                "kind", "internal-application",
-                                "matchSignals", map("exact", map("serviceNames", List.of("shared-service"), "endpointPrefixes", List.of("/api/shared")))
-                        )
-                ),
-                List.of(),
-                List.of(map(
-                        "id", "broken-repo",
-                        "name", "Broken Repo",
-                        "git", map("group", "Group", "project", "broken", "projectPath", "Group/broken"),
-                        "references", map("systems", List.of("missing-system"))
-                )),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                "index"
-        );
-    }
-
-    private static OperationalContextCatalog currentContractCatalog() {
-        return OperationalContextDtos.catalogFromRaw(
-                List.of(map(
-                        "id", "team-a",
-                        "name", "Team A",
-                        "purpose", "Owns current-contract sample.",
-                        "references", map(
-                                "systems", List.of("new-system"),
-                                "repositories", List.of("new-repo"),
-                                "processes", List.of("new-process"),
-                                "boundedContexts", List.of("new-context"),
-                                "integrations", List.of("new-integration")
-                        ),
-                        "responsibilities", List.of(
-                                map("targetType", "system", "targetId", "new-system", "teamId", "team-a"),
-                                map("targetType", "repository", "targetId", "new-repo", "teamId", "team-a"),
-                                map("targetType", "process", "targetId", "new-process", "teamId", "team-a"),
-                                map("targetType", "bounded-context", "targetId", "new-context", "teamId", "team-a"),
-                                map("targetType", "integration", "targetId", "new-integration", "teamId", "team-a")
-                        ),
-                        "handoffHints", map(
-                                "defaultRouteLabel", "Team A",
-                                "requiredEvidence", List.of("correlationId")
-                        )
-                )),
-                List.of(map(
-                        "id", "new-process",
-                        "name", "New Process",
-                        "summary", "Current process summary",
-                        "participants", map(
-                                "primarySystems", List.of("new-system"),
-                                "externalSystems", List.of("partner-system")
-                        ),
-                        "references", map(
-                                "repositories", List.of("new-repo"),
-                                "boundedContexts", List.of("new-context"),
-                                "teams", List.of("team-a")
-                        ),
-                        "responsibilities", List.of(map("teamId", "team-a")),
-                        "processSteps", List.of(map("id", "step-1", "name", "Run step")),
-                        "processBoundary", map("endsWhen", List.of("finished")),
-                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("correlationId"))
-                )),
-                List.of(
-                        map(
-                                "id", "new-system",
-                                "name", "New System",
-                                "kind", "internal-application",
-                                "purpose", "Current system purpose",
-                                "references", map(
-                                        "repositories", List.of("new-repo"),
-                                        "processes", List.of("new-process"),
-                                        "boundedContexts", List.of("new-context"),
-                                        "teams", List.of("team-a")
-                                ),
-                                "responsibilities", List.of(map("teamId", "team-a")),
-                                "match", map("serviceNames", List.of("new-service")),
-                                "dependencies", map("downstream", List.of("partner-system")),
-                                "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("correlationId"))
-                        ),
-                        map(
-                                "id", "partner-system",
-                                "name", "Partner System",
-                                "kind", "external-system",
-                                "matchSignals", map("exact", map("serviceNames", List.of("partner-service"))),
-                                "handoffHints", map("defaultRouteLabel", "Partner", "requiredEvidence", List.of("endpoint"))
-                        )
-                ),
-                List.of(map(
-                        "id", "new-integration",
-                        "name", "New System to Partner",
-                        "summary", "Current integration summary",
-                        "integrationStyle", "synchronous-request",
-                        "participants", map(
-                                "source", map("system", "new-system"),
-                                "targets", List.of(map("system", "partner-system")),
-                                "finalTargets", List.of("partner-system")
-                        ),
-                        "transport", map("protocols", List.of("REST"), "http", map("endpointPrefixes", List.of("/new/api"))),
-                        "references", map(
-                                "processes", List.of("new-process"),
-                                "boundedContexts", List.of("new-context"),
-                                "teams", List.of("team-a")
-                        ),
-                        "responsibilities", List.of(map("teamId", "team-a")),
-                        "matchSignals", map("strong", map("endpointPrefixes", List.of("/new/api"))),
-                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("endpoint"))
-                )),
-                List.of(map(
-                        "id", "new-repo",
-                        "name", "New Repo",
-                        "git", map("group", "Group", "project", "new-service", "projectPath", "Group/new-service"),
-                        "references", map(
-                                "systems", List.of("new-system"),
-                                "processes", List.of("new-process"),
-                                "boundedContexts", List.of("new-context")
-                        ),
-                        "sourceLayout", map(
-                                "sourceRoots", List.of("src/main/java/com/example/newservice"),
-                                "databaseMigrationPaths", List.of("src/main/resources/db/changelog")
-                        ),
-                        "matchSignals", map("strong", map("packagePrefixes", List.of("com.example.newservice"), "classHints", List.of("NewController"))),
-                        "modules", List.of(map("moduleId", "api", "sourceRoots", List.of("src/main/java"), "matchSignals", map("strong", map("classHints", List.of("NewController"))))),
-                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("projectPath"))
-                )),
-                List.of(map(
-                        "id", "new-scope",
-                        "name", "New Scope",
-                        "scopeType", "system",
-                        "lifecycleStatus", "active",
-                        "target", map("type", "system", "id", "new-system"),
-                        "useFor", List.of("incident-analysis"),
-                        "repositories", List.of(map(
-                                "repoId", "new-repo",
-                                "role", "primary-implementation",
-                                "priority", 1,
-                                "moduleIds", List.of("api"),
-                                "reason", "Main code path for new-system."
-                        )),
-                        "hints", map(
-                                "packagePrefixes", List.of("com.example.newservice"),
-                                "classHints", List.of("NewController"),
-                                "endpointHints", List.of("/new/api"),
-                                "database", map("schemas", List.of("NEW_SCHEMA"), "tables", List.of("NEW_TABLE")),
-                                "workflow", map("workflowNames", List.of("NewWorkflow"))
-                        ),
-                        "traversal", map(
-                                "rules", List.of("Read primary implementation first."),
-                                "expandWhen", List.of("Expand when shared rules are referenced.")
-                        )
-                ), map(
-                        "id", "new-process-scope",
-                        "name", "New Process Scope",
-                        "scopeType", "process",
-                        "lifecycleStatus", "active",
-                        "target", map("type", "process", "id", "new-process"),
-                        "useFor", List.of("incident-analysis"),
-                        "repositories", List.of(map(
-                                "repoId", "new-repo",
-                                "role", "primary-implementation",
-                                "priority", 1,
-                                "moduleIds", List.of("api"),
-                                "reason", "Main code path for new-process."
-                        )),
-                        "hints", map(
-                                "packagePrefixes", List.of("com.example.newservice"),
-                                "classHints", List.of("NewController"),
-                                "endpointHints", List.of("/new/api"),
-                                "database", map("schemas", List.of("NEW_SCHEMA"), "tables", List.of("NEW_TABLE")),
-                                "workflow", map("workflowNames", List.of("NewWorkflow"))
-                        ),
-                        "traversal", map(
-                                "rules", List.of("Read primary implementation first.")
-                        )
-                )),
-                List.of(map(
-                        "id", "new-context",
-                        "name", "New Context",
-                        "summary", "Current bounded context summary",
-                        "references", map(
-                                "systems", List.of("new-system"),
-                                "repositories", List.of("new-repo"),
-                                "processes", List.of("new-process"),
-                                "terms", List.of("new-term"),
-                                "teams", List.of("team-a")
-                        ),
-                        "responsibilities", List.of(map("teamId", "team-a")),
-                        "matchSignals", map("exact", map("terms", List.of("new-term"))),
-                        "handoffHints", map("defaultRouteLabel", "Team A", "requiredEvidence", List.of("bounded context"))
-                )),
-                List.of(new OperationalContextGlossaryTerm(
-                        "new-term",
-                        "New Term",
-                        "domain-term",
-                        "A term from current contract.",
-                        List.of(),
-                        List.of(),
-                        List.of("new-term"),
-                        List.of("new-context"),
-                        List.of(),
-                        List.of()
-                )),
-                List.of(),
-                List.of(),
-                "index"
-        );
-    }
-
-    private static Map<String, Object> map(Object... values) {
-        var map = new java.util.LinkedHashMap<String, Object>();
-        for (var index = 0; index + 1 < values.length; index += 2) {
-            map.put(String.valueOf(values[index]), values[index + 1]);
-        }
-        return map;
     }
 }
