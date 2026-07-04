@@ -615,10 +615,6 @@ export class AnalysisStepsPanelComponent {
       };
     })
   );
-  protected readonly stepperColumnCount = computed(() =>
-    Math.min(6, Math.max(1, this.preparedSteps().length))
-  );
-
   protected readonly selectedIndex = computed(() => {
     const steps = this.preparedSteps();
     const selectedStepKey = this.selectedStepKey();
