@@ -16,7 +16,6 @@ import pl.mkn.tdw.features.incidentanalysis.testsupport.TestOperationalContextPr
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
@@ -64,6 +63,8 @@ import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace.DynatraceEvidenceProviderTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -707,7 +708,7 @@ class AnalysisJobFacadeTest {
                         new AnalysisEvidenceCollector(
                                 new ElasticLogEvidenceProvider(new TestElasticLogPort()),
                                 new DeploymentContextEvidenceProvider(deploymentContextResolver),
-                                new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
+                                DynatraceEvidenceProviderTestCreator.create(new TestDynatraceIncidentPort(), deploymentContextResolver),
                                 new GitLabDeterministicEvidenceProvider(
                                         mock(GitLabRepositoryPort.class),
                                         gitLabProperties,

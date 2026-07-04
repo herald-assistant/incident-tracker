@@ -32,6 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,15 +72,15 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
                 new CopilotIncidentInitialRunAssembler(
                         factory,
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
-                        new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
+                        new CopilotIncidentSessionConfigRequestFactory(new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties))),
                         artifactService(objectMapper),
                         policyFactoryWithConfiguredElastic(),
                         new CopilotIncidentPromptRenderer(),
-                        new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper()),
+                        new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper(), new CopilotRunAuthMapper()),
                         new CopilotIncidentReportFactory()
                 ),
                 new CopilotRunPreparationService(
-                        new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
+                        new CopilotPreparedSessionFactory(CopilotSessionConfigFactoryTestCreator.create(properties))
                 )
         );
 

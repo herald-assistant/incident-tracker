@@ -42,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import pl.mkn.tdw.testsupport.agenttools.GitLabMcpToolsTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
@@ -61,14 +62,14 @@ class GitLabMcpToolsTest {
     private static final String DEFAULT_BRANCH_REF = "feature/INC-123";
     private static final String DEFAULT_APPLICATION_NAME = "backend";
 
-    private final GitLabMcpTools gitLabMcpTools = new GitLabMcpTools(
+    private final GitLabMcpTools gitLabMcpTools = GitLabMcpToolsTestCreator.create(
             new TestGitLabRepositoryPort(),
             gitLabProperties(DEFAULT_GROUP)
     );
 
     @Test
     void shouldListAvailableRepositoriesFromOperationalContextUsingSessionGroup() {
-        var tools = new GitLabMcpTools(
+        var tools = GitLabMcpToolsTestCreator.create(
                 mock(GitLabRepositoryPort.class),
                 ignored -> operationalContextCatalog(
                         List.of(codeSearchScope(
@@ -249,7 +250,7 @@ class GitLabMcpToolsTest {
 
     @Test
     void shouldSearchRepositoryCandidatesThroughToolUsingComponentHintForNestedProject() {
-        var tools = new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM"));
+        var tools = GitLabMcpToolsTestCreator.create(new TestGitLabRepositoryPort(), gitLabProperties("CRM"));
 
         var response = tools.searchRepositoryCandidates(
                 List.of("crm-customer-workflow"),
@@ -308,7 +309,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldBuildEndpointUseCaseContextUsingSessionBoundScope() {
         var endpointUseCaseContextService = mock(GitLabEndpointUseCaseContextService.class);
-        var tools = new GitLabMcpTools(
+        var tools = GitLabMcpToolsTestCreator.create(
                 mock(GitLabRepositoryPort.class),
                 ignored -> OperationalContextCatalog.empty(),
                 mock(GitLabRepositoryEndpointService.class),
@@ -401,7 +402,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldBuildJavaMethodUseCaseContextUsingSessionBoundScopeAndMaxResults() {
         var javaMethodUseCaseContextService = mock(GitLabJavaMethodUseCaseContextService.class);
-        var tools = new GitLabMcpTools(
+        var tools = GitLabMcpToolsTestCreator.create(
                 mock(GitLabRepositoryPort.class),
                 ignored -> OperationalContextCatalog.empty(),
                 mock(GitLabRepositoryEndpointService.class),
@@ -558,7 +559,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldResolveNestedOperationalContextRepositoryGroupUnderConfiguredRootGroup() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = new GitLabMcpTools(
+        var tools = GitLabMcpToolsTestCreator.create(
                 gitLabRepositoryPort,
                 ignored -> operationalContextCatalog(repository(
                         "crm-customer-process-repo",
@@ -618,7 +619,7 @@ class GitLabMcpToolsTest {
 
     @Test
     void shouldUseDefaultCharacterLimitWhenNotProvided() {
-        var tools = new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime"));
+        var tools = GitLabMcpToolsTestCreator.create(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime"));
 
         var response = tools.readRepositoryFile(
                 "crm-customer-account-service",
@@ -1270,7 +1271,7 @@ class GitLabMcpToolsTest {
 
     @Test
     void shouldExposeHelpersForOutlineAndRoleClassification() {
-        var tools = new GitLabMcpTools(mock(GitLabRepositoryPort.class));
+        var tools = GitLabMcpToolsTestCreator.create(mock(GitLabRepositoryPort.class));
 
         var outline = tools.buildOutline("""
                 package pl.mkn.config;
@@ -1303,7 +1304,7 @@ class GitLabMcpToolsTest {
 
     @Test
     void shouldExtractNeutralJavaFieldSummariesWithAnnotations() {
-        var tools = new GitLabMcpTools(mock(GitLabRepositoryPort.class));
+        var tools = GitLabMcpToolsTestCreator.create(mock(GitLabRepositoryPort.class));
 
         var outline = tools.buildOutline("""
                 package pl.mkn.customer;
@@ -1341,7 +1342,7 @@ class GitLabMcpToolsTest {
 
     @Test
     void shouldThrowReadableErrorWhenGitLabGroupCannotBeResolved() {
-        var tools = new GitLabMcpTools(mock(GitLabRepositoryPort.class));
+        var tools = GitLabMcpToolsTestCreator.create(mock(GitLabRepositoryPort.class));
 
         var exception = assertThrows(IllegalStateException.class, () -> tools.listAvailableRepositories(
                 DEFAULT_APPLICATION_NAME,
@@ -1400,7 +1401,7 @@ class GitLabMcpToolsTest {
     }
 
     private GitLabMcpTools gitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
-        return new GitLabMcpTools(gitLabRepositoryPort, gitLabProperties(DEFAULT_GROUP));
+        return GitLabMcpToolsTestCreator.create(gitLabRepositoryPort, gitLabProperties(DEFAULT_GROUP));
     }
 
     private static GitLabProperties gitLabProperties(String group) {

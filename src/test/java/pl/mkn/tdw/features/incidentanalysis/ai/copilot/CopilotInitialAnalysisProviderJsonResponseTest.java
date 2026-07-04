@@ -11,6 +11,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGatewa
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
 
 import java.util.List;
@@ -68,7 +69,8 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
         return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
-                new CopilotResponseParser(objectMapper)
+                new CopilotResponseParser(objectMapper),
+                new CopilotIncidentReportMapper()
         );
     }
 

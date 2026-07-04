@@ -12,7 +12,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
@@ -57,6 +56,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -83,7 +83,7 @@ class FlowExplorerJobServiceTest {
     private final CopilotSdkExecutionGateway executionGateway = mock(CopilotSdkExecutionGateway.class);
     private final FlowExplorerAiResponseParser responseParser = new FlowExplorerAiResponseParser(new ObjectMapper());
     private final TaskExecutor directExecutor = Runnable::run;
-    private final FlowExplorerJobService flowExplorerJobService = new FlowExplorerJobService(
+    private final FlowExplorerJobService flowExplorerJobService = FlowExplorerJobServiceTestCreator.create(
             contextService,
             promptPreparationService,
             runRequestAssembler,
@@ -262,7 +262,7 @@ class FlowExplorerJobServiceTest {
     @Test
     void shouldReturnCollectingSnapshotBeforeAsyncExecutionCompletes() {
         var queuedTask = new java.util.concurrent.atomic.AtomicReference<Runnable>();
-        var service = new FlowExplorerJobService(
+        var service = FlowExplorerJobServiceTestCreator.create(
                 contextService,
                 promptPreparationService,
                 runRequestAssembler,
@@ -283,7 +283,7 @@ class FlowExplorerJobServiceTest {
     void shouldPersistCollectingSnapshotWhenJobStarts() {
         var queuedTask = new java.util.concurrent.atomic.AtomicReference<Runnable>();
         var localRunPersistence = mock(FlowExplorerLocalRunPersistence.class);
-        var service = new FlowExplorerJobService(
+        var service = FlowExplorerJobServiceTestCreator.create(
                 contextService,
                 promptPreparationService,
                 new FlowExplorerFollowUpPromptPreparationService(),
@@ -400,7 +400,7 @@ class FlowExplorerJobServiceTest {
     @Test
     void shouldRejectFollowUpChatBeforeJobIsCompleted() {
         var queuedTask = new java.util.concurrent.atomic.AtomicReference<Runnable>();
-        var service = new FlowExplorerJobService(
+        var service = FlowExplorerJobServiceTestCreator.create(
                 contextService,
                 promptPreparationService,
                 runRequestAssembler,

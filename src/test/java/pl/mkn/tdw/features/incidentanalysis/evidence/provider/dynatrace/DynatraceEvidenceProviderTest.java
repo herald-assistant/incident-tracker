@@ -5,9 +5,13 @@ import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentEvidence;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceIncidentPort;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
+import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,8 +32,8 @@ class DynatraceEvidenceProviderTest {
     @Test
     void shouldSkipDynatraceLookupForDevEnvironment() {
         var dynatracePort = mock(DynatraceIncidentPort.class);
-        var provider = new DynatraceEvidenceProvider(dynatracePort, deploymentContextResolver);
-        var context = contextFrom(new pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort(), "timeout-123");
+        var provider = DynatraceEvidenceProviderTestCreator.create(dynatracePort, deploymentContextResolver);
+        var context = contextFrom(new TestElasticLogPort(), "timeout-123");
 
         var section = provider.collect(context);
 
@@ -45,7 +49,7 @@ class DynatraceEvidenceProviderTest {
     @Test
     void shouldCollectDynatraceEvidenceForUatEnvironment() {
         var dynatracePort = mock(DynatraceIncidentPort.class);
-        var provider = new DynatraceEvidenceProvider(dynatracePort, deploymentContextResolver);
+        var provider = DynatraceEvidenceProviderTestCreator.create(dynatracePort, deploymentContextResolver);
         var context = contextFrom(uatElasticLogPort(), "uat-incident-123");
 
         when(dynatracePort.loadIncidentEvidence(any())).thenReturn(new DynatraceIncidentEvidence(
@@ -217,7 +221,7 @@ class DynatraceEvidenceProviderTest {
     @Test
     void shouldExposeUnavailableStatusWhenDynatraceCallFails() {
         var dynatracePort = mock(DynatraceIncidentPort.class);
-        var provider = new DynatraceEvidenceProvider(dynatracePort, deploymentContextResolver);
+        var provider = DynatraceEvidenceProviderTestCreator.create(dynatracePort, deploymentContextResolver);
         var context = contextFrom(uatElasticLogPort(), "uat-incident-502");
 
         when(dynatracePort.loadIncidentEvidence(any())).thenThrow(
@@ -245,10 +249,10 @@ class DynatraceEvidenceProviderTest {
         assertTrue(runtimeView.componentStatuses().isEmpty());
     }
 
-    private static String attributeValue(pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem item, String name) {
+    private static String attributeValue(AnalysisEvidenceItem item, String name) {
         return item.attributes().stream()
                 .filter(attribute -> attribute.name().equals(name))
-                .map(pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute::value)
+                .map(AnalysisEvidenceAttribute::value)
                 .findFirst()
                 .orElse(null);
     }
@@ -284,11 +288,11 @@ class DynatraceEvidenceProviderTest {
             }
 
             @Override
-            public pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+            public ElasticLogSearchResult searchLogsByCorrelationId(
                     String correlationId
             ) {
                 var entries = findLogEntries(correlationId);
-                return new pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult(
+                return new ElasticLogSearchResult(
                         correlationId,
                         "test",
                         entries.size(),

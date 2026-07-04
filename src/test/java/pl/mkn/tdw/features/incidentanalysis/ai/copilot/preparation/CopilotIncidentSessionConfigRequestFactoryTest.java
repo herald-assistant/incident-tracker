@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -36,7 +37,7 @@ class CopilotIncidentSessionConfigRequestFactoryTest {
                 null
         );
 
-        var factory = new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties));
+        var factory = new CopilotIncidentSessionConfigRequestFactory(new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties)));
 
         var request = factory.create(
                 "analysis-123",

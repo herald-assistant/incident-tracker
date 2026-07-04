@@ -1,6 +1,6 @@
 package pl.mkn.tdw.integrations.gitlab;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.config.YamlMapFactoryBean;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor
 public class GitLabRepositoryEndpointService {
 
     private static final int DEFAULT_MAX_SCANNED_FILES = 120;
@@ -120,19 +121,6 @@ public class GitLabRepositoryEndpointService {
 
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final GitLabRepositoryAnalysisCache analysisCache;
-
-    @Autowired
-    public GitLabRepositoryEndpointService(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            GitLabRepositoryAnalysisCache analysisCache
-    ) {
-        this.gitLabRepositoryPort = gitLabRepositoryPort;
-        this.analysisCache = analysisCache;
-    }
-
-    public GitLabRepositoryEndpointService(GitLabRepositoryPort gitLabRepositoryPort) {
-        this(gitLabRepositoryPort, null);
-    }
 
     public GitLabRepositoryEndpointListResult listEndpoints(GitLabRepositoryEndpointListRequest request) {
         var group = required(request.group(), "group");

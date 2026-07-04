@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
+import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,7 +24,7 @@ class GitLabRestRepositoryAdapterTest {
         var properties = gitLabProperties("CRM");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
 
         server.expect(requestTo(
                         "https://gitlab.example.com/api/v4/groups/CRM/projects?include_subgroups=true&simple=true&per_page=100&search=crm-customer-workflow&page=1"))
@@ -67,7 +68,7 @@ class GitLabRestRepositoryAdapterTest {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
 
         server.expect(requestTo(
                         "https://gitlab.example.com/api/v4/groups/CRM%2Fruntime/projects?include_subgroups=true&simple=true&per_page=100&search=crm-customer-account-service&page=1"))
@@ -124,7 +125,7 @@ class GitLabRestRepositoryAdapterTest {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
 
         server.expect(requestTo(
                         "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/search?scope=blobs&search=@RestController&ref=release/2026.04&per_page=100"))
@@ -160,7 +161,7 @@ class GitLabRestRepositoryAdapterTest {
         var properties = gitLabProperties("CRM");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
 
         server.expect(requestTo(
                         "https://gitlab.example.com/api/v4/groups/CRM/projects?include_subgroups=true&simple=true&per_page=100&search=crm-customer-workflow&page=1"))
@@ -228,7 +229,7 @@ class GitLabRestRepositoryAdapterTest {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
 
         server.expect(requestTo(
                         "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/repository/tree?recursive=true&per_page=100&ref=release/2026.04&page=1&path=src/main/java"))
@@ -267,7 +268,7 @@ class GitLabRestRepositoryAdapterTest {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
 
         server.expect(requestTo(
                         "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-client-service/repository/files/src%2Fmain%2Fjava%2Fcom%2Fexample%2Fsynthetic%2Fedge%2FCustomerProfileClient.java/raw?ref=release/2026.04"))
@@ -315,7 +316,7 @@ class GitLabRestRepositoryAdapterTest {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new GitLabRestRepositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
         var metadataHeaders = new HttpHeaders();
         metadataHeaders.add("X-Gitlab-File-Path", "src/main/java/com/example/crm/customer/CustomerController.java");
         metadataHeaders.add("X-Gitlab-Blob-Id", "blob-customer-controller");

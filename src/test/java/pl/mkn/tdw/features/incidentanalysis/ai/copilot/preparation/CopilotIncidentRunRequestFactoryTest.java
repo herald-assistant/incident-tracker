@@ -8,13 +8,14 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 
 import java.util.List;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class CopilotIncidentRunRequestFactoryTest {
 
     private final CopilotIncidentRunRequestFactory factory =
-            new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
+            new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper(), new CopilotRunAuthMapper());
 
     @Test
     void shouldCreateCopilotRunRequestFromIncidentRuntimeInputs() {

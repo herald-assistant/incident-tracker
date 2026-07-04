@@ -43,6 +43,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
+import pl.mkn.tdw.testsupport.agenttools.GitLabMcpToolsTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -71,7 +75,7 @@ class CopilotIncidentInitialPreparationServiceTest {
     private final CopilotSdkToolFactory toolFactory = toolFactory(
             List.of(
                     MethodToolCallbackProvider.builder()
-                            .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime")))
+                            .toolObjects(GitLabMcpToolsTestCreator.create(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime")))
                             .build()
             ),
             objectMapper,
@@ -563,11 +567,11 @@ class CopilotIncidentInitialPreparationServiceTest {
         return new CopilotIncidentInitialRunAssembler(
                 toolFactory,
                 new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
-                new CopilotIncidentSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties)),
+                new CopilotIncidentSessionConfigRequestFactory(new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties))),
                 artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
-                new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper()),
+                new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper(), new CopilotRunAuthMapper()),
                 new CopilotIncidentReportFactory()
         );
     }
@@ -582,7 +586,7 @@ class CopilotIncidentInitialPreparationServiceTest {
 
     private CopilotRunPreparationService runPreparationService(CopilotSdkProperties properties) {
         return new CopilotRunPreparationService(
-                new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
+                new CopilotPreparedSessionFactory(CopilotSessionConfigFactoryTestCreator.create(properties))
         );
     }
 

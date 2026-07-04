@@ -14,6 +14,8 @@ import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class GitLabJavaDependencyModelBuilder {
 
     private static final Set<String> BEAN_STEREOTYPES = Set.of(
@@ -72,10 +75,6 @@ public class GitLabJavaDependencyModelBuilder {
     );
 
     private final GitLabJavaExternalTypePolicy externalTypePolicy;
-
-    public GitLabJavaDependencyModelBuilder(GitLabJavaExternalTypePolicy externalTypePolicy) {
-        this.externalTypePolicy = externalTypePolicy;
-    }
 
     GitLabJavaDependencyModelBuilder() {
         this(new GitLabJavaExternalTypePolicy());

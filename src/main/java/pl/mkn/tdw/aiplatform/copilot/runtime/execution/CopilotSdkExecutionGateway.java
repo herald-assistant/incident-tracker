@@ -4,7 +4,7 @@ import com.github.copilot.CopilotClient;
 import com.github.copilot.CopilotSession;
 import com.github.copilot.generated.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
@@ -28,25 +28,13 @@ import static pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSessionEven
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CopilotSdkExecutionGateway {
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
     private final CopilotToolBudgetRegistry toolBudgetRegistry;
     private final CopilotReportSessionStore reportSessionStore;
-
-    @Autowired
-    public CopilotSdkExecutionGateway(
-            CopilotSdkProperties properties,
-            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
-            CopilotToolBudgetRegistry toolBudgetRegistry,
-            CopilotReportSessionStore reportSessionStore
-    ) {
-        this.properties = properties;
-        this.toolEvidenceSessionStore = toolEvidenceSessionStore;
-        this.toolBudgetRegistry = toolBudgetRegistry;
-        this.reportSessionStore = reportSessionStore;
-    }
 
     public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
         var overallStart = System.nanoTime();

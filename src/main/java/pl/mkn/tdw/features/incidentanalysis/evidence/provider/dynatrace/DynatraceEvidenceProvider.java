@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
 
     private static final int MAX_PROBLEM_EVIDENCE_SUMMARY_CHARACTERS = 800;
@@ -51,24 +52,6 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
     private final DynatraceIncidentPort dynatraceIncidentPort;
     private final DynatraceProperties dynatraceProperties;
     private final DeploymentContextResolver deploymentContextResolver;
-
-    @Autowired
-    public DynatraceEvidenceProvider(
-            DynatraceIncidentPort dynatraceIncidentPort,
-            DynatraceProperties dynatraceProperties,
-            DeploymentContextResolver deploymentContextResolver
-    ) {
-        this.dynatraceIncidentPort = dynatraceIncidentPort;
-        this.dynatraceProperties = dynatraceProperties;
-        this.deploymentContextResolver = deploymentContextResolver;
-    }
-
-    public DynatraceEvidenceProvider(
-            DynatraceIncidentPort dynatraceIncidentPort,
-            DeploymentContextResolver deploymentContextResolver
-    ) {
-        this(dynatraceIncidentPort, configuredTestProperties(), deploymentContextResolver);
-    }
 
     @Override
     public AnalysisEvidenceSection collect(AnalysisContext context) {
@@ -972,13 +955,6 @@ public class DynatraceEvidenceProvider implements AnalysisEvidenceProvider {
         }
 
         return "";
-    }
-
-    private static DynatraceProperties configuredTestProperties() {
-        var properties = new DynatraceProperties();
-        properties.setBaseUrl("https://dynatrace.test");
-        properties.setApiToken("test-token");
-        return properties;
     }
 
     private record DynatraceComponentSummary(

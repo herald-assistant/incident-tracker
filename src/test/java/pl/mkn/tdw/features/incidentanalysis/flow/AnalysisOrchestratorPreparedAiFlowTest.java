@@ -28,6 +28,7 @@ import pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext
 
 import java.util.List;
 
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace.DynatraceEvidenceProviderTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -88,7 +89,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
                 new AnalysisEvidenceCollector(
                         new ElasticLogEvidenceProvider(new TestElasticLogPort()),
                         new DeploymentContextEvidenceProvider(deploymentContextResolver),
-                        new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
+                        DynatraceEvidenceProviderTestCreator.create(new TestDynatraceIncidentPort(), deploymentContextResolver),
                         new GitLabDeterministicEvidenceProvider(
                                 mock(GitLabRepositoryPort.class),
                                 gitLabProperties,

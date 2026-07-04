@@ -1,7 +1,7 @@
 package pl.mkn.tdw.integrations.gitlab.source;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -23,6 +23,7 @@ import java.util.List;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class GitLabSourceResolveService {
 
     private static final int PREVIEW_CONTENT_LIMIT = 2_000;
@@ -32,21 +33,6 @@ public class GitLabSourceResolveService {
     private final GitLabRestClientFactory gitLabRestClientFactory;
     private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
     private final GitLabProperties gitLabProperties;
-
-    @Autowired
-    public GitLabSourceResolveService(
-            GitLabRestClientFactory gitLabRestClientFactory,
-            GitLabRepositoryTreeService gitLabRepositoryTreeService,
-            GitLabProperties gitLabProperties
-    ) {
-        this.gitLabRestClientFactory = gitLabRestClientFactory;
-        this.gitLabRepositoryTreeService = gitLabRepositoryTreeService;
-        this.gitLabProperties = gitLabProperties;
-    }
-
-    GitLabSourceResolveService(GitLabRestClientFactory gitLabRestClientFactory, GitLabProperties gitLabProperties) {
-        this(gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory), gitLabProperties);
-    }
 
     public GitLabSourceResolveResponse resolve(GitLabSourceResolveRequest request) {
         return resolve(request, requestScopedSession());

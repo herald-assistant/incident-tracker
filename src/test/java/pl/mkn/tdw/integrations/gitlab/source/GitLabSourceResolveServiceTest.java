@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRestClientFactory;
 
+import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -268,7 +269,7 @@ class GitLabSourceResolveServiceTest {
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var factory = new GitLabRestClientFactory(properties, restClientBuilder);
-        return new ServiceFixture(new GitLabSourceResolveService(factory, properties), server);
+        return new ServiceFixture(GitLabIntegrationTestCreator.sourceResolveService(factory, properties), server);
     }
 
     private record ServiceFixture(

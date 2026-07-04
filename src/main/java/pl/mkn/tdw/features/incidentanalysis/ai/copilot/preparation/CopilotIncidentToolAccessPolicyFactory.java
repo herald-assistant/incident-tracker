@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation;
 
 import com.github.copilot.rpc.ToolDefinition;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
@@ -12,19 +12,11 @@ import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityServic
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class CopilotIncidentToolAccessPolicyFactory {
 
     private final CopilotIncidentEvidenceCoverageEvaluator coverageEvaluator;
     private final ElasticConnectionAvailabilityService elasticAvailabilityService;
-
-    @Autowired
-    public CopilotIncidentToolAccessPolicyFactory(
-            CopilotIncidentEvidenceCoverageEvaluator coverageEvaluator,
-            ElasticConnectionAvailabilityService elasticAvailabilityService
-    ) {
-        this.coverageEvaluator = coverageEvaluator;
-        this.elasticAvailabilityService = elasticAvailabilityService;
-    }
 
     public CopilotIncidentToolAccessPolicy create(
             InitialAnalysisRequest request,

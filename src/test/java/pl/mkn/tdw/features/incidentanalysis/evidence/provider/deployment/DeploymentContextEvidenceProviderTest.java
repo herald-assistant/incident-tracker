@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogEntry;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogPort;
+import pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult;
 import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
@@ -112,11 +113,11 @@ class DeploymentContextEvidenceProviderTest {
             }
 
             @Override
-            public pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult searchLogsByCorrelationId(
+            public ElasticLogSearchResult searchLogsByCorrelationId(
                     String correlationId
             ) {
                 var entries = findLogEntries(correlationId);
-                return new pl.mkn.tdw.integrations.elasticsearch.ElasticLogSearchResult(
+                return new ElasticLogSearchResult(
                         correlationId,
                         "test",
                         entries.size(),

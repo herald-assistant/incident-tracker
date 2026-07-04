@@ -9,7 +9,6 @@ import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import com.github.copilot.rpc.SessionHooks;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
@@ -20,35 +19,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Component
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@RequiredArgsConstructor
 public class CopilotSessionConfigFactory {
 
     private final CopilotSdkProperties properties;
     private final CopilotAccessTokenResolver accessTokenResolver;
-
-    public CopilotSessionConfigFactory(CopilotSdkProperties properties) {
-        this(
-                properties,
-                auth -> new pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken(
-                        testCompatibleToken(properties),
-                        null,
-                        null,
-                        false
-                )
-        );
-    }
-
-    private static String testCompatibleToken(CopilotSdkProperties properties) {
-        if (properties.getAuth() != null
-                && properties.getAuth().getLocal() != null
-                && StringUtils.hasText(properties.getAuth().getLocal().getGithubToken())) {
-            return properties.getAuth().getLocal().getGithubToken();
-        }
-        if (StringUtils.hasText(properties.getGithubToken())) {
-            return properties.getGithubToken();
-        }
-        return "test-token";
-    }
 
     public CopilotClientOptions clientOptions(CopilotRunAuth auth) {
         var accessToken = accessTokenResolver.resolve(auth);

@@ -13,6 +13,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentInitialPreparationService;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotInitialAnalysisPreparation;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
+import pl.mkn.tdw.features.incidentanalysis.ai.copilot.report.CopilotIncidentReportMapper;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.response.CopilotResponseParser;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentReportSectionIds;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
@@ -278,7 +279,8 @@ class CopilotInitialAnalysisProviderTest {
         return new CopilotInitialAnalysisProvider(
                 preparationService,
                 executionGateway,
-                new CopilotResponseParser(objectMapper)
+                new CopilotResponseParser(objectMapper),
+                new CopilotIncidentReportMapper()
         );
     }
 

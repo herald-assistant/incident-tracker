@@ -2,13 +2,13 @@ package pl.mkn.tdw.features.incidentanalysis.job;
 
 import org.springframework.core.task.TaskExecutor;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.tdw.features.incidentanalysis.flow.AnalysisOrchestrator;
 import pl.mkn.tdw.features.incidentanalysis.job.localworkspace.IncidentAnalysisLocalRunPersistence;
 import pl.mkn.tdw.features.incidentanalysis.job.validation.AnalysisJobStartValidationService;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticLogCsvImportService;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 
 final class AnalysisJobFacadeTestCreator {
 

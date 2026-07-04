@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.flowexplorer.job;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class FlowExplorerJobService {
 
     private final Map<String, FlowExplorerJobState> jobs = new ConcurrentHashMap<>();
@@ -50,99 +51,6 @@ public class FlowExplorerJobService {
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotAccessTokenResolver accessTokenResolver;
     private final FlowExplorerLocalRunPersistence localRunPersistence;
-
-    public FlowExplorerJobService(
-            FlowExplorerContextService flowExplorerContextService,
-            FlowExplorerPromptPreparationService promptPreparationService,
-            FlowExplorerCopilotRunRequestAssembler runRequestAssembler,
-            CopilotRunPreparationService runPreparationService,
-            CopilotSdkExecutionGateway executionGateway,
-            FlowExplorerAiResponseParser responseParser,
-            TaskExecutor applicationTaskExecutor
-    ) {
-        this(
-                flowExplorerContextService,
-                promptPreparationService,
-                new FlowExplorerFollowUpPromptPreparationService(),
-                runRequestAssembler,
-                runPreparationService,
-                executionGateway,
-                responseParser,
-                new FlowExplorerReportMapper(),
-                applicationTaskExecutor,
-                () -> AnalysisAiAuthRef.localToken(null),
-                new CopilotRunAuthMapper(),
-                auth -> new pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken(
-                        "test-token",
-                        null,
-                        null,
-                        false
-                ),
-                FlowExplorerLocalRunPersistence.NO_OP
-        );
-    }
-
-    public FlowExplorerJobService(
-            FlowExplorerContextService flowExplorerContextService,
-            FlowExplorerPromptPreparationService promptPreparationService,
-            FlowExplorerCopilotRunRequestAssembler runRequestAssembler,
-            CopilotRunPreparationService runPreparationService,
-            CopilotSdkExecutionGateway executionGateway,
-            FlowExplorerAiResponseParser responseParser,
-            TaskExecutor applicationTaskExecutor,
-            AnalysisAiAuthRefResolver authRefResolver,
-            CopilotRunAuthMapper runAuthMapper,
-            CopilotAccessTokenResolver accessTokenResolver
-    ) {
-        this(
-                flowExplorerContextService,
-                promptPreparationService,
-                new FlowExplorerFollowUpPromptPreparationService(),
-                runRequestAssembler,
-                runPreparationService,
-                executionGateway,
-                responseParser,
-                new FlowExplorerReportMapper(),
-                applicationTaskExecutor,
-                authRefResolver,
-                runAuthMapper,
-                accessTokenResolver,
-                FlowExplorerLocalRunPersistence.NO_OP
-        );
-    }
-
-    @Autowired
-    public FlowExplorerJobService(
-            FlowExplorerContextService flowExplorerContextService,
-            FlowExplorerPromptPreparationService promptPreparationService,
-            FlowExplorerFollowUpPromptPreparationService followUpPromptPreparationService,
-            FlowExplorerCopilotRunRequestAssembler runRequestAssembler,
-            CopilotRunPreparationService runPreparationService,
-            CopilotSdkExecutionGateway executionGateway,
-            FlowExplorerAiResponseParser responseParser,
-            FlowExplorerReportMapper reportMapper,
-            TaskExecutor applicationTaskExecutor,
-            AnalysisAiAuthRefResolver authRefResolver,
-            CopilotRunAuthMapper runAuthMapper,
-            CopilotAccessTokenResolver accessTokenResolver,
-            FlowExplorerLocalRunPersistence localRunPersistence
-    ) {
-        this.flowExplorerContextService = flowExplorerContextService;
-        this.promptPreparationService = promptPreparationService;
-        this.followUpPromptPreparationService = followUpPromptPreparationService != null
-                ? followUpPromptPreparationService
-                : new FlowExplorerFollowUpPromptPreparationService();
-        this.runRequestAssembler = runRequestAssembler;
-        this.runPreparationService = runPreparationService;
-        this.executionGateway = executionGateway;
-        this.responseParser = responseParser;
-        this.reportMapper = reportMapper != null ? reportMapper : new FlowExplorerReportMapper();
-        this.applicationTaskExecutor = applicationTaskExecutor;
-        this.authRefResolver = authRefResolver;
-        this.runAuthMapper = runAuthMapper;
-        this.accessTokenResolver = accessTokenResolver;
-        this.localRunPersistence = localRunPersistence;
-    }
 
     public FlowExplorerJobStateSnapshot startJob(FlowExplorerJobStartRequest request) {
         var authRef = authRefResolver.resolveForCurrentRequest();

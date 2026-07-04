@@ -1,5 +1,6 @@
 package pl.mkn.tdw.integrations.gitlab.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpoint;
@@ -11,15 +12,12 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class GitLabEndpointUseCaseEndpointResolver {
 
     private static final int MAX_NOT_FOUND_CANDIDATES = 10;
 
     private final GitLabRepositoryEndpointService endpointService;
-
-    public GitLabEndpointUseCaseEndpointResolver(GitLabRepositoryEndpointService endpointService) {
-        this.endpointService = endpointService;
-    }
 
     public GitLabEndpointUseCaseEndpointResolution resolve(
             String group,

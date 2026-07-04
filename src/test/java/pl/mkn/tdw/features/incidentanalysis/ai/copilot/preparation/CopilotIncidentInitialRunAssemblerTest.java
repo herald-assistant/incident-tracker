@@ -15,6 +15,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import java.util.List;
 import java.util.Map;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -36,7 +37,7 @@ class CopilotIncidentInitialRunAssemblerTest {
         var artifactService = mock(CopilotIncidentArtifactService.class);
         var toolAccessPolicyFactory = mock(CopilotIncidentToolAccessPolicyFactory.class);
         var promptRenderer = mock(CopilotIncidentPromptRenderer.class);
-        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
+        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper(), new CopilotRunAuthMapper());
         var assembler = new CopilotIncidentInitialRunAssembler(
                 toolFactory,
                 toolSessionContextFactory,

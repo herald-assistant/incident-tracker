@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRenderedArtifact;
@@ -14,15 +13,11 @@ import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@RequiredArgsConstructor
 public class CopilotIncidentRunRequestFactory {
 
     private final CopilotArtifactContentMapper artifactContentMapper;
     private final CopilotRunAuthMapper runAuthMapper;
-
-    public CopilotIncidentRunRequestFactory(CopilotArtifactContentMapper artifactContentMapper) {
-        this(artifactContentMapper, new CopilotRunAuthMapper());
-    }
 
     public CopilotRunRequest create(
             String runReference,

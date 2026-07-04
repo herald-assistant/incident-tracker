@@ -13,6 +13,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 import java.util.List;
 import java.util.Map;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,7 +35,7 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         var toolSessionContextFactory = mock(CopilotIncidentToolSessionContextFactory.class);
         var sessionConfigRequestFactory = mock(CopilotIncidentSessionConfigRequestFactory.class);
         var toolAccessPolicyFactory = mock(CopilotIncidentToolAccessPolicyFactory.class);
-        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
+        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper(), new CopilotRunAuthMapper());
         var assembler = new CopilotIncidentFollowUpRunAssembler(
                 toolFactory,
                 toolSessionContextFactory,
@@ -95,7 +96,7 @@ class CopilotIncidentFollowUpRunAssemblerTest {
         var toolSessionContextFactory = mock(CopilotIncidentToolSessionContextFactory.class);
         var sessionConfigRequestFactory = mock(CopilotIncidentSessionConfigRequestFactory.class);
         var toolAccessPolicyFactory = mock(CopilotIncidentToolAccessPolicyFactory.class);
-        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper());
+        var runRequestFactory = new CopilotIncidentRunRequestFactory(new CopilotArtifactContentMapper(), new CopilotRunAuthMapper());
         var assembler = new CopilotIncidentFollowUpRunAssembler(
                 toolFactory,
                 toolSessionContextFactory,

@@ -13,6 +13,8 @@ import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.ThisExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -24,6 +26,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class GitLabEndpointUseCaseTraversalService {
 
     private static final Pattern YAML_PATH_PATTERN = Pattern.compile("([\\w./-]+\\.ya?ml)");
@@ -51,26 +54,6 @@ public class GitLabEndpointUseCaseTraversalService {
     private final GitLabJavaSpringDataRepositoryDetector springDataRepositoryDetector;
     private final GitLabJavaMapStructResolver mapStructResolver;
     private final GitLabEndpointUseCaseResultCompressor resultCompressor;
-
-    public GitLabEndpointUseCaseTraversalService(
-            GitLabJavaSourceResolver sourceResolver,
-            GitLabJavaMethodLocator methodLocator,
-            GitLabJavaDependencyModelBuilder dependencyModelBuilder,
-            GitLabJavaInterfaceImplementorResolver implementorResolver,
-            GitLabJavaStrategyRegistryResolver strategyRegistryResolver,
-            GitLabJavaSpringDataRepositoryDetector springDataRepositoryDetector,
-            GitLabJavaMapStructResolver mapStructResolver,
-            GitLabEndpointUseCaseResultCompressor resultCompressor
-    ) {
-        this.sourceResolver = sourceResolver;
-        this.methodLocator = methodLocator;
-        this.dependencyModelBuilder = dependencyModelBuilder;
-        this.implementorResolver = implementorResolver;
-        this.strategyRegistryResolver = strategyRegistryResolver;
-        this.springDataRepositoryDetector = springDataRepositoryDetector;
-        this.mapStructResolver = mapStructResolver;
-        this.resultCompressor = resultCompressor;
-    }
 
     GitLabEndpointUseCaseTraversalService(
             GitLabJavaSourceResolver sourceResolver,

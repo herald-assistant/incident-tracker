@@ -1,7 +1,7 @@
 package pl.mkn.tdw.integrations.gitlab;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
+@RequiredArgsConstructor
 public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
 
     private static final int PROJECT_SEARCH_PAGE_SIZE = 100;
@@ -28,34 +29,6 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     private final GitLabRestClientFactory gitLabRestClientFactory;
     private final GitLabRepositoryTreeService gitLabRepositoryTreeService;
     private final GitLabRepositoryAnalysisCache analysisCache;
-
-    @Autowired
-    public GitLabRestRepositoryAdapter(
-            GitLabProperties properties,
-            GitLabRestClientFactory gitLabRestClientFactory,
-            GitLabRepositoryTreeService gitLabRepositoryTreeService,
-            GitLabRepositoryAnalysisCache analysisCache
-    ) {
-        this.properties = properties;
-        this.gitLabRestClientFactory = gitLabRestClientFactory;
-        this.gitLabRepositoryTreeService = gitLabRepositoryTreeService;
-        this.analysisCache = analysisCache;
-    }
-
-    public GitLabRestRepositoryAdapter(
-            GitLabProperties properties,
-            GitLabRestClientFactory gitLabRestClientFactory,
-            GitLabRepositoryTreeService gitLabRepositoryTreeService
-    ) {
-        this(properties, gitLabRestClientFactory, gitLabRepositoryTreeService, null);
-    }
-
-    public GitLabRestRepositoryAdapter(
-            GitLabProperties properties,
-            GitLabRestClientFactory gitLabRestClientFactory
-    ) {
-        this(properties, gitLabRestClientFactory, new GitLabRepositoryTreeService(gitLabRestClientFactory), null);
-    }
 
     @Override
     public List<GitLabRepositoryProjectCandidate> searchProjects(String group, List<String> projectHints) {

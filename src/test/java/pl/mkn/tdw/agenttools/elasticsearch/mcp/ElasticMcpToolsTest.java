@@ -17,6 +17,7 @@ import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import pl.mkn.tdw.testsupport.agenttools.ElasticMcpToolsTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,7 +29,7 @@ class ElasticMcpToolsTest {
 
     @Test
     void shouldSearchLogsThroughTool() {
-        var elasticMcpTools = new ElasticMcpTools(new TestElasticLogPort());
+        var elasticMcpTools = ElasticMcpToolsTestCreator.create(new TestElasticLogPort());
 
         var response = elasticMcpTools.searchLogsByCorrelationId("timeout-123");
 
@@ -40,7 +41,7 @@ class ElasticMcpToolsTest {
 
     @Test
     void shouldReturnStructuredDatabaseLockLogsThroughTool() {
-        var elasticMcpTools = new ElasticMcpTools(new TestElasticLogPort());
+        var elasticMcpTools = ElasticMcpToolsTestCreator.create(new TestElasticLogPort());
 
         var response = elasticMcpTools.searchLogsByCorrelationId("db-lock-123");
 
@@ -79,7 +80,7 @@ class ElasticMcpToolsTest {
                         )),
                         "OK"
                 ));
-        var elasticMcpTools = new ElasticMcpTools(new TestElasticLogPort(), service);
+        var elasticMcpTools = ElasticMcpToolsTestCreator.create(new TestElasticLogPort(), service);
 
         var response = elasticMcpTools.summarizeHttpCallsByPath(
                 " /external/path/ ",
@@ -123,7 +124,7 @@ class ElasticMcpToolsTest {
                         List.of(logEntry("GET /external/path/125 status=200")),
                         "OK"
                 ));
-        var elasticMcpTools = new ElasticMcpTools(new TestElasticLogPort(), service);
+        var elasticMcpTools = ElasticMcpToolsTestCreator.create(new TestElasticLogPort(), service);
 
         var response = elasticMcpTools.fetchHttpCallLogs(
                 "/external/path/125",
@@ -170,7 +171,7 @@ class ElasticMcpToolsTest {
                         List.of(logEntry("incident log")),
                         "OK"
                 ));
-        var elasticMcpTools = new ElasticMcpTools(new TestElasticLogPort(), service);
+        var elasticMcpTools = ElasticMcpToolsTestCreator.create(new TestElasticLogPort(), service);
 
         var response = elasticMcpTools.fetchHttpCallLogs(
                 null,

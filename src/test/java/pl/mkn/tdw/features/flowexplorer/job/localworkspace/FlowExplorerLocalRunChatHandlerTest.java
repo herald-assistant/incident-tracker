@@ -16,7 +16,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
@@ -55,6 +54,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;

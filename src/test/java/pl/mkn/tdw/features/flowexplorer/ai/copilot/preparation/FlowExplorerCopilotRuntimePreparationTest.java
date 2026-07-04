@@ -25,6 +25,7 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerFlowMethod;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerFlowNode;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerSnippetCard;
+import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportFactory;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
@@ -39,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -308,7 +311,9 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 toolFactory,
                 toolSessionContextFactory,
                 toolAccessPolicyFactory,
-                sessionConfigRequestFactory
+                sessionConfigRequestFactory,
+                new CopilotRunAuthMapper(),
+                new FlowExplorerReportFactory()
         );
         var gitLabTool = tool(GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH);
         var databaseTool = tool(DatabaseToolNames.DESCRIBE_TABLE);
@@ -374,7 +379,9 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 toolFactory,
                 toolSessionContextFactory,
                 toolAccessPolicyFactory,
-                sessionConfigRequestFactory
+                sessionConfigRequestFactory,
+                new CopilotRunAuthMapper(),
+                new FlowExplorerReportFactory()
         );
         var gitLabTool = tool(GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH);
         var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
@@ -424,7 +431,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     private FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory() {
         var properties = new CopilotSdkProperties();
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
-        return new FlowExplorerCopilotSessionConfigRequestFactory(new CopilotSkillRuntimeLoader(properties));
+        return new FlowExplorerCopilotSessionConfigRequestFactory(new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties)));
     }
 
     private static void assertSkillDirectories(List<String> skillDirectories) {

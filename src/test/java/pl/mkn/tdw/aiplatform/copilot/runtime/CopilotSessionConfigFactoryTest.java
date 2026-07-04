@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -29,7 +30,7 @@ class CopilotSessionConfigFactoryTest {
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
         properties.setDisabledSkills(List.of("incident-code-grounding"));
-        var factory = new CopilotSessionConfigFactory(properties);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
         var tools = tools("gitlab_find_flow_context", "gitlab_read_repository_file_chunk");
 
         var clientOptions = factory.clientOptions();
@@ -102,7 +103,7 @@ class CopilotSessionConfigFactoryTest {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         properties.setCopilotHome(" ");
-        var factory = new CopilotSessionConfigFactory(properties);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
 
         var clientOptions = factory.clientOptions();
 
@@ -115,7 +116,7 @@ class CopilotSessionConfigFactoryTest {
         properties.setWorkingDirectory("C:\\workspace");
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
-        var factory = new CopilotSessionConfigFactory(properties);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
 
         var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
                 sessionId(),
@@ -135,7 +136,7 @@ class CopilotSessionConfigFactoryTest {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         properties.setGithubToken("ghp_test_token");
-        var factory = new CopilotSessionConfigFactory(properties);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
 
         var clientOptions = factory.clientOptions();
 
@@ -148,7 +149,7 @@ class CopilotSessionConfigFactoryTest {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         properties.setPermissionMode(CopilotSdkProperties.PermissionMode.DENY_ALL);
-        var factory = new CopilotSessionConfigFactory(properties);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
 
         var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
                 sessionId(),

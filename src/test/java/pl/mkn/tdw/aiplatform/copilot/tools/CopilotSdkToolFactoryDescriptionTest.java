@@ -8,6 +8,9 @@ import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCustomizer;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabMcpTools;
@@ -17,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import pl.mkn.tdw.testsupport.agenttools.GitLabMcpToolsTestCreator;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -37,9 +41,9 @@ class CopilotSdkToolFactoryDescriptionTest {
                 List.of(gitLabToolProvider()),
                 objectMapper,
                 toolEvidenceSessionStore(objectMapper),
-                new pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy(
-                        new pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry(
-                                new pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties()
+                new CopilotToolBudgetPolicy(
+                        new CopilotToolBudgetRegistry(
+                                new CopilotToolBudgetProperties()
                         )
                 )
         );
@@ -112,7 +116,7 @@ class CopilotSdkToolFactoryDescriptionTest {
 
     private ToolCallbackProvider gitLabToolProvider() {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(new GitLabMcpTools(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime")))
+                .toolObjects(GitLabMcpToolsTestCreator.create(new TestGitLabRepositoryPort(), gitLabProperties("CRM/runtime")))
                 .build();
     }
 

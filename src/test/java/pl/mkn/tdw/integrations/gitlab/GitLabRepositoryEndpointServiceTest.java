@@ -15,17 +15,16 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
+import static pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator.endpointService;
 
 class GitLabRepositoryEndpointServiceTest {
 
-    private final GitLabRepositoryEndpointService service = new GitLabRepositoryEndpointService(
-            mock(GitLabRepositoryPort.class)
-    );
+    private final GitLabRepositoryEndpointService service = endpointService(mock(GitLabRepositoryPort.class));
 
     @Test
     void shouldReturnOpenApiYamlBackedEndpointsWithPathAndControllerImplementation() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var javaFile = new GitLabRepositoryFile(
                 "CRM",
                 "crm-customer-service",
@@ -221,7 +220,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldResolveStaticImportedEndpointAndParameterConstants() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java";
         var constantsPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
 
@@ -335,7 +334,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldReadOnlyConstantClassesUsedByEndpointAnnotations() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java";
         var usedConstantsPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
         var unusedConstantsPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseAuditUris.java";
@@ -449,7 +448,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldCacheJavaConstantFilesDuringEndpointInventory() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var firstControllerPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java";
         var secondControllerPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseSearchController.java";
         var constantsPath = "src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
@@ -590,7 +589,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldResolveStaticImportedEndpointConstantsFromAnotherModule() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/api/CustomerCaseController.java";
         var wrongSameModuleConstantsPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
         var constantsPath = "crm-case/crm-case-api/src/main/java/com/example/crm/casehandling/api/CustomerCaseUris.java";
@@ -711,7 +710,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldResolveClassQualifiedEndpointConstantsFromRegularImport() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "crm-exposure/crm-exposure-service/src/main/java/com/example/crm/exposure/api/CustomerExposureController.java";
         var constantsPath = "crm-exposure/crm-exposure-service/src/main/java/com/example/crm/exposure/contract/CustomerExposureUris.java";
 
@@ -835,7 +834,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldResolveClassQualifiedEndpointConstantsFromSamePackage() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "crm-product/crm-product-service/src/main/java/com/example/crm/product/api/CustomerProductController.java";
         var constantsPath = "crm-product/crm-product-service/src/main/java/com/example/crm/product/api/CustomerProductUris.java";
 
@@ -933,7 +932,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldResolveTransitiveStaticImportedEndpointConstants() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/lookup/CustomerLookupController.java";
         var sameModuleLookupUrisPath = "crm-case/crm-case-service/src/main/java/com/example/crm/casehandling/lookup/CustomerLookupUris.java";
         var lookupUrisPath = "crm-case/crm-case-api/src/main/java/com/example/crm/casehandling/lookup/CustomerLookupUris.java";
@@ -1079,7 +1078,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldDiscoverEndpointCandidatesBySpringRestSignalsBeforeRepositoryTreeFallback() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "src/main/java/com/example/crm/customer/api/CustomerCaseController.java";
         var openApiPath = "src/main/resources/openapi/customer-case-api.yml";
 
@@ -1187,7 +1186,7 @@ class GitLabRepositoryEndpointServiceTest {
     @Test
     void shouldNotCountConfigurationYamlFilesAsOpenApiContractsInRepositoryTreeFallback() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        var endpointService = new GitLabRepositoryEndpointService(repositoryPort);
+        var endpointService = endpointService(repositoryPort);
         var controllerPath = "src/main/java/com/example/crm/customer/api/CustomerCaseController.java";
         var openApiPath = "src/main/resources/openapi/customer-case-api.yaml";
         var applicationYamlPath = "src/main/resources/application.yml";

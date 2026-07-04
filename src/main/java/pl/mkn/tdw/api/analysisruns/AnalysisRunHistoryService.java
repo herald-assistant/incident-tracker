@@ -2,7 +2,6 @@ package pl.mkn.tdw.api.analysisruns;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
@@ -25,7 +24,6 @@ public class AnalysisRunHistoryService {
     private final List<LocalAnalysisRunChatHandler> chatHandlers;
     private final CopilotSessionCleanup copilotSessionCleanup;
 
-    @Autowired
     public AnalysisRunHistoryService(
             LocalAnalysisRunStore localAnalysisRunStore,
             List<LocalAnalysisRunChatHandler> chatHandlers,
@@ -36,17 +34,6 @@ public class AnalysisRunHistoryService {
         this.copilotSessionCleanup = copilotSessionCleanup != null
                 ? copilotSessionCleanup
                 : CopilotSessionCleanup.NO_OP;
-    }
-
-    AnalysisRunHistoryService(
-            LocalAnalysisRunStore localAnalysisRunStore,
-            List<LocalAnalysisRunChatHandler> chatHandlers
-    ) {
-        this(localAnalysisRunStore, chatHandlers, CopilotSessionCleanup.NO_OP);
-    }
-
-    AnalysisRunHistoryService(LocalAnalysisRunStore localAnalysisRunStore) {
-        this(localAnalysisRunStore, List.of());
     }
 
     public LocalAnalysisRunListResponse listRuns() {

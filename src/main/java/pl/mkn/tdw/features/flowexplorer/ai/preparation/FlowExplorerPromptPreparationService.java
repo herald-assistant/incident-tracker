@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.flowexplorer.ai.preparation;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRenderedArtifact;
@@ -16,13 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class FlowExplorerPromptPreparationService {
 
     private final FlowExplorerArtifactService artifactService;
-
-    public FlowExplorerPromptPreparationService(FlowExplorerArtifactService artifactService) {
-        this.artifactService = artifactService;
-    }
 
     public FlowExplorerPromptPreparation prepare(FlowExplorerJobStartRequest request, FlowExplorerContextSnapshot contextSnapshot) {
         var artifacts = artifactService.renderArtifacts(request, contextSnapshot);

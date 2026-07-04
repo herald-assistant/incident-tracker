@@ -46,7 +46,7 @@ class AnalysisRunHistoryServiceTest {
     void shouldListRunsFromIndexOnly() throws Exception {
         var store = new CapturingLocalAnalysisRunStore();
         store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), record("analysis-1", true));
-        var service = new AnalysisRunHistoryService(store);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store);
 
         var response = service.listRuns();
 
@@ -72,7 +72,7 @@ class AnalysisRunHistoryServiceTest {
     void shouldReturnSafeDetail() throws Exception {
         var store = new CapturingLocalAnalysisRunStore();
         store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), record("analysis-1", true));
-        var service = new AnalysisRunHistoryService(store);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store);
 
         var response = service.getRun(" analysis-1 ");
 
@@ -105,7 +105,7 @@ class AnalysisRunHistoryServiceTest {
                 entry("analysis-1", "incident-analysis", "corr-123"),
                 recordWithPrompt("analysis-1", "Prepared prompt", continuation)
         );
-        var service = new AnalysisRunHistoryService(store);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store);
 
         var exported = service.exportRun(" analysis-1 ");
 
@@ -133,7 +133,7 @@ class AnalysisRunHistoryServiceTest {
     void shouldRenameExistingRunAndReturnUpdatedDetail() {
         var store = new CapturingLocalAnalysisRunStore();
         store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), record("analysis-1", true));
-        var service = new AnalysisRunHistoryService(store);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store);
 
         var response = service.renameRun(" analysis-1 ", " Awaria koszyka w dev3 ");
 
@@ -150,7 +150,7 @@ class AnalysisRunHistoryServiceTest {
         var updatedRecord = recordWithPrompt("analysis-1", "Updated prompt after chat");
         store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), originalRecord);
         var handler = new CapturingChatHandler("incident-analysis", updatedRecord);
-        var service = new AnalysisRunHistoryService(store, List.of(handler));
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(handler));
 
         var response = service.sendChatMessage(
                 " analysis-1 ",
@@ -171,7 +171,7 @@ class AnalysisRunHistoryServiceTest {
         var store = new CapturingLocalAnalysisRunStore();
         store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), record("analysis-1", false));
         var handler = new CapturingChatHandler("incident-analysis", record("analysis-1", true));
-        var service = new AnalysisRunHistoryService(store, List.of(handler));
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(handler));
 
         assertThrows(LocalAnalysisRunContinuationUnavailableException.class,
                 () -> service.sendChatMessage("analysis-1", new LocalAnalysisRunChatMessageRequest("Dopytaj")));
@@ -183,7 +183,7 @@ class AnalysisRunHistoryServiceTest {
     void shouldRejectChatWhenFeatureHasNoHandler() {
         var store = new CapturingLocalAnalysisRunStore();
         store.addRun(entry("flow-1", "flow-explorer", "GET /customers"), record("flow-1", true));
-        var service = new AnalysisRunHistoryService(store, List.of());
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of());
 
         assertThrows(LocalAnalysisRunContinuationUnavailableException.class,
                 () -> service.sendChatMessage("flow-1", new LocalAnalysisRunChatMessageRequest("Dopytaj")));
@@ -198,7 +198,7 @@ class AnalysisRunHistoryServiceTest {
                 "incident-analysis",
                 LocalAnalysisRunContinuationException.chatFailed("Copilot unavailable.", null)
         );
-        var service = new AnalysisRunHistoryService(store, List.of(handler));
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(handler));
 
         assertThrows(LocalAnalysisRunChatFailedException.class,
                 () -> service.sendChatMessage("analysis-1", new LocalAnalysisRunChatMessageRequest("Dopytaj")));
@@ -210,7 +210,7 @@ class AnalysisRunHistoryServiceTest {
     @Test
     void shouldRejectRenameForMissingRun() {
         var store = new CapturingLocalAnalysisRunStore();
-        var service = new AnalysisRunHistoryService(store);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store);
 
         assertThrows(LocalAnalysisRunNotFoundException.class,
                 () -> service.renameRun("missing", "New name"));
@@ -223,7 +223,7 @@ class AnalysisRunHistoryServiceTest {
     void shouldDeleteExistingRun() {
         var store = new CapturingLocalAnalysisRunStore();
         store.addRun(entry("analysis-1", "incident-analysis", "corr-123"), record("analysis-1", true));
-        var service = new AnalysisRunHistoryService(store);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store);
 
         service.deleteRun(" analysis-1 ");
 
@@ -246,7 +246,7 @@ class AnalysisRunHistoryServiceTest {
                 recordWithPrompt("analysis-1", "Prepared prompt", continuation)
         );
         var cleanup = new CapturingCopilotSessionCleanup();
-        var service = new AnalysisRunHistoryService(store, List.of(), cleanup);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(), cleanup);
 
         service.deleteRun("analysis-1");
 
@@ -271,7 +271,7 @@ class AnalysisRunHistoryServiceTest {
                 recordWithPrompt("analysis-1", "Prepared prompt", continuation)
         );
         var cleanup = new FailingCopilotSessionCleanup();
-        var service = new AnalysisRunHistoryService(store, List.of(), cleanup);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(), cleanup);
 
         service.deleteRun("analysis-1");
 
@@ -286,7 +286,7 @@ class AnalysisRunHistoryServiceTest {
         var store = new CapturingLocalAnalysisRunStore();
         store.addIndexOnly(entry("analysis-1", "incident-analysis", "corr-123"));
         var cleanup = new CapturingCopilotSessionCleanup();
-        var service = new AnalysisRunHistoryService(store, List.of(), cleanup);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store, List.of(), cleanup);
 
         service.deleteRun("analysis-1");
 
@@ -299,7 +299,7 @@ class AnalysisRunHistoryServiceTest {
     void shouldReportCorruptedRunWhenIndexExistsButRecordIsMissing() {
         var store = new CapturingLocalAnalysisRunStore();
         store.addIndexOnly(entry("analysis-1", "incident-analysis", "corr-123"));
-        var service = new AnalysisRunHistoryService(store);
+        var service = AnalysisRunHistoryServiceTestCreator.create(store);
 
         assertThrows(LocalAnalysisRunCorruptedException.class, () -> service.getRun("analysis-1"));
     }

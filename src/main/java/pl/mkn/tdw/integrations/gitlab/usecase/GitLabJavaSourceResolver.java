@@ -5,6 +5,8 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile;
@@ -15,13 +17,10 @@ import java.util.LinkedList;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class GitLabJavaSourceResolver {
 
     private final GitLabJavaExternalTypePolicy externalTypePolicy;
-
-    public GitLabJavaSourceResolver(GitLabJavaExternalTypePolicy externalTypePolicy) {
-        this.externalTypePolicy = externalTypePolicy;
-    }
 
     GitLabJavaSourceResolver() {
         this(new GitLabJavaExternalTypePolicy());

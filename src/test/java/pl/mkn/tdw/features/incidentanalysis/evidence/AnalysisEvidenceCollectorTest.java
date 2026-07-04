@@ -18,7 +18,7 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapter;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.tdw.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
-import pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace.DynatraceEvidenceProvider;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.dynatrace.DynatraceEvidenceProviderTestCreator;
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceProvider;
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment.DeploymentContextResolver;
 import pl.mkn.tdw.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceProvider;
@@ -55,7 +55,7 @@ class AnalysisEvidenceCollectorTest {
     private final AnalysisEvidenceCollector analysisEvidenceCollector = new AnalysisEvidenceCollector(
             new ElasticLogEvidenceProvider(new TestElasticLogPort()),
             new DeploymentContextEvidenceProvider(deploymentContextResolver),
-            new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
+            DynatraceEvidenceProviderTestCreator.create(new TestDynatraceIncidentPort(), deploymentContextResolver),
             new GitLabDeterministicEvidenceProvider(
                     mock(GitLabRepositoryPort.class),
                     gitLabProperties,
@@ -112,7 +112,7 @@ class AnalysisEvidenceCollectorTest {
         var collector = new AnalysisEvidenceCollector(
                 new ElasticLogEvidenceProvider(new FailingElasticLogPort()),
                 new DeploymentContextEvidenceProvider(deploymentContextResolver),
-                new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
+                DynatraceEvidenceProviderTestCreator.create(new TestDynatraceIncidentPort(), deploymentContextResolver),
                 new GitLabDeterministicEvidenceProvider(
                         mock(GitLabRepositoryPort.class),
                         gitLabProperties,
@@ -174,7 +174,7 @@ class AnalysisEvidenceCollectorTest {
             var collector = new AnalysisEvidenceCollector(
                     new ElasticLogEvidenceProvider(new ProductionLikeElasticLogPort()),
                     new DeploymentContextEvidenceProvider(deploymentContextResolver),
-                    new DynatraceEvidenceProvider(blockingDynatracePort, deploymentContextResolver),
+                    DynatraceEvidenceProviderTestCreator.create(blockingDynatracePort, deploymentContextResolver),
                     new GitLabDeterministicEvidenceProvider(
                             blockingGitLabPort,
                             gitLabProperties,
@@ -250,7 +250,7 @@ class AnalysisEvidenceCollectorTest {
         var collector = new AnalysisEvidenceCollector(
                 new ElasticLogEvidenceProvider(new ProductionLikeElasticLogPort()),
                 new DeploymentContextEvidenceProvider(deploymentContextResolver),
-                new DynatraceEvidenceProvider(new TestDynatraceIncidentPort(), deploymentContextResolver),
+                DynatraceEvidenceProviderTestCreator.create(new TestDynatraceIncidentPort(), deploymentContextResolver),
                 new GitLabDeterministicEvidenceProvider(
                         gitLabRepositoryPort,
                         gitLabProperties,

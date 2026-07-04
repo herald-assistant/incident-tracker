@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
@@ -24,6 +24,7 @@ import java.util.Locale;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class CopilotIncidentArtifactService {
 
     private static final String MANIFEST_ARTIFACT_ID = "00-incident-manifest.json";
@@ -32,17 +33,6 @@ public class CopilotIncidentArtifactService {
     private final ObjectMapper objectMapper;
     private final CopilotIncidentDigestService incidentDigestService;
     private final CopilotIncidentArtifactItemIdGenerator itemIdGenerator;
-
-    @Autowired
-    public CopilotIncidentArtifactService(
-            ObjectMapper objectMapper,
-            CopilotIncidentDigestService incidentDigestService,
-            CopilotIncidentArtifactItemIdGenerator itemIdGenerator
-    ) {
-        this.objectMapper = objectMapper;
-        this.incidentDigestService = incidentDigestService;
-        this.itemIdGenerator = itemIdGenerator;
-    }
 
     public List<CopilotRenderedArtifact> renderArtifacts(
             InitialAnalysisRequest request,

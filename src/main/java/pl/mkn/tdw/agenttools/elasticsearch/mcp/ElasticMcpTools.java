@@ -1,10 +1,10 @@
 package pl.mkn.tdw.agenttools.elasticsearch.mcp;
 
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
@@ -25,25 +25,13 @@ import static pl.mkn.tdw.agenttools.elasticsearch.ElasticToolNames.SUMMARIZE_HTT
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class ElasticMcpTools {
 
     private static final String REASON_DESCRIPTION = "Short reason in Polish for the operator. Use one practical sentence.";
 
     private final ElasticLogPort elasticLogPort;
     private final ElasticLogSearchService elasticLogSearchService;
-
-    @Autowired
-    public ElasticMcpTools(
-            ElasticLogPort elasticLogPort,
-            ElasticLogSearchService elasticLogSearchService
-    ) {
-        this.elasticLogPort = elasticLogPort;
-        this.elasticLogSearchService = elasticLogSearchService;
-    }
-
-    public ElasticMcpTools(ElasticLogPort elasticLogPort) {
-        this(elasticLogPort, null);
-    }
 
     @Tool(
             name = SEARCH_LOGS_BY_CORRELATION_ID,

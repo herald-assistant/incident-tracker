@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.incidentanalysis.ai.copilot;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisResponse;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisPreparation;
@@ -22,26 +21,13 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@RequiredArgsConstructor
 public class CopilotInitialAnalysisProvider implements InitialAnalysisProvider {
 
     private final CopilotIncidentInitialPreparationService preparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final CopilotResponseParser responseParser;
     private final CopilotIncidentReportMapper reportMapper;
-
-    public CopilotInitialAnalysisProvider(
-            CopilotIncidentInitialPreparationService preparationService,
-            CopilotSdkExecutionGateway executionGateway,
-            CopilotResponseParser responseParser
-    ) {
-        this(
-                preparationService,
-                executionGateway,
-                responseParser,
-                new CopilotIncidentReportMapper()
-        );
-    }
 
     @Override
     public InitialAnalysisPreparation prepare(InitialAnalysisRequest request) {

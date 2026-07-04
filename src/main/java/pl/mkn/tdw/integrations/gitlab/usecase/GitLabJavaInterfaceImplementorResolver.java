@@ -5,6 +5,8 @@ import com.github.javaparser.ast.body.EnumDeclaration;
 import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 @Component
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class GitLabJavaInterfaceImplementorResolver {
 
     private static final int MAX_EXACT_CANDIDATE_FILES = 16;
@@ -43,10 +46,6 @@ public class GitLabJavaInterfaceImplementorResolver {
     );
 
     private final GitLabJavaSourceResolver sourceResolver;
-
-    public GitLabJavaInterfaceImplementorResolver(GitLabJavaSourceResolver sourceResolver) {
-        this.sourceResolver = sourceResolver;
-    }
 
     GitLabJavaInterfaceImplementorResolver() {
         this(new GitLabJavaSourceResolver());

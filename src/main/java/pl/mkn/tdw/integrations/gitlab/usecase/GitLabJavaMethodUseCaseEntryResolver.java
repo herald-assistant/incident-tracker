@@ -1,5 +1,7 @@
 package pl.mkn.tdw.integrations.gitlab.usecase;
 
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile;
@@ -11,20 +13,13 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class GitLabJavaMethodUseCaseEntryResolver {
 
     private static final int MAX_CLASS_CANDIDATE_FILES = 30;
 
     private final GitLabJavaSourceResolver sourceResolver;
     private final GitLabJavaMethodLocator methodLocator;
-
-    public GitLabJavaMethodUseCaseEntryResolver(
-            GitLabJavaSourceResolver sourceResolver,
-            GitLabJavaMethodLocator methodLocator
-    ) {
-        this.sourceResolver = sourceResolver;
-        this.methodLocator = methodLocator;
-    }
 
     GitLabJavaMethodUseCaseEntryResolver() {
         this(new GitLabJavaSourceResolver(), new GitLabJavaMethodLocator());

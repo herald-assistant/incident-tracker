@@ -1,6 +1,8 @@
 package pl.mkn.tdw.integrations.gitlab.usecase;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryAnalysisCache;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 
@@ -9,24 +11,18 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@RequiredArgsConstructor
 public class GitLabEndpointUseCaseContextService {
 
     private final GitLabEndpointUseCaseEndpointResolver endpointResolver;
     private final GitLabRepositoryPort repositoryPort;
     private final GitLabEndpointUseCaseTraversalService traversalService;
 
-    public GitLabEndpointUseCaseContextService(
-            GitLabEndpointUseCaseEndpointResolver endpointResolver,
-            GitLabRepositoryPort repositoryPort,
-            GitLabEndpointUseCaseTraversalService traversalService
-    ) {
-        this.endpointResolver = endpointResolver;
-        this.repositoryPort = repositoryPort;
-        this.traversalService = traversalService;
-    }
-
     public static GitLabEndpointUseCaseContextService createDefault(GitLabRepositoryPort repositoryPort) {
-        return createDefault(repositoryPort, new GitLabRepositoryEndpointService(repositoryPort));
+        return createDefault(
+                repositoryPort,
+                new GitLabRepositoryEndpointService(repositoryPort, new GitLabRepositoryAnalysisCache())
+        );
     }
 
     public static GitLabEndpointUseCaseContextService createDefault(

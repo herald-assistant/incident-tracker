@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -23,7 +24,7 @@ class CopilotRunPreparationServiceTest {
         Consumer<AnalysisEvidenceSection> evidenceSink = section -> {
         };
         var service = new CopilotRunPreparationService(
-                new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
+                new CopilotPreparedSessionFactory(CopilotSessionConfigFactoryTestCreator.create(properties))
         );
         var sessionConfigRequest = new CopilotSessionConfigRequest(
                 "session-123",
@@ -65,7 +66,7 @@ class CopilotRunPreparationServiceTest {
         Consumer<AnalysisEvidenceSection> evidenceSink = section -> {
         };
         var service = new CopilotRunPreparationService(
-                new CopilotPreparedSessionFactory(new CopilotSessionConfigFactory(properties))
+                new CopilotPreparedSessionFactory(CopilotSessionConfigFactoryTestCreator.create(properties))
         );
         var sessionConfigRequest = new CopilotSessionConfigRequest(
                 "session-456",

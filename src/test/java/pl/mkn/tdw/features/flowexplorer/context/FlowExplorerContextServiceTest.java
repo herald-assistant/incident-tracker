@@ -13,6 +13,7 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseLimits;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseMethodCandidate;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelation;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseRelationKind;
+import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseUnresolvedReference;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaTypeKind;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
@@ -251,7 +252,7 @@ class FlowExplorerContextServiceTest {
                 null,
                 List.of(),
                 List.of(),
-                List.of(new pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseUnresolvedReference(
+                List.of(new GitLabEndpointUseCaseUnresolvedReference(
                         "GET /missing",
                         null,
                         "Endpoint could not be resolved before use-case traversal: NOT_FOUND.",

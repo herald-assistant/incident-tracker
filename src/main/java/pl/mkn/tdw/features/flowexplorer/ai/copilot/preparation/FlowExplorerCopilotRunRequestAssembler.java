@@ -1,6 +1,6 @@
 package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
@@ -15,6 +15,7 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 @Component
+@RequiredArgsConstructor
 public class FlowExplorerCopilotRunRequestAssembler {
 
     private static final CopilotToolDescriptionContext TOOL_DESCRIPTION_CONTEXT =
@@ -26,39 +27,6 @@ public class FlowExplorerCopilotRunRequestAssembler {
     private final FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory;
     private final CopilotRunAuthMapper runAuthMapper;
     private final FlowExplorerReportFactory reportFactory;
-
-    @Autowired
-    public FlowExplorerCopilotRunRequestAssembler(
-            CopilotSdkToolFactory toolFactory,
-            FlowExplorerCopilotToolSessionContextFactory toolSessionContextFactory,
-            FlowExplorerCopilotToolAccessPolicyFactory toolAccessPolicyFactory,
-            FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory,
-            CopilotRunAuthMapper runAuthMapper,
-            FlowExplorerReportFactory reportFactory
-    ) {
-        this.toolFactory = toolFactory;
-        this.toolSessionContextFactory = toolSessionContextFactory;
-        this.toolAccessPolicyFactory = toolAccessPolicyFactory;
-        this.sessionConfigRequestFactory = sessionConfigRequestFactory;
-        this.runAuthMapper = runAuthMapper;
-        this.reportFactory = reportFactory != null ? reportFactory : new FlowExplorerReportFactory();
-    }
-
-    public FlowExplorerCopilotRunRequestAssembler(
-            CopilotSdkToolFactory toolFactory,
-            FlowExplorerCopilotToolSessionContextFactory toolSessionContextFactory,
-            FlowExplorerCopilotToolAccessPolicyFactory toolAccessPolicyFactory,
-            FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory
-    ) {
-        this(
-                toolFactory,
-                toolSessionContextFactory,
-                toolAccessPolicyFactory,
-                sessionConfigRequestFactory,
-                new CopilotRunAuthMapper(),
-                new FlowExplorerReportFactory()
-        );
-    }
 
     public FlowExplorerCopilotRunAssembly assemble(
             String runReference,

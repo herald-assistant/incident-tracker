@@ -1,6 +1,7 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ParseStart;
@@ -18,11 +19,9 @@ import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
@@ -43,7 +42,6 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextReques
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextRequest;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
@@ -96,6 +94,7 @@ import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.SEARCH_REPOSITORY_CAN
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class GitLabMcpTools {
 
     private static final int DEFAULT_MAX_CHARACTERS = 4_000;
@@ -123,95 +122,7 @@ public class GitLabMcpTools {
     private final GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService;
     private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
     private final GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
-    private final GitLabToolScopeResolver scopeResolver;
-
-    @Autowired
-    public GitLabMcpTools(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
-            GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService,
-            GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService,
-            GitLabJavaMethodSliceService gitLabJavaMethodSliceService,
-            GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService,
-            GitLabProperties gitLabProperties
-    ) {
-        this.gitLabRepositoryPort = gitLabRepositoryPort;
-        this.operationalContextPort = operationalContextPort;
-        this.gitLabRepositoryEndpointService = gitLabRepositoryEndpointService;
-        this.gitLabEndpointUseCaseContextService = gitLabEndpointUseCaseContextService;
-        this.gitLabJavaMethodUseCaseContextService = gitLabJavaMethodUseCaseContextService;
-        this.gitLabJavaMethodSliceService = gitLabJavaMethodSliceService;
-        this.gitLabOpenApiEndpointSliceService = gitLabOpenApiEndpointSliceService;
-        this.scopeResolver = new GitLabToolScopeResolver(gitLabProperties, operationalContextPort);
-    }
-
-    public GitLabMcpTools(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
-            GitLabProperties gitLabProperties
-    ) {
-        this(
-                gitLabRepositoryPort,
-                operationalContextPort,
-                gitLabRepositoryEndpointService,
-                defaultEndpointUseCaseContextService(gitLabRepositoryPort, gitLabRepositoryEndpointService),
-                defaultJavaMethodUseCaseContextService(gitLabRepositoryPort),
-                new GitLabJavaMethodSliceService(gitLabRepositoryPort),
-                new GitLabOpenApiEndpointSliceService(gitLabRepositoryPort, new ObjectMapper()),
-                gitLabProperties
-        );
-    }
-
-    public GitLabMcpTools(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
-    ) {
-        this(gitLabRepositoryPort, operationalContextPort, gitLabRepositoryEndpointService, new GitLabProperties());
-    }
-
-    public GitLabMcpTools(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort,
-            GitLabProperties gitLabProperties
-    ) {
-        this(
-                gitLabRepositoryPort,
-                operationalContextPort,
-                new GitLabRepositoryEndpointService(gitLabRepositoryPort),
-                gitLabProperties
-        );
-    }
-
-    public GitLabMcpTools(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort
-    ) {
-        this(gitLabRepositoryPort, operationalContextPort, new GitLabProperties());
-    }
-
-    public GitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort, GitLabProperties gitLabProperties) {
-        this(gitLabRepositoryPort, ignored -> emptyOperationalContextCatalog(), gitLabProperties);
-    }
-
-    public GitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
-        this(gitLabRepositoryPort, new GitLabProperties());
-    }
-
-    private static GitLabEndpointUseCaseContextService defaultEndpointUseCaseContextService(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService
-    ) {
-        return GitLabEndpointUseCaseContextService.createDefault(gitLabRepositoryPort, gitLabRepositoryEndpointService);
-    }
-
-    private static GitLabJavaMethodUseCaseContextService defaultJavaMethodUseCaseContextService(
-            GitLabRepositoryPort gitLabRepositoryPort
-    ) {
-        return GitLabJavaMethodUseCaseContextService.createDefault(gitLabRepositoryPort);
-    }
+    private final GitLabProperties gitLabProperties;
 
     private GitLabToolScope scope(
             String projectName,
@@ -219,7 +130,8 @@ public class GitLabMcpTools {
             String branchRef,
             ToolContext toolContext
     ) {
-        return scopeResolver.resolve(branchRef, projectName, applicationName, toolContext);
+        return new GitLabToolScopeResolver(gitLabProperties, operationalContextPort)
+                .resolve(branchRef, projectName, applicationName, toolContext);
     }
 
     private String firstProjectName(List<String> projectNames) {
@@ -2093,10 +2005,6 @@ public class GitLabMcpTools {
 
     private String safeValue(String value) {
         return value != null ? value : "";
-    }
-
-    private static OperationalContextCatalog emptyOperationalContextCatalog() {
-        return OperationalContextCatalog.empty();
     }
 
     private record FileMetadataSnapshot(

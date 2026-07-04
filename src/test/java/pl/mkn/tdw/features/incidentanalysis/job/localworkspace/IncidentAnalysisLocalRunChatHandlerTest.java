@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessToken;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
-import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatProvider;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatResponse;
@@ -34,6 +33,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

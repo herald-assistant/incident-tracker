@@ -10,6 +10,8 @@ import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.ThisExpr;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -20,6 +22,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Component
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 public class GitLabJavaStrategyRegistryResolver {
 
     private static final Set<String> COLLECTION_TYPES = Set.of(
@@ -40,16 +43,6 @@ public class GitLabJavaStrategyRegistryResolver {
     private final GitLabJavaSourceResolver sourceResolver;
     private final GitLabJavaMethodLocator methodLocator;
     private final GitLabJavaInterfaceImplementorResolver implementorResolver;
-
-    public GitLabJavaStrategyRegistryResolver(
-            GitLabJavaSourceResolver sourceResolver,
-            GitLabJavaMethodLocator methodLocator,
-            GitLabJavaInterfaceImplementorResolver implementorResolver
-    ) {
-        this.sourceResolver = sourceResolver;
-        this.methodLocator = methodLocator;
-        this.implementorResolver = implementorResolver;
-    }
 
     GitLabJavaStrategyRegistryResolver() {
         this(
