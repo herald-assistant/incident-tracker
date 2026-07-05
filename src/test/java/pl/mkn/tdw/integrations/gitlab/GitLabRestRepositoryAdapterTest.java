@@ -107,7 +107,8 @@ class GitLabRestRepositoryAdapterTest {
                 "release/2026.04",
                 List.of("crm-customer-account-service"),
                 List.of(),
-                List.of("deadlock")
+                List.of("deadlock"),
+                List.of()
         ));
 
         assertEquals(1, candidates.size());
@@ -116,6 +117,63 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("release/2026.04", candidates.get(0).branch());
         assertEquals("src/main/java/com/example/crm/customer/account/CustomerAccountService.java", candidates.get(0).filePath());
         assertTrue(candidates.get(0).matchReason().contains("deadlock"));
+
+        server.verify();
+    }
+
+    @Test
+    void shouldFilterRepositoryCandidatesByPathPrefixes() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/groups/CRM%2Fruntime/projects?include_subgroups=true&simple=true&per_page=100&search=crm-customer-account-service&page=1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "name": "crm-customer-account-service",
+                            "path": "crm-customer-account-service",
+                            "path_with_namespace": "CRM/runtime/crm-customer-account-service"
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/groups/CRM%2Fruntime/projects?include_subgroups=true&simple=true&per_page=100&search=crm_customer_account_service&page=1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        []
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-account-service/search?scope=blobs&search=deadlock&ref=release/2026.04&per_page=20"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "path": "src/main/java/com/example/crm/customer/account/CustomerAccountService.java"
+                          },
+                          {
+                            "path": "src/test/java/com/example/crm/customer/account/CustomerAccountServiceTest.java"
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        var candidates = adapter.searchCandidateFiles(new GitLabRepositorySearchQuery(
+                "db-lock-123",
+                "CRM/runtime",
+                "release/2026.04",
+                List.of("crm-customer-account-service"),
+                List.of(),
+                List.of("deadlock"),
+                List.of("src/main/java/com/example/crm/customer/account")
+        ));
+
+        assertEquals(1, candidates.size());
+        assertEquals("src/main/java/com/example/crm/customer/account/CustomerAccountService.java", candidates.get(0).filePath());
 
         server.verify();
     }
@@ -214,7 +272,8 @@ class GitLabRestRepositoryAdapterTest {
                 "release-candidate",
                 List.of("crm-customer-workflow"),
                 List.of(),
-                List.of("customer")
+                List.of("customer"),
+                List.of()
         ));
 
         assertEquals(1, candidates.size());

@@ -72,12 +72,19 @@ wymaga scope'u, przekaz jawnie:
 
 - `branchRef`, `applicationName` i `projectName` z
   `flow-explorer/canonical-tool-inputs.md`,
+- `pathPrefixes` z operational-context `codeSearchScopes`, jezeli dany
+  repository ma `searchMode=path-prefixes`,
 - `filePath` i `methodSelectors` z
   `flow-explorer/compact-flow-manifest.md`,
 - `filePath`, `httpMethod` i `endpointPath` z
   `flow-explorer/openapi-endpoint-contract.md`, jezeli czytasz OpenAPI.
 
 Nie przekazuj `gitLabGroup`.
+
+`pathPrefixes` stosuj tylko dla discovery/search/flow/class-reference tools.
+Gdy prefixy roznia sie per repozytorium, wykonaj osobne focused calls zamiast
+mieszac je w jednym zapytaniu. Exact file/method/OpenAPI reads powinny uzywac
+konkretnych sciezek z manifestu albo poprzedniego tool result.
 
 ## Algorytm
 

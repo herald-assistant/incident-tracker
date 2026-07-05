@@ -39,7 +39,7 @@ an open question instead of inventing extra ownership or routing fields.
 | Canonical system identity, purpose, system-level ownership and navigation | `systems.yml` |
 | Local language, semantic boundaries and bounded-context ownership | `bounded-contexts.yml` |
 | GitLab project identity and semantic references | `repo-map.yml` |
-| Repository set to inspect together for one semantic target | `code-search-scopes.yml` |
+| Repository set and GitLab search boundary to inspect together for one semantic target | `code-search-scopes.yml` |
 | Business or operational process path | `processes.yml` |
 | System-to-system or partner boundary relationship | `integrations.yml` |
 | Team identifiers, labels and collaboration clues | `teams.yml` |
@@ -171,11 +171,15 @@ Each scope should define:
 - one semantic target,
 - repositories to inspect together,
 - role and priority per repository,
+- `searchMode` per repository: `whole-repository` or `path-prefixes`,
+- `pathPrefixes` only when a larger repository contains the relevant bounded
+  context or process in specific modules,
 - reason and `readFor`,
 - limitations.
 
 This lets an agent continue analysis across repositories without guessing the
-next project.
+next project. It also lets the agent restrict GitLab search to known modules
+without turning operational context into a class, endpoint or file inventory.
 
 ### 10. Run validation and record gaps
 
@@ -208,5 +212,6 @@ For a new area, stop when these questions have clear answers:
 - References use existing catalog ids.
 - Handoff guidance is understandable to a business/system analyst.
 - Repository scope explains why to inspect a project, not how the project is
-  organized internally.
+  organized internally beyond the coarse `searchMode`/`pathPrefixes` search
+  boundary.
 - Uncertainty is visible as a limitation, open question or validation finding.

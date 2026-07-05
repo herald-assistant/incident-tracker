@@ -371,7 +371,8 @@ Polityka:
   zanim uzyje search/read tools.
 - `gitlab_list_available_repositories` zwraca tez `codeSearchScopes` z
   `code-search-scopes.yml`: semantic target, role, priorytety i `projectName`
-  repozytoriow, ktore nalezy przeszukiwac razem dla dopasowanego zakresu.
+  repozytoriow oraz `searchMode/pathPrefixes`, ktore nalezy respektowac przy
+  GitLab search/flow/class-reference dla dopasowanego zakresu.
 - DB tools sa wlaczane tylko przy resolved environment i
   `IncidentDataDiagnosticNeed=LIKELY/REQUIRED`.
 - Dla `POSSIBLE` dostepne sa tylko discovery tools.
@@ -447,7 +448,8 @@ guidance do opisow drogich lub ryzykownych tools. Przyklady:
 - GitLab available-repositories/search/class/flow guidance przypomina, ze
   operational context moze wskazywac kilka repozytoriow jednego systemu;
   repozytoria pomocnicze z `codeSearchScopes` oraz kompatybilnych
-  `codeSearchProjects` sa czescia scope'u szukania kodu,
+  `codeSearchProjects` sa czescia scope'u szukania kodu, a
+  `searchMode/pathPrefixes` zawieraja jawna granice searchu per repozytorium,
 - GitLab i DB tools powinny przekazywac krotki powod po polsku w `reason`,
 - DB tools przypominaja modelowi, ze dla JPA/repository/data-access symptomow
   najpierw trzeba sprobowac ugruntowac encje, repozytorium, tabele i relacje z

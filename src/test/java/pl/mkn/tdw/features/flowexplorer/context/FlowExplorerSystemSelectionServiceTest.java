@@ -102,8 +102,8 @@ class FlowExplorerSystemSelectionServiceTest {
                         "name", "Catalog semantic scope",
                         "target", map("type", "system", "id", "crm-customer-profile"),
                         "repositories", List.of(
-                                map("repoId", "crm-customer-profile-api"),
-                                map("repoId", "crm-customer-profile-domain")
+                                map("repoId", "crm-customer-profile-api", "searchMode", "whole-repository"),
+                                map("repoId", "crm-customer-profile-domain", "searchMode", "whole-repository")
                         )
                 )),
                 List.of(),

@@ -245,6 +245,12 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'aggregate'
     ),
     column(
+      'searchBoundary',
+      'Search boundary',
+      'Jawna granica wyszukiwania dla kazdego repozytorium w scope: cale repozytorium albo konkretne prefiksy sciezek/moduly. Pomaga AI ograniczyc GitLab search do semantycznie istotnych fragmentow repo.',
+      'aggregate'
+    ),
+    column(
       'limitations',
       'Limitations',
       'Jawne ograniczenia scope, na przyklad brak widocznosci partnera albo celowe pominiecie repozytoriow spoza katalogu. To material do visibility limits, nie instrukcja eksploracji kodu.',

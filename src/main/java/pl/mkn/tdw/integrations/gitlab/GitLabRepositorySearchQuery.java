@@ -8,6 +8,7 @@ public record GitLabRepositorySearchQuery(
         String branch,
         List<String> projectNames,
         List<String> operationNames,
-        List<String> keywords
+        List<String> keywords,
+        List<String> pathPrefixes
 ) {
 }

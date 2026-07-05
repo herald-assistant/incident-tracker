@@ -518,9 +518,10 @@ Sam provider operational context nie laduje juz katalogu bezposrednio z
 resources, tylko korzysta z query-based adaptera i wystawia typed
 `OperationalContextEvidenceView` dla downstreamow. Widok systemu zawiera tez
 `codeSearchScopeIds`, `codeSearchProjects`, role repozytoriow, `reason` i
-`readFor`, czyli projekty GitLaba skladajace sie na kod dopasowanego
-komponentu. Konkretne klasy, endpointy i sciezki kodu sa odkrywane przez
-GitLab tools, a nie utrzymywane jako operational context.
+`readFor` oraz `codeSearchRepositorySearchBoundaries`, czyli projekty GitLaba
+i coarse `searchMode/pathPrefixes` skladajace sie na kod dopasowanego
+komponentu. Konkretne klasy, endpointy i pliki sa odkrywane przez GitLab
+tools, a nie utrzymywane jako operational context.
 
 Operational context tools korzystaja z tego samego adaptera katalogu, ale nie
 sa kolejnym deterministic evidence providerem. Daja agentowi paginowany index,

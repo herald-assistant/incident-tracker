@@ -174,7 +174,10 @@ class OperationalContextOwnershipResolverTest {
                 List.of(map(
                         "id", "customer-profile-context-scope",
                         "target", map("type", "bounded-context", "id", "customer-profile-context"),
-                        "repositories", List.of(map("repoId", "crm-customer-service-repo"))
+                        "repositories", List.of(map(
+                                "repoId", "crm-customer-service-repo",
+                                "searchMode", "whole-repository"
+                        ))
                 )),
                 List.of(
                         map(

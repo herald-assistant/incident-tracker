@@ -38,7 +38,8 @@ class SyntheticAdaptersTest {
                 "main",
                 List.of("crm-customer-profile-service", "crm-customer-segment-service"),
                 List.of("GET /crm/customers", "POST /crm/notifications"),
-                List.of("timeout", "customer-profile", "notification")
+                List.of("timeout", "customer-profile", "notification"),
+                List.of()
         ));
 
         assertEquals(2, logEntries.size());

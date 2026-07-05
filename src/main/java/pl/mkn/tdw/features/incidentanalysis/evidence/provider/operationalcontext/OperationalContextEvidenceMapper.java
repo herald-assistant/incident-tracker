@@ -94,6 +94,7 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_PROJECTS, joined(repositoryProjects(codeSearchRepositories)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES, joined(codeSearch.repositoryRoles()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_REASONS, joined(codeSearch.repositoryReasons()));
+            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CODE_SEARCH_REPOSITORY_SEARCH_BOUNDARIES, joined(codeSearch.repositorySearchBoundaries()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational system " + firstNonBlank(system.id(), system.name()),
@@ -277,6 +278,7 @@ public class OperationalContextEvidenceMapper {
         var scopeIds = new ArrayList<String>();
         var repositoryRoles = new ArrayList<String>();
         var repositoryReasons = new ArrayList<String>();
+        var repositorySearchBoundaries = new ArrayList<String>();
         var seedRepoIds = new ArrayList<String>();
         seedRepoIds.addAll(repoIds);
         var matchedScopes = matchingCodeSearchScopes(catalog, system, seedRepoIds);
@@ -289,6 +291,7 @@ public class OperationalContextEvidenceMapper {
                             addRepository(selected, selectedIds, repository);
                             repositoryRoles.add(scopeRepositoryRole(scope, scopeRepository));
                             repositoryReasons.add(scopeRepositoryReason(scope, scopeRepository));
+                            repositorySearchBoundaries.add(scopeRepositorySearchBoundary(scope, scopeRepository));
                         });
             }
         }
@@ -310,7 +313,8 @@ public class OperationalContextEvidenceMapper {
                 selected,
                 deduplicate(scopeIds),
                 deduplicate(repositoryRoles),
-                deduplicate(repositoryReasons)
+                deduplicate(repositoryReasons),
+                deduplicate(repositorySearchBoundaries)
         );
     }
 
@@ -399,6 +403,20 @@ public class OperationalContextEvidenceMapper {
         return StringUtils.hasText(reason)
                 ? scope.id() + ":" + repository.repoId() + ":" + reason
                 : null;
+    }
+
+    private String scopeRepositorySearchBoundary(
+            OperationalContextRepositorySearchScope scope,
+            OperationalContextRepositorySearchRepository repository
+    ) {
+        var values = new ArrayList<String>();
+        values.add(scope.id());
+        values.add(repository.repoId());
+        values.add(firstNonBlank(repository.searchMode(), "missing-search-mode"));
+        if (!repository.pathPrefixes().isEmpty()) {
+            values.add("pathPrefixes=" + String.join(",", repository.pathPrefixes()));
+        }
+        return String.join(":", values.stream().filter(StringUtils::hasText).toList());
     }
 
     private void addRepository(
@@ -646,7 +664,8 @@ public class OperationalContextEvidenceMapper {
             List<OperationalContextRepository> repositories,
             List<String> scopeIds,
             List<String> repositoryRoles,
-            List<String> repositoryReasons
+            List<String> repositoryReasons,
+            List<String> repositorySearchBoundaries
     ) {
 
         private CodeSearchSelection {
@@ -654,10 +673,11 @@ public class OperationalContextEvidenceMapper {
             scopeIds = List.copyOf(scopeIds);
             repositoryRoles = List.copyOf(repositoryRoles);
             repositoryReasons = List.copyOf(repositoryReasons);
+            repositorySearchBoundaries = List.copyOf(repositorySearchBoundaries);
         }
 
         private static CodeSearchSelection empty() {
-            return new CodeSearchSelection(List.of(), List.of(), List.of(), List.of());
+            return new CodeSearchSelection(List.of(), List.of(), List.of(), List.of(), List.of());
         }
     }
 

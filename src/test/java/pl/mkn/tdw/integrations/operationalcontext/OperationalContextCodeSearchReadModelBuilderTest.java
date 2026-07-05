@@ -64,7 +64,8 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
                                 "role", "primary",
-                                "priority", 1
+                                "priority", 1,
+                                "searchMode", "whole-repository"
                         ))
                 )),
                 List.of(map("id", "customer-profile-context")),
@@ -125,7 +126,8 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         "target", map("type", "system", "id", "crm-customer-service"),
                         "repositories", List.of(map(
                                 "repoId", "missing-repo",
-                                "role", "primary"
+                                "role", "primary",
+                                "searchMode", "whole-repository"
                         ))
                 )),
                 List.of(),
@@ -181,12 +183,15 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                                         "repoId", "crm-customer-service-repo",
                                         "role", "primary",
                                         "priority", 1,
+                                        "searchMode", "path-prefixes",
+                                        "pathPrefixes", List.of("services/customer-profile", "libs/customer-domain"),
                                         "reason", "Main repository"
                                 ),
                                 map(
                                         "repoId", "crm-customer-shared-repo",
                                         "role", "supporting-library",
                                         "priority", 2,
+                                        "searchMode", "whole-repository",
                                         "reason", "Shared customer library"
                                 )
                         ),
@@ -198,7 +203,8 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
                                 "role", "primary",
-                                "priority", 1
+                                "priority", 1,
+                                "searchMode", "whole-repository"
                         ))
                 )),
                 List.of(map(

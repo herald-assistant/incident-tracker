@@ -211,6 +211,8 @@ public class OperationalContextCodeSearchReadModelBuilder {
                 scopeRepository.priority(),
                 scopeRepository.reason(),
                 scopeRepository.readFor(),
+                scopeRepository.searchMode(),
+                scopeRepository.pathPrefixes(),
                 gitView(repository),
                 new Provenance(
                         true,

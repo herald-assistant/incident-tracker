@@ -193,7 +193,8 @@ class OperationalContextReadModelValidatorTest {
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
                                 "role", "primary",
-                                "priority", 1
+                                "priority", 1,
+                                "searchMode", "whole-repository"
                         ))
                 )),
                 List.of(map("id", "customer-profile-context")),
@@ -262,14 +263,16 @@ class OperationalContextReadModelValidatorTest {
                                 "repositories", List.of(map(
                                         "repoId", "crm-customer-service-repo",
                                         "role", "supporting-library",
-                                        "priority", 2
+                                        "priority", 2,
+                                        "searchMode", "whole-repository"
                                 ))
                         ),
                         map(
                                 "id", "no-target-scope",
                                 "repositories", List.of(map(
                                         "repoId", "missing-repo",
-                                        "role", "primary"
+                                        "role", "primary",
+                                        "searchMode", "whole-repository"
                                 ))
                         )
                 ),
@@ -312,7 +315,8 @@ class OperationalContextReadModelValidatorTest {
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
                                 "role", "primary",
-                                "priority", 1
+                                "priority", 1,
+                                "searchMode", "whole-repository"
                         ))
                 )),
                 List.of(map(
@@ -372,7 +376,8 @@ class OperationalContextReadModelValidatorTest {
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
                                 "role", "primary",
-                                "priority", 1
+                                "priority", 1,
+                                "searchMode", "whole-repository"
                         ))
                 )),
                 List.of(),
@@ -387,6 +392,76 @@ class OperationalContextReadModelValidatorTest {
         assertFalse(findings.stream().anyMatch(finding -> finding.code().equals("BIDIRECTIONAL_REFERENCE")));
     }
 
+    @Test
+    void shouldReportCodeSearchRepositorySearchBoundaryProblems() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(map("id", "crm-customer-service")),
+                List.of(),
+                List.of(map("id", "crm-customer-service-repo")),
+                List.of(
+                        scopeWithRepository(
+                                "missing-mode-scope",
+                                map(
+                                        "repoId", "crm-customer-service-repo",
+                                        "role", "primary",
+                                        "priority", 1
+                                )
+                        ),
+                        scopeWithRepository(
+                                "unknown-mode-scope",
+                                map(
+                                        "repoId", "crm-customer-service-repo",
+                                        "role", "primary",
+                                        "priority", 1,
+                                        "searchMode", "module-list"
+                                )
+                        ),
+                        scopeWithRepository(
+                                "empty-prefix-scope",
+                                map(
+                                        "repoId", "crm-customer-service-repo",
+                                        "role", "primary",
+                                        "priority", 1,
+                                        "searchMode", "path-prefixes"
+                                )
+                        ),
+                        scopeWithRepository(
+                                "whole-repo-with-prefix-scope",
+                                map(
+                                        "repoId", "crm-customer-service-repo",
+                                        "role", "primary",
+                                        "priority", 1,
+                                        "searchMode", "whole-repository",
+                                        "pathPrefixes", List.of("src/main/java")
+                                )
+                        ),
+                        scopeWithRepository(
+                                "invalid-prefix-scope",
+                                map(
+                                        "repoId", "crm-customer-service-repo",
+                                        "role", "primary",
+                                        "priority", 1,
+                                        "searchMode", "path-prefixes",
+                                        "pathPrefixes", List.of("/src/main/java", "src\\main\\java")
+                                )
+                        )
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasError(findings, "CODE_SEARCH_REPOSITORY_WITHOUT_SEARCH_MODE");
+        assertHasError(findings, "CODE_SEARCH_REPOSITORY_UNKNOWN_SEARCH_MODE");
+        assertHasError(findings, "CODE_SEARCH_REPOSITORY_PATH_PREFIXES_EMPTY");
+        assertHasError(findings, "CODE_SEARCH_REPOSITORY_WHOLE_REPOSITORY_WITH_PATH_PREFIXES");
+        assertHasError(findings, "CODE_SEARCH_REPOSITORY_INVALID_PATH_PREFIX");
+    }
+
     private void assertHas(List<OperationalContextRelationIndex.ValidationFinding> findings, String code) {
         assertTrue(
                 findings.stream().anyMatch(finding -> finding.code().equals(code)),
@@ -397,6 +472,14 @@ class OperationalContextReadModelValidatorTest {
                         .filter(finding -> finding.code().equals(code))
                         .allMatch(finding -> !finding.sourceRefs().isEmpty()),
                 () -> "Expected source refs for " + code
+        );
+    }
+
+    private static Map<String, Object> scopeWithRepository(String id, Map<String, Object> repository) {
+        return map(
+                "id", id,
+                "target", map("type", "system", "id", "crm-customer-service"),
+                "repositories", List.of(repository)
         );
     }
 

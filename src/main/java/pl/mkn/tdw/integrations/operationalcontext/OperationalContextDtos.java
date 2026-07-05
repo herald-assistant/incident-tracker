@@ -16,6 +16,9 @@ import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.
 
 public final class OperationalContextDtos {
 
+    public static final String CODE_SEARCH_MODE_WHOLE_REPOSITORY = "whole-repository";
+    public static final String CODE_SEARCH_MODE_PATH_PREFIXES = "path-prefixes";
+
     private OperationalContextDtos() {
     }
 
@@ -794,11 +797,14 @@ public final class OperationalContextDtos {
             String role,
             Integer priority,
             String reason,
-            List<String> readFor
+            List<String> readFor,
+            String searchMode,
+            List<String> pathPrefixes
     ) {
 
         public OperationalContextRepositorySearchRepository {
             readFor = copyList(readFor);
+            pathPrefixes = copyList(pathPrefixes);
         }
     }
 
@@ -1297,7 +1303,9 @@ public final class OperationalContextDtos {
                 text(source, "role"),
                 integer(source, "priority"),
                 text(source, "reason"),
-                textList(source, "readFor")
+                textList(source, "readFor"),
+                text(source, "searchMode"),
+                textList(source, "pathPrefixes")
         );
     }
 

@@ -132,6 +132,8 @@ final class OperationalContextApiTestFixtures {
                                         "repoId", "crm-consent-repo",
                                         "role", "primary",
                                         "priority", 1,
+                                        "searchMode", "path-prefixes",
+                                        "pathPrefixes", List.of("src/main/java/pl/mkn/consent", "src/main/resources/db/consent"),
                                         "reason", "Main repository for customer consent service analysis.",
                                         "readFor", List.of("business logic")
                                 )),
@@ -149,6 +151,7 @@ final class OperationalContextApiTestFixtures {
                                         "repoId", "crm-consent-repo",
                                         "role", "primary",
                                         "priority", 1,
+                                        "searchMode", "whole-repository",
                                         "reason", "Main repository for customer consent capture analysis.",
                                         "readFor", List.of("process rules")
                                 ))

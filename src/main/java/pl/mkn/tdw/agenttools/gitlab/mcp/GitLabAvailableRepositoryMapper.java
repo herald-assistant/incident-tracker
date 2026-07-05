@@ -151,7 +151,9 @@ final class GitLabAvailableRepositoryMapper {
                 scopeRepository.priority(),
                 distinctLimited(List.of(repository.projectName()), MAX_ALIASES),
                 scopeRepository.reason(),
-                scopeRepository.readFor()
+                scopeRepository.readFor(),
+                scopeRepository.searchMode(),
+                scopeRepository.pathPrefixes()
         );
     }
 

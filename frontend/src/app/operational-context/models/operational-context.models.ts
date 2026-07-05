@@ -143,6 +143,7 @@ export interface OperationalContextCodeSearchScopeRowDto {
   lifecycleStatus: string;
   target: ExplainableAggregateDto;
   repositories: ExplainableAggregateDto;
+  searchBoundary: ExplainableAggregateDto;
   limitations: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
 }

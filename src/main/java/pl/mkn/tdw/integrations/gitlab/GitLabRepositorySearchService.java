@@ -56,7 +56,8 @@ public class GitLabRepositorySearchService {
                     branch,
                     projectHints,
                     operationNames,
-                    keywords
+                    keywords,
+                    List.of()
             ));
 
             if (fileCandidates.isEmpty()) {

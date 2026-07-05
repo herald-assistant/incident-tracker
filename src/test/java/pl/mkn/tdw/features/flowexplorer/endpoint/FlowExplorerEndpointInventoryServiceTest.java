@@ -300,8 +300,8 @@ class FlowExplorerEndpointInventoryServiceTest {
                         "name", "CRM Customer Profile scope",
                         "target", map("type", "system", "id", "crm-customer-profile"),
                         "repositories", List.of(
-                                map("repoId", "missing-repo", "priority", 1),
-                                map("repoId", "crm-customer-profile-domain", "priority", 2)
+                                map("repoId", "missing-repo", "priority", 1, "searchMode", "whole-repository"),
+                                map("repoId", "crm-customer-profile-domain", "priority", 2, "searchMode", "whole-repository")
                         )
                 )),
                 List.of(),

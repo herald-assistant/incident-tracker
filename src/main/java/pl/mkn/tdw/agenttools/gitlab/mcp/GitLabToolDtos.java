@@ -283,11 +283,14 @@ public final class GitLabToolDtos {
             Integer priority,
             List<String> projectNames,
             String reason,
-            List<String> readFor
+            List<String> readFor,
+            String searchMode,
+            List<String> pathPrefixes
     ) {
         public GitLabAvailableCodeSearchRepository {
             projectNames = projectNames != null ? List.copyOf(projectNames) : List.of();
             readFor = readFor != null ? List.copyOf(readFor) : List.of();
+            pathPrefixes = pathPrefixes != null ? List.copyOf(pathPrefixes) : List.of();
         }
     }
 

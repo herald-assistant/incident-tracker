@@ -68,6 +68,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_PATH_PREFIXES;
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_WHOLE_REPOSITORY;
+
 @Service
 @RequiredArgsConstructor
 public class OperationalContextViewService {
@@ -345,6 +348,7 @@ public class OperationalContextViewService {
                 scope.lifecycleStatus(),
                 codeSearchScopeTargetAggregate(view, scope),
                 codeSearchScopeRepositoriesAggregate(view, scope),
+                codeSearchScopeSearchBoundaryAggregate(scope),
                 valueAggregate("Limitations", CODE_SEARCH_SCOPE, scope.id(), scope.limitations(), "Known limitations for this scope.", "limitation"),
                 validationAggregate(CODE_SEARCH_SCOPE, scope.id(), view.validationFindings())
         );
@@ -504,6 +508,8 @@ public class OperationalContextViewService {
                         "priority", repository.priority(),
                         "reason", repository.reason(),
                         "readFor", repository.readFor(),
+                        "searchMode", repository.searchMode(),
+                        "pathPrefixes", repository.pathPrefixes(),
                         "projectPath", view.repositoriesById().containsKey(repository.repoId())
                                 ? view.repositoriesById().get(repository.repoId()).git().projectPath()
                                 : null
@@ -693,6 +699,8 @@ public class OperationalContextViewService {
                 values.add(repository.role());
                 values.add(repository.reason());
                 values.addAll(repository.readFor());
+                values.add(repository.searchMode());
+                values.addAll(repository.pathPrefixes());
             });
             if (containsAny(normalizedQuery, values)) {
                 results.add(searchResult(
@@ -940,6 +948,40 @@ public class OperationalContextViewService {
     private ExplainableAggregateDto codeSearchScopeRepositoriesAggregate(CatalogView view, OperationalContextRepositorySearchScope scope) {
         var ids = scope.repositories().stream().map(OperationalContextRepositorySearchRepository::repoId).toList();
         return idAggregate("Repositories", CODE_SEARCH_SCOPE, scope.id(), REPOSITORY, ids, view.repositoriesById());
+    }
+
+    private ExplainableAggregateDto codeSearchScopeSearchBoundaryAggregate(OperationalContextRepositorySearchScope scope) {
+        var repositories = scope.repositories();
+        var wholeRepositoryIds = repositories.stream()
+                .filter(repository -> CODE_SEARCH_MODE_WHOLE_REPOSITORY.equals(repository.searchMode()))
+                .map(OperationalContextRepositorySearchRepository::repoId)
+                .toList();
+        var pathPrefixItems = repositories.stream()
+                .filter(repository -> CODE_SEARCH_MODE_PATH_PREFIXES.equals(repository.searchMode()))
+                .flatMap(repository -> repository.pathPrefixes().stream()
+                        .map(pathPrefix -> repository.repoId() + ":" + pathPrefix))
+                .toList();
+        var missingBoundaryIds = repositories.stream()
+                .filter(repository -> !StringUtils.hasText(repository.searchMode()))
+                .map(OperationalContextRepositorySearchRepository::repoId)
+                .toList();
+
+        return aggregate(
+                "Search boundary",
+                repositories.size(),
+                missingBoundaryIds.isEmpty() ? "info" : "warning",
+                missingBoundaryIds.isEmpty() ? "high" : "low",
+                "Repository-level code search boundary: whole repository or curated path prefixes.",
+                nonEmptyGroups(
+                        group("Whole repositories", REPOSITORY, wholeRepositoryIds, "Search the whole repository for this semantic scope."),
+                        group("Path prefixes", "path-prefix", pathPrefixItems, "Search only this repository path prefix for this semantic scope."),
+                        group("Missing search mode", REPOSITORY, missingBoundaryIds, "Repository entry has no explicit searchMode.")
+                ),
+                List.of(reason("searchMode", "Each repository in code-search scope declares its search boundary.", missingBoundaryIds.isEmpty() ? "high" : "low")),
+                List.of(sourceRef(CODE_SEARCH_SCOPE, scope.id())),
+                "search-boundary",
+                repositories.stream().map(OperationalContextRepositorySearchRepository::repoId).toList()
+        );
     }
 
     private ExplainableAggregateDto countCard(String label, int count, String detailsType) {

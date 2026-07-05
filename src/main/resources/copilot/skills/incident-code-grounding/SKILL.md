@@ -225,8 +225,10 @@ wiecej niz jeden GitLab project. Operational context moze podac
 
 Gdy operational context podaje `codeSearchScopeIds`, `codeSearchRepoIds`,
 `codeSearchProjects`, repository `project`, repository roles albo repository
-reasons dla dopasowanego targetu, traktuj cala liste jako jeden implementation
-search scope.
+reasons dla dopasowanego targetu, traktuj cala liste jako implementation
+search scope. Jezeli operational context podaje
+`codeSearchRepositorySearchBoundaries`, respektuj `searchMode/pathPrefixes` dla
+kazdego repozytorium.
 
 Jesli sa `codeSearchRepositoryRoles`, zaczynaj od `primary` albo priority `1`,
 a potem przechodz przez supporting repositories wedlug priorytetu, `reason`
@@ -251,6 +253,13 @@ className, method, filePath, endpoint albo error clues z evidence incydentu lub
 GitLab tool results, przeczytaj najlepszy outline/chunk i zatrzymaj sie, gdy
 nie ma uzytecznego kodu biblioteki.
 
+Gdy repository ma `searchMode=path-prefixes`, przekaz jego `pathPrefixes` do
+`gitlab_search_repository_candidates`, `gitlab_find_flow_context` albo
+`gitlab_find_class_references`. Gdy kilka repozytoriow ma rozne prefixy, rob
+osobne focused tool calls per repozytorium albo wspolna granica; nie mieszaj
+niekompatybilnych prefixow w jednym search callu. Dla exact file reads nadal
+uzywaj konkretnego `projectName` i `filePath` z wyniku toola.
+
 ## Katalog Dostepnych Repozytoriow
 
 Uzyj `gitlab_list_available_repositories`, gdy istotne repozytorium nie jest
@@ -267,15 +276,18 @@ outline, chunk i read tools. `gitLabPath`, `summary` i metadata repozytorium
 traktuj jako kontekst rozrozniajacy.
 
 Gdy odpowiedz zawiera `codeSearchScopes`, preferuj dopasowany semantic scope
-zamiast pojedynczego repozytorium. Przekaz wszystkie `projectNames` z tego
-scope razem do search/flow/class-reference tools.
+zamiast pojedynczego repozytorium. Przekaz `projectNames` z tego scope do
+search/flow/class-reference tools razem tylko wtedy, gdy maja zgodna granice
+searchu. Dla repository z `searchMode=path-prefixes` przekaz `pathPrefixes`;
+dla `searchMode=whole-repository` nie przekazuj `pathPrefixes`.
 
 Dopasowuj incident clues do:
 
 - repository `name`, `aliases`, `projectName`, `gitLabPath`,
 - `systems`, `boundedContexts`, `processes`, `integrations`,
 - `codeSearchScopes[].target.type/id`, repository roles, priority, `reason`
-  i `readFor`.
+  i `readFor`,
+- repository `searchMode` i `pathPrefixes`.
 
 Preferuj jeden catalog call na poczatku cross-repository investigation. Nie
 powtarzaj go, chyba ze nowe evidence wskazuje inna rodzine repozytoriow.

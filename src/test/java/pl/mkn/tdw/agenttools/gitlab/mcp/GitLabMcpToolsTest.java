@@ -190,6 +190,7 @@ class GitLabMcpToolsTest {
 
         var response = tools.searchRepositoryCandidates(
                 List.of("crm-customer-profile-service", "crm-customer-segment-service"),
+                List.of("src/main/java/com/example/crm/customer"),
                 DEFAULT_BRANCH_REF,
                 DEFAULT_APPLICATION_NAME,
                 List.of("GET /crm/customers"),
@@ -203,6 +204,7 @@ class GitLabMcpToolsTest {
                         && "CRM/backend".equals(query.group())
                         && "feature/INC-123".equals(query.branch())
                         && List.of("crm-customer-profile-service", "crm-customer-segment-service").equals(query.projectNames())
+                        && List.of("src/main/java/com/example/crm/customer").equals(query.pathPrefixes())
                         && List.of("GET /crm/customers").equals(query.operationNames())
                         && List.of("timeout", "customer-profile").equals(query.keywords())
         ));
@@ -218,6 +220,7 @@ class GitLabMcpToolsTest {
 
         tools.searchRepositoryCandidates(
                 null,
+                null,
                 DEFAULT_BRANCH_REF,
                 DEFAULT_APPLICATION_NAME,
                 null,
@@ -228,6 +231,7 @@ class GitLabMcpToolsTest {
 
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
                 query.projectNames().isEmpty()
+                        && query.pathPrefixes().isEmpty()
                         && query.operationNames().isEmpty()
                         && query.keywords().isEmpty()
         ));
@@ -239,6 +243,7 @@ class GitLabMcpToolsTest {
 
         var response = tools.searchRepositoryCandidates(
                 List.of("crm-customer-workflow"),
+                List.of(),
                 "release-candidate",
                 "customer",
                 List.of(),
@@ -1122,6 +1127,7 @@ class GitLabMcpToolsTest {
 
         var response = tools.findFlowContext(
                 List.of("crm-customer-api", "crm-customer-core"),
+                List.of(),
                 DEFAULT_BRANCH_REF,
                 DEFAULT_APPLICATION_NAME,
                 List.of(
@@ -1143,6 +1149,7 @@ class GitLabMcpToolsTest {
                         && "CRM/backend".equals(query.group())
                         && "feature/INC-123".equals(query.branch())
                         && List.of("crm-customer-api", "crm-customer-core").equals(query.projectNames())
+                        && query.pathPrefixes().isEmpty()
                         && List.of("POST /crm/customers").equals(query.operationNames())
                         && List.of(
                         "com.example.crm.customer.CustomerController",
@@ -1209,6 +1216,7 @@ class GitLabMcpToolsTest {
 
         var response = tools.findClassReferences(
                 List.of("crm-customer-core"),
+                List.of(),
                 DEFAULT_BRANCH_REF,
                 DEFAULT_APPLICATION_NAME,
                 "com.example.crm.customer.domain.CustomerEntity",
@@ -1224,6 +1232,7 @@ class GitLabMcpToolsTest {
                         && "CRM/backend".equals(query.group())
                         && "feature/INC-123".equals(query.branch())
                         && List.of("crm-customer-core").equals(query.projectNames())
+                        && query.pathPrefixes().isEmpty()
                         && List.of("GET /crm/customers/{customerId}").equals(query.operationNames())
                         && List.of(
                         "com.example.crm.customer.domain.CustomerEntity",
@@ -1444,6 +1453,7 @@ class GitLabMcpToolsTest {
                 "repoId", repoId,
                 "role", role,
                 "priority", priority,
+                "searchMode", "whole-repository",
                 "reason", "Included in test code-search scope.",
                 "readFor", List.of("code-navigation")
         );

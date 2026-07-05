@@ -15,11 +15,16 @@ codeSearchScopes:
       - repoId: app-core-repo
         role: primary
         priority: 1
+        searchMode: path-prefixes
+        pathPrefixes:
+          - modules/app-core
+          - shared/domain-core
         reason: Main service repository for app-core.
         readFor: [business-flow, core-behavior]
       - repoId: app-shared-lib-repo
         role: supporting-library
         priority: 2
+        searchMode: whole-repository
         reason: Shared domain predicates are used by app-core.
         readFor: [shared-rules]
 

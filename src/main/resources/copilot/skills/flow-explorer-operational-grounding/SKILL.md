@@ -95,6 +95,8 @@ predicate albo mapowania. To jest praca GitLab tools.
   komponentami referencyjnymi.
 - `codeSearchScope` pomaga dobrac repozytoria, ale nie dowodzi, ze endpoint
   uzywa danego pliku.
+- `codeSearchScope` moze tez podac `searchMode/pathPrefixes`; to tylko granica
+  GitLab searchu dla wiekszego repozytorium, nie inventory klas ani endpointow.
 - Owner moze pochodzic tylko z `system` albo `bounded-context`; dla endpointa,
   klasy albo repozytorium idz przez code-search scope do systemu/contextu.
 - `bounded-context` ma pierwszenstwo przed `system`, a system jest fallbackiem.

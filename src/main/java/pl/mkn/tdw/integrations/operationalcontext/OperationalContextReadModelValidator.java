@@ -24,6 +24,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_PATH_PREFIXES;
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.CODE_SEARCH_MODE_WHOLE_REPOSITORY;
+
 public class OperationalContextReadModelValidator {
 
     private static final String CODE_SEARCH_SCOPE = "code-search-scope";
@@ -668,6 +671,69 @@ public class OperationalContextReadModelValidator {
                         "UNKNOWN_CODE_SEARCH_REPOSITORY",
                         "Code-search scope " + scope.id() + " references unknown repository " + repository.repoId() + ".",
                         List.of(scopeRef(scope, "repositories[repoId=" + repository.repoId() + "]", "references-repository"))
+                ));
+            }
+            validateCodeSearchRepositorySearchBoundary(scope, repository, findings);
+        }
+    }
+
+    private void validateCodeSearchRepositorySearchBoundary(
+            OperationalContextRepositorySearchScope scope,
+            OperationalContextDtos.OperationalContextRepositorySearchRepository repository,
+            List<ValidationFinding> findings
+    ) {
+        var searchMode = text(repository.searchMode());
+        var fieldPrefix = "repositories[repoId=" + repository.repoId() + "]";
+        if (!StringUtils.hasText(searchMode)) {
+            findings.add(new ValidationFinding(
+                    "error",
+                    "CODE_SEARCH_REPOSITORY_WITHOUT_SEARCH_MODE",
+                    "Code-search repository " + repository.repoId() + " in scope " + scope.id()
+                            + " must declare searchMode whole-repository or path-prefixes.",
+                    List.of(scopeRef(scope, fieldPrefix + ".searchMode", "search-boundary"))
+            ));
+            return;
+        }
+
+        if (!Set.of(CODE_SEARCH_MODE_WHOLE_REPOSITORY, CODE_SEARCH_MODE_PATH_PREFIXES).contains(searchMode)) {
+            findings.add(new ValidationFinding(
+                    "error",
+                    "CODE_SEARCH_REPOSITORY_UNKNOWN_SEARCH_MODE",
+                    "Code-search repository " + repository.repoId() + " in scope " + scope.id()
+                            + " uses unsupported searchMode " + searchMode + ".",
+                    List.of(scopeRef(scope, fieldPrefix + ".searchMode", "search-boundary"))
+            ));
+            return;
+        }
+
+        if (CODE_SEARCH_MODE_PATH_PREFIXES.equals(searchMode) && repository.pathPrefixes().isEmpty()) {
+            findings.add(new ValidationFinding(
+                    "error",
+                    "CODE_SEARCH_REPOSITORY_PATH_PREFIXES_EMPTY",
+                    "Code-search repository " + repository.repoId() + " in scope " + scope.id()
+                            + " uses path-prefixes searchMode but has no pathPrefixes.",
+                    List.of(scopeRef(scope, fieldPrefix + ".pathPrefixes", "search-boundary"))
+            ));
+        }
+
+        if (CODE_SEARCH_MODE_WHOLE_REPOSITORY.equals(searchMode) && !repository.pathPrefixes().isEmpty()) {
+            findings.add(new ValidationFinding(
+                    "error",
+                    "CODE_SEARCH_REPOSITORY_WHOLE_REPOSITORY_WITH_PATH_PREFIXES",
+                    "Code-search repository " + repository.repoId() + " in scope " + scope.id()
+                            + " uses whole-repository searchMode and must not declare pathPrefixes.",
+                    List.of(scopeRef(scope, fieldPrefix + ".pathPrefixes", "search-boundary"))
+            ));
+        }
+
+        for (var pathPrefix : repository.pathPrefixes()) {
+            if (!StringUtils.hasText(pathPrefix) || pathPrefix.startsWith("/") || pathPrefix.contains("\\")) {
+                findings.add(new ValidationFinding(
+                        "error",
+                        "CODE_SEARCH_REPOSITORY_INVALID_PATH_PREFIX",
+                        "Code-search repository " + repository.repoId() + " in scope " + scope.id()
+                                + " has invalid pathPrefix " + pathPrefix + ". Use relative GitLab paths with / separators.",
+                        List.of(scopeRef(scope, fieldPrefix + ".pathPrefixes", "search-boundary"))
                 ));
             }
         }

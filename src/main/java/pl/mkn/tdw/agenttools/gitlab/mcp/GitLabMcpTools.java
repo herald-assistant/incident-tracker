@@ -157,7 +157,8 @@ public class GitLabMcpTools {
                     Use this when projectName or GitLab path is unknown and logs, traces, code, comments, package names,
                     system names, module names, endpoints or bounded contexts mention another application or repository.
                     Prefer returned codeSearchScopes when a semantic target maps to multiple repositories; use all projectName
-                    values from the matching scope as inputs for GitLab search, flow context and read tools.
+                    values from the matching scope as inputs for GitLab search, flow context and read tools. When a repository
+                    in the matching scope has searchMode=path-prefixes, pass its pathPrefixes to search/flow/class discovery.
                     Pass branchRef explicitly from the prompt, an artifact or a previous tool result. The GitLab group is
                     resolved from projectName/applicationName via operational context or from application configuration.
                     """
@@ -484,12 +485,15 @@ public class GitLabMcpTools {
                     Search GitLab repository files in the resolved GitLab group and explicit branchRef using candidate project names,
                     operation names, class names, method names, entity names, exception names and keywords inferred from logs,
                     traces or prior analysis. Use this when the affected project/file is unclear or when broader repository
-                    candidates are needed before focused reads.
+                    candidates are needed before focused reads. Use pathPrefixes from operational-context codeSearchScopes to
+                    restrict a search to curated modules inside a repository.
                     """
     )
     public GitLabSearchRepositoryCandidatesToolResponse searchRepositoryCandidates(
             @ToolParam(required = false, description = "One or more candidate GitLab project paths inside the resolved GitLab group. Relative subgroup segments are allowed.")
             List<String> projectNames,
+            @ToolParam(required = false, description = "Optional repository path prefixes from operational-context codeSearchScopes. When set, search returns only files under these relative GitLab paths.")
+            List<String> pathPrefixes,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
             @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
@@ -504,11 +508,12 @@ public class GitLabMcpTools {
     ) {
         var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
         var safeProjectNames = defaultList(projectNames);
+        var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var safeKeywords = defaultList(keywords);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} keywords={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} keywords={}",
                 SEARCH_REPOSITORY_CANDIDATES,
                 scope.runReference(),
                 scope.group(),
@@ -518,6 +523,7 @@ public class GitLabMcpTools {
                 scope.copilotSessionId(),
                 scope.toolCallId(),
                 abbreviateList(safeProjectNames),
+                abbreviateList(safePathPrefixes),
                 abbreviateList(safeOperationNames),
                 abbreviateList(safeKeywords)
         );
@@ -528,7 +534,8 @@ public class GitLabMcpTools {
                 scope.branch(),
                 safeProjectNames,
                 safeOperationNames,
-                safeKeywords
+                safeKeywords,
+                safePathPrefixes
         );
         var candidates = gitLabRepositoryPort.searchCandidateFiles(query);
 
@@ -1263,12 +1270,15 @@ public class GitLabMcpTools {
                     Finds files in the resolved GitLab group and explicit branchRef that declare, import or directly use a grounded class.
                     Use this when an exception, stacktrace or deterministic code evidence points to an entity, repository, DTO,
                     mapper, validator or client class and you need surrounding code to infer repository predicates, JPA/table hints,
-                    direct relations or the broader flow before DB diagnostics.
+                    direct relations or the broader flow before DB diagnostics. Use pathPrefixes from operational-context
+                    codeSearchScopes to restrict a search to curated modules inside a repository.
                     """
     )
     public GitLabFindClassReferencesToolResponse findClassReferences(
             @ToolParam(required = false, description = "Candidate GitLab project paths inside the resolved GitLab group.")
             List<String> projectNames,
+            @ToolParam(required = false, description = "Optional repository path prefixes from operational-context codeSearchScopes. When set, search returns only files under these relative GitLab paths.")
+            List<String> pathPrefixes,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
             @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
@@ -1287,6 +1297,7 @@ public class GitLabMcpTools {
     ) {
         var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
         var safeProjectNames = defaultList(projectNames);
+        var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(joinLists(
                 classReferenceKeywords(className),
@@ -1295,7 +1306,7 @@ public class GitLabMcpTools {
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} pathPrefixes={} operationNames={} searchKeywords={} maxFilesPerRole={}",
                 FIND_CLASS_REFERENCES,
                 scope.runReference(),
                 scope.group(),
@@ -1306,6 +1317,7 @@ public class GitLabMcpTools {
                 scope.toolCallId(),
                 className,
                 abbreviateList(safeProjectNames),
+                abbreviateList(safePathPrefixes),
                 abbreviateList(safeOperationNames),
                 abbreviateList(searchKeywords),
                 effectiveMaxFilesPerRole
@@ -1317,7 +1329,8 @@ public class GitLabMcpTools {
                 scope.branch(),
                 safeProjectNames,
                 safeOperationNames,
-                searchKeywords
+                searchKeywords,
+                safePathPrefixes
         ));
         var flowCandidates = toFlowContextCandidates(candidates);
         var groups = groupFlowCandidates(flowCandidates, effectiveMaxFilesPerRole);
@@ -1352,12 +1365,15 @@ public class GitLabMcpTools {
                     or technical flow around a failing class, method, entity, repository method, endpoint, queue, message type or integration keyword.
                     Returns grouped candidates by likely role: entrypoint, service/orchestrator, repository, mapper, validator,
                     downstream client, listener, scheduler, outbox/event handler, entity or configuration.
-                    Use when the local error is known but the broader affected function is not yet clear.
+                    Use when the local error is known but the broader affected function is not yet clear. Use pathPrefixes from
+                    operational-context codeSearchScopes to restrict a search to curated modules inside a repository.
                     """
     )
     public GitLabFindFlowContextToolResponse findFlowContext(
             @ToolParam(required = false, description = "Candidate GitLab project paths inside the resolved GitLab group.")
             List<String> projectNames,
+            @ToolParam(required = false, description = "Optional repository path prefixes from operational-context codeSearchScopes. When set, search returns only files under these relative GitLab paths.")
+            List<String> pathPrefixes,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
             @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
@@ -1374,12 +1390,13 @@ public class GitLabMcpTools {
     ) {
         var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
         var safeProjectNames = defaultList(projectNames);
+        var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(defaultList(keywords));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} operationNames={} searchKeywords={} maxFilesPerRole={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} searchKeywords={} maxFilesPerRole={}",
                 FIND_FLOW_CONTEXT,
                 scope.runReference(),
                 scope.group(),
@@ -1389,6 +1406,7 @@ public class GitLabMcpTools {
                 scope.copilotSessionId(),
                 scope.toolCallId(),
                 abbreviateList(safeProjectNames),
+                abbreviateList(safePathPrefixes),
                 abbreviateList(safeOperationNames),
                 abbreviateList(searchKeywords),
                 effectiveMaxFilesPerRole
@@ -1400,7 +1418,8 @@ public class GitLabMcpTools {
                 scope.branch(),
                 safeProjectNames,
                 safeOperationNames,
-                searchKeywords
+                searchKeywords,
+                safePathPrefixes
         ));
         var flowCandidates = toFlowContextCandidates(candidates);
         var groups = groupFlowCandidates(flowCandidates, effectiveMaxFilesPerRole);

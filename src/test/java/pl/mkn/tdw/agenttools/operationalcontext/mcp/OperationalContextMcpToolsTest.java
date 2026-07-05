@@ -355,6 +355,7 @@ class OperationalContextMcpToolsTest {
                         "repoId", "notifications-service",
                         "role", "primary",
                         "priority", 1,
+                        "searchMode", "whole-repository",
                         "reason", "Primary repository."
                 )),
                 "limitations", List.of("Generated clients are partial.")

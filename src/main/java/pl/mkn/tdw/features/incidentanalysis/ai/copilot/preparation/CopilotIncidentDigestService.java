@@ -132,12 +132,16 @@ public class CopilotIncidentDigestService {
         var repositoryReasons = distinct(operationalContext.systems().stream()
                 .flatMap(system -> system.codeSearchRepositoryReasons().stream())
                 .toList());
+        var repositorySearchBoundaries = distinct(operationalContext.systems().stream()
+                .flatMap(system -> system.codeSearchRepositorySearchBoundaries().stream())
+                .toList());
 
         addListValue(lines, "matched systems", systems);
         addListValue(lines, "code search scopes", scopeIds);
         addListValue(lines, "GitLab projects to search as one semantic implementation scope", projects);
         addListValue(lines, "code search repository roles", repositoryRoles.stream().limit(8).toList());
         addListValue(lines, "code search repository reasons", repositoryReasons.stream().limit(8).toList());
+        addListValue(lines, "code search repository search boundaries", repositorySearchBoundaries.stream().limit(8).toList());
         lines.add("");
     }
 

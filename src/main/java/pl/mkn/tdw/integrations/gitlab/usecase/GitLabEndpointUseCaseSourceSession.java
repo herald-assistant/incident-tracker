@@ -100,7 +100,8 @@ public final class GitLabEndpointUseCaseSourceSession {
                     repository.branch(),
                     List.of(repository.projectName()),
                     List.of(),
-                    normalizedKeywords
+                    normalizedKeywords,
+                    List.of()
             ));
             return result != null ? List.copyOf(result) : List.of();
         });

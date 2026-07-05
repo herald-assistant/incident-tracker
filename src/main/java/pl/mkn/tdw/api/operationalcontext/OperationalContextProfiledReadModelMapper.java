@@ -254,6 +254,8 @@ class OperationalContextProfiledReadModelMapper {
                         "priority", repository.priority(),
                         "reason", repository.reason(),
                         "readFor", repository.readFor(),
+                        "searchMode", repository.searchMode(),
+                        "pathPrefixes", repository.pathPrefixes(),
                         "git", map(
                                 "provider", repository.git().provider(),
                                 "group", repository.git().group(),
@@ -279,7 +281,7 @@ class OperationalContextProfiledReadModelMapper {
                 ),
                 readModelLinks(expanded.analysisTarget(), "code-search"),
                 List.of("profile=expanded"),
-                List.of("Use returned repositories as the GitLab search/read scope."),
+                List.of("Use returned repositories as the GitLab search/read scope and respect repository searchMode/pathPrefixes."),
                 List.of("gitlab_list_available_repositories", "gitlab_search_repository_candidates"),
                 "Expanded profile returns all repositories and scopes.",
                 List.of(),

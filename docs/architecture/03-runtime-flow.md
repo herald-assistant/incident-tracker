@@ -283,10 +283,11 @@ Manifest zawiera:
 Digest zawiera skompresowane fakty sesji, coverage, log signals, deployment,
 operational code search scope, runtime, code highlights i znane luki evidence.
 Operational code search scope pokazuje `codeSearchScopes`, projekty GitLaba,
-role repozytoriow, `reason` i `readFor` z operational context. Te dane
-okreslaja, ktore repozytoria nalezy przeszukiwac razem dla dopasowanego
-systemu, procesu albo bounded contextu; konkretne klasy, endpointy i sciezki
-kodu sa odkrywane przez GitLab tools.
+role repozytoriow, `reason`, `readFor` oraz search boundary
+`searchMode/pathPrefixes` z operational context. Te dane okreslaja, ktore
+repozytoria nalezy przeszukiwac razem dla dopasowanego systemu, procesu albo
+bounded contextu i czy search ma objac cale repo, czy tylko wskazane prefixy.
+Konkretne klasy, endpointy i pliki sa odkrywane przez GitLab tools.
 
 `itemId` sa stabilne tylko w renderingu Copilota. Nie zmieniaja publicznego
 kontraktu `AnalysisEvidenceItem`.
@@ -353,15 +354,18 @@ GitLab tools:
   krotki summary oraz sygnaly dopasowania, m.in. aliases, systems,
   boundedContexts, processes i integrations. Zwraca tez `codeSearchScopes`,
   czyli gotowe grupy repozytoriow z rolami, priorytetami, `reason`, `readFor`
-  i lista `projectName` do wspolnego przeszukania; `projectName` z odpowiedzi
-  jest inputem dla pozostalych GitLab tools,
+  oraz `searchMode/pathPrefixes`; `projectName` z odpowiedzi jest inputem dla
+  pozostalych GitLab tools, a `pathPrefixes` ogranicza
+  search/flow/class-reference tools,
 - broad search zostaje dla braku deterministic GitLab evidence,
 - `gitlab_find_flow_context` przyjmuje focused `keywords`, bez osobnych
   parametrow klasy/metody/pliku.
 - gdy operational context wskazuje `codeSearchScopes`, `codeSearchProjects`
   albo kilka repo dopasowanego systemu, Copilot ma traktowac te projekty jako
   jeden scope kodu systemu i wykonac focused probe takze po
-  bibliotekach/shared repozytoriach zanim uzna klase za niedostepna.
+  bibliotekach/shared repozytoriach zanim uzna klase za niedostepna. Jezeli
+  repozytoria w scope maja rozne `pathPrefixes`, Copilot wykonuje osobne
+  focused calle per repozytorium/granica.
 
 DB tools:
 

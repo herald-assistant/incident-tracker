@@ -105,6 +105,7 @@ class OperationalContextControllerTest {
                 "active",
                 emptyAggregate("Target"),
                 emptyAggregate("Repositories"),
+                emptyAggregate("Search boundary"),
                 emptyAggregate("Limitations"),
                 emptyAggregate("Validation")
         )));

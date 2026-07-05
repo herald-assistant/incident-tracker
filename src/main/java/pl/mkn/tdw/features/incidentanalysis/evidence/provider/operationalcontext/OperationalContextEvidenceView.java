@@ -50,6 +50,7 @@ public record OperationalContextEvidenceView(
     static final String ATTRIBUTE_CODE_SEARCH_PROJECTS = "codeSearchProjects";
     static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES = "codeSearchRepositoryRoles";
     static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_REASONS = "codeSearchRepositoryReasons";
+    static final String ATTRIBUTE_CODE_SEARCH_REPOSITORY_SEARCH_BOUNDARIES = "codeSearchRepositorySearchBoundaries";
     static final String ATTRIBUTE_MATCHED_BY = "matchedBy";
     static final String ATTRIBUTE_SOURCE_SYSTEM = "sourceSystem";
     static final String ATTRIBUTE_TARGET_SYSTEMS = "targetSystems";
@@ -132,6 +133,7 @@ public record OperationalContextEvidenceView(
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_PROJECTS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_ROLES)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_REASONS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CODE_SEARCH_REPOSITORY_SEARCH_BOUNDARIES)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
                 ));
                 continue;
@@ -345,6 +347,7 @@ public record OperationalContextEvidenceView(
             List<String> codeSearchProjects,
             List<String> codeSearchRepositoryRoles,
             List<String> codeSearchRepositoryReasons,
+            List<String> codeSearchRepositorySearchBoundaries,
             List<String> matchedBy
     ) {
         public SystemItem {
@@ -362,6 +365,7 @@ public record OperationalContextEvidenceView(
             codeSearchProjects = immutable(codeSearchProjects);
             codeSearchRepositoryRoles = immutable(codeSearchRepositoryRoles);
             codeSearchRepositoryReasons = immutable(codeSearchRepositoryReasons);
+            codeSearchRepositorySearchBoundaries = immutable(codeSearchRepositorySearchBoundaries);
             matchedBy = immutable(matchedBy);
         }
     }

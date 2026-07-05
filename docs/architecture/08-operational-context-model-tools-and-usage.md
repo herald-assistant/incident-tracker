@@ -38,7 +38,8 @@ przez dedykowane tools oraz repozytoria zrodlowe.
   szczegolowych kontraktow transportu, payloadow ani implementacji klientow.
 - `code-search-scopes.yml` wskazuje semantyczny scope repozytoriow:
   `repoId`, `projectName`/`projectPath`, `role`, `priority`, `reason`,
-  `readFor`, limitations i validation.
+  `readFor`, `searchMode`, opcjonalne `pathPrefixes`, limitations i
+  validation.
 - Incident analysis jest pierwszym feature'em korzystajacym z katalogu, ale
   model i tools pozostaja neutralne.
 - Feature-specific zasady uzycia katalogu mieszkaja w policy/guidance feature'a
@@ -183,17 +184,24 @@ code-search scope.
 ### Code Search Scope
 
 Code search scope grupuje repozytoria, ktore trzeba czytac razem. To jest
-semantyczny kontrakt wyboru repozytoriow, nie instrukcja szukania po klasach.
+semantyczny kontrakt wyboru repozytoriow oraz coarse search boundary, nie
+instrukcja szukania po klasach.
 
 Repozytorium w scope powinno miec:
 
 - `repoId`,
 - `role`,
 - `priority`,
+- `searchMode`: `whole-repository` albo `path-prefixes`,
+- `pathPrefixes`, wymagane tylko dla `searchMode=path-prefixes`,
 - `reason`,
 - `readFor`,
 - `projectName` albo `projectPath`, jezeli sa znane,
 - optional limitations/validation.
+
+`pathPrefixes` sa relatywnymi sciezkami GitLaba bez wiodacego `/`. Opisuja
+moduly/prefixy katalogow, ktore naleza do semantycznego targetu w duzym
+repozytorium. Nie sa lista klas, endpointow, plikow ani pakietow.
 
 Dozwolone role powinny opisywac relacje w analizie, np. `primary`, `support`,
 `shared-library`, `migration-peer`, `external-adapter`. Nie uzywamy roli jako
@@ -352,11 +360,14 @@ Tool moze zwrocic:
 - `projectName`, `gitLabPath`, aliases i summary repozytorium,
 - references do systems, bounded contexts, processes i integrations,
 - `codeSearchScopes` z targetem semantycznym, rolami repozytoriow,
-  priorytetem, `reason`, `readFor` i lista projektow.
+  priorytetem, `reason`, `readFor`, `searchMode`, `pathPrefixes` i lista
+  projektow.
 
-Tool nie zwraca technicznych prefiksow, sciezek, hintow klas ani traversal
-rules. Po wyborze repozytorium model uzywa GitLab search/read tools do
-odkrywania faktycznego kodu.
+Model uzywa `searchMode/pathPrefixes` jako jawnej granicy dla GitLab
+search/flow/class-reference tools. Gdy repozytoria w jednym scope maja rozne
+granice, model powinien wykonac osobne focused calls dla repozytoriow/prefixow,
+zamiast mieszac niezgodne prefixy w jednym zapytaniu. Po wyborze repozytorium
+model uzywa GitLab search/read tools do odkrywania faktycznego kodu.
 
 ## Incident Analysis Usage
 
@@ -412,6 +423,10 @@ Walidacja katalogu powinna pilnowac:
 - duplicate references,
 - code-search scope bez targetu albo repozytorium,
 - unknown code-search repository,
+- code-search repository bez `searchMode`,
+- `searchMode=path-prefixes` bez `pathPrefixes`,
+- `searchMode=whole-repository` z `pathPrefixes`,
+- niepoprawne `pathPrefixes`,
 - `ownership` poza `system` i `bounded-context`,
 - ownera zapisanego jako inferowany zamiast jawnie potwierdzonego,
 - open questions dla realnych luk widocznosci.
@@ -433,6 +448,7 @@ UI pokazuje:
 - detail encji,
 - relations,
 - code-search scopes,
+- search boundary dla code-search scopes,
 - open questions.
 
 UI nie utrzymuje kompatybilnosci ze starym payloadem i nie renderuje
@@ -458,7 +474,8 @@ Nie przywracaj:
 
 - osobnego canonical runtime component obok `system`,
 - inline scope'u kodu pod systemem,
-- repository source layout albo module inventory,
+- repository source layout albo module inventory poza coarse
+  `searchMode/pathPrefixes` w `code-search-scopes.yml`,
 - technicznych hintow kodu/API,
 - detailed transport/payload/operation inventory integracji,
 - technicznych projekcji implementacji, flow i impact jako operational

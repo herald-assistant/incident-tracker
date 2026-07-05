@@ -69,6 +69,7 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     public List<GitLabRepositoryFileCandidate> searchCandidateFiles(GitLabRepositorySearchQuery query) {
         var projectNames = resolveProjectSearchTargets(query.group(), query.projectNames());
         var searchTerms = distinctSearchTerms(query.keywords(), query.operationNames());
+        var pathPrefixes = distinctPathPrefixes(query.pathPrefixes());
 
         if (projectNames.isEmpty() || searchTerms.isEmpty()) {
             return List.of();
@@ -79,6 +80,9 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         for (var projectName : projectNames) {
             for (var searchTerm : searchTerms) {
                 for (var blobMatch : searchProjectBlobs(query.group(), projectName, query.branch(), searchTerm)) {
+                    if (!matchesPathPrefixes(blobMatch.path(), pathPrefixes)) {
+                        continue;
+                    }
                     var key = projectName + "::" + blobMatch.path();
                     candidateScores.computeIfAbsent(
                                     key,
@@ -546,6 +550,43 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         }
 
         return List.copyOf(values);
+    }
+
+    private List<String> distinctPathPrefixes(List<String> pathPrefixes) {
+        var values = new LinkedHashSet<String>();
+
+        for (var pathPrefix : pathPrefixes != null ? pathPrefixes : List.<String>of()) {
+            if (!StringUtils.hasText(pathPrefix)) {
+                continue;
+            }
+
+            var normalized = pathPrefix.trim().replace('\\', '/');
+            while (normalized.startsWith("/")) {
+                normalized = normalized.substring(1);
+            }
+            while (normalized.endsWith("/")) {
+                normalized = normalized.substring(0, normalized.length() - 1);
+            }
+            if (StringUtils.hasText(normalized)) {
+                values.add(normalized);
+            }
+        }
+
+        return List.copyOf(values);
+    }
+
+    private boolean matchesPathPrefixes(String filePath, List<String> pathPrefixes) {
+        if (pathPrefixes.isEmpty()) {
+            return true;
+        }
+        if (!StringUtils.hasText(filePath)) {
+            return false;
+        }
+
+        var normalizedPath = filePath.trim().replace('\\', '/');
+        return pathPrefixes.stream().anyMatch(prefix ->
+                normalizedPath.equals(prefix) || normalizedPath.startsWith(prefix + "/")
+        );
     }
 
     private List<String> distinctProjectSearchTokens(String group, List<String> projectHints) {

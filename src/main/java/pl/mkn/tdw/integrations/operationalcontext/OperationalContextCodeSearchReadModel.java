@@ -88,6 +88,8 @@ public record OperationalContextCodeSearchReadModel(
             Integer priority,
             String reason,
             List<String> readFor,
+            String searchMode,
+            List<String> pathPrefixes,
             GitView git,
             OperationalContextRelationIndex.Provenance provenance
     ) {
@@ -96,6 +98,8 @@ public record OperationalContextCodeSearchReadModel(
             role = textOrDefault(role, "referenced");
             reason = text(reason);
             readFor = copyTextList(readFor);
+            searchMode = text(searchMode);
+            pathPrefixes = copyTextList(pathPrefixes);
             git = git != null ? git : GitView.empty();
         }
     }

@@ -179,6 +179,7 @@ public final class OperationalContextDtos {
             String lifecycleStatus,
             ExplainableAggregateDto target,
             ExplainableAggregateDto repositories,
+            ExplainableAggregateDto searchBoundary,
             ExplainableAggregateDto limitations,
             ExplainableAggregateDto validation
     ) {

@@ -332,7 +332,8 @@ class OperationalContextRelationIndexBuilderTest {
                         "repositories", List.of(map(
                                 "repoId", "crm-customer-service-repo",
                                 "role", "primary",
-                                "priority", 1
+                                "priority", 1,
+                                "searchMode", "whole-repository"
                         ))
                 )),
                 List.of(map(
