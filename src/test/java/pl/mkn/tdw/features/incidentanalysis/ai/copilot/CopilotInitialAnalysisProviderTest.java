@@ -49,7 +49,7 @@ class CopilotInitialAnalysisProviderTest {
                                 "elasticsearch",
                                 "logs",
                                 List.of(new AnalysisEvidenceItem(
-                                        "crm-catalog-service log entry",
+                                        "crm-customer-profile-service log entry",
                                         List.of(
                                                 new AnalysisEvidenceAttribute("level", "ERROR"),
                                                 new AnalysisEvidenceAttribute("message", "Read timed out while calling crm-customer-profile-service")
@@ -87,9 +87,9 @@ class CopilotInitialAnalysisProviderTest {
         when(executionGateway.execute(same(preparedRequest))).thenReturn(executionResult("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "affectedProcess": "Rozliczenie klienta",
-                  "affectedBoundedContext": "Catalog Context",
-                  "affectedTeam": "Core Integration Team",
+                  "affectedProcess": "Profil klienta CRM",
+                  "affectedBoundedContext": "CRM Customer Context",
+                  "affectedTeam": "CRM Customer Team",
                   "functionalAnalysis": "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu customer-profile.",
                   "technicalAnalysis": "Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.",
                   "confidence": "high",
@@ -112,9 +112,9 @@ class CopilotInitialAnalysisProviderTest {
                 "Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.",
                 response.technicalAnalysis()
         );
-        assertEquals("Rozliczenie klienta", response.affectedProcess());
-        assertEquals("Catalog Context", response.affectedBoundedContext());
-        assertEquals("Core Integration Team", response.affectedTeam());
+        assertEquals("Profil klienta CRM", response.affectedProcess());
+        assertEquals("CRM Customer Context", response.affectedBoundedContext());
+        assertEquals("CRM Customer Team", response.affectedTeam());
         assertEquals("high", response.confidence());
         assertEquals("Prepared prompt for timeout-123", response.prompt());
 
@@ -140,9 +140,9 @@ class CopilotInitialAnalysisProviderTest {
 
         assertEquals("copilot-sdk", response.providerName());
         assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
-        assertEquals("Rozliczenie klienta", response.affectedProcess());
-        assertEquals("Catalog Context", response.affectedBoundedContext());
-        assertEquals("Core Integration Team", response.affectedTeam());
+        assertEquals("Profil klienta CRM", response.affectedProcess());
+        assertEquals("CRM Customer Context", response.affectedBoundedContext());
+        assertEquals("CRM Customer Team", response.affectedTeam());
         assertEquals("Functional report section.", response.functionalAnalysis());
         assertEquals("Technical handoff section.", response.technicalAnalysis());
         assertEquals("medium", response.confidence());
@@ -251,8 +251,8 @@ class CopilotInitialAnalysisProviderTest {
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
                   "affectedProcess": "Orders",
-                  "affectedBoundedContext": "Ordering",
-                  "affectedTeam": "Orders Team",
+                  "affectedBoundedContext": "CRM Customer Context",
+                  "affectedTeam": "CRM Customer Team",
                   "functionalAnalysis": "Timeout is visible in the downstream call path.",
                   "confidence": "low",
                   "visibilityLimits": []
@@ -268,8 +268,8 @@ class CopilotInitialAnalysisProviderTest {
                 response.technicalAnalysis()
         );
         assertEquals("Orders", response.affectedProcess());
-        assertEquals("Ordering", response.affectedBoundedContext());
-        assertEquals("Orders Team", response.affectedTeam());
+        assertEquals("CRM Customer Context", response.affectedBoundedContext());
+        assertEquals("CRM Customer Team", response.affectedTeam());
     }
 
     private CopilotInitialAnalysisProvider provider(
@@ -312,9 +312,9 @@ class CopilotInitialAnalysisProviderTest {
                 ),
                 new AnalysisReportMeta(
                         List.of(
-                                new AnalysisReportReference("process", "Rozliczenie klienta", null, null),
-                                new AnalysisReportReference("boundedContext", "Catalog Context", null, null),
-                                new AnalysisReportReference("team", "Core Integration Team", null, null)
+                                new AnalysisReportReference("process", "Profil klienta CRM", null, null),
+                                new AnalysisReportReference("boundedContext", "CRM Customer Context", null, null),
+                                new AnalysisReportReference("team", "CRM Customer Team", null, null)
                         ),
                         List.of("Limited log window."),
                         List.of(),

@@ -59,7 +59,7 @@ class OperationalContextOwnershipResolverTest {
     void shouldInferSystemOwnerWhenExplicitOwnerIsMissing() {
         var resolution = resolver.resolve(sampleCatalog(), new OperationalContextOwnershipRequest(
                 null,
-                List.of("billing-gateway"),
+                List.of("crm-case-gateway"),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -67,8 +67,8 @@ class OperationalContextOwnershipResolverTest {
         ));
 
         assertEquals(INSIDE_SYSTEM, resolution.situationType());
-        assertEquals("billing-gateway", resolution.primaryOwners().get(0).targetId());
-        assertEquals("wlasciciel systemu Billing Gateway", resolution.primaryOwners().get(0).ownerLabel());
+        assertEquals("crm-case-gateway", resolution.primaryOwners().get(0).targetId());
+        assertEquals("wlasciciel systemu CRM Case Gateway", resolution.primaryOwners().get(0).ownerLabel());
         assertEquals(SOURCE_INFERRED_FROM_TARGET_NAME, resolution.primaryOwners().get(0).source());
         assertTrue(resolution.visibilityLimits().stream()
                 .anyMatch(limit -> limit.contains("has no explicit owner")));
@@ -157,8 +157,8 @@ class OperationalContextOwnershipResolverTest {
                                 "ownership", ownership(List.of(), "wlasciciel systemu Salesforce", "medium")
                         ),
                         map(
-                                "id", "billing-gateway",
-                                "name", "Billing Gateway"
+                                "id", "crm-case-gateway",
+                                "name", "CRM Case Gateway"
                         )
                 ),
                 List.of(),

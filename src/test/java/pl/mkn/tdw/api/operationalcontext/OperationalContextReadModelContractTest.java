@@ -20,8 +20,8 @@ class OperationalContextReadModelContractTest {
     void shouldKeepReadModelPayloadsFocusedOnRelationsAndCodeSearch() {
         var service = new OperationalContextViewService(port(typicalCatalog()));
 
-        var relations = service.entityRelationsReadModel("system", "agreement-service");
-        var codeSearch = service.codeSearchReadModel("system", "agreement-service");
+        var relations = service.entityRelationsReadModel("system", "crm-consent-service");
+        var codeSearch = service.codeSearchReadModel("system", "crm-consent-service");
 
         assertEquals("operational-context.entity-relations", relations.contract());
         assertEquals(List.of(
@@ -46,9 +46,9 @@ class OperationalContextReadModelContractTest {
                 "validationFindings"
         ), fieldNames(codeSearch));
         assertTrue(codeSearch.scopes().stream()
-                .anyMatch(scope -> scope.scope().id().equals("agreement-service-scope")));
+                .anyMatch(scope -> scope.scope().id().equals("crm-consent-service-scope")));
         assertTrue(codeSearch.repositories().stream()
-                .anyMatch(repository -> repository.repository().id().equals("agreement-repo")));
+                .anyMatch(repository -> repository.repository().id().equals("crm-consent-repo")));
     }
 
     @Test
@@ -57,17 +57,17 @@ class OperationalContextReadModelContractTest {
 
         var compactEntity = (OperationalContextProfiledReadModelDto) service.entity(
                 "system",
-                "agreement-service",
+                "crm-consent-service",
                 "default"
         );
         var compactRelations = (OperationalContextProfiledReadModelDto) service.entityRelationsReadModel(
                 "system",
-                "agreement-service",
+                "crm-consent-service",
                 "default"
         );
         var compactCodeSearch = (OperationalContextProfiledReadModelDto) service.codeSearchReadModel(
                 "system",
-                "agreement-service",
+                "crm-consent-service",
                 "default"
         );
 
@@ -97,12 +97,12 @@ class OperationalContextReadModelContractTest {
         var service = new OperationalContextViewService(port(typicalCatalog()));
 
         assertEquals(
-                objectMapper.valueToTree(service.entityRelationsReadModel("system", "agreement-service")),
-                objectMapper.valueToTree(service.entityRelationsReadModel("system", "agreement-service", "expanded"))
+                objectMapper.valueToTree(service.entityRelationsReadModel("system", "crm-consent-service")),
+                objectMapper.valueToTree(service.entityRelationsReadModel("system", "crm-consent-service", "expanded"))
         );
         assertEquals(
-                objectMapper.valueToTree(service.codeSearchReadModel("system", "agreement-service")),
-                objectMapper.valueToTree(service.codeSearchReadModel("system", "agreement-service", "expanded"))
+                objectMapper.valueToTree(service.codeSearchReadModel("system", "crm-consent-service")),
+                objectMapper.valueToTree(service.codeSearchReadModel("system", "crm-consent-service", "expanded"))
         );
     }
 

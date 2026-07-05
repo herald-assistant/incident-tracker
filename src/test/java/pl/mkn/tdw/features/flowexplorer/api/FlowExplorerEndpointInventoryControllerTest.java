@@ -34,31 +34,31 @@ class FlowExplorerEndpointInventoryControllerTest {
     @Test
     void shouldReturnEndpointInventoryForSystem() throws Exception {
         when(flowExplorerEndpointInventoryService.endpoints(
-                "catalog-core",
+                "crm-customer-profile",
                 "feature/FLOW-42",
                 "/api",
                 "get",
                 false
         )).thenReturn(inventory());
 
-        mockMvc.perform(get("/api/flow-explorer/systems/catalog-core/endpoints")
+        mockMvc.perform(get("/api/flow-explorer/systems/crm-customer-profile/endpoints")
                         .param("branch", "feature/FLOW-42")
                         .param("endpointPathPrefix", "/api")
                         .param("httpMethod", "get"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.systemId").value("catalog-core"))
+                .andExpect(jsonPath("$.systemId").value("crm-customer-profile"))
                 .andExpect(jsonPath("$.requestedBranch").value("feature/FLOW-42"))
                 .andExpect(jsonPath("$.resolvedRef").value("feature/FLOW-42"))
                 .andExpect(jsonPath("$.gitLabGroup").value("platform/backend"))
                 .andExpect(jsonPath("$.repositories", hasSize(1)))
                 .andExpect(jsonPath("$.endpoints", hasSize(1)))
                 .andExpect(jsonPath("$.endpoints[0].method").value("GET"))
-                .andExpect(jsonPath("$.endpoints[0].path").value("/api/catalog/{id}"))
+                .andExpect(jsonPath("$.endpoints[0].path").value("/api/crm/customers/{customerId}/profile"))
                 .andExpect(jsonPath("$.endpoints[0].tooltipDetails.parameters[0].description")
-                        .value("catalog item id"));
+                        .value("customer profile id"));
 
         verify(flowExplorerEndpointInventoryService).endpoints(
-                "catalog-core",
+                "crm-customer-profile",
                 "feature/FLOW-42",
                 "/api",
                 "get",
@@ -69,20 +69,20 @@ class FlowExplorerEndpointInventoryControllerTest {
     @Test
     void shouldPassRefreshFlagToEndpointInventoryService() throws Exception {
         when(flowExplorerEndpointInventoryService.endpoints(
-                "catalog-core",
+                "crm-customer-profile",
                 "main",
                 null,
                 null,
                 true
         )).thenReturn(inventory());
 
-        mockMvc.perform(get("/api/flow-explorer/systems/catalog-core/endpoints")
+        mockMvc.perform(get("/api/flow-explorer/systems/crm-customer-profile/endpoints")
                         .param("branch", "main")
                         .param("refresh", "true"))
                 .andExpect(status().isOk());
 
         verify(flowExplorerEndpointInventoryService).endpoints(
-                "catalog-core",
+                "crm-customer-profile",
                 "main",
                 null,
                 null,
@@ -111,10 +111,10 @@ class FlowExplorerEndpointInventoryControllerTest {
                 "path",
                 true,
                 "string",
-                "catalog item id"
+                "customer profile id"
         );
         return new FlowExplorerEndpointInventoryResponse(
-                "catalog-core",
+                "crm-customer-profile",
                 "feature/FLOW-42",
                 "feature/FLOW-42",
                 "platform/backend",
@@ -127,9 +127,9 @@ class FlowExplorerEndpointInventoryControllerTest {
                 2,
                 false,
                 List.of(new RepositoryInventoryResponse(
-                        "catalog-api",
-                        "catalog-api",
-                        "platform/backend/catalog-api",
+                        "crm-customer-profile-api",
+                        "crm-customer-profile-api",
+                        "platform/backend/crm-customer-profile-api",
                         "feature/FLOW-42",
                         3,
                         2,
@@ -138,41 +138,41 @@ class FlowExplorerEndpointInventoryControllerTest {
                         List.of()
                 )),
                 List.of(new EndpointOptionResponse(
-                        "catalog-api:GET /api/catalog/{id}",
+                        "crm-customer-profile-api:GET /api/crm/customers/{customerId}/profile",
                         "GET",
                         List.of("GET"),
-                        "/api/catalog/{id}",
-                        "/api/catalog/{id}",
-                        "Catalog lookup",
-                        "Returns catalog details.",
-                        "getCatalog",
-                        List.of("catalog"),
-                        "CatalogController",
-                        "getCatalog",
+                        "/api/crm/customers/{customerId}/profile",
+                        "/api/crm/customers/{customerId}/profile",
+                        "Customer profile lookup",
+                        "Returns customer profile details.",
+                        "getCustomerProfile",
+                        List.of("crm-customer-profile"),
+                        "CustomerProfileController",
+                        "getCustomerProfile",
                         new EndpointSourceResponse(
-                                "catalog-api",
-                                "catalog-api",
-                                "platform/backend/catalog-api",
-                                "src/main/java/com/example/catalog/CatalogController.java",
+                                "crm-customer-profile-api",
+                                "crm-customer-profile-api",
+                                "platform/backend/crm-customer-profile-api",
+                                "src/main/java/com/example/crm/customerprofile/CustomerProfileController.java",
                                 12,
                                 24
                         ),
                         List.of(parameter),
                         "high",
                         List.of(),
-                        List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java"),
+                        List.of("crm-customer-profile-api:src/main/java/com/example/crm/customerprofile/CustomerProfileController.java"),
                         new EndpointTooltipDetailsResponse(
                                 "OPENAPI_YAML",
-                                "Catalog lookup",
-                                "Returns catalog details.",
-                                "getCatalog",
-                                List.of("catalog"),
+                                "Customer profile lookup",
+                                "Returns customer profile details.",
+                                "getCustomerProfile",
+                                List.of("crm-customer-profile"),
                                 List.of(parameter),
-                                List.of("@PathVariable String id"),
-                                List.of("CatalogResponse"),
+                                List.of("@PathVariable String customerId"),
+                                List.of("CustomerProfileResponse"),
                                 List.of("RestController", "GetMapping"),
                                 List.of(),
-                                List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java")
+                                List.of("crm-customer-profile-api:src/main/java/com/example/crm/customerprofile/CustomerProfileController.java")
                         )
                 )),
                 List.of()

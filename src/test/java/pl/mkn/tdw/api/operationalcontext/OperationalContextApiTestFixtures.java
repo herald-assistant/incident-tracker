@@ -29,172 +29,172 @@ final class OperationalContextApiTestFixtures {
                 List.of(map(
                         "id", "team-a",
                         "name", "Team A",
-                        "purpose", "Owns agreement analysis context.",
+                        "purpose", "Owns customer consent analysis context.",
                         "references", map(
-                                "systems", List.of("agreement-service"),
-                                "repositories", List.of("agreement-repo"),
-                                "processes", List.of("agreement-submit-process"),
-                                "boundedContexts", List.of("agreement-context"),
-                                "integrations", List.of("agreement-partner-handoff")
+                                "systems", List.of("crm-consent-service"),
+                                "repositories", List.of("crm-consent-repo"),
+                                "processes", List.of("customer-consent-capture-process"),
+                                "boundedContexts", List.of("customer-consent-context"),
+                                "integrations", List.of("customer-consent-registry-handoff")
                         )
                 )),
                 List.of(map(
-                        "id", "agreement-submit-process",
-                        "name", "Agreement Submit",
-                        "summary", "Business process for submitting an agreement.",
+                        "id", "customer-consent-capture-process",
+                        "name", "Customer Consent Capture",
+                        "summary", "Business process for capturing customer consent.",
                         "participants", map(
-                                "primarySystems", List.of("agreement-service"),
-                                "externalSystems", List.of("partner-system")
+                                "primarySystems", List.of("crm-consent-service"),
+                                "externalSystems", List.of("consent-registry")
                         ),
                         "references", map(
-                                "systems", List.of("agreement-service"),
-                                "repositories", List.of("agreement-repo"),
-                                "boundedContexts", List.of("agreement-context"),
+                                "systems", List.of("crm-consent-service"),
+                                "repositories", List.of("crm-consent-repo"),
+                                "boundedContexts", List.of("customer-consent-context"),
                                 "teams", List.of("team-a")
                         ),
                         "processSteps", List.of(map(
-                                "id", "submit",
-                                "name", "Submit agreement",
-                                "summary", "Validates and passes the agreement to partner handoff."
+                                "id", "capture",
+                                "name", "Capture customer consent",
+                                "summary", "Validates customer consent and passes it to registry handoff."
                         )),
-                        "processBoundary", map("successArtifacts", List.of("agreement accepted"))
+                        "processBoundary", map("successArtifacts", List.of("customer consent captured"))
                 )),
                 List.of(
                         map(
-                                "id", "agreement-service",
-                                "name", "Agreement Service",
+                                "id", "crm-consent-service",
+                                "name", "CRM Consent Service",
                                 "kind", "internal-application",
-                                "purpose", "Owns agreement submission decisions.",
-                                "aliases", List.of("agreements"),
+                                "purpose", "Owns customer consent capture decisions.",
+                                "aliases", List.of("consents"),
                                 "references", map(
-                                        "repositories", List.of("agreement-repo"),
-                                        "processes", List.of("agreement-submit-process"),
-                                        "boundedContexts", List.of("agreement-context"),
+                                        "repositories", List.of("crm-consent-repo"),
+                                        "processes", List.of("customer-consent-capture-process"),
+                                        "boundedContexts", List.of("customer-consent-context"),
                                         "teams", List.of("team-a")
                                 ),
                                 "ownership", ownership(List.of("team-a"), null, "high"),
-                                "matchSignals", map("exact", map("markers", List.of("agreement-service")))
+                                "matchSignals", map("exact", map("markers", List.of("crm-consent-service")))
                         ),
                         map(
-                                "id", "partner-system",
-                                "name", "Partner System",
+                                "id", "consent-registry",
+                                "name", "Consent Registry",
                                 "kind", "external-system",
-                                "purpose", "Receives accepted agreements."
+                                "purpose", "Receives captured customer consent records."
                         )
                 ),
                 List.of(map(
-                        "id", "agreement-partner-handoff",
-                        "name", "Agreement Partner Handoff",
+                        "id", "customer-consent-registry-handoff",
+                        "name", "Customer Consent Registry Handoff",
                         "category", "external-handoff",
-                        "summary", "Business handoff from agreement service to partner system.",
+                        "summary", "Business handoff from CRM consent service to consent registry.",
                         "integrationStyle", "synchronous-request",
                         "flowDirection", "outbound",
                         "participants", map(
-                                "source", map("system", "agreement-service"),
-                                "targets", List.of(map("system", "partner-system")),
-                                "finalTargets", List.of(map("system", "partner-system"))
+                                "source", map("system", "crm-consent-service"),
+                                "targets", List.of(map("system", "consent-registry")),
+                                "finalTargets", List.of(map("system", "consent-registry"))
                         ),
                         "references", map(
-                                "processes", List.of("agreement-submit-process"),
-                                "boundedContexts", List.of("agreement-context"),
+                                "processes", List.of("customer-consent-capture-process"),
+                                "boundedContexts", List.of("customer-consent-context"),
                                 "teams", List.of("team-a")
                         ),
-                        "matchSignals", map("strong", map("terms", List.of("partner-handoff")))
+                        "matchSignals", map("strong", map("terms", List.of("consent-registry-handoff")))
                 )),
                 List.of(map(
-                        "id", "agreement-repo",
-                        "name", "Agreement Repo",
-                        "summary", "Repository for agreement service source.",
+                        "id", "crm-consent-repo",
+                        "name", "CRM Consent Repo",
+                        "summary", "Repository for customer consent service source.",
                         "git", map(
                                 "provider", "gitlab",
                                 "group", "Group",
-                                "project", "agreement-service",
-                                "projectPath", "Group/agreement-service",
+                                "project", "crm-consent-service",
+                                "projectPath", "Group/crm-consent-service",
                                 "defaultBranch", "main"
                         ),
                         "references", map(
-                                "systems", List.of("agreement-service"),
-                                "processes", List.of("agreement-submit-process"),
-                                "boundedContexts", List.of("agreement-context"),
+                                "systems", List.of("crm-consent-service"),
+                                "processes", List.of("customer-consent-capture-process"),
+                                "boundedContexts", List.of("customer-consent-context"),
                                 "teams", List.of("team-a")
                         )
                 )),
                 List.of(
                         map(
-                                "id", "agreement-service-scope",
-                                "name", "Agreement Service Scope",
+                                "id", "crm-consent-service-scope",
+                                "name", "CRM Consent Service Scope",
                                 "scopeType", "system",
                                 "lifecycleStatus", "active",
-                                "summary", "Repository scope for the agreement service.",
-                                "target", map("type", "system", "id", "agreement-service"),
+                                "summary", "Repository scope for the CRM consent service.",
+                                "target", map("type", "system", "id", "crm-consent-service"),
                                 "useFor", List.of("business-analysis", "test-scenario-design"),
                                 "repositories", List.of(map(
-                                        "repoId", "agreement-repo",
+                                        "repoId", "crm-consent-repo",
                                         "role", "primary",
                                         "priority", 1,
-                                        "reason", "Main repository for agreement service analysis.",
+                                        "reason", "Main repository for customer consent service analysis.",
                                         "readFor", List.of("business logic")
                                 )),
-                                "limitations", List.of("Partner internals are outside this catalog.")
+                                "limitations", List.of("Consent registry internals are outside this catalog.")
                         ),
                         map(
-                                "id", "agreement-process-scope",
-                                "name", "Agreement Process Scope",
+                                "id", "customer-consent-process-scope",
+                                "name", "Customer Consent Process Scope",
                                 "scopeType", "process",
                                 "lifecycleStatus", "active",
-                                "summary", "Repository scope for the agreement submit process.",
-                                "target", map("type", "process", "id", "agreement-submit-process"),
+                                "summary", "Repository scope for the customer consent capture process.",
+                                "target", map("type", "process", "id", "customer-consent-capture-process"),
                                 "useFor", List.of("business-analysis"),
                                 "repositories", List.of(map(
-                                        "repoId", "agreement-repo",
+                                        "repoId", "crm-consent-repo",
                                         "role", "primary",
                                         "priority", 1,
-                                        "reason", "Main repository for agreement submit analysis.",
+                                        "reason", "Main repository for customer consent capture analysis.",
                                         "readFor", List.of("process rules")
                                 ))
                         )
                 ),
                 List.of(map(
-                        "id", "agreement-context",
-                        "name", "Agreement Context",
-                        "summary", "Bounded context for agreement decisions.",
+                        "id", "customer-consent-context",
+                        "name", "Customer Consent Context",
+                        "summary", "Bounded context for customer consent decisions.",
                         "references", map(
-                                "systems", List.of("agreement-service"),
-                                "repositories", List.of("agreement-repo"),
-                                "processes", List.of("agreement-submit-process"),
-                                "terms", List.of("agreement"),
+                                "systems", List.of("crm-consent-service"),
+                                "repositories", List.of("crm-consent-repo"),
+                                "processes", List.of("customer-consent-capture-process"),
+                                "terms", List.of("customer-consent"),
                                 "teams", List.of("team-a")
                         ),
                         "ownership", ownership(List.of("team-a"), null, "high"),
-                        "matchSignals", map("exact", map("terms", List.of("agreement")))
+                        "matchSignals", map("exact", map("terms", List.of("customer-consent")))
                 )),
                 List.of(new OperationalContextGlossaryTerm(
-                        "agreement",
-                        "Agreement",
+                        "customer-consent",
+                        "Customer Consent",
                         "domain-term",
-                        "Business object submitted by a user.",
-                        List.of("agreement-submit-process"),
+                        "Consent record captured for a customer.",
+                        List.of("customer-consent-capture-process"),
                         List.of(),
-                        List.of("agreement"),
-                        List.of("agreement-context"),
-                        List.of("contract"),
+                        List.of("consent", "customer consent"),
+                        List.of("customer-consent-context"),
+                        List.of("opt-in"),
                         List.of()
                 )),
                 List.of(new OperationalContextHandoffRule(
                         "handoff-team-a",
-                        "Route agreement questions to Team A",
-                        List.of("agreement-service", "agreement-submit-process"),
+                        "Route customer consent questions to Team A",
+                        List.of("crm-consent-service", "customer-consent-capture-process"),
                         List.of(),
                         List.of("business scenario"),
-                        List.of("Open agreement context"),
+                        List.of("Open customer consent context"),
                         List.of("Keep language business-oriented.")
                 )),
                 List.of(new OperationalContextOpenQuestion(
                         "question-1",
                         "systems.yml",
                         "system",
-                        "agreement-service",
-                        "Clarify partner SLA ownership.",
+                        "crm-consent-service",
+                        "Clarify consent registry SLA ownership.",
                         "medium",
                         "open"
                 )),
@@ -219,8 +219,8 @@ final class OperationalContextApiTestFixtures {
                                 "matchSignals", map("exact", map("markers", List.of("shared-service")))
                         ),
                         map(
-                                "id", "catalog-core",
-                                "name", "Catalog Core",
+                                "id", "crm-customer-profile",
+                                "name", "CRM Customer Profile",
                                 "kind", "internal-application",
                                 "matchSignals", map("exact", map("markers", List.of("shared-service")))
                         )

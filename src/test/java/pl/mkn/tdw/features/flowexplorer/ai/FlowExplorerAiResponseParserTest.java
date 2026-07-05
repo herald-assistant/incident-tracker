@@ -26,7 +26,7 @@ class FlowExplorerAiResponseParserTest {
                   "overview": {
                     "markdown": "Tester chce poznac endpoint klienta.",
                     "confidence": "HIGH",
-                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                    "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"]
                   },
                   "sections": [
                     {
@@ -34,7 +34,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Functional flow",
                       "mode": "deep",
                       "markdown": "%s",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -52,7 +52,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Persistence",
                       "mode": "compact",
                       "markdown": "Repository pobiera profil klienta.",
-                      "sourceRefs": ["crm-service:CustomerRepository.java:L10-L18"],
+                      "sourceRefs": ["crm-service:CustomerProfileRepository.java:L10-L18"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -68,7 +68,7 @@ class FlowExplorerAiResponseParserTest {
                   ],
                   "globalVisibilityLimits": ["Nie widac runtime data."],
                   "globalOpenQuestions": [],
-                  "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
+                  "sourceReferences": ["crm-service:CustomerProfileController.java:L12-L24"],
                   "confidence": "HIGH",
                   "followUpPrompts": ["Sprawdz, czy profil nieaktywnego klienta powinien byc widoczny dla operatora."]
                 }
@@ -100,7 +100,7 @@ class FlowExplorerAiResponseParserTest {
                   "overview": {
                     "markdown": "Plan testow dla odczytu profilu klienta CRM powinien pokryc happy path, brak klienta i dane niepoprawne.",
                     "confidence": "medium",
-                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                    "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"]
                   },
                   "sections": [
                     {
@@ -108,7 +108,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Functional flow",
                       "mode": "deep",
                       "markdown": "%s",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -126,7 +126,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Persistence",
                       "mode": "compact",
                       "markdown": "Przygotowac rekord klienta CRM i sprawdzic, ze odczyt nie zmienia statusu profilu.",
-                      "sourceRefs": ["crm-service:CustomerRepository.java:L10-L18"],
+                      "sourceRefs": ["crm-service:CustomerProfileRepository.java:L10-L18"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -168,7 +168,7 @@ class FlowExplorerAiResponseParserTest {
                   "overview": {
                     "markdown": "Najwieksze ryzyko dla odczytu profilu klienta CRM to niejednoznaczne zachowanie dla brakujacego albo nieaktywnego klienta.",
                     "confidence": "medium",
-                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                    "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"]
                   },
                   "sections": [
                     {
@@ -176,7 +176,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Functional flow",
                       "mode": "compact",
                       "markdown": "%s",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"],
                       "visibilityLimits": [],
                       "openQuestions": ["Czy profil nieaktywnego klienta powinien byc widoczny?"]
                     },
@@ -194,7 +194,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Persistence",
                       "mode": "compact",
                       "markdown": "- Typ: Luka widocznosci\\n- Ryzyko: initial evidence pokazuje odczyt, ale nie pokazuje pelnego modelu statusow klienta.",
-                      "sourceRefs": ["crm-service:CustomerRepository.java:L10-L18"],
+                      "sourceRefs": ["crm-service:CustomerProfileRepository.java:L10-L18"],
                       "visibilityLimits": ["Nie widac encji klienta w initial snippetach."],
                       "openQuestions": []
                     },
@@ -447,7 +447,7 @@ class FlowExplorerAiResponseParserTest {
                   "overview": {
                     "markdown": "Overview dla CRM customer lookup.",
                     "confidence": "high",
-                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                    "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"]
                   },
                   "sections": [
                     {
@@ -455,7 +455,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Functional flow",
                       "mode": "%s",
                       "markdown": "%s",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -473,7 +473,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Persistence",
                       "mode": "%s",
                       "markdown": "CRM customer repository lookup.",
-                      "sourceRefs": ["crm-service:CustomerRepository.java:L10-L18"],
+                      "sourceRefs": ["crm-service:CustomerProfileRepository.java:L10-L18"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -489,7 +489,7 @@ class FlowExplorerAiResponseParserTest {
                   ],
                   "globalVisibilityLimits": [],
                   "globalOpenQuestions": [],
-                  "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
+                  "sourceReferences": ["crm-service:CustomerProfileController.java:L12-L24"],
                   "confidence": "high"%s
                 }
                 """.formatted(
@@ -516,7 +516,7 @@ class FlowExplorerAiResponseParserTest {
                   "overview": {
                     "markdown": "Overview dla CRM customer lookup.",
                     "confidence": "high",
-                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                    "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"]
                   },
                   "sections": [
                     {
@@ -524,7 +524,7 @@ class FlowExplorerAiResponseParserTest {
                       "title": "Functional flow",
                       "mode": "%s",
                       "markdown": "%s",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -549,7 +549,7 @@ class FlowExplorerAiResponseParserTest {
                   ],
                   "globalVisibilityLimits": [],
                   "globalOpenQuestions": [],
-                  "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
+                  "sourceReferences": ["crm-service:CustomerProfileController.java:L12-L24"],
                   "confidence": "high"
                 }
                 """.formatted(goal, functionalMode, functionalFlowMarkdownJson(), validationsMode, integrationsMode);

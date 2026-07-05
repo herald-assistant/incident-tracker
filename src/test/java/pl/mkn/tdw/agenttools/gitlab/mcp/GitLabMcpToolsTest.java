@@ -189,7 +189,7 @@ class GitLabMcpToolsTest {
         )));
 
         var response = tools.searchRepositoryCandidates(
-                List.of("crm-catalog-service", "crm-customer-profile-service"),
+                List.of("crm-customer-profile-service", "crm-customer-segment-service"),
                 DEFAULT_BRANCH_REF,
                 DEFAULT_APPLICATION_NAME,
                 List.of("GET /crm/customers"),
@@ -202,7 +202,7 @@ class GitLabMcpToolsTest {
                 query.correlationId() == null
                         && "CRM/backend".equals(query.group())
                         && "feature/INC-123".equals(query.branch())
-                        && List.of("crm-catalog-service", "crm-customer-profile-service").equals(query.projectNames())
+                        && List.of("crm-customer-profile-service", "crm-customer-segment-service").equals(query.projectNames())
                         && List.of("GET /crm/customers").equals(query.operationNames())
                         && List.of("timeout", "customer-profile").equals(query.keywords())
         ));
@@ -262,7 +262,7 @@ class GitLabMcpToolsTest {
                 "/api/customers",
                 "GET",
                 50,
-                "Listuje endpointy zamowien.",
+                "Listuje endpointy profilu klienta CRM.",
                 gitLabToolContext()
         );
 
@@ -281,9 +281,9 @@ class GitLabMcpToolsTest {
         assertIterableEquals(List.of("GET"), endpoint.httpMethods());
         assertEquals("com.example.crm.customer.api.CustomerController", endpoint.controllerClass());
         assertEquals("getCustomer", endpoint.handlerMethod());
-        assertEquals("src/main/java/com/example/crm/customer/api/CustomerController.java", endpoint.filePath());
+        assertEquals("src/main/java/com/example/crm/customer/api/CustomerProfileController.java", endpoint.filePath());
         assertIterableEquals(List.of("@PathVariable String customerId"), endpoint.requestTypes());
-        assertIterableEquals(List.of("ResponseEntity<OrderResponse>"), endpoint.responseTypes());
+        assertIterableEquals(List.of("ResponseEntity<CustomerProfileResponse>"), endpoint.responseTypes());
         assertTrue(endpoint.annotations().contains("RestController"));
         assertTrue(endpoint.annotations().contains("GetMapping"));
         assertEquals("high", endpoint.confidence());
@@ -318,18 +318,18 @@ class GitLabMcpToolsTest {
                                 "/api/customers/{customerId}",
                                 "com.example.crm.customer.CustomerController",
                                 "getCustomer",
-                                "src/main/java/com/example/crm/customer/CustomerController.java",
+                                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                                 10,
                                 18,
                                 List.of("@PathVariable String customerId"),
-                                List.of("OrderResponse"),
+                                List.of("CustomerProfileResponse"),
                                 List.of("RestController", "GetMapping"),
                                 GitLabEndpointUseCaseConfidence.HIGH,
                                 List.of(),
                                 List.of()
                         ),
                         List.of(new GitLabEndpointUseCaseFileCandidate(
-                                "src/main/java/com/example/crm/customer/CustomerController.java",
+                                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                                 GitLabEndpointUseCaseFileRole.CONTROLLER,
                                 1,
                                 List.of("getCustomer"),
@@ -341,11 +341,11 @@ class GitLabMcpToolsTest {
                                 "com.example.crm.customer.CustomerController#getCustomer",
                                 GitLabEndpointUseCaseRelationKind.ENDPOINT_HANDLER,
                                 GitLabEndpointUseCaseConfidence.HIGH,
-                                "Endpoint customer-profile resolved this handler method."
+                                "Endpoint handler resolved this CRM customer profile method."
                         )),
                         List.of(),
                         List.of(),
-                        List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java via gitlab_read_repository_file_outline"),
+                        List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerProfileController.java via gitlab_read_repository_file_outline"),
                         GitLabEndpointUseCaseLimits.defaults(),
                         GitLabEndpointUseCaseConfidence.HIGH
                 ));
@@ -359,7 +359,7 @@ class GitLabMcpToolsTest {
                 null,
                 4,
                 12,
-                "Buduje liste plikow dla endpointu zamowienia.",
+                "Buduje liste plikow dla endpointu profilu klienta CRM.",
                 gitLabToolContext()
         );
 
@@ -625,7 +625,7 @@ class GitLabMcpToolsTest {
                 "crm-customer-api",
                 "feature/FLOW-1",
                 DEFAULT_APPLICATION_NAME,
-                "src/main/java/com/example/crm/customer/api/CustomerController.java",
+                "src/main/java/com/example/crm/customer/api/CustomerProfileController.java",
                 "CustomerController",
                 List.of(new GitLabJavaMethodSliceMethodSelector("getCustomer", null)),
                 true,
@@ -641,8 +641,8 @@ class GitLabMcpToolsTest {
         assertEquals("crm-customer-api", response.projectName());
         assertEquals("feature/FLOW-1", response.branch());
         assertEquals(List.of(new GitLabJavaMethodSliceMethodSelector("getCustomer", null)), response.requestedMethods());
-        assertTrue(response.content().contains("public ResponseEntity<OrderResponse> getCustomer"));
-        assertFalse(response.content().contains("public OrderResponse createOrder"));
+        assertTrue(response.content().contains("public ResponseEntity<CustomerProfileResponse> getCustomer"));
+        assertFalse(response.content().contains("public CustomerProfileResponse updateCustomerProfile"));
     }
 
     @Test
@@ -691,13 +691,13 @@ class GitLabMcpToolsTest {
                 "CRM/backend",
                 "crm-customer-api",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 5
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM/backend",
                 "crm-customer-api",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 "abcde",
                 true
         ));
@@ -705,12 +705,12 @@ class GitLabMcpToolsTest {
                 "CRM/backend",
                 "crm-customer-api",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java"
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java"
         )).thenReturn(new GitLabRepositoryFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 "blob-repository",
                 "commit-repository",
                 "last-repository",
@@ -726,8 +726,8 @@ class GitLabMcpToolsTest {
                 List.of(
                         "/src/main/java/com/example/crm/customer/MissingCustomerService.java",
                         "crm-customer-api:src/main/java/com/example/crm/customer/CustomerService.java via gitlab_read_repository_file_outline",
-                        "\\src\\main\\java\\com\\example\\crm\\customer\\CustomerRepository.java",
-                        "src/main/java/com/example/crm/customer/CustomerMapper.java"
+                        "\\src\\main\\java\\com\\example\\crm\\customer\\CustomerProfileRepository.java",
+                        "src/main/java/com/example/crm/customer/CustomerProfileMapper.java"
                 ),
                 10,
                 15,
@@ -759,14 +759,14 @@ class GitLabMcpToolsTest {
                 "CRM/backend",
                 "crm-customer-api",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 5
         );
         verify(gitLabRepositoryPort).readFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java"
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java"
         );
         verifyNoMoreInteractions(gitLabRepositoryPort);
 
@@ -853,17 +853,17 @@ class GitLabMcpToolsTest {
         var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerCatalogService.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 30_000
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerCatalogService.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 """
-                        package com.example.crm.catalog;
+                        package com.example.crm.customerprofile;
 
                         import java.util.List;
                         import org.springframework.beans.factory.annotation.Autowired;
@@ -871,19 +871,19 @@ class GitLabMcpToolsTest {
                         import org.springframework.transaction.annotation.Transactional;
 
                         @Service
-                        public class CustomerCatalogService {
+                        public class CustomerProfileService {
                             private final CustomerPolicy customerPolicy;
                             @Deprecated
                             private NotificationPort notificationPort;
 
                             @Autowired
-                            public CustomerCatalogService(CustomerPolicy customerPolicy) {
+                            public CustomerProfileService(CustomerPolicy customerPolicy) {
                                 this.customerPolicy = customerPolicy;
                             }
 
                             @Transactional
-                            public OrderResult processOrder(String customerId) {
-                                return OrderResult.success(customerId);
+                            public CustomerProfileResult processCustomerProfile(String customerId) {
+                                return CustomerProfileResult.success(customerId);
                             }
 
                             private void validate(Customer customer) {
@@ -894,10 +894,10 @@ class GitLabMcpToolsTest {
         ));
 
         var response = tools.readRepositoryFileOutline(
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 DEFAULT_BRANCH_REF,
                 DEFAULT_APPLICATION_NAME,
-                "src/main/java/com/example/crm/catalog/CustomerCatalogService.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 null,
                 "Sprawdzam zarys pliku w tescie.",
                 gitLabToolContext()
@@ -905,12 +905,12 @@ class GitLabMcpToolsTest {
 
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerCatalogService.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 30_000
         );
-        assertEquals("com.example.crm.catalog", response.packageName());
+        assertEquals("com.example.crm.customerprofile", response.packageName());
         assertIterableEquals(
                 List.of(
                         "import java.util.List;",
@@ -922,10 +922,10 @@ class GitLabMcpToolsTest {
         );
         assertEquals(1, response.typeSummaries().size());
         var typeSummary = response.typeSummaries().get(0);
-        assertEquals("CustomerCatalogService", typeSummary.name());
-        assertTrue(typeSummary.qualifiedName().endsWith("CustomerCatalogService"));
+        assertEquals("CustomerProfileService", typeSummary.name());
+        assertTrue(typeSummary.qualifiedName().endsWith("CustomerProfileService"));
         assertEquals("class", typeSummary.kind());
-        assertEquals("public class CustomerCatalogService {", typeSummary.declaration());
+        assertEquals("public class CustomerProfileService {", typeSummary.declaration());
         assertIterableEquals(List.of("public"), typeSummary.modifiers());
         assertIterableEquals(List.of("@Service"), typeSummary.annotations());
         assertTrue(typeSummary.lineStart() > 0);
@@ -935,7 +935,7 @@ class GitLabMcpToolsTest {
                 response.fieldSummaries().stream().map(GitLabJavaFieldSummary::name).toList()
         );
         var policyField = response.fieldSummaries().get(0);
-        assertTrue(policyField.declaringTypeName().endsWith("CustomerCatalogService"));
+        assertTrue(policyField.declaringTypeName().endsWith("CustomerProfileService"));
         assertEquals("CustomerPolicy", policyField.type());
         assertIterableEquals(List.of("private", "final"), policyField.modifiers());
         assertTrue(policyField.annotations().isEmpty());
@@ -947,22 +947,22 @@ class GitLabMcpToolsTest {
         assertIterableEquals(List.of("@Deprecated"), notificationPortField.annotations());
         assertEquals(1, response.constructorSummaries().size());
         var constructorSummary = response.constructorSummaries().get(0);
-        assertTrue(constructorSummary.declaringTypeName().endsWith("CustomerCatalogService"));
-        assertEquals("public CustomerCatalogService(CustomerPolicy customerPolicy)", constructorSummary.signature());
+        assertTrue(constructorSummary.declaringTypeName().endsWith("CustomerProfileService"));
+        assertEquals("public CustomerProfileService(CustomerPolicy customerPolicy)", constructorSummary.signature());
         assertIterableEquals(List.of("public"), constructorSummary.modifiers());
         assertIterableEquals(List.of("@Autowired"), constructorSummary.annotations());
         assertTrue(constructorSummary.lineStart() > 0);
         assertTrue(constructorSummary.lineEnd() >= constructorSummary.lineStart());
         assertIterableEquals(
                 List.of(
-                        "public OrderResult processOrder(String customerId)",
+                        "public CustomerProfileResult processCustomerProfile(String customerId)",
                         "private void validate(Customer customer)"
                 ),
                 response.methodSummaries().stream().map(GitLabJavaMethodSummary::signature).toList()
         );
-        var processOrderSummary = response.methodSummaries().get(0);
-        assertIterableEquals(List.of("public"), processOrderSummary.modifiers());
-        assertIterableEquals(List.of("@Transactional"), processOrderSummary.annotations());
+        var processCustomerProfileSummary = response.methodSummaries().get(0);
+        assertIterableEquals(List.of("public"), processCustomerProfileSummary.modifiers());
+        assertIterableEquals(List.of("@Transactional"), processCustomerProfileSummary.annotations());
         var validateSummary = response.methodSummaries().get(1);
         assertIterableEquals(List.of("private"), validateSummary.modifiers());
         assertTrue(validateSummary.annotations().isEmpty());
@@ -976,17 +976,17 @@ class GitLabMcpToolsTest {
         var tools = gitLabMcpTools(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerCatalogService.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 10,
                 20,
                 10
         )).thenReturn(new GitLabRepositoryFileChunk(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerCatalogService.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 10,
                 20,
                 10,
@@ -997,17 +997,17 @@ class GitLabMcpToolsTest {
         ));
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerRepository.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileRepository.java",
                 30,
                 40,
                 5
         )).thenReturn(new GitLabRepositoryFileChunk(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerRepository.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileRepository.java",
                 30,
                 40,
                 30,
@@ -1019,15 +1019,15 @@ class GitLabMcpToolsTest {
 
         var response = tools.readRepositoryFileChunks(
                 List.of(
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/CustomerCatalogService.java", 10, 20, 10),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/CustomerRepository.java", 30, 40, 10),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/CustomerMapper.java", 1, 5, 100),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/CustomerValidator.java", 1, 5, 100),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/NotificationClient.java", 1, 5, 100),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/CustomerController.java", 1, 5, 100),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/OutboxPublisher.java", 1, 5, 100),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/CustomerJob.java", 1, 5, 100),
-                        new GitLabFileChunkRequest("crm-catalog-service", "src/main/java/com/example/crm/catalog/Extra.java", 1, 5, 100)
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java", 10, 20, 10),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/CustomerProfileRepository.java", 30, 40, 10),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/CustomerProfileMapper.java", 1, 5, 100),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/CustomerProfileValidator.java", 1, 5, 100),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/NotificationClient.java", 1, 5, 100),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/CustomerProfileController.java", 1, 5, 100),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/OutboxPublisher.java", 1, 5, 100),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/CustomerProfileJob.java", 1, 5, 100),
+                        new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/Extra.java", 1, 5, 100)
                 ),
                 DEFAULT_BRANCH_REF,
                 DEFAULT_APPLICATION_NAME,
@@ -1038,18 +1038,18 @@ class GitLabMcpToolsTest {
 
         verify(gitLabRepositoryPort).readFileChunk(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerCatalogService.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 10,
                 20,
                 10
         );
         verify(gitLabRepositoryPort).readFileChunk(
                 "CRM/backend",
-                "crm-catalog-service",
+                "crm-customer-profile-service",
                 "feature/INC-123",
-                "src/main/java/com/example/crm/catalog/CustomerRepository.java",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileRepository.java",
                 30,
                 40,
                 5
@@ -1074,7 +1074,7 @@ class GitLabMcpToolsTest {
                         "CRM/backend",
                         "crm-customer-api",
                         "feature/INC-123",
-                        "src/main/java/com/example/crm/customer/CustomerController.java",
+                        "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                         "Controller handling submitCustomer endpoint.",
                         100
                 ),
@@ -1090,15 +1090,15 @@ class GitLabMcpToolsTest {
                         "CRM/backend",
                         "crm-customer-core",
                         "feature/INC-123",
-                        "src/main/java/com/example/crm/customer/CustomerRepository.java",
-                        "Repository predicate used in submitOrder.",
+                        "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
+                        "Repository predicate used in submitCustomerProfile.",
                         92
                 ),
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
                         "feature/INC-123",
-                        "src/main/java/com/example/crm/customer/LegacyCustomerRepository.java",
+                        "src/main/java/com/example/crm/customer/LegacyCustomerProfileRepository.java",
                         "Fallback repository path.",
                         80
                 ),
@@ -1106,7 +1106,7 @@ class GitLabMcpToolsTest {
                         "CRM/backend",
                         "crm-customer-core",
                         "feature/INC-123",
-                        "src/main/java/com/example/crm/customer/CustomerMapper.java",
+                        "src/main/java/com/example/crm/customer/CustomerProfileMapper.java",
                         "Mapper between API and domain model.",
                         75
                 ),
@@ -1171,7 +1171,7 @@ class GitLabMcpToolsTest {
                 .candidates()
                 .size());
         assertEquals(
-                "crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java (entrypoint, outline-then-focused-chunk)",
+                "crm-customer-api:src/main/java/com/example/crm/customer/CustomerProfileController.java (entrypoint, outline-then-focused-chunk)",
                 response.recommendedNextReads().get(0)
         );
     }
@@ -1193,7 +1193,7 @@ class GitLabMcpToolsTest {
                         "CRM/backend",
                         "crm-customer-core",
                         "feature/INC-123",
-                        "src/main/java/com/example/crm/customer/repository/CustomerRepository.java",
+                        "src/main/java/com/example/crm/customer/repository/CustomerProfileRepository.java",
                         "Repository using CustomerEntity in JpaRepository declaration.",
                         95
                 ),
@@ -1261,24 +1261,24 @@ class GitLabMcpToolsTest {
                 import org.springframework.context.annotation.Bean;
 
                 @Configuration
-                public class CatalogConfiguration {
+                public class CustomerProfileConfiguration {
 
                     @Bean
-                    Scheduler catalogJobScheduler() {
+                    Scheduler customerProfileJobScheduler() {
                         return new Scheduler();
                     }
                 }
                 """);
 
-        assertEquals("CatalogConfiguration", tools.simpleName("pl.mkn.config.CatalogConfiguration"));
-        assertEquals("CatalogConfiguration", tools.fileNameWithoutExtension("src/main/java/pl/mkn/config/CatalogConfiguration.java"));
+        assertEquals("CustomerProfileConfiguration", tools.simpleName("pl.mkn.config.CustomerProfileConfiguration"));
+        assertEquals("CustomerProfileConfiguration", tools.fileNameWithoutExtension("src/main/java/pl/mkn/config/CustomerProfileConfiguration.java"));
         assertIterableEquals(List.of("alpha", "beta"), tools.deduplicate(List.of(" alpha ", "beta", "alpha", "  ")));
-        assertEquals("configuration", tools.inferRole("src/main/java/pl/mkn/config/CatalogConfiguration.java", "@Configuration"));
+        assertEquals("configuration", tools.inferRole("src/main/java/pl/mkn/config/CustomerProfileConfiguration.java", "@Configuration"));
         assertEquals("read-file-if-short", tools.recommendReadStrategy("src/main/resources/application.yml", "configuration"));
         assertEquals(1, tools.rolePriority("entrypoint"));
         assertIterableEquals(List.of("@Configuration"), outline.typeSummaries().get(0).annotations());
         assertTrue(outline.fieldSummaries().isEmpty());
-        assertEquals(List.of("Scheduler catalogJobScheduler()"), outline.methodSummaries().stream()
+        assertEquals(List.of("Scheduler customerProfileJobScheduler()"), outline.methodSummaries().stream()
                 .map(GitLabJavaMethodSummary::signature)
                 .toList());
         assertIterableEquals(List.of("@Bean"), outline.methodSummaries().get(0).annotations());

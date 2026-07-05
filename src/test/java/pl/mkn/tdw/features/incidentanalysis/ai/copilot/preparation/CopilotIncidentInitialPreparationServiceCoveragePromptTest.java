@@ -118,20 +118,20 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
                         "gitlab",
                         "resolved-code",
                         List.of(new AnalysisEvidenceItem(
-                                "CheckoutService.java around failing method",
+                                "CustomerProfileService.java around failing method",
                                 List.of(
-                                        attr("projectName", "checkout-service"),
-                                        attr("filePath", "src/main/java/com/example/CheckoutService.java"),
+                                        attr("projectName", "crm-customer-profile-service"),
+                                        attr("filePath", "src/main/java/com/example/CustomerProfileService.java"),
                                         attr("lineNumber", "12"),
                                         attr("returnedStartLine", "8"),
                                         attr("returnedEndLine", "18"),
                                         attr("content", """
-                                                class CheckoutService {
-                                                    Customer submit(CheckoutCommand command) {
+                                                class CustomerProfileService {
+                                                    Customer submit(CustomerProfileCommand command) {
                                                         if (command == null) {
                                                             throw new IllegalArgumentException("command");
                                                         }
-                                                        return command.toOrder();
+                                                        return command.toProfile();
                                                     }
                                                 }
                                                 """),

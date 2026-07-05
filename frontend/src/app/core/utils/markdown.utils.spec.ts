@@ -6,7 +6,7 @@ describe('markdownToHtml', () => {
 **Najważniejszy fakt**
 
 - Punkt pierwszy
-- Punkt drugi z \`NewLimitOrderDomainRepository\`
+- Punkt drugi z \`CustomerProfileRepository\`
 
 ---
 `);
@@ -14,7 +14,7 @@ describe('markdownToHtml', () => {
     expect(html).toContain('<strong>Najważniejszy fakt</strong>');
     expect(html).toContain('<ul>');
     expect(html).toContain('<li>Punkt pierwszy</li>');
-    expect(html).toContain('<li>Punkt drugi z <code>NewLimitOrderDomainRepository</code></li>');
+    expect(html).toContain('<li>Punkt drugi z <code>CustomerProfileRepository</code></li>');
     expect(html).toContain('</ul>');
     expect(html).toContain('<hr>');
   });

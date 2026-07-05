@@ -29,19 +29,19 @@ class FlowExplorerSystemSelectionServiceTest {
 
         assertEquals(2, systems.size());
         assertEquals("api-gateway", systems.get(0).systemId());
-        assertEquals("catalog-core", systems.get(1).systemId());
+        assertEquals("crm-customer-profile", systems.get(1).systemId());
 
         var catalog = systems.get(1);
-        assertEquals("Catalog Core", catalog.name());
+        assertEquals("CRM Customer Profile", catalog.name());
         assertEquals("internal-application", catalog.kind());
         assertEquals("active", catalog.lifecycleStatus());
         assertEquals("healthy", catalog.operationalStatus());
         assertEquals("high", catalog.criticality());
-        assertEquals("Handles catalog operations.", catalog.summary());
-        assertEquals(List.of("catalog", "notifications"), catalog.aliases());
+        assertEquals("Handles CRM customer profile operations.", catalog.summary());
+        assertEquals(List.of("crm-customer-profile", "notifications"), catalog.aliases());
         assertEquals(2, catalog.repositoryCount());
         assertEquals(1, catalog.codeSearchScopeCount());
-        assertEquals(List.of("catalog-team"), catalog.ownerTeamIds());
+        assertEquals(List.of("crm-customer-profile-team"), catalog.ownerTeamIds());
 
         assertFalse(capturedQuery.get().includeIndexDocument());
         assertTrue(capturedQuery.get().includes(SYSTEM));
@@ -54,7 +54,7 @@ class FlowExplorerSystemSelectionServiceTest {
                         map(
                                 "id", "platform-team",
                                 "name", "Platform Team",
-                                "references", map("systems", List.of("catalog-core"))
+                                "references", map("systems", List.of("crm-customer-profile"))
                         ),
                         map(
                                 "id", "ops-team",
@@ -64,21 +64,21 @@ class FlowExplorerSystemSelectionServiceTest {
                 List.of(),
                 List.of(
                         map(
-                                "id", "catalog-core",
-                                "name", "Catalog Core",
-                                "shortName", "Catalog",
+                                "id", "crm-customer-profile",
+                                "name", "CRM Customer Profile",
+                                "shortName", "CRM Customer Profile",
                                 "kind", "internal-application",
                                 "lifecycleStatus", "active",
                                 "operationalStatus", "healthy",
                                 "criticality", "high",
-                                "summary", "Handles catalog operations.",
-                                "aliases", List.of("catalog", "notifications"),
+                                "summary", "Handles CRM customer profile operations.",
+                                "aliases", List.of("crm-customer-profile", "notifications"),
                                 "references", map(
-                                        "repositories", List.of("catalog-api"),
-                                        "teams", List.of("catalog-team")
+                                        "repositories", List.of("crm-customer-profile-api"),
+                                        "teams", List.of("crm-customer-profile-team")
                                 ),
-                                "ownership", ownership(List.of("catalog-team"), "high"),
-                                "codeSearchScope", map("repositories", List.of("catalog-worker"))
+                                "ownership", ownership(List.of("crm-customer-profile-team"), "high"),
+                                "codeSearchScope", map("repositories", List.of("crm-customer-profile-worker"))
                         ),
                         map(
                                 "id", "api-gateway",
@@ -93,17 +93,17 @@ class FlowExplorerSystemSelectionServiceTest {
                 ),
                 List.of(),
                 List.of(
-                        map("id", "catalog-api", "name", "Catalog API"),
-                        map("id", "catalog-worker", "name", "Catalog Worker"),
-                        map("id", "catalog-domain", "name", "Catalog Domain")
+                        map("id", "crm-customer-profile-api", "name", "CRM Customer Profile API"),
+                        map("id", "crm-customer-profile-worker", "name", "CRM Customer Profile Worker"),
+                        map("id", "crm-customer-profile-domain", "name", "CRM Customer Profile Domain")
                 ),
                 List.of(map(
-                        "id", "catalog-semantic-scope",
+                        "id", "crm-customer-profile-semantic-scope",
                         "name", "Catalog semantic scope",
-                        "target", map("type", "system", "id", "catalog-core"),
+                        "target", map("type", "system", "id", "crm-customer-profile"),
                         "repositories", List.of(
-                                map("repoId", "catalog-api"),
-                                map("repoId", "catalog-domain")
+                                map("repoId", "crm-customer-profile-api"),
+                                map("repoId", "crm-customer-profile-domain")
                         )
                 )),
                 List.of(),

@@ -100,7 +100,7 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
         assertEquals("tool-fetched-code", section.category());
         assertEquals(2, section.items().size());
         assertEquals(
-                "src/main/java/com/example/crm/customer/CustomerController.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                 attributes(section, 0).get("filePath")
         );
         assertEquals("class CustomerController {}", attributes(section, 0).get("content"));
@@ -231,7 +231,7 @@ class CopilotToolEvidenceSessionStoreGitLabFilePrecedenceTest {
                       "group": "CRM/runtime",
                       "projectName": "crm-customer-api",
                       "branch": "main",
-                      "filePath": "src/main/java/com/example/crm/customer/CustomerController.java",
+                      "filePath": "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                       "content": "class CustomerController {}",
                       "truncated": false,
                       "inferredRole": "entrypoint",

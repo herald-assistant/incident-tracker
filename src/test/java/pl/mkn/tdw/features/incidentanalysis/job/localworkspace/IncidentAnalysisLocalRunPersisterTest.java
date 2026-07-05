@@ -127,7 +127,7 @@ class IncidentAnalysisLocalRunPersisterTest {
                         "main",
                         "DOWNSTREAM_TIMEOUT",
                         "Catalog process",
-                        "Catalog Context",
+                        "CRM Customer Context",
                         "Core Team",
                         "Functional analysis",
                         "Technical analysis",

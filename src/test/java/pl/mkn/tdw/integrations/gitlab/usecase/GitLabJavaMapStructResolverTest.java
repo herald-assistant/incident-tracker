@@ -30,7 +30,7 @@ class GitLabJavaMapStructResolverTest {
 
     @Test
     void shouldDetectMapStructMapperWithUsesAndDefaultMethod() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerMapper.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileMapper.java", """
                 package com.example.crm.customer;
 
                 import org.mapstruct.Mapper;
@@ -57,7 +57,7 @@ class GitLabJavaMapStructResolverTest {
         assertEquals(GitLabEndpointUseCaseConfidence.HIGH, detection.confidence());
         assertEquals("CustomerMapper", detection.mapper().simpleName());
         assertEquals("com.example.crm.customer.CustomerMapper", detection.mapper().qualifiedName());
-        assertEquals("src/main/java/com/example/crm/customer/CustomerMapper.java", detection.mapper().filePath());
+        assertEquals("src/main/java/com/example/crm/customer/CustomerProfileMapper.java", detection.mapper().filePath());
         assertEquals(List.of("IdentificationMapper", "AddressMapper"), detection.mapper().usesTypes());
         assertEquals(List.of("from", "map"), detection.mapper().declaredMethodNames());
         assertEquals(List.of("map"), detection.mapper().defaultMethodNames());
@@ -65,7 +65,7 @@ class GitLabJavaMapStructResolverTest {
 
     @Test
     void shouldDetectSingleUsesMapper() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerMapper.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileMapper.java", """
                 package com.example.crm.customer;
 
                 @org.mapstruct.Mapper(uses = IdentificationMapper.class)
@@ -81,7 +81,7 @@ class GitLabJavaMapStructResolverTest {
 
     @Test
     void shouldFindInstanceMapperCallsAndGetMapperCalls() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileController.java", """
                 package com.example.crm.customer;
 
                 import org.mapstruct.factory.Mappers;
@@ -113,7 +113,7 @@ class GitLabJavaMapStructResolverTest {
 
     @Test
     void shouldMarkMapperCallsInsideSwitchBranchesAsPotential() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerMapper.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileMapper.java", """
                 package com.example.crm.customer;
 
                 interface CustomerMapper {

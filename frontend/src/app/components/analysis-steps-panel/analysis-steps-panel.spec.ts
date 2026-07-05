@@ -622,7 +622,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(reason?.textContent?.trim()).toBe('Sprawdzam fragment klienta z timeoutem.');
     expect(icon?.textContent?.trim()).toBe('code');
     expect(status).not.toBeNull();
-    expect(compiled.textContent).toContain('CatalogGatewayClient');
+    expect(compiled.textContent).toContain('CustomerProfileGatewayClient');
     expect(compiled.textContent).toContain('timeout(Duration.ofSeconds(2))');
     expect(compiled.textContent).not.toContain('Powód pobrania');
     expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
@@ -648,9 +648,9 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(content).toContain('Kontekst przepływu');
     expect(content).toContain('AI zebrało 1 kandydata w 1 grupie kontekstu przepływu.');
     expect(content).toContain('repository');
-    expect(content).toContain('OrderRepository.java');
-    expect(content).toContain('orders-api · src/main/java/com/example/orders/OrderRepository.java · release/2026.04');
-    expect(content).toContain('orders-api:src/main/java/com/example/orders/OrderRepository.java');
+    expect(content).toContain('CustomerRepository.java');
+    expect(content).toContain('crm-api · src/main/java/com/example/crm/customer/CustomerRepository.java · release/2026.04');
+    expect(content).toContain('crm-api:src/main/java/com/example/crm/customer/CustomerRepository.java');
     expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
   });
 
@@ -686,7 +686,7 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(icons).toEqual(['storage', 'code']);
     expect(content).toContain('Policzenie rekordów');
     expect(content).toContain('Sprawdzam, czy istnieją rekordy dla correlationId.');
-    expect(content).toContain('"tableName": "ORDER_EVENT"');
+    expect(content).toContain('"tableName": "CUSTOMER_EVENT"');
     expect(content).toContain('"count": 3');
     expect(content).not.toContain('Powód sprawdzenia');
     expect(compiled.querySelector('.tool-evidence-timeline')).toBeNull();
@@ -695,7 +695,7 @@ describe('AnalysisStepsPanelComponent', () => {
       .querySelector('.ai-work-item--tool .ai-work-item__technical pre')
       ?.textContent ?? '';
     expect(toolTooltip).toContain('"toolArguments"');
-    expect(toolTooltip).toContain('"tableName": "ORDER_EVENT"');
+    expect(toolTooltip).toContain('"tableName": "CUSTOMER_EVENT"');
   });
 });
 
@@ -717,21 +717,21 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
     category: 'runtime-signals',
     items: [
       {
-        title: 'Dynatrace matched service CATALOG @ backend-zt002',
+        title: 'Dynatrace matched service CRM @ backend-zt002',
         attributes: [
           {
             name: 'displayName',
             value:
-              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || case-intake-service'
+              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || crm-customer-service'
           },
           { name: 'entityId', value: 'SERVICE-ABC123' },
           { name: 'matchScore', value: '315' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'catalog-main-zt002' },
+          { name: 'matchedNamespaces', value: 'crm-main-zt002' },
           { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
-          { name: 'matchedServiceNames', value: 'case-intake-service' }
+          { name: 'matchedServiceNames', value: 'crm-customer-service' }
         ]
       },
       {
@@ -740,34 +740,34 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'displayName',
             value:
-              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || CustomerController'
+              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'matchScore', value: '280' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'catalog-main-zt002' },
+          { name: 'matchedNamespaces', value: 'crm-main-zt002' },
           { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
-          { name: 'matchedServiceNames', value: 'case-intake-service' }
+          { name: 'matchedServiceNames', value: 'crm-customer-service' }
         ]
       },
       {
-        title: 'Dynatrace matched service ProductController',
+        title: 'Dynatrace matched service CustomerProfileController',
         attributes: [
           {
             name: 'displayName',
             value:
-              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || ProductController'
+              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerProfileController'
           },
           { name: 'entityId', value: 'SERVICE-ABC125' },
           { name: 'matchScore', value: '240' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'catalog-main-zt002' },
+          { name: 'matchedNamespaces', value: 'crm-main-zt002' },
           { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
-          { name: 'matchedServiceNames', value: 'case-intake-service' }
+          { name: 'matchedServiceNames', value: 'crm-customer-service' }
         ]
       },
       {
@@ -787,8 +787,8 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
             value:
               'Failed database connects [DATABASE_CONNECTION_FAILURE] (root cause) || Service unavailable [AVAILABILITY_EVIDENCE] || RabbitMQ Queue Listener lag [QUEUE_BACKLOG]'
           },
-          { name: 'affectedEntities', value: 'backend-zt002, notification-service' },
-          { name: 'impactedEntities', value: 'notification-api' },
+          { name: 'affectedEntities', value: 'backend-zt002, crm-notification-service' },
+          { name: 'impactedEntities', value: 'crm-notification-api' },
           {
             name: 'evidenceSummary',
             value:
@@ -797,9 +797,9 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
         ]
       },
       {
-        title: 'Dynatrace metric service.response.time.p95 for case-intake-service',
+        title: 'Dynatrace metric service.response.time.p95 for crm-customer-service',
         attributes: [
-          { name: 'entityDisplayName', value: 'case-intake-service' },
+          { name: 'entityDisplayName', value: 'crm-customer-service' },
           { name: 'entityId', value: 'SERVICE-ABC123' },
           { name: 'metricId', value: 'builtin:service.response.time' },
           { name: 'metricLabel', value: 'service.response.time.p95' },
@@ -820,7 +820,7 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'entityDisplayName',
             value:
-              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || CustomerController'
+              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'metricId', value: 'builtin:service.response.time' },
@@ -842,7 +842,7 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'entityDisplayName',
             value:
-              'CATALOG @ backend-zt002 || SpringBoot case-intake-service app || CustomerController'
+              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'metricId', value: 'builtin:service.errors.total.count' },
@@ -1023,11 +1023,11 @@ function buildAiToolGitLabSection(captureOrder = '1'): AnalysisEvidenceSection {
     category: 'tool-fetched-code',
     items: [
       {
-        title: 'edge-client-service file src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java',
+        title: 'crm-edge-service file src/main/java/com/example/synthetic/crm/CustomerProfileGatewayClient.java',
         attributes: [
           {
             name: 'filePath',
-            value: 'src/main/java/com/example/synthetic/edge/CatalogGatewayClient.java'
+            value: 'src/main/java/com/example/synthetic/crm/CustomerProfileGatewayClient.java'
           },
           { name: 'reason', value: 'Sprawdzam fragment klienta z timeoutem.' },
           { name: 'toolCaptureOrder', value: captureOrder },
@@ -1035,7 +1035,7 @@ function buildAiToolGitLabSection(captureOrder = '1'): AnalysisEvidenceSection {
           {
             name: 'content',
             value:
-              'public class CatalogGatewayClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}'
+              'public class CustomerProfileGatewayClient {\n    void configure() {\n        timeout(Duration.ofSeconds(2));\n    }\n}'
           }
         ]
       }
@@ -1059,7 +1059,7 @@ function buildAiToolDatabaseSection(captureOrder = '2'): AnalysisEvidenceSection
             name: 'toolArguments',
             value: `{
   "reason": "Sprawdzam, czy istnieją rekordy dla correlationId.",
-  "tableName": "ORDER_EVENT",
+  "tableName": "CUSTOMER_EVENT",
   "filters": {
     "CORRELATION_ID": "corr-123"
   }
@@ -1071,8 +1071,8 @@ function buildAiToolDatabaseSection(captureOrder = '2'): AnalysisEvidenceSection
   "environment": "zt002",
   "databaseAlias": "oracle",
   "table": {
-    "schema": "CLP",
-    "tableName": "ORDER_EVENT"
+    "schema": "CRM",
+    "tableName": "CUSTOMER_EVENT"
   },
   "count": 3,
   "appliedFilters": ["CORRELATION_ID = corr-123"],
@@ -1178,7 +1178,7 @@ function buildAiActivityEvents(): AnalysisAiActivityEvent[] {
             toolCallId: 'tool-call-db-1',
             name: 'db_count_rows',
             arguments: {
-              tableName: 'ORDER_EVENT',
+              tableName: 'CUSTOMER_EVENT',
               reason: 'Sprawdzam liczbę rekordów dla correlationId.'
             }
           }
@@ -1201,7 +1201,7 @@ function buildAiActivityEvents(): AnalysisAiActivityEvent[] {
       details: {
         toolCallId: 'tool-call-db-1',
         toolName: 'db_count_rows',
-        arguments: { tableName: 'ORDER_EVENT' }
+        arguments: { tableName: 'CUSTOMER_EVENT' }
       }
     },
     {
@@ -1245,14 +1245,14 @@ function buildAiToolGitLabDiscoverySection(captureOrder = '3'): AnalysisEvidence
                 role: 'repository',
                 candidates: [
                   {
-                    projectName: 'orders-api',
+                    projectName: 'crm-api',
                     branch: 'release/2026.04',
-                    filePath: 'src/main/java/com/example/orders/OrderRepository.java',
+                    filePath: 'src/main/java/com/example/crm/customer/CustomerRepository.java',
                     matchReason: 'Dopasowanie po nazwie encji i repozytorium.',
                     matchScore: 42,
                     inferredRole: 'repository',
                     recommendedReadStrategy: 'chunk',
-                    preview: 'interface OrderRepository'
+                    preview: 'interface CustomerRepository'
                   }
                 ]
               }
@@ -1260,7 +1260,7 @@ function buildAiToolGitLabDiscoverySection(captureOrder = '3'): AnalysisEvidence
           },
           {
             name: 'recommendedNextReads',
-            value: JSON.stringify(['orders-api:src/main/java/com/example/orders/OrderRepository.java'])
+            value: JSON.stringify(['crm-api:src/main/java/com/example/crm/customer/CustomerRepository.java'])
           }
         ]
       }
@@ -1278,7 +1278,7 @@ function buildAnalysisResult() {
     affectedProcess: 'Obsługa klienta',
     affectedBoundedContext: 'Customer Context',
     affectedTeam: 'Customer Team',
-    functionalAnalysis: 'Backend zwraca timeout przy obsłudze żądania katalogowego w procesie obsługi klienta.',
+    functionalAnalysis: 'Backend zwraca timeout przy obsłudze żądania profilu klienta CRM.',
     technicalAnalysis: 'Sprawdź połączenia backendu z bazą danych oraz timeouty w `CustomerController`.',
     confidence: 'medium',
     visibilityLimits: ['Brak potwierdzenia po stronie bazy danych.'],

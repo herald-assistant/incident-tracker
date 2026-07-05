@@ -283,9 +283,9 @@ class AnalysisJobControllerTest {
                                 "dev3",
                                 "dev/atlas",
                                 "DOWNSTREAM_TIMEOUT",
-                                "Rozliczenie klienta",
-                                "Catalog Context",
-                                "Core Integration Team",
+                                "Profil klienta CRM",
+                                "CRM Customer Context",
+                                "CRM Customer Team",
                                 "Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych.",
                                 "Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke.",
                                 "medium",
@@ -300,9 +300,9 @@ class AnalysisJobControllerTest {
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.preparedPrompt").value("Prompt body for timeout-123"))
                 .andExpect(jsonPath("$.result.detectedProblem").value("DOWNSTREAM_TIMEOUT"))
-                .andExpect(jsonPath("$.result.affectedProcess").value("Rozliczenie klienta"))
-                .andExpect(jsonPath("$.result.affectedBoundedContext").value("Catalog Context"))
-                .andExpect(jsonPath("$.result.affectedTeam").value("Core Integration Team"))
+                .andExpect(jsonPath("$.result.affectedProcess").value("Profil klienta CRM"))
+                .andExpect(jsonPath("$.result.affectedBoundedContext").value("CRM Customer Context"))
+                .andExpect(jsonPath("$.result.affectedTeam").value("CRM Customer Team"))
                 .andExpect(jsonPath("$.result.functionalAnalysis").value("Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych."))
                 .andExpect(jsonPath("$.result.technicalAnalysis").value("Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke."))
                 .andExpect(jsonPath("$.result.confidence").value("medium"))

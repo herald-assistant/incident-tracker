@@ -86,12 +86,12 @@ class GitLabEndpointUseCaseSourceSessionTest {
         var session = new GitLabEndpointUseCaseSourceSession(repositoryPort, repository, 1, 20);
 
         var first = session.readFile("src/main/java/com/example/crm/CustomerService.java");
-        var second = session.readFile("src/main/java/com/example/crm/CustomerRepository.java");
+        var second = session.readFile("src/main/java/com/example/crm/CustomerProfileRepository.java");
 
         assertTrue(first.readSuccessful());
         assertFalse(second.readSuccessful());
         assertTrue(second.limitations().contains(
-                "Source read file limit reached before reading src/main/java/com/example/crm/CustomerRepository.java."
+                "Source read file limit reached before reading src/main/java/com/example/crm/CustomerProfileRepository.java."
         ));
         assertEquals(1, session.readFileCount());
         assertTrue(session.readFileLimitReached());

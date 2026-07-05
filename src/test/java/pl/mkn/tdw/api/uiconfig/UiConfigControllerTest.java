@@ -23,14 +23,14 @@ class UiConfigControllerTest {
     @Test
     void shouldExposeUiConfig() throws Exception {
         when(uiConfigService.currentConfig()).thenReturn(new UiConfigResponse(
-                "Acme Engineering Workspace",
+                "CRM Operations Workspace",
                 "Team Delivery Workspace",
                 "Team Delivery Workspace"
         ));
 
         mockMvc.perform(get("/api/ui/config"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Acme Engineering Workspace"))
+                .andExpect(jsonPath("$.title").value("CRM Operations Workspace"))
                 .andExpect(jsonPath("$.subtitle").value("Team Delivery Workspace"))
                 .andExpect(jsonPath("$.defaultTitle").value("Team Delivery Workspace"));
     }

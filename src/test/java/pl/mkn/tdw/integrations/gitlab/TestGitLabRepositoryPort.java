@@ -8,7 +8,7 @@ import java.util.Map;
 public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
     private static final Map<String, String> FILE_CONTENTS = Map.of(
-            repositoryKey("crm-customer-api", "src/main/java/com/example/crm/customer/api/CustomerController.java"),
+            repositoryKey("crm-customer-api", "src/main/java/com/example/crm/customer/api/CustomerProfileController.java"),
             """
                     package com.example.crm.customer.api;
 
@@ -26,13 +26,13 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
                     public class CustomerController {
 
                         @GetMapping("/{customerId}")
-                        public ResponseEntity<OrderResponse> getCustomer(@PathVariable String customerId) {
-                            return ResponseEntity.ok(new OrderResponse(customerId));
+                        public ResponseEntity<CustomerProfileResponse> getCustomer(@PathVariable String customerId) {
+                            return ResponseEntity.ok(new CustomerProfileResponse(customerId));
                         }
 
                         @PostMapping(path = "/")
-                        public OrderResponse createOrder(@Valid @RequestBody CreateOrderRequest request) {
-                            return new OrderResponse(request.customerId());
+                        public CustomerProfileResponse updateCustomerProfile(@Valid @RequestBody CreateCustomerProfileRequest request) {
+                            return new CustomerProfileResponse(request.customerId());
                         }
                     }
                     """,
@@ -49,9 +49,9 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
                     public class CustomerProfileClient {
 
-                        public CustomerProfileResponse fetchCustomerProfile(String sku) {
+                        public CustomerProfileResponse fetchCustomerProfile(String customerId) {
                             return customerProfileWebClient.get()
-                                    .uri("/customer-profile/{sku}", sku)
+                                    .uri("/customer-profile/{customerId}", customerId)
                                     .retrieve()
                                     .bodyToMono(CustomerProfileResponse.class)
                                     .timeout(Duration.ofSeconds(2))
@@ -66,10 +66,10 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
                     public class CustomerAccountService {
 
-                        public void updateOrder(Customer customer) {
+                        public void updateCustomerProfile(Customer customer) {
                             transactionTemplate.executeWithoutResult(status -> {
-                                customerRepository.save(order);
-                                auditRepository.save(new AuditEntry(order.id()));
+                                customerRepository.save(customer);
+                                auditRepository.save(new AuditEntry(customer.id()));
                             });
                         }
 
@@ -131,8 +131,8 @@ public class TestGitLabRepositoryPort implements GitLabRepositoryPort {
         var projectNames = new LinkedHashSet<>(query.projectNames());
         var keywords = query.keywords();
 
-        if (projectNames.contains("crm-catalog-service")
-                || projectNames.contains("crm-customer-profile-service")
+        if (projectNames.contains("crm-customer-profile-service")
+                || projectNames.contains("crm-customer-segment-service")
                 || projectNames.contains("crm-customer-client-service")
                 || keywords.contains("timeout")) {
             candidates.add(new GitLabRepositoryFileCandidate(

@@ -36,7 +36,7 @@ describe('FlowExplorerPageComponent', () => {
     };
     flowExplorerApi = {
       getConfig: vi.fn(() => of({ defaultBranch: 'main' })),
-      getSystems: vi.fn(() => of([systemOption('crm-service'), systemOption('catalog-core')])),
+      getSystems: vi.fn(() => of([systemOption('crm-service'), systemOption('crm-analytics')])),
       getEndpointInventory: vi.fn(() => of(endpointInventory())),
       startJob: vi.fn(() => of(jobSnapshot({ status: 'COLLECTING_CONTEXT' }))),
       sendChatMessage: vi.fn(() =>
@@ -121,7 +121,7 @@ describe('FlowExplorerPageComponent', () => {
     expect(controls[5]?.querySelector('.flow-explorer-select-loader')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.flow-explorer-select-loader')).toHaveLength(3);
 
-    systems.next([systemOption('crm-service'), systemOption('catalog-core')]);
+    systems.next([systemOption('crm-service'), systemOption('crm-analytics')]);
     systems.complete();
     fixture.detectChanges();
     selectSystem(fixture, 'CRM Service');
@@ -152,12 +152,12 @@ describe('FlowExplorerPageComponent', () => {
     setInputValue(
       fixture.nativeElement,
       '.flow-explorer-select__search input[type="search"]',
-      'catalog'
+      'analytics'
     );
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Catalog Core');
+    expect(compiled.textContent).toContain('CRM Analytics');
     expect(compiled.textContent).not.toContain('CRM Service');
   });
 
@@ -955,20 +955,20 @@ function setChatTextareaValue(nativeElement: HTMLElement, value: string): void {
 }
 
 function systemOption(systemId: string): FlowExplorerSystemOption {
-  const crm = systemId === 'crm-service';
+  const primaryCrm = systemId === 'crm-service';
   return {
     systemId,
-    name: crm ? 'CRM Service' : 'Catalog Core',
-    shortName: crm ? 'CRM' : 'Catalog',
+    name: primaryCrm ? 'CRM Service' : 'CRM Analytics',
+    shortName: primaryCrm ? 'CRM' : 'CRM Analytics',
     kind: 'internal-application',
     lifecycleStatus: 'active',
     operationalStatus: 'healthy',
-    criticality: crm ? 'high' : 'medium',
-    summary: crm ? 'Customer relationship core API.' : 'Catalog operations API.',
-    aliases: crm ? ['crm'] : ['catalog'],
-    repositoryCount: crm ? 2 : 1,
+    criticality: primaryCrm ? 'high' : 'medium',
+    summary: primaryCrm ? 'Customer relationship core API.' : 'Customer analytics API.',
+    aliases: primaryCrm ? ['crm'] : ['crm-analytics', 'customer-insights'],
+    repositoryCount: primaryCrm ? 2 : 1,
     codeSearchScopeCount: 1,
-    ownerTeamIds: crm ? ['team-crm'] : ['team-catalog']
+    ownerTeamIds: primaryCrm ? ['team-crm'] : ['team-crm-analytics']
   };
 }
 

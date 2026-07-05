@@ -17,7 +17,7 @@ class GitLabEndpointUseCaseTraversalStateTest {
         var state = new GitLabEndpointUseCaseTraversalState(repository, null, 5, 20);
 
         state.enqueue(new GitLabEndpointUseCaseTraversalNode(
-                "src/main/java/com/example/CustomerMapper.java",
+                "src/main/java/com/example/CustomerProfileMapper.java",
                 "CustomerMapper",
                 "from",
                 1,

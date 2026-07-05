@@ -34,8 +34,8 @@ describe('AnalysisReportPanelComponent', () => {
     return {
       reportId: 'incident-report-1',
       header: 'DOWNSTREAM_TIMEOUT',
-      subHeader: 'Catalog / Catalog Context',
-      markdownSummary: '**Timeout** downstream blokuje proces katalogowy.',
+      subHeader: 'CRM / CRM Customer Context',
+      markdownSummary: '**Timeout** downstream blokuje proces profilu klienta CRM.',
       sections: [
         {
           id: 'TECHNICAL_HANDOFF',

@@ -31,9 +31,9 @@ class FlowExplorerReportMapperTest {
         assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, response.goal());
         assertEquals("Tester chce poznac GET /api/customers/{id}.", response.overview().markdown());
         assertEquals("high", response.overview().confidence());
-        assertEquals(List.of("crm-service:CustomerController.java:L12-L24"), response.overview().sourceRefs());
+        assertEquals(List.of("crm-service:CustomerProfileController.java:L12-L24"), response.overview().sourceRefs());
         assertEquals("high", response.confidence());
-        assertEquals(List.of("crm-service:CustomerController.java:L12-L24"), response.sourceReferences());
+        assertEquals(List.of("crm-service:CustomerProfileController.java:L12-L24"), response.sourceReferences());
         assertEquals(List.of("Nie widac konfiguracji runtime."), response.globalVisibilityLimits());
         assertEquals(List.of("Czy endpoint ma wariant dla klienta nieaktywnego?"), response.globalOpenQuestions());
         assertEquals(4, response.sections().size());
@@ -137,7 +137,7 @@ class FlowExplorerReportMapperTest {
         return new AnalysisReportReference(
                 "code",
                 "CustomerController",
-                "crm-service:CustomerController.java:L12-L24",
+                "crm-service:CustomerProfileController.java:L12-L24",
                 "Endpoint handler"
         );
     }

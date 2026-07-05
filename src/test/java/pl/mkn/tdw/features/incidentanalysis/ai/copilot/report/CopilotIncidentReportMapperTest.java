@@ -27,9 +27,9 @@ class CopilotIncidentReportMapperTest {
 
         assertEquals("copilot-sdk", response.providerName());
         assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
-        assertEquals("Rozliczenie klienta", response.affectedProcess());
-        assertEquals("Catalog Context", response.affectedBoundedContext());
-        assertEquals("Core Integration Team", response.affectedTeam());
+        assertEquals("Profil klienta CRM", response.affectedProcess());
+        assertEquals("CRM Customer Context", response.affectedBoundedContext());
+        assertEquals("CRM Customer Team", response.affectedTeam());
         assertEquals("Functional report section.", response.functionalAnalysis());
         assertEquals("Technical handoff section.", response.technicalAnalysis());
         assertEquals("medium", response.confidence());
@@ -103,9 +103,9 @@ class CopilotIncidentReportMapperTest {
                 ),
                 new AnalysisReportMeta(
                         List.of(
-                                new AnalysisReportReference("process", "Rozliczenie klienta", null, null),
-                                new AnalysisReportReference("boundedContext", "Catalog Context", null, null),
-                                new AnalysisReportReference("team", "Core Integration Team", null, null)
+                                new AnalysisReportReference("process", "Profil klienta CRM", null, null),
+                                new AnalysisReportReference("boundedContext", "CRM Customer Context", null, null),
+                                new AnalysisReportReference("team", "CRM Customer Team", null, null)
                         ),
                         List.of("Limited log window."),
                         List.of("Czy downstream jest stabilny?"),

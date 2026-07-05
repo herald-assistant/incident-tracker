@@ -127,14 +127,14 @@ class OperationalContextControllerTest {
 
     @Test
     void shouldExposeEntityEndpointWithQueryId() throws Exception {
-        when(viewService.entity("repository", "[CLP/backend]"))
-                .thenReturn(emptyDetail("repository", "[CLP/backend]"));
+        when(viewService.entity("repository", "[CRM/backend]"))
+                .thenReturn(emptyDetail("repository", "[CRM/backend]"));
 
         mockMvc.perform(get("/api/operational-context/entities/repository")
-                        .param("id", "[CLP/backend]"))
+                        .param("id", "[CRM/backend]"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.type").value("repository"))
-                .andExpect(jsonPath("$.id").value("[CLP/backend]"));
+                .andExpect(jsonPath("$.id").value("[CRM/backend]"));
     }
 
     @Test
@@ -165,8 +165,8 @@ class OperationalContextControllerTest {
 
     @Test
     void shouldExposeCurrentReadModelProjectionEndpointsWithQueryId() throws Exception {
-        var target = entityRef("repository", "[CLP/backend]");
-        when(viewService.entityRelationsReadModel("repository", "[CLP/backend]"))
+        var target = entityRef("repository", "[CRM/backend]");
+        when(viewService.entityRelationsReadModel("repository", "[CRM/backend]"))
                 .thenReturn(new OperationalContextEntityRelationsReadModelDto(
                         "operational-context.entity-relations",
                         1,
@@ -176,18 +176,18 @@ class OperationalContextControllerTest {
                         List.of(),
                         List.of()
                 ));
-        when(viewService.codeSearchReadModel("repository", "[CLP/backend]"))
+        when(viewService.codeSearchReadModel("repository", "[CRM/backend]"))
                 .thenReturn(OperationalContextCodeSearchReadModel.empty(target, List.of()));
 
         mockMvc.perform(get("/api/operational-context/read-model/entities/repository/relations")
-                        .param("id", "[CLP/backend]"))
+                        .param("id", "[CRM/backend]"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.analysisTarget.id").value("[CLP/backend]"));
+                .andExpect(jsonPath("$.analysisTarget.id").value("[CRM/backend]"));
 
         mockMvc.perform(get("/api/operational-context/read-model/entities/repository/code-search")
-                        .param("id", "[CLP/backend]"))
+                        .param("id", "[CRM/backend]"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.analysisTarget.id").value("[CLP/backend]"));
+                .andExpect(jsonPath("$.analysisTarget.id").value("[CRM/backend]"));
     }
 
     @Test

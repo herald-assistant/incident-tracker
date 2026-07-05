@@ -272,7 +272,7 @@ class FlowExplorerPromptPreparationServiceTest {
                         "/api/customers/{id}",
                         "CustomerController",
                         "getCustomer",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         12,
                         24,
                         "HIGH"
@@ -287,9 +287,9 @@ class FlowExplorerPromptPreparationServiceTest {
                         List.of()
                 )),
                 List.of(new FlowExplorerFlowNode(
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         "Endpoint handler.",
                         "HIGH",
@@ -297,9 +297,9 @@ class FlowExplorerPromptPreparationServiceTest {
                 )),
                 List.of(),
                 List.of(new FlowExplorerSnippetCard(
-                        "crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+                        "crm-service:src/main/java/com/example/CustomerProfileController.java:L9-L27",
                         "crm-service",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         9,
@@ -309,7 +309,7 @@ class FlowExplorerPromptPreparationServiceTest {
                         100,
                         snippetCardTruncated,
                         "Endpoint handler.",
-                        "// file: src/main/java/com/example/CustomerController.java\npublic CustomerResponse getCustomer() {}",
+                        "// file: src/main/java/com/example/CustomerProfileController.java\npublic CustomerResponse getCustomer() {}",
                         0,
                         List.of()
                 )),

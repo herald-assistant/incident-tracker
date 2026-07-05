@@ -58,7 +58,7 @@ class GitLabEndpointUseCaseContextServiceTest {
         assertEquals("release/1", result.repository().branch());
         assertEquals(endpoint.endpointId(), result.endpoint().endpointId());
         assertEquals(GitLabEndpointUseCaseFileRole.CONTROLLER, result.files().get(0).role());
-        assertEquals("src/main/java/com/example/crm/CustomerController.java", result.files().get(0).path());
+        assertEquals("src/main/java/com/example/crm/CustomerProfileController.java", result.files().get(0).path());
         assertTrue(result.files().get(0).symbols().contains("getCustomer"));
         assertFalse(result.limits().maxFilesReached());
 
@@ -73,7 +73,7 @@ class GitLabEndpointUseCaseContextServiceTest {
                 "CRM",
                 "crm-customer-service",
                 "release/1",
-                "src/main/java/com/example/crm/CustomerController.java",
+                "src/main/java/com/example/crm/CustomerProfileController.java",
                 120_000
         );
     }
@@ -100,7 +100,7 @@ class GitLabEndpointUseCaseContextServiceTest {
 
         assertEquals("updateCustomer", result.endpoint().handlerMethod());
         assertTrue(result.files().stream()
-                .anyMatch(file -> file.path().equals("src/main/java/com/example/crm/CustomerController.java")
+                .anyMatch(file -> file.path().equals("src/main/java/com/example/crm/CustomerProfileController.java")
                         && file.symbols().contains("updateCustomer")));
 
         var endpointRequest = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
@@ -135,7 +135,7 @@ class GitLabEndpointUseCaseContextServiceTest {
         assertEquals(1, result.unresolved().size());
         assertTrue(result.unresolved().get(0).reason().contains("ENDPOINT_NOT_FOUND"));
         assertTrue(result.suggestedNextReads().get(0)
-                .contains("crm-customer-service:src/main/java/com/example/crm/CustomerController.java"));
+                .contains("crm-customer-service:src/main/java/com/example/crm/CustomerProfileController.java"));
         verifyNoInteractions(repositoryPort);
     }
 
@@ -154,7 +154,7 @@ class GitLabEndpointUseCaseContextServiceTest {
                 "/api/customers/{id}",
                 "com.example.crm.LegacyCustomerController",
                 "getCustomer",
-                "src/main/java/com/example/crm/LegacyCustomerController.java",
+                "src/main/java/com/example/crm/LegacyCustomerProfileController.java",
                 1,
                 5,
                 List.of(),
@@ -258,7 +258,7 @@ class GitLabEndpointUseCaseContextServiceTest {
                 path,
                 "com.example.crm.CustomerController",
                 handlerMethod,
-                "src/main/java/com/example/crm/CustomerController.java",
+                "src/main/java/com/example/crm/CustomerProfileController.java",
                 1,
                 5,
                 List.of("CustomerModel"),

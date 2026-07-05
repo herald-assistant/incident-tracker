@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GitLabJavaMethodSliceServiceTest {
 
-    private static final String FILE_PATH = "src/main/java/com/example/orders/OrderService.java";
+    private static final String FILE_PATH = "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java";
     private static final String ACCESSOR_FILE_PATH = "src/main/java/com/example/crm/customer/CustomerLifecycle.java";
 
     private final GitLabJavaMethodSliceService service = new GitLabJavaMethodSliceService(new SliceRepositoryPort());
@@ -26,11 +26,11 @@ class GitLabJavaMethodSliceServiceTest {
     void shouldRenderFocusedMethodSliceWithRelevantFieldsImportsAndLocalCallees() {
         var response = service.readMethodSlice(new GitLabJavaMethodSliceRequest(
                 "CRM",
-                "orders",
+                "crm-customer-profile",
                 "main",
                 FILE_PATH,
-                "OrderService",
-                List.of(new GitLabJavaMethodSliceMethodSelector("createOrder", 18)),
+                "CustomerProfileService",
+                List.of(new GitLabJavaMethodSliceMethodSelector("updateCustomerProfile", 18)),
                 true,
                 true,
                 true,
@@ -38,14 +38,14 @@ class GitLabJavaMethodSliceServiceTest {
         ));
 
         assertEquals("OK", response.status());
-        assertEquals("com.example.orders.OrderService", response.declaringTypeName());
-        assertEquals(List.of(new GitLabJavaMethodSliceMethodSelector("createOrder", 18)), response.requestedMethods());
+        assertEquals("com.example.crm.customerprofile.CustomerProfileService", response.declaringTypeName());
+        assertEquals(List.of(new GitLabJavaMethodSliceMethodSelector("updateCustomerProfile", 18)), response.requestedMethods());
         assertFalse(response.truncated());
-        assertTrue(response.includedFields().contains("orderRepository"));
+        assertTrue(response.includedFields().contains("customerProfileRepository"));
         assertTrue(response.includedFields().contains("auditClient"));
         assertTrue(response.includedFields().contains("clock"));
         assertFalse(response.includedFields().contains("noiseClient"));
-        assertTrue(response.includedMethods().stream().anyMatch(method -> "createOrder".equals(method.methodName())));
+        assertTrue(response.includedMethods().stream().anyMatch(method -> "updateCustomerProfile".equals(method.methodName())));
         assertTrue(response.includedMethods().stream().anyMatch(method -> "prepareEntity".equals(method.methodName())));
         assertTrue(response.includedMethods().stream().anyMatch(method -> "resultFrom".equals(method.methodName())));
         assertTrue(response.includedMethods().stream().anyMatch(method -> "map".equals(method.methodName())));
@@ -54,7 +54,7 @@ class GitLabJavaMethodSliceServiceTest {
         var content = response.content();
         var normalizedContent = content.replace("\r\n", "\n");
         assertTrue(normalizedContent.contains("""
-                package com.example.orders;
+                package com.example.crm.customerprofile;
 
                 import java.time.Clock;
                 import java.time.Instant;
@@ -69,13 +69,13 @@ class GitLabJavaMethodSliceServiceTest {
         assertTrue(content.contains("import java.time.Instant;"));
         assertTrue(content.contains("import lombok.RequiredArgsConstructor;"));
         assertFalse(content.contains("import java.util.UUID;"));
-        assertTrue(content.contains("private final OrderRepository orderRepository;"));
+        assertTrue(content.contains("private final CustomerProfileRepository customerProfileRepository;"));
         assertTrue(content.contains("private final AuditClient auditClient;"));
         assertFalse(content.contains("private final NoiseClient noiseClient;"));
-        assertTrue(content.contains("public OrderResult createOrder"));
-        assertTrue(content.contains("OrderEntity prepareEntity"));
-        assertTrue(content.contains("protected OrderResult resultFrom"));
-        assertTrue(content.contains("private OrderEntity map"));
+        assertTrue(content.contains("public CustomerProfileResult updateCustomerProfile"));
+        assertTrue(content.contains("CustomerProfileEntity prepareEntity"));
+        assertTrue(content.contains("protected CustomerProfileResult resultFrom"));
+        assertTrue(content.contains("private CustomerProfileEntity map"));
         assertFalse(content.contains("private void record"));
         assertFalse(content.contains("public void unrelated"));
         assertTrue(content.contains("// ... omitted fields ..."));
@@ -87,11 +87,11 @@ class GitLabJavaMethodSliceServiceTest {
     void shouldRenderAllOverloadsWhenLineStartIsNotProvided() {
         var response = service.readMethodSlice(new GitLabJavaMethodSliceRequest(
                 "CRM",
-                "orders",
+                "crm-customer-profile",
                 "main",
                 FILE_PATH,
-                "OrderService",
-                List.of(new GitLabJavaMethodSliceMethodSelector("createOrder", null)),
+                "CustomerProfileService",
+                List.of(new GitLabJavaMethodSliceMethodSelector("updateCustomerProfile", null)),
                 true,
                 true,
                 true,
@@ -101,11 +101,11 @@ class GitLabJavaMethodSliceServiceTest {
         assertEquals("OK", response.status());
         assertTrue(response.candidates().isEmpty());
         assertEquals(2, response.includedMethods().stream()
-                .filter(method -> "createOrder".equals(method.methodName()))
+                .filter(method -> "updateCustomerProfile".equals(method.methodName()))
                 .count());
-        assertTrue(response.content().contains("public OrderResult createOrder(OrderRequest request)"));
-        assertTrue(response.content().contains("public OrderResult createOrder(String externalId)"));
-        assertTrue(response.content().contains("private OrderEntity map"));
+        assertTrue(response.content().contains("public CustomerProfileResult updateCustomerProfile(CustomerProfileRequest request)"));
+        assertTrue(response.content().contains("public CustomerProfileResult updateCustomerProfile(String externalId)"));
+        assertTrue(response.content().contains("private CustomerProfileEntity map"));
     }
 
     @Test
@@ -214,7 +214,7 @@ class GitLabJavaMethodSliceServiceTest {
 
         private String orderSource() {
             return """
-                    package com.example.orders;
+                    package com.example.crm.customerprofile;
 
                     import java.time.Clock;
                     import java.time.Instant;
@@ -224,34 +224,34 @@ class GitLabJavaMethodSliceServiceTest {
 
                     @Service
                     @RequiredArgsConstructor
-                    public class OrderService {
+                    public class CustomerProfileService {
 
-                        private final OrderRepository orderRepository;
+                        private final CustomerProfileRepository customerProfileRepository;
                         private final AuditClient auditClient;
                         private final Clock clock;
                         private final NoiseClient noiseClient;
 
-                        public OrderResult createOrder(OrderRequest request) {
+                        public CustomerProfileResult updateCustomerProfile(CustomerProfileRequest request) {
                             var entity = prepareEntity(request);
-                            orderRepository.save(entity);
+                            customerProfileRepository.save(entity);
                             auditClient.record(entity.id(), Instant.now(clock));
                             return resultFrom(entity);
                         }
 
-                        public OrderResult createOrder(String externalId) {
-                            return new OrderResult(externalId);
+                        public CustomerProfileResult updateCustomerProfile(String externalId) {
+                            return new CustomerProfileResult(externalId);
                         }
 
-                        OrderEntity prepareEntity(OrderRequest request) {
+                        CustomerProfileEntity prepareEntity(CustomerProfileRequest request) {
                             return map(request);
                         }
 
-                        protected OrderResult resultFrom(OrderEntity entity) {
-                            return new OrderResult(entity.id());
+                        protected CustomerProfileResult resultFrom(CustomerProfileEntity entity) {
+                            return new CustomerProfileResult(entity.id());
                         }
 
-                        private OrderEntity map(OrderRequest request) {
-                            return new OrderEntity(request.customerId());
+                        private CustomerProfileEntity map(CustomerProfileRequest request) {
+                            return new CustomerProfileEntity(request.customerId());
                         }
 
                         private void record(String id, Instant at) {

@@ -137,7 +137,7 @@ class CopilotReportToolsTest {
 
         var result = tools.updateHeader(
                 "DOWNSTREAM_TIMEOUT",
-                "Rozliczenie klienta | Catalog Context | Core Integration Team",
+                "Profil klienta CRM | CRM Customer Context | CRM Customer Team",
                 "Downstream timeout blocks customer settlement.",
                 "Aktualizacja problemu wykrytego.",
                 toolContext()
@@ -145,7 +145,7 @@ class CopilotReportToolsTest {
 
         assertEquals("ok", result.status());
         assertEquals("DOWNSTREAM_TIMEOUT", result.report().header());
-        assertEquals("Rozliczenie klienta | Catalog Context | Core Integration Team", result.report().subHeader());
+        assertEquals("Profil klienta CRM | CRM Customer Context | CRM Customer Team", result.report().subHeader());
         assertEquals("Downstream timeout blocks customer settlement.", result.report().markdownSummary());
         assertEquals("DOWNSTREAM_TIMEOUT", store.current("report-1").orElseThrow().header());
     }

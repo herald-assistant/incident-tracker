@@ -185,7 +185,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                                   "group": "CRM/runtime",
                                   "projectName": "crm-customer-api",
                                   "branch": "main",
-                                  "filePath": "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                                  "filePath": "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                                   "matchReason": "repository keyword",
                                   "matchScore": 31,
                                   "inferredRole": "repository",
@@ -195,7 +195,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                               ]
                             }
                           ],
-                          "recommendedNextReads": ["crm-customer-api:src/main/java/com/example/crm/customer/CustomerRepository.java"]
+                          "recommendedNextReads": ["crm-customer-api:src/main/java/com/example/crm/customer/CustomerProfileRepository.java"]
                         }
                         """
         );
@@ -217,11 +217,11 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                             "pathExpression": "/api/customers/{customerId}",
                             "controllerClass": "com.example.crm.customer.CustomerController",
                             "handlerMethod": "getCustomer",
-                            "filePath": "src/main/java/com/example/crm/customer/CustomerController.java",
+                            "filePath": "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                             "lineStart": 12,
                             "lineEnd": 20,
                             "requestTypes": ["@PathVariable String customerId"],
-                            "responseTypes": ["OrderResponse"],
+                            "responseTypes": ["CustomerProfileResponse"],
                             "annotations": ["RestController", "GetMapping"],
                             "confidence": "HIGH",
                             "limitations": [],
@@ -229,7 +229,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                           },
                           "files": [
                             {
-                              "path": "src/main/java/com/example/crm/customer/CustomerController.java",
+                              "path": "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                               "role": "CONTROLLER",
                               "priority": 1,
                               "symbols": ["getCustomer"],
@@ -265,7 +265,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
                           ],
                           "limitations": ["Traversal stopped at max depth."],
                           "suggestedNextReads": [
-                            "crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java via gitlab_read_repository_file_outline",
+                            "crm-customer-api:src/main/java/com/example/crm/customer/CustomerProfileController.java via gitlab_read_repository_file_outline",
                             "crm-customer-api:src/main/java/com/example/crm/customer/CustomerService.java via gitlab_read_repository_file_outline"
                           ],
                           "limits": {
@@ -338,7 +338,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         assertEquals("gitlab_find_flow_context", flowAttributes.get("toolName"));
         assertEquals("1", flowAttributes.get("groupCount"));
         assertEquals("1", flowAttributes.get("recommendedNextReadCount"));
-        assertTrue(flowAttributes.get("groups").contains("CustomerRepository.java"));
+        assertTrue(flowAttributes.get("groups").contains("CustomerProfileRepository.java"));
         assertEquals("4", flowAttributes.get("toolCaptureOrder"));
 
         var endpointContextAttributes = attributes(lastSection.items().get(4));
@@ -353,7 +353,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
         assertEquals("2", endpointContextAttributes.get("suggestedNextReadCount"));
         assertEquals("MEDIUM", endpointContextAttributes.get("confidence"));
         assertEquals("5", endpointContextAttributes.get("toolCaptureOrder"));
-        assertTrue(endpointContextAttributes.get("files").contains("CustomerController.java"));
+        assertTrue(endpointContextAttributes.get("files").contains("CustomerProfileController.java"));
         assertTrue(endpointContextAttributes.get("files").contains("CustomerService.java"));
         assertTrue(endpointContextAttributes.get("relations").contains("LOCAL_METHOD_CALL"));
         assertTrue(endpointContextAttributes.get("unresolved").contains("CustomerMapper"));

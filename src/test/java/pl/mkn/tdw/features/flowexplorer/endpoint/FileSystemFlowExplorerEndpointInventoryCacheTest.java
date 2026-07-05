@@ -23,11 +23,11 @@ class FileSystemFlowExplorerEndpointInventoryCacheTest {
     @Test
     void shouldReadEndpointInventoryAfterCacheRecreation() {
         var key = new FlowExplorerEndpointInventoryCache.Key(
-                "catalog-core",
+                "crm-customer-profile",
                 null,
                 "main",
                 "platform/backend",
-                List.of("catalog-api:catalog-api:platform/backend/catalog-api"),
+                List.of("crm-customer-profile-api:crm-customer-profile-api:platform/backend/crm-customer-profile-api"),
                 null,
                 null
         );
@@ -45,11 +45,11 @@ class FileSystemFlowExplorerEndpointInventoryCacheTest {
     @Test
     void shouldEvictEndpointInventoryCacheEntry() {
         var key = new FlowExplorerEndpointInventoryCache.Key(
-                "catalog-core",
+                "crm-customer-profile",
                 null,
                 "main",
                 "platform/backend",
-                List.of("catalog-api:catalog-api:platform/backend/catalog-api"),
+                List.of("crm-customer-profile-api:crm-customer-profile-api:platform/backend/crm-customer-profile-api"),
                 null,
                 null
         );
@@ -75,7 +75,7 @@ class FileSystemFlowExplorerEndpointInventoryCacheTest {
 
     private FlowExplorerEndpointInventoryResponse response() {
         return new FlowExplorerEndpointInventoryResponse(
-                "catalog-core",
+                "crm-customer-profile",
                 null,
                 "main",
                 "platform/backend",

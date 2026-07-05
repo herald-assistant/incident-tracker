@@ -330,7 +330,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     fixture.detectChanges();
 
     expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
-    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu katalogowego.');
+    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu profilu klienta CRM.');
     expect(fixture.nativeElement.textContent).toContain('incident-report-1');
     expect(fixture.nativeElement.textContent).toContain('Technical handoff');
     expect(fixture.nativeElement.textContent).not.toContain('Lokalny run został otwarty z historii.');
@@ -352,7 +352,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
 
     expect(analysisApi.getAnalysis).toHaveBeenCalledWith('analysis-1');
     expect(fixture.componentInstance.correlationIdControl.value).toBe('corr-123');
-    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu katalogowego.');
+    expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu profilu klienta CRM.');
   });
 
   it('should continue a local run through the analysis history API', async () => {
@@ -756,11 +756,11 @@ function completedJob(): AnalysisJobStateSnapshot {
       environment: 'dev3',
       gitLabBranch: 'main',
       detectedProblem: 'DOWNSTREAM_TIMEOUT',
-      affectedProcess: 'Catalog',
-      affectedBoundedContext: 'Catalog Context',
-      affectedTeam: 'Catalog Team',
-      functionalAnalysis: 'Analiza funkcjonalna procesu katalogowego.',
-      technicalAnalysis: 'Analiza techniczna timeoutu w kliencie katalogu.',
+      affectedProcess: 'CRM',
+      affectedBoundedContext: 'CRM Customer Context',
+      affectedTeam: 'CRM Team',
+      functionalAnalysis: 'Analiza funkcjonalna procesu profilu klienta CRM.',
+      technicalAnalysis: 'Analiza techniczna timeoutu w komponencie profilu klienta CRM.',
       confidence: 'medium',
       visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
       prompt: 'Prepared prompt without tokens.',
@@ -774,14 +774,14 @@ function incidentReport(): AnalysisReport {
   return {
     reportId: 'incident-report-1',
     header: 'DOWNSTREAM_TIMEOUT',
-    subHeader: 'Catalog / Catalog Context',
-    markdownSummary: 'Timeout downstream blokuje odczyt katalogu.',
+    subHeader: 'CRM / CRM Customer Context',
+    markdownSummary: 'Timeout downstream blokuje odczyt profilu klienta CRM.',
     sections: [
       {
         id: 'FUNCTIONAL_ANALYSIS',
         title: 'Functional analysis',
         order: 1,
-        markdown: 'Analiza funkcjonalna procesu katalogowego.',
+        markdown: 'Analiza funkcjonalna procesu profilu klienta CRM.',
         meta: {
           references: [],
           visibilityLimits: [],
@@ -795,13 +795,13 @@ function incidentReport(): AnalysisReport {
         id: 'TECHNICAL_HANDOFF',
         title: 'Technical handoff',
         order: 2,
-        markdown: 'Analiza techniczna timeoutu w kliencie katalogu.',
+        markdown: 'Analiza techniczna timeoutu w komponencie profilu klienta CRM.',
         meta: {
           references: [
             {
               type: 'code',
-              label: 'CatalogClient.call',
-              target: 'src/main/java/CatalogClient.java:L42',
+              label: 'CustomerProfileClient.call',
+              target: 'src/main/java/CustomerProfileClient.java:L42',
               description: 'Wywolanie downstream.'
             }
           ],
@@ -828,7 +828,7 @@ function localRunDetail(job: AnalysisJobStateSnapshot = completedJob()): LocalAn
   return {
     analysisId: 'analysis-1',
     feature: 'incident-analysis',
-    name: 'Catalog corr-123',
+    name: 'CRM corr-123',
     status: job.status,
     createdAt: '2026-05-02T10:00:00Z',
     updatedAt: '2026-05-02T10:05:00Z',

@@ -102,7 +102,7 @@ describe('App', () => {
 
     await router.navigateByUrl('/analysis-history');
     fixture.detectChanges();
-    flushUiConfig(http, 'ChatCLP');
+    flushUiConfig(http, 'CRM Workspace');
     http.expectOne('/api/analysis/runs').flush({ runs: [] });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -114,7 +114,7 @@ describe('App', () => {
 
     expect(compiled.querySelector('app-analysis-history-page')).not.toBeNull();
     expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
-      'ChatCLP'
+      'CRM Workspace'
     );
     expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
       'Analysis History'
@@ -134,7 +134,7 @@ describe('App', () => {
 
     await router.navigateByUrl('/workspace-settings');
     fixture.detectChanges();
-    flushUiConfig(http, 'ChatCLP');
+    flushUiConfig(http, 'CRM Workspace');
     http.expectOne('/api/workspace/settings').flush(workspaceSettingsResponse());
     await fixture.whenStable();
     fixture.detectChanges();
@@ -146,7 +146,7 @@ describe('App', () => {
 
     expect(compiled.querySelector('app-workspace-settings-page')).not.toBeNull();
     expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
-      'ChatCLP'
+      'CRM Workspace'
     );
     expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
       'Workspace Settings'
@@ -189,7 +189,7 @@ describe('App', () => {
       .queryAll(By.css('.workspace-settings-source'))
       .map((element) => element.injector.get(MatTooltip));
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.message)).toEqual([
-      'Default: ChatCLP',
+      'Default: CRM Workspace',
       '',
       'Default: https://gitlab.example.com',
       'Default: platform/app',
@@ -428,7 +428,7 @@ describe('App', () => {
 
     await router.navigateByUrl('/flow-explorer');
     fixture.detectChanges();
-    flushUiConfig(http, 'ChatCLP');
+    flushUiConfig(http, 'CRM Workspace');
     http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
     http.expectOne('/api/flow-explorer/systems').flush([]);
     http.expectOne('/api/analysis/ai/options').flush({
@@ -449,7 +449,7 @@ describe('App', () => {
     const breadcrumbLink = compiled.querySelector(
       '.app-shell__breadcrumb-link'
     ) as HTMLAnchorElement | null;
-    expect(breadcrumbLink?.textContent?.trim()).toBe('ChatCLP');
+    expect(breadcrumbLink?.textContent?.trim()).toBe('CRM Workspace');
     expect(breadcrumbLink?.getAttribute('href')).toBe('/');
     expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
       'Flow Explorer'
@@ -534,8 +534,8 @@ function workspaceSettingsResponse(): Record<string, unknown> {
       appUi: {
         title: {
           propertyKey: 'app.ui.title',
-          value: 'ChatCLP',
-          applicationValue: 'ChatCLP',
+          value: 'CRM Workspace',
+          applicationValue: 'CRM Workspace',
           workspaceValue: null,
           source: 'APPLICATION_PROPERTIES',
           secret: false

@@ -37,30 +37,30 @@ class OperationalContextViewServiceTest {
         var service = new OperationalContextViewService(port(typicalCatalog()));
 
         var system = service.systems().get(0);
-        assertEquals("agreement-service", system.id());
+        assertEquals("crm-consent-service", system.id());
         assertEquals("internal-application", system.kind());
         assertEquals("team-a", system.owner().value());
         assertTrue(system.relations().count() >= 4);
         assertEquals(1, system.signals().count());
 
         var repository = service.repositories().get(0);
-        assertEquals("Group/agreement-service", repository.project());
+        assertEquals("Group/crm-consent-service", repository.project());
         assertEquals("Group", repository.group());
         assertEquals("team-a", repository.owner().value());
         assertEquals(1, repository.systems().count());
         assertEquals(1, repository.contexts().count());
         assertEquals(1, repository.processes().count());
         assertTrue(repository.codeSearchScopes().count() >= 1);
-        assertTrue(repository.codeSearchRoles().detailsIds().contains("primary in agreement-repo"));
+        assertTrue(repository.codeSearchRoles().detailsIds().contains("primary in crm-consent-repo"));
 
         var codeSearchScope = service.codeSearchScopes().get(0);
-        assertEquals("Agreement Service Scope", codeSearchScope.name());
+        assertEquals("CRM Consent Service Scope", codeSearchScope.name());
         assertEquals(1, codeSearchScope.target().count());
         assertEquals(1, codeSearchScope.repositories().count());
         assertEquals(1, codeSearchScope.limitations().count());
 
         var process = service.processes().get(0);
-        assertEquals("Business process for submitting an agreement.", process.purpose());
+        assertEquals("Business process for capturing customer consent.", process.purpose());
         assertEquals(1, process.systems().count());
         assertEquals(1, process.externalSystems().count());
         assertEquals(1, process.repositories().count());
@@ -68,8 +68,8 @@ class OperationalContextViewServiceTest {
         assertEquals(1, process.steps().count());
 
         var integration = service.integrations().get(0);
-        assertEquals("agreement-service", integration.sourceSystem());
-        assertEquals("partner-system", integration.targetSystems());
+        assertEquals("crm-consent-service", integration.sourceSystem());
+        assertEquals("consent-registry", integration.targetSystems());
         assertEquals("external-handoff", integration.category());
         assertEquals("synchronous-request", integration.integrationStyle());
         assertEquals("outbound", integration.flowDirection());
@@ -77,7 +77,7 @@ class OperationalContextViewServiceTest {
         assertEquals(1, integration.contexts().count());
 
         var context = service.boundedContexts().get(0);
-        assertEquals("Bounded context for agreement decisions.", context.purpose());
+        assertEquals("Bounded context for customer consent decisions.", context.purpose());
         assertEquals(1, context.systems().count());
         assertEquals(1, context.terms().count());
 
@@ -93,16 +93,16 @@ class OperationalContextViewServiceTest {
     void shouldExposeOnlyRelationsAndCodeSearchReadModelsForOperatorApi() {
         var service = new OperationalContextViewService(port(typicalCatalog()));
 
-        var relations = service.entityRelationsReadModel("system", "agreement-service");
+        var relations = service.entityRelationsReadModel("system", "crm-consent-service");
         assertEquals("operational-context.entity-relations", relations.contract());
-        assertEquals("agreement-service", relations.analysisTarget().id());
-        assertTrue(relations.neighbors().stream().anyMatch(ref -> ref.id().equals("agreement-repo")));
+        assertEquals("crm-consent-service", relations.analysisTarget().id());
+        assertTrue(relations.neighbors().stream().anyMatch(ref -> ref.id().equals("crm-consent-repo")));
 
-        var codeSearch = service.codeSearchReadModel("system", "agreement-service");
+        var codeSearch = service.codeSearchReadModel("system", "crm-consent-service");
         assertEquals("operational-context.code-search", codeSearch.contract());
-        assertTrue(codeSearch.scopes().stream().anyMatch(scope -> scope.scope().id().equals("agreement-service-scope")));
-        assertTrue(codeSearch.repositories().stream().anyMatch(repository -> repository.repository().id().equals("agreement-repo")));
-        assertTrue(codeSearch.limitations().contains("Partner internals are outside this catalog."));
+        assertTrue(codeSearch.scopes().stream().anyMatch(scope -> scope.scope().id().equals("crm-consent-service-scope")));
+        assertTrue(codeSearch.repositories().stream().anyMatch(repository -> repository.repository().id().equals("crm-consent-repo")));
+        assertTrue(codeSearch.limitations().contains("Consent registry internals are outside this catalog."));
     }
 
     @Test
@@ -111,17 +111,17 @@ class OperationalContextViewServiceTest {
 
         var compactEntity = (OperationalContextProfiledReadModelDto) service.entity(
                 "system",
-                "agreement-service",
+                "crm-consent-service",
                 "default"
         );
         var compactRelations = (OperationalContextProfiledReadModelDto) service.entityRelationsReadModel(
                 "system",
-                "agreement-service",
+                "crm-consent-service",
                 "default"
         );
         var compactCodeSearch = (OperationalContextProfiledReadModelDto) service.codeSearchReadModel(
                 "system",
-                "agreement-service",
+                "crm-consent-service",
                 "default"
         );
 
@@ -182,12 +182,12 @@ class OperationalContextViewServiceTest {
     void shouldSearchByBusinessAndCatalogTerms() {
         var service = new OperationalContextViewService(port(typicalCatalog()));
 
-        assertFalse(service.search("agreement-service").isEmpty());
+        assertFalse(service.search("crm-consent-service").isEmpty());
         assertTrue(service.search("business-analysis").stream()
                 .anyMatch(result -> result.type().equals("code-search-scope")));
-        assertTrue(service.search("partner-handoff").stream()
+        assertTrue(service.search("consent-registry-handoff").stream()
                 .anyMatch(result -> result.type().equals("integration")));
-        assertTrue(service.search("Agreement").stream()
+        assertTrue(service.search("Customer Consent").stream()
                 .anyMatch(result -> result.type().equals("glossary-term")));
     }
 
@@ -195,10 +195,10 @@ class OperationalContextViewServiceTest {
     void shouldReturnEntityDetailsAndControlledNotFound() {
         var service = new OperationalContextViewService(port(typicalCatalog()));
 
-        var detail = service.entity("system", "agreement-service");
+        var detail = service.entity("system", "crm-consent-service");
 
         assertEquals("system", detail.type());
-        assertEquals("agreement-service", detail.id());
+        assertEquals("crm-consent-service", detail.id());
         assertFalse(detail.recognitionSignals().isEmpty());
         assertThrows(
                 OperationalContextEntityNotFoundException.class,

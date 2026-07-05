@@ -104,11 +104,11 @@ function completedJob(): AnalysisJobStateSnapshot {
       environment: 'dev3',
       gitLabBranch: 'main',
       detectedProblem: 'DOWNSTREAM_TIMEOUT',
-      affectedProcess: 'Catalog',
-      affectedBoundedContext: 'Catalog Context',
-      affectedTeam: 'Catalog Team',
-      functionalAnalysis: 'Analiza funkcjonalna procesu katalogowego.',
-      technicalAnalysis: 'Analiza techniczna timeoutu w kliencie katalogu.',
+      affectedProcess: 'CRM',
+      affectedBoundedContext: 'CRM Customer Context',
+      affectedTeam: 'CRM Team',
+      functionalAnalysis: 'Analiza funkcjonalna procesu profilu klienta CRM.',
+      technicalAnalysis: 'Analiza techniczna timeoutu w komponencie profilu klienta CRM.',
       confidence: 'medium',
       visibilityLimits: ['Brak potwierdzenia po stronie downstream.'],
       prompt: 'Final prompt without GitHub tokens.',
@@ -117,14 +117,14 @@ function completedJob(): AnalysisJobStateSnapshot {
     report: {
       reportId: 'incident-report-1',
       header: 'DOWNSTREAM_TIMEOUT',
-      subHeader: 'Catalog / Catalog Context',
-      markdownSummary: 'Timeout downstream blokuje odczyt katalogu.',
+      subHeader: 'CRM / CRM Customer Context',
+      markdownSummary: 'Timeout downstream blokuje odczyt profilu klienta CRM.',
       sections: [
         {
           id: 'TECHNICAL_HANDOFF',
           title: 'Technical handoff',
           order: 1,
-          markdown: 'CustomerService.getCustomer powinien sprawdzic timeout klienta katalogu.',
+          markdown: 'CustomerService.getCustomer powinien sprawdzic timeout przy odczycie profilu CRM.',
           meta: {
             references: [
               {

@@ -27,13 +27,13 @@ describe('AppUiConfigService', () => {
     const request = http.expectOne('/api/ui/config');
     expect(request.request.method).toBe('GET');
     request.flush({
-      title: 'Acme Engineering Workspace',
+      title: 'CRM Operations Workspace',
       subtitle: 'Team Delivery Workspace',
       defaultTitle: 'Team Delivery Workspace'
     });
 
     expect(service.config()).toEqual({
-      title: 'Acme Engineering Workspace',
+      title: 'CRM Operations Workspace',
       subtitle: 'Team Delivery Workspace',
       defaultTitle: 'Team Delivery Workspace'
     });

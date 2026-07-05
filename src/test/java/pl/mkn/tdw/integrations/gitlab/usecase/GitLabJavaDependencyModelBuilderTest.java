@@ -29,7 +29,7 @@ class GitLabJavaDependencyModelBuilderTest {
 
     @Test
     void shouldDetectLombokRequiredArgsConstructorFinalFieldDependencies() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileController.java", """
                 package com.example.crm.customer;
 
                 import lombok.RequiredArgsConstructor;
@@ -138,7 +138,7 @@ class GitLabJavaDependencyModelBuilderTest {
 
     @Test
     void shouldDetectAutowiredSetterInjectionWithLazyParameter() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileController.java", """
                 package com.example.crm.customer;
 
                 import org.springframework.beans.factory.annotation.Autowired;

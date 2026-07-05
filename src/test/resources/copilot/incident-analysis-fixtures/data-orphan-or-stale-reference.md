@@ -1,11 +1,11 @@
 ---
-name: data-orphan-or-stale-reference-policy-holder
+name: data-orphan-or-stale-reference-customer-segment-reference
 expectedClassification: data_orphan_or_stale_reference
 starterSkill: incident-analysis-orchestrator
 specializedSkill: incident-data-diagnostics
 ---
 
-# Fixture: Data Orphan Or Stale Reference - Policy Holder
+# Fixture: Data Orphan Or Stale Reference - Customer Segment Reference
 
 ## Cel
 
@@ -22,21 +22,21 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-orphan-001`
-- trigger: event `PolicyActivated`
-- failure point: enrich policy holder reference
-- log: `ReferenceDataNotFoundException: customerRef=CUST-77 not found`
-- code hint: `Policy.HOLDER_REF -> CUSTOMER_REFERENCE.CUSTOMER_REF`
-- table/key: `POLICY.HOLDER_REF = CUST-77`
+- trigger: event `CustomerProfileUpdated`
+- failure point: enrich customer segment reference
+- log: `ReferenceDataNotFoundException: segmentRef=SEG-77 not found`
+- code hint: `CustomerProfile.SEGMENT_REF -> CUSTOMER_SEGMENT.SEGMENT_REF`
+- table/key: `CUSTOMER_PROFILE.SEGMENT_REF = SEG-77`
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `event -> policy load -> holder reference lookup -> missing reference`.
+   `event -> customer profile load -> segment reference lookup -> missing reference`.
 2. Ustal, czy blad dotyczy local data, reference data czy innego systemu.
 3. Zaladuj `incident-data-diagnostics`.
 4. Wykonaj DB test rozrozniajacy:
-   - parent/local row exists: `POLICY`
-   - referenced row exists/current: `CUSTOMER_REFERENCE`
+   - parent/local row exists: `CUSTOMER_PROFILE`
+   - referenced row exists/current: `CUSTOMER_SEGMENT`
    - validity/status check referencji
 5. Jesli parent istnieje, ale referencja jest missing/stale, utrzymaj
    `data_orphan_or_stale_reference`.

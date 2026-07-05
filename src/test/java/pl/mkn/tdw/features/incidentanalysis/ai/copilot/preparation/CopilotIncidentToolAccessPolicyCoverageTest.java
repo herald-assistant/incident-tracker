@@ -42,14 +42,14 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     void shouldKeepFocusedGitLabToolsForFailingMethodOnlyEvidence() {
         var policy = policy(
                 request("dev3", List.of(gitLabSection(
-                        "CheckoutService.java around failing method",
+                        "CustomerProfileService.java around failing method",
                         """
-                                class CheckoutService {
-                                    Customer submit(CheckoutCommand command) {
+                                class CustomerProfileService {
+                                    Customer submit(CustomerProfileCommand command) {
                                         if (command == null) {
                                             throw new IllegalArgumentException("command");
                                         }
-                                        return command.toOrder();
+                                        return command.toProfile();
                                     }
                                 }
                                 """
@@ -84,10 +84,10 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     void shouldKeepFocusedGitLabToolsWhenFlowContextIsAttachedForTechnicalAnalysisGrounding() {
         var policy = policy(
                 request("dev3", List.of(gitLabSection(
-                        "Flow context upstream and downstream for CheckoutService",
+                        "Flow context upstream and downstream for CustomerProfileService",
                         """
-                                class CheckoutService {
-                                    Customer submit(CheckoutCommand command) {
+                                class CustomerProfileService {
+                                    Customer submit(CustomerProfileCommand command) {
                                         validator.validate(command);
                                         return downstreamClient.reserve(command.id());
                                     }
@@ -112,10 +112,10 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 request("dev3", List.of(
                         jpaExceptionSection(),
                         gitLabSection(
-                                "Flow context upstream and downstream for CheckoutService",
+                                "Flow context upstream and downstream for CustomerProfileService",
                                 """
-                                        class CheckoutService {
-                                            Customer submit(CheckoutCommand command) {
+                                        class CustomerProfileService {
+                                            Customer submit(CustomerProfileCommand command) {
                                                 validator.validate(command);
                                                 return downstreamClient.reserve(command.id());
                                             }
@@ -310,11 +310,11 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 request("dev3", List.of(
                         matchedOperationalContextSection(),
                         gitLabSection(
-                                "CheckoutService.java around failing method",
+                                "CustomerProfileService.java around failing method",
                                 """
-                                        class CheckoutService {
-                                            Customer submit(CheckoutCommand command) {
-                                                return command.toOrder();
+                                        class CustomerProfileService {
+                                            Customer submit(CustomerProfileCommand command) {
+                                                return command.toProfile();
                                             }
                                         }
                                         """
@@ -529,8 +529,8 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "resolved-code",
                 List.of(item(
                         title,
-                        attr("projectName", "checkout-service"),
-                        attr("filePath", "src/main/java/com/example/CheckoutService.java"),
+                        attr("projectName", "crm-customer-profile-service"),
+                        attr("filePath", "src/main/java/com/example/CustomerProfileService.java"),
                         attr("lineNumber", "12"),
                         attr("returnedStartLine", "8"),
                         attr("returnedEndLine", "18"),
@@ -546,12 +546,12 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "logs",
                 List.of(item(
                         "error log",
-                        attr("serviceName", "crm-catalog-service"),
-                        attr("className", "com.example.CustomerCatalogService"),
-                        attr("message", "Failed to resolve catalog item"),
+                        attr("serviceName", "crm-customer-profile-service"),
+                        attr("className", "com.example.CustomerProfileService"),
+                        attr("message", "Failed to resolve customer profile"),
                         attr("exception", """
                                 java.lang.IllegalStateException: failed
-                                \tat com.example.CustomerCatalogService.resolve(CustomerCatalogService.java:42)
+                                \tat com.example.CustomerProfileService.resolve(CustomerProfileService.java:42)
                                 """)
                 ))
         );
@@ -563,9 +563,9 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "logs",
                 List.of(item(
                         "truncated log",
-                        attr("serviceName", "crm-catalog-service"),
-                        attr("className", "com.example.CustomerCatalogService"),
-                        attr("message", "Failed to resolve catalog item"),
+                        attr("serviceName", "crm-customer-profile-service"),
+                        attr("className", "com.example.CustomerProfileService"),
+                        attr("message", "Failed to resolve customer profile"),
                         attr("messageTruncated", "true")
                 ))
         );
@@ -577,7 +577,7 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
                 "logs",
                 List.of(item(
                         "repository error",
-                        attr("serviceName", "crm-catalog-service"),
+                        attr("serviceName", "crm-customer-profile-service"),
                         attr("message", "EntityNotFoundException while loading tenant status by business key")
                 ))
         );

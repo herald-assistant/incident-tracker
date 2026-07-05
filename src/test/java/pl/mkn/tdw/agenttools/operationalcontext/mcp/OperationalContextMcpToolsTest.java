@@ -59,7 +59,7 @@ class OperationalContextMcpToolsTest {
         assertEquals("default", firstPage.affordances().profile());
         assertTrue(firstPage.affordances().links().stream()
                 .anyMatch(link -> link.rel().equals("first-entity") && link.tool().equals("opctx_get_entity")));
-        assertEquals("catalog", firstPage.items().get(0).id());
+        assertEquals("crm-customer-profile", firstPage.items().get(0).id());
 
         var filtered = tools.listEntities(
                 "system",
@@ -237,7 +237,7 @@ class OperationalContextMcpToolsTest {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(team()),
                 List.of(process()),
-                List.of(system("catalog", "Catalog", "catalog-api"), system("notifications", "Notifications", "notifications-api")),
+                List.of(system("crm-customer-profile", "CRM Customer Profile", "crm-customer-profile-api"), system("notifications", "Notifications", "notifications-api")),
                 List.of(integration()),
                 List.of(repository()),
                 List.of(codeSearchScope()),
@@ -260,9 +260,9 @@ class OperationalContextMcpToolsTest {
 
     private Map<String, Object> process() {
         return map(
-                "id", "checkout",
-                "name", "Checkout",
-                "summary", "Customer checkout process.",
+                "id", "customer-notification",
+                "name", "Customer Notification",
+                "summary", "CRM customer notification process.",
                 "participants", map(
                         "primarySystems", List.of("notifications"),
                         "externalSystems", List.of("notification-gateway")
@@ -284,7 +284,7 @@ class OperationalContextMcpToolsTest {
                 "aliases", List.of(alias),
                 "references", map(
                         "repositories", id.equals("notifications") ? List.of("notifications-service") : List.of(),
-                        "processes", id.equals("notifications") ? List.of("checkout") : List.of(),
+                        "processes", id.equals("notifications") ? List.of("customer-notification") : List.of(),
                         "boundedContexts", id.equals("notifications") ? List.of("notifications") : List.of(),
                         "teams", id.equals("notifications") ? List.of("notifications-team") : List.of()
                 ),
@@ -331,7 +331,7 @@ class OperationalContextMcpToolsTest {
                 "references", map(
                         "systems", List.of("notifications"),
                         "boundedContexts", List.of("notifications"),
-                        "processes", List.of("checkout"),
+                        "processes", List.of("customer-notification"),
                         "integrations", List.of("notification-gateway-api")
                 ),
                 "matchSignals", map(
@@ -386,7 +386,7 @@ class OperationalContextMcpToolsTest {
                 "Authorization",
                 "notifications",
                 "External notification delivery before acknowledgement.",
-                List.of("checkout"),
+                List.of("customer-notification"),
                 List.of("authentication"),
                 List.of("authorization", "notification delivery"),
                 List.of("notifications"),

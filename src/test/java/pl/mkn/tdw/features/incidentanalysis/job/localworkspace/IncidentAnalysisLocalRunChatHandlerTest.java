@@ -183,9 +183,9 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                         "dev3",
                         "main",
                         "DOWNSTREAM_TIMEOUT",
-                        "Catalog",
-                        "Catalog Context",
-                        "Catalog Team",
+                        "CRM Customer Profile",
+                        "CRM Customer Context",
+                        "CRM Customer Team",
                         "Analiza funkcjonalna.",
                         "Analiza techniczna.",
                         "medium",
@@ -322,7 +322,7 @@ class IncidentAnalysisLocalRunChatHandlerTest {
                     "tool-call-1",
                     "gitlab_get_file_chunk",
                     Instant.parse("2026-06-20T10:06:00Z"),
-                    Map.of("projectName", "catalog-service")
+                    Map.of("projectName", "crm-profile-service")
             ));
             return new AnalysisAiChatResponse(
                     "test-provider",

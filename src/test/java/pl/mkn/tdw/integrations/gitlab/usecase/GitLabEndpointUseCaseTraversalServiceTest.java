@@ -49,7 +49,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
 
         var byPath = filesByPath(result);
         assertEquals(GitLabEndpointUseCaseFileRole.CONTROLLER,
-                byPath.get(path("api/CustomerController.java")).role());
+                byPath.get(path("api/CustomerProfileController.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_PORT,
                 byPath.get(path("domain/CustomerRepositoryPort.java")).role());
         assertEquals(GitLabEndpointUseCaseFileRole.REPOSITORY_IMPLEMENTATION,
@@ -65,7 +65,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
         assertTrue(byPath.containsKey(path("domain/MultilineFormView.java")), byPath.keySet().toString());
         assertEquals(GitLabEndpointUseCaseFileRole.PROJECTION,
                 byPath.get(path("domain/MultilineFormView.java")).role());
-        assertTrue(byPath.get(path("api/CustomerController.java")).symbols().contains("getCustomerModel"));
+        assertTrue(byPath.get(path("api/CustomerProfileController.java")).symbols().contains("getCustomerModel"));
         assertTrue(result.relations().stream()
                 .anyMatch(relation -> relation.kind() == GitLabEndpointUseCaseRelationKind.MAPPER_CALL
                         && relation.to().contains("CustomerMapper#from")));
@@ -141,7 +141,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                         null,
                         "com.example.crm.customer.api.CustomerController",
                         "updateCustomer",
-                        path("api/CustomerController.java"),
+                        path("api/CustomerProfileController.java"),
                         1,
                         20,
                         List.of("CustomerModel model"),
@@ -232,7 +232,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                         null,
                         "com.example.crm.customer.api.CustomerController",
                         "updateCustomer",
-                        path("api/CustomerController.java"),
+                        path("api/CustomerProfileController.java"),
                         1,
                         20,
                         List.of("CustomerWebModel customerWebModel"),
@@ -262,7 +262,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 PROJECT,
                 BRANCH
         );
-        var controllerPath = "crm-customer-service/customer-adapter/src/main/java/com/example/crm/customer/api/CustomerController.java";
+        var controllerPath = "crm-customer-service/customer-adapter/src/main/java/com/example/crm/customer/api/CustomerProfileController.java";
         var portPath = "crm-customer-service/customer-application/src/main/java/com/example/crm/customer/application/UpdateCustomerPort.java";
         var servicePath = "crm-customer-service/customer-application/src/main/java/com/example/crm/customer/application/UpdateCustomerService.java";
         var customerPath = "crm-customer-service/customer-domain/src/main/java/com/example/crm/customer/domain/Customer.java";
@@ -355,7 +355,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     @Test
     void shouldTraverseAutowiredSetterInjectedBranchAndConstructorInjectedBranch() {
         var sources = new LinkedHashMap<String, String>();
-        sources.put(path("api/CustomerController.java"), """
+        sources.put(path("api/CustomerProfileController.java"), """
                 package com.example.crm.customer.api;
 
                 import com.example.crm.customer.application.CustomerAuditFacade;
@@ -465,7 +465,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                         null,
                         "com.example.crm.customer.api.CustomerController",
                         "activateCustomer",
-                        path("api/CustomerController.java"),
+                        path("api/CustomerProfileController.java"),
                         1,
                         30,
                         List.of("CustomerActivationRequest"),
@@ -502,7 +502,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
     @Test
     void shouldTreatLombokBuilderAsGeneratedTerminalCall() {
         var sources = new LinkedHashMap<String, String>();
-        sources.put(path("api/CustomerController.java"), """
+        sources.put(path("api/CustomerProfileController.java"), """
                 package com.example.crm.customer.api;
 
                 import com.example.crm.customer.application.CreateCustomerService;
@@ -564,7 +564,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                         null,
                         "com.example.crm.customer.api.CustomerController",
                         "createCustomer",
-                        path("api/CustomerController.java"),
+                        path("api/CustomerProfileController.java"),
                         1,
                         20,
                         List.of("String customerId"),
@@ -612,7 +612,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
                 null,
                 "com.example.crm.customer.api.CustomerController",
                 handlerMethod,
-                path("api/CustomerController.java"),
+                path("api/CustomerProfileController.java"),
                 1,
                 20,
                 List.of("CustomerModel"),
@@ -691,7 +691,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
 
     private Map<String, String> crmCustomerSources() {
         var sources = new LinkedHashMap<String, String>();
-        sources.put(path("api/CustomerController.java"), """
+        sources.put(path("api/CustomerProfileController.java"), """
                 package com.example.crm.customer.api;
 
                 import com.example.crm.customer.application.UpdateCustomerPort;
@@ -1033,7 +1033,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
 
     private Map<String, String> domainInterfaceSources() {
         var sources = new LinkedHashMap<String, String>();
-        sources.put(path("api/CustomerController.java"), """
+        sources.put(path("api/CustomerProfileController.java"), """
                 package com.example.crm.customer.api;
 
                 import com.example.crm.customer.application.UpdateCustomerPort;
@@ -1182,7 +1182,7 @@ class GitLabEndpointUseCaseTraversalServiceTest {
 
     private Map<String, String> generatedOpenApiModelSources() {
         var sources = new LinkedHashMap<String, String>();
-        sources.put(path("api/CustomerController.java"), """
+        sources.put(path("api/CustomerProfileController.java"), """
                 package com.example.crm.customer.api;
 
                 import com.example.crm.customer.application.UpdateCustomerPort;

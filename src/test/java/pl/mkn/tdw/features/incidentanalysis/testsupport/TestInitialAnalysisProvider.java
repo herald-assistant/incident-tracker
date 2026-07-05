@@ -31,11 +31,11 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
             return new InitialAnalysisResponse(
                     "test-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Catalog profile lookup",
-                    "Catalog Context",
-                    "Core Integration Team",
-                    "Analiza funkcjonalna: incydent dotyka procesu katalogowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
-                    "Analiza techniczna: sprawdz timeout klienta katalogu, latency downstream i konfiguracje retry w sciezce outbound lookup.",
+                    "CRM profile lookup",
+                    "CRM Customer Context",
+                    "CRM Customer Team",
+                    "Analiza funkcjonalna: incydent dotyka procesu profilu klienta CRM, ktory pobiera dane profilu klienta CRM przed zbudowaniem odpowiedzi.",
+                    "Analiza techniczna: sprawdz timeout klienta profilu klienta CRM, latency downstream i konfiguracje retry w sciezce outbound lookup.",
                     "medium",
                     List.of("Test provider korzysta z syntetycznych evidence."),
                     syntheticPrompt(request),
@@ -44,11 +44,11 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
                     syntheticReport(
                             request,
                             "DOWNSTREAM_TIMEOUT",
-                            "Catalog profile lookup",
-                            "Catalog Context",
-                            "Core Integration Team",
-                            "Analiza funkcjonalna: incydent dotyka procesu katalogowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
-                            "Analiza techniczna: sprawdz timeout klienta katalogu, latency downstream i konfiguracje retry w sciezce outbound lookup.",
+                            "CRM profile lookup",
+                            "CRM Customer Context",
+                            "CRM Customer Team",
+                            "Analiza funkcjonalna: incydent dotyka procesu profilu klienta CRM, ktory pobiera dane profilu klienta CRM przed zbudowaniem odpowiedzi.",
+                            "Analiza techniczna: sprawdz timeout klienta profilu klienta CRM, latency downstream i konfiguracje retry w sciezce outbound lookup.",
                             "medium"
                     )
             );
@@ -61,7 +61,7 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
                     "Customer persistence update",
                     "Customer Management Context",
                     "Customer Persistence Team",
-                    "Analiza funkcjonalna: incydent dotyka zapisu zamowienia po walidacji domenowej.",
+                    "Analiza funkcjonalna: incydent dotyka zapisu profilu klienta CRM po walidacji domenowej.",
                     "Analiza techniczna: sprawdz zakres transakcji, blokady sesji i ostatnie zmiany w warstwie persistence.",
                     "medium",
                     List.of("Test provider korzysta z syntetycznych evidence."),
@@ -74,7 +74,7 @@ public final class TestInitialAnalysisProvider implements InitialAnalysisProvide
                             "Customer persistence update",
                             "Customer Management Context",
                             "Customer Persistence Team",
-                            "Analiza funkcjonalna: incydent dotyka zapisu zamowienia po walidacji domenowej.",
+                            "Analiza funkcjonalna: incydent dotyka zapisu profilu klienta CRM po walidacji domenowej.",
                             "Analiza techniczna: sprawdz zakres transakcji, blokady sesji i ostatnie zmiany w warstwie persistence.",
                             "medium"
                     )

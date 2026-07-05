@@ -52,7 +52,7 @@ class GitLabEndpointUseCaseContextModelTest {
     @Test
     void shouldKeepResultListsNullSafeAndImmutable() {
         var method = new GitLabEndpointUseCaseMethodCandidate(
-                "\\src\\main\\java\\com\\example\\crm\\CustomerController.java",
+                "\\src\\main\\java\\com\\example\\crm\\CustomerProfileController.java",
                 " CustomerController ",
                 " customer.api.CustomerController ",
                 " com.example.crm.CustomerController ",
@@ -73,7 +73,7 @@ class GitLabEndpointUseCaseContextModelTest {
                 GitLabEndpointUseCaseConfidence.HIGH
         );
         var files = new ArrayList<>(List.of(new GitLabEndpointUseCaseFileCandidate(
-                "/src/main/java/com/example/crm/CustomerController.java",
+                "/src/main/java/com/example/crm/CustomerProfileController.java",
                 GitLabEndpointUseCaseFileRole.CONTROLLER,
                 0,
                 List.of(" getCustomer ", " "),
@@ -96,7 +96,7 @@ class GitLabEndpointUseCaseContextModelTest {
         files.clear();
 
         assertEquals(1, result.files().size());
-        assertEquals("src/main/java/com/example/crm/CustomerController.java", result.files().get(0).path());
+        assertEquals("src/main/java/com/example/crm/CustomerProfileController.java", result.files().get(0).path());
         assertEquals(1, result.files().get(0).priority());
         assertEquals(List.of("getCustomer"), result.files().get(0).symbols());
         assertEquals(1, result.files().get(0).methods().size());
@@ -127,7 +127,7 @@ class GitLabEndpointUseCaseContextModelTest {
                 " /api/customers/{id} ",
                 " com.example.crm.CustomerController ",
                 " getCustomer ",
-                "\\src\\main\\java\\com\\example\\crm\\CustomerController.java",
+                "\\src\\main\\java\\com\\example\\crm\\CustomerProfileController.java",
                 -10,
                 -1,
                 List.of(" CustomerRequest "),
@@ -144,7 +144,7 @@ class GitLabEndpointUseCaseContextModelTest {
         assertEquals("/api/customers/{id}", endpoint.pathExpression());
         assertEquals("com.example.crm.CustomerController", endpoint.controllerClass());
         assertEquals("getCustomer", endpoint.handlerMethod());
-        assertEquals("src/main/java/com/example/crm/CustomerController.java", endpoint.filePath());
+        assertEquals("src/main/java/com/example/crm/CustomerProfileController.java", endpoint.filePath());
         assertEquals(0, endpoint.lineStart());
         assertEquals(0, endpoint.lineEnd());
         assertEquals(List.of("CustomerRequest"), endpoint.requestTypes());
@@ -166,14 +166,14 @@ class GitLabEndpointUseCaseContextModelTest {
     void shouldKeepUnresolvedReferenceListsNullSafe() {
         var unresolved = new GitLabEndpointUseCaseUnresolvedReference(
                 " CustomerRepositoryPort.Query ",
-                "\\src\\main\\java\\com\\example\\crm\\CustomerController.java",
+                "\\src\\main\\java\\com\\example\\crm\\CustomerProfileController.java",
                 " multiple implementations ",
                 List.of(" implements Query ", " "),
                 List.of(" CustomerQueryRepository.java ")
         );
 
         assertEquals("CustomerRepositoryPort.Query", unresolved.symbol());
-        assertEquals("src/main/java/com/example/crm/CustomerController.java", unresolved.ownerPath());
+        assertEquals("src/main/java/com/example/crm/CustomerProfileController.java", unresolved.ownerPath());
         assertEquals("multiple implementations", unresolved.reason());
         assertEquals(List.of("implements Query"), unresolved.searchedKeywords());
         assertEquals(List.of("CustomerQueryRepository.java"), unresolved.candidates());

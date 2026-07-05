@@ -21,12 +21,12 @@ class UiConfigServiceTest {
     @Test
     void shouldUseConfiguredTitleAndDefaultSubtitleWhenTitleIsConfigured() {
         var properties = new UiConfigProperties();
-        properties.setTitle("  Acme Engineering Workspace  ");
+        properties.setTitle("  CRM Operations Workspace  ");
         var service = new UiConfigService(properties);
 
         var response = service.currentConfig();
 
-        assertThat(response.title()).isEqualTo("Acme Engineering Workspace");
+        assertThat(response.title()).isEqualTo("CRM Operations Workspace");
         assertThat(response.subtitle()).isEqualTo("Team Delivery Workspace");
         assertThat(response.defaultTitle()).isEqualTo("Team Delivery Workspace");
     }

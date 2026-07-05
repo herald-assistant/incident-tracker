@@ -30,20 +30,20 @@ class CopilotIncidentDigestServiceTest {
         assertTrue(digest.contains("- GitLab: `DIRECT_COLLABORATOR_ATTACHED`"));
         assertTrue(digest.contains("## Strongest log signals"));
         assertTrue(digest.contains("- exception: `java.lang.IllegalStateException: failed`"));
-        assertTrue(digest.contains("- className: `com.example.CustomerCatalogService`"));
+        assertTrue(digest.contains("- className: `com.example.CustomerProfileService`"));
         assertTrue(digest.contains("## Deployment facts"));
-        assertTrue(digest.contains("- projectNameHint: `crm-catalog-service`"));
+        assertTrue(digest.contains("- projectNameHint: `crm-customer-profile-service`"));
         assertTrue(digest.contains("- commitSha: `abc123`"));
         assertTrue(digest.contains("## Operational code search scope"));
-        assertTrue(digest.contains("- code search scopes: `catalog-code-search`"));
-        assertTrue(digest.contains("- GitLab projects to search as one semantic implementation scope: `crm-catalog-service`, `libs/catalog-shared`"));
-        assertTrue(digest.contains("- code search repository roles: `catalog-code-search:crm-catalog-service-repo:primary:priority=1`, `catalog-code-search:catalog-shared-repo:supporting-library:priority=2`"));
-        assertTrue(digest.contains("- code search repository reasons: `catalog-code-search:crm-catalog-service-repo:Main catalog service repository.`, `catalog-code-search:catalog-shared-repo:Shared catalog rules.`"));
+        assertTrue(digest.contains("- code search scopes: `crm-customer-code-search`"));
+        assertTrue(digest.contains("- GitLab projects to search as one semantic implementation scope: `crm-customer-profile-service`, `libs/crm-customer-shared`"));
+        assertTrue(digest.contains("- code search repository roles: `crm-customer-code-search:crm-customer-profile-service-repo:primary:priority=1`, `crm-customer-code-search:crm-customer-shared-repo:supporting-library:priority=2`"));
+        assertTrue(digest.contains("- code search repository reasons: `crm-customer-code-search:crm-customer-profile-service-repo:Main CRM customer profile service repository.`, `crm-customer-code-search:crm-customer-shared-repo:Shared CRM customer profile rules.`"));
         assertTrue(digest.contains("## Runtime signals"));
         assertTrue(digest.contains("- Dynatrace collection status: `COLLECTED`"));
-        assertTrue(digest.contains("- matched services: `crm-catalog-service`"));
+        assertTrue(digest.contains("- matched services: `crm-customer-profile-service`"));
         assertTrue(digest.contains("## Code evidence"));
-        assertTrue(digest.contains("- project: `crm-catalog-service`"));
+        assertTrue(digest.contains("- project: `crm-customer-profile-service`"));
         assertTrue(digest.contains("- coverage: `DIRECT_COLLABORATOR_ATTACHED`"));
         assertTrue(digest.contains("## Known evidence gaps"));
         assertTrue(digest.contains("`MISSING_FLOW_CONTEXT`"));
@@ -73,13 +73,13 @@ class CopilotIncidentDigestServiceTest {
                                 "elasticsearch",
                                 "logs",
                                 List.of(item(
-                                        "crm-catalog-service log entry",
-                                        attr("serviceName", "crm-catalog-service"),
-                                        attr("className", "com.example.CustomerCatalogService"),
-                                        attr("message", "Failed to resolve catalog item"),
+                                        "crm-customer-profile-service log entry",
+                                        attr("serviceName", "crm-customer-profile-service"),
+                                        attr("className", "com.example.CustomerProfileService"),
+                                        attr("message", "Failed to resolve customer profile"),
                                         attr("exception", """
                                                 java.lang.IllegalStateException: failed
-                                                \tat com.example.CustomerCatalogService.resolve(CustomerCatalogService.java:42)
+                                                \tat com.example.CustomerProfileService.resolve(CustomerProfileService.java:42)
                                                 """)
                                 ))
                         ),
@@ -88,9 +88,9 @@ class CopilotIncidentDigestServiceTest {
                                 "resolved-deployment",
                                 List.of(item(
                                         "deployment",
-                                        attr("projectNameHint", "crm-catalog-service"),
-                                        attr("containerName", "catalog"),
-                                        attr("containerImage", "registry/catalog:abc123"),
+                                        attr("projectNameHint", "crm-customer-profile-service"),
+                                        attr("containerName", "crm-customer-profile"),
+                                        attr("containerImage", "registry/crm-customer-profile:abc123"),
                                         attr("commitSha", "abc123")
                                 ))
                         ),
@@ -107,7 +107,7 @@ class CopilotIncidentDigestServiceTest {
                                         item(
                                                 "Dynatrace component",
                                                 attr("dynatraceItemType", "component-status"),
-                                                attr("componentName", "crm-catalog-service"),
+                                                attr("componentName", "crm-customer-profile-service"),
                                                 attr("correlationStatus", "MATCHED"),
                                                 attr("componentSignalStatus", "SIGNALS_PRESENT"),
                                                 attr("problemDisplayId", "P-123"),
@@ -119,15 +119,15 @@ class CopilotIncidentDigestServiceTest {
                                 "gitlab",
                                 "resolved-code",
                                 List.of(item(
-                                        "CustomerCatalogService and repository collaborator",
-                                        attr("projectName", "crm-catalog-service"),
-                                        attr("filePath", "src/main/java/com/example/CustomerCatalogService.java"),
-                                        attr("symbol", "com.example.CustomerCatalogService"),
+                                        "CustomerProfileService and repository collaborator",
+                                        attr("projectName", "crm-customer-profile-service"),
+                                        attr("filePath", "src/main/java/com/example/CustomerProfileService.java"),
+                                        attr("symbol", "com.example.CustomerProfileService"),
                                         attr("lineNumber", "42"),
                                         attr("content", """
-                                                class CustomerCatalogService {
-                                                    CatalogItem resolve(String itemId) {
-                                                        return catalogRepository.find(itemId);
+                                                class CustomerProfileService {
+                                                    CustomerProfile resolve(String itemId) {
+                                                        return customerProfileRepository.find(itemId);
                                                     }
                                                 }
                                                 """),
@@ -139,21 +139,21 @@ class CopilotIncidentDigestServiceTest {
                                 "matched-context",
                                 List.of(
                                         item(
-                                                "Operational system catalog",
-                                                attr("systemId", "catalog"),
-                                                attr("name", "Catalog"),
-                                                attr("repositoryIds", "crm-catalog-service-repo; catalog-shared-repo"),
-                                                attr("codeSearchScopeIds", "catalog-code-search"),
-                                                attr("codeSearchRepositoryIds", "crm-catalog-service-repo; catalog-shared-repo"),
-                                                attr("codeSearchProjects", "crm-catalog-service; libs/catalog-shared"),
-                                                attr("codeSearchRepositoryRoles", "catalog-code-search:crm-catalog-service-repo:primary:priority=1; catalog-code-search:catalog-shared-repo:supporting-library:priority=2"),
-                                                attr("codeSearchRepositoryReasons", "catalog-code-search:crm-catalog-service-repo:Main catalog service repository.; catalog-code-search:catalog-shared-repo:Shared catalog rules.")
+                                                "Operational system customer profile",
+                                                attr("systemId", "crm-customer-profile"),
+                                                attr("name", "CRM Customer Profile"),
+                                                attr("repositoryIds", "crm-customer-profile-service-repo; crm-customer-shared-repo"),
+                                                attr("codeSearchScopeIds", "crm-customer-code-search"),
+                                                attr("codeSearchRepositoryIds", "crm-customer-profile-service-repo; crm-customer-shared-repo"),
+                                                attr("codeSearchProjects", "crm-customer-profile-service; libs/crm-customer-shared"),
+                                                attr("codeSearchRepositoryRoles", "crm-customer-code-search:crm-customer-profile-service-repo:primary:priority=1; crm-customer-code-search:crm-customer-shared-repo:supporting-library:priority=2"),
+                                                attr("codeSearchRepositoryReasons", "crm-customer-code-search:crm-customer-profile-service-repo:Main CRM customer profile service repository.; crm-customer-code-search:crm-customer-shared-repo:Shared CRM customer profile rules.")
                                         ),
                                         item(
-                                                "Operational repository catalog-shared-repo",
-                                                attr("repositoryId", "catalog-shared-repo"),
-                                                attr("projectPath", "libs/catalog-shared"),
-                                                attr("systemIds", "catalog")
+                                                "Operational repository crm-customer-shared-repo",
+                                                attr("repositoryId", "crm-customer-shared-repo"),
+                                                attr("projectPath", "libs/crm-customer-shared"),
+                                                attr("systemIds", "crm-customer-profile")
                                         )
                                 )
                         )

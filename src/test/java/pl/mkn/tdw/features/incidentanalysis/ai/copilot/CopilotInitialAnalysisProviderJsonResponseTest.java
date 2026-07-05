@@ -39,11 +39,11 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
         when(executionGateway.execute(same(preparedRequest))).thenReturn(executionResult("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "affectedProcess": "Zamowienia",
-                  "affectedBoundedContext": "Ordering",
-                  "affectedTeam": "Orders Team",
-                  "functionalAnalysis": "Timeout dotyka pobrania katalogu w flow zamowienia.",
-                  "technicalAnalysis": "- Sprawdz `CatalogClient` i latency downstream.",
+                  "affectedProcess": "Profil klienta CRM",
+                  "affectedBoundedContext": "CRM Customer Context",
+                  "affectedTeam": "CRM Customer Team",
+                  "functionalAnalysis": "Timeout dotyka pobrania profilu klienta CRM.",
+                  "technicalAnalysis": "- Sprawdz `CustomerProfileClient` i latency downstream.",
                   "confidence": "high",
                   "visibilityLimits": []
                 }
@@ -53,11 +53,11 @@ class CopilotInitialAnalysisProviderJsonResponseTest {
 
         assertEquals("copilot-sdk", response.providerName());
         assertEquals("DOWNSTREAM_TIMEOUT", response.detectedProblem());
-        assertEquals("Timeout dotyka pobrania katalogu w flow zamowienia.", response.functionalAnalysis());
-        assertEquals("- Sprawdz `CatalogClient` i latency downstream.", response.technicalAnalysis());
-        assertEquals("Zamowienia", response.affectedProcess());
-        assertEquals("Ordering", response.affectedBoundedContext());
-        assertEquals("Orders Team", response.affectedTeam());
+        assertEquals("Timeout dotyka pobrania profilu klienta CRM.", response.functionalAnalysis());
+        assertEquals("- Sprawdz `CustomerProfileClient` i latency downstream.", response.technicalAnalysis());
+        assertEquals("Profil klienta CRM", response.affectedProcess());
+        assertEquals("CRM Customer Context", response.affectedBoundedContext());
+        assertEquals("CRM Customer Team", response.affectedTeam());
         assertEquals("high", response.confidence());
         assertEquals("Prepared JSON prompt", response.prompt());
     }

@@ -161,7 +161,7 @@ class FlowExplorerJobServiceTest {
         assertEquals("high", started.result().aiResponse().confidence());
         assertEquals(4, started.result().aiResponse().sections().size());
         assertEquals("Flow zapisany przez report tool.", started.result().aiResponse().sections().get(0).markdown());
-        assertEquals(List.of("crm-service:CustomerController.java:L12-L24"),
+        assertEquals(List.of("crm-service:CustomerProfileController.java:L12-L24"),
                 started.result().aiResponse().sourceReferences());
         assertNotNull(started.report());
         assertEquals("report-1", started.report().reportId());
@@ -205,7 +205,7 @@ class FlowExplorerJobServiceTest {
                 "file-chunk",
                 List.of(new AnalysisEvidenceItem(
                         "CustomerController",
-                        List.of(new AnalysisEvidenceAttribute("filePath", "CustomerController.java"))
+                        List.of(new AnalysisEvidenceAttribute("filePath", "CustomerProfileController.java"))
                 ))
         );
         var activity = new AnalysisAiActivityEvent(
@@ -552,7 +552,7 @@ class FlowExplorerJobServiceTest {
                   "overview": {
                     "markdown": "Tester chce poznac GET /api/customers/{id}.",
                     "confidence": "high",
-                    "sourceRefs": ["crm-service:CustomerController.java:L12-L24"]
+                    "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"]
                   },
                   "sections": [
                     {
@@ -560,7 +560,7 @@ class FlowExplorerJobServiceTest {
                       "title": "Functional flow",
                       "mode": "deep",
                       "markdown": "%s",
-                      "sourceRefs": ["crm-service:CustomerController.java:L12-L24"],
+                      "sourceRefs": ["crm-service:CustomerProfileController.java:L12-L24"],
                       "visibilityLimits": [],
                       "openQuestions": []
                     },
@@ -594,7 +594,7 @@ class FlowExplorerJobServiceTest {
                   ],
                   "globalVisibilityLimits": [],
                   "globalOpenQuestions": [],
-                  "sourceReferences": ["crm-service:CustomerController.java:L12-L24"],
+                  "sourceReferences": ["crm-service:CustomerProfileController.java:L12-L24"],
                   "confidence": "high"
                 }
                 """.formatted(functionalFlowMarkdownJson());
@@ -641,7 +641,7 @@ class FlowExplorerJobServiceTest {
                 List.of(new AnalysisReportReference(
                         "code",
                         "CustomerController",
-                        "crm-service:CustomerController.java:L12-L24",
+                        "crm-service:CustomerProfileController.java:L12-L24",
                         "Endpoint handler"
                 )),
                 List.of(),
@@ -688,7 +688,7 @@ class FlowExplorerJobServiceTest {
                         "/api/customers/{id}",
                         "CustomerController",
                         "getCustomer",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         12,
                         24,
                         "HIGH"
@@ -703,9 +703,9 @@ class FlowExplorerJobServiceTest {
                         List.of()
                 )),
                 List.of(new FlowExplorerFlowNode(
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         "Endpoint handler.",
                         "HIGH",
@@ -713,9 +713,9 @@ class FlowExplorerJobServiceTest {
                 )),
                 List.of(),
                 List.of(new FlowExplorerSnippetCard(
-                        "crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+                        "crm-service:src/main/java/com/example/CustomerProfileController.java:L9-L27",
                         "crm-service",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         9,
@@ -725,7 +725,7 @@ class FlowExplorerJobServiceTest {
                         100,
                         false,
                         "Endpoint handler.",
-                        "// file: src/main/java/com/example/CustomerController.java\npublic CustomerResponse getCustomer() {}",
+                        "// file: src/main/java/com/example/CustomerProfileController.java\npublic CustomerResponse getCustomer() {}",
                         0,
                         List.of()
                 )),

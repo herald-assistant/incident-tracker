@@ -116,12 +116,12 @@ class AnalysisJobFacadeTest {
         assertEquals("DOWNSTREAM_TIMEOUT", completed.report().header());
         assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
         assertEquals(
-                "Analiza funkcjonalna: incydent dotyka procesu katalogowego, ktory pobiera dane katalogowe przed zbudowaniem odpowiedzi.",
+                "Analiza funkcjonalna: incydent dotyka procesu profilu klienta CRM, ktory pobiera dane profilu klienta CRM przed zbudowaniem odpowiedzi.",
                 completed.result().functionalAnalysis()
         );
-        assertEquals("Catalog profile lookup", completed.result().affectedProcess());
-        assertEquals("Catalog Context", completed.result().affectedBoundedContext());
-        assertEquals("Core Integration Team", completed.result().affectedTeam());
+        assertEquals("CRM profile lookup", completed.result().affectedProcess());
+        assertEquals("CRM Customer Context", completed.result().affectedBoundedContext());
+        assertEquals("CRM Customer Team", completed.result().affectedTeam());
         assertEquals("COMPLETED", completed.steps().get(5).status());
     }
 
@@ -555,7 +555,7 @@ class AnalysisJobFacadeTest {
         var assistantMessage = completed.chatMessages().get(1);
         assertEquals("COMPLETED", assistantMessage.status());
         assertEquals(
-                "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie katalogu.",
+                "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie profilu klienta CRM.",
                 assistantMessage.content()
         );
         assertEquals("Synthetic follow-up prompt for timeout-123", assistantMessage.prompt());
@@ -852,10 +852,10 @@ class AnalysisJobFacadeTest {
             return new InitialAnalysisResponse(
                     "session-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Catalog profile lookup",
-                    "Catalog Context",
-                    "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
+                    "CRM profile lookup",
+                    "CRM Customer Context",
+                    "CRM Customer Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania profilu klienta CRM w procesie katalogowym.",
                     "Analiza techniczna: session id Copilota zostal przekazany do lokalnej persystencji.",
                     "medium",
                     List.of(),
@@ -865,7 +865,7 @@ class AnalysisJobFacadeTest {
                     report(
                             "session-aware-report-" + prepared.request().correlationId(),
                             "DOWNSTREAM_TIMEOUT",
-                            "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
+                            "Analiza funkcjonalna: timeout dotyka pobrania profilu klienta CRM w procesie katalogowym.",
                             "Analiza techniczna: session id Copilota zostal przekazany do lokalnej persystencji."
                     )
             );
@@ -901,9 +901,9 @@ class AnalysisJobFacadeTest {
                 ),
                 new AnalysisReportMeta(
                         List.of(
-                                new AnalysisReportReference("process", "Catalog profile lookup", null, null),
-                                new AnalysisReportReference("boundedContext", "Catalog Context", null, null),
-                                new AnalysisReportReference("team", "Core Integration Team", null, null)
+                                new AnalysisReportReference("process", "CRM profile lookup", null, null),
+                                new AnalysisReportReference("boundedContext", "CRM Customer Context", null, null),
+                                new AnalysisReportReference("team", "CRM Customer Team", null, null)
                         ),
                         List.of(),
                         List.of(),
@@ -972,10 +972,10 @@ class AnalysisJobFacadeTest {
             return new InitialAnalysisResponse(
                     "usage-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Catalog profile lookup",
-                    "Catalog Context",
-                    "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
+                    "CRM profile lookup",
+                    "CRM Customer Context",
+                    "CRM Customer Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania profilu klienta CRM w procesie katalogowym.",
                     "Analiza techniczna: sprawdz konfiguracje klienta HTTP i latency downstream.",
                     "medium",
                     List.of(),
@@ -1088,10 +1088,10 @@ class AnalysisJobFacadeTest {
             return new InitialAnalysisResponse(
                     "blocking-tool-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Catalog profile lookup",
-                    "Catalog Context",
-                    "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
+                    "CRM profile lookup",
+                    "CRM Customer Context",
+                    "CRM Customer Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania profilu klienta CRM w procesie katalogowym.",
                     "Analiza techniczna: plik pobrany przez GitLab potwierdza konfiguracje timeoutu klienta.",
                     "medium",
                     List.of(),
@@ -1153,10 +1153,10 @@ class AnalysisJobFacadeTest {
             return new InitialAnalysisResponse(
                     "feedback-aware-ai-provider",
                     "DOWNSTREAM_TIMEOUT",
-                    "Catalog profile lookup",
-                    "Catalog Context",
-                    "Core Integration Team",
-                    "Analiza funkcjonalna: timeout dotyka pobrania katalogu w procesie katalogowym.",
+                    "CRM profile lookup",
+                    "CRM Customer Context",
+                    "CRM Customer Team",
+                    "Analiza funkcjonalna: timeout dotyka pobrania profilu klienta CRM w procesie katalogowym.",
                     "Analiza techniczna: feedback toola jest zapisany osobno od deterministic evidence.",
                     "medium",
                     List.of(),
@@ -1223,7 +1223,7 @@ class AnalysisJobFacadeTest {
 
             return new AnalysisAiChatResponse(
                     "test-chat-provider",
-                    "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie katalogu.",
+                    "Potwierdzilem w repo, ze timeout jest ustawiany w kliencie profilu klienta CRM.",
                     "Synthetic follow-up prompt for " + request.correlationId()
             );
         }

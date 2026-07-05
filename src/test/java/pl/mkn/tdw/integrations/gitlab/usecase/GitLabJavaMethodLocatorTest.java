@@ -30,7 +30,7 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldResolveEndpointHandlerByQualifiedTypeName() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileController.java", """
                 package com.example.crm.customer;
 
                 import org.springframework.http.ResponseEntity;
@@ -66,7 +66,7 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldResolvePrivateHelperInSameClass() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileController.java", """
                 package com.example.crm.customer;
 
                 class CustomerController {
@@ -210,7 +210,7 @@ class GitLabJavaMethodLocatorTest {
 
     @Test
     void shouldReturnNotFoundWhenMethodDoesNotExist() {
-        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerController.java", """
+        var astFile = astFile("src/main/java/com/example/crm/customer/CustomerProfileController.java", """
                 package com.example.crm.customer;
 
                 class CustomerController {

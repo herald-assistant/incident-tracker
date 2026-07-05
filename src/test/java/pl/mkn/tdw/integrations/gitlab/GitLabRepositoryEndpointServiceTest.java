@@ -167,7 +167,7 @@ class GitLabRepositoryEndpointServiceTest {
     void shouldReturnOpenApiAnnotationDocumentationForControllerEndpoint() {
         var endpoints = service.parseEndpointFile(
                 "crm-customer-service",
-                "src/main/java/com/example/crm/customer/api/CustomerController.java",
+                "src/main/java/com/example/crm/customer/api/CustomerProfileController.java",
                 """
                         package com.example.crm.customer.api;
 

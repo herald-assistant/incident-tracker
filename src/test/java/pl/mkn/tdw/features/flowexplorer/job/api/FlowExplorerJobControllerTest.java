@@ -359,20 +359,20 @@ class FlowExplorerJobControllerTest {
                 new FlowExplorerResultOverview(
                         "Context ready.",
                         "high",
-                        List.of("crm-service:CustomerController.java:L12-L24")
+                        List.of("crm-service:CustomerProfileController.java:L12-L24")
                 ),
                 List.of(new FlowExplorerResultSection(
                         FlowExplorerResultSectionId.FUNCTIONAL_FLOW,
                         "Functional flow",
                         FlowExplorerResultSectionMode.DEEP,
                         "Controller przyjmuje request.",
-                        List.of("crm-service:CustomerController.java:L12-L24"),
+                        List.of("crm-service:CustomerProfileController.java:L12-L24"),
                         List.of(),
                         List.of()
                 )),
                 List.of(),
                 List.of(),
-                List.of("crm-service:CustomerController.java:L12-L24"),
+                List.of("crm-service:CustomerProfileController.java:L12-L24"),
                 "high"
         );
     }
@@ -394,7 +394,7 @@ class FlowExplorerJobControllerTest {
                         "/api/customers/{id}",
                         "CustomerController",
                         "getCustomer",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         12,
                         24,
                         "HIGH"
@@ -409,9 +409,9 @@ class FlowExplorerJobControllerTest {
                         List.of()
                 )),
                 List.of(new FlowExplorerFlowNode(
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         "Endpoint handler.",
                         "HIGH",
@@ -419,9 +419,9 @@ class FlowExplorerJobControllerTest {
                 )),
                 List.of(),
                 List.of(new FlowExplorerSnippetCard(
-                        "crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+                        "crm-service:src/main/java/com/example/CustomerProfileController.java:L9-L27",
                         "crm-service",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         9,
@@ -431,7 +431,7 @@ class FlowExplorerJobControllerTest {
                         100,
                         false,
                         "Endpoint handler.",
-                        "// file: src/main/java/com/example/CustomerController.java\npublic CustomerResponse getCustomer() {}",
+                        "// file: src/main/java/com/example/CustomerProfileController.java\npublic CustomerResponse getCustomer() {}",
                         0,
                         List.of()
                 )),

@@ -16,11 +16,11 @@ class CopilotResponseParserTest {
         var result = parser.parse("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "affectedProcess": "Obsluga zamowienia",
-                  "affectedBoundedContext": "Ordering",
-                  "affectedTeam": "Orders Team",
-                  "functionalAnalysis": "Timeout dotyka procesu zamowienia, ktory pobiera katalog przed finalizacja.",
-                  "technicalAnalysis": "Sprawdz `CatalogClient`, latency downstream i konfiguracje timeoutu.",
+                  "affectedProcess": "Obsluga profilu klienta CRM",
+                  "affectedBoundedContext": "CRM Customer Context",
+                  "affectedTeam": "CRM Customer Team",
+                  "functionalAnalysis": "Timeout dotyka procesu profilu klienta CRM, ktory pobiera dane profilu przed finalizacja.",
+                  "technicalAnalysis": "Sprawdz `CustomerProfileClient`, latency downstream i konfiguracje timeoutu.",
                   "confidence": "high",
                   "visibilityLimits": ["Brak potwierdzenia metryk downstream."]
                 }
@@ -29,9 +29,9 @@ class CopilotResponseParserTest {
         assertTrue(result.structuredResponse());
         assertFalse(result.fallbackResponseUsed());
         assertEquals("DOWNSTREAM_TIMEOUT", result.response().detectedProblem());
-        assertEquals("Obsluga zamowienia", result.response().affectedProcess());
-        assertTrue(result.response().functionalAnalysis().contains("procesu zamowienia"));
-        assertTrue(result.response().technicalAnalysis().contains("`CatalogClient`"));
+        assertEquals("Obsluga profilu klienta CRM", result.response().affectedProcess());
+        assertTrue(result.response().functionalAnalysis().contains("procesu profilu klienta CRM"));
+        assertTrue(result.response().technicalAnalysis().contains("`CustomerProfileClient`"));
         assertEquals("high", result.response().confidence());
         assertEquals(1, result.response().visibilityLimits().size());
     }
@@ -71,7 +71,7 @@ class CopilotResponseParserTest {
                   "affectedProcess": "case-review-process",
                   "affectedBoundedContext": "product-configuration",
                   "affectedTeam": "nieustalone",
-                  "functionalAnalysis": "Blad mapowania daty dotyka pobierania produktow klienta.",
+                  "functionalAnalysis": "Blad mapowania daty dotyka pobierania profilu klienta CRM.",
                   "technicalAnalysis": "Obsluz `LocalDateTime` w mapperze wskazanym przez stacktrace.",
                   "confidence": "high",
                   "visibilityLimits": []
@@ -94,7 +94,7 @@ class CopilotResponseParserTest {
                   "affectedProcess": "nieustalone",
                   "affectedBoundedContext": "nieustalone",
                   "affectedTeam": "nieustalone",
-                  "functionalAnalysis": "Timeout dotyka pobrania katalogu.",
+                  "functionalAnalysis": "Timeout dotyka pobrania profilu klienta CRM.",
                   "technicalAnalysis": "Sprawdz klienta HTTP i downstream.",
                   "confidence": "medium",
                   "visibilityLimits": []
@@ -182,10 +182,10 @@ class CopilotResponseParserTest {
         var result = parser.parse("""
                 {
                   "detectedProblem": "DOWNSTREAM_TIMEOUT",
-                  "affectedProcess": "Zamowienia",
-                  "affectedBoundedContext": "Ordering",
-                  "affectedTeam": "Orders Team",
-                  "functionalAnalysis": "Timeout widoczny w procesie zamowienia.",
+                  "affectedProcess": "Profil klienta CRM",
+                  "affectedBoundedContext": "CRM Customer Context",
+                  "affectedTeam": "CRM Customer Team",
+                  "functionalAnalysis": "Timeout widoczny w procesie profilu klienta CRM.",
                   "confidence": "medium",
                   "visibilityLimits": ["Brak technicalAnalysis."]
                 }
@@ -194,9 +194,9 @@ class CopilotResponseParserTest {
         assertFalse(result.structuredResponse());
         assertTrue(result.fallbackResponseUsed());
         assertEquals("DOWNSTREAM_TIMEOUT", result.response().detectedProblem());
-        assertEquals("Timeout widoczny w procesie zamowienia.", result.response().functionalAnalysis());
+        assertEquals("Timeout widoczny w procesie profilu klienta CRM.", result.response().functionalAnalysis());
         assertTrue(result.response().technicalAnalysis().contains("Nie udalo sie sparsowac"));
-        assertEquals("Orders Team", result.response().affectedTeam());
+        assertEquals("CRM Customer Team", result.response().affectedTeam());
         assertEquals("medium", result.response().confidence());
         assertEquals(1, result.response().visibilityLimits().size());
     }

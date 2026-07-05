@@ -30,7 +30,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldBuildAstModelWithMultipleTopLevelAndNestedTypes() {
-        var path = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var path = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         repositoryFiles(path);
         source(path, """
                 package com.example.crm.customer;
@@ -98,7 +98,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldResolveTypeByExactImport() {
-        var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         var servicePath = "src/main/java/com/example/crm/customer/application/CustomerService.java";
         repositoryFiles(controllerPath, servicePath);
         source(controllerPath, """
@@ -134,7 +134,7 @@ class GitLabJavaSourceResolverTest {
                 "main"
         );
         var rootSession = new GitLabEndpointUseCaseSourceSession(repositoryPort, rootRepository);
-        var controllerPath = "crm-customer-service/customer-adapter/src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "crm-customer-service/customer-adapter/src/main/java/com/example/crm/customer/CustomerProfileController.java";
         var servicePath = "crm-customer-service/customer-application/src/main/java/com/example/crm/customer/application/CustomerService.java";
         repositoryFiles(controllerPath, servicePath);
         source(controllerPath, """
@@ -164,7 +164,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldResolveTypeFromSamePackageWithoutImport() {
-        var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         var servicePath = "src/main/java/com/example/crm/customer/CustomerService.java";
         repositoryFiles(controllerPath, servicePath);
         source(controllerPath, """
@@ -192,7 +192,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldReturnAmbiguousWhenTreeLookupFindsManyFiles() {
-        var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         var apiCustomerPath = "src/main/java/com/example/crm/customer/api/Customer.java";
         var domainCustomerPath = "src/main/java/com/example/crm/customer/domain/Customer.java";
         repositoryFiles(controllerPath, apiCustomerPath, domainCustomerPath);
@@ -214,7 +214,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldReturnUnresolvedWhenTypeCannotBeFoundQuickly() {
-        var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         repositoryFiles(controllerPath);
         source(controllerPath, """
                 package com.example.crm.customer;
@@ -235,7 +235,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldSkipRepositoryLookupForResponseEntityImport() {
-        var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         source(controllerPath, """
                 package com.example.crm.customer;
 
@@ -260,7 +260,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldResolveLocalGeneratedApiInterfaceBeforeTreatingItAsExternal() {
-        var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         var apiPath = "src/main/java/com/example/crm/generated/CustomerApi.java";
         repositoryFiles(controllerPath, apiPath);
         source(controllerPath, """
@@ -288,7 +288,7 @@ class GitLabJavaSourceResolverTest {
 
     @Test
     void shouldReturnTerminalBoundaryForInternalImportMissingInRepositoryTree() {
-        var controllerPath = "src/main/java/com/example/crm/customer/CustomerController.java";
+        var controllerPath = "src/main/java/com/example/crm/customer/CustomerProfileController.java";
         repositoryFiles(controllerPath);
         source(controllerPath, """
                 package com.example.crm.customer;

@@ -48,7 +48,7 @@ class FlowExplorerArtifactServiceTest {
         assertEquals("feature/FLOW-42", contextJson.at("/contextSnapshot/branchRef").asText());
         assertEquals("DEEP", contextJson.at("/sectionModes/0/mode").asText());
         assertTrue(contextJson.at("/contextSnapshot/gitLabGroup").isMissingNode());
-        assertEquals("crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+        assertEquals("crm-service:src/main/java/com/example/CustomerProfileController.java:L9-L27",
                 contextJson.at("/contextSnapshot/snippetCards/0/id").asText());
         assertTrue(contextJson.at("/contextSnapshot/snippetCards/0/characterCount").asInt() > 0);
         assertEquals(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT,
@@ -64,7 +64,7 @@ class FlowExplorerArtifactServiceTest {
         assertTrue(canonicalToolInputs.contains("## File And Method Scope"));
         assertTrue(canonicalToolInputs.contains("compact-flow-manifest.md` as the canonical filePath + methodSelector list"));
         assertTrue(canonicalToolInputs.contains("Combine manifest `filePath` and methods"));
-        assertFalse(canonicalToolInputs.contains("`src/main/java/com/example/CustomerController.java` methods"));
+        assertFalse(canonicalToolInputs.contains("`src/main/java/com/example/CustomerProfileController.java` methods"));
         assertFalse(canonicalToolInputs.contains("already embedded in flow-explorer/snippet-cards.md"));
         assertTrue(canonicalToolInputs.contains("## Canonical Scope Values"));
         assertTrue(canonicalToolInputs.contains("Use these exact values when a runtime skill selects a GitLab tool."));
@@ -147,7 +147,7 @@ class FlowExplorerArtifactServiceTest {
                         "/api/customers/{id}",
                         "CustomerController",
                         "getCustomer",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         12,
                         24,
                         "HIGH"
@@ -162,9 +162,9 @@ class FlowExplorerArtifactServiceTest {
                         List.of()
                 )),
                 List.of(new FlowExplorerFlowNode(
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         "Endpoint handler.",
                         "HIGH",
@@ -172,9 +172,9 @@ class FlowExplorerArtifactServiceTest {
                 )),
                 List.of(),
                 List.of(new FlowExplorerSnippetCard(
-                        "crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+                        "crm-service:src/main/java/com/example/CustomerProfileController.java:L9-L27",
                         "crm-service",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         9,
@@ -184,7 +184,7 @@ class FlowExplorerArtifactServiceTest {
                         100,
                         false,
                         "Endpoint handler.",
-                        "// file: src/main/java/com/example/CustomerController.java\npublic CustomerResponse getCustomer() {}",
+                        "// file: src/main/java/com/example/CustomerProfileController.java\npublic CustomerResponse getCustomer() {}",
                         0,
                         List.of()
                 )),
@@ -239,7 +239,7 @@ class FlowExplorerArtifactServiceTest {
                         "/api/customers/{id}",
                         "CustomerController",
                         "getCustomer",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         12,
                         24,
                         "HIGH"
@@ -256,9 +256,9 @@ class FlowExplorerArtifactServiceTest {
                 flowNodes,
                 List.of(),
                 List.of(new FlowExplorerSnippetCard(
-                        "crm-service:src/main/java/com/example/CustomerController.java:L9-L27",
+                        "crm-service:src/main/java/com/example/CustomerProfileController.java:L9-L27",
                         "crm-service",
-                        "src/main/java/com/example/CustomerController.java",
+                        "src/main/java/com/example/CustomerProfileController.java",
                         "CONTROLLER",
                         List.of(new FlowExplorerFlowMethod("getCustomer", 12, 24)),
                         9,
@@ -268,7 +268,7 @@ class FlowExplorerArtifactServiceTest {
                         100,
                         false,
                         "Endpoint handler.",
-                        "// file: src/main/java/com/example/CustomerController.java\npublic CustomerResponse getCustomer() {}",
+                        "// file: src/main/java/com/example/CustomerProfileController.java\npublic CustomerResponse getCustomer() {}",
                         0,
                         List.of()
                 )),

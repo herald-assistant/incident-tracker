@@ -45,7 +45,7 @@ class FlowExplorerContextServiceTest {
 
     @Test
     void shouldBuildCompactFlowManifestForResolvedEndpoint() {
-        when(repositoryScopeService.resolve("catalog-core", "feature/FLOW-42"))
+        when(repositoryScopeService.resolve("crm-customer-profile", "feature/FLOW-42"))
                 .thenReturn(scope());
         when(gitLabEndpointUseCaseContextService.buildContext(
                 org.mockito.ArgumentMatchers.eq("platform/backend"),
@@ -77,8 +77,8 @@ class FlowExplorerContextServiceTest {
         ));
 
         var snapshot = service.buildContext(new FlowExplorerContextRequest(
-                "catalog-core",
-                "catalog-api:GET /api/catalog/{id}",
+                "crm-customer-profile",
+                "crm-customer-profile-api:GET /api/crm/customers/{customerId}/profile",
                 null,
                 null,
                 "feature/FLOW-42",
@@ -86,27 +86,27 @@ class FlowExplorerContextServiceTest {
                 List.of(pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea.PERSISTENCE)
         ));
 
-        assertEquals("catalog-core", snapshot.systemId());
+        assertEquals("crm-customer-profile", snapshot.systemId());
         assertEquals("feature/FLOW-42", snapshot.resolvedRef());
         assertTrue(snapshot.coverage().endpointResolved());
         assertEquals(1, snapshot.coverage().attemptedRepositoryCount());
         assertEquals(2, snapshot.coverage().flowNodeCount());
         assertEquals(2, snapshot.coverage().methodCount());
-        assertEquals("CatalogController", snapshot.endpoint().controllerClass());
-        assertEquals("catalog-api", snapshot.repositories().get(0).projectName());
+        assertEquals("CustomerProfileController", snapshot.endpoint().controllerClass());
+        assertEquals("crm-customer-profile-api", snapshot.repositories().get(0).projectName());
         assertTrue(snapshot.repositories().get(0).selected());
 
         var controllerNode = snapshot.flowNodes().get(0);
         assertEquals("CONTROLLER", controllerNode.role());
-        assertEquals("src/main/java/com/example/catalog/CatalogController.java", controllerNode.filePath());
-        assertEquals("getCatalog", controllerNode.methods().get(0).methodName());
+        assertEquals("src/main/java/com/example/crm/customerprofile/CustomerProfileController.java", controllerNode.filePath());
+        assertEquals("getCustomerProfile", controllerNode.methods().get(0).methodName());
         assertEquals(12, controllerNode.methods().get(0).lineStart());
         assertEquals(24, controllerNode.methods().get(0).lineEnd());
         assertEquals("Endpoint handler and local controller flow.", controllerNode.reason());
         assertEquals(1, snapshot.relations().size());
         assertEquals("ENDPOINT_HANDLER", snapshot.relations().get(0).kind());
         assertEquals(1, snapshot.snippetCards().size());
-        assertEquals("src/main/java/com/example/catalog/CatalogController.java", snapshot.snippetCards().get(0).filePath());
+        assertEquals("src/main/java/com/example/crm/customerprofile/CustomerProfileController.java", snapshot.snippetCards().get(0).filePath());
         assertEquals(1, snapshot.coverage().snippetCardCount());
         assertTrue(snapshot.coverage().snippetBudgetReached());
         assertTrue(snapshot.openApiEndpointContracts().isEmpty());
@@ -118,14 +118,14 @@ class FlowExplorerContextServiceTest {
                 org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
                 requestCaptor.capture()
         );
-        assertEquals("catalog-api", requestCaptor.getValue().projectName());
-        assertEquals("GET /api/catalog/{id}", requestCaptor.getValue().endpointId());
+        assertEquals("crm-customer-profile-api", requestCaptor.getValue().projectName());
+        assertEquals("GET /api/crm/customers/{customerId}/profile", requestCaptor.getValue().endpointId());
         assertEquals(GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES, requestCaptor.getValue().maxFiles());
     }
 
     @Test
     void shouldReturnUnresolvedCoverageWithoutFlowNodes() {
-        when(repositoryScopeService.resolve("catalog-core", null)).thenReturn(scope());
+        when(repositoryScopeService.resolve("crm-customer-profile", null)).thenReturn(scope());
         when(gitLabEndpointUseCaseContextService.buildContext(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
@@ -133,7 +133,7 @@ class FlowExplorerContextServiceTest {
         )).thenReturn(unresolvedUseCaseContext());
 
         var snapshot = service.buildContext(new FlowExplorerContextRequest(
-                "catalog-core",
+                "crm-customer-profile",
                 null,
                 "GET",
                 "/missing",
@@ -159,7 +159,7 @@ class FlowExplorerContextServiceTest {
                 FlowExplorerSystemNotFoundException.class,
                 () -> service.buildContext(new FlowExplorerContextRequest(
                         "missing-system",
-                        "GET /api/catalog/{id}",
+                        "GET /api/crm/customers/{customerId}/profile",
                         null,
                         null,
                         null,
@@ -178,9 +178,9 @@ class FlowExplorerContextServiceTest {
                 "platform/backend",
                 1,
                 List.of(new FlowExplorerRepositoryScopeRepository(
-                        "catalog-api",
-                        "catalog-api",
-                        "platform/backend/catalog-api",
+                        "crm-customer-profile-api",
+                        "crm-customer-profile-api",
+                        "platform/backend/crm-customer-profile-api",
                         null,
                         "system.references.repositories",
                         catalog.repositories().get(0)
@@ -193,17 +193,17 @@ class FlowExplorerContextServiceTest {
         return new GitLabEndpointUseCaseContextResult(
                 null,
                 new GitLabEndpointUseCaseEndpointContext(
-                        "GET /api/catalog/{id}",
+                        "GET /api/crm/customers/{customerId}/profile",
                         List.of("GET"),
-                        "/api/catalog/{id}",
-                        "/api/catalog/{id}",
-                        "CatalogController",
-                        "getCatalog",
-                        "src/main/java/com/example/catalog/CatalogController.java",
+                        "/api/crm/customers/{customerId}/profile",
+                        "/api/crm/customers/{customerId}/profile",
+                        "CustomerProfileController",
+                        "getCustomerProfile",
+                        "src/main/java/com/example/crm/customerprofile/CustomerProfileController.java",
                         12,
                         24,
                         List.of(),
-                        List.of("CatalogResponse"),
+                        List.of("CustomerProfileResponse"),
                         List.of("RestController", "GetMapping"),
                         GitLabEndpointUseCaseConfidence.HIGH,
                         List.of(),
@@ -211,36 +211,36 @@ class FlowExplorerContextServiceTest {
                 ),
                 List.of(
                         file(
-                                "src/main/java/com/example/catalog/CatalogController.java",
+                                "src/main/java/com/example/crm/customerprofile/CustomerProfileController.java",
                                 GitLabEndpointUseCaseFileRole.CONTROLLER,
                                 1,
-                                "CatalogController",
-                                "getCatalog",
+                                "CustomerProfileController",
+                                "getCustomerProfile",
                                 12,
                                 24,
                                 "Endpoint handler and local controller flow."
                         ),
                         file(
-                                "src/main/java/com/example/catalog/CatalogService.java",
+                                "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                                 GitLabEndpointUseCaseFileRole.USE_CASE_SERVICE,
                                 2,
-                                "CatalogService",
-                                "getCatalog",
+                                "CustomerProfileService",
+                                "getCustomerProfile",
                                 42,
                                 55,
                                 "Injected service method called by controller."
                         )
                 ),
                 List.of(new GitLabEndpointUseCaseRelation(
-                        "GET /api/catalog/{id}",
-                        "CatalogController#getCatalog",
+                        "GET /api/crm/customers/{customerId}/profile",
+                        "CustomerProfileController#getCustomerProfile",
                         GitLabEndpointUseCaseRelationKind.ENDPOINT_HANDLER,
                         GitLabEndpointUseCaseConfidence.HIGH,
                         "Endpoint inventory resolved this handler method."
                 )),
                 List.of(),
                 List.of(),
-                List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java"),
+                List.of("crm-customer-profile-api:src/main/java/com/example/crm/customerprofile/CustomerProfileController.java"),
                 GitLabEndpointUseCaseLimits.defaults(),
                 GitLabEndpointUseCaseConfidence.HIGH
         );
@@ -268,11 +268,11 @@ class FlowExplorerContextServiceTest {
 
     private static FlowExplorerSnippetCard snippetCard() {
         return new FlowExplorerSnippetCard(
-                "catalog-api:src/main/java/com/example/catalog/CatalogController.java:L9-L27",
-                "catalog-api",
-                "src/main/java/com/example/catalog/CatalogController.java",
+                "crm-customer-profile-api:src/main/java/com/example/crm/customerprofile/CustomerProfileController.java:L9-L27",
+                "crm-customer-profile-api",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileController.java",
                 "CONTROLLER",
-                List.of(new FlowExplorerFlowMethod("getCatalog", 12, 24)),
+                List.of(new FlowExplorerFlowMethod("getCustomerProfile", 12, 24)),
                 9,
                 27,
                 9,
@@ -280,7 +280,7 @@ class FlowExplorerContextServiceTest {
                 120,
                 false,
                 "Endpoint handler and local controller flow.",
-                "// file: src/main/java/com/example/catalog/CatalogController.java\npublic CatalogResponse getCatalog() {}",
+                "// file: src/main/java/com/example/crm/customerprofile/CustomerProfileController.java\npublic CustomerProfileResponse getCustomerProfile() {}",
                 0,
                 List.of()
         );
@@ -305,7 +305,7 @@ class FlowExplorerContextServiceTest {
                         path,
                         typeName,
                         typeName,
-                        "com.example.catalog." + typeName,
+                        "com.example.crm.customerprofile." + typeName,
                         GitLabJavaTypeKind.CLASS,
                         methodName,
                         null,
@@ -314,7 +314,7 @@ class FlowExplorerContextServiceTest {
                         0,
                         List.of(),
                         List.of(),
-                        "CatalogResponse",
+                        "CustomerProfileResponse",
                         List.of("public"),
                         role,
                         priority,
@@ -332,19 +332,19 @@ class FlowExplorerContextServiceTest {
                 List.of(),
                 List.of(),
                 List.of(map(
-                        "id", "catalog-core",
-                        "name", "Catalog Core",
+                        "id", "crm-customer-profile",
+                        "name", "CRM Customer Profile",
                         "kind", "internal-application",
-                        "references", map("repositories", List.of("catalog-api"))
+                        "references", map("repositories", List.of("crm-customer-profile-api"))
                 )),
                 List.of(),
                 List.of(map(
-                        "id", "catalog-api",
-                        "name", "Catalog API",
+                        "id", "crm-customer-profile-api",
+                        "name", "CRM Customer Profile API",
                         "git", map(
                                 "provider", "gitlab",
                                 "group", "platform/backend",
-                                "projectPath", "platform/backend/catalog-api"
+                                "projectPath", "platform/backend/crm-customer-profile-api"
                         )
                 )),
                 List.of(),

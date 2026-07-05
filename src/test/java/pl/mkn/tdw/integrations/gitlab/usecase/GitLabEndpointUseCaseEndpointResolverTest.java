@@ -204,7 +204,7 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 path,
                 controllerClass,
                 handlerMethod,
-                "src/main/java/com/example/crm/CustomerController.java",
+                "src/main/java/com/example/crm/CustomerProfileController.java",
                 10,
                 15,
                 List.of("CustomerRequest"),
@@ -212,7 +212,7 @@ class GitLabEndpointUseCaseEndpointResolverTest {
                 List.of("OpenApiContract"),
                 confidence,
                 List.of("endpoint limitation"),
-                List.of("crm-customer-service:src/main/java/com/example/crm/CustomerController.java lines 10-15 via gitlab_read_repository_file_chunk")
+                List.of("crm-customer-service:src/main/java/com/example/crm/CustomerProfileController.java lines 10-15 via gitlab_read_repository_file_chunk")
         );
     }
 }

@@ -25,13 +25,13 @@ class GitLabRepositoryFilesByPathApiServiceTest {
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerController.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                 10
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerController.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                 "1234567890",
                 false
         ));
@@ -39,12 +39,12 @@ class GitLabRepositoryFilesByPathApiServiceTest {
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerController.java"
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java"
         )).thenReturn(new GitLabRepositoryFileMetadata(
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerController.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                 "blob-controller",
                 "commit-controller",
                 "last-controller",
@@ -89,9 +89,9 @@ class GitLabRepositoryFilesByPathApiServiceTest {
                 "crm-customer-api",
                 "main",
                 List.of(
-                        "crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java via gitlab_read_repository_file_outline",
+                        "crm-customer-api:src/main/java/com/example/crm/customer/CustomerProfileController.java via gitlab_read_repository_file_outline",
                         "\\src\\main\\java\\com\\example\\crm\\customer\\CustomerService.java",
-                        "src/main/java/com/example/crm/customer/CustomerMapper.java"
+                        "src/main/java/com/example/crm/customer/CustomerProfileMapper.java"
                 ),
                 10,
                 15
@@ -101,14 +101,14 @@ class GitLabRepositoryFilesByPathApiServiceTest {
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerController.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                 10
         );
         verify(repositoryPort).readFileMetadata(
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerController.java"
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java"
         );
         verify(repositoryPort).readFile(
                 "CRM",
@@ -156,13 +156,13 @@ class GitLabRepositoryFilesByPathApiServiceTest {
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 20
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 "interface CustomerRepository {}",
                 true
         ));
@@ -170,12 +170,12 @@ class GitLabRepositoryFilesByPathApiServiceTest {
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java"
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java"
         )).thenReturn(new GitLabRepositoryFileMetadata(
                 "CRM",
                 "crm-customer-api",
                 "main",
-                "src/main/java/com/example/crm/customer/CustomerRepository.java",
+                "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 "blob-repository",
                 "commit-repository",
                 "last-repository",
@@ -190,7 +190,7 @@ class GitLabRepositoryFilesByPathApiServiceTest {
                 "main",
                 List.of(
                         "src/main/java/com/example/crm/customer/Missing.java",
-                        "src/main/java/com/example/crm/customer/CustomerRepository.java"
+                        "src/main/java/com/example/crm/customer/CustomerProfileRepository.java"
                 ),
                 20,
                 100

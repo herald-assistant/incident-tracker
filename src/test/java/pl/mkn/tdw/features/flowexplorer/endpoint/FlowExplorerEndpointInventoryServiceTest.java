@@ -36,16 +36,16 @@ class FlowExplorerEndpointInventoryServiceTest {
     void shouldBuildEndpointInventoryForSystemUsingConfiguredDefaultBranch() {
         var endpointService = mock(GitLabRepositoryEndpointService.class);
         when(endpointService.listEndpoints(argThat(request -> request != null
-                && "catalog-api".equals(request.projectName()))))
-                .thenReturn(endpointList("catalog-api", List.of(endpoint()), List.of()));
+                && "crm-customer-profile-api".equals(request.projectName()))))
+                .thenReturn(endpointList("crm-customer-profile-api", List.of(endpoint()), List.of()));
         when(endpointService.listEndpoints(argThat(request -> request != null
-                && "domains/catalog-domain".equals(request.projectName()))))
-                .thenReturn(endpointList("domains/catalog-domain", List.of(), List.of("No controllers found.")));
+                && "domains/crm-customer-profile-domain".equals(request.projectName()))))
+                .thenReturn(endpointList("domains/crm-customer-profile-domain", List.of(), List.of("No controllers found.")));
         var service = service(endpointService, "platform/backend", "release-candidate");
 
-        var response = service.endpoints("catalog-core", null, "/api", "get");
+        var response = service.endpoints("crm-customer-profile", null, "/api", "get");
 
-        assertEquals("catalog-core", response.systemId());
+        assertEquals("crm-customer-profile", response.systemId());
         assertEquals("release-candidate", response.resolvedRef());
         assertEquals("platform/backend", response.gitLabGroup());
         assertEquals("/api", response.endpointPathPrefix());
@@ -56,19 +56,19 @@ class FlowExplorerEndpointInventoryServiceTest {
         assertEquals(6, response.candidateFileCount());
         assertEquals(4, response.scannedFileCount());
         assertTrue(response.limitations().contains("Operational context references unknown repository: missing-repo"));
-        assertTrue(response.limitations().contains("catalog-domain: No controllers found."));
+        assertTrue(response.limitations().contains("crm-customer-profile-domain: No controllers found."));
 
         var endpoint = response.endpoints().get(0);
-        assertEquals("catalog-api:GET /api/catalog/{id}", endpoint.endpointId());
+        assertEquals("crm-customer-profile-api:GET /api/crm/customers/{customerId}/profile", endpoint.endpointId());
         assertEquals("GET", endpoint.method());
-        assertEquals("/api/catalog/{id}", endpoint.path());
-        assertEquals("Returns catalog details.", endpoint.description());
-        assertEquals("getCatalog", endpoint.operationId());
-        assertEquals("CatalogController", endpoint.controllerClass());
-        assertEquals("catalog-api", endpoint.source().repositoryId());
-        assertEquals("src/main/java/com/example/catalog/CatalogController.java", endpoint.source().filePath());
-        assertEquals("id", endpoint.parameters().get(0).name());
-        assertEquals("catalog item id", endpoint.tooltipDetails().parameters().get(0).description());
+        assertEquals("/api/crm/customers/{customerId}/profile", endpoint.path());
+        assertEquals("Returns customer profile details.", endpoint.description());
+        assertEquals("getCustomerProfile", endpoint.operationId());
+        assertEquals("CustomerProfileController", endpoint.controllerClass());
+        assertEquals("crm-customer-profile-api", endpoint.source().repositoryId());
+        assertEquals("src/main/java/com/example/crm/customerprofile/CustomerProfileController.java", endpoint.source().filePath());
+        assertEquals("customerId", endpoint.parameters().get(0).name());
+        assertEquals("customer profile id", endpoint.tooltipDetails().parameters().get(0).description());
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
         verify(endpointService, times(2)).listEndpoints(requestCaptor.capture());
@@ -88,7 +88,7 @@ class FlowExplorerEndpointInventoryServiceTest {
         when(endpointService.listEndpoints(any())).thenReturn(endpointList("any", List.of(), List.of()));
         var service = service(endpointService, "platform/backend", "release-candidate");
 
-        var response = service.endpoints("catalog-core", "feature/FLOW-42", null, null);
+        var response = service.endpoints("crm-customer-profile", "feature/FLOW-42", null, null);
 
         assertEquals("feature/FLOW-42", response.requestedBranch());
         assertEquals("feature/FLOW-42", response.resolvedRef());
@@ -106,13 +106,13 @@ class FlowExplorerEndpointInventoryServiceTest {
         var cache = new InMemoryEndpointInventoryCache();
         var service = service(endpointService, "platform/backend", "release-candidate", catalog(), cache);
 
-        var first = service.endpoints("catalog-core", null, null, null);
-        var second = service.endpoints("catalog-core", null, null, null);
+        var first = service.endpoints("crm-customer-profile", null, null, null);
+        var second = service.endpoints("crm-customer-profile", null, null, null);
 
         assertEquals(first, second);
         verify(endpointService, times(2)).listEndpoints(any());
 
-        service.endpoints("catalog-core", null, null, null, true);
+        service.endpoints("crm-customer-profile", null, null, null, true);
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
         verify(endpointService, times(4)).listEndpoints(requestCaptor.capture());
@@ -161,7 +161,7 @@ class FlowExplorerEndpointInventoryServiceTest {
 
         assertThrows(
                 FlowExplorerGitLabConfigurationException.class,
-                () -> service.endpoints("catalog-core", null, null, null)
+                () -> service.endpoints("crm-customer-profile", null, null, null)
         );
     }
 
@@ -232,35 +232,35 @@ class FlowExplorerEndpointInventoryServiceTest {
 
     private static GitLabRepositoryEndpoint endpoint() {
         return new GitLabRepositoryEndpoint(
-                "GET /api/catalog/{id}",
+                "GET /api/crm/customers/{customerId}/profile",
                 List.of("GET"),
-                "/api/catalog/{id}",
-                "/api/catalog/{id}",
-                "CatalogController",
-                "getCatalog",
-                "src/main/java/com/example/catalog/CatalogController.java",
+                "/api/crm/customers/{customerId}/profile",
+                "/api/crm/customers/{customerId}/profile",
+                "CustomerProfileController",
+                "getCustomerProfile",
+                "src/main/java/com/example/crm/customerprofile/CustomerProfileController.java",
                 12,
                 24,
-                List.of("@PathVariable String id"),
-                List.of("CatalogResponse"),
+                List.of("@PathVariable String customerId"),
+                List.of("CustomerProfileResponse"),
                 List.of("RestController", "GetMapping"),
                 new GitLabRepositoryEndpointDocumentation(
                         "OPENAPI_YAML",
-                        "Catalog lookup",
-                        "Returns catalog details.",
-                        "getCatalog",
-                        List.of("catalog"),
+                        "Customer profile lookup",
+                        "Returns customer profile details.",
+                        "getCustomerProfile",
+                        List.of("crm-customer-profile"),
                         List.of(new GitLabRepositoryEndpointParameterDocumentation(
-                                "id",
+                                "customerId",
                                 "path",
                                 true,
                                 "string",
-                                "catalog item id"
+                                "customer profile id"
                         ))
                 ),
                 "high",
                 List.of(),
-                List.of("catalog-api:src/main/java/com/example/catalog/CatalogController.java")
+                List.of("crm-customer-profile-api:src/main/java/com/example/crm/customerprofile/CustomerProfileController.java")
         );
     }
 
@@ -269,39 +269,39 @@ class FlowExplorerEndpointInventoryServiceTest {
                 List.of(),
                 List.of(),
                 List.of(map(
-                        "id", "catalog-core",
-                        "name", "Catalog Core",
+                        "id", "crm-customer-profile",
+                        "name", "CRM Customer Profile",
                         "kind", "internal-application",
-                        "references", map("repositories", List.of("catalog-api"))
+                        "references", map("repositories", List.of("crm-customer-profile-api"))
                 )),
                 List.of(),
                 List.of(
                         map(
-                                "id", "catalog-api",
-                                "name", "Catalog API",
+                                "id", "crm-customer-profile-api",
+                                "name", "CRM Customer Profile API",
                                 "git", map(
                                         "provider", "gitlab",
                                         "group", "platform/backend",
-                                        "projectPath", "platform/backend/catalog-api"
+                                        "projectPath", "platform/backend/crm-customer-profile-api"
                                 )
                         ),
                         map(
-                                "id", "catalog-domain",
-                                "name", "Catalog Domain",
+                                "id", "crm-customer-profile-domain",
+                                "name", "CRM Customer Profile Domain",
                                 "git", map(
                                         "provider", "gitlab",
                                         "group", "platform/backend",
-                                        "projectPath", "platform/backend/domains/catalog-domain"
+                                        "projectPath", "platform/backend/domains/crm-customer-profile-domain"
                                 )
                         )
                 ),
                 List.of(map(
-                        "id", "catalog-scope",
-                        "name", "Catalog scope",
-                        "target", map("type", "system", "id", "catalog-core"),
+                        "id", "crm-customer-profile-scope",
+                        "name", "CRM Customer Profile scope",
+                        "target", map("type", "system", "id", "crm-customer-profile"),
                         "repositories", List.of(
                                 map("repoId", "missing-repo", "priority", 1),
-                                map("repoId", "catalog-domain", "priority", 2)
+                                map("repoId", "crm-customer-profile-domain", "priority", 2)
                         )
                 )),
                 List.of(),

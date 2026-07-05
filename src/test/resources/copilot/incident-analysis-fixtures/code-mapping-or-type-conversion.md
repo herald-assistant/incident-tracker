@@ -25,7 +25,7 @@ Fixture testuje kontrakt routingu:
 - trigger: downstream response mapping
 - failure point: DTO to domain mapper
 - log: `DateTimeParseException: Text '2026-06-06T10:00:00Z' could not be parsed`
-- code hint: `PolicyDtoMapper.toDomain(validFrom)`
+- code hint: `CustomerProfileDtoMapper.toDomain(validFrom)`
 - input field: `validFrom`
 
 ## Oczekiwany Dry Run Orkiestratora

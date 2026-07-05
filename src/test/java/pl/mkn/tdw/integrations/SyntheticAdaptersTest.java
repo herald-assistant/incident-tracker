@@ -36,7 +36,7 @@ class SyntheticAdaptersTest {
                 "timeout-123",
                 "CRM/runtime",
                 "main",
-                List.of("crm-catalog-service", "crm-customer-profile-service"),
+                List.of("crm-customer-profile-service", "crm-customer-segment-service"),
                 List.of("GET /crm/customers", "POST /crm/notifications"),
                 List.of("timeout", "customer-profile", "notification")
         ));

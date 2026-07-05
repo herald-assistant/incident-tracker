@@ -21,7 +21,7 @@ describe('ContextEntityDrawerComponent', () => {
     expect(text).toContain('Resolved ownership');
     expect(text).toContain('bounded context boundary');
     expect(text).toContain('Credit Decision Domain Owner');
-    expect(text).toContain('Agreement Process Domain Owner');
+    expect(text).toContain('Customer Consent Domain Owner');
     expect(text).toContain('Resolution path');
     expect(text).toContain('Visibility limits');
     expect(text).not.toContain('[object Object]');
@@ -53,10 +53,10 @@ function entityDetail(): OperationalContextEntityDetailDto {
           partnerOwners: [
             {
               targetType: 'bounded-context',
-              targetId: 'agreement-process-management',
-              targetLabel: 'Agreement Process Management',
+              targetId: 'customer-consent-management',
+              targetLabel: 'Customer Consent Management',
               ownerTeamIds: [],
-              ownerLabel: 'Agreement Process Domain Owner',
+              ownerLabel: 'Customer Consent Domain Owner',
               source: 'inferred-owner',
               confidence: 'medium'
             }
@@ -64,7 +64,7 @@ function entityDetail(): OperationalContextEntityDetailDto {
           handoffReason: 'Problem type bounded-context-boundary requires both domain owners.',
           resolutionPath: [
             'request.boundedContextIds -> credit-decision-management',
-            'bounded-context:agreement-process-management -> inferred owner'
+            'bounded-context:customer-consent-management -> inferred owner'
           ],
           visibilityLimits: [
             'Bounded context credit-decision-management has no explicit owner.'

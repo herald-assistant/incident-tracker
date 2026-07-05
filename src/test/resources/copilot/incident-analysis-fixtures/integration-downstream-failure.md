@@ -1,11 +1,11 @@
 ---
-name: integration-downstream-failure-catalog-timeout
+name: integration-downstream-failure-crm-profile-timeout
 expectedClassification: integration_downstream_failure
 starterSkill: incident-analysis-orchestrator
 specializedSkill: incident-code-grounding
 ---
 
-# Fixture: Integration Downstream Failure - Catalog Timeout
+# Fixture: Integration Downstream Failure - CRM Profile Timeout
 
 ## Cel
 
@@ -22,16 +22,16 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-int-001`
-- trigger: order calculation
-- failure point: catalog service HTTP call
-- log: `HttpServerErrorException 503 from GET /catalog/products/P-9`
-- code hint: `CatalogClient.getProduct(productCode)`
-- downstream: `catalog-service`
+- trigger: customer profile lookup
+- failure point: CRM profile downstream HTTP call
+- log: `HttpServerErrorException 503 from GET /crm/customers/C-77/profile`
+- code hint: `CustomerProfileClient.getProfile(customerId)`
+- downstream: `crm-profile-service`
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `order request -> product lookup -> catalog client -> downstream 503`.
+   `customer request -> profile lookup -> customer profile client -> downstream 503`.
 2. Zaladuj `incident-code-grounding`.
 3. Przeczytaj klienta integracji, endpoint, timeout/retry i error handling.
 4. Uzyj log/HTTP comparison tylko, gdy moze rozroznic local vs downstream.
@@ -43,7 +43,7 @@ Fixture testuje kontrakt routingu:
 
 ### `functionalAnalysis`
 
-- Wyjasnia, ze proces zalezy od katalogu produktow.
+- Wyjasnia, ze proces zalezy od profilu klienta CRM.
 - Wskazuje downstream i skutek funkcjonalny braku odpowiedzi.
 
 ### `technicalAnalysis`

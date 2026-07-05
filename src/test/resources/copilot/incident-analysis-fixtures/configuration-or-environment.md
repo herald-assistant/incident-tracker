@@ -22,16 +22,16 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-conf-001`
-- trigger: catalog refresh
-- failure point: feature-flagged tax calculation path
-- log: `MissingTaxProfileException for country=DE`
-- config hint: `tax.v2.enabled=true` in `dev3`, false in previous env
-- operational context: tax process owner differs from catalog owner
+- trigger: customer profile refresh
+- failure point: feature-flagged customer segmentation path
+- log: `MissingCustomerSegmentException for segment=VIP`
+- config hint: `crm.segmentation.v2.enabled=true` in `dev3`, false in previous env
+- operational context: customer segmentation owner differs from CRM profile owner
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `catalog refresh job -> tax strategy selection -> missing tax profile`.
+   `customer profile refresh job -> customer segmentation strategy selection -> missing customer segment`.
 2. Sprawdz, czy evidence wskazuje property, feature flag, deployment albo env
    drift.
 3. Zaladuj `incident-operational-grounding`, jezeli potrzebny jest system,

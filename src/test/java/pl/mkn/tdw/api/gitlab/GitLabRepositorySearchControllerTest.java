@@ -148,15 +148,15 @@ class GitLabRepositorySearchControllerTest {
                                 null,
                                 "com.example.crm.customer.CustomerController",
                                 "getCustomer",
-                                "src/main/java/com/example/crm/customer/CustomerController.java",
+                                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                                 17,
                                 19,
                                 List.of("@PathVariable String customerId"),
-                                List.of("ResponseEntity<OrderResponse>"),
+                                List.of("ResponseEntity<CustomerProfileResponse>"),
                                 List.of("RestController", "GetMapping"),
                                 "high",
                                 List.of(),
-                                List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java lines 17-19 via gitlab_read_repository_file_chunk")
+                                List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerProfileController.java lines 17-19 via gitlab_read_repository_file_chunk")
                         )),
                         List.of()
                 ));
@@ -207,18 +207,18 @@ class GitLabRepositorySearchControllerTest {
                                 "/api/customers/{customerId}",
                                 "com.example.crm.customer.CustomerController",
                                 "getCustomer",
-                                "src/main/java/com/example/crm/customer/CustomerController.java",
+                                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                                 17,
                                 19,
                                 List.of("@PathVariable String customerId"),
-                                List.of("OrderResponse"),
+                                List.of("CustomerProfileResponse"),
                                 List.of("RestController", "GetMapping"),
                                 GitLabEndpointUseCaseConfidence.HIGH,
                                 List.of(),
                                 List.of()
                         ),
                         List.of(new GitLabEndpointUseCaseFileCandidate(
-                                "src/main/java/com/example/crm/customer/CustomerController.java",
+                                "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                                 GitLabEndpointUseCaseFileRole.CONTROLLER,
                                 1,
                                 List.of("getCustomer"),
@@ -230,11 +230,11 @@ class GitLabRepositorySearchControllerTest {
                                 "com.example.crm.customer.CustomerController#getCustomer",
                                 GitLabEndpointUseCaseRelationKind.ENDPOINT_HANDLER,
                                 GitLabEndpointUseCaseConfidence.HIGH,
-                                "Endpoint customer-profile resolved this handler method."
+                                "Endpoint handler resolved this CRM customer profile method."
                         )),
                         List.of(),
                         List.of(),
-                        List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerController.java via gitlab_read_repository_file_outline"),
+                        List.of("crm-customer-api:src/main/java/com/example/crm/customer/CustomerProfileController.java via gitlab_read_repository_file_outline"),
                         GitLabEndpointUseCaseLimits.defaults(),
                         GitLabEndpointUseCaseConfidence.HIGH
                 ));
@@ -399,7 +399,7 @@ class GitLabRepositorySearchControllerTest {
                                         "CRM",
                                         "crm-customer-api",
                                         "release-candidate",
-                                        "src/main/java/com/example/crm/customer/CustomerController.java",
+                                        "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                                          "class CustomerController {}",
                                          false,
                                          "entrypoint",
@@ -444,7 +444,7 @@ class GitLabRepositorySearchControllerTest {
                                   "projectName": "crm-customer-api",
                                   "branch": "release-candidate",
                                   "filePaths": [
-                                    "src/main/java/com/example/crm/customer/CustomerController.java",
+                                    "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                                     "src/main/java/com/example/crm/customer/CustomerService.java"
                                   ],
                                   "maxCharactersPerFile": 4000,
@@ -455,7 +455,7 @@ class GitLabRepositorySearchControllerTest {
                 .andExpect(jsonPath("$.group").value("CRM"))
                 .andExpect(jsonPath("$.projectName").value("crm-customer-api"))
                 .andExpect(jsonPath("$.returnedFileCount").value(2))
-                .andExpect(jsonPath("$.files[0].filePath").value("src/main/java/com/example/crm/customer/CustomerController.java"))
+                .andExpect(jsonPath("$.files[0].filePath").value("src/main/java/com/example/crm/customer/CustomerProfileController.java"))
                 .andExpect(jsonPath("$.files[0].inferredRole").value("entrypoint"))
                 .andExpect(jsonPath("$.files[0].lastCommitId").value("last-controller"))
                 .andExpect(jsonPath("$.files[0].lastModifiedAt").value("2026-06-14T10:20:00.000Z"));

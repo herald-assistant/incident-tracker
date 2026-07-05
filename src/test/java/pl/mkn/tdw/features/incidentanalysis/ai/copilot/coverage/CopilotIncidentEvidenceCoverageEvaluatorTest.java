@@ -40,15 +40,15 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
     @Test
     void shouldClassifyFailingMethodOnlyAsMissingFlowContext() {
         var report = evaluator.evaluate(request("dev3", List.of(gitLabSection(
-                "CheckoutService.java around failing method",
-                "src/main/java/com/example/CheckoutService.java",
+                "CustomerProfileService.java around failing method",
+                "src/main/java/com/example/CustomerProfileService.java",
                 """
-                        class CheckoutService {
-                            Customer submit(CheckoutCommand command) {
+                        class CustomerProfileService {
+                            Customer submit(CustomerProfileCommand command) {
                                 if (command == null) {
                                     throw new IllegalArgumentException("command");
                                 }
-                                return command.toOrder();
+                                return command.toProfile();
                             }
                         }
                         """
@@ -61,11 +61,11 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
     @Test
     void shouldClassifyFlowContextAttachedWhenEvidenceExplainsSurroundingFlow() {
         var report = evaluator.evaluate(request("dev3", List.of(gitLabSection(
-                "Flow context downstream for CheckoutService",
-                "src/main/java/com/example/CheckoutService.java",
+                "Flow context downstream for CustomerProfileService",
+                "src/main/java/com/example/CustomerProfileService.java",
                 """
-                        class CheckoutService {
-                            Customer submit(CheckoutCommand command) {
+                        class CustomerProfileService {
+                            Customer submit(CustomerProfileCommand command) {
                                 var validation = validator.validate(command);
                                 return downstreamClient.reserve(validation);
                             }
@@ -84,12 +84,12 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "logs",
                 List.of(item(
                         "error log",
-                        attr("serviceName", "crm-catalog-service"),
-                        attr("className", "com.example.CustomerCatalogService"),
-                        attr("message", "Failed to resolve catalog item ITEM-1"),
+                        attr("serviceName", "crm-customer-profile-service"),
+                        attr("className", "com.example.CustomerProfileService"),
+                        attr("message", "Failed to resolve customer profile ITEM-1"),
                         attr("exception", """
                                 java.lang.IllegalStateException: failed
-                                \tat com.example.CustomerCatalogService.resolve(CustomerCatalogService.java:42)
+                                \tat com.example.CustomerProfileService.resolve(CustomerProfileService.java:42)
                                 """)
                 ))
         ))));
@@ -104,7 +104,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "logs",
                 List.of(item(
                         "repository error",
-                        attr("serviceName", "crm-catalog-service"),
+                        attr("serviceName", "crm-customer-profile-service"),
                         attr("message", "EntityNotFoundException while loading tenant status by business key")
                 ))
         ))));
@@ -129,7 +129,7 @@ class CopilotIncidentEvidenceCoverageEvaluatorTest {
                 "resolved-code",
                 List.of(item(
                         title,
-                        attr("projectName", "checkout-service"),
+                        attr("projectName", "crm-customer-profile-service"),
                         attr("filePath", filePath),
                         attr("lineNumber", "12"),
                         attr("returnedStartLine", "8"),

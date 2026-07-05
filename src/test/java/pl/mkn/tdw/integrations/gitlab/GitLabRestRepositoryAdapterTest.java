@@ -133,7 +133,7 @@ class GitLabRestRepositoryAdapterTest {
                 .andRespond(withSuccess("""
                         [
                           {
-                            "path": "src/main/java/com/example/crm/customer/api/CustomerController.java"
+                            "path": "src/main/java/com/example/crm/customer/api/CustomerProfileController.java"
                           }
                         ]
                         """, MediaType.APPLICATION_JSON));
@@ -150,7 +150,7 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("CRM/runtime", candidates.get(0).group());
         assertEquals("crm-customer-api", candidates.get(0).projectName());
         assertEquals("release/2026.04", candidates.get(0).branch());
-        assertEquals("src/main/java/com/example/crm/customer/api/CustomerController.java", candidates.get(0).filePath());
+        assertEquals("src/main/java/com/example/crm/customer/api/CustomerProfileController.java", candidates.get(0).filePath());
         assertTrue(candidates.get(0).matchReason().contains("@RestController"));
 
         server.verify();
@@ -237,7 +237,7 @@ class GitLabRestRepositoryAdapterTest {
                 .andRespond(withSuccess("""
                         [
                           {
-                            "path": "src/main/java/com/example/crm/customer/CustomerController.java",
+                            "path": "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                             "type": "blob"
                           },
                           {
@@ -258,7 +258,7 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("CRM/runtime", files.get(0).group());
         assertEquals("crm-customer-api", files.get(0).projectName());
         assertEquals("release/2026.04", files.get(0).branch());
-        assertEquals("src/main/java/com/example/crm/customer/CustomerController.java", files.get(0).filePath());
+        assertEquals("src/main/java/com/example/crm/customer/CustomerProfileController.java", files.get(0).filePath());
 
         server.verify();
     }
@@ -278,9 +278,9 @@ class GitLabRestRepositoryAdapterTest {
 
                         public class CustomerProfileClient {
 
-                            public CustomerProfileResponse fetchCustomerProfile(String sku) {
+                            public CustomerProfileResponse fetchCustomerProfile(String customerId) {
                                 return customerProfileWebClient.get()
-                                        .uri("/customer-profile/{sku}", sku)
+                                        .uri("/customer-profile/{customerId}", customerId)
                                         .retrieve()
                                         .bodyToMono(CustomerProfileResponse.class)
                                         .timeout(Duration.ofSeconds(2))
@@ -318,7 +318,7 @@ class GitLabRestRepositoryAdapterTest {
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
         var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
         var metadataHeaders = new HttpHeaders();
-        metadataHeaders.add("X-Gitlab-File-Path", "src/main/java/com/example/crm/customer/CustomerController.java");
+        metadataHeaders.add("X-Gitlab-File-Path", "src/main/java/com/example/crm/customer/CustomerProfileController.java");
         metadataHeaders.add("X-Gitlab-Blob-Id", "blob-customer-controller");
         metadataHeaders.add("X-Gitlab-Commit-Id", "branch-tip-commit");
         metadataHeaders.add("X-Gitlab-Last-Commit-Id", "last-file-commit");
@@ -326,7 +326,7 @@ class GitLabRestRepositoryAdapterTest {
         metadataHeaders.add("X-Gitlab-Size", "2048");
 
         server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/repository/files/src%2Fmain%2Fjava%2Fcom%2Fexample%2Fcrm%2Fcustomer%2FCustomerController.java?ref=release/2026.04"))
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/repository/files/src%2Fmain%2Fjava%2Fcom%2Fexample%2Fcrm%2Fcustomer%2FCustomerProfileController.java?ref=release/2026.04"))
                 .andExpect(method(HttpMethod.HEAD))
                 .andRespond(withSuccess().headers(metadataHeaders));
         server.expect(requestTo(
@@ -343,13 +343,13 @@ class GitLabRestRepositoryAdapterTest {
                 "CRM/runtime",
                 "crm-customer-api",
                 "release/2026.04",
-                "src/main/java/com/example/crm/customer/CustomerController.java"
+                "src/main/java/com/example/crm/customer/CustomerProfileController.java"
         );
 
         assertEquals("CRM/runtime", metadata.group());
         assertEquals("crm-customer-api", metadata.projectName());
         assertEquals("release/2026.04", metadata.branch());
-        assertEquals("src/main/java/com/example/crm/customer/CustomerController.java", metadata.filePath());
+        assertEquals("src/main/java/com/example/crm/customer/CustomerProfileController.java", metadata.filePath());
         assertEquals("blob-customer-controller", metadata.blobId());
         assertEquals("branch-tip-commit", metadata.commitId());
         assertEquals("last-file-commit", metadata.lastCommitId());
