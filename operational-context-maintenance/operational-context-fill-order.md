@@ -11,19 +11,40 @@ The catalog is not a copy of inventories from other sources. Keep detailed facts
 in repositories, observability data, external system evidence, and specialized
 tools.
 
+## Ownership model
+
+Ownership is stored only on:
+
+- `systems.yml`,
+- `bounded-contexts.yml`.
+
+Bounded-context ownership has priority over system ownership. System ownership
+is the fallback when the bounded context is unknown, missing, or the problem is
+system-wide. Repositories, code-search scopes, processes, integrations, teams,
+glossary terms and handoff rules never define owners.
+
+Boundary problems should resolve both sides through referenced systems and
+bounded contexts. If a concrete team is not cataloged, the resolver may expose
+an inferred label such as "owner of system Salesforce" or "owner of domain
+customer".
+
+Generated YAML/Markdown should follow the current shapes in the file-specific
+prompts. If a fact does not fit a shape, link the right catalog entity or record
+an open question instead of inventing extra ownership or routing fields.
+
 ## Fact ownership
 
 | Fact | File |
 | --- | --- |
-| Canonical system identity, purpose, owner and handoff entry point | `systems.yml` |
+| Canonical system identity, purpose, system-level ownership and navigation | `systems.yml` |
+| Local language, semantic boundaries and bounded-context ownership | `bounded-contexts.yml` |
 | GitLab project identity and semantic references | `repo-map.yml` |
 | Repository set to inspect together for one semantic target | `code-search-scopes.yml` |
 | Business or operational process path | `processes.yml` |
-| System-to-system or partner handoff relationship | `integrations.yml` |
-| Local language and semantic boundaries | `bounded-contexts.yml` |
-| Team responsibility and routing hints | `teams.yml` |
+| System-to-system or partner boundary relationship | `integrations.yml` |
+| Team identifiers, labels and collaboration clues | `teams.yml` |
 | Business terms and disambiguation | `glossary.md` |
-| Routing rule, evidence needs and first actions | `handoff-rules.md` |
+| Handoff situation, evidence needs and first actions | `handoff-rules.md` |
 | Catalog rules, quality notes and current open questions | `operational-context-index.md` |
 
 ## Recommended order
@@ -51,65 +72,83 @@ Minimum useful entry:
 
 - `id`, `name`, `kind`, `summary`, `purpose`,
 - aliases and use cases,
-- references to known processes, contexts, repositories and owners,
-- handoff hints or responsibilities.
+- references to known processes, contexts, repositories and integrations,
+- `ownership` only when there is durable system-level accountability.
 
-### 3. Add team and handoff owner
-
-Update `teams.yml` and `handoff-rules.md` early when ownership is unclear.
-This gives AI and analysts a safe next step even before code reading starts.
-
-Minimum useful entry:
-
-- team id/name,
-- what the team owns,
-- when to route there,
-- required evidence,
-- expected first action,
-- partner teams and visibility limits.
-
-### 4. Add bounded context and glossary language
+### 3. Add bounded context and glossary language
 
 Update `bounded-contexts.yml` and `glossary.md` when the main risk is language
-ambiguity. This is especially useful for business analysts, testers and
-requirements work.
+ambiguity or domain ownership. This is especially useful for business analysts,
+testers and requirements work.
 
-Minimum useful entry:
+Minimum useful bounded-context entry:
 
 - local meaning,
 - what belongs here,
 - what not to confuse with,
-- related systems, processes, teams and terms.
+- related systems, processes and terms,
+- `ownership` only when there is durable bounded-context accountability.
+
+### 4. Add team labels only after owners exist
+
+Update `teams.yml` when a team id used by system or bounded-context ownership
+needs a readable label, aliases or collaboration context.
+
+Minimum useful entry:
+
+- team id/name,
+- aliases,
+- what the team label means,
+- references that help navigation.
+
+Do not add reverse ownership to teams. If ownership is unclear, add an open
+question on the system or bounded context instead.
 
 ### 5. Describe the process path
 
 Update `processes.yml` when the user asks about a business journey, a use case,
 acceptance criteria, or test scenarios.
 
-Process steps should be business or ownership milestones. They should help
-answer:
+Process steps should be business, system or bounded-context milestones. They
+should help answer:
 
 - what the user expected,
 - where the process stopped,
-- which system owns the next step,
-- what handoff or partner owner may be needed.
+- which system or bounded context should be checked next,
+- what evidence is needed before a boundary handoff.
 
-### 6. Add integrations as handoff relationships
+### 6. Add integrations as boundary relationships
 
-Update `integrations.yml` when the relevant fact is a boundary between systems
-or owners.
+Update `integrations.yml` when the relevant fact is a boundary between systems,
+bounded contexts or external parties.
 
 Useful integration entries include:
 
 - source and target systems,
+- source and target bounded contexts when known,
 - business purpose,
 - high-level interaction style and direction,
-- related process and bounded contexts,
-- owners, partners, failure modes and handoff hints.
+- related process and failure modes.
 
-Keep detailed source-specific facts outside this catalog.
+Keep detailed source-specific facts and owner assignments outside this file.
 
-### 7. Map repositories
+### 7. Add handoff rules for evidence, not routing
+
+Update `handoff-rules.md` when an analyst needs a repeatable way to decide
+whether a boundary handoff is needed and what evidence must be collected.
+
+Minimum useful entry:
+
+- applies/does-not-apply conditions,
+- required evidence,
+- expected first actions,
+- operational context links to systems, bounded contexts, processes or
+  integrations.
+
+The receiving owner is resolved from linked systems and bounded contexts, not
+from the rule.
+
+### 8. Map repositories
 
 Update `repo-map.yml` after the semantic target is clear. Repository entries
 should answer:
@@ -117,12 +156,12 @@ should answer:
 - which GitLab project is related to this system, process, context or
   integration,
 - why it matters,
-- who maintains it,
 - when to inspect it.
 
-Repository entries should not try to describe internal code organization.
+Repository entries should not try to describe internal code organization or
+define maintainers as owners.
 
-### 8. Define code-search scopes
+### 9. Define code-search scopes
 
 Update `code-search-scopes.yml` last, once systems, processes, contexts and
 repositories are known.
@@ -138,7 +177,7 @@ Each scope should define:
 This lets an agent continue analysis across repositories without guessing the
 next project.
 
-### 9. Run validation and record gaps
+### 10. Run validation and record gaps
 
 Use the operational context API validation and maintenance findings before and
 after larger updates.
@@ -146,9 +185,9 @@ after larger updates.
 Check:
 
 - missing referenced ids,
-- ambiguous ownership,
+- missing system/bounded-context ownership for concrete user tasks,
 - duplicate facts across files,
-- entries without useful handoff or navigation value,
+- entries without useful navigation value,
 - open questions that block a concrete user task.
 
 ## Minimal useful catalog
@@ -156,7 +195,7 @@ Check:
 For a new area, stop when these questions have clear answers:
 
 - What system or process should analysis start from?
-- Which team owns the first response?
+- Which bounded context or system owns the first response?
 - Which bounded context or business term explains the user language?
 - Which repository or repository set should be inspected next?
 - What evidence is needed before a handoff?

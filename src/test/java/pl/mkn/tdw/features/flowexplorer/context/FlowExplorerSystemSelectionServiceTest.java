@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.TEAM;
 
 class FlowExplorerSystemSelectionServiceTest {
 
@@ -40,13 +39,12 @@ class FlowExplorerSystemSelectionServiceTest {
         assertEquals("high", catalog.criticality());
         assertEquals("Handles catalog operations.", catalog.summary());
         assertEquals(List.of("catalog", "notifications"), catalog.aliases());
-        assertEquals(3, catalog.repositoryCount());
-        assertEquals(2, catalog.codeSearchScopeCount());
-        assertEquals(List.of("catalog-team", "platform-team", "ops-team"), catalog.ownerTeamIds());
+        assertEquals(2, catalog.repositoryCount());
+        assertEquals(1, catalog.codeSearchScopeCount());
+        assertEquals(List.of("catalog-team"), catalog.ownerTeamIds());
 
         assertFalse(capturedQuery.get().includeIndexDocument());
         assertTrue(capturedQuery.get().includes(SYSTEM));
-        assertTrue(capturedQuery.get().includes(TEAM));
         assertTrue(capturedQuery.get().includes(REPOSITORY));
     }
 
@@ -60,11 +58,7 @@ class FlowExplorerSystemSelectionServiceTest {
                         ),
                         map(
                                 "id", "ops-team",
-                                "name", "Ops Team",
-                                "responsibilities", List.of(map(
-                                        "targetType", "system",
-                                        "targetId", "catalog-core"
-                                ))
+                                "name", "Ops Team"
                         )
                 ),
                 List.of(),
@@ -83,10 +77,7 @@ class FlowExplorerSystemSelectionServiceTest {
                                         "repositories", List.of("catalog-api"),
                                         "teams", List.of("catalog-team")
                                 ),
-                                "responsibilities", List.of(map(
-                                        "actorType", "team",
-                                        "actorId", "platform-team"
-                                )),
+                                "ownership", ownership(List.of("catalog-team"), "high"),
                                 "codeSearchScope", map("repositories", List.of("catalog-worker"))
                         ),
                         map(
@@ -129,5 +120,14 @@ class FlowExplorerSystemSelectionServiceTest {
             map.put(String.valueOf(values[index]), values[index + 1]);
         }
         return map;
+    }
+
+    private static Map<String, Object> ownership(List<String> ownerTeamIds, String confidence) {
+        return map(
+                "ownerTeamIds", ownerTeamIds,
+                "ownershipStatus", "explicit",
+                "confidence", confidence,
+                "source", "test"
+        );
     }
 }

@@ -62,10 +62,12 @@ class OperationalContextEvidenceProviderTest {
         assertTrue(titles.contains("Operational repository app-core-repo"));
         assertTrue(titles.contains("Operational repository app-shared-lib-repo"));
         assertTrue(titles.contains("Operational bounded context core-context"));
-        assertTrue(titles.contains("Operational team core-team"));
         assertTrue(titles.contains("Operational glossary term soap-fault"));
         assertTrue(titles.contains("Operational handoff rule integration-external-sync-failure"));
         assertEquals("app-core", view.systems().get(0).systemId());
+        assertTrue(view.systems().get(0).ownerTeamIds().contains("core-team"));
+        assertTrue(view.systems().get(0).ownerLabels().contains("core-team"));
+        assertEquals("inside-system", view.systems().get(0).ownershipSituationType());
         assertTrue(view.systems().get(0).repositoryIds().contains("app-shared-lib-repo"));
         assertTrue(view.systems().get(0).codeSearchScopeIds().contains("app-core-code-search"));
         assertTrue(view.systems().get(0).codeSearchRepositoryIds().contains("app-shared-lib-repo"));
@@ -78,16 +80,22 @@ class OperationalContextEvidenceProviderTest {
         ));
         assertEquals("app-core-to-partner-sync", view.integrations().get(0).integrationId());
         assertEquals("synchronous-request", view.integrations().get(0).integrationStyle());
+        assertTrue(view.integrations().get(0).ownerTeamIds().contains("core-team"));
+        assertTrue(view.integrations().get(0).partnerOwnerLabels().stream()
+                .anyMatch(label -> label.contains("Partner context")));
+        assertEquals("bounded-context-boundary", view.integrations().get(0).ownershipSituationType());
         assertEquals("main-process", view.processes().get(0).processId());
+        assertTrue(view.processes().get(0).ownerTeamIds().contains("core-team"));
         assertEquals("app-core-repo", view.repositories().get(0).repositoryId());
+        assertTrue(view.repositories().get(0).ownerTeamIds().contains("core-team"));
         assertTrue(view.repositories().stream()
                 .anyMatch(repository -> repository.repositoryId().equals("app-shared-lib-repo")
                         && repository.systemIds().contains("app-core")));
         assertEquals("core-context", view.boundedContexts().get(0).boundedContextId());
-        assertEquals("core-team", view.teams().get(0).teamId());
+        assertTrue(view.boundedContexts().get(0).ownerTeamIds().contains("core-team"));
         assertEquals("soap-fault", view.glossaryTerms().get(0).termId());
         assertEquals("integration-external-sync-failure", view.handoffRules().get(0).ruleId());
-        assertEquals("Integration Team", view.handoffRules().get(0).routeTo());
+        assertTrue(view.handoffRules().get(0).requiredEvidence().contains("host"));
     }
 
     private AnalysisContext sampleContext() {

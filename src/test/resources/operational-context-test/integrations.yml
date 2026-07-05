@@ -19,9 +19,6 @@ integrations:
       processes: [main-process]
       boundedContexts: [core-context, partner-context]
       teams: [integration-team]
-    responsibilities:
-      - teamId: integration-team
-        role: contract-owner
     matchSignals:
       exact:
         hosts: [api.partner.local]
@@ -29,10 +26,4 @@ integrations:
         spans: [SyncGateway.call]
         markers: [PARTNER]
         errors: [SOAPFault, Read timed out]
-    handoffHints:
-      defaultRouteLabel: Integration Team
-      firstResponderTeamIds: [integration-team]
-      partnerTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, host, exception]
-
 gaps: []

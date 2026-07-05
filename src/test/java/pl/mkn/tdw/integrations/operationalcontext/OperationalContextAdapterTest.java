@@ -40,7 +40,7 @@ class OperationalContextAdapterTest {
                         && question.question().equals("Confirm whether remote API error terminology needs CRM-specific subtypes.")));
         assertTrue(catalog.openQuestions().stream()
                 .anyMatch(question -> question.sourceFile().equals("handoff-rules.md")
-                        && question.question().equals("Confirm actual routing target for notification-provider synchronous failures.")));
+                        && question.question().equals("Confirm ownership boundary evidence for notification-provider synchronous failures.")));
         assertFalse(catalog.indexDocument().isBlank());
     }
 
@@ -106,18 +106,6 @@ class OperationalContextAdapterTest {
         assertTrue(findings.stream().noneMatch(finding ->
                 finding.code().startsWith("CODE_SEARCH_TARGET_")
                         && finding.code().endsWith("_DERIVED_FROM_REPOSITORY")));
-    }
-
-    @Test
-    void shouldLoadTestCatalogWithoutTeamReferenceCopies() {
-        var adapter = new OperationalContextAdapter(testProperties());
-
-        var catalog = adapter.loadContext(OperationalContextQuery.all());
-        var findings = new OperationalContextReadModelValidator().validate(catalog);
-
-        assertFalse(catalog.teams().isEmpty());
-        assertTrue(findings.stream().noneMatch(finding ->
-                finding.code().equals("TEAM_REFERENCE_DERIVED_FROM_RESPONSIBILITY")));
     }
 
     @Test

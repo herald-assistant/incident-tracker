@@ -36,10 +36,6 @@ final class OperationalContextApiTestFixtures {
                                 "processes", List.of("agreement-submit-process"),
                                 "boundedContexts", List.of("agreement-context"),
                                 "integrations", List.of("agreement-partner-handoff")
-                        ),
-                        "handoffHints", map(
-                                "defaultRouteLabel", "Team A",
-                                "requiredEvidence", List.of("business scenario")
                         )
                 )),
                 List.of(map(
@@ -56,17 +52,12 @@ final class OperationalContextApiTestFixtures {
                                 "boundedContexts", List.of("agreement-context"),
                                 "teams", List.of("team-a")
                         ),
-                        "responsibilities", List.of(map("teamId", "team-a")),
                         "processSteps", List.of(map(
                                 "id", "submit",
                                 "name", "Submit agreement",
                                 "summary", "Validates and passes the agreement to partner handoff."
                         )),
-                        "processBoundary", map("successArtifacts", List.of("agreement accepted")),
-                        "handoffHints", map(
-                                "defaultRouteLabel", "Team A",
-                                "requiredEvidence", List.of("business scenario")
-                        )
+                        "processBoundary", map("successArtifacts", List.of("agreement accepted"))
                 )),
                 List.of(
                         map(
@@ -81,19 +72,14 @@ final class OperationalContextApiTestFixtures {
                                         "boundedContexts", List.of("agreement-context"),
                                         "teams", List.of("team-a")
                                 ),
-                                "responsibilities", List.of(map("teamId", "team-a")),
-                                "matchSignals", map("exact", map("markers", List.of("agreement-service"))),
-                                "handoffHints", map(
-                                        "defaultRouteLabel", "Team A",
-                                        "requiredEvidence", List.of("business scenario")
-                                )
+                                "ownership", ownership(List.of("team-a"), null, "high"),
+                                "matchSignals", map("exact", map("markers", List.of("agreement-service")))
                         ),
                         map(
                                 "id", "partner-system",
                                 "name", "Partner System",
                                 "kind", "external-system",
-                                "purpose", "Receives accepted agreements.",
-                                "handoffHints", map("defaultRouteLabel", "Partner")
+                                "purpose", "Receives accepted agreements."
                         )
                 ),
                 List.of(map(
@@ -113,13 +99,7 @@ final class OperationalContextApiTestFixtures {
                                 "boundedContexts", List.of("agreement-context"),
                                 "teams", List.of("team-a")
                         ),
-                        "responsibilities", List.of(map("teamId", "team-a")),
-                        "matchSignals", map("strong", map("terms", List.of("partner-handoff"))),
-                        "handoffHints", map(
-                                "defaultRouteLabel", "Team A",
-                                "partnerTeamIds", List.of("team-a"),
-                                "requiredEvidence", List.of("business scenario")
-                        )
+                        "matchSignals", map("strong", map("terms", List.of("partner-handoff")))
                 )),
                 List.of(map(
                         "id", "agreement-repo",
@@ -137,10 +117,6 @@ final class OperationalContextApiTestFixtures {
                                 "processes", List.of("agreement-submit-process"),
                                 "boundedContexts", List.of("agreement-context"),
                                 "teams", List.of("team-a")
-                        ),
-                        "handoffHints", map(
-                                "defaultRouteLabel", "Team A",
-                                "requiredEvidence", List.of("project path")
                         )
                 )),
                 List.of(
@@ -189,7 +165,7 @@ final class OperationalContextApiTestFixtures {
                                 "terms", List.of("agreement"),
                                 "teams", List.of("team-a")
                         ),
-                        "responsibilities", List.of(map("teamId", "team-a")),
+                        "ownership", ownership(List.of("team-a"), null, "high"),
                         "matchSignals", map("exact", map("terms", List.of("agreement")))
                 )),
                 List.of(new OperationalContextGlossaryTerm(
@@ -207,12 +183,10 @@ final class OperationalContextApiTestFixtures {
                 List.of(new OperationalContextHandoffRule(
                         "handoff-team-a",
                         "Route agreement questions to Team A",
-                        "team-a",
                         List.of("agreement-service", "agreement-submit-process"),
                         List.of(),
                         List.of("business scenario"),
                         List.of("Open agreement context"),
-                        List.of("team-a"),
                         List.of("Keep language business-oriented.")
                 )),
                 List.of(new OperationalContextOpenQuestion(
@@ -242,7 +216,6 @@ final class OperationalContextApiTestFixtures {
                                 "name", "App Core",
                                 "kind", "internal-application",
                                 "references", map("repositories", List.of("missing-repo")),
-                                "responsibilities", List.of(map("teamId", "core-team")),
                                 "matchSignals", map("exact", map("markers", List.of("shared-service")))
                         ),
                         map(
@@ -274,5 +247,15 @@ final class OperationalContextApiTestFixtures {
             map.put(String.valueOf(values[index]), values[index + 1]);
         }
         return map;
+    }
+
+    private static Map<String, Object> ownership(List<String> ownerTeamIds, String ownerLabel, String confidence) {
+        return map(
+                "ownerTeamIds", ownerTeamIds,
+                "ownerLabel", ownerLabel,
+                "ownershipStatus", "explicit",
+                "confidence", confidence,
+                "source", "test"
+        );
     }
 }

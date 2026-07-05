@@ -5,9 +5,11 @@ boundedContexts:
     name: Customer Profile Context
     category: supporting-domain
     purpose: Owns the customer profile semantics.
-    responsibilities:
-      - teamId: crm-team
-        role: context-owner
+    ownership:
+      ownerTeamIds: [crm-team]
+      ownershipStatus: explicit
+      confidence: high
+      source: test
     matchSignals:
       strong:
         markers: [CRM_CUSTOMER]
@@ -15,26 +17,18 @@ boundedContexts:
       - targetContextId: notification-context
         type: conformist
         via: [crm-customer-to-notification-sync]
-    handoffHints:
-      defaultRouteLabel: crm-team
-      firstResponderTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, boundedContext]
-
   - id: notification-context
     name: Notification Context
     category: supporting-domain
     purpose: Owns outbound CRM notification semantics.
-    responsibilities:
-      - teamId: crm-integration-team
-        role: context-owner
+    ownership:
+      ownerTeamIds: [crm-integration-team]
+      ownershipStatus: explicit
+      confidence: medium
+      source: test
     matchSignals:
       strong:
         markers: [CRM_NOTIFICATION]
-    handoffHints:
-      defaultRouteLabel: crm-integration-team
-      firstResponderTeamIds: [crm-integration-team]
-      requiredEvidence: [correlationId, environment, host, integration evidence]
-
 gaps:
   - id: confirm-customer-profile-context-boundary
     type: human-confirmation-required

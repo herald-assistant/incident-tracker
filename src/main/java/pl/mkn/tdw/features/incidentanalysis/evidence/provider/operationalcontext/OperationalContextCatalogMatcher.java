@@ -300,12 +300,6 @@ public class OperationalContextCatalogMatcher {
             return score;
         }
 
-        addTeamOwnershipMatches(score, teamId, systemMatches, "system");
-        addTeamOwnershipMatches(score, teamId, processMatches, "process");
-        addTeamOwnershipMatches(score, teamId, repositoryMatches, "repository");
-        addTeamOwnershipMatches(score, teamId, boundedContextMatches, "boundedContext");
-        addTeamOwnershipMatches(score, teamId, integrationMatches, "integration");
-
         if (anyOverlap(team.references().systems(), matchedIds(systemMatches))) {
             score.add(8, "referencesMatchedSystem");
         }
@@ -351,12 +345,10 @@ public class OperationalContextCatalogMatcher {
         score.add("retain-with-current-owner".equals(rule.id()) ? 4 : 8, "selectedByIncidentPattern");
         addSignalMatch(score, signals, rule.id(), 6, 3, "ruleId");
         addSignalMatch(score, signals, rule.title(), 5, 2, "ruleTitle");
-        addSignalMatch(score, signals, rule.routeTo(), 5, 2, "routeTo");
         addSignalMatches(score, signals, rule.useWhen(), 4, 2, "useWhen");
         addSignalMatches(score, signals, rule.doNotUseWhen(), 3, 1, "doNotUseWhen");
         addSignalMatches(score, signals, rule.requiredEvidence(), 3, 1, "requiredEvidence");
         addSignalMatches(score, signals, rule.expectedFirstAction(), 3, 1, "firstAction");
-        addSignalMatches(score, signals, rule.partnerTeams(), 4, 2, "partnerTeam");
         addSignalMatches(score, signals, rule.notes(), 2, 1, "ruleNote");
         return score;
     }
@@ -370,41 +362,6 @@ public class OperationalContextCatalogMatcher {
         addSignalMatch(score, signals, entry.id(), 10, 5, label + "Id");
         addSignalMatch(score, signals, entry.name(), 7, 3, label + "Name");
         addSignalMatch(score, signals, entry.shortName(), 6, 3, label + "ShortName");
-    }
-
-    private void addTeamOwnershipMatches(
-            OperationalContextMatchScore score,
-            String teamId,
-            List<? extends OperationalContextMatchedEntry<? extends OperationalContextEntry>> matches,
-            String relationLabel
-    ) {
-        for (var match : matches) {
-            var entry = match.entry();
-            var entryId = entry.id();
-            if (containsNormalizedId(entry.references().teams(), teamId)
-                    || responsibilityTeamIds(entry).contains(normalize(teamId))) {
-                score.add(12, relationLabel + "Owner=" + entryId);
-            }
-            if (containsNormalizedId(entry.handoffHints().partnerTeamIds(), teamId)) {
-                score.add(7, relationLabel + "Partner=" + entryId);
-            }
-        }
-    }
-
-    private boolean containsNormalizedId(List<String> values, String id) {
-        var normalizedId = normalize(id);
-        return StringUtils.hasText(normalizedId)
-                && values.stream()
-                .map(value -> normalize(value))
-                .anyMatch(normalizedId::equals);
-    }
-
-    private List<String> responsibilityTeamIds(OperationalContextEntry entry) {
-        return entry.responsibilities().stream()
-                .map(responsibility -> responsibility.teamId())
-                .filter(StringUtils::hasText)
-                .map(value -> normalize(value))
-                .toList();
     }
 
     private void addSignalMatches(

@@ -38,7 +38,7 @@ Przyjmij:
 - klasyfikacje bledu i causal chain,
 - rozdzielenie faktow, hipotez i visibility limits,
 - material specjalistyczny: GitLab code path, DB finding, runtime evidence,
-  downstream boundary, operational context albo handoff route,
+  downstream boundary, operational context albo resolved handoff,
 - oczekiwany profil odbiorcy, gdy wynika z pytania albo ownershipu.
 
 ## Czego Ten Skill Nie Diagnozuje
@@ -49,7 +49,7 @@ Nie diagnozuj tutaj od zera:
 - klas bledu, jesli orkiestrator ich jeszcze nie ustalil,
 - DB issue bez DB evidence,
 - code issue bez code evidence,
-- ownershipu i route bez operational context albo incident evidence.
+- ownershipu i handoffu bez operational context albo incident evidence.
 
 Jezeli handoff wymaga brakujacej diagnostyki, wypisz limitation i skieruj do
 odpowiedniego skilla specjalistycznego zamiast ukrywac luke.
@@ -202,8 +202,8 @@ konkretnego wymaganego szczegolu i capability jest dostepne w sesji.
 
 Uzywaj:
 
-- Operational Context tools dla ownershipu, handoff rules, procesu, bounded
-  contextu, systemu, repository scope i receiving team details,
+- Operational Context tools dla resolved ownership, handoff rules, procesu,
+  bounded contextu, systemu, repository scope i receiving owner details,
 - GitLab tools dla pliku, klasy, metody, repozytorium, predykatu, call flow
   albo szczegolow code change,
 - Database tools dla potwierdzonego stanu danych, brakujacych rekordow,
@@ -246,8 +246,8 @@ Uzyj dokladnie tej struktury top-level, w tej kolejnosci.
 | Pole | Wartosc |
 |---|---|
 | Profil odbiorcy | <Developer / QA / DevOps / Data / Partner / Technical receiver> |
-| Sugerowany odbiorca | <team/person/system owner albo Nie ustalono> |
-| Cel przekazania | <jedno zdanie: implement fix / verify data / validate runtime / route to partner> |
+| Sugerowany odbiorca | <primary owner / partner owner / system owner albo Nie ustalono> |
+| Cel przekazania | <jedno zdanie: implement fix / verify data / validate runtime / handoff to partner> |
 | Pierwsza oczekiwana akcja | <jedna konkretna akcja> |
 
 ## 2. Streszczenie
@@ -406,6 +406,8 @@ Stosuj `Quality Gate` jako obowiazkowa walidacje handoffu. Dodatkowo sprawdz:
 - odbiorca i pierwsza akcja sa konkretne albo oznaczone jako `Nie ustalono`,
 - root cause jest faktem tylko przy wystarczajacym evidence,
 - DB, downstream, runtime i ownership claims nie sa zgadywane,
+- odbiorca wynika z `resolvedOwnership` systemu/bounded contextu albo jest
+  jawnie oznaczony jako inferowany,
 - testy i Definition of Done daja odbiorcy jasny sposob zamkniecia sprawy.
 
 ## Fallbacki

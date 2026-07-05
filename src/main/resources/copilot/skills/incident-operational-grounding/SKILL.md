@@ -11,15 +11,15 @@ incydentu.
 Operational context to katalog systemow, repozytoriow, code-search scopes,
 procesow, integracji, bounded contexts, teamow, glossary terms i handoff rules.
 
-Katalog jest przydatny do ugruntowania nazw, relacji, ownershipu, code scope,
-DB targeting hints i handoff guidance. Nie jest samodzielnym dowodem root
-cause.
+Katalog jest przydatny do ugruntowania nazw, relacji, resolved ownership,
+code scope, DB targeting hints i handoff guidance. Nie jest samodzielnym
+dowodem root cause.
 
 ## Cel
 
 Zbuduj `OperationalGroundingSummary`: katalogowe nazwy systemu, procesu,
-bounded contextu, ownershipu, code-search scope, DB hints i handoff route
-potrzebne do incident analysis.
+bounded contextu, resolved ownership, code-search scope, DB hints i handoff
+decision potrzebne do incident analysis.
 
 ## Rola Wobec Orkiestratora
 
@@ -48,8 +48,8 @@ Uzywaj go wspierajaco dla:
   `code_validation_or_business_rule`, aby dobrac code-search scope,
 - `data_missing`, `data_predicate_mismatch` i
   `data_orphan_or_stale_reference`, aby dobrac application/repository/DB hints,
-- `integration_downstream_failure`, aby nazwac downstream/upstream i
-  receiving owner,
+- `integration_downstream_failure`, aby nazwac downstream/upstream i ownerow
+  obu stron granicy,
 - `async_or_process_state`, aby powiazac event/process z systemem i handoffem.
 
 ## Wejscie Oczekiwane Od Orkiestratora
@@ -61,7 +61,7 @@ Przyjmij:
 - aktualny szkic flow use case'u,
 - failure point albo integration boundary,
 - brakujace pola `affectedProcess`, `affectedBoundedContext`, `affectedTeam`,
-- potrzebe GitLab scope, DB target albo handoff route.
+- potrzebe GitLab scope, DB target albo resolved handoff.
 
 Nie szukaj w katalogu bez sygnalu. Uzywaj concrete query z evidence albo
 najnowszej wiadomosci uzytkownika.
@@ -72,7 +72,8 @@ Ten skill ma potwierdzic albo oslabic tylko hipotezy routingowe i katalogowe:
 
 - jaki system, proces, bounded context albo integracja najlepiej pasuje do
   incident evidence,
-- ktory team, owner albo handoff route jest najbardziej uzasadniony,
+- ktory bounded context/system jest najblizszym targetem ownershipu i czy
+  trzeba wlaczyc partner ownera,
 - jaki repository/code-search scope albo DB target warto przekazac dalej,
 - czy problem wyglada na poza zasiegiem analizowanego systemu,
 - czy katalog jest zbyt niepelny albo niejednoznaczny, aby podniesc confidence.
@@ -87,7 +88,7 @@ Dobierz najmniejszy katalogowy check, ktory rozroznia aktywne potrzeby:
 - system/process match rozroznia lokalny problem od cross-system handoffu,
 - repository/code-search scope rozroznia, gdzie GitLab skill ma szukac kodu,
 - integration relation rozroznia upstream, downstream i local boundary,
-- ownership/handoff rule rozroznia odbiorce i pierwsza akcje,
+- resolved ownership/handoff rule rozroznia odbiorce, partnerow i pierwsza akcje,
 - glossary/bounded context rozroznia znaczenie biznesowe dla
   `functionalAnalysis`.
 
@@ -95,7 +96,7 @@ Dobierz najmniejszy katalogowy check, ktory rozroznia aktywne potrzeby:
 
 Po kazdym wyniku `opctx_*` sprawdz, czy katalog rozstrzygnal waska potrzebe
 orkiestratora: nazwe systemu, procesu, bounded contextu, ownera, code-search
-scope, DB hint albo handoff route.
+scope, DB hint albo resolved handoff.
 
 - Jezeli wynik potwierdza routing albo scope i jest wsparty evidence
   incydentu, zwroc `OperationalGroundingSummary`.
@@ -120,15 +121,16 @@ Po uzyciu operational context zwroc do orkiestratora:
 - integration/downstream/upstream context, jesli dotyczy,
 - repository/code-search scope dla GitLab tools,
 - application/deployment/repository hints dla DB targeting,
-- handoff route, expected first action i evidence package dla odbiorcy,
+- resolved ownership, handoff reason, expected first action i evidence package
+  dla odbiorcy,
 - glossary/local language, jesli pomaga analitykowi zrozumiec flow.
 
 ## Wklad Do Wyniku
 
 - `functionalAnalysis`: system, process, bounded context, integration,
   ownership, local language, handoff reason i functional routing.
-- `technicalAnalysis`: repository scope, target system/integration, receiving
-  owner, handoff evidence i first technical verification.
+- `technicalAnalysis`: repository scope, target system/integration,
+  primary/partner owner, handoff evidence i first technical verification.
 - `visibilityLimits`: weak catalog match, missing owner, incomplete process
   coverage, ambiguous repository scope, open questions.
 - `confidence`: katalog moze podniesc confidence w routingu, ale nie w root
@@ -143,9 +145,13 @@ system: <system/aplikacja albo Nie ustalono>
 process: <proces albo Nie ustalono>
 boundedContext: <bounded context albo Nie ustalono>
 affectedTeam: <team/owner albo Nie ustalono>
-handoffRoute:
-  receiver: <team/system/rola albo Nie ustalono>
-  reason: <dlaczego handoff jest uzasadniony>
+resolvedOwnership:
+  situationType: <inside-bounded-context | inside-system | bounded-context-boundary | system-boundary | system-infrastructure | external-system-boundary | ambiguous | unknown>
+  primaryOwners:
+    - <bounded-context/system + ownerTeamIds/ownerLabel/source/confidence>
+  partnerOwners:
+    - <druga strona styku albo Nie dotyczy>
+  handoffReason: <dlaczego handoff jest uzasadniony>
 codeSearchScope:
   - <project/scope/repository hint>
 dbTargetHints:
@@ -176,7 +182,8 @@ Sprawdz:
   incident evidence albo tool resultu,
 - operational context nie jest uzyty jako dowod root cause,
 - repository/code-search scope ma konkretny powod,
-- handoff route zawiera odbiorce, powod i pierwsza akcje albo limitation.
+- resolved ownership zawiera odbiorce, partnerow, powod i pierwsza akcje albo
+  limitation.
 
 ## Fallbacki
 
@@ -193,7 +200,7 @@ Jezeli katalog nie rozstrzyga:
 Przekaz:
 
 - `OperationalGroundingSummary`,
-- handoff route i evidence package,
+- resolved ownership/handoff decision i evidence package,
 - code-search albo DB targeting hints,
 - visibility limits dla `functionalAnalysis` i `technicalAnalysis`.
 
@@ -208,7 +215,7 @@ Uzywaj operational context tools, gdy:
 - GitLab project albo code-search scope nie jest ugruntowany,
 - DB application/schema target potrzebuje pomocy z system albo repository
   context,
-- finalna odpowiedz potrzebuje konkretnej trasy handoffu,
+- finalna odpowiedz potrzebuje konkretnego resolved handoffu,
 - uzytkownik pyta w follow-upie o znaczenie biznesowo-operacyjne, ownership,
   proces, glossary terms albo powiazane systemy.
 
@@ -282,17 +289,35 @@ Nie dowodzi data issue. Dla JPA, repository albo data-access symptoms nadal
 najpierw ugruntuj entity/repository/table hints z deterministic GitLab evidence
 albo enabled GitLab tools, gdy to mozliwe.
 
-## Handoff
+## Ownership I Handoff
 
-Uzywaj handoff hints i handoff rules jako guidance routingu.
+Owner katalogowy moze pochodzic tylko z `system` albo `bounded-context`.
+`bounded-context` ma pierwszenstwo przed `system`; system jest fallbackiem,
+gdy context jest nieznany albo problem jest system-wide. Nie traktuj
+repozytorium, procesu, integracji, teamu, glossary ani handoff rule jako
+zrodla ownera.
+
+Gdy pytanie dotyczy endpointa, klasy albo repozytorium, rozstrzygnij ownera
+przez lancuch:
+
+1. technical target,
+2. repository/code-search scope,
+3. system i ewentualny bounded context,
+4. resolved ownership/handoff.
+
+Uzywaj handoff rules jako guidance sytuacji, evidence i pierwszej akcji, ale
+nie jako listy teamow do routingu.
 
 Gdy rekomendujesz handoff, uwzglednij:
 
-- dlaczego ta trasa jest istotna dla incydentu,
+- dlaczego ten bounded context/system albo boundary jest istotny dla incydentu,
+- primary ownera i partner ownera, jezeli problem jest na styku dwoch stron,
 - jakie evidence trzeba przekazac,
-- co receiving team albo party powinien sprawdzic jako pierwsze.
+- co receiving owner albo party powinien sprawdzic jako pierwsze.
 
-Jezeli ownership jest niejednoznaczny, napisz to wprost.
+Jezeli ownership jest niejednoznaczny, napisz to wprost. Jezeli katalog nie ma
+jawnego ownera, mozesz uzyc opisowej inferencji typu `wlasciciel systemu X`,
+ale oznacz ja jako inferencje i dodaj visibility limit.
 
 ## `reason` Dla Operational Context Tooli
 

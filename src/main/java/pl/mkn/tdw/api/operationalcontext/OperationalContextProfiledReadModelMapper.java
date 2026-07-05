@@ -119,7 +119,7 @@ class OperationalContextProfiledReadModelMapper {
                         "Full search result list."
                 )),
                 List.of("profile=expanded"),
-                List.of("Open the best matching entity before choosing repositories or handoff route."),
+                List.of("Open the best matching entity before choosing repositories or handoff decision."),
                 List.of("opctx_get_entity"),
                 "Expanded profile returns all search results.",
                 omitted(expanded.size(), results.size(), "results"),

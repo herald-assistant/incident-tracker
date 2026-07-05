@@ -5,13 +5,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.flowexplorer.api.FlowExplorerSystemOptionResponse;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextResponsibility;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
 
@@ -24,7 +24,6 @@ import java.util.Set;
 
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
-import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.TEAM;
 
 @Service
 @RequiredArgsConstructor
@@ -32,11 +31,11 @@ public class FlowExplorerSystemSelectionService {
 
     private static final Set<OperationalContextEntryType> SYSTEM_SELECTION_ENTRY_TYPES = Set.of(
             SYSTEM,
-            TEAM,
             REPOSITORY
     );
 
     private final OperationalContextPort operationalContextPort;
+    private final OperationalContextOwnershipResolver ownershipResolver = new OperationalContextOwnershipResolver();
 
     public List<FlowExplorerSystemOptionResponse> systems() {
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
@@ -61,10 +60,7 @@ public class FlowExplorerSystemSelectionService {
                 system.references().repositories(),
                 codeSearchScopeRepositoryIds
         ));
-        var ownerTeamIds = distinct(combineValues(
-                ownerTeamIds(system),
-                owningTeamIds(catalog, system.id())
-        ));
+        var ownerTeamIds = ownerTeamIds(ownershipResolver.resolve(catalog, ownershipRequest(system)));
 
         return new FlowExplorerSystemOptionResponse(
                 system.id(),
@@ -115,59 +111,23 @@ public class FlowExplorerSystemSelectionService {
         return normalized.equals("system") || normalized.equals("systems");
     }
 
-    private List<String> ownerTeamIds(OperationalContextEntry entry) {
-        return distinct(combineValues(
-                entry.references().teams(),
-                responsibilityTeamIds(entry)
-        ));
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextSystem system) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                List.of(system.id()),
+                List.of(),
+                List.of(),
+                List.of(),
+                null
+        );
     }
 
-    private List<String> owningTeamIds(OperationalContextCatalog catalog, String systemId) {
-        return catalog.teams().stream()
-                .filter(team -> teamOwnedSystemIds(team).contains(systemId))
-                .map(OperationalContextTeam::id)
+    private List<String> ownerTeamIds(OperationalContextOwnershipResolution ownership) {
+        return ownership.primaryOwners().stream()
+                .flatMap(owner -> owner.ownerTeamIds().stream())
                 .filter(StringUtils::hasText)
                 .distinct()
                 .toList();
-    }
-
-    private List<String> teamOwnedSystemIds(OperationalContextTeam team) {
-        return distinct(combineValues(
-                team.references().systems(),
-                responsibilityTargetIds(team, "system")
-        ));
-    }
-
-    private List<String> responsibilityTeamIds(OperationalContextEntry entry) {
-        var values = new LinkedHashSet<String>();
-        for (var responsibility : entry.responsibilities()) {
-            if (StringUtils.hasText(responsibility.teamId())) {
-                values.add(responsibility.teamId());
-            }
-            if ("team".equals(normalize(responsibility.actorType()))
-                    && StringUtils.hasText(responsibility.actorId())) {
-                values.add(responsibility.actorId());
-            }
-        }
-        return List.copyOf(values);
-    }
-
-    private List<String> responsibilityTargetIds(OperationalContextEntry entry, String targetType) {
-        var values = new LinkedHashSet<String>();
-        for (var responsibility : entry.responsibilities()) {
-            if (targetTypeMatches(responsibility, targetType) && StringUtils.hasText(responsibility.targetId())) {
-                values.add(responsibility.targetId());
-            }
-        }
-        return List.copyOf(values);
-    }
-
-    private boolean targetTypeMatches(OperationalContextResponsibility responsibility, String expected) {
-        var normalized = normalize(responsibility.targetType());
-        return switch (expected) {
-            case "system" -> normalized.equals("system") || normalized.equals("systems");
-            default -> normalized.equals(expected);
-        };
     }
 
     @SafeVarargs

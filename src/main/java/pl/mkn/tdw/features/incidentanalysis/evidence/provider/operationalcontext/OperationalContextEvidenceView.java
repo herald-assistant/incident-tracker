@@ -34,7 +34,13 @@ public record OperationalContextEvidenceView(
     static final String ATTRIBUTE_RULE_ID = "ruleId";
     static final String ATTRIBUTE_NAME = "name";
     static final String ATTRIBUTE_OWNER_TEAM_IDS = "ownerTeamIds";
-    static final String ATTRIBUTE_PARTNER_TEAM_IDS = "partnerTeamIds";
+    static final String ATTRIBUTE_PARTNER_OWNER_TEAM_IDS = "partnerOwnerTeamIds";
+    static final String ATTRIBUTE_OWNER_LABELS = "ownerLabels";
+    static final String ATTRIBUTE_PARTNER_OWNER_LABELS = "partnerOwnerLabels";
+    static final String ATTRIBUTE_OWNERSHIP_SITUATION_TYPE = "ownershipSituationType";
+    static final String ATTRIBUTE_OWNERSHIP_HANDOFF_REASON = "ownershipHandoffReason";
+    static final String ATTRIBUTE_OWNERSHIP_VISIBILITY_LIMITS = "ownershipVisibilityLimits";
+    static final String ATTRIBUTE_OWNERSHIP_RESOLUTION_PATH = "ownershipResolutionPath";
     static final String ATTRIBUTE_EXTERNAL_OWNER = "externalOwner";
     static final String ATTRIBUTE_PROCESS_IDS = "processIds";
     static final String ATTRIBUTE_CONTEXT_IDS = "contextIds";
@@ -61,10 +67,8 @@ public record OperationalContextEvidenceView(
     static final String ATTRIBUTE_DEFINITION = "definition";
     static final String ATTRIBUTE_MATCH_SIGNALS = "matchSignals";
     static final String ATTRIBUTE_CANONICAL_REFERENCES = "canonicalReferences";
-    static final String ATTRIBUTE_ROUTE_TO = "routeTo";
     static final String ATTRIBUTE_REQUIRED_EVIDENCE = "requiredEvidence";
     static final String ATTRIBUTE_EXPECTED_FIRST_ACTION = "expectedFirstAction";
-    static final String ATTRIBUTE_PARTNER_TEAMS = "partnerTeams";
 
     public OperationalContextEvidenceView {
         systems = immutable(systems);
@@ -112,7 +116,13 @@ public record OperationalContextEvidenceView(
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SYSTEM_ID),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_NAME),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_TEAM_IDS)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_LABELS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_LABELS)),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_SITUATION_TYPE),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_HANDOFF_REASON),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_VISIBILITY_LIMITS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_RESOLUTION_PATH)),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_EXTERNAL_OWNER),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CONTEXT_IDS)),
@@ -135,7 +145,13 @@ public record OperationalContextEvidenceView(
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SOURCE_SYSTEM),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_TARGET_SYSTEMS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_TEAM_IDS)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_LABELS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_LABELS)),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_SITUATION_TYPE),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_HANDOFF_REASON),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_VISIBILITY_LIMITS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_RESOLUTION_PATH)),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_EXTERNAL_OWNER),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_INTEGRATION_CATEGORY),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_INTEGRATION_STYLE),
@@ -152,7 +168,13 @@ public record OperationalContextEvidenceView(
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_ID),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_NAME),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_TEAM_IDS)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_LABELS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_LABELS)),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_SITUATION_TYPE),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_HANDOFF_REASON),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_VISIBILITY_LIMITS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_RESOLUTION_PATH)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SYSTEM_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_EXTERNAL_SYSTEM_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_COMPLETION_SIGNALS)),
@@ -168,6 +190,12 @@ public record OperationalContextEvidenceView(
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROJECT_PATH),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_GROUP),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_LABELS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_LABELS)),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_SITUATION_TYPE),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_HANDOFF_REASON),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_VISIBILITY_LIMITS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_RESOLUTION_PATH)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SYSTEM_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_CONTEXT_IDS)),
@@ -182,6 +210,12 @@ public record OperationalContextEvidenceView(
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_BOUNDED_CONTEXT_ID),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_NAME),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_TEAM_IDS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNER_LABELS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_OWNER_LABELS)),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_SITUATION_TYPE),
+                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_HANDOFF_REASON),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_VISIBILITY_LIMITS)),
+                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_OWNERSHIP_RESOLUTION_PATH)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_SYSTEM_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_REPOSITORY_IDS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PROCESS_IDS)),
@@ -223,10 +257,8 @@ public record OperationalContextEvidenceView(
                 handoffRules.add(new HandoffRuleItem(
                         item.title(),
                         AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_RULE_ID),
-                        AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_ROUTE_TO),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_REQUIRED_EVIDENCE)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_EXPECTED_FIRST_ACTION)),
-                        splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_PARTNER_TEAMS)),
                         splitValues(AnalysisEvidenceAttributes.text(attributes, ATTRIBUTE_MATCHED_BY))
                 ));
             }
@@ -297,7 +329,13 @@ public record OperationalContextEvidenceView(
             String systemId,
             String name,
             List<String> ownerTeamIds,
-            List<String> partnerTeamIds,
+            List<String> partnerOwnerTeamIds,
+            List<String> ownerLabels,
+            List<String> partnerOwnerLabels,
+            String ownershipSituationType,
+            String ownershipHandoffReason,
+            List<String> ownershipVisibilityLimits,
+            List<String> ownershipResolutionPath,
             String externalOwner,
             List<String> processIds,
             List<String> contextIds,
@@ -310,7 +348,11 @@ public record OperationalContextEvidenceView(
             List<String> matchedBy
     ) {
         public SystemItem {
-            partnerTeamIds = immutable(partnerTeamIds);
+            partnerOwnerTeamIds = immutable(partnerOwnerTeamIds);
+            ownerLabels = immutable(ownerLabels);
+            partnerOwnerLabels = immutable(partnerOwnerLabels);
+            ownershipVisibilityLimits = immutable(ownershipVisibilityLimits);
+            ownershipResolutionPath = immutable(ownershipResolutionPath);
             processIds = immutable(processIds);
             contextIds = immutable(contextIds);
             ownerTeamIds = immutable(ownerTeamIds);
@@ -331,7 +373,13 @@ public record OperationalContextEvidenceView(
             String sourceSystem,
             List<String> targetSystems,
             List<String> ownerTeamIds,
-            List<String> partnerTeamIds,
+            List<String> partnerOwnerTeamIds,
+            List<String> ownerLabels,
+            List<String> partnerOwnerLabels,
+            String ownershipSituationType,
+            String ownershipHandoffReason,
+            List<String> ownershipVisibilityLimits,
+            List<String> ownershipResolutionPath,
             String externalOwner,
             String category,
             String integrationStyle,
@@ -342,7 +390,11 @@ public record OperationalContextEvidenceView(
         public IntegrationItem {
             targetSystems = immutable(targetSystems);
             ownerTeamIds = immutable(ownerTeamIds);
-            partnerTeamIds = immutable(partnerTeamIds);
+            partnerOwnerTeamIds = immutable(partnerOwnerTeamIds);
+            ownerLabels = immutable(ownerLabels);
+            partnerOwnerLabels = immutable(partnerOwnerLabels);
+            ownershipVisibilityLimits = immutable(ownershipVisibilityLimits);
+            ownershipResolutionPath = immutable(ownershipResolutionPath);
             matchedBy = immutable(matchedBy);
         }
     }
@@ -352,7 +404,13 @@ public record OperationalContextEvidenceView(
             String processId,
             String name,
             List<String> ownerTeamIds,
-            List<String> partnerTeamIds,
+            List<String> partnerOwnerTeamIds,
+            List<String> ownerLabels,
+            List<String> partnerOwnerLabels,
+            String ownershipSituationType,
+            String ownershipHandoffReason,
+            List<String> ownershipVisibilityLimits,
+            List<String> ownershipResolutionPath,
             List<String> systemIds,
             List<String> externalSystemIds,
             List<String> completionSignals,
@@ -360,7 +418,11 @@ public record OperationalContextEvidenceView(
     ) {
         public ProcessItem {
             ownerTeamIds = immutable(ownerTeamIds);
-            partnerTeamIds = immutable(partnerTeamIds);
+            partnerOwnerTeamIds = immutable(partnerOwnerTeamIds);
+            ownerLabels = immutable(ownerLabels);
+            partnerOwnerLabels = immutable(partnerOwnerLabels);
+            ownershipVisibilityLimits = immutable(ownershipVisibilityLimits);
+            ownershipResolutionPath = immutable(ownershipResolutionPath);
             systemIds = immutable(systemIds);
             externalSystemIds = immutable(externalSystemIds);
             completionSignals = immutable(completionSignals);
@@ -374,6 +436,12 @@ public record OperationalContextEvidenceView(
             String projectPath,
             String group,
             List<String> ownerTeamIds,
+            List<String> ownerLabels,
+            List<String> partnerOwnerLabels,
+            String ownershipSituationType,
+            String ownershipHandoffReason,
+            List<String> ownershipVisibilityLimits,
+            List<String> ownershipResolutionPath,
             List<String> systemIds,
             List<String> processIds,
             List<String> contextIds,
@@ -381,6 +449,10 @@ public record OperationalContextEvidenceView(
     ) {
         public RepositoryItem {
             ownerTeamIds = immutable(ownerTeamIds);
+            ownerLabels = immutable(ownerLabels);
+            partnerOwnerLabels = immutable(partnerOwnerLabels);
+            ownershipVisibilityLimits = immutable(ownershipVisibilityLimits);
+            ownershipResolutionPath = immutable(ownershipResolutionPath);
             systemIds = immutable(systemIds);
             processIds = immutable(processIds);
             contextIds = immutable(contextIds);
@@ -393,6 +465,12 @@ public record OperationalContextEvidenceView(
             String boundedContextId,
             String name,
             List<String> ownerTeamIds,
+            List<String> ownerLabels,
+            List<String> partnerOwnerLabels,
+            String ownershipSituationType,
+            String ownershipHandoffReason,
+            List<String> ownershipVisibilityLimits,
+            List<String> ownershipResolutionPath,
             List<String> systemIds,
             List<String> repositoryIds,
             List<String> processIds,
@@ -401,6 +479,10 @@ public record OperationalContextEvidenceView(
     ) {
         public BoundedContextItem {
             ownerTeamIds = immutable(ownerTeamIds);
+            ownerLabels = immutable(ownerLabels);
+            partnerOwnerLabels = immutable(partnerOwnerLabels);
+            ownershipVisibilityLimits = immutable(ownershipVisibilityLimits);
+            ownershipResolutionPath = immutable(ownershipResolutionPath);
             systemIds = immutable(systemIds);
             repositoryIds = immutable(repositoryIds);
             processIds = immutable(processIds);
@@ -449,16 +531,13 @@ public record OperationalContextEvidenceView(
     public record HandoffRuleItem(
             String title,
             String ruleId,
-            String routeTo,
             List<String> requiredEvidence,
             List<String> expectedFirstAction,
-            List<String> partnerTeams,
             List<String> matchedBy
     ) {
         public HandoffRuleItem {
             requiredEvidence = immutable(requiredEvidence);
             expectedFirstAction = immutable(expectedFirstAction);
-            partnerTeams = immutable(partnerTeams);
             matchedBy = immutable(matchedBy);
         }
     }

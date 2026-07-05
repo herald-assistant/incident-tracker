@@ -227,12 +227,10 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(new OperationalContextDtos.OperationalContextHandoffRule(
                         "notification-sync-failure",
                         "Notification sync failure",
-                        "Owner of backend",
                         List.of("Backend failed"),
                         List.of(),
                         List.of("correlationId"),
                         List.of("Check backend"),
-                        List.of("CRM Customer maintainers"),
                         new OperationalContextDtos.OperationalContextReferences(
                                 List.of("crm-customer-service"),
                                 List.of(),
@@ -274,13 +272,7 @@ class OperationalContextRelationIndexBuilderTest {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(map(
                         "id", "team-a",
-                        "name", "Team A",
-                        "responsibilities", List.of(map(
-                                "targetType", "system",
-                                "targetId", "crm-customer-service",
-                                "role", "maintainer",
-                                "confidence", "high"
-                        ))
+                        "name", "Team A"
                 )),
                 List.of(map(
                         "id", "customer-support-process",

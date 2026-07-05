@@ -83,7 +83,7 @@ Po wstepnym `IntegrationBoundarySummary` wykonaj gate zgodny z trybem sekcji:
   adres/kanal/path, moment w flow, cel i pewnosc,
 - `DEEP`: summary ma dodac dla kazdej granicy transport/adres, payload,
   headers/auth/metadane, response albo event handling, konfiguracje,
-  owner/handoff i source refs, albo jawny visibility limit.
+  resolved owner/handoff i source refs, albo jawny visibility limit.
 
 Jezeli summary jest zbyt plytkie dla aktywnego trybu:
 
@@ -113,7 +113,7 @@ boundaries:
     payload: <biznesowy opis danych albo sygnalu>
     purpose: <po co endpoint komunikuje sie z targetem>
     confidence: Fakt z evidence | Inferencja | Luka widocznosci
-    ownerOrHandoff: <owner/team/rule albo Nie ustalono>
+    resolvedOwnership: <primary/partner owner z systemu albo bounded contextu; Nie ustalono, jezeli brak danych>
     sourceRefs:
       - <artifact/tool/projectName:path:Lx-Ly>
 visibilityLimits:
@@ -129,7 +129,7 @@ Dla `INTEGRATIONS=COMPACT` przygotuj tabele:
 
 Dla `INTEGRATIONS=DEEP` dodaj osobny blok dla kazdej integracji:
 transport/adres, moment w flow, request/event/payload, headers/auth/metadane,
-response i error handling, konfiguracja, owner/handoff oraz source refs.
+response i error handling, konfiguracja, resolved owner/handoff oraz source refs.
 
 ## Walidacja
 

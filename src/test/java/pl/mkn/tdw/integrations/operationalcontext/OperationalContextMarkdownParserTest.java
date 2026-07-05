@@ -172,11 +172,6 @@ class OperationalContextMarkdownParserTest {
 
                 **Title:** External integration failure
 
-                **Route decision**
-
-                - **Candidate teams:** CRM Integration Team
-                - **Partner teams:** CRM Team
-
                 **Applies when**
 
                 - Evidence points to notification integration failure
@@ -201,11 +196,9 @@ class OperationalContextMarkdownParserTest {
         assertEquals(1, rules.size());
         assertEquals("integration-failure", rules.get(0).id());
         assertEquals("External integration failure", rules.get(0).title());
-        assertEquals("CRM Integration Team", rules.get(0).routeTo());
         assertEquals("Evidence points to notification integration failure", rules.get(0).useWhen().get(0));
         assertEquals("integration evidence", rules.get(0).requiredEvidence().get(0));
         assertEquals("Verify external call", rules.get(0).expectedFirstAction().get(0));
-        assertEquals("CRM Team", rules.get(0).partnerTeams().get(0));
         assertEquals("crm-customer-service", rules.get(0).references().systems().get(0));
         assertEquals("crm-customer-to-notification-sync", rules.get(0).references().integrations().get(0));
         assertEquals("customer-support-process", rules.get(0).references().processes().get(0));

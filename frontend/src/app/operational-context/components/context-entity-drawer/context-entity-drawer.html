@@ -34,14 +34,94 @@
     @for (section of entity.overviewSections; track section.title) {
       <section class="entity-drawer__section">
         <h3>{{ section.title }}</h3>
-        <dl>
-          @for (field of fieldEntries(section.fields); track field.key) {
-            <div>
-              <dt>{{ field.key }}</dt>
-              <dd>{{ field.value }}</dd>
+        @if (resolvedOwnership(section); as ownership) {
+          <div class="ownership-detail">
+            <div class="ownership-detail__summary">
+              <span class="ownership-chip">{{ situationLabel(ownership.situationType) }}</span>
+              @if (ownership.handoffReason) {
+                <p>{{ ownership.handoffReason }}</p>
+              }
             </div>
-          }
-        </dl>
+
+            <div class="ownership-detail__owners">
+              <div class="ownership-owner-group">
+                <h4>Primary owners</h4>
+                @if (ownership.primaryOwners.length) {
+                  <ul class="ownership-owner-list">
+                    @for (owner of ownership.primaryOwners; track trackOwner($index, owner)) {
+                      <li>
+                        <strong>{{ ownerLabel(owner) }}</strong>
+                        <small>{{ ownerTarget(owner) }}</small>
+                        <div class="ownership-owner-meta">
+                          @for (meta of ownerMeta(owner); track meta) {
+                            <span>{{ meta }}</span>
+                          }
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="muted-text">No primary owner resolved.</p>
+                }
+              </div>
+
+              <div class="ownership-owner-group">
+                <h4>Partner owners</h4>
+                @if (ownership.partnerOwners.length) {
+                  <ul class="ownership-owner-list">
+                    @for (owner of ownership.partnerOwners; track trackOwner($index, owner)) {
+                      <li>
+                        <strong>{{ ownerLabel(owner) }}</strong>
+                        <small>{{ ownerTarget(owner) }}</small>
+                        <div class="ownership-owner-meta">
+                          @for (meta of ownerMeta(owner); track meta) {
+                            <span>{{ meta }}</span>
+                          }
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="muted-text">No partner owner resolved.</p>
+                }
+              </div>
+            </div>
+
+            @if (hasItems(ownership.visibilityLimits)) {
+              <div class="ownership-notes">
+                <h4>Visibility limits</h4>
+                <ul>
+                  @for (limit of ownership.visibilityLimits; track limit) {
+                    <li>{{ limit }}</li>
+                  }
+                </ul>
+              </div>
+            }
+
+            @if (hasItems(ownership.resolutionPath)) {
+              <details class="ownership-resolution">
+                <summary>
+                  <span>Resolution path</span>
+                  <strong>{{ ownership.resolutionPath.length }}</strong>
+                </summary>
+                <ol>
+                  @for (step of ownership.resolutionPath; track step) {
+                    <li>{{ step }}</li>
+                  }
+                </ol>
+              </details>
+            }
+          </div>
+        } @else {
+          <dl>
+            @for (field of fieldEntries(section.fields); track field.key) {
+              <div>
+                <dt>{{ field.key }}</dt>
+                <dd>{{ field.value }}</dd>
+              </div>
+            }
+          </dl>
+        }
       </section>
     }
 

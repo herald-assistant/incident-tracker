@@ -7,16 +7,20 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegrationParticipant;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextTeam;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +31,8 @@ import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.
 
 @Component
 public class OperationalContextEvidenceMapper {
+
+    private final OperationalContextOwnershipResolver ownershipResolver = new OperationalContextOwnershipResolver();
 
     public AnalysisEvidenceSection emptySection() {
         return new AnalysisEvidenceSection(
@@ -46,10 +52,10 @@ public class OperationalContextEvidenceMapper {
     ) {
         var items = new ArrayList<AnalysisEvidenceItem>();
         addSystemItems(items, matches.systemMatches(), catalog);
-        addIntegrationItems(items, matches.integrationMatches());
-        addProcessItems(items, matches.processMatches());
-        addRepositoryItems(items, matches.repositoryMatches());
-        addBoundedContextItems(items, matches.boundedContextMatches());
+        addIntegrationItems(items, matches.integrationMatches(), catalog);
+        addProcessItems(items, matches.processMatches(), catalog);
+        addRepositoryItems(items, matches.repositoryMatches(), catalog);
+        addBoundedContextItems(items, matches.boundedContextMatches(), catalog);
         addTeamItems(items, matches.teamMatches());
         addGlossaryItems(items, matches.glossaryMatches());
         addHandoffRuleItems(items, matches.handoffMatches());
@@ -74,11 +80,11 @@ public class OperationalContextEvidenceMapper {
             var repoIds = systemRepositoryIds(system);
             var codeSearch = resolveCodeSearchSelection(catalog, system, repoIds);
             var codeSearchRepositories = codeSearch.repositories();
+            var ownership = ownershipResolver.resolve(catalog, ownershipRequest(system));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_ID, systemId);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(system.name(), system.shortName()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(system)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(system.handoffHints().partnerTeamIds()));
+            addOwnershipAttributes(attributes, ownership);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_OWNER, system.participants().externalOwner());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(system.references().processes()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(system.references().boundedContexts()));
@@ -98,22 +104,22 @@ public class OperationalContextEvidenceMapper {
 
     private void addIntegrationItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<OperationalContextIntegration>> matches
+            List<OperationalContextMatchedEntry<OperationalContextIntegration>> matches,
+            OperationalContextCatalog catalog
     ) {
         for (var match : matches) {
             var integration = match.entry();
+            var ownership = ownershipResolver.resolve(catalog, ownershipRequest(integration));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_ID, integration.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(integration.name(), integration.shortName()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SOURCE_SYSTEM, integration.participants().source().system());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_TARGET_SYSTEMS, joined(integrationTargetSystems(integration)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(integration)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(integration.handoffHints().partnerTeamIds()));
+            addOwnershipAttributes(attributes, ownership);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_OWNER, integrationExternalOwner(integration));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_CATEGORY, integration.category());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_STYLE, integration.integrationStyle());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_FLOW_DIRECTION, integration.flowDirection());
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_HANDOFF_TARGET, integration.handoffHints().defaultRouteLabel());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational integration " + firstNonBlank(integration.id(), integration.name()),
@@ -124,15 +130,16 @@ public class OperationalContextEvidenceMapper {
 
     private void addProcessItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<OperationalContextProcess>> matches
+            List<OperationalContextMatchedEntry<OperationalContextProcess>> matches,
+            OperationalContextCatalog catalog
     ) {
         for (var match : matches) {
             var process = match.entry();
+            var ownership = ownershipResolver.resolve(catalog, ownershipRequest(process));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_ID, process.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(process.name(), process.shortName()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(process)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAM_IDS, joined(process.handoffHints().partnerTeamIds()));
+            addOwnershipAttributes(attributes, ownership);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(process.participants().primarySystems()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXTERNAL_SYSTEM_IDS, joined(process.participants().externalSystems()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_COMPLETION_SIGNALS, joined(limit(completionSignals(process), 4)));
@@ -146,15 +153,17 @@ public class OperationalContextEvidenceMapper {
 
     private void addRepositoryItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<OperationalContextRepository>> matches
+            List<OperationalContextMatchedEntry<OperationalContextRepository>> matches,
+            OperationalContextCatalog catalog
     ) {
         for (var match : matches) {
             var repository = match.entry();
+            var ownership = ownershipResolver.resolve(catalog, ownershipRequest(repository));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_ID, repository.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROJECT_PATH, repository.git().projectPath());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_GROUP, repository.git().group());
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(repository)));
+            addOwnershipAttributes(attributes, ownership);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(repository.references().systems()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(repository.references().processes()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(repository.references().boundedContexts()));
@@ -168,14 +177,16 @@ public class OperationalContextEvidenceMapper {
 
     private void addBoundedContextItems(
             List<AnalysisEvidenceItem> items,
-            List<OperationalContextMatchedEntry<OperationalContextBoundedContext>> matches
+            List<OperationalContextMatchedEntry<OperationalContextBoundedContext>> matches,
+            OperationalContextCatalog catalog
     ) {
         for (var match : matches) {
             var boundedContext = match.entry();
+            var ownership = ownershipResolver.resolve(catalog, ownershipRequest(boundedContext));
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_BOUNDED_CONTEXT_ID, boundedContext.id());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_NAME, firstNonBlank(boundedContext.name(), boundedContext.shortName()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(boundedContext)));
+            addOwnershipAttributes(attributes, ownership);
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_SYSTEM_IDS, joined(boundedContext.references().systems()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REPOSITORY_IDS, joined(boundedContext.references().repositories()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(boundedContext.references().processes()));
@@ -202,7 +213,6 @@ public class OperationalContextEvidenceMapper {
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PROCESS_IDS, joined(team.references().processes()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_CONTEXT_IDS, joined(team.references().boundedContexts()));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_INTEGRATION_IDS, joined(team.references().integrations()));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_HANDOFF_TARGET, team.handoffHints().defaultRouteLabel());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational team " + firstNonBlank(team.id(), team.name()),
@@ -238,10 +248,8 @@ public class OperationalContextEvidenceMapper {
             var rule = match.entry();
             var attributes = new ArrayList<AnalysisEvidenceAttribute>();
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_RULE_ID, rule.id());
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_ROUTE_TO, rule.routeTo());
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_REQUIRED_EVIDENCE, joined(limit(rule.requiredEvidence(), 5)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_EXPECTED_FIRST_ACTION, joined(limit(rule.expectedFirstAction(), 3)));
-            addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_TEAMS, joined(limit(rule.partnerTeams(), 4)));
             addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_MATCHED_BY, joined(match.score().reasons()));
             items.add(new AnalysisEvidenceItem(
                     "Operational handoff rule " + rule.id(),
@@ -421,13 +429,117 @@ public class OperationalContextEvidenceMapper {
         return deduplicate(values);
     }
 
-    private List<String> ownerTeamIds(OperationalContextEntry entry) {
-        var values = new ArrayList<String>();
-        values.addAll(entry.references().teams());
-        for (var responsibility : entry.responsibilities()) {
-            values.add(responsibility.teamId());
-        }
-        return deduplicate(values);
+    private void addOwnershipAttributes(
+            List<AnalysisEvidenceAttribute> attributes,
+            OperationalContextOwnershipResolution ownership
+    ) {
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_TEAM_IDS, joined(ownerTeamIds(ownership.primaryOwners())));
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_OWNER_TEAM_IDS, joined(ownerTeamIds(ownership.partnerOwners())));
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNER_LABELS, joined(ownerLabels(ownership.primaryOwners())));
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_PARTNER_OWNER_LABELS, joined(ownerLabels(ownership.partnerOwners())));
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNERSHIP_SITUATION_TYPE, ownership.situationType());
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNERSHIP_HANDOFF_REASON, ownership.handoffReason());
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNERSHIP_VISIBILITY_LIMITS, joined(ownership.visibilityLimits()));
+        addAttribute(attributes, OperationalContextEvidenceView.ATTRIBUTE_OWNERSHIP_RESOLUTION_PATH, joined(ownership.resolutionPath()));
+    }
+
+    private List<String> ownerTeamIds(List<Owner> owners) {
+        return deduplicate(owners.stream()
+                .flatMap(owner -> owner.ownerTeamIds().stream())
+                .toList());
+    }
+
+    private List<String> ownerLabels(List<Owner> owners) {
+        return deduplicate(owners.stream()
+                .map(owner -> firstNonBlank(owner.ownerLabel(), String.join(", ", owner.ownerTeamIds()), owner.targetLabel()))
+                .toList());
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextSystem system) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                List.of(system.id()),
+                List.of(),
+                List.of(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextIntegration integration) {
+        var allContextIds = new ArrayList<String>();
+        allContextIds.addAll(integration.references().boundedContexts());
+        allContextIds.add(integration.participants().source().boundedContext());
+        allContextIds.addAll(integration.participants().targets().stream()
+                .map(OperationalContextIntegrationParticipant::boundedContext)
+                .toList());
+
+        var systemIds = new ArrayList<String>();
+        systemIds.addAll(integration.references().systems());
+        systemIds.add(integration.participants().source().system());
+        systemIds.addAll(integration.participants().targetSystems());
+        systemIds.addAll(integration.participants().intermediarySystems());
+        systemIds.addAll(integration.participants().finalTargetSystems());
+
+        var boundedContextIds = deduplicate(allContextIds);
+        var resolvedSystemIds = deduplicate(systemIds);
+        var situationType = boundedContextIds.size() > 1
+                ? OperationalContextOwnershipResolution.BOUNDED_CONTEXT_BOUNDARY
+                : resolvedSystemIds.size() > 1
+                ? OperationalContextOwnershipResolution.SYSTEM_BOUNDARY
+                : null;
+        return new OperationalContextOwnershipRequest(
+                situationType,
+                resolvedSystemIds,
+                boundedContextIds,
+                integration.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextProcess process) {
+        var systemIds = new ArrayList<String>();
+        systemIds.addAll(process.references().systems());
+        systemIds.addAll(process.participants().primarySystems());
+        return new OperationalContextOwnershipRequest(
+                null,
+                deduplicate(systemIds),
+                process.references().boundedContexts(),
+                process.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextRepository repository) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                repository.references().systems(),
+                repository.references().boundedContexts(),
+                List.of(repository.id()),
+                List.of(),
+                new OperationalContextOwnershipRequest.TechnicalTarget(
+                        repository.id(),
+                        repository.git().projectPath(),
+                        List.of(),
+                        repository.references().systems(),
+                        repository.references().boundedContexts(),
+                        null,
+                        "operational-context-evidence"
+                )
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextBoundedContext boundedContext) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                boundedContext.references().systems(),
+                List.of(boundedContext.id()),
+                boundedContext.references().repositories(),
+                List.of(),
+                null
+        );
     }
 
     private List<String> integrationTargetSystems(OperationalContextIntegration integration) {

@@ -82,7 +82,6 @@ public class OperationalContextRelationIndexBuilder {
         for (var system : systems) {
             var source = new EntityKey(SYSTEM, system.id());
             references(state, source, system.references(), "systems.yml", SYSTEM, system.id(), "$.systems[id=" + system.id() + "].references", true);
-            responsibilities(state, source, system.responsibilities(), "systems.yml", SYSTEM, system.id(), "$.systems[id=" + system.id() + "].responsibilities");
             explicitRelations(state, source, system.relations(), "systems.yml", system.id(), "$.systems[id=" + system.id() + "].relations");
 
             dependencyRelations(state, source, system.values("dependencies.upstream"), "depends-on-upstream-system", "systems.yml", system.id(), "dependencies.upstream");
@@ -95,7 +94,6 @@ public class OperationalContextRelationIndexBuilder {
         for (var repository : repositories) {
             var source = new EntityKey(REPOSITORY, repository.id());
             references(state, source, repository.references(), REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].references", true);
-            responsibilities(state, source, repository.responsibilities(), REPO_MAP_FILE, REPOSITORY, repository.id(), "$.repositories[id=" + repository.id() + "].responsibilities");
             explicitRelations(state, source, repository.relations(), REPO_MAP_FILE, repository.id(), "$.repositories[id=" + repository.id() + "].relations");
         }
     }
@@ -139,7 +137,6 @@ public class OperationalContextRelationIndexBuilder {
             referenceList(state, source, "platform-component", SYSTEM, process.participants().platformComponents(), "processes.yml", process.id(), "$.processes[id=" + process.id() + "].participants.platformComponents", true);
 
             references(state, source, process.references(), "processes.yml", PROCESS, process.id(), "$.processes[id=" + process.id() + "].references", false);
-            responsibilities(state, source, process.responsibilities(), "processes.yml", PROCESS, process.id(), "$.processes[id=" + process.id() + "].responsibilities");
             explicitRelations(state, source, process.relations(), "processes.yml", process.id(), "$.processes[id=" + process.id() + "].relations");
 
             for (var step : process.steps()) {
@@ -171,7 +168,6 @@ public class OperationalContextRelationIndexBuilder {
             integration.participants().finalTargets().forEach(participant -> integrationParticipant(state, source, integration, participant, "finalTargets", "final-target-system"));
 
             references(state, source, integration.references(), "integrations.yml", INTEGRATION, integration.id(), "$.integrations[id=" + integration.id() + "].references", false);
-            responsibilities(state, source, integration.responsibilities(), "integrations.yml", INTEGRATION, integration.id(), "$.integrations[id=" + integration.id() + "].responsibilities");
             explicitRelations(state, source, integration.relations(), "integrations.yml", integration.id(), "$.integrations[id=" + integration.id() + "].relations");
         }
     }
@@ -180,7 +176,6 @@ public class OperationalContextRelationIndexBuilder {
         for (var context : boundedContexts) {
             var source = new EntityKey(BOUNDED_CONTEXT, context.id());
             references(state, source, context.references(), "bounded-contexts.yml", BOUNDED_CONTEXT, context.id(), "$.boundedContexts[id=" + context.id() + "].references", true);
-            responsibilities(state, source, context.responsibilities(), "bounded-contexts.yml", BOUNDED_CONTEXT, context.id(), "$.boundedContexts[id=" + context.id() + "].responsibilities");
             explicitRelations(state, source, context.relations(), "bounded-contexts.yml", context.id(), "$.boundedContexts[id=" + context.id() + "].relations");
         }
     }
@@ -189,7 +184,6 @@ public class OperationalContextRelationIndexBuilder {
         for (var team : teams) {
             var source = new EntityKey(TEAM, team.id());
             references(state, source, team.references(), "teams.yml", TEAM, team.id(), "$.teams[id=" + team.id() + "].references", true);
-            responsibilities(state, source, team.responsibilities(), "teams.yml", TEAM, team.id(), "$.teams[id=" + team.id() + "].responsibilities");
             explicitRelations(state, source, team.relations(), "teams.yml", team.id(), "$.teams[id=" + team.id() + "].relations");
         }
     }
@@ -428,61 +422,6 @@ public class OperationalContextRelationIndexBuilder {
                     canonical ? "medium" : "low",
                     sourceRef(file, sourceRefEntityType, sourceEntityId, fieldPath, relationType)
             );
-        }
-    }
-
-    private void responsibilities(
-            BuildState state,
-            EntityKey source,
-            List<OperationalContextDtos.OperationalContextResponsibility> responsibilities,
-            String file,
-            String sourceEntityId,
-            String fieldPath
-    ) {
-        responsibilities(state, source, responsibilities, file, source.type(), sourceEntityId, fieldPath);
-    }
-
-    private void responsibilities(
-            BuildState state,
-            EntityKey source,
-            List<OperationalContextDtos.OperationalContextResponsibility> responsibilities,
-            String file,
-            String sourceRefEntityType,
-            String sourceEntityId,
-            String fieldPath
-    ) {
-        for (var responsibility : responsibilities) {
-            if (StringUtils.hasText(responsibility.teamId())) {
-                relation(
-                        state,
-                        source,
-                        "responsible-team",
-                        new EntityKey(TEAM, responsibility.teamId()),
-                        responsibility.role(),
-                        source,
-                        true,
-                        false,
-                        "direct-yaml",
-                        firstNonBlank(responsibility.confidence(), "medium"),
-                        sourceRef(file, sourceRefEntityType, sourceEntityId, fieldPath, "responsible-team")
-                );
-            }
-
-            if (StringUtils.hasText(responsibility.targetType()) && StringUtils.hasText(responsibility.targetId())) {
-                relation(
-                        state,
-                        source,
-                        "responsible-for",
-                        new EntityKey(normalizeTargetType(responsibility.targetType()), responsibility.targetId()),
-                        responsibility.role(),
-                        source,
-                        true,
-                        false,
-                        "direct-yaml",
-                        firstNonBlank(responsibility.confidence(), "medium"),
-                        sourceRef(file, sourceRefEntityType, sourceEntityId, fieldPath, "responsible-for")
-                );
-            }
         }
     }
 

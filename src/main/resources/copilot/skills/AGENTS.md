@@ -116,7 +116,8 @@ Nie przywracaj starych pol publicznego wyniku: `summary`,
 `evidenceReferences`.
 
 Operational context w incident analysis jest groundingiem, scope guidance i
-handoff routingiem. Nie jest samodzielnym dowodem root cause.
+zrodlem resolved ownership/handoff przez system albo bounded context. Nie jest
+samodzielnym dowodem root cause.
 
 ## Flow Explorer
 

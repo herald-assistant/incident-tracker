@@ -10,20 +10,16 @@ systems:
       processes: [main-process]
       boundedContexts: [core-context]
       teams: [core-team]
-    responsibilities:
-      - teamId: core-team
-        role: first-responder
+    ownership:
+      ownerTeamIds: [core-team]
+      ownershipStatus: explicit
+      confidence: high
+      source: test
     matchSignals:
       strong:
         projectNames: [app-core-repo, app-shared-lib]
         spans: [SyncGateway.call]
         markers: [APP_CORE]
-    handoffHints:
-      defaultRouteLabel: core-team
-      firstResponderTeamIds: [core-team]
-      partnerTeamIds: [integration-team]
-      requiredEvidence: [correlationId, environment, businessImpact, exception]
-
   - id: partner-service
     name: Partner Service
     kind: external-system
@@ -32,15 +28,14 @@ systems:
       processes: [main-process]
       boundedContexts: [partner-context]
       teams: [integration-team]
+    ownership:
+      ownerTeamIds: [integration-team]
+      ownershipStatus: explicit
+      confidence: medium
+      source: test
     matchSignals:
       exact:
         hosts: [api.partner.local]
       strong:
         markers: [PARTNER]
-    handoffHints:
-      defaultRouteLabel: integration-team
-      firstResponderTeamIds: [integration-team]
-      partnerTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, host, exception]
-
 gaps: []

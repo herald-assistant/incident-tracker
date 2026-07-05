@@ -118,7 +118,8 @@ class OperationalContextMcpToolsTest {
         assertEquals(1, result.signals().size());
         assertTrue(result.codeSearch().containsKey("codeSearchScopes"));
         assertFalse(result.codeSearch().containsKey("localCodeSearchScope"));
-        assertTrue(result.handoff().containsKey("requiredEvidence"));
+        assertTrue(result.handoff().containsKey("resolvedOwnership"));
+        assertTrue(result.handoff().get("resolvedOwnership").toString().contains("notifications-team"));
         assertEquals(1, result.openQuestions().size());
         assertTrue(result.sourceRefs().contains("systems.yml#notifications"));
         assertFalse(result.overview().containsKey("payload"));
@@ -287,20 +288,14 @@ class OperationalContextMcpToolsTest {
                         "boundedContexts", id.equals("notifications") ? List.of("notifications") : List.of(),
                         "teams", id.equals("notifications") ? List.of("notifications-team") : List.of()
                 ),
-                "responsibilities", id.equals("notifications")
-                        ? List.of(map("teamId", "notifications-team", "role", "owner"))
-                        : List.of(),
+                "ownership", id.equals("notifications")
+                        ? ownership(List.of("notifications-team"), null, "high")
+                        : map(),
                 "matchSignals", map(
                         "strong", map(
                                 "markers", List.of(alias)
                         )
-                ),
-                "handoffHints", id.equals("notifications")
-                        ? map(
-                        "defaultRoute", "Notifications Team",
-                        "requiredEvidence", List.of("correlationId", "provider response code")
                 )
-                        : map()
         );
     }
 
@@ -376,6 +371,7 @@ class OperationalContextMcpToolsTest {
                         "repositories", List.of("notifications-service"),
                         "terms", List.of("authorization")
                 ),
+                "ownership", ownership(List.of("notifications-team"), null, "high"),
                 "matchSignals", map(
                         "strong", map(
                                 "domainTerms", List.of("notification delivery")
@@ -403,12 +399,10 @@ class OperationalContextMcpToolsTest {
         return new OperationalContextHandoffRule(
                 "notification-gateway-timeout",
                 "Notification gateway timeout",
-                "notifications-team",
                 List.of("Timeout from notification gateway"),
                 List.of("Local validation failure"),
                 List.of("correlationId"),
                 List.of("Check provider status."),
-                List.of("platform-team"),
                 List.of()
         );
     }
@@ -431,5 +425,15 @@ class OperationalContextMcpToolsTest {
             map.put(keyValues[index].toString(), keyValues[index + 1]);
         }
         return map;
+    }
+
+    private Map<String, Object> ownership(List<String> ownerTeamIds, String ownerLabel, String confidence) {
+        return map(
+                "ownerTeamIds", ownerTeamIds,
+                "ownerLabel", ownerLabel,
+                "ownershipStatus", "explicit",
+                "confidence", confidence,
+                "source", "test"
+        );
     }
 }

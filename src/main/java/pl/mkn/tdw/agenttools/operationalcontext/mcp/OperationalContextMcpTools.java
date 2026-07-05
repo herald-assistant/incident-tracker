@@ -142,7 +142,7 @@ public class OperationalContextMcpTools {
             description = """
                     Returns compact details for one operational context entity.
                     Use this after search or list results before relying on relationships, ownership, code-search scope,
-                    handoff hints, recognition signals or source limitations.
+                    handoff decision guidance, recognition signals or source limitations.
                     """
     )
     public OpctxEntityDetailResult getEntity(

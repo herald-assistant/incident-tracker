@@ -4,41 +4,13 @@ teams:
   - id: core-team
     name: Core Team
     purpose: Owns the main application flow.
-    responsibilities:
-      - targetType: system
-        targetId: app-core
-        teamId: core-team
-      - targetType: repository
-        targetId: app-core-repo
-        teamId: core-team
-      - targetType: process
-        targetId: main-process
-        teamId: core-team
-      - targetType: bounded-context
-        targetId: core-context
-        teamId: core-team
     matchSignals:
       strong:
         projectNames: [app-core-repo]
-    handoffHints:
-      defaultRouteLabel: tech-lead
-      firstResponderTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, businessImpact, exception]
-
   - id: integration-team
     name: Integration Team
     purpose: Owns cross-system contracts.
-    responsibilities:
-      - targetType: integration
-        targetId: app-core-to-partner-sync
-        teamId: integration-team
     matchSignals:
       exact:
         hosts: [api.partner.local]
-    handoffHints:
-      defaultRouteLabel: integration-owner
-      firstResponderTeamIds: [integration-team]
-      partnerTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, host, exception]
-
 gaps: []

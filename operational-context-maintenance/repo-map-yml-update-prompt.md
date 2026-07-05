@@ -10,6 +10,17 @@ been identified.
 Keep repository entries semantic and navigational. Do not describe internal file
 organization or low-level code clues here.
 
+## Ownership rule
+
+Repository entries do not define ownership. Owner and handoff are resolved from
+the referenced bounded context first, then the referenced system. If neither is
+known, the resolver may expose an inferred owner label based on the system or
+bounded-context name.
+
+Keep repository entries in the YAML shape below. If ownership is needed, resolve
+or correct the referenced system/bounded context instead of adding owner-like
+fields here.
+
 ## YAML shape
 
 ```yaml
@@ -47,20 +58,8 @@ repositories:
         - customer-requests
       integrations:
         - portal-to-case-management
-      teams:
-        - customer-experience-team
       handoffRules:
-        - route-customer-request-issues
-    responsibilities:
-      - teamId: customer-experience-team
-        targetType: repository
-        targetId: customer-portal-ui
-        role: maintainer
-        scope: product behavior and review
-        status: current
-        confidence: high
-        evidence: repository ownership notes
-        source: repo-map.yml
+        - customer-request-boundary
     matchSignals:
       exact:
         projects:
@@ -71,14 +70,6 @@ repositories:
       weak:
         phrases:
           - customer request screen
-    handoffHints:
-      defaultRouteLabel: Customer Experience maintainers
-      firstResponderTeamIds:
-        - customer-experience-team
-      requiredEvidence:
-        - affected journey or screen name
-      expectedFirstActions:
-        - Check whether the change belongs in this project or in a related service.
     relations:
       - type: supports
         targetType: system
@@ -90,7 +81,8 @@ repositories:
 
 - Treat `git.projectPath` as the GitLab link; keep the rest business-readable.
 - Use `references` to connect a repository with systems, processes, bounded
-  contexts, integrations, teams and handoff rules.
+  contexts, integrations and handoff rules.
+- Do not add team references to imply repository ownership.
 - Add aliases only when they help resolve a real user or tool signal.
 - Leave code reading order to `code-search-scopes.yml`.
 - If a repository is unclear, keep the entry small and add a validation finding

@@ -9,6 +9,13 @@ in this system and what it must not be confused with.
 Keep terms concise. Link to systems, repositories, processes, bounded contexts,
 integrations, teams and handoff rules when those links help navigation.
 
+Glossary terms do not define ownership. Owner and handoff are resolved from
+linked bounded contexts and systems.
+
+Keep glossary entries in the markdown shape below. If a fact does not fit this
+shape, link the relevant catalog entity or record an open question instead of
+adding a new ownership or routing field.
+
 ## Markdown shape
 
 ```markdown
@@ -20,7 +27,7 @@ integrations, teams and handoff rules when those links help navigation.
 
 **Category:** business concept
 
-**Definition:** User-facing request started by a customer before it becomes owned by the case team.
+**Definition:** User-facing request started by a customer before it becomes visible in case handling.
 
 **Aliases:**
 - request intake
@@ -42,7 +49,6 @@ integrations, teams and handoff rules when those links help navigation.
 - bounded-context:customer-requests
 - process:customer-request-handling
 - system:customer-portal
-- team:customer-experience-team
 
 **Notes:**
 - Use this term when translating findings into business-facing language.
@@ -57,6 +63,7 @@ integrations, teams and handoff rules when those links help navigation.
 - `Not to confuse with` should name nearby terms that often cause ambiguity.
 - `Match signals` should be short business words or stable labels.
 - `Canonical references` use `type:id`, for example `system:customer-portal`.
+- Do not use team references to imply ownership.
 - Use `Notes` for analyst guidance that does not belong to a typed field.
 
 ## Quality check

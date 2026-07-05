@@ -37,11 +37,7 @@ public final class OperationalContextDtos {
 
         OperationalContextReferences references();
 
-        List<OperationalContextResponsibility> responsibilities();
-
         OperationalContextMatchSignals matchSignals();
-
-        OperationalContextHandoffHints handoffHints();
 
         List<OperationalContextRelation> relations();
 
@@ -56,7 +52,6 @@ public final class OperationalContextDtos {
             values.addAll(aliases());
             values.addAll(useFor());
             values.addAll(matchSignals().allValues());
-            values.addAll(handoffHints().routeSignals());
             return List.copyOf(values);
         }
 
@@ -180,10 +175,9 @@ public final class OperationalContextDtos {
             List<String> aliases,
             List<String> useFor,
             OperationalContextSystemParticipants participants,
+            OperationalContextOwnership ownership,
             OperationalContextReferences references,
-            List<OperationalContextResponsibility> responsibilities,
             OperationalContextMatchSignals matchSignals,
-            OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
             Map<String, Object> payload
     ) implements OperationalContextEntry {
@@ -192,10 +186,9 @@ public final class OperationalContextDtos {
             aliases = copyList(aliases);
             useFor = copyList(useFor);
             participants = participants != null ? participants : OperationalContextSystemParticipants.empty();
+            ownership = defaultOwnership(ownership);
             references = defaultReferences(references);
-            responsibilities = copyList(responsibilities);
             matchSignals = defaultMatchSignals(matchSignals);
-            handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
             payload = copyMap(payload);
         }
@@ -206,7 +199,6 @@ public final class OperationalContextDtos {
             values.addAll(aliases);
             values.addAll(useFor);
             values.addAll(matchSignals.allValues());
-            values.addAll(handoffHints.routeSignals());
             return copyTextList(values);
         }
     }
@@ -224,9 +216,7 @@ public final class OperationalContextDtos {
             List<String> useFor,
             OperationalContextGit git,
             OperationalContextReferences references,
-            List<OperationalContextResponsibility> responsibilities,
             OperationalContextMatchSignals matchSignals,
-            OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
             Map<String, Object> payload
     ) implements OperationalContextEntry {
@@ -236,9 +226,7 @@ public final class OperationalContextDtos {
             useFor = copyList(useFor);
             git = git != null ? git : OperationalContextGit.empty();
             references = defaultReferences(references);
-            responsibilities = copyList(responsibilities);
             matchSignals = defaultMatchSignals(matchSignals);
-            handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
             payload = copyMap(payload);
         }
@@ -270,9 +258,7 @@ public final class OperationalContextDtos {
             OperationalContextProcessBoundary processBoundary,
             OperationalContextProcessOutcomes outcomes,
             OperationalContextReferences references,
-            List<OperationalContextResponsibility> responsibilities,
             OperationalContextMatchSignals matchSignals,
-            OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
             List<OperationalContextProcessStep> steps,
             List<String> failureModes,
@@ -286,9 +272,7 @@ public final class OperationalContextDtos {
             processBoundary = processBoundary != null ? processBoundary : OperationalContextProcessBoundary.empty();
             outcomes = outcomes != null ? outcomes : OperationalContextProcessOutcomes.empty();
             references = defaultReferences(references);
-            responsibilities = copyList(responsibilities);
             matchSignals = defaultMatchSignals(matchSignals);
-            handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
             steps = copyList(steps);
             failureModes = copyList(failureModes);
@@ -323,9 +307,7 @@ public final class OperationalContextDtos {
             List<String> useFor,
             OperationalContextIntegrationParticipants participants,
             OperationalContextReferences references,
-            List<OperationalContextResponsibility> responsibilities,
             OperationalContextMatchSignals matchSignals,
-            OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
             List<String> failureModes,
             Map<String, Object> payload
@@ -336,9 +318,7 @@ public final class OperationalContextDtos {
             useFor = copyList(useFor);
             participants = participants != null ? participants : OperationalContextIntegrationParticipants.empty();
             references = defaultReferences(references);
-            responsibilities = copyList(responsibilities);
             matchSignals = defaultMatchSignals(matchSignals);
-            handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
             failureModes = copyList(failureModes);
             payload = copyMap(payload);
@@ -361,10 +341,9 @@ public final class OperationalContextDtos {
             String purpose,
             List<String> aliases,
             List<String> useFor,
+            OperationalContextOwnership ownership,
             OperationalContextReferences references,
-            List<OperationalContextResponsibility> responsibilities,
             OperationalContextMatchSignals matchSignals,
-            OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
             Map<String, Object> payload
     ) implements OperationalContextEntry {
@@ -372,10 +351,9 @@ public final class OperationalContextDtos {
         public OperationalContextBoundedContext {
             aliases = copyList(aliases);
             useFor = copyList(useFor);
+            ownership = defaultOwnership(ownership);
             references = defaultReferences(references);
-            responsibilities = copyList(responsibilities);
             matchSignals = defaultMatchSignals(matchSignals);
-            handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
             payload = copyMap(payload);
         }
@@ -401,9 +379,7 @@ public final class OperationalContextDtos {
             List<String> aliases,
             List<String> useFor,
             OperationalContextReferences references,
-            List<OperationalContextResponsibility> responsibilities,
             OperationalContextMatchSignals matchSignals,
-            OperationalContextHandoffHints handoffHints,
             List<OperationalContextRelation> relations,
             Map<String, Object> payload
     ) implements OperationalContextEntry {
@@ -412,9 +388,7 @@ public final class OperationalContextDtos {
             aliases = copyList(aliases);
             useFor = copyList(useFor);
             references = defaultReferences(references);
-            responsibilities = copyList(responsibilities);
             matchSignals = defaultMatchSignals(matchSignals);
-            handoffHints = defaultHandoffHints(handoffHints);
             relations = copyList(relations);
             payload = copyMap(payload);
         }
@@ -456,19 +430,36 @@ public final class OperationalContextDtos {
         }
     }
 
-    public record OperationalContextResponsibility(
-            String teamId,
-            String actorType,
-            String actorId,
-            String targetType,
-            String targetId,
-            String role,
-            String scope,
-            String status,
+    public record OperationalContextOwnership(
+            List<String> ownerTeamIds,
+            String ownerLabel,
+            String ownershipStatus,
             String confidence,
-            String evidence,
-            String source
+            String source,
+            List<String> notes
     ) {
+
+        public OperationalContextOwnership {
+            ownerTeamIds = copyList(ownerTeamIds);
+            ownershipStatus = firstNonBlank(ownershipStatus, "unknown");
+            confidence = firstNonBlank(confidence, "low");
+            notes = copyList(notes);
+        }
+
+        public static OperationalContextOwnership empty() {
+            return new OperationalContextOwnership(
+                    List.of(),
+                    null,
+                    "unknown",
+                    "low",
+                    null,
+                    List.of()
+            );
+        }
+
+        public boolean hasOwner() {
+            return !ownerTeamIds.isEmpty() || StringUtils.hasText(ownerLabel);
+        }
     }
 
     public record OperationalContextSystemParticipants(String externalOwner) {
@@ -760,77 +751,6 @@ public final class OperationalContextDtos {
         }
     }
 
-    public record OperationalContextHandoffHints(
-            String defaultRouteLabel,
-            List<String> firstResponderTeamIds,
-            List<String> escalationTeamIds,
-            List<String> partnerTeamIds,
-            List<String> platformSupportTeamIds,
-            List<String> externalRouteLabels,
-            List<String> requiredEvidence,
-            List<String> preferredEvidence,
-            List<String> expectedFirstActions,
-            List<String> whenToRouteHere,
-            List<String> whenToInvolveAsPartner,
-            List<String> whenNotToRouteHere,
-            String fallbackIfAmbiguous,
-            List<String> notes
-    ) {
-
-        public OperationalContextHandoffHints {
-            firstResponderTeamIds = copyList(firstResponderTeamIds);
-            escalationTeamIds = copyList(escalationTeamIds);
-            partnerTeamIds = copyList(partnerTeamIds);
-            platformSupportTeamIds = copyList(platformSupportTeamIds);
-            externalRouteLabels = copyList(externalRouteLabels);
-            requiredEvidence = copyList(requiredEvidence);
-            preferredEvidence = copyList(preferredEvidence);
-            expectedFirstActions = copyList(expectedFirstActions);
-            whenToRouteHere = copyList(whenToRouteHere);
-            whenToInvolveAsPartner = copyList(whenToInvolveAsPartner);
-            whenNotToRouteHere = copyList(whenNotToRouteHere);
-            notes = copyList(notes);
-        }
-
-        public static OperationalContextHandoffHints empty() {
-            return new OperationalContextHandoffHints(
-                    null,
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    null,
-                    List.of()
-            );
-        }
-
-        public List<String> routeSignals() {
-            var values = new LinkedHashSet<String>();
-            values.add(defaultRouteLabel);
-            values.addAll(firstResponderTeamIds);
-            values.addAll(escalationTeamIds);
-            values.addAll(partnerTeamIds);
-            values.addAll(platformSupportTeamIds);
-            values.addAll(externalRouteLabels);
-            values.addAll(requiredEvidence);
-            values.addAll(preferredEvidence);
-            values.addAll(expectedFirstActions);
-            values.addAll(whenToRouteHere);
-            values.addAll(whenToInvolveAsPartner);
-            values.addAll(whenNotToRouteHere);
-            values.add(fallbackIfAmbiguous);
-            values.addAll(notes);
-            return copyTextList(values);
-        }
-    }
-
     public record OperationalContextRepositorySearchScope(
             String id,
             String name,
@@ -908,12 +828,10 @@ public final class OperationalContextDtos {
     public record OperationalContextHandoffRule(
             String id,
             String title,
-            String routeTo,
             List<String> useWhen,
             List<String> doNotUseWhen,
             List<String> requiredEvidence,
             List<String> expectedFirstAction,
-            List<String> partnerTeams,
             OperationalContextReferences references,
             List<String> notes
     ) {
@@ -921,23 +839,19 @@ public final class OperationalContextDtos {
         public OperationalContextHandoffRule(
                 String id,
                 String title,
-                String routeTo,
                 List<String> useWhen,
                 List<String> doNotUseWhen,
                 List<String> requiredEvidence,
                 List<String> expectedFirstAction,
-                List<String> partnerTeams,
                 List<String> notes
         ) {
             this(
                     id,
                     title,
-                    routeTo,
                     useWhen,
                     doNotUseWhen,
                     requiredEvidence,
                     expectedFirstAction,
-                    partnerTeams,
                     OperationalContextReferences.empty(),
                     notes
             );
@@ -948,7 +862,6 @@ public final class OperationalContextDtos {
             doNotUseWhen = copyList(doNotUseWhen);
             requiredEvidence = copyList(requiredEvidence);
             expectedFirstAction = copyList(expectedFirstAction);
-            partnerTeams = copyList(partnerTeams);
             references = defaultReferences(references);
             notes = copyList(notes);
         }
@@ -1059,10 +972,9 @@ public final class OperationalContextDtos {
                 textList(source, "aliases"),
                 textList(source, "useFor"),
                 systemParticipants(source.get("participants")),
+                ownership(source.get("ownership")),
                 references(source.get("references")),
-                responsibilities(source.get("responsibilities")),
                 matchSignals(firstValue(source, "matchSignals", "match")),
-                handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 source
         );
@@ -1082,9 +994,7 @@ public final class OperationalContextDtos {
                 textList(source, "useFor"),
                 git(source.get("git")),
                 references(source.get("references")),
-                responsibilities(source.get("responsibilities")),
                 matchSignals(firstValue(source, "matchSignals", "match")),
-                handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 source
         );
@@ -1126,9 +1036,7 @@ public final class OperationalContextDtos {
                 processBoundary(source.get("processBoundary")),
                 processOutcomes(source.get("outcomes")),
                 references(source.get("references")),
-                responsibilities(source.get("responsibilities")),
                 matchSignals(firstValue(source, "matchSignals", "match")),
-                handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 steps,
                 textList(source, "failureModes"),
@@ -1152,9 +1060,7 @@ public final class OperationalContextDtos {
                 textList(source, "useFor"),
                 integrationParticipants(source.get("participants")),
                 references(source.get("references")),
-                responsibilities(source.get("responsibilities")),
                 matchSignals(firstValue(source, "matchSignals", "match")),
-                handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 textList(source, "failureModes"),
                 source
@@ -1171,10 +1077,9 @@ public final class OperationalContextDtos {
                 text(source, "purpose"),
                 textList(source, "aliases"),
                 textList(source, "useFor"),
+                ownership(source.get("ownership")),
                 references(source.get("references")),
-                responsibilities(source.get("responsibilities")),
                 matchSignals(firstValue(source, "matchSignals", "match")),
-                handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 source
         );
@@ -1191,9 +1096,7 @@ public final class OperationalContextDtos {
                 textList(source, "aliases"),
                 textList(source, "useFor"),
                 references(source.get("references")),
-                responsibilities(source.get("responsibilities")),
                 matchSignals(firstValue(source, "matchSignals", "match")),
-                handoffHints(source.get("handoffHints")),
                 relations(source.get("relations")),
                 source
         );
@@ -1213,22 +1116,16 @@ public final class OperationalContextDtos {
         );
     }
 
-    private static List<OperationalContextResponsibility> responsibilities(Object value) {
-        return mapList(value).stream()
-                .map(source -> new OperationalContextResponsibility(
-                        text(source, "teamId"),
-                        text(source, "actorType"),
-                        text(source, "actorId"),
-                        text(source, "targetType"),
-                        text(source, "targetId"),
-                        text(source, "role"),
-                        text(source, "scope"),
-                        text(source, "status"),
-                        text(source, "confidence"),
-                        text(source, "evidence"),
-                        text(source, "source")
-                ))
-                .toList();
+    private static OperationalContextOwnership ownership(Object value) {
+        var source = map(value);
+        return new OperationalContextOwnership(
+                textList(source, "ownerTeamIds"),
+                text(source, "ownerLabel"),
+                text(source, "ownershipStatus"),
+                text(source, "confidence"),
+                text(source, "source"),
+                textList(source, "notes")
+        );
     }
 
     private static OperationalContextSystemParticipants systemParticipants(Object value) {
@@ -1386,26 +1283,6 @@ public final class OperationalContextDtos {
                 .toList();
     }
 
-    private static OperationalContextHandoffHints handoffHints(Object value) {
-        var source = map(value);
-        return new OperationalContextHandoffHints(
-                firstNonBlank(text(source, "defaultRouteLabel"), text(source, "defaultRoute")),
-                textList(source, "firstResponderTeamIds"),
-                textList(source, "escalationTeamIds"),
-                textList(source, "partnerTeamIds"),
-                textList(source, "platformSupportTeamIds"),
-                textList(source, "externalRouteLabels"),
-                textList(source, "requiredEvidence"),
-                textList(source, "preferredEvidence"),
-                firstList(source, "expectedFirstActions", "firstActions"),
-                textList(source, "whenToRouteHere"),
-                textList(source, "whenToInvolveAsPartner"),
-                textList(source, "whenNotToRouteHere"),
-                text(source, "fallbackIfAmbiguous"),
-                textList(source, "notes")
-        );
-    }
-
     private static OperationalContextRepositorySearchTarget repositorySearchTarget(Object value) {
         var source = map(value);
         return new OperationalContextRepositorySearchTarget(
@@ -1428,27 +1305,17 @@ public final class OperationalContextDtos {
         return value != null ? value : OperationalContextReferences.empty();
     }
 
-    private static OperationalContextMatchSignals defaultMatchSignals(OperationalContextMatchSignals value) {
-        return value != null ? value : OperationalContextMatchSignals.empty();
+    private static OperationalContextOwnership defaultOwnership(OperationalContextOwnership value) {
+        return value != null ? value : OperationalContextOwnership.empty();
     }
 
-    private static OperationalContextHandoffHints defaultHandoffHints(OperationalContextHandoffHints value) {
-        return value != null ? value : OperationalContextHandoffHints.empty();
+    private static OperationalContextMatchSignals defaultMatchSignals(OperationalContextMatchSignals value) {
+        return value != null ? value : OperationalContextMatchSignals.empty();
     }
 
     private static Map<String, Object> map(Object value) {
         var values = mapList(value);
         return values.isEmpty() ? Map.of() : values.get(0);
-    }
-
-    private static List<String> firstList(Map<String, Object> source, String... paths) {
-        for (var path : paths) {
-            var values = textList(source, path);
-            if (!values.isEmpty()) {
-                return values;
-            }
-        }
-        return List.of();
     }
 
     private static Object firstValue(Map<String, Object> source, String... paths) {

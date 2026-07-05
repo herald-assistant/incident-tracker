@@ -3,11 +3,25 @@
 ## Purpose
 
 Update `systems.yml` as the canonical catalog of durable systems. A system entry
-helps an analyst decide what business/system area is involved, who owns it, what
-other catalog entries are related, and where a handoff should start.
+helps an analyst decide what business/system area is involved, who owns it at
+system level, what other catalog entries are related, and where analysis should
+continue.
 
 Keep this file compact. Facts that can be found by GitLab tools, logs, external
 observability, or repository discovery do not belong here.
+
+## Ownership rule
+
+`systems.yml` may define ownership. System ownership is the fallback owner when
+the affected bounded context is unknown or has no explicit ownership.
+
+Use bounded-context ownership first whenever the problem is clearly inside a
+bounded context. Use system ownership when the problem is system-wide,
+infrastructure-facing, integration-facing, or only the system is known.
+
+Keep ownership in the YAML shape below. If accountability is unclear, add an
+open question or low-confidence owner label instead of inventing extra routing
+fields.
 
 ## When to add or change a system
 
@@ -36,9 +50,18 @@ systems:
       - customer self service
     useFor:
       - Start incident or requirement analysis when the signal points to customer request handling.
-      - Explain ownership and handoff for portal-facing problems.
+      - Resolve system-level ownership when the bounded context is unknown.
     participants:
       externalOwner: ""
+    ownership:
+      ownerTeamIds:
+        - customer-experience-team
+      ownerLabel: ""
+      ownershipStatus: explicit
+      confidence: high
+      source: systems.yml
+      notes:
+        - Confirmed system-level accountable owner.
     references:
       repositories:
         - customer-portal-ui
@@ -51,17 +74,7 @@ systems:
       teams:
         - customer-experience-team
       handoffRules:
-        - route-customer-request-issues
-    responsibilities:
-      - teamId: customer-experience-team
-        targetType: system
-        targetId: customer-portal
-        role: owner
-        scope: functional support and triage
-        status: current
-        confidence: high
-        evidence: confirmed by team ownership notes
-        source: systems.yml
+        - customer-request-boundary
     matchSignals:
       exact:
         terms:
@@ -73,21 +86,6 @@ systems:
       weak:
         phrases:
           - customer request screen
-    handoffHints:
-      defaultRouteLabel: Customer Experience support
-      firstResponderTeamIds:
-        - customer-experience-team
-      partnerTeamIds: []
-      requiredEvidence:
-        - user-visible symptom
-        - affected business request id when available
-      expectedFirstActions:
-        - Confirm whether the issue is isolated to portal-facing request handling.
-      whenToRouteHere:
-        - The user symptom is described in portal or customer request language.
-      whenNotToRouteHere:
-        - The issue is only about a downstream partner area with no portal impact.
-      fallbackIfAmbiguous: Start with customer-experience-team and ask for the affected business journey.
     relations:
       - type: uses
         targetType: process
@@ -98,15 +96,22 @@ systems:
 ## Update rules
 
 - Prefer stable business and system names over incidental strings.
+- Keep `ownership` only for durable system-level accountability.
+- Use `ownerTeamIds` when the team exists in `teams.yml`; use `ownerLabel` only
+  when the owner is an external/domain label without a cataloged team.
 - Keep `references` only for catalog entities that are useful for navigation.
+  `references.teams` is not an ownership source; it only links the owner label
+  to the team catalog.
 - Keep `matchSignals` small and durable. Use names, aliases and business terms.
-- Put ownership in `responsibilities` or `handoffHints`, not in free text only.
 - Use `relations` for meaningful navigation that is not already obvious from
-  another owner field.
-- If a fact is uncertain, add a note/open question instead of inventing a value.
+  another typed field.
+- If ownership is uncertain, set low confidence or add an open question instead
+  of inventing a team.
 
 ## Quality check
 
-- Every entry has `id`, `name`, `summary`, `purpose`, owner or handoff guidance.
+- Every entry has `id`, `name`, `summary`, `purpose` and useful navigation.
+- Ownership is present only when there is a durable system-level owner.
 - References point to existing catalog ids or are intentionally left empty.
-- The entry helps a business analyst decide where to start or who to involve.
+- The entry helps a business analyst decide where to start or which system
+  owner/bounded context should be checked next.

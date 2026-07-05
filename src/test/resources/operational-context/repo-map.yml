@@ -12,18 +12,10 @@ repositories:
       processes: [customer-support-process]
       boundedContexts: [customer-profile-context]
       teams: [crm-team]
-    responsibilities:
-      - teamId: crm-team
-        role: code-owner
     matchSignals:
       exact:
         projectNames: [crm-customer-service-repo]
       strong: {}
-    handoffHints:
-      defaultRouteLabel: crm-team
-      firstResponderTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, exception]
-
   - id: crm-customer-shared-repo
     name: CRM Customer Shared Library
     git:
@@ -35,16 +27,8 @@ repositories:
       processes: [customer-support-process]
       boundedContexts: [customer-profile-context]
       teams: [crm-team]
-    responsibilities:
-      - teamId: crm-team
-        role: code-owner
     matchSignals:
       exact:
         projectNames: [crm-customer-shared]
       strong: {}
-    handoffHints:
-      defaultRouteLabel: crm-team
-      firstResponderTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, exception]
-
 gaps: []

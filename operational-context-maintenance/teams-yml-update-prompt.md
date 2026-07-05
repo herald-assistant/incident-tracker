@@ -2,12 +2,21 @@
 
 ## Purpose
 
-Update `teams.yml` as the ownership and routing catalog. A team entry should
-explain what the team owns, when to involve it, which catalog entities it is
-responsible for, and what evidence helps the team act.
+Update `teams.yml` as the catalog of team identifiers, labels and collaboration
+clues. A team entry should help users recognize a team returned by ownership
+resolution and understand why it may be involved.
 
-Keep the file focused on responsibility and handoff. Do not add inventory from
-other sources or long operational runbooks.
+Keep the file focused on team identity and analyst-readable collaboration
+context. Do not add inventory from other sources or long operational runbooks.
+
+## Ownership rule
+
+Team entries do not define ownership. Ownership is assigned only from
+`systems.yml` and `bounded-contexts.yml`. `teams.yml` may describe a team so an
+owner id is understandable, but it is never a reverse ownership source.
+
+Keep team entries in the YAML shape below. If ownership is missing or unclear,
+update the owning system/bounded context or add an open question there.
 
 ## YAML shape
 
@@ -17,15 +26,15 @@ teams:
     name: Customer Experience Team
     shortName: Customer Experience
     lifecycleStatus: active
-    summary: Owns customer-facing request intake and portal behavior.
-    purpose: First responder for user-facing request issues and related requirement analysis.
+    summary: Team visible as owner for customer-facing request intake and portal behavior.
+    purpose: Helps analysts understand the team label when ownership resolver returns this team.
     aliases:
       - CX team
       - portal team
     useFor:
-      - Route issues described in customer request or portal language.
-      - Review development stories for request intake behavior.
-      - Confirm acceptance criteria for user-facing journeys.
+      - Recognize the team when returned from system or bounded-context ownership.
+      - Understand collaboration language for request intake behavior.
+      - Confirm who can review user-facing journey assumptions when already selected as owner.
     references:
       systems:
         - customer-portal
@@ -40,26 +49,7 @@ teams:
       terms:
         - customer-request
       handoffRules:
-        - route-customer-request-issues
-    responsibilities:
-      - teamId: customer-experience-team
-        targetType: system
-        targetId: customer-portal
-        role: owner
-        scope: user-facing behavior and request intake
-        status: current
-        confidence: high
-        evidence: team catalog
-        source: teams.yml
-      - teamId: customer-experience-team
-        targetType: bounded-context
-        targetId: customer-requests
-        role: domain-owner
-        scope: local language and business rules
-        status: current
-        confidence: high
-        evidence: team catalog
-        source: teams.yml
+        - customer-request-boundary
     matchSignals:
       exact:
         names:
@@ -71,28 +61,8 @@ teams:
       weak:
         phrases:
           - customer request owner
-    handoffHints:
-      defaultRouteLabel: Customer Experience support
-      firstResponderTeamIds:
-        - customer-experience-team
-      partnerTeamIds:
-        - case-management-team
-      requiredEvidence:
-        - affected customer journey
-        - business request id when available
-      preferredEvidence:
-        - screenshot or user-facing error text
-      expectedFirstActions:
-        - Confirm the affected journey and whether another owner is needed.
-      whenToRouteHere:
-        - The issue affects request intake or portal-visible behavior.
-      whenToInvolveAsPartner:
-        - Another owner is investigating a problem with portal-facing impact.
-      whenNotToRouteHere:
-        - The issue is only downstream after a confirmed handoff.
-      fallbackIfAmbiguous: Ask for the affected journey before changing owner.
     relations:
-      - type: partners-with
+      - type: collaborates-with
         targetType: team
         target: case-management-team
         evidence: shared request handling process
@@ -100,9 +70,11 @@ teams:
 
 ## Update rules
 
-- A team entry should answer "who should be involved and why?".
-- Use responsibilities for typed ownership; use handoff hints for routing.
-- Keep required evidence actionable and user-facing.
-- Do not duplicate every relationship already owned by systems, processes or
-  integrations unless it helps routing.
-- If ownership is uncertain, use `confidence` and add an open question.
+- A team entry should answer "what does this team label mean?".
+- Use `references` for navigation and context only; they do not assign
+  ownership.
+- Keep evidence/action guidance in handoff rules, not in team routing hints.
+- Do not duplicate every relationship already described by systems, processes
+  or integrations.
+- If ownership is uncertain, add an open question on the owning system or
+  bounded context instead of adding reverse ownership here.

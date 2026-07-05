@@ -3,6 +3,10 @@ package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.*;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -59,6 +63,8 @@ public class OperationalContextToolMapper {
             "sourceCoverage",
             "openQuestions"
     );
+
+    private final OperationalContextOwnershipResolver ownershipResolver = new OperationalContextOwnershipResolver();
 
     public OpctxScopeResult getScope(OperationalContextCatalog catalog) {
         var index = index(catalog);
@@ -212,10 +218,10 @@ public class OperationalContextToolMapper {
 
         safeCatalog.systems().forEach(system -> entities.add(systemEntity(system, safeCatalog, openQuestions)));
         safeCatalog.repositories().forEach(repository -> entities.add(repositoryEntity(repository, safeCatalog, openQuestions)));
-        safeCatalog.codeSearchScopes().forEach(scope -> entities.add(codeSearchScopeEntity(scope, repositoriesById, openQuestions)));
-        safeCatalog.processes().forEach(process -> entities.add(processEntity(process, openQuestions)));
-        safeCatalog.integrations().forEach(integration -> entities.add(integrationEntity(integration, openQuestions)));
-        safeCatalog.boundedContexts().forEach(context -> entities.add(boundedContextEntity(context, openQuestions)));
+        safeCatalog.codeSearchScopes().forEach(scope -> entities.add(codeSearchScopeEntity(scope, safeCatalog, repositoriesById, openQuestions)));
+        safeCatalog.processes().forEach(process -> entities.add(processEntity(process, safeCatalog, openQuestions)));
+        safeCatalog.integrations().forEach(integration -> entities.add(integrationEntity(integration, safeCatalog, openQuestions)));
+        safeCatalog.boundedContexts().forEach(context -> entities.add(boundedContextEntity(context, safeCatalog, openQuestions)));
         safeCatalog.teams().forEach(team -> entities.add(teamEntity(team, openQuestions)));
         safeCatalog.glossaryTerms().forEach(term -> entities.add(glossaryTermEntity(term, openQuestions)));
         safeCatalog.handoffRules().forEach(rule -> entities.add(handoffRuleEntity(rule, openQuestions)));
@@ -237,8 +243,10 @@ public class OperationalContextToolMapper {
         var codeSearchScopes = catalog.codeSearchScopes().stream()
                 .filter(scope -> semanticTargetMatches(scope.target(), TYPE_SYSTEM, system.id()))
                 .toList();
+        var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(system));
         var facets = facets(
-                "ownerTeamIds", teamIds(system.responsibilities(), system.references()),
+                "ownerTeamIds", ownerTeamIds(resolvedOwnership),
+                "ownerLabels", ownerLabels(resolvedOwnership),
                 "repositoryIds", system.references().repositories(),
                 "processIds", system.references().processes(),
                 "boundedContextIds", system.references().boundedContexts(),
@@ -255,7 +263,6 @@ public class OperationalContextToolMapper {
         );
         var relations = values(
                 "references", references(system.references()),
-                "responsibilities", responsibilities(system.responsibilities()),
                 "relations", relations(system.relations()),
                 "externalOwner", system.participants().externalOwner()
         );
@@ -265,7 +272,7 @@ public class OperationalContextToolMapper {
                         .map(scope -> codeSearchScopeSummary(scope, catalog.repositories()))
                         .toList()
         );
-        var handoff = handoff(system.handoffHints());
+        var handoff = resolvedOwnershipHandoff(resolvedOwnership);
 
         return entity(
                 TYPE_SYSTEM,
@@ -297,7 +304,10 @@ public class OperationalContextToolMapper {
                 .filter(scope -> scope.repositories().stream()
                         .anyMatch(candidate -> normalize(candidate.repoId()).equals(normalize(repository.id()))))
                 .toList();
+        var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(repository));
         var facets = facets(
+                "ownerTeamIds", ownerTeamIds(resolvedOwnership),
+                "ownerLabels", ownerLabels(resolvedOwnership),
                 "projectName", List.of(repository.git().project()),
                 "gitLabPath", List.of(repository.git().projectPath()),
                 "systems", repository.references().systems(),
@@ -316,7 +326,6 @@ public class OperationalContextToolMapper {
         );
         var relations = values(
                 "references", references(repository.references()),
-                "responsibilities", responsibilities(repository.responsibilities()),
                 "relations", relations(repository.relations())
         );
         var signals = values("matchSignals", matchSignals(repository.matchSignals()));
@@ -340,7 +349,7 @@ public class OperationalContextToolMapper {
                 relations,
                 signals,
                 codeSearch,
-                handoff(repository.handoffHints()),
+                resolvedOwnershipHandoff(resolvedOwnership),
                 values("sourceRefs", List.of("repo-map.yml#repositories/" + repository.id())),
                 openQuestionsFor(openQuestions, TYPE_REPOSITORY, repository.id()),
                 List.of("repo-map.yml#repositories/" + repository.id()),
@@ -350,13 +359,17 @@ public class OperationalContextToolMapper {
 
     private OpctxCatalogEntity codeSearchScopeEntity(
             OperationalContextRepositorySearchScope scope,
+            OperationalContextCatalog catalog,
             Map<String, OperationalContextRepository> repositoriesById,
             List<OperationalContextOpenQuestion> openQuestions
     ) {
         var includedRepositories = scope.repositories().stream()
                 .map(repository -> scopeRepository(repository, repositoriesById))
                 .toList();
+        var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(scope));
         var facets = facets(
+                "ownerTeamIds", ownerTeamIds(resolvedOwnership),
+                "ownerLabels", ownerLabels(resolvedOwnership),
                 "scopeType", scope.scopeType(),
                 "targetType", scope.target().type(),
                 "targetId", scope.target().id(),
@@ -394,7 +407,7 @@ public class OperationalContextToolMapper {
                 relations,
                 values("target", repositorySearchTarget(scope.target())),
                 codeSearch,
-                Map.of(),
+                resolvedOwnershipHandoff(resolvedOwnership),
                 sourceCoverage,
                 openQuestionsFor(openQuestions, TYPE_CODE_SEARCH_SCOPE, scope.id()),
                 List.of("code-search-scopes.yml#codeSearchScopes/" + scope.id()),
@@ -404,9 +417,13 @@ public class OperationalContextToolMapper {
 
     private OpctxCatalogEntity processEntity(
             OperationalContextProcess process,
+            OperationalContextCatalog catalog,
             List<OperationalContextOpenQuestion> openQuestions
     ) {
+        var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(process));
         var facets = facets(
+                "ownerTeamIds", ownerTeamIds(resolvedOwnership),
+                "ownerLabels", ownerLabels(resolvedOwnership),
                 "primarySystems", process.participants().primarySystems(),
                 "supportingSystems", process.participants().supportingSystems(),
                 "externalSystems", process.participants().externalSystems(),
@@ -433,7 +450,6 @@ public class OperationalContextToolMapper {
                         "platformComponents", process.participants().platformComponents()
                 ),
                 "references", references(process.references()),
-                "responsibilities", responsibilities(process.responsibilities()),
                 "relations", relations(process.relations()),
                 "steps", process.steps().stream().map(this::processStep).toList()
         );
@@ -451,7 +467,7 @@ public class OperationalContextToolMapper {
                 relations,
                 values("matchSignals", matchSignals(process.matchSignals()), "failureModes", process.failureModes()),
                 Map.of(),
-                handoff(process.handoffHints()),
+                resolvedOwnershipHandoff(resolvedOwnership),
                 values("sourceRefs", List.of("processes.yml#" + process.id())),
                 openQuestionsFor(openQuestions, TYPE_PROCESS, process.id()),
                 List.of("processes.yml#" + process.id()),
@@ -461,9 +477,13 @@ public class OperationalContextToolMapper {
 
     private OpctxCatalogEntity integrationEntity(
             OperationalContextIntegration integration,
+            OperationalContextCatalog catalog,
             List<OperationalContextOpenQuestion> openQuestions
     ) {
+        var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(integration));
         var facets = facets(
+                "ownerTeamIds", ownerTeamIds(resolvedOwnership),
+                "ownerLabels", ownerLabels(resolvedOwnership),
                 "sourceSystem", List.of(integration.participants().source().system()),
                 "targetSystems", integration.participants().targetSystems(),
                 "intermediarySystems", integration.participants().intermediarySystems(),
@@ -489,7 +509,6 @@ public class OperationalContextToolMapper {
                         "finalTargets", integration.participants().finalTargets().stream().map(this::integrationParticipant).toList()
                 ),
                 "references", references(integration.references()),
-                "responsibilities", responsibilities(integration.responsibilities()),
                 "relations", relations(integration.relations())
         );
         var signals = values(
@@ -510,7 +529,7 @@ public class OperationalContextToolMapper {
                 relations,
                 signals,
                 Map.of(),
-                handoff(integration.handoffHints()),
+                resolvedOwnershipHandoff(resolvedOwnership),
                 values("sourceRefs", List.of("integrations.yml#" + integration.id())),
                 openQuestionsFor(openQuestions, TYPE_INTEGRATION, integration.id()),
                 List.of("integrations.yml#" + integration.id()),
@@ -520,9 +539,13 @@ public class OperationalContextToolMapper {
 
     private OpctxCatalogEntity boundedContextEntity(
             OperationalContextBoundedContext context,
+            OperationalContextCatalog catalog,
             List<OperationalContextOpenQuestion> openQuestions
     ) {
+        var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(context));
         var facets = facets(
+                "ownerTeamIds", ownerTeamIds(resolvedOwnership),
+                "ownerLabels", ownerLabels(resolvedOwnership),
                 "systems", context.references().systems(),
                 "repositories", context.references().repositories(),
                 "processes", context.references().processes(),
@@ -546,12 +569,11 @@ public class OperationalContextToolMapper {
                 ),
                 values(
                         "references", references(context.references()),
-                        "responsibilities", responsibilities(context.responsibilities()),
                         "relations", relations(context.relations())
                 ),
                 values("matchSignals", matchSignals(context.matchSignals())),
                 Map.of(),
-                handoff(context.handoffHints()),
+                resolvedOwnershipHandoff(resolvedOwnership),
                 values("sourceRefs", List.of("bounded-contexts.yml#" + context.id())),
                 openQuestionsFor(openQuestions, TYPE_BOUNDED_CONTEXT, context.id()),
                 List.of("bounded-contexts.yml#" + context.id()),
@@ -588,12 +610,11 @@ public class OperationalContextToolMapper {
                 ),
                 values(
                         "references", references(team.references()),
-                        "responsibilities", responsibilities(team.responsibilities()),
                         "relations", relations(team.relations())
                 ),
                 values("matchSignals", matchSignals(team.matchSignals())),
                 Map.of(),
-                handoff(team.handoffHints()),
+                Map.of(),
                 values("sourceRefs", List.of("teams.yml#" + team.id())),
                 openQuestionsFor(openQuestions, TYPE_TEAM, team.id()),
                 List.of("teams.yml#" + team.id()),
@@ -645,8 +666,6 @@ public class OperationalContextToolMapper {
             List<OperationalContextOpenQuestion> openQuestions
     ) {
         var facets = facets(
-                "routeTo", List.of(rule.routeTo()),
-                "partnerTeams", rule.partnerTeams(),
                 "requiredEvidence", rule.requiredEvidence(),
                 "useWhen", rule.useWhen()
         );
@@ -660,21 +679,19 @@ public class OperationalContextToolMapper {
                 List.of(),
                 rule.useWhen(),
                 facets,
-                values("title", rule.title(), "routeTo", rule.routeTo()),
-                values("partnerTeams", rule.partnerTeams()),
+                values("title", rule.title()),
+                Map.of(),
                 values("useWhen", rule.useWhen(), "doNotUseWhen", rule.doNotUseWhen()),
                 Map.of(),
                 values(
-                        "routeTo", rule.routeTo(),
                         "requiredEvidence", rule.requiredEvidence(),
                         "expectedFirstAction", rule.expectedFirstAction(),
-                        "partnerTeams", rule.partnerTeams(),
                         "notes", rule.notes()
                 ),
                 values("sourceRefs", List.of("handoff-rules.md#" + rule.id())),
                 openQuestionsFor(openQuestions, TYPE_HANDOFF_RULE, rule.id()),
                 List.of("handoff-rules.md#" + rule.id()),
-                join(rule.useWhen(), join(rule.requiredEvidence(), join(rule.expectedFirstAction(), rule.partnerTeams())))
+                join(rule.useWhen(), join(rule.requiredEvidence(), rule.expectedFirstAction()))
         );
     }
 
@@ -961,7 +978,7 @@ public class OperationalContextToolMapper {
                 List.of("opctx_get_entity(type=<type>, id=<id>)", "opctx_search(query=<more-specific-signal>)"),
                 items.isEmpty()
                         ? List.of("Search again with a system, repository, process, integration, team or local-language term.")
-                        : List.of("Read top result details before choosing repositories or handoff route."),
+                        : List.of("Read top result details before choosing repositories or handoff decision."),
                 List.of("opctx_get_entity", "opctx_search"),
                 "Increase limit only when recall matters more than a short ranked candidate set.",
                 List.of("Search returns compact ranked candidates, not full entity details."),
@@ -1234,14 +1251,144 @@ public class OperationalContextToolMapper {
         }
     }
 
-    private List<String> teamIds(
-            List<OperationalContextResponsibility> responsibilities,
-            OperationalContextReferences references
-    ) {
-        var values = new LinkedHashSet<String>();
-        values.addAll(safeList(references.teams()));
-        safeList(responsibilities).forEach(responsibility -> values.add(responsibility.teamId()));
-        return textValues(values);
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextSystem system) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                textValues(system.id()),
+                List.of(),
+                List.of(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextRepository repository) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                repository.references().systems(),
+                repository.references().boundedContexts(),
+                textValues(repository.id()),
+                List.of(),
+                new OperationalContextOwnershipRequest.TechnicalTarget(
+                        repository.id(),
+                        repository.git().projectPath(),
+                        List.of(),
+                        repository.references().systems(),
+                        repository.references().boundedContexts(),
+                        null,
+                        "opctx_get_entity"
+                )
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextRepositorySearchScope scope) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                textValues(scope.id()),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextProcess process) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                textValues(process.references().systems(), process.participants().primarySystems()),
+                process.references().boundedContexts(),
+                process.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextIntegration integration) {
+        var contextIds = textValues(
+                integration.references().boundedContexts(),
+                integration.participants().source().boundedContext(),
+                integration.participants().targets().stream().map(OperationalContextIntegrationParticipant::boundedContext).toList()
+        );
+        var systemIds = textValues(
+                integration.references().systems(),
+                integration.participants().source().system(),
+                integration.participants().targetSystems(),
+                integration.participants().intermediarySystems(),
+                integration.participants().finalTargetSystems()
+        );
+        var situationType = contextIds.size() > 1
+                ? OperationalContextOwnershipResolution.BOUNDED_CONTEXT_BOUNDARY
+                : systemIds.size() > 1
+                ? OperationalContextOwnershipResolution.SYSTEM_BOUNDARY
+                : null;
+        return new OperationalContextOwnershipRequest(
+                situationType,
+                systemIds,
+                contextIds,
+                integration.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextBoundedContext context) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                context.references().systems(),
+                textValues(context.id()),
+                context.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private Map<String, Object> resolvedOwnershipHandoff(OperationalContextOwnershipResolution resolution) {
+        return values("resolvedOwnership", resolvedOwnership(resolution));
+    }
+
+    private Map<String, Object> resolvedOwnership(OperationalContextOwnershipResolution resolution) {
+        return values(
+                "situationType", resolution.situationType(),
+                "primaryOwners", owners(resolution.primaryOwners()),
+                "partnerOwners", owners(resolution.partnerOwners()),
+                "handoffReason", resolution.handoffReason(),
+                "resolutionPath", resolution.resolutionPath(),
+                "visibilityLimits", resolution.visibilityLimits()
+        );
+    }
+
+    private List<Map<String, Object>> owners(List<Owner> owners) {
+        return owners.stream()
+                .map(owner -> values(
+                        "targetType", owner.targetType(),
+                        "targetId", owner.targetId(),
+                        "targetLabel", owner.targetLabel(),
+                        "ownerTeamIds", owner.ownerTeamIds(),
+                        "ownerLabel", owner.ownerLabel(),
+                        "source", owner.source(),
+                        "confidence", owner.confidence()
+                ))
+                .toList();
+    }
+
+    private List<String> ownerTeamIds(OperationalContextOwnershipResolution resolution) {
+        return resolution.primaryOwners().stream()
+                .flatMap(owner -> owner.ownerTeamIds().stream())
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+    }
+
+    private List<String> ownerLabels(OperationalContextOwnershipResolution resolution) {
+        return resolution.primaryOwners().stream()
+                .map(this::ownerLabel)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
+    }
+
+    private String ownerLabel(Owner owner) {
+        return firstNonBlank(owner.ownerLabel(), String.join(", ", owner.ownerTeamIds()), owner.targetLabel());
     }
 
     private Map<String, Object> references(OperationalContextReferences references) {
@@ -1255,24 +1402,6 @@ public class OperationalContextToolMapper {
                 "teams", references.teams(),
                 "handoffRules", references.handoffRules()
         );
-    }
-
-    private List<Map<String, Object>> responsibilities(List<OperationalContextResponsibility> responsibilities) {
-        return safeList(responsibilities).stream()
-                .map(responsibility -> values(
-                        "teamId", responsibility.teamId(),
-                        "actorType", responsibility.actorType(),
-                        "actorId", responsibility.actorId(),
-                        "targetType", responsibility.targetType(),
-                        "targetId", responsibility.targetId(),
-                        "role", responsibility.role(),
-                        "scope", responsibility.scope(),
-                        "status", responsibility.status(),
-                        "confidence", responsibility.confidence(),
-                        "evidence", responsibility.evidence(),
-                        "source", responsibility.source()
-                ))
-                .toList();
     }
 
     private Map<String, Object> matchSignals(OperationalContextMatchSignals matchSignals) {
@@ -1295,25 +1424,6 @@ public class OperationalContextToolMapper {
                         "evidence", relation.evidence()
                 ))
                 .toList();
-    }
-
-    private Map<String, Object> handoff(OperationalContextHandoffHints handoffHints) {
-        return values(
-                "defaultRouteLabel", handoffHints.defaultRouteLabel(),
-                "firstResponderTeamIds", handoffHints.firstResponderTeamIds(),
-                "escalationTeamIds", handoffHints.escalationTeamIds(),
-                "partnerTeamIds", handoffHints.partnerTeamIds(),
-                "platformSupportTeamIds", handoffHints.platformSupportTeamIds(),
-                "externalRouteLabels", handoffHints.externalRouteLabels(),
-                "requiredEvidence", handoffHints.requiredEvidence(),
-                "preferredEvidence", handoffHints.preferredEvidence(),
-                "expectedFirstActions", handoffHints.expectedFirstActions(),
-                "whenToRouteHere", handoffHints.whenToRouteHere(),
-                "whenToInvolveAsPartner", handoffHints.whenToInvolveAsPartner(),
-                "whenNotToRouteHere", handoffHints.whenNotToRouteHere(),
-                "fallbackIfAmbiguous", handoffHints.fallbackIfAmbiguous(),
-                "notes", handoffHints.notes()
-        );
     }
 
     private Map<String, Object> git(OperationalContextGit git) {

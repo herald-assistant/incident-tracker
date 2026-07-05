@@ -10,6 +10,17 @@ and development story preparation.
 The catalog should say what the business path is and where to continue, not list
 incidental clues from another source.
 
+## Ownership rule
+
+Process entries do not define ownership. Owner and handoff are resolved from the
+bounded contexts and systems referenced by the process. If a process crosses
+several bounded contexts or systems, the resolver should show both sides as
+primary/partner owners.
+
+Keep process entries in the YAML shape below. If the process needs ownership or
+handoff resolution, add precise system/bounded-context references instead of new
+owner-like fields.
+
 ## YAML shape
 
 ```yaml
@@ -28,7 +39,7 @@ processes:
     useFor:
       - Explain what the user expected to happen.
       - Prepare development stories or acceptance test scenarios.
-      - Decide which system owns the next analysis step.
+      - Decide which system or bounded context should be checked next.
     participants:
       actors:
         - customer
@@ -41,7 +52,7 @@ processes:
       platformComponents: []
     processBoundary:
       endsWhen:
-        - The request is visible to the owning case team.
+        - The request is visible to the case handling context.
     outcomes:
       successArtifacts:
         - customer request accepted
@@ -58,23 +69,10 @@ processes:
         - case-lifecycle
       integrations:
         - portal-to-case-management
-      teams:
-        - customer-experience-team
-        - case-management-team
       terms:
         - customer-request
       handoffRules:
-        - route-customer-request-issues
-    responsibilities:
-      - teamId: customer-experience-team
-        targetType: process
-        targetId: customer-request-handling
-        role: process-owner
-        scope: request intake and user-facing behavior
-        status: current
-        confidence: high
-        evidence: process ownership notes
-        source: processes.yml
+        - customer-request-boundary
     matchSignals:
       exact:
         terms:
@@ -85,22 +83,11 @@ processes:
       weak:
         phrases:
           - customer cannot submit a request
-    handoffHints:
-      defaultRouteLabel: Customer request process owner
-      firstResponderTeamIds:
-        - customer-experience-team
-      partnerTeamIds:
-        - case-management-team
-      requiredEvidence:
-        - business request id when available
-        - observed step where the journey stopped
-      expectedFirstActions:
-        - Map the symptom to one process step before assigning ownership.
     relations:
       - type: uses
         targetType: integration
         target: portal-to-case-management
-        evidence: process handoff
+        evidence: process boundary between request intake and case handling
     steps:
       - id: submit-request
         name: Submit request
@@ -118,32 +105,37 @@ processes:
       - id: accept-for-handling
         name: Accept for handling
         type: system-handoff
-        summary: Request is accepted and handed to the case owner.
+        summary: Request is accepted and becomes visible in the case handling context.
         references:
           systems:
             - case-management
+          boundedContexts:
+            - case-lifecycle
           integrations:
             - portal-to-case-management
         matchSignals:
           strong:
             terms:
-              - accepted by case team
+              - accepted for case handling
     failureModes:
       - Customer cannot complete request intake.
-      - Request appears accepted but the next owner cannot continue.
+      - Request appears accepted but the next context cannot continue.
 ```
 
 ## Update rules
 
 - Model a process only when it is meaningful to a business or system analyst.
-- Steps should be user, business, or ownership milestones.
+- Steps should be user, business, system or bounded-context milestones.
 - Use `references` to connect systems, repositories, contexts, integrations,
-  teams, glossary terms and handoff rules.
+  glossary terms and handoff rules.
 - Keep step `matchSignals` as business words or durable labels.
 - Put uncertainty in open questions rather than inventing a process path.
 
 ## Quality check
 
 - The process can be used to write user stories or test scenarios.
-- The process helps decide the next system or team when analysis must continue.
+- The process helps decide the next system or bounded context when analysis
+  must continue.
+- Ownership is not stored here; it is derived from referenced systems and
+  bounded contexts.
 - The entry does not duplicate details available in code or tools.

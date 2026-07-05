@@ -107,8 +107,8 @@ Szczegoly etapow naleza do dedykowanych skilli:
 
 - `incident-code-grounding`: code flow, predicates, mapping, validation,
   integration clients i technical code evidence,
-- `incident-operational-grounding`: system, process, bounded context, owner,
-  code scope i handoff route,
+- `incident-operational-grounding`: system, process, bounded context,
+  resolved owner, code scope i handoff decision,
 - `incident-data-diagnostics`: DB/data/process-state checks,
 - `incident-functional-analysis`: format i jezyk `functionalAnalysis`,
 - `incident-technical-handoff`: format i tresc `technicalAnalysis`.

@@ -218,41 +218,6 @@ class OperationalContextReadModelValidatorTest {
     }
 
     @Test
-    void shouldReportTeamReferencesDuplicatedByResponsibilities() {
-        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
-                List.of(map(
-                        "id", "crm-team",
-                        "references", map(
-                                "systems", List.of("crm-customer-service"),
-                                "repositories", List.of("crm-customer-service-repo")
-                        ),
-                        "responsibilities", List.of(
-                                map(
-                                        "targetType", "system",
-                                        "targetId", "crm-customer-service"
-                                ),
-                                map(
-                                        "targetType", "repository",
-                                        "targetId", "crm-customer-service-repo"
-                                )
-                        )
-                )),
-                List.of(),
-                List.of(map("id", "crm-customer-service")),
-                List.of(),
-                List.of(map("id", "crm-customer-service-repo")),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                "index"
-        ));
-
-        assertHasError(findings, "TEAM_REFERENCE_DERIVED_FROM_RESPONSIBILITY");
-    }
-
-    @Test
     void shouldReportBidirectionalReferences() {
         var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
                 List.of(),
@@ -319,6 +284,78 @@ class OperationalContextReadModelValidatorTest {
         assertHasWarning(findings, "CODE_SEARCH_SCOPE_WITHOUT_PRIMARY_REPOSITORY");
         assertHasError(findings, "CODE_SEARCH_SCOPE_WITHOUT_TARGET");
         assertHasError(findings, "UNKNOWN_CODE_SEARCH_REPOSITORY");
+    }
+
+    @Test
+    void shouldRejectOwnershipOutsideSystemAndBoundedContext() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(map(
+                        "id", "support-team",
+                        "ownership", map("ownerLabel", "support team")
+                )),
+                List.of(),
+                List.of(map(
+                        "id", "crm-customer-service",
+                        "ownership", map(
+                                "ownerTeamIds", List.of("support-team"),
+                                "ownershipStatus", "explicit"
+                        )
+                )),
+                List.of(),
+                List.of(map(
+                        "id", "crm-customer-service-repo",
+                        "ownership", map("ownerTeamIds", List.of("support-team"))
+                )),
+                List.of(map(
+                        "id", "crm-customer-service-scope",
+                        "target", map("type", "system", "id", "crm-customer-service"),
+                        "repositories", List.of(map(
+                                "repoId", "crm-customer-service-repo",
+                                "role", "primary",
+                                "priority", 1
+                        ))
+                )),
+                List.of(map(
+                        "id", "customer-profile-context",
+                        "ownership", map(
+                                "ownerTeamIds", List.of("support-team"),
+                                "ownershipStatus", "explicit"
+                        )
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasError(findings, "OWNERSHIP_OUTSIDE_SYSTEM_OR_BOUNDED_CONTEXT");
+    }
+
+    @Test
+    void shouldWarnWhenCatalogStoresInferredOwnership() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(map(
+                        "id", "salesforce",
+                        "ownership", map(
+                                "ownerLabel", "wlasciciel systemu Salesforce",
+                                "ownershipStatus", "unknown",
+                                "confidence", "low",
+                                "source", "inferred backlog"
+                        )
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasWarning(findings, "INFERRED_OWNERSHIP_IN_CATALOG");
     }
 
     @Test

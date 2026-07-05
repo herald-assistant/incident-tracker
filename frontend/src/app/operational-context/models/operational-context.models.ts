@@ -48,6 +48,25 @@ export interface ExplainableBreakdownItemDto {
   sourceRefs: SourceReferenceDto[];
 }
 
+export interface OperationalContextResolvedOwnerDto {
+  targetType: string;
+  targetId: string | null;
+  targetLabel: string | null;
+  ownerTeamIds: string[];
+  ownerLabel: string | null;
+  source: string;
+  confidence: string;
+}
+
+export interface OperationalContextResolvedOwnershipDto {
+  situationType: string;
+  primaryOwners: OperationalContextResolvedOwnerDto[];
+  partnerOwners: OperationalContextResolvedOwnerDto[];
+  resolutionPath: string[];
+  handoffReason: string | null;
+  visibilityLimits: string[];
+}
+
 export interface ValidationFindingDto {
   id: string;
   severity: 'info' | 'warning' | 'error' | string;
@@ -92,6 +111,7 @@ export interface OperationalContextSystemRowDto {
   name: string;
   kind: string;
   owner: ExplainableValueDto<string>;
+  resolvedOwnership: OperationalContextResolvedOwnershipDto;
   purpose: string;
   relations: ExplainableAggregateDto;
   signals: ExplainableAggregateDto;
@@ -105,6 +125,7 @@ export interface OperationalContextRepositoryRowDto {
   project: string;
   group: string;
   owner: ExplainableValueDto<string>;
+  resolvedOwnership: OperationalContextResolvedOwnershipDto;
   systems: ExplainableAggregateDto;
   contexts: ExplainableAggregateDto;
   processes: ExplainableAggregateDto;
@@ -130,6 +151,7 @@ export interface OperationalContextProcessRowDto {
   id: string;
   name: string;
   owner: ExplainableValueDto<string>;
+  resolvedOwnership: OperationalContextResolvedOwnershipDto;
   purpose: string;
   systems: ExplainableAggregateDto;
   externalSystems: ExplainableAggregateDto;
@@ -137,7 +159,6 @@ export interface OperationalContextProcessRowDto {
   contexts: ExplainableAggregateDto;
   steps: ExplainableAggregateDto;
   completionSignals: ExplainableAggregateDto;
-  handoffHints: ExplainableAggregateDto;
   validation: ExplainableAggregateDto;
 }
 
@@ -147,7 +168,8 @@ export interface OperationalContextIntegrationRowDto {
   sourceSystem: string;
   targetSystems: string;
   owner: ExplainableValueDto<string>;
-  partnerTeams: ExplainableAggregateDto;
+  resolvedOwnership: OperationalContextResolvedOwnershipDto;
+  partnerOwners: ExplainableAggregateDto;
   category: string;
   integrationStyle: string;
   flowDirection: string;
@@ -162,6 +184,7 @@ export interface OperationalContextBoundedContextRowDto {
   id: string;
   name: string;
   owner: ExplainableValueDto<string>;
+  resolvedOwnership: OperationalContextResolvedOwnershipDto;
   purpose: string;
   systems: ExplainableAggregateDto;
   terms: ExplainableAggregateDto;
@@ -195,11 +218,9 @@ export interface OperationalContextGlossaryRowDto {
 export interface OperationalContextHandoffRuleRowDto {
   id: string;
   title: string;
-  routeTo: string;
   useWhen: ExplainableAggregateDto;
   requiredEvidence: ExplainableAggregateDto;
   expectedFirstAction: string;
-  partnerTeams: ExplainableAggregateDto;
 }
 
 export interface OperationalContextSearchResultDto {

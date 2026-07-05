@@ -12,18 +12,10 @@ repositories:
       processes: [main-process]
       boundedContexts: [core-context]
       teams: [core-team]
-    responsibilities:
-      - teamId: core-team
-        role: code-owner
     matchSignals:
       exact:
         projectNames: [app-core-repo]
       strong: {}
-    handoffHints:
-      defaultRouteLabel: core-team
-      firstResponderTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, exception]
-
   - id: app-shared-lib-repo
     name: App Shared Library
     git:
@@ -35,15 +27,7 @@ repositories:
       processes: [main-process]
       boundedContexts: [core-context]
       teams: [core-team]
-    responsibilities:
-      - teamId: core-team
-        role: code-owner
     matchSignals:
       exact:
         projectNames: [app-shared-lib]
-    handoffHints:
-      defaultRouteLabel: core-team
-      firstResponderTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, gitLabBranch, projectPath, filePath, exception]
-
 gaps: []

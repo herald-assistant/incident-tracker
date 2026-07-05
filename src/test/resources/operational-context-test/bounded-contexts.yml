@@ -12,9 +12,11 @@ boundedContexts:
       integrations: [app-core-to-partner-sync]
       terms: [work-item]
       teams: [core-team]
-    responsibilities:
-      - teamId: core-team
-        role: context-owner
+    ownership:
+      ownerTeamIds: [core-team]
+      ownershipStatus: explicit
+      confidence: high
+      source: test
     matchSignals:
       strong:
         markers: [APP_CORE]
@@ -22,11 +24,6 @@ boundedContexts:
       - target: partner-context
         type: conformist
         via: [app-core-to-partner-sync]
-    handoffHints:
-      defaultRouteLabel: core-team
-      firstResponderTeamIds: [core-team]
-      requiredEvidence: [correlationId, environment, boundedContext]
-
 gaps:
   - id: confirm-core-context-boundary
     type: human-confirmation-required
@@ -35,4 +32,3 @@ gaps:
     entityType: bounded-context
     entityId: core-context
     description: Confirm whether Core Context should include shared library semantics.
-

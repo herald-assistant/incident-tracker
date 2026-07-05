@@ -4,10 +4,6 @@
 
 **Title:** External synchronous integration failure
 
-**Route decision**
-
-Candidate teams: CRM Integration Team
-
 **Applies when**
 
 
@@ -22,17 +18,9 @@ Candidate teams: CRM Integration Team
 
 - Verify the external call path, timeout status, and contract ownership
 
-**Partner teams**
-
-- CRM Team
-
 ### `retain-with-current-owner`
 
 **Title:** Keep the incident with the current owner
-
-**Route decision**
-
-Candidate teams: No handoff
 
 **Applies when**
 
@@ -47,11 +35,11 @@ Candidate teams: No handoff
 
 ## Gaps
 
-### `confirm-integration-routing`
+### `confirm-integration-ownership-boundary`
 
-**Gap id:** `confirm-integration-routing`
+**Gap id:** `confirm-integration-ownership-boundary`
 
-**Type:** `responsibility-routing`
+**Type:** `ownership-boundary`
 
 **Severity:** `medium`
 
@@ -59,5 +47,4 @@ Candidate teams: No handoff
 
 **Description**
 
-Confirm actual routing target for notification-provider synchronous failures.
-
+Confirm ownership boundary evidence for notification-provider synchronous failures.

@@ -279,12 +279,10 @@ public class OperationalContextAdapter implements OperationalContextPort {
         return switch (path) {
             case "id" -> List.of(rule.id());
             case "title" -> List.of(rule.title());
-            case "routeTo" -> List.of(rule.routeTo());
             case "useWhen" -> rule.useWhen();
             case "doNotUseWhen" -> rule.doNotUseWhen();
             case "requiredEvidence" -> rule.requiredEvidence();
             case "expectedFirstAction" -> rule.expectedFirstAction();
-            case "partnerTeams" -> rule.partnerTeams();
             case "notes" -> rule.notes();
             default -> List.of();
         };

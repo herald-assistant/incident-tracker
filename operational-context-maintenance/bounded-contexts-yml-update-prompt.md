@@ -9,6 +9,17 @@ meanings that look similar in code, logs, or user reports.
 
 Keep entries semantic. Do not use this file as a map of low-level code details.
 
+## Ownership rule
+
+`bounded-contexts.yml` may define ownership. Bounded-context ownership has
+priority over system ownership whenever the problem can be mapped to a bounded
+context.
+
+Use system ownership only when the bounded context is unknown, missing, or the
+problem is system-wide. Keep ownership in the YAML shape below; if the boundary
+or owner is unclear, add an open question instead of inventing extra routing
+fields.
+
 ## YAML shape
 
 ```yaml
@@ -25,7 +36,16 @@ boundedContexts:
     useFor:
       - Explain user-facing request concepts to analysts and testers.
       - Disambiguate request intake from case lifecycle handling.
-      - Guide where to continue when a requirement crosses context boundaries.
+      - Resolve domain ownership before falling back to system ownership.
+    ownership:
+      ownerTeamIds:
+        - customer-experience-team
+      ownerLabel: ""
+      ownershipStatus: explicit
+      confidence: high
+      source: bounded-contexts.yml
+      notes:
+        - Product owner confirmed for local language and business behavior.
     references:
       systems:
         - customer-portal
@@ -40,17 +60,7 @@ boundedContexts:
       teams:
         - customer-experience-team
       handoffRules:
-        - route-customer-request-issues
-    responsibilities:
-      - teamId: customer-experience-team
-        targetType: bounded-context
-        targetId: customer-requests
-        role: domain-owner
-        scope: local language and user-facing request behavior
-        status: current
-        confidence: high
-        evidence: product ownership notes
-        source: bounded-contexts.yml
+        - customer-request-boundary
     matchSignals:
       exact:
         terms:
@@ -61,20 +71,6 @@ boundedContexts:
       weak:
         phrases:
           - portal request status
-    handoffHints:
-      defaultRouteLabel: Customer request domain owner
-      firstResponderTeamIds:
-        - customer-experience-team
-      partnerTeamIds:
-        - case-management-team
-      requiredEvidence:
-        - affected concept or business status
-      expectedFirstActions:
-        - Confirm whether the question belongs to request intake or case handling.
-      whenToRouteHere:
-        - The question uses request intake or user-facing status language.
-      whenNotToRouteHere:
-        - The question is only about internal case handling after handoff.
     relations:
       - type: hands-off-to
         targetType: bounded-context
@@ -86,14 +82,17 @@ boundedContexts:
 
 ## Update rules
 
-- Capture local language, boundaries, ownership and relations.
+- Capture local language, semantic boundaries, ownership and relations.
+- Keep ownership at bounded-context level only when it describes durable domain
+  accountability.
 - Use `references.terms` for glossary entries that define the local language.
 - Add relations only when they help navigation across contexts.
 - Keep aliases and match signals stable and business-readable.
-- Put unclear boundaries into open questions.
+- Put unclear boundaries or unclear ownership into open questions.
 
 ## Quality check
 
 - The entry helps explain the system to an analyst or tester.
-- It clarifies what belongs here and what should be handed to another context.
+- It clarifies what belongs here and what should be resolved through another
+  context or system owner.
 - It does not duplicate code details that tools can discover.

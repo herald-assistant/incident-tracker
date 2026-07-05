@@ -2,6 +2,9 @@ package pl.mkn.tdw.api.operationalcontext;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -9,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.brokenCatalog;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.emptyCatalog;
+import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.map;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.port;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.typicalCatalog;
 
@@ -146,6 +150,32 @@ class OperationalContextViewServiceTest {
         assertTrue(findings.stream().anyMatch(finding ->
                 finding.category().equals("UNKNOWN_RELATION_TARGET")
                         && finding.detail().contains("missing-system")));
+    }
+
+    @Test
+    void shouldExposeOwnershipContractValidation() {
+        var service = new OperationalContextViewService(port(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(map("id", "crm-customer-service")),
+                List.of(),
+                List.of(map(
+                        "id", "crm-customer-service-repo",
+                        "ownership", map("ownerLabel", "legacy repository owner")
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        )));
+
+        var findings = service.validation();
+
+        assertTrue(findings.stream().anyMatch(finding ->
+                finding.category().equals("OWNERSHIP_OUTSIDE_SYSTEM_OR_BOUNDED_CONTEXT")
+                        && finding.entityType().equals("repository")));
     }
 
     @Test

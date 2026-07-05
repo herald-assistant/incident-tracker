@@ -65,12 +65,10 @@ final class OperationalContextMarkdownParser {
             rules.add(new OperationalContextHandoffRule(
                     entry.id(),
                     firstValue(entry, "title", entry.id()),
-                    routeTo(entry),
                     valuesFor(entry, "applies when", "use when", "trigger condition"),
                     valuesFor(entry, "does not apply when"),
                     valuesFor(entry, "required evidence"),
                     valuesFor(entry, "expected first actions", "expected first action", "recommended first actions"),
-                    partnerTeams(entry),
                     operationalContextLinks(entry),
                     valuesFor(entry, "notes", "llm tool hints", "limitations")
             ));
@@ -85,92 +83,10 @@ final class OperationalContextMarkdownParser {
                 && (entry.scalarFields().containsKey("rule id") || entry.scalarFields().containsKey("title"));
     }
 
-    private String routeTo(MarkdownEntry entry) {
-        var candidateTeams = firstDefined(first(valuesFor(entry, "candidate teams")), routeDecisionValue(entry, "candidate teams"));
-        if (StringUtils.hasText(candidateTeams)) {
-            return candidateTeams;
-        }
-
-        var externalParties = firstDefined(first(valuesFor(entry, "external parties")), routeDecisionValue(entry, "external parties"));
-        if (StringUtils.hasText(externalParties)) {
-            return externalParties;
-        }
-
-        var scalarRouteTo = entry.scalarFields().get("route to");
-        if (StringUtils.hasText(scalarRouteTo)) {
-            return scalarRouteTo;
-        }
-
-        return routingRoleTarget(entry);
-    }
-
-    private List<String> partnerTeams(MarkdownEntry entry) {
-        var partners = new ArrayList<String>();
-        partners.addAll(valuesFor(entry, "partner teams"));
-
-        var routeDecisionPartners = firstDefined(first(valuesFor(entry, "partner teams")), routeDecisionValue(entry, "partner teams"));
-        if (StringUtils.hasText(routeDecisionPartners)) {
-            partners.addAll(splitValues(routeDecisionPartners));
-        }
-
-        return distinct(partners);
-    }
-
-    private String routeDecisionValue(MarkdownEntry entry, String label) {
-        var normalizedLabel = normalizeFieldLabel(label);
-        for (var value : valuesFor(entry, "route decision")) {
-            var separator = value.indexOf(':');
-            if (separator < 1) {
-                continue;
-            }
-            var currentLabel = normalizeFieldLabel(value.substring(0, separator));
-            if (!normalizedLabel.equals(currentLabel)) {
-                continue;
-            }
-            var currentValue = value.substring(separator + 1).trim();
-            if (!isNone(currentValue)) {
-                return currentValue;
-            }
-        }
-        return "";
-    }
-
-    private String routingRoleTarget(MarkdownEntry entry) {
-        for (var line : valuesFor(entry, "routing roles")) {
-            if (!line.contains("|")) {
-                continue;
-            }
-            var cells = tableCells(line);
-            if (cells.size() < 2 || "role".equalsIgnoreCase(cells.get(0))) {
-                continue;
-            }
-            var role = cells.get(0);
-            var target = cells.get(1);
-            if ((role.equals("first-responder") || role.equals("current-handler")) && !isNone(target)) {
-                return target;
-            }
-        }
-        return "";
-    }
-
     private boolean isNone(String value) {
         return !StringUtils.hasText(value)
                 || "none".equalsIgnoreCase(value.trim())
                 || "null".equalsIgnoreCase(value.trim());
-    }
-
-    private List<String> tableCells(String line) {
-        var trimmed = line.trim();
-        if (trimmed.startsWith("|")) {
-            trimmed = trimmed.substring(1);
-        }
-        if (trimmed.endsWith("|")) {
-            trimmed = trimmed.substring(0, trimmed.length() - 1);
-        }
-        return List.of(trimmed.split("\\|", -1)).stream()
-                .map(this::stripMarkdown)
-                .map(String::trim)
-                .toList();
     }
 
     private List<MarkdownEntry> parseEntries(String markdown) {
@@ -303,22 +219,6 @@ final class OperationalContextMarkdownParser {
     private String firstValue(MarkdownEntry entry, String field, String fallback) {
         var value = entry.scalarFields().get(field);
         return StringUtils.hasText(value) ? value : fallback;
-    }
-
-    private String first(List<String> values) {
-        return values.stream()
-                .filter(StringUtils::hasText)
-                .findFirst()
-                .orElse("");
-    }
-
-    private String firstDefined(String... values) {
-        for (var value : values) {
-            if (StringUtils.hasText(value)) {
-                return value;
-            }
-        }
-        return "";
     }
 
     private List<String> valuesFor(MarkdownEntry entry, String... fields) {

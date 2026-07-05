@@ -5,33 +5,28 @@ systems:
     name: CRM Customer Service
     kind: internal-application
     purpose: Executes CRM customer profile and support workflows.
-    responsibilities:
-      - teamId: crm-team
-        role: first-responder
+    ownership:
+      ownerTeamIds: [crm-team]
+      ownershipStatus: explicit
+      confidence: high
+      source: test
     matchSignals:
       strong:
         projectNames: [crm-customer-service-repo, crm-customer-shared]
         spans: [CustomerNotificationGateway.call]
         markers: [CRM_CUSTOMER]
-    handoffHints:
-      defaultRouteLabel: crm-team
-      firstResponderTeamIds: [crm-team]
-      partnerTeamIds: [crm-integration-team]
-      requiredEvidence: [correlationId, environment, businessImpact, exception]
-
   - id: notification-provider
     name: Notification Provider
     kind: external-system
     purpose: Provides data used by the customer support workflow.
+    ownership:
+      ownerTeamIds: [crm-integration-team]
+      ownershipStatus: explicit
+      confidence: medium
+      source: test
     matchSignals:
       exact:
         hosts: [api.notifications.local]
       strong:
         markers: [CRM_NOTIFICATION]
-    handoffHints:
-      defaultRouteLabel: crm-integration-team
-      firstResponderTeamIds: [crm-integration-team]
-      partnerTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, host, exception]
-
 gaps: []

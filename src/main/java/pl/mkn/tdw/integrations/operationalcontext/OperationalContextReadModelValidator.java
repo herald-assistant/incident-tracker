@@ -1,8 +1,11 @@
 package pl.mkn.tdw.integrations.operationalcontext;
 
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegrationParticipant;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextOwnership;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextProcess;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
@@ -28,6 +31,28 @@ public class OperationalContextReadModelValidator {
     private static final String SYSTEM = "system";
     private static final String BOUNDED_CONTEXT = "bounded-context";
     private static final String REPOSITORY = "repository";
+    private static final String PROCESS = "process";
+    private static final String TEAM = "team";
+
+    private static final Map<String, String> SOURCE_FILES = Map.of(
+            SYSTEM, "systems.yml",
+            REPOSITORY, "repo-map.yml",
+            CODE_SEARCH_SCOPE, "code-search-scopes.yml",
+            PROCESS, "processes.yml",
+            INTEGRATION, "integrations.yml",
+            BOUNDED_CONTEXT, "bounded-contexts.yml",
+            TEAM, "teams.yml"
+    );
+
+    private static final Map<String, String> SOURCE_COLLECTIONS = Map.of(
+            SYSTEM, "systems",
+            REPOSITORY, "repositories",
+            CODE_SEARCH_SCOPE, "codeSearchScopes",
+            PROCESS, "processes",
+            INTEGRATION, "integrations",
+            BOUNDED_CONTEXT, "boundedContexts",
+            TEAM, "teams"
+    );
 
     private static final Set<String> PARTICIPANT_SYSTEM_RELATIONS = Set.of(
             "source-system",
@@ -62,11 +87,153 @@ public class OperationalContextReadModelValidator {
         validateSystemDependenciesDerivedFromIntegrations(safeCatalog, findings);
         validateBoundedContextReferencesDerivedFromReadModel(safeCatalog, findings);
         validateProcessParticipantReferenceDuplicates(safeCatalog, findings);
-        validateTeamReferenceDuplicates(safeCatalog, findings);
         validateBidirectionalReferences(relationIndex.relations(), findings);
         validateCodeSearchScopes(safeCatalog, findings);
+        validateOwnershipModel(safeCatalog, findings);
 
         return sortedDistinct(findings);
+    }
+
+    public List<ValidationFinding> validateCatalogContract(OperationalContextCatalog catalog) {
+        var safeCatalog = catalog != null ? catalog : OperationalContextCatalog.empty();
+        var relationIndex = relationIndexBuilder.build(safeCatalog);
+        var findings = new ArrayList<ValidationFinding>();
+
+        findings.addAll(relationIndex.validationFindings());
+        validateOwnershipModel(safeCatalog, findings);
+
+        return sortedDistinct(findings);
+    }
+
+    private void validateOwnershipModel(
+            OperationalContextCatalog catalog,
+            List<ValidationFinding> findings
+    ) {
+        for (var system : catalog.systems()) {
+            validateEntryPayload(system, SYSTEM, true, findings);
+            warnInferredOwnership(system.ownership(), SYSTEM, system.id(), findings);
+        }
+        for (var boundedContext : catalog.boundedContexts()) {
+            validateEntryPayload(boundedContext, BOUNDED_CONTEXT, true, findings);
+            warnInferredOwnership(boundedContext.ownership(), BOUNDED_CONTEXT, boundedContext.id(), findings);
+        }
+        for (var repository : catalog.repositories()) {
+            validateEntryPayload(repository, REPOSITORY, false, findings);
+        }
+        for (var process : catalog.processes()) {
+            validateEntryPayload(process, PROCESS, false, findings);
+        }
+        for (var integration : catalog.integrations()) {
+            validateEntryPayload(integration, INTEGRATION, false, findings);
+        }
+        for (var team : catalog.teams()) {
+            validateEntryPayload(team, TEAM, false, findings);
+        }
+        for (var scope : catalog.codeSearchScopes()) {
+            validatePayload(
+                    CODE_SEARCH_SCOPE,
+                    scope.id(),
+                    rootPath(CODE_SEARCH_SCOPE, scope.id()),
+                    scope.payload(),
+                    false,
+                    findings
+            );
+        }
+    }
+
+    private void validateEntryPayload(
+            OperationalContextEntry entry,
+            String entityType,
+            boolean ownershipAllowed,
+            List<ValidationFinding> findings
+    ) {
+        validatePayload(
+                entityType,
+                entry.id(),
+                rootPath(entityType, entry.id()),
+                entry.payload(),
+                ownershipAllowed,
+                findings
+        );
+    }
+
+    private void validatePayload(
+            String entityType,
+            String entityId,
+            String fieldPath,
+            Object value,
+            boolean ownershipAllowed,
+            List<ValidationFinding> findings
+    ) {
+        if (value instanceof Map<?, ?> map) {
+            for (var entry : map.entrySet()) {
+                var key = String.valueOf(entry.getKey());
+                var childPath = fieldPath + "." + key;
+                if (!ownershipAllowed && "ownership".equals(key)) {
+                    findings.add(new ValidationFinding(
+                            "error",
+                            "OWNERSHIP_OUTSIDE_SYSTEM_OR_BOUNDED_CONTEXT",
+                            "Ownership for " + entityType + " " + entityId
+                                    + " is not allowed; ownership can be declared only on system or bounded-context.",
+                            List.of(sourceRef(entityType, entityId, childPath, "ownership"))
+                    ));
+                }
+                validatePayload(entityType, entityId, childPath, entry.getValue(), ownershipAllowed, findings);
+            }
+        } else if (value instanceof List<?> list) {
+            for (var index = 0; index < list.size(); index++) {
+                validatePayload(
+                        entityType,
+                        entityId,
+                        fieldPath + "[" + index + "]",
+                        list.get(index),
+                        ownershipAllowed,
+                        findings
+                );
+            }
+        }
+    }
+
+    private void warnInferredOwnership(
+            OperationalContextOwnership ownership,
+            String entityType,
+            String entityId,
+            List<ValidationFinding> findings
+    ) {
+        if (ownership == null || !ownership.hasOwner()) {
+            return;
+        }
+        if ("explicit".equalsIgnoreCase(text(ownership.ownershipStatus()))) {
+            return;
+        }
+
+        findings.add(new ValidationFinding(
+                "warning",
+                "INFERRED_OWNERSHIP_IN_CATALOG",
+                "Owner for " + entityType + " " + entityId
+                        + " is not explicit; inferred owners should stay in resolver output, not in catalog data.",
+                List.of(sourceRef(entityType, entityId, rootPath(entityType, entityId) + ".ownership", "ownership"))
+        ));
+    }
+
+    private String rootPath(String entityType, String entityId) {
+        return "$." + SOURCE_COLLECTIONS.getOrDefault(entityType, entityType) + "[id=" + entityId + "]";
+    }
+
+    private SourceRef sourceRef(
+            String entityType,
+            String entityId,
+            String fieldPath,
+            String relationRole
+    ) {
+        return new SourceRef(
+                "src/main/resources/operational-context/"
+                        + SOURCE_FILES.getOrDefault(entityType, "operational-context"),
+                entityType,
+                entityId,
+                fieldPath,
+                relationRole
+        );
     }
 
     private void validateRelationProvenance(
@@ -415,151 +582,6 @@ public class OperationalContextReadModelValidator {
         return Set.copyOf(result);
     }
 
-    private void validateTeamReferenceDuplicates(
-            OperationalContextCatalog catalog,
-            List<ValidationFinding> findings
-    ) {
-        for (var team : catalog.teams()) {
-            var responsibilityTargets = teamResponsibilityTargets(team);
-            warnTeamReferenceDuplicate(
-                    findings,
-                    team.id(),
-                    team.references().systems(),
-                    responsibilityTargets.systems(),
-                    "references.systems",
-                    "references-system"
-            );
-            warnTeamReferenceDuplicate(
-                    findings,
-                    team.id(),
-                    team.references().repositories(),
-                    responsibilityTargets.repositories(),
-                    "references.repositories",
-                    "references-repository"
-            );
-            warnTeamReferenceDuplicate(
-                    findings,
-                    team.id(),
-                    team.references().processes(),
-                    responsibilityTargets.processes(),
-                    "references.processes",
-                    "references-process"
-            );
-            warnTeamReferenceDuplicate(
-                    findings,
-                    team.id(),
-                    team.references().boundedContexts(),
-                    responsibilityTargets.boundedContexts(),
-                    "references.boundedContexts",
-                    "references-bounded-context"
-            );
-            warnTeamReferenceDuplicate(
-                    findings,
-                    team.id(),
-                    team.references().integrations(),
-                    responsibilityTargets.integrations(),
-                    "references.integrations",
-                    "references-integration"
-            );
-            warnTeamReferenceDuplicate(
-                    findings,
-                    team.id(),
-                    team.references().terms(),
-                    responsibilityTargets.terms(),
-                    "references.terms",
-                    "references-term"
-            );
-            warnTeamReferenceDuplicate(
-                    findings,
-                    team.id(),
-                    team.references().handoffRules(),
-                    responsibilityTargets.handoffRules(),
-                    "references.handoffRules",
-                    "references-handoff-rule"
-            );
-        }
-    }
-
-    private void warnTeamReferenceDuplicate(
-            List<ValidationFinding> findings,
-            String teamId,
-            List<String> references,
-            Set<String> responsibilityTargets,
-            String fieldPath,
-            String relationRole
-    ) {
-        for (var targetId : references) {
-            if (!responsibilityTargets.contains(targetId)) {
-                continue;
-            }
-            findings.add(new ValidationFinding(
-                    "error",
-                    "TEAM_REFERENCE_DERIVED_FROM_RESPONSIBILITY",
-                    "Team " + teamId + " keeps " + targetId + " in " + fieldPath
-                            + ", but the same ownership target is already declared in responsibilities.",
-                    List.of(new SourceRef(
-                            "src/main/resources/operational-context/teams.yml",
-                            "team",
-                            teamId,
-                            "$.teams[id=" + teamId + "]." + fieldPath,
-                            relationRole
-                    ))
-            ));
-        }
-    }
-
-    private TeamResponsibilityTargets teamResponsibilityTargets(OperationalContextDtos.OperationalContextTeam team) {
-        var systems = new LinkedHashSet<String>();
-        var repositories = new LinkedHashSet<String>();
-        var processes = new LinkedHashSet<String>();
-        var boundedContexts = new LinkedHashSet<String>();
-        var integrations = new LinkedHashSet<String>();
-        var terms = new LinkedHashSet<String>();
-        var handoffRules = new LinkedHashSet<String>();
-
-        for (var responsibility : team.responsibilities()) {
-            var targetId = text(responsibility.targetId());
-            if (!StringUtils.hasText(targetId)) {
-                continue;
-            }
-            switch (normalizeTargetType(responsibility.targetType())) {
-                case SYSTEM -> systems.add(targetId);
-                case REPOSITORY -> repositories.add(targetId);
-                case "process" -> processes.add(targetId);
-                case BOUNDED_CONTEXT -> boundedContexts.add(targetId);
-                case INTEGRATION -> integrations.add(targetId);
-                case "term" -> terms.add(targetId);
-                case "handoff-rule" -> handoffRules.add(targetId);
-                default -> {
-                }
-            }
-        }
-
-        return new TeamResponsibilityTargets(
-                Set.copyOf(systems),
-                Set.copyOf(repositories),
-                Set.copyOf(processes),
-                Set.copyOf(boundedContexts),
-                Set.copyOf(integrations),
-                Set.copyOf(terms),
-                Set.copyOf(handoffRules)
-        );
-    }
-
-    private String normalizeTargetType(String targetType) {
-        var normalized = text(targetType).replace("_", "-").replace(" ", "-");
-        return switch (normalized) {
-            case "systems" -> SYSTEM;
-            case "repositories", "repo" -> REPOSITORY;
-            case "processes" -> "process";
-            case "boundedContext", "boundedContexts", "bounded-contexts", "context", "contexts" -> BOUNDED_CONTEXT;
-            case "integrations" -> INTEGRATION;
-            case "terms", "glossary-term", "glossary-terms" -> "term";
-            case "handoffRule", "handoffRules", "handoff-rules" -> "handoff-rule";
-            default -> normalized;
-        };
-    }
-
     private void validateBidirectionalReferences(
             List<ReadModelRelation> relations,
             List<ValidationFinding> findings
@@ -743,14 +765,4 @@ public class OperationalContextReadModelValidator {
     private record DerivedBoundedContextReferences(Set<String> systems, Set<String> integrations) {
     }
 
-    private record TeamResponsibilityTargets(
-            Set<String> systems,
-            Set<String> repositories,
-            Set<String> processes,
-            Set<String> boundedContexts,
-            Set<String> integrations,
-            Set<String> terms,
-            Set<String> handoffRules
-    ) {
-    }
 }

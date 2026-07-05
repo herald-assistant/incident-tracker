@@ -127,7 +127,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'owner',
       'Owner',
-      'Jawnie wskazany zespol lub strona odpowiedzialna za system. Dzieki temu AI nie zgaduje wlasciciela po nazwie repozytorium, tylko moze uzasadnic rekomendowany kontakt lub handoff faktem z katalogu.',
+      'Owner rozstrzygniety z ownershipu systemu. Jezeli katalog nie ma jawnego zespolu, backend pokazuje inferowana strone odpowiedzialna zamiast sklejania ownera z relacji technicznych.',
       'owner'
     ),
     column(
@@ -144,8 +144,8 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     ),
     column(
       'handoffReadiness',
-      'Handoff',
-      'Ocena, czy system ma wystarczajace wskazowki przekazania sprawy dalej: ownera, partnerow, role odpowiedzialnosci i reguly routingu. Pomaga AI proponowac nastepny krok operacyjny zamiast ogolnego "sprawdzic z zespolem".',
+      'Resolved handoff',
+      'Wynik resolvera ownershipu dla systemu: wskazuje wlasciciela, sciezke rozstrzygniecia i ograniczenia widocznosci, bez utrzymywania osobnych wskazowek handoffu na poziomie technicznym.',
       'aggregate'
     ),
     column(
@@ -164,7 +164,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'owner',
       'Owner',
-      'Maintainer lub zespol odpowiedzialny za repozytorium. To nie zawsze jest wlasciciel systemu, dlatego kolumna pomaga odroznic odpowiedzialnosc za kod od odpowiedzialnosci za proces albo handoff.',
+      'Owner repozytorium rozstrzygniety przez powiazany bounded context lub system. Repozytorium nie definiuje osobnego wlasciciela utrzymaniowego w katalogu.',
       'owner'
     ),
     column(
@@ -205,8 +205,8 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     ),
     column(
       'handoffReadiness',
-      'Handoff',
-      'Gotowosc repozytorium do uzycia w rekomendacji handoffu: czy ma ownera, role i powiazania z systemami. Chroni przed uproszczeniem "repo rowna sie wlasciciel incydentu".',
+      'Resolved handoff',
+      'Wynik ownership resolvera dla repozytorium na podstawie jego powiazan z bounded contextem, systemem i zakresem kodu.',
       'aggregate'
     ),
     column(
@@ -266,7 +266,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'owner',
       'Owner',
-      'Zespol lub strona odpowiedzialna za proces jako calosc. Ta informacja jest oddzielona od ownera pojedynczego systemu, bo proces moze przebiegac przez wiele komponentow.',
+      'Owner procesu rozstrzygniety z bounded contextu albo systemu powiazanego z procesem. Proces nie utrzymuje osobnego ownera na nizszym poziomie szczegolowosci.',
       'owner'
     ),
     column(
@@ -346,13 +346,13 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'owner',
       'Owner',
-      'Strona odpowiedzialna za lokalny kontrakt integracyjny. Pomaga AI rozdzielic ownership integracji od ownera systemu zrodlowego lub docelowego.',
+      'Glowny owner integracji rozstrzygniety przez bounded contexty lub systemy uczestniczace w granicy komunikacji.',
       'owner'
     ),
     column(
-      'partnerTeams',
-      'Partner teams',
-      'Zespoly partnerskie albo zewnetrzne strony, ktore moga byc potrzebne przy analizie. To podstawa do rekomendacji handoffu, gdy evidence wskazuje na granice systemow.',
+      'partnerOwners',
+      'Partner owners',
+      'Partnerzy wynikajacy z resolvera ownershipu dla problemu na granicy systemow albo bounded contextow. Gdy katalog nie zna zespolu, backend pokazuje inferowanego wlasciciela strony.',
       'aggregate'
     ),
     column(
@@ -375,8 +375,8 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     ),
     column(
       'handoffReadiness',
-      'Handoff',
-      'Ocena, czy integracja ma jasne zasady przekazania sprawy: partnerow, wymagane evidence i role. Dzieki temu AI moze podac konkretny, sprawdzalny kolejny krok przy problemie na granicy systemow.',
+      'Resolved handoff',
+      'Wynik resolvera dla granicy integracyjnej: owner lokalny, partnerzy i widoczne ograniczenia katalogu.',
       'aggregate'
     ),
     column(
@@ -395,7 +395,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     column(
       'owner',
       'Owner',
-      'Zespol stewardujacy dany obszar domenowy lub jezyk. Pomaga odroznic wlasciciela semantyki od maintainerow pojedynczego repozytorium.',
+      'Owner bounded contextu. Ten poziom ma pierwszenstwo przy rozstrzyganiu wlasciciela problemu domenowego lub endpointu powiazanego z kontekstem.',
       'owner'
     ),
     column(
@@ -508,11 +508,6 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'Nazwa reguly handoffu, czyli instrukcji kiedy i jak przekazac temat dalej. Regula pomaga koordynowac prace, ale nie zastepuje evidence technicznego.'
     ),
     column(
-      'routeTo',
-      'Route to',
-      'Docelowy zespol, rola lub strona, do ktorej nalezy skierowac sprawe przy spelnieniu warunkow. AI uzywa tego do konkretnej rekomendacji kolejnego kroku.'
-    ),
-    column(
       'useWhen',
       'Use when',
       'Warunki, sygnaly lub sytuacje, w ktorych regula ma sens. Dzieki temu AI nie przekazuje sprawy automatycznie po nazwie systemu, tylko sprawdza czy pasuje kontekst incydentu.',
@@ -528,12 +523,6 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'expectedFirstAction',
       'Expected first action',
       'Pierwsza praktyczna czynnosc oczekiwana po przekazaniu sprawy. Pomaga AI formulowac rekomendacje jako dzialanie do wykonania, a nie ogolna sugestie.'
-    ),
-    column(
-      'partnerTeams',
-      'Partner teams',
-      'Zespoly lub strony, ktore moga byc potrzebne razem z glownym odbiorca. Przy integracjach i procesach end-to-end pomaga to wskazac, kogo wlaczyc do wspolnej weryfikacji.',
-      'aggregate'
     )
   ]
 };

@@ -10,6 +10,12 @@ AI consider together and in what order?
 Keep scopes narrow and explain why each repository is included. The actual code
 search is performed by GitLab tools.
 
+Code-search scopes do not define ownership. Owner and handoff are resolved from
+the scope target's bounded context or system.
+
+Keep scopes in the YAML shape below. If the owner is unclear, fix the target's
+system or bounded context instead of adding ownership-like fields here.
+
 ## YAML shape
 
 ```yaml
@@ -36,7 +42,7 @@ codeSearchScopes:
       - repoId: case-management-service
         role: supporting
         priority: 2
-        reason: Owns case state changes used by the portal.
+        reason: Contains case state changes used by the portal.
         readFor:
           - business state handling
           - validation and handoff rules
@@ -53,6 +59,7 @@ codeSearchScopes:
 - `reason` must be understandable to a business/system analyst.
 - `readFor` should describe questions to answer, not low-level code clues.
 - Keep `limitations` explicit when the scope is intentionally incomplete.
+- Keep ownership and routing out of this file.
 
 ## Quality check
 

@@ -20,6 +20,8 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalC
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextIntegrationRowDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProcessRowDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextRepositoryRowDto;
+import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextResolvedOwnerDto;
+import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextResolvedOwnershipDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSearchResultDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
@@ -32,7 +34,6 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.Operati
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffHints;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegration;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextIntegrationParticipant;
@@ -52,6 +53,11 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationInde
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.SourceRef;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndexBuilder;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadModelValidator;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolver;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -91,10 +97,14 @@ public class OperationalContextViewService {
     private final OperationalContextPort operationalContextPort;
     private final OperationalContextRelationIndexBuilder relationIndexBuilder =
             new OperationalContextRelationIndexBuilder();
+    private final OperationalContextReadModelValidator readModelValidator =
+            new OperationalContextReadModelValidator(relationIndexBuilder);
     private final OperationalContextCodeSearchReadModelBuilder codeSearchReadModelBuilder =
             new OperationalContextCodeSearchReadModelBuilder(relationIndexBuilder);
     private final OperationalContextProfiledReadModelMapper profiledReadModelMapper =
             new OperationalContextProfiledReadModelMapper();
+    private final OperationalContextOwnershipResolver ownershipResolver =
+            new OperationalContextOwnershipResolver();
 
     public OperationalContextSummaryDto summary() {
         var view = view();
@@ -187,11 +197,9 @@ public class OperationalContextViewService {
                 .map(rule -> new OperationalContextHandoffRuleRowDto(
                         rule.id(),
                         rule.title(),
-                        rule.routeTo(),
                         valueAggregate("Use when", HANDOFF_RULE, rule.id(), rule.useWhen(), "Rule conditions.", "condition"),
                         valueAggregate("Required evidence", HANDOFF_RULE, rule.id(), rule.requiredEvidence(), "Evidence needed for handoff.", "evidence"),
-                        first(rule.expectedFirstAction()),
-                        valueAggregate("Partner teams", HANDOFF_RULE, rule.id(), rule.partnerTeams(), "Partner teams listed by the rule.", TEAM)
+                        first(rule.expectedFirstAction())
                 ))
                 .toList();
     }
@@ -294,33 +302,37 @@ public class OperationalContextViewService {
     }
 
     private OperationalContextSystemRowDto systemRow(CatalogView view, OperationalContextSystem system) {
+        var resolvedOwnership = resolvedOwnership(view, ownershipRequest(system));
         return new OperationalContextSystemRowDto(
                 system.id(),
                 system.label(),
                 system.kind(),
-                ownerValue(system),
+                ownerValue(resolvedOwnership, SYSTEM, system.id()),
+                resolvedOwnership,
                 summaryText(system),
                 referenceAggregate(view, SYSTEM, system.id(), system.references()),
                 signalAggregate(SYSTEM, system.id(), system.matchSignals()),
-                handoffAggregate(SYSTEM, system.id(), system.handoffHints()),
+                resolvedOwnershipAggregate(SYSTEM, system.id(), resolvedOwnership),
                 validationAggregate(SYSTEM, system.id(), view.validationFindings()),
                 openQuestionAggregate(SYSTEM, system.id(), view.openQuestions())
         );
     }
 
     private OperationalContextRepositoryRowDto repositoryRow(CatalogView view, OperationalContextRepository repository) {
+        var resolvedOwnership = resolvedOwnership(view, ownershipRequest(repository));
         return new OperationalContextRepositoryRowDto(
                 repository.id(),
                 firstNonBlank(repository.git().projectPath(), repository.git().project()),
                 repository.git().group(),
-                ownerValue(repository),
+                ownerValue(resolvedOwnership, REPOSITORY, repository.id()),
+                resolvedOwnership,
                 idAggregate("Systems", REPOSITORY, repository.id(), SYSTEM, repository.references().systems(), view.systemsById()),
                 idAggregate("Contexts", REPOSITORY, repository.id(), BOUNDED_CONTEXT, repository.references().boundedContexts(), view.contextsById()),
                 idAggregate("Processes", REPOSITORY, repository.id(), PROCESS, repository.references().processes(), view.processesById()),
                 idAggregate("Integrations", REPOSITORY, repository.id(), INTEGRATION, repository.references().integrations(), view.integrationsById()),
                 repositoryCodeSearchScopesAggregate(view, repository),
                 repositoryCodeSearchRolesAggregate(view, repository),
-                handoffAggregate(REPOSITORY, repository.id(), repository.handoffHints()),
+                resolvedOwnershipAggregate(REPOSITORY, repository.id(), resolvedOwnership),
                 validationAggregate(REPOSITORY, repository.id(), view.validationFindings())
         );
     }
@@ -339,10 +351,12 @@ public class OperationalContextViewService {
     }
 
     private OperationalContextProcessRowDto processRow(CatalogView view, OperationalContextProcess process) {
+        var resolvedOwnership = resolvedOwnership(view, ownershipRequest(process));
         return new OperationalContextProcessRowDto(
                 process.id(),
                 process.label(),
-                ownerValue(process),
+                ownerValue(resolvedOwnership, PROCESS, process.id()),
+                resolvedOwnership,
                 summaryText(process),
                 idAggregate("Systems", PROCESS, process.id(), SYSTEM, process.references().systems(), view.systemsById()),
                 idAggregate("External systems", PROCESS, process.id(), SYSTEM, process.participants().externalSystems(), view.systemsById()),
@@ -350,35 +364,38 @@ public class OperationalContextViewService {
                 idAggregate("Contexts", PROCESS, process.id(), BOUNDED_CONTEXT, process.references().boundedContexts(), view.contextsById()),
                 valueAggregate("Steps", PROCESS, process.id(), process.steps().stream().map(step -> firstNonBlank(step.name(), step.id())).toList(), "Process steps listed in catalog.", "step"),
                 valueAggregate("Completion signals", PROCESS, process.id(), process.outcomes().successArtifacts(), "Success artifacts listed in catalog.", "outcome"),
-                handoffAggregate(PROCESS, process.id(), process.handoffHints()),
                 validationAggregate(PROCESS, process.id(), view.validationFindings())
         );
     }
 
     private OperationalContextIntegrationRowDto integrationRow(CatalogView view, OperationalContextIntegration integration) {
+        var resolvedOwnership = resolvedOwnership(view, ownershipRequest(integration));
         return new OperationalContextIntegrationRowDto(
                 integration.id(),
                 integration.label(),
                 integration.participants().source().system(),
                 String.join(", ", integration.participants().targetSystems()),
-                ownerValue(integration),
-                valueAggregate("Partner teams", INTEGRATION, integration.id(), integration.handoffHints().partnerTeamIds(), "Partner teams listed in handoff hints.", TEAM),
+                ownerValue(resolvedOwnership, INTEGRATION, integration.id()),
+                resolvedOwnership,
+                resolvedPartnerOwnersAggregate(INTEGRATION, integration.id(), resolvedOwnership),
                 integration.category(),
                 integration.integrationStyle(),
                 integration.flowDirection(),
                 idAggregate("Processes", INTEGRATION, integration.id(), PROCESS, integration.references().processes(), view.processesById()),
                 idAggregate("Contexts", INTEGRATION, integration.id(), BOUNDED_CONTEXT, integration.references().boundedContexts(), view.contextsById()),
                 signalAggregate(INTEGRATION, integration.id(), integration.matchSignals()),
-                handoffAggregate(INTEGRATION, integration.id(), integration.handoffHints()),
+                resolvedOwnershipAggregate(INTEGRATION, integration.id(), resolvedOwnership),
                 validationAggregate(INTEGRATION, integration.id(), view.validationFindings())
         );
     }
 
     private OperationalContextBoundedContextRowDto boundedContextRow(CatalogView view, OperationalContextBoundedContext context) {
+        var resolvedOwnership = resolvedOwnership(view, ownershipRequest(context));
         return new OperationalContextBoundedContextRowDto(
                 context.id(),
                 context.label(),
-                ownerValue(context),
+                ownerValue(resolvedOwnership, BOUNDED_CONTEXT, context.id()),
+                resolvedOwnership,
                 summaryText(context),
                 idAggregate("Systems", BOUNDED_CONTEXT, context.id(), SYSTEM, context.references().systems(), view.systemsById()),
                 idAggregate("Terms", BOUNDED_CONTEXT, context.id(), GLOSSARY_TERM, context.references().terms(), glossaryMap(view)),
@@ -398,7 +415,7 @@ public class OperationalContextViewService {
                 idAggregate("Owns contexts", TEAM, team.id(), BOUNDED_CONTEXT, team.references().boundedContexts(), view.contextsById()),
                 idAggregate("Owns integrations", TEAM, team.id(), INTEGRATION, team.references().integrations(), view.integrationsById()),
                 signalAggregate(TEAM, team.id(), team.matchSignals()),
-                handoffAggregate(TEAM, team.id(), team.handoffHints()),
+                notOwnershipSourceAggregate(TEAM, team.id()),
                 validationAggregate(TEAM, team.id(), view.validationFindings())
         );
     }
@@ -412,7 +429,7 @@ public class OperationalContextViewService {
                 "useFor", entry.useFor()
         )));
         sections.add(section("References", referencesMap(entry.references())));
-        sections.add(section("Handoff", handoffMap(entry.handoffHints())));
+        sections.add(section("Resolved ownership", resolvedOwnershipMap(resolvedOwnership(view, ownershipRequest(type, entry)))));
         return new OperationalContextEntityDetailDto(
                 type,
                 entry.id(),
@@ -555,14 +572,12 @@ public class OperationalContextViewService {
                 HANDOFF_RULE,
                 rule.id(),
                 rule.title(),
-                rule.routeTo(),
+                firstNonBlank(first(rule.useWhen()), first(rule.expectedFirstAction()), first(rule.notes())),
                 List.of(section("Overview", map(
-                        "routeTo", rule.routeTo(),
                         "useWhen", rule.useWhen(),
                         "doNotUseWhen", rule.doNotUseWhen(),
                         "requiredEvidence", rule.requiredEvidence(),
                         "expectedFirstAction", rule.expectedFirstAction(),
-                        "partnerTeams", rule.partnerTeams(),
                         "notes", rule.notes()
                 ))),
                 relatedGroups(view, HANDOFF_RULE, rule.id(), rule.references()),
@@ -579,7 +594,7 @@ public class OperationalContextViewService {
         var loaded = operationalContextPort.loadContext(OperationalContextQuery.all());
         var catalog = loaded != null ? loaded : OperationalContextCatalog.empty();
         var relationIndex = relationIndexBuilder.build(catalog);
-        var validation = relationIndex.validationFindings().stream()
+        var validation = readModelValidator.validateCatalogContract(catalog).stream()
                 .map(this::validationFinding)
                 .toList();
         var openQuestions = catalog.openQuestions().stream()
@@ -709,17 +724,16 @@ public class OperationalContextViewService {
         for (var rule : view.catalog().handoffRules()) {
             if (containsAny(
                     normalizedQuery,
-                    textValues(rule.id(), rule.title(), rule.routeTo()),
+                    textValues(rule.id(), rule.title()),
                     rule.useWhen(),
                     rule.requiredEvidence(),
-                    rule.partnerTeams(),
                     rule.expectedFirstAction()
             )) {
                 results.add(searchResult(
                         HANDOFF_RULE,
                         rule.id(),
                         rule.title(),
-                        rule.routeTo(),
+                        firstNonBlank(first(rule.useWhen()), first(rule.expectedFirstAction()), first(rule.notes())),
                         new SearchMatch("medium", List.of("handoff"), "Matched handoff rule.")
                 ));
             }
@@ -807,25 +821,18 @@ public class OperationalContextViewService {
         );
     }
 
-    private ExplainableAggregateDto handoffAggregate(String entityType, String entityId, OperationalContextHandoffHints handoffHints) {
-        var values = handoffHints.routeSignals();
+    private ExplainableAggregateDto notOwnershipSourceAggregate(String entityType, String entityId) {
         return aggregate(
-                "Handoff readiness",
-                values.size(),
-                values.isEmpty() ? "warning" : "info",
-                values.isEmpty() ? "low" : "high",
-                "Handoff hints available for this entity.",
-                nonEmptyGroups(
-                        group("First responders", TEAM, handoffHints.firstResponderTeamIds(), "First responder team."),
-                        group("Escalation", TEAM, handoffHints.escalationTeamIds(), "Escalation team."),
-                        group("Partners", TEAM, handoffHints.partnerTeamIds(), "Partner team."),
-                        group("Required evidence", "evidence", handoffHints.requiredEvidence(), "Evidence for handoff."),
-                        group("Expected actions", "action", handoffHints.expectedFirstActions(), "Expected first action.")
-                ),
-                List.of(reason("handoffHints", "Catalog handoff guidance.", values.isEmpty() ? "low" : "high")),
+                "Resolved handoff",
+                0,
+                "unknown",
+                "low",
+                "Team entries are not an ownership source. Resolve ownership from bounded context or system.",
+                List.of(),
+                List.of(reason("resolvedOwnership", "Team entries are not used as ownership input.", "low")),
                 List.of(sourceRef(entityType, entityId)),
-                "handoff",
-                values
+                "resolved-ownership",
+                List.of()
         );
     }
 
@@ -992,23 +999,142 @@ public class OperationalContextViewService {
         );
     }
 
-    private ExplainableValueDto<String> ownerValue(OperationalContextEntry entry) {
-        var owner = firstNonBlank(
-                first(entry.references().teams()),
-                entry.responsibilities().stream()
-                        .map(responsibility -> firstNonBlank(responsibility.teamId(), responsibility.actorId()))
-                        .filter(StringUtils::hasText)
-                        .findFirst()
-                        .orElse(null),
-                entry.handoffHints().defaultRouteLabel()
+    private OperationalContextResolvedOwnershipDto resolvedOwnership(
+            CatalogView view,
+            OperationalContextOwnershipRequest request
+    ) {
+        return resolvedOwnership(ownershipResolver.resolve(view.catalog(), request));
+    }
+
+    private OperationalContextResolvedOwnershipDto resolvedOwnership(OperationalContextOwnershipResolution resolution) {
+        return new OperationalContextResolvedOwnershipDto(
+                resolution.situationType(),
+                owners(resolution.primaryOwners()),
+                owners(resolution.partnerOwners()),
+                resolution.resolutionPath(),
+                resolution.handoffReason(),
+                resolution.visibilityLimits()
         );
+    }
+
+    private List<OperationalContextResolvedOwnerDto> owners(List<Owner> owners) {
+        return owners.stream()
+                .map(owner -> new OperationalContextResolvedOwnerDto(
+                        owner.targetType(),
+                        owner.targetId(),
+                        owner.targetLabel(),
+                        owner.ownerTeamIds(),
+                        owner.ownerLabel(),
+                        owner.source(),
+                        owner.confidence()
+                ))
+                .toList();
+    }
+
+    private ExplainableValueDto<String> ownerValue(
+            OperationalContextResolvedOwnershipDto resolvedOwnership,
+            String entityType,
+            String entityId
+    ) {
+        var owner = resolvedOwnership.primaryOwners().stream()
+                .findFirst()
+                .map(this::ownerLabel)
+                .orElse(null);
+        var confidence = resolvedOwnership.primaryOwners().stream()
+                .findFirst()
+                .map(OperationalContextResolvedOwnerDto::confidence)
+                .filter(StringUtils::hasText)
+                .orElse("low");
         return new ExplainableValueDto<>(
                 owner,
-                "Owner",
-                StringUtils.hasText(owner) ? "high" : "low",
-                List.of(reason("references", "Owner inferred from teams, responsibilities or handoff route.", StringUtils.hasText(owner) ? "high" : "low")),
-                StringUtils.hasText(owner) ? List.of() : List.of("Owner not explicit in catalog."),
-                List.of(sourceRef(normalizeType(entry.getClass().getSimpleName()), entry.id()))
+                StringUtils.hasText(owner) ? "Resolved owner" : "Missing owner",
+                confidence,
+                List.of(reason(
+                        "resolvedOwnership",
+                        firstNonBlank(resolvedOwnership.handoffReason(), "Owner resolved from system/bounded context ownership."),
+                        confidence
+                )),
+                resolvedOwnership.visibilityLimits(),
+                List.of(sourceRef(entityType, entityId))
+        );
+    }
+
+    private ExplainableAggregateDto resolvedOwnershipAggregate(
+            String entityType,
+            String entityId,
+            OperationalContextResolvedOwnershipDto resolvedOwnership
+    ) {
+        var owners = new ArrayList<OperationalContextResolvedOwnerDto>();
+        owners.addAll(resolvedOwnership.primaryOwners());
+        owners.addAll(resolvedOwnership.partnerOwners());
+        var count = owners.size();
+        var hasVisibilityLimits = !resolvedOwnership.visibilityLimits().isEmpty();
+        return aggregate(
+                "Resolved handoff",
+                count,
+                hasVisibilityLimits ? "warning" : count == 0 ? "warning" : "info",
+                owners.stream().map(OperationalContextResolvedOwnerDto::confidence).filter(StringUtils::hasText).findFirst().orElse("low"),
+                "Ownership and handoff resolved from bounded context/system ownership.",
+                nonEmptyGroups(
+                        ownerGroup("Primary owners", resolvedOwnership.primaryOwners(), "Resolved primary owner."),
+                        ownerGroup("Partner owners", resolvedOwnership.partnerOwners(), "Resolved partner owner."),
+                        group("Resolution path", "resolution-step", resolvedOwnership.resolutionPath(), "Resolver decision path."),
+                        group("Visibility limits", "visibility-limit", resolvedOwnership.visibilityLimits(), "Resolver visibility limit.")
+                ),
+                List.of(reason("resolvedOwnership", firstNonBlank(resolvedOwnership.handoffReason(), "Resolved ownership."), "high")),
+                List.of(sourceRef(entityType, entityId)),
+                "resolved-ownership",
+                owners.stream()
+                        .map(owner -> firstNonBlank(owner.targetId(), owner.targetLabel(), ownerLabel(owner)))
+                        .toList()
+        );
+    }
+
+    private ExplainableAggregateDto resolvedPartnerOwnersAggregate(
+            String entityType,
+            String entityId,
+            OperationalContextResolvedOwnershipDto resolvedOwnership
+    ) {
+        return aggregate(
+                "Partner owners",
+                resolvedOwnership.partnerOwners().size(),
+                resolvedOwnership.partnerOwners().isEmpty() ? "info" : "warning",
+                resolvedOwnership.partnerOwners().isEmpty() ? "high" : "medium",
+                "Partner owners resolved for a boundary handoff.",
+                nonEmptyGroups(ownerGroup("Partner owners", resolvedOwnership.partnerOwners(), "Resolved partner owner.")),
+                List.of(reason("resolvedOwnership", "Partner owners come from the ownership resolver.", "high")),
+                List.of(sourceRef(entityType, entityId)),
+                "resolved-ownership",
+                resolvedOwnership.partnerOwners().stream()
+                        .map(owner -> firstNonBlank(owner.targetId(), owner.targetLabel(), ownerLabel(owner)))
+                        .toList()
+        );
+    }
+
+    private ExplainableBreakdownGroupDto ownerGroup(
+            String label,
+            List<OperationalContextResolvedOwnerDto> owners,
+            String reason
+    ) {
+        var items = owners.stream()
+                .map(owner -> new ExplainableBreakdownItemDto(
+                        firstNonBlank(owner.targetId(), owner.targetLabel(), ownerLabel(owner)),
+                        ownerLabel(owner),
+                        firstNonBlank(owner.targetType(), "owner"),
+                        reason + " Source: " + firstNonBlank(owner.source(), "unknown") + ".",
+                        "resolved",
+                        List.of()
+                ))
+                .toList();
+        return new ExplainableBreakdownGroupDto(label, items.size(), items);
+    }
+
+    private String ownerLabel(OperationalContextResolvedOwnerDto owner) {
+        return firstNonBlank(
+                owner.ownerLabel(),
+                String.join(", ", owner.ownerTeamIds()),
+                owner.targetLabel(),
+                owner.targetId()
         );
     }
 
@@ -1103,16 +1229,26 @@ public class OperationalContextViewService {
         );
     }
 
-    private Map<String, Object> handoffMap(OperationalContextHandoffHints handoff) {
+    private Map<String, Object> resolvedOwnershipMap(OperationalContextResolvedOwnershipDto resolvedOwnership) {
         return map(
-                "defaultRouteLabel", handoff.defaultRouteLabel(),
-                "firstResponderTeamIds", handoff.firstResponderTeamIds(),
-                "escalationTeamIds", handoff.escalationTeamIds(),
-                "partnerTeamIds", handoff.partnerTeamIds(),
-                "requiredEvidence", handoff.requiredEvidence(),
-                "preferredEvidence", handoff.preferredEvidence(),
-                "expectedFirstActions", handoff.expectedFirstActions(),
-                "fallbackIfAmbiguous", handoff.fallbackIfAmbiguous()
+                "situationType", resolvedOwnership.situationType(),
+                "primaryOwners", resolvedOwnership.primaryOwners().stream().map(this::resolvedOwnerMap).toList(),
+                "partnerOwners", resolvedOwnership.partnerOwners().stream().map(this::resolvedOwnerMap).toList(),
+                "handoffReason", resolvedOwnership.handoffReason(),
+                "resolutionPath", resolvedOwnership.resolutionPath(),
+                "visibilityLimits", resolvedOwnership.visibilityLimits()
+        );
+    }
+
+    private Map<String, Object> resolvedOwnerMap(OperationalContextResolvedOwnerDto owner) {
+        return map(
+                "targetType", owner.targetType(),
+                "targetId", owner.targetId(),
+                "targetLabel", owner.targetLabel(),
+                "ownerTeamIds", owner.ownerTeamIds(),
+                "ownerLabel", owner.ownerLabel(),
+                "source", owner.source(),
+                "confidence", owner.confidence()
         );
     }
 
@@ -1142,6 +1278,113 @@ public class OperationalContextViewService {
                 List.of(),
                 List.of(),
                 List.of()
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextSystem system) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                textValues(system.id()),
+                List.of(),
+                List.of(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextRepository repository) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                repository.references().systems(),
+                repository.references().boundedContexts(),
+                textValues(repository.id()),
+                List.of(),
+                new OperationalContextOwnershipRequest.TechnicalTarget(
+                        repository.id(),
+                        repository.git().projectPath(),
+                        List.of(),
+                        repository.references().systems(),
+                        repository.references().boundedContexts(),
+                        null,
+                        "operational-context-api"
+                )
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextProcess process) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                distinct(combineValues(process.references().systems(), process.participants().primarySystems())),
+                process.references().boundedContexts(),
+                process.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextIntegration integration) {
+        var contextIds = distinct(combineValues(
+                integration.references().boundedContexts(),
+                integration.participants().source().boundedContext(),
+                integration.participants().targets().stream().map(OperationalContextIntegrationParticipant::boundedContext).toList()
+        ));
+        var systemIds = distinct(combineValues(
+                integration.references().systems(),
+                integration.participants().source().system(),
+                integration.participants().targetSystems(),
+                integration.participants().intermediarySystems(),
+                integration.participants().finalTargetSystems()
+        ));
+        var situationType = contextIds.size() > 1
+                ? OperationalContextOwnershipResolution.BOUNDED_CONTEXT_BOUNDARY
+                : systemIds.size() > 1
+                ? OperationalContextOwnershipResolution.SYSTEM_BOUNDARY
+                : null;
+        return new OperationalContextOwnershipRequest(
+                situationType,
+                systemIds,
+                contextIds,
+                integration.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(OperationalContextBoundedContext context) {
+        return new OperationalContextOwnershipRequest(
+                null,
+                context.references().systems(),
+                textValues(context.id()),
+                context.references().repositories(),
+                List.of(),
+                null
+        );
+    }
+
+    private OperationalContextOwnershipRequest ownershipRequest(String type, OperationalContextEntry entry) {
+        var normalizedType = normalizeType(type);
+        if (SYSTEM.equals(normalizedType) && entry instanceof OperationalContextSystem system) {
+            return ownershipRequest(system);
+        }
+        if (REPOSITORY.equals(normalizedType) && entry instanceof OperationalContextRepository repository) {
+            return ownershipRequest(repository);
+        }
+        if (PROCESS.equals(normalizedType) && entry instanceof OperationalContextProcess process) {
+            return ownershipRequest(process);
+        }
+        if (INTEGRATION.equals(normalizedType) && entry instanceof OperationalContextIntegration integration) {
+            return ownershipRequest(integration);
+        }
+        if (BOUNDED_CONTEXT.equals(normalizedType) && entry instanceof OperationalContextBoundedContext context) {
+            return ownershipRequest(context);
+        }
+        return new OperationalContextOwnershipRequest(
+                null,
+                entry.references().systems(),
+                entry.references().boundedContexts(),
+                entry.references().repositories(),
+                List.of(),
+                null
         );
     }
 
@@ -1313,6 +1556,21 @@ public class OperationalContextViewService {
         values.addAll(references.teams());
         values.addAll(references.handoffRules());
         return distinct(values);
+    }
+
+    private List<String> combineValues(Object... values) {
+        var result = new ArrayList<String>();
+        for (var value : values) {
+            if (value instanceof List<?> list) {
+                list.stream()
+                        .map(item -> item != null ? String.valueOf(item) : null)
+                        .filter(StringUtils::hasText)
+                        .forEach(result::add);
+            } else if (value instanceof String text && StringUtils.hasText(text)) {
+                result.add(text);
+            }
+        }
+        return result;
     }
 
     private boolean containsAny(String normalizedQuery, List<String>... groups) {

@@ -13,9 +13,6 @@ integrations:
       finalTargets:
         - system: notification-provider
           role: server
-    responsibilities:
-      - teamId: crm-integration-team
-        role: contract-owner
     matchSignals:
       exact:
         hosts: [api.notifications.local]
@@ -23,10 +20,4 @@ integrations:
         spans: [CustomerNotificationGateway.call]
         markers: [CRM_NOTIFICATION]
         errors: [RemoteApiError, Read timed out]
-    handoffHints:
-      defaultRouteLabel: CRM Integration Team
-      firstResponderTeamIds: [crm-integration-team]
-      partnerTeamIds: [crm-team]
-      requiredEvidence: [correlationId, environment, host, exception]
-
 gaps: []

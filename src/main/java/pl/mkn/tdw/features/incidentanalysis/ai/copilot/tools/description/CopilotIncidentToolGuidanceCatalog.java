@@ -223,7 +223,7 @@ public class CopilotIncidentToolGuidanceCatalog {
             Map.entry(
                     OperationalContextToolNames.GET_ENTITY,
                     List.of(
-                            "Use after list or search results to confirm relations, recognition signals, code-search hints, handoff hints and source limitations.",
+                            "Use after list or search results to confirm relations, recognition signals, code-search scope, resolved ownership or handoff decision guidance and source limitations.",
                             "Do not name affectedProcess, affectedBoundedContext or affectedTeam unless the entity also fits incident evidence."
                     )
             )

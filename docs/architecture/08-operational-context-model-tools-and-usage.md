@@ -14,7 +14,8 @@ uzupelniac to, czego nie da sie szybko i pewnie wywnioskowac z jednego repo:
 - do ktorego kolejnego repozytorium albo capability przejsc, gdy analiza
   wymaga kontynuacji,
 - jak przetlumaczyc techniczny sygnal na jezyk analityka biznesowo-systemowego,
-- jaki handoff, owner, partner albo ograniczenie widocznosci jest istotne,
+- jaki resolved ownership, handoff, partner albo ograniczenie widocznosci jest
+  istotne,
 - ktore pytania sa nadal otwarte i nie powinny byc zgadywane przez AI.
 
 Operational context nie jest inventory kodu ani runtime. Szczegoly klas,
@@ -26,6 +27,11 @@ przez dedykowane tools oraz repozytoria zrodlowe.
 - `system` jest kanonicznym bytem katalogowym.
 - Dane runtime, service names i deployment signals sa wlasciwosciami albo
   sygnalami systemu, nie osobnym bytem referencyjnym.
+- Ownership jest faktem katalogowym tylko dla `system` i `bounded-context`.
+- `bounded-context` ma pierwszenstwo przed `system`; system jest fallbackiem,
+  gdy context nie jest znany albo problem jest system-wide.
+- Repository, code-search scope, process, integration, handoff rule, glossary
+  term i team nie definiuja ownera.
 - Katalog moze wskazac repozytoria do wspolnego czytania, ale nie przechowuje
   szczegolowych elementow kodu, tras API, nazw kolejek ani tabel.
 - Katalog moze opisac integracje jako relacje systemowe, ale nie przechowuje
@@ -38,6 +44,53 @@ przez dedykowane tools oraz repozytoria zrodlowe.
 - Feature-specific zasady uzycia katalogu mieszkaja w policy/guidance feature'a
   i runtime skillach, nie w neutralnych `opctx_*` tools.
 
+## Ownership I Handoff
+
+Docelowy kontrakt ownershipu:
+
+```yaml
+ownership:
+  ownerTeamIds: []
+  ownerLabel: ""
+  ownershipStatus: explicit | unknown
+  confidence: high | medium | low
+  source: ""
+  notes: []
+```
+
+Znaczenie:
+
+- `ownerTeamIds` wskazuje znane zespoly z `teams.yml`.
+- `ownerLabel` opisuje wlasciciela, gdy nie ma stabilnego team id, np.
+  `wlasciciel systemu Salesforce`.
+- `ownershipStatus=explicit` oznacza potwierdzony fakt katalogowy.
+- `ownershipStatus=unknown` oznacza brak jawnego ownera; resolver moze wtedy
+  zwrocic opisowa inferencje, ale nie zapisuje jej jako fakt katalogowy.
+
+Resolver ownershipu jest jedynym miejscem, ktore przeklada katalog na wynik
+handoffu. Priorytet:
+
+1. owner dopasowanego `bounded-context`,
+2. owner systemu powiazanego z bounded contextem,
+3. owner dopasowanego `system`,
+4. inferowany opis ownera z nazwy systemu albo bounded contextu.
+
+Gdy problem jest na styku dwoch systemow albo bounded contextow, wynik ma
+wskazac ownerow obu stron: `primaryOwners` i `partnerOwners`. Dla relacji
+system-infrastruktura albo system-zewnetrzny druga strona moze byc ownerem
+opisowym, jezeli katalog nie zna teamu.
+
+Pytanie techniczne typu "kto jest wlascicielem endpointa?" nie oznacza
+ownershipu endpointa. Lancuch rozstrzygania jest:
+
+1. endpoint, klasa, metoda albo inny technical target,
+2. repozytorium i code-search scope,
+3. system oraz, jesli da sie ustalic, bounded context,
+4. resolved ownership/handoff z resolvera.
+
+Handoff rules pomagaja rozpoznac sytuacje, wymagane evidence i pierwsze
+dzialanie. Nie zawieraja listy teamow do routingu.
+
 ## Zakres Pytan
 
 Katalog wspiera przede wszystkim pytania:
@@ -45,7 +98,7 @@ Katalog wspiera przede wszystkim pytania:
 - "od czego zaczac analize tego problemu?",
 - "ktore repozytoria trzeba czytac razem?",
 - "jaki proces albo bounded context tlumaczy ten objaw?",
-- "kto moze byc ownerem albo pierwszym handoffem?",
+- "kto jest resolved ownerem albo kogo wlaczyc do handoffu?",
 - "jak opisac ten techniczny sygnal jezykiem biznesowym?",
 - "ktore ograniczenia widocznosci trzeba pokazac uzytkownikowi?",
 - "jak przygotowac dev stories, user stories albo scenariusze testowe po
@@ -85,15 +138,15 @@ Pliki katalogu:
 | Plik | Rola |
 | --- | --- |
 | `operational-context-index.md` | opis celu katalogu, zasad modelowania, quality gates i ograniczen |
-| `systems.yml` | kanoniczne systemy, aliasy, status, summary, references, ownership, handoff i open questions |
+| `systems.yml` | kanoniczne systemy, aliasy, status, summary, references, ownership i open questions |
 | `repo-map.yml` | mapa repozytoriow do GitLaba i relacji katalogowych |
 | `code-search-scopes.yml` | semantyczne grupy repozytoriow do wspolnego przeszukania |
 | `processes.yml` | procesy biznesowo-operacyjne, kroki, rezultaty i relacje |
 | `bounded-contexts.yml` | bounded contexty, jezyk lokalny, zakres odpowiedzialnosci i granice |
-| `integrations.yml` | integracje jako relacje systemowe: source, target, category, style, direction, ownership |
-| `teams.yml` | zespoly, odpowiedzialnosci, handoff i luki ownershipu |
+| `integrations.yml` | integracje jako relacje systemowe: source, target, category, style i direction |
+| `teams.yml` | identyfikatory, etykiety i opis zespolow uzywanych przez ownership |
 | `glossary.md` | slownik pojec biznesowo-systemowych |
-| `handoff-rules.md` | reguly przekazania sprawy i wymagane evidence |
+| `handoff-rules.md` | sytuacje handoffu, wymagane evidence i pierwsze akcje |
 
 ## Model
 
@@ -106,8 +159,7 @@ Pliki katalogu:
 - `summary`,
 - `references` do procesow, repozytoriow, integracji, bounded contextow,
   zespolow i pojec,
-- `responsibilities`, `relations`, `sourceCoverage`, `gaps` tam, gdzie sa
-  potrzebne.
+- `ownership`, `relations`, `sourceCoverage`, `gaps` tam, gdzie sa potrzebne.
 
 System nie powinien miec osobnego katalogu runtime names, deployment names,
 container names ani endpointow.
@@ -121,10 +173,12 @@ katalogowych sie odnosi. Powinno zawierac:
 - purpose/summary,
 - status, criticality, aliases,
 - references do systemow, procesow, integracji i bounded contextow,
-- handoff/ownership/limitations.
+- limitations i open questions.
 
 Repository nie opisuje ukladu katalogow, plikow build/deployment ani sciezek
-implementacji.
+implementacji. Repository nie definiuje ownera; owner endpointu, klasy albo
+repozytorium jest rozstrzygany przez system/bounded context znaleziony przez
+code-search scope.
 
 ### Code Search Scope
 
@@ -180,20 +234,23 @@ Integration opisuje zaleznosc systemowa:
 - criticality i data sensitivity,
 - role uczestnikow,
 - references do procesow, bounded contextow i pojec,
-- responsibility status, ownership, limitations.
+- limitations.
 
 Integration nie jest katalogiem HTTP paths, queue names, topics, payloadow ani
-klientow technicznych.
+klientow technicznych. Integration nie definiuje ownera; handoff na granicy
+integracji wynika z ownerow systemow albo bounded contextow po obu stronach.
 
 ### Team, Glossary, Handoff
 
-Te pliki maja najwieksza wartosc, gdy tlumacza odpowiedzialnosc i jezyk:
+Te pliki maja najwieksza wartosc, gdy tlumacza jezyk i sytuacje przekazania:
 
-- `teams.yml` mowi, kto moze byc ownerem lub partnerem,
+- `teams.yml` opisuje team id/label zwracane przez ownership systemu albo
+  bounded contextu,
 - `glossary.md` tlumaczy pojecia i rozroznienia,
 - `handoff-rules.md` opisuje, kiedy i z jakim evidence przekazac temat.
 
-Nie nalezy uzywac ich jako miejsca na techniczne instrukcje czytania kodu.
+Nie nalezy uzywac ich jako miejsca na techniczne instrukcje czytania kodu ani
+na reczny routing teamow.
 
 ## Loader I Read Models
 
@@ -272,7 +329,7 @@ Tools sluza do:
   zespolu, terminu albo handoff clue,
 - dociagniecia kompaktowego detailu encji,
 - wskazania code-search scopes i repozytoriow do dalszych GitLab calls,
-- pokazania ograniczen widocznosci i pytan otwartych.
+- pokazania resolved ownership, ograniczen widocznosci i pytan otwartych.
 
 Tools nie sluza do:
 
@@ -310,10 +367,10 @@ Typowe uzycie:
 
 1. Elasticsearch/Dynatrace/GitLab deterministic zbieraja fakty incydentu.
 2. Operational context matcher dopasowuje systemy, procesy, bounded contexty,
-   integracje, repozytoria, glossary i handoff.
+   integracje, repozytoria, glossary i sytuacje handoffu.
 3. Prompt dostaje operational grounding, code-search scopes i ograniczenia.
 4. AI uzywa katalogu do `functionalAnalysis`: system, proces, jezyk lokalny,
-   owner, handoff, widocznosc.
+   resolved ownership, handoff, widocznosc.
 5. AI uzywa GitLab tools do `technicalAnalysis`, gdy trzeba znalezc konkretny
    kod.
 6. AI uzywa DB tools tylko zgodnie z feature policy i resolved environment.
@@ -330,7 +387,7 @@ inventory.
 Skrypt:
 
 ```powershell
-operational-context-maintenance/clean-operational-context.ps1
+operational-context-maintenance/cleanup-operational-context.ps1
 ```
 
 ma sluzyc do czyszczenia istniejacych katalogow z usunietych pol i sekcji.
@@ -340,7 +397,7 @@ YAML dla starych struktur oraz raportuje zakres usuniec.
 Po wiekszej zmianie katalogu nalezy wykonac:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\operational-context-maintenance\clean-operational-context.ps1 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\operational-context-maintenance\cleanup-operational-context.ps1 -DryRun
 ```
 
 Komenda powinna pokazac `Removal candidates: 0`. Dodatkowy `rg` dobieraj do
@@ -355,11 +412,14 @@ Walidacja katalogu powinna pilnowac:
 - duplicate references,
 - code-search scope bez targetu albo repozytorium,
 - unknown code-search repository,
-- brak owner/handoff tam, gdzie jest deklarowany responsibility status,
+- `ownership` poza `system` i `bounded-context`,
+- ownera zapisanego jako inferowany zamiast jawnie potwierdzonego,
 - open questions dla realnych luk widocznosci.
 
-Validation nie powinna wymuszac technicznych hintow. Brak endpointu, klasy,
-tabeli albo deployment file w katalogu nie jest bledem.
+Validation pilnuje aktualnego kontraktu API/read-modelu, a nie historycznych
+pol migracyjnych, ktorych runtime juz nie parsuje. Nie powinna tez wymuszac
+technicznych hintow. Brak endpointu, klasy, tabeli albo deployment file w
+katalogu nie jest bledem.
 
 ## UI
 

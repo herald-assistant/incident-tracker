@@ -7,9 +7,6 @@ processes:
     participants:
       primarySystems: [crm-customer-service]
       externalSystems: [notification-provider]
-    responsibilities:
-      - teamId: crm-team
-        role: process-owner
     processSteps:
       - id: call-notification-provider
         name: Call Notification Provider
@@ -20,12 +17,4 @@ processes:
             hosts: [api.notifications.local]
     processBoundary:
       endsWhen: [customer-support-process-completed]
-    handoffHints:
-      defaultRouteLabel: crm-team
-      firstResponderTeamIds: [crm-team]
-      partnerTeamIds: [crm-integration-team]
-      requiredEvidence: [correlationId, environment, businessImpact, exception]
-      routingNotes:
-        - If the flow waits on the notification call, route first to the integration owner.
-
 gaps: []

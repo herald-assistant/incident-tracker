@@ -373,11 +373,9 @@ function handoffRule(): OperationalContextHandoffRuleRowDto {
   return {
     id: 'backend-service-error',
     title: 'Backend service error',
-    routeTo: 'Owner of backend',
     useWhen: aggregate('Use when', 1),
     requiredEvidence: aggregate('Required evidence', 2),
-    expectedFirstAction: 'Route to Owner of backend.',
-    partnerTeams: aggregate('Partner teams', 0)
+    expectedFirstAction: 'Resolve owner from bounded context or system.'
   };
 }
 
@@ -463,12 +461,34 @@ function systemRow(): OperationalContextSystemRowDto {
       warnings: [],
       sourceRefs: []
     },
+    resolvedOwnership: resolvedOwnership(),
     purpose: 'Runs the core flow.',
     relations: aggregate('Relations', 0),
     signals: aggregate('Signals', 1),
     handoffReadiness: aggregate('Handoff', 1),
     validation: aggregate('Status', 0),
     openQuestions: aggregate('Open questions', 0)
+  };
+}
+
+function resolvedOwnership() {
+  return {
+    situationType: 'inside-system',
+    primaryOwners: [
+      {
+        targetType: 'system',
+        targetId: 'app-core',
+        targetLabel: 'App Core',
+        ownerTeamIds: ['core-team'],
+        ownerLabel: null,
+        source: 'explicit-ownership',
+        confidence: 'high'
+      }
+    ],
+    partnerOwners: [],
+    resolutionPath: ['system:app-core -> ownership'],
+    handoffReason: 'Problem typu `inside-system` prowadzi do core-team.',
+    visibilityLimits: []
   };
 }
 

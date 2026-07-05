@@ -12,6 +12,7 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalC
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelLinkDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextReadModelTruncationDto;
+import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextResolvedOwnershipDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSummaryDto;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextSystemRowDto;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
@@ -80,6 +81,7 @@ class OperationalContextControllerTest {
                 "App Core",
                 "internal",
                 null,
+                emptyResolvedOwnership(),
                 "Runs core flow",
                 emptyAggregate("Relations"),
                 emptyAggregate("Signals"),
@@ -216,6 +218,17 @@ class OperationalContextControllerTest {
                 "high",
                 "",
                 List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "",
+                List.of()
+        );
+    }
+
+    private static OperationalContextResolvedOwnershipDto emptyResolvedOwnership() {
+        return new OperationalContextResolvedOwnershipDto(
+                "unknown",
                 List.of(),
                 List.of(),
                 List.of(),

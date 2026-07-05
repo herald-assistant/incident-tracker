@@ -93,6 +93,36 @@ public final class OperationalContextDtos {
     ) {
     }
 
+    public record OperationalContextResolvedOwnerDto(
+            String targetType,
+            String targetId,
+            String targetLabel,
+            List<String> ownerTeamIds,
+            String ownerLabel,
+            String source,
+            String confidence
+    ) {
+        public OperationalContextResolvedOwnerDto {
+            ownerTeamIds = ownerTeamIds != null ? List.copyOf(ownerTeamIds) : List.of();
+        }
+    }
+
+    public record OperationalContextResolvedOwnershipDto(
+            String situationType,
+            List<OperationalContextResolvedOwnerDto> primaryOwners,
+            List<OperationalContextResolvedOwnerDto> partnerOwners,
+            List<String> resolutionPath,
+            String handoffReason,
+            List<String> visibilityLimits
+    ) {
+        public OperationalContextResolvedOwnershipDto {
+            primaryOwners = primaryOwners != null ? List.copyOf(primaryOwners) : List.of();
+            partnerOwners = partnerOwners != null ? List.copyOf(partnerOwners) : List.of();
+            resolutionPath = resolutionPath != null ? List.copyOf(resolutionPath) : List.of();
+            visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
+        }
+    }
+
     public record OperationalContextSummaryDto(
             int systems,
             int repositories,
@@ -115,6 +145,7 @@ public final class OperationalContextDtos {
             String name,
             String kind,
             ExplainableValueDto<String> owner,
+            OperationalContextResolvedOwnershipDto resolvedOwnership,
             String purpose,
             ExplainableAggregateDto relations,
             ExplainableAggregateDto signals,
@@ -129,6 +160,7 @@ public final class OperationalContextDtos {
             String project,
             String group,
             ExplainableValueDto<String> owner,
+            OperationalContextResolvedOwnershipDto resolvedOwnership,
             ExplainableAggregateDto systems,
             ExplainableAggregateDto contexts,
             ExplainableAggregateDto processes,
@@ -156,6 +188,7 @@ public final class OperationalContextDtos {
             String id,
             String name,
             ExplainableValueDto<String> owner,
+            OperationalContextResolvedOwnershipDto resolvedOwnership,
             String purpose,
             ExplainableAggregateDto systems,
             ExplainableAggregateDto externalSystems,
@@ -163,7 +196,6 @@ public final class OperationalContextDtos {
             ExplainableAggregateDto contexts,
             ExplainableAggregateDto steps,
             ExplainableAggregateDto completionSignals,
-            ExplainableAggregateDto handoffHints,
             ExplainableAggregateDto validation
     ) {
     }
@@ -174,7 +206,8 @@ public final class OperationalContextDtos {
             String sourceSystem,
             String targetSystems,
             ExplainableValueDto<String> owner,
-            ExplainableAggregateDto partnerTeams,
+            OperationalContextResolvedOwnershipDto resolvedOwnership,
+            ExplainableAggregateDto partnerOwners,
             String category,
             String integrationStyle,
             String flowDirection,
@@ -190,6 +223,7 @@ public final class OperationalContextDtos {
             String id,
             String name,
             ExplainableValueDto<String> owner,
+            OperationalContextResolvedOwnershipDto resolvedOwnership,
             String purpose,
             ExplainableAggregateDto systems,
             ExplainableAggregateDto terms,
@@ -226,11 +260,9 @@ public final class OperationalContextDtos {
     public record OperationalContextHandoffRuleRowDto(
             String id,
             String title,
-            String routeTo,
             ExplainableAggregateDto useWhen,
             ExplainableAggregateDto requiredEvidence,
-            String expectedFirstAction,
-            ExplainableAggregateDto partnerTeams
+            String expectedFirstAction
     ) {
     }
 

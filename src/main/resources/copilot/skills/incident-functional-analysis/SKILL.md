@@ -38,7 +38,7 @@ Przyjmij:
 - klasyfikacje bledu oraz najwazniejsza hipoteze przyczynowa,
 - evidence ledger: co jest potwierdzone, co jest hipoteza, czego nie widac,
 - operational context: system, proces, bounded context, integracje, glossary,
-  owner albo handoff route,
+  resolved ownership albo handoff decision,
 - material z GitLab/DB/runtime/downstream tylko w takim zakresie, w jakim
   trzeba go przetlumaczyc na znaczenie funkcjonalne.
 
@@ -125,7 +125,7 @@ Operational Context sluzy do:
 - slownictwa procesu i bounded contextu,
 - glossary i lokalnego jezyka,
 - integracji oraz kontekstu upstream/downstream,
-- guidance handoffu i ownershipu,
+- guidance handoffu i resolved ownershipu,
 - code-search scope jako kontekstu pomocniczego.
 
 Operational Context nie jest dowodem root cause. Moze wyjasnic, gdzie incydent
@@ -150,7 +150,7 @@ Uzyj dokladnie tej struktury top-level, w tej kolejnosci.
 | Proces | <dotkniety proces albo Nie ustalono> |
 | Bounded context | <bounded context albo Nie ustalono> |
 | Integracja / downstream | <istotna integracja/system albo Nie dotyczy> |
-| Wlasciciel / handoff | <team/owner/route albo Nie ustalono> |
+| Wlasciciel / handoff | <resolved owner/handoff z systemu albo bounded contextu; Nie ustalono, jezeli brak danych> |
 
 ## 2. Co ten fragment robi funkcjonalnie
 
@@ -174,7 +174,7 @@ nie jest potwierdzony, napisz to wprost.>
 
 | Pole | Wartosc |
 |---|---|
-| Sugerowany odbiorca | <team/system owner/rola albo Nie ustalono> |
+| Sugerowany odbiorca | <primary owner albo partner owner z resolvedOwnership; Nie ustalono, jezeli brak danych> |
 | Powod przekazania | <dlaczego ten odbiorca jest istotny> |
 | Pierwsze pytanie / akcja | <jedna konkretna weryfikacja/akcja dla odbiorcy> |
 
@@ -195,6 +195,9 @@ nie jest potwierdzony, napisz to wprost.>
 - Wyjasniaj lokalny jargon, gdy pochodzi z glossary albo bounded contextu.
 - Nie twierdz, ze znasz team, proces albo context, jezeli evidence incydentu
   lub tool results nie wspieraja dopasowania katalogowego.
+- Nie wyprowadzaj ownera bezposrednio z repozytorium, procesu, integracji,
+  teamu ani handoff rule. Dla endpointa albo klasy idz przez repo/code-search
+  scope do systemu lub bounded contextu i dopiero potem do resolved ownership.
 - Jezeli incydent jest techniczny, ale funkcjonalnie istotny, najpierw opisz
   normalny flow biznesowo-systemowy, potem jego przerwanie.
 - Jezeli problem lezy poza analizowanym systemem, napisz, jakie evidence trzeba

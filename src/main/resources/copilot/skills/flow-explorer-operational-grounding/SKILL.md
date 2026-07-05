@@ -6,13 +6,13 @@ description: Playbook uzycia opctx tools w Flow Explorerze - system, proces, bou
 # Flow Explorer Operational Grounding
 
 Uzywaj tego skilla, gdy Flow Explorer potrzebuje katalogowego kontekstu systemu,
-procesu, ownershipu albo handoffu.
+procesu, resolved ownership albo handoffu.
 
 ## Cel
 
 Zbuduj `OperationalGroundingSummary`: katalogowe nazwy i relacje potrzebne do
-opisania endpointu jezykiem procesu, systemu, bounded contextu, ownershipu,
-glossary i handoffu.
+opisania endpointu jezykiem procesu, systemu, bounded contextu, resolved
+ownership, glossary i handoffu.
 
 ## Rola Wobec Orkiestratora
 
@@ -20,11 +20,11 @@ Operational context pomaga nazwac:
 
 - kanoniczny system,
 - proces albo bounded context,
-- owner team,
+- resolved owner systemu albo bounded contextu,
 - glossary pojec biznesowych,
 - ubiquitous language dla flow endpointu,
 - code-search scope,
-- integracje i handoff route.
+- integracje i handoff decision.
 
 Operational context nie jest dowodem, ze kod faktycznie wykonuje dana logike.
 Zachowanie endpointu potwierdzaj artefaktami albo GitLab tools.
@@ -38,7 +38,8 @@ artefaktow, aktualnego `goal`, `sectionModes` oraz konkretnej luki katalogowej.
 
 1. Zacznij od artefaktow i kanonicznego systemu.
 2. Wybierz najmniejszy `opctx_*` tool call.
-3. Potwierdz glossary, ownera, proces, context, code scope albo handoff.
+3. Potwierdz glossary, ownera przez system/bounded context, proces, context,
+   code scope albo handoff.
 4. Zwroc `OperationalGroundingSummary` albo limitation.
 
 ## Petla Katalogowa
@@ -94,8 +95,12 @@ predicate albo mapowania. To jest praca GitLab tools.
   komponentami referencyjnymi.
 - `codeSearchScope` pomaga dobrac repozytoria, ale nie dowodzi, ze endpoint
   uzywa danego pliku.
+- Owner moze pochodzic tylko z `system` albo `bounded-context`; dla endpointa,
+  klasy albo repozytorium idz przez code-search scope do systemu/contextu.
+- `bounded-context` ma pierwszenstwo przed `system`, a system jest fallbackiem.
 - Jezeli owner albo process jest niejednoznaczny, wpisz to jako ograniczenie
-  widocznosci.
+  widocznosci. Nie uzywaj `teams.yml`, procesu, integracji ani handoff rule
+  jako bezposredniego zrodla ownera.
 
 ## Glossary I Ubiquitous Language
 
@@ -172,7 +177,13 @@ Zwroc `OperationalGroundingSummary`:
 system: <kanoniczny system albo Nie ustalono>
 process: <proces albo Nie ustalono>
 boundedContext: <bounded context albo Nie ustalono>
-ownerOrHandoff: <team/route albo Nie ustalono>
+resolvedOwnership:
+  situationType: <inside-bounded-context | inside-system | bounded-context-boundary | system-boundary | system-infrastructure | external-system-boundary | ambiguous | unknown>
+  primaryOwners:
+    - <system/bounded-context owner albo inferowany ownerLabel>
+  partnerOwners:
+    - <druga strona styku albo Nie dotyczy>
+  handoffReason: <powod handoffu albo Nie ustalono>
 glossaryTerms:
   - term: <pojecie>
     status: confirmed | inferred | missing
