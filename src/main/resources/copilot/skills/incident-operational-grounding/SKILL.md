@@ -87,6 +87,8 @@ Dobierz najmniejszy katalogowy check, ktory rozroznia aktywne potrzeby:
 
 - system/process match rozroznia lokalny problem od cross-system handoffu,
 - repository/code-search scope rozroznia, gdzie GitLab skill ma szukac kodu,
+- repository + path prefix + code-search scope rozroznia, do ktorego bounded
+  contextu i ownera moze nalezec znaleziony fragment kodu,
 - integration relation rozroznia upstream, downstream i local boundary,
 - resolved ownership/handoff rule rozroznia odbiorce, partnerow i pierwsza akcje,
 - glossary/bounded context rozroznia znaczenie biznesowe dla
@@ -266,6 +268,9 @@ Uzywaj operational context do zawezania GitLab exploration:
 
 - preferuj `codeSearchScope`, gdy pasuje do semantic target analizy: bounded
   context, process, system albo integration,
+- preferuj scope targetowany na `bounded-context`, gdy kod mozna przypisac do
+  konkretnego bounded contextu; `system` jest fallbackiem dla kodu system-wide
+  albo nieznanego contextu,
 - traktuj `codeSearchScope.target.type/id` jako powod, dla ktorego repository
   set nalezy czytac razem,
 - przekaz wszystkie istotne `projectName` ze scope do GitLab search/flow tools,
@@ -279,6 +284,20 @@ Uzywaj operational context do zawezania GitLab exploration:
 
 Nie uznawaj kodu za niedostepny po jednym repository lookup, gdy operational
 context listuje szerszy code-search scope.
+
+## Routing Z Kodu Do Ownera
+
+Gdy wejscie zawiera GitLab result, plik, klase, endpoint albo repository hint,
+rozstrzygaj bounded context i ownera przez lancuch:
+
+1. `projectName`/repository i `filePath`,
+2. dopasowany `pathPrefixes` w `codeSearchScope`, jezeli istnieje,
+3. `codeSearchScope.target`, preferencyjnie `bounded-context`,
+4. bounded-context ownership, a dopiero potem system ownership.
+
+Nie traktuj `repo-map.yml` ani samego repozytorium jako zrodla ownera. Jezeli
+kilka scope'ow pasuje do tego samego repo/path albo scope targetuje tylko
+system, wpisz ambiguity albo visibility limit zamiast zgadywac bounded context.
 
 ## Targetowanie DB
 
@@ -301,9 +320,10 @@ Gdy pytanie dotyczy endpointa, klasy albo repozytorium, rozstrzygnij ownera
 przez lancuch:
 
 1. technical target,
-2. repository/code-search scope,
-3. system i ewentualny bounded context,
-4. resolved ownership/handoff.
+2. repository + path prefix,
+3. code-search scope,
+4. bounded context, a dopiero potem system,
+5. resolved ownership/handoff.
 
 Uzywaj handoff rules jako guidance sytuacji, evidence i pierwszej akcji, ale
 nie jako listy teamow do routingu.

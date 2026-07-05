@@ -39,7 +39,7 @@ an open question instead of inventing extra ownership or routing fields.
 | Canonical system identity, purpose, system-level ownership and navigation | `systems.yml` |
 | Local language, semantic boundaries and bounded-context ownership | `bounded-contexts.yml` |
 | GitLab project identity and semantic references | `repo-map.yml` |
-| Repository set and GitLab search boundary to inspect together for one semantic target | `code-search-scopes.yml` |
+| Semantic-to-code bridge: target, repository set and GitLab search boundary | `code-search-scopes.yml` |
 | Business or operational process path | `processes.yml` |
 | System-to-system or partner boundary relationship | `integrations.yml` |
 | Team identifiers, labels and collaboration clues | `teams.yml` |
@@ -88,6 +88,11 @@ Minimum useful bounded-context entry:
 - what not to confuse with,
 - related systems, processes and terms,
 - `ownership` only when there is durable bounded-context accountability.
+
+Do not use `bounded-contexts.yml` as the primary map from context to
+repositories or modules. The code path for a bounded context is:
+
+`bounded-context -> code-search scope -> repository -> path prefix -> code`.
 
 ### 4. Add team labels only after owners exist
 
@@ -161,6 +166,11 @@ should answer:
 Repository entries should not try to describe internal code organization or
 define maintainers as owners.
 
+Repository references to systems, processes or bounded contexts are recognition
+signals and navigation hints. They are not the canonical route from code to
+ownership. When code ownership matters, model the route through a
+`code-search-scopes.yml` entry with the most precise semantic target.
+
 ### 9. Define code-search scopes
 
 Update `code-search-scopes.yml` last, once systems, processes, contexts and
@@ -169,6 +179,8 @@ repositories are known.
 Each scope should define:
 
 - one semantic target,
+- `target.type: bounded-context` whenever a known bounded context owns the
+  behavior; use `system` only for system-wide code or unknown context,
 - repositories to inspect together,
 - role and priority per repository,
 - `searchMode` per repository: `whole-repository` or `path-prefixes`,
@@ -180,6 +192,14 @@ Each scope should define:
 This lets an agent continue analysis across repositories without guessing the
 next project. It also lets the agent restrict GitLab search to known modules
 without turning operational context into a class, endpoint or file inventory.
+
+The intended navigation paths are:
+
+- from semantics to code:
+  `bounded-context -> code-search scope -> repository -> path prefix -> code`,
+- from code to owner:
+  `code/file path -> repository + path prefix -> code-search scope -> bounded
+  context -> resolved ownership`.
 
 ### 10. Run validation and record gaps
 
@@ -211,6 +231,9 @@ For a new area, stop when these questions have clear answers:
 - Facts have one owner file.
 - References use existing catalog ids.
 - Handoff guidance is understandable to a business/system analyst.
+- Bounded-context-owned code is linked through a bounded-context-targeted
+  code-search scope, not through repository lists embedded in the bounded
+  context.
 - Repository scope explains why to inspect a project, not how the project is
   organized internally beyond the coarse `searchMode`/`pathPrefixes` search
   boundary.

@@ -15,6 +15,18 @@ target. The actual code search is performed by GitLab tools.
 Code-search scopes do not define ownership. Owner and handoff are resolved from
 the scope target's bounded context or system.
 
+Prefer a bounded-context target when the code belongs to a known semantic
+boundary. Use a system target only for system-wide code or when the bounded
+context is unknown. Use process or integration targets for cross-context flows
+or boundary relationships that intentionally span more than one bounded
+context.
+
+This file is the canonical bridge between semantic context and code:
+
+- bounded context -> code-search scope -> repository -> path prefix -> code,
+- code/file path -> repository + path prefix -> code-search scope -> bounded
+  context -> owner.
+
 Keep scopes in the YAML shape below. If the owner is unclear, fix the target's
 system or bounded context instead of adding ownership-like fields here.
 
@@ -22,17 +34,17 @@ system or bounded context instead of adding ownership-like fields here.
 
 ```yaml
 codeSearchScopes:
-  - id: customer-request-handling-scope
-    name: Customer request handling code scope
-    scopeType: process
+  - id: customer-requests-code-scope
+    name: Customer Requests code scope
+    scopeType: bounded-context
     lifecycleStatus: active
-    summary: Repositories to inspect together for customer request handling.
+    summary: Repositories and modules to inspect for the Customer Requests bounded context.
     target:
-      type: process
-      id: customer-request-handling
+      type: bounded-context
+      id: customer-requests
     useFor:
-      - Understand the customer request path across UI and service projects.
-      - Prepare development stories or test scenarios for this business process.
+      - Understand request intake behavior across UI and service projects.
+      - Route code findings back to the Customer Requests owner.
     repositories:
       - repoId: customer-portal-ui
         role: primary
@@ -60,6 +72,11 @@ codeSearchScopes:
 ## Update rules
 
 - Use one `target` per scope.
+- Prefer `target.type: bounded-context` when a bounded context owns the
+  semantic behavior implemented by this code. Fall back to `system` only for
+  system-wide code or unknown context.
+- Do not duplicate code ownership by listing repositories directly on the
+  bounded context. Use this scope as the navigational link from context to code.
 - `role` should express why a repository belongs in the set, for example
   `primary`, `supporting`, `shared`, `reference`, `legacy`, or `migration-peer`.
 - `priority` is the read order. `1` means start here.
@@ -83,7 +100,11 @@ codeSearchScopes:
 - Every `repoId` exists in `repo-map.yml`.
 - Every scope has at least one repository.
 - Every scope has a target that exists in the catalog.
+- The target is the most precise semantic owner available: bounded context
+  before system when the code can be mapped to a bounded context.
 - Every repository declares `searchMode`.
 - `path-prefixes` repositories have non-empty `pathPrefixes`.
 - `whole-repository` repositories do not declare `pathPrefixes`.
 - The scope helps continue analysis when the current repository is not enough.
+- The scope supports reverse routing from repository/path prefix to bounded
+  context and then to resolved ownership.

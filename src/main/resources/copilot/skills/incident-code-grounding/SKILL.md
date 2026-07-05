@@ -260,6 +260,17 @@ osobne focused tool calls per repozytorium albo wspolna granica; nie mieszaj
 niekompatybilnych prefixow w jednym search callu. Dla exact file reads nadal
 uzywaj konkretnego `projectName` i `filePath` z wyniku toola.
 
+Gdy GitLab result wskazuje konkretny `filePath`, traktuj dopasowanie
+`projectName + filePath` do `codeSearchScope` i jego `pathPrefixes` jako
+katalogowy sygnal routingu, nie jako dowod zachowania kodu. Ten sygnal moze
+prowadzic dalej:
+
+`filePath -> repository + pathPrefixes -> codeSearchScope -> bounded-context -> owner`.
+
+Jesli potrzebujesz ownera albo affected bounded context, przekaz ten sygnal do
+`incident-operational-grounding` zamiast wyprowadzac ownera bezposrednio z
+repozytorium.
+
 ## Katalog Dostepnych Repozytoriow
 
 Uzyj `gitlab_list_available_repositories`, gdy istotne repozytorium nie jest
@@ -288,6 +299,10 @@ Dopasowuj incident clues do:
 - `codeSearchScopes[].target.type/id`, repository roles, priority, `reason`
   i `readFor`,
 - repository `searchMode` i `pathPrefixes`.
+
+Preferuj `codeSearchScopes[].target.type=bounded-context` jako najprecyzyjniejszy
+semantic owner kodu. Scope targetowany na `system` traktuj jako fallback dla
+kodu system-wide albo wtedy, gdy bounded context nie jest znany.
 
 Preferuj jeden catalog call na poczatku cross-repository investigation. Nie
 powtarzaj go, chyba ze nowe evidence wskazuje inna rodzine repozytoriow.

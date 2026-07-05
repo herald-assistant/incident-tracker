@@ -97,6 +97,10 @@ predicate albo mapowania. To jest praca GitLab tools.
   uzywa danego pliku.
 - `codeSearchScope` moze tez podac `searchMode/pathPrefixes`; to tylko granica
   GitLab searchu dla wiekszego repozytorium, nie inventory klas ani endpointow.
+- Gdy GitLab result ma `projectName` i `filePath`, uzyj dopasowania
+  repository + path prefix do `codeSearchScope`, a potem do jego targetu, aby
+  nazwac bounded context albo ownera. Preferuj target `bounded-context`; target
+  `system` jest fallbackiem.
 - Owner moze pochodzic tylko z `system` albo `bounded-context`; dla endpointa,
   klasy albo repozytorium idz przez code-search scope do systemu/contextu.
 - `bounded-context` ma pierwszenstwo przed `system`, a system jest fallbackiem.
@@ -144,6 +148,17 @@ Operational context moze wzbogacic:
 
 Formuluj to prostym jezykiem dla analityka/testera. Oddzielaj "katalog mowi"
 od "kod potwierdza".
+
+## Routing Z Kodu Do Kontekstu
+
+Dla endpointu, klasy albo pliku znalezionego przez GitLab uzywaj sciezki:
+
+`filePath -> repository + pathPrefixes -> codeSearchScope -> bounded-context -> resolved ownership`.
+
+Jezeli scope targetuje `bounded-context`, uzyj go jako najblizszego semantic
+contextu dla raportu. Jezeli scope targetuje tylko `system`, oznacz bounded
+context jako nieustalony albo inferowany, chyba ze inne katalogowe evidence go
+potwierdza.
 
 ### Biznesowe Nazwy Zrodel Danych
 

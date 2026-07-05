@@ -8,6 +8,8 @@ related catalog entities. It should help analysts avoid mixing business
 meanings that look similar in code, logs, or user reports.
 
 Keep entries semantic. Do not use this file as a map of low-level code details.
+Do not use it as the primary map from bounded context to repositories. Code
+navigation for a bounded context goes through `code-search-scopes.yml`.
 
 ## Ownership rule
 
@@ -49,8 +51,6 @@ boundedContexts:
     references:
       systems:
         - customer-portal
-      repositories:
-        - customer-portal-ui
       processes:
         - customer-request-handling
       integrations:
@@ -88,6 +88,8 @@ boundedContexts:
 - Use `references.terms` for glossary entries that define the local language.
 - Add relations only when they help navigation across contexts.
 - Keep aliases and match signals stable and business-readable.
+- Link code through a `code-search-scopes.yml` entry whose `target` is this
+  bounded context. Do not duplicate repository/module boundaries here.
 - Put unclear boundaries or unclear ownership into open questions.
 
 ## Quality check
@@ -95,4 +97,6 @@ boundedContexts:
 - The entry helps explain the system to an analyst or tester.
 - It clarifies what belongs here and what should be resolved through another
   context or system owner.
+- Its code ownership path is available through a bounded-context-targeted
+  code-search scope when code navigation is needed.
 - It does not duplicate code details that tools can discover.

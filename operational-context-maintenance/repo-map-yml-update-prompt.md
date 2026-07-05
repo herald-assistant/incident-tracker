@@ -13,13 +13,17 @@ organization or low-level code clues here.
 ## Ownership rule
 
 Repository entries do not define ownership. Owner and handoff are resolved from
-the referenced bounded context first, then the referenced system. If neither is
-known, the resolver may expose an inferred owner label based on the system or
-bounded-context name.
+bounded contexts or systems selected through operational context. Repository
+`references.boundedContexts` are recognition and navigation signals; they are
+not the canonical code ownership route. For code-to-owner routing, use
+`code-search-scopes.yml`:
+
+`code/file path -> repository + path prefix -> code-search scope -> bounded
+context -> owner`.
 
 Keep repository entries in the YAML shape below. If ownership is needed, resolve
-or correct the referenced system/bounded context instead of adding owner-like
-fields here.
+or correct the bounded-context/system target and its code-search scope instead
+of adding owner-like fields here.
 
 ## YAML shape
 
@@ -81,9 +85,10 @@ repositories:
 
 - Treat `git.projectPath` as the GitLab link; keep the rest business-readable.
 - Use `references` to connect a repository with systems, processes, bounded
-  contexts, integrations and handoff rules.
+  contexts, integrations and handoff rules as recognition signals.
 - Do not add team references to imply repository ownership.
 - Add aliases only when they help resolve a real user or tool signal.
-- Leave code reading order to `code-search-scopes.yml`.
+- Leave code reading order, module boundaries and bounded-context-to-code
+  ownership routing to `code-search-scopes.yml`.
 - If a repository is unclear, keep the entry small and add a validation finding
   or open question outside this prompt.

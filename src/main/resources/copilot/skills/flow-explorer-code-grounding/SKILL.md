@@ -86,6 +86,11 @@ Gdy prefixy roznia sie per repozytorium, wykonaj osobne focused calls zamiast
 mieszac je w jednym zapytaniu. Exact file/method/OpenAPI reads powinny uzywac
 konkretnych sciezek z manifestu albo poprzedniego tool result.
 
+Gdy wynik GitLaba zwraca `projectName` i `filePath`, zachowaj je jako sygnal
+dla operational grounding: moga zostac odwrotnie zmapowane przez
+`codeSearchScope` i `pathPrefixes` do bounded contextu oraz resolved ownership.
+Nie wyprowadzaj ownera bezposrednio z repozytorium w tym skillu.
+
 ## Algorytm
 
 1. Sprawdz `flow-explorer/canonical-tool-inputs.md`,

@@ -198,6 +198,10 @@ nie jest potwierdzony, napisz to wprost.>
 - Nie wyprowadzaj ownera bezposrednio z repozytorium, procesu, integracji,
   teamu ani handoff rule. Dla endpointa albo klasy idz przez repo/code-search
   scope do systemu lub bounded contextu i dopiero potem do resolved ownership.
+- Jezeli code-search scope targetuje `bounded-context`, traktuj go jako
+  najprecyzyjniejszy katalogowy most z kodu do funkcjonalnego obszaru i ownera.
+  Scope targetowany na `system` jest fallbackiem dla kodu system-wide albo
+  nieustalonego contextu.
 - Jezeli incydent jest techniczny, ale funkcjonalnie istotny, najpierw opisz
   normalny flow biznesowo-systemowy, potem jego przerwanie.
 - Jezeli problem lezy poza analizowanym systemem, napisz, jakie evidence trzeba
