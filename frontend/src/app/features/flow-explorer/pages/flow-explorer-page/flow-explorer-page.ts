@@ -58,6 +58,7 @@ import {
   normalizeAnalysisAiModelOptions,
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
+import { appendOptimisticChatTurn } from '../../../../core/utils/analysis-chat-optimistic.utils';
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -765,6 +766,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.chatError.set('');
 
     const exportState = this.exportState();
+    const previousJob = job;
+    const previousExportState = exportState;
     if (exportState?.origin === 'local') {
       const localRunId = exportState.localRunId;
       if (!localRunId) {
@@ -773,6 +776,8 @@ export class FlowExplorerPageComponent implements OnInit {
         return;
       }
 
+      this.job.set(appendOptimisticChatTurn(job, trimmedMessage));
+      this.exportState.set(null);
       this.historyApi
         .sendChatMessage(localRunId, { message: trimmedMessage })
         .pipe(takeUntilDestroyed(this.destroyRef))
@@ -783,12 +788,16 @@ export class FlowExplorerPageComponent implements OnInit {
           },
           error: (error: HttpErrorResponse) => {
             this.isSendingChat.set(false);
+            this.job.set(previousJob);
+            this.exportState.set(previousExportState);
             this.chatError.set(this.errorMessage(error, 'Nie udalo sie wyslac lokalnego pytania follow-up.'));
           }
         });
       return;
     }
 
+    this.job.set(appendOptimisticChatTurn(job, trimmedMessage));
+    this.exportState.set(null);
     this.flowExplorerApi
       .sendChatMessage(job.jobId, { message: trimmedMessage })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -806,6 +815,8 @@ export class FlowExplorerPageComponent implements OnInit {
         },
         error: (error: HttpErrorResponse) => {
           this.isSendingChat.set(false);
+          this.job.set(previousJob);
+          this.exportState.set(previousExportState);
           this.chatError.set(this.errorMessage(error, 'Nie udalo sie wyslac pytania follow-up.'));
         }
       });

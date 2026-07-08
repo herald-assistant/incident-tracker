@@ -59,6 +59,7 @@ import {
   normalizeAnalysisAiModelOptions,
   reasoningEffortsForAiModel
 } from '../../core/utils/analysis-ai-model-options.utils';
+import { appendOptimisticChatTurn } from '../../core/utils/analysis-chat-optimistic.utils';
 import { AnalysisFeatureAsideComponent } from '../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
@@ -549,12 +550,17 @@ export class AnalysisConsoleComponent {
     }
 
     if (exportState?.origin === 'local') {
-      this.submitLocalChat(analysisId, trimmedMessage);
+      this.submitLocalChat(analysisId, trimmedMessage, currentJob);
       return;
     }
 
+    const previousJob = currentJob;
+    const previousExportState = exportState;
     this.chatError.set('');
+    this.chatNeedsGithubAuth.set(false);
     this.isChatSubmitting.set(true);
+    this.job.set(appendOptimisticChatTurn(currentJob, trimmedMessage));
+    this.exportState.set(null);
 
     this.analysisApi
       .sendChatMessage(analysisId, { message: trimmedMessage })
@@ -580,6 +586,8 @@ export class AnalysisConsoleComponent {
             error,
             'Nie udało się wysłać wiadomości do backendu.'
           );
+          this.job.set(previousJob);
+          this.exportState.set(previousExportState);
           this.applyGithubAuthError(transportError.code);
           this.chatError.set(transportError.message);
           this.chatNeedsGithubAuth.set(this.isGithubAuthError(transportError.code));
@@ -587,15 +595,24 @@ export class AnalysisConsoleComponent {
       });
   }
 
-  private submitLocalChat(analysisId: string, message: string): void {
+  private submitLocalChat(
+    analysisId: string,
+    message: string,
+    currentJob: AnalysisJobStateSnapshot
+  ): void {
     const exportState = this.exportState();
     if (!exportState?.continuationEnabled) {
       this.chatError.set('Ten lokalny run nie ma włączonych metadanych kontynuacji.');
       return;
     }
 
+    const previousJob = currentJob;
+    const previousExportState = exportState;
     this.chatError.set('');
+    this.chatNeedsGithubAuth.set(false);
     this.isChatSubmitting.set(true);
+    this.job.set(appendOptimisticChatTurn(currentJob, message));
+    this.exportState.set(null);
 
     this.historyApi
       .sendChatMessage(analysisId, { message })
@@ -610,6 +627,8 @@ export class AnalysisConsoleComponent {
             error,
             'Nie udało się wysłać wiadomości do lokalnego runu.'
           );
+          this.job.set(previousJob);
+          this.exportState.set(previousExportState);
           this.applyGithubAuthError(transportError.code);
           this.chatError.set(transportError.message);
           this.chatNeedsGithubAuth.set(this.isGithubAuthError(transportError.code));

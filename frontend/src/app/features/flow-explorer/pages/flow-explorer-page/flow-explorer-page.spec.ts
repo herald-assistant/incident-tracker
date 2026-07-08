@@ -683,6 +683,48 @@ describe('FlowExplorerPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Walidacja jest w CustomerService.validate.');
   });
 
+  it('should show a sent Flow Explorer follow-up before the chat API responds', () => {
+    const chatResponse$ = new Subject<FlowExplorerJobStateSnapshot>();
+    vi.mocked(flowExplorerApi.sendChatMessage).mockReturnValueOnce(chatResponse$);
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+    const component = fixture.componentInstance;
+    const liveJob = jobSnapshot({
+      status: 'COMPLETED',
+      currentStepCode: 'COMPLETED',
+      currentStepLabel: 'AI result ready',
+      preparedPrompt: 'canonical prompt',
+      result: flowExplorerResult(),
+      report: flowExplorerReport()
+    });
+    component.job.set(liveJob);
+    component.exportState.set({
+      origin: 'live',
+      exportedAt: '',
+      fileName: '',
+      job: liveJob
+    });
+
+    (component as unknown as { sendChatMessage(message: string): void }).sendChatMessage(
+      'Gdzie jest walidacja?'
+    );
+    fixture.detectChanges();
+
+    expect(component.job()?.chatMessages).toHaveLength(2);
+    expect(component.job()?.chatMessages[0]?.role).toBe('USER');
+    expect(component.job()?.chatMessages[0]?.content).toBe('Gdzie jest walidacja?');
+    expect(component.job()?.chatMessages[1]?.role).toBe('ASSISTANT');
+    expect(component.job()?.chatMessages[1]?.status).toBe('IN_PROGRESS');
+    expect(component.exportState()).toBeNull();
+
+    chatResponse$.next(jobSnapshot({ ...liveJob, chatMessages: completedChatMessages() }));
+    chatResponse$.complete();
+    fixture.detectChanges();
+
+    expect(component.job()?.chatMessages[1]?.content).toContain(
+      'Walidacja jest w CustomerService.validate.'
+    );
+  });
+
   it('should continue a local Flow Explorer run through analysis history API', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 

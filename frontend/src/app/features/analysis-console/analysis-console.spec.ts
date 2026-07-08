@@ -386,6 +386,38 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(component.exportState()?.sourceEnvelope).toBe(updatedDetail.exportEnvelope);
   });
 
+  it('should show a sent follow-up message before the live chat API responds', async () => {
+    const chatResponse$ = new Subject<AnalysisJobStateSnapshot>();
+    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    component.job.set(completedJob());
+    component.exportState.set({
+      origin: 'live',
+      exportedAt: '',
+      fileName: '',
+      job: completedJob()
+    });
+    (component as unknown as { activeAnalysisId: string }).activeAnalysisId = 'analysis-1';
+    analysisApi.sendChatMessage.mockReturnValueOnce(chatResponse$);
+
+    component.submitChat('Sprawdź jeszcze repozytorium.');
+    fixture.detectChanges();
+
+    expect(component.job()?.chatMessages).toHaveLength(2);
+    expect(component.job()?.chatMessages[0]?.role).toBe('USER');
+    expect(component.job()?.chatMessages[0]?.content).toBe('Sprawdź jeszcze repozytorium.');
+    expect(component.job()?.chatMessages[1]?.role).toBe('ASSISTANT');
+    expect(component.job()?.chatMessages[1]?.status).toBe('IN_PROGRESS');
+    expect(component.exportState()).toBeNull();
+
+    chatResponse$.next(completedJobWithChat());
+    chatResponse$.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.job()?.chatMessages[1]?.content).toContain('timeout na downstream');
+  });
+
   it('should expose detailed usage cost breakdown on the compact run context item', async () => {
     const { fixture } = await createComponent(connectedStatus());
     const component = fixture.componentInstance;
