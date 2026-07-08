@@ -127,6 +127,22 @@ public record CopilotIncidentToolAccessPolicy(
             boolean elasticToolsConfigured,
             String elasticToolsDisabledReason
     ) {
+        return fromCoverage(
+                registeredTools,
+                evidenceCoverage,
+                elasticToolsConfigured,
+                elasticToolsDisabledReason,
+                false
+        );
+    }
+
+    public static CopilotIncidentToolAccessPolicy fromCoverage(
+            List<ToolDefinition> registeredTools,
+            CopilotIncidentEvidenceCoverageReport evidenceCoverage,
+            boolean elasticToolsConfigured,
+            String elasticToolsDisabledReason,
+            boolean databaseRawSqlEnabled
+    ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
         var coverage = evidenceCoverage != null ? evidenceCoverage : CopilotIncidentEvidenceCoverageReport.empty();
         var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
@@ -134,7 +150,7 @@ public record CopilotIncidentToolAccessPolicy(
         var databaseToolsRegistered = hasToolPrefix(tools, DatabaseToolNames.PREFIX);
         var operationalContextToolsRegistered = hasToolPrefix(tools, OperationalContextToolNames.PREFIX);
         var enabledTools = tools.stream()
-                .filter(tool -> isEnabled(tool.name(), coverage, elasticToolsConfigured))
+                .filter(tool -> isEnabled(tool.name(), coverage, elasticToolsConfigured, databaseRawSqlEnabled))
                 .toList();
         var availableToolNames = enabledTools.stream()
                 .map(ToolDefinition::name)
@@ -168,6 +184,24 @@ public record CopilotIncidentToolAccessPolicy(
             boolean elasticToolsConfigured,
             String elasticToolsDisabledReason
     ) {
+        return fromFollowUpSession(
+                registeredTools,
+                environmentResolved,
+                gitLabScopeResolved,
+                elasticToolsConfigured,
+                elasticToolsDisabledReason,
+                false
+        );
+    }
+
+    public static CopilotIncidentToolAccessPolicy fromFollowUpSession(
+            List<ToolDefinition> registeredTools,
+            boolean environmentResolved,
+            boolean gitLabScopeResolved,
+            boolean elasticToolsConfigured,
+            String elasticToolsDisabledReason,
+            boolean databaseRawSqlEnabled
+    ) {
         List<ToolDefinition> tools = registeredTools != null ? List.copyOf(registeredTools) : List.of();
         var elasticToolsRegistered = hasToolPrefix(tools, ElasticToolNames.PREFIX);
         var gitLabToolsRegistered = hasToolPrefix(tools, GitLabToolNames.PREFIX);
@@ -178,7 +212,8 @@ public record CopilotIncidentToolAccessPolicy(
                         tool.name(),
                         environmentResolved,
                         gitLabScopeResolved,
-                        elasticToolsConfigured
+                        elasticToolsConfigured,
+                        databaseRawSqlEnabled
                 ))
                 .toList();
         var availableToolNames = enabledTools.stream()
@@ -311,7 +346,8 @@ public record CopilotIncidentToolAccessPolicy(
     private static boolean isEnabled(
             String toolName,
             CopilotIncidentEvidenceCoverageReport evidenceCoverage,
-            boolean elasticToolsConfigured
+            boolean elasticToolsConfigured,
+            boolean databaseRawSqlEnabled
     ) {
         if (toolName == null || toolName.isBlank()) {
             return false;
@@ -329,7 +365,7 @@ public record CopilotIncidentToolAccessPolicy(
             return gitLabToolEnabled(toolName, evidenceCoverage);
         }
         if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
-            return databaseToolEnabled(toolName, evidenceCoverage);
+            return databaseToolEnabled(toolName, evidenceCoverage, databaseRawSqlEnabled);
         }
         if (toolName.startsWith(OperationalContextToolNames.PREFIX)) {
             return true;
@@ -350,9 +386,13 @@ public record CopilotIncidentToolAccessPolicy(
         return FOCUSED_GITLAB_TOOLS.contains(toolName);
     }
 
-    private static boolean databaseToolEnabled(String toolName, CopilotIncidentEvidenceCoverageReport evidenceCoverage) {
+    private static boolean databaseToolEnabled(
+            String toolName,
+            CopilotIncidentEvidenceCoverageReport evidenceCoverage,
+            boolean databaseRawSqlEnabled
+    ) {
         if (DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)) {
-            return false;
+            return databaseRawSqlEnabled && evidenceCoverage.environmentResolved();
         }
         if (evidenceCoverage.databaseNeedsTooling()) {
             return true;
@@ -364,7 +404,8 @@ public record CopilotIncidentToolAccessPolicy(
             String toolName,
             boolean environmentResolved,
             boolean gitLabScopeResolved,
-            boolean elasticToolsConfigured
+            boolean elasticToolsConfigured,
+            boolean databaseRawSqlEnabled
     ) {
         if (toolName == null || toolName.isBlank()) {
             return false;
@@ -382,7 +423,10 @@ public record CopilotIncidentToolAccessPolicy(
             return gitLabScopeResolved;
         }
         if (toolName.startsWith(DatabaseToolNames.PREFIX)) {
-            return environmentResolved && !DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName);
+            if (DatabaseToolNames.EXECUTE_READONLY_SQL.equals(toolName)) {
+                return environmentResolved && databaseRawSqlEnabled;
+            }
+            return environmentResolved;
         }
         if (toolName.startsWith(OperationalContextToolNames.PREFIX)) {
             return true;

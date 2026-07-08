@@ -7,6 +7,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.coverage.CopilotIncidentEvidenceCoverageEvaluator;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.tdw.integrations.database.DatabaseToolProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticConnectionAvailabilityService;
 
 import java.util.List;
@@ -17,6 +18,7 @@ public class CopilotIncidentToolAccessPolicyFactory {
 
     private final CopilotIncidentEvidenceCoverageEvaluator coverageEvaluator;
     private final ElasticConnectionAvailabilityService elasticAvailabilityService;
+    private final DatabaseToolProperties databaseToolProperties;
 
     public CopilotIncidentToolAccessPolicy create(
             InitialAnalysisRequest request,
@@ -27,7 +29,8 @@ public class CopilotIncidentToolAccessPolicyFactory {
                 registeredTools,
                 coverageEvaluator.evaluate(request),
                 elasticAvailability.configured(),
-                elasticAvailability.disabledReason()
+                elasticAvailability.disabledReason(),
+                databaseToolProperties.isRawSqlEnabled()
         );
     }
 
@@ -41,7 +44,8 @@ public class CopilotIncidentToolAccessPolicyFactory {
                 StringUtils.hasText(request.environment()),
                 StringUtils.hasText(request.gitLabBranch()),
                 elasticAvailability.configured(),
-                elasticAvailability.disabledReason()
+                elasticAvailability.disabledReason(),
+                databaseToolProperties.isRawSqlEnabled()
         );
     }
 }

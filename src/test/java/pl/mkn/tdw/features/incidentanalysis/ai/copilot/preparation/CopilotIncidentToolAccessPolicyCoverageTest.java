@@ -259,6 +259,27 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
     }
 
     @Test
+    void shouldEnableRawSqlForInitialAnalysisWhenEnvironmentIsResolvedAndRawSqlIsEnabled() {
+        var policy = policyFactoryWithConfiguredElastic(true).create(
+                request("dev3", List.of(sufficientElasticSection())),
+                tools("db_execute_readonly_sql")
+        );
+
+        assertTrue(policy.availableToolNames().contains("db_execute_readonly_sql"));
+        assertTrue(policy.databaseToolsEnabled());
+    }
+
+    @Test
+    void shouldKeepRawSqlDisabledForInitialAnalysisWhenEnvironmentIsUnresolvedEvenIfRawSqlIsEnabled() {
+        var policy = policyFactoryWithConfiguredElastic(true).create(
+                request(null, List.of(jpaExceptionSection())),
+                tools("db_execute_readonly_sql")
+        );
+
+        assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
+    }
+
+    @Test
     void shouldDisableDatabaseToolsWhenDataNeedExistsButEnvironmentIsUnresolved() {
         var policy = policy(
                 request(null, List.of(jpaExceptionSection())),
@@ -377,6 +398,26 @@ class CopilotIncidentToolAccessPolicyCoverageTest {
         assertTrue(policy.availableToolNames().contains("db_find_tables"));
         assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
         assertTrue(policy.availableToolNames().contains("opctx_search"));
+    }
+
+    @Test
+    void shouldEnableRawSqlForFollowUpWhenEnvironmentIsResolvedAndRawSqlIsEnabled() {
+        var policy = policyFactoryWithConfiguredElastic(true).createForFollowUp(
+                chatRequest("dev3", "CRM/runtime", "release/2026.04"),
+                tools("db_execute_readonly_sql")
+        );
+
+        assertTrue(policy.availableToolNames().contains("db_execute_readonly_sql"));
+    }
+
+    @Test
+    void shouldKeepRawSqlDisabledForFollowUpWhenEnvironmentIsMissingEvenIfRawSqlIsEnabled() {
+        var policy = policyFactoryWithConfiguredElastic(true).createForFollowUp(
+                chatRequest(null, "CRM/runtime", "release/2026.04"),
+                tools("db_execute_readonly_sql")
+        );
+
+        assertFalse(policy.availableToolNames().contains("db_execute_readonly_sql"));
     }
 
     @Test
