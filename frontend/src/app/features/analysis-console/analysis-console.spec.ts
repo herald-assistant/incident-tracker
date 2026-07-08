@@ -331,8 +331,9 @@ describe('AnalysisConsoleComponent auth flow', () => {
 
     expect(historyApi.getRun).toHaveBeenCalledWith('analysis-1');
     expect(fixture.nativeElement.textContent).toContain('Analiza funkcjonalna procesu profilu klienta CRM.');
-    expect(fixture.nativeElement.textContent).toContain('incident-report-1');
-    expect(fixture.nativeElement.textContent).toContain('Technical handoff');
+    expect(fixture.nativeElement.textContent).toContain('Rezultat analizy technicznej');
+    expect(fixture.nativeElement.textContent).toContain('Limits, questions and references');
+    expect(fixture.nativeElement.querySelector('app-analysis-report-panel')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('Lokalny run został otwarty z historii.');
   });
 

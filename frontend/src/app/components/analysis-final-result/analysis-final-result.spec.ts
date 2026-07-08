@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AnalysisResultResponse } from '../../core/models/analysis.models';
+import { AnalysisReport, AnalysisResultResponse } from '../../core/models/analysis.models';
 import { AnalysisFinalResultComponent } from './analysis-final-result';
 
 describe('AnalysisFinalResultComponent', () => {
@@ -38,7 +38,29 @@ describe('AnalysisFinalResultComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
   });
 
-  async function renderResult(): Promise<ComponentFixture<AnalysisFinalResultComponent>> {
+  it('should render report sections in tabs and hide empty meta groups', async () => {
+    const fixture = await renderResult(report());
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('Rezultat analizy funkcjonalnej');
+    expect(compiled.textContent).toContain('Rezultat analizy technicznej');
+    expect(compiled.textContent).toContain('Proces biznesowy zatrzymuje się na walidacji.');
+    expect(compiled.textContent).not.toContain('References');
+    expect(compiled.textContent).toContain('Limits, questions and references');
+
+    clickButtonContaining(compiled, 'Rezultat analizy technicznej');
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain('Timeout powstaje w CustomerClient.');
+    expect(compiled.textContent).toContain('References');
+    expect(compiled.textContent).toContain('CustomerClient.call');
+    expect(compiled.textContent).toContain('Visibility limits');
+    expect(compiled.textContent).not.toContain('Open questions');
+  });
+
+  async function renderResult(
+    reportValue: AnalysisReport | null = null
+  ): Promise<ComponentFixture<AnalysisFinalResultComponent>> {
     await TestBed.configureTestingModule({
       imports: [AnalysisFinalResultComponent]
     }).compileComponents();
@@ -46,6 +68,7 @@ describe('AnalysisFinalResultComponent', () => {
     const fixture = TestBed.createComponent(AnalysisFinalResultComponent);
     fixture.componentRef.setInput('status', 'COMPLETED');
     fixture.componentRef.setInput('result', analysisResult());
+    fixture.componentRef.setInput('report', reportValue);
     fixture.detectChanges();
     return fixture;
   }
@@ -66,6 +89,60 @@ describe('AnalysisFinalResultComponent', () => {
       visibilityLimits: ['Brak logów aplikacyjnych.'],
       prompt: '',
       usage: null
+    };
+  }
+
+  function report(): AnalysisReport {
+    return {
+      reportId: 'incident-report-1',
+      header: 'Detected problem',
+      subHeader: 'CRM / test',
+      markdownSummary: '',
+      sections: [
+        {
+          id: 'FUNCTIONAL_ANALYSIS',
+          title: 'Functional analysis',
+          order: 1,
+          markdown: 'Proces biznesowy zatrzymuje się na walidacji.',
+          meta: {
+            references: [],
+            visibilityLimits: [],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'medium',
+            warnings: []
+          }
+        },
+        {
+          id: 'TECHNICAL_HANDOFF',
+          title: 'Technical handoff',
+          order: 2,
+          markdown: 'Timeout powstaje w `CustomerClient`.',
+          meta: {
+            references: [
+              {
+                type: 'code',
+                label: 'CustomerClient.call',
+                target: 'src/main/java/CustomerClient.java:L42',
+                description: 'Wywolanie downstream.'
+              }
+            ],
+            visibilityLimits: ['Brak logów aplikacyjnych.'],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'medium',
+            warnings: []
+          }
+        }
+      ],
+      meta: {
+        references: [],
+        visibilityLimits: ['Brak logów aplikacyjnych.'],
+        openQuestions: [],
+        gaps: [],
+        confidence: 'medium',
+        warnings: []
+      }
     };
   }
 

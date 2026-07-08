@@ -274,6 +274,7 @@
             @if (currentJob.result) {
               <app-analysis-final-result
                 [result]="currentJob.result"
+                [report]="currentJob.report ?? null"
                 [status]="currentJob.status"
               ></app-analysis-final-result>
             } @else {
@@ -289,10 +290,6 @@
                 </div>
                 <p>{{ jobBannerMessage(currentJob) }}</p>
               </section>
-            }
-
-            @if (currentJob.report) {
-              <app-analysis-report-panel [report]="currentJob.report"></app-analysis-report-panel>
             }
 
           </div>

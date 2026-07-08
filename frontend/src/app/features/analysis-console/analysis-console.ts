@@ -63,7 +63,6 @@ import { appendOptimisticChatTurn } from '../../core/utils/analysis-chat-optimis
 import { AnalysisFeatureAsideComponent } from '../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFinalResultComponent } from '../../components/analysis-final-result/analysis-final-result';
 import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-up-chat/analysis-follow-up-chat';
-import { AnalysisReportPanelComponent } from '../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 
 const POLL_INTERVAL_MS = 1500;
@@ -108,7 +107,6 @@ const DEFAULT_ANALYSIS_INPUT_OPTIONS: AnalysisJobInputOptionsResponse = {
     AnalysisFeatureAsideComponent,
     AnalysisFinalResultComponent,
     AnalysisFollowUpChatComponent,
-    AnalysisReportPanelComponent,
     AnalysisStepsPanelComponent
   ],
   templateUrl: './analysis-console.html',

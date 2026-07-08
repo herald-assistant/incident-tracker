@@ -1,0 +1,169 @@
+@if (hasMeta(meta())) {
+  @if (variant() === 'appendix') {
+    <details class="flow-explorer-result-appendix analysis-report-appendix">
+      <summary>
+        <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+        <div>
+          <span class="field-label">{{ appendixEyebrow() }}</span>
+          <strong>{{ appendixTitle() }}</strong>
+        </div>
+        <span class="flow-explorer-result-appendix__counts">
+          @if (hasItems(meta()?.visibilityLimits)) {
+            <span>{{ countLabel(meta()?.visibilityLimits?.length ?? 0, 'limit', 'limits') }}</span>
+          }
+          @if (hasItems(meta()?.openQuestions)) {
+            <span>{{ countLabel(meta()?.openQuestions?.length ?? 0, 'question', 'questions') }}</span>
+          }
+          @if (hasItems(meta()?.gaps)) {
+            <span>{{ countLabel(meta()?.gaps?.length ?? 0, 'gap', 'gaps') }}</span>
+          }
+          @if (hasItems(meta()?.warnings)) {
+            <span>{{ countLabel(meta()?.warnings?.length ?? 0, 'warning', 'warnings') }}</span>
+          }
+          @if (hasItems(meta()?.references)) {
+            <span>{{ countLabel(meta()?.references?.length ?? 0, 'reference', 'references') }}</span>
+          }
+        </span>
+      </summary>
+
+      <div class="flow-explorer-result-appendix__body">
+        @if (hasItems(meta()?.visibilityLimits)) {
+          <div class="flow-explorer-result-appendix__group">
+            <h4>Visibility limits</h4>
+            <ul class="flow-explorer-meta-list">
+              @for (limit of meta()?.visibilityLimits; track $index) {
+                <li>{{ limit }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (hasItems(meta()?.openQuestions)) {
+          <div class="flow-explorer-result-appendix__group">
+            <h4>Open questions</h4>
+            <ul class="flow-explorer-meta-list">
+              @for (question of meta()?.openQuestions; track $index) {
+                <li>{{ question }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (hasItems(meta()?.gaps)) {
+          <div class="flow-explorer-result-appendix__group">
+            <h4>Gaps</h4>
+            <ul class="flow-explorer-meta-list">
+              @for (gap of meta()?.gaps; track $index) {
+                <li>{{ gap }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (hasItems(meta()?.warnings)) {
+          <div class="flow-explorer-result-appendix__group">
+            <h4>Warnings</h4>
+            <ul class="flow-explorer-meta-list">
+              @for (warning of meta()?.warnings; track $index) {
+                <li>{{ warning }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (hasItems(meta()?.references)) {
+          <div class="flow-explorer-result-appendix__group flow-explorer-result-appendix__group--references">
+            <h4>All references</h4>
+            <div class="flow-explorer-chip-list">
+              @for (reference of meta()?.references; track $index) {
+                <span class="panel-chip flow-explorer-reference-chip">
+                  <strong>{{ referenceLabel(reference) }}</strong>
+                  @if (hasText(referenceDetails(reference))) {
+                    <small>{{ referenceDetails(reference) }}</small>
+                  }
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </details>
+  } @else {
+    <div
+      class="flow-explorer-section-metadata analysis-report-section-meta"
+      [class.analysis-report-section-meta--start]="align() === 'start'"
+    >
+      @if (hasItems(meta()?.references)) {
+        <details class="flow-explorer-reference-list">
+          <summary>
+            <span class="material-symbols-outlined" aria-hidden="true">notes</span>
+            <span>References</span>
+            <small>{{ meta()?.references?.length }}</small>
+          </summary>
+          <div class="flow-explorer-chip-list">
+            @for (reference of meta()?.references; track $index) {
+              <span class="panel-chip flow-explorer-reference-chip">
+                <strong>{{ referenceLabel(reference) }}</strong>
+                @if (hasText(referenceDetails(reference))) {
+                  <small>{{ referenceDetails(reference) }}</small>
+                }
+              </span>
+            }
+          </div>
+        </details>
+      }
+      @if (hasItems(meta()?.visibilityLimits)) {
+        <details class="flow-explorer-meta-detail">
+          <summary>
+            <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
+            <span>Visibility limits</span>
+            <small>{{ meta()?.visibilityLimits?.length }}</small>
+          </summary>
+          <ul class="flow-explorer-meta-list">
+            @for (limit of meta()?.visibilityLimits; track $index) {
+              <li>{{ limit }}</li>
+            }
+          </ul>
+        </details>
+      }
+      @if (hasItems(meta()?.openQuestions)) {
+        <details class="flow-explorer-meta-detail">
+          <summary>
+            <span class="material-symbols-outlined" aria-hidden="true">help</span>
+            <span>Open questions</span>
+            <small>{{ meta()?.openQuestions?.length }}</small>
+          </summary>
+          <ul class="flow-explorer-meta-list">
+            @for (question of meta()?.openQuestions; track $index) {
+              <li>{{ question }}</li>
+            }
+          </ul>
+        </details>
+      }
+      @if (hasItems(meta()?.gaps)) {
+        <details class="flow-explorer-meta-detail">
+          <summary>
+            <span class="material-symbols-outlined" aria-hidden="true">rule</span>
+            <span>Gaps</span>
+            <small>{{ meta()?.gaps?.length }}</small>
+          </summary>
+          <ul class="flow-explorer-meta-list">
+            @for (gap of meta()?.gaps; track $index) {
+              <li>{{ gap }}</li>
+            }
+          </ul>
+        </details>
+      }
+      @if (hasItems(meta()?.warnings)) {
+        <details class="flow-explorer-meta-detail">
+          <summary>
+            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+            <span>Warnings</span>
+            <small>{{ meta()?.warnings?.length }}</small>
+          </summary>
+          <ul class="flow-explorer-meta-list">
+            @for (warning of meta()?.warnings; track $index) {
+              <li>{{ warning }}</li>
+            }
+          </ul>
+        </details>
+      }
+    </div>
+  }
+}

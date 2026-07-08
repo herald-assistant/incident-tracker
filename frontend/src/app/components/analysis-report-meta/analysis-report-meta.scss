@@ -1,0 +1,282 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.flow-explorer-section-metadata {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  min-width: 0;
+  width: 100%;
+}
+
+.analysis-report-section-meta--start {
+  justify-items: start;
+}
+
+.flow-explorer-reference-list,
+.flow-explorer-meta-detail {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  width: min(760px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+.analysis-report-section-meta--start .flow-explorer-reference-list,
+.analysis-report-section-meta--start .flow-explorer-meta-detail {
+  justify-items: start;
+}
+
+.flow-explorer-reference-list summary,
+.flow-explorer-meta-detail summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  justify-self: end;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  list-style: none;
+}
+
+.analysis-report-section-meta--start .flow-explorer-reference-list summary,
+.analysis-report-section-meta--start .flow-explorer-meta-detail summary {
+  justify-self: start;
+}
+
+.flow-explorer-reference-list summary::-webkit-details-marker,
+.flow-explorer-meta-detail summary::-webkit-details-marker,
+.flow-explorer-result-appendix > summary::-webkit-details-marker {
+  display: none;
+}
+
+.flow-explorer-reference-list summary::after,
+.flow-explorer-meta-detail summary::after,
+.flow-explorer-result-appendix > summary::after {
+  content: "expand_more";
+  color: var(--text-muted);
+  font-family: "Material Symbols Outlined";
+  font-size: 18px;
+  font-weight: normal;
+  line-height: 1;
+  transition:
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.flow-explorer-reference-list[open] summary::after,
+.flow-explorer-meta-detail[open] summary::after,
+.flow-explorer-result-appendix[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.flow-explorer-reference-list summary:hover,
+.flow-explorer-reference-list summary:focus-visible,
+.flow-explorer-reference-list summary:hover::after,
+.flow-explorer-reference-list summary:focus-visible::after,
+.flow-explorer-meta-detail summary:hover,
+.flow-explorer-meta-detail summary:focus-visible,
+.flow-explorer-meta-detail summary:hover::after,
+.flow-explorer-meta-detail summary:focus-visible::after,
+.flow-explorer-result-appendix > summary:hover,
+.flow-explorer-result-appendix > summary:focus-visible,
+.flow-explorer-result-appendix > summary:hover::after,
+.flow-explorer-result-appendix > summary:focus-visible::after {
+  color: var(--text-main);
+}
+
+.flow-explorer-reference-list summary .material-symbols-outlined,
+.flow-explorer-meta-detail summary .material-symbols-outlined {
+  color: currentColor;
+  font-size: 17px;
+}
+
+.flow-explorer-reference-list summary small,
+.flow-explorer-meta-detail summary small {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.flow-explorer-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.flow-explorer-reference-list .flow-explorer-chip-list {
+  justify-content: flex-end;
+  justify-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.analysis-report-section-meta--start .flow-explorer-reference-list .flow-explorer-chip-list {
+  justify-content: flex-start;
+}
+
+.flow-explorer-meta-list {
+  justify-self: end;
+  width: min(620px, 100%);
+  margin: 0;
+  padding: 2px 0 0 18px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.analysis-report-section-meta--start .flow-explorer-meta-list {
+  justify-self: stretch;
+  width: 100%;
+}
+
+.flow-explorer-meta-list li + li {
+  margin-top: 4px;
+}
+
+.flow-explorer-reference-list .panel-chip,
+.flow-explorer-result-appendix__group--references .panel-chip {
+  display: inline-block;
+  flex: 0 1 auto;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 8px;
+  border-color: var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-align: left;
+  white-space: normal;
+}
+
+.flow-explorer-reference-chip,
+.flow-explorer-reference-list .flow-explorer-reference-chip,
+.flow-explorer-result-appendix__group--references .flow-explorer-reference-chip {
+  display: inline-grid;
+  gap: 2px;
+}
+
+.flow-explorer-reference-chip strong,
+.flow-explorer-reference-chip small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.flow-explorer-reference-chip strong {
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.flow-explorer-reference-chip small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.flow-explorer-result-appendix {
+  display: grid;
+  min-width: 0;
+  border-top: 1px solid rgba(184, 198, 216, 0.74);
+  color: var(--text-muted);
+}
+
+.flow-explorer-result-appendix > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 2px;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.flow-explorer-result-appendix > summary > .material-symbols-outlined {
+  flex: 0 0 auto;
+  color: currentColor;
+  font-size: 19px;
+}
+
+.flow-explorer-result-appendix > summary > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.flow-explorer-result-appendix > summary strong {
+  display: block;
+  color: currentColor;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.flow-explorer-result-appendix__counts {
+  display: inline-flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  justify-content: flex-end;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.flow-explorer-result-appendix__counts span + span::before {
+  content: ".";
+  margin-right: 8px;
+  color: rgba(102, 119, 144, 0.7);
+}
+
+.flow-explorer-result-appendix__body {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 2px 0 12px 28px;
+}
+
+.flow-explorer-result-appendix__group {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.flow-explorer-result-appendix__group h4 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.flow-explorer-result-appendix__group .flow-explorer-meta-list {
+  justify-self: stretch;
+  width: 100%;
+  color: var(--text-muted);
+}
+
+.flow-explorer-result-appendix__group--references .flow-explorer-chip-list {
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+}

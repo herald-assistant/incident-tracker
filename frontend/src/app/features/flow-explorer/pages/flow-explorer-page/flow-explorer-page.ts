@@ -43,8 +43,9 @@ import {
 import { buildFlowExplorerReportMarkdown } from '../../utils/flow-explorer-result-markdown.utils';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-follow-up-chat/analysis-follow-up-chat';
+import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
+import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
-import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import {
   AnalysisAiCostEstimate,
@@ -75,13 +76,8 @@ interface FlowExplorerUsageStat {
   value: string;
 }
 
-interface FlowExplorerDisplayReference {
-  label: string;
-  details: string;
-}
-
 interface FlowExplorerDisplayMeta {
-  references: FlowExplorerDisplayReference[];
+  references: AnalysisReportReference[];
   visibilityLimits: string[];
   openQuestions: string[];
   gaps: string[];
@@ -195,8 +191,9 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
     AnalysisFollowUpChatComponent,
+    AnalysisReportMetaComponent,
+    AnalysisReportSectionContentComponent,
     AnalysisStepsPanelComponent,
-    MarkdownContentComponent
   ],
   templateUrl: './flow-explorer-page.html',
   styleUrl: './flow-explorer-page.scss'
@@ -1587,7 +1584,13 @@ function displayMetaFromReport(meta: AnalysisReportMeta | null | undefined): Flo
   return {
     references: (meta?.references ?? [])
       .map(displayReferenceFromReport)
-      .filter((reference) => hasTextValue(reference.label) || hasTextValue(reference.details)),
+      .filter(
+        (reference) =>
+          hasTextValue(reference.label) ||
+          hasTextValue(reference.target) ||
+          hasTextValue(reference.type) ||
+          hasTextValue(reference.description)
+      ),
     visibilityLimits: cleanTextList(meta?.visibilityLimits),
     openQuestions: cleanTextList(meta?.openQuestions),
     gaps: cleanTextList(meta?.gaps),
@@ -1596,13 +1599,13 @@ function displayMetaFromReport(meta: AnalysisReportMeta | null | undefined): Flo
   };
 }
 
-function displayReferenceFromReport(reference: AnalysisReportReference): FlowExplorerDisplayReference {
-  const label = firstText(reference.label, reference.target, reference.type, reference.description, 'Reference');
-  const details = [reference.type, reference.target, reference.description]
-    .map(cleanText)
-    .filter((value) => hasTextValue(value) && value !== label)
-    .join(' | ');
-  return { label, details };
+function displayReferenceFromReport(reference: AnalysisReportReference): AnalysisReportReference {
+  return {
+    type: cleanText(reference.type),
+    label: firstText(reference.label, reference.target, reference.type, reference.description, 'Reference'),
+    target: cleanText(reference.target),
+    description: cleanText(reference.description)
+  };
 }
 
 function emptyDisplayMeta(confidence = ''): FlowExplorerDisplayMeta {

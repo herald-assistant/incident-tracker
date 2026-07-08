@@ -1,0 +1,11 @@
+:host {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.flow-explorer-markdown,
+.analysis-report-section-content__markdown {
+  display: block;
+  min-width: 0;
+}

@@ -1,9 +1,12 @@
-@if (result(); as analysisResult) {
+@if (display(); as analysisResult) {
   <section class="final-analysis">
     <div class="panel-card__header panel-card__header--compact final-analysis__header">
       <div>
         <p class="section-eyebrow">Wynik</p>
         <h3>{{ status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza' }}</h3>
+        @if (hasMeaningfulValue(analysisResult.subTitle)) {
+          <p>{{ analysisResult.subTitle }}</p>
+        }
       </div>
 
       <div class="final-analysis__actions">
@@ -48,70 +51,47 @@
     }
 
     <div class="analysis-result-tabs" role="tablist" aria-label="Sekcje finalnej analizy">
-      <button
-        id="analysis-tab-functional"
-        class="analysis-result-tab"
-        [class.analysis-result-tab--active]="activeAnalysisTab() === 'functional'"
-        type="button"
-        role="tab"
-        aria-controls="analysis-panel-functional"
-        [attr.aria-selected]="activeAnalysisTab() === 'functional'"
-        [attr.tabindex]="activeAnalysisTab() === 'functional' ? 0 : -1"
-        (click)="selectAnalysisTab('functional')"
-      >
-        Rezultat analizy funkcjonalnej
-      </button>
-
-      <button
-        id="analysis-tab-technical"
-        class="analysis-result-tab"
-        [class.analysis-result-tab--active]="activeAnalysisTab() === 'technical'"
-        type="button"
-        role="tab"
-        aria-controls="analysis-panel-technical"
-        [attr.aria-selected]="activeAnalysisTab() === 'technical'"
-        [attr.tabindex]="activeAnalysisTab() === 'technical' ? 0 : -1"
-        (click)="selectAnalysisTab('technical')"
-      >
-        Rezultat analizy technicznej
-      </button>
+      @for (section of analysisResult.sections; track section.id) {
+        <button
+          [id]="'analysis-tab-' + section.id"
+          class="analysis-result-tab"
+          [class.analysis-result-tab--active]="activeAnalysisTab() === section.id"
+          type="button"
+          role="tab"
+          [attr.aria-controls]="'analysis-panel-' + section.id"
+          [attr.aria-selected]="activeAnalysisTab() === section.id"
+          [attr.tabindex]="activeAnalysisTab() === section.id ? 0 : -1"
+          (click)="selectAnalysisTab(section.id)"
+        >
+          {{ section.tabLabel }}
+        </button>
+      }
     </div>
 
-    @if (activeAnalysisTab() === 'functional') {
-      <div
-        id="analysis-panel-functional"
-        class="analysis-summary analysis-summary--tab-panel"
-        role="tabpanel"
-        aria-labelledby="analysis-tab-functional"
-        tabindex="0"
-      >
-        <app-markdown-content
-          [content]="analysisResult.functionalAnalysis || 'Brak wyniku analizy funkcjonalnej.'"
-        ></app-markdown-content>
-      </div>
-    } @else {
-      <div
-        id="analysis-panel-technical"
-        class="analysis-summary analysis-summary--tab-panel"
-        role="tabpanel"
-        aria-labelledby="analysis-tab-technical"
-        tabindex="0"
-      >
-        <app-markdown-content
-          [content]="analysisResult.technicalAnalysis || 'Brak wyniku analizy technicznej.'"
-        ></app-markdown-content>
-      </div>
+    @for (section of analysisResult.sections; track section.id) {
+      @if (activeAnalysisTab() === section.id) {
+        <div
+          [id]="'analysis-panel-' + section.id"
+          class="analysis-summary analysis-summary--tab-panel"
+          role="tabpanel"
+          [attr.aria-labelledby]="'analysis-tab-' + section.id"
+          tabindex="0"
+        >
+          <app-analysis-report-section-content
+            [markdown]="section.markdown"
+            [emptyText]="section.emptyText"
+            [meta]="section.meta"
+            metaAlign="start"
+          ></app-analysis-report-section-content>
+        </div>
+      }
     }
 
-    @if (analysisResult.visibilityLimits.length > 0) {
-      <div class="analysis-highlight">
-        <p class="result-card-label">Ograniczenia widoczności</p>
-        <ul>
-          @for (limit of analysisResult.visibilityLimits; track limit) {
-            <li>{{ limit }}</li>
-          }
-        </ul>
-      </div>
-    }
+    <section class="final-analysis__appendix" aria-label="Analysis appendix">
+      <app-analysis-report-meta
+        [meta]="analysisResult.appendix"
+        variant="appendix"
+      ></app-analysis-report-meta>
+    </section>
   </section>
 }
