@@ -95,8 +95,12 @@ predicate albo mapowania. To jest praca GitLab tools.
   komponentami referencyjnymi.
 - `codeSearchScope` pomaga dobrac repozytoria, ale nie dowodzi, ze endpoint
   uzywa danego pliku.
-- `codeSearchScope` moze tez podac `searchMode/pathPrefixes`; to tylko granica
-  GitLab searchu dla wiekszego repozytorium, nie inventory klas ani endpointow.
+- `codeSearchScope` moze tez podac `searchMode/pathPrefixes`; to domyslny
+  discovery scope GitLaba dla wiekszego repozytorium, nie inventory klas ani
+  endpointow i nie blokada dla focused read po konkretnej zaleznosci.
+- Jezeli GitLab focused read wychodzi poza `pathPrefixes`, traktuj to jako
+  jawny sygnal granicy zaleznosci i nazwij go w `visibilityLimits` albo
+  handoffie, zamiast zakladac nowy szeroki owner scope.
 - Gdy GitLab result ma `projectName` i `filePath`, uzyj dopasowania
   repository + path prefix do `codeSearchScope`, a potem do jego targetu, aby
   nazwac bounded context albo ownera. Preferuj target `bounded-context`; target

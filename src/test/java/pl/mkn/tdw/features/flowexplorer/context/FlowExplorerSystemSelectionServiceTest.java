@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.CODE_SEARCH_SCOPE;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
 
@@ -46,6 +47,7 @@ class FlowExplorerSystemSelectionServiceTest {
         assertFalse(capturedQuery.get().includeIndexDocument());
         assertTrue(capturedQuery.get().includes(SYSTEM));
         assertTrue(capturedQuery.get().includes(REPOSITORY));
+        assertTrue(capturedQuery.get().includes(CODE_SEARCH_SCOPE));
     }
 
     private static OperationalContextCatalog catalog() {
@@ -74,7 +76,7 @@ class FlowExplorerSystemSelectionServiceTest {
                                 "summary", "Handles CRM customer profile operations.",
                                 "aliases", List.of("crm-customer-profile", "notifications"),
                                 "references", map(
-                                        "repositories", List.of("crm-customer-profile-api"),
+                                        "repositories", List.of("crm-customer-profile-worker"),
                                         "teams", List.of("crm-customer-profile-team")
                                 ),
                                 "ownership", ownership(List.of("crm-customer-profile-team"), "high"),

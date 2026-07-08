@@ -183,6 +183,47 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('L12-L24');
   });
 
+  it('should show operator-facing visibility messages instead of search scope mechanics', () => {
+    const baseInventory = endpointInventory();
+    vi.mocked(flowExplorerApi.getEndpointInventory).mockReturnValue(
+      of({
+        ...baseInventory,
+        scannedFileLimitReached: true,
+        limitations: ['codeSearchScope path-prefixes scan limit reached for crm-api repository'],
+        endpoints: baseInventory.endpoints.map((endpoint) => ({
+          ...endpoint,
+          limitations: [
+            'Explicit focused read outside default discovery scope: src/main/java/com/example/InternalDependency.java'
+          ],
+          tooltipDetails: endpoint.tooltipDetails
+            ? {
+                ...endpoint.tooltipDetails,
+                limitations: ['File not found: src/main/java/com/example/InternalDependency.java']
+              }
+            : null
+        }))
+      })
+    );
+    const fixture = TestBed.createComponent(FlowExplorerPageComponent);
+
+    fixture.detectChanges();
+    selectSystem(fixture, 'CRM Service');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Analiza zostala wykonana na dostepnych materialach.');
+    expect(compiled.textContent).not.toContain('path-prefixes');
+    expect(compiled.textContent).not.toContain('codeSearchScope');
+    expect(compiled.textContent).not.toContain('scan limit');
+
+    openEndpointSelect(compiled);
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain('Nie znaleziono pliku.');
+    expect(compiled.textContent).not.toContain('outside default discovery scope');
+    expect(compiled.textContent).not.toContain('src/main/java/com/example/InternalDependency.java');
+    expect(compiled.textContent).not.toContain('crm-api ·');
+  });
+
   it('should keep selected endpoint preview focused on method, path and description', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 

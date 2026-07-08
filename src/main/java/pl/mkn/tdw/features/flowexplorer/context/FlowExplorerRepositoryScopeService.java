@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.CODE_SEARCH_SCOPE;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
 
@@ -34,7 +35,8 @@ public class FlowExplorerRepositoryScopeService {
 
     private static final Set<OperationalContextEntryType> REPOSITORY_SCOPE_ENTRY_TYPES = Set.of(
             SYSTEM,
-            REPOSITORY
+            REPOSITORY,
+            CODE_SEARCH_SCOPE
     );
 
     private final OperationalContextPort operationalContextPort;
@@ -57,7 +59,7 @@ public class FlowExplorerRepositoryScopeService {
         var limitations = new ArrayList<String>();
 
         if (repositoryRefs.isEmpty()) {
-            limitations.add("Operational context system has no repository references or matching code-search scope repositories.");
+            limitations.add("Operational context system has no code-search scope repositories.");
         }
 
         for (var repositoryRef : repositoryRefs) {
@@ -87,8 +89,13 @@ public class FlowExplorerRepositoryScopeService {
                     repository.id(),
                     projectName,
                     projectPath(repository),
+                    repositoryRef.scopeId(),
+                    repositoryRef.role(),
                     repositoryRef.priority(),
                     repositoryRef.reason(),
+                    repositoryRef.readFor(),
+                    repositoryRef.searchMode(),
+                    repositoryRef.pathPrefixes(),
                     repository
             ));
         }
@@ -144,7 +151,6 @@ public class FlowExplorerRepositoryScopeService {
             OperationalContextSystem system
     ) {
         var refsById = new LinkedHashMap<String, RepositoryRef>();
-        addRepositoryRefs(refsById, system.references().repositories(), null, "system.references.repositories");
 
         for (var scope : catalog.codeSearchScopes()) {
             if (!targetsSystem(scope, system.id())) {
@@ -160,9 +166,14 @@ public class FlowExplorerRepositoryScopeService {
             for (var repository : scopeRepositories) {
                 addRepositoryRef(
                         refsById,
+                        scope.id(),
                         repository.repoId(),
+                        repository.role(),
                         repository.priority(),
-                        "codeSearchScopes[" + scope.id() + "]"
+                        repository.reason(),
+                        repository.readFor(),
+                        repository.searchMode(),
+                        repository.pathPrefixes()
                 );
             }
         }
@@ -170,32 +181,36 @@ public class FlowExplorerRepositoryScopeService {
         return List.copyOf(refsById.values());
     }
 
-    private void addRepositoryRefs(
-            LinkedHashMap<String, RepositoryRef> refsById,
-            List<String> repositoryIds,
-            Integer priority,
-            String reason
-    ) {
-        for (var repositoryId : repositoryIds != null ? repositoryIds : List.<String>of()) {
-            addRepositoryRef(refsById, repositoryId, priority, reason);
-        }
-    }
-
     private void addRepositoryRef(
             LinkedHashMap<String, RepositoryRef> refsById,
+            String scopeId,
             String repositoryId,
+            String role,
             Integer priority,
-            String reason
+            String reason,
+            List<String> readFor,
+            String searchMode,
+            List<String> pathPrefixes
     ) {
         var normalizedId = normalizeComparable(repositoryId);
         if (!StringUtils.hasText(normalizedId)) {
             return;
         }
-        refsById.putIfAbsent(normalizedId, new RepositoryRef(repositoryId.trim(), priority, reason));
+        refsById.putIfAbsent(normalizedId, new RepositoryRef(
+                scopeId,
+                repositoryId.trim(),
+                role,
+                priority,
+                reason,
+                readFor,
+                searchMode,
+                pathPrefixes
+        ));
     }
 
     private boolean targetsSystem(OperationalContextRepositorySearchScope scope, String systemId) {
-        return systemTargetType(scope.target().type()) && systemId.equals(scope.target().id());
+        return systemTargetType(scope.target().type())
+                && normalizeComparable(systemId).equals(normalizeComparable(scope.target().id()));
     }
 
     private boolean systemTargetType(String targetType) {
@@ -271,6 +286,20 @@ public class FlowExplorerRepositoryScopeService {
                 : "";
     }
 
-    private record RepositoryRef(String repositoryId, Integer priority, String reason) {
+    private record RepositoryRef(
+            String scopeId,
+            String repositoryId,
+            String role,
+            Integer priority,
+            String reason,
+            List<String> readFor,
+            String searchMode,
+            List<String> pathPrefixes
+    ) {
+
+        private RepositoryRef {
+            readFor = readFor != null ? List.copyOf(readFor) : List.of();
+            pathPrefixes = pathPrefixes != null ? List.copyOf(pathPrefixes) : List.of();
+        }
     }
 }

@@ -86,6 +86,13 @@ Gdy prefixy roznia sie per repozytorium, wykonaj osobne focused calls zamiast
 mieszac je w jednym zapytaniu. Exact file/method/OpenAPI reads powinny uzywac
 konkretnych sciezek z manifestu albo poprzedniego tool result.
 
+`searchMode/pathPrefixes` sa domyslnym discovery scope, nie security allowlista
+dla jawnych targetow. Jezeli w toku analizy pojawia sie konkretna klasa, plik,
+metoda, OpenAPI file albo prefix zaleznosci poza tym scope'em, wykonaj focused
+read/lookup na tym targetcie i wpisz w `visibilityLimits`, ze evidence wyszlo
+poza domyslny discovery scope. Nie zamieniaj takiego przypadku w broad
+rediscovery repozytorium.
+
 Gdy wynik GitLaba zwraca `projectName` i `filePath`, zachowaj je jako sygnal
 dla operational grounding: moga zostac odwrotnie zmapowane przez
 `codeSearchScope` i `pathPrefixes` do bounded contextu oraz resolved ownership.
@@ -122,6 +129,8 @@ Po kazdym tool result sprawdz, czy odpowiedz domyka pytanie evidence:
 - jezeli wynik odpowiada na pytanie, zwroc `CodeGroundingSummary`,
 - jezeli wynik jest zbyt plytki, ale wskazuje konkretny plik, metode, chunk,
   selector albo OpenAPI path, wykonaj jedno waskie poglebienie,
+- jezeli waskie poglebienie dotyczy targetu poza `pathPrefixes`, wykonaj je
+  jako explicit focused read i oznacz scope crossing jako limitation,
 - jezeli kolejne poglebienie byloby tym samym pytaniem albo szerokim skanem,
   zwroc `visibility_limit`,
 - jezeli `nextStep` wskazuje `map_persistence_section` albo
@@ -172,6 +181,9 @@ Gdy orkiestrator albo skill sekcyjny prosi o kod:
 - `reasoningEffort=medium`: primary flow i aktywne sekcje `DEEP`.
 - `reasoningEffort=high`: pomocnicze walidatory, mappery, repository details
   albo integracje tylko gdy zmieniaja scenariusze, ryzyka albo edge case.
+- `pathPrefixes` oszczedzaja discovery; nie blokuj nimi konkretnego
+  filePath/class/method read, jezeli target wynika z artefaktu albo tool
+  result.
 
 ## Wklad Do Wyniku
 

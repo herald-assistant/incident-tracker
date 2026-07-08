@@ -1000,12 +1000,8 @@ export class FlowExplorerPageComponent implements OnInit {
       system.lifecycleStatus || 'status n/a',
       system.ownerTeamIds.join(', ') || 'owner n/a'
     ].join(' · ');
-    const repositoryCount =
-      system.repositoryCount === 1
-        ? '1 source repository'
-        : `${system.repositoryCount} source repositories`;
 
-    return `${summary}\n${catalogMeta}\n${repositoryCount}`;
+    return `${summary}\n${catalogMeta}`;
   }
 
   protected systemOptionClass(system: FlowExplorerSystemOption): string {
@@ -1065,7 +1061,7 @@ export class FlowExplorerPageComponent implements OnInit {
     if (!source) {
       return '';
     }
-    return `${source.projectName || source.repositoryId} · ${source.filePath}`;
+    return source.filePath;
   }
 
   protected endpointLineLabel(source: FlowExplorerEndpointSource | null): string {
@@ -1073,6 +1069,23 @@ export class FlowExplorerPageComponent implements OnInit {
       return '';
     }
     return `L${source.lineStart}-L${source.lineEnd}`;
+  }
+
+  protected inventoryVisibilityMessages(
+    inventory: FlowExplorerEndpointInventoryResponse
+  ): string[] {
+    const limitations = [...inventory.limitations];
+    if (inventory.scannedFileLimitReached) {
+      limitations.push('scan limit reached');
+    }
+    return this.operatorVisibilityMessages(limitations, true);
+  }
+
+  protected endpointVisibilityMessages(endpoint: FlowExplorerEndpointOption): string[] {
+    const limitations = endpoint.tooltipDetails?.limitations?.length
+      ? endpoint.tooltipDetails.limitations
+      : endpoint.limitations;
+    return this.operatorVisibilityMessages(limitations, false);
   }
 
   protected parameterLabel(parameter: FlowExplorerEndpointParameter): string {
@@ -1097,6 +1110,57 @@ export class FlowExplorerPageComponent implements OnInit {
           this.hasItems(meta.gaps) ||
           this.hasItems(meta.warnings))
     );
+  }
+
+  private operatorVisibilityMessages(limitations: string[], inventory: boolean): string[] {
+    const messages = limitations
+      .map((limitation) => this.operatorVisibilityMessage(limitation, inventory))
+      .filter((message): message is string => Boolean(message));
+    return Array.from(new Set(messages));
+  }
+
+  private operatorVisibilityMessage(limitation: string, inventory: boolean): string | null {
+    const normalized = limitation.trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+    if (
+      normalized.includes('file') &&
+      (normalized.includes('not found') ||
+        normalized.includes('missing') ||
+        normalized.includes('unavailable'))
+    ) {
+      return 'Nie znaleziono pliku.';
+    }
+    if (
+      normalized.includes('endpoint') &&
+      (normalized.includes('not found') ||
+        normalized.includes('missing') ||
+        normalized.includes('unavailable'))
+    ) {
+      return 'Nie znaleziono endpointu.';
+    }
+    if (
+      normalized.includes('repository') ||
+      normalized.includes('repo') ||
+      normalized.includes('gitlab')
+    ) {
+      return 'Czesc danych nie byla dostepna podczas analizy.';
+    }
+    if (
+      normalized.includes('scope') ||
+      normalized.includes('prefix') ||
+      normalized.includes('boundary') ||
+      normalized.includes('outside') ||
+      normalized.includes('limit') ||
+      normalized.includes('scan') ||
+      normalized.includes('truncated')
+    ) {
+      return 'Analiza zostala wykonana na dostepnych materialach.';
+    }
+    return inventory
+      ? 'Analiza zostala wykonana na dostepnych materialach.'
+      : 'Czesc szczegolow endpointu nie zostala potwierdzona.';
   }
 
   protected confidencePillClass(confidence: string): string {

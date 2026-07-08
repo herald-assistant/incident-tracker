@@ -46,6 +46,11 @@ granic odpowiedzialnosci skilli.
 
 Hidden `ToolContext` jest techniczna mechanika runtime. Nie zakladaj, ze
 zawiera functional scope endpointu. Nie przekazuj `gitLabGroup` do tools.
+`searchMode/pathPrefixes` z `flow-explorer/canonical-tool-inputs.md` traktuj
+jako domyslny discovery scope dla search/list/flow tools. Nie sa blokada dla
+explicit focused read, gdy znana jest konkretna sciezka, klasa, metoda albo
+prefix zaleznosci; taki scope crossing przekaz do summary jako visibility
+limit.
 
 ## Sterowanie Analiza
 
@@ -82,6 +87,9 @@ specjalistycznych skilli:
   jaka decyzja zmieni sie po wyniku.
 - `No duplicate work`: nie powtarzaj evidence z artefaktow ani nie dubluj
   procedur persistence, integration, code albo operational grounding.
+- `Discovery vs focused read`: broad discovery musi korzystac z
+  `searchMode/pathPrefixes`, ale konkretna zaleznosc poza tym zakresem moze
+  byc doczytana waskim GitLab readem z jawna notka widocznosci.
 - `Result readiness`: zakoncz orkiestracje, gdy kazdy potrzebny summary artifact
   istnieje albo ma jawny limitation dla `flow-explorer-write-report`.
 - `Feedback loop`: jezeli summary artifact jest nieobecny, zbyt plytki dla

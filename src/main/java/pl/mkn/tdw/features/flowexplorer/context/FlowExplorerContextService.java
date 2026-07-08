@@ -54,6 +54,7 @@ public class FlowExplorerContextService {
                                 endpointSelector.endpointId(),
                                 request.httpMethod(),
                                 request.endpointPath(),
+                                repository.pathPrefixes(),
                                 GitLabEndpointUseCaseContextRequest.DEFAULT_MAX_DEPTH,
                                 GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES
                         )
@@ -176,6 +177,8 @@ public class FlowExplorerContextService {
                 repository.projectName(),
                 repository.projectPath(),
                 resolvedRef,
+                repository.searchMode(),
+                repository.pathPrefixes(),
                 attempted,
                 false,
                 limitations
@@ -193,6 +196,8 @@ public class FlowExplorerContextService {
                         repository.projectName(),
                         repository.projectPath(),
                         repository.resolvedRef(),
+                        repository.searchMode(),
+                        repository.pathPrefixes(),
                         repository.attempted(),
                         selectedProjectName != null && selectedProjectName.equals(repository.projectName()),
                         repository.limitations()

@@ -80,6 +80,7 @@ public class FlowExplorerEndpointInventoryService {
                         scope.resolvedRef(),
                         normalizedEndpointPathPrefix,
                         normalizedHttpMethod,
+                        repository.pathPrefixes(),
                         null,
                         refreshCache
                 ));
@@ -104,6 +105,8 @@ public class FlowExplorerEndpointInventoryService {
                         repository.projectName(),
                         repository.projectPath(),
                         scope.resolvedRef(),
+                        repository.searchMode(),
+                        repository.pathPrefixes(),
                         0,
                         0,
                         false,
@@ -150,7 +153,9 @@ public class FlowExplorerEndpointInventoryService {
                 .map(repository -> String.join(":",
                         safe(repository.repositoryId()),
                         safe(repository.projectName()),
-                        safe(repository.projectPath())
+                        safe(repository.projectPath()),
+                        safe(repository.searchMode()),
+                        String.join(",", repository.pathPrefixes())
                 ))
                 .sorted()
                 .toList();
@@ -185,6 +190,8 @@ public class FlowExplorerEndpointInventoryService {
                 repository.projectName(),
                 repository.projectPath(),
                 resolvedRef,
+                repository.searchMode(),
+                repository.pathPrefixes(),
                 result.candidateFileCount(),
                 result.scannedFileCount(),
                 result.scannedFileLimitReached(),

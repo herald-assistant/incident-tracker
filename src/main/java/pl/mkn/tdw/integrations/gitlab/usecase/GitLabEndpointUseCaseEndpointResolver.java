@@ -50,7 +50,9 @@ public class GitLabEndpointUseCaseEndpointResolver {
                 repository.branch(),
                 request.endpointId() == null ? request.endpointPath() : null,
                 request.endpointId() == null ? request.httpMethod() : null,
-                null
+                request.pathPrefixes(),
+                null,
+                false
         ));
         var limitations = new ArrayList<String>(endpointList.limitations());
         var matches = endpointList.endpoints().stream()

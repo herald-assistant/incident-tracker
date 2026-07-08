@@ -51,6 +51,8 @@ class FlowExplorerEndpointInventoryControllerTest {
                 .andExpect(jsonPath("$.resolvedRef").value("feature/FLOW-42"))
                 .andExpect(jsonPath("$.gitLabGroup").value("platform/backend"))
                 .andExpect(jsonPath("$.repositories", hasSize(1)))
+                .andExpect(jsonPath("$.repositories[0].searchMode").value("path-prefixes"))
+                .andExpect(jsonPath("$.repositories[0].pathPrefixes[0]").value("src/main/java/com/example/crm/customerprofile"))
                 .andExpect(jsonPath("$.endpoints", hasSize(1)))
                 .andExpect(jsonPath("$.endpoints[0].method").value("GET"))
                 .andExpect(jsonPath("$.endpoints[0].path").value("/api/crm/customers/{customerId}/profile"))
@@ -131,6 +133,8 @@ class FlowExplorerEndpointInventoryControllerTest {
                         "crm-customer-profile-api",
                         "platform/backend/crm-customer-profile-api",
                         "feature/FLOW-42",
+                        "path-prefixes",
+                        List.of("src/main/java/com/example/crm/customerprofile"),
                         3,
                         2,
                         false,

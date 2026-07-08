@@ -91,6 +91,7 @@ public class OperationalContextReadModelValidator {
         validateBoundedContextReferencesDerivedFromReadModel(safeCatalog, findings);
         validateProcessParticipantReferenceDuplicates(safeCatalog, findings);
         validateBidirectionalReferences(relationIndex.relations(), findings);
+        validateSystemsDoNotReferenceRepositories(safeCatalog, findings);
         validateCodeSearchScopes(safeCatalog, findings);
         validateOwnershipModel(safeCatalog, findings);
 
@@ -621,10 +622,58 @@ public class OperationalContextReadModelValidator {
             List<ValidationFinding> findings
     ) {
         var repositoryIds = repositoryIds(catalog);
+        var scopedSystemIds = new LinkedHashSet<String>();
         for (var scope : catalog.codeSearchScopes()) {
             validateCodeSearchScopeShape(scope, repositoryIds, findings);
+            if (isSystemTarget(scope)) {
+                scopedSystemIds.add(text(scope.target().id()));
+            }
             var readModel = codeSearchReadModelBuilder.buildForEntity(catalog, CODE_SEARCH_SCOPE, scope.id());
             findings.addAll(readModel.validationFindings());
+        }
+        validateInternalSystemsHaveCodeSearchScope(catalog.systems(), scopedSystemIds, findings);
+    }
+
+    private void validateSystemsDoNotReferenceRepositories(
+            OperationalContextCatalog catalog,
+            List<ValidationFinding> findings
+    ) {
+        for (var system : catalog.systems()) {
+            if (system.references().repositories().isEmpty()) {
+                continue;
+            }
+            findings.add(new ValidationFinding(
+                    "error",
+                    "SYSTEM_REPOSITORY_REFERENCE_NOT_ALLOWED",
+                    "System " + system.id()
+                            + " must not declare references.repositories; define a code-search scope targeting system:"
+                            + system.id() + " and keep repository ownership/context on repo-map.yml.",
+                    List.of(sourceRef(
+                            SYSTEM,
+                            system.id(),
+                            rootPath(SYSTEM, system.id()) + ".references.repositories",
+                            "references-repository"
+                    ))
+            ));
+        }
+    }
+
+    private void validateInternalSystemsHaveCodeSearchScope(
+            List<OperationalContextSystem> systems,
+            Set<String> scopedSystemIds,
+            List<ValidationFinding> findings
+    ) {
+        for (var system : systems) {
+            if (!needsCodeSearchScope(system) || scopedSystemIds.contains(system.id())) {
+                continue;
+            }
+            findings.add(new ValidationFinding(
+                    "warning",
+                    "INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE",
+                    "Internal system " + system.id()
+                            + " has no code-search scope; code discovery will not infer repositories from system references.",
+                    List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()), "code-search-scope"))
+            ));
         }
     }
 
@@ -660,6 +709,14 @@ public class OperationalContextReadModelValidator {
                     "error",
                     "CODE_SEARCH_SCOPE_WITHOUT_TARGET",
                     "Code-search scope " + scope.id() + " has no operational target.",
+                    List.of(scopeRef(scope, "target", "scope-target"))
+            ));
+        } else if (!isSystemTarget(scope)) {
+            findings.add(new ValidationFinding(
+                    "error",
+                    "CODE_SEARCH_SCOPE_TARGET_NOT_SYSTEM",
+                    "Code-search scope " + scope.id()
+                            + " must target a system; repository discovery uses only system code-search scopes.",
                     List.of(scopeRef(scope, "target", "scope-target"))
             ));
         }
@@ -756,6 +813,15 @@ public class OperationalContextReadModelValidator {
         return scope.target().value();
     }
 
+    private boolean isSystemTarget(OperationalContextRepositorySearchScope scope) {
+        return SYSTEM.equals(normalize(scope.target().type())) && StringUtils.hasText(scope.target().id());
+    }
+
+    private boolean needsCodeSearchScope(OperationalContextSystem system) {
+        var kind = normalize(system.kind());
+        return "internal".equals(kind) || kind.startsWith("internal-") || "api-gateway".equals(kind);
+    }
+
     private SourceRef scopeRef(
             OperationalContextRepositorySearchScope scope,
             String fieldPath,
@@ -826,6 +892,13 @@ public class OperationalContextReadModelValidator {
 
     private String text(String value) {
         return StringUtils.hasText(value) ? value.trim() : "";
+    }
+
+    private String normalize(String value) {
+        return text(value)
+                .replace("_", "-")
+                .replace(" ", "-")
+                .toLowerCase(Locale.ROOT);
     }
 
     private record DerivedBoundedContextReferences(Set<String> systems, Set<String> integrations) {

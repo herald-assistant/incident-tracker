@@ -42,6 +42,7 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 - Nie zakladaj, ze initial analysis przeczytala cala implementacje endpointu. Initial result i snippet cards sa punktem startowym, nie pelnym dowodem.
                 - Gdy pytanie dotyczy poglebienia, potwierdzenia, doprecyzowania, doszczegolowienia, walidacji, persistence, integracji, edge case albo korekty initial wyniku, domyslnie uzyj dostepnych Flow Explorer tools przed odpowiedzia.
                 - Dla kodu uzywaj focused GitLab reads/search zgodnie ze skillem `flow-explorer-code-grounding`; dla nazw domenowych, procesu, bounded contextu, ownershipu, glossary albo handoffu uzywaj `flow-explorer-operational-grounding`.
+                - Repository `searchMode/pathPrefixes` sa domyslnym discovery scope dla search/list tools. Jezeli follow-up wskazuje konkretna sciezke, klase, metode albo prefix poza tym scope'em, wykonaj focused read i nazwij to jako visibility note.
                 - Dla sekcji persistence uzywaj `flow-explorer-map-persistence-section`; dla zewnetrznych systemow, eventow, kolejek, payloadow albo handoffow uzywaj `flow-explorer-map-integrations-section`.
                 - Jezeli tool jest niedostepny, odrzucony albo nie daje wystarczajacego materialu, odpowiedz najlepiej jak sie da i jawnie nazwij ograniczenie widocznosci.
 
@@ -62,6 +63,8 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 reasoningEffort: %s
                 endpointResolved: %s
                 repositoryScopeResolved: %s
+                repositories:
+                %s
 
                 ## User message
                 %s
@@ -79,8 +82,36 @@ public class FlowExplorerFollowUpPromptPreparationService {
                 contextSnapshot != null && contextSnapshot.repositories() != null
                         && contextSnapshot.repositories().stream().anyMatch(repository ->
                         StringUtils.hasText(repository.projectName())),
+                repositories(contextSnapshot),
                 userMessage(message)
         ).trim();
+    }
+
+    private String repositories(FlowExplorerContextSnapshot contextSnapshot) {
+        if (contextSnapshot == null || contextSnapshot.repositories() == null || contextSnapshot.repositories().isEmpty()) {
+            return "- repository scope not resolved";
+        }
+        return contextSnapshot.repositories().stream()
+                .filter(repository -> repository != null && StringUtils.hasText(repository.projectName()))
+                .map(repository -> "- projectName: `%s`, branchRef: `%s`, searchMode: `%s`, pathPrefixes: %s".formatted(
+                        value(repository.projectName()),
+                        value(repository.resolvedRef()),
+                        StringUtils.hasText(repository.searchMode()) ? repository.searchMode().trim() : "whole-repository",
+                        pathPrefixes(repository.pathPrefixes())
+                ))
+                .reduce((left, right) -> left + System.lineSeparator() + right)
+                .orElse("- repository scope not resolved");
+    }
+
+    private String pathPrefixes(List<String> pathPrefixes) {
+        if (pathPrefixes == null || pathPrefixes.isEmpty()) {
+            return "[]";
+        }
+        return pathPrefixes.stream()
+                .filter(StringUtils::hasText)
+                .map(pathPrefix -> "`" + pathPrefix.trim() + "`")
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("[]");
     }
 
     private String reasoningEffort(FlowExplorerJobStartRequest request) {

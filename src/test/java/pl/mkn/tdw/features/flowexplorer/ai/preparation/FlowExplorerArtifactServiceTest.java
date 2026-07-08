@@ -61,6 +61,11 @@ class FlowExplorerArtifactServiceTest {
         assertTrue(canonicalToolInputs.contains("branchRef: `feature/FLOW-42`"));
         assertTrue(canonicalToolInputs.contains("selected projectName: `crm-service`"));
         assertTrue(canonicalToolInputs.contains("projectPath: `platform/backend/crm-service`"));
+        assertTrue(canonicalToolInputs.contains("searchMode: `path-prefixes`"));
+        assertTrue(canonicalToolInputs.contains("pathPrefixes: `src/main/java/com/example/customer`"));
+        assertTrue(canonicalToolInputs.contains("## Discovery Boundary Policy"));
+        assertTrue(canonicalToolInputs.contains("default discovery scope"));
+        assertTrue(canonicalToolInputs.contains("Explicit focused reads by concrete `filePath`, class, method selector"));
         assertTrue(canonicalToolInputs.contains("## File And Method Scope"));
         assertTrue(canonicalToolInputs.contains("compact-flow-manifest.md` as the canonical filePath + methodSelector list"));
         assertTrue(canonicalToolInputs.contains("Combine manifest `filePath` and methods"));
@@ -157,6 +162,8 @@ class FlowExplorerArtifactServiceTest {
                         "crm-service",
                         "platform/backend/crm-service",
                         "feature/FLOW-42",
+                        "path-prefixes",
+                        List.of("src/main/java/com/example/customer"),
                         true,
                         true,
                         List.of()
@@ -249,6 +256,8 @@ class FlowExplorerArtifactServiceTest {
                         "crm-service",
                         "platform/backend/crm-service",
                         "feature/FLOW-42",
+                        "path-prefixes",
+                        List.of("src/main/java/com/example/customer"),
                         true,
                         true,
                         List.of()

@@ -52,6 +52,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("`sectionModes` jest zrodlem prawdy dla sekcji wyniku"));
         assertTrue(prompt.contains("`userInstructions` doprecyzowuja intencje"));
         assertTrue(prompt.contains("Najpierw wykorzystaj artefakty osadzone w tym promptcie"));
+        assertTrue(prompt.contains("`searchMode/pathPrefixes` z `flow-explorer/canonical-tool-inputs.md` sa domyslnym discovery scope"));
         assertTrue(prompt.contains("Skup sie na jezyku zrozumialym dla testera."));
         assertTrue(prompt.contains("Runtime skills usage contract"));
         assertTrue(prompt.contains("Pobierz i zastosuj wymagane skille przez built-in tool `skill`"));
@@ -80,6 +81,9 @@ class FlowExplorerPromptPreparationServiceTest {
         assertFalse(prompt.contains("GitLab tools do not read endpoint functional scope from hidden ToolContext"));
         assertTrue(prompt.contains("Canonical tool inputs"));
         assertTrue(prompt.contains("selected projectName: `crm-service`"));
+        assertTrue(prompt.contains("searchMode: `path-prefixes`"));
+        assertTrue(prompt.contains("pathPrefixes: `src/main/java/com/example/customer`"));
+        assertTrue(prompt.contains("Discovery Boundary Policy"));
         assertTrue(prompt.contains("File And Method Scope"));
         assertTrue(prompt.contains("Use `flow-explorer/compact-flow-manifest.md` as the canonical filePath + methodSelector list"));
         assertTrue(prompt.contains("Compact flow manifest"));
@@ -154,12 +158,16 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Nie zwracaj pelnego JSON `flow-explorer-write-report`"));
         assertTrue(prompt.contains("Nie zakladaj, ze initial analysis przeczytala cala implementacje endpointu"));
         assertTrue(prompt.contains("domyslnie uzyj dostepnych Flow Explorer tools przed odpowiedzia"));
+        assertTrue(prompt.contains("Repository `searchMode/pathPrefixes` sa domyslnym discovery scope"));
         assertTrue(prompt.contains("flow-explorer-map-persistence-section"));
         assertTrue(prompt.contains("flow-explorer-map-integrations-section"));
         assertTrue(prompt.contains("Docelowy odbiorca to analityk albo tester"));
         assertTrue(prompt.contains("Nie zaczynaj odpowiedzi od nazw klas, metod, beanow"));
         assertTrue(prompt.contains("systemId: crm-service"));
         assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
+        assertTrue(prompt.contains("repositories:"));
+        assertTrue(prompt.contains("searchMode: `path-prefixes`"));
+        assertTrue(prompt.contains("pathPrefixes: `src/main/java/com/example/customer`"));
         assertTrue(prompt.contains("goal: DEEP_DISCOVERY"));
         assertTrue(prompt.contains("Doprecyzuj walidacje"));
         assertFalse(prompt.contains("## Required JSON response contract"));
@@ -282,6 +290,8 @@ class FlowExplorerPromptPreparationServiceTest {
                         "crm-service",
                         "platform/backend/crm-service",
                         "feature/FLOW-42",
+                        "path-prefixes",
+                        List.of("src/main/java/com/example/customer"),
                         true,
                         true,
                         List.of()

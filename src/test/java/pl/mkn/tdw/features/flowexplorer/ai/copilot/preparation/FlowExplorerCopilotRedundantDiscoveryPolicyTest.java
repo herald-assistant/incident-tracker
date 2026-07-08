@@ -33,6 +33,8 @@ class FlowExplorerCopilotRedundantDiscoveryPolicyTest {
         assertEquals(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT, result.get("toolName"));
         assertTrue(result.get("instruction").toString().contains("compact-flow-manifest.md"));
         assertTrue(result.get("instruction").toString().contains("focused read"));
+        assertTrue(result.get("instruction").toString().contains("pathPrefixes"));
+        assertTrue(result.get("instruction").toString().contains("nie blokada"));
     }
 
     @Test
@@ -50,6 +52,8 @@ class FlowExplorerCopilotRedundantDiscoveryPolicyTest {
         assertTrue(result.get("instruction").toString().contains("canonical-tool-inputs.md"));
         assertTrue(result.get("instruction").toString().contains("compact-flow-manifest.md"));
         assertTrue(result.get("instruction").toString().contains("projectName"));
+        assertTrue(result.get("instruction").toString().contains("searchMode"));
+        assertTrue(result.get("instruction").toString().contains("poza domyslnym discovery scope"));
     }
 
     @Test

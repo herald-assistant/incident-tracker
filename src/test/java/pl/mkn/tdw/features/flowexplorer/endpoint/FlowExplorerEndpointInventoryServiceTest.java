@@ -55,6 +55,10 @@ class FlowExplorerEndpointInventoryServiceTest {
         assertEquals(1, response.endpointCount());
         assertEquals(6, response.candidateFileCount());
         assertEquals(4, response.scannedFileCount());
+        assertEquals("path-prefixes", response.repositories().get(0).searchMode());
+        assertEquals(List.of("src/main/java/com/example/crm/customerprofile"), response.repositories().get(0).pathPrefixes());
+        assertEquals("whole-repository", response.repositories().get(1).searchMode());
+        assertEquals(List.of(), response.repositories().get(1).pathPrefixes());
         assertTrue(response.limitations().contains("Operational context references unknown repository: missing-repo"));
         assertTrue(response.limitations().contains("crm-customer-profile-domain: No controllers found."));
 
@@ -80,6 +84,12 @@ class FlowExplorerEndpointInventoryServiceTest {
                 .allMatch(request -> "/api".equals(request.endpointPathPrefix())));
         assertTrue(requestCaptor.getAllValues().stream()
                 .allMatch(request -> "GET".equals(request.httpMethod())));
+        assertTrue(requestCaptor.getAllValues().stream()
+                .anyMatch(request -> "crm-customer-profile-api".equals(request.projectName())
+                        && request.pathPrefixes().equals(List.of("src/main/java/com/example/crm/customerprofile"))));
+        assertTrue(requestCaptor.getAllValues().stream()
+                .anyMatch(request -> "domains/crm-customer-profile-domain".equals(request.projectName())
+                        && request.pathPrefixes().isEmpty()));
     }
 
     @Test
@@ -272,10 +282,19 @@ class FlowExplorerEndpointInventoryServiceTest {
                         "id", "crm-customer-profile",
                         "name", "CRM Customer Profile",
                         "kind", "internal-application",
-                        "references", map("repositories", List.of("crm-customer-profile-api"))
+                        "references", map("repositories", List.of("legacy-system-reference-repo"))
                 )),
                 List.of(),
                 List.of(
+                        map(
+                                "id", "legacy-system-reference-repo",
+                                "name", "Legacy System Reference Repo",
+                                "git", map(
+                                        "provider", "gitlab",
+                                        "group", "platform/backend",
+                                        "projectPath", "platform/backend/legacy-system-reference-repo"
+                                )
+                        ),
                         map(
                                 "id", "crm-customer-profile-api",
                                 "name", "CRM Customer Profile API",
@@ -301,7 +320,13 @@ class FlowExplorerEndpointInventoryServiceTest {
                         "target", map("type", "system", "id", "crm-customer-profile"),
                         "repositories", List.of(
                                 map("repoId", "missing-repo", "priority", 1, "searchMode", "whole-repository"),
-                                map("repoId", "crm-customer-profile-domain", "priority", 2, "searchMode", "whole-repository")
+                                map(
+                                        "repoId", "crm-customer-profile-api",
+                                        "priority", 2,
+                                        "searchMode", "path-prefixes",
+                                        "pathPrefixes", List.of("src/main/java/com/example/crm/customerprofile")
+                                ),
+                                map("repoId", "crm-customer-profile-domain", "priority", 3, "searchMode", "whole-repository")
                         )
                 )),
                 List.of(),
@@ -319,8 +344,7 @@ class FlowExplorerEndpointInventoryServiceTest {
                 List.of(map(
                         "id", "customer-process",
                         "name", "Customer Process",
-                        "kind", "internal-application",
-                        "references", map("repositories", List.of("crm-customer-process-repo"))
+                        "kind", "internal-application"
                 )),
                 List.of(),
                 List.of(map(
@@ -332,7 +356,15 @@ class FlowExplorerEndpointInventoryServiceTest {
                                 "projectPath", "CRM/PROCESSES/CRM_CUSTOMER_PROCESS"
                         )
                 )),
-                List.of(),
+                List.of(map(
+                        "id", "customer-process-scope",
+                        "target", map("type", "system", "id", "customer-process"),
+                        "repositories", List.of(map(
+                                "repoId", "crm-customer-process-repo",
+                                "priority", 1,
+                                "searchMode", "whole-repository"
+                        ))
+                )),
                 List.of(),
                 List.of(),
                 List.of(),

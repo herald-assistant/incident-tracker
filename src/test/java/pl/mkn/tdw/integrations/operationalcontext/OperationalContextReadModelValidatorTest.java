@@ -290,6 +290,102 @@ class OperationalContextReadModelValidatorTest {
     }
 
     @Test
+    void shouldReportCodeSearchScopeTargetOutsideSystem() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(map("id", "crm-customer-service-repo")),
+                List.of(map(
+                        "id", "customer-profile-context-scope",
+                        "target", map("type", "bounded-context", "id", "customer-profile-context"),
+                        "repositories", List.of(map(
+                                "repoId", "crm-customer-service-repo",
+                                "role", "primary",
+                                "priority", 1,
+                                "searchMode", "whole-repository"
+                        ))
+                )),
+                List.of(map("id", "customer-profile-context")),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasError(findings, "CODE_SEARCH_SCOPE_TARGET_NOT_SYSTEM");
+    }
+
+    @Test
+    void shouldWarnWhenInternalSystemHasNoCodeSearchScope() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(
+                        map("id", "crm-customer-service", "kind", "internal-application"),
+                        map("id", "api-gateway", "kind", "api-gateway"),
+                        map("id", "billing-service", "kind", "internal-service"),
+                        map("id", "salesforce", "kind", "external-saas")
+                ),
+                List.of(),
+                List.of(map("id", "billing-service-repo")),
+                List.of(map(
+                        "id", "billing-service-scope",
+                        "target", map("type", "system", "id", "billing-service"),
+                        "repositories", List.of(map(
+                                "repoId", "billing-service-repo",
+                                "role", "primary",
+                                "priority", 1,
+                                "searchMode", "whole-repository"
+                        ))
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasWarning(findings, "INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE");
+        assertTrue(
+                findings.stream()
+                        .filter(finding -> finding.code().equals("INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE"))
+                        .anyMatch(finding -> finding.message().contains("crm-customer-service"))
+                        && findings.stream()
+                        .filter(finding -> finding.code().equals("INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE"))
+                        .anyMatch(finding -> finding.message().contains("api-gateway")),
+                () -> "Expected missing-scope warnings for internal system and api-gateway in " + findings
+        );
+        assertFalse(findings.stream()
+                .filter(finding -> finding.code().equals("INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE"))
+                .anyMatch(finding -> finding.message().contains("billing-service")
+                        || finding.message().contains("salesforce")));
+    }
+
+    @Test
+    void shouldRejectRepositoryReferencesDeclaredOnSystem() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(map(
+                        "id", "crm-customer-service",
+                        "references", map("repositories", List.of("crm-customer-service-repo"))
+                )),
+                List.of(),
+                List.of(map("id", "crm-customer-service-repo")),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasError(findings, "SYSTEM_REPOSITORY_REFERENCE_NOT_ALLOWED");
+    }
+
+    @Test
     void shouldRejectOwnershipOutsideSystemAndBoundedContext() {
         var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
                 List.of(map(

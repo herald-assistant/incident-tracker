@@ -16,6 +16,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,6 +28,7 @@ public final class GitLabEndpointUseCaseSourceSession {
 
     private final GitLabRepositoryPort repositoryPort;
     private final GitLabEndpointUseCaseRepositoryContext repository;
+    private final List<String> pathPrefixes;
     private final int maxReadFiles;
     private final int maxCharactersPerFile;
     private final JavaParser javaParser;
@@ -43,6 +46,7 @@ public final class GitLabEndpointUseCaseSourceSession {
         this(
                 repositoryPort,
                 repository,
+                List.of(),
                 GitLabEndpointUseCaseLimits.DEFAULT_MAX_READ_FILES,
                 DEFAULT_MAX_CHARACTERS_PER_FILE
         );
@@ -54,8 +58,19 @@ public final class GitLabEndpointUseCaseSourceSession {
             int maxReadFiles,
             int maxCharactersPerFile
     ) {
+        this(repositoryPort, repository, List.of(), maxReadFiles, maxCharactersPerFile);
+    }
+
+    public GitLabEndpointUseCaseSourceSession(
+            GitLabRepositoryPort repositoryPort,
+            GitLabEndpointUseCaseRepositoryContext repository,
+            List<String> pathPrefixes,
+            int maxReadFiles,
+            int maxCharactersPerFile
+    ) {
         this.repositoryPort = Objects.requireNonNull(repositoryPort, "repositoryPort must not be null");
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
+        this.pathPrefixes = normalizePathPrefixes(pathPrefixes);
         this.maxReadFiles = maxReadFiles < 1 ? GitLabEndpointUseCaseLimits.DEFAULT_MAX_READ_FILES : maxReadFiles;
         this.maxCharactersPerFile = maxCharactersPerFile < 1
                 ? DEFAULT_MAX_CHARACTERS_PER_FILE
@@ -68,12 +83,19 @@ public final class GitLabEndpointUseCaseSourceSession {
     public List<GitLabRepositoryFile> listRepositoryFiles(String pathPrefix) {
         var normalizedPathPrefix = normalizeOptionalPath(pathPrefix);
         var cacheKey = cacheKey("tree", normalizedPathPrefix != null ? normalizedPathPrefix : "<root>");
-        return repositoryFiles.computeIfAbsent(cacheKey, ignored -> List.copyOf(repositoryPort.listRepositoryFiles(
-                repository.group(),
-                repository.projectName(),
-                repository.branch(),
-                normalizedPathPrefix
-        )));
+        return repositoryFiles.computeIfAbsent(cacheKey, ignored -> {
+            if (pathPrefixes.isEmpty()) {
+                return listRepositoryFilesWithinPrefix(normalizedPathPrefix);
+            }
+
+            var files = new LinkedHashMap<String, GitLabRepositoryFile>();
+            for (var effectivePrefix : effectiveListPrefixes(normalizedPathPrefix)) {
+                listRepositoryFilesWithinPrefix(effectivePrefix).stream()
+                        .filter(file -> file != null && pathWithinPrefixes(file.filePath()))
+                        .forEach(file -> files.putIfAbsent(file.filePath(), file));
+            }
+            return List.copyOf(files.values());
+        });
     }
 
     public List<GitLabRepositoryFile> listRepositoryFiles() {
@@ -101,9 +123,13 @@ public final class GitLabEndpointUseCaseSourceSession {
                     List.of(repository.projectName()),
                     List.of(),
                     normalizedKeywords,
-                    List.of()
+                    pathPrefixes
             ));
-            return result != null ? List.copyOf(result) : List.of();
+            return result != null
+                    ? result.stream()
+                    .filter(candidate -> candidate != null && pathWithinPrefixes(candidate.filePath()))
+                    .toList()
+                    : List.of();
         });
     }
 
@@ -139,7 +165,7 @@ public final class GitLabEndpointUseCaseSourceSession {
         }
 
         readFileCount++;
-        var limitations = new ArrayList<String>();
+        var limitations = new ArrayList<String>(focusedReadBoundaryLimitations(normalizedPath));
         try {
             var content = repositoryPort.readFile(
                     repository.group(),
@@ -254,6 +280,32 @@ public final class GitLabEndpointUseCaseSourceSession {
         return readFileLimitReached;
     }
 
+    public List<String> pathPrefixes() {
+        return pathPrefixes;
+    }
+
+    private List<GitLabRepositoryFile> listRepositoryFilesWithinPrefix(String pathPrefix) {
+        var result = repositoryPort.listRepositoryFiles(
+                repository.group(),
+                repository.projectName(),
+                repository.branch(),
+                pathPrefix
+        );
+        return result != null ? List.copyOf(result) : List.of();
+    }
+
+    private List<String> effectiveListPrefixes(String requestedPrefix) {
+        if (!StringUtils.hasText(requestedPrefix)) {
+            return pathPrefixes;
+        }
+        if (pathWithinPrefixes(requestedPrefix)) {
+            return List.of(requestedPrefix);
+        }
+        return pathPrefixes.stream()
+                .filter(prefix -> pathWithinPrefix(prefix, requestedPrefix))
+                .toList();
+    }
+
     private String normalizeOptionalPath(String pathPrefix) {
         if (!StringUtils.hasText(pathPrefix)) {
             return null;
@@ -265,6 +317,44 @@ public final class GitLabEndpointUseCaseSourceSession {
         return StringUtils.hasText(normalized) ? normalized : null;
     }
 
+    private List<String> normalizePathPrefixes(List<String> pathPrefixes) {
+        if (pathPrefixes == null || pathPrefixes.isEmpty()) {
+            return List.of();
+        }
+        var normalized = new LinkedHashSet<String>();
+        for (var prefix : pathPrefixes) {
+            var value = normalizeOptionalPath(prefix);
+            if (StringUtils.hasText(value)) {
+                normalized.add(value);
+            }
+        }
+        return List.copyOf(normalized);
+    }
+
+    private boolean pathWithinPrefixes(String path) {
+        if (pathPrefixes.isEmpty()) {
+            return true;
+        }
+        var normalizedPath = GitLabEndpointUseCaseModelSupport.normalizeFilePath(path);
+        if (!StringUtils.hasText(normalizedPath)) {
+            return false;
+        }
+        return pathPrefixes.stream().anyMatch(prefix -> pathWithinPrefix(normalizedPath, prefix));
+    }
+
+    private boolean pathWithinPrefix(String path, String prefix) {
+        return path.equals(prefix) || path.startsWith(prefix + "/");
+    }
+
+    private List<String> focusedReadBoundaryLimitations(String path) {
+        if (pathPrefixes.isEmpty() || pathWithinPrefixes(path)) {
+            return List.of();
+        }
+        return List.of("Source file " + path
+                + " is outside default repository discovery scope and was read because it was explicitly requested. "
+                + "Default discovery pathPrefixes: " + String.join(", ", pathPrefixes) + ".");
+    }
+
     private String cacheKey(String type, String... parts) {
         var key = new StringBuilder(type)
                 .append('|')
@@ -272,7 +362,9 @@ public final class GitLabEndpointUseCaseSourceSession {
                 .append('|')
                 .append(repository.projectName())
                 .append('|')
-                .append(repository.branch());
+                .append(repository.branch())
+                .append('|')
+                .append(String.join("\u001E", pathPrefixes));
         for (var part : parts) {
             key.append('|').append(part);
         }

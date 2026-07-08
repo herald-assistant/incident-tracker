@@ -12,6 +12,7 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.Operati
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextHandoffRule;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextOpenQuestion;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -149,7 +150,7 @@ public class OperationalContextAdapter implements OperationalContextPort {
                 filterEntries(catalog.systems(), query, OperationalContextEntryType.SYSTEM),
                 filterEntries(catalog.integrations(), query, OperationalContextEntryType.INTEGRATION),
                 filterEntries(catalog.repositories(), query, OperationalContextEntryType.REPOSITORY),
-                catalog.codeSearchScopes(),
+                filterCodeSearchScopes(catalog.codeSearchScopes(), query),
                 filterEntries(catalog.boundedContexts(), query, OperationalContextEntryType.BOUNDED_CONTEXT),
                 filterGlossaryTerms(catalog.glossaryTerms(), query),
                 filterHandoffRules(catalog.handoffRules(), query),
@@ -174,6 +175,24 @@ public class OperationalContextAdapter implements OperationalContextPort {
 
         return entries.stream()
                 .filter(entry -> matchesAll(entry, filters))
+                .toList();
+    }
+
+    private List<OperationalContextRepositorySearchScope> filterCodeSearchScopes(
+            List<OperationalContextRepositorySearchScope> scopes,
+            OperationalContextQuery query
+    ) {
+        if (!query.includes(OperationalContextEntryType.CODE_SEARCH_SCOPE)) {
+            return List.of();
+        }
+
+        var filters = query.filtersFor(OperationalContextEntryType.CODE_SEARCH_SCOPE);
+        if (filters.isEmpty()) {
+            return scopes;
+        }
+
+        return scopes.stream()
+                .filter(scope -> matchesAll(scope, filters))
                 .toList();
     }
 
@@ -220,6 +239,11 @@ public class OperationalContextAdapter implements OperationalContextPort {
     private boolean matchesAll(OperationalContextGlossaryTerm term, List<OperationalContextFilter> filters) {
         return filters.stream()
                 .allMatch(filter -> matchesAnyValue(glossaryTermValues(term, filter.path()), filter));
+    }
+
+    private boolean matchesAll(OperationalContextRepositorySearchScope scope, List<OperationalContextFilter> filters) {
+        return filters.stream()
+                .allMatch(filter -> matchesAnyValue(codeSearchScopeValues(scope, filter.path()), filter));
     }
 
     private boolean matchesAll(OperationalContextHandoffRule rule, List<OperationalContextFilter> filters) {
@@ -271,6 +295,20 @@ public class OperationalContextAdapter implements OperationalContextPort {
             case "canonicalReferences" -> term.canonicalReferences();
             case "synonyms" -> term.synonyms();
             case "notes" -> term.notes();
+            default -> List.of();
+        };
+    }
+
+    private List<String> codeSearchScopeValues(OperationalContextRepositorySearchScope scope, String path) {
+        return switch (path) {
+            case "id" -> List.of(scope.id());
+            case "name" -> List.of(scope.name());
+            case "scopeType" -> List.of(scope.scopeType());
+            case "target.type" -> List.of(scope.target().type());
+            case "target.id" -> List.of(scope.target().id());
+            case "repositories.repoId" -> scope.repositories().stream()
+                    .map(OperationalContextDtos.OperationalContextRepositorySearchRepository::repoId)
+                    .toList();
             default -> List.of();
         };
     }

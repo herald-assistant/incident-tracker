@@ -55,6 +55,20 @@ class FlowExplorerToolDescriptionCustomizerTest {
     }
 
     @Test
+    void shouldAppendDiscoveryScopeGuidanceForDiscoveryTools() {
+        var description = customizer.customize(
+                FLOW_EXPLORER_CONTEXT,
+                GitLabToolNames.FIND_CLASS_REFERENCES,
+                "Finds class references."
+        );
+
+        assertTrue(description.contains("searchMode/pathPrefixes"));
+        assertTrue(description.contains("default discovery scope"));
+        assertTrue(description.contains("searchMode=path-prefixes"));
+        assertTrue(description.contains("focused read tool"));
+    }
+
+    @Test
     void shouldAppendFlowExplorerGuidanceForOperationalContextTools() {
         var description = customizer.customize(
                 FLOW_EXPLORER_CONTEXT,
@@ -89,6 +103,7 @@ class FlowExplorerToolDescriptionCustomizerTest {
         );
 
         assertTrue(description.contains("maxCharacters returns a prefix of the file"));
+        assertTrue(description.contains("Concrete filePath reads are allowed outside canonical pathPrefixes"));
         assertTrue(description.contains("if truncated=true"));
         assertTrue(description.contains("gitlab_read_repository_file_chunk"));
         assertTrue(description.contains("method context, method slice, outline or focused chunks"));

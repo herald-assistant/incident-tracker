@@ -9,10 +9,8 @@ runtime i feature'y analityczne oraz granice, ktorych nie wolno odbudowywac.
 Operational context jest curated navigation layer dla analizy systemowej. Ma
 uzupelniac to, czego nie da sie szybko i pewnie wywnioskowac z jednego repo:
 
-- od ktorego systemu, procesu, bounded contextu, zespolu albo repozytorium
-  zaczac,
-- do ktorego kolejnego repozytorium albo capability przejsc, gdy analiza
-  wymaga kontynuacji,
+- od ktorego systemu, procesu, bounded contextu albo zespolu zaczac,
+- ktory code-search scope wskazuje repozytoria i prefixy do dalszego czytania,
 - jak przetlumaczyc techniczny sygnal na jezyk analityka biznesowo-systemowego,
 - jaki resolved ownership, handoff, partner albo ograniczenie widocznosci jest
   istotne,
@@ -32,8 +30,10 @@ przez dedykowane tools oraz repozytoria zrodlowe.
   gdy context nie jest znany albo problem jest system-wide.
 - Repository, code-search scope, process, integration, handoff rule, glossary
   term i team nie definiuja ownera.
-- Katalog moze wskazac repozytoria do wspolnego czytania, ale nie przechowuje
-  szczegolowych elementow kodu, tras API, nazw kolejek ani tabel.
+- Katalog wskazuje repozytoria do wspolnego czytania tylko przez
+  `code-search-scopes.yml`; `system` nie ma bezposredniej referencji do repo.
+  Katalog nie przechowuje szczegolowych elementow kodu, tras API, nazw kolejek
+  ani tabel.
 - Katalog moze opisac integracje jako relacje systemowe, ale nie przechowuje
   szczegolowych kontraktow transportu, payloadow ani implementacji klientow.
 - `code-search-scopes.yml` wskazuje semantyczny scope repozytoriow:
@@ -158,12 +158,12 @@ Pliki katalogu:
 - `id`, `name`, `aliases`,
 - `systemType`, `lifecycleStatus`, `criticality`,
 - `summary`,
-- `references` do procesow, repozytoriow, integracji, bounded contextow,
-  zespolow i pojec,
+- `references` do procesow, integracji, bounded contextow, zespolow i pojec,
 - `ownership`, `relations`, `sourceCoverage`, `gaps` tam, gdzie sa potrzebne.
 
 System nie powinien miec osobnego katalogu runtime names, deployment names,
-container names ani endpointow.
+container names, endpointow ani `references.repositories`. Code discovery dla
+systemu zaczyna sie od code-search scope'u targetujacego ten system.
 
 ### Repository
 
@@ -227,11 +227,13 @@ Bounded context opisuje odpowiedzialnosc domenowa i lokalny jezyk:
 - includes/excludes,
 - business capabilities,
 - invariants,
-- relacje do systemow, procesow, integracji i repozytoriow,
+- relacje do systemow, procesow i integracji,
 - ownership oraz limitations.
 
 Bounded context moze wskazac pojecia domenowe, ale nie powinien przechowywac
-list klas encji ani Java-owych implementation hints.
+list klas encji, Java-owych implementation hints ani list repozytoriow. Code
+discovery dla bounded contextu zaczyna sie od code-search scope'u targetujacego
+ten bounded context.
 
 ### Integration
 
@@ -378,7 +380,7 @@ Typowe uzycie:
 
 1. Elasticsearch/Dynatrace/GitLab deterministic zbieraja fakty incydentu.
 2. Operational context matcher dopasowuje systemy, procesy, bounded contexty,
-   integracje, repozytoria, glossary i sytuacje handoffu.
+   integracje, code-search scopes, glossary i sytuacje handoffu.
 3. Prompt dostaje operational grounding, code-search scopes i ograniczenia.
 4. AI uzywa katalogu do `functionalAnalysis`: system, proces, jezyk lokalny,
    resolved ownership, handoff, widocznosc.
@@ -474,6 +476,7 @@ Nie przywracaj:
 
 - osobnego canonical runtime component obok `system`,
 - inline scope'u kodu pod systemem,
+- bezposredniego `system.references.repositories`,
 - repository source layout albo module inventory poza coarse
   `searchMode/pathPrefixes` w `code-search-scopes.yml`,
 - technicznych hintow kodu/API,

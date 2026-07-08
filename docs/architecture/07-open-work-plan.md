@@ -101,7 +101,7 @@ Cel: dopracowac miejsca, ktore nie blokuja MVP, ale poprawiaja czytelnosc
 wyboru systemu i endpointu.
 
 - Dodac karte albo panel szczegolow systemu: owner/team, lifecycle,
-  code-search scopes, repozytoria, validation findings i open questions.
+  code-search scope summary, validation findings i open questions.
 - Rozstrzygnac po smoke testach UX, czy collapsed endpoint item powinien
   pokazywac confidence.
 - W expanded/popover endpoint item dodac tags, documentation source i next

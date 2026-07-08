@@ -1184,6 +1184,169 @@ class GitLabRepositoryEndpointServiceTest {
     }
 
     @Test
+    void shouldFilterEndpointDiscoverySearchResultsByPathPrefixes() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = endpointService(repositoryPort);
+        var customerControllerPath = "src/main/java/com/example/crm/customer/api/CustomerController.java";
+        var adminControllerPath = "src/main/java/com/example/crm/admin/api/AdminController.java";
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-customer-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of(
+                new GitLabRepositoryFileCandidate(
+                        "CRM",
+                        "crm-customer-service",
+                        "main",
+                        customerControllerPath,
+                        "Matched @RestController.",
+                        10
+                ),
+                new GitLabRepositoryFileCandidate(
+                        "CRM",
+                        "crm-customer-service",
+                        "main",
+                        adminControllerPath,
+                        "Matched @RestController.",
+                        10
+                )
+        ));
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-customer-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                customerControllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                customerControllerPath,
+                """
+                        package com.example.crm.customer.api;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.RequestMapping;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        @RestController
+                        @RequestMapping("/api/crm/customers")
+                        class CustomerController {
+
+                          @GetMapping("/{customerId}")
+                          CustomerResponse getCustomer(String customerId) {
+                            return new CustomerResponse(customerId);
+                          }
+                        }
+                        """,
+                false
+        ));
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                null,
+                null,
+                List.of("src/main/java/com/example/crm/customer"),
+                20,
+                false
+        ));
+
+        assertEquals(1, result.candidateFileCount());
+        assertEquals(1, result.scannedFileCount());
+        assertEquals(1, result.endpoints().size());
+        assertEquals("/api/crm/customers/{customerId}", result.endpoints().get(0).path());
+        verify(repositoryPort).readFile("CRM", "crm-customer-service", "main", customerControllerPath, 80_000);
+        verify(repositoryPort, never()).readFile("CRM", "crm-customer-service", "main", adminControllerPath, 80_000);
+    }
+
+    @Test
+    void shouldUsePathPrefixesForEndpointDiscoveryRepositoryTreeFallback() {
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = endpointService(repositoryPort);
+        var customerControllerPath = "src/main/java/com/example/crm/customer/api/CustomerController.java";
+        var adminControllerPath = "src/main/java/com/example/crm/admin/api/AdminController.java";
+        var prefix = "src/main/java/com/example/crm/customer";
+
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-customer-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("@RestController")),
+                eq(100)
+        )).thenReturn(List.of());
+        when(repositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("crm-customer-service"),
+                eq("main"),
+                argThat(terms -> terms != null && terms.contains("openapi:")),
+                eq(50)
+        )).thenReturn(List.of());
+        when(repositoryPort.listRepositoryFiles("CRM", "crm-customer-service", "main", prefix))
+                .thenReturn(List.of(
+                        new GitLabRepositoryFile("CRM", "crm-customer-service", "main", customerControllerPath),
+                        new GitLabRepositoryFile("CRM", "crm-customer-service", "main", adminControllerPath)
+                ));
+        when(repositoryPort.readFile(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                customerControllerPath,
+                80_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                customerControllerPath,
+                """
+                        package com.example.crm.customer.api;
+
+                        import org.springframework.web.bind.annotation.GetMapping;
+                        import org.springframework.web.bind.annotation.RestController;
+
+                        @RestController
+                        class CustomerController {
+
+                          @GetMapping("/api/crm/customers/{customerId}")
+                          CustomerResponse getCustomer(String customerId) {
+                            return new CustomerResponse(customerId);
+                          }
+                        }
+                        """,
+                false
+        ));
+
+        var result = endpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
+                "CRM",
+                "crm-customer-service",
+                "main",
+                null,
+                null,
+                List.of(prefix),
+                20,
+                false
+        ));
+
+        assertEquals(1, result.candidateFileCount());
+        assertEquals(1, result.scannedFileCount());
+        assertEquals(1, result.endpoints().size());
+        verify(repositoryPort).listRepositoryFiles("CRM", "crm-customer-service", "main", prefix);
+        verify(repositoryPort, never()).listRepositoryFiles("CRM", "crm-customer-service", "main", null);
+        verify(repositoryPort, never()).readFile("CRM", "crm-customer-service", "main", adminControllerPath, 80_000);
+    }
+
+    @Test
     void shouldNotCountConfigurationYamlFilesAsOpenApiContractsInRepositoryTreeFallback() {
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var endpointService = endpointService(repositoryPort);

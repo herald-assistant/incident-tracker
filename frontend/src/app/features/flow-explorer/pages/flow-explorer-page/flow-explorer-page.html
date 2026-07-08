@@ -323,16 +323,11 @@
                                   </div>
                                 }
 
-                                @if (
-                                  (endpoint.tooltipDetails?.limitations?.length || endpoint.limitations.length) > 0
-                                ) {
+                                @if (endpointVisibilityMessages(endpoint).length > 0) {
                                   <div class="flow-explorer-info-list">
-                                    <span class="field-label">Limitations</span>
-                                    @for (
-                                      limitation of endpoint.tooltipDetails?.limitations || endpoint.limitations;
-                                      track limitation
-                                    ) {
-                                      <p>{{ limitation }}</p>
+                                    <span class="field-label">Visibility</span>
+                                    @for (message of endpointVisibilityMessages(endpoint); track message) {
+                                      <p>{{ message }}</p>
                                     }
                                   </div>
                                 }
@@ -647,13 +642,10 @@
         }
 
         @if (endpointInventory(); as inventory) {
-          @if (inventory.limitations.length > 0 || inventory.scannedFileLimitReached) {
+          @if (inventoryVisibilityMessages(inventory).length > 0) {
             <div class="flow-explorer-limitations">
-              @if (inventory.scannedFileLimitReached) {
-                <span class="panel-chip panel-chip--warning">scan limit</span>
-              }
-              @for (limitation of inventory.limitations; track limitation) {
-                <span class="panel-chip panel-chip--warning">{{ limitation }}</span>
+              @for (message of inventoryVisibilityMessages(inventory); track message) {
+                <span class="panel-chip panel-chip--warning">{{ message }}</span>
               }
             </div>
           }

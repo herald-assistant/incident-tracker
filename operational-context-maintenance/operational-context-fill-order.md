@@ -3,8 +3,8 @@
 ## Goal
 
 Use this order when creating or updating operational context. The catalog should
-help an analyst start in the right place, continue into the next repository or
-system when needed, translate findings into business language, and prepare
+help an analyst start in the right place, choose the right code-search scope
+when code is needed, translate findings into business language, and prepare
 development stories or automated test scenarios.
 
 The catalog is not a copy of inventories from other sources. Keep detailed facts
@@ -72,8 +72,11 @@ Minimum useful entry:
 
 - `id`, `name`, `kind`, `summary`, `purpose`,
 - aliases and use cases,
-- references to known processes, contexts, repositories and integrations,
+- references to known processes, contexts, integrations, teams and terms,
 - `ownership` only when there is durable system-level accountability.
+
+Do not list repositories on a system. Repository navigation for a system goes
+through `code-search-scopes.yml`.
 
 ### 3. Add bounded context and glossary language
 
@@ -167,9 +170,10 @@ Repository entries should not try to describe internal code organization or
 define maintainers as owners.
 
 Repository references to systems, processes or bounded contexts are recognition
-signals and navigation hints. They are not the canonical route from code to
-ownership. When code ownership matters, model the route through a
-`code-search-scopes.yml` entry with the most precise semantic target.
+signals and navigation hints owned by `repo-map.yml`. They are not the
+canonical route from a system to code or from code to ownership. When code
+ownership matters, model the route through a `code-search-scopes.yml` entry with
+the most precise semantic target.
 
 ### 9. Define code-search scopes
 

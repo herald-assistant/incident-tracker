@@ -241,6 +241,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertContainsAll(orchestrator, List.of(
                 "`flow-explorer/canonical-tool-inputs.md`",
                 "Nie przekazuj `gitLabGroup` do tools",
+                "domyslny discovery scope",
+                "explicit focused read",
                 "`sectionModes` sluzy orkiestratorowi tylko do decyzji",
                 "`reasoningEffort` ogranicza glebokosc orkiestracji",
                 "Hidden `ToolContext` jest techniczna mechanika runtime",
@@ -252,6 +254,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "GitLab tools nie czytaja functional scope'u z hidden `ToolContext`",
                 "`branchRef`, `applicationName` i `projectName`",
                 "`filePath` i `methodSelectors`",
+                "`searchMode/pathPrefixes` sa domyslnym discovery scope",
+                "poza domyslny discovery scope",
                 "Nie zaczynaj od `gitlab_read_repository_file`",
                 "Po `truncated=true` nie wnioskuj o dalszej czesci pliku",
                 "Nie przekazuj `gitLabGroup`"
@@ -259,6 +263,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertContainsAll(operationalGrounding, List.of(
                 "OperationalGroundingSummary",
                 "Operational context nie jest dowodem",
+                "nie blokada dla focused read",
                 "## Petla Katalogowa",
                 "jedno waskie",
                 "biznesowa nazwe systemu",

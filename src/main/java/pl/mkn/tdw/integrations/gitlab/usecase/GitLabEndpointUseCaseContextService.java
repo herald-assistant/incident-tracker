@@ -49,6 +49,7 @@ public class GitLabEndpointUseCaseContextService {
         var session = new GitLabEndpointUseCaseSourceSession(
                 repositoryPort,
                 endpointResolution.repository(),
+                request.pathPrefixes(),
                 GitLabEndpointUseCaseLimits.DEFAULT_MAX_READ_FILES,
                 GitLabEndpointUseCaseSourceSession.DEFAULT_MAX_CHARACTERS_PER_FILE
         );

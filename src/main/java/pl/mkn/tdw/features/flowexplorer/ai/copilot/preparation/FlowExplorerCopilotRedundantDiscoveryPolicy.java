@@ -34,7 +34,7 @@ public class FlowExplorerCopilotRedundantDiscoveryPolicy implements CopilotToolI
             reject(
                     request,
                     "Endpoint use-case context is already embedded in the initial Flow Explorer artifacts.",
-                    "Nie uruchamiaj ponownie budowania endpoint contextu. Uzyj `flow-explorer/canonical-tool-inputs.md`, `flow-explorer/compact-flow-manifest.md` i `flow-explorer/snippet-cards.md`; jezeli nadal brakuje danych, wpisz limit widocznosci albo uzyj focused read dla konkretnego pliku/metody."
+                    "Nie uruchamiaj ponownie broad endpoint discovery. Uzyj `flow-explorer/canonical-tool-inputs.md`, `flow-explorer/compact-flow-manifest.md` i `flow-explorer/snippet-cards.md`; jezeli nadal brakuje danych, uzyj focused read dla konkretnego pliku/metody. `pathPrefixes` sa domyslnym discovery scope, nie blokada dla jawnie wskazanej sciezki."
             );
         }
 
@@ -43,7 +43,7 @@ public class FlowExplorerCopilotRedundantDiscoveryPolicy implements CopilotToolI
             reject(
                     request,
                     "Repository scope is already resolved for this Flow Explorer initial run.",
-                    "Nie wykonuj repository rediscovery. Uzyj `projectName`, `projectPath` i `branchRef` z `flow-explorer/canonical-tool-inputs.md` oraz `filePath` z `flow-explorer/compact-flow-manifest.md`; jezeli potrzebujesz kodu, wykonaj focused GitLab read na konkretnym pliku albo metodzie."
+                    "Nie wykonuj repository rediscovery. Uzyj `projectName`, `projectPath`, `branchRef`, `searchMode` i `pathPrefixes` z `flow-explorer/canonical-tool-inputs.md` oraz `filePath` z `flow-explorer/compact-flow-manifest.md`; jezeli potrzebujesz kodu, wykonaj focused GitLab read na konkretnym pliku albo metodzie, rowniez poza domyslnym discovery scope z jawna notka widocznosci."
             );
         }
     }

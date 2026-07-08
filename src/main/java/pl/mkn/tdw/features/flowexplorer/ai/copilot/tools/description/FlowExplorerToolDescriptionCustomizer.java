@@ -59,10 +59,23 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
                     "Always provide reason as one short Polish sentence for the operator."
             );
         }
+        if (GitLabToolNames.LIST_REPOSITORY_ENDPOINTS.equals(normalizedToolName)
+                || GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(normalizedToolName)
+                || GitLabToolNames.FIND_CLASS_REFERENCES.equals(normalizedToolName)
+                || GitLabToolNames.FIND_FLOW_CONTEXT.equals(normalizedToolName)) {
+            return List.of(
+                    "Use searchMode/pathPrefixes from canonical-tool-inputs.md as the default discovery scope for the selected repository.",
+                    "For searchMode=path-prefixes, pass only that repository's listed pathPrefixes; for whole-repository, do not invent prefixes.",
+                    "Do not use this for broad rediscovery when compact-flow-manifest.md or snippet-cards.md already answer the question.",
+                    "If a concrete file/class/method is already known, prefer a focused read tool instead of another discovery search.",
+                    "Always provide reason as one short Polish sentence for the operator."
+            );
+        }
         if (GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT.equals(normalizedToolName)) {
             return List.of(
                     "Use when compact-flow-manifest.md or a prior tool result identifies a concrete Java class and method and the downstream use-case path is still incomplete.",
                     "Use this to continue flow from the known method before issuing repeated focused reads.",
+                    "If you provide pathPrefixes, treat them as discovery optimization; a concrete file/method target may come from outside the default scope when a dependency is explicit.",
                     "Use maxResults to cap returned context.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
@@ -79,6 +92,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.READ_REPOSITORY_FILE.equals(normalizedToolName)) {
             return List.of(
                     "Expensive in Flow Explorer. Use only when method context, method slice, outline or focused chunks are insufficient.",
+                    "Concrete filePath reads are allowed outside canonical pathPrefixes when the dependency is explicit; report this as a visibility note instead of starting broad rediscovery.",
                     "maxCharacters returns a prefix of the file; if truncated=true, continue with gitlab_read_repository_file_chunk instead of inferring the rest.",
                     "Do not use for OpenAPI YAML endpoint contracts; use gitlab_read_openapi_endpoint_slice instead.",
                     "Do not use to browse a full bean when snippet-cards.md already contains the endpoint method.",
@@ -88,6 +102,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.READ_REPOSITORY_FILE_OUTLINE.equals(normalizedToolName)) {
             return List.of(
                     "Use when you know a file but need class structure, annotations, inheritance, fields or method names before choosing the next focused read.",
+                    "Concrete filePath reads are allowed outside canonical pathPrefixes when the dependency is explicit; report this as a visibility note instead of starting broad rediscovery.",
                     "Use typeSummaries, constructorSummaries, methodSummaries and fieldSummaries because annotations are attached to the Java element where they appear.",
                     "For Flow Explorer PERSISTENCE section, use this only for concrete ORM gaps requested by flow-explorer-map-persistence-section; deep mode may require full table/column/source closure and must recursively close every updated table.",
                     "Check relation annotations such as @OneToMany/@ManyToMany/@ElementCollection/@JoinTable before deciding whether a persistence edge is complete.",
@@ -101,6 +116,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
                 || GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS.equals(normalizedToolName)) {
             return List.of(
                     "Fallback when method context, method slice or outline does not fit, parser context is missing or a line range is the only grounded input.",
+                    "Concrete filePath reads are allowed outside canonical pathPrefixes when the dependency is explicit; report this as a visibility note instead of starting broad rediscovery.",
                     "For Flow Explorer PERSISTENCE section, use chunks only to close exact ORM annotation gaps requested by flow-explorer-map-persistence-section; keep the range narrow.",
                     "For deep persistence mapping, close every table and column touched by the endpoint; do not stop at join-table IDs when relation columns or target tables are still unresolved.",
                     "Do not use chunks to read DDL/Liquibase/Flyway/changelog files for persistence mapping.",
@@ -112,6 +128,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.READ_REPOSITORY_FILES_BY_PATH.equals(normalizedToolName)) {
             return List.of(
                     "Use only for a small grounded set of files from endpoint use-case context or a focused follow-up question.",
+                    "A grounded file list may include files outside canonical pathPrefixes; read them as focused targets and report the scope crossing as a visibility note.",
                     "Prefer reading roles that change the requested documentation scope; skip unrelated models and mappers.",
                     "Always provide reason as one short Polish sentence for the operator."
             );
@@ -119,6 +136,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
         if (GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT.equals(normalizedToolName)) {
             return List.of(
                     "Use when initial Flow Explorer artifacts did not resolve the endpoint flow or a follow-up asks to rebuild it.",
+                    "Use searchMode/pathPrefixes from canonical-tool-inputs.md as discovery optimization for the selected repository.",
                     "Do not call just to confirm a flow that compact-flow-manifest.md already provides.",
                     "Do not call to rediscover branchRef/projectName from canonical-tool-inputs.md or filePath from compact-flow-manifest.md.",
                     "Always provide reason as one short Polish sentence for the operator."
@@ -128,6 +146,7 @@ public class FlowExplorerToolDescriptionCustomizer implements CopilotToolDescrip
             return List.of(
                     "Use only to close a concrete gap after checking canonical-tool-inputs.md, compact-flow-manifest.md and snippet-cards.md.",
                     "Use branchRef/projectName from canonical-tool-inputs.md and filePath/methods from compact-flow-manifest.md when available.",
+                    "Use pathPrefixes only for discovery/search tools; explicit file/class/method reads can go outside them when the target is concrete and should be reported as a visibility note.",
                     "Follow flow-explorer-code-grounding for tool selection; let flow-explorer-map-persistence-section and flow-explorer-map-integrations-section define section-specific mapping gaps.",
                     "Always provide reason as one short Polish sentence for the operator."
             );

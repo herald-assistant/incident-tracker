@@ -163,6 +163,31 @@ class FlowExplorerSnippetCardServiceTest {
     }
 
     @Test
+    void shouldReadExplicitSnippetCardsOutsideRepositoryBoundaryWithVisibilityLimitation() {
+        when(javaMethodSliceService.readMethodSlice(any()))
+                .thenAnswer(invocation -> methodSliceResponse(invocation.getArgument(0)));
+
+        var result = service.buildSnippetCards(
+                "platform/backend",
+                "main",
+                repositoryWithPrefixes(List.of("src/main/java/app/customer")),
+                List.of(
+                        node("src/main/java/app/order/OrderService.java", "USE_CASE_SERVICE", "getOrder", 12, 24)
+                ),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
+                List.of()
+        );
+
+        assertEquals(1, result.cards().size());
+        assertTrue(result.limitations().stream()
+                .anyMatch(limitation -> limitation.contains("outside default repository discovery scope")));
+        verify(javaMethodSliceService).readMethodSlice(any());
+        verify(repositoryPort, never()).readFileChunk(
+                anyString(), anyString(), anyString(), anyString(), anyInt(), anyInt(), anyInt()
+        );
+    }
+
+    @Test
     void shouldSkipSnippetCardsWhenRepositoryIsMissing() {
         var result = service.buildSnippetCards(
                 "platform/backend",
@@ -250,11 +275,17 @@ class FlowExplorerSnippetCardServiceTest {
     }
 
     private static FlowExplorerRepositoryContext repository() {
+        return repositoryWithPrefixes(List.of());
+    }
+
+    private static FlowExplorerRepositoryContext repositoryWithPrefixes(List<String> pathPrefixes) {
         return new FlowExplorerRepositoryContext(
                 "crm-service",
                 "crm-service",
                 "platform/backend/crm-service",
                 "feature/FLOW-42",
+                pathPrefixes.isEmpty() ? "whole-repository" : "path-prefixes",
+                pathPrefixes,
                 true,
                 true,
                 List.of()

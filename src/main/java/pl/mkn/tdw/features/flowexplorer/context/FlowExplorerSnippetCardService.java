@@ -63,13 +63,15 @@ public class FlowExplorerSnippetCardService {
                 budgetReached = true;
                 break;
             }
+            var boundaryLimitations = focusedReadBoundaryLimitations(repository, node.filePath());
 
             try {
                 var attempt = tryBuildMethodSliceCard(
                         gitLabGroup,
                         resolvedRef,
                         repository,
-                        node
+                        node,
+                        boundaryLimitations
                 );
                 var card = attempt.card() != null
                         ? attempt.card()
@@ -78,7 +80,7 @@ public class FlowExplorerSnippetCardService {
                                 resolvedRef,
                                 repository,
                                 node,
-                                attempt.limitations()
+                                mergeLimitations(boundaryLimitations, attempt.limitations())
                         );
                 cards.add(card);
                 totalCharacters += card.characterCount();
@@ -182,7 +184,8 @@ public class FlowExplorerSnippetCardService {
             String gitLabGroup,
             String resolvedRef,
             FlowExplorerRepositoryContext repository,
-            FlowExplorerFlowNode node
+            FlowExplorerFlowNode node,
+            List<String> boundaryLimitations
     ) {
         if (!javaFile(node.filePath())) {
             return MethodSliceAttempt.empty();
@@ -215,7 +218,7 @@ public class FlowExplorerSnippetCardService {
                 }
                 return new MethodSliceAttempt(null, distinct(limitations));
             }
-            return new MethodSliceAttempt(methodSliceCard(repository, node, response), List.of());
+            return new MethodSliceAttempt(methodSliceCard(repository, node, response, boundaryLimitations), List.of());
         } catch (RuntimeException exception) {
             limitations.add("Method slice failed and snippet card fell back to line chunk: "
                     + safeMessage(exception));
@@ -343,12 +346,14 @@ public class FlowExplorerSnippetCardService {
     private FlowExplorerSnippetCard methodSliceCard(
             FlowExplorerRepositoryContext repository,
             FlowExplorerFlowNode node,
-            GitLabJavaMethodSliceResponse response
+            GitLabJavaMethodSliceResponse response,
+            List<String> extraLimitations
     ) {
         var requestedLineRange = requestedLineRange(node);
         var requestedStartLine = requestedLineRange != null ? requestedLineRange.startLine() : response.returnedLineStart();
         var requestedEndLine = requestedLineRange != null ? requestedLineRange.endLine() : response.returnedLineEnd();
         var limitations = new ArrayList<String>(node.limitations());
+        limitations.addAll(extraLimitations != null ? extraLimitations : List.of());
         limitations.addAll(response.limitations());
         if (response.truncated()) {
             limitations.add("Snippet content was truncated by GitLab method slice output limit.");
@@ -406,6 +411,48 @@ public class FlowExplorerSnippetCardService {
 
     private String normalizeRole(String role) {
         return StringUtils.hasText(role) ? role.trim().toUpperCase() : "UNKNOWN";
+    }
+
+    private boolean pathWithinBoundary(FlowExplorerRepositoryContext repository, String filePath) {
+        if (repository == null || repository.pathPrefixes().isEmpty()) {
+            return true;
+        }
+        var normalizedPath = normalizeFilePath(filePath);
+        if (!StringUtils.hasText(normalizedPath)) {
+            return false;
+        }
+        return repository.pathPrefixes().stream()
+                .map(this::normalizeFilePath)
+                .filter(StringUtils::hasText)
+                .anyMatch(prefix -> normalizedPath.equals(prefix) || normalizedPath.startsWith(prefix + "/"));
+    }
+
+    private List<String> focusedReadBoundaryLimitations(FlowExplorerRepositoryContext repository, String filePath) {
+        if (pathWithinBoundary(repository, filePath)) {
+            return List.of();
+        }
+        return List.of("File is outside default repository discovery scope and was read because it was explicitly requested.");
+    }
+
+    private List<String> mergeLimitations(List<String> first, List<String> second) {
+        var merged = new ArrayList<String>();
+        merged.addAll(first != null ? first : List.of());
+        merged.addAll(second != null ? second : List.of());
+        return distinct(merged);
+    }
+
+    private String normalizeFilePath(String path) {
+        if (!StringUtils.hasText(path)) {
+            return null;
+        }
+        var normalized = path.trim().replace('\\', '/');
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return StringUtils.hasText(normalized) ? normalized : null;
     }
 
     private List<String> distinct(List<String> values) {

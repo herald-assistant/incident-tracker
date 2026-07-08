@@ -45,6 +45,7 @@ public class FlowExplorerOpenApiContractService {
         var contracts = new ArrayList<FlowExplorerOpenApiEndpointContract>();
         var limitations = new ArrayList<String>();
         for (var candidate : candidates.stream().limit(MAX_OPENAPI_CONTRACTS).toList()) {
+            var boundaryLimitations = focusedReadBoundaryLimitations(repository, candidate.filePath());
             try {
                 var response = openApiEndpointSliceService.readEndpointSlice(new GitLabOpenApiEndpointSliceRequest(
                         gitLabGroup,
@@ -60,8 +61,11 @@ public class FlowExplorerOpenApiContractService {
                 limitations.addAll(response.limitations().stream()
                         .map(limitation -> candidate.filePath() + ": " + limitation)
                         .toList());
+                limitations.addAll(boundaryLimitations.stream()
+                        .map(limitation -> candidate.filePath() + ": " + limitation)
+                        .toList());
                 if (GitLabOpenApiEndpointSliceService.STATUS_OK.equals(response.status())) {
-                    contracts.add(contract(response));
+                    contracts.add(contract(response, boundaryLimitations));
                 }
             } catch (RuntimeException exception) {
                 limitations.add(candidate.filePath() + ": OpenAPI endpoint slice failed: " + safeMessage(exception));
@@ -100,7 +104,47 @@ public class FlowExplorerOpenApiContractService {
                 && (path.contains("openapi") || path.contains("swagger") || path.contains("/api/"));
     }
 
-    private FlowExplorerOpenApiEndpointContract contract(GitLabOpenApiEndpointSliceResponse response) {
+    private boolean pathWithinBoundary(FlowExplorerRepositoryContext repository, String filePath) {
+        if (repository == null || repository.pathPrefixes().isEmpty()) {
+            return true;
+        }
+        var normalizedPath = normalizeFilePath(filePath);
+        if (!StringUtils.hasText(normalizedPath)) {
+            return false;
+        }
+        return repository.pathPrefixes().stream()
+                .map(this::normalizeFilePath)
+                .filter(StringUtils::hasText)
+                .anyMatch(prefix -> normalizedPath.equals(prefix) || normalizedPath.startsWith(prefix + "/"));
+    }
+
+    private List<String> focusedReadBoundaryLimitations(FlowExplorerRepositoryContext repository, String filePath) {
+        if (pathWithinBoundary(repository, filePath)) {
+            return List.of();
+        }
+        return List.of("File is outside default repository discovery scope and was read because it was explicitly requested.");
+    }
+
+    private String normalizeFilePath(String path) {
+        if (!StringUtils.hasText(path)) {
+            return null;
+        }
+        var normalized = path.trim().replace('\\', '/');
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return StringUtils.hasText(normalized) ? normalized : null;
+    }
+
+    private FlowExplorerOpenApiEndpointContract contract(
+            GitLabOpenApiEndpointSliceResponse response,
+            List<String> extraLimitations
+    ) {
+        var limitations = new ArrayList<String>(response.limitations());
+        limitations.addAll(extraLimitations != null ? extraLimitations : List.of());
         return new FlowExplorerOpenApiEndpointContract(
                 response.projectName(),
                 response.filePath(),
@@ -115,7 +159,7 @@ public class FlowExplorerOpenApiContractService {
                 response.content(),
                 response.returnedCharacters(),
                 response.truncated(),
-                response.limitations()
+                distinct(limitations)
         );
     }
 

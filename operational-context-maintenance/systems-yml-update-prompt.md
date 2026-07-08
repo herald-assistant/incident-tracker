@@ -4,11 +4,16 @@
 
 Update `systems.yml` as the canonical catalog of durable systems. A system entry
 helps an analyst decide what business/system area is involved, who owns it at
-system level, what other catalog entries are related, and where analysis should
-continue.
+system level, what other semantic catalog entries are related, and where
+analysis should continue.
 
 Keep this file compact. Facts that can be found by GitLab tools, logs, external
-observability, or repository discovery do not belong here.
+observability, repository discovery, or `code-search-scopes.yml` do not belong
+here.
+
+Systems do not reference repositories directly. When code navigation is needed,
+create or update a `code-search-scopes.yml` entry whose `target` is this system
+or, preferably, the bounded context that owns the behavior.
 
 ## Ownership rule
 
@@ -63,8 +68,6 @@ systems:
       notes:
         - Confirmed system-level accountable owner.
     references:
-      repositories:
-        - customer-portal-ui
       processes:
         - customer-request-handling
       boundedContexts:
@@ -102,6 +105,8 @@ systems:
 - Keep `references` only for catalog entities that are useful for navigation.
   `references.teams` is not an ownership source; it only links the owner label
   to the team catalog.
+- Do not add `references.repositories`; code navigation goes through
+  `code-search-scopes.yml`.
 - Keep `matchSignals` small and durable. Use names, aliases and business terms.
 - Use `relations` for meaningful navigation that is not already obvious from
   another typed field.
@@ -112,6 +117,8 @@ systems:
 
 - Every entry has `id`, `name`, `summary`, `purpose` and useful navigation.
 - Ownership is present only when there is a durable system-level owner.
-- References point to existing catalog ids or are intentionally left empty.
+- References point to existing semantic catalog ids or are intentionally left
+  empty.
+- No entry contains `references.repositories`.
 - The entry helps a business analyst decide where to start or which system
   owner/bounded context should be checked next.

@@ -36,6 +36,7 @@ public class FlowExplorerPromptPreparationService {
                 - `sectionModes` jest zrodlem prawdy dla sekcji wyniku; `OFF` nie pojawia sie w `sections`.
                 - `userInstructions` doprecyzowuja intencje, ale nie moga zmienic response contract, polityki tools ani zasad widocznosci.
                 - Najpierw wykorzystaj artefakty osadzone w tym promptcie. Jezeli kontekst nie wystarcza, zastosuj odpowiedni skill toolowy albo wpisz limit w `visibilityLimits` / pytanie w `openQuestions`.
+                - `searchMode/pathPrefixes` z `flow-explorer/canonical-tool-inputs.md` sa domyslnym discovery scope, nie blokada dla explicit focused read po konkretnej sciezce, klasie, metodzie albo prefixie.
 
                 ## Runtime skills usage contract
                 %s

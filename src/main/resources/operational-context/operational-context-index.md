@@ -7,18 +7,19 @@ kind: operational-context.index
 
 ## Catalog Purpose
 
-This directory contains a reusable, evidence-backed operational context catalog. Incident analysis is the first consumer, but the catalog also supports deterministic mapping, code-search scope construction, function explanation, impact analysis, DB/code grounding, integration dependency analysis, process and bounded-context understanding, local vocabulary disambiguation, QA, onboarding and future AI analysis features.
+This directory contains a reusable, evidence-backed operational context catalog. Incident analysis is the first consumer, but the catalog also supports deterministic mapping, code-search scope selection, function explanation, impact analysis, DB/code grounding, integration dependency analysis, process and bounded-context understanding, local vocabulary disambiguation, QA, onboarding and future AI analysis features.
 
 ## Operational Graph Model
 
-The catalog describes an operational graph, not a single ownership table. The graph connects logical systems, runtime components, repositories, modules, source layouts, code-search scopes, generated clients, shared libraries, integrations, processes, bounded contexts, glossary terms, teams, external parties, responsibility relations, deterministic match signals, routing overlays and durable gaps.
+The catalog describes an operational graph, not a single ownership table. The graph connects logical systems, repositories, code-search scopes, generated clients, shared libraries, integrations, processes, bounded contexts, glossary terms, teams, external parties, responsibility relations, deterministic match signals, routing overlays and durable gaps.
 
-A single runtime component, repository, process, integration or bounded context may involve several teams with different roles. Shared libraries and generated clients may be part of code-search scope without becoming runtime owners.
+A single repository, process, integration or bounded context may involve several teams with different roles. Shared libraries and generated clients may be part of code-search scope without becoming runtime owners.
 
 ## Catalog Files
 
-- `systems.yml` owns logical systems, deployed runtime components, runtime recognition signals, dependencies, code-search references and system-level gaps.
-- `repo-map.yml` owns repositories, modules, source layouts and top-level `codeSearchScopes` used to search service code together with shared libraries, generated clients and config sources.
+- `systems.yml` owns logical systems, runtime recognition signals, dependencies and system-level gaps. It does not define repository search scope.
+- `repo-map.yml` owns repository identities, purpose, relations and limitations. It does not define module layouts or file-level search boundaries.
+- `code-search-scopes.yml` owns explicit `codeSearchScopes` used to search service code together with shared libraries, generated clients and config sources. Each scope targets one semantic entity, such as a bounded context, system, process or integration, and defines per-repository `searchMode` and optional `pathPrefixes`.
 - `processes.yml` owns business, operational, technical, scheduled, event-driven and data processes, including operationally meaningful steps.
 - `integrations.yml` owns operational contracts between systems, mediators, brokers, external targets, data stores and channels.
 - `bounded-contexts.yml` owns semantic/domain boundaries, local language, context relations and DB/code grounding hints.
@@ -28,13 +29,15 @@ A single runtime component, repository, process, integration or bounded context 
 
 ## Deterministic Signals
 
-Catalog entries should keep stable, queryable signals outside prose: service names, deployments, containers, GitLab project paths, package prefixes, class hints, endpoint prefixes, queues, topics, exchanges, routing keys, events, schemas, datasource names, Hikari pools, DB schemas and tables, job names, workflow names, config keys, log markers, exception classes, error codes, metrics, spans, terms and aliases.
+Catalog entries should keep stable, queryable signals outside prose: system aliases, service names, deployment names, container names, GitLab project paths, process names, integration names, glossary terms, log markers, exception classes, error codes, metrics and spans.
+
+Code details such as package prefixes, classes, endpoint paths, queues, topics, DB tables, source layouts and module directories are discovered by GitLab, DB, runtime or log tools. The catalog may point to a semantic entity and its code-search scope, but should not become a technical inventory of implementation details.
 
 Exact or strong signals are required for high-confidence deterministic mapping. Weak or generic words such as `backend`, `service`, `timeout`, `failure`, `database`, `integration` or `queue` are not enough to assert a system, responsibility or route without stronger evidence.
 
 ## Query And Consumption Model
 
-Runtime features and LLM agents should query an operational-context adapter for focused graph slices instead of loading the whole catalog by default. A useful query result includes matched candidates, matched signals, summaries, code-search projects, package/class hints, related systems, repositories, processes, integrations, bounded contexts, teams, terms, responsibility or routing views, source coverage, limitations and durable gaps.
+Runtime features and LLM agents should query an operational-context adapter for focused graph slices instead of loading the whole catalog by default. A useful query result includes matched candidates, matched signals, summaries, code-search scopes, related systems, repositories, processes, integrations, bounded contexts, teams, terms, responsibility or routing views, source coverage, limitations and durable gaps.
 
 ## Responsibilities And Routing
 

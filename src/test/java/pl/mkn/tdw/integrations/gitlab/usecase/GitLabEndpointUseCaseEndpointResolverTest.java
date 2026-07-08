@@ -90,6 +90,34 @@ class GitLabEndpointUseCaseEndpointResolverTest {
     }
 
     @Test
+    void shouldPropagatePathPrefixesToEndpointInventoryLookup() {
+        var endpoint = endpoint(
+                "GET /api/crm/customers/{id} -> com.example.crm.CustomerController#getCustomer",
+                List.of("GET"),
+                "/api/crm/customers/{id}",
+                "com.example.crm.CustomerController",
+                "getCustomer",
+                "high"
+        );
+        when(endpointService.listEndpoints(any())).thenReturn(endpointList(List.of(endpoint), List.of()));
+
+        resolver.resolve("CRM", "main", new GitLabEndpointUseCaseContextRequest(
+                "crm-customer-service",
+                null,
+                "GET",
+                "/api/crm/customers/{id}",
+                List.of("src/main/java/com/example/crm/customerprofile"),
+                null,
+                null
+        ));
+
+        var captor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
+        verify(endpointService).listEndpoints(captor.capture());
+        assertEquals(List.of("src/main/java/com/example/crm/customerprofile"),
+                captor.getValue().pathPrefixes());
+    }
+
+    @Test
     void shouldReturnAmbiguousEndpointWhenPathMatchesManyHandlers() {
         var first = endpoint(
                 "GET /api/crm/customers/{id} -> com.example.crm.CustomerController#getCustomer",

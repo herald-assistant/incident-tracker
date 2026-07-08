@@ -70,6 +70,8 @@ public record FlowExplorerEndpointInventoryResponse(
             String projectName,
             String projectPath,
             String resolvedRef,
+            String searchMode,
+            List<String> pathPrefixes,
             int candidateFileCount,
             int scannedFileCount,
             boolean scannedFileLimitReached,
@@ -78,6 +80,7 @@ public record FlowExplorerEndpointInventoryResponse(
     ) {
 
         public RepositoryInventoryResponse {
+            pathPrefixes = pathPrefixes != null ? List.copyOf(pathPrefixes) : List.of();
             limitations = limitations != null ? List.copyOf(limitations) : List.of();
         }
     }

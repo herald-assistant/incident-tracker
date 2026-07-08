@@ -128,8 +128,9 @@ public class GitLabRepositoryEndpointService {
         var branch = required(request.branch(), "branch");
         var endpointPathPrefix = normalizeEndpointPathPrefix(request.endpointPathPrefix());
         var httpMethod = normalizeHttpMethod(request.httpMethod());
+        var pathPrefixes = normalizePathPrefixes(request.pathPrefixes());
         var maxScannedFiles = normalizeMaxScannedFiles(request.maxScannedFiles());
-        var inventory = endpointInventory(group, projectName, branch, maxScannedFiles, request.refreshCache());
+        var inventory = endpointInventory(group, projectName, branch, pathPrefixes, maxScannedFiles, request.refreshCache());
         var limitations = new ArrayList<String>(inventory.limitations());
 
         var filteredEndpoints = inventory.endpoints().stream()
@@ -163,14 +164,15 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
+            List<String> pathPrefixes,
             int maxScannedFiles,
             boolean refreshCache
     ) {
         if (analysisCache == null) {
-            return buildEndpointInventory(group, projectName, branch, maxScannedFiles);
+            return buildEndpointInventory(group, projectName, branch, pathPrefixes, maxScannedFiles);
         }
 
-        var keyParts = List.of(group, projectName, branch, maxScannedFiles);
+        var keyParts = List.of(group, projectName, branch, pathPrefixes, maxScannedFiles);
         if (refreshCache) {
             analysisCache.evict("gitlab.repository-endpoint-inventory", keyParts);
         }
@@ -178,7 +180,7 @@ public class GitLabRepositoryEndpointService {
         return analysisCache.getOrCompute(
                 "gitlab.repository-endpoint-inventory",
                 keyParts,
-                () -> buildEndpointInventory(group, projectName, branch, maxScannedFiles)
+                () -> buildEndpointInventory(group, projectName, branch, pathPrefixes, maxScannedFiles)
         );
     }
 
@@ -186,11 +188,12 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
+            List<String> pathPrefixes,
             int maxScannedFiles
     ) {
         var limitations = new ArrayList<String>();
 
-        var endpointDiscovery = endpointCandidateFiles(group, projectName, branch, limitations);
+        var endpointDiscovery = endpointCandidateFiles(group, projectName, branch, pathPrefixes, limitations);
         var candidateFiles = endpointDiscovery.files();
         var scannedFiles = candidateFiles.stream()
                 .limit(maxScannedFiles)
@@ -199,6 +202,7 @@ public class GitLabRepositoryEndpointService {
                 group,
                 projectName,
                 branch,
+                pathPrefixes,
                 endpointDiscovery.repositoryTreeFiles(),
                 limitations
         );
@@ -207,7 +211,10 @@ public class GitLabRepositoryEndpointService {
         var controllerImplementations = new ArrayList<ControllerImplementation>();
         var openApiOperations = new ArrayList<OpenApiOperation>();
         var openApiDocumentCount = 0;
-        var constantResolutionContext = new JavaStringConstantResolutionContext(endpointDiscovery.repositoryTreeFiles());
+        var constantResolutionContext = new JavaStringConstantResolutionContext(
+                endpointDiscovery.repositoryTreeFiles(),
+                pathPrefixes
+        );
 
         for (var file : scannedFiles) {
             try {
@@ -788,7 +795,7 @@ public class GitLabRepositoryEndpointService {
                 group,
                 projectName,
                 branch,
-                List.of(directPath),
+                pathsWithinPrefixes(List.of(directPath), resolutionContext),
                 failures
         );
         if (directContent != null) {
@@ -799,7 +806,7 @@ public class GitLabRepositoryEndpointService {
                 group,
                 projectName,
                 branch,
-                searchJavaStringConstantFilePaths(group, projectName, branch, importedClass),
+                searchJavaStringConstantFilePaths(group, projectName, branch, importedClass, resolutionContext),
                 failures
         );
         if (searchContent != null) {
@@ -851,7 +858,8 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
-            String importedClass
+            String importedClass,
+            JavaStringConstantResolutionContext resolutionContext
     ) {
         try {
             var simpleClassName = simpleName(importedClass);
@@ -863,6 +871,9 @@ public class GitLabRepositoryEndpointService {
                             20
                     ).stream()
                     .filter(candidate -> candidate != null && javaSourcePathMatchesClass(candidate.filePath(), importedClass))
+                    .filter(candidate -> pathWithinPrefixes(candidate.filePath(), resolutionContext != null
+                            ? resolutionContext.pathPrefixes()
+                            : List.of()))
                     .sorted(Comparator.comparing(GitLabRepositoryFileCandidate::filePath))
                     .map(GitLabRepositoryFileCandidate::filePath)
                     .toList();
@@ -899,12 +910,25 @@ public class GitLabRepositoryEndpointService {
         if (resolutionContext != null && resolutionContext.repositoryTreeLoaded()) {
             return resolutionContext.repositoryTreeFiles();
         }
-        var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
-        var safeFiles = files != null ? files : List.<GitLabRepositoryFile>of();
-        if (resolutionContext != null) {
-            resolutionContext.repositoryTreeFiles(safeFiles);
+        var pathPrefixes = resolutionContext != null ? resolutionContext.pathPrefixes() : List.<String>of();
+        var safeFiles = new ArrayList<GitLabRepositoryFile>();
+        if (pathPrefixes.isEmpty()) {
+            var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
+            safeFiles.addAll(files != null ? files : List.<GitLabRepositoryFile>of());
+        } else {
+            for (var pathPrefix : pathPrefixes) {
+                var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, pathPrefix);
+                if (files != null) {
+                    safeFiles.addAll(files.stream()
+                            .filter(file -> file != null && pathWithinPrefixes(file.filePath(), pathPrefixes))
+                            .toList());
+                }
+            }
         }
-        return safeFiles;
+        if (resolutionContext != null) {
+            resolutionContext.repositoryTreeFiles(deduplicateFiles(safeFiles));
+        }
+        return deduplicateFiles(safeFiles);
     }
 
     private boolean javaSourcePathMatchesClass(String filePath, String importedClass) {
@@ -2235,6 +2259,7 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
+            List<String> pathPrefixes,
             List<GitLabRepositoryFile> knownRepositoryTreeFiles,
             List<String> limitations
     ) {
@@ -2245,6 +2270,7 @@ public class GitLabRepositoryEndpointService {
                 OPENAPI_DISCOVERY_TERMS,
                 OPENAPI_SEARCH_RESULTS_PER_TERM
         ).stream()
+                .filter(file -> pathWithinPrefixes(file.filePath(), pathPrefixes))
                 .filter(file -> isYamlFile(file.filePath()))
                 .toList();
         if (!searchedFiles.isEmpty()) {
@@ -2253,8 +2279,9 @@ public class GitLabRepositoryEndpointService {
 
         var repositoryFiles = knownRepositoryTreeFiles != null && !knownRepositoryTreeFiles.isEmpty()
                 ? knownRepositoryTreeFiles
-                : repositoryTreeFiles(group, projectName, branch, limitations, "OpenAPI contract discovery");
+                : repositoryTreeFiles(group, projectName, branch, pathPrefixes, limitations, "OpenAPI contract discovery");
         return sortOpenApiFiles(repositoryFiles.stream()
+                .filter(file -> file != null && pathWithinPrefixes(file.filePath(), pathPrefixes))
                 .filter(file -> file != null && isYamlFile(file.filePath()))
                 .toList());
     }
@@ -2292,6 +2319,7 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
+            List<String> pathPrefixes,
             List<String> limitations
     ) {
         var searchedFiles = searchFilesByContent(
@@ -2301,6 +2329,7 @@ public class GitLabRepositoryEndpointService {
                 ENDPOINT_DISCOVERY_TERMS,
                 ENDPOINT_SEARCH_RESULTS_PER_TERM
         ).stream()
+                .filter(file -> pathWithinPrefixes(file.filePath(), pathPrefixes))
                 .filter(file -> isProductionJavaSource(file.filePath()))
                 .filter(file -> !isTestSource(file.filePath()))
                 .toList();
@@ -2308,16 +2337,20 @@ public class GitLabRepositoryEndpointService {
             return new EndpointCandidateDiscovery(sortEndpointCandidateFiles(searchedFiles), List.of());
         }
 
-        var repositoryFiles = repositoryTreeFiles(group, projectName, branch, limitations, "Spring REST endpoint discovery");
-        var fallbackFiles = sortEndpointCandidateFiles(candidateFiles(repositoryFiles));
+        var repositoryFiles = repositoryTreeFiles(group, projectName, branch, pathPrefixes, limitations, "Spring REST endpoint discovery");
+        var fallbackFiles = sortEndpointCandidateFiles(candidateFiles(repositoryFiles, pathPrefixes));
         if (!fallbackFiles.isEmpty()) {
             limitations.add("GitLab endpoint candidate search returned no Spring REST signals; repository tree fallback selected likely endpoint files by path.");
         }
         return new EndpointCandidateDiscovery(fallbackFiles, repositoryFiles);
     }
 
-    private List<GitLabRepositoryFile> candidateFiles(List<GitLabRepositoryFile> repositoryFiles) {
+    private List<GitLabRepositoryFile> candidateFiles(
+            List<GitLabRepositoryFile> repositoryFiles,
+            List<String> pathPrefixes
+    ) {
         return repositoryFiles.stream()
+                .filter(file -> file != null && pathWithinPrefixes(file.filePath(), pathPrefixes))
                 .filter(file -> file != null && isProductionJavaSource(file.filePath()))
                 .filter(file -> !isTestSource(file.filePath()))
                 .filter(file -> likelyEndpointSourceFile(file.filePath()))
@@ -2367,12 +2400,25 @@ public class GitLabRepositoryEndpointService {
             String group,
             String projectName,
             String branch,
+            List<String> pathPrefixes,
             List<String> limitations,
             String purpose
     ) {
         try {
-            var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
-            return files != null ? files : List.of();
+            if (pathPrefixes == null || pathPrefixes.isEmpty()) {
+                var files = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, null);
+                return files != null ? files : List.of();
+            }
+            var files = new ArrayList<GitLabRepositoryFile>();
+            for (var pathPrefix : pathPrefixes) {
+                var prefixFiles = gitLabRepositoryPort.listRepositoryFiles(group, projectName, branch, pathPrefix);
+                if (prefixFiles != null) {
+                    files.addAll(prefixFiles.stream()
+                            .filter(file -> file != null && pathWithinPrefixes(file.filePath(), pathPrefixes))
+                            .toList());
+                }
+            }
+            return deduplicateFiles(files);
         } catch (RuntimeException exception) {
             limitations.add(purpose + " repository tree fallback failed: " + safeMessage(exception));
             return List.of();
@@ -2658,6 +2704,26 @@ public class GitLabRepositoryEndpointService {
         return StringUtils.hasText(httpMethod) ? httpMethod.trim().toUpperCase(Locale.ROOT) : null;
     }
 
+    private List<String> normalizePathPrefixes(List<String> pathPrefixes) {
+        var normalized = new LinkedHashSet<String>();
+        for (var pathPrefix : pathPrefixes != null ? pathPrefixes : List.<String>of()) {
+            if (!StringUtils.hasText(pathPrefix)) {
+                continue;
+            }
+            var value = pathPrefix.trim().replace('\\', '/');
+            while (value.startsWith("/")) {
+                value = value.substring(1);
+            }
+            while (value.endsWith("/")) {
+                value = value.substring(0, value.length() - 1);
+            }
+            if (StringUtils.hasText(value)) {
+                normalized.add(value);
+            }
+        }
+        return List.copyOf(normalized);
+    }
+
     private int normalizeMaxScannedFiles(Integer maxScannedFiles) {
         if (maxScannedFiles == null || maxScannedFiles <= 0) {
             return DEFAULT_MAX_SCANNED_FILES;
@@ -2676,6 +2742,45 @@ public class GitLabRepositoryEndpointService {
         return StringUtils.hasText(exception.getMessage())
                 ? exception.getMessage()
                 : exception.getClass().getSimpleName();
+    }
+
+    private boolean pathWithinPrefixes(String filePath, List<String> pathPrefixes) {
+        if (pathPrefixes == null || pathPrefixes.isEmpty()) {
+            return true;
+        }
+        if (!StringUtils.hasText(filePath)) {
+            return false;
+        }
+        var normalizedPath = filePath.trim().replace('\\', '/');
+        while (normalizedPath.startsWith("/")) {
+            normalizedPath = normalizedPath.substring(1);
+        }
+        for (var pathPrefix : pathPrefixes) {
+            if (!StringUtils.hasText(pathPrefix)) {
+                continue;
+            }
+            var normalizedPrefix = pathPrefix.trim().replace('\\', '/');
+            while (normalizedPrefix.startsWith("/")) {
+                normalizedPrefix = normalizedPrefix.substring(1);
+            }
+            while (normalizedPrefix.endsWith("/")) {
+                normalizedPrefix = normalizedPrefix.substring(0, normalizedPrefix.length() - 1);
+            }
+            if (normalizedPath.equals(normalizedPrefix) || normalizedPath.startsWith(normalizedPrefix + "/")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<String> pathsWithinPrefixes(
+            List<String> filePaths,
+            JavaStringConstantResolutionContext resolutionContext
+    ) {
+        var pathPrefixes = resolutionContext != null ? resolutionContext.pathPrefixes() : List.<String>of();
+        return filePaths.stream()
+                .filter(filePath -> pathWithinPrefixes(filePath, pathPrefixes))
+                .toList();
     }
 
     private int leadingSpaces(String value) {
@@ -2903,12 +3008,17 @@ public class GitLabRepositoryEndpointService {
     private static final class JavaStringConstantResolutionContext {
 
         private final Map<String, JavaStringConstantFileLookup> constantFileLookups = new LinkedHashMap<>();
+        private final List<String> pathPrefixes;
         private List<GitLabRepositoryFile> repositoryTreeFiles;
         private boolean repositoryTreeLoaded;
 
-        private JavaStringConstantResolutionContext(List<GitLabRepositoryFile> repositoryTreeFiles) {
+        private JavaStringConstantResolutionContext(
+                List<GitLabRepositoryFile> repositoryTreeFiles,
+                List<String> pathPrefixes
+        ) {
             this.repositoryTreeFiles = repositoryTreeFiles != null ? List.copyOf(repositoryTreeFiles) : List.of();
             this.repositoryTreeLoaded = repositoryTreeFiles != null && !repositoryTreeFiles.isEmpty();
+            this.pathPrefixes = pathPrefixes != null ? List.copyOf(pathPrefixes) : List.of();
         }
 
         private JavaStringConstantFileLookup constantFileLookup(String importedClass) {
@@ -2930,6 +3040,10 @@ public class GitLabRepositoryEndpointService {
 
         private boolean repositoryTreeLoaded() {
             return repositoryTreeLoaded;
+        }
+
+        private List<String> pathPrefixes() {
+            return pathPrefixes;
         }
     }
 

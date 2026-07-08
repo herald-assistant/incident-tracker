@@ -95,6 +95,9 @@ class FlowExplorerContextServiceTest {
         assertEquals("CustomerProfileController", snapshot.endpoint().controllerClass());
         assertEquals("crm-customer-profile-api", snapshot.repositories().get(0).projectName());
         assertTrue(snapshot.repositories().get(0).selected());
+        assertEquals("path-prefixes", snapshot.repositories().get(0).searchMode());
+        assertEquals(List.of("src/main/java/com/example/crm/customerprofile"),
+                snapshot.repositories().get(0).pathPrefixes());
 
         var controllerNode = snapshot.flowNodes().get(0);
         assertEquals("CONTROLLER", controllerNode.role());
@@ -120,6 +123,8 @@ class FlowExplorerContextServiceTest {
         );
         assertEquals("crm-customer-profile-api", requestCaptor.getValue().projectName());
         assertEquals("GET /api/crm/customers/{customerId}/profile", requestCaptor.getValue().endpointId());
+        assertEquals(List.of("src/main/java/com/example/crm/customerprofile"),
+                requestCaptor.getValue().pathPrefixes());
         assertEquals(GitLabEndpointUseCaseContextRequest.MAX_MAX_FILES, requestCaptor.getValue().maxFiles());
     }
 
@@ -181,8 +186,13 @@ class FlowExplorerContextServiceTest {
                         "crm-customer-profile-api",
                         "crm-customer-profile-api",
                         "platform/backend/crm-customer-profile-api",
-                        null,
-                        "system.references.repositories",
+                        "crm-customer-profile-scope",
+                        "primary",
+                        1,
+                        "codeSearchScopes[crm-customer-profile-scope]",
+                        List.of("flow-context"),
+                        "path-prefixes",
+                        List.of("src/main/java/com/example/crm/customerprofile"),
                         catalog.repositories().get(0)
                 )),
                 List.of()
@@ -334,8 +344,7 @@ class FlowExplorerContextServiceTest {
                 List.of(map(
                         "id", "crm-customer-profile",
                         "name", "CRM Customer Profile",
-                        "kind", "internal-application",
-                        "references", map("repositories", List.of("crm-customer-profile-api"))
+                        "kind", "internal-application"
                 )),
                 List.of(),
                 List.of(map(
@@ -347,7 +356,19 @@ class FlowExplorerContextServiceTest {
                                 "projectPath", "platform/backend/crm-customer-profile-api"
                         )
                 )),
-                List.of(),
+                List.of(map(
+                        "id", "crm-customer-profile-scope",
+                        "target", map("type", "system", "id", "crm-customer-profile"),
+                        "repositories", List.of(map(
+                                "repoId", "crm-customer-profile-api",
+                                "role", "primary",
+                                "priority", 1,
+                                "reason", "codeSearchScopes[crm-customer-profile-scope]",
+                                "readFor", List.of("flow-context"),
+                                "searchMode", "path-prefixes",
+                                "pathPrefixes", List.of("src/main/java/com/example/crm/customerprofile")
+                        ))
+                )),
                 List.of(),
                 List.of(),
                 List.of(),

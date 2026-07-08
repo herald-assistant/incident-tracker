@@ -15,13 +15,12 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRes
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
 
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.CODE_SEARCH_SCOPE;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.SYSTEM;
 
@@ -31,7 +30,8 @@ public class FlowExplorerSystemSelectionService {
 
     private static final Set<OperationalContextEntryType> SYSTEM_SELECTION_ENTRY_TYPES = Set.of(
             SYSTEM,
-            REPOSITORY
+            REPOSITORY,
+            CODE_SEARCH_SCOPE
     );
 
     private final OperationalContextPort operationalContextPort;
@@ -55,11 +55,6 @@ public class FlowExplorerSystemSelectionService {
             OperationalContextCatalog catalog,
             OperationalContextSystem system
     ) {
-        var codeSearchScopeRepositoryIds = codeSearchScopeRepositoryIds(catalog, system.id());
-        var repositoryIds = distinct(combineValues(
-                system.references().repositories(),
-                codeSearchScopeRepositoryIds
-        ));
         var ownerTeamIds = ownerTeamIds(ownershipResolver.resolve(catalog, ownershipRequest(system)));
 
         return new FlowExplorerSystemOptionResponse(
@@ -72,7 +67,7 @@ public class FlowExplorerSystemSelectionService {
                 system.criticality(),
                 firstDefined(system.summary(), system.purpose()),
                 system.aliases(),
-                repositoryIds.size(),
+                codeSearchScopeRepositoryIds(catalog, system.id()).size(),
                 codeSearchScopeCount(catalog, system),
                 ownerTeamIds
         );
@@ -128,27 +123,6 @@ public class FlowExplorerSystemSelectionService {
                 .filter(StringUtils::hasText)
                 .distinct()
                 .toList();
-    }
-
-    @SafeVarargs
-    private final List<String> combineValues(List<String>... values) {
-        var combined = new ArrayList<String>();
-        for (var list : values) {
-            if (list != null) {
-                combined.addAll(list);
-            }
-        }
-        return combined;
-    }
-
-    private List<String> distinct(List<String> values) {
-        var distinctValues = new LinkedHashSet<String>();
-        for (var value : values) {
-            if (StringUtils.hasText(value)) {
-                distinctValues.add(value);
-            }
-        }
-        return List.copyOf(distinctValues);
     }
 
     private String firstDefined(String first, String second) {

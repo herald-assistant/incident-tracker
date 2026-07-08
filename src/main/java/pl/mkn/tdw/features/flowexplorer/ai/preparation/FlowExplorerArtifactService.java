@@ -188,10 +188,22 @@ public class FlowExplorerArtifactService {
                             .append("projectName: `").append(safe(repository.projectName())).append("`")
                             .append(", projectPath: `").append(safe(repository.projectPath())).append("`")
                             .append(", branchRef: `").append(safe(repository.resolvedRef())).append("`")
+                            .append(", searchMode: `").append(discoverySearchMode(repository)).append("`")
+                            .append(", pathPrefixes: ").append(discoveryPathPrefixes(repository.pathPrefixes()))
                             .append(repository.attempted() ? ", attempted" : ", not-attempted")
                             .append(System.lineSeparator()));
         }
         builder.append(System.lineSeparator());
+
+        builder.append("## Discovery Boundary Policy").append(System.lineSeparator());
+        builder.append("- Treat `searchMode/pathPrefixes` as the default discovery scope for endpoint inventory, repository tree, content search, flow context and class-reference tools.")
+                .append(System.lineSeparator());
+        builder.append("- For `searchMode=path-prefixes`, pass listed `pathPrefixes` to discovery/search tools for that repository; for `whole-repository`, do not invent prefixes.")
+                .append(System.lineSeparator());
+        builder.append("- Explicit focused reads by concrete `filePath`, class, method selector, OpenAPI file or user/tool-provided prefix may go outside the default discovery scope.")
+                .append(System.lineSeparator());
+        builder.append("- When a focused read goes outside the default discovery scope, use the concrete target and report it as a visibility note instead of broad rediscovery.")
+                .append(System.lineSeparator()).append(System.lineSeparator());
 
         builder.append("## File And Method Scope").append(System.lineSeparator());
         builder.append("- Use `").append(COMPACT_FLOW_MANIFEST_ARTIFACT)
@@ -538,6 +550,23 @@ public class FlowExplorerArtifactService {
     private void appendKeyValue(StringBuilder builder, String key, String value) {
         builder.append("- ").append(key).append(": `").append(safe(value)).append("`")
                 .append(System.lineSeparator());
+    }
+
+    private String discoverySearchMode(FlowExplorerRepositoryContext repository) {
+        return StringUtils.hasText(repository.searchMode())
+                ? repository.searchMode().trim()
+                : "whole-repository";
+    }
+
+    private String discoveryPathPrefixes(List<String> pathPrefixes) {
+        if (pathPrefixes == null || pathPrefixes.isEmpty()) {
+            return "[]";
+        }
+        return pathPrefixes.stream()
+                .filter(StringUtils::hasText)
+                .map(pathPrefix -> "`" + pathPrefix.trim() + "`")
+                .reduce((left, right) -> left + ", " + right)
+                .orElse("[]");
     }
 
     private static String safe(String value) {
