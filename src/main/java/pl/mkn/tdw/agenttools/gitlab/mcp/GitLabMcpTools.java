@@ -838,13 +838,16 @@ public class GitLabMcpTools {
                 effectiveMaxCharacters
         );
 
-        var fileContent = gitLabRepositoryPort.readFile(
-                scope.group(),
+        var readResult = readRepositoryFileByExactOrPartialPath(
+                scope,
                 projectName,
-                scope.branch(),
-                filePath,
+                normalizeRepositoryFilePath(filePath, projectName),
                 effectiveMaxCharacters
         );
+        if (readResult.fileContent() == null) {
+            throw new IllegalStateException(readResult.error());
+        }
+        var fileContent = readResult.fileContent();
 
         log.info(
                 "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} returnedCharacters={} truncated={}",
@@ -1242,11 +1245,7 @@ public class GitLabMcpTools {
                 attemptedPaths
         );
         if (typeDefinitionCandidates.size() > 1) {
-            return new RepositoryFileReadResult(
-                    null,
-                    "File not found. Java type definition lookup was ambiguous: "
-                            + abbreviateList(typeDefinitionCandidates)
-            );
+            return new RepositoryFileReadResult(null, "File not found.");
         }
         for (var candidatePath : typeDefinitionCandidates) {
             attemptedPaths.add(candidatePath);

@@ -806,6 +806,78 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInSingleFileRead() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> operationalContextCatalogWithSystems(
+                        List.of(system("backend", "Backend")),
+                        List.of(codeSearchScope(
+                                "backend-code-search",
+                                "system",
+                                "backend",
+                                List.of(scopeRepository(
+                                        "shared-lib-repo",
+                                        "supporting-contracts",
+                                        2,
+                                        List.of("shared-contracts")
+                                ))
+                        )),
+                        repository(
+                                "shared-lib-repo",
+                                "Shared contracts",
+                                "library",
+                                "active",
+                                "CRM",
+                                "CRM/shared-lib",
+                                "shared-lib",
+                                List.of("shared-lib"),
+                                List.of(),
+                                List.of("customer"),
+                                List.of(),
+                                List.of(),
+                                List.of()
+                        )
+                ),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                500
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                500
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                "class CustomerMapper {}",
+                false
+        ));
+
+        var response = tools.readRepositoryFile(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                500,
+                "Czytam konkretny plik z prefiksem scope.",
+                gitLabToolContext()
+        );
+
+        assertEquals("shared-contracts/src/main/java/com/example/shared/CustomerMapper.java", response.filePath());
+        assertEquals("class CustomerMapper {}", response.content());
+    }
+
+    @Test
     void shouldResolveNestedOperationalContextRepositoryGroupUnderConfiguredRootGroup() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = GitLabMcpToolsTestCreator.create(
