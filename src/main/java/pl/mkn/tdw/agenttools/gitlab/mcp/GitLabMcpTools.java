@@ -30,6 +30,7 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
@@ -111,6 +112,8 @@ public class GitLabMcpTools {
     private static final int MAX_FILES_PER_ROLE = 10;
     private static final int MAX_BATCH_CHUNKS = 8;
     private static final int MAX_BATCH_FILES_BY_PATH = 100;
+    private static final int MAX_TYPE_DEFINITION_SEARCH_RESULTS_PER_TERM = 5;
+    private static final int MAX_TYPE_DEFINITION_CANDIDATES = 5;
     private static final int MAX_IMPORTS = 40;
     private static final int MAX_TYPE_SUMMARIES = 20;
     private static final int MAX_FIELD_SUMMARIES = 80;
@@ -1102,14 +1105,14 @@ public class GitLabMcpTools {
             }
 
             var effectiveFileMaxCharacters = Math.min(effectiveMaxCharactersPerFile, remainingCharacters);
-            try {
-                var fileContent = gitLabRepositoryPort.readFile(
-                        scope.group(),
-                        projectName,
-                        scope.branch(),
-                        requestedPath,
-                        effectiveFileMaxCharacters
-                );
+            var readResult = readRepositoryFileByExactOrPartialPath(
+                    scope,
+                    projectName,
+                    requestedPath,
+                    effectiveFileMaxCharacters
+            );
+            if (readResult.fileContent() != null) {
+                var fileContent = readResult.fileContent();
                 var content = fileContent != null ? fileContent.content() : null;
                 var returnedCharacters = safeLength(content);
                 var inferredRole = inferRole(
@@ -1143,9 +1146,9 @@ public class GitLabMcpTools {
                 if (remainingCharacters <= 0) {
                     totalCharacterLimitReached = true;
                 }
-            } catch (RuntimeException exception) {
+            } else {
                 failedFileCount++;
-                var error = toolErrorMessage(exception);
+                var error = readResult.error();
                 log.warn(
                         "Tool partial failure [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} reason={}",
                         READ_REPOSITORY_FILES_BY_PATH,
@@ -1209,6 +1212,249 @@ public class GitLabMcpTools {
                 totalCharacterLimitReached,
                 List.copyOf(results)
         );
+    }
+
+    private RepositoryFileReadResult readRepositoryFileByExactOrPartialPath(
+            GitLabToolScope scope,
+            String projectName,
+            String requestedPath,
+            int maxCharacters
+    ) {
+        var attemptedPaths = new LinkedHashSet<String>();
+        var readErrors = new ArrayList<String>();
+        for (var candidatePath : expandedRepositoryFilePathCandidates(
+                scope.group(),
+                scope.applicationName(),
+                projectName,
+                requestedPath
+        )) {
+            attemptedPaths.add(candidatePath);
+            var content = tryReadRepositoryFile(scope, projectName, candidatePath, maxCharacters, readErrors);
+            if (content != null) {
+                return new RepositoryFileReadResult(content, null);
+            }
+        }
+
+        var typeDefinitionCandidates = javaTypeDefinitionCandidatePaths(
+                scope,
+                projectName,
+                requestedPath,
+                attemptedPaths
+        );
+        if (typeDefinitionCandidates.size() > 1) {
+            return new RepositoryFileReadResult(
+                    null,
+                    "File not found. Java type definition lookup was ambiguous: "
+                            + abbreviateList(typeDefinitionCandidates)
+            );
+        }
+        for (var candidatePath : typeDefinitionCandidates) {
+            attemptedPaths.add(candidatePath);
+            var content = tryReadRepositoryFile(scope, projectName, candidatePath, maxCharacters, readErrors);
+            if (content != null) {
+                return new RepositoryFileReadResult(content, null);
+            }
+        }
+
+        return new RepositoryFileReadResult(null, "File not found.");
+    }
+
+    private GitLabRepositoryFileContent tryReadRepositoryFile(
+            GitLabToolScope scope,
+            String projectName,
+            String filePath,
+            int maxCharacters,
+            List<String> readErrors
+    ) {
+        try {
+            return gitLabRepositoryPort.readFile(
+                    scope.group(),
+                    projectName,
+                    scope.branch(),
+                    filePath,
+                    maxCharacters
+            );
+        } catch (RuntimeException exception) {
+            readErrors.add(filePath + ": " + toolErrorMessage(exception));
+            return null;
+        }
+    }
+
+    private List<String> expandedRepositoryFilePathCandidates(
+            String group,
+            String applicationName,
+            String projectName,
+            String requestedPath
+    ) {
+        var candidates = new LinkedHashSet<String>();
+        add(candidates, requestedPath);
+        for (var pathPrefix : scopedRepositoryPathPrefixes(group, applicationName, projectName)) {
+            var normalizedPrefix = normalizeRepositoryFilePath(pathPrefix, projectName);
+            if (!StringUtils.hasText(normalizedPrefix)) {
+                continue;
+            }
+            if (requestedPath.equals(normalizedPrefix) || requestedPath.startsWith(normalizedPrefix + "/")) {
+                continue;
+            }
+            add(candidates, normalizedPrefix + "/" + requestedPath);
+        }
+        return List.copyOf(candidates);
+    }
+
+    private List<String> scopedRepositoryPathPrefixes(
+            String group,
+            String applicationName,
+            String projectName
+    ) {
+        var catalog = loadBroadDiscoveryCatalog();
+        var repository = findRepository(group, projectName, catalog.repositories());
+        if (repository == null) {
+            return List.of();
+        }
+
+        var relevantScopes = applicationCodeSearchScopes(catalog, applicationName);
+        var scopesToCheck = relevantScopes.isEmpty()
+                ? defaultList(catalog.codeSearchScopes())
+                : relevantScopes;
+        var pathPrefixes = new LinkedHashSet<String>();
+        for (var scope : scopesToCheck) {
+            for (var scopedRepository : scope.repositories()) {
+                if (sameCatalogId(repository.id(), scopedRepository.repoId())) {
+                    scopedRepository.pathPrefixes().forEach(prefix -> add(pathPrefixes, prefix));
+                }
+            }
+        }
+        return List.copyOf(pathPrefixes);
+    }
+
+    private List<OperationalContextRepositorySearchScope> applicationCodeSearchScopes(
+            OperationalContextCatalog catalog,
+            String applicationName
+    ) {
+        var targetIds = applicationScopeTargetIds(applicationName, catalog);
+        if (targetIds.systemIds().isEmpty() && targetIds.boundedContextIds().isEmpty()) {
+            return List.of();
+        }
+        return defaultList(catalog.codeSearchScopes()).stream()
+                .filter(scope -> scopeTargetsApplication(scope, targetIds))
+                .toList();
+    }
+
+    private ApplicationScopeTargetIds applicationScopeTargetIds(
+            String applicationName,
+            OperationalContextCatalog catalog
+    ) {
+        var normalizedApplicationName = normalizeComparable(applicationName);
+        var systemIds = new LinkedHashSet<String>();
+        var boundedContextIds = new LinkedHashSet<String>();
+        if (!StringUtils.hasText(normalizedApplicationName)) {
+            return new ApplicationScopeTargetIds(systemIds, boundedContextIds);
+        }
+        for (var system : defaultList(catalog.systems())) {
+            if (systemMatches(system, normalizedApplicationName)) {
+                add(systemIds, normalizeComparable(system.id()));
+                system.references().boundedContexts().forEach(contextId ->
+                        add(boundedContextIds, normalizeComparable(contextId)));
+            }
+        }
+        add(systemIds, normalizedApplicationName);
+        add(boundedContextIds, normalizedApplicationName);
+        return new ApplicationScopeTargetIds(systemIds, boundedContextIds);
+    }
+
+    private boolean scopeTargetsApplication(
+            OperationalContextRepositorySearchScope scope,
+            ApplicationScopeTargetIds targetIds
+    ) {
+        if (scope.target() == null) {
+            return false;
+        }
+        var targetType = normalizeComparable(scope.target().type());
+        var targetId = normalizeComparable(scope.target().id());
+        if (!StringUtils.hasText(targetId)) {
+            return false;
+        }
+        if (Set.of("system", "systems").contains(targetType)) {
+            return targetIds.systemIds().contains(targetId);
+        }
+        if (Set.of("bounded_context", "bounded_contexts").contains(targetType)) {
+            return targetIds.boundedContextIds().contains(targetId);
+        }
+        return false;
+    }
+
+    private List<String> javaTypeDefinitionCandidatePaths(
+            GitLabToolScope scope,
+            String projectName,
+            String requestedPath,
+            Set<String> alreadyTriedPaths
+    ) {
+        if (!StringUtils.hasText(requestedPath) || !requestedPath.endsWith(".java")) {
+            return List.of();
+        }
+
+        var typeName = fileNameWithoutExtension(requestedPath);
+        if (!StringUtils.hasText(typeName)) {
+            return List.of();
+        }
+
+        var candidates = List.<GitLabRepositoryFileCandidate>of();
+        try {
+            candidates = gitLabRepositoryPort.searchRepositoryFilesByContent(
+                    scope.group(),
+                    projectName,
+                    scope.branch(),
+                    javaTypeDefinitionSearchTerms(typeName),
+                    MAX_TYPE_DEFINITION_SEARCH_RESULTS_PER_TERM
+            );
+        } catch (RuntimeException ignored) {
+            return List.of();
+        }
+        var typeFileName = typeName + ".java";
+        var packageSuffix = javaPackagePathSuffix(requestedPath);
+        var filteredCandidates = defaultList(candidates).stream()
+                .map(GitLabRepositoryFileCandidate::filePath)
+                .filter(StringUtils::hasText)
+                .map(path -> path.replace('\\', '/'))
+                .filter(path -> path.endsWith("/" + typeFileName) || path.equals(typeFileName))
+                .filter(path -> !alreadyTriedPaths.contains(path))
+                .distinct()
+                .toList();
+        if (StringUtils.hasText(packageSuffix)) {
+            var packageMatches = filteredCandidates.stream()
+                    .filter(path -> path.equals(packageSuffix) || path.endsWith("/" + packageSuffix))
+                    .toList();
+            if (!packageMatches.isEmpty()) {
+                filteredCandidates = packageMatches;
+            }
+        }
+        return filteredCandidates.stream()
+                .sorted()
+                .limit(MAX_TYPE_DEFINITION_CANDIDATES)
+                .toList();
+    }
+
+    private List<String> javaTypeDefinitionSearchTerms(String typeName) {
+        return List.of(
+                "class " + typeName,
+                "interface " + typeName,
+                "enum " + typeName,
+                "record " + typeName,
+                "@interface " + typeName
+        );
+    }
+
+    private String javaPackagePathSuffix(String requestedPath) {
+        if (!StringUtils.hasText(requestedPath)) {
+            return null;
+        }
+        var normalizedPath = requestedPath.replace('\\', '/');
+        var marker = "src/main/java/";
+        var markerIndex = normalizedPath.indexOf(marker);
+        if (markerIndex < 0) {
+            return null;
+        }
+        return normalizedPath.substring(markerIndex);
     }
 
     @Tool(
@@ -2227,6 +2473,18 @@ public class GitLabMcpTools {
         return fileContent != null && StringUtils.hasText(fileContent.filePath())
                 ? fileContent.filePath()
                 : fallbackFilePath;
+    }
+
+    private record RepositoryFileReadResult(
+            GitLabRepositoryFileContent fileContent,
+            String error
+    ) {
+    }
+
+    private record ApplicationScopeTargetIds(
+            Set<String> systemIds,
+            Set<String> boundedContextIds
+    ) {
     }
 
     private FileMetadataSnapshot readFileMetadata(GitLabToolScope scope, String projectName, String filePath) {

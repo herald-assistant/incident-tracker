@@ -624,6 +624,151 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInFocusedBatchRead() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> operationalContextCatalogWithSystems(
+                        List.of(system("backend", "Backend")),
+                        List.of(codeSearchScope(
+                                "backend-code-search",
+                                "system",
+                                "backend",
+                                List.of(scopeRepository(
+                                        "shared-lib-repo",
+                                        "supporting-contracts",
+                                        2,
+                                        List.of("shared-contracts")
+                                ))
+                        )),
+                        repository(
+                                "shared-lib-repo",
+                                "Shared contracts",
+                                "library",
+                                "active",
+                                "CRM",
+                                "CRM/shared-lib",
+                                "shared-lib",
+                                List.of("shared-lib"),
+                                List.of(),
+                                List.of("customer"),
+                                List.of(),
+                                List.of(),
+                                List.of()
+                        )
+                ),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                500
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                500
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                "class CustomerMapper {}",
+                false
+        ));
+
+        var response = tools.readRepositoryFilesByPath(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                List.of("src/main/java/com/example/shared/CustomerMapper.java"),
+                500,
+                500,
+                "Czytam konkretny plik z prefiksem scope.",
+                gitLabToolContext()
+        );
+
+        assertEquals(1, response.returnedFileCount());
+        assertEquals(0, response.failedFileCount());
+        assertEquals(
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                response.files().get(0).filePath()
+        );
+        assertEquals("class CustomerMapper {}", response.files().get(0).content());
+    }
+
+    @Test
+    void shouldResolveJavaFileByTypeDefinitionSearchWhenPathExpansionMisses() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> OperationalContextCatalog.empty(),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                500
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.searchRepositoryFilesByContent(
+                eq("CRM"),
+                eq("shared-lib"),
+                eq(DEFAULT_BRANCH_REF),
+                argThat(terms -> terms.contains("class CustomerMapper")
+                        && terms.contains("interface CustomerMapper")
+                        && terms.contains("enum CustomerMapper")
+                        && terms.contains("record CustomerMapper")
+                        && terms.contains("@interface CustomerMapper")),
+                eq(5)
+        )).thenReturn(List.of(new GitLabRepositoryFileCandidate(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "generated/contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                "Matched class CustomerMapper.",
+                95
+        )));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "generated/contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                500
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "generated/contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                "class CustomerMapper {}",
+                false
+        ));
+
+        var response = tools.readRepositoryFilesByPath(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                List.of("src/main/java/com/example/shared/CustomerMapper.java"),
+                500,
+                500,
+                "Czytam konkretny plik po definicji typu.",
+                gitLabToolContext()
+        );
+
+        assertEquals(1, response.returnedFileCount());
+        assertEquals(0, response.failedFileCount());
+        assertEquals(
+                "generated/contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                response.files().get(0).filePath()
+        );
+    }
+
+    @Test
     void shouldAllowFocusedFileReadInSupportingRepositoryFromSystemCodeSearchScope() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = GitLabMcpToolsTestCreator.create(
@@ -861,6 +1006,13 @@ class GitLabMcpToolsTest {
                 "src/main/java/com/example/crm/customer/MissingCustomerService.java",
                 10
         );
+        verify(gitLabRepositoryPort).searchRepositoryFilesByContent(
+                eq("CRM/backend"),
+                eq("crm-customer-api"),
+                eq("feature/INC-123"),
+                argThat(terms -> terms.contains("class MissingCustomerService")),
+                eq(5)
+        );
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
                 "crm-customer-api",
@@ -900,7 +1052,7 @@ class GitLabMcpToolsTest {
         assertFalse(response.fileCountTruncated());
         assertTrue(response.totalCharacterLimitReached());
         assertEquals(3, response.files().size());
-        assertTrue(response.files().get(0).error().contains("file not found"));
+        assertTrue(response.files().get(0).error().contains("File not found"));
         assertEquals("SKIPPED", response.files().get(0).metadataStatus());
         assertEquals("service-or-orchestrator", response.files().get(1).inferredRole());
         assertEquals("last-service", response.files().get(1).lastCommitId());
@@ -1628,11 +1780,21 @@ class GitLabMcpToolsTest {
             String role,
             int priority
     ) {
+        return scopeRepository(repoId, role, priority, List.of());
+    }
+
+    private Map<String, Object> scopeRepository(
+            String repoId,
+            String role,
+            int priority,
+            List<String> pathPrefixes
+    ) {
         return Map.of(
                 "repoId", repoId,
                 "role", role,
                 "priority", priority,
-                "searchMode", "whole-repository",
+                "searchMode", pathPrefixes.isEmpty() ? "whole-repository" : "path-prefixes",
+                "pathPrefixes", pathPrefixes,
                 "reason", "Included in test code-search scope.",
                 "readFor", List.of("code-navigation")
         );
