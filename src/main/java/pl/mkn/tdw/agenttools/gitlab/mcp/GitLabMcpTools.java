@@ -24,6 +24,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
@@ -42,6 +43,11 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextReques
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextRequest;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
@@ -115,6 +121,12 @@ public class GitLabMcpTools {
 
     private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?m)^\\s*package\\s+([\\w.]+)\\s*;");
     private static final Pattern IMPORT_PATTERN = Pattern.compile("(?m)^\\s*import\\s+(?:static\\s+)?[\\w.*]+\\s*;");
+    private static final Set<OperationalContextEntryType> BROAD_DISCOVERY_CONTEXT_ENTRY_TYPES = Set.of(
+            OperationalContextEntryType.SYSTEM,
+            OperationalContextEntryType.REPOSITORY,
+            OperationalContextEntryType.CODE_SEARCH_SCOPE
+    );
+
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final OperationalContextPort operationalContextPort;
     private final GitLabRepositoryEndpointService gitLabRepositoryEndpointService;
@@ -148,6 +160,218 @@ public class GitLabMcpTools {
                 .map(chunk -> chunk.projectName().trim())
                 .findFirst()
                 .orElse(null);
+    }
+
+    private List<String> effectiveBroadDiscoveryProjectNames(
+            String group,
+            String applicationName,
+            List<String> projectNames,
+            String purpose
+    ) {
+        var catalog = loadBroadDiscoveryCatalog();
+        var safeProjectNames = defaultList(projectNames);
+        if (!safeProjectNames.isEmpty()) {
+            safeProjectNames.forEach(projectName -> requirePrimaryRepositoryForBroadDiscovery(
+                    group,
+                    applicationName,
+                    projectName,
+                    purpose,
+                    catalog
+            ));
+            return safeProjectNames;
+        }
+
+        var matchingSystemIds = matchingSystemIds(applicationName, catalog);
+        if (matchingSystemIds.isEmpty()) {
+            return safeProjectNames;
+        }
+
+        var projectNamesFromScope = new LinkedHashSet<String>();
+        for (var codeSearchScope : systemCodeSearchScopes(catalog, matchingSystemIds)) {
+            for (var scopedRepository : codeSearchScope.repositories()) {
+                if (!isPrimaryScopeRepository(scopedRepository)) {
+                    continue;
+                }
+                projectNameForRepository(group, scopedRepository.repoId(), catalog.repositories())
+                        .stream()
+                        .findFirst()
+                        .ifPresent(projectNamesFromScope::add);
+            }
+        }
+        return projectNamesFromScope.isEmpty()
+                ? safeProjectNames
+                : List.copyOf(projectNamesFromScope);
+    }
+
+    private void requirePrimaryRepositoryForBroadDiscovery(
+            String group,
+            String applicationName,
+            String projectName,
+            String purpose
+    ) {
+        requirePrimaryRepositoryForBroadDiscovery(
+                group,
+                applicationName,
+                projectName,
+                purpose,
+                loadBroadDiscoveryCatalog()
+        );
+    }
+
+    private void requirePrimaryRepositoryForBroadDiscovery(
+            String group,
+            String applicationName,
+            String projectName,
+            String purpose,
+            OperationalContextCatalog catalog
+    ) {
+        var repository = findRepository(group, projectName, catalog.repositories());
+        if (repository == null) {
+            return;
+        }
+
+        var matchingSystemIds = matchingSystemIds(applicationName, catalog);
+        var relevantScopes = !matchingSystemIds.isEmpty()
+                ? systemCodeSearchScopes(catalog, matchingSystemIds)
+                : defaultList(catalog.codeSearchScopes());
+        var scopedRepositories = relevantScopes.stream()
+                .flatMap(scope -> scope.repositories().stream())
+                .filter(scopedRepository -> sameCatalogId(repository.id(), scopedRepository.repoId()))
+                .toList();
+
+        if (!matchingSystemIds.isEmpty()
+                && scopedRepositories.isEmpty()
+                && !systemCodeSearchScopes(catalog, matchingSystemIds).isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Broad GitLab %s is limited to repositories from the primary code search scope for application '%s'."
+                            .formatted(purpose, applicationName)
+            );
+        }
+
+        if (scopedRepositories.isEmpty() || scopedRepositories.stream().anyMatch(this::isPrimaryScopeRepository)) {
+            return;
+        }
+
+        throw new IllegalArgumentException(
+                "Broad GitLab %s is limited to primary repositories; repository '%s' is available for focused reads when a class or file path is known."
+                        .formatted(purpose, projectName)
+        );
+    }
+
+    private OperationalContextCatalog loadBroadDiscoveryCatalog() {
+        if (operationalContextPort == null) {
+            return OperationalContextCatalog.empty();
+        }
+        return operationalContextPort.loadContext(new OperationalContextQuery(
+                BROAD_DISCOVERY_CONTEXT_ENTRY_TYPES,
+                List.of(),
+                false
+        ));
+    }
+
+    private List<OperationalContextRepositorySearchScope> systemCodeSearchScopes(
+            OperationalContextCatalog catalog,
+            Set<String> matchingSystemIds
+    ) {
+        return defaultList(catalog.codeSearchScopes()).stream()
+                .filter(scope -> scope.target() != null
+                        && "system".equalsIgnoreCase(trimToEmpty(scope.target().type()))
+                        && matchingSystemIds.contains(normalizeComparable(scope.target().id())))
+                .toList();
+    }
+
+    private LinkedHashSet<String> matchingSystemIds(
+            String applicationName,
+            OperationalContextCatalog catalog
+    ) {
+        var normalizedApplicationName = normalizeComparable(applicationName);
+        var matchingSystemIds = new LinkedHashSet<String>();
+        if (!StringUtils.hasText(normalizedApplicationName)) {
+            return matchingSystemIds;
+        }
+        for (var system : defaultList(catalog.systems())) {
+            if (systemMatches(system, normalizedApplicationName)) {
+                add(matchingSystemIds, normalizeComparable(system.id()));
+            }
+        }
+        return matchingSystemIds;
+    }
+
+    private boolean systemMatches(OperationalContextSystem system, String normalizedApplicationName) {
+        var values = new LinkedHashSet<String>();
+        add(values, system.id());
+        add(values, system.name());
+        add(values, system.shortName());
+        addAll(values, system.aliases());
+        addAll(values, system.genericSignals());
+        return values.stream()
+                .map(this::normalizeComparable)
+                .anyMatch(normalizedApplicationName::equals);
+    }
+
+    private OperationalContextRepository findRepository(
+            String group,
+            String projectName,
+            List<OperationalContextRepository> repositories
+    ) {
+        var normalizedProjectName = normalizeComparable(projectName);
+        if (!StringUtils.hasText(normalizedProjectName)) {
+            return null;
+        }
+        for (var repository : defaultList(repositories)) {
+            var candidates = repositoryProjectNameCandidates(group, repository);
+            if (candidates.stream().map(this::normalizeComparable).anyMatch(normalizedProjectName::equals)) {
+                return repository;
+            }
+        }
+        return null;
+    }
+
+    private LinkedHashSet<String> projectNameForRepository(
+            String group,
+            String repoId,
+            List<OperationalContextRepository> repositories
+    ) {
+        var projectNames = new LinkedHashSet<String>();
+        for (var repository : defaultList(repositories)) {
+            if (!sameCatalogId(repository.id(), repoId)) {
+                continue;
+            }
+            add(projectNames, relativeProjectPath(group, repository.git().projectPath()));
+            add(projectNames, repository.git().project());
+            add(projectNames, repository.git().projectPath());
+        }
+        return projectNames;
+    }
+
+    private LinkedHashSet<String> repositoryProjectNameCandidates(
+            String group,
+            OperationalContextRepository repository
+    ) {
+        var candidates = new LinkedHashSet<String>();
+        add(candidates, repository.id());
+        add(candidates, repository.name());
+        add(candidates, repository.git().project());
+        add(candidates, repository.git().projectPath());
+        add(candidates, relativeProjectPath(group, repository.git().projectPath()));
+        addAll(candidates, repository.git().aliases());
+        addAll(candidates, repository.aliases());
+        return candidates;
+    }
+
+    private boolean isPrimaryScopeRepository(OperationalContextRepositorySearchRepository repository) {
+        return "primary".equalsIgnoreCase(trimToEmpty(repository.role()))
+                || Integer.valueOf(1).equals(repository.priority());
+    }
+
+    private String relativeProjectPath(String configuredGroup, String rawProjectPath) {
+        return GitLabPathUtils.relativeProjectPath(configuredGroup, rawProjectPath);
+    }
+
+    private boolean sameCatalogId(String left, String right) {
+        var normalizedLeft = normalizeComparable(left);
+        var normalizedRight = normalizeComparable(right);
+        return StringUtils.hasText(normalizedLeft) && normalizedLeft.equals(normalizedRight);
     }
 
     @Tool(
@@ -187,7 +411,10 @@ public class GitLabMcpTools {
         );
 
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
-                Set.of(OperationalContextEntryType.REPOSITORY),
+                Set.of(
+                        OperationalContextEntryType.REPOSITORY,
+                        OperationalContextEntryType.CODE_SEARCH_SCOPE
+                ),
                 List.of(),
                 false
         ));
@@ -259,6 +486,13 @@ public class GitLabMcpTools {
                 endpointPathPrefix,
                 httpMethod,
                 maxScannedFiles
+        );
+
+        requirePrimaryRepositoryForBroadDiscovery(
+                scope.group(),
+                scope.applicationName(),
+                projectName,
+                "endpoint inventory"
         );
 
         var result = gitLabRepositoryEndpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
@@ -511,6 +745,12 @@ public class GitLabMcpTools {
         var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var safeKeywords = defaultList(keywords);
+        var effectiveProjectNames = effectiveBroadDiscoveryProjectNames(
+                scope.group(),
+                scope.applicationName(),
+                safeProjectNames,
+                "repository candidate search"
+        );
 
         log.info(
                 "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} keywords={}",
@@ -522,7 +762,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                abbreviateList(safeProjectNames),
+                abbreviateList(effectiveProjectNames),
                 abbreviateList(safePathPrefixes),
                 abbreviateList(safeOperationNames),
                 abbreviateList(safeKeywords)
@@ -532,7 +772,7 @@ public class GitLabMcpTools {
                 null,
                 scope.group(),
                 scope.branch(),
-                safeProjectNames,
+                effectiveProjectNames,
                 safeOperationNames,
                 safeKeywords,
                 safePathPrefixes
@@ -1394,6 +1634,12 @@ public class GitLabMcpTools {
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(defaultList(keywords));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
+        var effectiveProjectNames = effectiveBroadDiscoveryProjectNames(
+                scope.group(),
+                scope.applicationName(),
+                safeProjectNames,
+                "flow context search"
+        );
 
         log.info(
                 "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} searchKeywords={} maxFilesPerRole={}",
@@ -1405,7 +1651,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                abbreviateList(safeProjectNames),
+                abbreviateList(effectiveProjectNames),
                 abbreviateList(safePathPrefixes),
                 abbreviateList(safeOperationNames),
                 abbreviateList(searchKeywords),
@@ -1416,7 +1662,7 @@ public class GitLabMcpTools {
                 null,
                 scope.group(),
                 scope.branch(),
-                safeProjectNames,
+                effectiveProjectNames,
                 safeOperationNames,
                 searchKeywords,
                 safePathPrefixes
@@ -1919,6 +2165,31 @@ public class GitLabMcpTools {
         joined.addAll(defaultList(left));
         joined.addAll(defaultList(right));
         return joined;
+    }
+
+    private String normalizeComparable(String value) {
+        return StringUtils.hasText(value)
+                ? value.trim()
+                        .toLowerCase(Locale.ROOT)
+                        .replace('-', '_')
+                        .replaceAll("[^a-z0-9/_]+", "_")
+                : null;
+    }
+
+    private String trimToEmpty(String value) {
+        return StringUtils.hasText(value) ? value.trim() : "";
+    }
+
+    private void add(LinkedHashSet<String> values, String value) {
+        if (StringUtils.hasText(value)) {
+            values.add(value.trim());
+        }
+    }
+
+    private void addAll(LinkedHashSet<String> values, List<String> source) {
+        for (var value : defaultList(source)) {
+            add(values, value);
+        }
     }
 
     private int normalizeMaxFilesPerRole(Integer maxFilesPerRole) {

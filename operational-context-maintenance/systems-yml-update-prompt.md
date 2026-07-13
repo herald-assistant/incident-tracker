@@ -12,8 +12,8 @@ observability, repository discovery, or `code-search-scopes.yml` do not belong
 here.
 
 Systems do not reference repositories directly. When code navigation is needed,
-create or update a `code-search-scopes.yml` entry whose `target` is this system
-or, preferably, the bounded context that owns the behavior.
+create or update the single `code-search-scopes.yml` entry whose `target` is
+this system.
 
 ## Ownership rule
 
@@ -107,6 +107,8 @@ systems:
   to the team catalog.
 - Do not add `references.repositories`; code navigation goes through
   `code-search-scopes.yml`.
+- Ensure this system has exactly one system-targeted code-search scope when it
+  is an internal system or otherwise requires code discovery.
 - Keep `matchSignals` small and durable. Use names, aliases and business terms.
 - Use `relations` for meaningful navigation that is not already obvious from
   another typed field.

@@ -9,7 +9,12 @@ meanings that look similar in code, logs, or user reports.
 
 Keep entries semantic. Do not use this file as a map of low-level code details.
 Do not use it as the primary map from bounded context to repositories. Code
-navigation for a bounded context goes through `code-search-scopes.yml`.
+navigation starts from the system's single `code-search-scopes.yml` entry and
+then resolves bounded-context meaning through catalog references and code
+evidence. An optional bounded-context code-search scope may be added only as a
+semantic slice when it clarifies a durable domain boundary or helps route code
+locations back to bounded-context ownership; it does not replace the system
+scope.
 
 ## Ownership rule
 
@@ -88,8 +93,10 @@ boundedContexts:
 - Use `references.terms` for glossary entries that define the local language.
 - Add relations only when they help navigation across contexts.
 - Keep aliases and match signals stable and business-readable.
-- Link code through a `code-search-scopes.yml` entry whose `target` is this
-  bounded context. Do not duplicate repository/module boundaries here.
+- Keep repository and module boundaries in the related system-targeted
+  code-search scope. Add a bounded-context-targeted scope only when it provides
+  useful semantic narrowing or code-to-team attribution for this context and
+  remains consistent with the system scope.
 - Put unclear boundaries or unclear ownership into open questions.
 
 ## Quality check
@@ -97,6 +104,7 @@ boundedContexts:
 - The entry helps explain the system to an analyst or tester.
 - It clarifies what belongs here and what should be resolved through another
   context or system owner.
-- Its code ownership path is available through a bounded-context-targeted
-  code-search scope when code navigation is needed.
+- Its code ownership path is available through the related system-targeted
+  code-search scope when code navigation is needed, with an optional
+  bounded-context scope only as a semantic slice for attribution.
 - It does not duplicate code details that tools can discover.

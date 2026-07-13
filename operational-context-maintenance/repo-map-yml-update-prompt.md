@@ -19,11 +19,11 @@ not the canonical code ownership route. For code-to-owner routing, use
 `code-search-scopes.yml`:
 
 `code/file path -> repository + path prefix -> code-search scope -> bounded
-context -> owner`.
+context or system -> owner`.
 
 Keep repository entries in the YAML shape below. If ownership is needed, resolve
-or correct the bounded-context/system target and its code-search scope instead
-of adding owner-like fields here.
+or correct the referenced bounded context/system and the related system
+code-search scope instead of adding owner-like fields here.
 
 ## YAML shape
 
@@ -89,6 +89,9 @@ repositories:
 - Do not add team references to imply repository ownership.
 - Add aliases only when they help resolve a real user or tool signal.
 - Leave code reading order, module boundaries and bounded-context-to-code
-  ownership routing to `code-search-scopes.yml`.
+  ownership routing to the system-targeted scope in `code-search-scopes.yml`.
+- When a repository is a direct internal library dependency of a system's
+  primary repository, make sure it has a stable repository entry so it can be
+  included in that system's single code-search scope.
 - If a repository is unclear, keep the entry small and add a validation finding
   or open question outside this prompt.

@@ -47,6 +47,12 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('App Core');
+    const headers = Array.from(
+      fixture.nativeElement.querySelectorAll('.catalog-table__header-cell') as NodeListOf<HTMLElement>
+    ).map((element) => element.textContent?.trim());
+    expect(headers.slice(0, 5)).toEqual(['System', 'Kind', 'Owner', 'Repositories', 'Relations']);
+    const rowCells = fixture.nativeElement.querySelectorAll('.catalog-table__row [role="cell"]') as NodeListOf<HTMLElement>;
+    expect(rowCells[3].textContent).toContain('2');
 
     component.localFilterControl.setValue('missing');
     fixture.detectChanges();
@@ -463,6 +469,7 @@ function systemRow(): OperationalContextSystemRowDto {
     },
     resolvedOwnership: resolvedOwnership(),
     purpose: 'Runs the core flow.',
+    repositories: aggregate('Repositories', 2),
     relations: aggregate('Relations', 0),
     signals: aggregate('Signals', 1),
     handoffReadiness: aggregate('Handoff', 1),

@@ -66,13 +66,17 @@ public class FlowExplorerEndpointInventoryService {
         var repositoryResponses = new ArrayList<RepositoryInventoryResponse>();
         var endpointResponses = new ArrayList<EndpointOptionResponse>();
         var limitations = new ArrayList<>(scope.limitations());
+        var endpointInventoryRepositories = endpointInventoryRepositories(scope.repositories());
+        if (endpointInventoryRepositories.isEmpty() && !scope.repositories().isEmpty()) {
+            limitations.add("Operational context system has no primary repository for endpoint inventory.");
+        }
         var candidateFileCount = 0;
         var scannedFileCount = 0;
         var scannedFileLimitReached = false;
         var scannedRepositoryCount = 0;
         var dataCollectedAt = (Instant) null;
 
-        for (var repository : scope.repositories()) {
+        for (var repository : endpointInventoryRepositories) {
             try {
                 var result = gitLabRepositoryEndpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
                         scope.gitLabGroup(),
@@ -149,7 +153,7 @@ public class FlowExplorerEndpointInventoryService {
             String endpointPathPrefix,
             String httpMethod
     ) {
-        var repositories = scope.repositories().stream()
+        var repositories = endpointInventoryRepositories(scope.repositories()).stream()
                 .map(repository -> String.join(":",
                         safe(repository.repositoryId()),
                         safe(repository.projectName()),
@@ -168,6 +172,21 @@ public class FlowExplorerEndpointInventoryService {
                 endpointPathPrefix,
                 httpMethod
         );
+    }
+
+    private List<FlowExplorerRepositoryScopeRepository> endpointInventoryRepositories(
+            List<FlowExplorerRepositoryScopeRepository> repositories
+    ) {
+        return repositories.stream()
+                .filter(this::primaryRepository)
+                .toList();
+    }
+
+    private boolean primaryRepository(FlowExplorerRepositoryScopeRepository repository) {
+        if ("primary".equalsIgnoreCase(safe(repository.role()).trim())) {
+            return true;
+        }
+        return Integer.valueOf(1).equals(repository.priority());
     }
 
     private Instant oldest(Instant current, Instant candidate) {

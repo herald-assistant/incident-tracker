@@ -147,6 +147,7 @@ public final class OperationalContextDtos {
             ExplainableValueDto<String> owner,
             OperationalContextResolvedOwnershipDto resolvedOwnership,
             String purpose,
+            ExplainableAggregateDto repositories,
             ExplainableAggregateDto relations,
             ExplainableAggregateDto signals,
             ExplainableAggregateDto handoffReadiness,

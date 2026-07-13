@@ -51,16 +51,14 @@ class FlowExplorerEndpointInventoryServiceTest {
         assertEquals("/api", response.endpointPathPrefix());
         assertEquals("GET", response.httpMethod());
         assertEquals(3, response.repositoryCount());
-        assertEquals(2, response.scannedRepositoryCount());
+        assertEquals(1, response.scannedRepositoryCount());
         assertEquals(1, response.endpointCount());
-        assertEquals(6, response.candidateFileCount());
-        assertEquals(4, response.scannedFileCount());
+        assertEquals(3, response.candidateFileCount());
+        assertEquals(2, response.scannedFileCount());
         assertEquals("path-prefixes", response.repositories().get(0).searchMode());
         assertEquals(List.of("src/main/java/com/example/crm/customerprofile"), response.repositories().get(0).pathPrefixes());
-        assertEquals("whole-repository", response.repositories().get(1).searchMode());
-        assertEquals(List.of(), response.repositories().get(1).pathPrefixes());
         assertTrue(response.limitations().contains("Operational context references unknown repository: missing-repo"));
-        assertTrue(response.limitations().contains("crm-customer-profile-domain: No controllers found."));
+        assertTrue(response.limitations().stream().noneMatch(limitation -> limitation.contains("No controllers found.")));
 
         var endpoint = response.endpoints().get(0);
         assertEquals("crm-customer-profile-api:GET /api/crm/customers/{customerId}/profile", endpoint.endpointId());
@@ -75,7 +73,7 @@ class FlowExplorerEndpointInventoryServiceTest {
         assertEquals("customer profile id", endpoint.tooltipDetails().parameters().get(0).description());
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
-        verify(endpointService, times(2)).listEndpoints(requestCaptor.capture());
+        verify(endpointService).listEndpoints(requestCaptor.capture());
         assertTrue(requestCaptor.getAllValues().stream()
                 .allMatch(request -> "release-candidate".equals(request.branch())));
         assertTrue(requestCaptor.getAllValues().stream()
@@ -88,8 +86,7 @@ class FlowExplorerEndpointInventoryServiceTest {
                 .anyMatch(request -> "crm-customer-profile-api".equals(request.projectName())
                         && request.pathPrefixes().equals(List.of("src/main/java/com/example/crm/customerprofile"))));
         assertTrue(requestCaptor.getAllValues().stream()
-                .anyMatch(request -> "domains/crm-customer-profile-domain".equals(request.projectName())
-                        && request.pathPrefixes().isEmpty()));
+                .noneMatch(request -> "domains/crm-customer-profile-domain".equals(request.projectName())));
     }
 
     @Test
@@ -104,7 +101,7 @@ class FlowExplorerEndpointInventoryServiceTest {
         assertEquals("feature/FLOW-42", response.resolvedRef());
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
-        verify(endpointService, times(2)).listEndpoints(requestCaptor.capture());
+        verify(endpointService).listEndpoints(requestCaptor.capture());
         assertTrue(requestCaptor.getAllValues().stream()
                 .allMatch(request -> "feature/FLOW-42".equals(request.branch())));
     }
@@ -120,15 +117,15 @@ class FlowExplorerEndpointInventoryServiceTest {
         var second = service.endpoints("crm-customer-profile", null, null, null);
 
         assertEquals(first, second);
-        verify(endpointService, times(2)).listEndpoints(any());
+        verify(endpointService).listEndpoints(any());
 
         service.endpoints("crm-customer-profile", null, null, null, true);
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
-        verify(endpointService, times(4)).listEndpoints(requestCaptor.capture());
+        verify(endpointService, times(2)).listEndpoints(requestCaptor.capture());
         var captured = requestCaptor.getAllValues();
-        assertTrue(captured.subList(0, 2).stream().noneMatch(GitLabRepositoryEndpointListRequest::refreshCache));
-        assertTrue(captured.subList(2, 4).stream().allMatch(GitLabRepositoryEndpointListRequest::refreshCache));
+        assertTrue(captured.subList(0, 1).stream().noneMatch(GitLabRepositoryEndpointListRequest::refreshCache));
+        assertTrue(captured.subList(1, 2).stream().allMatch(GitLabRepositoryEndpointListRequest::refreshCache));
         assertEquals(1, cache.evictions);
     }
 
@@ -319,14 +316,20 @@ class FlowExplorerEndpointInventoryServiceTest {
                         "name", "CRM Customer Profile scope",
                         "target", map("type", "system", "id", "crm-customer-profile"),
                         "repositories", List.of(
-                                map("repoId", "missing-repo", "priority", 1, "searchMode", "whole-repository"),
+                                map("repoId", "missing-repo", "priority", 3, "searchMode", "whole-repository"),
                                 map(
                                         "repoId", "crm-customer-profile-api",
-                                        "priority", 2,
+                                        "role", "primary",
+                                        "priority", 1,
                                         "searchMode", "path-prefixes",
                                         "pathPrefixes", List.of("src/main/java/com/example/crm/customerprofile")
                                 ),
-                                map("repoId", "crm-customer-profile-domain", "priority", 3, "searchMode", "whole-repository")
+                                map(
+                                        "repoId", "crm-customer-profile-domain",
+                                        "role", "supporting-library",
+                                        "priority", 2,
+                                        "searchMode", "whole-repository"
+                                )
                         )
                 )),
                 List.of(),

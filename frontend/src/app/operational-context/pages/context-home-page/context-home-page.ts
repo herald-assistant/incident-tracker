@@ -131,6 +131,12 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'owner'
     ),
     column(
+      'repositories',
+      'Repositories',
+      'Repozytoria skladajace sie na systemowy code-search scope. Pokazuja, ile projektow agent powinien traktowac jako wspolny indeks kodu dla tego systemu, bez przywracania bezposrednich referencji system -> repo.',
+      'aggregate'
+    ),
+    column(
       'relations',
       'Relations',
       'Powiazania systemu z procesami, repozytoriami, integracjami, bounded contextami, terminami i zespolami. Te relacje buduja graf wiedzy, ktory pozwala AI przejsc od technicznego sygnalu do funkcji biznesowej i sasiednich systemow.',

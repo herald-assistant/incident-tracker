@@ -259,6 +259,57 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldNarrowBroadSearchToPrimaryRepositoryFromSystemCodeSearchScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> backendSystemCatalog(),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of());
+
+        tools.searchRepositoryCandidates(
+                List.of(),
+                List.of(),
+                DEFAULT_BRANCH_REF,
+                "backend",
+                List.of(),
+                List.of("CustomerController"),
+                "Szukam kandydatow dla systemu backend.",
+                gitLabToolContext()
+        );
+
+        verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
+                "CRM".equals(query.group())
+                        && List.of("backend").equals(query.projectNames())
+        ));
+    }
+
+    @Test
+    void shouldRejectBroadSearchInSupportingRepositoryFromSystemCodeSearchScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> backendSystemCatalog(),
+                gitLabProperties("CRM")
+        );
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> tools.searchRepositoryCandidates(
+                List.of("shared-lib"),
+                List.of(),
+                DEFAULT_BRANCH_REF,
+                "backend",
+                List.of(),
+                List.of("CustomerMapper"),
+                "Probuję szeroko szukac w libce.",
+                gitLabToolContext()
+        ));
+
+        assertTrue(exception.getMessage().contains("focused reads"));
+        verifyNoMoreInteractions(gitLabRepositoryPort);
+    }
+
+    @Test
     void shouldListRepositoryEndpointsUsingSessionBoundScope() {
         var response = gitLabMcpTools.listRepositoryEndpoints(
                 "crm-customer-api",
@@ -294,6 +345,32 @@ class GitLabMcpToolsTest {
         assertEquals("high", endpoint.confidence());
         assertTrue(endpoint.limitations().isEmpty());
         assertTrue(endpoint.suggestedNextReads().get(0).contains("gitlab_read_repository_file_chunk"));
+    }
+
+    @Test
+    void shouldRejectEndpointInventoryInSupportingRepositoryFromSystemCodeSearchScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var endpointService = mock(GitLabRepositoryEndpointService.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> backendSystemCatalog(),
+                endpointService,
+                gitLabProperties("CRM")
+        );
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> tools.listRepositoryEndpoints(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                null,
+                null,
+                null,
+                "Probuję listowac endpointy libki.",
+                gitLabToolContext()
+        ));
+
+        assertTrue(exception.getMessage().contains("focused reads"));
+        verifyNoMoreInteractions(endpointService);
     }
 
     @Test
@@ -544,6 +621,43 @@ class GitLabMcpToolsTest {
         assertEquals("src/main/java/com/example/synthetic/edge/CustomerProfileClient.java", response.filePath());
         assertEquals("class CustomerProfileClient {}", response.content());
         assertFalse(response.truncated());
+    }
+
+    @Test
+    void shouldAllowFocusedFileReadInSupportingRepositoryFromSystemCodeSearchScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> backendSystemCatalog(),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                200
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                "class CustomerMapper {}",
+                false
+        ));
+
+        var response = tools.readRepositoryFile(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                200,
+                "Czytam konkretny plik z libki.",
+                gitLabToolContext()
+        );
+
+        assertEquals("shared-lib", response.projectName());
+        assertEquals("class CustomerMapper {}", response.content());
     }
 
     @Test
@@ -1409,10 +1523,18 @@ class GitLabMcpToolsTest {
             List<Map<String, Object>> codeSearchScopes,
             Map<String, Object>... repositories
     ) {
+        return operationalContextCatalogWithSystems(List.of(), codeSearchScopes, repositories);
+    }
+
+    private OperationalContextCatalog operationalContextCatalogWithSystems(
+            List<Map<String, Object>> systems,
+            List<Map<String, Object>> codeSearchScopes,
+            Map<String, Object>... repositories
+    ) {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
-                List.of(),
+                systems,
                 List.of(),
                 List.of(repositories),
                 codeSearchScopes,
@@ -1422,6 +1544,63 @@ class GitLabMcpToolsTest {
                 List.of(),
                 ""
         );
+    }
+
+    private OperationalContextCatalog backendSystemCatalog() {
+        return operationalContextCatalogWithSystems(
+                List.of(system("backend", "Backend")),
+                List.of(codeSearchScope(
+                        "backend-code-search",
+                        "system",
+                        "backend",
+                        List.of(
+                                scopeRepository("backend-repo", "primary", 1),
+                                scopeRepository("shared-lib-repo", "library", 2)
+                        )
+                )),
+                repository(
+                        "backend-repo",
+                        "Backend",
+                        "service",
+                        "active",
+                        "CRM",
+                        "CRM/backend",
+                        "backend",
+                        List.of("backend"),
+                        List.of("backend"),
+                        List.of("customer"),
+                        List.of("customer-process"),
+                        List.of(),
+                        List.of("shared-lib-repo")
+                ),
+                repository(
+                        "shared-lib-repo",
+                        "Shared lib",
+                        "library",
+                        "active",
+                        "CRM",
+                        "CRM/shared-lib",
+                        "shared-lib",
+                        List.of("shared-lib"),
+                        List.of(),
+                        List.of("customer"),
+                        List.of(),
+                        List.of(),
+                        List.of()
+                )
+        );
+    }
+
+    private Map<String, Object> system(String id, String name) {
+        var system = new LinkedHashMap<String, Object>();
+        system.put("id", id);
+        system.put("name", name);
+        system.put("shortName", id);
+        system.put("kind", "internal-system");
+        system.put("lifecycleStatus", "active");
+        system.put("aliases", List.of(id, name));
+        system.put("useFor", List.of("code-search"));
+        return system;
     }
 
     private Map<String, Object> codeSearchScope(

@@ -313,6 +313,7 @@ public class OperationalContextViewService {
                 ownerValue(resolvedOwnership, SYSTEM, system.id()),
                 resolvedOwnership,
                 summaryText(system),
+                systemCodeSearchRepositoriesAggregate(view, system),
                 referenceAggregate(view, SYSTEM, system.id(), system.references()),
                 signalAggregate(SYSTEM, system.id(), system.matchSignals()),
                 resolvedOwnershipAggregate(SYSTEM, system.id(), resolvedOwnership),
@@ -929,6 +930,26 @@ public class OperationalContextViewService {
                 .map(OperationalContextRepositorySearchScope::id)
                 .toList();
         return valueAggregate("Code-search scopes", REPOSITORY, repository.id(), scopeIds, "Code-search scopes including this repository.", CODE_SEARCH_SCOPE);
+    }
+
+    private ExplainableAggregateDto systemCodeSearchRepositoriesAggregate(
+            CatalogView view,
+            OperationalContextSystem system
+    ) {
+        var repositoryIds = view.catalog().codeSearchScopes().stream()
+                .filter(scope -> SYSTEM.equals(normalizeType(scope.target().type())))
+                .filter(scope -> normalize(scope.target().id()).equals(normalize(system.id())))
+                .flatMap(scope -> scope.repositories().stream())
+                .map(OperationalContextRepositorySearchRepository::repoId)
+                .toList();
+        return idAggregate(
+                "Repositories",
+                SYSTEM,
+                system.id(),
+                REPOSITORY,
+                repositoryIds,
+                view.repositoriesById()
+        );
     }
 
     private ExplainableAggregateDto repositoryCodeSearchRolesAggregate(CatalogView view, OperationalContextRepository repository) {

@@ -113,6 +113,7 @@ export interface OperationalContextSystemRowDto {
   owner: ExplainableValueDto<string>;
   resolvedOwnership: OperationalContextResolvedOwnershipDto;
   purpose: string;
+  repositories: ExplainableAggregateDto;
   relations: ExplainableAggregateDto;
   signals: ExplainableAggregateDto;
   handoffReadiness: ExplainableAggregateDto;

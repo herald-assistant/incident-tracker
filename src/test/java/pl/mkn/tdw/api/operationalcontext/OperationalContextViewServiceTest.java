@@ -40,6 +40,7 @@ class OperationalContextViewServiceTest {
         assertEquals("crm-consent-service", system.id());
         assertEquals("internal-application", system.kind());
         assertEquals("team-a", system.owner().value());
+        assertEquals(1, system.repositories().count());
         assertTrue(system.relations().count() >= 4);
         assertEquals(1, system.signals().count());
 
