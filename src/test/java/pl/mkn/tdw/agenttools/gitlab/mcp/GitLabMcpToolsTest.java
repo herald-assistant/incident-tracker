@@ -808,39 +808,7 @@ class GitLabMcpToolsTest {
     @Test
     void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInSingleFileRead() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
-        var tools = GitLabMcpToolsTestCreator.create(
-                gitLabRepositoryPort,
-                ignored -> operationalContextCatalogWithSystems(
-                        List.of(system("backend", "Backend")),
-                        List.of(codeSearchScope(
-                                "backend-code-search",
-                                "system",
-                                "backend",
-                                List.of(scopeRepository(
-                                        "shared-lib-repo",
-                                        "supporting-contracts",
-                                        2,
-                                        List.of("shared-contracts")
-                                ))
-                        )),
-                        repository(
-                                "shared-lib-repo",
-                                "Shared contracts",
-                                "library",
-                                "active",
-                                "CRM",
-                                "CRM/shared-lib",
-                                "shared-lib",
-                                List.of("shared-lib"),
-                                List.of(),
-                                List.of("customer"),
-                                List.of(),
-                                List.of(),
-                                List.of()
-                        )
-                ),
-                gitLabProperties("CRM")
-        );
+        var tools = gitLabMcpToolsWithSharedContractsPrefix(gitLabRepositoryPort);
         when(gitLabRepositoryPort.readFile(
                 "CRM",
                 "shared-lib",
@@ -875,6 +843,250 @@ class GitLabMcpToolsTest {
 
         assertEquals("shared-contracts/src/main/java/com/example/shared/CustomerMapper.java", response.filePath());
         assertEquals("class CustomerMapper {}", response.content());
+    }
+
+    @Test
+    void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInRepositoryFileOutline() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpToolsWithSharedContractsPrefix(gitLabRepositoryPort);
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                30_000
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                30_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                """
+                        package com.example.shared;
+
+                        public class CustomerMapper {
+                            public Customer map(CustomerDto dto) {
+                                return new Customer(dto.id());
+                            }
+                        }
+                        """,
+                false
+        ));
+
+        var response = tools.readRepositoryFileOutline(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                null,
+                "Sprawdzam zarys pliku z prefiksem scope.",
+                gitLabToolContext()
+        );
+
+        assertEquals("shared-contracts/src/main/java/com/example/shared/CustomerMapper.java", response.filePath());
+        assertEquals("com.example.shared", response.packageName());
+        assertEquals("CustomerMapper", response.typeSummaries().get(0).name());
+    }
+
+    @Test
+    void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInRepositoryFileChunk() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpToolsWithSharedContractsPrefix(gitLabRepositoryPort);
+        when(gitLabRepositoryPort.readFileChunk(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                3,
+                5,
+                500
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.readFileChunk(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                3,
+                5,
+                500
+        )).thenReturn(new GitLabRepositoryFileChunk(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                3,
+                5,
+                3,
+                5,
+                10,
+                "return new Customer(dto.id());",
+                false
+        ));
+
+        var response = tools.readRepositoryFileChunk(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                3,
+                5,
+                500,
+                "Czytam fragment pliku z prefiksem scope.",
+                gitLabToolContext()
+        );
+
+        assertEquals("shared-contracts/src/main/java/com/example/shared/CustomerMapper.java", response.filePath());
+        assertEquals("return new Customer(dto.id());", response.content());
+    }
+
+    @Test
+    void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInJavaMethodSlice() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpToolsWithSharedContractsPrefix(gitLabRepositoryPort);
+        when(gitLabRepositoryPort.readFileMetadata(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/shared/CustomerMapper.java"
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.readFileMetadata(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java"
+        )).thenReturn(new GitLabRepositoryFileMetadata(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                "blob",
+                "commit",
+                "last",
+                "2026-07-14T00:00:00.000Z",
+                "sha",
+                300L
+        ));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                200_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/java/com/example/shared/CustomerMapper.java",
+                """
+                        package com.example.shared;
+
+                        public class CustomerMapper {
+                            public Customer map(CustomerDto dto) {
+                                return new Customer(dto.id());
+                            }
+                        }
+                        """,
+                false
+        ));
+
+        var response = tools.readJavaMethodSlice(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                "src/main/java/com/example/shared/CustomerMapper.java",
+                "CustomerMapper",
+                List.of(new GitLabJavaMethodSliceMethodSelector("map", null)),
+                true,
+                true,
+                true,
+                8_000,
+                "Czytam metode z pliku z prefiksem scope.",
+                gitLabToolContext()
+        );
+
+        assertEquals("OK", response.status());
+        assertEquals("shared-contracts/src/main/java/com/example/shared/CustomerMapper.java", response.filePath());
+        assertTrue(response.content().contains("public Customer map(CustomerDto dto)"));
+    }
+
+    @Test
+    void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInOpenApiEndpointSlice() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = gitLabMcpToolsWithSharedContractsPrefix(gitLabRepositoryPort);
+        when(gitLabRepositoryPort.readFileMetadata(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "src/main/resources/openapi/customer-api.yml"
+        )).thenThrow(new IllegalStateException("file not found"));
+        when(gitLabRepositoryPort.readFileMetadata(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/resources/openapi/customer-api.yml"
+        )).thenReturn(new GitLabRepositoryFileMetadata(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/resources/openapi/customer-api.yml",
+                "blob",
+                "commit",
+                "last",
+                "2026-07-14T00:00:00.000Z",
+                "sha",
+                300L
+        ));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/resources/openapi/customer-api.yml",
+                500_000
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "shared-contracts/src/main/resources/openapi/customer-api.yml",
+                """
+                        openapi: 3.0.1
+                        info:
+                          title: Customer API
+                          version: 1.0.0
+                        paths:
+                          /customers/{customerId}:
+                            get:
+                              operationId: getCustomer
+                              responses:
+                                '200':
+                                  description: OK
+                        """,
+                false
+        ));
+
+        var response = tools.readOpenApiEndpointSlice(
+                "shared-lib",
+                DEFAULT_BRANCH_REF,
+                "backend",
+                "src/main/resources/openapi/customer-api.yml",
+                "GET",
+                "/customers/{customerId}",
+                true,
+                2,
+                8_000,
+                "Czytam OpenAPI z prefiksem scope.",
+                gitLabToolContext()
+        );
+
+        assertEquals("OK", response.status());
+        assertEquals("shared-contracts/src/main/resources/openapi/customer-api.yml", response.filePath());
+        assertEquals("/customers/{customerId}", response.matchedPath());
+        assertEquals("getCustomer", response.operationId());
     }
 
     @Test
@@ -1731,6 +1943,42 @@ class GitLabMcpToolsTest {
 
     private GitLabMcpTools gitLabMcpTools(GitLabRepositoryPort gitLabRepositoryPort) {
         return GitLabMcpToolsTestCreator.create(gitLabRepositoryPort, gitLabProperties(DEFAULT_GROUP));
+    }
+
+    private GitLabMcpTools gitLabMcpToolsWithSharedContractsPrefix(GitLabRepositoryPort gitLabRepositoryPort) {
+        return GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> operationalContextCatalogWithSystems(
+                        List.of(system("backend", "Backend")),
+                        List.of(codeSearchScope(
+                                "backend-code-search",
+                                "system",
+                                "backend",
+                                List.of(scopeRepository(
+                                        "shared-lib-repo",
+                                        "supporting-contracts",
+                                        2,
+                                        List.of("shared-contracts")
+                                ))
+                        )),
+                        repository(
+                                "shared-lib-repo",
+                                "Shared contracts",
+                                "library",
+                                "active",
+                                "CRM",
+                                "CRM/shared-lib",
+                                "shared-lib",
+                                List.of("shared-lib"),
+                                List.of(),
+                                List.of("customer"),
+                                List.of(),
+                                List.of(),
+                                List.of()
+                        )
+                ),
+                gitLabProperties("CRM")
+        );
     }
 
     private static GitLabProperties gitLabProperties(String group) {
