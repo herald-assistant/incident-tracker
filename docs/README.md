@@ -34,6 +34,12 @@ Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
 - `architecture/07-open-work-plan.md`
   jedyny aktywny backlog planistyczny; stare plany robocze zostaly do niego
   scalone i oczyszczone z wykonanych zadan.
+- `architecture/12-change-verification-business-need.md`
+  biznesowy opis planowanego feature'u Change Verification: problem, wynik,
+  tryby uzycia, wartosc i granice przed przygotowaniem planu implementacji.
+- `architecture/13-change-verification-implementation-plan.md`
+  plan techniczny Change Verification: integracje, MCP tools, nowy feature,
+  UI, runtime, testy i etapowanie MVP.
 - `../operational-context-maintenance`
   prompty i procedury utrzymania katalogu operational context.
 - `../frontend`
