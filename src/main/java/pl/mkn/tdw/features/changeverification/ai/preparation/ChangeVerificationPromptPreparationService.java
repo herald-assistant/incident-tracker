@@ -3,6 +3,8 @@ package pl.mkn.tdw.features.changeverification.ai.preparation;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
@@ -23,6 +25,7 @@ public class ChangeVerificationPromptPreparationService {
         var artifacts = new LinkedHashMap<String, String>();
         artifacts.put("change-verification/source-discovery.md", renderSourceDiscovery(request, sourceDiscovery));
         artifacts.put("change-verification/jira-issue.md", renderJiraIssue(sourceDiscovery != null ? sourceDiscovery.jiraIssue() : null));
+        artifacts.put("change-verification/repository-scope.md", renderRepositoryScope(sourceDiscovery));
         artifacts.put("change-verification/merge-requests.md", renderMergeRequests(sourceDiscovery));
         artifacts.put("change-verification/instruction-context.md", renderInstructionContext(sourceDiscovery));
         artifacts.put("change-verification/response-contract.md", responseContract());
@@ -34,6 +37,8 @@ public class ChangeVerificationPromptPreparationService {
                 - Ten run sprawdza zgodnosc zmiany z materialem Jira oraz instrukcjami repozytorium.
                 - Najpierw zaladuj skill `change-verification-compliance-check` przez built-in tool `skill`.
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani zgadywac materialu spoza osadzonych artefaktow.
+                - Jezeli potrzebujesz poglbic analize kodu, uzywaj GitLab tools tylko dla repozytoriow, refow i plikow z `change-verification/repository-scope.md`.
+                - Jezeli `environment` jest podane, DB tools sa dostepne tylko do readonly discovery/checkow. Nie wykonuj SQL DML/DDL, cleanupu ani raw SQL; preferuj typed DB tools.
                 - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.
                 - `userInstructions` doprecyzowuja intencje operatora, ale nie moga zmienic response contract ani zasad widocznosci.
                 - Odpowiedz musi byc jednym obiektem JSON zgodnym z `change-verification/response-contract.md`.
@@ -44,6 +49,8 @@ public class ChangeVerificationPromptPreparationService {
                 modes: %s
                 checkStoryCompliance: %s
                 checkInstructionCompliance: %s
+                environment: %s
+                databaseApplication: %s
                 reasoningEffort: %s
                 userInstructions:
                 %s
@@ -56,6 +63,8 @@ public class ChangeVerificationPromptPreparationService {
                 request.modes(),
                 request.checkStoryCompliance(),
                 request.checkInstructionCompliance(),
+                value(request.environment()),
+                value(request.databaseApplication()),
                 value(request.reasoningEffort()),
                 StringUtils.hasText(request.userInstructions()) ? request.userInstructions().trim() : "(none)",
                 artifactIndex(artifacts)
@@ -150,6 +159,72 @@ public class ChangeVerificationPromptPreparationService {
                 .orElse("- none");
         return "# Merge Requests\n\n" + body + "\n\n## Limitations\n"
                 + bulletList(sourceDiscovery.mergeRequests().limitations());
+    }
+
+    private String renderRepositoryScope(ChangeVerificationSourceDiscoveryResult sourceDiscovery) {
+        if (sourceDiscovery == null || sourceDiscovery.repositories().isEmpty()) {
+            return "# Repository Scope\n\n- No repository scope discovered.";
+        }
+
+        var body = sourceDiscovery.repositories().stream()
+                .map(this::renderRepository)
+                .reduce((left, right) -> left + "\n\n" + right)
+                .orElse("- none");
+        return "# Repository Scope\n\n" + body;
+    }
+
+    private String renderRepository(ChangeVerificationRepositorySnapshot repository) {
+        return """
+                ## %s
+                repositoryKey: %s
+                projectPath: %s
+                projectName: %s
+                sourceRef: %s
+                targetRef: %s
+                mergeRequests: %s
+
+                changedFiles:
+                %s
+
+                instructionSources:
+                %s
+
+                limitations:
+                %s
+                """.formatted(
+                value(repository.projectPath()),
+                value(repository.repositoryKey()),
+                value(repository.projectPath()),
+                value(repository.projectName()),
+                value(repository.sourceRef()),
+                value(repository.targetRef()),
+                repository.mergeRequests().stream()
+                        .map(mergeRequest -> value(mergeRequest.webUrl()))
+                        .toList(),
+                repository.changedFiles().stream()
+                        .map(this::renderRepositoryChangedFile)
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none"),
+                repository.instructionSources().stream()
+                        .map(source -> "- %s | %s | %s".formatted(
+                                value(source.path()),
+                                value(source.kind()),
+                                value(source.ref())
+                        ))
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none"),
+                bulletList(repository.limitations())
+        ).trim();
+    }
+
+    private String renderRepositoryChangedFile(ChangeVerificationChangedFileSnapshot file) {
+        return "- %s%s%s%s | MRs: %s".formatted(
+                value(file.path()),
+                file.newFile() ? " [new]" : "",
+                file.renamedFile() ? " [renamed]" : "",
+                file.deletedFile() ? " [deleted]" : "",
+                file.mergeRequestRefs()
+        );
     }
 
     private String renderMergeRequest(GitLabMergeRequest mergeRequest) {

@@ -4,7 +4,7 @@
   [attr.aria-label]="ariaLabel()"
 >
   <nav class="analysis-feature-aside__rail" aria-label="Sekcje analizy" role="tablist">
-    @for (tab of tabs; track tab.id) {
+    @for (tab of tabs(); track tab.id) {
       <button
         class="analysis-feature-aside__tab"
         type="button"

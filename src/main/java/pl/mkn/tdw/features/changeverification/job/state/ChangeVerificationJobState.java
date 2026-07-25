@@ -11,14 +11,18 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultRe
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysis;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestCommit;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
 import pl.mkn.tdw.integrations.jira.JiraIssueComment;
 import pl.mkn.tdw.integrations.jira.JiraIssueLink;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
@@ -32,8 +36,15 @@ import java.util.List;
 public final class ChangeVerificationJobState {
 
     private static final String STATUS_COMPLETED = "COMPLETED";
-    private static final String STEP_SOURCE_DISCOVERY = "SOURCE_DISCOVERY";
+    private static final String STATUS_FAILED = "FAILED";
+    private static final String STATUS_RUNNING = "RUNNING";
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_SKIPPED = "SKIPPED";
+    private static final String STEP_JIRA_MATERIAL = "JIRA_MATERIAL";
+    private static final String STEP_MERGE_REQUEST_DISCOVERY = "MERGE_REQUEST_DISCOVERY";
+    private static final String STEP_CHANGED_FILES = "CHANGED_FILES";
     private static final String STEP_INSTRUCTION_CONTEXT = "INSTRUCTION_CONTEXT";
+    private static final String STEP_INITIAL_SOURCE_SNAPSHOT = "INITIAL_SOURCE_SNAPSHOT";
     private static final String STEP_AI_VERIFICATION = "AI_VERIFICATION";
     private static final String STEP_SMOKE_PACK_GENERATION = "SMOKE_PACK_GENERATION";
     private static final String STEP_EXECUTION = "EXECUTION";
@@ -46,6 +57,8 @@ public final class ChangeVerificationJobState {
             new AnalysisEvidenceReference("change-verification", "jira-issue");
     private static final AnalysisEvidenceReference MERGE_REQUEST_EVIDENCE =
             new AnalysisEvidenceReference("change-verification", "merge-requests");
+    private static final AnalysisEvidenceReference REPOSITORY_SCOPE_EVIDENCE =
+            new AnalysisEvidenceReference("change-verification", "repository-scope");
     private static final AnalysisEvidenceReference SOURCE_LIMITS_EVIDENCE =
             new AnalysisEvidenceReference("change-verification", "source-discovery-limits");
     private static final AnalysisEvidenceReference INSTRUCTION_CONTEXT_EVIDENCE =
@@ -59,11 +72,21 @@ public final class ChangeVerificationJobState {
     private Instant updatedAt;
     private Instant completedAt;
     private String status;
+    private String currentStepCode;
+    private String currentStepLabel;
+    private String errorCode;
+    private String errorMessage;
     private String preparedPrompt;
     private ChangeVerificationResultResponse result;
     private List<AnalysisJobStepResponse> steps;
     private List<AnalysisEvidenceSection> contextSections;
+    private List<AnalysisEvidenceSection> toolEvidenceSections;
+    private List<AnalysisAiActivityEvent> aiActivityEvents;
     private ChangeVerificationSourceDiscoveryResult sourceDiscovery;
+    private JiraIssueMaterial jiraIssue;
+    private GitLabMergeRequestSearchResult mergeRequests;
+    private InstructionContextResult instructionContext;
+    private List<String> sourceDiscoveryLimitations;
     private ChangeVerificationComplianceAnalysis complianceAnalysis;
     private ChangeVerificationSmokePackAnalysis smokePackAnalysis;
     private ChangeVerificationSmokePackResponse smokePack;
@@ -75,24 +98,211 @@ public final class ChangeVerificationJobState {
         this.createdAt = Instant.now();
         this.updatedAt = createdAt;
         this.status = "QUEUED";
+        this.currentStepCode = null;
+        this.currentStepLabel = null;
         this.steps = List.of();
         this.contextSections = List.of();
+        this.toolEvidenceSections = List.of();
+        this.aiActivityEvents = List.of();
+        this.sourceDiscoveryLimitations = List.of();
     }
 
-    public synchronized void markSourceDiscoveryCompleted(
-            ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+    public synchronized void markSourceDiscoveryStarted() {
+        var now = Instant.now();
+        status = "COLLECTING_CONTEXT";
+        currentStepCode = STEP_JIRA_MATERIAL;
+        currentStepLabel = "Jira material";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markJiraMaterialStarted(String issueKey) {
+        var now = Instant.now();
+        status = "COLLECTING_CONTEXT";
+        currentStepCode = STEP_JIRA_MATERIAL;
+        currentStepLabel = "Jira material";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markJiraMaterialCompleted(
+            String issueKey,
+            JiraIssueMaterial jiraIssue,
+            List<String> limitations
+    ) {
+        var now = Instant.now();
+        this.jiraIssue = jiraIssue;
+        this.sourceDiscoveryLimitations = limitations != null ? List.copyOf(limitations) : List.of();
+        currentStepCode = STEP_MERGE_REQUEST_DISCOVERY;
+        currentStepLabel = "Merge request discovery";
+        updatedAt = now;
+        contextSections = contextSections(partialSourceDiscovery(issueKey));
+        steps = steps(now);
+    }
+
+    public synchronized void markMergeRequestDiscoveryStarted(String issueKey) {
+        var now = Instant.now();
+        currentStepCode = STEP_MERGE_REQUEST_DISCOVERY;
+        currentStepLabel = "Merge request discovery";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markMergeRequestDiscoveryCompleted(
+            String issueKey,
+            GitLabMergeRequestSearchResult mergeRequests,
+            List<String> limitations
+    ) {
+        var now = Instant.now();
+        this.mergeRequests = mergeRequests;
+        this.sourceDiscoveryLimitations = limitations != null ? List.copyOf(limitations) : List.of();
+        currentStepCode = STEP_CHANGED_FILES;
+        currentStepLabel = "Changed files";
+        updatedAt = now;
+        contextSections = contextSections(partialSourceDiscovery(issueKey));
+        steps = steps(now);
+    }
+
+    public synchronized void markInstructionContextStarted(GitLabMergeRequestSearchResult mergeRequests) {
+        var now = Instant.now();
+        currentStepCode = STEP_INSTRUCTION_CONTEXT;
+        currentStepLabel = "Instruction context";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markInstructionContextCompleted(
+            GitLabMergeRequestSearchResult mergeRequests,
+            InstructionContextResult instructionContext,
+            List<String> limitations
+    ) {
+        var now = Instant.now();
+        this.mergeRequests = mergeRequests;
+        this.instructionContext = instructionContext;
+        this.sourceDiscoveryLimitations = limitations != null ? List.copyOf(limitations) : List.of();
+        currentStepCode = STEP_INITIAL_SOURCE_SNAPSHOT;
+        currentStepLabel = "Initial source snapshot";
+        updatedAt = now;
+        contextSections = contextSections(partialSourceDiscovery(resolvedIssueKey()));
+        steps = steps(now);
+    }
+
+    public synchronized void markSourceDiscoveryCompleted(ChangeVerificationSourceDiscoveryResult sourceDiscovery) {
+        var now = Instant.now();
+        this.sourceDiscovery = sourceDiscovery;
+        if (sourceDiscovery != null) {
+            this.jiraIssue = sourceDiscovery.jiraIssue();
+            this.mergeRequests = sourceDiscovery.mergeRequests();
+            this.instructionContext = sourceDiscovery.instructionContext();
+            this.sourceDiscoveryLimitations = sourceDiscovery.limitations();
+        }
+        contextSections = contextSections(sourceDiscovery);
+        currentStepCode = nextCurrentStepAfterSourceDiscovery();
+        currentStepLabel = nextCurrentStepLabelAfterSourceDiscovery();
+        status = currentStepCode != null ? "AWAITING_AI" : STATUS_COMPLETED;
+        updatedAt = now;
+        steps = steps(now);
+        if (currentStepCode == null) {
+            markCompleted(null, null);
+        }
+    }
+
+    public synchronized void markChangedFilesCompleted(String issueKey) {
+        var now = Instant.now();
+        currentStepCode = request.checkInstructionCompliance()
+                ? STEP_INSTRUCTION_CONTEXT
+                : STEP_INITIAL_SOURCE_SNAPSHOT;
+        currentStepLabel = request.checkInstructionCompliance()
+                ? "Instruction context"
+                : "Initial source snapshot";
+        updatedAt = now;
+        contextSections = contextSections(partialSourceDiscovery(issueKey));
+        steps = steps(now);
+    }
+
+    public synchronized void markAiVerificationStarted() {
+        var now = Instant.now();
+        status = "ANALYZING";
+        currentStepCode = STEP_AI_VERIFICATION;
+        currentStepLabel = "AI verification";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markAiVerificationCompleted(ChangeVerificationComplianceAnalysis complianceAnalysis) {
+        var now = Instant.now();
+        this.complianceAnalysis = complianceAnalysis;
+        preparedPrompt = preparedPrompt(complianceAnalysis, smokePackAnalysis);
+        currentStepCode = smokePackRequested() ? STEP_SMOKE_PACK_GENERATION : null;
+        currentStepLabel = smokePackRequested() ? "Smoke pack generation" : null;
+        status = "ANALYZING";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markSmokePackGenerationStarted() {
+        var now = Instant.now();
+        status = "ANALYZING";
+        currentStepCode = STEP_SMOKE_PACK_GENERATION;
+        currentStepLabel = "Smoke pack generation";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markAiToolEvidenceUpdated(AnalysisEvidenceSection section) {
+        if (section == null || !section.hasItems()) {
+            return;
+        }
+        var now = Instant.now();
+        toolEvidenceSections = upsertEvidenceSection(toolEvidenceSections, section);
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markAiActivity(AnalysisAiActivityEvent event) {
+        if (event == null) {
+            return;
+        }
+        var now = Instant.now();
+        var events = new ArrayList<>(aiActivityEvents);
+        events.add(event);
+        aiActivityEvents = List.copyOf(events);
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markSmokePackGenerationCompleted(ChangeVerificationSmokePackAnalysis smokePackAnalysis) {
+        var now = Instant.now();
+        this.smokePackAnalysis = smokePackAnalysis;
+        smokePack = smokePackResult();
+        preparedPrompt = preparedPrompt(complianceAnalysis, smokePackAnalysis);
+        currentStepCode = null;
+        currentStepLabel = null;
+        status = "SMOKE_PACK_READY";
+        updatedAt = now;
+        steps = steps(now);
+    }
+
+    public synchronized void markCompleted(
             ChangeVerificationComplianceAnalysis complianceAnalysis,
             ChangeVerificationSmokePackAnalysis smokePackAnalysis
     ) {
         var now = Instant.now();
-        this.sourceDiscovery = sourceDiscovery;
-        this.complianceAnalysis = complianceAnalysis;
-        this.smokePackAnalysis = smokePackAnalysis;
+        if (complianceAnalysis != null) {
+            this.complianceAnalysis = complianceAnalysis;
+        }
+        if (smokePackAnalysis != null) {
+            this.smokePackAnalysis = smokePackAnalysis;
+        }
         status = STATUS_COMPLETED;
+        currentStepCode = null;
+        currentStepLabel = null;
         updatedAt = now;
         completedAt = now;
         preparedPrompt = preparedPrompt(complianceAnalysis, smokePackAnalysis);
-        contextSections = contextSections(sourceDiscovery);
+        if (contextSections.isEmpty()) {
+            contextSections = contextSections(sourceDiscovery);
+        }
         smokePack = smokePackResult();
         steps = steps(now);
         execution = executionResult();
@@ -107,6 +317,18 @@ public final class ChangeVerificationJobState {
                 execution,
                 complianceAnalysis != null ? complianceAnalysis.usage() : null
         );
+    }
+
+    public synchronized void markFailed(String errorCode, String errorMessage) {
+        var now = Instant.now();
+        status = STATUS_FAILED;
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
+        updatedAt = now;
+        completedAt = now;
+        currentStepCode = null;
+        currentStepLabel = null;
+        steps = steps(now);
     }
 
     public synchronized ChangeVerificationSmokePackResponse smokePack() {
@@ -163,15 +385,17 @@ public final class ChangeVerificationJobState {
                 request.aiOptions().model(),
                 request.aiOptions().reasoningEffort(),
                 status,
-                null,
-                null,
-                null,
-                null,
+                currentStepCode,
+                currentStepLabel,
+                errorCode,
+                errorMessage,
                 createdAt,
                 updatedAt,
                 completedAt,
                 steps,
                 contextSections,
+                toolEvidenceSections,
+                aiActivityEvents,
                 preparedPrompt,
                 result
         );
@@ -181,16 +405,40 @@ public final class ChangeVerificationJobState {
         var startedAt = createdAt;
         var steps = new ArrayList<AnalysisJobStepResponse>();
         steps.add(step(
-                STEP_SOURCE_DISCOVERY,
-                "Source discovery",
+                STEP_JIRA_MATERIAL,
+                "Jira material",
                 PHASE_CONTEXT,
-                STATUS_COMPLETED,
-                sourceDiscoveryMessage(),
-                contextItemCount(),
+                jiraMaterialStepStatus(),
+                jiraMaterialStepMessage(),
+                jiraIssue != null ? 1 : null,
                 startedAt,
                 completedAt,
                 List.of(),
-                producedSourceEvidence()
+                jiraIssue != null ? List.of(JIRA_EVIDENCE) : List.of()
+        ));
+        steps.add(step(
+                STEP_MERGE_REQUEST_DISCOVERY,
+                "Merge request discovery",
+                PHASE_CONTEXT,
+                mergeRequestDiscoveryStepStatus(),
+                mergeRequestDiscoveryStepMessage(),
+                mergeRequestCount(),
+                startedAt,
+                completedAt,
+                jiraIssue != null ? List.of(JIRA_EVIDENCE) : List.of(CHANGE_CONTEXT_EVIDENCE),
+                mergeRequests != null ? List.of(MERGE_REQUEST_EVIDENCE) : List.of()
+        ));
+        steps.add(step(
+                STEP_CHANGED_FILES,
+                "Changed files",
+                PHASE_CONTEXT,
+                changedFilesStepStatus(),
+                changedFilesStepMessage(),
+                changedFileCount(),
+                startedAt,
+                completedAt,
+                mergeRequests != null ? List.of(MERGE_REQUEST_EVIDENCE) : List.of(),
+                mergeRequests != null ? List.of(MERGE_REQUEST_EVIDENCE) : List.of()
         ));
         steps.add(step(
                 STEP_INSTRUCTION_CONTEXT,
@@ -205,10 +453,22 @@ public final class ChangeVerificationJobState {
                 producedInstructionEvidence()
         ));
         steps.add(step(
+                STEP_INITIAL_SOURCE_SNAPSHOT,
+                "Initial source snapshot",
+                PHASE_CONTEXT,
+                initialSourceSnapshotStepStatus(),
+                initialSourceSnapshotStepMessage(),
+                contextItemCount(),
+                startedAt,
+                completedAt,
+                producedSourceEvidence(),
+                producedSourceEvidence()
+        ));
+        steps.add(step(
                 STEP_AI_VERIFICATION,
                 "AI verification",
                 PHASE_AI,
-                complianceRequested() ? STATUS_COMPLETED : "SKIPPED",
+                aiVerificationStepStatus(),
                 aiVerificationMessage(),
                 aiFindingCount(),
                 startedAt,
@@ -221,7 +481,7 @@ public final class ChangeVerificationJobState {
                 STEP_SMOKE_PACK_GENERATION,
                 "Smoke pack generation",
                 PHASE_AI,
-                smokePackRequested() ? STATUS_COMPLETED : "SKIPPED",
+                smokePackGenerationStepStatus(),
                 smokePackStepMessage(),
                 smokePackRequested() && smokePack != null ? smokePack.tests().size() : null,
                 startedAt,
@@ -312,6 +572,10 @@ public final class ChangeVerificationJobState {
             sections.add(mergeRequestSection(sourceDiscovery.mergeRequests().mergeRequests()));
         }
 
+        if (sourceDiscovery != null && !sourceDiscovery.repositories().isEmpty()) {
+            sections.add(repositoryScopeSection(sourceDiscovery.repositories()));
+        }
+
         if (sourceDiscovery != null && sourceDiscovery.instructionContext() != null) {
             sections.add(instructionContextSection(sourceDiscovery.instructionContext().sources()));
         }
@@ -341,6 +605,61 @@ public final class ChangeVerificationJobState {
         }
 
         return List.copyOf(sections);
+    }
+
+    private List<AnalysisEvidenceSection> upsertEvidenceSection(
+            List<AnalysisEvidenceSection> sections,
+            AnalysisEvidenceSection updatedSection
+    ) {
+        var merged = new ArrayList<>(sections != null ? sections : List.<AnalysisEvidenceSection>of());
+        for (var index = 0; index < merged.size(); index++) {
+            var current = merged.get(index);
+            if (sameSection(current, updatedSection)) {
+                merged.set(index, mergeSection(current, updatedSection));
+                return List.copyOf(merged);
+            }
+        }
+        merged.add(updatedSection);
+        return List.copyOf(merged);
+    }
+
+    private AnalysisEvidenceSection mergeSection(
+            AnalysisEvidenceSection current,
+            AnalysisEvidenceSection updated
+    ) {
+        var items = new ArrayList<AnalysisEvidenceItem>();
+        items.addAll(current.items());
+        for (var updatedItem : updated.items()) {
+            if (items.stream().noneMatch(existing -> sameItem(existing, updatedItem))) {
+                items.add(updatedItem);
+            }
+        }
+        return new AnalysisEvidenceSection(updated.provider(), updated.category(), List.copyOf(items));
+    }
+
+    private boolean sameItem(AnalysisEvidenceItem left, AnalysisEvidenceItem right) {
+        return left != null
+                && right != null
+                && java.util.Objects.equals(left.title(), right.title())
+                && java.util.Objects.equals(left.attributes(), right.attributes());
+    }
+
+    private boolean sameSection(AnalysisEvidenceSection left, AnalysisEvidenceSection right) {
+        return left != null
+                && right != null
+                && java.util.Objects.equals(left.provider(), right.provider())
+                && java.util.Objects.equals(left.category(), right.category());
+    }
+
+    private ChangeVerificationSourceDiscoveryResult partialSourceDiscovery(String issueKey) {
+        return new ChangeVerificationSourceDiscoveryResult(
+                issueKey,
+                request.issueUrl(),
+                jiraIssue,
+                mergeRequests,
+                instructionContext,
+                sourceDiscoveryLimitations
+        );
     }
 
     private AnalysisEvidenceSection jiraSection(JiraIssueMaterial issue) {
@@ -390,6 +709,46 @@ public final class ChangeVerificationJobState {
                 .map(this::mergeRequestItem)
                 .toList();
         return new AnalysisEvidenceSection(MERGE_REQUEST_EVIDENCE.provider(), MERGE_REQUEST_EVIDENCE.category(), items);
+    }
+
+    private AnalysisEvidenceSection repositoryScopeSection(List<ChangeVerificationRepositorySnapshot> repositories) {
+        var items = repositories.stream()
+                .map(this::repositoryScopeItem)
+                .toList();
+        return new AnalysisEvidenceSection(
+                REPOSITORY_SCOPE_EVIDENCE.provider(),
+                REPOSITORY_SCOPE_EVIDENCE.category(),
+                items
+        );
+    }
+
+    private AnalysisEvidenceItem repositoryScopeItem(ChangeVerificationRepositorySnapshot repository) {
+        return new AnalysisEvidenceItem(
+                "Repository: " + fallback(repository.projectPath(), repository.repositoryKey()),
+                List.of(
+                        attribute("repositoryKey", repository.repositoryKey()),
+                        attribute("projectPath", repository.projectPath()),
+                        attribute("projectName", repository.projectName()),
+                        attribute("sourceRef", repository.sourceRef()),
+                        attribute("targetRef", repository.targetRef()),
+                        attribute("mergeRequestCount", repository.mergeRequests().size()),
+                        attribute("mergeRequests", repository.mergeRequests().stream()
+                                .map(mr -> fallback(mr.webUrl(), "!" + mr.iid()))
+                                .toList()
+                                .toString()),
+                        attribute("changedFileCount", repository.changedFiles().size()),
+                        attribute("changedFiles", repository.changedFiles().stream()
+                                .map(file -> file.path() + " " + file.mergeRequestRefs())
+                                .toList()
+                                .toString()),
+                        attribute("instructionSourceCount", repository.instructionSources().size()),
+                        attribute("instructionSources", repository.instructionSources().stream()
+                                .map(source -> source.path() + "@" + source.ref())
+                                .toList()
+                                .toString()),
+                        attribute("limitations", String.join("\n", repository.limitations()))
+                )
+        );
     }
 
     private AnalysisEvidenceItem mergeRequestItem(GitLabMergeRequest mergeRequest) {
@@ -574,17 +933,173 @@ public final class ChangeVerificationJobState {
     }
 
     private String instructionStepStatus() {
-        return request.checkInstructionCompliance() ? STATUS_COMPLETED : "SKIPPED";
+        if (!request.checkInstructionCompliance()) {
+            return STATUS_SKIPPED;
+        }
+        if (instructionContext != null) {
+            return STATUS_COMPLETED;
+        }
+        if (STEP_INSTRUCTION_CONTEXT.equals(currentStepCode)) {
+            return STATUS_RUNNING;
+        }
+        if (sourceDiscovery == null) {
+            return STATUS_PENDING;
+        }
+        return STATUS_COMPLETED;
+    }
+
+    private String jiraMaterialStepStatus() {
+        if (jiraIssue != null) {
+            return STATUS_COMPLETED;
+        }
+        if (STEP_JIRA_MATERIAL.equals(currentStepCode)) {
+            return STATUS_RUNNING;
+        }
+        if (STATUS_FAILED.equals(status)) {
+            return STATUS_FAILED;
+        }
+        return STATUS_PENDING;
+    }
+
+    private String mergeRequestDiscoveryStepStatus() {
+        if (mergeRequests != null) {
+            return STATUS_COMPLETED;
+        }
+        if (STEP_MERGE_REQUEST_DISCOVERY.equals(currentStepCode)) {
+            return STATUS_RUNNING;
+        }
+        if (STATUS_FAILED.equals(status)) {
+            return STATUS_FAILED;
+        }
+        return STATUS_PENDING;
+    }
+
+    private String changedFilesStepStatus() {
+        if (mergeRequests != null) {
+            return STATUS_COMPLETED;
+        }
+        if (STEP_CHANGED_FILES.equals(currentStepCode)) {
+            return STATUS_RUNNING;
+        }
+        if (STATUS_FAILED.equals(status)) {
+            return STATUS_FAILED;
+        }
+        return STATUS_PENDING;
+    }
+
+    private String initialSourceSnapshotStepStatus() {
+        if (sourceDiscovery != null) {
+            return STATUS_COMPLETED;
+        }
+        if (STEP_INITIAL_SOURCE_SNAPSHOT.equals(currentStepCode)) {
+            return STATUS_RUNNING;
+        }
+        if (STATUS_FAILED.equals(status)) {
+            return STATUS_FAILED;
+        }
+        return STATUS_PENDING;
+    }
+
+    private String aiVerificationStepStatus() {
+        if (!complianceRequested()) {
+            return STATUS_SKIPPED;
+        }
+        if (complianceAnalysis != null) {
+            return STATUS_COMPLETED;
+        }
+        if (STEP_AI_VERIFICATION.equals(currentStepCode)) {
+            return STATUS_RUNNING;
+        }
+        if (STATUS_FAILED.equals(status)) {
+            return STATUS_FAILED;
+        }
+        return STATUS_PENDING;
+    }
+
+    private String smokePackGenerationStepStatus() {
+        if (!smokePackRequested()) {
+            return STATUS_SKIPPED;
+        }
+        if (smokePackAnalysis != null || smokePack != null) {
+            return STATUS_COMPLETED;
+        }
+        if (STEP_SMOKE_PACK_GENERATION.equals(currentStepCode)) {
+            return STATUS_RUNNING;
+        }
+        if (STATUS_FAILED.equals(status)) {
+            return STATUS_FAILED;
+        }
+        return STATUS_PENDING;
+    }
+
+    private String nextCurrentStepAfterSourceDiscovery() {
+        if (complianceRequested()) {
+            return STEP_AI_VERIFICATION;
+        }
+        if (smokePackRequested()) {
+            return STEP_SMOKE_PACK_GENERATION;
+        }
+        return null;
+    }
+
+    private String nextCurrentStepLabelAfterSourceDiscovery() {
+        if (complianceRequested()) {
+            return "AI verification";
+        }
+        if (smokePackRequested()) {
+            return "Smoke pack generation";
+        }
+        return null;
     }
 
     private String instructionStepMessage() {
         if (!request.checkInstructionCompliance()) {
             return "Instruction compliance was not requested.";
         }
-        var sourceCount = sourceDiscovery != null && sourceDiscovery.instructionContext() != null
-                ? sourceDiscovery.instructionContext().sources().size()
+        var sourceCount = instructionContext != null
+                ? instructionContext.sources().size()
                 : 0;
         return "Instruction context discovered repository instruction sources: " + sourceCount + ".";
+    }
+
+    private String jiraMaterialStepMessage() {
+        if (jiraIssue != null) {
+            return "Jira material loaded for issue " + fallback(jiraIssue.issueKey(), resolvedIssueKey()) + ".";
+        }
+        if (STEP_JIRA_MATERIAL.equals(currentStepCode)) {
+            return "Loading Jira issue material.";
+        }
+        return "Waiting for Jira issue material.";
+    }
+
+    private String mergeRequestDiscoveryStepMessage() {
+        if (mergeRequests != null) {
+            return "Merge request discovery found " + mergeRequests.mergeRequests().size() + " MR(s).";
+        }
+        if (STEP_MERGE_REQUEST_DISCOVERY.equals(currentStepCode)) {
+            return "Searching GitLab merge requests for Jira key.";
+        }
+        return "Waiting for merge request discovery.";
+    }
+
+    private String changedFilesStepMessage() {
+        if (mergeRequests != null) {
+            return "Changed file discovery collected " + changedFileCount() + " file path(s).";
+        }
+        if (STEP_CHANGED_FILES.equals(currentStepCode)) {
+            return "Collecting changed files from merge requests.";
+        }
+        return "Waiting for merge request changed files.";
+    }
+
+    private String initialSourceSnapshotStepMessage() {
+        if (sourceDiscovery != null) {
+            return "Initial source snapshot is ready for AI analysis.";
+        }
+        if (STEP_INITIAL_SOURCE_SNAPSHOT.equals(currentStepCode)) {
+            return "Preparing initial source snapshot.";
+        }
+        return "Waiting for deterministic source discovery.";
     }
 
     private boolean complianceRequested() {
@@ -609,6 +1124,9 @@ public final class ChangeVerificationJobState {
         if (sourceDiscovery != null && sourceDiscovery.issueKey() != null) {
             return sourceDiscovery.issueKey();
         }
+        if (jiraIssue != null && jiraIssue.issueKey() != null) {
+            return jiraIssue.issueKey();
+        }
         return request.issueKey();
     }
 
@@ -616,23 +1134,30 @@ public final class ChangeVerificationJobState {
         if (sourceDiscovery != null && sourceDiscovery.jiraIssue() != null) {
             return sourceDiscovery.jiraIssue().issueUrl();
         }
+        if (jiraIssue != null && jiraIssue.issueUrl() != null) {
+            return jiraIssue.issueUrl();
+        }
         if (sourceDiscovery != null && sourceDiscovery.issueUrl() != null) {
             return sourceDiscovery.issueUrl();
         }
         return request.issueUrl();
     }
 
-    private String sourceDiscoveryMessage() {
-        var jiraFound = sourceDiscovery != null && sourceDiscovery.jiraIssue() != null;
-        var mrCount = sourceDiscovery != null && sourceDiscovery.mergeRequests() != null
-                ? sourceDiscovery.mergeRequests().mergeRequests().size()
-                : 0;
-        return "Source discovery collected Jira material: %s, GitLab merge requests: %d."
-                .formatted(jiraFound ? "yes" : "no", mrCount);
-    }
-
     private int contextItemCount() {
         return contextSections.stream().mapToInt(section -> section.items().size()).sum();
+    }
+
+    private Integer mergeRequestCount() {
+        return mergeRequests != null ? mergeRequests.mergeRequests().size() : null;
+    }
+
+    private Integer changedFileCount() {
+        if (mergeRequests == null) {
+            return null;
+        }
+        return mergeRequests.mergeRequests().stream()
+                .mapToInt(mergeRequest -> mergeRequest.changedFiles().size())
+                .sum();
     }
 
     private List<AnalysisEvidenceReference> producedSourceEvidence() {

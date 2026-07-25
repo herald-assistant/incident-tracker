@@ -37,16 +37,10 @@ class DatabaseMcpToolScopeResolverTest {
     }
 
     @Test
-    void shouldFailWhenCorrelationIdIsMissing() {
-        var exception = assertThrows(
-                IllegalStateException.class,
-                () -> DatabaseMcpToolScopeResolver.from(toolContext("sandbox-a", null))
-        );
+    void shouldUseAnalysisRunIdWhenCorrelationIdIsMissing() {
+        var scope = DatabaseMcpToolScopeResolver.from(toolContext("sandbox-a", null));
 
-        assertEquals(
-                "Missing correlationId in Copilot tool context; database tools require current incident correlationId.",
-                exception.getMessage()
-        );
+        assertEquals("run-1", scope.correlationId());
     }
 
     private ToolContext toolContext(String environment, String correlationId) {

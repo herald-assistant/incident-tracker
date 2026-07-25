@@ -26,11 +26,7 @@ final class DatabaseMcpToolScopeResolver {
         var context = toolContext.getContext();
 
         return new DbCapabilityScope(
-                required(
-                        context,
-                        CORRELATION_ID,
-                        "Missing correlationId in Copilot tool context; database tools require current incident correlationId."
-                ),
+                firstNonBlank(optional(context, CORRELATION_ID), optional(context, ANALYSIS_RUN_ID)),
                 required(
                         context,
                         ENVIRONMENT,

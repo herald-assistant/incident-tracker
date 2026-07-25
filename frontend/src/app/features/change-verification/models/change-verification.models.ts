@@ -1,4 +1,5 @@
 import {
+  AnalysisAiActivityEvent,
   AnalysisAiUsage,
   AnalysisEvidenceSection,
   AnalysisJobStepResponse
@@ -25,6 +26,8 @@ export interface ChangeVerificationJobStartRequest {
   checkStoryCompliance?: boolean;
   checkInstructionCompliance?: boolean;
   userInstructions?: string;
+  environment?: string;
+  databaseApplication?: string;
   model?: string;
   reasoningEffort?: string;
 }
@@ -192,6 +195,8 @@ export interface ChangeVerificationJobStateSnapshot {
   completedAt: string | null;
   steps: AnalysisJobStepResponse[];
   contextSections: AnalysisEvidenceSection[];
+  toolEvidenceSections: AnalysisEvidenceSection[];
+  aiActivityEvents: AnalysisAiActivityEvent[];
   preparedPrompt: string;
   result: ChangeVerificationResult | null;
 }

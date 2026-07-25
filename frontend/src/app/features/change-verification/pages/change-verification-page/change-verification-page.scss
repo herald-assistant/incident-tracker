@@ -41,6 +41,12 @@
   min-width: 0;
 }
 
+.change-verification-db-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .change-verification-textarea {
   min-height: 108px;
   resize: vertical;
@@ -104,9 +110,15 @@
 }
 
 .change-verification-run-actions .primary-button,
+.change-verification-run-actions .secondary-button,
 .change-verification-actions .primary-button,
 .change-verification-actions .secondary-button {
   white-space: nowrap;
+}
+
+.change-verification-import-hint {
+  margin: -4px 0 0;
+  text-align: right;
 }
 
 .change-verification-error {
@@ -134,6 +146,85 @@
   gap: 16px;
 }
 
+.change-verification-overview {
+  display: grid;
+  gap: 14px;
+}
+
+.change-verification-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.change-verification-summary-card {
+  display: grid;
+  min-width: 0;
+  min-height: 92px;
+  gap: 6px;
+  align-content: start;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-subtle);
+}
+
+.change-verification-summary-card strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 1.05rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.change-verification-summary-card small,
+.change-verification-summary-card__label {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.change-verification-summary-card__label {
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.change-verification-overview__notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.change-verification-overview__notes > div {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.change-verification-overview__notes h4 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.92rem;
+}
+
+.change-verification-overview__notes ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change-verification-overview__notes li {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .change-verification-panel {
   display: grid;
   gap: 12px;
@@ -155,28 +246,222 @@
   font-size: 24px;
 }
 
-.change-verification-panel ul {
+.change-verification-finding-groups,
+.change-verification-finding-group,
+.change-verification-finding-list {
   display: grid;
   gap: 10px;
+}
+
+.change-verification-finding-group {
+  min-width: 0;
+}
+
+.change-verification-finding-group__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.change-verification-finding-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.change-verification-panel li {
+.change-verification-finding-list li {
   display: grid;
-  gap: 4px;
-  padding: 10px 0 0;
-  border-top: 1px solid var(--color-border);
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
 }
 
-.change-verification-panel li strong {
+.change-verification-finding-list strong,
+.change-verification-table strong,
+.change-verification-execution-result strong {
   color: var(--text-main);
 }
 
 .change-verification-panel small,
 .change-verification-empty {
   color: var(--text-muted);
+}
+
+.change-verification-finding-list p {
+  margin: 4px 0 0;
+}
+
+.change-verification-severity,
+.change-verification-review-status {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.change-verification-severity--blocker,
+.change-verification-severity--high {
+  background: #ffebe6;
+  color: #ae2a19;
+}
+
+.change-verification-severity--medium,
+.change-verification-review-status--needs_review {
+  background: #fff7d6;
+  color: #7f5f01;
+}
+
+.change-verification-severity--low,
+.change-verification-severity--info,
+.change-verification-review-status--ready {
+  background: #e3fcef;
+  color: #216e4e;
+}
+
+.change-verification-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.change-verification-token-row span {
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--color-surface-subtle);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+}
+
+.change-verification-action-callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--text-main);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.change-verification-action-callout .material-symbols-outlined {
+  color: var(--primary);
+  font-size: 18px;
+}
+
+.change-verification-artifact-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.change-verification-artifact-bar p {
+  overflow-wrap: anywhere;
+}
+
+.change-verification-table-scroll {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.change-verification-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.change-verification-table th,
+.change-verification-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.change-verification-table th {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.change-verification-table td {
+  color: var(--text-main);
+  font-size: 0.88rem;
+}
+
+.change-verification-table td:first-child {
+  display: grid;
+  gap: 6px;
+}
+
+.change-verification-table td:nth-child(2) {
+  display: grid;
+  gap: 4px;
+}
+
+.change-verification-table code {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.change-verification-method {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.change-verification-draft-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0;
+}
+
+.change-verification-draft-panel summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.change-verification-draft-panel[open] {
+  padding-bottom: 12px;
+}
+
+.change-verification-draft-panel[open] .change-verification-draft {
+  padding: 0 12px;
 }
 
 .change-verification-draft {
@@ -203,12 +488,51 @@
   width: fit-content;
 }
 
+.change-verification-execution-results {
+  display: grid;
+  gap: 10px;
+}
+
+.change-verification-execution-result {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.change-verification-execution-result > div:first-child {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.change-verification-execution-result small {
+  grid-column: 2;
+}
+
+.change-verification-assertion-list {
+  display: grid;
+  gap: 6px;
+}
+
+.change-verification-assertion-list span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
 .change-verification-empty-state {
   min-height: 220px;
 }
 
 @media (max-width: 1180px) {
   .change-verification-source-grid,
+  .change-verification-db-grid,
+  .change-verification-summary-grid,
+  .change-verification-overview__notes,
+  .change-verification-artifact-bar,
   .change-verification-execution-grid {
     grid-template-columns: 1fr;
   }
@@ -238,9 +562,14 @@
   }
 
   .change-verification-run-actions .primary-button,
+  .change-verification-run-actions .secondary-button,
   .change-verification-actions .primary-button,
   .change-verification-actions .secondary-button {
     flex: 1 1 100%;
+  }
+
+  .change-verification-import-hint {
+    text-align: left;
   }
 
   .change-verification-cleanup-toggle {

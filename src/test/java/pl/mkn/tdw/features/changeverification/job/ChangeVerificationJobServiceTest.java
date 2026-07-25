@@ -35,14 +35,55 @@ import pl.mkn.tdw.integrations.jira.JiraIssueComment;
 import pl.mkn.tdw.integrations.jira.JiraIssueLink;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
+import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ChangeVerificationJobServiceTest {
+
+    @Test
+    void shouldReturnLiveSnapshotBeforeBackgroundAnalysisCompletes() {
+        var taskExecutor = new CapturingTaskExecutor();
+        var service = service(taskExecutor);
+
+        var snapshot = service.startJob(new ChangeVerificationJobStartRequest(
+                "CRM-123",
+                null,
+                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE, ChangeVerificationJobMode.GENERATE_SMOKE_PACK),
+                true,
+                true,
+                null,
+                "gpt-5.4",
+                "medium"
+        ));
+
+        assertThat(snapshot.jobId()).isNotBlank();
+        assertThat(snapshot.status()).isEqualTo("COLLECTING_CONTEXT");
+        assertThat(snapshot.currentStepCode()).isEqualTo("JIRA_MATERIAL");
+        assertThat(snapshot.result()).isNull();
+        assertThat(snapshot.steps())
+                .filteredOn(step -> "JIRA_MATERIAL".equals(step.code()))
+                .singleElement()
+                .extracting("status")
+                .isEqualTo("RUNNING");
+
+        taskExecutor.runNext();
+
+        var completed = service.getJob(snapshot.jobId());
+        assertThat(completed.status()).isEqualTo("COMPLETED");
+        assertThat(completed.result()).isNotNull();
+    }
 
     @Test
     void shouldCreateCompletedSkeletonJob() {
@@ -61,15 +102,30 @@ class ChangeVerificationJobServiceTest {
         assertThat(snapshot.jobId()).isNotBlank();
         assertThat(snapshot.status()).isEqualTo("COMPLETED");
         assertThat(snapshot.steps()).extracting("code").containsExactly(
-                "SOURCE_DISCOVERY",
+                "JIRA_MATERIAL",
+                "MERGE_REQUEST_DISCOVERY",
+                "CHANGED_FILES",
                 "INSTRUCTION_CONTEXT",
+                "INITIAL_SOURCE_SNAPSHOT",
                 "AI_VERIFICATION",
                 "SMOKE_PACK_GENERATION",
                 "EXECUTION"
         );
         assertThat(snapshot.contextSections())
                 .extracting("category")
-                .contains("change-source", "jira-issue", "merge-requests", "instruction-context", "source-discovery-limits");
+                .contains(
+                        "change-source",
+                        "jira-issue",
+                        "merge-requests",
+                        "instruction-context",
+                        "source-discovery-limits"
+                );
+        assertThat(snapshot.toolEvidenceSections())
+                .filteredOn(section -> "ai-tool-invocations".equals(section.category()))
+                .singleElement()
+                .extracting(section -> section.items().size())
+                .isEqualTo(2);
+        assertThat(snapshot.aiActivityEvents()).hasSize(2);
         assertThat(snapshot.steps())
                 .filteredOn(step -> "INSTRUCTION_CONTEXT".equals(step.code()))
                 .singleElement()
@@ -154,6 +210,10 @@ class ChangeVerificationJobServiceTest {
     }
 
     private static ChangeVerificationJobService service() {
+        return service(new org.springframework.core.task.SyncTaskExecutor());
+    }
+
+    private static ChangeVerificationJobService service(org.springframework.core.task.TaskExecutor taskExecutor) {
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup("CRM/runtime");
         var gitLabRepositoryPort = new TestGitLabRepositoryPort();
@@ -179,8 +239,27 @@ class ChangeVerificationJobServiceTest {
                                 "Database integration is disabled in test."
                         )),
                         new ChangeVerificationExecutionProperties()
-                )
+                ),
+                taskExecutor
         );
+    }
+
+    private static final class CapturingTaskExecutor implements org.springframework.core.task.TaskExecutor {
+
+        private final Queue<Runnable> tasks = new ArrayDeque<>();
+
+        @Override
+        public void execute(Runnable task) {
+            tasks.add(task);
+        }
+
+        private void runNext() {
+            var task = tasks.poll();
+            if (task == null) {
+                throw new AssertionError("Expected a captured background task.");
+            }
+            task.run();
+        }
     }
 
     private static final class TestComplianceAnalysisProvider implements ChangeVerificationComplianceAnalysisProvider {
@@ -191,6 +270,29 @@ class ChangeVerificationJobServiceTest {
                 ChangeVerificationJobStartRequest request,
                 pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery
         ) {
+            return analyze(jobId, request, sourceDiscovery, AnalysisAiToolEvidenceListener.NO_OP);
+        }
+
+        @Override
+        public ChangeVerificationComplianceAnalysis analyze(
+                String jobId,
+                ChangeVerificationJobStartRequest request,
+                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            return analyze(jobId, request, sourceDiscovery, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
+        }
+
+        @Override
+        public ChangeVerificationComplianceAnalysis analyze(
+                String jobId,
+                ChangeVerificationJobStartRequest request,
+                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+                AnalysisAiToolEvidenceListener toolEvidenceListener,
+                AnalysisAiActivityListener activityListener
+        ) {
+            toolEvidenceListener.onToolEvidenceUpdated(toolEvidence("gitlab_read_file", "COMPLETED"));
+            activityListener.onAiActivity(aiActivity("TOOL", "COMPLETED", "gitlab_read_file"));
             return new ChangeVerificationComplianceAnalysis(
                     new ChangeVerificationAiResponse(
                             "PASSED_WITH_WARNINGS",
@@ -223,6 +325,31 @@ class ChangeVerificationJobServiceTest {
                 pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
                 ChangeVerificationComplianceAnalysis complianceAnalysis
         ) {
+            return analyze(jobId, request, sourceDiscovery, complianceAnalysis, AnalysisAiToolEvidenceListener.NO_OP);
+        }
+
+        @Override
+        public ChangeVerificationSmokePackAnalysis analyze(
+                String jobId,
+                ChangeVerificationJobStartRequest request,
+                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+                ChangeVerificationComplianceAnalysis complianceAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener
+        ) {
+            return analyze(jobId, request, sourceDiscovery, complianceAnalysis, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
+        }
+
+        @Override
+        public ChangeVerificationSmokePackAnalysis analyze(
+                String jobId,
+                ChangeVerificationJobStartRequest request,
+                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+                ChangeVerificationComplianceAnalysis complianceAnalysis,
+                AnalysisAiToolEvidenceListener toolEvidenceListener,
+                AnalysisAiActivityListener activityListener
+        ) {
+            toolEvidenceListener.onToolEvidenceUpdated(toolEvidence("db_describe_table", "COMPLETED"));
+            activityListener.onAiActivity(aiActivity("USAGE", "INFO", null));
             return new ChangeVerificationSmokePackAnalysis(
                     new ChangeVerificationSmokePackResponse(
                             true,
@@ -255,6 +382,38 @@ class ChangeVerificationJobServiceTest {
                     "session-smoke-test"
             );
         }
+    }
+
+    private static AnalysisEvidenceSection toolEvidence(String toolName, String outcome) {
+        return new AnalysisEvidenceSection(
+                "change-verification",
+                "ai-tool-invocations",
+                List.of(new AnalysisEvidenceItem(
+                        "AI tool: " + toolName + " -> " + outcome,
+                        List.of(
+                                new AnalysisEvidenceAttribute("toolName", toolName),
+                                new AnalysisEvidenceAttribute("outcome", outcome)
+                        )
+                ))
+        );
+    }
+
+    private static AnalysisAiActivityEvent aiActivity(String category, String status, String toolName) {
+        return new AnalysisAiActivityEvent(
+                "event-" + category + "-" + status + "-" + (toolName != null ? toolName : "model"),
+                null,
+                "test-event",
+                category,
+                status,
+                "AI activity",
+                "Synthetic AI activity.",
+                null,
+                null,
+                toolName != null ? "call-" + toolName : null,
+                toolName,
+                java.time.Instant.parse("2026-07-25T10:00:00Z"),
+                Map.of()
+        );
     }
 
     private static final class TestJiraIssuePort implements JiraIssuePort {

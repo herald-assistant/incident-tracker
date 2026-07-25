@@ -237,6 +237,8 @@ class ChangeVerificationJobControllerTest {
                         )
                 ),
                 List.of(),
+                List.of(),
+                List.of(),
                 "Change Verification skeleton prompt",
                 new ChangeVerificationResultResponse(
                         "COMPLETED",

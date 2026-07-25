@@ -12,6 +12,24 @@ reuse'owac obecne warstwy `aiplatform`, `agenttools`, `integrations`,
 `shared` i wspolne komponenty UI, ale ma miec wlasny request, job state,
 prompt, runtime skille, tool policy, result contract i widok Angular.
 
+Aktualizacja po pierwszym smoke tescie AI:
+
+- feature musi dzialac jako live job, tak jak `Incident Analysis` i
+  `Flow Explorer`: `POST /api/change-verification/jobs` zwraca od razu
+  `jobId` i pierwszy snapshot, a kolejne istotne kroki sa dopisywane do stanu
+  joba i widoczne w UI bez czekania na finalna odpowiedz,
+- przebieg powinien byc podzielony na analize inicjalna deterministyczna oraz
+  poglobiona analize AI; deterministyczny etap zbiera Jira, MR-y, changed
+  files, instructions i wstepny code/database scope, a AI dostaje ten material
+  oraz kontrolowane tools do dociagniecia brakujacych dowodow,
+- lista MR-ow jednej story moze dotyczyc kilku repozytoriow, wiec source
+  snapshot, tool context i UI musza obslugiwac multi-repository scope zamiast
+  zakladac jedno repo,
+- jezeli AI raportuje brak wystarczajacych zrodel, nie powinien to byc koniec
+  flow; poglobiony etap musi miec dostep do GitLab code tools i readonly DB
+  tools, zeby samodzielnie zweryfikowac implementacje i ustawienia danych w
+  granicach allowlisty.
+
 ## Wnioski z obecnej implementacji
 
 ### Co mozemy reuse'owac
@@ -22,6 +40,10 @@ Obecna architektura jest juz przygotowana na trzeci feature:
   feature-specific job API pod `/api/flow-explorer/jobs`, job state,
   deterministic context, prompt preparation, Copilot run assembler,
   report-first result, local workspace, follow-up chat i Angular screen.
+- `Incident Analysis` i `Flow Explorer` pokazuja oczekiwany UX live joba:
+  start joba zwraca natychmiastowy snapshot, frontend polluje endpoint joba,
+  a feature aside/panele rezultatu pokazuja kroki, zebrane zrodla,
+  aktywnosc AI, tool evidence i finalny report w jednym widoku.
 - `aiplatform.copilot.runtime` przyjmuje neutralny `CopilotRunRequest`:
   prompt, auth, target sesji, session config, artifacts, initial report oraz
   sinks dla evidence/activity. To jest wlasciwa granica dla nowego feature'u.
@@ -37,6 +59,10 @@ Obecna architektura jest juz przygotowana na trzeci feature:
 - `integrations.gitlab` ma juz duzo reusable capability do czytania kodu:
   repository search, file read/chunk, endpoint inventory, OpenAPI endpoint
   slice, Java method slice oraz endpoint use-case context.
+- `integrations.gitlab` ma byc tez semantycznym ownerem instrukcji
+  repozytorium. Instructions discovery jest czescia code source capability,
+  bo `AGENTS.md`, Copilot instructions i pliki wskazane przez instrukcje
+  migruja razem z repozytorium.
 - `agenttools.gitlab.mcp` wystawia AI narzedzia nad tymi capability:
   `gitlab_list_available_repositories`,
   `gitlab_list_repository_endpoints`,
@@ -59,8 +85,9 @@ Obecna architektura jest juz przygotowana na trzeci feature:
 - integracji Confluence do pobrania stron podlinkowanych ze story,
 - rozszerzenia GitLaba o merge requesty: search po Jira key, MR metadata,
   changed files, diff, commits i linki do branchy,
-- discovery instrukcji repozytorium: globalne i lokalne `AGENTS.md`,
-  Copilot instructions oraz pliki wskazane przez te instrukcje,
+- discovery instrukcji repozytorium jako czesc GitLab code source capability:
+  globalne i lokalne `AGENTS.md`, Copilot instructions oraz pliki wskazane
+  przez te instrukcje,
 - modelu smoke packa i generatora eksportu Postman collection/environment,
 - controlled HTTP execution dla zaakceptowanych testow,
 - neutralnego sposobu wykonywania readonly DB assertions bez incidentowego
@@ -130,8 +157,6 @@ pl.mkn.tdw.agenttools.jira
 pl.mkn.tdw.agenttools.jira.mcp
 pl.mkn.tdw.agenttools.confluence
 pl.mkn.tdw.agenttools.confluence.mcp
-pl.mkn.tdw.agenttools.instructions
-pl.mkn.tdw.agenttools.instructions.mcp
 pl.mkn.tdw.agenttools.smoke
 pl.mkn.tdw.agenttools.smoke.mcp
 ```
@@ -139,6 +164,12 @@ pl.mkn.tdw.agenttools.smoke.mcp
 GitLab MR support powinien wejsc do istniejacego
 `integrations.gitlab` / `agenttools.gitlab`, bo jest rozszerzeniem tej samej
 integracji.
+
+Instructions support rowniez powinien byc traktowany jako czesc
+`integrations.gitlab` / `agenttools.gitlab`, a nie jako niezalezna integracja.
+Nowe tools powinny byc wystawione obok GitLab MR/code tools, np.
+`gitlab_get_repository_instruction_context`, zeby AI widzialo jeden spójny
+Code Source capability.
 
 ## Publiczne API feature'u
 
@@ -192,14 +223,41 @@ Uwagi:
 
 ## Model joba i statusy
 
+Change Verification ma uzywac live job projection od pierwszego releasu
+feature'u. Endpoint startowy nie moze czekac na zakonczenie AI. Powinien:
+
+1. zwrocic `jobId`, `status=QUEUED` albo `COLLECTING_CONTEXT` i pierwszy
+   snapshot,
+2. uruchomic prace w tle,
+3. dopisywac do job state kolejne kroki, evidence sections, activity events,
+   partial result i visibility limits,
+4. pozwolic frontendowi pollowac `GET /api/change-verification/jobs/{jobId}`
+   tak samo, jak robia to pozostale feature'y,
+5. pokazywac przebieg i wyniki w feature aside/panelu roboczym, bez osobnego
+   ekranu "czekania" na finalna odpowiedz.
+
+Job powinien miec dwa logiczne poziomy analizy:
+
+- `Initial deterministic analysis` - bez AI zbiera i normalizuje material:
+  Jira issue, MR-y z linkow albo regex fallback, repozytoria, changed files,
+  diff summary, instruction context, endpoint inventory hints, test/config/db
+  migration hints oraz visibility limits.
+- `Deep AI analysis` - AI dostaje deterministyczny snapshot oraz allowlistowane
+  tools do poglobienia analizy kodu i danych. Ten etap powinien byc
+  uruchamiany nawet wtedy, gdy pierwszy prompt smoke packa zwraca
+  `insufficient sources`, bo wtedy AI ma jawnie dociagnac brakujace dowody z
+  GitLaba i readonly DB tools.
+
 Proponowane kroki job state:
 
 | Step code | Faza | Znaczenie |
 | --- | --- | --- |
-| `SOURCE_DISCOVERY` | CONTEXT | Jira, linked docs, MR discovery, MR diff |
+| `JOB_ACCEPTED` | SETUP | job zapisany, pierwszy snapshot zwrocony do UI |
+| `SOURCE_DISCOVERY` | CONTEXT | Jira, linked docs, multi-repo MR discovery, MR diff |
 | `INSTRUCTION_CONTEXT` | CONTEXT | globalne/lokalne AGENTS, Copilot instructions, linked instruction files |
-| `CODE_RECONNAISSANCE` | CONTEXT | endpointy, DTO, testy, changed files, source slices |
-| `AI_VERIFICATION` | AI | Story Compliance i Instruction Compliance |
+| `CODE_RECONNAISSANCE` | CONTEXT | endpointy, DTO, testy, changed files, source slices per repo |
+| `DATABASE_RECONNAISSANCE` | CONTEXT | readonly DB scope hints, migracje, slowniki, konfiguracje danych i assertions candidates |
+| `AI_VERIFICATION` | AI | Story Compliance, Instruction Compliance i poglobione dociaganie dowodow tools |
 | `SMOKE_PACK_GENERATION` | AI | draft smoke packa i Postman export |
 | `SMOKE_PACK_REVIEW` | USER | stan oczekiwania na akceptacje/edycje |
 | `EXECUTION` | EXECUTION | HTTP requesty, assertions, readonly DB checks |
@@ -210,6 +268,7 @@ Glowny status joba:
 ```text
 QUEUED
 COLLECTING_CONTEXT
+AWAITING_AI
 ANALYZING
 SMOKE_PACK_READY
 WAITING_FOR_APPROVAL
@@ -222,6 +281,12 @@ Statusy rezultatu merytorycznego powinny byc zgodne z dokumentem biznesowym:
 `Compliant`, `Discrepancies found`, `Insufficient story`,
 `Instructions incomplete`, `Smoke pack generated`, `Ready to run`, `Passed`,
 `Failed`, `Cleanup required`, `Cannot verify`.
+
+`Cannot verify` powinien byc uzywany dopiero po probie poglobienia analizy
+przez tools. Sam fakt, ze material poczatkowy ze story albo MR summary jest
+za slaby, powinien dac status posredni typu `Needs deeper analysis` i
+uruchomic AI-guided reconnaissance, o ile operator zaznaczyl zgodnosc albo
+smoke pack generation.
 
 ## Integracje
 
@@ -323,6 +388,31 @@ GitLab MR discovery ma dwa tryby:
 Istniejace GitLab code tools pozostaja zrodlem source reads. Nowe MR
 capability ma dostarczyc zakres zmiany: ktore repo, branch, pliki i diff.
 
+Source snapshot musi byc multi-repository. Jedna story moze miec MR-y w FE,
+backendach, adapterach integracyjnych, konfiguracji albo repozytoriach
+migracyjnych. Model nie moze wiec trzymac pojedynczego `repositoryKey` jako
+root calej zmiany. Minimalny ksztalt snapshotu:
+
+```text
+ChangeVerificationSourceSnapshot
+  jiraMaterial
+  repositories[]
+    repositoryKey
+    group
+    projectName
+    defaultRef
+    mergeRequests[]
+    changedFiles[]
+    instructionContext
+    codeReconnaissance
+  crossRepositoryVisibilityLimits[]
+```
+
+Tool context dla AI powinien przenosic liste dozwolonych repozytoriow i refow,
+a GitLab tools powinny walidowac, ze kazdy odczyt pliku/metody/endpointu
+dotyczy jednego z repozytoriow znalezionych dla story albo jawnie
+dopuszczonych przez operatora.
+
 ### 4. Instructions
 
 Pakiet:
@@ -419,6 +509,20 @@ Planowany kierunek:
 AI moze proponowac DB assertion, ale runtime wykonuje tylko zaakceptowana,
 strukturalna definicje.
 
+W poglobionej analizie AI powinno miec tez readonly DB tools jako capability
+do potwierdzania konfiguracji danych, slownikow, feature flags, mappingow albo
+rekordow referencyjnych, jezeli zmiana tego wymaga. To nie oznacza dowolnego
+SQL-a w promptcie. Bezpieczny model:
+
+- deterministyczny etap buduje DB visibility scope z operational context,
+  konfiguracji srodowiska i repo/migration hints,
+- AI moze poprosic o readonly database summary albo typed query/assertion
+  tylko w granicach scope'u,
+- wyniki DB trafiaja do job state jako evidence sections i sa widoczne dla
+  operatora,
+- raw SQL jako tekst moze pojawic sie tylko jako rekomendacja/manualny
+  artefakt dla czlowieka, a nie jako pole wykonywane autonomicznie przez AI.
+
 ## MCP tools
 
 Nowe tools powinny byc neutralne i rejestrowane przez
@@ -495,21 +599,21 @@ Rola:
 - przekazac `projectName`, `sourceBranch`, `targetBranch` i changed file paths
   do istniejacych code read tools.
 
-### Instructions tools
+### GitLab repository instructions tools
 
-Pakiety:
+Rozszerzyc:
 
 ```text
-agenttools.instructions
-agenttools.instructions.mcp
+agenttools.gitlab
+agenttools.gitlab.mcp
 ```
 
 Nazwy:
 
 ```text
-instructions_get_context
-instructions_read_source
-instructions_list_applicable_sources
+gitlab_get_repository_instruction_context
+gitlab_read_repository_instruction_source
+gitlab_list_applicable_repository_instruction_sources
 ```
 
 Rola:
@@ -562,15 +666,36 @@ Allowlisty per etap:
 - Confluence tools,
 - GitLab MR tools,
 - GitLab read/search/slice tools,
-- Instructions tools,
+- GitLab repository instructions tools,
 - Operational Context tools, gdy trzeba rozpoznac system/repo/scope,
+- report tools,
+- feedback tool.
+
+### Deep AI reconnaissance
+
+Ten etap uruchamia sie po deterministycznym source discovery, szczegolnie gdy
+pierwsza proba compliance albo smoke pack generation wskazuje
+`insufficient sources`.
+
+- GitLab MR tools dla wszystkich repozytoriow z source snapshotu,
+- GitLab repository search/file/slice tools ograniczone do dozwolonych
+  repo/refow,
+- GitLab endpoint/OpenAPI/use-case context tools,
+- GitLab repository instructions tools,
+- Operational Context tools do powiazania systemu, repo, bounded contextu i DB
+  scope,
+- readonly DB tools jako proposal/evidence support w granicach neutralnego
+  DB scope,
 - report tools,
 - feedback tool.
 
 ### Smoke pack generation
 
 - GitLab endpoint/OpenAPI/use-case context tools,
-- DB discovery tools tylko jako proposal support, bez execution,
+- GitLab read/search/slice tools, jezeli source discovery nie znalazl
+  endpointow albo kontraktow request/response,
+- readonly DB tools tylko jako proposal/evidence support, bez write i bez
+  autonomicznego execution,
 - smoke validation/render tools, jezeli beda dodane,
 - report tools,
 - feedback tool.
@@ -875,7 +1000,7 @@ sekcje diagnostyczne, zeby pozniej latwo rozdzielic eksporty.
 
 ### Etap 0 - kontrakty i granice
 
-Cel: przygotowac kontrakty bez runtime execution.
+Cel: przygotowac kontrakty i live job projection bez runtime execution.
 
 Prace:
 
@@ -883,12 +1008,22 @@ Prace:
 - dodac szkielety DTO:
   - job start request,
   - job state snapshot,
+  - job step/activity snapshot,
+  - partial source/evidence snapshot,
   - result contract,
   - finding,
   - source material,
   - smoke pack,
   - execution result,
+- dodac feature-owned job API:
+  - `POST /api/change-verification/jobs`,
+  - `GET /api/change-verification/jobs/{jobId}`,
+- start joba ma zwracac od razu `jobId` i pierwszy snapshot,
+- dodac in-memory job store oraz background runner analogiczny UX-owo do
+  pozostalych feature'ow, bez reuse'u ich feature-owned pakietow,
 - dodac route Angular placeholder `/change-verification`,
+- dodac UI live job polling i feature aside/result panel pokazujacy kroki,
+  partial evidence, activity events i finalny report,
 - dodac PackageDependencyGuardTest rules:
   - `features.changeverification` nie importuje `features.incidentanalysis`,
   - `features.changeverification` nie importuje `features.flowexplorer`,
@@ -898,11 +1033,13 @@ Done:
 
 - projekt sie kompiluje,
 - route jest widoczny w sidebarze jako Analysis Feature,
+- job start zwraca natychmiastowy snapshot,
+- UI pokazuje live przebieg pustego/dummy joba,
 - nie ma jeszcze zewnetrznych calli.
 
 ### Etap 1 - Jira + GitLab MR discovery
 
-Cel: z Jira key zbudowac deterministic source bundle.
+Cel: z Jira key zbudowac deterministyczny, multi-repository source bundle.
 
 Prace:
 
@@ -911,6 +1048,10 @@ Prace:
 - dodac fallback search MR po Jira key,
 - dodac source bundle w `features.changeverification.context`:
   `ChangeVerificationSourceSnapshot`,
+- modelowac `repositories[]` zamiast pojedynczego repozytorium,
+- dopisywac partial source discovery do job state po kazdym istotnym kroku:
+  Jira material loaded, MR links parsed, fallback MR search completed,
+  changed files loaded,
 - dodac evidence sections dla:
   - Jira material,
   - linked docs,
@@ -947,9 +1088,9 @@ Prace:
 
 MCP:
 
-- `instructions_get_context`,
-- `instructions_list_applicable_sources`,
-- `instructions_read_source`.
+- `gitlab_get_repository_instruction_context`,
+- `gitlab_list_applicable_repository_instruction_sources`,
+- `gitlab_read_repository_instruction_source`.
 
 Testy:
 
@@ -959,7 +1100,8 @@ Testy:
 
 ### Etap 3 - Check Compliance AI
 
-Cel: pierwszy uzyteczny MVP bez smoke execution.
+Cel: pierwszy uzyteczny MVP bez smoke execution, z poglobionym AI
+reconnaissance gdy material startowy jest za slaby.
 
 Prace:
 
@@ -983,11 +1125,22 @@ Prace:
   - instruction context,
   - code reconnaissance summary,
 - dodac tool policy dla compliance,
+- dodac tool policy dla deep AI reconnaissance:
+  - AI moze doczytac kod w kazdym repozytorium z source snapshotu,
+  - AI moze przejsc od changed files do endpointow, DTO, walidacji,
+    serwisow, mapperow, migracji i testow,
+  - AI moze uzyc readonly DB tools do potwierdzenia ustawien danych,
+    slownikow, feature flags albo rekordow referencyjnych,
+  - kazdy dodatkowy odczyt trafia do activity/evidence joba,
 - dodac UI findings table.
 
 Done:
 
 - tryb `Check Compliance` dziala od Jira key,
+- job pokazuje deterministic initial analysis przed odpowiedzia AI,
+- AI potrafi wyjsc poza poczatkowy MR summary i doczytac kod z wielu repo,
+- AI potrafi oznaczyc, ktore DB signals potwierdzaja albo ograniczaja
+  weryfikacje,
 - wynik pokazuje source-backed findings,
 - finding bez source trafia jako suggestion, nie violation.
 
@@ -995,7 +1148,9 @@ Testy:
 
 - prompt zawiera wymagane artifacts,
 - report mapper mapuje sekcje na DTO,
-- policy wlacza tylko dozwolone tools,
+- policy wlacza tylko dozwolone tools per etap,
+- multi-repo tool context blokuje repozytoria spoza source snapshotu,
+- readonly DB tool policy nie pozwala na write ani execution poza scope,
 - frontend renderuje findings i visibility limits.
 
 ### Etap 4 - Smoke Pack generation
@@ -1010,7 +1165,10 @@ Prace:
 - rozszerzyc prompt i skille o `change-verification-smoke-pack-design`,
 - dodac sekcje reportu `SMOKE_PACK`,
 - dodac endpointy exportu Postman,
-- dodac UI smoke pack editor.
+- dodac UI smoke pack editor,
+- jezeli AI zwroci `insufficient sources`, job nie powinien konczyc flow od
+  razu; powinien oznaczyc brak jako visibility limit i uruchomic deep AI
+  reconnaissance z GitLab/DB tools, o ile scope i polityka na to pozwalaja.
 
 MCP opcjonalnie:
 
@@ -1022,6 +1180,8 @@ Done:
 
 - tryb `Generate Smoke Pack` dziala nawet przy slabym story, jezeli MR/kod
   pozwala znalezc endpointy,
+- `insufficient sources` po pierwszej probie prowadzi do poglobionego
+  rekonesansu albo jawnego `Cannot verify` z lista brakujacych zrodel,
 - uzytkownik moze edytowac variables i scenariusze,
 - Postman export jest poprawnym JSON-em.
 
@@ -1134,6 +1294,8 @@ End-to-end/manual smoke:
 Najwazniejsze decyzje przed implementacja:
 
 - Czy Confluence wchodzi do MVP, czy dopiero po Jira + GitLab MR?
+- Czy readonly DB tools wchodza juz do poglobionej analizy AI jako evidence
+  support, nawet jezeli pelne execution zostaje feature flagiem?
 - Czy pierwsza wersja execution obsluguje DB assertions, czy tylko HTTP +
   cleanup endpoint?
 - Czy bezposredni MR link jest rownorzednym inputem, czy tylko fallbackiem?
@@ -1151,6 +1313,10 @@ Najwieksze ryzyka:
 - zbyt szeroki scope AI: ograniczamy go etapami i source-backed findings,
 - zbyt szybkie wlaczenie execution: najpierw compliance + smoke pack,
 - DB scope skopiowany z incydentow: trzeba go zneutralizowac,
+- pojedyncze repo w modelu zmiany: source snapshot i hidden tool context musza
+  od poczatku obslugiwac wiele repozytoriow,
+- `insufficient sources` jako terminalny blad: traktujemy to jako trigger do
+  deep AI reconnaissance, a dopiero potem jako `Cannot verify`,
 - Postman jako source of truth runtime: unikamy tego przez wewnetrzny smoke
   pack model,
 - findingi bez zrodel: trafiaja jako suggestions albo visibility limits,
@@ -1161,20 +1327,32 @@ Najwieksze ryzyka:
 
 Najrozsadniejszy MVP:
 
-1. Jira key/link.
-2. GitLab MR discovery z Jiry albo regex fallback po Jira key.
-3. Instruction context discovery z `AGENTS.md` i Copilot instructions.
-4. `Check Compliance`:
+1. Live job API i UI polling:
+   - start zwraca natychmiastowy `jobId`,
+   - frontend pokazuje deterministic initial analysis i AI activity w tym
+     samym widoku,
+   - feature aside/result panel uzupelnia sie po kazdym istotnym kroku.
+2. Jira key/link.
+3. Multi-repo GitLab MR discovery z Jiry albo regex fallback po Jira key.
+4. Instruction context discovery z `AGENTS.md` i Copilot instructions jako
+   czesc GitLab Code Source capability.
+5. `Check Compliance`:
    - Story Compliance,
    - Instruction Compliance,
+   - deep AI code reconnaissance przez GitLab tools, jezeli material
+     poczatkowy jest niewystarczajacy,
+   - readonly DB evidence support, jezeli zmiana dotyczy konfiguracji albo
+     danych,
    - discrepancies,
    - suggested actions.
-5. `Generate Smoke Pack`:
+6. `Generate Smoke Pack`:
    - edytowalny smoke pack,
    - Postman collection/environment export.
-6. Bez execution w pierwszym releasie MVP albo execution tylko jako feature
+7. Bez execution w pierwszym releasie MVP albo execution tylko jako feature
    flag po akceptacji smoke packa.
 
 To daje uzyteczny rezultat bez najwiekszego ryzyka runtime side effectow.
 Execution i cleanup powinny wejsc jako kolejny etap, gdy model smoke packa,
-allowlisty srodowisk i DB readonly scope beda stabilne.
+allowlisty srodowisk i DB readonly scope beda stabilne. Readonly DB tools dla
+poglebionej analizy moga wejsc wczesniej, jezeli beda ograniczone do evidence
+support i nie beda wykonywac write ani cleanup.

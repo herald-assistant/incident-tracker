@@ -1,4 +1,4 @@
-import { Component, input, signal } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 type AnalysisFeatureAsidePanel = 'progress' | 'ai' | 'chat' | 'feedback';
@@ -53,8 +53,14 @@ export class AnalysisFeatureAsideComponent {
   readonly aiCount = input(0);
   readonly chatCount = input(0);
   readonly feedbackCount = input(0);
+  readonly showProgress = input(true);
+  readonly showAi = input(true);
+  readonly showChat = input(true);
+  readonly showFeedback = input(true);
 
-  protected readonly tabs = ASIDE_TABS;
+  protected readonly tabs = computed(() =>
+    ASIDE_TABS.filter((tab) => this.isVisible(tab.id))
+  );
   protected readonly activePanel = signal<AnalysisFeatureAsidePanel | null>(null);
 
   protected selectPanel(panel: AnalysisFeatureAsidePanel): void {
@@ -104,6 +110,19 @@ export class AnalysisFeatureAsideComponent {
   }
 
   private tabLabel(panel: AnalysisFeatureAsidePanel): string {
-    return this.tabs.find((tab) => tab.id === panel)?.label ?? panel;
+    return ASIDE_TABS.find((tab) => tab.id === panel)?.label ?? panel;
+  }
+
+  private isVisible(panel: AnalysisFeatureAsidePanel): boolean {
+    switch (panel) {
+      case 'progress':
+        return this.showProgress();
+      case 'ai':
+        return this.showAi();
+      case 'chat':
+        return this.showChat();
+      case 'feedback':
+        return this.showFeedback();
+    }
   }
 }

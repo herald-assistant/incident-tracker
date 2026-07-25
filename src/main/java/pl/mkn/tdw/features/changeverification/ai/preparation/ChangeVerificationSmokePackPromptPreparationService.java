@@ -5,6 +5,8 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
@@ -34,7 +36,9 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 - Ten run projektuje edytowalny smoke pack dla zmiany.
                 - Najpierw zaladuj skill `change-verification-smoke-pack-design` przez built-in tool `skill`.
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani wykonywac requestow.
+                - Jezeli potrzebujesz poglbic analize endpointow albo payloadow, uzywaj GitLab tools tylko dla repozytoriow, refow i plikow z sekcji Repository Scope.
                 - Nie proponuj zapisu do DB jako akcji wykonywanej przez AI. DB assertions sa tylko readonly checkami.
+                - Jezeli `environment` jest podane, DB tools moga sluzyc tylko do readonly discovery/checkow; nie uzywaj raw SQL ani DML/DDL.
                 - Cleanup moze byc endpointem aplikacyjnym albo manualSql jako fallback dla operatora.
                 - Jezeli endpoint, request body albo cleanup sa niepewne, ustaw testowi `reviewStatus` = `NEEDS_REVIEW`.
                 - Odpowiedz musi byc jednym obiektem JSON zgodnym z `change-verification/smoke-response-contract.md`.
@@ -43,6 +47,8 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 issueKey: %s
                 issueUrl: %s
                 modes: %s
+                environment: %s
+                databaseApplication: %s
                 userInstructions:
                 %s
 
@@ -52,6 +58,8 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 value(sourceDiscovery != null ? sourceDiscovery.issueKey() : request.issueKey()),
                 value(sourceDiscovery != null ? sourceDiscovery.issueUrl() : request.issueUrl()),
                 request.modes(),
+                value(request.environment()),
+                value(request.databaseApplication()),
                 StringUtils.hasText(request.userInstructions()) ? request.userInstructions().trim() : "(none)",
                 artifactIndex(artifacts)
         ).trim();
@@ -80,6 +88,9 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 ## Merge Requests
                 %s
 
+                ## Repository Scope
+                %s
+
                 ## Discovery Limitations
                 %s
                 """.formatted(
@@ -90,8 +101,60 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                         .map(this::renderMergeRequest)
                         .reduce((left, right) -> left + "\n\n" + right)
                         .orElse("- none"),
+                renderRepositoryScope(sourceDiscovery),
                 bulletList(sourceDiscovery != null ? sourceDiscovery.limitations() : List.of())
         ).trim();
+    }
+
+    private String renderRepositoryScope(ChangeVerificationSourceDiscoveryResult sourceDiscovery) {
+        if (sourceDiscovery == null || sourceDiscovery.repositories().isEmpty()) {
+            return "- No repository scope discovered.";
+        }
+        return sourceDiscovery.repositories().stream()
+                .map(this::renderRepository)
+                .reduce((left, right) -> left + "\n\n" + right)
+                .orElse("- none");
+    }
+
+    private String renderRepository(ChangeVerificationRepositorySnapshot repository) {
+        return """
+                ### %s
+                sourceRef: %s
+                targetRef: %s
+                changedFiles:
+                %s
+                instructionSources:
+                %s
+                limitations:
+                %s
+                """.formatted(
+                value(repository.projectPath()),
+                value(repository.sourceRef()),
+                value(repository.targetRef()),
+                repository.changedFiles().stream()
+                        .map(this::renderRepositoryChangedFile)
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none"),
+                repository.instructionSources().stream()
+                        .map(source -> "- %s | %s | %s".formatted(
+                                value(source.path()),
+                                value(source.kind()),
+                                value(source.ref())
+                        ))
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none"),
+                bulletList(repository.limitations())
+        ).trim();
+    }
+
+    private String renderRepositoryChangedFile(ChangeVerificationChangedFileSnapshot file) {
+        return "- %s%s%s%s | MRs: %s".formatted(
+                value(file.path()),
+                file.newFile() ? " [new]" : "",
+                file.renamedFile() ? " [renamed]" : "",
+                file.deletedFile() ? " [deleted]" : "",
+                file.mergeRequestRefs()
+        );
     }
 
     private String renderIssue(JiraIssueMaterial issue) {

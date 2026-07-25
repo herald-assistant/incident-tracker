@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.changeverification.job.api;
 
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
@@ -25,6 +26,8 @@ public record ChangeVerificationJobStateSnapshot(
         Instant completedAt,
         List<AnalysisJobStepResponse> steps,
         List<AnalysisEvidenceSection> contextSections,
+        List<AnalysisEvidenceSection> toolEvidenceSections,
+        List<AnalysisAiActivityEvent> aiActivityEvents,
         String preparedPrompt,
         ChangeVerificationResultResponse result
 ) {
@@ -33,5 +36,7 @@ public record ChangeVerificationJobStateSnapshot(
         modes = modes != null ? List.copyOf(modes) : List.of();
         steps = steps != null ? List.copyOf(steps) : List.of();
         contextSections = contextSections != null ? List.copyOf(contextSections) : List.of();
+        toolEvidenceSections = toolEvidenceSections != null ? List.copyOf(toolEvidenceSections) : List.of();
+        aiActivityEvents = aiActivityEvents != null ? List.copyOf(aiActivityEvents) : List.of();
     }
 }

@@ -10,8 +10,10 @@ import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAna
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparationService;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
+import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 
 @Service
 @RequiredArgsConstructor
@@ -30,15 +32,44 @@ public class ChangeVerificationCopilotComplianceAnalysisProvider implements Chan
             ChangeVerificationJobStartRequest request,
             ChangeVerificationSourceDiscoveryResult sourceDiscovery
     ) {
+        return analyze(jobId, request, sourceDiscovery, AnalysisAiToolEvidenceListener.NO_OP);
+    }
+
+    @Override
+    public ChangeVerificationComplianceAnalysis analyze(
+            String jobId,
+            ChangeVerificationJobStartRequest request,
+            ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+            AnalysisAiToolEvidenceListener toolEvidenceListener
+    ) {
+        return analyze(jobId, request, sourceDiscovery, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
+    }
+
+    @Override
+    public ChangeVerificationComplianceAnalysis analyze(
+            String jobId,
+            ChangeVerificationJobStartRequest request,
+            ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
+    ) {
         var authRef = authRefResolver.resolveForCurrentRequest();
         var preparation = promptPreparationService.prepare(request, sourceDiscovery);
         var runRequest = runRequestAssembler.assemble(
                 jobId,
                 request,
+                sourceDiscovery,
                 preparation,
                 authRef != null ? authRef : AnalysisAiAuthRef.localToken(null)
         );
-        var executionResult = executionGateway.execute(runPreparationService.prepare(runRequest));
+        var preparedSession = runPreparationService.prepare(runRequest);
+        if (toolEvidenceListener != null && toolEvidenceListener != AnalysisAiToolEvidenceListener.NO_OP) {
+            preparedSession = preparedSession.withEvidenceSink(toolEvidenceListener::onToolEvidenceUpdated);
+        }
+        if (activityListener != null && activityListener != AnalysisAiActivityListener.NO_OP) {
+            preparedSession = preparedSession.withActivitySink(activityListener::onAiActivity);
+        }
+        var executionResult = executionGateway.execute(preparedSession);
         return new ChangeVerificationComplianceAnalysis(
                 responseParser.parse(executionResult.content()),
                 executionResult.usage(),

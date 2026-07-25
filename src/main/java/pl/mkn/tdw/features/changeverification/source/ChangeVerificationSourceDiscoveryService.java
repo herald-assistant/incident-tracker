@@ -32,6 +32,13 @@ public class ChangeVerificationSourceDiscoveryService {
     private final InstructionContextDiscoveryService instructionContextDiscoveryService;
 
     public ChangeVerificationSourceDiscoveryResult discover(ChangeVerificationJobStartRequest request) {
+        return discover(request, ChangeVerificationSourceDiscoveryListener.NO_OP);
+    }
+
+    public ChangeVerificationSourceDiscoveryResult discover(
+            ChangeVerificationJobStartRequest request,
+            ChangeVerificationSourceDiscoveryListener listener
+    ) {
         var issueKey = resolveIssueKey(request);
         var limitations = new ArrayList<String>();
         JiraIssueMaterial jiraIssue = null;
@@ -41,10 +48,16 @@ public class ChangeVerificationSourceDiscoveryService {
         if (!StringUtils.hasText(issueKey)) {
             limitations.add("Jira issue key could not be resolved from request.");
         } else {
+            listener.onJiraMaterialStarted(issueKey);
             jiraIssue = fetchJiraIssue(issueKey, limitations);
+            listener.onJiraMaterialCompleted(issueKey, jiraIssue, List.copyOf(limitations));
+            listener.onMergeRequestDiscoveryStarted(issueKey);
             mergeRequests = fetchMergeRequests(issueKey, limitations);
+            listener.onMergeRequestDiscoveryCompleted(issueKey, mergeRequests, List.copyOf(limitations));
             if (Boolean.TRUE.equals(request.checkInstructionCompliance())) {
+                listener.onInstructionContextStarted(mergeRequests);
                 instructionContext = fetchInstructionContext(mergeRequests, limitations);
+                listener.onInstructionContextCompleted(mergeRequests, instructionContext, List.copyOf(limitations));
             }
         }
 

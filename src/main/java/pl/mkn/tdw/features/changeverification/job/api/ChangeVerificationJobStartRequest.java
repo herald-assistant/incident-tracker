@@ -19,6 +19,10 @@ public record ChangeVerificationJobStartRequest(
         Boolean checkInstructionCompliance,
         @Size(max = 4000, message = "userInstructions must not exceed 4000 characters")
         String userInstructions,
+        @Size(max = 80, message = "environment must not exceed 80 characters")
+        String environment,
+        @Size(max = 120, message = "databaseApplication must not exceed 120 characters")
+        String databaseApplication,
         @Size(max = 80, message = "model must not exceed 80 characters")
         String model,
         @Size(max = 40, message = "reasoningEffort must not exceed 40 characters")
@@ -41,8 +45,34 @@ public record ChangeVerificationJobStartRequest(
                 ? checkInstructionCompliance
                 : modes.contains(ChangeVerificationJobMode.CHECK_COMPLIANCE);
         userInstructions = normalize(userInstructions);
+        environment = normalize(environment);
+        databaseApplication = normalize(databaseApplication);
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);
+    }
+
+    public ChangeVerificationJobStartRequest(
+            String issueKey,
+            String issueUrl,
+            List<ChangeVerificationJobMode> modes,
+            Boolean checkStoryCompliance,
+            Boolean checkInstructionCompliance,
+            String userInstructions,
+            String model,
+            String reasoningEffort
+    ) {
+        this(
+                issueKey,
+                issueUrl,
+                modes,
+                checkStoryCompliance,
+                checkInstructionCompliance,
+                userInstructions,
+                null,
+                null,
+                model,
+                reasoningEffort
+        );
     }
 
     @AssertTrue(message = "issueKey or issueUrl must be provided")

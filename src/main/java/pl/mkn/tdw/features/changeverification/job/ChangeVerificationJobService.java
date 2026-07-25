@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.changeverification.job;
 
 import org.springframework.stereotype.Service;
+import org.springframework.core.task.TaskExecutor;
 import lombok.extern.slf4j.Slf4j;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationAiResponse;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
@@ -17,9 +18,12 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeExe
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
 import pl.mkn.tdw.features.changeverification.job.state.ChangeVerificationJobState;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryListener;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryService;
 import pl.mkn.tdw.features.changeverification.execution.ChangeVerificationSmokeExecutionService;
 import pl.mkn.tdw.features.changeverification.smoke.ChangeVerificationPostmanCollectionRenderer;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
+import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 
 import java.util.Map;
 import java.util.UUID;
@@ -36,34 +40,148 @@ public class ChangeVerificationJobService {
     private final ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider;
     private final ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer;
     private final ChangeVerificationSmokeExecutionService smokeExecutionService;
+    private final TaskExecutor applicationTaskExecutor;
 
     public ChangeVerificationJobService(
             ChangeVerificationSourceDiscoveryService sourceDiscoveryService,
             ChangeVerificationComplianceAnalysisProvider complianceAnalysisProvider,
             ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider,
             ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer,
-            ChangeVerificationSmokeExecutionService smokeExecutionService
+            ChangeVerificationSmokeExecutionService smokeExecutionService,
+            TaskExecutor applicationTaskExecutor
     ) {
         this.sourceDiscoveryService = sourceDiscoveryService;
         this.complianceAnalysisProvider = complianceAnalysisProvider;
         this.smokePackAnalysisProvider = smokePackAnalysisProvider;
         this.postmanCollectionRenderer = postmanCollectionRenderer;
         this.smokeExecutionService = smokeExecutionService;
+        this.applicationTaskExecutor = applicationTaskExecutor;
     }
 
     public ChangeVerificationJobStateSnapshot startJob(ChangeVerificationJobStartRequest request) {
         var jobId = UUID.randomUUID().toString();
         var job = new ChangeVerificationJobState(jobId, request);
-        var sourceDiscovery = sourceDiscoveryService.discover(request);
-        var complianceAnalysis = complianceRequested(request)
-                ? analyzeCompliance(jobId, request, sourceDiscovery)
-                : null;
-        var smokePackAnalysis = smokePackRequested(request)
-                ? analyzeSmokePack(jobId, request, sourceDiscovery, complianceAnalysis)
-                : null;
-        job.markSourceDiscoveryCompleted(sourceDiscovery, complianceAnalysis, smokePackAnalysis);
         jobs.put(jobId, job);
+        job.markSourceDiscoveryStarted();
+        applicationTaskExecutor.execute(() -> runJob(jobId, job, request));
         return job.snapshot();
+    }
+
+    private void runJob(String jobId, ChangeVerificationJobState job, ChangeVerificationJobStartRequest request) {
+        try {
+            var sourceDiscovery = sourceDiscoveryService.discover(request, sourceDiscoveryListener(job));
+            job.markSourceDiscoveryCompleted(sourceDiscovery);
+
+            var complianceAnalysis = (complianceRequested(request))
+                    ? runCompliance(jobId, job, request, sourceDiscovery)
+                    : null;
+            var smokePackAnalysis = (smokePackRequested(request))
+                    ? runSmokePack(jobId, job, request, sourceDiscovery, complianceAnalysis)
+                    : null;
+
+            job.markCompleted(complianceAnalysis, smokePackAnalysis);
+        } catch (RuntimeException exception) {
+            log.error(
+                    "Change Verification job failed jobId={} issueKey={} reason={}",
+                    jobId,
+                    request.issueKey(),
+                    exception.getMessage(),
+                    exception
+            );
+            job.markFailed(
+                    "CHANGE_VERIFICATION_FAILED",
+                    org.springframework.util.StringUtils.hasText(exception.getMessage())
+                            ? exception.getMessage()
+                            : "Unexpected Change Verification failure."
+            );
+        }
+    }
+
+    private ChangeVerificationSourceDiscoveryListener sourceDiscoveryListener(ChangeVerificationJobState job) {
+        return new ChangeVerificationSourceDiscoveryListener() {
+            @Override
+            public void onJiraMaterialStarted(String issueKey) {
+                job.markJiraMaterialStarted(issueKey);
+            }
+
+            @Override
+            public void onJiraMaterialCompleted(
+                    String issueKey,
+                    pl.mkn.tdw.integrations.jira.JiraIssueMaterial jiraIssue,
+                    List<String> limitations
+            ) {
+                job.markJiraMaterialCompleted(issueKey, jiraIssue, limitations);
+            }
+
+            @Override
+            public void onMergeRequestDiscoveryStarted(String issueKey) {
+                job.markMergeRequestDiscoveryStarted(issueKey);
+            }
+
+            @Override
+            public void onMergeRequestDiscoveryCompleted(
+                    String issueKey,
+                    pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult mergeRequests,
+                    List<String> limitations
+            ) {
+                job.markMergeRequestDiscoveryCompleted(issueKey, mergeRequests, limitations);
+                job.markChangedFilesCompleted(issueKey);
+            }
+
+            @Override
+            public void onInstructionContextStarted(
+                    pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult mergeRequests
+            ) {
+                job.markInstructionContextStarted(mergeRequests);
+            }
+
+            @Override
+            public void onInstructionContextCompleted(
+                    pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult mergeRequests,
+                    pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult instructionContext,
+                    List<String> limitations
+            ) {
+                job.markInstructionContextCompleted(mergeRequests, instructionContext, limitations);
+            }
+        };
+    }
+
+    private ChangeVerificationComplianceAnalysis runCompliance(
+            String jobId,
+            ChangeVerificationJobState job,
+            ChangeVerificationJobStartRequest request,
+            pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery
+    ) {
+        job.markAiVerificationStarted();
+        var complianceAnalysis = analyzeCompliance(
+                jobId,
+                request,
+                sourceDiscovery,
+                toolEvidenceListener(job),
+                activityListener(job)
+        );
+        job.markAiVerificationCompleted(complianceAnalysis);
+        return complianceAnalysis;
+    }
+
+    private ChangeVerificationSmokePackAnalysis runSmokePack(
+            String jobId,
+            ChangeVerificationJobState job,
+            ChangeVerificationJobStartRequest request,
+            pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+            ChangeVerificationComplianceAnalysis complianceAnalysis
+    ) {
+        job.markSmokePackGenerationStarted();
+        var smokePackAnalysis = analyzeSmokePack(
+                jobId,
+                request,
+                sourceDiscovery,
+                complianceAnalysis,
+                toolEvidenceListener(job),
+                activityListener(job)
+        );
+        job.markSmokePackGenerationCompleted(smokePackAnalysis);
+        return smokePackAnalysis;
     }
 
     public ChangeVerificationJobStateSnapshot getJob(String jobId) {
@@ -113,10 +231,18 @@ public class ChangeVerificationJobService {
     private ChangeVerificationComplianceAnalysis analyzeCompliance(
             String jobId,
             ChangeVerificationJobStartRequest request,
-            pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery
+            pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
     ) {
         try {
-            return complianceAnalysisProvider.analyze(jobId, request, sourceDiscovery);
+            return complianceAnalysisProvider.analyze(
+                    jobId,
+                    request,
+                    sourceDiscovery,
+                    toolEvidenceListener,
+                    activityListener
+            );
         } catch (RuntimeException exception) {
             log.warn(
                     "Change Verification AI compliance check failed jobId={} issueKey={} reason={}",
@@ -161,10 +287,19 @@ public class ChangeVerificationJobService {
             String jobId,
             ChangeVerificationJobStartRequest request,
             pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-            ChangeVerificationComplianceAnalysis complianceAnalysis
+            ChangeVerificationComplianceAnalysis complianceAnalysis,
+            AnalysisAiToolEvidenceListener toolEvidenceListener,
+            AnalysisAiActivityListener activityListener
     ) {
         try {
-            return smokePackAnalysisProvider.analyze(jobId, request, sourceDiscovery, complianceAnalysis);
+            return smokePackAnalysisProvider.analyze(
+                    jobId,
+                    request,
+                    sourceDiscovery,
+                    complianceAnalysis,
+                    toolEvidenceListener,
+                    activityListener
+            );
         } catch (RuntimeException exception) {
             log.warn(
                     "Change Verification AI smoke pack generation failed jobId={} issueKey={} reason={}",
@@ -194,6 +329,14 @@ public class ChangeVerificationJobService {
         return org.springframework.util.StringUtils.hasText(exception.getMessage())
                 ? exception.getMessage()
                 : exception.getClass().getSimpleName();
+    }
+
+    private AnalysisAiToolEvidenceListener toolEvidenceListener(ChangeVerificationJobState job) {
+        return job::markAiToolEvidenceUpdated;
+    }
+
+    private AnalysisAiActivityListener activityListener(ChangeVerificationJobState job) {
+        return job::markAiActivity;
     }
 
     private ChangeVerificationExecutionResponse executionResponse(

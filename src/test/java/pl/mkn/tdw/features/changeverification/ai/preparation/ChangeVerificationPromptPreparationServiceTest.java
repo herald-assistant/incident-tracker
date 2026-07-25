@@ -40,16 +40,21 @@ class ChangeVerificationPromptPreparationServiceTest {
                 "Focus cleanup.",
                 "Customer profile status",
                 "feature/CRM-123-status",
+                "CRM/runtime/customer-api",
+                "src/main/java/CustomerController.java",
                 "AGENTS.md",
                 "Response Contract"
         );
         assertThat(preparation.artifactContents().keySet()).containsExactly(
                 "change-verification/source-discovery.md",
                 "change-verification/jira-issue.md",
+                "change-verification/repository-scope.md",
                 "change-verification/merge-requests.md",
                 "change-verification/instruction-context.md",
                 "change-verification/response-contract.md"
         );
+        assertThat(preparation.artifactContents().get("change-verification/repository-scope.md"))
+                .contains("Repository Scope", "sourceRef: feature/CRM-123-status", "instructionSources:");
     }
 
     private ChangeVerificationSourceDiscoveryResult sourceDiscovery() {
