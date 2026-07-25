@@ -16,6 +16,7 @@ import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceCopilotSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceJiraSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspacePaths;
@@ -151,6 +152,10 @@ class LocalWorkspaceStoreTest {
                 LocalWorkspaceSettingsFile.VERSION,
                 new LocalWorkspaceAppUiSettings("CRM workspace"),
                 new LocalWorkspaceCopilotSettings("ghu_copilot_secret"),
+                new LocalWorkspaceJiraSettings(
+                        "https://jira.example.com",
+                        "jira_secret"
+                ),
                 new LocalWorkspaceGitLabSettings(
                         "https://gitlab.example.com",
                         "platform/backend",

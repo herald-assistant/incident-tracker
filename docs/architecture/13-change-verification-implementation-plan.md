@@ -97,7 +97,7 @@ frontend Change Verification screen
   -> features.changeverification.job.api
   -> features.changeverification.job
   -> features.changeverification.context/source gathering
-  -> integrations.jira / integrations.confluence / integrations.gitlab / integrations.instructions
+  -> integrations.jira / integrations.confluence / integrations.gitlab
   -> features.changeverification.ai.copilot
   -> aiplatform.copilot.runtime + aiplatform.copilot.tools
   -> agenttools.*.mcp
@@ -123,7 +123,7 @@ pl.mkn.tdw.features.changeverification.execution
 
 pl.mkn.tdw.integrations.jira
 pl.mkn.tdw.integrations.confluence
-pl.mkn.tdw.integrations.instructions
+pl.mkn.tdw.integrations.gitlab.instructions
 pl.mkn.tdw.integrations.httpexecution
 
 pl.mkn.tdw.agenttools.jira
@@ -325,14 +325,15 @@ capability ma dostarczyc zakres zmiany: ktore repo, branch, pliki i diff.
 
 ### 4. Instructions
 
-Nowy pakiet:
+Pakiet:
 
 ```text
-integrations.instructions
+integrations.gitlab.instructions
 ```
 
-To nie jest zewnetrzny system, tylko reusable source gathering capability nad
-repozytoriami. Adapter nie powinien importowac feature'a.
+To nie jest osobny zewnetrzny system, tylko czesc GitLab code source capability
+odpowiedzialna za repozytoryjne instrukcje migrujace razem z kodem,
+endpointami, use case'ami i plikami. Adapter nie powinien importowac feature'a.
 
 Zakres:
 
@@ -937,7 +938,7 @@ Cel: z changed files zbudowac source-backed instruction context.
 
 Prace:
 
-- dodac `integrations.instructions`,
+- dodac `integrations.gitlab.instructions`,
 - odczyt `AGENTS.md`, lokalnych `AGENTS.md`, Copilot instructions i linked
   instruction files przez GitLab file reads,
 - ograniczyc followowanie linkow do repo-relative paths i allowlistowanych
@@ -1177,4 +1178,3 @@ Najrozsadniejszy MVP:
 To daje uzyteczny rezultat bez najwiekszego ryzyka runtime side effectow.
 Execution i cleanup powinny wejsc jako kolejny etap, gdy model smoke packa,
 allowlisty srodowisk i DB readonly scope beda stabilne.
-

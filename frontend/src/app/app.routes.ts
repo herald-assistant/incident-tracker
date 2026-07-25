@@ -62,6 +62,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'change-verification',
+        loadComponent: () =>
+          import(
+            './features/change-verification/pages/change-verification-page/change-verification-page'
+          ).then((module) => module.ChangeVerificationPageComponent),
+        data: {
+          section: 'Analysis Features',
+          title: 'Change Verification'
+        }
+      },
+      {
         path: 'evidence',
         redirectTo: 'elastic',
         pathMatch: 'full'
@@ -102,7 +113,7 @@ export const routes: Routes = [
           title: 'GitLab Source',
           capabilityInfo: {
             description:
-              'Manualne testowanie GitLab helper API: repo discovery, endpoint inventory, use-case context, odczyt plikow i source resolve.',
+              'Manualne testowanie GitLab helper API: repo discovery, MR discovery po Jira key, endpoint inventory, use-case context, odczyt plikow i source resolve.',
             badges: ['Reusable przez AI', 'Readonly'],
             meta: [
               { label: 'Endpointy', value: 'POST /api/gitlab/*' },
@@ -117,6 +128,37 @@ export const routes: Routes = [
               {
                 label: 'Guardrails',
                 value: 'configured GitLab auth, readonly REST calls, scan limits i character budgets'
+              }
+            ]
+          }
+        }
+      },
+      {
+        path: 'jira',
+        loadComponent: () =>
+          import('./features/jira-source-console/jira-source-console').then(
+            (module) => module.JiraSourceConsoleComponent
+          ),
+        data: {
+          section: 'Tool Workbench',
+          title: 'Jira Source',
+          capabilityInfo: {
+            description:
+              'Manualne testowanie Jira issue source API: pobieranie materialu story/issue, linkow, komentarzy i skonfigurowanych kryteriow akceptacji.',
+            badges: ['Reusable przez AI', 'Readonly'],
+            meta: [
+              { label: 'Endpointy', value: 'POST /api/jira/issue/material' },
+              {
+                label: 'Wymagany scope',
+                value: 'issue key albo link do Jira issue; konfiguracja korzysta z base URL i personal access token'
+              },
+              {
+                label: 'Reusable przez AI',
+                value: 'Tak, jako readonly issue material capability dla featureow takich jak Change Verification'
+              },
+              {
+                label: 'Guardrails',
+                value: 'readonly REST call, Bearer PAT, limity komentarzy/linkow/tekstu i jawne visibility limitations'
               }
             ]
           }

@@ -89,7 +89,9 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(8);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(10);
+    expect(compiled.textContent).toContain('Repository Instructions');
+    expect(compiled.textContent).toContain('Merge Request Search');
     expect(compiled.querySelector('.workbench-header')).toBeNull();
     expect(compiled.querySelector('.gitlab-result')).toBeFalsy();
     expect(compiled.textContent).not.toContain('Kopiuj JSON');

@@ -31,6 +31,7 @@ export class WorkspaceSettingsPageComponent {
   readonly saveMessage = signal('');
   readonly showToken = signal(false);
   readonly showCopilotGithubToken = signal(false);
+  readonly showJiraToken = signal(false);
   readonly showElasticsearchAuthorizationHeader = signal(false);
   readonly showDynatraceApiToken = signal(false);
 
@@ -40,6 +41,10 @@ export class WorkspaceSettingsPageComponent {
     }),
     copilot: new FormGroup({
       localGithubToken: new FormControl('', { nonNullable: true })
+    }),
+    jira: new FormGroup({
+      baseUrl: new FormControl('', { nonNullable: true }),
+      token: new FormControl('', { nonNullable: true })
     }),
     gitLab: new FormGroup({
       baseUrl: new FormControl('', { nonNullable: true }),
@@ -125,6 +130,10 @@ export class WorkspaceSettingsPageComponent {
     this.showCopilotGithubToken.update((visible) => !visible);
   }
 
+  toggleJiraTokenVisibility(): void {
+    this.showJiraToken.update((visible) => !visible);
+  }
+
   toggleElasticsearchAuthorizationHeaderVisibility(): void {
     this.showElasticsearchAuthorizationHeader.update((visible) => !visible);
   }
@@ -179,6 +188,10 @@ export class WorkspaceSettingsPageComponent {
       copilot: {
         localGithubToken: settings.values.copilot.localGithubToken.value
       },
+      jira: {
+        baseUrl: settings.values.jira.baseUrl.value,
+        token: settings.values.jira.token.value
+      },
       gitLab: {
         baseUrl: settings.values.gitLab.baseUrl.value,
         group: settings.values.gitLab.group.value,
@@ -205,6 +218,10 @@ export class WorkspaceSettingsPageComponent {
       copilot: {
         localGithubToken: this.form.controls.copilot.controls.localGithubToken.value.trim()
       },
+      jira: {
+        baseUrl: this.form.controls.jira.controls.baseUrl.value.trim(),
+        token: this.form.controls.jira.controls.token.value.trim()
+      },
       gitLab: {
         baseUrl: this.form.controls.gitLab.controls.baseUrl.value.trim(),
         group: this.form.controls.gitLab.controls.group.value.trim(),
@@ -228,6 +245,8 @@ export class WorkspaceSettingsPageComponent {
     return [
       settings.values.appUi.title,
       settings.values.copilot.localGithubToken,
+      settings.values.jira.baseUrl,
+      settings.values.jira.token,
       settings.values.gitLab.baseUrl,
       settings.values.gitLab.group,
       settings.values.gitLab.token,

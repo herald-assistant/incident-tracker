@@ -1,0 +1,311 @@
+<div class="page-shell change-verification-page">
+  <main class="change-verification-workspace" aria-labelledby="changeVerificationWorkspaceTitle">
+    <section class="change-verification-composer analysis-card">
+      <div class="section-heading change-verification-composer__heading">
+        <div>
+          <p class="section-eyebrow">Change Verification</p>
+          <h2 id="changeVerificationWorkspaceTitle">Verify a change before release</h2>
+          <p class="field-hint">
+            Story alignment, repository instructions, smoke pack readiness and execution cleanup in
+            one release-focused workflow.
+          </p>
+        </div>
+      </div>
+
+      <div class="change-verification-source-grid">
+        <label class="field-control change-verification-field">
+          <span class="field-label">Jira key or link</span>
+          <input
+            class="text-input"
+            type="text"
+            [value]="issueInput()"
+            placeholder="CRM-123 or https://jira.example.com/browse/CRM-123"
+            autocomplete="off"
+            spellcheck="false"
+            (input)="updateIssueInput($any($event.target).value)"
+          />
+        </label>
+
+        <fieldset class="change-verification-options">
+          <legend class="field-label">Verification scope</legend>
+          <div class="change-verification-option-grid">
+            <label>
+              <input
+                type="checkbox"
+                [checked]="checkStoryCompliance()"
+                (change)="toggleStoryCompliance($any($event.target).checked)"
+              />
+              <span>Story compliance</span>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                [checked]="checkInstructionCompliance()"
+                (change)="toggleInstructionCompliance($any($event.target).checked)"
+              />
+              <span>Instruction compliance</span>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                [checked]="generateSmokePack()"
+                (change)="toggleSmokePack($any($event.target).checked)"
+              />
+              <span>Generate smoke pack</span>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                [checked]="executeSmokePack()"
+                (change)="toggleExecution($any($event.target).checked)"
+              />
+              <span>Execute accepted pack</span>
+            </label>
+          </div>
+        </fieldset>
+      </div>
+
+      <label class="field-control change-verification-field">
+        <span class="field-label">Operator notes</span>
+        <textarea
+          class="text-input change-verification-textarea"
+          [value]="userInstructions()"
+          rows="4"
+          placeholder="Optional focus, release context or known risk."
+          (input)="updateUserInstructions($any($event.target).value)"
+        ></textarea>
+      </label>
+
+      <div class="change-verification-run-actions">
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="!canStartJob()"
+          (click)="startJob()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+          <span>{{ isSubmitting() ? 'Starting...' : 'Run Verification' }}</span>
+        </button>
+      </div>
+
+      @if (jobError()) {
+        <p class="change-verification-error">{{ jobError() }}</p>
+      }
+    </section>
+
+    @if (job(); as currentJob) {
+      <section class="change-verification-run analysis-card">
+        <div>
+          <p class="section-eyebrow">Run {{ currentJob.status }}</p>
+          <h2>{{ currentJob.issueKey || currentJob.issueUrl }}</h2>
+          <p class="field-hint">{{ currentJob.modes.join(' / ') }}</p>
+        </div>
+        <span class="status-pill">{{ currentJob.status }}</span>
+      </section>
+
+      <app-analysis-steps-panel
+        [steps]="currentJob.steps"
+        [evidenceSections]="currentJob.contextSections"
+        [showAiWorkflow]="false"
+      />
+
+      <section class="change-verification-result-grid">
+        <article class="change-verification-panel panel-card">
+          <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
+            <div>
+              <p class="section-eyebrow">Compliance</p>
+              <h3>Story and instructions</h3>
+            </div>
+            <span class="material-symbols-outlined" aria-hidden="true">rule</span>
+          </div>
+          <p>Status: {{ currentJob.result?.compliance?.status || 'n/a' }}</p>
+          @if (complianceFindings().length) {
+            <ul>
+              @for (finding of complianceFindings(); track finding.id) {
+                <li>
+                  <strong>{{ finding.severity }}</strong>
+                  <span>{{ finding.summary }}</span>
+                  <small>{{ finding.suggestedAction }}</small>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="change-verification-empty">No findings yet.</p>
+          }
+        </article>
+
+        <article class="change-verification-panel panel-card">
+          <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
+            <div>
+              <p class="section-eyebrow">Smoke Pack</p>
+              <h3>Postman collection</h3>
+            </div>
+            <span class="material-symbols-outlined" aria-hidden="true">api</span>
+          </div>
+          <p>Status: {{ smokePack()?.status || 'n/a' }}</p>
+          <p>{{ smokePack()?.postmanCollectionName || 'Postman collection not generated yet.' }}</p>
+          @if (smokePack()?.tests?.length) {
+            <ul>
+              @for (test of smokePack()?.tests || []; track test.id) {
+                <li>
+                  <strong>{{ test.method }} {{ test.path }}</strong>
+                  <span>{{ test.name }}</span>
+                  <small>{{ test.reviewStatus || 'NEEDS_REVIEW' }} · {{ test.riskCovered || test.purpose }}</small>
+                </li>
+              }
+            </ul>
+            <div class="change-verification-actions">
+              <button
+                type="button"
+                class="secondary-button"
+                (click)="saveSmokePackDraft()"
+                [disabled]="isSavingSmokePack()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                {{ isSavingSmokePack() ? 'Saving...' : 'Save draft' }}
+              </button>
+              <button type="button" class="secondary-button" (click)="downloadPostmanCollection()">
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                Postman
+              </button>
+            </div>
+            <label class="change-verification-draft">
+              <span class="field-label">Editable smoke pack JSON</span>
+              <textarea
+                class="text-input change-verification-code-textarea"
+                rows="12"
+                [value]="smokePackDraft()"
+                (input)="updateSmokePackDraft($any($event.target).value)"
+              ></textarea>
+            </label>
+            @if (smokePackDraftError()) {
+              <p class="change-verification-error">{{ smokePackDraftError() }}</p>
+            }
+          } @else {
+            <p class="change-verification-empty">No smoke tests generated yet.</p>
+          }
+        </article>
+
+        <article class="change-verification-panel panel-card">
+          <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
+            <div>
+              <p class="section-eyebrow">Execution</p>
+              <h3>Accepted tests and cleanup</h3>
+            </div>
+            <span class="material-symbols-outlined" aria-hidden="true">play_circle</span>
+          </div>
+          <p>Status: {{ execution()?.status || 'n/a' }}</p>
+
+          <div class="change-verification-execution-grid">
+            <label class="field-control change-verification-field">
+              <span class="field-label">Base URL</span>
+              <input
+                class="text-input"
+                type="text"
+                [value]="smokeExecutionBaseUrl()"
+                placeholder="https://test.example.com"
+                autocomplete="off"
+                spellcheck="false"
+                (input)="updateSmokeExecutionBaseUrl($any($event.target).value)"
+              />
+            </label>
+            <label class="field-control change-verification-field">
+              <span class="field-label">DB environment</span>
+              <input
+                class="text-input"
+                type="text"
+                [value]="smokeExecutionEnvironment()"
+                placeholder="test, preprod, release"
+                autocomplete="off"
+                spellcheck="false"
+                (input)="updateSmokeExecutionEnvironment($any($event.target).value)"
+              />
+            </label>
+            <label class="field-control change-verification-field">
+              <span class="field-label">DB application scope</span>
+              <input
+                class="text-input"
+                type="text"
+                [value]="smokeExecutionDatabaseApplication()"
+                placeholder="crm, customer-api"
+                autocomplete="off"
+                spellcheck="false"
+                (input)="updateSmokeExecutionDatabaseApplication($any($event.target).value)"
+              />
+            </label>
+          </div>
+
+          <label class="change-verification-cleanup-toggle">
+            <input
+              type="checkbox"
+              [checked]="executeCleanup()"
+              (change)="toggleCleanupExecution($any($event.target).checked)"
+            />
+            <span>Allow cleanup endpoint if policy allows it</span>
+          </label>
+
+          <div class="change-verification-actions">
+            <button
+              type="button"
+              class="primary-button"
+              (click)="executeAcceptedSmokePack()"
+              [disabled]="isExecutingSmokePack()"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              {{ isExecutingSmokePack() ? 'Running...' : 'Run accepted tests' }}
+            </button>
+          </div>
+          @if (smokeExecutionError()) {
+            <p class="change-verification-error">{{ smokeExecutionError() }}</p>
+          }
+          @if (execution()?.testResults?.length) {
+            <ul>
+              @for (testResult of execution()?.testResults || []; track testResult.testId) {
+                <li>
+                  <strong>{{ testResult.status }}</strong>
+                  <span>{{ testResult.name }}</span>
+                  @if (testResult.http) {
+                    <small>
+                      {{ testResult.http.method }} {{ testResult.http.statusCode || 'n/a' }}
+                      · {{ testResult.http.durationMillis }}ms
+                    </small>
+                  }
+                  @for (assertion of testResult.responseAssertions; track assertion.type + assertion.target) {
+                    <small>{{ assertion.status }} · {{ assertion.type }} · {{ assertion.message }}</small>
+                  }
+                  @for (assertion of testResult.dbAssertions; track assertion.type + assertion.target) {
+                    <small>{{ assertion.status }} · {{ assertion.message }}</small>
+                  }
+                  @if (testResult.cleanup) {
+                    <small>{{ testResult.cleanup.status }} · {{ testResult.cleanup.message }}</small>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="change-verification-empty">No execution results yet.</p>
+          }
+          @if (execution()?.manualCleanupSql) {
+            <label class="change-verification-draft">
+              <span class="field-label">Manual cleanup SQL</span>
+              <textarea
+                class="text-input change-verification-code-textarea"
+                rows="5"
+                readonly
+                [value]="execution()?.manualCleanupSql"
+              ></textarea>
+            </label>
+          }
+        </article>
+      </section>
+    } @else {
+      <section class="change-verification-empty-state analysis-card analysis-empty-state">
+        <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
+        <h2>Ready for the first Change Verification run</h2>
+        <p>
+          Waiting for Jira source and verification scope.
+        </p>
+      </section>
+    }
+  </main>
+</div>

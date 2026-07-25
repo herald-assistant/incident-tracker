@@ -147,6 +147,60 @@
               }
             }
 
+            @case ('repository-instructions') {
+              <div class="form-grid form-grid--stacked">
+                <label class="form-field">
+                  <span class="field-label">Changed files</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="6"
+                    placeholder="np. src/main/java/com/example/customer/CustomerController.java"
+                    spellcheck="false"
+                    [formControl]="gitLabInstructionForm.controls.changedFilePaths"
+                  ></textarea>
+                  <span class="field-hint">
+                    Tool użyje wspólnego scope jako `repositoryKey = group/projectName` oraz `branch/ref`.
+                    Changed files są opcjonalne, ale pozwalają znaleźć lokalne AGENTS.md.
+                  </span>
+                </label>
+              </div>
+            }
+
+            @case ('merge-request-search') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Jira issue key</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="np. CRM-123"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabMergeRequestForm.controls.issueKey"
+                  />
+                  <span class="field-hint">Tool użyje `group` ze wspólnego scope, a gdy go nie podasz, backend użyje konfiguracji GitLaba.</span>
+                </label>
+
+                <label class="form-field">
+                  <span class="field-label">Max results</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    [formControl]="gitLabMergeRequestForm.controls.maxResults"
+                  />
+                </label>
+              </div>
+
+              @if (
+                controlInvalid(gitLabMergeRequestForm.controls.issueKey) ||
+                controlInvalid(gitLabMergeRequestForm.controls.maxResults)
+              ) {
+                <p class="form-error">Pole `issueKey` jest wymagane, a limit musi mieścić się w zakresie 1-100.</p>
+              }
+            }
+
             @case ('endpoint-inventory') {
               <div class="form-grid">
                 <label class="form-field">
@@ -740,6 +794,211 @@
                   </div>
                 } @else {
                   <p class="empty-state">Inventory nie zwróciło endpointów dla podanego scope.</p>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'repository-instructions' && gitLabInstructionResult(); as instructionResult) {
+              <section class="context-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">Repository Instructions</p>
+                    <h3>{{ instructionResult.sources.length }} instruction sources</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    @if (instructionResult.limitations.length > 0) {
+                      <span class="panel-chip panel-chip--warning">{{ instructionResult.limitations.length }} limitations</span>
+                    }
+                  </div>
+                </div>
+
+                @if (instructionResult.sources.length > 0) {
+                  <div class="endpoint-list">
+                    @for (source of instructionResult.sources; track source.repositoryKey + ':' + source.ref + ':' + source.path) {
+                      <details class="endpoint-card">
+                        <summary class="endpoint-card__summary">
+                          <div class="endpoint-card__main">
+                            <span class="endpoint-card__method">{{ source.kind || 'INSTRUCTION' }}</span>
+                            <div class="endpoint-card__copy">
+                              <h4>{{ source.path || 'unknown instruction path' }}</h4>
+                              <p>
+                                {{ source.repositoryKey || 'unknown repository' }} · {{ source.ref || 'unknown ref' }}
+                              </p>
+                            </div>
+                            @if (source.truncated) {
+                              <span class="panel-chip panel-chip--warning">truncated</span>
+                            }
+                            @if (source.referencedBy) {
+                              <span class="panel-chip">referenced</span>
+                            }
+                            <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
+                              expand_more
+                            </span>
+                          </div>
+                        </summary>
+
+                        <div class="endpoint-card__details">
+                          <div class="endpoint-card__meta">
+                            @if (source.referencedBy) {
+                              <span>referenced by {{ source.referencedBy }}</span>
+                            }
+                            <span>{{ source.applicableChangedFiles.length }} applicable files</span>
+                          </div>
+
+                          @if (source.applicableChangedFiles.length > 0) {
+                            <div class="context-method-list">
+                              @for (filePath of source.applicableChangedFiles; track filePath) {
+                                <div class="context-method-row">
+                                  <span class="context-method-row__name">{{ filePath }}</span>
+                                </div>
+                              }
+                            </div>
+                          }
+
+                          <pre class="source-output">{{ source.content || '' }}</pre>
+                        </div>
+                      </details>
+                    }
+                  </div>
+                } @else {
+                  <p class="empty-state">Nie znaleziono instruction sources dla podanego scope.</p>
+                }
+
+                @if (instructionResult.limitations.length > 0) {
+                  <ul class="context-list">
+                    @for (limitation of instructionResult.limitations; track limitation) {
+                      <li>{{ limitation }}</li>
+                    }
+                  </ul>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'merge-request-search' && gitLabMergeRequestResult(); as mrResult) {
+              <section class="context-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">Merge Request Search</p>
+                    <h3>{{ mrResult.mergeRequests.length }} merge requests</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    @if (mrResult.issueKey) {
+                      <span class="panel-chip">{{ mrResult.issueKey }}</span>
+                    }
+                    @if (mrResult.group) {
+                      <span class="panel-chip">{{ mrResult.group }}</span>
+                    }
+                    @if (mrResult.limitations.length > 0) {
+                      <span class="panel-chip panel-chip--warning">{{ mrResult.limitations.length }} limitations</span>
+                    }
+                  </div>
+                </div>
+
+                @if (mrResult.mergeRequests.length > 0) {
+                  <div class="endpoint-list">
+                    @for (mergeRequest of mrResult.mergeRequests; track mergeRequest.id || mergeRequest.webUrl || $index) {
+                      <details class="endpoint-card">
+                        <summary class="endpoint-card__summary">
+                          <div class="endpoint-card__main">
+                            <span class="endpoint-card__method">MR !{{ mergeRequest.iid || '?' }}</span>
+                            <div class="endpoint-card__copy">
+                              <h4>{{ mergeRequest.title || 'Untitled merge request' }}</h4>
+                              <p>
+                                {{ mergeRequest.projectPath || 'unknown project' }} ·
+                                {{ mergeRequest.sourceBranch || 'source?' }} -> {{ mergeRequest.targetBranch || 'target?' }}
+                              </p>
+                            </div>
+                            @if (mergeRequest.state) {
+                              <span class="panel-chip">{{ mergeRequest.state }}</span>
+                            }
+                            <span class="panel-chip">{{ mergeRequest.commits.length }} commits</span>
+                            <span class="panel-chip">{{ mergeRequest.changedFiles.length }} files</span>
+                            <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
+                              expand_more
+                            </span>
+                          </div>
+                        </summary>
+
+                        <div class="endpoint-card__details">
+                          <div class="endpoint-card__meta">
+                            @if (mergeRequest.authorName) {
+                              <span>{{ mergeRequest.authorName }}</span>
+                            }
+                            @if (mergeRequest.createdAt) {
+                              <span>created {{ mergeRequest.createdAt }}</span>
+                            }
+                            @if (mergeRequest.mergedAt) {
+                              <span>merged {{ mergeRequest.mergedAt }}</span>
+                            }
+                            @if (mergeRequest.changesCount) {
+                              <span>{{ mergeRequest.changesCount }} changes</span>
+                            }
+                            @if (mergeRequest.webUrl) {
+                              <span>{{ mergeRequest.webUrl }}</span>
+                            }
+                          </div>
+
+                          @if (mergeRequest.changedFiles.length > 0) {
+                            <div class="context-method-list">
+                              @for (file of mergeRequest.changedFiles; track file.newPath || file.oldPath || $index) {
+                                <div class="context-method-row">
+                                  <span class="context-method-row__name">
+                                    {{ file.newPath || file.oldPath || 'unknown file' }}
+                                  </span>
+                                  @if (file.newFile) {
+                                    <span class="context-method-row__range">new</span>
+                                  } @else if (file.renamedFile) {
+                                    <span class="context-method-row__range">renamed</span>
+                                  } @else if (file.deletedFile) {
+                                    <span class="context-method-row__range">deleted</span>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          }
+
+                          @if (mergeRequest.commits.length > 0) {
+                            <details class="context-subsection context-subsection--collapsible">
+                              <summary>
+                                <span>Commits</span>
+                                <span class="panel-chip">{{ mergeRequest.commits.length }}</span>
+                              </summary>
+                              <div class="context-method-list">
+                                @for (commit of mergeRequest.commits; track commit.id || commit.shortId || $index) {
+                                  <div class="context-method-row">
+                                    <span class="context-method-row__name">
+                                      {{ commit.title || commit.shortId || commit.id }}
+                                    </span>
+                                    @if (commit.shortId) {
+                                      <span class="context-method-row__range">{{ commit.shortId }}</span>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            </details>
+                          }
+
+                          @if (mergeRequest.limitations.length > 0) {
+                            <ul class="context-list">
+                              @for (limitation of mergeRequest.limitations; track limitation) {
+                                <li>{{ limitation }}</li>
+                              }
+                            </ul>
+                          }
+                        </div>
+                      </details>
+                    }
+                  </div>
+                } @else {
+                  <p class="empty-state">GitLab nie zwrócił MR-ek dla podanego issue key.</p>
+                }
+
+                @if (mrResult.limitations.length > 0) {
+                  <ul class="context-list">
+                    @for (limitation of mrResult.limitations; track limitation) {
+                      <li>{{ limitation }}</li>
+                    }
+                  </ul>
                 }
               </section>
             }

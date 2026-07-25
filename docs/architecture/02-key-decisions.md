@@ -16,7 +16,7 @@ Konsekwencje:
 - `features.incidentanalysis` nie jest generycznym core dla kolejnych analiz,
 - `aiplatform`, `agenttools`, `integrations`, `shared`, `common` i
   shared/operator `api.*` musza pozostac reusable poza incydentami,
-- kolejne feature'y, np. flow explorer, functional logic explorer albo
+- kolejne feature'y, np. flow explorer, change verification albo
   natural-language data diagnostics, maja dostarczac wlasny request/result,
   prompt, skille, tool policy, hidden context i UI/API,
 - publiczne URL-e moga historycznie zawierac `analysis`, ale pakiety Javy
@@ -685,10 +685,10 @@ powinna tez zakladac, ze kazda sesja ma `correlationId`, `environment`,
 `gitLabBranch` albo `gitLabGroup`.
 
 To jest warunek dla kolejnych feature'ow. Flow explorer moze potrzebowac
-requestu opisowego zamiast `correlationId`, functional logic explorer moze
-budowac wynik o regulach i wariantach use case'u, a natural-language data
-diagnostics moze miec kontrakt nad readonly DB queries. Te roznice musza
-zostac w `features.<feature>`, nie w `aiplatform.copilot`.
+requestu opisowego zamiast `correlationId`, change verification moze budowac
+wynik zgodnosci zmiany i smoke pack, a natural-language data diagnostics moze
+miec kontrakt nad readonly DB queries. Te roznice musza zostac w
+`features.<feature>`, nie w `aiplatform.copilot`.
 
 Stan obecny jest przejsciowy: `features.incidentanalysis.ai.copilot` zawiera
 incident-specific prompt, coverage, policy i GitLab/DB capture evidence, a

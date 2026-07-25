@@ -1,0 +1,226 @@
+<div class="page-shell jira-source-console">
+  <main class="jira-workspace">
+    <form class="jira-layout" novalidate (submit)="submit($event)">
+      <aside class="analysis-card jira-tool-panel">
+        <section class="jira-scope-section" aria-labelledby="jiraScopeTitle">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Shared scope</p>
+              <h2 id="jiraScopeTitle">Zakres wywołania</h2>
+            </div>
+          </div>
+
+          <label class="form-field" for="jiraIssueRef">
+            <span class="field-label">Issue key or link</span>
+            <input
+              id="jiraIssueRef"
+              class="text-input"
+              type="text"
+              placeholder="CRM-123 albo https://jira.example.com/browse/CRM-123"
+              autocomplete="off"
+              spellcheck="false"
+              [formControl]="scopeForm.controls.issueRef"
+            />
+          </label>
+
+          @if (controlInvalid(scopeForm.controls.issueRef)) {
+            <p class="form-error">Pole `issueRef` jest wymagane.</p>
+          }
+        </section>
+
+        <section class="jira-tool-section" aria-labelledby="jiraToolsTitle">
+          <div class="section-heading jira-tool-section__heading">
+            <div>
+              <p class="section-eyebrow">Tools</p>
+              <h2 id="jiraToolsTitle">Element do testu</h2>
+            </div>
+            <span class="panel-chip">1</span>
+          </div>
+
+          <div class="jira-tool-list" aria-label="Jira tools">
+            <button class="jira-tool-button jira-tool-button--active" type="button" aria-pressed="true">
+              <span class="jira-tool-button__content">
+                <span>Issue Material</span>
+                <small>issue/material</small>
+              </span>
+              <span
+                class="jira-tool-button__state"
+                [attr.data-status]="state().status"
+                aria-hidden="true"
+              ></span>
+            </button>
+          </div>
+        </section>
+      </aside>
+
+      <section class="jira-main">
+        <article class="analysis-card jira-runner">
+          <div class="section-heading jira-runner__header">
+            <div>
+              <p class="section-eyebrow">Issue source</p>
+              <h2>Issue Material</h2>
+              <p class="field-hint">
+                Pobiera opis, status, typ, linki, komentarze i skonfigurowane kryteria akceptacji z Jira.
+              </p>
+            </div>
+            <span class="panel-chip route-chip">POST /api/jira/issue/material</span>
+          </div>
+
+          <div class="payload-placeholder">
+            <span class="material-symbols-outlined" aria-hidden="true">assignment</span>
+            <p>Ten endpoint używa tylko issue key/link z lewego panelu i skonfigurowanego PAT Jira.</p>
+          </div>
+
+          <div class="jira-runner__actions">
+            <button class="secondary-button" type="button" (click)="resetScope()">
+              <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+              <span>Reset scope</span>
+            </button>
+            <button class="primary-button" type="submit" [disabled]="state().status === 'loading'">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              <span class="button-label">Run request</span>
+            </button>
+          </div>
+        </article>
+
+        @if (hasResult()) {
+          <article class="analysis-card jira-result">
+            <div class="jira-result__header">
+              <div>
+                <p class="section-eyebrow">Result</p>
+                <h2>Ostatni wynik</h2>
+              </div>
+            </div>
+
+            <div class="tool-status" [attr.data-status]="state().status">
+              <div>
+                <p class="tool-status__label">{{ state().endpoint || 'Manual validation' }}</p>
+                <p class="tool-status__message">{{ state().message }}</p>
+              </div>
+              <div class="tool-status__badges">
+                @if (state().statusCode !== null) {
+                  <span class="tool-status__code">HTTP {{ state().statusCode }}</span>
+                }
+                @if (state().durationMs !== null) {
+                  <span class="tool-status__code">{{ durationLabel(state().durationMs) }}</span>
+                }
+                <span [class]="statusPillClass(state().status)">
+                  {{ statusLabel(state().status) }}
+                </span>
+              </div>
+            </div>
+
+            @if (result(); as issue) {
+              <section class="issue-summary">
+                <div>
+                  <p class="tool-status__label">Issue</p>
+                  <h3>{{ issue.issueKey || 'unknown issue' }}</h3>
+                  <p>{{ issue.summary || 'Brak summary w odpowiedzi Jira.' }}</p>
+                </div>
+                <div class="issue-summary__badges">
+                  @if (issue.issueType) {
+                    <span class="panel-chip">{{ issue.issueType }}</span>
+                  }
+                  @if (issue.status) {
+                    <span class="panel-chip">{{ issue.status }}</span>
+                  }
+                  <span class="panel-chip">{{ issue.acceptanceCriteria.length }} AC</span>
+                  <span class="panel-chip">{{ issue.links.length }} links</span>
+                  <span class="panel-chip">{{ issue.comments.length }} comments</span>
+                </div>
+              </section>
+            }
+
+            @if (state().requestJson) {
+              <details class="json-response-panel jira-json-panel jira-json-panel--request">
+                <summary class="json-response-panel__header">
+                  <span class="json-response-panel__title">
+                    <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                      chevron_right
+                    </span>
+                    <span class="field-label">Request preview</span>
+                  </span>
+                  <div class="json-response-panel__actions">
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Kopiuj request preview do schowka"
+                      title="Kopiuj JSON"
+                      (click)="$event.stopPropagation(); copyJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">
+                        {{ copiedJsonPayloadKey() === 'request' ? 'task_alt' : 'content_copy' }}
+                      </span>
+                    </button>
+                    <button
+                      class="json-icon-button"
+                      type="button"
+                      [disabled]="!state().requestJson"
+                      aria-label="Pobierz request preview do pliku JSON"
+                      title="Pobierz JSON"
+                      (click)="$event.stopPropagation(); downloadJsonPayload('request', state().requestJson)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                    </button>
+                  </div>
+                </summary>
+                <textarea
+                  id="jiraRequestPreview"
+                  class="json-output"
+                  aria-label="Request preview"
+                  readonly
+                  spellcheck="false"
+                  [value]="state().requestJson"
+                ></textarea>
+              </details>
+            }
+
+            <details class="json-response-panel jira-json-panel" open>
+              <summary class="json-response-panel__header">
+                <span class="json-response-panel__title">
+                  <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">
+                    chevron_right
+                  </span>
+                  <span class="field-label">JSON response</span>
+                </span>
+                <div class="json-response-panel__actions">
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Kopiuj JSON response do schowka"
+                    title="Kopiuj JSON"
+                    (click)="$event.stopPropagation(); copyJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ copiedJsonPayloadKey() === 'response' ? 'task_alt' : 'content_copy' }}
+                    </span>
+                  </button>
+                  <button
+                    class="json-icon-button"
+                    type="button"
+                    [disabled]="!state().responseJson"
+                    aria-label="Pobierz JSON response do pliku"
+                    title="Pobierz JSON"
+                    (click)="$event.stopPropagation(); downloadJsonPayload('response', state().responseJson)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                  </button>
+                </div>
+              </summary>
+              <textarea
+                id="jiraJsonResponse"
+                class="json-output"
+                aria-label="JSON response"
+                readonly
+                spellcheck="false"
+                [value]="state().responseJson"
+              ></textarea>
+            </details>
+          </article>
+        }
+      </section>
+    </form>
+  </main>
+</div>

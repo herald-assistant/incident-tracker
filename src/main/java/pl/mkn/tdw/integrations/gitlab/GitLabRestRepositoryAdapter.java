@@ -9,6 +9,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -213,6 +215,40 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     @Override
+    public InstructionRepositoryFile readFile(InstructionRepositoryFileRequest request) {
+        var target = resolveInstructionRepositoryTarget(request.repositoryKey());
+        if (!StringUtils.hasText(target.group()) || !StringUtils.hasText(target.projectName())) {
+            return InstructionRepositoryFile.failed(
+                    request.repositoryKey(),
+                    request.ref(),
+                    request.path(),
+                    "GitLab instruction repository target could not be resolved for " + request.repositoryKey() + "."
+            );
+        }
+
+        try {
+            var file = readFile(
+                    target.group(),
+                    target.projectName(),
+                    request.ref(),
+                    request.path(),
+                    request.maxCharacters()
+            );
+            return new InstructionRepositoryFile(
+                    request.repositoryKey(),
+                    request.ref(),
+                    request.path(),
+                    true,
+                    file.content(),
+                    file.truncated(),
+                    null
+            );
+        } catch (RuntimeException exception) {
+            return InstructionRepositoryFile.missing(request.repositoryKey(), request.ref(), request.path());
+        }
+    }
+
+    @Override
     public GitLabRepositoryFileMetadata readFileMetadata(
             String group,
             String projectName,
@@ -289,6 +325,42 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         );
     }
 
+    @Override
+    public GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
+            String group,
+            String issueKey,
+            int maxResults
+    ) {
+        var resolvedGroup = StringUtils.hasText(group) ? group.trim() : properties.getGroup();
+        if (!StringUtils.hasText(resolvedGroup) || !StringUtils.hasText(issueKey)) {
+            return new GitLabMergeRequestSearchResult(
+                    issueKey,
+                    resolvedGroup,
+                    List.of(),
+                    List.of("GitLab group or Jira issue key is missing.")
+            );
+        }
+
+        var safeMaxResults = maxResults > 0 ? maxResults : properties.getMaxMergeRequests();
+        var limitations = new ArrayList<String>();
+        var searchResults = searchGroupMergeRequests(resolvedGroup, issueKey.trim(), safeMaxResults);
+        if (searchResults.size() >= safeMaxResults) {
+            limitations.add("GitLab MR search reached max result limit: " + safeMaxResults + ".");
+        }
+
+        var mergeRequests = searchResults.stream()
+                .limit(safeMaxResults)
+                .map(result -> mergeRequestFromSearchResult(resolvedGroup, result))
+                .toList();
+
+        return new GitLabMergeRequestSearchResult(
+                issueKey.trim(),
+                resolvedGroup,
+                mergeRequests,
+                limitations
+        );
+    }
+
     private List<GitLabGroupProjectResult> searchGroupProjects(String group, String searchToken) {
         var results = new ArrayList<GitLabGroupProjectResult>();
         var page = "1";
@@ -320,6 +392,142 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
 
     private List<GitLabBlobSearchResult> searchProjectBlobs(String group, String projectName, String branch, String searchTerm) {
         return searchProjectBlobs(group, projectName, branch, searchTerm, properties.getSearchResultsPerTerm());
+    }
+
+    private List<GitLabMergeRequestSearchResponse> searchGroupMergeRequests(
+            String group,
+            String issueKey,
+            int maxResults
+    ) {
+        var results = new ArrayList<GitLabMergeRequestSearchResponse>();
+        var page = "1";
+        var perPage = Math.max(1, Math.min(100, maxResults));
+
+        while (StringUtils.hasText(page) && results.size() < maxResults) {
+            try {
+                var entity = restClient().get()
+                        .uri(groupMergeRequestsUri(group, issueKey, page, perPage))
+                        .retrieve()
+                        .toEntity(GitLabMergeRequestSearchResponse[].class);
+
+                var body = entity.getBody();
+                if (body != null) {
+                    results.addAll(List.of(body));
+                }
+
+                page = entity.getHeaders().getFirst("X-Next-Page");
+            } catch (RestClientResponseException exception) {
+                if (exception.getStatusCode().value() == 404) {
+                    return List.of();
+                }
+
+                throw new IllegalStateException("GitLab merge request search failed for " + group, exception);
+            }
+        }
+
+        return List.copyOf(results);
+    }
+
+    private GitLabMergeRequest mergeRequestFromSearchResult(
+            String group,
+            GitLabMergeRequestSearchResponse result
+    ) {
+        var limitations = new ArrayList<String>();
+        var projectPath = projectPath(group, result);
+        var commits = fetchMergeRequestCommits(result.projectId(), result.iid(), limitations);
+        var changedFiles = fetchMergeRequestChangedFiles(result.projectId(), result.iid(), limitations);
+
+        return new GitLabMergeRequest(
+                result.id(),
+                result.iid(),
+                result.projectId(),
+                projectPath,
+                result.title(),
+                result.state(),
+                result.webUrl(),
+                result.sourceBranch(),
+                result.targetBranch(),
+                result.author() != null ? result.author().name() : "",
+                result.createdAt(),
+                result.updatedAt(),
+                result.mergedAt(),
+                result.changesCount(),
+                commits,
+                changedFiles,
+                limitations
+        );
+    }
+
+    private List<GitLabMergeRequestCommit> fetchMergeRequestCommits(
+            Long projectId,
+            Long mergeRequestIid,
+            List<String> limitations
+    ) {
+        if (projectId == null || mergeRequestIid == null) {
+            limitations.add("MR commits could not be fetched because project id or MR iid is missing.");
+            return List.of();
+        }
+
+        try {
+            var commits = restClient().get()
+                    .uri(mergeRequestCommitsUri(projectId, mergeRequestIid))
+                    .retrieve()
+                    .body(GitLabMergeRequestCommitResponse[].class);
+            if (commits == null) {
+                return List.of();
+            }
+            if (commits.length >= properties.getMaxMergeRequestCommits()) {
+                limitations.add("MR commits reached max result limit: " + properties.getMaxMergeRequestCommits() + ".");
+            }
+            return Arrays.stream(commits)
+                    .map(commit -> new GitLabMergeRequestCommit(
+                            commit.id(),
+                            commit.shortId(),
+                            commit.title(),
+                            commit.authorName(),
+                            commit.createdAt()
+                    ))
+                    .toList();
+        } catch (RestClientResponseException exception) {
+            limitations.add("MR commits could not be fetched: HTTP " + exception.getStatusCode().value() + ".");
+            return List.of();
+        }
+    }
+
+    private List<GitLabMergeRequestChangedFile> fetchMergeRequestChangedFiles(
+            Long projectId,
+            Long mergeRequestIid,
+            List<String> limitations
+    ) {
+        if (projectId == null || mergeRequestIid == null) {
+            limitations.add("MR changed files could not be fetched because project id or MR iid is missing.");
+            return List.of();
+        }
+
+        try {
+            var diffs = restClient().get()
+                    .uri(mergeRequestDiffsUri(projectId, mergeRequestIid))
+                    .retrieve()
+                    .body(GitLabMergeRequestDiffResponse[].class);
+            if (diffs == null) {
+                return List.of();
+            }
+            if (diffs.length >= properties.getMaxMergeRequestChangedFiles()) {
+                limitations.add("MR changed files reached max result limit: " + properties.getMaxMergeRequestChangedFiles() + ".");
+            }
+            return Arrays.stream(diffs)
+                    .map(diff -> new GitLabMergeRequestChangedFile(
+                            diff.oldPath(),
+                            diff.newPath(),
+                            diff.newFile(),
+                            diff.renamedFile(),
+                            diff.deletedFile()
+                    ))
+                    .toList();
+        } catch (RestClientResponseException exception) {
+            limitations.add("MR changed files could not be fetched: HTTP " + exception.getStatusCode().value() + ".");
+            return List.of();
+        }
     }
 
     private List<GitLabBlobSearchResult> searchProjectBlobs(
@@ -478,6 +686,31 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
 
     private URI projectSearchUri(String group, String projectName, String branch, String searchTerm) {
         return projectSearchUri(group, projectName, branch, searchTerm, properties.getSearchResultsPerTerm());
+    }
+
+    private URI groupMergeRequestsUri(String group, String issueKey, String page, int perPage) {
+        return URI.create(apiBaseUrl()
+                + "/groups/" + encodePathSegment(group)
+                + "/merge_requests?scope=all"
+                + "&state=all"
+                + "&search=" + encodeQueryParam(issueKey)
+                + "&in=title,source_branch"
+                + "&per_page=" + Math.max(1, perPage)
+                + "&page=" + encodeQueryParam(page));
+    }
+
+    private URI mergeRequestCommitsUri(Long projectId, Long mergeRequestIid) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + projectId
+                + "/merge_requests/" + mergeRequestIid
+                + "/commits?per_page=" + Math.max(1, properties.getMaxMergeRequestCommits()));
+    }
+
+    private URI mergeRequestDiffsUri(Long projectId, Long mergeRequestIid) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + projectId
+                + "/merge_requests/" + mergeRequestIid
+                + "/diffs?per_page=" + Math.max(1, properties.getMaxMergeRequestChangedFiles()));
     }
 
     private URI projectSearchUri(
@@ -652,6 +885,38 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         return value.substring(start, end);
     }
 
+    private InstructionRepositoryTarget resolveInstructionRepositoryTarget(String repositoryKey) {
+        if (!StringUtils.hasText(repositoryKey)) {
+            return new InstructionRepositoryTarget(properties.getGroup(), null);
+        }
+
+        var configuredGroup = properties.getGroup();
+        var normalizedRepositoryKey = trimSlashes(repositoryKey.trim());
+        if (StringUtils.hasText(configuredGroup)) {
+            var normalizedGroup = trimSlashes(configuredGroup.trim());
+            var prefix = normalizedGroup + "/";
+            if (normalizedRepositoryKey.equals(normalizedGroup)) {
+                return new InstructionRepositoryTarget(normalizedGroup, "");
+            }
+            if (normalizedRepositoryKey.startsWith(prefix)) {
+                return new InstructionRepositoryTarget(
+                        normalizedGroup,
+                        normalizedRepositoryKey.substring(prefix.length())
+                );
+            }
+        }
+
+        var slash = normalizedRepositoryKey.lastIndexOf('/');
+        if (slash <= 0) {
+            return new InstructionRepositoryTarget(configuredGroup, normalizedRepositoryKey);
+        }
+
+        return new InstructionRepositoryTarget(
+                normalizedRepositoryKey.substring(0, slash),
+                normalizedRepositoryKey.substring(slash + 1)
+        );
+    }
+
     private int projectMatchScore(String projectPath, String projectName, String searchToken) {
         var normalizedProjectPath = normalizeProjectComparable(projectPath);
         var normalizedProjectName = normalizeProjectComparable(projectName);
@@ -719,6 +984,28 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                         .replaceAll("[^a-z0-9/_]+", "_");
     }
 
+    private String projectPath(String group, GitLabMergeRequestSearchResponse result) {
+        if (result.references() != null && StringUtils.hasText(result.references().full())) {
+            var full = result.references().full();
+            var separator = full.indexOf('!');
+            return separator > 0 ? full.substring(0, separator) : full;
+        }
+
+        if (StringUtils.hasText(result.webUrl())) {
+            var marker = "/-/merge_requests/";
+            var markerIndex = result.webUrl().indexOf(marker);
+            if (markerIndex > 0) {
+                var beforeMarker = result.webUrl().substring(0, markerIndex);
+                var apiRoot = properties.getBaseUrl();
+                if (StringUtils.hasText(apiRoot) && beforeMarker.startsWith(apiRoot)) {
+                    return trimSlashes(beforeMarker.substring(apiRoot.length()));
+                }
+            }
+        }
+
+        return group;
+    }
+
     private String encodePathSegment(String value) {
         return UriUtils.encodePathSegment(value, StandardCharsets.UTF_8);
     }
@@ -729,6 +1016,68 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
 
     private record GitLabBlobSearchResult(
             String path
+    ) {
+    }
+
+    private record GitLabMergeRequestSearchResponse(
+            Long id,
+            Long iid,
+            @JsonProperty("project_id")
+            Long projectId,
+            String title,
+            String state,
+            @JsonProperty("web_url")
+            String webUrl,
+            @JsonProperty("source_branch")
+            String sourceBranch,
+            @JsonProperty("target_branch")
+            String targetBranch,
+            GitLabUserResponse author,
+            @JsonProperty("created_at")
+            String createdAt,
+            @JsonProperty("updated_at")
+            String updatedAt,
+            @JsonProperty("merged_at")
+            String mergedAt,
+            @JsonProperty("changes_count")
+            String changesCount,
+            GitLabMergeRequestReferencesResponse references
+    ) {
+    }
+
+    private record GitLabMergeRequestReferencesResponse(
+            String full
+    ) {
+    }
+
+    private record GitLabUserResponse(
+            String name
+    ) {
+    }
+
+    private record GitLabMergeRequestCommitResponse(
+            String id,
+            @JsonProperty("short_id")
+            String shortId,
+            String title,
+            @JsonProperty("author_name")
+            String authorName,
+            @JsonProperty("created_at")
+            String createdAt
+    ) {
+    }
+
+    private record GitLabMergeRequestDiffResponse(
+            @JsonProperty("old_path")
+            String oldPath,
+            @JsonProperty("new_path")
+            String newPath,
+            @JsonProperty("new_file")
+            boolean newFile,
+            @JsonProperty("renamed_file")
+            boolean renamedFile,
+            @JsonProperty("deleted_file")
+            boolean deletedFile
     ) {
     }
 
@@ -782,6 +1131,9 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
             @JsonProperty("committed_date")
             String committedDate
     ) {
+    }
+
+    private record InstructionRepositoryTarget(String group, String projectName) {
     }
 
     private static final class CandidateAccumulator {

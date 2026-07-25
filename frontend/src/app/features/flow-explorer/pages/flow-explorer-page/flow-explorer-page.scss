@@ -2,6 +2,10 @@
   display: block;
 }
 
+.flow-explorer-page {
+  width: min(1480px, calc(100% - 28px));
+}
+
 .flow-explorer-workspace,
 .flow-explorer-composer,
 .flow-explorer-main,

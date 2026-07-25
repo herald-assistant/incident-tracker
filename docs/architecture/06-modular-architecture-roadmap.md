@@ -11,8 +11,8 @@ To nie byl plan "big bang rename". Kolejnosc prac najpierw wygaszala zle
 zaleznosci i stabilizowala kontrakty, a dopiero pozniej przenosila wieksze
 pakiety do docelowych nazw. Obecny stan: produkcyjny i testowy root
 `analysis.*` sa zamkniete; kolejny dowod architektury to drugi feature albo
-spike reuse'u platformy/tools, najlepiej flow explorer, functional logic
-explorer albo natural-language data diagnostics.
+spike reuse'u platformy/tools, najlepiej flow explorer, change verification
+albo natural-language data diagnostics.
 
 ## Docelowy Model
 
@@ -373,7 +373,7 @@ warstw nie moze importowac feature'a incydentowego.
 
 ### `features.*`
 
-Kolejne feature'y, np. flow explorer, functional logic explorer,
+Kolejne feature'y, np. flow explorer, change verification,
 natural-language data diagnostics, analiza dokumentacji albo generowanie
 scenariuszy, powinny dostarczyc wlasne:
 
@@ -681,7 +681,7 @@ Cel: upewnic sie, ze target nie jest tylko przemalowana analiza incydentow.
 Dobry maly drugi feature:
 
 - flow explorer dla requestu albo use case'u,
-- functional logic explorer dla reguly biznesowej albo procesu,
+- change verification dla zgodnosci zmiany, smoke packa i gotowosci release'u,
 - natural-language data diagnostics nad readonly DB capability,
 - analiza dokumentacji,
 - generator scenariuszy testowych.

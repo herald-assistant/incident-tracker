@@ -171,6 +171,7 @@
               [class.is-loading]="isLoading()"
               [attr.aria-busy]="isLoading()"
             >
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
               <span class="button-label">Run analysis</span>
               <span class="button-spinner" aria-hidden="true"></span>
             </button>
@@ -183,7 +184,8 @@
               (change)="importAnalysis($event)"
             />
             <button class="secondary-button" type="button" (click)="triggerImport(importFileInput)">
-              Import
+              <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              <span>Import</span>
             </button>
 
             @if (exportState()) {
@@ -241,10 +243,13 @@
 
     <section #responsePanel class="incident-workspace__body" aria-live="polite">
       @if (!job() && !transportError()) {
-        <section class="analysis-placeholder-workspace">
+        <section class="analysis-placeholder-workspace analysis-empty-state">
           @if (placeholderMode() === 'loading') {
             <p class="placeholder-kicker">Trwa</p>
           }
+          <span class="material-symbols-outlined" aria-hidden="true">
+            {{ placeholderMode() === 'loading' ? 'hourglass_top' : 'troubleshoot' }}
+          </span>
           <h2>{{ placeholderTitle() }}</h2>
           <p>{{ placeholderDescription() }}</p>
         </section>

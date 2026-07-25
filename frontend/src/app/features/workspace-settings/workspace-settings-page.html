@@ -185,11 +185,140 @@
         }
       </section>
 
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsJiraTitle">
+        <div class="workspace-settings-panel__header">
+          <div>
+            <p class="section-eyebrow">Jira</p>
+            <h2 id="workspaceSettingsJiraTitle">Issue source capability</h2>
+          </div>
+        </div>
+
+        @if (settings(); as currentSettings) {
+          <div class="workspace-settings-grid">
+            <label class="workspace-settings-field" for="jiraBaseUrl">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.jira.baseUrl.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Base URL
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.jira.baseUrl, form.controls.jira.controls.baseUrl.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.jira.baseUrl) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.jira.baseUrl)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.jira.baseUrl, form.controls.jira.controls.baseUrl.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.jira.baseUrl, form.controls.jira.controls.baseUrl.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Jira Base URL"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.jira.controls.baseUrl, currentSettings.values.jira.baseUrl)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <input
+                id="jiraBaseUrl"
+                class="text-input"
+                type="url"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.jira.controls.baseUrl"
+              />
+            </label>
+
+            <label class="workspace-settings-field" for="jiraToken">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.jira.token.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Personal access token
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.jira.token, form.controls.jira.controls.token.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.jira.token) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.jira.token)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.jira.token, form.controls.jira.controls.token.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.jira.token, form.controls.jira.controls.token.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Jira personal access token"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.jira.controls.token, currentSettings.values.jira.token)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <span class="workspace-settings-secret-control">
+                <input
+                  id="jiraToken"
+                  class="text-input"
+                  [type]="showJiraToken() ? 'text' : 'password'"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="form.controls.jira.controls.token"
+                />
+                <button
+                  class="secondary-button workspace-settings-icon-button"
+                  type="button"
+                  [attr.aria-label]="showJiraToken() ? 'Hide Jira personal access token' : 'Show Jira personal access token'"
+                  [matTooltip]="showJiraToken() ? 'Hide Jira personal access token' : 'Show Jira personal access token'"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
+                  (click)="toggleJiraTokenVisibility()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ showJiraToken() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </span>
+            </label>
+          </div>
+        } @else {
+          <div class="workspace-settings-placeholder">
+            <span class="workspace-settings-spinner" aria-hidden="true"></span>
+            <span>Loading settings...</span>
+          </div>
+        }
+      </section>
+
       <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsGitLabTitle">
         <div class="workspace-settings-panel__header">
           <div>
             <p class="section-eyebrow">GitLab</p>
-            <h2 id="workspaceSettingsGitLabTitle">Source capability</h2>
+            <h2 id="workspaceSettingsGitLabTitle">Code source capability</h2>
           </div>
         </div>
 

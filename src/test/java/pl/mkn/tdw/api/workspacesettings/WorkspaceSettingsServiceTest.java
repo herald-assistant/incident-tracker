@@ -6,6 +6,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.jira.JiraProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsStore;
 
@@ -17,6 +18,7 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsSource;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsUpdateRequest;
 
@@ -34,6 +36,9 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().appUi().title().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().copilot().localGithubToken().value()).isEqualTo("copilot-app-token");
         assertThat(response.values().copilot().localGithubToken().secret()).isTrue();
+        assertThat(response.values().jira().baseUrl().value()).isEqualTo("https://jira.app");
+        assertThat(response.values().jira().token().value()).isEqualTo("jira-app-token");
+        assertThat(response.values().jira().token().secret()).isTrue();
         assertThat(response.values().gitLab().baseUrl().value()).isEqualTo("https://gitlab.app");
         assertThat(response.values().gitLab().group().value()).isEqualTo("app/group");
         assertThat(response.values().gitLab().token().value()).isEqualTo("app-token");
@@ -46,6 +51,8 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().dynatrace().apiToken().value()).isEqualTo("dt0c01.app-token");
         assertThat(response.values().dynatrace().apiToken().secret()).isTrue();
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken()).isEqualTo("copilot-app-token");
+        assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.app");
+        assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
         assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.app");
         assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.app");
@@ -59,6 +66,10 @@ class WorkspaceSettingsServiceTest {
         var response = fixture.service.saveSettings(new WorkspaceSettingsUpdateRequest(
                 new WorkspaceSettingsAppUiUpdate("Workspace override"),
                 new WorkspaceSettingsCopilotUpdate("copilot-workspace-token"),
+                new WorkspaceSettingsJiraUpdate(
+                        "https://jira.app",
+                        "jira-workspace-token"
+                ),
                 new WorkspaceSettingsGitLabUpdate(
                         "https://gitlab.app",
                         "workspace/group",
@@ -77,6 +88,8 @@ class WorkspaceSettingsServiceTest {
         ));
 
         assertThat(fixture.store.saved.copilot().localGithubToken()).isEqualTo("copilot-workspace-token");
+        assertThat(fixture.store.saved.jira().baseUrl()).isNull();
+        assertThat(fixture.store.saved.jira().token()).isEqualTo("jira-workspace-token");
         assertThat(fixture.store.saved.gitLab().baseUrl()).isNull();
         assertThat(fixture.store.saved.gitLab().group()).isEqualTo("workspace/group");
         assertThat(fixture.store.saved.gitLab().token()).isEqualTo("workspace-token");
@@ -89,6 +102,8 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().gitLab().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().copilot().localGithubToken().source())
                 .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
+        assertThat(response.values().jira().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
+        assertThat(response.values().jira().token().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().gitLab().group().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().elasticsearch().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().elasticsearch().kibanaSpaceId().source())
@@ -100,6 +115,8 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("Workspace override");
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken())
                 .isEqualTo("copilot-workspace-token");
+        assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.app");
+        assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-workspace-token");
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("workspace/group");
         assertThat(fixture.gitLabProperties.getToken()).isEqualTo("workspace-token");
@@ -118,6 +135,10 @@ class WorkspaceSettingsServiceTest {
         fixture.service.saveSettings(new WorkspaceSettingsUpdateRequest(
                 new WorkspaceSettingsAppUiUpdate("Workspace override"),
                 new WorkspaceSettingsCopilotUpdate("copilot-workspace-token"),
+                new WorkspaceSettingsJiraUpdate(
+                        "https://jira.workspace",
+                        "jira-workspace-token"
+                ),
                 new WorkspaceSettingsGitLabUpdate("https://gitlab.workspace", "workspace/group", "workspace-token"),
                 new WorkspaceSettingsElasticsearchUpdate(
                         "https://elastic.workspace",
@@ -134,6 +155,10 @@ class WorkspaceSettingsServiceTest {
         var response = fixture.service.saveSettings(new WorkspaceSettingsUpdateRequest(
                 new WorkspaceSettingsAppUiUpdate("App workspace"),
                 new WorkspaceSettingsCopilotUpdate("copilot-app-token"),
+                new WorkspaceSettingsJiraUpdate(
+                        "https://jira.app",
+                        "jira-app-token"
+                ),
                 new WorkspaceSettingsGitLabUpdate("https://gitlab.app", "app/group", "app-token"),
                 new WorkspaceSettingsElasticsearchUpdate(
                         "https://elastic.app",
@@ -149,6 +174,8 @@ class WorkspaceSettingsServiceTest {
 
         assertThat(fixture.store.saved.appUi().title()).isNull();
         assertThat(fixture.store.saved.copilot().localGithubToken()).isNull();
+        assertThat(fixture.store.saved.jira().baseUrl()).isNull();
+        assertThat(fixture.store.saved.jira().token()).isNull();
         assertThat(fixture.store.saved.gitLab().baseUrl()).isNull();
         assertThat(fixture.store.saved.gitLab().group()).isNull();
         assertThat(fixture.store.saved.gitLab().token()).isNull();
@@ -161,11 +188,14 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().appUi().title().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().copilot().localGithubToken().source())
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
+        assertThat(response.values().jira().token().source())
+                .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().elasticsearch().indexPattern().source())
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("App workspace");
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken())
                 .isEqualTo("copilot-app-token");
+        assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("app/group");
         assertThat(fixture.elasticProperties.getIndexPattern()).isEqualTo("logs-*");
         assertThat(fixture.dynatraceProperties.getApiToken()).isEqualTo("dt0c01.app-token");
@@ -176,6 +206,9 @@ class WorkspaceSettingsServiceTest {
         uiConfigProperties.setTitle("App workspace");
         var copilotSdkProperties = new CopilotSdkProperties();
         copilotSdkProperties.getAuth().getLocal().setGithubToken("copilot-app-token");
+        var jiraProperties = new JiraProperties();
+        jiraProperties.setBaseUrl("https://jira.app");
+        jiraProperties.setToken("jira-app-token");
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setBaseUrl("https://gitlab.app");
         gitLabProperties.setGroup("app/group");
@@ -192,6 +225,7 @@ class WorkspaceSettingsServiceTest {
         return new Fixture(
                 uiConfigProperties,
                 copilotSdkProperties,
+                jiraProperties,
                 gitLabProperties,
                 elasticProperties,
                 dynatraceProperties,
@@ -200,6 +234,7 @@ class WorkspaceSettingsServiceTest {
                         store,
                         uiConfigProperties,
                         copilotSdkProperties,
+                        jiraProperties,
                         gitLabProperties,
                         elasticProperties,
                         dynatraceProperties
@@ -210,6 +245,7 @@ class WorkspaceSettingsServiceTest {
     private record Fixture(
             UiConfigProperties uiConfigProperties,
             CopilotSdkProperties copilotSdkProperties,
+            JiraProperties jiraProperties,
             GitLabProperties gitLabProperties,
             ElasticProperties elasticProperties,
             DynatraceProperties dynatraceProperties,

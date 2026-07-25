@@ -29,8 +29,8 @@ platforma analityczna ma obslugiwac wiele sposobow zadawania pytan o system.
 Glowny shell UI jest zorganizowany wokol trzech grup:
 
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu, na razie
-  `Incident Analysis` jako pierwszy dostepny feature oraz przyszle miejsca na
-  Flow Explorer, Functional Logic i Data Diagnostics.
+  `Incident Analysis`, `Flow Explorer` i `Change Verification` oraz przyszle
+  miejsce na Data Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Database Tools i Operational Context. Te widoki
   sluza do testow, debugowania i recznego zebrania inputu; nie sa osobnymi
@@ -219,7 +219,7 @@ generycznym silnikiem analitycznym.
 
 Kolejny duzy krok powinien potwierdzic, ze platforma nie jest tylko
 przemianowanym incident trackerem. Najlepszym dowodem bedzie drugi feature,
-np. flow explorer albo functional logic explorer, ktory:
+np. flow explorer albo change verification, ktory:
 
 1. ma wlasny request/result contract,
 2. uzywa `aiplatform.copilot` przez neutralny run request,

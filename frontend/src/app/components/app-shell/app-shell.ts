@@ -74,7 +74,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: 'account_tree',
         reloadOnActiveClick: true
       },
-      { label: 'Functional Logic', icon: 'schema', disabled: true },
+      {
+        label: 'Change Verification',
+        route: '/change-verification',
+        icon: 'fact_check',
+        reloadOnActiveClick: true
+      },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
     ]
   },
@@ -83,6 +88,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Elastic Logs', route: '/elastic', icon: 'manage_search' },
       { label: 'GitLab Source', route: '/gitlab', icon: 'source' },
+      { label: 'Jira Source', route: '/jira', icon: 'assignment' },
       { label: 'Database Tools', route: '/database', icon: 'database' },
       { label: 'Operational Context', route: '/operational-context', icon: 'hub' }
     ]

@@ -859,6 +859,35 @@ body .flow-tree-node__badges .confidence-pill,
   line-height: 1.25;
 }
 
+.analysis-empty-state {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 220px;
+  padding-block: 44px;
+  text-align: center;
+}
+
+.analysis-empty-state .material-symbols-outlined {
+  color: var(--primary);
+  font-size: 42px;
+}
+
+.analysis-empty-state h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  line-height: 1.25;
+}
+
+.analysis-empty-state p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .section-note {
   margin: 4px 0 0;
   max-width: 28ch;

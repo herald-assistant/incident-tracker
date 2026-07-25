@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
 import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -371,6 +372,35 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void shouldReadInstructionFileFromRepositoryKeyUsingConfiguredGitLabGroup() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcustomer-api/repository/files/AGENTS.md/raw?ref=feature/CRM-123"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("Use repository boundaries.", MediaType.TEXT_PLAIN));
+
+        var file = adapter.readFile(new InstructionRepositoryFileRequest(
+                "CRM/runtime/customer-api",
+                "feature/CRM-123",
+                "AGENTS.md",
+                12_000
+        ));
+
+        assertTrue(file.exists());
+        assertEquals("CRM/runtime/customer-api", file.repositoryKey());
+        assertEquals("feature/CRM-123", file.ref());
+        assertEquals("AGENTS.md", file.path());
+        assertEquals("Use repository boundaries.", file.content());
+        assertFalse(file.truncated());
+
+        server.verify();
+    }
+
+    @Test
     void shouldReadFileMetadataAndResolveLastModifiedAtFromCommit() {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();
@@ -415,6 +445,83 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("2026-06-14T10:20:00.000Z", metadata.lastModifiedAt());
         assertEquals("content-sha-256", metadata.contentSha256());
         assertEquals(2048L, metadata.sizeBytes());
+
+        server.verify();
+    }
+
+    @Test
+    void shouldFindMergeRequestsByIssueKeyWithCommitsAndChangedFiles() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/groups/CRM%2Fruntime/merge_requests?scope=all&state=all&search=CRM-123&in=title,source_branch&per_page=10&page=1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "id": 1001,
+                            "iid": 7,
+                            "project_id": 77,
+                            "title": "CRM-123 customer status",
+                            "state": "merged",
+                            "web_url": "https://gitlab.example.com/CRM/runtime/customer-api/-/merge_requests/7",
+                            "source_branch": "feature/CRM-123-customer-status",
+                            "target_branch": "release/2026.08",
+                            "author": { "name": "Jan Nowak" },
+                            "created_at": "2026-07-20T10:00:00.000Z",
+                            "updated_at": "2026-07-21T10:00:00.000Z",
+                            "merged_at": "2026-07-21T11:00:00.000Z",
+                            "changes_count": "4",
+                            "references": { "full": "CRM/runtime/customer-api!7" }
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/77/merge_requests/7/commits?per_page=50"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "id": "abcdef123456",
+                            "short_id": "abcdef12",
+                            "title": "CRM-123 add status",
+                            "author_name": "Jan Nowak",
+                            "created_at": "2026-07-20T10:00:00.000Z"
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/77/merge_requests/7/diffs?per_page=100"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "old_path": "src/main/java/CustomerController.java",
+                            "new_path": "src/main/java/CustomerController.java",
+                            "new_file": false,
+                            "renamed_file": false,
+                            "deleted_file": false
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        var result = adapter.findMergeRequestsByIssueKey("CRM/runtime", "CRM-123", 10);
+
+        assertEquals("CRM-123", result.issueKey());
+        assertEquals(1, result.mergeRequests().size());
+        var mergeRequest = result.mergeRequests().get(0);
+        assertEquals("CRM/runtime/customer-api", mergeRequest.projectPath());
+        assertEquals("CRM-123 customer status", mergeRequest.title());
+        assertEquals("feature/CRM-123-customer-status", mergeRequest.sourceBranch());
+        assertEquals(1, mergeRequest.commits().size());
+        assertEquals("abcdef12", mergeRequest.commits().get(0).shortId());
+        assertEquals(1, mergeRequest.changedFiles().size());
+        assertEquals("src/main/java/CustomerController.java", mergeRequest.changedFiles().get(0).newPath());
 
         server.verify();
     }

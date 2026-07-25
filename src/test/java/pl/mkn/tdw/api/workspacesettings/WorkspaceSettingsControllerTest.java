@@ -18,6 +18,7 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsFieldResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsSource;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsValuesResponse;
@@ -40,6 +41,7 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(jsonPath("$.settingsPath").value("tdw-data/settings.json"))
                 .andExpect(jsonPath("$.values.appUi.title.value").value("CRM workspace"))
                 .andExpect(jsonPath("$.values.copilot.localGithubToken.value").value("ghu_secret"))
+                .andExpect(jsonPath("$.values.jira.baseUrl.value").value("https://jira.example.com"))
                 .andExpect(jsonPath("$.values.gitLab.group.source").value("WORKSPACE_SETTINGS"))
                 .andExpect(jsonPath("$.values.elasticsearch.indexPattern.value").value("logs-platform-*"))
                 .andExpect(jsonPath("$.values.dynatrace.baseUrl.value").value("https://dynatrace.example.com"));
@@ -58,6 +60,10 @@ class WorkspaceSettingsControllerTest {
                                   },
                                   "copilot": {
                                     "localGithubToken": "ghu_secret"
+                                  },
+                                  "jira": {
+                                    "baseUrl": "https://jira.example.com",
+                                    "token": "jira_secret"
                                   },
                                   "gitLab": {
                                     "baseUrl": "https://gitlab.example.com",
@@ -78,6 +84,7 @@ class WorkspaceSettingsControllerTest {
                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.values.copilot.localGithubToken.secret").value(true))
+                .andExpect(jsonPath("$.values.jira.token.secret").value(true))
                 .andExpect(jsonPath("$.values.gitLab.token.secret").value(true))
                 .andExpect(jsonPath("$.values.elasticsearch.authorizationHeader.secret").value(true))
                 .andExpect(jsonPath("$.values.dynatrace.apiToken.secret").value(true));
@@ -104,6 +111,24 @@ class WorkspaceSettingsControllerTest {
                                 WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                 true
                         )),
+                        new WorkspaceSettingsJiraResponse(
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.jira.base-url",
+                                        "https://jira.example.com",
+                                        "https://jira.example.com",
+                                        null,
+                                        WorkspaceSettingsSource.APPLICATION_PROPERTIES,
+                                        false
+                                ),
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.jira.token",
+                                        "jira_secret",
+                                        "",
+                                        "jira_secret",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        true
+                                )
+                        ),
                         new WorkspaceSettingsGitLabResponse(
                                 new WorkspaceSettingsFieldResponse(
                                         "analysis.gitlab.base-url",

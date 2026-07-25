@@ -9,9 +9,14 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchService;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
@@ -35,10 +40,31 @@ public class GitLabRepositorySearchController {
     private final GitLabRepositoryFilesByPathApiService gitLabRepositoryFilesByPathApiService;
     private final GitLabJavaMethodSliceService gitLabJavaMethodSliceService;
     private final GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
+    private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final GitLabProperties gitLabProperties;
+    private final InstructionContextDiscoveryService instructionContextDiscoveryService;
 
     @PostMapping("/search")
     public GitLabRepositorySearchResponse search(@Valid @RequestBody GitLabRepositorySearchRequest request) {
         return gitLabRepositorySearchService.search(request);
+    }
+
+    @PostMapping("/merge-requests/by-issue")
+    public GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
+            @Valid @RequestBody GitLabMergeRequestSearchApiRequest request
+    ) {
+        return gitLabRepositoryPort.findMergeRequestsByIssueKey(
+                request.group(),
+                request.issueKey(),
+                request.maxResults() != null ? request.maxResults() : gitLabProperties.getMaxMergeRequests()
+        );
+    }
+
+    @PostMapping("/instructions/context")
+    public InstructionContextResult discoverInstructionContext(
+            @Valid @RequestBody GitLabInstructionContextApiRequest request
+    ) {
+        return instructionContextDiscoveryService.discover(request.toInstructionContextRequest());
     }
 
     @PostMapping("/endpoints")

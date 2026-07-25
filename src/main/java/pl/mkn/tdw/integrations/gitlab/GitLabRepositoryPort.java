@@ -1,5 +1,8 @@
 package pl.mkn.tdw.integrations.gitlab;
 
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFile;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
+
 import java.util.List;
 
 public interface GitLabRepositoryPort {
@@ -51,5 +54,22 @@ public interface GitLabRepositoryPort {
             int endLine,
             int maxCharacters
     );
+
+    default GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
+            String group,
+            String issueKey,
+            int maxResults
+    ) {
+        return new GitLabMergeRequestSearchResult(issueKey, group, List.of(), List.of("GitLab MR discovery is not implemented by this port."));
+    }
+
+    default InstructionRepositoryFile readFile(InstructionRepositoryFileRequest request) {
+        return InstructionRepositoryFile.failed(
+                request.repositoryKey(),
+                request.ref(),
+                request.path(),
+                "GitLab instruction file read is not implemented by this port."
+        );
+    }
 
 }

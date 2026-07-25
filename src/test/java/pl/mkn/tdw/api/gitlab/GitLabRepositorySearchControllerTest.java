@@ -7,16 +7,26 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestCommit;
+import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
+import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpoint;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointListResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryProjectCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchService;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextRequest;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextResult;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceResponse;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
@@ -79,6 +89,138 @@ class GitLabRepositorySearchControllerTest {
 
     @MockitoBean
     private GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService;
+
+    @MockitoBean
+    private GitLabRepositoryPort gitLabRepositoryPort;
+
+    @MockitoBean
+    private GitLabProperties gitLabProperties;
+
+    @MockitoBean
+    private InstructionContextDiscoveryService instructionContextDiscoveryService;
+
+    @Test
+    void shouldExposeInstructionContextDiscovery() throws Exception {
+        when(instructionContextDiscoveryService.discover(any(InstructionContextRequest.class)))
+                .thenReturn(new InstructionContextResult(
+                        List.of(new InstructionSource(
+                                "CRM/runtime/customer-api",
+                                "feature/CRM-123",
+                                "AGENTS.md",
+                                "AGENTS",
+                                "Use repository boundaries.",
+                                false,
+                                null,
+                                List.of("src/main/java/CustomerController.java")
+                        )),
+                        List.of()
+                ));
+
+        mockMvc.perform(post("/api/gitlab/repository/instructions/context")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "repositoryKey": "CRM/runtime/customer-api",
+                                  "ref": "feature/CRM-123",
+                                  "changedFilePaths": [
+                                    "src/main/java/CustomerController.java"
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources[0].repositoryKey").value("CRM/runtime/customer-api"))
+                .andExpect(jsonPath("$.sources[0].path").value("AGENTS.md"))
+                .andExpect(jsonPath("$.sources[0].kind").value("AGENTS"))
+                .andExpect(jsonPath("$.sources[0].applicableChangedFiles[0]")
+                        .value("src/main/java/CustomerController.java"));
+
+        verify(instructionContextDiscoveryService).discover(argThat(request ->
+                request.scopes().size() == 1
+                        && "CRM/runtime/customer-api".equals(request.scopes().get(0).repositoryKey())
+                        && "feature/CRM-123".equals(request.scopes().get(0).ref())
+                        && request.scopes().get(0).changedFilePaths()
+                                .contains("src/main/java/CustomerController.java")
+        ));
+    }
+
+    @Test
+    void shouldExposeMergeRequestSearchByIssueKey() throws Exception {
+        when(gitLabRepositoryPort.findMergeRequestsByIssueKey("CRM/runtime", "CRM-123", 5))
+                .thenReturn(new GitLabMergeRequestSearchResult(
+                        "CRM-123",
+                        "CRM/runtime",
+                        List.of(new GitLabMergeRequest(
+                                1001L,
+                                7L,
+                                77L,
+                                "CRM/runtime/customer-api",
+                                "CRM-123 customer status",
+                                "merged",
+                                "https://gitlab.example.com/CRM/runtime/customer-api/-/merge_requests/7",
+                                "feature/CRM-123-customer-status",
+                                "release/2026.08",
+                                "Jan Nowak",
+                                "2026-07-20T10:00:00.000Z",
+                                "2026-07-21T10:00:00.000Z",
+                                "2026-07-21T11:00:00.000Z",
+                                "4",
+                                List.of(new GitLabMergeRequestCommit(
+                                        "abcdef123456",
+                                        "abcdef12",
+                                        "CRM-123 add status",
+                                        "Jan Nowak",
+                                        "2026-07-20T10:00:00.000Z"
+                                )),
+                                List.of(new GitLabMergeRequestChangedFile(
+                                        "src/main/java/CustomerController.java",
+                                        "src/main/java/CustomerController.java",
+                                        false,
+                                        false,
+                                        false
+                                )),
+                                List.of()
+                        )),
+                        List.of()
+                ));
+
+        mockMvc.perform(post("/api/gitlab/repository/merge-requests/by-issue")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "CRM/runtime",
+                                  "issueKey": "CRM-123",
+                                  "maxResults": 5
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.issueKey").value("CRM-123"))
+                .andExpect(jsonPath("$.group").value("CRM/runtime"))
+                .andExpect(jsonPath("$.mergeRequests[0].title").value("CRM-123 customer status"))
+                .andExpect(jsonPath("$.mergeRequests[0].commits[0].shortId").value("abcdef12"))
+                .andExpect(jsonPath("$.mergeRequests[0].changedFiles[0].newPath")
+                        .value("src/main/java/CustomerController.java"));
+
+        verify(gitLabRepositoryPort).findMergeRequestsByIssueKey("CRM/runtime", "CRM-123", 5);
+    }
+
+    @Test
+    void shouldUseConfiguredLimitWhenMaxResultsIsMissing() throws Exception {
+        when(gitLabProperties.getMaxMergeRequests()).thenReturn(10);
+        when(gitLabRepositoryPort.findMergeRequestsByIssueKey(null, "CRM-123", 10))
+                .thenReturn(new GitLabMergeRequestSearchResult("CRM-123", "CRM/runtime", List.of(), List.of()));
+
+        mockMvc.perform(post("/api/gitlab/repository/merge-requests/by-issue")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "issueKey": "CRM-123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.issueKey").value("CRM-123"));
+
+        verify(gitLabRepositoryPort).findMergeRequestsByIssueKey(null, "CRM-123", 10);
+    }
 
     @Test
     void shouldSearchGitLabRepositoryForValidRequest() throws Exception {

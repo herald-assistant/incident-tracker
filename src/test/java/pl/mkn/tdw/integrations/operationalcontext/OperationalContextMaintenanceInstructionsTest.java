@@ -29,7 +29,7 @@ class OperationalContextMaintenanceInstructionsTest {
         assertTrue(fillOrder.contains("Do not list repositories on a system."));
         assertTrue(fillOrder.contains("Repository navigation for a system goes"));
         assertTrue(scopePrompt.contains("This file is the canonical bridge between semantic context and code"));
-        assertTrue(scopePrompt.contains("bounded context -> code-search scope -> repository -> path prefix -> code"));
+        assertTrue(scopePrompt.contains("bounded context -> optional code-search scope -> repository -> path prefix -> code"));
     }
 
     private static String read(String path) throws IOException {

@@ -1,6 +1,7 @@
 package pl.mkn.tdw.api;
 
 import pl.mkn.tdw.api.database.DatabaseToolApiException;
+import pl.mkn.tdw.api.jira.JiraSourceApiException;
 import pl.mkn.tdw.api.operationalcontext.OperationalContextEntityNotFoundException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotLocalTokenMissingException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.GitHubCopilotAuthRequiredException;
@@ -158,6 +159,17 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DatabaseToolApiException.class)
     public ResponseEntity<ApiErrorResponse> handleDatabaseToolApi(DatabaseToolApiException exception) {
+        var response = new ApiErrorResponse(
+                exception.code(),
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(exception.status()).body(response);
+    }
+
+    @ExceptionHandler(JiraSourceApiException.class)
+    public ResponseEntity<ApiErrorResponse> handleJiraSourceApi(JiraSourceApiException exception) {
         var response = new ApiErrorResponse(
                 exception.code(),
                 exception.getMessage(),

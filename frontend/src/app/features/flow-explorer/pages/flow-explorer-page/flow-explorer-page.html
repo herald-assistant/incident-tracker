@@ -811,6 +811,17 @@
           </section>
         }
 
+        @if (!job() && !jobError() && !isSubmitting()) {
+          <section class="analysis-card flow-explorer-empty-state analysis-empty-state">
+            <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+            <h2>Ready for the first Flow Explorer run</h2>
+            <p>
+              Select application, endpoint and documentation scope to see the generated flow,
+              evidence trace and follow-up workspace here.
+            </p>
+          </section>
+        }
+
         @if (job(); as snapshot) {
           <div class="flow-explorer-analysis-grid">
             <div class="flow-explorer-analysis-main">

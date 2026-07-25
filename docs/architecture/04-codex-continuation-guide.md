@@ -538,8 +538,8 @@ incydentem. Najbardziej naturalne kandydaty:
 - flow explorer: opis end-to-end requestu/use case'u przez komponenty,
   integracje, dane i kod, z endpointami i kolejkami dociaganymi przez
   dedykowane tools wtedy, gdy sa potrzebne,
-- functional logic explorer: pytania o reguly, warianty i implementacje
-  konkretnego use case'u,
+- change verification: zgodnosc zmiany ze story, instrukcjami repozytorium,
+  smoke pack i kontrolowane uruchomienie weryfikacji,
 - natural-language data diagnostics: readonly pytania o dane systemu jezykiem
   naturalnym z typed DB tools, limitami i audytem.
 

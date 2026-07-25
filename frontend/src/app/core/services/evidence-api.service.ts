@@ -34,6 +34,18 @@ export interface GitLabRepositorySearchPayload {
   keywords: string[];
 }
 
+export interface GitLabMergeRequestSearchPayload {
+  group?: string;
+  issueKey: string;
+  maxResults?: number;
+}
+
+export interface GitLabInstructionContextPayload {
+  repositoryKey: string;
+  ref: string;
+  changedFilePaths: string[];
+}
+
 export interface GitLabSourceResolvePayload {
   groupPath: string;
   projectPath: string;
@@ -381,6 +393,65 @@ export interface GitLabRepositoryEndpointsResponse {
   limitations: string[];
 }
 
+export interface GitLabMergeRequestCommit {
+  id?: string | null;
+  shortId?: string | null;
+  title?: string | null;
+  authorName?: string | null;
+  createdAt?: string | null;
+}
+
+export interface GitLabMergeRequestChangedFile {
+  oldPath?: string | null;
+  newPath?: string | null;
+  newFile: boolean;
+  renamedFile: boolean;
+  deletedFile: boolean;
+}
+
+export interface GitLabMergeRequest {
+  id?: number | null;
+  iid?: number | null;
+  projectId?: number | null;
+  projectPath?: string | null;
+  title?: string | null;
+  state?: string | null;
+  webUrl?: string | null;
+  sourceBranch?: string | null;
+  targetBranch?: string | null;
+  authorName?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  mergedAt?: string | null;
+  changesCount?: string | null;
+  commits: GitLabMergeRequestCommit[];
+  changedFiles: GitLabMergeRequestChangedFile[];
+  limitations: string[];
+}
+
+export interface GitLabMergeRequestSearchResponse {
+  issueKey?: string | null;
+  group?: string | null;
+  mergeRequests: GitLabMergeRequest[];
+  limitations: string[];
+}
+
+export interface GitLabInstructionSource {
+  repositoryKey?: string | null;
+  ref?: string | null;
+  path?: string | null;
+  kind?: string | null;
+  content?: string | null;
+  truncated: boolean;
+  referencedBy?: string | null;
+  applicableChangedFiles: string[];
+}
+
+export interface GitLabInstructionContextResponse {
+  sources: GitLabInstructionSource[];
+  limitations: string[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -401,6 +472,24 @@ export class EvidenceApiService {
 
   searchGitLabRepository(payload: GitLabRepositorySearchPayload): Observable<unknown> {
     return this.http.post('/api/gitlab/repository/search', payload);
+  }
+
+  searchGitLabMergeRequests(
+    payload: GitLabMergeRequestSearchPayload
+  ): Observable<GitLabMergeRequestSearchResponse> {
+    return this.http.post<GitLabMergeRequestSearchResponse>(
+      '/api/gitlab/repository/merge-requests/by-issue',
+      payload
+    );
+  }
+
+  discoverGitLabInstructionContext(
+    payload: GitLabInstructionContextPayload
+  ): Observable<GitLabInstructionContextResponse> {
+    return this.http.post<GitLabInstructionContextResponse>(
+      '/api/gitlab/repository/instructions/context',
+      payload
+    );
   }
 
   resolveGitLabSource(payload: GitLabSourceResolvePayload, preview: boolean): Observable<unknown> {

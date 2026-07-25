@@ -17,5 +17,8 @@ public class GitLabProperties {
     private boolean ignoreSslErrors;
     private int searchResultsPerTerm = 20;
     private int maxCandidateCount = 10;
+    private int maxMergeRequests = 10;
+    private int maxMergeRequestCommits = 50;
+    private int maxMergeRequestChangedFiles = 100;
 
 }

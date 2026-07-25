@@ -81,7 +81,7 @@ ponizszych zasad:
 - Historyczne `analysis.options` jest zamkniete. Neutralne preferencje
   wykonania AI mieszkaja w `shared.ai`, a endpoint
   `GET /analysis/ai/options` w `api.aioptions`.
-- Przyszle feature'y, np. flow explorer, functional logic explorer,
+- Przyszle feature'y, np. flow explorer, change verification,
   natural-language data diagnostics, analiza dokumentacji albo generowanie
   scenariuszy, powinny dostarczyc wlasny prompt, evidence/source pipeline,
   skille, hidden context, policy uzycia capability i kontrakt odpowiedzi,

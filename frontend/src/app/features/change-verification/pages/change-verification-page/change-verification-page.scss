@@ -1,0 +1,249 @@
+:host {
+  display: block;
+}
+
+.change-verification-page {
+  width: min(1480px, calc(100% - 28px));
+}
+
+.change-verification-workspace {
+  display: grid;
+  gap: 16px;
+}
+
+.change-verification-composer,
+.change-verification-run,
+.change-verification-empty-state {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.change-verification-composer__heading h2,
+.change-verification-run h2,
+.change-verification-empty-state h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  line-height: 1.25;
+}
+
+.change-verification-source-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(440px, 1.2fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.change-verification-field {
+  min-width: 0;
+}
+
+.change-verification-textarea {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.change-verification-options {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.change-verification-options .field-label {
+  margin-bottom: 0;
+}
+
+.change-verification-option-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 14px;
+  min-height: 44px;
+  align-items: center;
+}
+
+.change-verification-option-grid label,
+.change-verification-cleanup-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.change-verification-option-grid input,
+.change-verification-cleanup-toggle input {
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.change-verification-option-grid span,
+.change-verification-cleanup-toggle span {
+  min-width: 0;
+}
+
+.change-verification-run-actions,
+.change-verification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.change-verification-run-actions .primary-button,
+.change-verification-actions .primary-button,
+.change-verification-actions .secondary-button {
+  white-space: nowrap;
+}
+
+.change-verification-error {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.change-verification-run {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.change-verification-run p,
+.change-verification-empty-state p,
+.change-verification-panel p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.change-verification-result-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.change-verification-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.change-verification-panel-header {
+  align-items: center;
+}
+
+.change-verification-panel-header h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.change-verification-panel-header .material-symbols-outlined {
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.change-verification-panel ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change-verification-panel li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.change-verification-panel li strong {
+  color: var(--text-main);
+}
+
+.change-verification-panel small,
+.change-verification-empty {
+  color: var(--text-muted);
+}
+
+.change-verification-draft {
+  display: grid;
+  gap: 8px;
+}
+
+.change-verification-code-textarea {
+  min-height: 220px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.change-verification-execution-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.change-verification-cleanup-toggle {
+  justify-content: flex-start;
+  width: fit-content;
+}
+
+.change-verification-empty-state {
+  min-height: 220px;
+}
+
+@media (max-width: 1180px) {
+  .change-verification-source-grid,
+  .change-verification-execution-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .change-verification-option-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .change-verification-page {
+    width: min(100% - 16px, 1480px);
+  }
+
+  .change-verification-composer__heading,
+  .change-verification-run {
+    grid-template-columns: 1fr;
+  }
+
+  .change-verification-option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .change-verification-run-actions,
+  .change-verification-actions {
+    justify-content: stretch;
+  }
+
+  .change-verification-run-actions .primary-button,
+  .change-verification-actions .primary-button,
+  .change-verification-actions .secondary-button {
+    flex: 1 1 100%;
+  }
+
+  .change-verification-cleanup-toggle {
+    width: auto;
+  }
+}

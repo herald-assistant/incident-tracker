@@ -1,0 +1,370 @@
+:host {
+  display: block;
+}
+
+.jira-workspace,
+.jira-scope-section,
+.jira-tool-section,
+.jira-main,
+.jira-runner,
+.jira-result {
+  display: grid;
+  gap: 16px;
+}
+
+.jira-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.jira-tool-panel {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 18px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.jira-tool-section__heading,
+.jira-runner__header {
+  align-items: flex-start;
+}
+
+.jira-tool-list {
+  display: grid;
+  gap: 7px;
+}
+
+.jira-tool-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 10px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 9px 10px;
+  border: 1px solid rgba(12, 102, 228, 0.48);
+  border-radius: 8px;
+  background: #eff6ff;
+  color: var(--primary-dark);
+  font: inherit;
+  text-align: left;
+}
+
+.jira-tool-button__content {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.jira-tool-button__content span {
+  min-width: 0;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.jira-tool-button__content small {
+  min-width: 0;
+  color: var(--primary-dark);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.jira-tool-button__state {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c7d1df;
+}
+
+.jira-tool-button__state[data-status='loading'] {
+  background: var(--primary);
+}
+
+.jira-tool-button__state[data-status='success'] {
+  background: var(--success-text);
+}
+
+.jira-tool-button__state[data-status='error'] {
+  background: var(--danger-text);
+}
+
+.jira-runner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.jira-runner__actions .primary-button,
+.jira-runner__actions .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jira-runner__actions .material-symbols-outlined {
+  font-size: 1.08rem;
+}
+
+.payload-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 120px;
+  padding: 18px;
+  border: 1px dashed rgba(94, 108, 132, 0.42);
+  border-radius: 8px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+.payload-placeholder .material-symbols-outlined {
+  color: var(--primary-dark);
+  font-size: 1.35rem;
+}
+
+.payload-placeholder p,
+.issue-summary p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.jira-result__header,
+.tool-status,
+.issue-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.jira-result__header h2,
+.issue-summary h3 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1.18rem;
+  line-height: 1.25;
+}
+
+.tool-status,
+.issue-summary {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
+
+.tool-status[data-status='loading'] {
+  border-color: rgba(12, 102, 228, 0.26);
+  background: #eff6ff;
+}
+
+.tool-status[data-status='success'] {
+  border-color: rgba(33, 110, 78, 0.22);
+  background: #f0fff6;
+}
+
+.tool-status[data-status='error'] {
+  border-color: rgba(174, 46, 36, 0.2);
+  background: #fff4f2;
+}
+
+.tool-status__label {
+  margin: 0 0 4px;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.tool-status__message {
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.tool-status__badges,
+.issue-summary__badges,
+.json-response-panel__actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tool-status__code {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(23, 43, 77, 0.08);
+  color: #44546f;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.jira-json-panel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.json-response-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.json-response-panel__header::-webkit-details-marker {
+  display: none;
+}
+
+.jira-json-panel[open] .json-response-panel__header {
+  border-bottom: 1px solid var(--border);
+}
+
+.json-response-panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.json-response-panel__header .field-label {
+  margin-bottom: 0;
+}
+
+.json-panel-toggle-icon {
+  color: var(--primary-dark);
+  font-size: 1.1rem;
+  transition: transform 0.16s ease;
+}
+
+.jira-json-panel[open] .json-panel-toggle-icon {
+  transform: rotate(90deg);
+}
+
+.json-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(12, 102, 228, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--primary-dark);
+  cursor: pointer;
+}
+
+.json-icon-button:hover:not(:disabled) {
+  border-color: rgba(12, 102, 228, 0.42);
+}
+
+.json-icon-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(12, 102, 228, 0.14);
+}
+
+.json-icon-button:disabled {
+  opacity: 0.48;
+}
+
+.json-icon-button .material-symbols-outlined {
+  font-size: 19px;
+}
+
+.json-output {
+  width: 100%;
+  min-height: 360px;
+  padding: 14px;
+  border: 0;
+  border-radius: 0;
+  background: #f8fbff;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  resize: vertical;
+  white-space: pre;
+}
+
+.jira-json-panel--request .json-output {
+  min-height: 220px;
+}
+
+.json-output:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 3px rgba(12, 102, 228, 0.08);
+}
+
+.route-chip {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+  .jira-layout {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .jira-result__header,
+  .tool-status,
+  .issue-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .jira-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .jira-tool-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .jira-runner__actions,
+  .tool-status__badges,
+  .issue-summary__badges {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .jira-runner__actions .primary-button,
+  .jira-runner__actions .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .json-response-panel__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .json-output {
+    min-height: 260px;
+  }
+}

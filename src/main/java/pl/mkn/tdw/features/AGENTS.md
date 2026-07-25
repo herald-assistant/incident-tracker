@@ -5,9 +5,9 @@
 Ten katalog zawiera dedykowane feature'y analityczne zbudowane na reusable
 warstwach: `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
 
-Obecnie pierwszy feature to `incidentanalysis`. Docelowo obok niego moga
-powstac kolejne analizy systemowe, np. flow explorer, functional logic
-explorer albo natural-language data diagnostics.
+Obecnie pierwszym feature'em byl `incidentanalysis`, a kolejne dostepne
+analizy to flow explorer i change verification. Docelowo obok nich moga
+powstac kolejne analizy systemowe, np. natural-language data diagnostics.
 
 ## Zasady
 

@@ -9,11 +9,13 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
+import pl.mkn.tdw.integrations.jira.JiraProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceCopilotSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceJiraSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsStore;
 
@@ -30,6 +32,8 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsFieldResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsSource;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsUpdateRequest;
@@ -42,6 +46,7 @@ public class WorkspaceSettingsService {
     private final LocalWorkspaceSettingsStore settingsStore;
     private final UiConfigProperties uiConfigProperties;
     private final CopilotSdkProperties copilotSdkProperties;
+    private final JiraProperties jiraProperties;
     private final GitLabProperties gitLabProperties;
     private final ElasticProperties elasticProperties;
     private final DynatraceProperties dynatraceProperties;
@@ -70,6 +75,9 @@ public class WorkspaceSettingsService {
         var copilot = request != null && request.copilot() != null
                 ? request.copilot()
                 : new WorkspaceSettingsCopilotUpdate(null);
+        var jira = request != null && request.jira() != null
+                ? request.jira()
+                : new WorkspaceSettingsJiraUpdate(null, null);
         var gitLab = request != null && request.gitLab() != null
                 ? request.gitLab()
                 : new WorkspaceSettingsGitLabUpdate(null, null, null);
@@ -89,6 +97,10 @@ public class WorkspaceSettingsService {
                                 copilot.localGithubToken(),
                                 application().copilot().localGithubToken()
                         )
+                ),
+                new LocalWorkspaceJiraSettings(
+                        overrideValue(jira.baseUrl(), application().jira().baseUrl()),
+                        overrideValue(jira.token(), application().jira().token())
                 ),
                 new LocalWorkspaceGitLabSettings(
                         overrideValue(gitLab.baseUrl(), application().gitLab().baseUrl()),
@@ -135,6 +147,10 @@ public class WorkspaceSettingsService {
                                 file.copilot().localGithubToken(),
                                 true
                         )),
+                        new WorkspaceSettingsJiraResponse(
+                                field("analysis.jira.base-url", app.jira().baseUrl(), file.jira().baseUrl(), false),
+                                field("analysis.jira.token", app.jira().token(), file.jira().token(), true)
+                        ),
                         new WorkspaceSettingsGitLabResponse(
                                 field("analysis.gitlab.base-url", app.gitLab().baseUrl(), file.gitLab().baseUrl(), false),
                                 field("analysis.gitlab.group", app.gitLab().group(), file.gitLab().group(), false),
@@ -214,6 +230,8 @@ public class WorkspaceSettingsService {
                 file.copilot().localGithubToken(),
                 app.copilot().localGithubToken()
         ));
+        jiraProperties.setBaseUrl(effectiveValue(file.jira().baseUrl(), app.jira().baseUrl()));
+        jiraProperties.setToken(effectiveValue(file.jira().token(), app.jira().token()));
         gitLabProperties.setBaseUrl(effectiveValue(file.gitLab().baseUrl(), app.gitLab().baseUrl()));
         gitLabProperties.setGroup(effectiveValue(file.gitLab().group(), app.gitLab().group()));
         gitLabProperties.setToken(effectiveValue(file.gitLab().token(), app.gitLab().token()));
@@ -245,6 +263,10 @@ public class WorkspaceSettingsService {
         return new WorkspaceSettingsValues(
                 new AppUiSettings(normalize(uiConfigProperties.getTitle())),
                 new CopilotSettings(normalize(copilotLocalGithubToken())),
+                new JiraSettings(
+                        normalize(jiraProperties.getBaseUrl()),
+                        normalize(jiraProperties.getToken())
+                ),
                 new GitLabSettings(
                         normalize(gitLabProperties.getBaseUrl()),
                         normalize(gitLabProperties.getGroup()),
@@ -307,6 +329,7 @@ public class WorkspaceSettingsService {
     private record WorkspaceSettingsValues(
             AppUiSettings appUi,
             CopilotSettings copilot,
+            JiraSettings jira,
             GitLabSettings gitLab,
             ElasticsearchSettings elasticsearch,
             DynatraceSettings dynatrace
@@ -320,6 +343,12 @@ public class WorkspaceSettingsService {
 
     private record CopilotSettings(
             String localGithubToken
+    ) {
+    }
+
+    private record JiraSettings(
+            String baseUrl,
+            String token
     ) {
     }
 

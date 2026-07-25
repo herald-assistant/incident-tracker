@@ -18,6 +18,8 @@ import {
   GitLabEndpointUseCaseFileCandidate,
   GitLabEndpointUseCaseMethodCandidate,
   GitLabEndpointUseCaseRelation,
+  GitLabInstructionContextPayload,
+  GitLabInstructionContextResponse,
   GitLabJavaMethodUseCaseContextPayload,
   GitLabJavaMethodUseCaseContextResponse,
   GitLabJavaMethodUseCaseEntryCandidate,
@@ -25,6 +27,8 @@ import {
   GitLabJavaMethodSlicePayload,
   GitLabJavaMethodSliceMethodSelector,
   GitLabJavaMethodSliceResponse,
+  GitLabMergeRequestSearchPayload,
+  GitLabMergeRequestSearchResponse,
   GitLabOpenApiEndpointSlicePayload,
   GitLabOpenApiEndpointSliceResponse,
   GitLabRepositoryEndpoint,
@@ -41,6 +45,8 @@ import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 type ToolStateStatus = 'idle' | 'loading' | 'success' | 'error';
 type GitLabJsonResponseKey =
   | 'repository-search'
+  | 'repository-instructions'
+  | 'merge-request-search'
   | 'endpoint-inventory'
   | 'endpoint-use-case-context'
   | 'java-method-use-case-context'
@@ -119,6 +125,22 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/repository/search',
     summary:
       'Testuje mapowanie project hints na repozytoria oraz opcjonalne wyszukiwanie kandydatów plików.'
+  },
+  {
+    key: 'repository-instructions',
+    label: 'Repository Instructions',
+    category: 'Discovery',
+    endpoint: '/api/gitlab/repository/instructions/context',
+    summary:
+      'Odnajduje AGENTS.md, Copilot instructions i wskazane pliki instrukcji dla repo/ref oraz changed files.'
+  },
+  {
+    key: 'merge-request-search',
+    label: 'Merge Request Search',
+    category: 'Discovery',
+    endpoint: '/api/gitlab/repository/merge-requests/by-issue',
+    summary:
+      'Szuka MR-ek po Jira issue key i zwraca branche, commity oraz changed files przydatne do Change Verification.'
   },
   {
     key: 'endpoint-inventory',
@@ -226,6 +248,24 @@ export class GitLabEvidenceConsoleComponent {
     }),
     operationNames: new FormControl('', { nonNullable: true }),
     keywords: new FormControl('', { nonNullable: true })
+  });
+
+  readonly gitLabMergeRequestForm = new FormGroup({
+    issueKey: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(80)]
+    }),
+    maxResults: new FormControl('10', {
+      nonNullable: true,
+      validators: [Validators.min(1), Validators.max(100)]
+    })
+  });
+
+  readonly gitLabInstructionForm = new FormGroup({
+    group: new FormControl('', { nonNullable: true }),
+    projectName: new FormControl('', { nonNullable: true }),
+    branch: new FormControl('HEAD', { nonNullable: true }),
+    changedFilePaths: new FormControl('', { nonNullable: true })
   });
 
   readonly gitLabEndpointForm = new FormGroup({
@@ -430,6 +470,12 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabRepositoryState = signal<ToolState>(
     this.idleState('Wpisz hinty projektu, aby przetestować mapowanie component -> repo.')
   );
+  readonly gitLabMergeRequestState = signal<ToolState>(
+    this.idleState('Podaj Jira issue key, aby wyszukać merge requesty powiązane ze zmianą.')
+  );
+  readonly gitLabInstructionState = signal<ToolState>(
+    this.idleState('Podaj scope repozytorium i opcjonalne changed files, aby odkryć instruction context.')
+  );
   readonly gitLabEndpointState = signal<ToolState>(
     this.idleState('Podaj scope repozytorium, aby znaleźć endpointy Spring REST.')
   );
@@ -454,6 +500,14 @@ export class GitLabEvidenceConsoleComponent {
 
   readonly gitLabEndpointResult = computed(() =>
     this.asGitLabEndpointResult(this.gitLabEndpointState().response)
+  );
+
+  readonly gitLabMergeRequestResult = computed(() =>
+    this.asGitLabMergeRequestSearchResult(this.gitLabMergeRequestState().response)
+  );
+
+  readonly gitLabInstructionResult = computed(() =>
+    this.asGitLabInstructionContextResult(this.gitLabInstructionState().response)
   );
 
   readonly gitLabEndpointUseCaseContextResult = computed(() =>
@@ -513,6 +567,12 @@ export class GitLabEvidenceConsoleComponent {
     event.preventDefault();
 
     switch (this.selectedToolKey()) {
+      case 'repository-instructions':
+        this.submitGitLabInstructionContext();
+        return;
+      case 'merge-request-search':
+        this.submitGitLabMergeRequestSearch();
+        return;
       case 'endpoint-inventory':
         this.submitGitLabEndpointSearch();
         return;
@@ -552,6 +612,17 @@ export class GitLabEvidenceConsoleComponent {
           endpointPathPrefix: '',
           httpMethod: '',
           maxScannedFiles: '120'
+        });
+        return;
+      case 'merge-request-search':
+        this.gitLabMergeRequestForm.patchValue({
+          issueKey: '',
+          maxResults: '10'
+        });
+        return;
+      case 'repository-instructions':
+        this.gitLabInstructionForm.patchValue({
+          changedFilePaths: ''
         });
         return;
       case 'endpoint-use-case-context':
@@ -692,6 +763,64 @@ export class GitLabEvidenceConsoleComponent {
       '/api/gitlab/repository/search'
     );
   }
+
+  submitGitLabMergeRequestSearch(event?: Event): void {
+    event?.preventDefault();
+
+    if (this.gitLabMergeRequestForm.invalid) {
+      this.gitLabMergeRequestForm.markAllAsTouched();
+      this.gitLabMergeRequestState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj Jira issue key i poprawny limit wyników dla wyszukiwania MR-ek.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabMergeRequestSearchPayload = {
+      group: this.optionalValue(this.scopeForm.controls.group.value),
+      issueKey: this.gitLabMergeRequestForm.controls.issueKey.value.trim(),
+      maxResults: this.optionalNumber(this.gitLabMergeRequestForm.controls.maxResults.value)
+    };
+
+    this.runRequest(
+      this.gitLabMergeRequestState,
+      this.evidenceApi.searchGitLabMergeRequests(payload),
+      payload,
+      '/api/gitlab/repository/merge-requests/by-issue'
+    );
+  }
+
+  submitGitLabInstructionContext(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabInstructionForm)) {
+      this.gitLabInstructionState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabInstructionContextPayload = {
+      repositoryKey: this.repositoryKey(
+        this.gitLabInstructionForm.controls.group.value,
+        this.gitLabInstructionForm.controls.projectName.value
+      ),
+      ref: this.gitLabInstructionForm.controls.branch.value.trim(),
+      changedFilePaths: this.toList(this.gitLabInstructionForm.controls.changedFilePaths.value)
+    };
+
+    this.runRequest(
+      this.gitLabInstructionState,
+      this.evidenceApi.discoverGitLabInstructionContext(payload),
+      payload,
+      '/api/gitlab/repository/instructions/context'
+    );
+  }
+
 
   submitGitLabEndpointSearch(event?: Event): void {
     event?.preventDefault();
@@ -1757,6 +1886,7 @@ export class GitLabEvidenceConsoleComponent {
 
   private usesRepositoryScope(toolKey: GitLabToolKey): boolean {
     return (
+      toolKey === 'repository-instructions' ||
       toolKey === 'endpoint-inventory' ||
       toolKey === 'endpoint-use-case-context' ||
       toolKey === 'java-method-use-case-context' ||
@@ -1764,6 +1894,12 @@ export class GitLabEvidenceConsoleComponent {
       toolKey === 'java-method-slice' ||
       toolKey === 'openapi-endpoint-slice'
     );
+  }
+
+  private repositoryKey(group: string, projectName: string): string {
+    const normalizedGroup = group.trim().replace(/^\/+|\/+$/g, '');
+    const normalizedProjectName = projectName.trim().replace(/^\/+|\/+$/g, '');
+    return [normalizedGroup, normalizedProjectName].filter(Boolean).join('/');
   }
 
   private toList(raw: string): string[] {
@@ -1856,6 +1992,10 @@ export class GitLabEvidenceConsoleComponent {
 
   private stateForJsonResponseKey(key: GitLabJsonResponseKey): WritableSignal<ToolState> {
     switch (key) {
+      case 'merge-request-search':
+        return this.gitLabMergeRequestState;
+      case 'repository-instructions':
+        return this.gitLabInstructionState;
       case 'endpoint-inventory':
         return this.gitLabEndpointState;
       case 'endpoint-use-case-context':
@@ -1896,6 +2036,30 @@ export class GitLabEvidenceConsoleComponent {
 
     const record = response as Partial<GitLabRepositoryEndpointsResponse>;
     return Array.isArray(record.endpoints) ? (record as GitLabRepositoryEndpointsResponse) : null;
+  }
+
+  private asGitLabMergeRequestSearchResult(
+    response: unknown
+  ): GitLabMergeRequestSearchResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabMergeRequestSearchResponse>;
+    return Array.isArray(record.mergeRequests)
+      ? (record as GitLabMergeRequestSearchResponse)
+      : null;
+  }
+
+  private asGitLabInstructionContextResult(
+    response: unknown
+  ): GitLabInstructionContextResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+
+    const record = response as Partial<GitLabInstructionContextResponse>;
+    return Array.isArray(record.sources) ? (record as GitLabInstructionContextResponse) : null;
   }
 
   private asGitLabEndpointUseCaseContextResult(

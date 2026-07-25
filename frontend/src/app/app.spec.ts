@@ -158,10 +158,12 @@ describe('App', () => {
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('tdw-data/settings.json');
     expect(compiled.textContent).toContain('Copilot');
+    expect(compiled.textContent).toContain('Jira');
     expect(compiled.textContent).toContain('Elasticsearch');
     expect(compiled.textContent).toContain('Dynatrace');
     expect(compiled.querySelector('.workspace-settings-baseline')).toBeNull();
     expect(compiled.textContent).not.toContain('analysis.ai.copilot');
+    expect(compiled.textContent).not.toContain('analysis.jira');
     expect(compiled.textContent).not.toContain('analysis.gitlab');
     expect(compiled.textContent).not.toContain('analysis.elasticsearch');
     expect(compiled.textContent).not.toContain('analysis.dynatrace');
@@ -172,6 +174,8 @@ describe('App', () => {
       compiled.querySelectorAll<HTMLElement>('.workspace-settings-source')
     );
     expect(sourceBadges.map((badge) => badge.textContent?.trim())).toEqual([
+      'DEFAULT',
+      'CUSTOM',
       'DEFAULT',
       'CUSTOM',
       'DEFAULT',
@@ -191,6 +195,8 @@ describe('App', () => {
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.message)).toEqual([
       'Default: CRM Workspace',
       '',
+      'Default: https://jira.example.com',
+      '',
       'Default: https://gitlab.example.com',
       'Default: platform/app',
       '',
@@ -202,6 +208,8 @@ describe('App', () => {
       ''
     ]);
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.disabled)).toEqual([
+      false,
+      true,
       false,
       true,
       false,
@@ -220,6 +228,7 @@ describe('App', () => {
     );
     expect(resetButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
       'Restore default for GitHub token',
+      'Restore default for Jira personal access token',
       'Restore default for Group',
       'Restore default for Token',
       'Restore default for Elasticsearch Base URL',
@@ -233,6 +242,7 @@ describe('App', () => {
         .queryAll(By.css('.workspace-settings-field-reset-button'))
         .map((element) => element.injector.get(MatTooltip).message)
     ).toEqual([
+      'Restore default',
       'Restore default',
       'Restore default',
       'Restore default',
@@ -261,6 +271,8 @@ describe('App', () => {
       'DEFAULT',
       'CUSTOM',
       'DEFAULT',
+      'CUSTOM',
+      'DEFAULT',
       'DEFAULT',
       'CUSTOM',
       'CUSTOM',
@@ -270,7 +282,7 @@ describe('App', () => {
       'CUSTOM',
       'CUSTOM'
     ]);
-    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(7);
+    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(8);
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -374,6 +386,28 @@ describe('App', () => {
     expect(compiled.textContent).not.toContain('HTTP Call Summary');
   });
 
+  it('should render the jira source console shell on the jira route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/jira');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector('a.app-shell__nav-item[aria-label="Jira Source"]');
+    expect(compiled.querySelector('app-jira-source-console')).not.toBeNull();
+    expect(compiled.querySelector('.workbench-header')).toBeNull();
+    expect(compiled.querySelector('.app-shell__info-trigger')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
+      'POST /api/jira/issue/material'
+    );
+    expect(navLink).not.toBeNull();
+    expect(compiled.textContent).toContain('Issue Material');
+    expect(compiled.textContent).toContain('Issue key or link');
+  });
+
   it('should redirect the legacy evidence route to elastic', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
@@ -470,6 +504,37 @@ describe('App', () => {
     expect(compiled.querySelector('app-platform-landing-page')).not.toBeNull();
   });
 
+  it('should render the change verification shell on the change verification route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/change-verification');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="Change Verification"]'
+    );
+
+    expect(compiled.querySelector('app-change-verification-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
+      'CRM Workspace'
+    );
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'Change Verification'
+    );
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'Change Verification'
+    );
+    expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
+    expect(navLink).not.toBeNull();
+    expect(compiled.textContent).toContain('Verify a change before release');
+  });
+
   it('should remount an active analysis feature from the sidebar as a fresh run screen', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
@@ -547,6 +612,24 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           value: 'ghu_copilot_secret',
           applicationValue: '',
           workspaceValue: 'ghu_copilot_secret',
+          source: 'WORKSPACE_SETTINGS',
+          secret: true
+        }
+      },
+      jira: {
+        baseUrl: {
+          propertyKey: 'analysis.jira.base-url',
+          value: 'https://jira.example.com',
+          applicationValue: 'https://jira.example.com',
+          workspaceValue: null,
+          source: 'APPLICATION_PROPERTIES',
+          secret: false
+        },
+        token: {
+          propertyKey: 'analysis.jira.token',
+          value: 'jira_secret',
+          applicationValue: '',
+          workspaceValue: 'jira_secret',
           source: 'WORKSPACE_SETTINGS',
           secret: true
         }

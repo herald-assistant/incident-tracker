@@ -434,8 +434,9 @@ Shell Angulara ma:
 Znaczenie grup UI:
 
 - `Analysis Features` - pionowe feature'y produktowe. `Incident Analysis` jest
-  pierwszym dostepnym feature'em; Flow Explorer, Functional Logic i Data
-  Diagnostics sa placeholders dla przyszlych feature'ow.
+  pierwszym dostepnym feature'em; Flow Explorer i Change Verification sa
+  kolejnymi dostepnymi feature'ami, a Data Diagnostics pozostaje placeholderem
+  dla przyszlego feature'a.
 - `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
   GitLab, Database i Operational Context sa analysis-independent i nie
   eksponuja incidentowego `analysisRunId`; DB/GitLab scope dla AI pozostaje
