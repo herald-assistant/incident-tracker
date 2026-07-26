@@ -54,6 +54,33 @@ describe('change-verification-import-export utils', () => {
     ).toThrow('Change Verification export wymaga kanonicznego raportu analizy.');
   });
 
+  it('should parse a running local history envelope when completed result is not required', () => {
+    const envelope = {
+      schema: 'tdw.change-verification-export',
+      version: 2,
+      exportedAt: '2026-07-26T09:02:00Z',
+      payload: {
+        type: 'change-verification-analysis',
+        resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT,
+        diagnostics: {
+          resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT
+        },
+        job: changeVerificationJob({
+          status: 'ANALYZING',
+          completedAt: null,
+          result: null,
+          report: null
+        })
+      }
+    };
+
+    const imported = parseImportedChangeVerificationResult(envelope, { requireCompleted: false });
+
+    expect(imported.job.status).toBe('ANALYZING');
+    expect(imported.job.result).toBeNull();
+    expect(imported.job.report).toBeNull();
+  });
+
   it('should build a stable export file name', () => {
     expect(
       buildChangeVerificationExportFileName(changeVerificationJob(), '2026-07-26T10:00:00Z')

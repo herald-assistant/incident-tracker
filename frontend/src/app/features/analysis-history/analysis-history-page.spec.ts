@@ -50,7 +50,7 @@ describe('AnalysisHistoryPageComponent', () => {
     const runActionButtons = Array.from(
       compiled.querySelectorAll<HTMLButtonElement>('.analysis-history-run__actions button')
     );
-    expect(runActionButtons).toHaveLength(12);
+    expect(runActionButtons).toHaveLength(16);
     expect(runActionButtons.every((button) => button.querySelectorAll('span:not(.material-symbols-outlined)').length === 0))
       .toBe(true);
     expect(tooltipMessagesForIcon(fixture, 'refresh')).toContain('Refresh');
@@ -169,6 +169,21 @@ describe('AnalysisHistoryPageComponent', () => {
       queryParams: { localRunId: 'analysis-2' }
     });
   });
+
+  it('should route a change verification run to the Change Verification feature screen', async () => {
+    const { fixture, router } = await createComponent();
+    const run = listRuns()[3]!;
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.openRun(run);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/change-verification'], {
+      queryParams: { localRunId: 'analysis-4' }
+    });
+  });
+
 
   it('should export the stored envelope without rebuilding the payload', async () => {
     const { fixture, historyApi } = await createComponent();
@@ -322,6 +337,15 @@ function listRuns(): LocalAnalysisRunListItemResponse[] {
       createdAt: '2026-05-02T11:00:00Z',
       updatedAt: '2026-05-02T11:00:30Z',
       completedAt: ''
+    },
+    {
+      analysisId: 'analysis-4',
+      feature: 'change-verification',
+      name: 'Change verification DEV-123',
+      status: 'COMPLETED',
+      createdAt: '2026-05-02T08:00:00Z',
+      updatedAt: '2026-05-02T08:04:00Z',
+      completedAt: '2026-05-02T08:04:00Z'
     }
   ];
 }

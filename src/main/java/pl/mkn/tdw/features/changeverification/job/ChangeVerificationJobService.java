@@ -19,6 +19,7 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationExecutio
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeExecutionRequest;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
+import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.job.state.ChangeVerificationJobState;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryListener;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryService;
@@ -44,6 +45,7 @@ public class ChangeVerificationJobService {
     private final ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider;
     private final ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer;
     private final ChangeVerificationSmokeExecutionService smokeExecutionService;
+    private final ChangeVerificationLocalRunPersistence localRunPersistence;
     private final TaskExecutor applicationTaskExecutor;
 
     public ChangeVerificationJobService(
@@ -54,6 +56,7 @@ public class ChangeVerificationJobService {
             ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider,
             ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer,
             ChangeVerificationSmokeExecutionService smokeExecutionService,
+            ChangeVerificationLocalRunPersistence localRunPersistence,
             TaskExecutor applicationTaskExecutor
     ) {
         this.sourceDiscoveryService = sourceDiscoveryService;
@@ -63,6 +66,9 @@ public class ChangeVerificationJobService {
         this.smokePackAnalysisProvider = smokePackAnalysisProvider;
         this.postmanCollectionRenderer = postmanCollectionRenderer;
         this.smokeExecutionService = smokeExecutionService;
+        this.localRunPersistence = localRunPersistence != null
+                ? localRunPersistence
+                : ChangeVerificationLocalRunPersistence.NO_OP;
         this.applicationTaskExecutor = applicationTaskExecutor;
     }
 
@@ -71,6 +77,7 @@ public class ChangeVerificationJobService {
         var job = new ChangeVerificationJobState(jobId, request);
         jobs.put(jobId, job);
         job.markSourceDiscoveryStarted();
+        persistRunSnapshot(job);
         applicationTaskExecutor.execute(() -> runJob(jobId, job, request));
         return job.snapshot();
     }
@@ -79,7 +86,9 @@ public class ChangeVerificationJobService {
         try {
             var sourceDiscovery = sourceDiscoveryService.discover(request, sourceDiscoveryListener(job));
             job.markSourceDiscoveryCompleted(sourceDiscovery);
+            persistRunSnapshot(job);
             job.markPreparedPrompt(initialPreparedPrompt(request, sourceDiscovery));
+            persistRunSnapshot(job);
 
             var complianceAnalysis = (complianceRequested(request))
                     ? runCompliance(jobId, job, request, sourceDiscovery)
@@ -89,6 +98,7 @@ public class ChangeVerificationJobService {
                     : null;
 
             job.markCompleted(complianceAnalysis, smokePackAnalysis);
+            persistRunSnapshot(job);
         } catch (RuntimeException exception) {
             log.error(
                     "Change Verification job failed jobId={} issueKey={} reason={}",
@@ -103,6 +113,7 @@ public class ChangeVerificationJobService {
                             ? exception.getMessage()
                             : "Unexpected Change Verification failure."
             );
+            persistRunSnapshot(job);
         }
     }
 
@@ -111,6 +122,7 @@ public class ChangeVerificationJobService {
             @Override
             public void onJiraMaterialStarted(String issueKey) {
                 job.markJiraMaterialStarted(issueKey);
+                persistRunSnapshot(job);
             }
 
             @Override
@@ -120,11 +132,13 @@ public class ChangeVerificationJobService {
                     List<String> limitations
             ) {
                 job.markJiraMaterialCompleted(issueKey, jiraIssue, limitations);
+                persistRunSnapshot(job);
             }
 
             @Override
             public void onMergeRequestDiscoveryStarted(String issueKey) {
                 job.markMergeRequestDiscoveryStarted(issueKey);
+                persistRunSnapshot(job);
             }
 
             @Override
@@ -135,6 +149,7 @@ public class ChangeVerificationJobService {
             ) {
                 job.markMergeRequestDiscoveryCompleted(issueKey, mergeRequests, limitations);
                 job.markChangedFilesCompleted(issueKey);
+                persistRunSnapshot(job);
             }
 
             @Override
@@ -142,6 +157,7 @@ public class ChangeVerificationJobService {
                     pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult mergeRequests
             ) {
                 job.markInstructionContextStarted(mergeRequests);
+                persistRunSnapshot(job);
             }
 
             @Override
@@ -151,6 +167,7 @@ public class ChangeVerificationJobService {
                     List<String> limitations
             ) {
                 job.markInstructionContextCompleted(mergeRequests, instructionContext, limitations);
+                persistRunSnapshot(job);
             }
         };
     }
@@ -162,6 +179,7 @@ public class ChangeVerificationJobService {
             pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery
     ) {
         job.markAiVerificationStarted();
+        persistRunSnapshot(job);
         var complianceAnalysis = analyzeCompliance(
                 jobId,
                 request,
@@ -170,6 +188,7 @@ public class ChangeVerificationJobService {
                 activityListener(job)
         );
         job.markAiVerificationCompleted(complianceAnalysis);
+        persistRunSnapshot(job);
         return complianceAnalysis;
     }
 
@@ -181,6 +200,7 @@ public class ChangeVerificationJobService {
             ChangeVerificationComplianceAnalysis complianceAnalysis
     ) {
         job.markSmokePackGenerationStarted();
+        persistRunSnapshot(job);
         var smokePackAnalysis = analyzeSmokePack(
                 jobId,
                 request,
@@ -190,6 +210,7 @@ public class ChangeVerificationJobService {
                 activityListener(job)
         );
         job.markSmokePackGenerationCompleted(smokePackAnalysis);
+        persistRunSnapshot(job);
         return smokePackAnalysis;
     }
 
@@ -211,6 +232,7 @@ public class ChangeVerificationJobService {
     ) {
         var job = job(jobId);
         job.updateSmokePack(smokePack);
+        persistRunSnapshot(job);
         return job.smokePack();
     }
 
@@ -226,6 +248,7 @@ public class ChangeVerificationJobService {
         var testResults = smokeExecutionService.execute(job.smokePack(), request);
         var response = executionResponse(testResults);
         job.markExecutionCompleted(response);
+        persistRunSnapshot(job);
         return response;
     }
 
@@ -354,11 +377,30 @@ public class ChangeVerificationJobService {
     }
 
     private AnalysisAiToolEvidenceListener toolEvidenceListener(ChangeVerificationJobState job) {
-        return job::markAiToolEvidenceUpdated;
+        return section -> {
+            job.markAiToolEvidenceUpdated(section);
+            persistRunSnapshot(job);
+        };
     }
 
     private AnalysisAiActivityListener activityListener(ChangeVerificationJobState job) {
-        return job::markAiActivity;
+        return event -> {
+            job.markAiActivity(event);
+            persistRunSnapshot(job);
+        };
+    }
+
+    private void persistRunSnapshot(ChangeVerificationJobState job) {
+        try {
+            localRunPersistence.persistRunSnapshot(job.snapshot());
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Failed to persist Change Verification local run snapshot jobId={} reason={}",
+                    job.snapshot().jobId(),
+                    exception.getMessage(),
+                    exception
+            );
+        }
     }
 
     private ChangeVerificationExecutionResponse executionResponse(

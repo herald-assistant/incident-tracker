@@ -231,6 +231,9 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'flow-explorer') {
       return 'Flow Explorer';
     }
+    if (feature === 'change-verification') {
+      return 'Change Verification';
+    }
     return feature
       ? feature
           .split(/[-_]/)
@@ -246,6 +249,9 @@ export class AnalysisHistoryPageComponent {
     }
     if (feature === 'flow-explorer') {
       return 'account_tree';
+    }
+    if (feature === 'change-verification') {
+      return 'fact_check';
     }
     return 'analytics';
   }
@@ -327,6 +333,9 @@ function routeForFeature(feature: string): string | null {
   }
   if (feature === 'flow-explorer') {
     return '/flow-explorer';
+  }
+  if (feature === 'change-verification') {
+    return '/change-verification';
   }
   return null;
 }

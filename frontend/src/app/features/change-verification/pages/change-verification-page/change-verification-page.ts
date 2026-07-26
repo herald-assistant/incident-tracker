@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { finalize, Subscription, switchMap, timer } from 'rxjs';
 
 import {
@@ -16,8 +17,10 @@ import {
   AnalysisReportMeta,
   AnalysisReportReference,
   AnalysisReportSection,
-  ApiErrorResponse
+  ApiErrorResponse,
+  LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
+import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
@@ -54,6 +57,8 @@ interface ChangeVerificationReportDisplay {
 })
 export class ChangeVerificationPageComponent implements OnDestroy {
   private readonly changeVerificationApi = inject(ChangeVerificationApiService);
+  private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
 
@@ -81,17 +86,23 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly canStartJob = computed(
     () => Boolean(this.issueInput().trim()) && !this.isSubmitting()
   );
-  readonly isImportedResult = computed(() => this.exportState()?.origin === 'imported');
+  readonly isImportedResult = computed(() => {
+    const origin = this.exportState()?.origin;
+    return origin === 'imported' || origin === 'local';
+  });
   readonly canExportResult = computed(() => {
     const exportState = this.exportState();
     return Boolean(exportState?.job.status === 'COMPLETED' && exportState.job.result && exportState.job.report);
   });
   readonly importExportHint = computed(() => {
     const exportState = this.exportState();
-    if (exportState?.origin !== 'imported') {
-      return '';
+    if (exportState?.origin === 'imported') {
+      return `Imported file: ${exportState.fileName}`;
     }
-    return `Imported file: ${exportState.fileName}`;
+    if (exportState?.origin === 'local') {
+      return `Local run: ${exportState.localRunName || exportState.localRunId || exportState.job.jobId}`;
+    }
+    return '';
   });
   readonly selectedModes = computed(() => this.buildModes());
   readonly smokePack = computed(() => this.job()?.result?.smokePack ?? null);
@@ -124,6 +135,17 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       currentJob.toolEvidenceSections.reduce((count, section) => count + section.items.length, 0)
     );
   });
+
+  constructor() {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const localRunId = params.get('localRunId')?.trim() ?? '';
+        if (localRunId) {
+          this.loadLocalChangeVerificationRun(localRunId);
+        }
+      });
+  }
 
   protected updateIssueInput(value: string): void {
     this.issueInput.set(value);
@@ -400,6 +422,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.pollingSubscription?.unsubscribe();
     this.clearResultCopyFeedback();
   }
 
@@ -454,6 +477,62 @@ export class ChangeVerificationPageComponent implements OnDestroy {
         fileName: currentExportState?.fileName ?? '',
         job
       });
+    }
+  }
+
+  private loadLocalChangeVerificationRun(analysisId: string): void {
+    this.pollingSubscription?.unsubscribe();
+    this.pollingSubscription = undefined;
+    this.job.set(null);
+    this.jobError.set('');
+    this.smokeExecutionError.set('');
+    this.smokePackDraftError.set('');
+    this.isSubmitting.set(true);
+
+    this.historyApi
+      .getRun(analysisId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isSubmitting.set(false))
+      )
+      .subscribe({
+        next: (detail) => this.applyLocalChangeVerificationRun(detail),
+        error: (error: HttpErrorResponse) => {
+          this.jobError.set(this.errorMessage(error));
+        }
+      });
+  }
+
+  private applyLocalChangeVerificationRun(detail: LocalAnalysisRunDetailResponse): void {
+    try {
+      if (detail.feature !== 'change-verification') {
+        throw new Error(`Lokalny run ${detail.analysisId} nie jest runem Change Verification.`);
+      }
+
+      const imported = parseImportedChangeVerificationResult(detail.exportEnvelope, {
+        requireCompleted: false
+      });
+      this.issueInput.set(imported.job.issueUrl || imported.job.issueKey);
+      this.checkStoryCompliance.set(imported.job.checkStoryCompliance);
+      this.checkInstructionCompliance.set(imported.job.checkInstructionCompliance);
+      this.generateSmokePack.set(imported.job.modes.includes('GENERATE_SMOKE_PACK'));
+      this.executeSmokePack.set(imported.job.modes.includes('EXECUTE_SMOKE_PACK'));
+      this.setJob(imported.job, {
+        origin: 'local',
+        exportedAt: imported.exportedAt,
+        fileName: '',
+        localRunId: detail.analysisId,
+        localRunName: detail.name
+      });
+      if (!this.isTerminalStatus(imported.job.status)) {
+        this.startPolling(imported.job.jobId || detail.analysisId);
+      }
+    } catch (error) {
+      this.jobError.set(
+        error instanceof Error
+          ? error.message
+          : 'Nie udało się odtworzyć lokalnego runu Change Verification.'
+      );
     }
   }
 

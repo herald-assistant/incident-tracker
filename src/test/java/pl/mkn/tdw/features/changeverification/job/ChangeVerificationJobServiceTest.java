@@ -20,6 +20,7 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeCle
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
+import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatcher;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryService;
 import pl.mkn.tdw.features.changeverification.smoke.ChangeVerificationPostmanCollectionRenderer;
@@ -246,6 +247,7 @@ class ChangeVerificationJobServiceTest {
                         org.springframework.web.client.RestClient.builder(),
                         new ChangeVerificationExecutionProperties()
                 ),
+                ChangeVerificationLocalRunPersistence.NO_OP,
                 taskExecutor
         );
     }

@@ -88,9 +88,11 @@ export interface ChangeVerificationDiagnosticArtifactSummary {
 }
 
 export interface ChangeVerificationExportState {
-  origin: 'live' | 'imported';
+  origin: 'live' | 'imported' | 'local';
   exportedAt: string;
   fileName: string;
+  localRunId?: string;
+  localRunName?: string;
   job: ChangeVerificationJobStateSnapshot;
 }
 
@@ -211,7 +213,10 @@ export function buildChangeVerificationExportDiagnostics(
   };
 }
 
-export function parseImportedChangeVerificationResult(payload: unknown): {
+export function parseImportedChangeVerificationResult(
+  payload: unknown,
+  options: { requireCompleted?: boolean } = {}
+): {
   exportedAt: string;
   job: ChangeVerificationJobStateSnapshot;
 } {
@@ -239,7 +244,9 @@ export function parseImportedChangeVerificationResult(payload: unknown): {
   }
 
   const job = normalizeChangeVerificationJob(envelopePayload['job']);
-  assertCompletedExportableJob(job);
+  if (options.requireCompleted ?? true) {
+    assertCompletedExportableJob(job);
+  }
 
   return {
     exportedAt: normalizeString(payloadObject['exportedAt']),
