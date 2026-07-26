@@ -30,9 +30,9 @@ import {
 } from '../models/change-verification.models';
 
 export const CHANGE_VERIFICATION_EXPORT_SCHEMA = 'tdw.change-verification-export';
-export const CHANGE_VERIFICATION_EXPORT_VERSION = 1;
+export const CHANGE_VERIFICATION_EXPORT_VERSION = 2;
 export const CHANGE_VERIFICATION_EXPORT_PAYLOAD_TYPE = 'change-verification-analysis';
-export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v1';
+export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v2';
 
 export interface ChangeVerificationExportEnvelope {
   schema: string;
@@ -75,7 +75,6 @@ export interface ChangeVerificationExportDiagnostics {
     toolEvidenceItemCount: number;
     aiActivityEventCount: number;
     usageIncluded: boolean;
-    reportIncluded: boolean;
   };
   artifacts: ChangeVerificationDiagnosticArtifactSummary[];
 }
@@ -156,8 +155,7 @@ export function buildChangeVerificationExportDiagnostics(
       contextEvidenceItemCount: evidenceItemCount(job.contextSections),
       toolEvidenceItemCount: evidenceItemCount(job.toolEvidenceSections),
       aiActivityEventCount: job.aiActivityEvents.length,
-      usageIncluded: Boolean(job.result.usage),
-      reportIncluded: Boolean(job.report)
+      usageIncluded: Boolean(job.result.usage)
     },
     artifacts: [
       {
@@ -191,9 +189,9 @@ export function buildChangeVerificationExportDiagnostics(
       {
         name: 'analysisReport',
         kind: 'canonical-report',
-        included: Boolean(job.report),
-        itemCount: job.report ? job.report.sections.length : 0,
-        characterCount: job.report ? JSON.stringify(job.report).length : null
+        included: true,
+        itemCount: job.report.sections.length,
+        characterCount: JSON.stringify(job.report).length
       },
       {
         name: 'preparedPrompt',
@@ -299,6 +297,7 @@ export function buildChangeVerificationExportFileName(
 
 type ExportableChangeVerificationJob = ChangeVerificationJobStateSnapshot & {
   result: ChangeVerificationResult;
+  report: NonNullable<ChangeVerificationJobStateSnapshot['report']>;
 };
 
 function assertCompletedExportableJob(
@@ -309,6 +308,9 @@ function assertCompletedExportableJob(
   }
   if (!job.result) {
     throw new Error('Change Verification export wymaga wyniku weryfikacji.');
+  }
+  if (!job.report) {
+    throw new Error('Change Verification export wymaga kanonicznego raportu analizy.');
   }
 }
 

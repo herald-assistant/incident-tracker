@@ -200,5 +200,5 @@ export interface ChangeVerificationJobStateSnapshot {
   aiActivityEvents: AnalysisAiActivityEvent[];
   preparedPrompt: string;
   result: ChangeVerificationResult | null;
-  report?: AnalysisReport | null;
+  report: AnalysisReport | null;
 }

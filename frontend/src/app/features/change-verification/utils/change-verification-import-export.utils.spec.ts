@@ -14,7 +14,7 @@ describe('change-verification-import-export utils', () => {
     const imported = parseImportedChangeVerificationResult(envelope);
 
     expect(envelope.schema).toBe('tdw.change-verification-export');
-    expect(envelope.version).toBe(1);
+    expect(envelope.version).toBe(2);
     expect(envelope.payload.type).toBe('change-verification-analysis');
     expect(envelope.payload.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
@@ -27,6 +27,7 @@ describe('change-verification-import-export utils', () => {
     expect(imported.exportedAt).toBe(exportedAt);
     expect(imported.job.jobId).toBe('change-job-1');
     expect(imported.job.result?.compliance.findings[0]?.summary).toBe('Story alignment confirmed');
+    expect(imported.job.report?.header).toBe('Change Verification: CRM-123');
   });
 
   it('should reject non Change Verification payloads', () => {
@@ -42,6 +43,15 @@ describe('change-verification-import-export utils', () => {
         '2026-07-26T10:00:00Z'
       )
     ).toThrow('Import i eksport wspiera tylko zakończone Change Verification runy COMPLETED.');
+  });
+
+  it('should reject completed jobs without a canonical report', () => {
+    expect(() =>
+      buildChangeVerificationExportEnvelope(
+        changeVerificationJob({ report: null }),
+        '2026-07-26T10:00:00Z'
+      )
+    ).toThrow('Change Verification export wymaga kanonicznego raportu analizy.');
   });
 
   it('should build a stable export file name', () => {
@@ -180,6 +190,36 @@ function changeVerificationJob(
         visibilityLimits: []
       },
       usage: null
+    },
+    report: {
+      reportId: 'change-verification-CRM-123',
+      header: 'Change Verification: CRM-123',
+      subHeader: 'Compliance READY | Smoke READY | Execution NOT_RUN',
+      markdownSummary: '- Compliance: `READY` with 1 finding.',
+      sections: [
+        {
+          id: 'CHANGE_COMPLIANCE',
+          title: 'Change alignment',
+          order: 0,
+          markdown: 'Story alignment confirmed.',
+          meta: {
+            references: [{ type: 'jira', label: 'CRM-123', target: 'CRM-123', description: 'Target issue.' }],
+            visibilityLimits: ['No runtime logs were checked.'],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'MEDIUM',
+            warnings: []
+          }
+        }
+      ],
+      meta: {
+        references: [{ type: 'jira', label: 'CRM-123', target: 'https://jira.example.com/browse/CRM-123', description: 'Target issue.' }],
+        visibilityLimits: ['No runtime logs were checked.'],
+        openQuestions: [],
+        gaps: [],
+        confidence: 'MEDIUM',
+        warnings: []
+      }
     },
     ...overrides
   };

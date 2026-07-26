@@ -34,57 +34,6 @@ public record ChangeVerificationJobStateSnapshot(
         AnalysisReport report
 ) {
 
-    public ChangeVerificationJobStateSnapshot(
-            String jobId,
-            String issueKey,
-            String issueUrl,
-            List<ChangeVerificationJobMode> modes,
-            boolean checkStoryCompliance,
-            boolean checkInstructionCompliance,
-            String aiModel,
-            String reasoningEffort,
-            String status,
-            String currentStepCode,
-            String currentStepLabel,
-            String errorCode,
-            String errorMessage,
-            Instant createdAt,
-            Instant updatedAt,
-            Instant completedAt,
-            List<AnalysisJobStepResponse> steps,
-            List<AnalysisEvidenceSection> contextSections,
-            List<AnalysisEvidenceSection> toolEvidenceSections,
-            List<AnalysisAiActivityEvent> aiActivityEvents,
-            String preparedPrompt,
-            ChangeVerificationResultResponse result
-    ) {
-        this(
-                jobId,
-                issueKey,
-                issueUrl,
-                modes,
-                checkStoryCompliance,
-                checkInstructionCompliance,
-                aiModel,
-                reasoningEffort,
-                status,
-                currentStepCode,
-                currentStepLabel,
-                errorCode,
-                errorMessage,
-                createdAt,
-                updatedAt,
-                completedAt,
-                steps,
-                contextSections,
-                toolEvidenceSections,
-                aiActivityEvents,
-                preparedPrompt,
-                result,
-                null
-        );
-    }
-
     public ChangeVerificationJobStateSnapshot {
         modes = modes != null ? List.copyOf(modes) : List.of();
         steps = steps != null ? List.copyOf(steps) : List.of();

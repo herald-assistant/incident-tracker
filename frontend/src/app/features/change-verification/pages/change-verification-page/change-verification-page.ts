@@ -41,15 +41,6 @@ interface ChangeVerificationReportDisplay {
   appendix: AnalysisReportMeta;
 }
 
-const EMPTY_REPORT_META: AnalysisReportMeta = {
-  references: [],
-  visibilityLimits: [],
-  openQuestions: [],
-  gaps: [],
-  confidence: '',
-  warnings: []
-};
-
 @Component({
   selector: 'app-change-verification-page',
   imports: [
@@ -93,7 +84,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly isImportedResult = computed(() => this.exportState()?.origin === 'imported');
   readonly canExportResult = computed(() => {
     const exportState = this.exportState();
-    return Boolean(exportState?.job.status === 'COMPLETED' && exportState.job.result);
+    return Boolean(exportState?.job.status === 'COMPLETED' && exportState.job.result && exportState.job.report);
   });
   readonly importExportHint = computed(() => {
     const exportState = this.exportState();
@@ -108,7 +99,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly execution = computed(() => this.job()?.result?.execution ?? null);
   readonly executionResults = computed(() => this.execution()?.testResults ?? []);
   readonly reportDisplay = computed(() =>
-    changeVerificationReportDisplay(this.job()?.report ?? null, this.job()?.result ?? null)
+    changeVerificationReportDisplay(this.job()?.report ?? null)
   );
   readonly workflowIsRunning = computed(() => {
     const currentJob = this.job();
@@ -541,173 +532,20 @@ function looksLikeUrl(value: string): boolean {
 }
 
 function changeVerificationReportDisplay(
-  report: AnalysisReport | null,
-  result: ChangeVerificationJobStateSnapshot['result']
+  report: AnalysisReport | null
 ): ChangeVerificationReportDisplay | null {
-  const effectiveReport = report ?? fallbackReportFromResult(result);
-  if (!effectiveReport) {
+  if (!report) {
     return null;
   }
 
   return {
-    report: effectiveReport,
-    title: cleanText(effectiveReport.header) || 'Change Verification result',
-    subTitle: cleanText(effectiveReport.subHeader),
-    confidence: cleanText(effectiveReport.meta?.confidence) || result?.smokePack?.confidence || '',
-    sections: sortedSections(effectiveReport.sections),
-    appendix: normalizedMeta(effectiveReport.meta)
+    report,
+    title: cleanText(report.header) || 'Change Verification result',
+    subTitle: cleanText(report.subHeader),
+    confidence: cleanText(report.meta?.confidence),
+    sections: sortedSections(report.sections),
+    appendix: normalizedMeta(report.meta)
   };
-}
-
-function fallbackReportFromResult(
-  result: ChangeVerificationJobStateSnapshot['result']
-): AnalysisReport | null {
-  if (!result) {
-    return null;
-  }
-
-  return {
-    reportId: `change-verification-${result.issueKey || 'result'}`,
-    header: `Change Verification: ${result.issueKey || result.issueUrl || 'change'}`,
-    subHeader: `Compliance ${result.compliance.status || 'pending'} | Smoke ${result.smokePack.status || 'pending'} | Execution ${result.execution.status || 'pending'}`,
-    markdownSummary: [
-      `- Compliance: \`${result.compliance.status || 'pending'}\` with ${result.compliance.findings.length} finding(s).`,
-      `- Smoke pack: \`${result.smokePack.status || 'pending'}\` with ${result.smokePack.tests.length} test(s).`,
-      `- Execution: \`${result.execution.status || 'pending'}\`.`
-    ].join('\n'),
-    sections: [
-      {
-        id: 'CHANGE_COMPLIANCE',
-        title: 'Change alignment',
-        order: 0,
-        markdown: complianceMarkdown(result),
-        meta: {
-          ...EMPTY_REPORT_META,
-          references: result.compliance.findings.flatMap((finding) =>
-            finding.references.map((reference) => ({
-              type: 'change-source',
-              label: finding.id || finding.source,
-              target: reference,
-              description: finding.summary
-            }))
-          ),
-          visibilityLimits: [...result.compliance.visibilityLimits],
-          warnings: result.compliance.findings
-            .filter((finding) => ['MEDIUM', 'HIGH', 'BLOCKER'].includes(finding.severity))
-            .map((finding) => `[${finding.severity}] ${finding.summary}`)
-        }
-      },
-      {
-        id: 'SMOKE_PACK',
-        title: 'Smoke pack',
-        order: 1,
-        markdown: smokePackMarkdown(result),
-        meta: {
-          ...EMPTY_REPORT_META,
-          references: result.smokePack.tests.flatMap((test) =>
-            test.sourceRefs.map((reference) => ({
-              type: 'smoke-source',
-              label: test.id || test.name,
-              target: reference,
-              description: test.riskCovered || test.purpose
-            }))
-          ),
-          visibilityLimits: [...result.smokePack.visibilityLimits],
-          gaps: result.smokePack.tests
-            .filter((test) => (test.reviewStatus || '').toUpperCase() !== 'READY')
-            .map((test) => `${test.id || test.name} requires review before execution.`),
-          confidence: cleanText(result.smokePack.confidence)
-        }
-      },
-      {
-        id: 'SMOKE_EXECUTION',
-        title: 'Execution readiness',
-        order: 2,
-        markdown: executionMarkdown(result),
-        meta: {
-          ...EMPTY_REPORT_META,
-          visibilityLimits: [...result.execution.visibilityLimits],
-          gaps:
-            result.execution.requested && result.execution.testResults.length === 0
-              ? ['Execution waits for explicit operator run with base URL.']
-              : []
-        }
-      }
-    ],
-    meta: {
-      ...EMPTY_REPORT_META,
-      references: [
-        {
-          type: 'jira',
-          label: result.issueKey || 'Jira issue',
-          target: result.issueUrl || result.issueKey,
-          description: 'Target issue verified by Change Verification.'
-        }
-      ],
-      visibilityLimits: uniqueText([
-        ...result.compliance.visibilityLimits,
-        ...result.smokePack.visibilityLimits,
-        ...result.execution.visibilityLimits
-      ]),
-      confidence: cleanText(result.smokePack.confidence)
-    }
-  };
-}
-
-function complianceMarkdown(result: NonNullable<ChangeVerificationJobStateSnapshot['result']>): string {
-  const lines = ['### Status', `\`${result.compliance.status || 'pending'}\``, '', '### Findings'];
-  if (!result.compliance.findings.length) {
-    lines.push('No compliance findings were returned.');
-  }
-  result.compliance.findings.forEach((finding) => {
-    lines.push(`- **[${finding.severity}] ${finding.summary || 'Finding'}**`);
-    addIndented(lines, finding.details);
-    addIndented(lines, finding.suggestedAction ? `Suggested action: ${finding.suggestedAction}` : '');
-  });
-  if (result.compliance.suggestedActions.length) {
-    lines.push('', '### Recommended actions');
-    result.compliance.suggestedActions.forEach((action) => lines.push(`- ${action}`));
-  }
-  return compactMarkdown(lines);
-}
-
-function smokePackMarkdown(result: NonNullable<ChangeVerificationJobStateSnapshot['result']>): string {
-  const lines = ['### Status', `\`${result.smokePack.status || 'pending'}\``];
-  if (result.smokePack.postmanCollectionName) {
-    lines.push('', `Collection: \`${result.smokePack.postmanCollectionName}\``);
-  }
-  lines.push('', '### Smoke tests');
-  if (!result.smokePack.tests.length) {
-    lines.push('No smoke tests were generated.');
-  }
-  result.smokePack.tests.forEach((test) => {
-    lines.push(`- **${test.id || 'test'}: ${test.name || 'Smoke test'}**`);
-    addIndented(lines, `\`${test.method || 'HTTP'} ${test.path || '/'}\``);
-    addIndented(lines, test.riskCovered || test.purpose || '');
-    addIndented(lines, `Review status: \`${test.reviewStatus || 'NEEDS_REVIEW'}\``);
-  });
-  if (result.smokePack.suggestedActions.length) {
-    lines.push('', '### Recommended actions');
-    result.smokePack.suggestedActions.forEach((action) => lines.push(`- ${action}`));
-  }
-  return compactMarkdown(lines);
-}
-
-function executionMarkdown(result: NonNullable<ChangeVerificationJobStateSnapshot['result']>): string {
-  if (!result.execution.requested) {
-    return 'Smoke execution was not requested in this run.';
-  }
-  const lines = ['### Status', `\`${result.execution.status || 'pending'}\``];
-  if (!result.execution.testResults.length) {
-    lines.push('', 'No smoke tests have been executed yet.');
-  }
-  result.execution.testResults.forEach((test) => {
-    lines.push(`- **${test.testId || test.name || 'test'}**: \`${test.status || 'pending'}\``);
-    if (test.http) {
-      addIndented(lines, `${test.http.method} ${test.http.url} -> ${test.http.statusCode ?? 'n/a'} in ${test.http.durationMillis}ms`);
-    }
-  });
-  return compactMarkdown(lines);
 }
 
 function buildChangeVerificationReportMarkdown(report: AnalysisReport): string {
@@ -771,16 +609,6 @@ function sortedSections(sections: AnalysisReportSection[] | null | undefined): A
     const rightOrder = typeof right.order === 'number' ? right.order : Number.MAX_SAFE_INTEGER;
     return leftOrder - rightOrder;
   });
-}
-
-function addIndented(lines: string[], value: string): void {
-  if (hasText(value)) {
-    lines.push(`  - ${value.trim()}`);
-  }
-}
-
-function compactMarkdown(lines: string[]): string {
-  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function uniqueText(values: string[]): string[] {
