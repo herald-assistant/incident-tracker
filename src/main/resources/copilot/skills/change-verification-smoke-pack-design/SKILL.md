@@ -13,14 +13,19 @@ funkcjonalnosc po wdrozeniu zyje i odpowiada zgodnie z oczekiwaniem.
 
 ## Wejscia
 
-Korzystaj tylko z artefaktow osadzonych w promptcie:
+Pracuj artifact-first. Zacznij od artefaktow osadzonych w promptcie:
 
 - `change-verification/smoke-source.md`
 - `change-verification/smoke-compliance.md`
 - `change-verification/smoke-response-contract.md`
 
-Nie czytaj lokalnego filesystemu. Nie wykonuj requestow. Nie zgaduj danych,
-ktorych nie da sie uczciwie wywnioskowac z artefaktow.
+Nie czytaj lokalnego filesystemu. Nie wykonuj requestow. Gdy artefakty nie
+wystarczaja do uczciwego projektu smoke packa, uzywaj wylacznie wlaczonych
+GitLab tools i Operational Context tools. Merge request wskazuje repozytorium i
+ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile
+jest potrzebne do zrozumienia endpointu, payloadu, walidacji albo use case'u w
+ramach budzetu sesji. Nie zgaduj danych, ktorych nie da sie uczciwie
+wywnioskowac z artefaktow albo pobranych narzedziami zrodel.
 
 ## Zasady projektowania
 
@@ -63,7 +68,14 @@ ktorych nie da sie uczciwie wywnioskowac z artefaktow.
 7. Merge requests i changed files sa zrodlem endpointow, payloadow i widocznych
    zmian implementacji. Gdy MR pochodzi z parenta albo sibling subtaska, traktuj
    go jako kontekst zaleznosci.
-8. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla
+8. Repository Scope pokazuje repozytoria z MR, rozbicie `projectPath` na
+   `rootGroup`/`groupPath`/`repositoryName` oraz dopasowania
+   repo -> code search scope -> target. Nie interpretuj tego jako bezposredniej
+   relacji repo -> system albo repo -> bounded-context.
+9. Code search scope z operational context jest wskazowka, jaki system albo
+   bounded context moze byc potrzebny do zrozumienia endpointow, payloadow i
+   cleanupu aplikacyjnego.
+10. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla
    target issue i wpisz pozostale ryzyka w `visibilityLimits` lub
    `suggestedActions`.
 

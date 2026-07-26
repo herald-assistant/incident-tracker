@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import com.github.copilot.rpc.ToolDefinition;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
 
 import java.util.List;
 import java.util.Set;
@@ -9,7 +10,8 @@ import java.util.Set;
 record ChangeVerificationCopilotToolAccessPolicy(
         List<ToolDefinition> enabledTools,
         List<String> availableToolNames,
-        boolean gitLabToolsRegistered
+        boolean gitLabToolsRegistered,
+        boolean operationalContextToolsRegistered
 ) {
 
     private static final Set<String> TOOL_ALLOWLIST = Set.of(
@@ -25,7 +27,11 @@ record ChangeVerificationCopilotToolAccessPolicy(
             GitLabToolNames.READ_JAVA_METHOD_SLICE,
             GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
             GitLabToolNames.FIND_CLASS_REFERENCES,
-            GitLabToolNames.FIND_FLOW_CONTEXT
+            GitLabToolNames.FIND_FLOW_CONTEXT,
+            OperationalContextToolNames.GET_SCOPE,
+            OperationalContextToolNames.LIST_ENTITIES,
+            OperationalContextToolNames.SEARCH,
+            OperationalContextToolNames.GET_ENTITY
     );
 
     ChangeVerificationCopilotToolAccessPolicy {
@@ -42,12 +48,17 @@ record ChangeVerificationCopilotToolAccessPolicy(
         return new ChangeVerificationCopilotToolAccessPolicy(
                 enabledTools,
                 enabledTools.stream().map(ToolDefinition::name).toList(),
-                hasToolPrefix(tools, GitLabToolNames.PREFIX)
+                hasToolPrefix(tools, GitLabToolNames.PREFIX),
+                hasToolPrefix(tools, OperationalContextToolNames.PREFIX)
         );
     }
 
     boolean gitLabToolsEnabled() {
         return availableToolNames.stream().anyMatch(name -> name != null && name.startsWith(GitLabToolNames.PREFIX));
+    }
+
+    boolean operationalContextToolsEnabled() {
+        return availableToolNames.stream().anyMatch(name -> name != null && name.startsWith(OperationalContextToolNames.PREFIX));
     }
 
     private static boolean hasToolPrefix(List<ToolDefinition> tools, String prefix) {

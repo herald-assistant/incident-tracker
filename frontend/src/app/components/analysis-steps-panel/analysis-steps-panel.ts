@@ -1105,10 +1105,15 @@ function resolvePreparedPrompt(
 
 function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean {
   const normalizedStepCode = String(stepCode || '').toUpperCase();
-  return normalizedStepCode === 'OPERATIONAL_CONTEXT' || normalizedStepCode === 'DETERMINISTIC_CONTEXT';
+  return normalizedStepCode === 'OPERATIONAL_CONTEXT'
+    || normalizedStepCode === 'DETERMINISTIC_CONTEXT'
+    || normalizedStepCode === 'INITIAL_SOURCE_SNAPSHOT';
 }
 
 function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'INITIAL_SOURCE_SNAPSHOT') {
+    return 'Initial prompt wysłany do AI';
+  }
   if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
     return 'Prompt po dopasowaniu kontekstu operacyjnego';
   }
@@ -1120,6 +1125,9 @@ function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
 }
 
 function buildPreparedPromptDescription(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'INITIAL_SOURCE_SNAPSHOT') {
+    return 'To jest prompt złożony po pobraniu Jira, MR-ek, instrukcji repozytorium i kontekstu code search scope. Ten tekst trafia do pierwszego kroku AI.';
+  }
   if (String(stepCode || '').toUpperCase() === 'OPERATIONAL_CONTEXT') {
     return 'To jest finalny prompt złożony z evidence i lokalnego kontekstu operacyjnego jeszcze przed wywołaniem AI. Jeśli Copilot nie odpowie, możesz skopiować go stąd i uruchomić we własnym narzędziu.';
   }

@@ -36,7 +36,8 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 - Ten run projektuje edytowalny smoke pack dla zmiany.
                 - Najpierw zaladuj skill `change-verification-smoke-pack-design` przez built-in tool `skill`.
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani wykonywac requestow.
-                - Jezeli potrzebujesz poglbic analize endpointow albo payloadow, uzywaj GitLab tools tylko dla repozytoriow, refow i plikow z sekcji Repository Scope.
+                - Jezeli potrzebujesz poglbic analize endpointow albo payloadow, uzywaj GitLab tools i Operational Context tools do zrozumienia endpointu, use case'u albo bounded contextu zwiazanego ze zmiana.
+                - Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do zaprojektowania sensownego smoke packa w ramach budzetu sesji.
                 - MVP Change Verification nie sprawdza bazy danych. Nie generuj DB assertions, SQL ani manualSql cleanup.
                 - Cleanup moze byc endpointem aplikacyjnym albo instrukcja manualnej weryfikacji bez SQL.
                 - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
@@ -76,7 +77,9 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 5. Sibling subtaski wykorzystuj tylko wtedy, gdy sa niezbedne do uruchomienia albo oceny target issue. W innych przypadkach nie projektuj dla nich osobnych testow.
                 6. Confluence pages sa kontekstem domenowym i flow. Uzywaj ich do wyboru sensownego smoke scenariusza, ale testuj tylko fragment powiazany z target issue.
                 7. Merge requests i changed files sa zrodlem endpointow, payloadow i widocznych zmian implementacji. Gdy MR pochodzi z parenta albo sibling subtaska, traktuj go jako kontekst zaleznosci.
-                8. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla target issue i wpisz pozostale ryzyka w `visibilityLimits` lub `suggestedActions`.
+                8. Repository Scope pokazuje repozytoria z MR, rozbicie projectPath na rootGroup/groupPath/repositoryName oraz dopasowania repo -> code search scope -> target. Nie interpretuj tego jako bezposredniej relacji repo -> system albo repo -> bounded-context.
+                9. Code search scope z operational context jest wskazowka, jaki system lub bounded context moze byc potrzebny do zrozumienia endpointow, payloadow i cleanupu aplikacyjnego.
+                10. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla target issue i wpisz pozostale ryzyka w `visibilityLimits` lub `suggestedActions`.
                 """.trim();
     }
 
@@ -140,16 +143,26 @@ public class ChangeVerificationSmokePackPromptPreparationService {
     private String renderRepository(ChangeVerificationRepositorySnapshot repository) {
         return """
                 ### %s
+                projectPath: %s
+                rootGroup: %s
+                groupPath: %s
+                repositoryName: %s
                 sourceRef: %s
                 targetRef: %s
                 changedFiles:
                 %s
                 instructionSources:
                 %s
+                operationalContextMatches:
+                %s
                 limitations:
                 %s
                 """.formatted(
                 value(repository.projectPath()),
+                value(repository.projectPath()),
+                value(repository.rootGroup()),
+                value(repository.groupPath()),
+                value(repository.repositoryName()),
                 value(repository.sourceRef()),
                 value(repository.targetRef()),
                 repository.changedFiles().stream()
@@ -161,6 +174,20 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                                 value(source.path()),
                                 value(source.kind()),
                                 value(source.ref())
+                        ))
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none"),
+                repository.operationalContextMatches().stream()
+                        .map(match -> "- repoId=%s | codeSearchScope=%s (%s) | relation=repo->code-search-scope->%s:%s | role=%s | searchMode=%s | pathPrefixes=%s | readFor=%s".formatted(
+                                value(match.repositoryId()),
+                                value(match.codeSearchScopeId()),
+                                value(match.codeSearchScopeName()),
+                                value(match.targetType()),
+                                value(match.targetId()),
+                                value(match.repositoryRole()),
+                                value(match.searchMode()),
+                                match.pathPrefixes(),
+                                match.readFor()
                         ))
                         .reduce((left, right) -> left + "\n" + right)
                         .orElse("- none"),

@@ -45,6 +45,7 @@ public final class ChangeVerificationJobState {
     private static final String STEP_CHANGED_FILES = "CHANGED_FILES";
     private static final String STEP_INSTRUCTION_CONTEXT = "INSTRUCTION_CONTEXT";
     private static final String STEP_INITIAL_SOURCE_SNAPSHOT = "INITIAL_SOURCE_SNAPSHOT";
+    private static final String STEP_SOURCE_CONTEXT_READY_LABEL = "Source context ready";
     private static final String STEP_AI_VERIFICATION = "AI_VERIFICATION";
     private static final String STEP_SMOKE_PACK_GENERATION = "SMOKE_PACK_GENERATION";
     private static final String STEP_EXECUTION = "EXECUTION";
@@ -181,7 +182,7 @@ public final class ChangeVerificationJobState {
         this.instructionContext = instructionContext;
         this.sourceDiscoveryLimitations = limitations != null ? List.copyOf(limitations) : List.of();
         currentStepCode = STEP_INITIAL_SOURCE_SNAPSHOT;
-        currentStepLabel = "Initial source snapshot";
+        currentStepLabel = STEP_SOURCE_CONTEXT_READY_LABEL;
         updatedAt = now;
         contextSections = contextSections(partialSourceDiscovery(resolvedIssueKey()));
         steps = steps(now);
@@ -214,9 +215,19 @@ public final class ChangeVerificationJobState {
                 : STEP_INITIAL_SOURCE_SNAPSHOT;
         currentStepLabel = request.checkInstructionCompliance()
                 ? "Instruction context"
-                : "Initial source snapshot";
+                : STEP_SOURCE_CONTEXT_READY_LABEL;
         updatedAt = now;
         contextSections = contextSections(partialSourceDiscovery(issueKey));
+        steps = steps(now);
+    }
+
+    public synchronized void markPreparedPrompt(String preparedPrompt) {
+        if (!org.springframework.util.StringUtils.hasText(preparedPrompt)) {
+            return;
+        }
+        var now = Instant.now();
+        this.preparedPrompt = preparedPrompt;
+        updatedAt = now;
         steps = steps(now);
     }
 
@@ -454,7 +465,7 @@ public final class ChangeVerificationJobState {
         ));
         steps.add(step(
                 STEP_INITIAL_SOURCE_SNAPSHOT,
-                "Initial source snapshot",
+                STEP_SOURCE_CONTEXT_READY_LABEL,
                 PHASE_CONTEXT,
                 initialSourceSnapshotStepStatus(),
                 initialSourceSnapshotStepMessage(),
@@ -782,6 +793,9 @@ public final class ChangeVerificationJobState {
                 List.of(
                         attribute("repositoryKey", repository.repositoryKey()),
                         attribute("projectPath", repository.projectPath()),
+                        attribute("rootGroup", repository.rootGroup()),
+                        attribute("groupPath", repository.groupPath()),
+                        attribute("repositoryName", repository.repositoryName()),
                         attribute("projectName", repository.projectName()),
                         attribute("sourceRef", repository.sourceRef()),
                         attribute("targetRef", repository.targetRef()),
@@ -798,6 +812,16 @@ public final class ChangeVerificationJobState {
                         attribute("instructionSourceCount", repository.instructionSources().size()),
                         attribute("instructionSources", repository.instructionSources().stream()
                                 .map(source -> source.path() + "@" + source.ref())
+                                .toList()
+                                .toString()),
+                        attribute("operationalContextMatchCount", repository.operationalContextMatches().size()),
+                        attribute("operationalContextMatches", repository.operationalContextMatches().stream()
+                                .map(match -> "%s -> %s -> %s:%s".formatted(
+                                        match.repositoryId(),
+                                        match.codeSearchScopeId(),
+                                        match.targetType(),
+                                        match.targetId()
+                                ))
                                 .toList()
                                 .toString()),
                         attribute("limitations", String.join("\n", repository.limitations()))
@@ -1148,10 +1172,10 @@ public final class ChangeVerificationJobState {
 
     private String initialSourceSnapshotStepMessage() {
         if (sourceDiscovery != null) {
-            return "Initial source snapshot is ready for AI analysis.";
+            return "Source context and initial AI prompt are ready.";
         }
         if (STEP_INITIAL_SOURCE_SNAPSHOT.equals(currentStepCode)) {
-            return "Preparing initial source snapshot.";
+            return "Preparing source context for AI.";
         }
         return "Waiting for deterministic source discovery.";
     }
@@ -1315,6 +1339,9 @@ public final class ChangeVerificationJobState {
         }
         if (smokePackAnalysis != null && smokePackAnalysis.prompt() != null) {
             return smokePackAnalysis.prompt();
+        }
+        if (org.springframework.util.StringUtils.hasText(preparedPrompt)) {
+            return preparedPrompt;
         }
         return "Change Verification prompt was not prepared.";
     }

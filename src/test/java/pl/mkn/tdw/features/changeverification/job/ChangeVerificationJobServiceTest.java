@@ -6,6 +6,8 @@ import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAna
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysisProvider;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysisProvider;
+import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparationService;
+import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationSmokePackPromptPreparationService;
 import pl.mkn.tdw.features.changeverification.execution.ChangeVerificationExecutionProperties;
 import pl.mkn.tdw.features.changeverification.execution.ChangeVerificationSmokeExecutionService;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
@@ -18,6 +20,7 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeCle
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatcher;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryService;
 import pl.mkn.tdw.features.changeverification.smoke.ChangeVerificationPostmanCollectionRenderer;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
@@ -34,6 +37,7 @@ import pl.mkn.tdw.integrations.jira.JiraIssueComment;
 import pl.mkn.tdw.integrations.jira.JiraIssueLink;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
@@ -130,6 +134,12 @@ class ChangeVerificationJobServiceTest {
                 .singleElement()
                 .extracting("itemCount")
                 .isEqualTo(4);
+        assertThat(snapshot.steps())
+                .filteredOn(step -> "INITIAL_SOURCE_SNAPSHOT".equals(step.code()))
+                .singleElement()
+                .extracting("label")
+                .isEqualTo("Source context ready");
+        assertThat(snapshot.preparedPrompt()).isEqualTo("Change Verification test prompt");
         assertThat(snapshot.result()).isNotNull();
         assertThat(snapshot.result().compliance().status()).isEqualTo("PASSED_WITH_WARNINGS");
         assertThat(snapshot.result().compliance().findings()).singleElement()
@@ -224,8 +234,11 @@ class ChangeVerificationJobServiceTest {
                         new InstructionContextDiscoveryService(
                                 gitLabRepositoryPort,
                                 new InstructionDiscoveryProperties()
-                        )
+                        ),
+                        new ChangeVerificationOperationalContextMatcher(ignored -> OperationalContextCatalog.empty())
                 ),
+                new ChangeVerificationPromptPreparationService(),
+                new ChangeVerificationSmokePackPromptPreparationService(),
                 new TestComplianceAnalysisProvider(),
                 new TestSmokePackAnalysisProvider(),
                 new ChangeVerificationPostmanCollectionRenderer(),

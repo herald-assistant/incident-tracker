@@ -8,6 +8,8 @@ import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAna
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysisProvider;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysisProvider;
+import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparationService;
+import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationSmokePackPromptPreparationService;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
@@ -36,6 +38,8 @@ public class ChangeVerificationJobService {
 
     private final Map<String, ChangeVerificationJobState> jobs = new ConcurrentHashMap<>();
     private final ChangeVerificationSourceDiscoveryService sourceDiscoveryService;
+    private final ChangeVerificationPromptPreparationService compliancePromptPreparationService;
+    private final ChangeVerificationSmokePackPromptPreparationService smokePackPromptPreparationService;
     private final ChangeVerificationComplianceAnalysisProvider complianceAnalysisProvider;
     private final ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider;
     private final ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer;
@@ -44,6 +48,8 @@ public class ChangeVerificationJobService {
 
     public ChangeVerificationJobService(
             ChangeVerificationSourceDiscoveryService sourceDiscoveryService,
+            ChangeVerificationPromptPreparationService compliancePromptPreparationService,
+            ChangeVerificationSmokePackPromptPreparationService smokePackPromptPreparationService,
             ChangeVerificationComplianceAnalysisProvider complianceAnalysisProvider,
             ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider,
             ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer,
@@ -51,6 +57,8 @@ public class ChangeVerificationJobService {
             TaskExecutor applicationTaskExecutor
     ) {
         this.sourceDiscoveryService = sourceDiscoveryService;
+        this.compliancePromptPreparationService = compliancePromptPreparationService;
+        this.smokePackPromptPreparationService = smokePackPromptPreparationService;
         this.complianceAnalysisProvider = complianceAnalysisProvider;
         this.smokePackAnalysisProvider = smokePackAnalysisProvider;
         this.postmanCollectionRenderer = postmanCollectionRenderer;
@@ -71,6 +79,7 @@ public class ChangeVerificationJobService {
         try {
             var sourceDiscovery = sourceDiscoveryService.discover(request, sourceDiscoveryListener(job));
             job.markSourceDiscoveryCompleted(sourceDiscovery);
+            job.markPreparedPrompt(initialPreparedPrompt(request, sourceDiscovery));
 
             var complianceAnalysis = (complianceRequested(request))
                     ? runCompliance(jobId, job, request, sourceDiscovery)
@@ -272,6 +281,19 @@ public class ChangeVerificationJobService {
                     null
             );
         }
+    }
+
+    private String initialPreparedPrompt(
+            ChangeVerificationJobStartRequest request,
+            pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery
+    ) {
+        if (complianceRequested(request)) {
+            return compliancePromptPreparationService.prepare(request, sourceDiscovery).prompt();
+        }
+        if (smokePackRequested(request)) {
+            return smokePackPromptPreparationService.prepare(request, sourceDiscovery, null).prompt();
+        }
+        return "";
     }
 
     private boolean complianceRequested(ChangeVerificationJobStartRequest request) {

@@ -97,14 +97,16 @@ public class ChangeVerificationCopilotRunRequestAssembler {
         );
 
         log.info(
-                "Change Verification Copilot session prepared runReference={} sessionId={} skillCount={} skills={} skillDirectories={} gitLabToolsRegistered={} gitLabToolsEnabled={}",
+                "Change Verification Copilot session prepared runReference={} sessionId={} skillCount={} skills={} skillDirectories={} gitLabToolsRegistered={} gitLabToolsEnabled={} operationalContextToolsRegistered={} operationalContextToolsEnabled={}",
                 runReference,
                 toolSessionContext.copilotSessionId(),
                 skillNames.size(),
                 skillNames,
                 skillDirectories,
                 toolAccessPolicy.gitLabToolsRegistered(),
-                toolAccessPolicy.gitLabToolsEnabled()
+                toolAccessPolicy.gitLabToolsEnabled(),
+                toolAccessPolicy.operationalContextToolsRegistered(),
+                toolAccessPolicy.operationalContextToolsEnabled()
         );
 
         var sessionConfigRequest = new CopilotSessionConfigRequest(

@@ -58,6 +58,9 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
         var scope = new LinkedHashMap<String, Object>();
         putIfText(scope, "repositoryKey", repository.repositoryKey());
         putIfText(scope, "projectPath", repository.projectPath());
+        putIfText(scope, "rootGroup", repository.rootGroup());
+        putIfText(scope, "groupPath", repository.groupPath());
+        putIfText(scope, "repositoryName", repository.repositoryName());
         putIfText(scope, "projectName", repository.projectName());
         putIfText(scope, "sourceRef", repository.sourceRef());
         putIfText(scope, "targetRef", repository.targetRef());
@@ -79,6 +82,35 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
                         .map(this::instructionSourceScope)
                         .toList()
         );
+        scope.put(
+                "operationalContextMatches",
+                repository.operationalContextMatches().stream()
+                        .map(this::operationalContextMatchScope)
+                        .toList()
+        );
+        return scope;
+    }
+
+    private Map<String, Object> operationalContextMatchScope(
+            pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatch match
+    ) {
+        var scope = new LinkedHashMap<String, Object>();
+        putIfText(scope, "repositoryId", match.repositoryId());
+        putIfText(scope, "codeSearchScopeId", match.codeSearchScopeId());
+        putIfText(scope, "codeSearchScopeName", match.codeSearchScopeName());
+        putIfText(scope, "scopeType", match.scopeType());
+        putIfText(scope, "targetType", match.targetType());
+        putIfText(scope, "targetId", match.targetId());
+        putIfText(scope, "relation", "repo->code-search-scope->target");
+        putIfText(scope, "repositoryRole", match.repositoryRole());
+        if (match.priority() != null) {
+            scope.put("priority", match.priority());
+        }
+        putIfText(scope, "reason", match.reason());
+        scope.put("readFor", match.readFor());
+        putIfText(scope, "searchMode", match.searchMode());
+        scope.put("pathPrefixes", match.pathPrefixes());
+        scope.put("limitations", match.limitations());
         return scope;
     }
 

@@ -32,6 +32,7 @@ public class ChangeVerificationSourceDiscoveryService {
     private final GitLabRepositoryPort gitLabRepositoryPort;
     private final GitLabProperties gitLabProperties;
     private final InstructionContextDiscoveryService instructionContextDiscoveryService;
+    private final ChangeVerificationOperationalContextMatcher operationalContextMatcher;
 
     public ChangeVerificationSourceDiscoveryResult discover(ChangeVerificationJobStartRequest request) {
         return discover(request, ChangeVerificationSourceDiscoveryListener.NO_OP);
@@ -63,12 +64,16 @@ public class ChangeVerificationSourceDiscoveryService {
             }
         }
 
+        var repositories = ChangeVerificationRepositorySnapshotFactory.from(mergeRequests, instructionContext);
+        repositories = operationalContextMatcher.enrich(repositories);
+
         return new ChangeVerificationSourceDiscoveryResult(
                 issueKey,
                 request.issueUrl(),
                 jiraIssue,
                 mergeRequests,
                 instructionContext,
+                repositories,
                 limitations
         );
     }

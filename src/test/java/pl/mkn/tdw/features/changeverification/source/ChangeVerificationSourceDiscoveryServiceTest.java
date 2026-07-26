@@ -11,6 +11,7 @@ import pl.mkn.tdw.integrations.gitlab.instructions.InstructionContextDiscoverySe
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionDiscoveryProperties;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 
 import java.util.List;
 
@@ -32,7 +33,8 @@ class ChangeVerificationSourceDiscoveryServiceTest {
                 jiraIssuePort,
                 gitLabRepositoryPort,
                 gitLabProperties,
-                new InstructionContextDiscoveryService(gitLabRepositoryPort, new InstructionDiscoveryProperties())
+                new InstructionContextDiscoveryService(gitLabRepositoryPort, new InstructionDiscoveryProperties()),
+                new ChangeVerificationOperationalContextMatcher(ignored -> OperationalContextCatalog.empty())
         );
 
         when(jiraIssuePort.getIssueMaterial("CRM-123")).thenReturn(issueWithSubTask());
@@ -70,7 +72,8 @@ class ChangeVerificationSourceDiscoveryServiceTest {
                 jiraIssuePort,
                 gitLabRepositoryPort,
                 gitLabProperties,
-                new InstructionContextDiscoveryService(gitLabRepositoryPort, new InstructionDiscoveryProperties())
+                new InstructionContextDiscoveryService(gitLabRepositoryPort, new InstructionDiscoveryProperties()),
+                new ChangeVerificationOperationalContextMatcher(ignored -> OperationalContextCatalog.empty())
         );
 
         when(jiraIssuePort.getIssueMaterial("CRM-124")).thenReturn(subTaskWithParent());

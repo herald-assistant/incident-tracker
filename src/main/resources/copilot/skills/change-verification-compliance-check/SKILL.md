@@ -14,16 +14,22 @@ rozjazdy, ryzyka i rekomendowane korekty przed wdrozeniem.
 
 ## Wejscia
 
-Korzystaj tylko z artefaktow osadzonych w promptcie:
+Pracuj artifact-first. Zacznij od artefaktow osadzonych w promptcie:
 
 - `change-verification/source-discovery.md`
 - `change-verification/jira-issue.md`
+- `change-verification/repository-scope.md`
 - `change-verification/merge-requests.md`
 - `change-verification/instruction-context.md`
 - `change-verification/response-contract.md`
 
-Nie czytaj lokalnego filesystemu. Nie zgaduj materialu z Jira, GitLaba ani
-Confluence, ktorego nie ma w artefaktach.
+Nie czytaj lokalnego filesystemu. Gdy artefakty nie wystarczaja do uczciwej
+oceny, uzywaj wylacznie wlaczonych GitLab tools i Operational Context tools.
+Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica
+czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do zrozumienia endpointu,
+use case'u albo bounded contextu w ramach budzetu sesji. Nie zgaduj materialu z
+Jira ani Confluence, ktorego nie ma w artefaktach albo nie zostal pobrany przez
+wlaczone narzedzia.
 
 ## Procedura
 
@@ -76,13 +82,21 @@ Confluence, ktorego nie ma w artefaktach.
 7. Merge requests i changed files pokazuja widoczna implementacje. Gdy MR nalezy
    do parenta albo sibling subtaska, wykorzystuj go tylko tam, gdzie pomaga
    ocenic target issue albo zaleznosc target issue.
-8. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne.
+8. Repository Scope pokazuje repozytoria z MR, rozbicie `projectPath` na
+   `rootGroup`/`groupPath`/`repositoryName` oraz dopasowania
+   repo -> code search scope -> target. Nie interpretuj tego jako
+   bezposredniej relacji repo -> system albo repo -> bounded-context.
+9. Code search scope z operational context jest wskazowka, jaki system albo
+   bounded context moze byc potrzebny do zrozumienia zmiany. Uzywaj Operational
+   Context tools, gdy potrzebujesz doprecyzowac proces, system, bounded context,
+   integracje albo slownictwo domenowe.
+10. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne.
    Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla
    brakujacych wymagan biznesowych.
-9. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz
+11. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz
    ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo
    implementacji.
-10. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z
+12. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z
     target issue, a reszte opisz jako out of scope albo visibility limit.
 
 ## Status

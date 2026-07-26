@@ -208,6 +208,26 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea?.value).toContain('Provider: dynatrace, category: runtime-signals');
   });
 
+  it('should expose the initial Change Verification prompt on the source context step', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildChangeVerificationSourceContextStep()]);
+    fixture.componentRef.setInput('preparedPrompt', '# Change Verification canonical prompt');
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const promptTextarea = compiled.querySelector(
+      '.prepared-prompt__textarea'
+    ) as HTMLTextAreaElement | null;
+
+    expect(compiled.textContent).toContain('Initial prompt wysłany do AI');
+    expect(compiled.textContent).toContain('Ten tekst trafia do pierwszego kroku AI.');
+    expect(promptTextarea).not.toBeNull();
+    expect(promptTextarea?.value).toContain('Change Verification canonical prompt');
+  });
+
   it('should hide the prepared prompt on the final AI step and keep the result preview visible', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
@@ -933,6 +953,18 @@ function buildOperationalContextStep(): AnalysisJobStepResponse {
     status: 'COMPLETED',
     message: 'Krok zakończony bez nowych danych.',
     itemCount: 0,
+    startedAt: '2026-04-14T12:00:10Z',
+    completedAt: '2026-04-14T12:00:12Z'
+  };
+}
+
+function buildChangeVerificationSourceContextStep(): AnalysisJobStepResponse {
+  return {
+    code: 'INITIAL_SOURCE_SNAPSHOT',
+    label: 'Source context ready',
+    status: 'COMPLETED',
+    message: 'Source context and initial AI prompt are ready.',
+    itemCount: 4,
     startedAt: '2026-04-14T12:00:10Z',
     completedAt: '2026-04-14T12:00:12Z'
   };

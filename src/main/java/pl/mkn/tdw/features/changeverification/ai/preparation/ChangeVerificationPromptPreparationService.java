@@ -37,7 +37,8 @@ public class ChangeVerificationPromptPreparationService {
                 - Ten run sprawdza zgodnosc zmiany z materialem Jira oraz instrukcjami repozytorium.
                 - Najpierw zaladuj skill `change-verification-compliance-check` przez built-in tool `skill`.
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani zgadywac materialu spoza osadzonych artefaktow.
-                - Jezeli potrzebujesz poglbic analize kodu, uzywaj GitLab tools tylko dla repozytoriow, refow i plikow z `change-verification/repository-scope.md`.
+                - Jezeli potrzebujesz poglbic analize kodu, uzywaj GitLab tools i Operational Context tools do zrozumienia endpointu, use case'u albo bounded contextu zwiazanego ze zmiana.
+                - Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do uzyskania uzasadnionej odpowiedzi w ramach budzetu sesji.
                 - MVP Change Verification nie sprawdza bazy danych. Nie projektuj DB checks, nie proponuj SQL i nie oczekuj DB tools.
                 - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
                 - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.
@@ -83,9 +84,11 @@ public class ChangeVerificationPromptPreparationService {
                 5. Subtaski target issue albo sibling subtaski parenta sa kontekstem powiazanej pracy. Traktuj je jako sygnal zaleznosci, nie jako dodatkowe wymagania target issue.
                 6. Confluence pages z remote-linkow sa materialem kontekstowym. Uzywaj ich do rozumienia domeny, flow, terminologii i ryzyk. Nie zamieniaj szerokiego opisu Confluence w wymaganie, jesli target issue nie laczy go jawnie ze zmiana.
                 7. Merge requests i changed files pokazuja widoczna implementacje. Jesli MR nalezy do parenta albo sibling subtaska, wykorzystuj go tylko tam, gdzie pomaga ocenic target issue albo zaleznosc target issue.
-                8. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne. Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla brakujacych wymagan biznesowych.
-                9. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
-                10. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
+                8. Repository Scope pokazuje repozytoria z MR, rozbicie projectPath na rootGroup/groupPath/repositoryName oraz dopasowania repo -> code search scope -> target. Nie interpretuj tego jako bezposredniej relacji repo -> system albo repo -> bounded-context.
+                9. Code search scope z operational context jest wskazowka, jaki system lub bounded context moze byc potrzebny do zrozumienia zmiany. Uzywaj Operational Context tools, gdy potrzebujesz doprecyzowac proces, system, bounded context, integracje albo slownictwo domenowe.
+                10. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne. Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla brakujacych wymagan biznesowych.
+                11. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
+                12. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
                 """.trim();
     }
 
@@ -305,6 +308,9 @@ public class ChangeVerificationPromptPreparationService {
                 ## %s
                 repositoryKey: %s
                 projectPath: %s
+                rootGroup: %s
+                groupPath: %s
+                repositoryName: %s
                 projectName: %s
                 sourceRef: %s
                 targetRef: %s
@@ -316,12 +322,18 @@ public class ChangeVerificationPromptPreparationService {
                 instructionSources:
                 %s
 
+                operationalContextMatches:
+                %s
+
                 limitations:
                 %s
                 """.formatted(
                 value(repository.projectPath()),
                 value(repository.repositoryKey()),
                 value(repository.projectPath()),
+                value(repository.rootGroup()),
+                value(repository.groupPath()),
+                value(repository.repositoryName()),
                 value(repository.projectName()),
                 value(repository.sourceRef()),
                 value(repository.targetRef()),
@@ -340,8 +352,28 @@ public class ChangeVerificationPromptPreparationService {
                         ))
                         .reduce((left, right) -> left + "\n" + right)
                         .orElse("- none"),
+                repository.operationalContextMatches().stream()
+                        .map(this::renderOperationalContextMatch)
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none"),
                 bulletList(repository.limitations())
         ).trim();
+    }
+
+    private String renderOperationalContextMatch(pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatch match) {
+        return "- repoId=%s | codeSearchScope=%s (%s) | relation=repo->code-search-scope->%s:%s | role=%s | searchMode=%s | pathPrefixes=%s | readFor=%s | reason=%s | limitations=%s".formatted(
+                value(match.repositoryId()),
+                value(match.codeSearchScopeId()),
+                value(match.codeSearchScopeName()),
+                value(match.targetType()),
+                value(match.targetId()),
+                value(match.repositoryRole()),
+                value(match.searchMode()),
+                match.pathPrefixes(),
+                match.readFor(),
+                value(match.reason()),
+                match.limitations()
+        );
     }
 
     private String renderRepositoryChangedFile(ChangeVerificationChangedFileSnapshot file) {
