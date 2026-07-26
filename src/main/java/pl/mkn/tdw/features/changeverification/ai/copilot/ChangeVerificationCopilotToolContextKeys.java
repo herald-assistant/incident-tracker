@@ -9,8 +9,6 @@ final class ChangeVerificationCopilotToolContextKeys {
     static final String RUN_KIND_SMOKE_PACK = "smoke-pack";
     static final String REPOSITORY_SCOPE_RESOLVED = "changeVerificationRepositoryScopeResolved";
     static final String ALLOWED_REPOSITORIES = "changeVerificationAllowedRepositories";
-    static final String DATABASE_APPLICATION = "changeVerificationDatabaseApplication";
-    static final String DATABASE_READONLY_ONLY = "changeVerificationDatabaseReadonlyOnly";
 
     private ChangeVerificationCopilotToolContextKeys() {
     }

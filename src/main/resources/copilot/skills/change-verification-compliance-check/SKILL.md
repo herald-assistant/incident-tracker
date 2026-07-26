@@ -28,27 +28,62 @@ Confluence, ktorego nie ma w artefaktach.
 ## Procedura
 
 1. Ustal obietnice zmiany:
-   - opis story,
-   - acceptance criteria,
+   - target issue podane przez uzytkownika,
+   - acceptance criteria target issue,
+   - opis target issue,
    - komentarze i linki,
    - dodatkowe operator `userInstructions`.
-2. Ustal widoczny zakres implementacji:
+2. Ustal role materialu kontekstowego:
+   - parent issue jako szerszy kontekst celu, AC, slownictwa i ryzyk,
+   - Confluence pages jako kontekst domenowy i flow,
+   - subtaski jako kontekst powiazanej pracy,
+   - MR-y parenta albo sibling subtaskow jako kontekst zaleznosci.
+3. Ustal widoczny zakres implementacji:
    - MR titles,
    - source/target branches,
    - commit titles,
    - changed files.
-3. Ustal obowiazujace instrukcje:
+4. Ustal obowiazujace instrukcje:
    - globalne i lokalne `AGENTS.md`,
    - `.github/copilot-instructions.md`,
    - pliki referencjonowane przez instrukcje.
-4. Porownaj trzy warstwy:
-   - story vs widoczna implementacja,
-   - acceptance criteria vs widoczna implementacja,
+5. Porownaj trzy warstwy:
+   - target issue vs widoczna implementacja,
+   - acceptance criteria target issue vs widoczna implementacja,
    - instructions vs widoczna implementacja.
-5. Rozrozniaj:
+6. Rozrozniaj:
    - fakt potwierdzony przez artefakt,
    - inferencje z nazw plikow, branchy albo commitow,
    - luki widocznosci.
+
+## Interpretacja zrodel
+
+1. Target issue jest glownym zakresem weryfikacji. Nie rozszerzaj zakresu
+   tylko dlatego, ze parent albo Confluence sa szersze.
+2. Acceptance criteria target issue sa najsilniejszym sygnalem wymagan. Gdy sa
+   sprzeczne z opisem, pokaz rozjazd jako finding.
+3. Opis target issue zawieza i tlumaczy oczekiwane zachowanie. Uzywaj go do
+   interpretacji AC, ale nie ignoruj AC.
+4. Parent issue jest materialem kontekstowym. Gdy target issue jest subtaskiem,
+   parent pomaga zrozumiec cel nadrzedny, slownictwo, linki i ryzyka, ale ocena
+   zgodnosci ma byc zawiezona do target subtaska.
+5. Subtaski target issue albo sibling subtaski parenta sa kontekstem powiazanej
+   pracy. Traktuj je jako sygnal zaleznosci, nie jako dodatkowe wymagania
+   target issue.
+6. Confluence pages z remote-linkow sa materialem kontekstowym. Uzywaj ich do
+   rozumienia domeny, flow, terminologii i ryzyk. Nie zamieniaj szerokiego opisu
+   Confluence w wymaganie, jesli target issue nie laczy go jawnie ze zmiana.
+7. Merge requests i changed files pokazuja widoczna implementacje. Gdy MR nalezy
+   do parenta albo sibling subtaska, wykorzystuj go tylko tam, gdzie pomaga
+   ocenic target issue albo zaleznosc target issue.
+8. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne.
+   Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla
+   brakujacych wymagan biznesowych.
+9. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz
+   ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo
+   implementacji.
+10. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z
+    target issue, a reszte opisz jako out of scope albo visibility limit.
 
 ## Status
 

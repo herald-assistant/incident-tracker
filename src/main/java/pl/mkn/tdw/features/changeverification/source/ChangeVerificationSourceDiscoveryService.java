@@ -16,6 +16,8 @@ import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -52,7 +54,7 @@ public class ChangeVerificationSourceDiscoveryService {
             jiraIssue = fetchJiraIssue(issueKey, limitations);
             listener.onJiraMaterialCompleted(issueKey, jiraIssue, List.copyOf(limitations));
             listener.onMergeRequestDiscoveryStarted(issueKey);
-            mergeRequests = fetchMergeRequests(issueKey, limitations);
+            mergeRequests = fetchMergeRequests(issueKeysForMergeRequests(issueKey, jiraIssue), limitations);
             listener.onMergeRequestDiscoveryCompleted(issueKey, mergeRequests, List.copyOf(limitations));
             if (Boolean.TRUE.equals(request.checkInstructionCompliance())) {
                 listener.onInstructionContextStarted(mergeRequests);
@@ -81,6 +83,35 @@ public class ChangeVerificationSourceDiscoveryService {
         }
     }
 
+    private GitLabMergeRequestSearchResult fetchMergeRequests(List<String> issueKeys, List<String> limitations) {
+        if (issueKeys == null || issueKeys.isEmpty()) {
+            return new GitLabMergeRequestSearchResult(null, gitLabProperties.getGroup(), List.of(), List.of());
+        }
+
+        var mergeRequestsByKey = new LinkedHashMap<String, pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest>();
+        var collectedLimitations = new ArrayList<String>();
+        for (var issueKey : issueKeys) {
+            var result = fetchMergeRequests(issueKey, limitations);
+            if (result == null) {
+                continue;
+            }
+            result.mergeRequests().forEach(mergeRequest ->
+                    mergeRequestsByKey.putIfAbsent(mergeRequestIdentity(mergeRequest), mergeRequest)
+            );
+            result.limitations().stream()
+                    .filter(StringUtils::hasText)
+                    .map(limitation -> issueKey + ": " + limitation)
+                    .forEach(collectedLimitations::add);
+        }
+
+        return new GitLabMergeRequestSearchResult(
+                String.join(",", issueKeys),
+                gitLabProperties.getGroup(),
+                List.copyOf(mergeRequestsByKey.values()),
+                collectedLimitations
+        );
+    }
+
     private GitLabMergeRequestSearchResult fetchMergeRequests(String issueKey, List<String> limitations) {
         try {
             return gitLabRepositoryPort.findMergeRequestsByIssueKey(
@@ -93,6 +124,46 @@ public class ChangeVerificationSourceDiscoveryService {
             limitations.add("GitLab merge requests could not be fetched: " + safeMessage(exception));
             return null;
         }
+    }
+
+    private List<String> issueKeysForMergeRequests(String issueKey, JiraIssueMaterial jiraIssue) {
+        var issueKeys = new LinkedHashSet<String>();
+        if (StringUtils.hasText(issueKey)) {
+            issueKeys.add(issueKey.trim());
+        }
+        if (jiraIssue != null) {
+            jiraIssue.subTasks().stream()
+                    .map(JiraIssueMaterial::issueKey)
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .forEach(issueKeys::add);
+            if (jiraIssue.parentIssue() != null) {
+                var parentIssue = jiraIssue.parentIssue();
+                if (StringUtils.hasText(parentIssue.issueKey())) {
+                    issueKeys.add(parentIssue.issueKey().trim());
+                }
+                parentIssue.subTasks().stream()
+                        .map(JiraIssueMaterial::issueKey)
+                        .filter(StringUtils::hasText)
+                        .map(String::trim)
+                        .forEach(issueKeys::add);
+            }
+        }
+        return List.copyOf(issueKeys);
+    }
+
+    private String mergeRequestIdentity(pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest mergeRequest) {
+        if (mergeRequest.id() != null) {
+            return "id:" + mergeRequest.id();
+        }
+        if (StringUtils.hasText(mergeRequest.webUrl())) {
+            return "url:" + mergeRequest.webUrl().trim();
+        }
+        return "fallback:%s:%s:%s".formatted(
+                mergeRequest.projectPath(),
+                mergeRequest.iid(),
+                mergeRequest.title()
+        );
     }
 
     private InstructionContextResult fetchInstructionContext(

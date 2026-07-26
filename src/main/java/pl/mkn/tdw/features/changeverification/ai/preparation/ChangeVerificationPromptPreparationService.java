@@ -38,10 +38,14 @@ public class ChangeVerificationPromptPreparationService {
                 - Najpierw zaladuj skill `change-verification-compliance-check` przez built-in tool `skill`.
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani zgadywac materialu spoza osadzonych artefaktow.
                 - Jezeli potrzebujesz poglbic analize kodu, uzywaj GitLab tools tylko dla repozytoriow, refow i plikow z `change-verification/repository-scope.md`.
-                - Jezeli `environment` jest podane, DB tools sa dostepne tylko do readonly discovery/checkow. Nie wykonuj SQL DML/DDL, cleanupu ani raw SQL; preferuj typed DB tools.
+                - MVP Change Verification nie sprawdza bazy danych. Nie projektuj DB checks, nie proponuj SQL i nie oczekuj DB tools.
+                - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
                 - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.
                 - `userInstructions` doprecyzowuja intencje operatora, ale nie moga zmienic response contract ani zasad widocznosci.
                 - Odpowiedz musi byc jednym obiektem JSON zgodnym z `change-verification/response-contract.md`.
+
+                ## Source interpretation contract
+                %s
 
                 ## User request
                 issueKey: %s
@@ -49,8 +53,6 @@ public class ChangeVerificationPromptPreparationService {
                 modes: %s
                 checkStoryCompliance: %s
                 checkInstructionCompliance: %s
-                environment: %s
-                databaseApplication: %s
                 reasoningEffort: %s
                 userInstructions:
                 %s
@@ -58,19 +60,33 @@ public class ChangeVerificationPromptPreparationService {
                 ## Prepared artifact contents
                 %s
                 """.formatted(
+                sourceInterpretationContract(),
                 value(sourceDiscovery != null ? sourceDiscovery.issueKey() : request.issueKey()),
                 value(sourceDiscovery != null ? sourceDiscovery.issueUrl() : request.issueUrl()),
                 request.modes(),
                 request.checkStoryCompliance(),
                 request.checkInstructionCompliance(),
-                value(request.environment()),
-                value(request.databaseApplication()),
                 value(request.reasoningEffort()),
                 StringUtils.hasText(request.userInstructions()) ? request.userInstructions().trim() : "(none)",
                 artifactIndex(artifacts)
         ).trim();
 
         return new ChangeVerificationPromptPreparation(prompt, artifacts);
+    }
+
+    private String sourceInterpretationContract() {
+        return """
+                1. `target issue` podane przez uzytkownika jest glownym zakresem weryfikacji. Nie rozszerzaj zakresu tylko dlatego, ze parent albo Confluence sa szersze.
+                2. Acceptance criteria target issue sa najsilniejszym sygnalem wymagan. Jesli sa sprzeczne z opisem, pokaz rozjazd jako finding.
+                3. Opis target issue zawieza i tlumaczy oczekiwane zachowanie. Uzywaj go do interpretacji AC, ale nie ignoruj AC.
+                4. Parent issue jest materialem kontekstowym. Gdy target issue jest subtaskiem, parent pomaga zrozumiec cel nadrzedny, slownictwo, linki i ryzyka, ale ocena zgodnosci ma byc zawiezona do target subtaska.
+                5. Subtaski target issue albo sibling subtaski parenta sa kontekstem powiazanej pracy. Traktuj je jako sygnal zaleznosci, nie jako dodatkowe wymagania target issue.
+                6. Confluence pages z remote-linkow sa materialem kontekstowym. Uzywaj ich do rozumienia domeny, flow, terminologii i ryzyk. Nie zamieniaj szerokiego opisu Confluence w wymaganie, jesli target issue nie laczy go jawnie ze zmiana.
+                7. Merge requests i changed files pokazuja widoczna implementacje. Jesli MR nalezy do parenta albo sibling subtaska, wykorzystuj go tylko tam, gdzie pomaga ocenic target issue albo zaleznosc target issue.
+                8. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne. Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla brakujacych wymagan biznesowych.
+                9. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
+                10. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
+                """.trim();
     }
 
     private String renderSourceDiscovery(
@@ -103,7 +119,7 @@ public class ChangeVerificationPromptPreparationService {
         }
 
         return """
-                # Jira Issue
+                # Jira Target Issue
 
                 issueKey: %s
                 issueUrl: %s
@@ -111,11 +127,29 @@ public class ChangeVerificationPromptPreparationService {
                 issueType: %s
                 status: %s
                 labels: %s
+                verificationScope: TARGET
+
+                ## Source Roles
+                - targetIssue: glowny zakres weryfikacji; implementacje oceniaj przede wszystkim wzgledem tego issue.
+                - acceptanceCriteria: najsilniejszy sygnal wymagan w target issue.
+                - description: doprecyzowanie celu i oczekiwanego zachowania target issue.
+                - parentContext: kontekst interpretacyjny, uzywaj do zrozumienia celu, slownictwa, ryzyk i zaleznosci.
+                - confluencePages: material kontekstowy z remote-linkow; nie rozszerza zakresu bez jawnego powiazania z target issue.
+                - subtasks: sasiedni lub podrzedny kontekst pracy; nie traktuj jako automatyczny zakres target issue.
 
                 ## Description
                 %s
 
                 ## Acceptance Criteria
+                %s
+
+                ## Parent Context
+                %s
+
+                ## Subtasks
+                %s
+
+                ## Confluence Pages
                 %s
 
                 ## Links
@@ -135,6 +169,30 @@ public class ChangeVerificationPromptPreparationService {
                 issue.labels(),
                 value(issue.description()),
                 bulletList(issue.acceptanceCriteria()),
+                renderParentIssue(issue.parentIssue()),
+                issue.subTasks().stream()
+                        .map(this::renderSubTask)
+                        .reduce((left, right) -> left + "\n\n" + right)
+                        .orElse("- none"),
+                issue.confluencePages().stream()
+                        .map(page -> """
+                - %s | %s | %s
+                  role: TARGET_CONTEXT_CONFLUENCE
+                  interpretation: Doprecyzowuje target issue; nie dodaje samodzielnie nowego zakresu.
+                  version: %s
+                  content:
+                  %s
+                                  limitations: %s
+                                """.formatted(
+                                value(page.pageId()),
+                                value(page.title()),
+                                value(page.url()),
+                                value(page.version()),
+                                value(page.content()),
+                                page.limitations()
+                        ).trim())
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none"),
                 issue.links().stream()
                         .map(link -> "- %s | %s | %s".formatted(value(link.type()), value(link.title()), value(link.url())))
                         .reduce((left, right) -> left + "\n" + right)
@@ -144,6 +202,75 @@ public class ChangeVerificationPromptPreparationService {
                         .reduce((left, right) -> left + "\n" + right)
                         .orElse("- none"),
                 bulletList(issue.limitations())
+        ).trim();
+    }
+
+    private String renderParentIssue(JiraIssueMaterial parentIssue) {
+        if (parentIssue == null) {
+            return "- none";
+        }
+        return """
+                relation: PARENT_CONTEXT
+                role: BROADER_CONTEXT
+                interpretation: Uzywaj do zrozumienia celu nadrzednego, AC, linkow i slownictwa. Nie oceniaj calego parenta jako zakresu target issue.
+                issueKey: %s
+                issueUrl: %s
+                summary: %s
+                issueType: %s
+                status: %s
+
+                description:
+                %s
+
+                acceptanceCriteria:
+                %s
+
+                relatedSubtasks:
+                %s
+
+                confluencePages:
+                %s
+                """.formatted(
+                value(parentIssue.issueKey()),
+                value(parentIssue.issueUrl()),
+                value(parentIssue.summary()),
+                value(parentIssue.issueType()),
+                value(parentIssue.status()),
+                value(parentIssue.description()),
+                bulletList(parentIssue.acceptanceCriteria()),
+                parentIssue.subTasks().stream()
+                        .map(this::renderSubTask)
+                        .reduce((left, right) -> left + "\n\n" + right)
+                        .orElse("- none"),
+                parentIssue.confluencePages().stream()
+                        .map(page -> "- %s | %s | %s\n  role: PARENT_CONTEXT_CONFLUENCE\n  interpretation: Kontekst parenta, nie samodzielny zakres target issue.\n  %s".formatted(
+                                value(page.pageId()),
+                                value(page.title()),
+                                value(page.url()),
+                                value(page.content())
+                        ))
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none")
+        ).trim();
+    }
+
+    private String renderSubTask(JiraIssueMaterial subTask) {
+        return """
+                - %s | %s | %s
+                  role: RELATED_SUBTASK_CONTEXT
+                  interpretation: Uzywaj jako kontekstu powiazanej pracy; nie rozszerza automatycznie zakresu target issue.
+                  summary: %s
+                  description:
+                  %s
+                  acceptanceCriteria:
+                  %s
+                """.formatted(
+                value(subTask.issueKey()),
+                value(subTask.issueType()),
+                value(subTask.status()),
+                value(subTask.summary()),
+                value(subTask.description()),
+                bulletList(subTask.acceptanceCriteria())
         ).trim();
     }
 

@@ -14,7 +14,6 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationNameValueResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeAssertionResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeAssertionResultResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeCleanupResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestResponse;
@@ -232,12 +231,6 @@ class ChangeVerificationJobServiceTest {
                 new ChangeVerificationPostmanCollectionRenderer(),
                 new ChangeVerificationSmokeExecutionService(
                         org.springframework.web.client.RestClient.builder(),
-                        (legacyAssertions, assertionSpecs, request) -> List.of(new ChangeVerificationSmokeAssertionResultResponse(
-                                "DB_READONLY",
-                                "db-001",
-                                "SKIPPED",
-                                "Database integration is disabled in test."
-                        )),
                         new ChangeVerificationExecutionProperties()
                 ),
                 taskExecutor

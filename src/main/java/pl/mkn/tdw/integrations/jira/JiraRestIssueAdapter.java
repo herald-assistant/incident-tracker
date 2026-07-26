@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
+import pl.mkn.tdw.integrations.confluence.ConfluencePageContent;
+import pl.mkn.tdw.integrations.confluence.ConfluencePagePort;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -19,27 +21,41 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
 
     private final JiraProperties properties;
     private final JiraRestClientFactory restClientFactory;
+    private final ConfluencePagePort confluencePagePort;
 
     @Override
     public JiraIssueMaterial getIssueMaterial(String issueKey) {
+        return getIssueMaterial(issueKey, true, true, null);
+    }
+
+    private JiraIssueMaterial getIssueMaterial(
+            String issueKey,
+            boolean includeSubTasks,
+            boolean includeParent,
+            String excludedSubTaskKey
+    ) {
         if (!StringUtils.hasText(issueKey)) {
             throw new IllegalArgumentException("issueKey must not be blank");
         }
 
         try {
-            var issue = restClientFactory.create()
-                    .get()
-                    .uri(issueUri(issueKey.trim()))
-                    .retrieve()
-                    .body(JsonNode.class);
+            var issue = fetchIssue(issueKey.trim());
             var remoteLinks = fetchRemoteLinks(issueKey.trim());
-            return toMaterial(issueKey.trim(), issue, remoteLinks);
+            return toMaterial(issueKey.trim(), issue, remoteLinks, includeSubTasks, includeParent, excludedSubTaskKey);
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 404) {
                 return missingIssue(issueKey.trim());
             }
             throw new IllegalStateException("Jira issue material request failed for " + issueKey, exception);
         }
+    }
+
+    private JsonNode fetchIssue(String issueKey) {
+        return restClientFactory.create()
+                .get()
+                .uri(issueUri(issueKey))
+                .retrieve()
+                .body(JsonNode.class);
     }
 
     private List<JiraIssueLink> fetchRemoteLinks(String issueKey) {
@@ -62,13 +78,25 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
         }
     }
 
-    private JiraIssueMaterial toMaterial(String issueKey, JsonNode issue, List<JiraIssueLink> remoteLinks) {
+    private JiraIssueMaterial toMaterial(
+            String issueKey,
+            JsonNode issue,
+            List<JiraIssueLink> remoteLinks,
+            boolean includeSubTasks,
+            boolean includeParent,
+            String excludedSubTaskKey
+    ) {
         var fields = issue != null ? issue.path("fields") : null;
         var links = new ArrayList<JiraIssueLink>();
         links.addAll(issueLinks(fields != null ? fields.path("issuelinks") : null));
         links.addAll(remoteLinks);
 
         var limitations = new ArrayList<String>();
+        var parentIssue = includeParent ? parentIssue(issueKey, fields, limitations) : null;
+        var subTasks = includeSubTasks
+                ? subTasks(fields != null ? fields.path("subtasks") : null, limitations, excludedSubTaskKey)
+                : List.<JiraIssueMaterial>of();
+        var confluencePages = confluencePages(remoteLinks, limitations);
         if (issue == null || issue.isMissingNode() || issue.isNull()) {
             limitations.add("Jira returned an empty issue body.");
         }
@@ -89,6 +117,9 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                 textArray(fields != null ? fields.path("labels") : null),
                 acceptanceCriteria(fields),
                 links,
+                subTasks,
+                parentIssue,
+                confluencePages,
                 comments(fields != null ? fields.path("comment").path("comments") : null),
                 limitations
         );
@@ -106,7 +137,94 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                 List.of(),
                 List.of(),
                 List.of(),
+                null,
+                List.of(),
+                List.of(),
                 List.of("Jira issue was not found or is not visible for configured credentials.")
+        );
+    }
+
+    private JiraIssueMaterial parentIssue(String targetIssueKey, JsonNode fields, List<String> limitations) {
+        if (fields == null || fields.isMissingNode() || !isSubTask(fields)) {
+            return null;
+        }
+
+        var parentKey = text(fields.path("parent"), "key", "");
+        if (!StringUtils.hasText(parentKey)) {
+            limitations.add("Jira target issue is a subtask, but parent key was not available.");
+            return null;
+        }
+        try {
+            return getIssueMaterial(parentKey, true, false, targetIssueKey);
+        } catch (RuntimeException exception) {
+            limitations.add("Jira parent issue " + parentKey + " could not be fetched: " + safeMessage(exception));
+            return null;
+        }
+    }
+
+    private boolean isSubTask(JsonNode fields) {
+        if (fields.path("issuetype").path("subtask").asBoolean(false)) {
+            return true;
+        }
+        var issueType = text(fields.path("issuetype"), "name", "");
+        return StringUtils.hasText(issueType)
+                && issueType.toLowerCase(java.util.Locale.ROOT).replace("-", "").replace(" ", "").contains("subtask");
+    }
+
+    private List<JiraIssueMaterial> subTasks(JsonNode subTasks, List<String> limitations, String excludedSubTaskKey) {
+        if (subTasks == null || !subTasks.isArray()) {
+            return List.of();
+        }
+
+        var values = new ArrayList<JiraIssueMaterial>();
+        var maxSubTasks = Math.max(0, properties.getMaxSubTasks());
+        for (var subTask : subTasks) {
+            if (values.size() >= maxSubTasks) {
+                limitations.add("Jira subtasks were truncated to analysis.jira.max-sub-tasks=" + maxSubTasks + ".");
+                break;
+            }
+            var subTaskKey = text(subTask, "key", "");
+            if (!StringUtils.hasText(subTaskKey)) {
+                continue;
+            }
+            if (StringUtils.hasText(excludedSubTaskKey) && subTaskKey.equalsIgnoreCase(excludedSubTaskKey.trim())) {
+                continue;
+            }
+            try {
+                values.add(getIssueMaterial(subTaskKey, false, false, null));
+            } catch (RuntimeException exception) {
+                limitations.add("Jira subtask " + subTaskKey + " could not be fetched: " + safeMessage(exception));
+            }
+        }
+        return List.copyOf(values);
+    }
+
+    private List<JiraConfluencePage> confluencePages(List<JiraIssueLink> remoteLinks, List<String> limitations) {
+        if (remoteLinks == null || remoteLinks.isEmpty()) {
+            return List.of();
+        }
+
+        var values = new ArrayList<JiraConfluencePage>();
+        for (var link : remoteLinks) {
+            if (!"remote-link".equals(link.type()) || !StringUtils.hasText(link.url())) {
+                continue;
+            }
+            confluencePagePort.getPageContent(link.url()).ifPresent(page -> {
+                values.add(toJiraConfluencePage(page));
+                limitations.addAll(page.limitations());
+            });
+        }
+        return List.copyOf(values);
+    }
+
+    private JiraConfluencePage toJiraConfluencePage(ConfluencePageContent page) {
+        return new JiraConfluencePage(
+                page.pageId(),
+                page.title(),
+                page.url(),
+                page.content(),
+                page.version(),
+                page.limitations()
         );
     }
 
@@ -259,7 +377,7 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
 
     private URI issueUri(String issueKey) {
         var fields = new LinkedHashSet<String>();
-        fields.addAll(List.of("summary", "description", "status", "issuetype", "labels", "issuelinks", "comment"));
+        fields.addAll(List.of("summary", "description", "status", "issuetype", "labels", "issuelinks", "subtasks", "parent", "comment"));
         fields.addAll(properties.getAcceptanceCriteriaFieldIds());
 
         return URI.create(apiBaseUrl()
@@ -299,5 +417,11 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
 
     private String encodeQueryParam(String value) {
         return UriUtils.encodeQueryParam(value, StandardCharsets.UTF_8);
+    }
+
+    private String safeMessage(RuntimeException exception) {
+        return StringUtils.hasText(exception.getMessage())
+                ? exception.getMessage()
+                : exception.getClass().getSimpleName();
     }
 }

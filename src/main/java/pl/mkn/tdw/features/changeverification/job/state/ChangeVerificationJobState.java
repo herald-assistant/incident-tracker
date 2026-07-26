@@ -678,6 +678,11 @@ public final class ChangeVerificationJobState {
                 )
         ));
         issue.links().stream().map(this::jiraLinkItem).forEach(items::add);
+        if (issue.parentIssue() != null) {
+            items.add(jiraParentIssueItem(issue.parentIssue()));
+        }
+        issue.subTasks().stream().map(this::jiraSubTaskItem).forEach(items::add);
+        issue.confluencePages().stream().map(this::jiraConfluencePageItem).forEach(items::add);
         issue.comments().stream().map(this::jiraCommentItem).forEach(items::add);
         return new AnalysisEvidenceSection(JIRA_EVIDENCE.provider(), JIRA_EVIDENCE.category(), items);
     }
@@ -689,6 +694,55 @@ public final class ChangeVerificationJobState {
                         attribute("type", link.type()),
                         attribute("title", link.title()),
                         attribute("url", link.url())
+                )
+        );
+    }
+
+    private AnalysisEvidenceItem jiraParentIssueItem(JiraIssueMaterial parentIssue) {
+        return new AnalysisEvidenceItem(
+                "Jira parent context: " + fallback(parentIssue.issueKey(), parentIssue.summary()),
+                List.of(
+                        attribute("relation", "PARENT_CONTEXT"),
+                        attribute("issueKey", parentIssue.issueKey()),
+                        attribute("issueUrl", parentIssue.issueUrl()),
+                        attribute("summary", parentIssue.summary()),
+                        attribute("issueType", parentIssue.issueType()),
+                        attribute("status", parentIssue.status()),
+                        attribute("description", parentIssue.description()),
+                        attribute("acceptanceCriteria", String.join("\n\n", parentIssue.acceptanceCriteria())),
+                        attribute("subTaskKeys", parentIssue.subTasks().stream()
+                                .map(JiraIssueMaterial::issueKey)
+                                .toList()
+                                .toString())
+                )
+        );
+    }
+
+    private AnalysisEvidenceItem jiraSubTaskItem(JiraIssueMaterial subTask) {
+        return new AnalysisEvidenceItem(
+                "Jira subtask: " + fallback(subTask.issueKey(), subTask.summary()),
+                List.of(
+                        attribute("issueKey", subTask.issueKey()),
+                        attribute("issueUrl", subTask.issueUrl()),
+                        attribute("summary", subTask.summary()),
+                        attribute("issueType", subTask.issueType()),
+                        attribute("status", subTask.status()),
+                        attribute("description", subTask.description()),
+                        attribute("acceptanceCriteria", String.join("\n\n", subTask.acceptanceCriteria()))
+                )
+        );
+    }
+
+    private AnalysisEvidenceItem jiraConfluencePageItem(pl.mkn.tdw.integrations.jira.JiraConfluencePage page) {
+        return new AnalysisEvidenceItem(
+                "Confluence page: " + fallback(page.title(), page.url()),
+                List.of(
+                        attribute("pageId", page.pageId()),
+                        attribute("title", page.title()),
+                        attribute("url", page.url()),
+                        attribute("version", page.version()),
+                        attribute("content", page.content()),
+                        attribute("limitations", page.limitations().toString())
                 )
         );
     }

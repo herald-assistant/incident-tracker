@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
@@ -45,10 +44,6 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
 
         context.put(ChangeVerificationCopilotToolContextKeys.FEATURE, ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE);
         context.put(ChangeVerificationCopilotToolContextKeys.RUN_KIND, normalizeRunKind(runKind));
-        context.put(ChangeVerificationCopilotToolContextKeys.DATABASE_READONLY_ONLY, true);
-        putIfText(context, AgentToolContextKeys.ENVIRONMENT, request != null ? request.environment() : null);
-        putIfText(context, ChangeVerificationCopilotToolContextKeys.DATABASE_APPLICATION,
-                request != null ? request.databaseApplication() : null);
         context.put(ChangeVerificationCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED, !repositories.isEmpty());
         context.put(
                 ChangeVerificationCopilotToolContextKeys.ALLOWED_REPOSITORIES,

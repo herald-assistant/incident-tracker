@@ -8,7 +8,6 @@ import org.springframework.web.client.RestClient;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationNameValueResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeAssertionResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeCleanupResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeAssertionResultResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeDbAssertionResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeExecutionRequest;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
@@ -34,12 +33,6 @@ class ChangeVerificationSmokeExecutionServiceTest {
 
         var service = new ChangeVerificationSmokeExecutionService(
                 restClientBuilder,
-                (legacyAssertions, assertionSpecs, request) -> List.of(new ChangeVerificationSmokeAssertionResultResponse(
-                        "DB_READONLY",
-                        "db-001",
-                        "PASSED",
-                        "Readonly SQL executed; rows=1."
-                )),
                 new ChangeVerificationExecutionProperties()
         );
 
@@ -62,9 +55,7 @@ class ChangeVerificationSmokeExecutionServiceTest {
                     assertThat(test.responseAssertions()).singleElement()
                             .extracting("status")
                             .isEqualTo("PASSED");
-                    assertThat(test.dbAssertions()).singleElement()
-                            .extracting("status")
-                            .isEqualTo("PASSED");
+                    assertThat(test.dbAssertions()).isEmpty();
                 });
         server.verify();
     }
@@ -73,7 +64,6 @@ class ChangeVerificationSmokeExecutionServiceTest {
     void shouldBlockUnreviewedTestBeforeHttpExecution() {
         var service = new ChangeVerificationSmokeExecutionService(
                 RestClient.builder(),
-                (legacyAssertions, assertionSpecs, request) -> List.of(),
                 new ChangeVerificationExecutionProperties()
         );
 
@@ -130,7 +120,6 @@ class ChangeVerificationSmokeExecutionServiceTest {
         properties.setCleanupEndpointAllowlist(List.of("/api/test-data/.*"));
         var service = new ChangeVerificationSmokeExecutionService(
                 restClientBuilder,
-                (legacyAssertions, assertionSpecs, request) -> List.of(),
                 properties
         );
 

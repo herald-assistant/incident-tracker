@@ -19,5 +19,6 @@ public class JiraProperties {
     private List<String> acceptanceCriteriaFieldIds = new ArrayList<>();
     private int maxComments = 20;
     private int maxRemoteLinks = 50;
+    private int maxSubTasks = 20;
     private int maxTextCharacters = 12_000;
 }

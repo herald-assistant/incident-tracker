@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
-import pl.mkn.tdw.agenttools.database.DatabaseToolNames;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
@@ -56,13 +55,12 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         );
         var gitLabReadTool = tool(GitLabToolNames.READ_REPOSITORY_FILE);
         var gitLabSearchTool = tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES);
-        var databaseTool = tool(DatabaseToolNames.DESCRIBE_TABLE);
-        var rawSqlTool = tool(DatabaseToolNames.EXECUTE_READONLY_SQL);
+        var unrelatedTool = tool("db_describe_table");
 
         when(toolFactory.createToolDefinitions(
                 contextCaptor.capture(),
                 eq(CHANGE_VERIFICATION_DESCRIPTION_CONTEXT)
-        )).thenReturn(List.of(databaseTool, rawSqlTool, gitLabReadTool, gitLabSearchTool));
+        )).thenReturn(List.of(unrelatedTool, gitLabReadTool, gitLabSearchTool));
 
         var runRequest = assembler.assemble(
                 "cv-123",
@@ -78,10 +76,9 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         assertEquals("change-verification-cv-123", sessionConfig.sessionId());
         assertEquals("Change Verification prompt", runRequest.prompt());
         assertEquals(preparation().artifactContents(), runRequest.artifactContents());
-        assertEquals(List.of(databaseTool, gitLabReadTool, gitLabSearchTool), sessionConfig.tools());
+        assertEquals(List.of(gitLabReadTool, gitLabSearchTool), sessionConfig.tools());
         assertEquals(
                 List.of(
-                        DatabaseToolNames.DESCRIBE_TABLE,
                         GitLabToolNames.READ_REPOSITORY_FILE,
                         GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES
                 ),
@@ -101,14 +98,7 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE,
                 hiddenContext.get(ChangeVerificationCopilotToolContextKeys.RUN_KIND)
         );
-        assertEquals(true, hiddenContext.get(ChangeVerificationCopilotToolContextKeys.DATABASE_READONLY_ONLY));
-        assertEquals("sandbox-a", hiddenContext.get(AgentToolContextKeys.ENVIRONMENT));
-        assertEquals(
-                "customer-api",
-                hiddenContext.get(ChangeVerificationCopilotToolContextKeys.DATABASE_APPLICATION)
-        );
         assertEquals(true, hiddenContext.get(ChangeVerificationCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED));
-        assertThat(hiddenContext).doesNotContainKeys(AgentToolContextKeys.GITLAB_GROUP, AgentToolContextKeys.GITLAB_BRANCH);
 
         assertThat((List<?>) hiddenContext.get(ChangeVerificationCopilotToolContextKeys.ALLOWED_REPOSITORIES))
                 .singleElement()
@@ -191,8 +181,6 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 true,
                 true,
                 "Focus contracts.",
-                "sandbox-a",
-                "customer-api",
                 "gpt-5.4",
                 "medium"
         );

@@ -5,8 +5,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import pl.mkn.tdw.integrations.confluence.ConfluencePageContent;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -22,10 +24,22 @@ class JiraRestIssueAdapterTest {
         var properties = jiraProperties();
         var restClientBuilder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(restClientBuilder).build();
-        var adapter = new JiraRestIssueAdapter(properties, new JiraRestClientFactory(properties, restClientBuilder));
+        var adapter = new JiraRestIssueAdapter(
+                properties,
+                new JiraRestClientFactory(properties, restClientBuilder),
+                pageUrl -> Optional.of(new ConfluencePageContent(
+                        "123",
+                        "Functional design",
+                        pageUrl,
+                        "Confluence describes checklist batch data.",
+                        "7",
+                        List.of()
+                ))
+        );
 
         server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-123?fields=")))
                 .andExpect(requestTo(containsString("customfield_10042")))
+                .andExpect(requestTo(containsString("subtasks")))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("Authorization", "Bearer jira-token"))
                 .andRespond(withSuccess("""
@@ -46,6 +60,9 @@ class JiraRestIssueAdapterTest {
                             "status": { "name": "Ready for Test" },
                             "labels": ["release", "smoke"],
                             "customfield_10042": "Status is visible for active customers.",
+                            "subtasks": [
+                              { "key": "CRM-124" }
+                            ],
                             "issuelinks": [
                               {
                                 "type": { "name": "relates to" },
@@ -81,6 +98,29 @@ class JiraRestIssueAdapterTest {
                         ]
                         """, MediaType.APPLICATION_JSON));
 
+        server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-124?fields=")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "key": "CRM-124",
+                          "fields": {
+                            "summary": "Backend subtask",
+                            "description": "Implement endpoint contract.",
+                            "issuetype": { "name": "Sub-task" },
+                            "status": { "name": "In Progress" },
+                            "labels": [],
+                            "customfield_10042": "Subtask acceptance criterion.",
+                            "subtasks": [],
+                            "issuelinks": [],
+                            "comment": { "comments": [] }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo("https://jira.example.com/rest/api/2/issue/CRM-124/remotelink"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
         var material = adapter.getIssueMaterial("CRM-123");
 
         assertThat(material.issueKey()).isEqualTo("CRM-123");
@@ -90,9 +130,115 @@ class JiraRestIssueAdapterTest {
         assertThat(material.acceptanceCriteria()).containsExactly("Status is visible for active customers.");
         assertThat(material.links()).extracting(JiraIssueLink::title)
                 .contains("Parent business epic", "Functional design");
+        assertThat(material.subTasks()).singleElement()
+                .extracting(JiraIssueMaterial::issueKey)
+                .isEqualTo("CRM-124");
+        assertThat(material.confluencePages()).singleElement()
+                .satisfies(page -> {
+                    assertThat(page.pageId()).isEqualTo("123");
+                    assertThat(page.content()).contains("checklist batch data");
+                });
         assertThat(material.comments()).singleElement()
                 .extracting(JiraIssueComment::author)
                 .isEqualTo("Anna Kowalska");
+
+        server.verify();
+    }
+
+    @Test
+    void shouldFetchParentContextWhenTargetIssueIsSubTask() {
+        var properties = jiraProperties();
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = new JiraRestIssueAdapter(
+                properties,
+                new JiraRestClientFactory(properties, restClientBuilder),
+                pageUrl -> Optional.empty()
+        );
+
+        server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-124?fields=")))
+                .andExpect(requestTo(containsString("parent")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "key": "CRM-124",
+                          "fields": {
+                            "summary": "Backend subtask",
+                            "description": "Implement endpoint contract.",
+                            "issuetype": { "name": "Sub-task" },
+                            "status": { "name": "In Progress" },
+                            "labels": [],
+                            "customfield_10042": "Subtask acceptance criterion.",
+                            "parent": { "key": "CRM-123" },
+                            "subtasks": [],
+                            "issuelinks": [],
+                            "comment": { "comments": [] }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo("https://jira.example.com/rest/api/2/issue/CRM-124/remotelink"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-123?fields=")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "key": "CRM-123",
+                          "fields": {
+                            "summary": "Parent story",
+                            "description": "Collect checklist batch data.",
+                            "issuetype": { "name": "Story" },
+                            "status": { "name": "In Progress" },
+                            "labels": [],
+                            "customfield_10042": "Checklist data is collected.",
+                            "subtasks": [
+                              { "key": "CRM-124" },
+                              { "key": "CRM-125" }
+                            ],
+                            "issuelinks": [],
+                            "comment": { "comments": [] }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo("https://jira.example.com/rest/api/2/issue/CRM-123/remotelink"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-125?fields=")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "key": "CRM-125",
+                          "fields": {
+                            "summary": "Frontend subtask",
+                            "description": "Expose checklist controls.",
+                            "issuetype": { "name": "Sub-task" },
+                            "status": { "name": "Open" },
+                            "labels": [],
+                            "customfield_10042": "Controls are visible.",
+                            "subtasks": [],
+                            "issuelinks": [],
+                            "comment": { "comments": [] }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo("https://jira.example.com/rest/api/2/issue/CRM-125/remotelink"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        var material = adapter.getIssueMaterial("CRM-124");
+
+        assertThat(material.issueKey()).isEqualTo("CRM-124");
+        assertThat(material.parentIssue()).isNotNull();
+        assertThat(material.parentIssue().issueKey()).isEqualTo("CRM-123");
+        assertThat(material.parentIssue().acceptanceCriteria()).containsExactly("Checklist data is collected.");
+        assertThat(material.parentIssue().subTasks()).singleElement()
+                .extracting(JiraIssueMaterial::issueKey)
+                .isEqualTo("CRM-125");
 
         server.verify();
     }

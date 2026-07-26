@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import com.github.copilot.rpc.ToolDefinition;
-import pl.mkn.tdw.agenttools.database.DatabaseToolNames;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 
 import java.util.List;
@@ -10,8 +9,7 @@ import java.util.Set;
 record ChangeVerificationCopilotToolAccessPolicy(
         List<ToolDefinition> enabledTools,
         List<String> availableToolNames,
-        boolean gitLabToolsRegistered,
-        boolean databaseToolsRegistered
+        boolean gitLabToolsRegistered
 ) {
 
     private static final Set<String> TOOL_ALLOWLIST = Set.of(
@@ -27,18 +25,7 @@ record ChangeVerificationCopilotToolAccessPolicy(
             GitLabToolNames.READ_JAVA_METHOD_SLICE,
             GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE,
             GitLabToolNames.FIND_CLASS_REFERENCES,
-            GitLabToolNames.FIND_FLOW_CONTEXT,
-            DatabaseToolNames.GET_SCOPE,
-            DatabaseToolNames.FIND_TABLES,
-            DatabaseToolNames.FIND_COLUMNS,
-            DatabaseToolNames.DESCRIBE_TABLE,
-            DatabaseToolNames.EXISTS_BY_KEY,
-            DatabaseToolNames.COUNT_ROWS,
-            DatabaseToolNames.GROUP_COUNT,
-            DatabaseToolNames.CHECK_ORPHANS,
-            DatabaseToolNames.FIND_RELATIONSHIPS,
-            DatabaseToolNames.JOIN_COUNT,
-            DatabaseToolNames.COMPARE_TABLE_TO_EXPECTED_MAPPING
+            GitLabToolNames.FIND_FLOW_CONTEXT
     );
 
     ChangeVerificationCopilotToolAccessPolicy {
@@ -55,17 +42,12 @@ record ChangeVerificationCopilotToolAccessPolicy(
         return new ChangeVerificationCopilotToolAccessPolicy(
                 enabledTools,
                 enabledTools.stream().map(ToolDefinition::name).toList(),
-                hasToolPrefix(tools, GitLabToolNames.PREFIX),
-                hasToolPrefix(tools, DatabaseToolNames.PREFIX)
+                hasToolPrefix(tools, GitLabToolNames.PREFIX)
         );
     }
 
     boolean gitLabToolsEnabled() {
         return availableToolNames.stream().anyMatch(name -> name != null && name.startsWith(GitLabToolNames.PREFIX));
-    }
-
-    boolean databaseToolsEnabled() {
-        return availableToolNames.stream().anyMatch(name -> name != null && name.startsWith(DatabaseToolNames.PREFIX));
     }
 
     private static boolean hasToolPrefix(List<ToolDefinition> tools, String prefix) {

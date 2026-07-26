@@ -65,34 +65,6 @@
         </fieldset>
       </div>
 
-      <div class="change-verification-db-grid">
-        <label class="field-control change-verification-field">
-          <span class="field-label">DB environment</span>
-          <input
-            class="text-input"
-            type="text"
-            [value]="analysisEnvironment()"
-            placeholder="Optional, e.g. test or preprod"
-            autocomplete="off"
-            spellcheck="false"
-            (input)="updateAnalysisEnvironment($any($event.target).value)"
-          />
-        </label>
-
-        <label class="field-control change-verification-field">
-          <span class="field-label">DB application scope</span>
-          <input
-            class="text-input"
-            type="text"
-            [value]="analysisDatabaseApplication()"
-            placeholder="Optional, e.g. customer-api"
-            autocomplete="off"
-            spellcheck="false"
-            (input)="updateAnalysisDatabaseApplication($any($event.target).value)"
-          />
-        </label>
-      </div>
-
       <label class="field-control change-verification-field">
         <span class="field-label">Operator notes</span>
         <textarea
@@ -389,30 +361,6 @@
                 (input)="updateSmokeExecutionBaseUrl($any($event.target).value)"
               />
             </label>
-            <label class="field-control change-verification-field">
-              <span class="field-label">DB environment</span>
-              <input
-                class="text-input"
-                type="text"
-                [value]="smokeExecutionEnvironment()"
-                placeholder="test, preprod, release"
-                autocomplete="off"
-                spellcheck="false"
-                (input)="updateSmokeExecutionEnvironment($any($event.target).value)"
-              />
-            </label>
-            <label class="field-control change-verification-field">
-              <span class="field-label">DB application scope</span>
-              <input
-                class="text-input"
-                type="text"
-                [value]="smokeExecutionDatabaseApplication()"
-                placeholder="crm, customer-api"
-                autocomplete="off"
-                spellcheck="false"
-                (input)="updateSmokeExecutionDatabaseApplication($any($event.target).value)"
-              />
-            </label>
           </div>
 
           <label class="change-verification-cleanup-toggle">
@@ -451,9 +399,6 @@
                     @for (assertion of testResult.responseAssertions; track assertion.type + assertion.target) {
                       <span>{{ assertion.status }} · {{ assertion.type }} · {{ assertion.message }}</span>
                     }
-                    @for (assertion of testResult.dbAssertions; track assertion.type + assertion.target) {
-                      <span>{{ assertion.status }} · DB · {{ assertion.message }}</span>
-                    }
                     @if (testResult.cleanup) {
                       <span>{{ testResult.cleanup.status }} · cleanup · {{ testResult.cleanup.message }}</span>
                     }
@@ -463,17 +408,6 @@
             </div>
           } @else {
             <p class="change-verification-empty">No execution results yet.</p>
-          }
-          @if (execution()?.manualCleanupSql) {
-            <label class="change-verification-draft">
-              <span class="field-label">Manual cleanup SQL</span>
-              <textarea
-                class="text-input change-verification-code-textarea"
-                rows="5"
-                readonly
-                [value]="execution()?.manualCleanupSql"
-              ></textarea>
-            </label>
           }
         </article>
       </section>

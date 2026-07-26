@@ -352,22 +352,10 @@ public class ChangeVerificationJobService {
                 .map(cleanup -> cleanup.strategy() + ": " + cleanup.status()
                         + (cleanup.action() != null ? " " + cleanup.action() : ""))
                 .toList();
-        var manualSql = testResults.stream()
-                .map(pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestExecutionResponse::cleanup)
-                .filter(java.util.Objects::nonNull)
-                .map(pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeCleanupResultResponse::manualSql)
-                .filter(org.springframework.util.StringUtils::hasText)
-                .distinct()
-                .reduce((left, right) -> left + "\n\n" + right)
-                .orElse(null);
         var status = aggregateExecutionStatus(testResults);
         var limits = testResults.stream()
-                .flatMap(result -> java.util.stream.Stream.concat(
-                        result.responseAssertions().stream(),
-                        result.dbAssertions().stream()
-                ))
+                .flatMap(result -> result.responseAssertions().stream())
                 .filter(assertion -> "NEEDS_MANUAL_REVIEW".equals(assertion.status())
-                        || "READY_FOR_READONLY_EXECUTION".equals(assertion.status())
                         || "BLOCKED_BY_POLICY".equals(assertion.status()))
                 .map(assertion -> assertion.type() + " " + assertion.target() + ": " + assertion.message())
                 .distinct()
@@ -378,7 +366,7 @@ public class ChangeVerificationJobService {
                 executedIds,
                 testResults,
                 cleanupActions,
-                manualSql,
+                null,
                 limits
         );
     }

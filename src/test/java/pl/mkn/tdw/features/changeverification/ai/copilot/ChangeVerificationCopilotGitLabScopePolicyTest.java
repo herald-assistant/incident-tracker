@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.agenttools.database.DatabaseToolNames;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
@@ -147,7 +146,7 @@ class ChangeVerificationCopilotGitLabScopePolicyTest {
                 "{}"
         )));
         assertDoesNotThrow(() -> policy.beforeInvocation(request(
-                DatabaseToolNames.DESCRIBE_TABLE,
+                "db_describe_table",
                 Map.of("tableName", "CUSTOMER")
         )));
     }

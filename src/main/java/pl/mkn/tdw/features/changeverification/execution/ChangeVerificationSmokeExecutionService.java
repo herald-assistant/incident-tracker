@@ -32,7 +32,6 @@ public class ChangeVerificationSmokeExecutionService {
     private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{\\{([^}]+)}}");
 
     private final RestClient.Builder restClientBuilder;
-    private final ChangeVerificationReadonlyDbAssertionExecutor dbAssertionExecutor;
     private final ChangeVerificationExecutionProperties properties;
 
     public List<ChangeVerificationSmokeTestExecutionResponse> execute(
@@ -56,9 +55,9 @@ public class ChangeVerificationSmokeExecutionService {
 
         var http = executeHttp(test, request);
         var responseAssertions = responseAssertions(test.responseAssertions(), http);
-        var dbAssertions = dbAssertionExecutor.execute(test.dbAssertions(), test.dbAssertionSpecs(), request);
+        var dbAssertions = List.<ChangeVerificationSmokeAssertionResultResponse>of();
         var cleanup = cleanupResult(test, request);
-        var status = testStatus(http, responseAssertions, dbAssertions, cleanup);
+        var status = testStatus(http, responseAssertions, cleanup);
 
         return new ChangeVerificationSmokeTestExecutionResponse(
                 test.id(),
@@ -257,18 +256,14 @@ public class ChangeVerificationSmokeExecutionService {
     private String testStatus(
             ChangeVerificationSmokeHttpResultResponse http,
             List<ChangeVerificationSmokeAssertionResultResponse> responseAssertions,
-            List<ChangeVerificationSmokeAssertionResultResponse> dbAssertions,
             ChangeVerificationSmokeCleanupResultResponse cleanup
     ) {
         if (http.errorMessage() != null || containsStatus(responseAssertions, "FAILED")
-                || containsStatus(dbAssertions, "BLOCKED_BY_POLICY")
                 || "BLOCKED_BY_POLICY".equals(cleanup.status())
                 || "FAILED".equals(cleanup.status())) {
             return "FAILED";
         }
         if (containsStatus(responseAssertions, "NEEDS_MANUAL_REVIEW")
-                || containsStatus(dbAssertions, "READY_FOR_READONLY_EXECUTION")
-                || containsStatus(dbAssertions, "SKIPPED")
                 || "MANUAL_ACTION_REQUIRED".equals(cleanup.status())
                 || "NEEDS_REVIEW".equals(cleanup.status())) {
             return "PASSED_WITH_WARNINGS";

@@ -48,15 +48,11 @@ export class ChangeVerificationPageComponent {
   readonly generateSmokePack = signal(true);
   readonly executeSmokePack = signal(false);
   readonly userInstructions = signal('');
-  readonly analysisEnvironment = signal('');
-  readonly analysisDatabaseApplication = signal('');
   readonly job = signal<ChangeVerificationJobStateSnapshot | null>(null);
   readonly jobError = signal('');
   readonly smokePackDraft = signal('');
   readonly smokePackDraftError = signal('');
   readonly smokeExecutionBaseUrl = signal('');
-  readonly smokeExecutionEnvironment = signal('');
-  readonly smokeExecutionDatabaseApplication = signal('');
   readonly smokeExecutionError = signal('');
   readonly executeCleanup = signal(false);
   readonly isSavingSmokePack = signal(false);
@@ -139,14 +135,6 @@ export class ChangeVerificationPageComponent {
     this.userInstructions.set(value);
   }
 
-  protected updateAnalysisEnvironment(value: string): void {
-    this.analysisEnvironment.set(value);
-  }
-
-  protected updateAnalysisDatabaseApplication(value: string): void {
-    this.analysisDatabaseApplication.set(value);
-  }
-
   protected toggleStoryCompliance(checked: boolean): void {
     this.checkStoryCompliance.set(checked);
   }
@@ -203,16 +191,6 @@ export class ChangeVerificationPageComponent {
     this.smokeExecutionError.set('');
   }
 
-  protected updateSmokeExecutionEnvironment(value: string): void {
-    this.smokeExecutionEnvironment.set(value);
-    this.smokeExecutionError.set('');
-  }
-
-  protected updateSmokeExecutionDatabaseApplication(value: string): void {
-    this.smokeExecutionDatabaseApplication.set(value);
-    this.smokeExecutionError.set('');
-  }
-
   protected toggleCleanupExecution(checked: boolean): void {
     this.executeCleanup.set(checked);
   }
@@ -255,7 +233,7 @@ export class ChangeVerificationPageComponent {
   }
 
   protected smokeAssertionCount(test: ChangeVerificationSmokeTest): number {
-    return test.responseAssertions.length + test.dbAssertionSpecs.length + test.dbAssertions.length;
+    return test.responseAssertions.length;
   }
 
   protected saveSmokePackDraft(): void {
@@ -329,8 +307,6 @@ export class ChangeVerificationPageComponent {
     this.changeVerificationApi
       .executeSmokePack(currentJob.jobId, {
         baseUrl,
-        environment: this.smokeExecutionEnvironment().trim() || undefined,
-        databaseApplication: this.smokeExecutionDatabaseApplication().trim() || undefined,
         executeCleanup: this.executeCleanup()
       })
       .pipe(
@@ -419,9 +395,7 @@ export class ChangeVerificationPageComponent {
       modes: this.selectedModes(),
       checkStoryCompliance: this.checkStoryCompliance(),
       checkInstructionCompliance: this.checkInstructionCompliance(),
-      userInstructions: userInstructions || undefined,
-      environment: this.analysisEnvironment().trim() || undefined,
-      databaseApplication: this.analysisDatabaseApplication().trim() || undefined
+      userInstructions: userInstructions || undefined
     };
 
     if (looksLikeUrl(issue)) {

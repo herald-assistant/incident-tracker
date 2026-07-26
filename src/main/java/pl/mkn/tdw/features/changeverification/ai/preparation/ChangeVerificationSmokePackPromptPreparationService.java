@@ -37,34 +37,47 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 - Najpierw zaladuj skill `change-verification-smoke-pack-design` przez built-in tool `skill`.
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani wykonywac requestow.
                 - Jezeli potrzebujesz poglbic analize endpointow albo payloadow, uzywaj GitLab tools tylko dla repozytoriow, refow i plikow z sekcji Repository Scope.
-                - Nie proponuj zapisu do DB jako akcji wykonywanej przez AI. DB assertions sa tylko readonly checkami.
-                - Jezeli `environment` jest podane, DB tools moga sluzyc tylko do readonly discovery/checkow; nie uzywaj raw SQL ani DML/DDL.
-                - Cleanup moze byc endpointem aplikacyjnym albo manualSql jako fallback dla operatora.
+                - MVP Change Verification nie sprawdza bazy danych. Nie generuj DB assertions, SQL ani manualSql cleanup.
+                - Cleanup moze byc endpointem aplikacyjnym albo instrukcja manualnej weryfikacji bez SQL.
+                - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
                 - Jezeli endpoint, request body albo cleanup sa niepewne, ustaw testowi `reviewStatus` = `NEEDS_REVIEW`.
                 - Odpowiedz musi byc jednym obiektem JSON zgodnym z `change-verification/smoke-response-contract.md`.
+
+                ## Source interpretation contract
+                %s
 
                 ## User request
                 issueKey: %s
                 issueUrl: %s
                 modes: %s
-                environment: %s
-                databaseApplication: %s
                 userInstructions:
                 %s
 
                 ## Prepared artifact contents
                 %s
                 """.formatted(
+                sourceInterpretationContract(),
                 value(sourceDiscovery != null ? sourceDiscovery.issueKey() : request.issueKey()),
                 value(sourceDiscovery != null ? sourceDiscovery.issueUrl() : request.issueUrl()),
                 request.modes(),
-                value(request.environment()),
-                value(request.databaseApplication()),
                 StringUtils.hasText(request.userInstructions()) ? request.userInstructions().trim() : "(none)",
                 artifactIndex(artifacts)
         ).trim();
 
         return new ChangeVerificationPromptPreparation(prompt, artifacts);
+    }
+
+    private String sourceInterpretationContract() {
+        return """
+                1. `target issue` podane przez uzytkownika jest glownym zakresem smoke packa. Projektuj testy pod najwazniejsze efekty target issue.
+                2. Acceptance criteria target issue sa podstawowym materialem do wyboru ryzyk, asercji HTTP i oczekiwanego efektu.
+                3. Opis target issue doprecyzowuje scenariusze i dane testowe, ale nie zastepuje acceptance criteria.
+                4. Parent issue jest szerszym kontekstem. Gdy target issue jest subtaskiem, parent pomaga zrozumiec cel nadrzedny, ale nie oznacza, ze smoke pack ma pokryc wszystkie subtaski parenta.
+                5. Sibling subtaski wykorzystuj tylko wtedy, gdy sa niezbedne do uruchomienia albo oceny target issue. W innych przypadkach nie projektuj dla nich osobnych testow.
+                6. Confluence pages sa kontekstem domenowym i flow. Uzywaj ich do wyboru sensownego smoke scenariusza, ale testuj tylko fragment powiazany z target issue.
+                7. Merge requests i changed files sa zrodlem endpointow, payloadow i widocznych zmian implementacji. Gdy MR pochodzi z parenta albo sibling subtaska, traktuj go jako kontekst zaleznosci.
+                8. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla target issue i wpisz pozostale ryzyka w `visibilityLimits` lub `suggestedActions`.
+                """.trim();
     }
 
     private String renderSource(
@@ -81,6 +94,14 @@ public class ChangeVerificationSmokePackPromptPreparationService {
 
                 issueKey: %s
                 issueUrl: %s
+                verificationScope: TARGET_ISSUE_FIRST
+
+                ## Source Roles
+                - targetIssue: glowny zakres smoke packa.
+                - acceptanceCriteria: podstawowy material do wyboru ryzyk i oczekiwanych asercji.
+                - parentContext: szerszy kontekst celu; nie rozszerza automatycznie smoke packa.
+                - confluencePages: kontekst domenowy i flow; testuj tylko fragment powiazany z target issue.
+                - mergeRequests: widoczna implementacja i potencjalne endpointy/payloady.
 
                 ## Story Material
                 %s
@@ -168,11 +189,83 @@ public class ChangeVerificationSmokePackPromptPreparationService {
 
                 acceptanceCriteria:
                 %s
+
+                parentContext:
+                %s
+
+                subtasks:
+                %s
+
+                confluencePages:
+                %s
                 """.formatted(
                 value(issue.summary()),
                 value(issue.description()),
-                bulletList(issue.acceptanceCriteria())
+                bulletList(issue.acceptanceCriteria()),
+                renderParentIssue(issue.parentIssue()),
+                issue.subTasks().stream()
+                        .map(this::renderSubTask)
+                        .reduce((left, right) -> left + "\n\n" + right)
+                        .orElse("- none"),
+                issue.confluencePages().stream()
+                        .map(page -> "- %s | %s | %s\n  role: TARGET_CONTEXT_CONFLUENCE\n  interpretation: Kontekst target issue; testuj tylko fragment powiazany z target issue.\n  %s".formatted(
+                                value(page.pageId()),
+                                value(page.title()),
+                                value(page.url()),
+                                value(page.content())
+                        ))
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none")
         ).trim();
+    }
+
+    private String renderParentIssue(JiraIssueMaterial parentIssue) {
+        if (parentIssue == null) {
+            return "- none";
+        }
+        return """
+                relation: PARENT_CONTEXT
+                role: BROADER_CONTEXT
+                interpretation: Uzywaj do zrozumienia celu nadrzednego i ryzyk. Nie projektuj smoke packa dla calego parenta, jesli target issue tego nie wymaga.
+                issueKey: %s
+                summary: %s
+                description:
+                %s
+                acceptanceCriteria:
+                %s
+                relatedSubtasks:
+                %s
+                confluencePages:
+                %s
+                """.formatted(
+                value(parentIssue.issueKey()),
+                value(parentIssue.summary()),
+                value(parentIssue.description()),
+                bulletList(parentIssue.acceptanceCriteria()),
+                parentIssue.subTasks().stream()
+                        .map(this::renderSubTask)
+                        .reduce((left, right) -> left + "\n\n" + right)
+                        .orElse("- none"),
+                parentIssue.confluencePages().stream()
+                        .map(page -> "- %s | %s | %s\n  role: PARENT_CONTEXT_CONFLUENCE\n  interpretation: Kontekst parenta; testuj tylko czesc powiazana z target issue.\n  %s".formatted(
+                                value(page.pageId()),
+                                value(page.title()),
+                                value(page.url()),
+                                value(page.content())
+                        ))
+                        .reduce((left, right) -> left + "\n" + right)
+                        .orElse("- none")
+        ).trim();
+    }
+
+    private String renderSubTask(JiraIssueMaterial subTask) {
+        return "- %s | %s | %s\n  role: RELATED_SUBTASK_CONTEXT\n  interpretation: Kontekst powiazanej pracy; nie jest automatycznym zakresem smoke packa.\n  summary: %s\n  acceptanceCriteria:\n%s".formatted(
+                value(subTask.issueKey()),
+                value(subTask.issueType()),
+                value(subTask.status()),
+                value(subTask.summary()),
+                bulletList(subTask.acceptanceCriteria())
+        );
     }
 
     private String renderMergeRequest(GitLabMergeRequest mergeRequest) {
@@ -279,23 +372,15 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                         {"type": "STATUS", "target": "status", "operator": "EQUALS", "expectedValue": "200"},
                         {"type": "JSON_PATH", "target": "$.status", "operator": "EXISTS", "expectedValue": ""}
                       ],
-                      "dbAssertions": ["legacy readonly SQL/check description"],
-                      "dbAssertionSpecs": [
-                        {
-                          "id": "db-001",
-                          "sql": "select * from CUSTOMER where ID = '{{customerId}}'",
-                          "operator": "EXISTS | NOT_EXISTS | ROW_COUNT_EQ | ROW_COUNT_GT | ROW_COUNT_GTE | ROW_COUNT_LT | ROW_COUNT_LTE",
-                          "expectedValue": "1",
-                          "description": "what persisted effect this verifies"
-                        }
-                      ],
+                      "dbAssertions": [],
+                      "dbAssertionSpecs": [],
                       "cleanup": {
-                        "strategy": "NONE | ENDPOINT | MANUAL_SQL | NEEDS_REVIEW",
+                        "strategy": "NONE | ENDPOINT | NEEDS_REVIEW",
                         "method": "DELETE",
                         "path": "/api/example/{{id}}",
                         "requestBody": "",
-                        "manualSql": "delete statement for operator, never executed by AI",
-                        "hints": ["cleanup note"]
+                        "manualSql": null,
+                        "hints": ["cleanup note without SQL"]
                       },
                       "cleanupHints": ["short cleanup fallback"],
                       "sourceRefs": ["change-verification/merge-requests.md"],

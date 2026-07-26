@@ -115,24 +115,8 @@ public class ChangeVerificationPostmanCollectionRenderer {
         for (var assertion : test.responseAssertions()) {
             lines.addAll(assertionScript(assertion));
         }
-        if (!test.dbAssertions().isEmpty()) {
-            lines.add("// Readonly DB assertions to verify outside Postman:");
-            test.dbAssertions().forEach(assertion -> lines.add("// - " + assertion));
-        }
-        if (!test.dbAssertionSpecs().isEmpty()) {
-            lines.add("// Structured readonly DB assertions:");
-            test.dbAssertionSpecs().forEach(assertion -> lines.add("// - %s %s %s".formatted(
-                    value(assertion.id(), assertion.sql()),
-                    value(assertion.operator(), "REVIEW"),
-                    value(assertion.expectedValue(), "")
-            )));
-        }
         if (test.cleanup() != null) {
             lines.add("// Cleanup strategy: " + value(test.cleanup().strategy(), "n/a"));
-            if (StringUtils.hasText(test.cleanup().manualSql())) {
-                lines.add("// Manual SQL fallback for operator:");
-                lines.add("// " + test.cleanup().manualSql());
-            }
         }
         return List.copyOf(lines);
     }
