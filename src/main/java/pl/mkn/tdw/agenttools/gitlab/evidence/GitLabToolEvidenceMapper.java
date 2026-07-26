@@ -1,4 +1,4 @@
-package pl.mkn.tdw.features.incidentanalysis.ai.copilot.tools.gitlab;
+package pl.mkn.tdw.agenttools.gitlab.evidence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,7 +9,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
-import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildEndpointUseCaseContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildJavaMethodUseCaseContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
@@ -82,12 +81,12 @@ public class GitLabToolEvidenceMapper {
         };
     }
 
-    AnalysisEvidenceSection capture(
+    public AnalysisEvidenceSection capture(
             String toolCallId,
             String toolName,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         return switch (toolName) {
             case READ_REPOSITORY_FILE -> captureGitLabFile(toolCallId, rawArguments, rawResult, sessionEvidence);
@@ -141,7 +140,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileToolResponse.class);
@@ -173,7 +172,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFilesByPathToolResponse.class);
@@ -216,7 +215,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileChunkToolResponse.class);
@@ -248,7 +247,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileChunksToolResponse.class);
@@ -291,7 +290,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabJavaMethodSliceResponse.class);
@@ -323,7 +322,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabReadRepositoryFileOutlineToolResponse.class);
@@ -368,7 +367,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabListAvailableRepositoriesToolResponse.class);
@@ -407,7 +406,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabSearchRepositoryCandidatesToolResponse.class);
@@ -441,7 +440,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabListRepositoryEndpointsToolResponse.class);
@@ -483,7 +482,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabBuildEndpointUseCaseContextToolResponse.class);
@@ -542,7 +541,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabBuildJavaMethodUseCaseContextToolResponse.class);
@@ -606,7 +605,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabFindClassReferencesToolResponse.class);
@@ -648,7 +647,7 @@ public class GitLabToolEvidenceMapper {
             String toolCallId,
             String rawArguments,
             String rawResult,
-            CopilotToolEvidenceSessionStore.SessionToolEvidence sessionEvidence
+            GitLabToolEvidenceSink sessionEvidence
     ) {
         try {
             var response = objectMapper.readValue(rawResult, GitLabFindFlowContextToolResponse.class);

@@ -1,10 +1,13 @@
 package pl.mkn.tdw.features.changeverification.ai.copilot;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.agenttools.gitlab.evidence.GitLabToolEvidenceMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationFinishedEvent;
 import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationOutcome;
+import pl.mkn.tdw.common.JsonPayloadReader;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.ArrayList;
@@ -15,9 +18,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChangeVerificationCopilotToolInvocationEvidenceCaptureListenerTest {
 
     @Test
-    void shouldCaptureChangeVerificationToolInvocationOutcome() {
+    void shouldCaptureChangeVerificationGitLabToolEvidenceUsingSharedGitLabShape() {
         var evidenceStore = new CopilotToolEvidenceSessionStore();
-        var listener = new ChangeVerificationCopilotToolInvocationEvidenceCaptureListener(evidenceStore);
+        var listener = listener(evidenceStore);
         var captured = new ArrayList<AnalysisEvidenceSection>();
         evidenceStore.registerSession("session-1", captured::add);
 
@@ -25,24 +28,24 @@ class ChangeVerificationCopilotToolInvocationEvidenceCaptureListenerTest {
                 changeVerificationContext(),
                 "session-1",
                 "call-1",
-                "gitlab_read_file",
-                "{\"projectName\":\"customer-api\"}",
-                CopilotToolInvocationOutcome.REJECTED,
-                "Rejected by Change Verification scope policy.",
+                "gitlab_search_repository_candidates",
+                "{\"projectNames\":[\"customer-api\"],\"reason\":\"Locate endpoint\"}",
+                CopilotToolInvocationOutcome.COMPLETED,
+                "{\"candidates\":[]}",
                 12L,
                 null
         ));
 
         assertThat(captured).singleElement()
                 .satisfies(section -> {
-                    assertThat(section.provider()).isEqualTo("change-verification");
-                    assertThat(section.category()).isEqualTo("ai-tool-invocations");
+                    assertThat(section.provider()).isEqualTo("gitlab");
+                    assertThat(section.category()).isEqualTo("tool-discovery");
                     assertThat(section.items()).singleElement()
                             .satisfies(item -> {
-                                assertThat(item.title()).isEqualTo("AI tool: gitlab_read_file -> REJECTED");
+                                assertThat(item.title()).isEqualTo("GitLab search candidates");
                                 assertThat(item.attributes())
                                         .extracting("name")
-                                        .contains("toolName", "toolCallId", "outcome", "arguments", "result");
+                                        .contains("toolName", "toolCallId", "toolArguments", "candidateCount");
                             });
                 });
     }
@@ -50,7 +53,7 @@ class ChangeVerificationCopilotToolInvocationEvidenceCaptureListenerTest {
     @Test
     void shouldIgnoreToolInvocationOutsideChangeVerification() {
         var evidenceStore = new CopilotToolEvidenceSessionStore();
-        var listener = new ChangeVerificationCopilotToolInvocationEvidenceCaptureListener(evidenceStore);
+        var listener = listener(evidenceStore);
         var captured = new ArrayList<AnalysisEvidenceSection>();
         evidenceStore.registerSession("session-1", captured::add);
 
@@ -67,6 +70,16 @@ class ChangeVerificationCopilotToolInvocationEvidenceCaptureListenerTest {
         ));
 
         assertThat(captured).isEmpty();
+    }
+
+    private ChangeVerificationCopilotToolInvocationEvidenceCaptureListener listener(
+            CopilotToolEvidenceSessionStore evidenceStore
+    ) {
+        var objectMapper = new ObjectMapper();
+        return new ChangeVerificationCopilotToolInvocationEvidenceCaptureListener(
+                evidenceStore,
+                new GitLabToolEvidenceMapper(objectMapper, new JsonPayloadReader(objectMapper))
+        );
     }
 
     private CopilotToolSessionContext changeVerificationContext() {

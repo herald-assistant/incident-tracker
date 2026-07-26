@@ -2,7 +2,8 @@ import {
   AnalysisAiActivityEvent,
   AnalysisAiUsage,
   AnalysisEvidenceSection,
-  AnalysisJobStepResponse
+  AnalysisJobStepResponse,
+  AnalysisReport
 } from '../../../core/models/analysis.models';
 
 export type ChangeVerificationJobMode =
@@ -199,4 +200,5 @@ export interface ChangeVerificationJobStateSnapshot {
   aiActivityEvents: AnalysisAiActivityEvent[];
   preparedPrompt: string;
   result: ChangeVerificationResult | null;
+  report?: AnalysisReport | null;
 }

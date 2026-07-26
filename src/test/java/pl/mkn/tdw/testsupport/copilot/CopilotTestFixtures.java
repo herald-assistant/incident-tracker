@@ -20,7 +20,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationEventPubl
 import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationFinishedEvent;
 import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationOutcome;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.tools.gitlab.GitLabToolEvidenceCaptureListener;
-import pl.mkn.tdw.features.incidentanalysis.ai.copilot.tools.gitlab.GitLabToolEvidenceMapper;
+import pl.mkn.tdw.agenttools.gitlab.evidence.GitLabToolEvidenceMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;

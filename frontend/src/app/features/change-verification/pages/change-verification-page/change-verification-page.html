@@ -133,120 +133,84 @@
       </section>
 
       <section class="change-verification-result-grid">
-        <article class="change-verification-overview panel-card">
-          <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
-            <div>
-              <p class="section-eyebrow">Verification result</p>
-              <h3>Release readiness snapshot</h3>
-            </div>
-            <span [attr.class]="statusPillClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
-          </div>
+        @if (reportDisplay(); as resultReport) {
+          <article class="change-verification-report panel-card">
+            <div class="panel-card__header panel-card__header--compact change-verification-report__header">
+              <div>
+                <p class="section-eyebrow">AI result</p>
+                <h3>{{ resultReport.title }}</h3>
+                @if (hasText(resultReport.subTitle)) {
+                  <p>{{ resultReport.subTitle }}</p>
+                }
+              </div>
 
-          <div class="change-verification-summary-grid">
-            <div class="change-verification-summary-card">
-              <span class="change-verification-summary-card__label">Compliance</span>
-              <strong>{{ currentJob.result?.compliance?.status || 'pending' }}</strong>
-              <span [attr.class]="resultStatusPillClass(currentJob.result?.compliance?.status)">
-                {{ currentJob.result?.compliance?.status || 'pending' }}
-              </span>
+              <div class="change-verification-report__actions">
+                @if (hasText(resultReport.confidence)) {
+                  <span class="panel-chip">
+                    {{ resultReport.confidence }}
+                  </span>
+                }
+                <span [attr.class]="statusPillClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [attr.aria-label]="resultCopied() ? 'Skopiowano wynik Change Verification' : 'Kopiuj wynik Change Verification'"
+                  [title]="resultCopied() ? 'Skopiowano' : 'Kopiuj wynik jako markdown'"
+                  (click)="copyResultMarkdown()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ resultCopied() ? 'task_alt' : 'content_copy' }}
+                  </span>
+                  <span>{{ resultCopied() ? 'Copied' : 'Copy result' }}</span>
+                </button>
+              </div>
             </div>
-            <div class="change-verification-summary-card">
-              <span class="change-verification-summary-card__label">Findings</span>
-              <strong>{{ complianceFindings().length }}</strong>
-              <small>{{ complianceFindingGroups().length }} severity group(s)</small>
-            </div>
-            <div class="change-verification-summary-card">
-              <span class="change-verification-summary-card__label">Smoke tests</span>
-              <strong>{{ smokeTests().length }}</strong>
-              <small>{{ readySmokeTestCount() }} ready · {{ reviewSmokeTestCount() }} review</small>
-            </div>
-            <div class="change-verification-summary-card">
-              <span class="change-verification-summary-card__label">Execution</span>
-              <strong>{{ execution()?.status || 'not run' }}</strong>
-              <small>{{ passedExecutionCount() }} passed · {{ failedExecutionCount() }} failed</small>
-            </div>
-          </div>
 
-          @if (suggestedActions().length || visibilityLimits().length) {
-            <div class="change-verification-overview__notes">
-              @if (suggestedActions().length) {
-                <div>
-                  <h4>Suggested actions</h4>
-                  <ul>
-                    @for (action of suggestedActions(); track action) {
-                      <li>{{ action }}</li>
-                    }
-                  </ul>
-                </div>
-              }
-              @if (visibilityLimits().length) {
-                <div>
-                  <h4>Visibility limits</h4>
-                  <ul>
-                    @for (limit of visibilityLimits(); track limit) {
-                      <li>{{ limit }}</li>
-                    }
-                  </ul>
-                </div>
-              }
-            </div>
-          }
-        </article>
+            @if (resultCopyError()) {
+              <p class="change-verification-error">{{ resultCopyError() }}</p>
+            }
 
-        <article class="change-verification-panel panel-card">
-          <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
-            <div>
-              <p class="section-eyebrow">Compliance</p>
-              <h3>Story and instructions</h3>
-            </div>
-            <span [attr.class]="resultStatusPillClass(currentJob.result?.compliance?.status)">
-              {{ currentJob.result?.compliance?.status || 'pending' }}
-            </span>
-          </div>
+            @if (hasText(resultReport.report.markdownSummary)) {
+              <app-analysis-report-section-content
+                [markdown]="resultReport.report.markdownSummary"
+                emptyText="No high-level summary was produced."
+                [meta]="null"
+                metaAlign="start"
+              ></app-analysis-report-section-content>
+            }
 
-          @if (complianceFindingGroups().length) {
-            <div class="change-verification-finding-groups">
-              @for (group of complianceFindingGroups(); track group.severity) {
-                <section class="change-verification-finding-group">
-                  <div class="change-verification-finding-group__heading">
-                    <span [attr.class]="severityClass(group.severity)">{{ group.severity }}</span>
-                    <span>{{ group.findings.length }} finding(s)</span>
+            <div class="change-verification-report__sections">
+              @for (section of resultReport.sections; track section.id) {
+                <section class="change-verification-report-section" [attr.aria-label]="section.title">
+                  <div class="change-verification-report-section__heading">
+                    <span class="material-symbols-outlined" aria-hidden="true">article</span>
+                    <div>
+                      <span class="field-label">{{ section.id }}</span>
+                      <h4>{{ section.title }}</h4>
+                    </div>
                   </div>
-                  <ul class="change-verification-finding-list">
-                    @for (finding of group.findings; track finding.id) {
-                      <li>
-                        <div>
-                          <strong>{{ finding.summary }}</strong>
-                          <p>{{ finding.details }}</p>
-                        </div>
-                        <small>{{ finding.source }}</small>
-                        @if (finding.references.length) {
-                          <div class="change-verification-token-row">
-                            @for (reference of finding.references; track reference) {
-                              <span>{{ reference }}</span>
-                            }
-                          </div>
-                        }
-                        <div class="change-verification-action-callout">
-                          <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
-                          <span>{{ finding.suggestedAction }}</span>
-                        </div>
-                      </li>
-                    }
-                  </ul>
+                  <app-analysis-report-section-content
+                    [markdown]="section.markdown"
+                    emptyText="No confirmed details for this section."
+                    [meta]="section.meta"
+                    metaAlign="start"
+                  ></app-analysis-report-section-content>
                 </section>
               }
             </div>
-          } @else {
-            <p class="change-verification-empty">No compliance findings yet.</p>
-          }
-        </article>
+
+            <app-analysis-report-meta
+              [meta]="resultReport.appendix"
+              variant="appendix"
+            ></app-analysis-report-meta>
+          </article>
+        }
 
         <article class="change-verification-panel panel-card">
           <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
             <div>
-              <p class="section-eyebrow">Smoke Pack</p>
-              <h3>Postman collection</h3>
+              <p class="section-eyebrow">Smoke pack artifact</p>
+              <h3>Editable Postman draft</h3>
             </div>
             <span [attr.class]="resultStatusPillClass(smokePack()?.status)">
               {{ smokePack()?.status || 'pending' }}
@@ -281,39 +245,6 @@
           </div>
 
           @if (smokeTests().length) {
-            <div class="change-verification-table-scroll">
-              <table class="change-verification-table">
-                <thead>
-                  <tr>
-                    <th>Request</th>
-                    <th>Test</th>
-                    <th>Assertions</th>
-                    <th>Review</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (test of smokeTests(); track test.id) {
-                    <tr>
-                      <td>
-                        <span class="change-verification-method">{{ test.method }}</span>
-                        <code>{{ test.path }}</code>
-                      </td>
-                      <td>
-                        <strong>{{ test.name }}</strong>
-                        <small>{{ test.riskCovered || test.purpose }}</small>
-                      </td>
-                      <td>{{ smokeAssertionCount(test) }}</td>
-                      <td>
-                        <span [attr.class]="reviewStatusClass(test.reviewStatus)">
-                          {{ test.reviewStatus || 'NEEDS_REVIEW' }}
-                        </span>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-
             <details class="change-verification-draft-panel">
               <summary>
                 <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
@@ -340,7 +271,7 @@
         <article class="change-verification-panel panel-card">
           <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
             <div>
-              <p class="section-eyebrow">Execution</p>
+              <p class="section-eyebrow">Execution controls</p>
               <h3>Accepted tests and cleanup</h3>
             </div>
             <span [attr.class]="resultStatusPillClass(execution()?.status)">

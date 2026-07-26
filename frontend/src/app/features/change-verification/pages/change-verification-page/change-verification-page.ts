@@ -1,23 +1,29 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize, Subscription, switchMap, timer } from 'rxjs';
 
 import {
-  ChangeVerificationFinding,
-  ChangeVerificationFindingSeverity,
   ChangeVerificationJobMode,
   ChangeVerificationJobStartRequest,
   ChangeVerificationJobStateSnapshot,
   ChangeVerificationSmokePack,
-  ChangeVerificationSmokeTestExecution,
-  ChangeVerificationSmokeTest
+  ChangeVerificationSmokeTestExecution
 } from '../../models/change-verification.models';
 import { ChangeVerificationApiService } from '../../services/change-verification-api.service';
-import { ApiErrorResponse } from '../../../../core/models/analysis.models';
+import {
+  AnalysisReport,
+  AnalysisReportMeta,
+  AnalysisReportReference,
+  AnalysisReportSection,
+  ApiErrorResponse
+} from '../../../../core/models/analysis.models';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
+import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
+import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import { downloadJsonFile, readJsonFile, sanitizeFileNamePart } from '../../../../core/utils/json-file.utils';
 import {
   buildChangeVerificationExportEnvelope,
@@ -26,18 +32,36 @@ import {
   parseImportedChangeVerificationResult
 } from '../../utils/change-verification-import-export.utils';
 
-interface ComplianceFindingGroup {
-  severity: ChangeVerificationFindingSeverity;
-  findings: ChangeVerificationFinding[];
+interface ChangeVerificationReportDisplay {
+  report: AnalysisReport;
+  title: string;
+  subTitle: string;
+  confidence: string;
+  sections: AnalysisReportSection[];
+  appendix: AnalysisReportMeta;
 }
+
+const EMPTY_REPORT_META: AnalysisReportMeta = {
+  references: [],
+  visibilityLimits: [],
+  openQuestions: [],
+  gaps: [],
+  confidence: '',
+  warnings: []
+};
 
 @Component({
   selector: 'app-change-verification-page',
-  imports: [AnalysisFeatureAsideComponent, AnalysisStepsPanelComponent],
+  imports: [
+    AnalysisFeatureAsideComponent,
+    AnalysisStepsPanelComponent,
+    AnalysisReportMetaComponent,
+    AnalysisReportSectionContentComponent
+  ],
   templateUrl: './change-verification-page.html',
   styleUrl: './change-verification-page.scss'
 })
-export class ChangeVerificationPageComponent {
+export class ChangeVerificationPageComponent implements OnDestroy {
   private readonly changeVerificationApi = inject(ChangeVerificationApiService);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
@@ -59,6 +83,9 @@ export class ChangeVerificationPageComponent {
   readonly isExecutingSmokePack = signal(false);
   readonly isSubmitting = signal(false);
   readonly exportState = signal<ChangeVerificationExportState | null>(null);
+  readonly resultCopied = signal(false);
+  readonly resultCopyError = signal('');
+  private resultCopyFeedbackHandle: number | null = null;
 
   readonly canStartJob = computed(
     () => Boolean(this.issueInput().trim()) && !this.isSubmitting()
@@ -76,32 +103,12 @@ export class ChangeVerificationPageComponent {
     return `Imported file: ${exportState.fileName}`;
   });
   readonly selectedModes = computed(() => this.buildModes());
-  readonly complianceFindings = computed(() => this.job()?.result?.compliance.findings ?? []);
-  readonly complianceFindingGroups = computed(() => this.groupFindings(this.complianceFindings()));
   readonly smokePack = computed(() => this.job()?.result?.smokePack ?? null);
   readonly smokeTests = computed(() => this.smokePack()?.tests ?? []);
   readonly execution = computed(() => this.job()?.result?.execution ?? null);
   readonly executionResults = computed(() => this.execution()?.testResults ?? []);
-  readonly suggestedActions = computed(() => this.uniqueValues([
-    ...(this.job()?.result?.compliance.suggestedActions ?? []),
-    ...(this.smokePack()?.suggestedActions ?? [])
-  ]));
-  readonly visibilityLimits = computed(() => this.uniqueValues([
-    ...(this.job()?.result?.compliance.visibilityLimits ?? []),
-    ...(this.smokePack()?.visibilityLimits ?? []),
-    ...(this.execution()?.visibilityLimits ?? [])
-  ]));
-  readonly readySmokeTestCount = computed(() =>
-    this.smokeTests().filter((test) => this.normalized(test.reviewStatus) === 'READY').length
-  );
-  readonly reviewSmokeTestCount = computed(() =>
-    this.smokeTests().filter((test) => this.normalized(test.reviewStatus) !== 'READY').length
-  );
-  readonly passedExecutionCount = computed(() =>
-    this.executionResults().filter((result) => this.normalized(result.status) === 'PASSED').length
-  );
-  readonly failedExecutionCount = computed(() =>
-    this.executionResults().filter((result) => this.normalized(result.status) === 'FAILED').length
+  readonly reportDisplay = computed(() =>
+    changeVerificationReportDisplay(this.job()?.report ?? null, this.job()?.result ?? null)
   );
   readonly workflowIsRunning = computed(() => {
     const currentJob = this.job();
@@ -217,14 +224,6 @@ export class ChangeVerificationPageComponent {
     return 'status-pill status-pill--queued';
   }
 
-  protected severityClass(severity: string | null | undefined): string {
-    return `change-verification-severity change-verification-severity--${this.normalized(severity).toLowerCase() || 'info'}`;
-  }
-
-  protected reviewStatusClass(status: string | null | undefined): string {
-    return `change-verification-review-status change-verification-review-status--${this.normalized(status).toLowerCase() || 'pending'}`;
-  }
-
   protected httpSummary(result: ChangeVerificationSmokeTestExecution): string {
     if (!result.http) {
       return 'HTTP not executed';
@@ -232,8 +231,29 @@ export class ChangeVerificationPageComponent {
     return `${result.http.method} ${result.http.statusCode ?? 'n/a'} · ${result.http.durationMillis}ms`;
   }
 
-  protected smokeAssertionCount(test: ChangeVerificationSmokeTest): number {
-    return test.responseAssertions.length;
+  protected hasText(value: string | null | undefined): boolean {
+    return hasText(value);
+  }
+
+  protected async copyResultMarkdown(): Promise<void> {
+    const display = this.reportDisplay();
+    if (!display) {
+      return;
+    }
+
+    const copied = await copyTextToClipboard(buildChangeVerificationReportMarkdown(display.report));
+    if (!copied) {
+      this.resultCopyError.set('Nie udało się skopiować wyniku weryfikacji do schowka.');
+      return;
+    }
+
+    this.resultCopyError.set('');
+    this.resultCopied.set(true);
+    this.clearResultCopyFeedback();
+    this.resultCopyFeedbackHandle = window.setTimeout(() => {
+      this.resultCopied.set(false);
+      this.resultCopyFeedbackHandle = null;
+    }, 1600);
   }
 
   protected saveSmokePackDraft(): void {
@@ -388,6 +408,18 @@ export class ChangeVerificationPageComponent {
     }
   }
 
+  ngOnDestroy(): void {
+    this.clearResultCopyFeedback();
+  }
+
+  private clearResultCopyFeedback(): void {
+    if (this.resultCopyFeedbackHandle === null) {
+      return;
+    }
+    window.clearTimeout(this.resultCopyFeedbackHandle);
+    this.resultCopyFeedbackHandle = null;
+  }
+
   private jobStartRequest(): ChangeVerificationJobStartRequest {
     const issue = this.issueInput().trim();
     const userInstructions = this.userInstructions().trim();
@@ -499,20 +531,6 @@ export class ChangeVerificationPageComponent {
     return 'Nie udalo sie uruchomic Change Verification.';
   }
 
-  private groupFindings(findings: ChangeVerificationFinding[]): ComplianceFindingGroup[] {
-    const severityOrder: ChangeVerificationFindingSeverity[] = ['BLOCKER', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
-    return severityOrder
-      .map((severity) => ({
-        severity,
-        findings: findings.filter((finding) => finding.severity === severity)
-      }))
-      .filter((group) => group.findings.length > 0);
-  }
-
-  private uniqueValues(values: string[]): string[] {
-    return Array.from(new Set(values.filter((value) => Boolean(value?.trim()))));
-  }
-
   private normalized(value: string | null | undefined): string {
     return String(value || '').trim().toUpperCase();
   }
@@ -520,4 +538,259 @@ export class ChangeVerificationPageComponent {
 
 function looksLikeUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
+}
+
+function changeVerificationReportDisplay(
+  report: AnalysisReport | null,
+  result: ChangeVerificationJobStateSnapshot['result']
+): ChangeVerificationReportDisplay | null {
+  const effectiveReport = report ?? fallbackReportFromResult(result);
+  if (!effectiveReport) {
+    return null;
+  }
+
+  return {
+    report: effectiveReport,
+    title: cleanText(effectiveReport.header) || 'Change Verification result',
+    subTitle: cleanText(effectiveReport.subHeader),
+    confidence: cleanText(effectiveReport.meta?.confidence) || result?.smokePack?.confidence || '',
+    sections: sortedSections(effectiveReport.sections),
+    appendix: normalizedMeta(effectiveReport.meta)
+  };
+}
+
+function fallbackReportFromResult(
+  result: ChangeVerificationJobStateSnapshot['result']
+): AnalysisReport | null {
+  if (!result) {
+    return null;
+  }
+
+  return {
+    reportId: `change-verification-${result.issueKey || 'result'}`,
+    header: `Change Verification: ${result.issueKey || result.issueUrl || 'change'}`,
+    subHeader: `Compliance ${result.compliance.status || 'pending'} | Smoke ${result.smokePack.status || 'pending'} | Execution ${result.execution.status || 'pending'}`,
+    markdownSummary: [
+      `- Compliance: \`${result.compliance.status || 'pending'}\` with ${result.compliance.findings.length} finding(s).`,
+      `- Smoke pack: \`${result.smokePack.status || 'pending'}\` with ${result.smokePack.tests.length} test(s).`,
+      `- Execution: \`${result.execution.status || 'pending'}\`.`
+    ].join('\n'),
+    sections: [
+      {
+        id: 'CHANGE_COMPLIANCE',
+        title: 'Change alignment',
+        order: 0,
+        markdown: complianceMarkdown(result),
+        meta: {
+          ...EMPTY_REPORT_META,
+          references: result.compliance.findings.flatMap((finding) =>
+            finding.references.map((reference) => ({
+              type: 'change-source',
+              label: finding.id || finding.source,
+              target: reference,
+              description: finding.summary
+            }))
+          ),
+          visibilityLimits: [...result.compliance.visibilityLimits],
+          warnings: result.compliance.findings
+            .filter((finding) => ['MEDIUM', 'HIGH', 'BLOCKER'].includes(finding.severity))
+            .map((finding) => `[${finding.severity}] ${finding.summary}`)
+        }
+      },
+      {
+        id: 'SMOKE_PACK',
+        title: 'Smoke pack',
+        order: 1,
+        markdown: smokePackMarkdown(result),
+        meta: {
+          ...EMPTY_REPORT_META,
+          references: result.smokePack.tests.flatMap((test) =>
+            test.sourceRefs.map((reference) => ({
+              type: 'smoke-source',
+              label: test.id || test.name,
+              target: reference,
+              description: test.riskCovered || test.purpose
+            }))
+          ),
+          visibilityLimits: [...result.smokePack.visibilityLimits],
+          gaps: result.smokePack.tests
+            .filter((test) => (test.reviewStatus || '').toUpperCase() !== 'READY')
+            .map((test) => `${test.id || test.name} requires review before execution.`),
+          confidence: cleanText(result.smokePack.confidence)
+        }
+      },
+      {
+        id: 'SMOKE_EXECUTION',
+        title: 'Execution readiness',
+        order: 2,
+        markdown: executionMarkdown(result),
+        meta: {
+          ...EMPTY_REPORT_META,
+          visibilityLimits: [...result.execution.visibilityLimits],
+          gaps:
+            result.execution.requested && result.execution.testResults.length === 0
+              ? ['Execution waits for explicit operator run with base URL.']
+              : []
+        }
+      }
+    ],
+    meta: {
+      ...EMPTY_REPORT_META,
+      references: [
+        {
+          type: 'jira',
+          label: result.issueKey || 'Jira issue',
+          target: result.issueUrl || result.issueKey,
+          description: 'Target issue verified by Change Verification.'
+        }
+      ],
+      visibilityLimits: uniqueText([
+        ...result.compliance.visibilityLimits,
+        ...result.smokePack.visibilityLimits,
+        ...result.execution.visibilityLimits
+      ]),
+      confidence: cleanText(result.smokePack.confidence)
+    }
+  };
+}
+
+function complianceMarkdown(result: NonNullable<ChangeVerificationJobStateSnapshot['result']>): string {
+  const lines = ['### Status', `\`${result.compliance.status || 'pending'}\``, '', '### Findings'];
+  if (!result.compliance.findings.length) {
+    lines.push('No compliance findings were returned.');
+  }
+  result.compliance.findings.forEach((finding) => {
+    lines.push(`- **[${finding.severity}] ${finding.summary || 'Finding'}**`);
+    addIndented(lines, finding.details);
+    addIndented(lines, finding.suggestedAction ? `Suggested action: ${finding.suggestedAction}` : '');
+  });
+  if (result.compliance.suggestedActions.length) {
+    lines.push('', '### Recommended actions');
+    result.compliance.suggestedActions.forEach((action) => lines.push(`- ${action}`));
+  }
+  return compactMarkdown(lines);
+}
+
+function smokePackMarkdown(result: NonNullable<ChangeVerificationJobStateSnapshot['result']>): string {
+  const lines = ['### Status', `\`${result.smokePack.status || 'pending'}\``];
+  if (result.smokePack.postmanCollectionName) {
+    lines.push('', `Collection: \`${result.smokePack.postmanCollectionName}\``);
+  }
+  lines.push('', '### Smoke tests');
+  if (!result.smokePack.tests.length) {
+    lines.push('No smoke tests were generated.');
+  }
+  result.smokePack.tests.forEach((test) => {
+    lines.push(`- **${test.id || 'test'}: ${test.name || 'Smoke test'}**`);
+    addIndented(lines, `\`${test.method || 'HTTP'} ${test.path || '/'}\``);
+    addIndented(lines, test.riskCovered || test.purpose || '');
+    addIndented(lines, `Review status: \`${test.reviewStatus || 'NEEDS_REVIEW'}\``);
+  });
+  if (result.smokePack.suggestedActions.length) {
+    lines.push('', '### Recommended actions');
+    result.smokePack.suggestedActions.forEach((action) => lines.push(`- ${action}`));
+  }
+  return compactMarkdown(lines);
+}
+
+function executionMarkdown(result: NonNullable<ChangeVerificationJobStateSnapshot['result']>): string {
+  if (!result.execution.requested) {
+    return 'Smoke execution was not requested in this run.';
+  }
+  const lines = ['### Status', `\`${result.execution.status || 'pending'}\``];
+  if (!result.execution.testResults.length) {
+    lines.push('', 'No smoke tests have been executed yet.');
+  }
+  result.execution.testResults.forEach((test) => {
+    lines.push(`- **${test.testId || test.name || 'test'}**: \`${test.status || 'pending'}\``);
+    if (test.http) {
+      addIndented(lines, `${test.http.method} ${test.http.url} -> ${test.http.statusCode ?? 'n/a'} in ${test.http.durationMillis}ms`);
+    }
+  });
+  return compactMarkdown(lines);
+}
+
+function buildChangeVerificationReportMarkdown(report: AnalysisReport): string {
+  const lines = [
+    `# ${cleanText(report.header) || 'Change Verification result'}`,
+    cleanText(report.subHeader),
+    cleanText(report.markdownSummary)
+  ].filter(hasText);
+
+  sortedSections(report.sections).forEach((section) => {
+    lines.push('', `## ${cleanText(section.title) || cleanText(section.id) || 'Section'}`);
+    lines.push(cleanText(section.markdown));
+    lines.push(...metaMarkdown(section.meta));
+  });
+
+  const appendix = metaMarkdown(report.meta, 'Report metadata');
+  if (appendix.length > 0) {
+    lines.push('', ...appendix);
+  }
+
+  return lines.filter((line, index, all) => line !== '' || all[index - 1] !== '').join('\n');
+}
+
+function metaMarkdown(meta: AnalysisReportMeta | null | undefined, title = 'Section metadata'): string[] {
+  const parts = [
+    bulletGroup('References', (meta?.references ?? []).map(referenceText)),
+    bulletGroup('Visibility limits', meta?.visibilityLimits ?? []),
+    bulletGroup('Open questions', meta?.openQuestions ?? []),
+    bulletGroup('Gaps', meta?.gaps ?? []),
+    bulletGroup('Warnings', meta?.warnings ?? [])
+  ].flat();
+  return parts.length > 0 ? [`### ${title}`, ...parts] : [];
+}
+
+function bulletGroup(title: string, values: string[]): string[] {
+  const cleaned = values.map(cleanText).filter(hasText);
+  return cleaned.length > 0 ? [`#### ${title}`, ...cleaned.map((value) => `- ${value}`)] : [];
+}
+
+function referenceText(reference: AnalysisReportReference): string {
+  return [reference.label, reference.type, reference.target, reference.description]
+    .map(cleanText)
+    .filter(hasText)
+    .join(' | ');
+}
+
+function normalizedMeta(meta: AnalysisReportMeta | null | undefined): AnalysisReportMeta {
+  return {
+    references: [...(meta?.references ?? [])],
+    visibilityLimits: uniqueText(meta?.visibilityLimits ?? []),
+    openQuestions: uniqueText(meta?.openQuestions ?? []),
+    gaps: uniqueText(meta?.gaps ?? []),
+    confidence: cleanText(meta?.confidence),
+    warnings: uniqueText(meta?.warnings ?? [])
+  };
+}
+
+function sortedSections(sections: AnalysisReportSection[] | null | undefined): AnalysisReportSection[] {
+  return [...(sections ?? [])].sort((left, right) => {
+    const leftOrder = typeof left.order === 'number' ? left.order : Number.MAX_SAFE_INTEGER;
+    const rightOrder = typeof right.order === 'number' ? right.order : Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder;
+  });
+}
+
+function addIndented(lines: string[], value: string): void {
+  if (hasText(value)) {
+    lines.push(`  - ${value.trim()}`);
+  }
+}
+
+function compactMarkdown(lines: string[]): string {
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function uniqueText(values: string[]): string[] {
+  return Array.from(new Set(values.map(cleanText).filter(hasText)));
+}
+
+function cleanText(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function hasText(value: string | null | undefined): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }

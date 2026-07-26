@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.agenttools.gitlab.evidence.GitLabToolEvidenceMapper;
+import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotGitLabToolEvidenceSink;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationFinishedEvent;
 import pl.mkn.tdw.aiplatform.copilot.tools.events.CopilotToolInvocationOutcome;
@@ -30,7 +32,7 @@ public class GitLabToolEvidenceCaptureListener {
                     event.toolName(),
                     event.rawArguments(),
                     event.rawResult(),
-                    sessionEvidence
+                    new CopilotGitLabToolEvidenceSink(sessionEvidence)
             );
             evidenceStore.publishSection(event.sessionId(), event.toolName(), updatedSection);
         });

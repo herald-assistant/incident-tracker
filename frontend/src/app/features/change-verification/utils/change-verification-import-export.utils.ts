@@ -7,6 +7,7 @@ import {
   AnalysisEvidenceSection,
   AnalysisJobStepResponse
 } from '../../../core/models/analysis.models';
+import { normalizeAnalysisReport } from '../../../core/utils/analysis-import-export.utils';
 import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
 import {
   ChangeVerificationCompliance,
@@ -74,6 +75,7 @@ export interface ChangeVerificationExportDiagnostics {
     toolEvidenceItemCount: number;
     aiActivityEventCount: number;
     usageIncluded: boolean;
+    reportIncluded: boolean;
   };
   artifacts: ChangeVerificationDiagnosticArtifactSummary[];
 }
@@ -154,7 +156,8 @@ export function buildChangeVerificationExportDiagnostics(
       contextEvidenceItemCount: evidenceItemCount(job.contextSections),
       toolEvidenceItemCount: evidenceItemCount(job.toolEvidenceSections),
       aiActivityEventCount: job.aiActivityEvents.length,
-      usageIncluded: Boolean(job.result.usage)
+      usageIncluded: Boolean(job.result.usage),
+      reportIncluded: Boolean(job.report)
     },
     artifacts: [
       {
@@ -184,6 +187,13 @@ export function buildChangeVerificationExportDiagnostics(
         included: job.aiActivityEvents.length > 0,
         itemCount: job.aiActivityEvents.length,
         characterCount: null
+      },
+      {
+        name: 'analysisReport',
+        kind: 'canonical-report',
+        included: Boolean(job.report),
+        itemCount: job.report ? job.report.sections.length : 0,
+        characterCount: job.report ? JSON.stringify(job.report).length : null
       },
       {
         name: 'preparedPrompt',
@@ -273,7 +283,8 @@ export function normalizeChangeVerificationJob(job: unknown): ChangeVerification
       ? jobObject['aiActivityEvents'].map(normalizeAiActivityEvent)
       : [],
     preparedPrompt: normalizeString(jobObject['preparedPrompt']),
-    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null
+    result: asObject(jobObject['result']) ? normalizeResult(jobObject['result']) : null,
+    report: asObject(jobObject['report']) ? normalizeAnalysisReport(jobObject['report']) : null
   };
 }
 

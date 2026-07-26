@@ -124,7 +124,7 @@ class ChangeVerificationJobServiceTest {
                         "source-discovery-limits"
                 );
         assertThat(snapshot.toolEvidenceSections())
-                .filteredOn(section -> "ai-tool-invocations".equals(section.category()))
+                .filteredOn(section -> "tool-discovery".equals(section.category()))
                 .singleElement()
                 .extracting(section -> section.items().size())
                 .isEqualTo(2);
@@ -297,7 +297,7 @@ class ChangeVerificationJobServiceTest {
                 AnalysisAiToolEvidenceListener toolEvidenceListener,
                 AnalysisAiActivityListener activityListener
         ) {
-            toolEvidenceListener.onToolEvidenceUpdated(toolEvidence("gitlab_read_file", "COMPLETED"));
+            toolEvidenceListener.onToolEvidenceUpdated(toolEvidence("gitlab_search_repository_candidates", "COMPLETED"));
             activityListener.onAiActivity(aiActivity("TOOL", "COMPLETED", "gitlab_read_file"));
             return new ChangeVerificationComplianceAnalysis(
                     new ChangeVerificationAiResponse(
@@ -354,7 +354,7 @@ class ChangeVerificationJobServiceTest {
                 AnalysisAiToolEvidenceListener toolEvidenceListener,
                 AnalysisAiActivityListener activityListener
         ) {
-            toolEvidenceListener.onToolEvidenceUpdated(toolEvidence("db_describe_table", "COMPLETED"));
+            toolEvidenceListener.onToolEvidenceUpdated(toolEvidence("gitlab_find_flow_context", "COMPLETED"));
             activityListener.onAiActivity(aiActivity("USAGE", "INFO", null));
             return new ChangeVerificationSmokePackAnalysis(
                     new ChangeVerificationSmokePackResponse(
@@ -392,13 +392,14 @@ class ChangeVerificationJobServiceTest {
 
     private static AnalysisEvidenceSection toolEvidence(String toolName, String outcome) {
         return new AnalysisEvidenceSection(
-                "change-verification",
-                "ai-tool-invocations",
+                "gitlab",
+                "tool-discovery",
                 List.of(new AnalysisEvidenceItem(
-                        "AI tool: " + toolName + " -> " + outcome,
+                        "GitLab tool: " + toolName,
                         List.of(
                                 new AnalysisEvidenceAttribute("toolName", toolName),
-                                new AnalysisEvidenceAttribute("outcome", outcome)
+                                new AnalysisEvidenceAttribute("toolCallId", "call-" + toolName),
+                                new AnalysisEvidenceAttribute("status", outcome)
                         )
                 ))
         );

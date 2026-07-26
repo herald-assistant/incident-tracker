@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStart
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
+import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportMapper;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysis;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
@@ -24,6 +25,7 @@ import pl.mkn.tdw.integrations.jira.JiraIssueLink;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
@@ -79,6 +81,7 @@ public final class ChangeVerificationJobState {
     private String errorMessage;
     private String preparedPrompt;
     private ChangeVerificationResultResponse result;
+    private AnalysisReport report;
     private List<AnalysisJobStepResponse> steps;
     private List<AnalysisEvidenceSection> contextSections;
     private List<AnalysisEvidenceSection> toolEvidenceSections;
@@ -328,6 +331,7 @@ public final class ChangeVerificationJobState {
                 execution,
                 complianceAnalysis != null ? complianceAnalysis.usage() : null
         );
+        report = ChangeVerificationReportMapper.toReport(result);
     }
 
     public synchronized void markFailed(String errorCode, String errorMessage) {
@@ -363,6 +367,7 @@ public final class ChangeVerificationJobState {
                     result.execution(),
                     result.usage()
             );
+            report = ChangeVerificationReportMapper.toReport(result);
         }
     }
 
@@ -381,6 +386,7 @@ public final class ChangeVerificationJobState {
                     this.execution,
                     result.usage()
             );
+            report = ChangeVerificationReportMapper.toReport(result);
         }
         steps = steps(updatedAt);
     }
@@ -408,7 +414,8 @@ public final class ChangeVerificationJobState {
                 toolEvidenceSections,
                 aiActivityEvents,
                 preparedPrompt,
-                result
+                result,
+                report
         );
     }
 

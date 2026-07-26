@@ -8,6 +8,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.features.changeverification.job.ChangeVerificationJobService;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
+import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportMapper;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 
@@ -69,7 +70,11 @@ class ChangeVerificationJobControllerTest {
                 .andExpect(jsonPath("$.steps[0].producesEvidence[0].provider").value("change-verification"))
                 .andExpect(jsonPath("$.result.compliance.status").value("PASSED_WITH_WARNINGS"))
                 .andExpect(jsonPath("$.result.smokePack.requested").value(true))
-                .andExpect(jsonPath("$.result.execution.requested").value(false));
+                .andExpect(jsonPath("$.result.execution.requested").value(false))
+                .andExpect(jsonPath("$.report.header").value("Change Verification: CRM-123"))
+                .andExpect(jsonPath("$.report.sections[0].id").value("CHANGE_COMPLIANCE"))
+                .andExpect(jsonPath("$.report.sections[1].id").value("SMOKE_PACK"))
+                .andExpect(jsonPath("$.report.meta.references[0].type").value("jira"));
 
         verify(changeVerificationJobService).startJob(new ChangeVerificationJobStartRequest(
                 "CRM-123",
@@ -105,7 +110,8 @@ class ChangeVerificationJobControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jobId").value("job-123"))
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
-                .andExpect(jsonPath("$.preparedPrompt").value("Change Verification skeleton prompt"));
+                .andExpect(jsonPath("$.preparedPrompt").value("Change Verification skeleton prompt"))
+                .andExpect(jsonPath("$.report.markdownSummary").exists());
 
         verify(changeVerificationJobService).getJob("job-123");
     }
@@ -190,6 +196,24 @@ class ChangeVerificationJobControllerTest {
     private static ChangeVerificationJobStateSnapshot snapshot(String jobId) {
         var instant = Instant.parse("2026-07-25T10:00:00Z");
         var modes = List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE, ChangeVerificationJobMode.GENERATE_SMOKE_PACK);
+        var result = new ChangeVerificationResultResponse(
+                "COMPLETED",
+                "CRM-123",
+                "https://jira.example.com/browse/CRM-123",
+                modes,
+                "Change Verification skeleton prompt",
+                new ChangeVerificationComplianceResponse(
+                        true,
+                        true,
+                        "PASSED_WITH_WARNINGS",
+                        List.of(),
+                        List.of(),
+                        List.of()
+                ),
+                smokePack(),
+                skippedExecution(),
+                null
+        );
         return new ChangeVerificationJobStateSnapshot(
                 jobId,
                 "CRM-123",
@@ -240,24 +264,8 @@ class ChangeVerificationJobControllerTest {
                 List.of(),
                 List.of(),
                 "Change Verification skeleton prompt",
-                new ChangeVerificationResultResponse(
-                        "COMPLETED",
-                        "CRM-123",
-                        "https://jira.example.com/browse/CRM-123",
-                        modes,
-                        "Change Verification skeleton prompt",
-                        new ChangeVerificationComplianceResponse(
-                                true,
-                                true,
-                                "PASSED_WITH_WARNINGS",
-                                List.of(),
-                                List.of(),
-                                List.of()
-                        ),
-                        smokePack(),
-                        skippedExecution(),
-                        null
-                )
+                result,
+                ChangeVerificationReportMapper.toReport(result)
         );
     }
 
