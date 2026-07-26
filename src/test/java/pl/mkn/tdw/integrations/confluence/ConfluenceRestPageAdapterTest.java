@@ -30,11 +30,11 @@ class ConfluenceRestPageAdapterTest {
                 .andRespond(withSuccess("""
                         {
                           "id": "686722831",
-                          "title": "Checklist batch design",
+                          "title": "CRM case profile design",
                           "version": { "number": 12 },
                           "body": {
                             "storage": {
-                              "value": "<p>Prepare checklist batch data.</p><ul><li>customer init</li><li>product event</li></ul>"
+                              "value": "<p>Prepare CRM case profile data.</p><ul><li>customer init</li><li>case event</li></ul>"
                             }
                           }
                         }
@@ -46,9 +46,9 @@ class ConfluenceRestPageAdapterTest {
 
         assertThat(page).isPresent();
         assertThat(page.orElseThrow().pageId()).isEqualTo("686722831");
-        assertThat(page.orElseThrow().title()).isEqualTo("Checklist batch design");
+        assertThat(page.orElseThrow().title()).isEqualTo("CRM case profile design");
         assertThat(page.orElseThrow().version()).isEqualTo("12");
-        assertThat(page.orElseThrow().content()).contains("Prepare checklist batch data");
+        assertThat(page.orElseThrow().content()).contains("Prepare CRM case profile data");
         assertThat(page.orElseThrow().content()).contains("customer init");
         server.verify();
     }

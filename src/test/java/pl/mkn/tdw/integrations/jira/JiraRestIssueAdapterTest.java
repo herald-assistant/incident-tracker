@@ -31,7 +31,7 @@ class JiraRestIssueAdapterTest {
                         "123",
                         "Functional design",
                         pageUrl,
-                        "Confluence describes checklist batch data.",
+                        "Confluence describes CRM case profile data.",
                         "7",
                         List.of()
                 ))
@@ -136,7 +136,7 @@ class JiraRestIssueAdapterTest {
         assertThat(material.confluencePages()).singleElement()
                 .satisfies(page -> {
                     assertThat(page.pageId()).isEqualTo("123");
-                    assertThat(page.content()).contains("checklist batch data");
+                    assertThat(page.content()).contains("CRM case profile data");
                 });
         assertThat(material.comments()).singleElement()
                 .extracting(JiraIssueComment::author)
@@ -188,11 +188,11 @@ class JiraRestIssueAdapterTest {
                           "key": "CRM-123",
                           "fields": {
                             "summary": "Parent story",
-                            "description": "Collect checklist batch data.",
+                            "description": "Collect CRM case profile data.",
                             "issuetype": { "name": "Story" },
                             "status": { "name": "In Progress" },
                             "labels": [],
-                            "customfield_10042": "Checklist data is collected.",
+                            "customfield_10042": "CRM case profile data is collected.",
                             "subtasks": [
                               { "key": "CRM-124" },
                               { "key": "CRM-125" }
@@ -214,7 +214,7 @@ class JiraRestIssueAdapterTest {
                           "key": "CRM-125",
                           "fields": {
                             "summary": "Frontend subtask",
-                            "description": "Expose checklist controls.",
+                            "description": "Expose CRM case controls",
                             "issuetype": { "name": "Sub-task" },
                             "status": { "name": "Open" },
                             "labels": [],
@@ -235,7 +235,7 @@ class JiraRestIssueAdapterTest {
         assertThat(material.issueKey()).isEqualTo("CRM-124");
         assertThat(material.parentIssue()).isNotNull();
         assertThat(material.parentIssue().issueKey()).isEqualTo("CRM-123");
-        assertThat(material.parentIssue().acceptanceCriteria()).containsExactly("Checklist data is collected.");
+        assertThat(material.parentIssue().acceptanceCriteria()).containsExactly("CRM case profile data is collected.");
         assertThat(material.parentIssue().subTasks()).singleElement()
                 .extracting(JiraIssueMaterial::issueKey)
                 .isEqualTo("CRM-125");

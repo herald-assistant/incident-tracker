@@ -19,10 +19,10 @@ class ChangeVerificationOperationalContextMatcherTest {
     void shouldMatchRepositoryThroughCodeSearchScopeTarget() {
         var matcher = new ChangeVerificationOperationalContextMatcher(ignored -> catalog());
         var repository = new ChangeVerificationRepositorySnapshot(
-                "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
-                "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
-                "CLP_AGREEMENT_PROCESS",
-                "feature/CLP-123",
+                "CRM/PROCESSING/CRM_CASE_PROCESS",
+                "CRM/PROCESSING/CRM_CASE_PROCESS",
+                "CRM_CASE_PROCESS",
+                "feature/CRM-123",
                 "main",
                 List.of(),
                 List.of(),
@@ -34,15 +34,15 @@ class ChangeVerificationOperationalContextMatcherTest {
 
         assertThat(result).singleElement()
                 .satisfies(enriched -> {
-                    assertThat(enriched.rootGroup()).isEqualTo("CLP");
-                    assertThat(enriched.groupPath()).isEqualTo("CLP/PROCESSES");
-                    assertThat(enriched.repositoryName()).isEqualTo("CLP_AGREEMENT_PROCESS");
+                    assertThat(enriched.rootGroup()).isEqualTo("CRM");
+                    assertThat(enriched.groupPath()).isEqualTo("CRM/PROCESSING");
+                    assertThat(enriched.repositoryName()).isEqualTo("CRM_CASE_PROCESS");
                     assertThat(enriched.operationalContextMatches()).singleElement()
                             .satisfies(match -> {
-                                assertThat(match.repositoryId()).isEqualTo("clp-agreement-process-repo");
-                                assertThat(match.codeSearchScopeId()).isEqualTo("clp-agreement-process-scope");
+                                assertThat(match.repositoryId()).isEqualTo("crm-case-process-repo");
+                                assertThat(match.codeSearchScopeId()).isEqualTo("crm-case-process-scope");
                                 assertThat(match.targetType()).isEqualTo("bounded-context");
-                                assertThat(match.targetId()).isEqualTo("agreement-process");
+                                assertThat(match.targetId()).isEqualTo("case-process");
                                 assertThat(match.pathPrefixes()).containsExactly("src/main/java");
                             });
                 });
@@ -66,21 +66,21 @@ class ChangeVerificationOperationalContextMatcherTest {
 
     private static OperationalContextRepository repository() {
         return new OperationalContextRepository(
-                "clp-agreement-process-repo",
-                "CLP agreement process repository",
-                "agreement-process",
+                "crm-case-process-repo",
+                "CRM case process repository",
+                "case-process",
                 "application",
                 "active",
                 "high",
-                "Agreement process code",
-                "Supports agreement process",
+                "CRM case process code",
+                "Supports CRM case process",
                 List.of(),
                 List.of(),
                 new OperationalContextGit(
                         "gitlab",
-                        "CLP/PROCESSES",
-                        "CLP_AGREEMENT_PROCESS",
-                        "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
+                        "CRM/PROCESSING",
+                        "CRM_CASE_PROCESS",
+                        "CRM/PROCESSING/CRM_CASE_PROCESS",
                         "main",
                         null,
                         List.of(),
@@ -95,15 +95,15 @@ class ChangeVerificationOperationalContextMatcherTest {
 
     private static OperationalContextRepositorySearchScope scope() {
         return new OperationalContextRepositorySearchScope(
-                "clp-agreement-process-scope",
-                "CLP Agreement Process",
+                "crm-case-process-scope",
+                "CRM Case Process",
                 "bounded-context",
                 "active",
-                "Repository scope for agreement process",
-                new OperationalContextRepositorySearchTarget("bounded-context", "agreement-process"),
+                "Repository scope for CRM case process",
+                new OperationalContextRepositorySearchTarget("bounded-context", "case-process"),
                 List.of("change verification"),
                 List.of(new OperationalContextRepositorySearchRepository(
-                        "clp-agreement-process-repo",
+                        "crm-case-process-repo",
                         "primary",
                         1,
                         "Main implementation repository for the bounded context.",
