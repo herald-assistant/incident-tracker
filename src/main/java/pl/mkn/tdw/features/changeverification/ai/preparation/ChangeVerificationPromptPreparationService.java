@@ -85,10 +85,12 @@ public class ChangeVerificationPromptPreparationService {
                 6. Confluence pages z remote-linkow sa materialem kontekstowym. Uzywaj ich do rozumienia domeny, flow, terminologii i ryzyk. Nie zamieniaj szerokiego opisu Confluence w wymaganie, jesli target issue nie laczy go jawnie ze zmiana.
                 7. Merge requests i changed files pokazuja widoczna implementacje. Jesli MR nalezy do parenta albo sibling subtaska, wykorzystuj go tylko tam, gdzie pomaga ocenic target issue albo zaleznosc target issue.
                 8. Repository Scope pokazuje repozytoria z MR, rozbicie projectPath na rootGroup/groupPath/repositoryName oraz dopasowania repo -> code search scope -> target. Nie interpretuj tego jako bezposredniej relacji repo -> system albo repo -> bounded-context.
-                9. Code search scope z operational context jest wskazowka, jaki system lub bounded context moze byc potrzebny do zrozumienia zmiany. Uzywaj Operational Context tools, gdy potrzebujesz doprecyzowac proces, system, bounded context, integracje albo slownictwo domenowe.
-                10. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne. Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla brakujacych wymagan biznesowych.
-                11. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
-                12. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
+                9. Dla GitLab tools uzywaj pola `projectName` z Repository Scope jako kanonicznego inputu. Nie przekazuj `projectPath`, `rootGroup/projectName` ani pelnej sciezki MR jako parametru `projectName`.
+                10. Dla GitLab tools uzywaj pola `analysisRef` jako `branchRef`. `sourceRef` i `targetRef` sa kontekstem MR; po merge'u source branch moze byc usuniety i wtedy `analysisRef` wskazuje target branch.
+                11. Code search scope z operational context jest wskazowka, jaki system lub bounded context moze byc potrzebny do zrozumienia zmiany. Uzywaj Operational Context tools, gdy potrzebujesz doprecyzowac proces, system, bounded context, integracje albo slownictwo domenowe.
+                12. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne. Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla brakujacych wymagan biznesowych.
+                13. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
+                14. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
                 """.trim();
     }
 
@@ -312,8 +314,14 @@ public class ChangeVerificationPromptPreparationService {
                 groupPath: %s
                 repositoryName: %s
                 projectName: %s
+                GitLab tool input: projectName=%s, branchRef=%s
+                GitLab path context: projectPath=%s
                 sourceRef: %s
+                sourceRefAvailable: %s
                 targetRef: %s
+                targetRefAvailable: %s
+                analysisRef: %s
+                analysisRefSource: %s
                 mergeRequests: %s
 
                 changedFiles:
@@ -335,8 +343,15 @@ public class ChangeVerificationPromptPreparationService {
                 value(repository.groupPath()),
                 value(repository.repositoryName()),
                 value(repository.projectName()),
+                value(repository.projectName()),
+                value(repository.analysisRef()),
+                value(repository.projectPath()),
                 value(repository.sourceRef()),
+                String.valueOf(repository.sourceRefAvailable()),
                 value(repository.targetRef()),
+                String.valueOf(repository.targetRefAvailable()),
+                value(repository.analysisRef()),
+                value(repository.analysisRefSource()),
                 repository.mergeRequests().stream()
                         .map(mergeRequest -> value(mergeRequest.webUrl()))
                         .toList(),

@@ -13,6 +13,7 @@ import {
 } from '../../models/change-verification.models';
 import { ChangeVerificationApiService } from '../../services/change-verification-api.service';
 import {
+  AnalysisAiModelOptionsResponse,
   AnalysisReport,
   AnalysisReportMeta,
   AnalysisReportReference,
@@ -20,6 +21,7 @@ import {
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
+import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
@@ -34,6 +36,19 @@ import {
   ChangeVerificationExportState,
   parseImportedChangeVerificationResult
 } from '../../utils/change-verification-import-export.utils';
+import {
+  defaultReasoningEffortForAiModel,
+  EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
+  listedDefaultAiModel,
+  normalizeAnalysisAiModelOptions,
+  reasoningEffortsForAiModel
+} from '../../../../core/utils/analysis-ai-model-options.utils';
+
+type SelectOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+};
 
 interface ChangeVerificationReportDisplay {
   report: AnalysisReport;
@@ -57,6 +72,7 @@ interface ChangeVerificationReportDisplay {
 })
 export class ChangeVerificationPageComponent implements OnDestroy {
   private readonly changeVerificationApi = inject(ChangeVerificationApiService);
+  private readonly analysisApi = inject(AnalysisApiService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -67,6 +83,8 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly checkInstructionCompliance = signal(true);
   readonly generateSmokePack = signal(true);
   readonly executeSmokePack = signal(false);
+  readonly selectedAiModel = signal('');
+  readonly selectedReasoningEffort = signal('');
   readonly userInstructions = signal('');
   readonly job = signal<ChangeVerificationJobStateSnapshot | null>(null);
   readonly jobError = signal('');
@@ -78,6 +96,9 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly isSavingSmokePack = signal(false);
   readonly isExecutingSmokePack = signal(false);
   readonly isSubmitting = signal(false);
+  readonly isAiModelOptionsLoading = signal(false);
+  readonly aiModelOptionsError = signal('');
+  readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly exportState = signal<ChangeVerificationExportState | null>(null);
   readonly resultCopied = signal(false);
   readonly resultCopyError = signal('');
@@ -105,6 +126,41 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     return '';
   });
   readonly selectedModes = computed(() => this.buildModes());
+  readonly aiModelOptions = computed<SelectOption[]>(() => {
+    if (this.isAiModelOptionsLoading()) {
+      return [
+        {
+          value: this.selectedAiModel(),
+          label: 'Ładowanie modeli AI...',
+          disabled: true
+        }
+      ];
+    }
+
+    return this.aiModelCatalog().models.map((model) => ({
+      value: model.id,
+      label: this.modelLabel(model.id, model.name)
+    }));
+  });
+  readonly availableReasoningEfforts = computed(() =>
+    this.reasoningEffortsForModel(this.selectedAiModel())
+  );
+  readonly reasoningEffortOptions = computed<SelectOption[]>(() => {
+    if (this.isAiModelOptionsLoading()) {
+      return [
+        {
+          value: this.selectedReasoningEffort(),
+          label: 'Ładowanie reasoning effort...',
+          disabled: true
+        }
+      ];
+    }
+
+    return this.availableReasoningEfforts().map((effort) => ({
+      value: effort,
+      label: this.reasoningEffortLabel(effort)
+    }));
+  });
   readonly smokePack = computed(() => this.job()?.result?.smokePack ?? null);
   readonly smokeTests = computed(() => this.smokePack()?.tests ?? []);
   readonly execution = computed(() => this.job()?.result?.execution ?? null);
@@ -137,6 +193,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   });
 
   constructor() {
+    this.loadAiModelOptions();
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
@@ -175,6 +232,15 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     if (checked) {
       this.generateSmokePack.set(true);
     }
+  }
+
+  protected selectAiModel(value: string): void {
+    this.selectedAiModel.set((value || '').trim());
+    this.syncReasoningEffortSelection();
+  }
+
+  protected selectReasoningEffort(value: string): void {
+    this.selectedReasoningEffort.set((value || '').trim());
   }
 
   protected startJob(): void {
@@ -394,6 +460,9 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       this.checkInstructionCompliance.set(imported.job.checkInstructionCompliance);
       this.generateSmokePack.set(imported.job.modes.includes('GENERATE_SMOKE_PACK'));
       this.executeSmokePack.set(imported.job.modes.includes('EXECUTE_SMOKE_PACK'));
+      this.selectedAiModel.set(imported.job.aiModel || '');
+      this.selectedReasoningEffort.set(imported.job.reasoningEffort || '');
+      this.syncReasoningEffortSelection();
       this.setJob(imported.job, {
         origin: 'imported',
         exportedAt: imported.exportedAt,
@@ -437,11 +506,17 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   private jobStartRequest(): ChangeVerificationJobStartRequest {
     const issue = this.issueInput().trim();
     const userInstructions = this.userInstructions().trim();
+    const selectedAiModel = this.selectedAiModel().trim()
+      || listedDefaultAiModel(this.aiModelCatalog());
+    const selectedReasoningEffort = this.selectedReasoningEffort().trim()
+      || defaultReasoningEffortForAiModel(this.aiModelCatalog(), selectedAiModel);
     const request: ChangeVerificationJobStartRequest = {
       modes: this.selectedModes(),
       checkStoryCompliance: this.checkStoryCompliance(),
       checkInstructionCompliance: this.checkInstructionCompliance(),
-      userInstructions: userInstructions || undefined
+      userInstructions: userInstructions || undefined,
+      model: selectedAiModel || undefined,
+      reasoningEffort: selectedReasoningEffort || undefined
     };
 
     if (looksLikeUrl(issue)) {
@@ -517,6 +592,9 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       this.checkInstructionCompliance.set(imported.job.checkInstructionCompliance);
       this.generateSmokePack.set(imported.job.modes.includes('GENERATE_SMOKE_PACK'));
       this.executeSmokePack.set(imported.job.modes.includes('EXECUTE_SMOKE_PACK'));
+      this.selectedAiModel.set(imported.job.aiModel || '');
+      this.selectedReasoningEffort.set(imported.job.reasoningEffort || '');
+      this.syncReasoningEffortSelection();
       this.setJob(imported.job, {
         origin: 'local',
         exportedAt: imported.exportedAt,
@@ -567,6 +645,31 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     return status === 'COMPLETED' || status === 'FAILED';
   }
 
+  private loadAiModelOptions(): void {
+    this.isAiModelOptionsLoading.set(true);
+    this.aiModelOptionsError.set('');
+
+    this.analysisApi
+      .getAiModelOptions()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isAiModelOptionsLoading.set(false))
+      )
+      .subscribe({
+        next: (options) => {
+          this.aiModelCatalog.set(normalizeAnalysisAiModelOptions(options));
+          this.syncAiModelSelection();
+          this.syncReasoningEffortSelection();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.aiModelCatalog.set(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
+          this.aiModelOptionsError.set(this.errorMessage(error));
+          this.syncAiModelSelection();
+          this.syncReasoningEffortSelection();
+        }
+      });
+  }
+
   private parseSmokePackDraft(): ChangeVerificationSmokePack | null {
     try {
       return JSON.parse(this.smokePackDraft()) as ChangeVerificationSmokePack;
@@ -603,6 +706,49 @@ export class ChangeVerificationPageComponent implements OnDestroy {
 
   private normalized(value: string | null | undefined): string {
     return String(value || '').trim().toUpperCase();
+  }
+
+  private syncAiModelSelection(): void {
+    if (this.selectedAiModel().trim()) {
+      return;
+    }
+
+    this.selectedAiModel.set(listedDefaultAiModel(this.aiModelCatalog()));
+  }
+
+  private syncReasoningEffortSelection(): void {
+    const availableEfforts = reasoningEffortsForAiModel(
+      this.aiModelCatalog(),
+      this.selectedAiModel()
+    );
+    const selectedReasoningEffort = this.selectedReasoningEffort().trim();
+    if (!availableEfforts.length) {
+      this.selectedReasoningEffort.set('');
+      return;
+    }
+    if (selectedReasoningEffort && availableEfforts.includes(selectedReasoningEffort)) {
+      return;
+    }
+
+    this.selectedReasoningEffort.set(
+      defaultReasoningEffortForAiModel(this.aiModelCatalog(), this.selectedAiModel())
+    );
+  }
+
+  private reasoningEffortsForModel(modelId: string): string[] {
+    return reasoningEffortsForAiModel(this.aiModelCatalog(), modelId);
+  }
+
+  private modelLabel(id: string, name: string): string {
+    if (!name || name === id) {
+      return id;
+    }
+
+    return `${name} (${id})`;
+  }
+
+  private reasoningEffortLabel(effort: string): string {
+    return effort ? effort.charAt(0).toUpperCase() + effort.slice(1) : effort;
   }
 }
 

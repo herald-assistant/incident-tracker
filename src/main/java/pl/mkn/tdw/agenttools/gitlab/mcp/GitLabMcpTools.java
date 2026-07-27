@@ -150,6 +150,26 @@ public class GitLabMcpTools {
                 .resolve(branchRef, projectName, applicationName, toolContext);
     }
 
+    private String canonicalProjectName(GitLabToolScope scope, String projectName) {
+        return canonicalProjectName(scope != null ? scope.group() : null, projectName);
+    }
+
+    private String canonicalProjectName(String group, String projectName) {
+        if (!StringUtils.hasText(projectName)) {
+            return projectName;
+        }
+        var relativeProjectPath = GitLabPathUtils.relativeProjectPath(group, projectName);
+        return StringUtils.hasText(relativeProjectPath) ? relativeProjectPath.trim() : projectName.trim();
+    }
+
+    private List<String> canonicalProjectNames(GitLabToolScope scope, List<String> projectNames) {
+        var values = new LinkedHashSet<String>();
+        for (var projectName : defaultList(projectNames)) {
+            add(values, canonicalProjectName(scope, projectName));
+        }
+        return List.copyOf(values);
+    }
+
     private String firstProjectName(List<String> projectNames) {
         return defaultList(projectNames).stream()
                 .filter(StringUtils::hasText)
@@ -475,6 +495,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
 
         log.info(
                 "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} maxScannedFiles={}",
@@ -486,7 +507,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 endpointPathPrefix,
                 httpMethod,
                 maxScannedFiles
@@ -495,13 +516,13 @@ public class GitLabMcpTools {
         requirePrimaryRepositoryForBroadDiscovery(
                 scope.group(),
                 scope.applicationName(),
-                projectName,
+                effectiveProjectName,
                 "endpoint inventory"
         );
 
         var result = gitLabRepositoryEndpointService.listEndpoints(new GitLabRepositoryEndpointListRequest(
                 scope.group(),
-                projectName,
+                effectiveProjectName,
                 scope.branch(),
                 endpointPathPrefix,
                 httpMethod,
@@ -567,6 +588,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
 
         log.info(
                 "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} maxDepth={} maxFiles={}",
@@ -578,7 +600,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 endpointId,
                 httpMethod,
                 endpointPath,
@@ -590,7 +612,7 @@ public class GitLabMcpTools {
                 scope.group(),
                 scope.branch(),
                 new GitLabEndpointUseCaseContextRequest(
-                        projectName,
+                        effectiveProjectName,
                         endpointId,
                         httpMethod,
                         endpointPath,
@@ -658,6 +680,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
 
         log.info(
                 "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} className={} methodName={} lineNumber={} parameterCount={} parameterTypes={} maxDepth={} maxResults={}",
@@ -669,7 +692,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 filePath,
                 className,
                 methodName,
@@ -684,7 +707,7 @@ public class GitLabMcpTools {
                 scope.group(),
                 scope.branch(),
                 new GitLabJavaMethodUseCaseContextRequest(
-                        projectName,
+                        effectiveProjectName,
                         filePath,
                         className,
                         methodName,
@@ -745,7 +768,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
-        var safeProjectNames = defaultList(projectNames);
+        var safeProjectNames = canonicalProjectNames(scope, projectNames);
         var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var safeKeywords = defaultList(keywords);
@@ -822,6 +845,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
 
         log.info(
@@ -834,15 +858,15 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 filePath,
                 effectiveMaxCharacters
         );
 
         var readResult = readRepositoryFileByExactOrPartialPath(
                 scope,
-                projectName,
-                normalizeRepositoryFilePath(filePath, projectName),
+                effectiveProjectName,
+                normalizeRepositoryFilePath(filePath, effectiveProjectName),
                 effectiveMaxCharacters
         );
         if (readResult.fileContent() == null) {
@@ -857,7 +881,7 @@ public class GitLabMcpTools {
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
                 scope.applicationName(),
-                responseProjectName(fileContent, projectName),
+                responseProjectName(fileContent, effectiveProjectName),
                 responseFilePath(fileContent, filePath),
                 fileContent != null && fileContent.content() != null ? fileContent.content().length() : 0,
                 fileContent != null && fileContent.truncated()
@@ -865,7 +889,7 @@ public class GitLabMcpTools {
 
         return new GitLabReadRepositoryFileToolResponse(
                 responseGroup(fileContent, scope.group()),
-                responseProjectName(fileContent, projectName),
+                responseProjectName(fileContent, effectiveProjectName),
                 responseBranch(fileContent, scope.branch()),
                 responseFilePath(fileContent, filePath),
                 fileContent != null ? fileContent.content() : null,
@@ -910,7 +934,8 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
-        var resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, projectName, filePath, true);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
+        var resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, effectiveProjectName, filePath, true);
 
         log.info(
                 "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} declaringTypeName={} methodSelectors={} maxCharacters={}",
@@ -922,7 +947,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 resolvedFilePath,
                 declaringTypeName,
                 methodSelectors,
@@ -931,7 +956,7 @@ public class GitLabMcpTools {
 
         var response = gitLabJavaMethodSliceService.readMethodSlice(new GitLabJavaMethodSliceRequest(
                 scope.group(),
-                projectName,
+                effectiveProjectName,
                 scope.branch(),
                 resolvedFilePath,
                 declaringTypeName,
@@ -995,7 +1020,8 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
-        var resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, projectName, filePath, false);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
+        var resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, effectiveProjectName, filePath, false);
 
         log.info(
                 "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} httpMethod={} endpointPath={} schemaDepth={} maxCharacters={}",
@@ -1007,7 +1033,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 resolvedFilePath,
                 httpMethod,
                 endpointPath,
@@ -1017,7 +1043,7 @@ public class GitLabMcpTools {
 
         var response = gitLabOpenApiEndpointSliceService.readEndpointSlice(new GitLabOpenApiEndpointSliceRequest(
                 scope.group(),
-                projectName,
+                effectiveProjectName,
                 scope.branch(),
                 resolvedFilePath,
                 httpMethod,
@@ -1072,7 +1098,8 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
-        var requestedFilePaths = normalizeRepositoryFilePaths(filePaths, projectName);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
+        var requestedFilePaths = normalizeRepositoryFilePaths(filePaths, effectiveProjectName);
         var processedFilePaths = requestedFilePaths.stream()
                 .limit(MAX_BATCH_FILES_BY_PATH)
                 .toList();
@@ -1089,7 +1116,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 requestedFilePaths.size(),
                 processedFilePaths.size(),
                 abbreviateList(processedFilePaths),
@@ -1113,7 +1140,7 @@ public class GitLabMcpTools {
             var effectiveFileMaxCharacters = Math.min(effectiveMaxCharactersPerFile, remainingCharacters);
             var readResult = readRepositoryFileByExactOrPartialPath(
                     scope,
-                    projectName,
+                    effectiveProjectName,
                     requestedPath,
                     effectiveFileMaxCharacters
             );
@@ -1125,11 +1152,11 @@ public class GitLabMcpTools {
                         responseFilePath(fileContent, requestedPath),
                         content
                 );
-                var metadata = readFileMetadata(scope, projectName, responseFilePath(fileContent, requestedPath));
+                var metadata = readFileMetadata(scope, effectiveProjectName, responseFilePath(fileContent, requestedPath));
 
                 results.add(new GitLabFileContentResult(
                         responseGroup(fileContent, scope.group()),
-                        responseProjectName(fileContent, projectName),
+                        responseProjectName(fileContent, effectiveProjectName),
                         responseBranch(fileContent, scope.branch()),
                         responseFilePath(fileContent, requestedPath),
                         content,
@@ -1162,13 +1189,13 @@ public class GitLabMcpTools {
                         scope.group(),
                         scope.branch(),
                         scope.applicationName(),
-                        projectName,
+                        effectiveProjectName,
                         requestedPath,
                         error
                 );
                 results.add(new GitLabFileContentResult(
                         scope.group(),
-                        projectName,
+                        effectiveProjectName,
                         scope.branch(),
                         requestedPath,
                         null,
@@ -1195,7 +1222,7 @@ public class GitLabMcpTools {
                 scope.group(),
                 scope.branch(),
                 scope.applicationName(),
-                projectName,
+                effectiveProjectName,
                 requestedFilePaths.size(),
                 results.size(),
                 returnedFileCount,
@@ -1207,7 +1234,7 @@ public class GitLabMcpTools {
 
         return new GitLabReadRepositoryFilesByPathToolResponse(
                 scope.group(),
-                projectName,
+                effectiveProjectName,
                 scope.branch(),
                 requestedFilePaths.size(),
                 results.size(),
@@ -1588,6 +1615,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
 
         log.info(
@@ -1600,7 +1628,7 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 filePath,
                 startLine,
                 endLine,
@@ -1609,8 +1637,8 @@ public class GitLabMcpTools {
 
         var fileChunk = readRepositoryFileChunkByExactOrPartialPath(
                 scope,
-                projectName,
-                normalizeRepositoryFilePath(filePath, projectName),
+                effectiveProjectName,
+                normalizeRepositoryFilePath(filePath, effectiveProjectName),
                 startLine,
                 endLine,
                 effectiveMaxCharacters
@@ -1623,7 +1651,7 @@ public class GitLabMcpTools {
                 fileChunk != null ? fileChunk.group() : scope.group(),
                 fileChunk != null ? fileChunk.branch() : scope.branch(),
                 scope.applicationName(),
-                fileChunk != null ? fileChunk.projectName() : projectName,
+                fileChunk != null ? fileChunk.projectName() : effectiveProjectName,
                 fileChunk != null ? fileChunk.filePath() : filePath,
                 fileChunk != null ? fileChunk.returnedStartLine() : 0,
                 fileChunk != null ? fileChunk.returnedEndLine() : 0,
@@ -1634,7 +1662,7 @@ public class GitLabMcpTools {
 
         return new GitLabReadRepositoryFileChunkToolResponse(
                 fileChunk != null ? fileChunk.group() : scope.group(),
-                fileChunk != null ? fileChunk.projectName() : projectName,
+                fileChunk != null ? fileChunk.projectName() : effectiveProjectName,
                 fileChunk != null ? fileChunk.branch() : scope.branch(),
                 fileChunk != null ? fileChunk.filePath() : filePath,
                 fileChunk != null ? fileChunk.requestedStartLine() : startLine,
@@ -1672,6 +1700,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_OUTLINE_MAX_CHARACTERS);
 
         log.info(
@@ -1684,15 +1713,15 @@ public class GitLabMcpTools {
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
-                projectName,
+                effectiveProjectName,
                 filePath,
                 effectiveMaxCharacters
         );
 
         var readResult = readRepositoryFileByExactOrPartialPath(
                 scope,
-                projectName,
-                normalizeRepositoryFilePath(filePath, projectName),
+                effectiveProjectName,
+                normalizeRepositoryFilePath(filePath, effectiveProjectName),
                 effectiveMaxCharacters
         );
         if (readResult.fileContent() == null) {
@@ -1712,7 +1741,7 @@ public class GitLabMcpTools {
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
                 scope.applicationName(),
-                responseProjectName(fileContent, projectName),
+                responseProjectName(fileContent, effectiveProjectName),
                 responseFilePath(fileContent, filePath),
                 outline.packageName(),
                 outline.imports().size(),
@@ -1726,7 +1755,7 @@ public class GitLabMcpTools {
 
         return new GitLabReadRepositoryFileOutlineToolResponse(
                 responseGroup(fileContent, scope.group()),
-                responseProjectName(fileContent, projectName),
+                responseProjectName(fileContent, effectiveProjectName),
                 responseBranch(fileContent, scope.branch()),
                 responseFilePath(fileContent, filePath),
                 outline.packageName(),
@@ -1785,7 +1814,7 @@ public class GitLabMcpTools {
                 safeChunks.size(),
                 processedChunks.size(),
                 abbreviateList(processedChunks.stream()
-                        .map(chunk -> chunk.projectName() + ":" + chunk.filePath())
+                        .map(chunk -> canonicalProjectName(scope, chunk.projectName()) + ":" + chunk.filePath())
                         .toList()),
                 effectiveMaxTotalCharacters
         );
@@ -1800,12 +1829,13 @@ public class GitLabMcpTools {
                 break;
             }
 
+            var effectiveProjectName = canonicalProjectName(scope, chunk.projectName());
             var requestedMaxCharacters = normalizePositiveLimit(chunk.maxCharacters(), DEFAULT_MAX_CHARACTERS);
             var effectiveChunkMaxCharacters = Math.min(requestedMaxCharacters, remainingCharacters);
             var fileChunk = readRepositoryFileChunkByExactOrPartialPath(
                     scope,
-                    chunk.projectName(),
-                    normalizeRepositoryFilePath(chunk.filePath(), chunk.projectName()),
+                    effectiveProjectName,
+                    normalizeRepositoryFilePath(chunk.filePath(), effectiveProjectName),
                     chunk.startLine(),
                     chunk.endLine(),
                     effectiveChunkMaxCharacters
@@ -1817,7 +1847,7 @@ public class GitLabMcpTools {
 
             results.add(new GitLabFileChunkResult(
                     fileChunk != null ? fileChunk.group() : scope.group(),
-                    fileChunk != null ? fileChunk.projectName() : chunk.projectName(),
+                    fileChunk != null ? fileChunk.projectName() : effectiveProjectName,
                     fileChunk != null ? fileChunk.branch() : scope.branch(),
                     fileChunk != null ? fileChunk.filePath() : chunk.filePath(),
                     fileChunk != null ? fileChunk.requestedStartLine() : chunk.startLine(),
@@ -1889,7 +1919,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
-        var safeProjectNames = defaultList(projectNames);
+        var safeProjectNames = canonicalProjectNames(scope, projectNames);
         var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(joinLists(
@@ -1982,7 +2012,7 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
-        var safeProjectNames = defaultList(projectNames);
+        var safeProjectNames = canonicalProjectNames(scope, projectNames);
         var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(defaultList(keywords));

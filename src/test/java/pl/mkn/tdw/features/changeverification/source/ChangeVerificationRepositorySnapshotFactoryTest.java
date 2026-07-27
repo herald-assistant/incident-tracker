@@ -32,7 +32,8 @@ class ChangeVerificationRepositorySnapshotFactoryTest {
                                 instruction("CRM/runtime/customer-fe", "feature/CRM-123-ui", ".github/copilot-instructions.md")
                         ),
                         List.of()
-                )
+                ),
+                "CRM/runtime"
         );
 
         assertThat(result).hasSize(2);
@@ -53,6 +54,32 @@ class ChangeVerificationRepositorySnapshotFactoryTest {
         assertThat(result.get(1).changedFiles()).singleElement()
                 .extracting(ChangeVerificationChangedFileSnapshot::path)
                 .isEqualTo("src/app/customer.ts");
+    }
+
+    @Test
+    void shouldUseRelativeProjectPathAsToolProjectNameForNestedGroups() {
+        var result = ChangeVerificationRepositorySnapshotFactory.from(
+                new GitLabMergeRequestSearchResult(
+                        "CRM-123",
+                        "CLP",
+                        List.of(mergeRequest(
+                                1L,
+                                "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
+                                "feature/CRM-123",
+                                "src/main/java/pl/mkn/AgreementProcess.java"
+                        )),
+                        List.of()
+                ),
+                null,
+                "CLP"
+        );
+
+        assertThat(result).singleElement()
+                .satisfies(repository -> {
+                    assertThat(repository.projectPath()).isEqualTo("CLP/PROCESSES/CLP_AGREEMENT_PROCESS");
+                    assertThat(repository.projectName()).isEqualTo("PROCESSES/CLP_AGREEMENT_PROCESS");
+                    assertThat(repository.repositoryName()).isEqualTo("CLP_AGREEMENT_PROCESS");
+                });
     }
 
     private static GitLabMergeRequest mergeRequest(

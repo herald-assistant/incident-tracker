@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.changeverification.source;
 
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
@@ -10,6 +11,7 @@ import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 final class ChangeVerificationRepositorySnapshotFactory {
 
@@ -20,6 +22,23 @@ final class ChangeVerificationRepositorySnapshotFactory {
             GitLabMergeRequestSearchResult mergeRequests,
             InstructionContextResult instructionContext
     ) {
+        return from(mergeRequests, instructionContext, mergeRequests != null ? mergeRequests.group() : null);
+    }
+
+    static List<ChangeVerificationRepositorySnapshot> from(
+            GitLabMergeRequestSearchResult mergeRequests,
+            InstructionContextResult instructionContext,
+            String configuredGitLabGroup
+    ) {
+        return from(mergeRequests, instructionContext, configuredGitLabGroup, List.of());
+    }
+
+    static List<ChangeVerificationRepositorySnapshot> from(
+            GitLabMergeRequestSearchResult mergeRequests,
+            InstructionContextResult instructionContext,
+            String configuredGitLabGroup,
+            List<ChangeVerificationRepositoryRefSelection> refSelections
+    ) {
         if (mergeRequests == null || mergeRequests.mergeRequests().isEmpty()) {
             return List.of();
         }
@@ -28,25 +47,30 @@ final class ChangeVerificationRepositorySnapshotFactory {
         for (var mergeRequest : mergeRequests.mergeRequests()) {
             grouped.computeIfAbsent(groupKey(mergeRequest), ignored -> new ArrayList<>()).add(mergeRequest);
         }
+        var refsByKey = refSelectionsByKey(refSelections);
 
         return grouped.values().stream()
-                .map(group -> repositorySnapshot(group, instructionContext))
+                .map(group -> repositorySnapshot(group, instructionContext, configuredGitLabGroup, refsByKey))
                 .toList();
     }
 
     private static ChangeVerificationRepositorySnapshot repositorySnapshot(
             List<GitLabMergeRequest> mergeRequests,
-            InstructionContextResult instructionContext
+            InstructionContextResult instructionContext,
+            String configuredGitLabGroup,
+            Map<String, ChangeVerificationRepositoryRefSelection> refsByKey
     ) {
         var first = mergeRequests.get(0);
         var projectPath = value(first.projectPath());
         var sourceRef = ref(first.sourceBranch(), first.targetBranch());
         var targetRef = value(first.targetBranch());
-        var instructionSources = instructionSources(projectPath, sourceRef, instructionContext);
-        return new ChangeVerificationRepositorySnapshot(
+        var refSelection = refsByKey.get(ChangeVerificationRepositoryRefSelection.key(projectPath, sourceRef, targetRef));
+        var analysisRef = refSelection != null ? refSelection.analysisRef() : sourceRef;
+        var instructionSources = instructionSources(projectPath, analysisRef, instructionContext);
+        var snapshot = new ChangeVerificationRepositorySnapshot(
                 projectPath,
                 projectPath,
-                projectName(projectPath),
+                projectName(configuredGitLabGroup, projectPath),
                 sourceRef,
                 targetRef,
                 mergeRequests,
@@ -54,6 +78,7 @@ final class ChangeVerificationRepositorySnapshotFactory {
                 instructionSources,
                 limitations(mergeRequests, instructionContext, instructionSources)
         );
+        return snapshot.withRefSelection(refSelection);
     }
 
     private static List<ChangeVerificationChangedFileSnapshot> changedFiles(List<GitLabMergeRequest> mergeRequests) {
@@ -108,6 +133,19 @@ final class ChangeVerificationRepositorySnapshotFactory {
                 + "|" + value(mergeRequest.targetBranch());
     }
 
+    private static Map<String, ChangeVerificationRepositoryRefSelection> refSelectionsByKey(
+            List<ChangeVerificationRepositoryRefSelection> refSelections
+    ) {
+        var result = new LinkedHashMap<String, ChangeVerificationRepositoryRefSelection>();
+        if (refSelections == null) {
+            return result;
+        }
+        refSelections.stream()
+                .filter(selection -> selection != null && StringUtils.hasText(selection.key()))
+                .forEach(selection -> result.putIfAbsent(selection.key(), selection));
+        return result;
+    }
+
     private static boolean repositoryMatches(String projectPath, InstructionSource source) {
         return value(projectPath).equals(value(source.repositoryKey()));
     }
@@ -120,8 +158,12 @@ final class ChangeVerificationRepositorySnapshotFactory {
         return StringUtils.hasText(sourceBranch) ? sourceBranch.trim() : value(targetBranch);
     }
 
-    private static String projectName(String projectPath) {
+    private static String projectName(String configuredGitLabGroup, String projectPath) {
         var value = value(projectPath);
+        var relativeProjectPath = GitLabPathUtils.relativeProjectPath(configuredGitLabGroup, value);
+        if (StringUtils.hasText(relativeProjectPath)) {
+            return relativeProjectPath;
+        }
         var index = value.lastIndexOf('/');
         return index >= 0 ? value.substring(index + 1) : value;
     }

@@ -41,6 +41,12 @@
   min-width: 0;
 }
 
+.change-verification-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .change-verification-textarea {
   min-height: 108px;
   resize: vertical;
@@ -119,6 +125,12 @@
   margin: 0;
   color: var(--danger-text);
   font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.change-verification-warning {
+  margin: -4px 0 0;
+  color: var(--warning-text, var(--text-muted));
   font-weight: 700;
 }
 
@@ -588,6 +600,7 @@
 
 @media (max-width: 1180px) {
   .change-verification-source-grid,
+  .change-verification-ai-grid,
   .change-verification-summary-grid,
   .change-verification-overview__notes,
   .change-verification-artifact-bar,

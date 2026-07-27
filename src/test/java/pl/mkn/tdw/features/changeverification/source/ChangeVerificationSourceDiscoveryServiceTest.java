@@ -16,6 +16,7 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.Operati
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,6 +43,9 @@ class ChangeVerificationSourceDiscoveryServiceTest {
                 .thenReturn(new GitLabMergeRequestSearchResult("CRM-123", "CRM/runtime", List.of(mergeRequest(1L, "CRM-123")), List.of()));
         when(gitLabRepositoryPort.findMergeRequestsByIssueKey("CRM/runtime", "CRM-124", 10))
                 .thenReturn(new GitLabMergeRequestSearchResult("CRM-124", "CRM/runtime", List.of(mergeRequest(2L, "CRM-124")), List.of()));
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "feature/CRM-123")).thenReturn(true);
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "feature/CRM-124")).thenReturn(true);
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "main")).thenReturn(true);
 
         var result = service.discover(new ChangeVerificationJobStartRequest(
                 "CRM-123",
@@ -83,6 +87,10 @@ class ChangeVerificationSourceDiscoveryServiceTest {
                 .thenReturn(new GitLabMergeRequestSearchResult("CRM-123", "CRM/runtime", List.of(mergeRequest(1L, "CRM-123")), List.of()));
         when(gitLabRepositoryPort.findMergeRequestsByIssueKey("CRM/runtime", "CRM-125", 10))
                 .thenReturn(new GitLabMergeRequestSearchResult("CRM-125", "CRM/runtime", List.of(mergeRequest(3L, "CRM-125")), List.of()));
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "feature/CRM-124")).thenReturn(true);
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "feature/CRM-123")).thenReturn(true);
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "feature/CRM-125")).thenReturn(true);
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "main")).thenReturn(true);
 
         var result = service.discover(new ChangeVerificationJobStartRequest(
                 "CRM-124",
@@ -101,6 +109,55 @@ class ChangeVerificationSourceDiscoveryServiceTest {
         verify(gitLabRepositoryPort).findMergeRequestsByIssueKey("CRM/runtime", "CRM-124", 10);
         verify(gitLabRepositoryPort).findMergeRequestsByIssueKey("CRM/runtime", "CRM-123", 10);
         verify(gitLabRepositoryPort).findMergeRequestsByIssueKey("CRM/runtime", "CRM-125", 10);
+    }
+
+    @Test
+    void shouldUseTargetBranchForAnalysisWhenSourceBranchWasRemoved() {
+        var jiraIssuePort = mock(JiraIssuePort.class);
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var gitLabProperties = new GitLabProperties();
+        gitLabProperties.setGroup("CRM/runtime");
+        gitLabProperties.setMaxMergeRequests(10);
+        var service = new ChangeVerificationSourceDiscoveryService(
+                jiraIssuePort,
+                gitLabRepositoryPort,
+                gitLabProperties,
+                new InstructionContextDiscoveryService(gitLabRepositoryPort, new InstructionDiscoveryProperties()),
+                new ChangeVerificationOperationalContextMatcher(ignored -> OperationalContextCatalog.empty())
+        );
+
+        when(jiraIssuePort.getIssueMaterial("CRM-123")).thenReturn(issueWithSubTask());
+        when(gitLabRepositoryPort.findMergeRequestsByIssueKey("CRM/runtime", "CRM-123", 10))
+                .thenReturn(new GitLabMergeRequestSearchResult("CRM-123", "CRM/runtime", List.of(mergeRequest(1L, "CRM-123")), List.of()));
+        when(gitLabRepositoryPort.findMergeRequestsByIssueKey("CRM/runtime", "CRM-124", 10))
+                .thenReturn(new GitLabMergeRequestSearchResult("CRM-124", "CRM/runtime", List.of(), List.of()));
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "feature/CRM-123")).thenReturn(false);
+        when(gitLabRepositoryPort.branchExists("CRM/runtime", "customer-api", "main")).thenReturn(true);
+
+        var result = service.discover(new ChangeVerificationJobStartRequest(
+                "CRM-123",
+                null,
+                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
+                true,
+                true,
+                null,
+                null,
+                null
+        ));
+
+        assertThat(result.repositories()).singleElement()
+                .satisfies(repository -> {
+                    assertThat(repository.sourceRef()).isEqualTo("feature/CRM-123");
+                    assertThat(repository.sourceRefAvailable()).isFalse();
+                    assertThat(repository.targetRef()).isEqualTo("main");
+                    assertThat(repository.targetRefAvailable()).isTrue();
+                    assertThat(repository.analysisRef()).isEqualTo("main");
+                    assertThat(repository.analysisRefSource()).isEqualTo("TARGET_REF");
+                    assertThat(repository.limitations()).anySatisfy(limitation ->
+                            assertThat(limitation).contains("Source branch 'feature/CRM-123' is not available"));
+                });
+        verify(gitLabRepositoryPort, atLeastOnce()).readFile(org.mockito.ArgumentMatchers.argThat(request ->
+                "CRM/runtime/customer-api".equals(request.repositoryKey()) && "main".equals(request.ref())));
     }
 
     private static JiraIssueMaterial issueWithSubTask() {

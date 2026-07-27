@@ -805,7 +805,11 @@ public final class ChangeVerificationJobState {
                         attribute("repositoryName", repository.repositoryName()),
                         attribute("projectName", repository.projectName()),
                         attribute("sourceRef", repository.sourceRef()),
+                        attribute("sourceRefAvailable", repository.sourceRefAvailable()),
                         attribute("targetRef", repository.targetRef()),
+                        attribute("targetRefAvailable", repository.targetRefAvailable()),
+                        attribute("analysisRef", repository.analysisRef()),
+                        attribute("analysisRefSource", repository.analysisRefSource()),
                         attribute("mergeRequestCount", repository.mergeRequests().size()),
                         attribute("mergeRequests", repository.mergeRequests().stream()
                                 .map(mr -> fallback(mr.webUrl(), "!" + mr.iid()))

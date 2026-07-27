@@ -55,6 +55,10 @@ public interface GitLabRepositoryPort {
             int maxCharacters
     );
 
+    default boolean branchExists(String group, String projectName, String branch) {
+        return true;
+    }
+
     default GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
             String group,
             String issueKey,

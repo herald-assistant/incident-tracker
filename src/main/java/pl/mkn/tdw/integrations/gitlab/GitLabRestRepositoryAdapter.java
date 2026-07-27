@@ -326,6 +326,30 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     @Override
+    public boolean branchExists(String group, String projectName, String branch) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(branch)) {
+            return false;
+        }
+
+        try {
+            restClient().get()
+                    .uri(branchUri(group, projectName, branch))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                return false;
+            }
+            throw new IllegalStateException(
+                    "GitLab branch lookup failed for " + group + "/" + projectName + "@" + branch,
+                    exception
+            );
+        }
+    }
+
+    @Override
     public GitLabMergeRequestSearchResult findMergeRequestsByIssueKey(
             String group,
             String issueKey,
@@ -740,6 +764,12 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                 + "/projects/" + encodePathSegment(group + "/" + projectName)
                 + "/repository/files/" + encodePathSegment(filePath)
                 + "?ref=" + encodeQueryParam(branch));
+    }
+
+    private URI branchUri(String group, String projectName, String branch) {
+        return URI.create(apiBaseUrl()
+                + "/projects/" + encodePathSegment(group + "/" + projectName)
+                + "/repository/branches/" + encodePathSegment(branch));
     }
 
     private URI commitMetadataUri(String group, String projectName, String commitId) {

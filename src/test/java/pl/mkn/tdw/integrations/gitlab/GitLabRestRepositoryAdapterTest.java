@@ -3,6 +3,7 @@ package pl.mkn.tdw.integrations.gitlab;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class GitLabRestRepositoryAdapterTest {
@@ -445,6 +447,28 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("2026-06-14T10:20:00.000Z", metadata.lastModifiedAt());
         assertEquals("content-sha-256", metadata.contentSha256());
         assertEquals(2048L, metadata.sizeBytes());
+
+        server.verify();
+    }
+
+    @Test
+    void shouldCheckBranchExistence() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/repository/branches/feature%2FCRM-123"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api/repository/branches/feature%2FCRM-124"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        assertTrue(adapter.branchExists("CRM/runtime", "crm-customer-api", "feature/CRM-123"));
+        assertFalse(adapter.branchExists("CRM/runtime", "crm-customer-api", "feature/CRM-124"));
 
         server.verify();
     }

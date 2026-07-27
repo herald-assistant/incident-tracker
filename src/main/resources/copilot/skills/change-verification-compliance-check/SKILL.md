@@ -86,17 +86,23 @@ wlaczone narzedzia.
    `rootGroup`/`groupPath`/`repositoryName` oraz dopasowania
    repo -> code search scope -> target. Nie interpretuj tego jako
    bezposredniej relacji repo -> system albo repo -> bounded-context.
-9. Code search scope z operational context jest wskazowka, jaki system albo
+9. Dla GitLab tools uzywaj pola `projectName` z Repository Scope jako
+   kanonicznego inputu. Nie przekazuj `projectPath`, `rootGroup/projectName`
+   ani pelnej sciezki MR jako parametru `projectName`.
+10. Dla GitLab tools uzywaj pola `analysisRef` jako `branchRef`. `sourceRef`
+   i `targetRef` sa kontekstem MR; po merge'u source branch moze byc usuniety
+   i wtedy `analysisRef` wskazuje target branch.
+11. Code search scope z operational context jest wskazowka, jaki system albo
    bounded context moze byc potrzebny do zrozumienia zmiany. Uzywaj Operational
    Context tools, gdy potrzebujesz doprecyzowac proces, system, bounded context,
    integracje albo slownictwo domenowe.
-10. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne.
+12. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne.
    Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla
    brakujacych wymagan biznesowych.
-11. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz
+13. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz
    ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo
    implementacji.
-12. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z
+14. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z
     target issue, a reszte opisz jako out of scope albo visibility limit.
 
 ## Status

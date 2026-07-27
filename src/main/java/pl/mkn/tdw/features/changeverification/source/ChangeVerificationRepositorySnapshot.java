@@ -14,6 +14,10 @@ public record ChangeVerificationRepositorySnapshot(
         String projectName,
         String sourceRef,
         String targetRef,
+        String analysisRef,
+        String analysisRefSource,
+        Boolean sourceRefAvailable,
+        Boolean targetRefAvailable,
         List<GitLabMergeRequest> mergeRequests,
         List<ChangeVerificationChangedFileSnapshot> changedFiles,
         List<InstructionSource> instructionSources,
@@ -22,6 +26,10 @@ public record ChangeVerificationRepositorySnapshot(
 ) {
 
     public ChangeVerificationRepositorySnapshot {
+        analysisRef = normalize(analysisRef).isEmpty() ? ref(sourceRef, targetRef) : normalize(analysisRef);
+        analysisRefSource = normalize(analysisRefSource).isEmpty()
+                ? refSource(analysisRef, sourceRef, targetRef)
+                : normalize(analysisRefSource);
         mergeRequests = mergeRequests != null ? List.copyOf(mergeRequests) : List.of();
         changedFiles = changedFiles != null ? List.copyOf(changedFiles) : List.of();
         instructionSources = instructionSources != null ? List.copyOf(instructionSources) : List.of();
@@ -49,6 +57,10 @@ public record ChangeVerificationRepositorySnapshot(
                 projectName,
                 sourceRef,
                 targetRef,
+                ref(sourceRef, targetRef),
+                refSource(ref(sourceRef, targetRef), sourceRef, targetRef),
+                null,
+                null,
                 mergeRequests,
                 changedFiles,
                 instructionSources,
@@ -57,10 +69,18 @@ public record ChangeVerificationRepositorySnapshot(
         );
     }
 
-    public ChangeVerificationRepositorySnapshot withOperationalContextMatches(
-            List<ChangeVerificationOperationalContextMatch> operationalContextMatches
+    public ChangeVerificationRepositorySnapshot withRefSelection(
+            ChangeVerificationRepositoryRefSelection refSelection
     ) {
-        return new  ChangeVerificationRepositorySnapshot(
+        if (refSelection == null) {
+            return this;
+        }
+        var mergedLimitations = new java.util.ArrayList<>(limitations);
+        refSelection.limitations().stream()
+                .filter(org.springframework.util.StringUtils::hasText)
+                .filter(limitation -> !mergedLimitations.contains(limitation))
+                .forEach(mergedLimitations::add);
+        return new ChangeVerificationRepositorySnapshot(
                 repositoryKey,
                 projectPath,
                 rootGroup,
@@ -69,6 +89,34 @@ public record ChangeVerificationRepositorySnapshot(
                 projectName,
                 sourceRef,
                 targetRef,
+                refSelection.analysisRef(),
+                refSelection.analysisRefSource(),
+                refSelection.sourceRefAvailable(),
+                refSelection.targetRefAvailable(),
+                mergeRequests,
+                changedFiles,
+                instructionSources,
+                operationalContextMatches,
+                mergedLimitations
+        );
+    }
+
+    public ChangeVerificationRepositorySnapshot withOperationalContextMatches(
+            List<ChangeVerificationOperationalContextMatch> operationalContextMatches
+    ) {
+        return new ChangeVerificationRepositorySnapshot(
+                repositoryKey,
+                projectPath,
+                rootGroup,
+                groupPath,
+                repositoryName,
+                projectName,
+                sourceRef,
+                targetRef,
+                analysisRef,
+                analysisRefSource,
+                sourceRefAvailable,
+                targetRefAvailable,
                 mergeRequests,
                 changedFiles,
                 instructionSources,
@@ -97,5 +145,19 @@ public record ChangeVerificationRepositorySnapshot(
 
     private static String normalize(String value) {
         return value != null ? value.trim().replace('\\', '/') : "";
+    }
+
+    private static String ref(String sourceRef, String targetRef) {
+        return !normalize(sourceRef).isEmpty() ? normalize(sourceRef) : normalize(targetRef);
+    }
+
+    private static String refSource(String analysisRef, String sourceRef, String targetRef) {
+        if (!normalize(analysisRef).isEmpty() && normalize(analysisRef).equals(normalize(sourceRef))) {
+            return ChangeVerificationRepositoryRefSelection.SOURCE_REF;
+        }
+        if (!normalize(analysisRef).isEmpty() && normalize(analysisRef).equals(normalize(targetRef))) {
+            return ChangeVerificationRepositoryRefSelection.TARGET_REF;
+        }
+        return ChangeVerificationRepositoryRefSelection.UNRESOLVED;
     }
 }

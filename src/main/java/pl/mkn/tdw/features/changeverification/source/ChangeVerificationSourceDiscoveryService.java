@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
@@ -47,6 +48,7 @@ public class ChangeVerificationSourceDiscoveryService {
         JiraIssueMaterial jiraIssue = null;
         GitLabMergeRequestSearchResult mergeRequests = null;
         InstructionContextResult instructionContext = null;
+        List<ChangeVerificationRepositoryRefSelection> refSelections = List.of();
 
         if (!StringUtils.hasText(issueKey)) {
             limitations.add("Jira issue key could not be resolved from request.");
@@ -57,14 +59,23 @@ public class ChangeVerificationSourceDiscoveryService {
             listener.onMergeRequestDiscoveryStarted(issueKey);
             mergeRequests = fetchMergeRequests(issueKeysForMergeRequests(issueKey, jiraIssue), limitations);
             listener.onMergeRequestDiscoveryCompleted(issueKey, mergeRequests, List.copyOf(limitations));
+            refSelections = resolveRepositoryRefs(
+                    ChangeVerificationRepositorySnapshotFactory.from(mergeRequests, null, gitLabProperties.getGroup()),
+                    limitations
+            );
             if (Boolean.TRUE.equals(request.checkInstructionCompliance())) {
                 listener.onInstructionContextStarted(mergeRequests);
-                instructionContext = fetchInstructionContext(mergeRequests, limitations);
+                instructionContext = fetchInstructionContext(mergeRequests, refSelections, limitations);
                 listener.onInstructionContextCompleted(mergeRequests, instructionContext, List.copyOf(limitations));
             }
         }
 
-        var repositories = ChangeVerificationRepositorySnapshotFactory.from(mergeRequests, instructionContext);
+        var repositories = ChangeVerificationRepositorySnapshotFactory.from(
+                mergeRequests,
+                instructionContext,
+                gitLabProperties.getGroup(),
+                refSelections
+        );
         repositories = operationalContextMatcher.enrich(repositories);
 
         return new ChangeVerificationSourceDiscoveryResult(
@@ -173,6 +184,7 @@ public class ChangeVerificationSourceDiscoveryService {
 
     private InstructionContextResult fetchInstructionContext(
             GitLabMergeRequestSearchResult mergeRequests,
+            List<ChangeVerificationRepositoryRefSelection> refSelections,
             List<String> limitations
     ) {
         if (mergeRequests == null || mergeRequests.mergeRequests().isEmpty()) {
@@ -181,13 +193,12 @@ public class ChangeVerificationSourceDiscoveryService {
         }
 
         try {
+            var refsByKey = refSelectionsByKey(refSelections);
             return instructionContextDiscoveryService.discover(new InstructionContextRequest(
                     mergeRequests.mergeRequests().stream()
                             .map(mergeRequest -> new InstructionRepositoryScope(
                                     mergeRequest.projectPath(),
-                                    StringUtils.hasText(mergeRequest.sourceBranch())
-                                            ? mergeRequest.sourceBranch()
-                                            : mergeRequest.targetBranch(),
+                                    analysisRef(mergeRequest, refsByKey),
                                     mergeRequest.changedFiles().stream()
                                             .map(file -> StringUtils.hasText(file.newPath()) ? file.newPath() : file.oldPath())
                                             .filter(StringUtils::hasText)
@@ -200,6 +211,109 @@ public class ChangeVerificationSourceDiscoveryService {
             limitations.add("Instruction context could not be fetched: " + safeMessage(exception));
             return null;
         }
+    }
+
+    private List<ChangeVerificationRepositoryRefSelection> resolveRepositoryRefs(
+            List<ChangeVerificationRepositorySnapshot> repositories,
+            List<String> limitations
+    ) {
+        if (repositories == null || repositories.isEmpty()) {
+            return List.of();
+        }
+        return repositories.stream()
+                .map(repository -> resolveRepositoryRef(repository, limitations))
+                .toList();
+    }
+
+    private ChangeVerificationRepositoryRefSelection resolveRepositoryRef(
+            ChangeVerificationRepositorySnapshot repository,
+            List<String> limitations
+    ) {
+        var selectionLimitations = new ArrayList<String>();
+        var sourceAvailable = branchAvailable(repository, repository.sourceRef(), selectionLimitations);
+        var targetAvailable = branchAvailable(repository, repository.targetRef(), selectionLimitations);
+        var analysisRef = repository.sourceRef();
+        var analysisRefSource = ChangeVerificationRepositoryRefSelection.SOURCE_REF;
+
+        if (!Boolean.TRUE.equals(sourceAvailable) && Boolean.TRUE.equals(targetAvailable)) {
+            analysisRef = repository.targetRef();
+            analysisRefSource = ChangeVerificationRepositoryRefSelection.TARGET_REF;
+            selectionLimitations.add("Source branch '%s' is not available for %s; target branch '%s' will be used for GitLab analysis."
+                    .formatted(repository.sourceRef(), repository.projectName(), repository.targetRef()));
+        } else if (!StringUtils.hasText(analysisRef) && StringUtils.hasText(repository.targetRef())) {
+            analysisRef = repository.targetRef();
+            analysisRefSource = ChangeVerificationRepositoryRefSelection.TARGET_REF;
+        } else if (!Boolean.TRUE.equals(sourceAvailable) && !Boolean.TRUE.equals(targetAvailable)) {
+            selectionLimitations.add("Neither source branch '%s' nor target branch '%s' could be confirmed for %s; GitLab analysis will use '%s' as a best-effort ref."
+                    .formatted(repository.sourceRef(), repository.targetRef(), repository.projectName(), analysisRef));
+        }
+
+        selectionLimitations.stream()
+                .filter(StringUtils::hasText)
+                .filter(limitation -> !limitations.contains(limitation))
+                .forEach(limitations::add);
+        return new ChangeVerificationRepositoryRefSelection(
+                repository.repositoryKey(),
+                repository.sourceRef(),
+                repository.targetRef(),
+                analysisRef,
+                analysisRefSource,
+                sourceAvailable,
+                targetAvailable,
+                List.copyOf(selectionLimitations)
+        );
+    }
+
+    private Boolean branchAvailable(
+            ChangeVerificationRepositorySnapshot repository,
+            String branchRef,
+            List<String> limitations
+    ) {
+        if (!StringUtils.hasText(branchRef)) {
+            return false;
+        }
+        try {
+            return gitLabRepositoryPort.branchExists(
+                    gitLabProperties.getGroup(),
+                    repository.projectName(),
+                    branchRef
+            );
+        } catch (RuntimeException exception) {
+            limitations.add("GitLab branch availability could not be checked for %s@%s: %s"
+                    .formatted(repository.projectName(), branchRef, safeMessage(exception)));
+            return null;
+        }
+    }
+
+    private Map<String, ChangeVerificationRepositoryRefSelection> refSelectionsByKey(
+            List<ChangeVerificationRepositoryRefSelection> refSelections
+    ) {
+        var result = new LinkedHashMap<String, ChangeVerificationRepositoryRefSelection>();
+        if (refSelections == null) {
+            return result;
+        }
+        refSelections.stream()
+                .filter(selection -> selection != null && StringUtils.hasText(selection.key()))
+                .forEach(selection -> result.putIfAbsent(selection.key(), selection));
+        return result;
+    }
+
+    private String analysisRef(
+            pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest mergeRequest,
+            Map<String, ChangeVerificationRepositoryRefSelection> refsByKey
+    ) {
+        var sourceRef = StringUtils.hasText(mergeRequest.sourceBranch())
+                ? mergeRequest.sourceBranch().trim()
+                : value(mergeRequest.targetBranch());
+        var targetRef = value(mergeRequest.targetBranch());
+        var refSelection = refsByKey.get(ChangeVerificationRepositoryRefSelection.key(
+                mergeRequest.projectPath(),
+                sourceRef,
+                targetRef
+        ));
+        return refSelection != null && StringUtils.hasText(refSelection.analysisRef())
+                ? refSelection.analysisRef()
+                : sourceRef;
     }
 
     private String resolveIssueKey(ChangeVerificationJobStartRequest request) {
@@ -218,5 +332,9 @@ public class ChangeVerificationSourceDiscoveryService {
         return StringUtils.hasText(exception.getMessage())
                 ? exception.getMessage()
                 : exception.getClass().getSimpleName();
+    }
+
+    private String value(String value) {
+        return StringUtils.hasText(value) ? value.trim() : "";
     }
 }

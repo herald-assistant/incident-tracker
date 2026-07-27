@@ -78,8 +78,10 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 6. Confluence pages sa kontekstem domenowym i flow. Uzywaj ich do wyboru sensownego smoke scenariusza, ale testuj tylko fragment powiazany z target issue.
                 7. Merge requests i changed files sa zrodlem endpointow, payloadow i widocznych zmian implementacji. Gdy MR pochodzi z parenta albo sibling subtaska, traktuj go jako kontekst zaleznosci.
                 8. Repository Scope pokazuje repozytoria z MR, rozbicie projectPath na rootGroup/groupPath/repositoryName oraz dopasowania repo -> code search scope -> target. Nie interpretuj tego jako bezposredniej relacji repo -> system albo repo -> bounded-context.
-                9. Code search scope z operational context jest wskazowka, jaki system lub bounded context moze byc potrzebny do zrozumienia endpointow, payloadow i cleanupu aplikacyjnego.
-                10. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla target issue i wpisz pozostale ryzyka w `visibilityLimits` lub `suggestedActions`.
+                9. Dla GitLab tools uzywaj pola `projectName` z Repository Scope jako kanonicznego inputu. Nie przekazuj `projectPath`, `rootGroup/projectName` ani pelnej sciezki MR jako parametru `projectName`.
+                10. Dla GitLab tools uzywaj pola `analysisRef` jako `branchRef`. `sourceRef` i `targetRef` sa kontekstem MR; po merge'u source branch moze byc usuniety i wtedy `analysisRef` wskazuje target branch.
+                11. Code search scope z operational context jest wskazowka, jaki system lub bounded context moze byc potrzebny do zrozumienia endpointow, payloadow i cleanupu aplikacyjnego.
+                12. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla target issue i wpisz pozostale ryzyka w `visibilityLimits` lub `suggestedActions`.
                 """.trim();
     }
 
@@ -147,8 +149,15 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 rootGroup: %s
                 groupPath: %s
                 repositoryName: %s
+                projectName: %s
+                GitLab tool input: projectName=%s, branchRef=%s
+                GitLab path context: projectPath=%s
                 sourceRef: %s
+                sourceRefAvailable: %s
                 targetRef: %s
+                targetRefAvailable: %s
+                analysisRef: %s
+                analysisRefSource: %s
                 changedFiles:
                 %s
                 instructionSources:
@@ -163,8 +172,16 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 value(repository.rootGroup()),
                 value(repository.groupPath()),
                 value(repository.repositoryName()),
+                value(repository.projectName()),
+                value(repository.projectName()),
+                value(repository.analysisRef()),
+                value(repository.projectPath()),
                 value(repository.sourceRef()),
+                String.valueOf(repository.sourceRefAvailable()),
                 value(repository.targetRef()),
+                String.valueOf(repository.targetRefAvailable()),
+                value(repository.analysisRef()),
+                value(repository.analysisRefSource()),
                 repository.changedFiles().stream()
                         .map(this::renderRepositoryChangedFile)
                         .reduce((left, right) -> left + "\n" + right)

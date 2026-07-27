@@ -624,6 +624,94 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldCanonicalizeProjectNameBeforeReadingRepositoryFile() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(gitLabRepositoryPort, gitLabProperties("CRM"));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "backend",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/crm/CustomerController.java",
+                500
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "backend",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/crm/CustomerController.java",
+                "class CustomerController {}",
+                false
+        ));
+
+        var response = tools.readRepositoryFile(
+                "CRM/backend",
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
+                "src/main/java/com/example/crm/CustomerController.java",
+                500,
+                "Czytam plik po kanonicznej nazwie projektu.",
+                gitLabToolContext()
+        );
+
+        verify(gitLabRepositoryPort).readFile(
+                "CRM",
+                "backend",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/crm/CustomerController.java",
+                500
+        );
+        assertEquals("backend", response.projectName());
+        assertEquals("class CustomerController {}", response.content());
+    }
+
+    @Test
+    void shouldCanonicalizeProjectNameBeforeReadingRepositoryFilesByPath() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(gitLabRepositoryPort, gitLabProperties("CRM"));
+        when(gitLabRepositoryPort.readFile(
+                "CRM",
+                "backend",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/crm/CustomerController.java",
+                500
+        )).thenReturn(new GitLabRepositoryFileContent(
+                "CRM",
+                "backend",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/crm/CustomerController.java",
+                "class CustomerController {}",
+                false
+        ));
+
+        var response = tools.readRepositoryFilesByPath(
+                "CRM/backend",
+                DEFAULT_BRANCH_REF,
+                DEFAULT_APPLICATION_NAME,
+                List.of("src/main/java/com/example/crm/CustomerController.java"),
+                500,
+                500,
+                "Czytam paczke plikow po kanonicznej nazwie projektu.",
+                gitLabToolContext()
+        );
+
+        verify(gitLabRepositoryPort).readFile(
+                "CRM",
+                "backend",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/crm/CustomerController.java",
+                500
+        );
+        verify(gitLabRepositoryPort).readFileMetadata(
+                "CRM",
+                "backend",
+                DEFAULT_BRANCH_REF,
+                "src/main/java/com/example/crm/CustomerController.java"
+        );
+        assertEquals("backend", response.projectName());
+        assertEquals("backend", response.files().get(0).projectName());
+        assertEquals("class CustomerController {}", response.files().get(0).content());
+    }
+
+    @Test
     void shouldExpandPartialFilePathWithCodeSearchScopePrefixesInFocusedBatchRead() {
         var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
         var tools = GitLabMcpToolsTestCreator.create(

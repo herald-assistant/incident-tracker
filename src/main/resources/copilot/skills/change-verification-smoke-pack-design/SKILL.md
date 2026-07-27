@@ -72,10 +72,16 @@ wywnioskowac z artefaktow albo pobranych narzedziami zrodel.
    `rootGroup`/`groupPath`/`repositoryName` oraz dopasowania
    repo -> code search scope -> target. Nie interpretuj tego jako bezposredniej
    relacji repo -> system albo repo -> bounded-context.
-9. Code search scope z operational context jest wskazowka, jaki system albo
+9. Dla GitLab tools uzywaj pola `projectName` z Repository Scope jako
+   kanonicznego inputu. Nie przekazuj `projectPath`, `rootGroup/projectName`
+   ani pelnej sciezki MR jako parametru `projectName`.
+10. Dla GitLab tools uzywaj pola `analysisRef` jako `branchRef`. `sourceRef`
+   i `targetRef` sa kontekstem MR; po merge'u source branch moze byc usuniety
+   i wtedy `analysisRef` wskazuje target branch.
+11. Code search scope z operational context jest wskazowka, jaki system albo
    bounded context moze byc potrzebny do zrozumienia endpointow, payloadow i
    cleanupu aplikacyjnego.
-10. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla
+12. Jesli zrodla sa sprzeczne albo za szerokie, generuj mniejszy smoke pack dla
    target issue i wpisz pozostale ryzyka w `visibilityLimits` lub
    `suggestedActions`.
 

@@ -65,6 +65,59 @@
         </fieldset>
       </div>
 
+      <div class="change-verification-ai-grid">
+        <label class="field-control change-verification-field" for="changeVerificationAiModel">
+          <span class="field-label">Model AI</span>
+          <span class="select-loading-control">
+            <select
+              id="changeVerificationAiModel"
+              class="select-input"
+              [class.select-input--loading]="isAiModelOptionsLoading()"
+              [value]="selectedAiModel()"
+              [attr.aria-busy]="isAiModelOptionsLoading()"
+              [disabled]="isSubmitting() || workflowIsRunning()"
+              (change)="selectAiModel($any($event.target).value)"
+            >
+              @for (option of aiModelOptions(); track option.value) {
+                <option [value]="option.value" [disabled]="option.disabled">
+                  {{ option.label }}
+                </option>
+              }
+            </select>
+            @if (isAiModelOptionsLoading()) {
+              <span class="select-loader" aria-hidden="true"></span>
+            }
+          </span>
+        </label>
+
+        <label class="field-control change-verification-field" for="changeVerificationReasoningEffort">
+          <span class="field-label">Reasoning effort</span>
+          <span class="select-loading-control">
+            <select
+              id="changeVerificationReasoningEffort"
+              class="select-input"
+              [class.select-input--loading]="isAiModelOptionsLoading()"
+              [value]="selectedReasoningEffort()"
+              [attr.aria-busy]="isAiModelOptionsLoading()"
+              [disabled]="isSubmitting() || workflowIsRunning() || !availableReasoningEfforts().length"
+              (change)="selectReasoningEffort($any($event.target).value)"
+            >
+              @for (option of reasoningEffortOptions(); track option.value) {
+                <option [value]="option.value" [disabled]="option.disabled">
+                  {{ option.label }}
+                </option>
+              }
+            </select>
+            @if (isAiModelOptionsLoading()) {
+              <span class="select-loader" aria-hidden="true"></span>
+            }
+          </span>
+        </label>
+      </div>
+      @if (aiModelOptionsError()) {
+        <p class="field-hint change-verification-warning">{{ aiModelOptionsError() }}</p>
+      }
+
       <label class="field-control change-verification-field">
         <span class="field-label">Operator notes</span>
         <textarea
