@@ -39,6 +39,7 @@ public class ChangeVerificationPromptPreparationService {
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani zgadywac materialu spoza osadzonych artefaktow.
                 - Jezeli potrzebujesz poglbic analize kodu, uzywaj GitLab tools i Operational Context tools do zrozumienia endpointu, use case'u albo bounded contextu zwiazanego ze zmiana.
                 - Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do uzyskania uzasadnionej odpowiedzi w ramach budzetu sesji.
+                - Jezeli lista changed files jest wieksza niz batch limit toola, dziel odczyt na kolejne wywolania GitLab tools zamiast raportowac brak dostepu do zmian.
                 - MVP Change Verification nie sprawdza bazy danych. Nie projektuj DB checks, nie proponuj SQL i nie oczekuj DB tools.
                 - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
                 - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.

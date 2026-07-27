@@ -24,8 +24,10 @@ wystarczaja do uczciwego projektu smoke packa, uzywaj wylacznie wlaczonych
 GitLab tools i Operational Context tools. Merge request wskazuje repozytorium i
 ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile
 jest potrzebne do zrozumienia endpointu, payloadu, walidacji albo use case'u w
-ramach budzetu sesji. Nie zgaduj danych, ktorych nie da sie uczciwie
-wywnioskowac z artefaktow albo pobranych narzedziami zrodel.
+ramach budzetu sesji. Jesli lista changed files jest wieksza niz batch limit
+toola, podziel odczyt na kolejne wywolania GitLab tools zamiast raportowac brak
+dostepu do zmian. Nie zgaduj danych, ktorych nie da sie uczciwie wywnioskowac z
+artefaktow albo pobranych narzedziami zrodel.
 
 ## Zasady projektowania
 

@@ -73,10 +73,8 @@
               id="changeVerificationAiModel"
               class="select-input"
               [class.select-input--loading]="isAiModelOptionsLoading()"
-              [value]="selectedAiModel()"
+              [formControl]="aiModelControl"
               [attr.aria-busy]="isAiModelOptionsLoading()"
-              [disabled]="isSubmitting() || workflowIsRunning()"
-              (change)="selectAiModel($any($event.target).value)"
             >
               @for (option of aiModelOptions(); track option.value) {
                 <option [value]="option.value" [disabled]="option.disabled">
@@ -97,10 +95,8 @@
               id="changeVerificationReasoningEffort"
               class="select-input"
               [class.select-input--loading]="isAiModelOptionsLoading()"
-              [value]="selectedReasoningEffort()"
+              [formControl]="reasoningEffortControl"
               [attr.aria-busy]="isAiModelOptionsLoading()"
-              [disabled]="isSubmitting() || workflowIsRunning() || !availableReasoningEfforts().length"
-              (change)="selectReasoningEffort($any($event.target).value)"
             >
               @for (option of reasoningEffortOptions(); track option.value) {
                 <option [value]="option.value" [disabled]="option.disabled">

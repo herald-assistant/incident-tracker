@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { finalize, Subscription, switchMap, timer } from 'rxjs';
 
@@ -65,7 +66,8 @@ interface ChangeVerificationReportDisplay {
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
     AnalysisReportMetaComponent,
-    AnalysisReportSectionContentComponent
+    AnalysisReportSectionContentComponent,
+    ReactiveFormsModule
   ],
   templateUrl: './change-verification-page.html',
   styleUrl: './change-verification-page.scss'
@@ -78,6 +80,8 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
 
+  readonly aiModelControl = new FormControl('', { nonNullable: true });
+  readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
   readonly issueInput = signal('');
   readonly checkStoryCompliance = signal(true);
   readonly checkInstructionCompliance = signal(true);
@@ -193,6 +197,15 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   });
 
   constructor() {
+    this.aiModelControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => {
+        this.selectedAiModel.set((value || '').trim());
+        this.syncReasoningEffortSelection();
+      });
+    this.reasoningEffortControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.selectedReasoningEffort.set((value || '').trim()));
     this.loadAiModelOptions();
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -462,6 +475,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       this.executeSmokePack.set(imported.job.modes.includes('EXECUTE_SMOKE_PACK'));
       this.selectedAiModel.set(imported.job.aiModel || '');
       this.selectedReasoningEffort.set(imported.job.reasoningEffort || '');
+      this.syncAiModelSelection();
       this.syncReasoningEffortSelection();
       this.setJob(imported.job, {
         origin: 'imported',
@@ -594,6 +608,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       this.executeSmokePack.set(imported.job.modes.includes('EXECUTE_SMOKE_PACK'));
       this.selectedAiModel.set(imported.job.aiModel || '');
       this.selectedReasoningEffort.set(imported.job.reasoningEffort || '');
+      this.syncAiModelSelection();
       this.syncReasoningEffortSelection();
       this.setJob(imported.job, {
         origin: 'local',
@@ -709,11 +724,23 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   }
 
   private syncAiModelSelection(): void {
-    if (this.selectedAiModel().trim()) {
+    const selectedModel = this.selectedAiModel().trim();
+    if (selectedModel) {
+      if (this.aiModelControl.value !== selectedModel) {
+        this.aiModelControl.setValue(selectedModel, { emitEvent: false });
+      }
       return;
     }
 
-    this.selectedAiModel.set(listedDefaultAiModel(this.aiModelCatalog()));
+    const currentModel = this.aiModelControl.value.trim();
+    if (currentModel) {
+      this.selectedAiModel.set(currentModel);
+      return;
+    }
+
+    const defaultModel = listedDefaultAiModel(this.aiModelCatalog());
+    this.aiModelControl.setValue(defaultModel, { emitEvent: false });
+    this.selectedAiModel.set(defaultModel);
   }
 
   private syncReasoningEffortSelection(): void {
@@ -723,16 +750,25 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     );
     const selectedReasoningEffort = this.selectedReasoningEffort().trim();
     if (!availableEfforts.length) {
+      this.reasoningEffortControl.setValue('', { emitEvent: false });
+      this.reasoningEffortControl.disable({ emitEvent: false });
       this.selectedReasoningEffort.set('');
       return;
     }
+    this.reasoningEffortControl.enable({ emitEvent: false });
     if (selectedReasoningEffort && availableEfforts.includes(selectedReasoningEffort)) {
+      if (this.reasoningEffortControl.value !== selectedReasoningEffort) {
+        this.reasoningEffortControl.setValue(selectedReasoningEffort, { emitEvent: false });
+      }
       return;
     }
 
-    this.selectedReasoningEffort.set(
-      defaultReasoningEffortForAiModel(this.aiModelCatalog(), this.selectedAiModel())
+    const defaultReasoningEffort = defaultReasoningEffortForAiModel(
+      this.aiModelCatalog(),
+      this.selectedAiModel()
     );
+    this.reasoningEffortControl.setValue(defaultReasoningEffort, { emitEvent: false });
+    this.selectedReasoningEffort.set(defaultReasoningEffort);
   }
 
   private reasoningEffortsForModel(modelId: string): string[] {

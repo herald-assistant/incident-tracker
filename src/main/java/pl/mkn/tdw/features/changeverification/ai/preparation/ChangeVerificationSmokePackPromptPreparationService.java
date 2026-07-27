@@ -38,6 +38,7 @@ public class ChangeVerificationSmokePackPromptPreparationService {
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani wykonywac requestow.
                 - Jezeli potrzebujesz poglbic analize endpointow albo payloadow, uzywaj GitLab tools i Operational Context tools do zrozumienia endpointu, use case'u albo bounded contextu zwiazanego ze zmiana.
                 - Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do zaprojektowania sensownego smoke packa w ramach budzetu sesji.
+                - Jezeli lista changed files jest wieksza niz batch limit toola, dziel odczyt na kolejne wywolania GitLab tools zamiast raportowac brak dostepu do zmian.
                 - MVP Change Verification nie sprawdza bazy danych. Nie generuj DB assertions, SQL ani manualSql cleanup.
                 - Cleanup moze byc endpointem aplikacyjnym albo instrukcja manualnej weryfikacji bez SQL.
                 - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.

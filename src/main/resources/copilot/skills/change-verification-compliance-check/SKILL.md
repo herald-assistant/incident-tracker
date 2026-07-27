@@ -27,7 +27,9 @@ Nie czytaj lokalnego filesystemu. Gdy artefakty nie wystarczaja do uczciwej
 oceny, uzywaj wylacznie wlaczonych GitLab tools i Operational Context tools.
 Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica
 czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do zrozumienia endpointu,
-use case'u albo bounded contextu w ramach budzetu sesji. Nie zgaduj materialu z
+use case'u albo bounded contextu w ramach budzetu sesji. Jesli lista changed
+files jest wieksza niz batch limit toola, podziel odczyt na kolejne wywolania
+GitLab tools zamiast raportowac brak dostepu do zmian. Nie zgaduj materialu z
 Jira ani Confluence, ktorego nie ma w artefaktach albo nie zostal pobrany przez
 wlaczone narzedzia.
 

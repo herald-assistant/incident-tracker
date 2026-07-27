@@ -26,6 +26,7 @@ import java.util.Locale;
 public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
 
     private static final int PROJECT_SEARCH_PAGE_SIZE = 100;
+    private static final int MERGE_REQUEST_DIFFS_PAGE_SIZE = 100;
 
     private final GitLabProperties properties;
     private final GitLabRestClientFactory gitLabRestClientFactory;
@@ -529,17 +530,31 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         }
 
         try {
-            var diffs = restClient().get()
-                    .uri(mergeRequestDiffsUri(projectId, mergeRequestIid))
-                    .retrieve()
-                    .body(GitLabMergeRequestDiffResponse[].class);
-            if (diffs == null) {
-                return List.of();
+            var maxChangedFiles = Math.max(1, properties.getMaxMergeRequestChangedFiles());
+            var diffs = new ArrayList<GitLabMergeRequestDiffResponse>();
+            var page = "1";
+            var perPage = Math.min(MERGE_REQUEST_DIFFS_PAGE_SIZE, maxChangedFiles);
+
+            while (StringUtils.hasText(page) && diffs.size() < maxChangedFiles) {
+                var entity = restClient().get()
+                        .uri(mergeRequestDiffsUri(projectId, mergeRequestIid, page, perPage))
+                        .retrieve()
+                        .toEntity(GitLabMergeRequestDiffResponse[].class);
+                var body = entity.getBody();
+                if (body != null) {
+                    for (var diff : body) {
+                        if (diffs.size() >= maxChangedFiles) {
+                            break;
+                        }
+                        diffs.add(diff);
+                    }
+                }
+                page = entity.getHeaders().getFirst("X-Next-Page");
             }
-            if (diffs.length >= properties.getMaxMergeRequestChangedFiles()) {
-                limitations.add("MR changed files reached max result limit: " + properties.getMaxMergeRequestChangedFiles() + ".");
+            if (diffs.size() >= maxChangedFiles && StringUtils.hasText(page)) {
+                limitations.add("MR changed files reached max result limit: " + maxChangedFiles + ".");
             }
-            return Arrays.stream(diffs)
+            return diffs.stream()
                     .map(diff -> new GitLabMergeRequestChangedFile(
                             diff.oldPath(),
                             diff.newPath(),
@@ -730,11 +745,12 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                 + "/commits?per_page=" + Math.max(1, properties.getMaxMergeRequestCommits()));
     }
 
-    private URI mergeRequestDiffsUri(Long projectId, Long mergeRequestIid) {
+    private URI mergeRequestDiffsUri(Long projectId, Long mergeRequestIid, String page, int perPage) {
         return URI.create(apiBaseUrl()
                 + "/projects/" + projectId
                 + "/merge_requests/" + mergeRequestIid
-                + "/diffs?per_page=" + Math.max(1, properties.getMaxMergeRequestChangedFiles()));
+                + "/diffs?per_page=" + Math.max(1, perPage)
+                + "&page=" + encodeQueryParam(page));
     }
 
     private URI projectSearchUri(

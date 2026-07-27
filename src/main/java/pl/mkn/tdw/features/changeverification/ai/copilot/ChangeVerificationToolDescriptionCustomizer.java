@@ -60,6 +60,7 @@ public class ChangeVerificationToolDescriptionCustomizer implements CopilotToolD
                     "Use projectName exactly from change-verification/repository-scope.md or a previous GitLab tool result.",
                     "Do not pass projectPath, gitLabPath, rootGroup/projectName or the full merge-request path as projectName.",
                     "Pass branchRef from analysisRef in change-verification/repository-scope.md; sourceRef and targetRef are merge-request context only.",
+                    "If changed files exceed a single tool batch, split focused reads into multiple GitLab tool calls instead of reporting no access to changes.",
                     "Use Operational Context tools when you need to understand the system, bounded context, process or code-search scope behind the repository.",
                     "Always provide reason as one short Polish sentence for the operator."
             );

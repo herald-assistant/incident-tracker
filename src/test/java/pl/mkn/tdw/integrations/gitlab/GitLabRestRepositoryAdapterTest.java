@@ -520,7 +520,7 @@ class GitLabRestRepositoryAdapterTest {
                         """, MediaType.APPLICATION_JSON));
 
         server.expect(requestTo(
-                        "https://gitlab.example.com/api/v4/projects/77/merge_requests/7/diffs?per_page=100"))
+                        "https://gitlab.example.com/api/v4/projects/77/merge_requests/7/diffs?per_page=100&page=1"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         [
@@ -550,12 +550,97 @@ class GitLabRestRepositoryAdapterTest {
         server.verify();
     }
 
+    @Test
+    void shouldPageMergeRequestChangedFilesBeyondSingleGitLabPage() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/groups/CRM%2Fruntime/merge_requests?scope=all&state=all&search=CRM-456&in=title,source_branch&per_page=10&page=1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "id": 2001,
+                            "iid": 8,
+                            "project_id": 78,
+                            "title": "CRM-456 large change",
+                            "state": "merged",
+                            "web_url": "https://gitlab.example.com/CRM/runtime/customer-api/-/merge_requests/8",
+                            "source_branch": "feature/CRM-456-large-change",
+                            "target_branch": "release/2026.08",
+                            "author": { "name": "Jan Nowak" },
+                            "changes_count": "101",
+                            "references": { "full": "CRM/runtime/customer-api!8" }
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/78/merge_requests/8/commits?per_page=50"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/78/merge_requests/8/diffs?per_page=100&page=1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(firstChangedFilesPageJson(), MediaType.APPLICATION_JSON)
+                        .header("X-Next-Page", "2"));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/78/merge_requests/8/diffs?per_page=100&page=2"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "old_path": "src/main/java/PageTwo.java",
+                            "new_path": "src/main/java/PageTwo.java",
+                            "new_file": false,
+                            "renamed_file": false,
+                            "deleted_file": false
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        var result = adapter.findMergeRequestsByIssueKey("CRM/runtime", "CRM-456", 10);
+
+        var mergeRequest = result.mergeRequests().get(0);
+        assertEquals(101, mergeRequest.changedFiles().size());
+        assertEquals("src/main/java/File001.java", mergeRequest.changedFiles().get(0).newPath());
+        assertEquals("src/main/java/PageTwo.java", mergeRequest.changedFiles().get(100).newPath());
+        assertTrue(mergeRequest.limitations().isEmpty());
+
+        server.verify();
+    }
+
     private static GitLabProperties gitLabProperties(String group) {
         var properties = new GitLabProperties();
         properties.setBaseUrl("https://gitlab.example.com");
         properties.setGroup(group);
         properties.setToken("glpat-test");
         return properties;
+    }
+
+    private static String firstChangedFilesPageJson() {
+        var builder = new StringBuilder("[");
+        for (int index = 1; index <= 100; index++) {
+            if (index > 1) {
+                builder.append(',');
+            }
+            builder.append("""
+                    {
+                      "old_path": "src/main/java/File%03d.java",
+                      "new_path": "src/main/java/File%03d.java",
+                      "new_file": false,
+                      "renamed_file": false,
+                      "deleted_file": false
+                    }
+                    """.formatted(index, index));
+        }
+        builder.append(']');
+        return builder.toString();
     }
 
 }
