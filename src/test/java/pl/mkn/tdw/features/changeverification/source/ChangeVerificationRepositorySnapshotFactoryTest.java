@@ -61,24 +61,24 @@ class ChangeVerificationRepositorySnapshotFactoryTest {
         var result = ChangeVerificationRepositorySnapshotFactory.from(
                 new GitLabMergeRequestSearchResult(
                         "CRM-123",
-                        "CLP",
+                        "CRM",
                         List.of(mergeRequest(
                                 1L,
-                                "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
+                                "CRM/WORKFLOWS/CRM_CASE_WORKFLOW",
                                 "feature/CRM-123",
-                                "src/main/java/pl/mkn/AgreementProcess.java"
+                                "src/main/java/pl/mkn/CaseWorkflow.java"
                         )),
                         List.of()
                 ),
                 null,
-                "CLP"
+                "CRM"
         );
 
         assertThat(result).singleElement()
                 .satisfies(repository -> {
-                    assertThat(repository.projectPath()).isEqualTo("CLP/PROCESSES/CLP_AGREEMENT_PROCESS");
-                    assertThat(repository.projectName()).isEqualTo("PROCESSES/CLP_AGREEMENT_PROCESS");
-                    assertThat(repository.repositoryName()).isEqualTo("CLP_AGREEMENT_PROCESS");
+                    assertThat(repository.projectPath()).isEqualTo("CRM/WORKFLOWS/CRM_CASE_WORKFLOW");
+                    assertThat(repository.projectName()).isEqualTo("WORKFLOWS/CRM_CASE_WORKFLOW");
+                    assertThat(repository.repositoryName()).isEqualTo("CRM_CASE_WORKFLOW");
                 });
     }
 
