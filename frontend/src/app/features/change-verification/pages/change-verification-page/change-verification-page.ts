@@ -56,8 +56,17 @@ interface ChangeVerificationReportDisplay {
   title: string;
   subTitle: string;
   confidence: string;
-  sections: AnalysisReportSection[];
+  sections: ChangeVerificationReportSectionDisplay[];
   appendix: AnalysisReportMeta;
+}
+
+interface ChangeVerificationReportSectionDisplay {
+  id: string;
+  title: string;
+  tabLabel: string;
+  markdown: string;
+  emptyText: string;
+  meta: AnalysisReportMeta;
 }
 
 @Component({
@@ -104,6 +113,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly aiModelOptionsError = signal('');
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly exportState = signal<ChangeVerificationExportState | null>(null);
+  readonly activeResultTab = signal('STORY_COMPLIANCE');
   readonly resultCopied = signal(false);
   readonly resultCopyError = signal('');
   private resultCopyFeedbackHandle: number | null = null;
@@ -254,6 +264,15 @@ export class ChangeVerificationPageComponent implements OnDestroy {
 
   protected selectReasoningEffort(value: string): void {
     this.selectedReasoningEffort.set((value || '').trim());
+  }
+
+  protected selectResultTab(tabId: string): void {
+    this.activeResultTab.set(cleanText(tabId));
+  }
+
+  protected activeResultTabId(sections: ChangeVerificationReportSectionDisplay[]): string {
+    const active = this.activeResultTab();
+    return sections.some((section) => section.id === active) ? active : sections[0]?.id ?? '';
   }
 
   protected startJob(): void {
@@ -804,9 +823,38 @@ function changeVerificationReportDisplay(
     title: cleanText(report.header) || 'Change Verification result',
     subTitle: cleanText(report.subHeader),
     confidence: cleanText(report.meta?.confidence),
-    sections: sortedSections(report.sections),
+    sections: changeVerificationReportSections(report.sections),
     appendix: normalizedMeta(report.meta)
   };
+}
+
+function changeVerificationReportSections(
+  sections: AnalysisReportSection[] | null | undefined
+): ChangeVerificationReportSectionDisplay[] {
+  return sortedSections(sections).map((section) => {
+    const id = cleanText(section.id) || cleanText(section.title) || 'SECTION';
+    return {
+      id,
+      title: cleanText(section.title) || id,
+      tabLabel: changeVerificationTabLabel(id, section.title),
+      markdown: cleanText(section.markdown),
+      emptyText: `No confirmed details for ${changeVerificationTabLabel(id, section.title)}.`,
+      meta: normalizedMeta(section.meta)
+    };
+  });
+}
+
+function changeVerificationTabLabel(id: string, title: string | null | undefined): string {
+  switch (cleanText(id).toUpperCase()) {
+    case 'STORY_COMPLIANCE':
+      return 'Story compliance';
+    case 'INSTRUCTION_COMPLIANCE':
+      return 'Instruction compliance';
+    case 'SMOKE_PACK':
+      return 'Smoke pack';
+    default:
+      return cleanText(title) || cleanText(id) || 'Result';
+  }
 }
 
 function buildChangeVerificationReportMarkdown(report: AnalysisReport): string {

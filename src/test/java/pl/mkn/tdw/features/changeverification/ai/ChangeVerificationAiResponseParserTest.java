@@ -15,6 +15,22 @@ class ChangeVerificationAiResponseParserTest {
                 ```json
                 {
                   "status": "FAILED",
+                  "verificationChecks": [
+                    {
+                      "id": "story-001",
+                      "scope": "STORY_COMPLIANCE",
+                      "criterionSource": "acceptance criteria",
+                      "criterionQuote": "Status is returned.",
+                      "interpretationType": "explicit",
+                      "expectedCriterion": "Status endpoint returns current customer status.",
+                      "verificationStatus": "FAILED",
+                      "verifiedAgainst": "MR changed files and controller implementation",
+                      "analysis": "Controller change does not expose the status field.",
+                      "evidenceRefs": ["change-verification/jira-issue.md", "src/main/java/CustomerController.java"],
+                      "gaps": [],
+                      "suggestedAction": "Expose status in the response DTO."
+                    }
+                  ],
                   "findings": [
                     {
                       "id": "cv-001",
@@ -34,6 +50,12 @@ class ChangeVerificationAiResponseParserTest {
                 """);
 
         assertThat(response.status()).isEqualTo("FAILED");
+        assertThat(response.verificationChecks()).singleElement()
+                .satisfies(check -> {
+                    assertThat(check.scope()).isEqualTo("STORY_COMPLIANCE");
+                    assertThat(check.interpretationType()).isEqualTo("explicit");
+                    assertThat(check.criterionQuote()).isEqualTo("Status is returned.");
+                });
         assertThat(response.findings()).singleElement()
                 .satisfies(finding -> {
                     assertThat(finding.id()).isEqualTo("cv-001");

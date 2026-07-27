@@ -43,10 +43,26 @@ export interface ChangeVerificationFinding {
   suggestedAction: string;
 }
 
+export interface ChangeVerificationVerificationCheck {
+  id: string;
+  scope: string;
+  criterionSource: string;
+  criterionQuote: string;
+  interpretationType: string;
+  expectedCriterion: string;
+  verificationStatus: string;
+  verifiedAgainst: string;
+  analysis: string;
+  evidenceRefs: string[];
+  gaps: string[];
+  suggestedAction: string;
+}
+
 export interface ChangeVerificationCompliance {
   storyComplianceRequested: boolean;
   instructionComplianceRequested: boolean;
   status: string;
+  verificationChecks: ChangeVerificationVerificationCheck[];
   findings: ChangeVerificationFinding[];
   suggestedActions: string[];
   visibilityLimits: string[];

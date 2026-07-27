@@ -36,7 +36,11 @@ class ChangeVerificationPromptPreparationServiceTest {
         );
 
         assertThat(preparation.prompt()).contains(
+                "change-verification-orchestrator",
                 "change-verification-compliance-check",
+                "change-verification-write-report",
+                "interpretationType",
+                "Acceptance criteria nie sa zamknieta lista wymagan",
                 "Focus cleanup.",
                 "Customer profile status",
                 "Source interpretation contract",

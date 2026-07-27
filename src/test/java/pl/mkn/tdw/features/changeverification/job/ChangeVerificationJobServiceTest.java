@@ -304,6 +304,7 @@ class ChangeVerificationJobServiceTest {
             return new ChangeVerificationComplianceAnalysis(
                     new ChangeVerificationAiResponse(
                             "PASSED_WITH_WARNINGS",
+                            List.of(),
                             List.of(new ChangeVerificationFindingResponse(
                                     "cv-001",
                                     ChangeVerificationFindingSeverity.LOW,
@@ -319,7 +320,8 @@ class ChangeVerificationJobServiceTest {
                     ),
                     null,
                     "Change Verification test prompt",
-                    "session-test"
+                    "session-test",
+                    null
             );
         }
     }

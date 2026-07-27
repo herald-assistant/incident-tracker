@@ -165,6 +165,22 @@ function changeVerificationJob(
         storyComplianceRequested: true,
         instructionComplianceRequested: true,
         status: 'READY',
+        verificationChecks: [
+          {
+            id: 'story-001',
+            scope: 'STORY_COMPLIANCE',
+            criterionSource: 'acceptance criteria',
+            criterionQuote: 'Customer can be created.',
+            interpretationType: 'explicit',
+            expectedCriterion: 'Customer creation endpoint persists the requested customer.',
+            verificationStatus: 'PASSED',
+            verifiedAgainst: 'CustomerController and smoke-1',
+            analysis: 'The endpoint and smoke pack cover the creation path.',
+            evidenceRefs: ['CRM-123', 'CustomerController'],
+            gaps: [],
+            suggestedAction: 'Proceed with release verification.'
+          }
+        ],
         findings: [
           {
             id: 'finding-1',
@@ -225,13 +241,41 @@ function changeVerificationJob(
       markdownSummary: '- Compliance: `READY` with 1 finding.',
       sections: [
         {
-          id: 'CHANGE_COMPLIANCE',
-          title: 'Change alignment',
+          id: 'STORY_COMPLIANCE',
+          title: 'Story compliance',
           order: 0,
           markdown: 'Story alignment confirmed.',
           meta: {
             references: [{ type: 'jira', label: 'CRM-123', target: 'CRM-123', description: 'Target issue.' }],
             visibilityLimits: ['No runtime logs were checked.'],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'MEDIUM',
+            warnings: []
+          }
+        },
+        {
+          id: 'INSTRUCTION_COMPLIANCE',
+          title: 'Instruction compliance',
+          order: 1,
+          markdown: 'Instruction alignment confirmed.',
+          meta: {
+            references: [],
+            visibilityLimits: [],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'MEDIUM',
+            warnings: []
+          }
+        },
+        {
+          id: 'SMOKE_PACK',
+          title: 'Smoke pack',
+          order: 2,
+          markdown: 'Smoke pack ready.',
+          meta: {
+            references: [],
+            visibilityLimits: [],
             openQuestions: [],
             gaps: [],
             confidence: 'MEDIUM',

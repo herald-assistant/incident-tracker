@@ -72,8 +72,9 @@ class ChangeVerificationJobControllerTest {
                 .andExpect(jsonPath("$.result.smokePack.requested").value(true))
                 .andExpect(jsonPath("$.result.execution.requested").value(false))
                 .andExpect(jsonPath("$.report.header").value("Change Verification: CRM-123"))
-                .andExpect(jsonPath("$.report.sections[0].id").value("CHANGE_COMPLIANCE"))
-                .andExpect(jsonPath("$.report.sections[1].id").value("SMOKE_PACK"))
+                .andExpect(jsonPath("$.report.sections[0].id").value("STORY_COMPLIANCE"))
+                .andExpect(jsonPath("$.report.sections[1].id").value("INSTRUCTION_COMPLIANCE"))
+                .andExpect(jsonPath("$.report.sections[2].id").value("SMOKE_PACK"))
                 .andExpect(jsonPath("$.report.meta.references[0].type").value("jira"));
 
         verify(changeVerificationJobService).startJob(new ChangeVerificationJobStartRequest(
@@ -206,6 +207,7 @@ class ChangeVerificationJobControllerTest {
                         true,
                         true,
                         "PASSED_WITH_WARNINGS",
+                        List.of(),
                         List.of(),
                         List.of(),
                         List.of()

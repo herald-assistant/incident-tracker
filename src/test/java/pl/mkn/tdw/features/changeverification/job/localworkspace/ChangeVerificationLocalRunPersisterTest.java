@@ -102,6 +102,7 @@ class ChangeVerificationLocalRunPersisterTest {
                         true,
                         "PASS_WITH_NOTES",
                         List.of(),
+                        List.of(),
                         List.of("Keep acceptance criteria updated."),
                         List.of()
                 ),

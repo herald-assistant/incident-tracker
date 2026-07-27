@@ -2,8 +2,10 @@ package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
+import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportSectionIds;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
@@ -51,6 +53,14 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
                         .map(this::repositoryScope)
                         .toList()
         );
+        if (ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE.equals(normalizeRunKind(runKind))) {
+            context.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
+            context.put(AgentToolContextKeys.REPORT_FEATURE, ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE);
+            context.put(
+                    AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
+                    ChangeVerificationReportSectionIds.activeComplianceSectionIds(request)
+            );
+        }
         return context;
     }
 

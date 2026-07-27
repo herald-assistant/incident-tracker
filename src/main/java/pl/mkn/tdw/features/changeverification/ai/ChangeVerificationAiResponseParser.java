@@ -35,6 +35,7 @@ public class ChangeVerificationAiResponseParser {
         return new ChangeVerificationAiResponse(
                 "INCONCLUSIVE",
                 List.of(),
+                List.of(),
                 List.of("Run compliance verification again or inspect collected evidence manually."),
                 List.of(limitation),
                 "low"

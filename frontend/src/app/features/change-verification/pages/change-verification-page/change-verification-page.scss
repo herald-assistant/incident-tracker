@@ -190,12 +190,48 @@
   gap: 14px;
 }
 
+.change-verification-result-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-subtle);
+}
+
+.change-verification-result-tab {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.change-verification-result-tab:hover,
+.change-verification-result-tab:focus-visible {
+  color: var(--text-main);
+  border-color: var(--color-border-strong);
+}
+
+.change-verification-result-tab--active {
+  border-color: var(--primary);
+  background: var(--color-surface);
+  color: var(--primary);
+  box-shadow: var(--shadow-soft);
+}
+
 .change-verification-report-section {
   display: grid;
   gap: 10px;
   min-width: 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--color-border);
+  padding-top: 4px;
 }
 
 .change-verification-report-section__heading {

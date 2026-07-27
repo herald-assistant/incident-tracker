@@ -722,13 +722,20 @@ Nowe skille w:
 src/main/resources/copilot/skills
 ```
 
-Proponowana lista:
+Aktualny initial compliance workflow:
 
 ```text
 change-verification-orchestrator
-change-verification-story-compliance
-change-verification-instruction-compliance
+change-verification-compliance-check
+change-verification-story-compliance-section
+change-verification-instruction-compliance-section
+change-verification-write-report
 change-verification-smoke-pack-design
+```
+
+Planowane rozszerzenia po MVP:
+
+```text
 change-verification-execution-result-review
 change-verification-follow-up-chat
 ```
@@ -737,12 +744,20 @@ Zasady:
 
 - skille pisane po polsku,
 - techniczne identyfikatory zostaja po angielsku,
-- skill `change-verification-orchestrator` mowi, kiedy uzyc 1a, 1b, smoke
-  pack i execution,
-- skill story compliance wymusza macierz requirement -> implementation
-  evidence -> assessment -> suggested action,
-- skill instruction compliance wymusza source-backed findings i zakaz
+- skill `change-verification-orchestrator` buduje ledger wymagan, uruchamia
+  tylko aktywne sekcje, wykonuje readiness gate i przekazuje wynik do
+  `change-verification-write-report`,
+- skill `change-verification-compliance-check` rozroznia wymagania
+  `explicit`, `inferred`, `normalized`, `conflicting` i `not_verifiable`;
+  acceptance criteria sa najsilniejszym sygnalem, ale nie zamykaja dedukcji
+  z opisu, komentarzy, Confluence, instrukcji i widocznego kodu,
+- skill story compliance section wymusza macierz requirement ->
+  implementation evidence -> assessment -> suggested action,
+- skill instruction compliance section wymusza source-backed findings i zakaz
   violation bez source,
+- skill `change-verification-write-report` jako jedyny zapisuje aktywne
+  sekcje przez report tools, aktualizuje meta i potwierdza finalny snapshot
+  przez `report_get_current`,
 - skill smoke pack design wymusza Postman-ready, editable, minimal smoke, a
   nie pelna regresje,
 - skill execution result review wymusza bezpieczna interpretacje failed tests
@@ -750,19 +765,18 @@ Zasady:
 
 ## Result contract
 
-`Change Verification` powinien uzyc report-first result. Proponowane sekcje
-raportu:
+`Change Verification` uzywa report-first result. Aktualne sekcje raportu:
 
 ```text
-REQUIREMENT_COMPLIANCE
+STORY_COMPLIANCE
 INSTRUCTION_COMPLIANCE
-DISCREPANCIES
-SUGGESTED_ACTIONS
 SMOKE_PACK
-EXECUTION_RESULT
-CLEANUP
-VISIBILITY_LIMITS
 ```
+
+AI zapisuje aktywne sekcje compliance. Backendowy mapper pozostaje fallbackiem
+dla nieudanego zapisu raportu oraz domyka sekcje `SMOKE_PACK` po osobnej sesji
+projektowania testow. References, gaps, open questions, warnings, confidence i
+visibility limits sa trzymane w meta raportu i meta sekcji.
 
 Feature-specific DTO moze mapowac report na strukturalny wynik:
 

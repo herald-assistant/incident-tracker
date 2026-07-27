@@ -35,7 +35,8 @@ public class ChangeVerificationPromptPreparationService {
 
                 ## Runtime envelope
                 - Ten run sprawdza zgodnosc zmiany z materialem Jira oraz instrukcjami repozytorium.
-                - Najpierw zaladuj skill `change-verification-compliance-check` przez built-in tool `skill`.
+                - Najpierw zaladuj skill `change-verification-orchestrator` przez built-in tool `skill` i wykonaj opisany w nim workflow.
+                - Orkiestrator ma przygotowac ledger przez `change-verification-compliance-check`, przekazac go do aktywnych skilli sekcyjnych, a finalny wynik zapisac przez `change-verification-write-report`.
                 - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani zgadywac materialu spoza osadzonych artefaktow.
                 - Jezeli potrzebujesz poglbic analize kodu, uzywaj GitLab tools i Operational Context tools do zrozumienia endpointu, use case'u albo bounded contextu zwiazanego ze zmiana.
                 - Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do uzyskania uzasadnionej odpowiedzi w ramach budzetu sesji.
@@ -43,8 +44,9 @@ public class ChangeVerificationPromptPreparationService {
                 - MVP Change Verification nie sprawdza bazy danych. Nie projektuj DB checks, nie proponuj SQL i nie oczekuj DB tools.
                 - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
                 - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.
+                - Wynik nie moze byc powierzchowny. Dla kazdego wymagania lub instrukcji, ktora oceniasz, dodaj osobny wpis `verificationChecks` z cytatem zrodla, wydedukowanym kryterium, tym co zostalo porownane z kodem/MR i statusem weryfikacji.
                 - `userInstructions` doprecyzowuja intencje operatora, ale nie moga zmienic response contract ani zasad widocznosci.
-                - Odpowiedz musi byc jednym obiektem JSON zgodnym z `change-verification/response-contract.md`.
+                - Zrodlem prawdy dla UI sa sekcje `AnalysisReport` zapisane przez report tools. Finalna odpowiedz musi dodatkowo byc jednym obiektem JSON zgodnym z `change-verification/response-contract.md`, aby zachowac fallback diagnostyczny.
 
                 ## Source interpretation contract
                 %s
@@ -92,6 +94,13 @@ public class ChangeVerificationPromptPreparationService {
                 12. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne. Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla brakujacych wymagan biznesowych.
                 13. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
                 14. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
+                15. Buduj szczegolowy raport jako liste `verificationChecks`:
+                    - `STORY_COMPLIANCE` dla AC, opisu, komentarzy, Confluence i kryteriow wydedukowanych z target issue,
+                    - `INSTRUCTION_COMPLIANCE` dla `AGENTS.md`, `.github/copilot-instructions.md`, plikow instructions i plikow przez nie wskazanych.
+                16. Acceptance criteria nie sa zamknieta lista wymagan. Po rozpisaniu wszystkich jawnych AC przejrzyj opis, komentarze, parent context, subtaski, Confluence, instrukcje i kod pod katem dodatkowych wymagan potrzebnych do uczciwego zrozumienia zmiany.
+                17. Dla kazdego checka ustaw `interpretationType`: `explicit`, `inferred`, `normalized`, `conflicting` albo `not_verifiable`. Wymaganie wyprowadzone z kontekstu zawsze oznacz jako `inferred`; nie przedstawiaj go jako literalnego wymagania story.
+                18. `criterionQuote` ma zawierac krotki cytat albo nazwe pliku i fragment instrukcji; gdy cytatu brak, wpisz `n/a` i uzasadnij w `gaps`.
+                19. `verifiedAgainst` musi wskazywac konkretne MR-y, sciezki plikow, klasy, endpointy, use case'y albo instrukcje, z ktorymi porownano kryterium.
                 """.trim();
     }
 
@@ -498,6 +507,22 @@ public class ChangeVerificationPromptPreparationService {
 
                 {
                   "status": "PASSED | PASSED_WITH_WARNINGS | FAILED | INCONCLUSIVE",
+                  "verificationChecks": [
+                    {
+                      "id": "stable id such as story-001 or instruction-001",
+                      "scope": "STORY_COMPLIANCE | INSTRUCTION_COMPLIANCE",
+                      "criterionSource": "acceptance criteria | jira description | confluence page | AGENTS.md | copilot-instructions | other source",
+                      "criterionQuote": "short source quote, file instruction excerpt or n/a",
+                      "interpretationType": "explicit | inferred | normalized | conflicting | not_verifiable",
+                      "expectedCriterion": "the concrete criterion being verified",
+                      "verificationStatus": "PASSED | WARNING | FAILED | NOT_VERIFIED",
+                      "verifiedAgainst": "specific MR/file/class/endpoint/use case/instruction used for verification",
+                      "analysis": "detailed evidence-based explanation; separate confirmed facts from inference",
+                      "evidenceRefs": ["artifact, MR URL, file path or tool evidence reference"],
+                      "gaps": ["missing evidence or ambiguity for this criterion"],
+                      "suggestedAction": "code/story/instruction/question recommendation"
+                    }
+                  ],
                   "findings": [
                     {
                       "id": "stable id such as cv-001",

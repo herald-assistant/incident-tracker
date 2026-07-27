@@ -13,9 +13,12 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparation;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
+import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportFactory;
+import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportSectionIds;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
@@ -51,16 +54,25 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 toolFactory,
                 new ChangeVerificationCopilotToolSessionContextFactory(),
                 skillDirectoryResolver(),
-                new CopilotRunAuthMapper()
+                new CopilotRunAuthMapper(),
+                new ChangeVerificationReportFactory()
         );
         var gitLabReadTool = tool(GitLabToolNames.READ_REPOSITORY_FILE);
         var gitLabSearchTool = tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES);
+        var reportUpsertTool = tool(CopilotReportToolNames.UPSERT_SECTION);
+        var reportGetTool = tool(CopilotReportToolNames.GET_CURRENT);
         var unrelatedTool = tool("db_describe_table");
 
         when(toolFactory.createToolDefinitions(
                 contextCaptor.capture(),
                 eq(CHANGE_VERIFICATION_DESCRIPTION_CONTEXT)
-        )).thenReturn(List.of(unrelatedTool, gitLabReadTool, gitLabSearchTool));
+        )).thenReturn(List.of(
+                unrelatedTool,
+                gitLabReadTool,
+                gitLabSearchTool,
+                reportUpsertTool,
+                reportGetTool
+        ));
 
         var runRequest = assembler.assemble(
                 "cv-123",
@@ -76,11 +88,16 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         assertEquals("change-verification-cv-123", sessionConfig.sessionId());
         assertEquals("Change Verification prompt", runRequest.prompt());
         assertEquals(preparation().artifactContents(), runRequest.artifactContents());
-        assertEquals(List.of(gitLabReadTool, gitLabSearchTool), sessionConfig.tools());
+        assertEquals(
+                List.of(gitLabReadTool, gitLabSearchTool, reportUpsertTool, reportGetTool),
+                sessionConfig.tools()
+        );
         assertEquals(
                 List.of(
                         GitLabToolNames.READ_REPOSITORY_FILE,
-                        GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES
+                        GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
+                        CopilotReportToolNames.UPSERT_SECTION,
+                        CopilotReportToolNames.GET_CURRENT
                 ),
                 sessionConfig.availableToolNames()
         );
@@ -99,6 +116,23 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 hiddenContext.get(ChangeVerificationCopilotToolContextKeys.RUN_KIND)
         );
         assertEquals(true, hiddenContext.get(ChangeVerificationCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED));
+        assertThat(hiddenContext.get(AgentToolContextKeys.REPORT_ID)).isInstanceOf(String.class);
+        assertEquals(
+                ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE,
+                hiddenContext.get(AgentToolContextKeys.REPORT_FEATURE)
+        );
+        assertEquals(
+                List.of(
+                        ChangeVerificationReportSectionIds.STORY_COMPLIANCE,
+                        ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE
+                ),
+                hiddenContext.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS)
+        );
+        assertThat(runRequest.initialReport()).isNotNull();
+        assertEquals(
+                hiddenContext.get(AgentToolContextKeys.REPORT_ID),
+                runRequest.initialReport().reportId()
+        );
 
         assertThat((List<?>) hiddenContext.get(ChangeVerificationCopilotToolContextKeys.ALLOWED_REPOSITORIES))
                 .singleElement()
@@ -118,13 +152,17 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 toolFactory,
                 new ChangeVerificationCopilotToolSessionContextFactory(),
                 skillDirectoryResolver(),
-                new CopilotRunAuthMapper()
+                new CopilotRunAuthMapper(),
+                new ChangeVerificationReportFactory()
         );
 
         when(toolFactory.createToolDefinitions(
                 contextCaptor.capture(),
                 eq(CHANGE_VERIFICATION_DESCRIPTION_CONTEXT)
-        )).thenReturn(List.of(tool(GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE)));
+        )).thenReturn(List.of(
+                tool(GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE),
+                tool(CopilotReportToolNames.UPSERT_SECTION)
+        ));
 
         var runRequest = assembler.assemble(
                 "cv-123-smoke",
@@ -142,6 +180,14 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 ChangeVerificationCopilotToolContextKeys.RUN_KIND_SMOKE_PACK,
                 contextCaptor.getValue().hiddenContext().get(ChangeVerificationCopilotToolContextKeys.RUN_KIND)
         );
+        assertThat(runRequest.sessionConfigRequest().availableToolNames())
+                .doesNotContain(CopilotReportToolNames.UPSERT_SECTION);
+        assertThat(contextCaptor.getValue().hiddenContext())
+                .doesNotContainKeys(
+                        AgentToolContextKeys.REPORT_ID,
+                        AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS
+                );
+        assertThat(runRequest.initialReport()).isNull();
     }
 
     private CopilotNamedSkillDirectoryResolver skillDirectoryResolver() {

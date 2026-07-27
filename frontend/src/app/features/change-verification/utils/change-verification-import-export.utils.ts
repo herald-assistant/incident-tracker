@@ -419,11 +419,32 @@ function normalizeCompliance(compliance: unknown): ChangeVerificationCompliance 
     storyComplianceRequested: normalizeBoolean(complianceObject?.['storyComplianceRequested']),
     instructionComplianceRequested: normalizeBoolean(complianceObject?.['instructionComplianceRequested']),
     status: normalizeString(complianceObject?.['status']),
+    verificationChecks: Array.isArray(complianceObject?.['verificationChecks'])
+      ? complianceObject['verificationChecks'].map(normalizeVerificationCheck)
+      : [],
     findings: Array.isArray(complianceObject?.['findings'])
       ? complianceObject['findings'].map(normalizeFinding)
       : [],
     suggestedActions: normalizeStringArray(complianceObject?.['suggestedActions']),
     visibilityLimits: normalizeStringArray(complianceObject?.['visibilityLimits'])
+  };
+}
+
+function normalizeVerificationCheck(check: unknown) {
+  const checkObject = asObject(check);
+  return {
+    id: normalizeString(checkObject?.['id']),
+    scope: normalizeString(checkObject?.['scope']),
+    criterionSource: normalizeString(checkObject?.['criterionSource']),
+    criterionQuote: normalizeString(checkObject?.['criterionQuote']),
+    interpretationType: normalizeString(checkObject?.['interpretationType']),
+    expectedCriterion: normalizeString(checkObject?.['expectedCriterion']),
+    verificationStatus: normalizeString(checkObject?.['verificationStatus']),
+    verifiedAgainst: normalizeString(checkObject?.['verifiedAgainst']),
+    analysis: normalizeString(checkObject?.['analysis']),
+    evidenceRefs: normalizeStringArray(checkObject?.['evidenceRefs']),
+    gaps: normalizeStringArray(checkObject?.['gaps']),
+    suggestedAction: normalizeString(checkObject?.['suggestedAction'])
   };
 }
 

@@ -6,6 +6,7 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingR
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
@@ -18,14 +19,22 @@ import java.util.Locale;
 
 public final class ChangeVerificationReportMapper {
 
-    public static final String SECTION_COMPLIANCE = "CHANGE_COMPLIANCE";
-    public static final String SECTION_SMOKE_PACK = "SMOKE_PACK";
-    public static final String SECTION_EXECUTION = "SMOKE_EXECUTION";
+    public static final String SECTION_STORY_COMPLIANCE = ChangeVerificationReportSectionIds.STORY_COMPLIANCE;
+    public static final String SECTION_INSTRUCTION_COMPLIANCE =
+            ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE;
+    public static final String SECTION_SMOKE_PACK = ChangeVerificationReportSectionIds.SMOKE_PACK;
 
     private ChangeVerificationReportMapper() {
     }
 
     public static AnalysisReport toReport(ChangeVerificationResultResponse result) {
+        return toReport(result, null);
+    }
+
+    public static AnalysisReport toReport(
+            ChangeVerificationResultResponse result,
+            AnalysisReport aiComplianceReport
+    ) {
         if (result == null) {
             return null;
         }
@@ -33,29 +42,32 @@ public final class ChangeVerificationReportMapper {
         var compliance = result.compliance();
         var smokePack = result.smokePack();
         var execution = result.execution();
-        var sections = List.of(
+        var fallbackSections = List.of(
                 new AnalysisReportSection(
-                        SECTION_COMPLIANCE,
-                        "Change alignment",
+                        SECTION_STORY_COMPLIANCE,
+                        "Story compliance",
                         0,
-                        complianceMarkdown(result),
-                        complianceMeta(result)
+                        storyComplianceMarkdown(result),
+                        storyComplianceMeta(result)
+                ),
+                new AnalysisReportSection(
+                        SECTION_INSTRUCTION_COMPLIANCE,
+                        "Instruction compliance",
+                        1,
+                        instructionComplianceMarkdown(result),
+                        instructionComplianceMeta(result)
                 ),
                 new AnalysisReportSection(
                         SECTION_SMOKE_PACK,
                         "Smoke pack",
-                        1,
-                        smokePackMarkdown(smokePack),
-                        smokePackMeta(smokePack)
-                ),
-                new AnalysisReportSection(
-                        SECTION_EXECUTION,
-                        "Execution readiness",
                         2,
-                        executionMarkdown(execution),
-                        executionMeta(execution)
+                        smokePackMarkdown(smokePack, execution),
+                        smokePackMeta(smokePack, execution)
                 )
         );
+        var sections = fallbackSections.stream()
+                .map(section -> mergeAiSection(aiComplianceReport, section))
+                .toList();
 
         return new AnalysisReport(
                 "change-verification-" + fallback(result.issueKey(), "result"),
@@ -63,7 +75,73 @@ public final class ChangeVerificationReportMapper {
                 subHeader(result),
                 markdownSummary(result),
                 sections,
-                reportMeta(result)
+                mergeMeta(
+                        aiComplianceReport != null ? aiComplianceReport.meta() : null,
+                        reportMeta(result)
+                )
+        );
+    }
+
+    private static AnalysisReportSection mergeAiSection(
+            AnalysisReport aiComplianceReport,
+            AnalysisReportSection fallbackSection
+    ) {
+        var aiSection = findSection(aiComplianceReport, fallbackSection.id());
+        if (aiSection == null || !StringUtils.hasText(aiSection.markdown())) {
+            return fallbackSection;
+        }
+        return new AnalysisReportSection(
+                fallbackSection.id(),
+                StringUtils.hasText(aiSection.title()) ? aiSection.title().trim() : fallbackSection.title(),
+                fallbackSection.order(),
+                aiSection.markdown().trim(),
+                mergeMeta(aiSection.meta(), fallbackSection.meta())
+        );
+    }
+
+    private static AnalysisReportSection findSection(AnalysisReport report, String sectionId) {
+        if (report == null || !StringUtils.hasText(sectionId)) {
+            return null;
+        }
+        return report.sections().stream()
+                .filter(section -> section != null && sectionId.equalsIgnoreCase(section.id()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static AnalysisReportMeta mergeMeta(AnalysisReportMeta primary, AnalysisReportMeta fallback) {
+        var primaryMeta = primary != null ? primary : AnalysisReportMeta.empty();
+        var fallbackMeta = fallback != null ? fallback : AnalysisReportMeta.empty();
+
+        var references = new ArrayList<AnalysisReportReference>();
+        references.addAll(primaryMeta.references());
+        references.addAll(fallbackMeta.references());
+
+        var visibilityLimits = new ArrayList<String>();
+        visibilityLimits.addAll(primaryMeta.visibilityLimits());
+        visibilityLimits.addAll(fallbackMeta.visibilityLimits());
+
+        var openQuestions = new ArrayList<String>();
+        openQuestions.addAll(primaryMeta.openQuestions());
+        openQuestions.addAll(fallbackMeta.openQuestions());
+
+        var gaps = new ArrayList<String>();
+        gaps.addAll(primaryMeta.gaps());
+        gaps.addAll(fallbackMeta.gaps());
+
+        var warnings = new ArrayList<String>();
+        warnings.addAll(primaryMeta.warnings());
+        warnings.addAll(fallbackMeta.warnings());
+
+        return new AnalysisReportMeta(
+                distinctReferences(references),
+                distinct(visibilityLimits),
+                distinct(openQuestions),
+                distinct(gaps),
+                StringUtils.hasText(primaryMeta.confidence())
+                        ? normalizeConfidence(primaryMeta.confidence())
+                        : normalizeConfidence(fallbackMeta.confidence()),
+                distinct(warnings)
         );
     }
 
@@ -92,37 +170,86 @@ public final class ChangeVerificationReportMapper {
         return String.join("\n", lines);
     }
 
-    private static String complianceMarkdown(ChangeVerificationResultResponse result) {
+    private static String storyComplianceMarkdown(ChangeVerificationResultResponse result) {
+        return complianceSectionMarkdown(
+                result,
+                SECTION_STORY_COMPLIANCE,
+                "Story compliance",
+                "Story compliance was not requested in this run.",
+                "Jira story, acceptance criteria, comments and Confluence context"
+        );
+    }
+
+    private static String instructionComplianceMarkdown(ChangeVerificationResultResponse result) {
+        return complianceSectionMarkdown(
+                result,
+                SECTION_INSTRUCTION_COMPLIANCE,
+                "Instruction compliance",
+                "Instruction compliance was not requested in this run.",
+                "Repository instructions, AGENTS.md, copilot-instructions and referenced instruction files"
+        );
+    }
+
+    private static String complianceSectionMarkdown(
+            ChangeVerificationResultResponse result,
+            String scope,
+            String title,
+            String notRequestedText,
+            String evidenceScope
+    ) {
         var compliance = result.compliance();
         if (compliance == null) {
             return "Compliance result is not available.";
         }
 
-        var lines = new ArrayList<String>();
-        lines.add("### Status");
-        lines.add("`" + safeStatus(compliance.status()) + "`");
-        lines.add("");
-        lines.add("### Scope");
-        lines.add("- Story compliance: " + yesNo(compliance.storyComplianceRequested()));
-        lines.add("- Instruction compliance: " + yesNo(compliance.instructionComplianceRequested()));
+        if (SECTION_STORY_COMPLIANCE.equals(scope) && !compliance.storyComplianceRequested()) {
+            return notRequestedText;
+        }
+        if (SECTION_INSTRUCTION_COMPLIANCE.equals(scope) && !compliance.instructionComplianceRequested()) {
+            return notRequestedText;
+        }
 
-        if (!compliance.findings().isEmpty()) {
+        var checks = checksForScope(compliance.verificationChecks(), scope);
+        var findings = findingsForScope(compliance.findings(), scope);
+        var lines = new ArrayList<String>();
+        lines.add("## Krótkie podsumowanie weryfikacji");
+        lines.add("Status: `" + safeStatus(compliance.status()) + "`.");
+        lines.add("Zakres: " + evidenceScope + ".");
+        if (!checks.isEmpty()) {
+            lines.add("Zweryfikowano " + checks.size() + " kryterium/kryteria w tej sekcji.");
+        } else if (!findings.isEmpty()) {
+            lines.add("AI zwrocilo findingi, ale nie rozpisalo strukturalnych checkow dla tej sekcji.");
+        } else {
+            lines.add("Brak rozjazdow i brak szczegolowych checkow zwroconych dla tej sekcji.");
+        }
+
+        lines.add("");
+        lines.add("## Szczegółowy raport");
+        if (!checks.isEmpty()) {
+            for (var check : checks) {
+                appendVerificationCheck(lines, check);
+            }
+        } else {
+            lines.add("Brak strukturalnych `verificationChecks` dla sekcji `" + title + "`.");
+            lines.add("Dla starszych wynikow ponizej pokazujemy findingi jako fallback.");
+        }
+
+        if (!findings.isEmpty()) {
             lines.add("");
             lines.add("### Findings");
-            for (var finding : compliance.findings()) {
+            for (var finding : findings) {
                 lines.add("- **[" + finding.severity() + "] " + fallback(finding.summary(), "Finding") + "**");
                 addIndented(lines, finding.details());
                 if (StringUtils.hasText(finding.source())) {
                     addIndented(lines, "Source: `" + finding.source().trim() + "`");
                 }
+                if (!finding.references().isEmpty()) {
+                    addIndented(lines, "References: " + String.join(", ", finding.references()));
+                }
                 if (StringUtils.hasText(finding.suggestedAction())) {
                     addIndented(lines, "Suggested action: " + finding.suggestedAction().trim());
                 }
             }
-        } else {
-            lines.add("");
-            lines.add("### Findings");
-            lines.add("No compliance findings were returned.");
         }
 
         if (!compliance.suggestedActions().isEmpty()) {
@@ -133,7 +260,47 @@ public final class ChangeVerificationReportMapper {
         return compactMarkdown(lines);
     }
 
-    private static AnalysisReportMeta complianceMeta(ChangeVerificationResultResponse result) {
+    private static void appendVerificationCheck(
+            List<String> lines,
+            ChangeVerificationVerificationCheckResponse check
+    ) {
+        lines.add("");
+        lines.add("### " + fallback(check.id(), "criterion") + " - " + safeStatus(check.verificationStatus()));
+        lines.add("- **Kryterium:** " + fallback(check.expectedCriterion(), "n/a"));
+        lines.add("- **Źródło kryterium:** " + fallback(check.criterionSource(), "n/a"));
+        lines.add("- **Sposób interpretacji:** `" + fallback(check.interpretationType(), "not_verifiable") + "`");
+        lines.add("- **Cytat / fragment źródła:** " + quote(check.criterionQuote()));
+        lines.add("- **Zweryfikowano względem:** " + fallback(check.verifiedAgainst(), "n/a"));
+        if (StringUtils.hasText(check.analysis())) {
+            lines.add("");
+            lines.add(check.analysis().trim());
+        }
+        if (!check.evidenceRefs().isEmpty()) {
+            lines.add("");
+            lines.add("#### Evidence refs");
+            check.evidenceRefs().forEach(reference -> lines.add("- " + reference));
+        }
+        if (!check.gaps().isEmpty()) {
+            lines.add("");
+            lines.add("#### Gaps");
+            check.gaps().forEach(gap -> lines.add("- " + gap));
+        }
+        if (StringUtils.hasText(check.suggestedAction())) {
+            lines.add("");
+            lines.add("#### Suggested action");
+            lines.add(check.suggestedAction().trim());
+        }
+    }
+
+    private static AnalysisReportMeta storyComplianceMeta(ChangeVerificationResultResponse result) {
+        return complianceMeta(result, SECTION_STORY_COMPLIANCE);
+    }
+
+    private static AnalysisReportMeta instructionComplianceMeta(ChangeVerificationResultResponse result) {
+        return complianceMeta(result, SECTION_INSTRUCTION_COMPLIANCE);
+    }
+
+    private static AnalysisReportMeta complianceMeta(ChangeVerificationResultResponse result, String scope) {
         var compliance = result.compliance();
         if (compliance == null) {
             return AnalysisReportMeta.empty();
@@ -143,7 +310,27 @@ public final class ChangeVerificationReportMapper {
         var gaps = new ArrayList<String>();
         var openQuestions = new ArrayList<String>();
         var warnings = new ArrayList<String>();
-        for (var finding : compliance.findings()) {
+        for (var check : checksForScope(compliance.verificationChecks(), scope)) {
+            for (var reference : check.evidenceRefs()) {
+                if (StringUtils.hasText(reference)) {
+                    references.add(new AnalysisReportReference(
+                            scope.toLowerCase(Locale.ROOT),
+                            fallback(check.id(), check.criterionSource(), "criterion"),
+                            reference.trim(),
+                            fallback(check.expectedCriterion(), check.analysis(), "")
+                    ));
+                }
+            }
+            gaps.addAll(check.gaps());
+            if (!isPassedCheck(check)) {
+                add(warnings, "[" + safeStatus(check.verificationStatus()) + "] "
+                        + fallback(check.expectedCriterion(), check.id(), "criterion"));
+            }
+            if ("NOT_VERIFIED".equalsIgnoreCase(fallback(check.verificationStatus(), ""))) {
+                add(openQuestions, "Jak potwierdzic kryterium: " + fallback(check.expectedCriterion(), check.id(), "criterion") + "?");
+            }
+        }
+        for (var finding : findingsForScope(compliance.findings(), scope)) {
             for (var reference : finding.references()) {
                 if (StringUtils.hasText(reference)) {
                     references.add(new AnalysisReportReference(
@@ -175,21 +362,25 @@ public final class ChangeVerificationReportMapper {
         );
     }
 
-    private static String smokePackMarkdown(ChangeVerificationSmokePackResponse smokePack) {
+    private static String smokePackMarkdown(
+            ChangeVerificationSmokePackResponse smokePack,
+            ChangeVerificationExecutionResponse execution
+    ) {
         if (smokePack == null) {
             return "Smoke pack was not generated.";
         }
 
         var lines = new ArrayList<String>();
-        lines.add("### Status");
-        lines.add("`" + safeStatus(smokePack.status()) + "`");
+        lines.add("## Krótkie podsumowanie weryfikacji");
+        lines.add("Smoke pack status: `" + safeStatus(smokePack.status()) + "`.");
+        lines.add("Execution status: `" + safeStatus(execution != null ? execution.status() : "SKIPPED") + "`.");
         if (StringUtils.hasText(smokePack.postmanCollectionName())) {
-            lines.add("");
-            lines.add("Collection: `" + smokePack.postmanCollectionName().trim() + "`");
+            lines.add("Collection: `" + smokePack.postmanCollectionName().trim() + "`.");
         }
 
+        lines.add("");
+        lines.add("## Szczegółowy raport smoke packa");
         if (!smokePack.tests().isEmpty()) {
-            lines.add("");
             lines.add("### Smoke tests");
             for (var test : smokePack.tests()) {
                 lines.add("- **" + fallback(test.id(), "test") + ": " + fallback(test.name(), "Smoke test") + "**");
@@ -214,10 +405,16 @@ public final class ChangeVerificationReportMapper {
             lines.add("### Recommended actions");
             smokePack.suggestedActions().forEach(action -> lines.add("- " + action));
         }
+        lines.add("");
+        lines.add("## Execution readiness");
+        lines.add(executionMarkdown(execution));
         return compactMarkdown(lines);
     }
 
-    private static AnalysisReportMeta smokePackMeta(ChangeVerificationSmokePackResponse smokePack) {
+    private static AnalysisReportMeta smokePackMeta(
+            ChangeVerificationSmokePackResponse smokePack,
+            ChangeVerificationExecutionResponse execution
+    ) {
         if (smokePack == null) {
             return AnalysisReportMeta.empty();
         }
@@ -247,6 +444,10 @@ public final class ChangeVerificationReportMapper {
         }
         if (!"READY".equalsIgnoreCase(fallback(smokePack.status(), ""))) {
             add(warnings, "Smoke pack status is " + safeStatus(smokePack.status()) + ".");
+        }
+        if (execution != null) {
+            gaps.addAll(executionMeta(execution).gaps());
+            warnings.addAll(executionMeta(execution).warnings());
         }
         return new AnalysisReportMeta(
                 references,
@@ -332,9 +533,10 @@ public final class ChangeVerificationReportMapper {
                 fallback(result.issueUrl(), result.issueKey(), ""),
                 "Target issue verified by Change Verification."
         ));
-        references.addAll(complianceMeta(result).references());
+        references.addAll(storyComplianceMeta(result).references());
+        references.addAll(instructionComplianceMeta(result).references());
         if (result.smokePack() != null) {
-            references.addAll(smokePackMeta(result.smokePack()).references());
+            references.addAll(smokePackMeta(result.smokePack(), result.execution()).references());
         }
 
         var visibilityLimits = new ArrayList<String>();
@@ -386,15 +588,70 @@ public final class ChangeVerificationReportMapper {
         };
     }
 
+    private static List<ChangeVerificationVerificationCheckResponse> checksForScope(
+            List<ChangeVerificationVerificationCheckResponse> checks,
+            String scope
+    ) {
+        return checks.stream()
+                .filter(check -> check != null && matchesScope(check.scope(), scope))
+                .toList();
+    }
+
+    private static List<ChangeVerificationFindingResponse> findingsForScope(
+            List<ChangeVerificationFindingResponse> findings,
+            String scope
+    ) {
+        return findings.stream()
+                .filter(finding -> finding != null && matchesFindingScope(finding.source(), scope))
+                .toList();
+    }
+
+    private static boolean matchesScope(String value, String scope) {
+        var normalized = fallback(value, "").toUpperCase(Locale.ROOT);
+        if (SECTION_STORY_COMPLIANCE.equals(scope)) {
+            return normalized.contains("STORY")
+                    || normalized.contains("ACCEPTANCE")
+                    || normalized.contains("JIRA")
+                    || normalized.contains("CONFLUENCE");
+        }
+        if (SECTION_INSTRUCTION_COMPLIANCE.equals(scope)) {
+            return normalized.contains("INSTRUCTION")
+                    || normalized.contains("AGENTS")
+                    || normalized.contains("COPILOT");
+        }
+        return normalized.equals(scope);
+    }
+
+    private static boolean matchesFindingScope(String value, String scope) {
+        var normalized = fallback(value, "").toUpperCase(Locale.ROOT);
+        if (SECTION_STORY_COMPLIANCE.equals(scope)) {
+            return "STORY".equals(normalized)
+                    || "ACCEPTANCE_CRITERIA".equals(normalized)
+                    || "IMPLEMENTATION".equals(normalized)
+                    || "VISIBILITY".equals(normalized);
+        }
+        if (SECTION_INSTRUCTION_COMPLIANCE.equals(scope)) {
+            return "INSTRUCTIONS".equals(normalized);
+        }
+        return normalized.equals(scope);
+    }
+
+    private static boolean isPassedCheck(ChangeVerificationVerificationCheckResponse check) {
+        return "PASSED".equalsIgnoreCase(fallback(check != null ? check.verificationStatus() : null, ""));
+    }
+
+    private static String quote(String value) {
+        if (!StringUtils.hasText(value) || "n/a".equalsIgnoreCase(value.trim())) {
+            return "`n/a`";
+        }
+        return "> " + value.trim().replace("\n", "\n> ");
+    }
+
     private static String normalizeConfidence(String confidence) {
         if (!StringUtils.hasText(confidence)) {
             return "";
         }
         return confidence.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private static String yesNo(boolean value) {
-        return value ? "yes" : "no";
     }
 
     private static String safeStatus(String status) {

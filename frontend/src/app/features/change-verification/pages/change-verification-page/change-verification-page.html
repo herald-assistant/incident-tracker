@@ -228,25 +228,42 @@
               ></app-analysis-report-section-content>
             }
 
-            <div class="change-verification-report__sections">
+            <div class="change-verification-result-tabs" role="tablist" aria-label="Change Verification result sections">
               @for (section of resultReport.sections; track section.id) {
-                <section class="change-verification-report-section" [attr.aria-label]="section.title">
-                  <div class="change-verification-report-section__heading">
-                    <span class="material-symbols-outlined" aria-hidden="true">article</span>
-                    <div>
-                      <span class="field-label">{{ section.id }}</span>
-                      <h4>{{ section.title }}</h4>
-                    </div>
-                  </div>
+                <button
+                  [id]="'change-verification-tab-' + section.id"
+                  class="change-verification-result-tab"
+                  [class.change-verification-result-tab--active]="activeResultTabId(resultReport.sections) === section.id"
+                  type="button"
+                  role="tab"
+                  [attr.aria-controls]="'change-verification-panel-' + section.id"
+                  [attr.aria-selected]="activeResultTabId(resultReport.sections) === section.id"
+                  [attr.tabindex]="activeResultTabId(resultReport.sections) === section.id ? 0 : -1"
+                  (click)="selectResultTab(section.id)"
+                >
+                  {{ section.tabLabel }}
+                </button>
+              }
+            </div>
+
+            @for (section of resultReport.sections; track section.id) {
+              @if (activeResultTabId(resultReport.sections) === section.id) {
+                <section
+                  [id]="'change-verification-panel-' + section.id"
+                  class="change-verification-report-section"
+                  role="tabpanel"
+                  [attr.aria-labelledby]="'change-verification-tab-' + section.id"
+                  tabindex="0"
+                >
                   <app-analysis-report-section-content
                     [markdown]="section.markdown"
-                    emptyText="No confirmed details for this section."
+                    [emptyText]="section.emptyText"
                     [meta]="section.meta"
                     metaAlign="start"
                   ></app-analysis-report-section-content>
                 </section>
               }
-            </div>
+            }
 
             <app-analysis-report-meta
               [meta]="resultReport.appendix"

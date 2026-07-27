@@ -12,6 +12,10 @@ instrukcjami repozytorium dostarczonymi w artefaktach Change Verification.
 Wynik ma pomoc release ownerowi, developerowi albo testerowi szybko zobaczyc
 rozjazdy, ryzyka i rekomendowane korekty przed wdrozeniem.
 
+Ten skill jest wlascicielem `RequirementLedger` i analizy compliance. Nie
+zapisuje finalnych sekcji raportu. Sekcje buduja dedykowane skille, a finalny
+zapis nalezy do `change-verification-write-report`.
+
 ## Wejscia
 
 Pracuj artifact-first. Zacznij od artefaktow osadzonych w promptcie:
@@ -63,6 +67,21 @@ wlaczone narzedzia.
    - fakt potwierdzony przez artefakt,
    - inferencje z nazw plikow, branchy albo commitow,
    - luki widocznosci.
+7. Zbuduj szczegolowe `verificationChecks`. Kazdy check musi wskazywac:
+   - konkretne kryterium z AC, opisu, komentarza, Confluence albo instrukcji,
+   - krotki cytat zrodla lub nazwe pliku instrukcji,
+   - co porownano z implementacja z MR lub dociagnietym kodem,
+   - status `PASSED`, `WARNING`, `FAILED` albo `NOT_VERIFIED`,
+   - gaps i rekomendacje, jezeli nie da sie uczciwie potwierdzic kryterium.
+8. Po rozpisaniu jawnych acceptance criteria przejrzyj pozostale pola Jira,
+   powiazany fragment Confluence, instrukcje i widoczny kod pod katem
+   dodatkowych wymagan. Istnienie AC nie zamyka analizy.
+9. Dla kazdego checka ustaw `interpretationType`:
+   - `explicit`,
+   - `inferred`,
+   - `normalized`,
+   - `conflicting`,
+   - `not_verifiable`.
 
 ## Interpretacja zrodel
 
@@ -118,6 +137,10 @@ Ustaw `status` wedlug zasad:
 
 ## Findings
 
+`verificationChecks` sa podstawowym, szczegolowym raportem. `findings` sluza
+do zebrania najwazniejszych rozjazdow, ryzyk albo luk widocznosci wynikajacych
+z checkow. Nie zastapuj listy checkow jednym ogolnym findingiem.
+
 Kazdy finding musi miec:
 
 - `severity`: `INFO`, `LOW`, `MEDIUM`, `HIGH` albo `BLOCKER`,
@@ -132,8 +155,40 @@ Kazdy finding musi miec:
 Nie tworz findingu jako mocnego zarzutu, jezeli masz tylko brak widocznosci.
 Wtedy uzyj `VISIBILITY` i wpisz ograniczenie.
 
-## Output
+## Handoff
 
-Zwracaj dokladnie jeden obiekt JSON zgodny z
-`change-verification/response-contract.md`. Nie dodawaj tekstu przed ani po
-JSON.
+Przekaz orkiestratorowi:
+
+```text
+RequirementLedger
+verificationChecks
+findings
+suggestedActions
+visibilityLimits
+openQuestions
+gaps
+warnings
+confidence
+readiness
+```
+
+Kazdy wpis ledgeru ma pola:
+
+```text
+id
+scope
+sourceRole
+sourceRef
+criterionQuote
+interpretationType
+expectedCriterion
+verifiedAgainst
+verificationStatus
+analysis
+evidenceRefs
+gaps
+suggestedAction
+```
+
+Nie finalizuj JSON i nie wywoluj report tools. Po handoffie orkiestrator
+uruchamia aktywne skille sekcyjne oraz `change-verification-write-report`.

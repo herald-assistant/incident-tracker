@@ -286,6 +286,7 @@ public class ChangeVerificationJobService {
             return new ChangeVerificationComplianceAnalysis(
                     new ChangeVerificationAiResponse(
                             "INCONCLUSIVE",
+                            List.of(),
                             List.of(new ChangeVerificationFindingResponse(
                                     "cv-ai-unavailable",
                                     ChangeVerificationFindingSeverity.MEDIUM,
@@ -299,6 +300,7 @@ public class ChangeVerificationJobService {
                             List.of("AI compliance check failed: " + safeMessage(exception)),
                             "low"
                     ),
+                    null,
                     null,
                     null,
                     null

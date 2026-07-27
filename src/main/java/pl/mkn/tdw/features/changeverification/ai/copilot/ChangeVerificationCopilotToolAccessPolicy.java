@@ -3,6 +3,7 @@ package pl.mkn.tdw.features.changeverification.ai.copilot;
 import com.github.copilot.rpc.ToolDefinition;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 
 import java.util.List;
 import java.util.Set;
@@ -39,10 +40,14 @@ record ChangeVerificationCopilotToolAccessPolicy(
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
     }
 
-    static ChangeVerificationCopilotToolAccessPolicy fromRegisteredTools(List<ToolDefinition> registeredTools) {
+    static ChangeVerificationCopilotToolAccessPolicy fromRegisteredTools(
+            List<ToolDefinition> registeredTools,
+            boolean reportToolsEnabled
+    ) {
         var tools = registeredTools != null ? List.copyOf(registeredTools) : List.<ToolDefinition>of();
         var enabledTools = tools.stream()
-                .filter(tool -> TOOL_ALLOWLIST.contains(tool.name()))
+                .filter(tool -> TOOL_ALLOWLIST.contains(tool.name())
+                        || reportToolsEnabled && CopilotReportToolNames.isReportTool(tool.name()))
                 .toList();
 
         return new ChangeVerificationCopilotToolAccessPolicy(
@@ -59,6 +64,10 @@ record ChangeVerificationCopilotToolAccessPolicy(
 
     boolean operationalContextToolsEnabled() {
         return availableToolNames.stream().anyMatch(name -> name != null && name.startsWith(OperationalContextToolNames.PREFIX));
+    }
+
+    boolean reportToolsEnabled() {
+        return availableToolNames.stream().anyMatch(CopilotReportToolNames::isReportTool);
     }
 
     private static boolean hasToolPrefix(List<ToolDefinition> tools, String prefix) {

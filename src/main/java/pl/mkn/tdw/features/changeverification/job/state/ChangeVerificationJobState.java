@@ -331,7 +331,7 @@ public final class ChangeVerificationJobState {
                 execution,
                 complianceAnalysis != null ? complianceAnalysis.usage() : null
         );
-        report = ChangeVerificationReportMapper.toReport(result);
+        report = ChangeVerificationReportMapper.toReport(result, complianceReport());
     }
 
     public synchronized void markFailed(String errorCode, String errorMessage) {
@@ -367,7 +367,7 @@ public final class ChangeVerificationJobState {
                     result.execution(),
                     result.usage()
             );
-            report = ChangeVerificationReportMapper.toReport(result);
+            report = ChangeVerificationReportMapper.toReport(result, complianceReport());
         }
     }
 
@@ -386,7 +386,7 @@ public final class ChangeVerificationJobState {
                     this.execution,
                     result.usage()
             );
-            report = ChangeVerificationReportMapper.toReport(result);
+            report = ChangeVerificationReportMapper.toReport(result, complianceReport());
         }
         steps = steps(updatedAt);
     }
@@ -417,6 +417,10 @@ public final class ChangeVerificationJobState {
                 result,
                 report
         );
+    }
+
+    private AnalysisReport complianceReport() {
+        return complianceAnalysis != null ? complianceAnalysis.report() : null;
     }
 
     private List<AnalysisJobStepResponse> steps(Instant completedAt) {
@@ -947,6 +951,7 @@ public final class ChangeVerificationJobState {
                     "SKIPPED",
                     List.of(),
                     List.of(),
+                    List.of(),
                     List.of("Compliance check was not requested for this skeleton job.")
             );
         }
@@ -957,6 +962,7 @@ public final class ChangeVerificationJobState {
                     request.checkStoryCompliance(),
                     request.checkInstructionCompliance(),
                     response.status(),
+                    response.verificationChecks(),
                     response.findings(),
                     response.suggestedActions(),
                     combinedComplianceVisibilityLimits(response.visibilityLimits())
@@ -967,6 +973,7 @@ public final class ChangeVerificationJobState {
                 request.checkStoryCompliance(),
                 request.checkInstructionCompliance(),
                 "INCONCLUSIVE",
+                List.of(),
                 List.of(new ChangeVerificationFindingResponse(
                         "cv-ai-not-run",
                         ChangeVerificationFindingSeverity.MEDIUM,
