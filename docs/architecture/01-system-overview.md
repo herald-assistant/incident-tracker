@@ -73,10 +73,10 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /incident-analysis` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
-- ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /database` i
-  `GET /operational-context` do recznego testowania, debugowania i zbierania
-  inputu z reusable capability bez przenoszenia logiki incident analysis do
-  tych widokow,
+- ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /jira`,
+  `GET /confluence`, `GET /database` i `GET /operational-context` do recznego
+  testowania, debugowania i zbierania inputu z reusable capability bez
+  przenoszenia logiki incident analysis do tych widokow,
 - ekran `GET /operational-context` w Tool Workbench do utrzymania katalogu
   systemow, repozytoriow, procesow, integracji, bounded contexts, zespolow,
   glossary, handoff rules, validation findings i open questions,
@@ -140,6 +140,14 @@ Na dzisiaj projekt ma:
   helper endpointow GitLaba oraz podgladu request/response JSON. Legacy route
   `GET /evidence`
   przekierowuje w Angularze do `/elastic`.
+- `GET /jira`
+  Angularowy ekran `Tool Workbench / Jira Source` do recznego pobierania
+  materialu issue przez `POST /api/jira/issue/material` i podgladu
+  request/response JSON.
+- `GET /confluence`
+  Angularowy ekran `Tool Workbench / Confluence Source` do recznego pobierania
+  tekstu strony przez `POST /api/confluence/page/content`, wraz z
+  rozpoznanym `pageId`, wersja i jawnymi ograniczeniami adaptera.
 - `GET /database`
   Angularowy ekran `Tool Workbench / Database Tools` do recznego testowania
   Database tools przez shared/operator endpointy `/api/database/*`.
@@ -438,9 +446,9 @@ Znaczenie grup UI:
   kolejnymi dostepnymi feature'ami, a Data Diagnostics pozostaje placeholderem
   dla przyszlego feature'a.
 - `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
-  GitLab, Database i Operational Context sa analysis-independent i nie
-  eksponuja incidentowego `analysisRunId`; DB/GitLab scope dla AI pozostaje
-  feature-owned hidden `ToolContext`.
+  GitLab, Jira, Confluence, Database i Operational Context sa
+  analysis-independent i nie eksponuja incidentowego `analysisRunId`;
+  DB/GitLab scope dla AI pozostaje feature-owned hidden `ToolContext`.
 - `Platform` - overview i konfiguracja samego Team Delivery Workspace:
   workspace settings, personalizacja, autentykacja i modele AI. V1 pokazuje
   ustawieniowe pozycje jako disabled placeholders, dopoki nie powstana ich

@@ -1,5 +1,6 @@
 package pl.mkn.tdw.api;
 
+import pl.mkn.tdw.api.confluence.ConfluenceSourceApiException;
 import pl.mkn.tdw.api.database.DatabaseToolApiException;
 import pl.mkn.tdw.api.jira.JiraSourceApiException;
 import pl.mkn.tdw.api.operationalcontext.OperationalContextEntityNotFoundException;
@@ -170,6 +171,17 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(JiraSourceApiException.class)
     public ResponseEntity<ApiErrorResponse> handleJiraSourceApi(JiraSourceApiException exception) {
+        var response = new ApiErrorResponse(
+                exception.code(),
+                exception.getMessage(),
+                List.of()
+        );
+
+        return ResponseEntity.status(exception.status()).body(response);
+    }
+
+    @ExceptionHandler(ConfluenceSourceApiException.class)
+    public ResponseEntity<ApiErrorResponse> handleConfluenceSourceApi(ConfluenceSourceApiException exception) {
         var response = new ApiErrorResponse(
                 exception.code(),
                 exception.getMessage(),

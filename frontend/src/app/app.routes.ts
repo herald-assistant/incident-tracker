@@ -165,6 +165,37 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'confluence',
+        loadComponent: () =>
+          import('./features/confluence-source-console/confluence-source-console').then(
+            (module) => module.ConfluenceSourceConsoleComponent
+          ),
+        data: {
+          section: 'Tool Workbench',
+          title: 'Confluence Source',
+          capabilityInfo: {
+            description:
+              'Manualne testowanie Confluence page source API: rozpoznawanie pageId i pobieranie tytulu, wersji oraz tekstu strony.',
+            badges: ['Reusable przez AI', 'Readonly'],
+            meta: [
+              { label: 'Endpointy', value: 'POST /api/confluence/page/content' },
+              {
+                label: 'Wymagany scope',
+                value: 'link do strony zgodny z URL pattern; konfiguracja korzysta z base URL i personal access token'
+              },
+              {
+                label: 'Reusable przez AI',
+                value: 'Tak, jako readonly material kontekstowy pobierany przez featurey korzystajace z Jira remote links'
+              },
+              {
+                label: 'Guardrails',
+                value: 'readonly REST call, Bearer PAT, URL allowlist i limit dlugosci tekstu'
+              }
+            ]
+          }
+        }
+      },
+      {
         path: 'database',
         component: DatabaseConsoleComponent,
         data: {

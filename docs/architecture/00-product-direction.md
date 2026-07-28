@@ -32,9 +32,10 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
   `Incident Analysis`, `Flow Explorer` i `Change Verification` oraz przyszle
   miejsce na Data Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
-  Elastic Logs, GitLab Source, Database Tools i Operational Context. Te widoki
-  sluza do testow, debugowania i recznego zebrania inputu; nie sa osobnymi
-  feature'ami produktowymi ani nie powinny niesc logiki incydentu.
+  Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
+  i Operational Context. Te widoki sluza do testow, debugowania i recznego
+  zebrania inputu; nie sa osobnymi feature'ami produktowymi ani nie powinny
+  niesc logiki incydentu.
 - `Platform` - startowy overview Team Delivery Workspace oraz customizacja:
   parametryzacja workspace'u, personalizacja, autentykacja, konfiguracja
   modeli i inne ustawienia platformy.

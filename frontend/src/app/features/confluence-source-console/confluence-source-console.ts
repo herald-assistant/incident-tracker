@@ -5,48 +5,50 @@ import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, Validator
 
 import { ApiErrorResponse } from '../../core/models/analysis.models';
 import {
-  JiraIssueMaterialPayload,
-  JiraIssueMaterialResponse,
-  JiraSourceApiService
-} from '../../core/services/jira-source-api.service';
+  ConfluencePageContentPayload,
+  ConfluencePageContentResponse,
+  ConfluenceSourceApiService
+} from '../../core/services/confluence-source-api.service';
 import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 
-type JiraSourceStatus = 'idle' | 'loading' | 'success' | 'error';
-type JiraJsonPayloadKey = 'request' | 'response';
+type ConfluenceSourceStatus = 'idle' | 'loading' | 'success' | 'error';
+type ConfluenceJsonPayloadKey = 'request' | 'response';
 
 interface ToolState {
-  status: JiraSourceStatus;
+  status: ConfluenceSourceStatus;
   statusCode: number | null;
   message: string;
   endpoint: string;
   requestJson: string;
   responseJson: string;
-  response: JiraIssueMaterialResponse | null;
+  response: ConfluencePageContentResponse | null;
   durationMs: number | null;
 }
 
-const JIRA_SOURCE_ENDPOINT = '/api/jira/issue/material';
+const CONFLUENCE_SOURCE_ENDPOINT = '/api/confluence/page/content';
 
 @Component({
-  selector: 'app-jira-source-console',
+  selector: 'app-confluence-source-console',
   imports: [ReactiveFormsModule],
-  templateUrl: './jira-source-console.html',
+  templateUrl: './confluence-source-console.html',
   styleUrl: '../source-console-layout.scss'
 })
-export class JiraSourceConsoleComponent {
-  private readonly jiraSourceApi = inject(JiraSourceApiService);
+export class ConfluenceSourceConsoleComponent {
+  private readonly confluenceSourceApi = inject(ConfluenceSourceApiService);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly copiedJsonPayloadKey = signal<JiraJsonPayloadKey | null>(null);
+  readonly copiedJsonPayloadKey = signal<ConfluenceJsonPayloadKey | null>(null);
   readonly toolState = signal<ToolState>(
-    this.idleState('Podaj issue key lub link do Jira, aby sprawdzić readonly pobieranie materialu issue.')
+    this.idleState(
+      'Podaj link do strony Confluence, aby sprawdzić readonly pobieranie jej treści.'
+    )
   );
   readonly state = computed(() => this.toolState());
   readonly hasResult = computed(() => this.state().status !== 'idle');
   readonly result = computed(() => this.state().response);
 
   readonly scopeForm = new FormGroup({
-    issueRef: new FormControl('', {
+    pageUrl: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required]
     })
@@ -60,17 +62,17 @@ export class JiraSourceConsoleComponent {
       this.toolState.set(
         this.errorStateFromPayload({
           code: 'VALIDATION_ERROR',
-          message: 'Uzupełnij Jira issue key albo link do issue.'
+          message: 'Uzupełnij link do strony Confluence.'
         })
       );
       return;
     }
 
-    const payload: JiraIssueMaterialPayload = {
-      issueRef: this.scopeForm.controls.issueRef.value.trim()
+    const payload: ConfluencePageContentPayload = {
+      pageUrl: this.scopeForm.controls.pageUrl.value.trim()
     };
     const requestJson = this.toFormattedJson({
-      endpoint: JIRA_SOURCE_ENDPOINT,
+      endpoint: CONFLUENCE_SOURCE_ENDPOINT,
       method: 'POST',
       body: payload
     });
@@ -79,28 +81,31 @@ export class JiraSourceConsoleComponent {
     this.toolState.set({
       status: 'loading',
       statusCode: null,
-      message: `Wysyłamy request do ${JIRA_SOURCE_ENDPOINT}...`,
-      endpoint: JIRA_SOURCE_ENDPOINT,
+      message: `Wysyłamy request do ${CONFLUENCE_SOURCE_ENDPOINT}...`,
+      endpoint: CONFLUENCE_SOURCE_ENDPOINT,
       requestJson,
       responseJson: this.toFormattedJson({
         status: 'WAITING',
-        endpoint: JIRA_SOURCE_ENDPOINT,
+        endpoint: CONFLUENCE_SOURCE_ENDPOINT,
         request: payload
       }),
       response: null,
       durationMs: null
     });
 
-    this.jiraSourceApi
-      .getIssueMaterial(payload)
+    this.confluenceSourceApi
+      .getPageContent(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) =>
           this.toolState.set({
             status: 'success',
             statusCode: 200,
-            message: 'Backend zwrócił materiał issue z Jira adaptera.',
-            endpoint: JIRA_SOURCE_ENDPOINT,
+            message:
+              response.limitations.length > 0
+                ? `Backend zwrócił stronę z ${response.limitations.length} ograniczeniem/ograniczeniami.`
+                : 'Backend zwrócił treść strony z adaptera Confluence.',
+            endpoint: CONFLUENCE_SOURCE_ENDPOINT,
             requestJson,
             responseJson: this.toFormattedJson(response),
             response,
@@ -112,14 +117,14 @@ export class JiraSourceConsoleComponent {
   }
 
   resetScope(): void {
-    this.scopeForm.reset({ issueRef: '' });
+    this.scopeForm.reset({ pageUrl: '' });
   }
 
   controlInvalid(control: AbstractControl<unknown, unknown>): boolean {
     return control.invalid && (control.dirty || control.touched);
   }
 
-  statusLabel(status: JiraSourceStatus): string {
+  statusLabel(status: ConfluenceSourceStatus): string {
     switch (status) {
       case 'loading':
         return 'W toku';
@@ -132,7 +137,7 @@ export class JiraSourceConsoleComponent {
     }
   }
 
-  statusPillClass(status: JiraSourceStatus): string {
+  statusPillClass(status: ConfluenceSourceStatus): string {
     switch (status) {
       case 'loading':
         return 'status-pill status-pill--running';
@@ -152,7 +157,11 @@ export class JiraSourceConsoleComponent {
     return durationMs < 1000 ? `${durationMs} ms` : `${(durationMs / 1000).toFixed(1)} s`;
   }
 
-  async copyJsonPayload(key: JiraJsonPayloadKey, value: string): Promise<void> {
+  contentLength(content: string | null | undefined): number {
+    return content?.length ?? 0;
+  }
+
+  async copyJsonPayload(key: ConfluenceJsonPayloadKey, value: string): Promise<void> {
     if (!value) {
       return;
     }
@@ -170,7 +179,7 @@ export class JiraSourceConsoleComponent {
     }, 1600);
   }
 
-  downloadJsonPayload(key: JiraJsonPayloadKey, value: string): void {
+  downloadJsonPayload(key: ConfluenceJsonPayloadKey, value: string): void {
     if (!value) {
       return;
     }
@@ -179,7 +188,7 @@ export class JiraSourceConsoleComponent {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = this.jiraJsonPayloadFileName(key);
+    link.download = this.confluenceJsonPayloadFileName(key);
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -191,7 +200,7 @@ export class JiraSourceConsoleComponent {
         status: 'error',
         statusCode: error.status || null,
         message: payload.message,
-        endpoint: JIRA_SOURCE_ENDPOINT,
+        endpoint: CONFLUENCE_SOURCE_ENDPOINT,
         requestJson,
         responseJson: this.toFormattedJson(payload.body),
         response: null,
@@ -283,7 +292,7 @@ export class JiraSourceConsoleComponent {
       status: 'error',
       statusCode: null,
       message: payload.message,
-      endpoint: JIRA_SOURCE_ENDPOINT,
+      endpoint: CONFLUENCE_SOURCE_ENDPOINT,
       requestJson,
       responseJson: this.toFormattedJson(payload),
       response: null,
@@ -309,10 +318,10 @@ export class JiraSourceConsoleComponent {
     return formatted === undefined ? 'null' : formatted;
   }
 
-  private jiraJsonPayloadFileName(key: JiraJsonPayloadKey): string {
-    const issueRef = this.scopeForm.controls.issueRef.value || 'issue';
-    const safeIssueRef = issueRef.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'issue';
+  private confluenceJsonPayloadFileName(key: ConfluenceJsonPayloadKey): string {
+    const pageUrl = this.scopeForm.controls.pageUrl.value || 'page';
+    const pageId = pageUrl.match(/(?:pageId=|\/pages\/)(\d+)/i)?.[1] ?? 'page';
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    return `jira-${safeIssueRef}-${key}-${timestamp}.json`;
+    return `confluence-${pageId}-${key}-${timestamp}.json`;
   }
 }

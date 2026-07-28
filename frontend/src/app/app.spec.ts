@@ -408,6 +408,30 @@ describe('App', () => {
     expect(compiled.textContent).toContain('Issue key or link');
   });
 
+  it('should render the confluence source console shell on the confluence route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/confluence');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="Confluence Source"]'
+    );
+    expect(compiled.querySelector('app-confluence-source-console')).not.toBeNull();
+    expect(compiled.querySelector('.workbench-header')).toBeNull();
+    expect(compiled.querySelector('.app-shell__info-trigger')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
+      'POST /api/confluence/page/content'
+    );
+    expect(navLink).not.toBeNull();
+    expect(compiled.textContent).toContain('Page Content');
+    expect(compiled.textContent).toContain('Page URL');
+  });
+
   it('should redirect the legacy evidence route to elastic', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);

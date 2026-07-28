@@ -1,47 +1,51 @@
-<div class="page-shell jira-source-console">
+<div class="page-shell confluence-source-console">
   <main class="source-workspace">
     <form class="source-layout" novalidate (submit)="submit($event)">
       <aside class="analysis-card source-tool-panel">
-        <section class="source-scope-section" aria-labelledby="jiraScopeTitle">
+        <section class="source-scope-section" aria-labelledby="confluenceScopeTitle">
           <div class="section-heading">
             <div>
               <p class="section-eyebrow">Shared scope</p>
-              <h2 id="jiraScopeTitle">Zakres wywołania</h2>
+              <h2 id="confluenceScopeTitle">Zakres wywołania</h2>
             </div>
           </div>
 
-          <label class="form-field" for="jiraIssueRef">
-            <span class="field-label">Issue key or link</span>
+          <label class="form-field" for="confluencePageUrl">
+            <span class="field-label">Page URL</span>
             <input
-              id="jiraIssueRef"
+              id="confluencePageUrl"
               class="text-input"
-              type="text"
-              placeholder="CRM-123 albo https://jira.example.com/browse/CRM-123"
+              type="url"
+              placeholder="https://confluence.example.com/pages/viewpage.action?pageId=123"
               autocomplete="off"
               spellcheck="false"
-              [formControl]="scopeForm.controls.issueRef"
+              [formControl]="scopeForm.controls.pageUrl"
             />
           </label>
 
-          @if (controlInvalid(scopeForm.controls.issueRef)) {
-            <p class="form-error">Pole `issueRef` jest wymagane.</p>
+          @if (controlInvalid(scopeForm.controls.pageUrl)) {
+            <p class="form-error">Pole `pageUrl` jest wymagane.</p>
           }
         </section>
 
-        <section class="source-tool-section" aria-labelledby="jiraToolsTitle">
+        <section class="source-tool-section" aria-labelledby="confluenceToolsTitle">
           <div class="section-heading source-tool-section__heading">
             <div>
               <p class="section-eyebrow">Tools</p>
-              <h2 id="jiraToolsTitle">Element do testu</h2>
+              <h2 id="confluenceToolsTitle">Element do testu</h2>
             </div>
             <span class="panel-chip">1</span>
           </div>
 
-          <div class="source-tool-list" aria-label="Jira tools">
-            <button class="source-tool-button source-tool-button--active" type="button" aria-pressed="true">
+          <div class="source-tool-list" aria-label="Confluence tools">
+            <button
+              class="source-tool-button source-tool-button--active"
+              type="button"
+              aria-pressed="true"
+            >
               <span class="source-tool-button__content">
-                <span>Issue Material</span>
-                <small>issue/material</small>
+                <span>Page Content</span>
+                <small>page/content</small>
               </span>
               <span
                 class="source-tool-button__state"
@@ -57,18 +61,21 @@
         <article class="analysis-card source-runner">
           <div class="section-heading source-runner__header">
             <div>
-              <p class="section-eyebrow">Issue source</p>
-              <h2>Issue Material</h2>
+              <p class="section-eyebrow">Page source</p>
+              <h2>Page Content</h2>
               <p class="field-hint">
-                Pobiera opis, status, typ, linki, komentarze i skonfigurowane kryteria akceptacji z Jira.
+                Rozpoznaje pageId z linku i pobiera tytuł, wersję oraz tekst strony przez Confluence REST API.
               </p>
             </div>
-            <span class="panel-chip route-chip">POST /api/jira/issue/material</span>
+            <span class="panel-chip route-chip">POST /api/confluence/page/content</span>
           </div>
 
           <div class="payload-placeholder">
-            <span class="material-symbols-outlined" aria-hidden="true">assignment</span>
-            <p>Ten endpoint używa tylko issue key/link z lewego panelu i skonfigurowanego PAT Jira.</p>
+            <span class="material-symbols-outlined" aria-hidden="true">article</span>
+            <p>
+              Endpoint używa linku z lewego panelu oraz skonfigurowanych base URL,
+              URL pattern i PAT Confluence.
+            </p>
           </div>
 
           <div class="source-runner__actions">
@@ -110,23 +117,18 @@
               </div>
             </div>
 
-            @if (result(); as issue) {
+            @if (result(); as page) {
               <section class="source-summary">
                 <div>
-                  <p class="tool-status__label">Issue</p>
-                  <h3>{{ issue.issueKey || 'unknown issue' }}</h3>
-                  <p>{{ issue.summary || 'Brak summary w odpowiedzi Jira.' }}</p>
+                  <p class="tool-status__label">Confluence page</p>
+                  <h3>{{ page.title || 'Brak tytułu strony' }}</h3>
+                  <p>{{ page.url || 'Brak URL strony w odpowiedzi Confluence.' }}</p>
                 </div>
                 <div class="source-summary__badges">
-                  @if (issue.issueType) {
-                    <span class="panel-chip">{{ issue.issueType }}</span>
-                  }
-                  @if (issue.status) {
-                    <span class="panel-chip">{{ issue.status }}</span>
-                  }
-                  <span class="panel-chip">{{ issue.acceptanceCriteria.length }} AC</span>
-                  <span class="panel-chip">{{ issue.links.length }} links</span>
-                  <span class="panel-chip">{{ issue.comments.length }} comments</span>
+                  <span class="panel-chip">pageId {{ page.pageId || 'n/a' }}</span>
+                  <span class="panel-chip">version {{ page.version || 'n/a' }}</span>
+                  <span class="panel-chip">{{ contentLength(page.content) }} chars</span>
+                  <span class="panel-chip">{{ page.limitations.length }} limitations</span>
                 </div>
               </section>
             }
@@ -166,7 +168,7 @@
                   </div>
                 </summary>
                 <textarea
-                  id="jiraRequestPreview"
+                  id="confluenceRequestPreview"
                   class="json-output"
                   aria-label="Request preview"
                   readonly
@@ -210,7 +212,7 @@
                 </div>
               </summary>
               <textarea
-                id="jiraJsonResponse"
+                id="confluenceJsonResponse"
                 class="json-output"
                 aria-label="JSON response"
                 readonly

@@ -2,24 +2,24 @@
   display: block;
 }
 
-.jira-workspace,
-.jira-scope-section,
-.jira-tool-section,
-.jira-main,
-.jira-runner,
-.jira-result {
+.source-workspace,
+.source-scope-section,
+.source-tool-section,
+.source-main,
+.source-runner,
+.source-result {
   display: grid;
   gap: 16px;
 }
 
-.jira-layout {
+.source-layout {
   display: grid;
   grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 
-.jira-tool-panel {
+.source-tool-panel {
   position: sticky;
   top: 16px;
   display: grid;
@@ -34,17 +34,17 @@
   gap: 8px;
 }
 
-.jira-tool-section__heading,
-.jira-runner__header {
+.source-tool-section__heading,
+.source-runner__header {
   align-items: flex-start;
 }
 
-.jira-tool-list {
+.source-tool-list {
   display: grid;
   gap: 7px;
 }
 
-.jira-tool-button {
+.source-tool-button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 10px;
   gap: 10px;
@@ -60,20 +60,20 @@
   text-align: left;
 }
 
-.jira-tool-button__content {
+.source-tool-button__content {
   display: grid;
   gap: 2px;
   min-width: 0;
 }
 
-.jira-tool-button__content span {
+.source-tool-button__content span {
   min-width: 0;
   font-weight: 800;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
-.jira-tool-button__content small {
+.source-tool-button__content small {
   min-width: 0;
   color: var(--primary-dark);
   font-size: 0.72rem;
@@ -81,40 +81,40 @@
   overflow-wrap: anywhere;
 }
 
-.jira-tool-button__state {
+.source-tool-button__state {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #c7d1df;
 }
 
-.jira-tool-button__state[data-status='loading'] {
+.source-tool-button__state[data-status='loading'] {
   background: var(--primary);
 }
 
-.jira-tool-button__state[data-status='success'] {
+.source-tool-button__state[data-status='success'] {
   background: var(--success-text);
 }
 
-.jira-tool-button__state[data-status='error'] {
+.source-tool-button__state[data-status='error'] {
   background: var(--danger-text);
 }
 
-.jira-runner__actions {
+.source-runner__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
 }
 
-.jira-runner__actions .primary-button,
-.jira-runner__actions .secondary-button {
+.source-runner__actions .primary-button,
+.source-runner__actions .secondary-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.jira-runner__actions .material-symbols-outlined {
+.source-runner__actions .material-symbols-outlined {
   font-size: 1.08rem;
 }
 
@@ -136,22 +136,22 @@
 }
 
 .payload-placeholder p,
-.issue-summary p {
+.source-summary p {
   margin: 0;
   line-height: 1.45;
 }
 
-.jira-result__header,
+.source-result__header,
 .tool-status,
-.issue-summary {
+.source-summary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
-.jira-result__header h2,
-.issue-summary h3 {
+.source-result__header h2,
+.source-summary h3 {
   margin: 0;
   color: var(--text-main);
   font-size: 1.18rem;
@@ -159,7 +159,7 @@
 }
 
 .tool-status,
-.issue-summary {
+.source-summary {
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -197,7 +197,7 @@
 }
 
 .tool-status__badges,
-.issue-summary__badges,
+.source-summary__badges,
 .json-response-panel__actions {
   display: inline-flex;
   flex-wrap: wrap;
@@ -217,7 +217,7 @@
   white-space: nowrap;
 }
 
-.jira-json-panel {
+.source-json-panel {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -238,7 +238,7 @@
   display: none;
 }
 
-.jira-json-panel[open] .json-response-panel__header {
+.source-json-panel[open] .json-response-panel__header {
   border-bottom: 1px solid var(--border);
 }
 
@@ -258,7 +258,7 @@
   transition: transform 0.16s ease;
 }
 
-.jira-json-panel[open] .json-panel-toggle-icon {
+.source-json-panel[open] .json-panel-toggle-icon {
   transform: rotate(90deg);
 }
 
@@ -307,7 +307,7 @@
   white-space: pre;
 }
 
-.jira-json-panel--request .json-output {
+.source-json-panel--request .json-output {
   min-height: 220px;
 }
 
@@ -322,39 +322,39 @@
 }
 
 @media (max-width: 1180px) {
-  .jira-layout {
+  .source-layout {
     grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
   }
 }
 
 @media (max-width: 980px) {
-  .jira-result__header,
+  .source-result__header,
   .tool-status,
-  .issue-summary {
+  .source-summary {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .jira-layout {
+  .source-layout {
     grid-template-columns: 1fr;
   }
 
-  .jira-tool-panel {
+  .source-tool-panel {
     position: static;
     max-height: none;
     overflow: visible;
   }
 
-  .jira-runner__actions,
+  .source-runner__actions,
   .tool-status__badges,
-  .issue-summary__badges {
+  .source-summary__badges {
     justify-content: flex-start;
   }
 }
 
 @media (max-width: 720px) {
-  .jira-runner__actions .primary-button,
-  .jira-runner__actions .secondary-button {
+  .source-runner__actions .primary-button,
+  .source-runner__actions .secondary-button {
     width: 100%;
     justify-content: center;
   }

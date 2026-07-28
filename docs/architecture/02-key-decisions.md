@@ -52,7 +52,8 @@ Decyzje:
   aktywne sa `Incident Analysis` pod `/incident-analysis` oraz
   `Flow Explorer` pod `/flow-explorer`.
 - `Tool Workbench` zawiera reusable capability do testow i debugowania:
-  `Elastic Logs`, `GitLab Source`, `Database Tools` i `Operational Context`.
+  `Elastic Logs`, `GitLab Source`, `Jira Source`, `Confluence Source`,
+  `Database Tools` i `Operational Context`.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
 - `Platform` dotyczy overview i customizacji Team Delivery Workspace:

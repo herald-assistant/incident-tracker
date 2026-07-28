@@ -89,6 +89,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Elastic Logs', route: '/elastic', icon: 'manage_search' },
       { label: 'GitLab Source', route: '/gitlab', icon: 'source' },
       { label: 'Jira Source', route: '/jira', icon: 'assignment' },
+      { label: 'Confluence Source', route: '/confluence', icon: 'article' },
       { label: 'Database Tools', route: '/database', icon: 'database' },
       { label: 'Operational Context', route: '/operational-context', icon: 'hub' }
     ]

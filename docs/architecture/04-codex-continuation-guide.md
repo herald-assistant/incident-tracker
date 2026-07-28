@@ -309,7 +309,8 @@ przeczytaj `frontend/AGENTS.md` i najblizszy lokalny `AGENTS.md` w
 - `Analysis Features` dla dedykowanych feature'ow, na teraz
   `Incident Analysis` i `Flow Explorer`,
 - `Tool Workbench` dla analysis-independent capability: Elastic Logs,
-  GitLab Source, Database Tools i Operational Context,
+  GitLab Source, Jira Source, Confluence Source, Database Tools i Operational
+  Context,
 - `Platform` dla startowego overview workspace'u oraz customizacji:
   settings, personalizacja, autentykacja i modele.
 
@@ -351,6 +352,9 @@ wlacznie z `toolFeedback`; starsze eksporty bez tego pola sa normalizowane do
 pustych list.
 route `/elastic` sluzy do recznego odpalania helper endpointow Elastica,
 route `/gitlab` sluzy do recznego odpalania helper endpointow GitLaba, route
+`/jira` sluzy do recznego pobierania materialu issue, route `/confluence`
+sluzy do recznego pobierania tekstu strony przez ten sam adapter co
+Change Verification, route
 `/database` sluzy do recznego testowania endpointow nad `DatabaseToolService`
 z jawnym operatorskim `environment`, a route `/operational-context` sluzy do
 utrzymania katalogu systemow, repozytoriow, procesow, integracji i handoffu.
