@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
@@ -45,7 +46,7 @@ class ChangeVerificationReportMapperTest {
                         ChangeVerificationReportSectionIds.STORY_COMPLIANCE,
                         "Story compliance",
                         0,
-                        "## Krotkie podsumowanie weryfikacji\nAI-authored story report.",
+                        "## Wynik weryfikacji\nAI-authored story report.",
                         new AnalysisReportMeta(
                                 List.of(new AnalysisReportReference(
                                         "jira",
@@ -77,7 +78,11 @@ class ChangeVerificationReportMapperTest {
         assertThat(section(report, ChangeVerificationReportSectionIds.STORY_COMPLIANCE).markdown())
                 .contains("AI-authored story report");
         assertThat(section(report, ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE).markdown())
-                .contains("Brak strukturalnych `verificationChecks`");
+                .contains("Brak strukturalnych kryteriów")
+                .contains("aktualny kontrakt")
+                .doesNotContain("Dodatkowe ustalenia")
+                .doesNotContain("fallback")
+                .doesNotContain("verificationChecks");
         assertThat(section(report, ChangeVerificationReportSectionIds.SMOKE_PACK).markdown())
                 .isEqualTo("Smoke pack was not generated.");
         assertThat(report.meta().visibilityLimits()).contains(
@@ -85,6 +90,86 @@ class ChangeVerificationReportMapperTest {
                 "Diff visibility is partial."
         );
         assertThat(report.meta().confidence()).isEqualTo("high");
+    }
+
+    @Test
+    void shouldBuildHumanFirstFallbackWithAttentionBeforeConfirmedChecks() {
+        var result = new ChangeVerificationResultResponse(
+                "COMPLETED",
+                "CRM-123",
+                "https://jira.example.com/browse/CRM-123",
+                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
+                "prompt",
+                new ChangeVerificationComplianceResponse(
+                        true,
+                        false,
+                        "PASSED_WITH_WARNINGS",
+                        List.of(
+                                check(
+                                        "story-001",
+                                        "PASSED",
+                                        "Event uruchamia inicjalizację.",
+                                        "Przepływ został potwierdzony testem integracyjnym.",
+                                        ""
+                                ),
+                                check(
+                                        "story-002",
+                                        "WARNING",
+                                        "Błąd publikacji nie może zostać pominięty.",
+                                        "Wyjątek jest logowany, ale nie jest propagowany.",
+                                        "Dodać retry albo zaakceptować ryzyko."
+                                )
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of()
+                ),
+                null,
+                null,
+                null
+        );
+
+        var markdown = section(
+                ChangeVerificationReportMapper.toReport(result),
+                ChangeVerificationReportSectionIds.STORY_COMPLIANCE
+        ).markdown();
+
+        assertThat(markdown)
+                .contains("## Wynik weryfikacji")
+                .contains("**Potwierdzone:** 1")
+                .contains("**Wymaga uwagi:** 1")
+                .contains("## Wymaga uwagi")
+                .contains("| Status | Kryterium | Wniosek | Rekomendowane działanie |")
+                .contains("## Potwierdzone wymagania")
+                .contains("## Szczegóły kryteriów")
+                .doesNotContain("criterionSource")
+                .doesNotContain("evidenceRefs")
+                .doesNotContain("gaps: []");
+        assertThat(markdown.indexOf("## Wymaga uwagi"))
+                .isLessThan(markdown.indexOf("## Potwierdzone wymagania"));
+    }
+
+    private ChangeVerificationVerificationCheckResponse check(
+            String id,
+            String status,
+            String criterion,
+            String analysis,
+            String suggestedAction
+    ) {
+        return new ChangeVerificationVerificationCheckResponse(
+                id,
+                "STORY_COMPLIANCE",
+                "Jira acceptance criteria",
+                "System powinien opublikować event.",
+                "explicit",
+                criterion,
+                status,
+                "backend/src/EventPublisher.java",
+                analysis,
+                List.of("backend/src/EventPublisher.java"),
+                List.of(),
+                suggestedAction
+        );
     }
 
     private AnalysisReportSection section(AnalysisReport report, String id) {

@@ -255,12 +255,19 @@
                   [attr.aria-labelledby]="'change-verification-tab-' + section.id"
                   tabindex="0"
                 >
-                  <app-analysis-report-section-content
-                    [markdown]="section.markdown"
-                    [emptyText]="section.emptyText"
-                    [meta]="section.meta"
-                    metaAlign="start"
-                  ></app-analysis-report-section-content>
+                  @if (section.isComplianceSection) {
+                    <app-change-verification-compliance-result
+                      [checks]="section.complianceChecks"
+                      [meta]="section.meta"
+                    ></app-change-verification-compliance-result>
+                  } @else {
+                    <app-analysis-report-section-content
+                      [markdown]="section.markdown"
+                      [emptyText]="section.emptyText"
+                      [meta]="section.meta"
+                      metaAlign="start"
+                    ></app-analysis-report-section-content>
+                  }
                 </section>
               }
             }

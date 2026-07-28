@@ -15,17 +15,37 @@ interpretacji, zaleznosci i ryzyk, a nie jako automatyczne rozszerzenie scope.
 
 Sekcja musi zawierac:
 
-1. `Krotkie podsumowanie weryfikacji`:
-   - laczny status,
-   - najwazniejszy potwierdzony rezultat,
-   - najwazniejszy rozjazd albo limit widocznosci.
-2. `Szczegolowy raport`:
+1. `Wynik weryfikacji`:
+   - laczny status i liczby: potwierdzone / wymagajace uwagi / wszystkie,
+   - jedno najwazniejsze potwierdzenie,
+   - jedno najwazniejsze ryzyko albo limit,
+   - jedno rekomendowane dzialanie.
+2. `Wymaga uwagi`:
+   - tabela tylko dla `FAILED`, `WARNING`, `NOT_VERIFIED`, `conflicting`
+     i innych niejednoznacznych statusow,
+   - kolumny: `Status | Kryterium | Wniosek | Rekomendowane dzialanie`,
+   - najpowazniejsze pozycje jako pierwsze.
+3. `Potwierdzone wymagania`:
+   - zwarta tabela dla `PASSED`,
+   - kolumny: `Wymaganie | Zrodlo | Co potwierdzono | Status`.
+4. `Szczegoly kryteriow`:
    - osobny blok dla kazdego jawnego acceptance criterion,
    - osobne bloki dla wymagan z opisu i komentarzy,
    - osobne bloki dla uzasadnionych wymagan inferowanych z kontekstu.
-3. `Rozbieznosci i rekomendacje`:
-   - konkretna korekta kodu, story albo kryterium,
-   - pytania wymagajace decyzji ownera.
+5. `Rekomendowane dzialania`, tylko gdy istnieja konkretne dzialania.
+
+Raport jest czytany przez czlowieka. Nie wypisuj nazw pol kontraktu jako
+surowej listy `scope`, `criterionSource`, `criterionQuote`,
+`interpretationType`, `verifiedAgainst`, `evidenceRefs`, `gaps` i
+`suggestedAction`. Uzyj naturalnych etykiet i grupuj informacje wedlug decyzji,
+ktora operator ma podjac.
+
+Komorki tabel musza byc krotkie. Nie umieszczaj w nich dlugich cytatow, list
+sciezek ani references. Pelny cytat i techniczny proof umiesc w szczegolach
+kryterium. References, visibility limits, open questions, gaps i warnings
+przekaz jako section meta, aby UI mogl pokazac je na zadanie.
+
+Nie pokazuj pustych wartosci, `[]`, `n/a`, `Brak` ani sekcji bez tresci.
 
 ## Zasady Interpretacji
 
@@ -58,6 +78,9 @@ Kazdy check musi miec:
 - `evidenceRefs`,
 - `gaps`,
 - `suggestedAction`.
+
+Ten kontrakt pozostaje wymagany w finalnym JSON, nawet gdy Markdown prezentuje
+go w bardziej zwartej, human-first formie.
 
 ## Readiness
 

@@ -69,10 +69,26 @@ Po jednym targeted retry nierozstrzygalny brak zamien na
 5. Wywolaj `report_get_current`.
 6. Sprawdz, czy kazda aktywna sekcja istnieje, ma niepusty Markdown i meta.
 
-Kazda sekcja musi zaczynac sie od `## Krotkie podsumowanie weryfikacji`, a
-nastepnie zawierac `## Szczegolowy raport`. Checki maja pokazywac zrodlo,
-cytat, `interpretationType`, konkretne oczekiwanie, status, proof z kodu/MR,
-refs, gaps i suggested action.
+Kazda sekcja musi miec human-first Markdown w kolejnosci:
+
+1. `## Wynik weryfikacji` z werdyktem, licznikami i trzema najwazniejszymi
+   wnioskami: potwierdzenie, ryzyko, dzialanie.
+2. `## Wymaga uwagi` jako tabela niepotwierdzonych albo problematycznych
+   kryteriow. Sekcja moze zostac pominieta, gdy nie ma takich pozycji.
+3. `## Potwierdzone wymagania` jako zwarta tabela pozycji `PASSED`.
+4. `## Szczegoly kryteriow` z pelnym cytatem, interpretacja i proof dla
+   operatora, ktory chce wejsc glebiej.
+5. `## Rekomendowane dzialania`, gdy istnieja konkretne dzialania.
+
+Nie tworz z Markdown zrzutu pol kontraktu. W szczegolnosci nie wypisuj
+mechanicznie `scope`, `criterionSource`, `criterionQuote`,
+`interpretationType`, `verifiedAgainst`, `evidenceRefs`, `gaps` i
+`suggestedAction`. Pelny kontrakt nadal musi znalezc sie w finalnym JSON.
+
+Tabele musza byc skanowalne: krotkie komorki, bez dlugich cytatow, sciezek i
+list references. References, visibility limits, open questions, gaps i
+warnings zapisuj w section meta, aby UI prezentowal je jako zwijane informacje
+na zadanie. Pomijaj puste wartosci, `[]`, `n/a`, `Brak` i puste sekcje.
 
 ## Finalna Odpowiedz
 
@@ -91,6 +107,8 @@ pelny JSON. Nie zwracaj opisu przed ani po JSON.
 - Parent, subtaski i Confluence nie rozszerzaja po cichu target scope.
 - `FAILED` oznacza widoczny rozjazd, a brak proof oznacza `NOT_VERIFIED`.
 - Report meta pokazuje refs, gaps, open questions i visibility limits.
+- Najwazniejsze rozjazdy sa widoczne przed pozycjami potwierdzonymi.
+- Markdown nie wymaga znajomosci nazw pol kontraktu JSON.
 - `report_get_current` potwierdza finalny zapis.
 
 ## Antywzorce

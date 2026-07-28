@@ -29,9 +29,27 @@ powiazana z konkretnym fragmentem zmiany, do ktorego ma zastosowanie.
 
 Sekcja musi zawierac:
 
-1. `Krotkie podsumowanie weryfikacji`.
-2. `Szczegolowy raport` z osobnym checkiem dla kazdej istotnej reguly.
-3. `Rozbieznosci i rekomendacje`.
+1. `Wynik weryfikacji` z lacznym statusem, licznikami oraz najwazniejszym
+   potwierdzeniem, ryzykiem i dzialaniem.
+2. `Wymaga uwagi` jako tabela tylko dla niepotwierdzonych, ostrzegawczych,
+   sprzecznych albo naruszonych regul:
+   `Status | Regula | Wniosek | Rekomendowane dzialanie`.
+3. `Potwierdzone wymagania` jako zwarta tabela:
+   `Regula | Zrodlo | Co potwierdzono | Status`.
+4. `Szczegoly kryteriow` z osobnym checkiem dla kazdej istotnej reguly.
+5. `Rekomendowane dzialania`, tylko gdy istnieja konkretne dzialania.
+
+Markdown ma byc raportem dla czlowieka, nie zrzutem kontraktu JSON. Nie
+wypisuj nazw pol `scope`, `criterionSource`, `criterionQuote`,
+`interpretationType`, `verifiedAgainst`, `evidenceRefs`, `gaps` i
+`suggestedAction` jako technicznej listy. Uzywaj naturalnych etykiet.
+
+W tabelach umieszczaj krotkie wnioski. Cytaty z instrukcji, dlugie sciezki,
+proof i references przenies do szczegolow albo section meta. References,
+visibility limits, open questions, gaps i warnings musza byc section meta,
+aby UI pokazal je dopiero po rozwinieciu.
+
+Nie pokazuj pustych wartosci, `[]`, `n/a`, `Brak` ani pustych sekcji.
 
 Kazdy check musi miec ten sam kontrakt co `verificationChecks`, z:
 
@@ -40,6 +58,9 @@ Kazdy check musi miec ten sam kontrakt co `verificationChecks`, z:
 - `interpretationType`,
 - lista plikow/MR/kodu, wobec ktorych regule sprawdzono,
 - statusem i source refs.
+
+Pelny kontrakt checka pozostaje wymagany w finalnym JSON niezaleznie od
+human-first formy Markdown.
 
 Gdy instrukcja jest ogolna, ale jej zastosowanie do zmiany wymaga
 interpretacji, uzyj `interpretationType=inferred`. Gdy kilka instrukcji jest

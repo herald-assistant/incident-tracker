@@ -1,0 +1,227 @@
+@if (checks().length) {
+  <div class="change-verification-compliance">
+    <section class="change-verification-compliance__summary" aria-labelledby="compliance-section-summary">
+      <div class="change-verification-compliance__verdict">
+        <div>
+          <span class="field-label">Wynik sekcji</span>
+          <h4 id="compliance-section-summary">{{ sectionSummary() }}</h4>
+        </div>
+        <span [attr.class]="statusClass(sectionStatus())">{{ statusLabel(sectionStatus()) }}</span>
+      </div>
+
+      <dl class="change-verification-compliance__counts" aria-label="Podsumowanie kryteriów">
+        <div>
+          <dt>Zweryfikowane</dt>
+          <dd>{{ checks().length }}</dd>
+        </div>
+        <div>
+          <dt>Potwierdzone</dt>
+          <dd>{{ passedChecks().length }}</dd>
+        </div>
+        <div>
+          <dt>Wymaga uwagi</dt>
+          <dd>{{ attentionChecks().length }}</dd>
+        </div>
+      </dl>
+
+      <div class="change-verification-compliance__highlights">
+        <div class="change-verification-compliance__highlight change-verification-compliance__highlight--positive">
+          <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+          <div>
+            <strong>Najważniejsze potwierdzenie</strong>
+            <p>{{ confirmedHighlight() }}</p>
+          </div>
+        </div>
+        <div
+          class="change-verification-compliance__highlight"
+          [class.change-verification-compliance__highlight--warning]="attentionChecks().length"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">
+            {{ attentionChecks().length ? 'warning' : 'verified' }}
+          </span>
+          <div>
+            <strong>Najważniejsze ryzyko</strong>
+            <p>{{ riskHighlight() }}</p>
+          </div>
+        </div>
+        <div class="change-verification-compliance__highlight">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+          <div>
+            <strong>Rekomendowane działanie</strong>
+            <p>{{ actionHighlight() }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    @if (attentionChecks().length) {
+      <section class="change-verification-compliance__section" aria-labelledby="attention-checks-heading">
+        <div class="change-verification-compliance__section-heading">
+          <div>
+            <span class="field-label">Priorytet review</span>
+            <h4 id="attention-checks-heading">Wymaga uwagi</h4>
+          </div>
+          <span class="change-verification-compliance__section-count">{{ attentionChecks().length }}</span>
+        </div>
+
+        <div class="change-verification-compliance__table-wrap">
+          <table class="change-verification-compliance__table">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Kryterium</th>
+                <th>Wniosek</th>
+                <th>Rekomendowane działanie</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (check of attentionChecks(); track check.id) {
+                <tr>
+                  <td>
+                    <span
+                      class="change-verification-compliance__table-status"
+                      [class]="toneClass(check.verificationStatus)"
+                    >
+                      {{ statusLabel(check.verificationStatus) }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong>{{ criterionLabel(check) }}</strong>
+                    <small>{{ sourceLabel(check) }}</small>
+                  </td>
+                  <td>{{ conclusion(check) }}</td>
+                  <td>{{ action(check) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (passedChecks().length) {
+      <section class="change-verification-compliance__section" aria-labelledby="passed-checks-heading">
+        <div class="change-verification-compliance__section-heading">
+          <div>
+            <span class="field-label">Potwierdzony zakres</span>
+            <h4 id="passed-checks-heading">Potwierdzone wymagania</h4>
+          </div>
+          <span class="change-verification-compliance__section-count change-verification-compliance__section-count--positive">
+            {{ passedChecks().length }}
+          </span>
+        </div>
+
+        <div class="change-verification-compliance__table-wrap">
+          <table class="change-verification-compliance__table">
+            <thead>
+              <tr>
+                <th>Wymaganie</th>
+                <th>Źródło</th>
+                <th>Co potwierdzono</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (check of passedChecks(); track check.id) {
+                <tr>
+                  <td><strong>{{ criterionLabel(check) }}</strong></td>
+                  <td>{{ sourceLabel(check) }}</td>
+                  <td>{{ conclusion(check) }}</td>
+                  <td>
+                    <span
+                      class="change-verification-compliance__table-status"
+                      [class]="toneClass(check.verificationStatus)"
+                    >
+                      {{ statusLabel(check.verificationStatus) }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    <section class="change-verification-compliance__section" aria-labelledby="criteria-details-heading">
+      <div class="change-verification-compliance__section-heading">
+        <div>
+          <span class="field-label">Pełny materiał</span>
+          <h4 id="criteria-details-heading">Szczegóły kryteriów</h4>
+        </div>
+      </div>
+
+      <div class="change-verification-compliance__details">
+        @for (check of orderedChecks(); track check.id) {
+          <details class="change-verification-compliance__detail">
+            <summary>
+              <span
+                class="change-verification-compliance__detail-marker"
+                [class]="toneClass(check.verificationStatus)"
+                aria-hidden="true"
+              ></span>
+              <span class="change-verification-compliance__detail-title">
+                <strong>{{ criterionLabel(check) }}</strong>
+                <small>{{ sourceLabel(check) }}</small>
+              </span>
+              <span class="change-verification-compliance__detail-status">
+                {{ statusLabel(check.verificationStatus) }}
+              </span>
+              <span class="material-symbols-outlined change-verification-compliance__expand-icon" aria-hidden="true">
+                expand_more
+              </span>
+            </summary>
+
+            <div class="change-verification-compliance__detail-body">
+              <div class="change-verification-compliance__detail-lead">
+                <span class="field-label">Wniosek</span>
+                <p>{{ conclusion(check) }}</p>
+              </div>
+
+              @if (hasText(check.criterionQuote) && isMeaningful(check.criterionQuote)) {
+                <blockquote>
+                  <span class="field-label">Fragment materiału źródłowego</span>
+                  <p>{{ check.criterionQuote }}</p>
+                </blockquote>
+              }
+
+              <dl class="change-verification-compliance__detail-grid">
+                @if (hasText(check.interpretationType)) {
+                  <div>
+                    <dt>Sposób interpretacji</dt>
+                    <dd>{{ interpretationLabel(check.interpretationType) }}</dd>
+                  </div>
+                }
+                @if (hasText(check.verifiedAgainst) && isMeaningful(check.verifiedAgainst)) {
+                  <div>
+                    <dt>Zweryfikowano względem</dt>
+                    <dd>{{ check.verifiedAgainst }}</dd>
+                  </div>
+                }
+                @if (isMeaningful(check.suggestedAction)) {
+                  <div>
+                    <dt>Rekomendowane działanie</dt>
+                    <dd>{{ check.suggestedAction }}</dd>
+                  </div>
+                }
+              </dl>
+            </div>
+          </details>
+        }
+      </div>
+    </section>
+
+    <app-analysis-report-meta [meta]="meta()" align="start"></app-analysis-report-meta>
+  </div>
+} @else {
+  <div class="change-verification-compliance change-verification-compliance--empty">
+    <section class="change-verification-compliance__empty-state">
+      <span class="material-symbols-outlined" aria-hidden="true">rule</span>
+      <div>
+        <h4>Brak strukturalnego wyniku weryfikacji</h4>
+        <p>Analiza nie zwróciła kryteriów wymaganych przez aktualny kontrakt.</p>
+      </div>
+    </section>
+    <app-analysis-report-meta [meta]="meta()" align="start"></app-analysis-report-meta>
+  </div>
+}

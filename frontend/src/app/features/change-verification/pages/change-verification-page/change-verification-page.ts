@@ -6,11 +6,13 @@ import { ActivatedRoute } from '@angular/router';
 import { finalize, Subscription, switchMap, timer } from 'rxjs';
 
 import {
+  ChangeVerificationCompliance,
   ChangeVerificationJobMode,
   ChangeVerificationJobStartRequest,
   ChangeVerificationJobStateSnapshot,
   ChangeVerificationSmokePack,
-  ChangeVerificationSmokeTestExecution
+  ChangeVerificationSmokeTestExecution,
+  ChangeVerificationVerificationCheck
 } from '../../models/change-verification.models';
 import { ChangeVerificationApiService } from '../../services/change-verification-api.service';
 import {
@@ -28,6 +30,7 @@ import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-f
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
 import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
+import { ChangeVerificationComplianceResultComponent } from '../../components/change-verification-compliance-result/change-verification-compliance-result';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import { downloadJsonFile, readJsonFile, sanitizeFileNamePart } from '../../../../core/utils/json-file.utils';
@@ -67,6 +70,8 @@ interface ChangeVerificationReportSectionDisplay {
   markdown: string;
   emptyText: string;
   meta: AnalysisReportMeta;
+  complianceChecks: ChangeVerificationVerificationCheck[];
+  isComplianceSection: boolean;
 }
 
 @Component({
@@ -76,6 +81,7 @@ interface ChangeVerificationReportSectionDisplay {
     AnalysisStepsPanelComponent,
     AnalysisReportMetaComponent,
     AnalysisReportSectionContentComponent,
+    ChangeVerificationComplianceResultComponent,
     ReactiveFormsModule
   ],
   templateUrl: './change-verification-page.html',
@@ -180,7 +186,10 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly execution = computed(() => this.job()?.result?.execution ?? null);
   readonly executionResults = computed(() => this.execution()?.testResults ?? []);
   readonly reportDisplay = computed(() =>
-    changeVerificationReportDisplay(this.job()?.report ?? null)
+    changeVerificationReportDisplay(
+      this.job()?.report ?? null,
+      this.job()?.result?.compliance ?? null
+    )
   );
   readonly workflowIsRunning = computed(() => {
     const currentJob = this.job();
@@ -812,7 +821,8 @@ function looksLikeUrl(value: string): boolean {
 }
 
 function changeVerificationReportDisplay(
-  report: AnalysisReport | null
+  report: AnalysisReport | null,
+  compliance: ChangeVerificationCompliance | null
 ): ChangeVerificationReportDisplay | null {
   if (!report) {
     return null;
@@ -823,24 +833,44 @@ function changeVerificationReportDisplay(
     title: cleanText(report.header) || 'Change Verification result',
     subTitle: cleanText(report.subHeader),
     confidence: cleanText(report.meta?.confidence),
-    sections: changeVerificationReportSections(report.sections),
+    sections: changeVerificationReportSections(report.sections, compliance),
     appendix: normalizedMeta(report.meta)
   };
 }
 
 function changeVerificationReportSections(
-  sections: AnalysisReportSection[] | null | undefined
+  sections: AnalysisReportSection[] | null | undefined,
+  compliance: ChangeVerificationCompliance | null
 ): ChangeVerificationReportSectionDisplay[] {
   return sortedSections(sections).map((section) => {
     const id = cleanText(section.id) || cleanText(section.title) || 'SECTION';
+    const normalizedId = id.toUpperCase();
     return {
       id,
       title: cleanText(section.title) || id,
       tabLabel: changeVerificationTabLabel(id, section.title),
       markdown: cleanText(section.markdown),
       emptyText: `No confirmed details for ${changeVerificationTabLabel(id, section.title)}.`,
-      meta: normalizedMeta(section.meta)
+      meta: normalizedMeta(section.meta),
+      complianceChecks: complianceChecksForSection(compliance, normalizedId),
+      isComplianceSection: ['STORY_COMPLIANCE', 'INSTRUCTION_COMPLIANCE'].includes(normalizedId)
     };
+  });
+}
+
+function complianceChecksForSection(
+  compliance: ChangeVerificationCompliance | null,
+  sectionId: string
+): ChangeVerificationVerificationCheck[] {
+  return [...(compliance?.verificationChecks ?? [])].filter((check) => {
+    const scope = cleanText(check.scope).toUpperCase();
+    if (sectionId === 'STORY_COMPLIANCE') {
+      return ['STORY', 'ACCEPTANCE', 'JIRA', 'CONFLUENCE'].some((value) => scope.includes(value));
+    }
+    if (sectionId === 'INSTRUCTION_COMPLIANCE') {
+      return ['INSTRUCTION', 'AGENTS', 'COPILOT'].some((value) => scope.includes(value));
+    }
+    return false;
   });
 }
 

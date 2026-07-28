@@ -65,17 +65,22 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
         assertThat(skill("change-verification-story-compliance-section")).contains(
                 "STORY_COMPLIANCE",
                 "interpretationType",
-                "wymagan inferowanych"
+                "wymagan inferowanych",
+                "Wymaga uwagi",
+                "Potwierdzone wymagania"
         );
         assertThat(skill("change-verification-instruction-compliance-section")).contains(
                 "INSTRUCTION_COMPLIANCE",
                 "applicableChangedFiles",
-                "interpretationType"
+                "interpretationType",
+                "Markdown ma byc raportem dla czlowieka"
         );
         assertThat(skill("change-verification-write-report")).contains(
                 "report_upsert_section",
                 "report_update_meta",
-                "report_get_current"
+                "report_get_current",
+                "human-first Markdown",
+                "## Szczegoly kryteriow"
         );
     }
 

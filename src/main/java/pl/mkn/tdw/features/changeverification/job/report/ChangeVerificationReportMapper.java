@@ -210,54 +210,110 @@ public final class ChangeVerificationReportMapper {
         }
 
         var checks = checksForScope(compliance.verificationChecks(), scope);
-        var findings = findingsForScope(compliance.findings(), scope);
+        var passedChecks = checks.stream().filter(ChangeVerificationReportMapper::isPassedCheck).toList();
+        var attentionChecks = checks.stream().filter(check -> !isPassedCheck(check)).toList();
         var lines = new ArrayList<String>();
-        lines.add("## Krótkie podsumowanie weryfikacji");
-        lines.add("Status: `" + safeStatus(compliance.status()) + "`.");
+        lines.add("## Wynik weryfikacji");
+        lines.add("**Status:** `" + safeStatus(compliance.status()) + "`"
+                + " · **Potwierdzone:** " + passedChecks.size()
+                + " · **Wymaga uwagi:** " + attentionChecks.size()
+                + " · **Wszystkie kryteria:** " + checks.size());
         lines.add("Zakres: " + evidenceScope + ".");
         if (!checks.isEmpty()) {
-            lines.add("Zweryfikowano " + checks.size() + " kryterium/kryteria w tej sekcji.");
-        } else if (!findings.isEmpty()) {
-            lines.add("AI zwrocilo findingi, ale nie rozpisalo strukturalnych checkow dla tej sekcji.");
+            appendKeyTakeaways(lines, passedChecks, attentionChecks, compliance.suggestedActions());
         } else {
-            lines.add("Brak rozjazdow i brak szczegolowych checkow zwroconych dla tej sekcji.");
+            lines.add("Analiza nie zwrocila kryteriow wymaganych przez aktualny kontrakt.");
         }
 
-        lines.add("");
-        lines.add("## Szczegółowy raport");
         if (!checks.isEmpty()) {
-            for (var check : checks) {
-                appendVerificationCheck(lines, check);
+            if (!attentionChecks.isEmpty()) {
+                lines.add("");
+                lines.add("## Wymaga uwagi");
+                lines.add("| Status | Kryterium | Wniosek | Rekomendowane działanie |");
+                lines.add("| --- | --- | --- | --- |");
+                for (var check : attentionChecks) {
+                    appendAttentionTableRow(lines, check);
+                }
             }
+
+            if (!passedChecks.isEmpty()) {
+                lines.add("");
+                lines.add("## Potwierdzone wymagania");
+                lines.add("| Wymaganie | Źródło | Co potwierdzono | Status |");
+                lines.add("| --- | --- | --- | --- |");
+                for (var check : passedChecks) {
+                    appendPassedTableRow(lines, check);
+                }
+            }
+
+            lines.add("");
+            lines.add("## Szczegóły kryteriów");
+            checks.forEach(check -> appendVerificationCheck(lines, check));
         } else {
-            lines.add("Brak strukturalnych `verificationChecks` dla sekcji `" + title + "`.");
-            lines.add("Dla starszych wynikow ponizej pokazujemy findingi jako fallback.");
+            lines.add("");
+            lines.add("Brak strukturalnych kryteriów dla sekcji `" + title + "`.");
         }
 
-        if (!findings.isEmpty()) {
+        var suggestedActions = compliance.suggestedActions().stream()
+                .filter(ChangeVerificationReportMapper::meaningfulText)
+                .toList();
+        if (!suggestedActions.isEmpty()) {
             lines.add("");
-            lines.add("### Findings");
-            for (var finding : findings) {
-                lines.add("- **[" + finding.severity() + "] " + fallback(finding.summary(), "Finding") + "**");
-                addIndented(lines, finding.details());
-                if (StringUtils.hasText(finding.source())) {
-                    addIndented(lines, "Source: `" + finding.source().trim() + "`");
-                }
-                if (!finding.references().isEmpty()) {
-                    addIndented(lines, "References: " + String.join(", ", finding.references()));
-                }
-                if (StringUtils.hasText(finding.suggestedAction())) {
-                    addIndented(lines, "Suggested action: " + finding.suggestedAction().trim());
-                }
-            }
-        }
-
-        if (!compliance.suggestedActions().isEmpty()) {
-            lines.add("");
-            lines.add("### Recommended actions");
-            compliance.suggestedActions().forEach(action -> lines.add("- " + action));
+            lines.add("## Rekomendowane działania");
+            suggestedActions.forEach(action -> lines.add("- " + action.trim()));
         }
         return compactMarkdown(lines);
+    }
+
+    private static void appendKeyTakeaways(
+            List<String> lines,
+            List<ChangeVerificationVerificationCheckResponse> passedChecks,
+            List<ChangeVerificationVerificationCheckResponse> attentionChecks,
+            List<String> suggestedActions
+    ) {
+        lines.add("");
+        lines.add("### Najważniejsze wnioski");
+        if (!passedChecks.isEmpty()) {
+            var check = passedChecks.get(0);
+            lines.add("- **Potwierdzenie:** " + fallback(check.analysis(), check.expectedCriterion(), "Kryterium potwierdzone."));
+        }
+        if (!attentionChecks.isEmpty()) {
+            var check = attentionChecks.get(0);
+            lines.add("- **Ryzyko:** " + fallback(check.analysis(), check.expectedCriterion(), "Kryterium wymaga uwagi."));
+        }
+        var action = attentionChecks.stream()
+                .map(ChangeVerificationVerificationCheckResponse::suggestedAction)
+                .filter(ChangeVerificationReportMapper::meaningfulText)
+                .findFirst()
+                .orElseGet(() -> suggestedActions.stream()
+                        .filter(ChangeVerificationReportMapper::meaningfulText)
+                        .findFirst()
+                        .orElse(""));
+        if (StringUtils.hasText(action)) {
+            lines.add("- **Działanie:** " + action.trim());
+        }
+    }
+
+    private static void appendAttentionTableRow(
+            List<String> lines,
+            ChangeVerificationVerificationCheckResponse check
+    ) {
+        lines.add("| " + markdownTableCell(safeStatus(check.verificationStatus()))
+                + " | " + markdownTableCell(fallback(check.expectedCriterion(), check.criterionQuote(), check.id()))
+                + " | " + markdownTableCell(fallback(check.analysis(), check.verifiedAgainst(), "Brak wniosku."))
+                + " | " + markdownTableCell(meaningfulText(check.suggestedAction())
+                ? check.suggestedAction()
+                : "Wymaga decyzji ownera.") + " |");
+    }
+
+    private static void appendPassedTableRow(
+            List<String> lines,
+            ChangeVerificationVerificationCheckResponse check
+    ) {
+        lines.add("| " + markdownTableCell(fallback(check.expectedCriterion(), check.criterionQuote(), check.id()))
+                + " | " + markdownTableCell(fallback(check.criterionSource(), check.scope(), "Materiał źródłowy"))
+                + " | " + markdownTableCell(fallback(check.analysis(), check.verifiedAgainst(), "Potwierdzone."))
+                + " | " + markdownTableCell(safeStatus(check.verificationStatus())) + " |");
     }
 
     private static void appendVerificationCheck(
@@ -265,29 +321,29 @@ public final class ChangeVerificationReportMapper {
             ChangeVerificationVerificationCheckResponse check
     ) {
         lines.add("");
-        lines.add("### " + fallback(check.id(), "criterion") + " - " + safeStatus(check.verificationStatus()));
-        lines.add("- **Kryterium:** " + fallback(check.expectedCriterion(), "n/a"));
-        lines.add("- **Źródło kryterium:** " + fallback(check.criterionSource(), "n/a"));
-        lines.add("- **Sposób interpretacji:** `" + fallback(check.interpretationType(), "not_verifiable") + "`");
-        lines.add("- **Cytat / fragment źródła:** " + quote(check.criterionQuote()));
-        lines.add("- **Zweryfikowano względem:** " + fallback(check.verifiedAgainst(), "n/a"));
+        lines.add("### " + safeStatus(check.verificationStatus()) + " · "
+                + fallback(check.expectedCriterion(), check.criterionQuote(), check.id()));
+        if (StringUtils.hasText(check.criterionSource())) {
+            lines.add("- **Źródło:** " + check.criterionSource().trim());
+        }
+        if (StringUtils.hasText(check.interpretationType())) {
+            lines.add("- **Interpretacja:** `" + check.interpretationType().trim() + "`");
+        }
+        if (StringUtils.hasText(check.verifiedAgainst())) {
+            lines.add("- **Zweryfikowano względem:** " + check.verifiedAgainst().trim());
+        }
         if (StringUtils.hasText(check.analysis())) {
             lines.add("");
             lines.add(check.analysis().trim());
         }
-        if (!check.evidenceRefs().isEmpty()) {
+        if (meaningfulText(check.criterionQuote())) {
             lines.add("");
-            lines.add("#### Evidence refs");
-            check.evidenceRefs().forEach(reference -> lines.add("- " + reference));
+            lines.add("#### Fragment materiału źródłowego");
+            lines.add(quote(check.criterionQuote()));
         }
-        if (!check.gaps().isEmpty()) {
+        if (meaningfulText(check.suggestedAction())) {
             lines.add("");
-            lines.add("#### Gaps");
-            check.gaps().forEach(gap -> lines.add("- " + gap));
-        }
-        if (StringUtils.hasText(check.suggestedAction())) {
-            lines.add("");
-            lines.add("#### Suggested action");
+            lines.add("#### Rekomendowane działanie");
             lines.add(check.suggestedAction().trim());
         }
     }
@@ -641,10 +697,27 @@ public final class ChangeVerificationReportMapper {
     }
 
     private static String quote(String value) {
-        if (!StringUtils.hasText(value) || "n/a".equalsIgnoreCase(value.trim())) {
-            return "`n/a`";
-        }
         return "> " + value.trim().replace("\n", "\n> ");
+    }
+
+    private static String markdownTableCell(String value) {
+        var normalized = fallback(value, "")
+                .replace("|", "\\|")
+                .replaceAll("\\R+", " ")
+                .replaceAll("\\s{2,}", " ")
+                .trim();
+        if (normalized.length() <= 240) {
+            return normalized;
+        }
+        return normalized.substring(0, 237).stripTrailing() + "...";
+    }
+
+    private static boolean meaningfulText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return false;
+        }
+        var normalized = value.trim().toLowerCase(Locale.ROOT);
+        return !List.of("brak", "n/a", "none", "not applicable").contains(normalized);
     }
 
     private static String normalizeConfidence(String confidence) {
