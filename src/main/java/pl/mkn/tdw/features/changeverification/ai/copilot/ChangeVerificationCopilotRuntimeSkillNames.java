@@ -12,7 +12,6 @@ public final class ChangeVerificationCopilotRuntimeSkillNames {
     public static final String STORY_COMPLIANCE_SECTION = "change-verification-story-compliance-section";
     public static final String INSTRUCTION_COMPLIANCE_SECTION = "change-verification-instruction-compliance-section";
     public static final String WRITE_REPORT = "change-verification-write-report";
-    public static final String SMOKE_PACK_DESIGN = "change-verification-smoke-pack-design";
 
     private ChangeVerificationCopilotRuntimeSkillNames() {
     }
@@ -33,7 +32,4 @@ public final class ChangeVerificationCopilotRuntimeSkillNames {
         return List.copyOf(skillNames);
     }
 
-    public static List<String> smokePackSkillNames() {
-        return List.of(SMOKE_PACK_DESIGN);
-    }
 }

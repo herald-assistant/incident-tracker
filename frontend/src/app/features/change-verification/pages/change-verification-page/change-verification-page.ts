@@ -7,11 +7,8 @@ import { finalize, Subscription, switchMap, timer } from 'rxjs';
 
 import {
   ChangeVerificationCompliance,
-  ChangeVerificationJobMode,
   ChangeVerificationJobStartRequest,
   ChangeVerificationJobStateSnapshot,
-  ChangeVerificationSmokePack,
-  ChangeVerificationSmokeTestExecution,
   ChangeVerificationVerificationCheck
 } from '../../models/change-verification.models';
 import { ChangeVerificationApiService } from '../../services/change-verification-api.service';
@@ -35,7 +32,7 @@ import { AnalysisResultTabsComponent } from '../../../../components/analysis-res
 import { ChangeVerificationComplianceResultComponent } from '../../components/change-verification-compliance-result/change-verification-compliance-result';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
-import { downloadJsonFile, readJsonFile, sanitizeFileNamePart } from '../../../../core/utils/json-file.utils';
+import { downloadJsonFile, readJsonFile } from '../../../../core/utils/json-file.utils';
 import {
   buildChangeVerificationExportEnvelope,
   buildChangeVerificationExportFileName,
@@ -103,20 +100,11 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly issueInput = signal('');
   readonly checkStoryCompliance = signal(true);
   readonly checkInstructionCompliance = signal(true);
-  readonly generateSmokePack = signal(true);
-  readonly executeSmokePack = signal(false);
   readonly selectedAiModel = signal('');
   readonly selectedReasoningEffort = signal('');
   readonly userInstructions = signal('');
   readonly job = signal<ChangeVerificationJobStateSnapshot | null>(null);
   readonly jobError = signal('');
-  readonly smokePackDraft = signal('');
-  readonly smokePackDraftError = signal('');
-  readonly smokeExecutionBaseUrl = signal('');
-  readonly smokeExecutionError = signal('');
-  readonly executeCleanup = signal(false);
-  readonly isSavingSmokePack = signal(false);
-  readonly isExecutingSmokePack = signal(false);
   readonly isSubmitting = signal(false);
   readonly isAiModelOptionsLoading = signal(false);
   readonly aiModelOptionsError = signal('');
@@ -128,12 +116,10 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   private resultCopyFeedbackHandle: number | null = null;
 
   readonly canStartJob = computed(
-    () => Boolean(this.issueInput().trim()) && !this.isSubmitting()
+    () => Boolean(this.issueInput().trim())
+      && (this.checkStoryCompliance() || this.checkInstructionCompliance())
+      && !this.isSubmitting()
   );
-  readonly isImportedResult = computed(() => {
-    const origin = this.exportState()?.origin;
-    return origin === 'imported' || origin === 'local';
-  });
   readonly canExportResult = computed(() => {
     const exportState = this.exportState();
     return Boolean(exportState?.job.status === 'COMPLETED' && exportState.job.result && exportState.job.report);
@@ -148,7 +134,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     }
     return '';
   });
-  readonly selectedModes = computed(() => this.buildModes());
   readonly aiModelOptions = computed<SelectOption[]>(() => {
     if (this.isAiModelOptionsLoading()) {
       return [
@@ -184,10 +169,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       label: this.reasoningEffortLabel(effort)
     }));
   });
-  readonly smokePack = computed(() => this.job()?.result?.smokePack ?? null);
-  readonly smokeTests = computed(() => this.smokePack()?.tests ?? []);
-  readonly execution = computed(() => this.job()?.result?.execution ?? null);
-  readonly executionResults = computed(() => this.execution()?.testResults ?? []);
   readonly reportDisplay = computed(() =>
     changeVerificationReportDisplay(
       this.job()?.report ?? null,
@@ -255,20 +236,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     this.checkInstructionCompliance.set(checked);
   }
 
-  protected toggleSmokePack(checked: boolean): void {
-    this.generateSmokePack.set(checked);
-    if (!checked) {
-      this.executeSmokePack.set(false);
-    }
-  }
-
-  protected toggleExecution(checked: boolean): void {
-    this.executeSmokePack.set(checked);
-    if (checked) {
-      this.generateSmokePack.set(true);
-    }
-  }
-
   protected selectAiModel(value: string): void {
     this.selectedAiModel.set((value || '').trim());
     this.syncReasoningEffortSelection();
@@ -311,47 +278,12 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       });
   }
 
-  protected updateSmokePackDraft(value: string): void {
-    this.smokePackDraft.set(value);
-    this.smokePackDraftError.set('');
-  }
-
-  protected updateSmokeExecutionBaseUrl(value: string): void {
-    this.smokeExecutionBaseUrl.set(value);
-    this.smokeExecutionError.set('');
-  }
-
-  protected toggleCleanupExecution(checked: boolean): void {
-    this.executeCleanup.set(checked);
-  }
-
   protected statusLabel(status: string | null | undefined): string {
     return formatStatus(status);
   }
 
   protected statusPillClass(status: string | null | undefined): string {
     return `status-pill ${statusClassName(status)}`;
-  }
-
-  protected resultStatusPillClass(status: string | null | undefined): string {
-    const normalized = this.normalized(status);
-    if (['PASSED', 'READY', 'COMPLETED', 'SKIPPED'].includes(normalized)) {
-      return 'status-pill status-pill--done';
-    }
-    if (['FAILED', 'BLOCKED', 'BLOCKER', 'NOT_READY'].includes(normalized)) {
-      return 'status-pill status-pill--error';
-    }
-    if (['RUNNING', 'IN_PROGRESS', 'ANALYZING', 'COLLECTING_CONTEXT'].includes(normalized)) {
-      return 'status-pill status-pill--running';
-    }
-    return 'status-pill status-pill--queued';
-  }
-
-  protected httpSummary(result: ChangeVerificationSmokeTestExecution): string {
-    if (!result.http) {
-      return 'HTTP not executed';
-    }
-    return `${result.http.method} ${result.http.statusCode ?? 'n/a'} · ${result.http.durationMillis}ms`;
   }
 
   protected hasText(value: string | null | undefined): boolean {
@@ -379,101 +311,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     }, 1600);
   }
 
-  protected saveSmokePackDraft(): void {
-    const currentJob = this.job();
-    if (!currentJob?.jobId || this.isImportedResult()) {
-      return;
-    }
-
-    const smokePack = this.parseSmokePackDraft();
-    if (!smokePack) {
-      return;
-    }
-
-    this.isSavingSmokePack.set(true);
-    this.changeVerificationApi
-      .updateSmokePack(currentJob.jobId, smokePack)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isSavingSmokePack.set(false))
-      )
-      .subscribe({
-        next: (updatedSmokePack) => {
-          const job = this.job();
-          if (!job?.result) {
-            return;
-          }
-          this.setJob({
-            ...job,
-            result: {
-              ...job.result,
-              smokePack: updatedSmokePack
-            }
-          });
-        },
-        error: (error: HttpErrorResponse) => this.smokePackDraftError.set(this.errorMessage(error))
-      });
-  }
-
-  protected downloadPostmanCollection(): void {
-    const currentJob = this.job();
-    if (!currentJob?.jobId || this.isImportedResult()) {
-      return;
-    }
-
-    this.changeVerificationApi
-      .getPostmanCollection(currentJob.jobId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (collection) =>
-          downloadJsonFile(
-            `${sanitizeFileNamePart(this.smokePack()?.postmanCollectionName || currentJob.jobId)}.postman_collection.json`,
-            collection
-          ),
-        error: (error: HttpErrorResponse) => this.smokePackDraftError.set(this.errorMessage(error))
-      });
-  }
-
-  protected executeAcceptedSmokePack(): void {
-    const currentJob = this.job();
-    const baseUrl = this.smokeExecutionBaseUrl().trim();
-    if (this.isImportedResult()) {
-      return;
-    }
-    if (!currentJob?.jobId || !baseUrl) {
-      this.smokeExecutionError.set('Base URL is required before execution.');
-      return;
-    }
-
-    this.isExecutingSmokePack.set(true);
-    this.smokeExecutionError.set('');
-    this.changeVerificationApi
-      .executeSmokePack(currentJob.jobId, {
-        baseUrl,
-        executeCleanup: this.executeCleanup()
-      })
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isExecutingSmokePack.set(false))
-      )
-      .subscribe({
-        next: (execution) => {
-          const job = this.job();
-          if (!job?.result) {
-            return;
-          }
-          this.setJob({
-            ...job,
-            result: {
-              ...job.result,
-              execution
-            }
-          });
-        },
-        error: (error: HttpErrorResponse) => this.smokeExecutionError.set(this.errorMessage(error))
-      });
-  }
-
   protected triggerImport(fileInput: HTMLInputElement): void {
     this.jobError.set('');
     fileInput.value = '';
@@ -494,16 +331,11 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       this.pollingSubscription?.unsubscribe();
       this.pollingSubscription = undefined;
       this.isSubmitting.set(false);
-      this.isSavingSmokePack.set(false);
-      this.isExecutingSmokePack.set(false);
       this.jobError.set('');
-      this.smokeExecutionError.set('');
 
       this.issueInput.set(imported.job.issueUrl || imported.job.issueKey);
       this.checkStoryCompliance.set(imported.job.checkStoryCompliance);
       this.checkInstructionCompliance.set(imported.job.checkInstructionCompliance);
-      this.generateSmokePack.set(imported.job.modes.includes('GENERATE_SMOKE_PACK'));
-      this.executeSmokePack.set(imported.job.modes.includes('EXECUTE_SMOKE_PACK'));
       this.selectedAiModel.set(imported.job.aiModel || '');
       this.selectedReasoningEffort.set(imported.job.reasoningEffort || '');
       this.syncAiModelSelection();
@@ -556,7 +388,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     const selectedReasoningEffort = this.selectedReasoningEffort().trim()
       || defaultReasoningEffortForAiModel(this.aiModelCatalog(), selectedAiModel);
     const request: ChangeVerificationJobStartRequest = {
-      modes: this.selectedModes(),
       checkStoryCompliance: this.checkStoryCompliance(),
       checkInstructionCompliance: this.checkInstructionCompliance(),
       userInstructions: userInstructions || undefined,
@@ -578,11 +409,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     exportState?: Omit<ChangeVerificationExportState, 'job'>
   ): void {
     this.job.set(job);
-    const nextDraft = job.result?.smokePack ? JSON.stringify(job.result.smokePack, null, 2) : '';
-    if (!this.smokePackDraft() || this.smokePackDraft() === nextDraft || !job.result?.smokePack) {
-      this.smokePackDraft.set(nextDraft);
-    }
-    this.smokePackDraftError.set('');
 
     if (exportState) {
       this.exportState.set({ ...exportState, job });
@@ -605,8 +431,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     this.pollingSubscription = undefined;
     this.job.set(null);
     this.jobError.set('');
-    this.smokeExecutionError.set('');
-    this.smokePackDraftError.set('');
     this.isSubmitting.set(true);
 
     this.historyApi
@@ -635,8 +459,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       this.issueInput.set(imported.job.issueUrl || imported.job.issueKey);
       this.checkStoryCompliance.set(imported.job.checkStoryCompliance);
       this.checkInstructionCompliance.set(imported.job.checkInstructionCompliance);
-      this.generateSmokePack.set(imported.job.modes.includes('GENERATE_SMOKE_PACK'));
-      this.executeSmokePack.set(imported.job.modes.includes('EXECUTE_SMOKE_PACK'));
       this.selectedAiModel.set(imported.job.aiModel || '');
       this.selectedReasoningEffort.set(imported.job.reasoningEffort || '');
       this.syncAiModelSelection();
@@ -716,29 +538,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       });
   }
 
-  private parseSmokePackDraft(): ChangeVerificationSmokePack | null {
-    try {
-      return JSON.parse(this.smokePackDraft()) as ChangeVerificationSmokePack;
-    } catch {
-      this.smokePackDraftError.set('Smoke pack draft is not valid JSON.');
-      return null;
-    }
-  }
-
-  private buildModes(): ChangeVerificationJobMode[] {
-    const modes: ChangeVerificationJobMode[] = [];
-    if (this.checkStoryCompliance() || this.checkInstructionCompliance()) {
-      modes.push('CHECK_COMPLIANCE');
-    }
-    if (this.generateSmokePack()) {
-      modes.push('GENERATE_SMOKE_PACK');
-    }
-    if (this.executeSmokePack()) {
-      modes.push('EXECUTE_SMOKE_PACK');
-    }
-    return modes.length > 0 ? modes : ['CHECK_COMPLIANCE'];
-  }
-
   private errorMessage(error: HttpErrorResponse): string {
     const body = error.error as Partial<ApiErrorResponse> | null;
     if (body?.message) {
@@ -748,10 +547,6 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       return error.message;
     }
     return 'Nie udalo sie uruchomic Change Verification.';
-  }
-
-  private normalized(value: string | null | undefined): string {
-    return String(value || '').trim().toUpperCase();
   }
 
   private syncAiModelSelection(): void {
@@ -882,8 +677,6 @@ function changeVerificationTabLabel(id: string, title: string | null | undefined
       return 'Story compliance';
     case 'INSTRUCTION_COMPLIANCE':
       return 'Instruction compliance';
-    case 'SMOKE_PACK':
-      return 'Smoke pack';
     default:
       return cleanText(title) || cleanText(id) || 'Result';
   }

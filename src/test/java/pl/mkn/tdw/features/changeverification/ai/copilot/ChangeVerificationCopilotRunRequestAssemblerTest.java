@@ -15,7 +15,6 @@ import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparation;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportFactory;
 import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportSectionIds;
@@ -144,52 +143,6 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         verify(toolFactory).createToolDefinitions(toolContext, CHANGE_VERIFICATION_DESCRIPTION_CONTEXT);
     }
 
-    @Test
-    void shouldAssembleSmokePackRunWithSmokePackSkillAndRunKind() {
-        var toolFactory = mock(CopilotSdkToolFactory.class);
-        var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
-        var assembler = new ChangeVerificationCopilotRunRequestAssembler(
-                toolFactory,
-                new ChangeVerificationCopilotToolSessionContextFactory(),
-                skillDirectoryResolver(),
-                new CopilotRunAuthMapper(),
-                new ChangeVerificationReportFactory()
-        );
-
-        when(toolFactory.createToolDefinitions(
-                contextCaptor.capture(),
-                eq(CHANGE_VERIFICATION_DESCRIPTION_CONTEXT)
-        )).thenReturn(List.of(
-                tool(GitLabToolNames.READ_OPENAPI_ENDPOINT_SLICE),
-                tool(CopilotReportToolNames.UPSERT_SECTION)
-        ));
-
-        var runRequest = assembler.assemble(
-                "cv-123-smoke",
-                request(),
-                sourceDiscovery(),
-                preparation(),
-                AnalysisAiAuthRef.localToken(null),
-                ChangeVerificationCopilotRuntimeSkillNames.smokePackSkillNames(),
-                ChangeVerificationCopilotToolContextKeys.RUN_KIND_SMOKE_PACK
-        );
-
-        assertSkillDirectories(runRequest.sessionConfigRequest().skillDirectories(),
-                ChangeVerificationCopilotRuntimeSkillNames.smokePackSkillNames());
-        assertEquals(
-                ChangeVerificationCopilotToolContextKeys.RUN_KIND_SMOKE_PACK,
-                contextCaptor.getValue().hiddenContext().get(ChangeVerificationCopilotToolContextKeys.RUN_KIND)
-        );
-        assertThat(runRequest.sessionConfigRequest().availableToolNames())
-                .doesNotContain(CopilotReportToolNames.UPSERT_SECTION);
-        assertThat(contextCaptor.getValue().hiddenContext())
-                .doesNotContainKeys(
-                        AgentToolContextKeys.REPORT_ID,
-                        AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS
-                );
-        assertThat(runRequest.initialReport()).isNull();
-    }
-
     private CopilotNamedSkillDirectoryResolver skillDirectoryResolver() {
         var properties = new CopilotSdkProperties();
         properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
@@ -223,7 +176,6 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         return new ChangeVerificationJobStartRequest(
                 "CRM-123",
                 null,
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 true,
                 true,
                 "Focus contracts.",

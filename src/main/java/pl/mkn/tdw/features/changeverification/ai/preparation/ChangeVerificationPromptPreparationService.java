@@ -55,7 +55,6 @@ public class ChangeVerificationPromptPreparationService {
                 ## User request
                 issueKey: %s
                 issueUrl: %s
-                modes: %s
                 checkStoryCompliance: %s
                 checkInstructionCompliance: %s
                 reasoningEffort: %s
@@ -68,7 +67,6 @@ public class ChangeVerificationPromptPreparationService {
                 sourceInterpretationContract(),
                 value(sourceDiscovery != null ? sourceDiscovery.issueKey() : request.issueKey()),
                 value(sourceDiscovery != null ? sourceDiscovery.issueUrl() : request.issueUrl()),
-                request.modes(),
                 request.checkStoryCompliance(),
                 request.checkInstructionCompliance(),
                 value(request.reasoningEffort()),
@@ -116,7 +114,6 @@ public class ChangeVerificationPromptPreparationService {
 
                 issueKey: %s
                 issueUrl: %s
-                modes: %s
                 storyComplianceRequested: %s
                 instructionComplianceRequested: %s
                 limitations:
@@ -124,7 +121,6 @@ public class ChangeVerificationPromptPreparationService {
                 """.formatted(
                 value(sourceDiscovery != null ? sourceDiscovery.issueKey() : request.issueKey()),
                 value(sourceDiscovery != null ? sourceDiscovery.issueUrl() : request.issueUrl()),
-                request.modes(),
                 request.checkStoryCompliance(),
                 request.checkInstructionCompliance(),
                 bulletList(sourceDiscovery != null ? sourceDiscovery.limitations() : List.of())

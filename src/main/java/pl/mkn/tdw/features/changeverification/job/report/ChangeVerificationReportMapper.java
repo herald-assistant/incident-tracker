@@ -1,11 +1,8 @@
 package pl.mkn.tdw.features.changeverification.job.report;
 
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationExecutionResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
@@ -22,7 +19,6 @@ public final class ChangeVerificationReportMapper {
     public static final String SECTION_STORY_COMPLIANCE = ChangeVerificationReportSectionIds.STORY_COMPLIANCE;
     public static final String SECTION_INSTRUCTION_COMPLIANCE =
             ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE;
-    public static final String SECTION_SMOKE_PACK = ChangeVerificationReportSectionIds.SMOKE_PACK;
 
     private ChangeVerificationReportMapper() {
     }
@@ -39,9 +35,6 @@ public final class ChangeVerificationReportMapper {
             return null;
         }
 
-        var compliance = result.compliance();
-        var smokePack = result.smokePack();
-        var execution = result.execution();
         var fallbackSections = List.of(
                 new AnalysisReportSection(
                         SECTION_STORY_COMPLIANCE,
@@ -56,13 +49,6 @@ public final class ChangeVerificationReportMapper {
                         1,
                         instructionComplianceMarkdown(result),
                         instructionComplianceMeta(result)
-                ),
-                new AnalysisReportSection(
-                        SECTION_SMOKE_PACK,
-                        "Smoke pack",
-                        2,
-                        smokePackMarkdown(smokePack, execution),
-                        smokePackMeta(smokePack, execution)
                 )
         );
         var sections = fallbackSections.stream()
@@ -146,11 +132,7 @@ public final class ChangeVerificationReportMapper {
     }
 
     private static String subHeader(ChangeVerificationResultResponse result) {
-        var parts = new ArrayList<String>();
-        add(parts, "Compliance " + safeStatus(result.compliance() != null ? result.compliance().status() : null));
-        add(parts, "Smoke " + safeStatus(result.smokePack() != null ? result.smokePack().status() : null));
-        add(parts, "Execution " + safeStatus(result.execution() != null ? result.execution().status() : null));
-        return String.join(" | ", parts);
+        return "Compliance " + safeStatus(result.compliance() != null ? result.compliance().status() : null);
     }
 
     private static String markdownSummary(ChangeVerificationResultResponse result) {
@@ -159,13 +141,6 @@ public final class ChangeVerificationReportMapper {
         if (result.compliance() != null) {
             lines.add("- Compliance: `" + safeStatus(result.compliance().status()) + "` with "
                     + result.compliance().findings().size() + " finding(s).");
-        }
-        if (result.smokePack() != null) {
-            lines.add("- Smoke pack: `" + safeStatus(result.smokePack().status()) + "` with "
-                    + result.smokePack().tests().size() + " test(s).");
-        }
-        if (result.execution() != null) {
-            lines.add("- Execution: `" + safeStatus(result.execution().status()) + "`.");
         }
         return String.join("\n", lines);
     }
@@ -413,171 +388,8 @@ public final class ChangeVerificationReportMapper {
                 compliance.visibilityLimits(),
                 distinct(openQuestions),
                 distinct(gaps),
-                result.smokePack() != null ? normalizeConfidence(result.smokePack().confidence()) : "",
-                distinct(warnings)
-        );
-    }
-
-    private static String smokePackMarkdown(
-            ChangeVerificationSmokePackResponse smokePack,
-            ChangeVerificationExecutionResponse execution
-    ) {
-        if (smokePack == null) {
-            return "Smoke pack was not generated.";
-        }
-
-        var lines = new ArrayList<String>();
-        lines.add("## Krótkie podsumowanie weryfikacji");
-        lines.add("Smoke pack status: `" + safeStatus(smokePack.status()) + "`.");
-        lines.add("Execution status: `" + safeStatus(execution != null ? execution.status() : "SKIPPED") + "`.");
-        if (StringUtils.hasText(smokePack.postmanCollectionName())) {
-            lines.add("Collection: `" + smokePack.postmanCollectionName().trim() + "`.");
-        }
-
-        lines.add("");
-        lines.add("## Szczegółowy raport smoke packa");
-        if (!smokePack.tests().isEmpty()) {
-            lines.add("### Smoke tests");
-            for (var test : smokePack.tests()) {
-                lines.add("- **" + fallback(test.id(), "test") + ": " + fallback(test.name(), "Smoke test") + "**");
-                addIndented(lines, "`" + fallback(test.method(), "HTTP") + " " + fallback(test.path(), "/") + "`");
-                addIndented(lines, fallback(test.riskCovered(), test.purpose()));
-                addIndented(lines, "Review status: `" + fallback(test.reviewStatus(), "NEEDS_REVIEW") + "`");
-                if (!test.responseAssertions().isEmpty()) {
-                    addIndented(lines, "Assertions: " + test.responseAssertions().size());
-                }
-                if (test.cleanup() != null && StringUtils.hasText(test.cleanup().strategy())) {
-                    addIndented(lines, "Cleanup: `" + test.cleanup().strategy().trim() + "`");
-                }
-            }
-        } else {
-            lines.add("");
-            lines.add("### Smoke tests");
-            lines.add("No smoke tests were generated.");
-        }
-
-        if (!smokePack.suggestedActions().isEmpty()) {
-            lines.add("");
-            lines.add("### Recommended actions");
-            smokePack.suggestedActions().forEach(action -> lines.add("- " + action));
-        }
-        lines.add("");
-        lines.add("## Execution readiness");
-        lines.add(executionMarkdown(execution));
-        return compactMarkdown(lines);
-    }
-
-    private static AnalysisReportMeta smokePackMeta(
-            ChangeVerificationSmokePackResponse smokePack,
-            ChangeVerificationExecutionResponse execution
-    ) {
-        if (smokePack == null) {
-            return AnalysisReportMeta.empty();
-        }
-
-        var references = new ArrayList<AnalysisReportReference>();
-        var gaps = new ArrayList<String>();
-        var openQuestions = new ArrayList<String>();
-        var warnings = new ArrayList<String>();
-        for (var test : smokePack.tests()) {
-            for (var ref : test.sourceRefs()) {
-                if (StringUtils.hasText(ref)) {
-                    references.add(new AnalysisReportReference(
-                            "smoke-source",
-                            fallback(test.id(), test.name(), "smoke test"),
-                            ref.trim(),
-                            fallback(test.riskCovered(), test.purpose(), "")
-                    ));
-                }
-            }
-            if (!"READY".equalsIgnoreCase(fallback(test.reviewStatus(), ""))) {
-                add(gaps, fallback(test.id(), test.name(), "Smoke test") + " requires review before execution.");
-            }
-            if (test.cleanup() == null || !"NONE".equalsIgnoreCase(fallback(test.cleanup().strategy(), ""))) {
-                add(openQuestions, "Czy cleanup dla " + fallback(test.id(), test.name(), "smoke test")
-                        + " jest bezpieczny i wykonywalny endpointem aplikacyjnym?");
-            }
-        }
-        if (!"READY".equalsIgnoreCase(fallback(smokePack.status(), ""))) {
-            add(warnings, "Smoke pack status is " + safeStatus(smokePack.status()) + ".");
-        }
-        if (execution != null) {
-            gaps.addAll(executionMeta(execution).gaps());
-            warnings.addAll(executionMeta(execution).warnings());
-        }
-        return new AnalysisReportMeta(
-                references,
-                smokePack.visibilityLimits(),
-                distinct(openQuestions),
-                distinct(gaps),
-                normalizeConfidence(smokePack.confidence()),
-                distinct(warnings)
-        );
-    }
-
-    private static String executionMarkdown(ChangeVerificationExecutionResponse execution) {
-        if (execution == null || !execution.requested()) {
-            return "Smoke execution was not requested in this run.";
-        }
-
-        var lines = new ArrayList<String>();
-        lines.add("### Status");
-        lines.add("`" + safeStatus(execution.status()) + "`");
-        if (!execution.executedTestIds().isEmpty()) {
-            lines.add("");
-            lines.add("Executed tests: `" + String.join("`, `", execution.executedTestIds()) + "`");
-        }
-        if (!execution.testResults().isEmpty()) {
-            lines.add("");
-            lines.add("### Test results");
-            for (var testResult : execution.testResults()) {
-                lines.add("- **" + fallback(testResult.testId(), testResult.name(), "test") + "**: `"
-                        + safeStatus(testResult.status()) + "`");
-                if (testResult.http() != null) {
-                    addIndented(lines, fallback(testResult.http().method(), "HTTP") + " "
-                            + fallback(testResult.http().url(), "")
-                            + " -> " + (testResult.http().statusCode() != null
-                            ? testResult.http().statusCode()
-                            : "n/a")
-                            + " in " + testResult.http().durationMillis() + "ms");
-                }
-                testResult.responseAssertions().forEach(assertion ->
-                        addIndented(lines, assertion.status() + " - " + assertion.type() + " " + assertion.target()
-                                + ": " + assertion.message()));
-                if (testResult.cleanup() != null) {
-                    addIndented(lines, "Cleanup: " + testResult.cleanup().status() + " - "
-                            + testResult.cleanup().message());
-                }
-            }
-        } else {
-            lines.add("");
-            lines.add("No smoke tests have been executed yet.");
-        }
-        return compactMarkdown(lines);
-    }
-
-    private static AnalysisReportMeta executionMeta(ChangeVerificationExecutionResponse execution) {
-        if (execution == null) {
-            return AnalysisReportMeta.empty();
-        }
-        var gaps = new ArrayList<String>();
-        var warnings = new ArrayList<String>();
-        if (execution.requested() && execution.testResults().isEmpty()) {
-            gaps.add("Execution was requested but waits for explicit operator run with base URL.");
-        }
-        if ("FAILED".equalsIgnoreCase(execution.status())) {
-            warnings.add("At least one smoke test failed.");
-        }
-        if (StringUtils.hasText(execution.manualCleanupSql())) {
-            warnings.add("Manual cleanup SQL was produced and requires operator-controlled execution.");
-        }
-        return new AnalysisReportMeta(
-                List.of(),
-                execution.visibilityLimits(),
-                List.of(),
-                gaps,
                 "",
-                warnings
+                distinct(warnings)
         );
     }
 
@@ -591,34 +403,22 @@ public final class ChangeVerificationReportMapper {
         ));
         references.addAll(storyComplianceMeta(result).references());
         references.addAll(instructionComplianceMeta(result).references());
-        if (result.smokePack() != null) {
-            references.addAll(smokePackMeta(result.smokePack(), result.execution()).references());
-        }
 
         var visibilityLimits = new ArrayList<String>();
         if (result.compliance() != null) {
             visibilityLimits.addAll(result.compliance().visibilityLimits());
-        }
-        if (result.smokePack() != null) {
-            visibilityLimits.addAll(result.smokePack().visibilityLimits());
-        }
-        if (result.execution() != null) {
-            visibilityLimits.addAll(result.execution().visibilityLimits());
         }
 
         var warnings = new ArrayList<String>();
         if (result.compliance() != null && !"PASSED".equalsIgnoreCase(fallback(result.compliance().status(), ""))) {
             add(warnings, "Compliance status is " + safeStatus(result.compliance().status()) + ".");
         }
-        if (result.smokePack() != null && !"READY".equalsIgnoreCase(fallback(result.smokePack().status(), ""))) {
-            add(warnings, "Smoke pack status is " + safeStatus(result.smokePack().status()) + ".");
-        }
         return new AnalysisReportMeta(
                 distinctReferences(references),
                 distinct(visibilityLimits),
                 List.of(),
                 List.of(),
-                result.smokePack() != null ? normalizeConfidence(result.smokePack().confidence()) : "",
+                "",
                 distinct(warnings)
         );
     }

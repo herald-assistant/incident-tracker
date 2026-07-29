@@ -6,11 +6,6 @@ import {
   AnalysisReport
 } from '../../../core/models/analysis.models';
 
-export type ChangeVerificationJobMode =
-  | 'CHECK_COMPLIANCE'
-  | 'GENERATE_SMOKE_PACK'
-  | 'EXECUTE_SMOKE_PACK';
-
 export type ChangeVerificationJobStatus = 'QUEUED' | 'COMPLETED' | 'FAILED' | string;
 
 export type ChangeVerificationFindingSeverity =
@@ -23,12 +18,9 @@ export type ChangeVerificationFindingSeverity =
 export interface ChangeVerificationJobStartRequest {
   issueKey?: string;
   issueUrl?: string;
-  modes?: ChangeVerificationJobMode[];
   checkStoryCompliance?: boolean;
   checkInstructionCompliance?: boolean;
   userInstructions?: string;
-  environment?: string;
-  databaseApplication?: string;
   model?: string;
   reasoningEffort?: string;
 }
@@ -68,128 +60,12 @@ export interface ChangeVerificationCompliance {
   visibilityLimits: string[];
 }
 
-export interface ChangeVerificationSmokeTest {
-  id: string;
-  name: string;
-  method: string;
-  path: string;
-  purpose: string;
-  headers: ChangeVerificationNameValue[];
-  queryParams: ChangeVerificationNameValue[];
-  requestBody: string | null;
-  responseAssertions: ChangeVerificationSmokeAssertion[];
-  dbAssertions: string[];
-  dbAssertionSpecs: ChangeVerificationSmokeDbAssertion[];
-  cleanup: ChangeVerificationSmokeCleanup | null;
-  cleanupHints: string[];
-  sourceRefs: string[];
-  riskCovered: string | null;
-  reviewStatus: string | null;
-}
-
-export interface ChangeVerificationSmokeDbAssertion {
-  id: string;
-  sql: string;
-  operator: string | null;
-  expectedValue: string | null;
-  description: string | null;
-}
-
-export interface ChangeVerificationNameValue {
-  name: string;
-  value: string;
-  enabled: boolean;
-}
-
-export interface ChangeVerificationSmokeAssertion {
-  type: string;
-  target: string;
-  operator: string;
-  expectedValue: string;
-}
-
-export interface ChangeVerificationSmokeCleanup {
-  strategy: string;
-  method: string | null;
-  path: string | null;
-  requestBody: string | null;
-  manualSql: string | null;
-  hints: string[];
-}
-
-export interface ChangeVerificationSmokePack {
-  requested: boolean;
-  status: string;
-  postmanCollectionName: string | null;
-  tests: ChangeVerificationSmokeTest[];
-  visibilityLimits: string[];
-  suggestedActions: string[];
-  confidence: string | null;
-}
-
-export interface ChangeVerificationSmokeExecutionRequest {
-  baseUrl: string;
-  environment?: string;
-  databaseApplication?: string;
-  selectedTestIds?: string[];
-  variables?: Record<string, string>;
-  executeCleanup?: boolean;
-}
-
-export interface ChangeVerificationSmokeHttpResult {
-  method: string;
-  url: string;
-  statusCode: number | null;
-  durationMillis: number;
-  bodyExcerpt: string | null;
-  headers: ChangeVerificationNameValue[];
-  errorMessage: string | null;
-}
-
-export interface ChangeVerificationSmokeAssertionResult {
-  type: string;
-  target: string;
-  status: string;
-  message: string;
-}
-
-export interface ChangeVerificationSmokeCleanupResult {
-  strategy: string;
-  status: string;
-  action: string | null;
-  manualSql: string | null;
-  message: string;
-}
-
-export interface ChangeVerificationSmokeTestExecution {
-  testId: string;
-  name: string;
-  status: string;
-  http: ChangeVerificationSmokeHttpResult | null;
-  responseAssertions: ChangeVerificationSmokeAssertionResult[];
-  dbAssertions: ChangeVerificationSmokeAssertionResult[];
-  cleanup: ChangeVerificationSmokeCleanupResult | null;
-}
-
-export interface ChangeVerificationExecution {
-  requested: boolean;
-  status: string;
-  executedTestIds: string[];
-  testResults: ChangeVerificationSmokeTestExecution[];
-  cleanupActions: string[];
-  manualCleanupSql: string | null;
-  visibilityLimits: string[];
-}
-
 export interface ChangeVerificationResult {
   status: string;
   issueKey: string;
   issueUrl: string;
-  modes: ChangeVerificationJobMode[];
   prompt: string;
   compliance: ChangeVerificationCompliance;
-  smokePack: ChangeVerificationSmokePack;
-  execution: ChangeVerificationExecution;
   usage: AnalysisAiUsage | null;
 }
 
@@ -197,7 +73,6 @@ export interface ChangeVerificationJobStateSnapshot {
   jobId: string;
   issueKey: string;
   issueUrl: string;
-  modes: ChangeVerificationJobMode[];
   checkStoryCompliance: boolean;
   checkInstructionCompliance: boolean;
   aiModel: string;

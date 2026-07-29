@@ -12,7 +12,6 @@ public record ChangeVerificationJobStateSnapshot(
         String jobId,
         String issueKey,
         String issueUrl,
-        List<ChangeVerificationJobMode> modes,
         boolean checkStoryCompliance,
         boolean checkInstructionCompliance,
         String aiModel,
@@ -35,7 +34,6 @@ public record ChangeVerificationJobStateSnapshot(
 ) {
 
     public ChangeVerificationJobStateSnapshot {
-        modes = modes != null ? List.copyOf(modes) : List.of();
         steps = steps != null ? List.copyOf(steps) : List.of();
         contextSections = contextSections != null ? List.copyOf(contextSections) : List.of();
         toolEvidenceSections = toolEvidenceSections != null ? List.copyOf(toolEvidenceSections) : List.of();

@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 
 import java.nio.file.Files;
@@ -23,8 +22,6 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
                 "change-verification-instruction-compliance-section",
                 "change-verification-write-report"
         );
-        assertThat(ChangeVerificationCopilotRuntimeSkillNames.smokePackSkillNames())
-                .containsExactly("change-verification-smoke-pack-design");
     }
 
     @Test
@@ -32,7 +29,6 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
         var storyOnly = new ChangeVerificationJobStartRequest(
                 "CRM-123",
                 null,
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 true,
                 false,
                 null,

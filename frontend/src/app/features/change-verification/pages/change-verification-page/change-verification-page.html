@@ -6,8 +6,8 @@
           <p class="section-eyebrow">Change Verification</p>
           <h2 id="changeVerificationWorkspaceTitle">Verify a change before release</h2>
           <p class="field-hint">
-            Story alignment, repository instructions, smoke pack readiness and execution cleanup in
-            one release-focused workflow.
+            Verify the change against Jira, Confluence context and repository instructions in one
+            release-focused workflow.
           </p>
         </div>
       </div>
@@ -44,22 +44,6 @@
                 (change)="toggleInstructionCompliance($any($event.target).checked)"
               />
               <span>Instruction compliance</span>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                [checked]="generateSmokePack()"
-                (change)="toggleSmokePack($any($event.target).checked)"
-              />
-              <span>Generate smoke pack</span>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                [checked]="executeSmokePack()"
-                (change)="toggleExecution($any($event.target).checked)"
-              />
-              <span>Execute accepted pack</span>
             </label>
           </div>
         </fieldset>
@@ -176,7 +160,13 @@
         <div>
           <p class="section-eyebrow">Run {{ currentJob.status }}</p>
           <h2>{{ currentJob.issueKey || currentJob.issueUrl }}</h2>
-          <p class="field-hint">{{ currentJob.modes.join(' / ') }}</p>
+          <p class="field-hint">
+            {{ currentJob.checkStoryCompliance ? 'Story compliance' : '' }}
+            @if (currentJob.checkStoryCompliance && currentJob.checkInstructionCompliance) {
+              <span> / </span>
+            }
+            {{ currentJob.checkInstructionCompliance ? 'Instruction compliance' : '' }}
+          </p>
         </div>
         <span [attr.class]="statusPillClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
       </section>
@@ -248,141 +238,6 @@
           </article>
         }
 
-        <article class="change-verification-panel panel-card">
-          <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
-            <div>
-              <p class="section-eyebrow">Smoke pack artifact</p>
-              <h3>Editable Postman draft</h3>
-            </div>
-            <span [attr.class]="resultStatusPillClass(smokePack()?.status)">
-              {{ smokePack()?.status || 'pending' }}
-            </span>
-          </div>
-
-          <div class="change-verification-artifact-bar">
-            <div>
-              <span class="field-label">Collection</span>
-              <p>{{ smokePack()?.postmanCollectionName || 'Postman collection not generated yet.' }}</p>
-            </div>
-            <div class="change-verification-actions">
-              <button
-                type="button"
-                class="secondary-button"
-                (click)="saveSmokePackDraft()"
-                [disabled]="isSavingSmokePack() || !smokePack() || isImportedResult()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">save</span>
-                {{ isSavingSmokePack() ? 'Saving...' : 'Save draft' }}
-              </button>
-              <button
-                type="button"
-                class="secondary-button"
-                (click)="downloadPostmanCollection()"
-                [disabled]="!smokePack() || isImportedResult()"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">download</span>
-                Postman
-              </button>
-            </div>
-          </div>
-
-          @if (smokeTests().length) {
-            <details class="change-verification-draft-panel">
-              <summary>
-                <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
-                Editable smoke pack JSON
-              </summary>
-              <label class="change-verification-draft">
-                <span class="field-label">Smoke pack JSON</span>
-                <textarea
-                  class="text-input change-verification-code-textarea"
-                  rows="12"
-                  [value]="smokePackDraft()"
-                  (input)="updateSmokePackDraft($any($event.target).value)"
-                ></textarea>
-              </label>
-            </details>
-            @if (smokePackDraftError()) {
-              <p class="change-verification-error">{{ smokePackDraftError() }}</p>
-            }
-          } @else {
-            <p class="change-verification-empty">No smoke tests generated yet.</p>
-          }
-        </article>
-
-        <article class="change-verification-panel panel-card">
-          <div class="panel-card__header panel-card__header--compact change-verification-panel-header">
-            <div>
-              <p class="section-eyebrow">Execution controls</p>
-              <h3>Accepted tests and cleanup</h3>
-            </div>
-            <span [attr.class]="resultStatusPillClass(execution()?.status)">
-              {{ execution()?.status || 'not run' }}
-            </span>
-          </div>
-
-          <div class="change-verification-execution-grid">
-            <label class="field-control change-verification-field">
-              <span class="field-label">Base URL</span>
-              <input
-                class="text-input"
-                type="text"
-                [value]="smokeExecutionBaseUrl()"
-                placeholder="https://test.example.com"
-                autocomplete="off"
-                spellcheck="false"
-                (input)="updateSmokeExecutionBaseUrl($any($event.target).value)"
-              />
-            </label>
-          </div>
-
-          <label class="change-verification-cleanup-toggle">
-            <input
-              type="checkbox"
-              [checked]="executeCleanup()"
-              (change)="toggleCleanupExecution($any($event.target).checked)"
-            />
-            <span>Allow cleanup endpoint if policy allows it</span>
-          </label>
-
-          <div class="change-verification-actions">
-            <button
-              type="button"
-              class="primary-button"
-              (click)="executeAcceptedSmokePack()"
-              [disabled]="isExecutingSmokePack() || isImportedResult()"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
-              {{ isExecutingSmokePack() ? 'Running...' : 'Run accepted tests' }}
-            </button>
-          </div>
-          @if (smokeExecutionError()) {
-            <p class="change-verification-error">{{ smokeExecutionError() }}</p>
-          }
-          @if (executionResults().length) {
-            <div class="change-verification-execution-results">
-              @for (testResult of executionResults(); track testResult.testId) {
-                <article class="change-verification-execution-result">
-                  <div>
-                    <span [attr.class]="resultStatusPillClass(testResult.status)">{{ testResult.status }}</span>
-                    <strong>{{ testResult.name }}</strong>
-                    <small>{{ httpSummary(testResult) }}</small>
-                  </div>
-                  <div class="change-verification-assertion-list">
-                    @for (assertion of testResult.responseAssertions; track assertion.type + assertion.target) {
-                      <span>{{ assertion.status }} · {{ assertion.type }} · {{ assertion.message }}</span>
-                    }
-                    @if (testResult.cleanup) {
-                      <span>{{ testResult.cleanup.status }} · cleanup · {{ testResult.cleanup.message }}</span>
-                    }
-                  </div>
-                </article>
-              }
-            </div>
-          } @else {
-            <p class="change-verification-empty">No execution results yet.</p>
-          }
-        </article>
       </section>
 
       <app-analysis-feature-aside

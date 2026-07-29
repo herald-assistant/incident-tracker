@@ -1,17 +1,13 @@
 package pl.mkn.tdw.features.changeverification.job.state;
 
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationExecutionResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportMapper;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
-import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysis;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
@@ -49,11 +45,8 @@ public final class ChangeVerificationJobState {
     private static final String STEP_INITIAL_SOURCE_SNAPSHOT = "INITIAL_SOURCE_SNAPSHOT";
     private static final String STEP_SOURCE_CONTEXT_READY_LABEL = "Source context ready";
     private static final String STEP_AI_VERIFICATION = "AI_VERIFICATION";
-    private static final String STEP_SMOKE_PACK_GENERATION = "SMOKE_PACK_GENERATION";
-    private static final String STEP_EXECUTION = "EXECUTION";
     private static final String PHASE_CONTEXT = "CONTEXT";
     private static final String PHASE_AI = "AI";
-    private static final String PHASE_EXECUTION = "EXECUTION";
     private static final AnalysisEvidenceReference CHANGE_CONTEXT_EVIDENCE =
             new AnalysisEvidenceReference("change-verification", "change-source");
     private static final AnalysisEvidenceReference JIRA_EVIDENCE =
@@ -92,9 +85,6 @@ public final class ChangeVerificationJobState {
     private InstructionContextResult instructionContext;
     private List<String> sourceDiscoveryLimitations;
     private ChangeVerificationComplianceAnalysis complianceAnalysis;
-    private ChangeVerificationSmokePackAnalysis smokePackAnalysis;
-    private ChangeVerificationSmokePackResponse smokePack;
-    private ChangeVerificationExecutionResponse execution;
 
     public ChangeVerificationJobState(String jobId, ChangeVerificationJobStartRequest request) {
         this.jobId = jobId;
@@ -203,12 +193,9 @@ public final class ChangeVerificationJobState {
         contextSections = contextSections(sourceDiscovery);
         currentStepCode = nextCurrentStepAfterSourceDiscovery();
         currentStepLabel = nextCurrentStepLabelAfterSourceDiscovery();
-        status = currentStepCode != null ? "AWAITING_AI" : STATUS_COMPLETED;
+        status = "AWAITING_AI";
         updatedAt = now;
         steps = steps(now);
-        if (currentStepCode == null) {
-            markCompleted(null, null);
-        }
     }
 
     public synchronized void markChangedFilesCompleted(String issueKey) {
@@ -246,19 +233,10 @@ public final class ChangeVerificationJobState {
     public synchronized void markAiVerificationCompleted(ChangeVerificationComplianceAnalysis complianceAnalysis) {
         var now = Instant.now();
         this.complianceAnalysis = complianceAnalysis;
-        preparedPrompt = preparedPrompt(complianceAnalysis, smokePackAnalysis);
-        currentStepCode = smokePackRequested() ? STEP_SMOKE_PACK_GENERATION : null;
-        currentStepLabel = smokePackRequested() ? "Smoke pack generation" : null;
+        preparedPrompt = preparedPrompt(complianceAnalysis);
+        currentStepCode = null;
+        currentStepLabel = null;
         status = "ANALYZING";
-        updatedAt = now;
-        steps = steps(now);
-    }
-
-    public synchronized void markSmokePackGenerationStarted() {
-        var now = Instant.now();
-        status = "ANALYZING";
-        currentStepCode = STEP_SMOKE_PACK_GENERATION;
-        currentStepLabel = "Smoke pack generation";
         updatedAt = now;
         steps = steps(now);
     }
@@ -285,50 +263,27 @@ public final class ChangeVerificationJobState {
         steps = steps(now);
     }
 
-    public synchronized void markSmokePackGenerationCompleted(ChangeVerificationSmokePackAnalysis smokePackAnalysis) {
-        var now = Instant.now();
-        this.smokePackAnalysis = smokePackAnalysis;
-        smokePack = smokePackResult();
-        preparedPrompt = preparedPrompt(complianceAnalysis, smokePackAnalysis);
-        currentStepCode = null;
-        currentStepLabel = null;
-        status = "SMOKE_PACK_READY";
-        updatedAt = now;
-        steps = steps(now);
-    }
-
-    public synchronized void markCompleted(
-            ChangeVerificationComplianceAnalysis complianceAnalysis,
-            ChangeVerificationSmokePackAnalysis smokePackAnalysis
-    ) {
+    public synchronized void markCompleted(ChangeVerificationComplianceAnalysis complianceAnalysis) {
         var now = Instant.now();
         if (complianceAnalysis != null) {
             this.complianceAnalysis = complianceAnalysis;
-        }
-        if (smokePackAnalysis != null) {
-            this.smokePackAnalysis = smokePackAnalysis;
         }
         status = STATUS_COMPLETED;
         currentStepCode = null;
         currentStepLabel = null;
         updatedAt = now;
         completedAt = now;
-        preparedPrompt = preparedPrompt(complianceAnalysis, smokePackAnalysis);
+        preparedPrompt = preparedPrompt(complianceAnalysis);
         if (contextSections.isEmpty()) {
             contextSections = contextSections(sourceDiscovery);
         }
-        smokePack = smokePackResult();
         steps = steps(now);
-        execution = executionResult();
         result = new ChangeVerificationResultResponse(
                 STATUS_COMPLETED,
                 resolvedIssueKey(),
                 resolvedIssueUrl(),
-                request.modes(),
                 preparedPrompt,
                 complianceResult(),
-                smokePack,
-                execution,
                 complianceAnalysis != null ? complianceAnalysis.usage() : null
         );
         report = ChangeVerificationReportMapper.toReport(result, complianceReport());
@@ -346,57 +301,11 @@ public final class ChangeVerificationJobState {
         steps = steps(now);
     }
 
-    public synchronized ChangeVerificationSmokePackResponse smokePack() {
-        return smokePack != null ? smokePack : smokePackResult();
-    }
-
-    public synchronized void updateSmokePack(ChangeVerificationSmokePackResponse smokePack) {
-        this.smokePack = smokePack != null
-                ? smokePack
-                : smokePackResult();
-        updatedAt = Instant.now();
-        if (result != null) {
-            result = new ChangeVerificationResultResponse(
-                    result.status(),
-                    result.issueKey(),
-                    result.issueUrl(),
-                    result.modes(),
-                    result.prompt(),
-                    result.compliance(),
-                    this.smokePack,
-                    result.execution(),
-                    result.usage()
-            );
-            report = ChangeVerificationReportMapper.toReport(result, complianceReport());
-        }
-    }
-
-    public synchronized void markExecutionCompleted(ChangeVerificationExecutionResponse execution) {
-        this.execution = execution != null ? execution : executionResult();
-        updatedAt = Instant.now();
-        if (result != null) {
-            result = new ChangeVerificationResultResponse(
-                    result.status(),
-                    result.issueKey(),
-                    result.issueUrl(),
-                    result.modes(),
-                    result.prompt(),
-                    result.compliance(),
-                    result.smokePack(),
-                    this.execution,
-                    result.usage()
-            );
-            report = ChangeVerificationReportMapper.toReport(result, complianceReport());
-        }
-        steps = steps(updatedAt);
-    }
-
     public synchronized ChangeVerificationJobStateSnapshot snapshot() {
         return new ChangeVerificationJobStateSnapshot(
                 jobId,
                 request.issueKey(),
                 request.issueUrl(),
-                request.modes(),
                 request.checkStoryCompliance(),
                 request.checkInstructionCompliance(),
                 request.aiOptions().model(),
@@ -499,30 +408,6 @@ public final class ChangeVerificationJobState {
                 List.of(),
                 complianceAnalysis != null ? complianceAnalysis.usage() : null
         ));
-        steps.add(step(
-                STEP_SMOKE_PACK_GENERATION,
-                "Smoke pack generation",
-                PHASE_AI,
-                smokePackGenerationStepStatus(),
-                smokePackStepMessage(),
-                smokePackRequested() && smokePack != null ? smokePack.tests().size() : null,
-                startedAt,
-                completedAt,
-                List.of(CHANGE_CONTEXT_EVIDENCE),
-                List.of()
-        ));
-        steps.add(step(
-                STEP_EXECUTION,
-                "Smoke execution",
-                PHASE_EXECUTION,
-                executionStepStatus(),
-                executionStepMessage(),
-                execution != null ? execution.testResults().size() : null,
-                startedAt,
-                completedAt,
-                List.of(CHANGE_CONTEXT_EVIDENCE),
-                List.of()
-        ));
         return steps;
     }
 
@@ -579,7 +464,6 @@ public final class ChangeVerificationJobState {
                         List.of(
                                 attribute("issueKey", resolvedIssueKey()),
                                 attribute("issueUrl", resolvedIssueUrl()),
-                                attribute("modes", request.modes().toString()),
                                 attribute("checkStoryCompliance", request.checkStoryCompliance()),
                                 attribute("checkInstructionCompliance", request.checkInstructionCompliance())
                         )
@@ -944,18 +828,6 @@ public final class ChangeVerificationJobState {
     }
 
     private ChangeVerificationComplianceResponse complianceResult() {
-        if (!complianceRequested()) {
-            return new ChangeVerificationComplianceResponse(
-                    request.checkStoryCompliance(),
-                    request.checkInstructionCompliance(),
-                    "SKIPPED",
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of("Compliance check was not requested for this skeleton job.")
-            );
-        }
-
         if (complianceAnalysis != null && complianceAnalysis.response() != null) {
             var response = complianceAnalysis.response();
             return new ChangeVerificationComplianceResponse(
@@ -985,46 +857,6 @@ public final class ChangeVerificationJobState {
                 )),
                 List.of("Run AI compliance against Jira material, MR metadata and repository instructions again."),
                 combinedComplianceVisibilityLimits()
-        );
-    }
-
-    private ChangeVerificationSmokePackResponse smokePackResult() {
-        if (!smokePackRequested()) {
-            return new ChangeVerificationSmokePackResponse(
-                    false,
-                    "SKIPPED",
-                    null,
-                    List.of(),
-                    List.of("Smoke pack generation was not requested."),
-                    List.of(),
-                    null
-            );
-        }
-        if (smokePackAnalysis != null && smokePackAnalysis.response() != null) {
-            return smokePackAnalysis.response();
-        }
-        return new ChangeVerificationSmokePackResponse(
-                true,
-                "INCONCLUSIVE",
-                collectionName(),
-                List.of(),
-                List.of("Smoke pack generation did not produce a result."),
-                List.of("Review changed endpoints manually and create smoke tests from acceptance criteria."),
-                "low"
-        );
-    }
-
-    private ChangeVerificationExecutionResponse executionResult() {
-        return new ChangeVerificationExecutionResponse(
-                executionRequested(),
-                executionRequested() ? "WAITING_FOR_APPROVAL" : "SKIPPED",
-                List.of(),
-                List.of(),
-                List.of(),
-                null,
-                executionRequested()
-                        ? List.of("Smoke execution requires explicit run request with baseUrl.")
-                        : List.of()
         );
     }
 
@@ -1097,9 +929,6 @@ public final class ChangeVerificationJobState {
     }
 
     private String aiVerificationStepStatus() {
-        if (!complianceRequested()) {
-            return STATUS_SKIPPED;
-        }
         if (complianceAnalysis != null) {
             return STATUS_COMPLETED;
         }
@@ -1112,40 +941,12 @@ public final class ChangeVerificationJobState {
         return STATUS_PENDING;
     }
 
-    private String smokePackGenerationStepStatus() {
-        if (!smokePackRequested()) {
-            return STATUS_SKIPPED;
-        }
-        if (smokePackAnalysis != null || smokePack != null) {
-            return STATUS_COMPLETED;
-        }
-        if (STEP_SMOKE_PACK_GENERATION.equals(currentStepCode)) {
-            return STATUS_RUNNING;
-        }
-        if (STATUS_FAILED.equals(status)) {
-            return STATUS_FAILED;
-        }
-        return STATUS_PENDING;
-    }
-
     private String nextCurrentStepAfterSourceDiscovery() {
-        if (complianceRequested()) {
-            return STEP_AI_VERIFICATION;
-        }
-        if (smokePackRequested()) {
-            return STEP_SMOKE_PACK_GENERATION;
-        }
-        return null;
+        return STEP_AI_VERIFICATION;
     }
 
     private String nextCurrentStepLabelAfterSourceDiscovery() {
-        if (complianceRequested()) {
-            return "AI verification";
-        }
-        if (smokePackRequested()) {
-            return "Smoke pack generation";
-        }
-        return null;
+        return "AI verification";
     }
 
     private String instructionStepMessage() {
@@ -1196,24 +997,6 @@ public final class ChangeVerificationJobState {
             return "Preparing source context for AI.";
         }
         return "Waiting for deterministic source discovery.";
-    }
-
-    private boolean complianceRequested() {
-        return request.modes().contains(ChangeVerificationJobMode.CHECK_COMPLIANCE);
-    }
-
-    private boolean smokePackRequested() {
-        return request.modes().contains(ChangeVerificationJobMode.GENERATE_SMOKE_PACK)
-                || request.modes().contains(ChangeVerificationJobMode.EXECUTE_SMOKE_PACK);
-    }
-
-    private boolean executionRequested() {
-        return request.modes().contains(ChangeVerificationJobMode.EXECUTE_SMOKE_PACK);
-    }
-
-    private String collectionName() {
-        var source = resolvedIssueKey() != null ? resolvedIssueKey() : "change-verification";
-        return source + " smoke verification";
     }
 
     private String resolvedIssueKey() {
@@ -1302,9 +1085,6 @@ public final class ChangeVerificationJobState {
     }
 
     private String aiVerificationMessage() {
-        if (!complianceRequested()) {
-            return "Compliance verification was not requested.";
-        }
         if (complianceAnalysis != null && complianceAnalysis.response() != null) {
             return "AI compliance check completed with status " + complianceAnalysis.response().status() + ".";
         }
@@ -1318,45 +1098,9 @@ public final class ChangeVerificationJobState {
         return complianceAnalysis.response().findings().size();
     }
 
-    private String smokePackStepMessage() {
-        if (!smokePackRequested()) {
-            return "Smoke pack generation was not requested.";
-        }
-        if (smokePack != null) {
-            return "Smoke pack generated with status " + smokePack.status() + ".";
-        }
-        return "Smoke pack generation did not produce a result.";
-    }
-
-    private String executionStepStatus() {
-        if (!executionRequested() && execution == null) {
-            return "SKIPPED";
-        }
-        if (execution != null && !execution.testResults().isEmpty()) {
-            return STATUS_COMPLETED;
-        }
-        return executionRequested() ? "WAITING_FOR_APPROVAL" : "SKIPPED";
-    }
-
-    private String executionStepMessage() {
-        if (execution != null && !execution.testResults().isEmpty()) {
-            return "Smoke execution completed with status " + execution.status() + ".";
-        }
-        if (executionRequested()) {
-            return "Smoke execution is waiting for explicit run request with baseUrl.";
-        }
-        return "Smoke execution was not requested.";
-    }
-
-    private String preparedPrompt(
-            ChangeVerificationComplianceAnalysis complianceAnalysis,
-            ChangeVerificationSmokePackAnalysis smokePackAnalysis
-    ) {
+    private String preparedPrompt(ChangeVerificationComplianceAnalysis complianceAnalysis) {
         if (complianceAnalysis != null && complianceAnalysis.prompt() != null) {
             return complianceAnalysis.prompt();
-        }
-        if (smokePackAnalysis != null && smokePackAnalysis.prompt() != null) {
-            return smokePackAnalysis.prompt();
         }
         if (org.springframework.util.StringUtils.hasText(preparedPrompt)) {
             return preparedPrompt;

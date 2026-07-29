@@ -6,25 +6,16 @@ import lombok.extern.slf4j.Slf4j;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationAiResponse;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysisProvider;
-import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysis;
-import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysisProvider;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparationService;
-import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationSmokePackPromptPreparationService;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationExecutionResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeExecutionRequest;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
 import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.job.state.ChangeVerificationJobState;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryListener;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryService;
-import pl.mkn.tdw.features.changeverification.execution.ChangeVerificationSmokeExecutionService;
-import pl.mkn.tdw.features.changeverification.smoke.ChangeVerificationPostmanCollectionRenderer;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 
@@ -40,32 +31,20 @@ public class ChangeVerificationJobService {
     private final Map<String, ChangeVerificationJobState> jobs = new ConcurrentHashMap<>();
     private final ChangeVerificationSourceDiscoveryService sourceDiscoveryService;
     private final ChangeVerificationPromptPreparationService compliancePromptPreparationService;
-    private final ChangeVerificationSmokePackPromptPreparationService smokePackPromptPreparationService;
     private final ChangeVerificationComplianceAnalysisProvider complianceAnalysisProvider;
-    private final ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider;
-    private final ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer;
-    private final ChangeVerificationSmokeExecutionService smokeExecutionService;
     private final ChangeVerificationLocalRunPersistence localRunPersistence;
     private final TaskExecutor applicationTaskExecutor;
 
     public ChangeVerificationJobService(
             ChangeVerificationSourceDiscoveryService sourceDiscoveryService,
             ChangeVerificationPromptPreparationService compliancePromptPreparationService,
-            ChangeVerificationSmokePackPromptPreparationService smokePackPromptPreparationService,
             ChangeVerificationComplianceAnalysisProvider complianceAnalysisProvider,
-            ChangeVerificationSmokePackAnalysisProvider smokePackAnalysisProvider,
-            ChangeVerificationPostmanCollectionRenderer postmanCollectionRenderer,
-            ChangeVerificationSmokeExecutionService smokeExecutionService,
             ChangeVerificationLocalRunPersistence localRunPersistence,
             TaskExecutor applicationTaskExecutor
     ) {
         this.sourceDiscoveryService = sourceDiscoveryService;
         this.compliancePromptPreparationService = compliancePromptPreparationService;
-        this.smokePackPromptPreparationService = smokePackPromptPreparationService;
         this.complianceAnalysisProvider = complianceAnalysisProvider;
-        this.smokePackAnalysisProvider = smokePackAnalysisProvider;
-        this.postmanCollectionRenderer = postmanCollectionRenderer;
-        this.smokeExecutionService = smokeExecutionService;
         this.localRunPersistence = localRunPersistence != null
                 ? localRunPersistence
                 : ChangeVerificationLocalRunPersistence.NO_OP;
@@ -90,14 +69,8 @@ public class ChangeVerificationJobService {
             job.markPreparedPrompt(initialPreparedPrompt(request, sourceDiscovery));
             persistRunSnapshot(job);
 
-            var complianceAnalysis = (complianceRequested(request))
-                    ? runCompliance(jobId, job, request, sourceDiscovery)
-                    : null;
-            var smokePackAnalysis = (smokePackRequested(request))
-                    ? runSmokePack(jobId, job, request, sourceDiscovery, complianceAnalysis)
-                    : null;
-
-            job.markCompleted(complianceAnalysis, smokePackAnalysis);
+            var complianceAnalysis = runCompliance(jobId, job, request, sourceDiscovery);
+            job.markCompleted(complianceAnalysis);
             persistRunSnapshot(job);
         } catch (RuntimeException exception) {
             log.error(
@@ -192,72 +165,12 @@ public class ChangeVerificationJobService {
         return complianceAnalysis;
     }
 
-    private ChangeVerificationSmokePackAnalysis runSmokePack(
-            String jobId,
-            ChangeVerificationJobState job,
-            ChangeVerificationJobStartRequest request,
-            pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-            ChangeVerificationComplianceAnalysis complianceAnalysis
-    ) {
-        job.markSmokePackGenerationStarted();
-        persistRunSnapshot(job);
-        var smokePackAnalysis = analyzeSmokePack(
-                jobId,
-                request,
-                sourceDiscovery,
-                complianceAnalysis,
-                toolEvidenceListener(job),
-                activityListener(job)
-        );
-        job.markSmokePackGenerationCompleted(smokePackAnalysis);
-        persistRunSnapshot(job);
-        return smokePackAnalysis;
-    }
-
     public ChangeVerificationJobStateSnapshot getJob(String jobId) {
         var job = jobs.get(jobId);
         if (job == null) {
             throw new ChangeVerificationJobNotFoundException(jobId);
         }
         return job.snapshot();
-    }
-
-    public ChangeVerificationSmokePackResponse getSmokePack(String jobId) {
-        return job(jobId).smokePack();
-    }
-
-    public ChangeVerificationSmokePackResponse updateSmokePack(
-            String jobId,
-            ChangeVerificationSmokePackResponse smokePack
-    ) {
-        var job = job(jobId);
-        job.updateSmokePack(smokePack);
-        persistRunSnapshot(job);
-        return job.smokePack();
-    }
-
-    public Map<String, Object> postmanCollection(String jobId) {
-        return postmanCollectionRenderer.render(job(jobId).smokePack());
-    }
-
-    public ChangeVerificationExecutionResponse executeSmokePack(
-            String jobId,
-            ChangeVerificationSmokeExecutionRequest request
-    ) {
-        var job = job(jobId);
-        var testResults = smokeExecutionService.execute(job.smokePack(), request);
-        var response = executionResponse(testResults);
-        job.markExecutionCompleted(response);
-        persistRunSnapshot(job);
-        return response;
-    }
-
-    private ChangeVerificationJobState job(String jobId) {
-        var job = jobs.get(jobId);
-        if (job == null) {
-            throw new ChangeVerificationJobNotFoundException(jobId);
-        }
-        return job;
     }
 
     private ChangeVerificationComplianceAnalysis analyzeCompliance(
@@ -312,64 +225,7 @@ public class ChangeVerificationJobService {
             ChangeVerificationJobStartRequest request,
             pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery
     ) {
-        if (complianceRequested(request)) {
-            return compliancePromptPreparationService.prepare(request, sourceDiscovery).prompt();
-        }
-        if (smokePackRequested(request)) {
-            return smokePackPromptPreparationService.prepare(request, sourceDiscovery, null).prompt();
-        }
-        return "";
-    }
-
-    private boolean complianceRequested(ChangeVerificationJobStartRequest request) {
-        return request.modes().contains(ChangeVerificationJobMode.CHECK_COMPLIANCE);
-    }
-
-    private boolean smokePackRequested(ChangeVerificationJobStartRequest request) {
-        return request.modes().contains(ChangeVerificationJobMode.GENERATE_SMOKE_PACK)
-                || request.modes().contains(ChangeVerificationJobMode.EXECUTE_SMOKE_PACK);
-    }
-
-    private ChangeVerificationSmokePackAnalysis analyzeSmokePack(
-            String jobId,
-            ChangeVerificationJobStartRequest request,
-            pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-            ChangeVerificationComplianceAnalysis complianceAnalysis,
-            AnalysisAiToolEvidenceListener toolEvidenceListener,
-            AnalysisAiActivityListener activityListener
-    ) {
-        try {
-            return smokePackAnalysisProvider.analyze(
-                    jobId,
-                    request,
-                    sourceDiscovery,
-                    complianceAnalysis,
-                    toolEvidenceListener,
-                    activityListener
-            );
-        } catch (RuntimeException exception) {
-            log.warn(
-                    "Change Verification AI smoke pack generation failed jobId={} issueKey={} reason={}",
-                    jobId,
-                    request.issueKey(),
-                    exception.getMessage(),
-                    exception
-            );
-            return new ChangeVerificationSmokePackAnalysis(
-                    new ChangeVerificationSmokePackResponse(
-                            true,
-                            "INCONCLUSIVE",
-                            null,
-                            List.of(),
-                            List.of("AI smoke pack generation failed: " + safeMessage(exception)),
-                            List.of("Create smoke tests manually from Jira acceptance criteria and MR changed files."),
-                            "low"
-                    ),
-                    null,
-                    null,
-                    null
-            );
-        }
+        return compliancePromptPreparationService.prepare(request, sourceDiscovery).prompt();
     }
 
     private String safeMessage(RuntimeException exception) {
@@ -405,51 +261,4 @@ public class ChangeVerificationJobService {
         }
     }
 
-    private ChangeVerificationExecutionResponse executionResponse(
-            List<pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestExecutionResponse> testResults
-    ) {
-        var executedIds = testResults.stream()
-                .filter(result -> result.http() != null)
-                .map(pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestExecutionResponse::testId)
-                .toList();
-        var cleanupActions = testResults.stream()
-                .map(pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestExecutionResponse::cleanup)
-                .filter(java.util.Objects::nonNull)
-                .map(cleanup -> cleanup.strategy() + ": " + cleanup.status()
-                        + (cleanup.action() != null ? " " + cleanup.action() : ""))
-                .toList();
-        var status = aggregateExecutionStatus(testResults);
-        var limits = testResults.stream()
-                .flatMap(result -> result.responseAssertions().stream())
-                .filter(assertion -> "NEEDS_MANUAL_REVIEW".equals(assertion.status())
-                        || "BLOCKED_BY_POLICY".equals(assertion.status()))
-                .map(assertion -> assertion.type() + " " + assertion.target() + ": " + assertion.message())
-                .distinct()
-                .toList();
-        return new ChangeVerificationExecutionResponse(
-                true,
-                status,
-                executedIds,
-                testResults,
-                cleanupActions,
-                null,
-                limits
-        );
-    }
-
-    private String aggregateExecutionStatus(
-            List<pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestExecutionResponse> testResults
-    ) {
-        if (testResults.isEmpty()) {
-            return "SKIPPED";
-        }
-        if (testResults.stream().anyMatch(result -> "FAILED".equals(result.status()))) {
-            return "FAILED";
-        }
-        if (testResults.stream().anyMatch(result -> "PASSED_WITH_WARNINGS".equals(result.status())
-                || "NEEDS_REVIEW".equals(result.status()))) {
-            return "PASSED_WITH_WARNINGS";
-        }
-        return "PASSED";
-    }
 }

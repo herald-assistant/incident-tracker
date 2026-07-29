@@ -39,13 +39,17 @@ Przed wieksza zmiana zacznij od:
 7. `docs/architecture/06-modular-architecture-roadmap.md`
 8. `docs/architecture/07-open-work-plan.md`
 9. `docs/architecture/08-operational-context-model-tools-and-usage.md`
+10. `docs/architecture/14-analysis-feature-delivery-playbook.md` przy tworzeniu
+    feature'a oraz zmianach L1-L3 istniejacego feature'a lub mechanizmu
+    wspolnego
 
 ## Najwazniejsze niezmienniki
 
 - `POST /api/analysis/jobs` jest kanonicznym publicznym startem analizy;
-  przyjmuje `correlationId` oraz opcjonalne preferencje AI (`model`,
-  `reasoningEffort`). Legacy aliasy `/analysis/**` pozostaja dostepne tylko
-  dla kompatybilnosci.
+  przyjmuje `source`, dla `ELASTICSEARCH` wymagany `correlationId`, dla
+  `CSV_UPLOAD` multipart `logFile`, oraz opcjonalne preferencje AI (`model`,
+  `reasoningEffort`). Legacy aliasy `/analysis/**` pozostaja dostepne tylko dla
+  kompatybilnosci.
 - `gitLabBranch` i `environment` sa wyprowadzane z evidence, glownie z logow
   Elasticsearch.
 - `gitLabGroup` pochodzi z konfiguracji aplikacji, nie z evidence.
@@ -293,12 +297,25 @@ Zasady granic:
 
 ### Gdy dodajesz nowy feature analityczny
 
+- Zacznij od `docs/architecture/14-analysis-feature-delivery-playbook.md`.
 - Utworz dedykowany pakiet `features.<feature>`.
 - Nie reuse'uj `features.incidentanalysis.flow/job/evidence` jako generycznego
   core.
 - Dostarcz wlasny request/response, prompt, skille, tool policy, hidden
   context i result contract.
 - Reuse'uj `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
+
+### Gdy rozwijasz istniejacy feature
+
+- Sklasyfikuj zmiane jako L0-L3 wedlug
+  `docs/architecture/14-analysis-feature-delivery-playbook.md`.
+- Dla L1-L3 przygotuj baseline, conformance delta, liste konsumentow i
+  adekwatna macierz testow przed implementacja.
+- Zmiana nie moze dodawac architecture drift ani rozszerzac zasiegu
+  istniejacego driftu.
+- Traktuj zmiane publicznego requestu/wyniku/joba, promptu, skilli, tooli,
+  policy, reportu, import/export, continuation, shared modelu/komponentu albo
+  grafu zaleznosci co najmniej jako L1.
 
 ### Gdy dodajesz nowe integracje zewnetrzne
 

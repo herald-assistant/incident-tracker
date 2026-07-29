@@ -1,10 +1,7 @@
 package pl.mkn.tdw.features.changeverification.job.export;
 
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationExecutionResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -17,9 +14,9 @@ public record ChangeVerificationExportEnvelope(
         Payload payload
 ) {
     public static final String SCHEMA = "tdw.change-verification-export";
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
     public static final String PAYLOAD_TYPE = "change-verification-analysis";
-    public static final String RESULT_CONTRACT = "change-verification-result-v2";
+    public static final String RESULT_CONTRACT = "change-verification-result-v3";
 
     public static ChangeVerificationExportEnvelope from(
             ChangeVerificationJobStateSnapshot snapshot,
@@ -73,7 +70,6 @@ public record ChangeVerificationExportEnvelope(
     }
 
     public record Request(
-            List<ChangeVerificationJobMode> modes,
             boolean checkStoryCompliance,
             boolean checkInstructionCompliance,
             String aiModel,
@@ -85,10 +81,6 @@ public record ChangeVerificationExportEnvelope(
             String status,
             String complianceStatus,
             int findingCount,
-            int smokeTestCount,
-            int readySmokeTestCount,
-            String executionStatus,
-            int executionResultCount,
             int visibilityLimitCount
     ) {
     }
@@ -120,7 +112,6 @@ public record ChangeVerificationExportEnvelope(
 
     private static Request request(ChangeVerificationJobStateSnapshot snapshot) {
         return new Request(
-                snapshot != null ? safeList(snapshot.modes()) : List.of(),
                 snapshot != null && snapshot.checkStoryCompliance(),
                 snapshot != null && snapshot.checkInstructionCompliance(),
                 text(snapshot != null ? snapshot.aiModel() : null),
@@ -131,17 +122,11 @@ public record ChangeVerificationExportEnvelope(
     private static Result result(ChangeVerificationJobStateSnapshot snapshot) {
         var result = snapshot != null ? snapshot.result() : null;
         var compliance = result != null ? result.compliance() : null;
-        var smokePack = result != null ? result.smokePack() : null;
-        var execution = result != null ? result.execution() : null;
         return new Result(
                 text(result != null ? result.status() : snapshot != null ? snapshot.status() : null),
                 text(compliance != null ? compliance.status() : null),
                 compliance != null ? safeList(compliance.findings()).size() : 0,
-                smokePack != null ? safeList(smokePack.tests()).size() : 0,
-                readySmokeTestCount(smokePack),
-                text(execution != null ? execution.status() : null),
-                execution != null ? safeList(execution.testResults()).size() : 0,
-                visibilityLimitCount(compliance, smokePack, execution)
+                visibilityLimitCount(compliance)
         );
     }
 
@@ -214,23 +199,8 @@ public record ChangeVerificationExportEnvelope(
         );
     }
 
-    private static int readySmokeTestCount(ChangeVerificationSmokePackResponse smokePack) {
-        if (smokePack == null) {
-            return 0;
-        }
-        return (int) safeList(smokePack.tests()).stream()
-                .filter(test -> "READY".equals(test.reviewStatus()))
-                .count();
-    }
-
-    private static int visibilityLimitCount(
-            ChangeVerificationComplianceResponse compliance,
-            ChangeVerificationSmokePackResponse smokePack,
-            ChangeVerificationExecutionResponse execution
-    ) {
-        return safeList(compliance != null ? compliance.visibilityLimits() : List.of()).size()
-                + safeList(smokePack != null ? smokePack.visibilityLimits() : List.of()).size()
-                + safeList(execution != null ? execution.visibilityLimits() : List.of()).size();
+    private static int visibilityLimitCount(ChangeVerificationComplianceResponse compliance) {
+        return safeList(compliance != null ? compliance.visibilityLimits() : List.of()).size();
     }
 
     private static int evidenceItemCount(List<AnalysisEvidenceSection> sections) {

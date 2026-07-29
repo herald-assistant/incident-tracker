@@ -11,6 +11,9 @@ powstac kolejne analizy systemowe, np. natural-language data diagnostics.
 
 ## Zasady
 
+- Przed utworzeniem feature'a albo zmiana L1-L3 istniejacego feature'a
+  przeczytaj `docs/architecture/14-analysis-feature-delivery-playbook.md` i
+  wykonaj baseline/conformance delta wymagane dla tego poziomu.
 - Feature moze zalezec od platformy AI, reusable tools, integracji oraz malych
   kontraktow shared/common.
 - Platforma AI, tools, integracje, shared i common nie moga importowac

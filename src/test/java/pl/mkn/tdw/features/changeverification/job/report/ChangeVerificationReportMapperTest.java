@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.changeverification.job.report;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
@@ -17,12 +16,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChangeVerificationReportMapperTest {
 
     @Test
-    void shouldPreferAiAuthoredComplianceSectionAndKeepDeterministicSmokeFallback() {
+    void shouldPreferAiAuthoredComplianceSectionAndKeepDeterministicComplianceFallback() {
         var result = new ChangeVerificationResultResponse(
                 "COMPLETED",
                 "CRM-123",
                 "https://jira.example.com/browse/CRM-123",
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 "prompt",
                 new ChangeVerificationComplianceResponse(
                         true,
@@ -33,8 +31,6 @@ class ChangeVerificationReportMapperTest {
                         List.of(),
                         List.of("Diff visibility is partial.")
                 ),
-                null,
-                null,
                 null
         );
         var aiReport = new AnalysisReport(
@@ -74,7 +70,7 @@ class ChangeVerificationReportMapperTest {
         var report = ChangeVerificationReportMapper.toReport(result, aiReport);
 
         assertThat(report.header()).isEqualTo("Change Verification: CRM-123");
-        assertThat(report.sections()).hasSize(3);
+        assertThat(report.sections()).hasSize(2);
         assertThat(section(report, ChangeVerificationReportSectionIds.STORY_COMPLIANCE).markdown())
                 .contains("AI-authored story report");
         assertThat(section(report, ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE).markdown())
@@ -83,8 +79,6 @@ class ChangeVerificationReportMapperTest {
                 .doesNotContain("Dodatkowe ustalenia")
                 .doesNotContain("fallback")
                 .doesNotContain("verificationChecks");
-        assertThat(section(report, ChangeVerificationReportSectionIds.SMOKE_PACK).markdown())
-                .isEqualTo("Smoke pack was not generated.");
         assertThat(report.meta().visibilityLimits()).contains(
                 "Repository dependency was not visible.",
                 "Diff visibility is partial."
@@ -98,7 +92,6 @@ class ChangeVerificationReportMapperTest {
                 "COMPLETED",
                 "CRM-123",
                 "https://jira.example.com/browse/CRM-123",
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 "prompt",
                 new ChangeVerificationComplianceResponse(
                         true,
@@ -124,8 +117,6 @@ class ChangeVerificationReportMapperTest {
                         List.of(),
                         List.of()
                 ),
-                null,
-                null,
                 null
         );
 

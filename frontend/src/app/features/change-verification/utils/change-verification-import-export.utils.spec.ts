@@ -14,14 +14,12 @@ describe('change-verification-import-export utils', () => {
     const imported = parseImportedChangeVerificationResult(envelope);
 
     expect(envelope.schema).toBe('tdw.change-verification-export');
-    expect(envelope.version).toBe(2);
+    expect(envelope.version).toBe(3);
     expect(envelope.payload.type).toBe('change-verification-analysis');
     expect(envelope.payload.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.target.issueKey).toBe('CRM-123');
     expect(envelope.payload.diagnostics.result.findingCount).toBe(1);
-    expect(envelope.payload.diagnostics.result.smokeTestCount).toBe(1);
-    expect(envelope.payload.diagnostics.result.readySmokeTestCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.contextEvidenceItemCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.toolEvidenceItemCount).toBe(1);
     expect(imported.exportedAt).toBe(exportedAt);
@@ -57,7 +55,7 @@ describe('change-verification-import-export utils', () => {
   it('should parse a running local history envelope when completed result is not required', () => {
     const envelope = {
       schema: 'tdw.change-verification-export',
-      version: 2,
+      version: 3,
       exportedAt: '2026-07-26T09:02:00Z',
       payload: {
         type: 'change-verification-analysis',
@@ -95,7 +93,6 @@ function changeVerificationJob(
     jobId: 'change-job-1',
     issueKey: 'CRM-123',
     issueUrl: 'https://jira.example.com/browse/CRM-123',
-    modes: ['CHECK_COMPLIANCE', 'GENERATE_SMOKE_PACK'],
     checkStoryCompliance: true,
     checkInstructionCompliance: true,
     aiModel: 'gpt-test',
@@ -159,7 +156,6 @@ function changeVerificationJob(
       status: 'READY',
       issueKey: 'CRM-123',
       issueUrl: 'https://jira.example.com/browse/CRM-123',
-      modes: ['CHECK_COMPLIANCE', 'GENERATE_SMOKE_PACK'],
       prompt: 'Prompt',
       compliance: {
         storyComplianceRequested: true,
@@ -174,8 +170,8 @@ function changeVerificationJob(
             interpretationType: 'explicit',
             expectedCriterion: 'Customer creation endpoint persists the requested customer.',
             verificationStatus: 'PASSED',
-            verifiedAgainst: 'CustomerController and smoke-1',
-            analysis: 'The endpoint and smoke pack cover the creation path.',
+            verifiedAgainst: 'CustomerController',
+            analysis: 'The endpoint implementation covers the creation path.',
             evidenceRefs: ['CRM-123', 'CustomerController'],
             gaps: [],
             suggestedAction: 'Proceed with release verification.'
@@ -195,49 +191,12 @@ function changeVerificationJob(
         suggestedActions: ['Proceed with release verification.'],
         visibilityLimits: ['No runtime logs were checked.']
       },
-      smokePack: {
-        requested: true,
-        status: 'READY',
-        postmanCollectionName: 'CRM-123 smoke',
-        tests: [
-          {
-            id: 'smoke-1',
-            name: 'Create customer',
-            method: 'POST',
-            path: '/api/customers',
-            purpose: 'Verify the changed endpoint.',
-            headers: [],
-            queryParams: [],
-            requestBody: '{}',
-            responseAssertions: [{ type: 'STATUS', target: 'status', operator: 'EQ', expectedValue: '201' }],
-            dbAssertions: [],
-            dbAssertionSpecs: [],
-            cleanup: null,
-            cleanupHints: [],
-            sourceRefs: ['CustomerController'],
-            riskCovered: 'Creation path',
-            reviewStatus: 'READY'
-          }
-        ],
-        visibilityLimits: [],
-        suggestedActions: [],
-        confidence: 'MEDIUM'
-      },
-      execution: {
-        requested: false,
-        status: 'NOT_RUN',
-        executedTestIds: [],
-        testResults: [],
-        cleanupActions: [],
-        manualCleanupSql: null,
-        visibilityLimits: []
-      },
       usage: null
     },
     report: {
       reportId: 'change-verification-CRM-123',
       header: 'Change Verification: CRM-123',
-      subHeader: 'Compliance READY | Smoke READY | Execution NOT_RUN',
+      subHeader: 'Compliance READY',
       markdownSummary: '- Compliance: `READY` with 1 finding.',
       sections: [
         {
@@ -259,20 +218,6 @@ function changeVerificationJob(
           title: 'Instruction compliance',
           order: 1,
           markdown: 'Instruction alignment confirmed.',
-          meta: {
-            references: [],
-            visibilityLimits: [],
-            openQuestions: [],
-            gaps: [],
-            confidence: 'MEDIUM',
-            warnings: []
-          }
-        },
-        {
-          id: 'SMOKE_PACK',
-          title: 'Smoke pack',
-          order: 2,
-          markdown: 'Smoke pack ready.',
           meta: {
             references: [],
             visibilityLimits: [],

@@ -95,9 +95,8 @@ na zadanie. Pomijaj puste wartosci, `[]`, `n/a`, `Brak` i puste sekcje.
 ## Finalna Odpowiedz
 
 Po poprawnym `report_get_current` zwroc dokladnie jeden obiekt JSON zgodny z
-`change-verification/response-contract.md`. Jest to fallback diagnostyczny i
-wejscie do dalszej fazy smoke pack; zrodlem prawdy dla UI sa zapisane sekcje
-`AnalysisReport`.
+`change-verification/response-contract.md`. Jest to fallback diagnostyczny;
+zrodlem prawdy dla UI sa zapisane sekcje `AnalysisReport`.
 
 Gdy report tools nie sa dostepne albo zapis sie nie powiedzie, nadal zwroc
 pelny JSON. Nie zwracaj opisu przed ani po JSON.

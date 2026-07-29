@@ -6,12 +6,8 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationExecutionResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestResponse;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
@@ -63,11 +59,11 @@ class ChangeVerificationLocalRunPersisterTest {
 
         var exportEnvelope = store.savedRecord.exportEnvelope();
         assertEquals("tdw.change-verification-export", exportEnvelope.path("schema").asText());
-        assertEquals(2, exportEnvelope.path("version").asInt());
+        assertEquals(3, exportEnvelope.path("version").asInt());
         assertEquals(COMPLETED_AT.toString(), exportEnvelope.path("exportedAt").asText());
         assertEquals("change-verification-analysis", exportEnvelope.at("/payload/type").asText());
-        assertEquals("change-verification-result-v2", exportEnvelope.at("/payload/resultContract").asText());
-        assertEquals("change-verification-result-v2", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
+        assertEquals("change-verification-result-v3", exportEnvelope.at("/payload/resultContract").asText());
+        assertEquals("change-verification-result-v3", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
         assertEquals("change-job-1", exportEnvelope.at("/payload/job/jobId").asText());
         assertEquals("CRM-123", exportEnvelope.at("/payload/job/issueKey").asText());
         assertEquals("change-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
@@ -85,7 +81,7 @@ class ChangeVerificationLocalRunPersisterTest {
         assertNull(store.savedEntry.completedAt());
         assertEquals(UPDATED_AT.toString(), store.savedRecord.exportEnvelope().path("exportedAt").asText());
         assertEquals("RUNNING", store.savedRecord.exportEnvelope().at("/payload/job/status").asText());
-        assertEquals("change-verification-result-v2",
+        assertEquals("change-verification-result-v3",
                 store.savedRecord.exportEnvelope().at("/payload/diagnostics/resultContract").asText());
         assertFalse(store.savedRecord.continuation().enabled());
     }
@@ -95,7 +91,6 @@ class ChangeVerificationLocalRunPersisterTest {
                 "COMPLETED",
                 "CRM-123",
                 "https://jira.example.com/browse/CRM-123",
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE, ChangeVerificationJobMode.GENERATE_SMOKE_PACK),
                 "Prepared prompt",
                 new ChangeVerificationComplianceResponse(
                         true,
@@ -106,48 +101,12 @@ class ChangeVerificationLocalRunPersisterTest {
                         List.of("Keep acceptance criteria updated."),
                         List.of()
                 ),
-                new ChangeVerificationSmokePackResponse(
-                        true,
-                        "READY",
-                        "CRM-123 smoke",
-                        List.of(new ChangeVerificationSmokeTestResponse(
-                                "smoke-1",
-                                "Check CRM resource",
-                                "GET",
-                                "/api/crm/resources/123",
-                                "Verify the changed endpoint is reachable.",
-                                List.of(),
-                                List.of(),
-                                null,
-                                List.of(),
-                                List.of(),
-                                List.of(),
-                                null,
-                                List.of(),
-                                List.of("MR !1"),
-                                "Endpoint availability",
-                                "READY"
-                        )),
-                        List.of(),
-                        List.of(),
-                        "high"
-                ),
-                new ChangeVerificationExecutionResponse(
-                        false,
-                        "SKIPPED",
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        null,
-                        List.of()
-                ),
                 null
         );
         return new ChangeVerificationJobStateSnapshot(
                 "change-job-1",
                 "CRM-123",
                 "https://jira.example.com/browse/CRM-123",
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE, ChangeVerificationJobMode.GENERATE_SMOKE_PACK),
                 true,
                 true,
                 "gpt-5.4",
@@ -175,7 +134,6 @@ class ChangeVerificationLocalRunPersisterTest {
                 "change-job-1",
                 "CRM-123",
                 "https://jira.example.com/browse/CRM-123",
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 true,
                 true,
                 "gpt-5.4",

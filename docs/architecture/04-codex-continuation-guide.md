@@ -15,6 +15,8 @@ Przy nowej sesji najlepiej zaczac od:
 4. `docs/architecture/03-runtime-flow.md`
 5. `docs/architecture/05-package-dependencies.md`
 6. `docs/architecture/06-modular-architecture-roadmap.md`
+7. `docs/architecture/14-analysis-feature-delivery-playbook.md`, jezeli sesja
+   dotyczy nowego feature'a albo zmiany L1-L3 feature'a/mechanizmu wspolnego
 
 ## Co jest "source of truth"
 

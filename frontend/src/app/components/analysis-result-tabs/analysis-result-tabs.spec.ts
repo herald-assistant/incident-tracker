@@ -15,14 +15,13 @@ describe('AnalysisResultTabsComponent', () => {
     fixture.componentRef.setInput('activeTabId', 'STORY_COMPLIANCE');
     fixture.componentRef.setInput('tabs', [
       { id: 'STORY_COMPLIANCE', tabLabel: 'Story compliance' },
-      { id: 'INSTRUCTION_COMPLIANCE', tabLabel: 'Instruction compliance' },
-      { id: 'SMOKE_PACK', tabLabel: 'Smoke pack' }
+      { id: 'INSTRUCTION_COMPLIANCE', tabLabel: 'Instruction compliance' }
     ]);
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     const tabs = compiled.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(2);
     expect(tabs[0].classList).toContain('analysis-result-tab--active');
     expect(tabs[0].getAttribute('aria-controls')).toBe(
       'change-verification-panel-STORY_COMPLIANCE'

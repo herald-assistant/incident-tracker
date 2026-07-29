@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.changeverification.source;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
@@ -50,7 +49,6 @@ class ChangeVerificationSourceDiscoveryServiceTest {
         var result = service.discover(new ChangeVerificationJobStartRequest(
                 "CRM-123",
                 null,
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 true,
                 false,
                 null,
@@ -95,7 +93,6 @@ class ChangeVerificationSourceDiscoveryServiceTest {
         var result = service.discover(new ChangeVerificationJobStartRequest(
                 "CRM-124",
                 null,
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 true,
                 false,
                 null,
@@ -137,7 +134,6 @@ class ChangeVerificationSourceDiscoveryServiceTest {
         var result = service.discover(new ChangeVerificationJobStartRequest(
                 "CRM-123",
                 null,
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                 true,
                 true,
                 null,

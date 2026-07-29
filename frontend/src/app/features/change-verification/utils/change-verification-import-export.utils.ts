@@ -11,28 +11,16 @@ import { normalizeAnalysisReport } from '../../../core/utils/analysis-import-exp
 import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
 import {
   ChangeVerificationCompliance,
-  ChangeVerificationExecution,
   ChangeVerificationFinding,
   ChangeVerificationFindingSeverity,
-  ChangeVerificationJobMode,
   ChangeVerificationJobStateSnapshot,
-  ChangeVerificationNameValue,
-  ChangeVerificationResult,
-  ChangeVerificationSmokeAssertion,
-  ChangeVerificationSmokeAssertionResult,
-  ChangeVerificationSmokeCleanup,
-  ChangeVerificationSmokeCleanupResult,
-  ChangeVerificationSmokeDbAssertion,
-  ChangeVerificationSmokeHttpResult,
-  ChangeVerificationSmokePack,
-  ChangeVerificationSmokeTest,
-  ChangeVerificationSmokeTestExecution
+  ChangeVerificationResult
 } from '../models/change-verification.models';
 
 export const CHANGE_VERIFICATION_EXPORT_SCHEMA = 'tdw.change-verification-export';
-export const CHANGE_VERIFICATION_EXPORT_VERSION = 2;
+export const CHANGE_VERIFICATION_EXPORT_VERSION = 3;
 export const CHANGE_VERIFICATION_EXPORT_PAYLOAD_TYPE = 'change-verification-analysis';
-export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v2';
+export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v3';
 
 export interface ChangeVerificationExportEnvelope {
   schema: string;
@@ -53,7 +41,6 @@ export interface ChangeVerificationExportDiagnostics {
     issueUrl: string;
   };
   request: {
-    modes: ChangeVerificationJobMode[];
     checkStoryCompliance: boolean;
     checkInstructionCompliance: boolean;
     aiModel: string;
@@ -63,10 +50,6 @@ export interface ChangeVerificationExportDiagnostics {
     status: string;
     complianceStatus: string;
     findingCount: number;
-    smokeTestCount: number;
-    readySmokeTestCount: number;
-    executionStatus: string;
-    executionResultCount: number;
     visibilityLimitCount: number;
   };
   workflow: {
@@ -122,8 +105,6 @@ export function buildChangeVerificationExportDiagnostics(
   assertCompletedExportableJob(job);
 
   const compliance = job.result.compliance;
-  const smokePack = job.result.smokePack;
-  const execution = job.result.execution;
 
   return {
     resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT,
@@ -132,7 +113,6 @@ export function buildChangeVerificationExportDiagnostics(
       issueUrl: job.issueUrl
     },
     request: {
-      modes: job.modes,
       checkStoryCompliance: job.checkStoryCompliance,
       checkInstructionCompliance: job.checkInstructionCompliance,
       aiModel: job.aiModel,
@@ -142,15 +122,7 @@ export function buildChangeVerificationExportDiagnostics(
       status: job.result.status,
       complianceStatus: compliance.status,
       findingCount: compliance.findings.length,
-      smokeTestCount: smokePack.tests.length,
-      readySmokeTestCount: smokePack.tests.filter((test) => normalizeString(test.reviewStatus) === 'READY').length,
-      executionStatus: execution.status,
-      executionResultCount: execution.testResults.length,
-      visibilityLimitCount: uniqueValues([
-        ...compliance.visibilityLimits,
-        ...smokePack.visibilityLimits,
-        ...execution.visibilityLimits
-      ]).length
+      visibilityLimitCount: uniqueValues(compliance.visibilityLimits).length
     },
     workflow: {
       stepCount: job.steps.length,
@@ -264,7 +236,6 @@ export function normalizeChangeVerificationJob(job: unknown): ChangeVerification
     jobId: normalizeString(jobObject['jobId']),
     issueKey: normalizeString(jobObject['issueKey']),
     issueUrl: normalizeString(jobObject['issueUrl']),
-    modes: normalizeModes(jobObject['modes']),
     checkStoryCompliance: normalizeBoolean(jobObject['checkStoryCompliance']),
     checkInstructionCompliance: normalizeBoolean(jobObject['checkInstructionCompliance']),
     aiModel: normalizeString(jobObject['aiModel']),
@@ -404,11 +375,8 @@ function normalizeResult(result: unknown): ChangeVerificationResult {
     status: normalizeString(resultObject?.['status']),
     issueKey: normalizeString(resultObject?.['issueKey']),
     issueUrl: normalizeString(resultObject?.['issueUrl']),
-    modes: normalizeModes(resultObject?.['modes']),
     prompt: normalizeString(resultObject?.['prompt']),
     compliance: normalizeCompliance(resultObject?.['compliance']),
-    smokePack: normalizeSmokePack(resultObject?.['smokePack']),
-    execution: normalizeExecution(resultObject?.['execution']),
     usage: normalizeUsage(resultObject?.['usage'])
   };
 }
@@ -461,159 +429,6 @@ function normalizeFinding(finding: unknown): ChangeVerificationFinding {
   };
 }
 
-function normalizeSmokePack(smokePack: unknown): ChangeVerificationSmokePack {
-  const smokePackObject = asObject(smokePack);
-  return {
-    requested: normalizeBoolean(smokePackObject?.['requested']),
-    status: normalizeString(smokePackObject?.['status']),
-    postmanCollectionName: normalizeNullableString(smokePackObject?.['postmanCollectionName']),
-    tests: Array.isArray(smokePackObject?.['tests'])
-      ? smokePackObject['tests'].map(normalizeSmokeTest)
-      : [],
-    visibilityLimits: normalizeStringArray(smokePackObject?.['visibilityLimits']),
-    suggestedActions: normalizeStringArray(smokePackObject?.['suggestedActions']),
-    confidence: normalizeNullableString(smokePackObject?.['confidence'])
-  };
-}
-
-function normalizeSmokeTest(test: unknown): ChangeVerificationSmokeTest {
-  const testObject = asObject(test);
-  return {
-    id: normalizeString(testObject?.['id']),
-    name: normalizeString(testObject?.['name']),
-    method: normalizeString(testObject?.['method']),
-    path: normalizeString(testObject?.['path']),
-    purpose: normalizeString(testObject?.['purpose']),
-    headers: Array.isArray(testObject?.['headers']) ? testObject['headers'].map(normalizeNameValue) : [],
-    queryParams: Array.isArray(testObject?.['queryParams'])
-      ? testObject['queryParams'].map(normalizeNameValue)
-      : [],
-    requestBody: normalizeNullableString(testObject?.['requestBody']),
-    responseAssertions: Array.isArray(testObject?.['responseAssertions'])
-      ? testObject['responseAssertions'].map(normalizeAssertion)
-      : [],
-    dbAssertions: normalizeStringArray(testObject?.['dbAssertions']),
-    dbAssertionSpecs: Array.isArray(testObject?.['dbAssertionSpecs'])
-      ? testObject['dbAssertionSpecs'].map(normalizeDbAssertion)
-      : [],
-    cleanup: asObject(testObject?.['cleanup']) ? normalizeCleanup(testObject?.['cleanup']) : null,
-    cleanupHints: normalizeStringArray(testObject?.['cleanupHints']),
-    sourceRefs: normalizeStringArray(testObject?.['sourceRefs']),
-    riskCovered: normalizeNullableString(testObject?.['riskCovered']),
-    reviewStatus: normalizeNullableString(testObject?.['reviewStatus'])
-  };
-}
-
-function normalizeNameValue(item: unknown): ChangeVerificationNameValue {
-  const itemObject = asObject(item);
-  return {
-    name: normalizeString(itemObject?.['name']),
-    value: normalizeString(itemObject?.['value']),
-    enabled: normalizeBoolean(itemObject?.['enabled'])
-  };
-}
-
-function normalizeAssertion(assertion: unknown): ChangeVerificationSmokeAssertion {
-  const assertionObject = asObject(assertion);
-  return {
-    type: normalizeString(assertionObject?.['type']),
-    target: normalizeString(assertionObject?.['target']),
-    operator: normalizeString(assertionObject?.['operator']),
-    expectedValue: normalizeString(assertionObject?.['expectedValue'])
-  };
-}
-
-function normalizeDbAssertion(assertion: unknown): ChangeVerificationSmokeDbAssertion {
-  const assertionObject = asObject(assertion);
-  return {
-    id: normalizeString(assertionObject?.['id']),
-    sql: normalizeString(assertionObject?.['sql']),
-    operator: normalizeNullableString(assertionObject?.['operator']),
-    expectedValue: normalizeNullableString(assertionObject?.['expectedValue']),
-    description: normalizeNullableString(assertionObject?.['description'])
-  };
-}
-
-function normalizeCleanup(cleanup: unknown): ChangeVerificationSmokeCleanup {
-  const cleanupObject = asObject(cleanup);
-  return {
-    strategy: normalizeString(cleanupObject?.['strategy']),
-    method: normalizeNullableString(cleanupObject?.['method']),
-    path: normalizeNullableString(cleanupObject?.['path']),
-    requestBody: normalizeNullableString(cleanupObject?.['requestBody']),
-    manualSql: normalizeNullableString(cleanupObject?.['manualSql']),
-    hints: normalizeStringArray(cleanupObject?.['hints'])
-  };
-}
-
-function normalizeExecution(execution: unknown): ChangeVerificationExecution {
-  const executionObject = asObject(execution);
-  return {
-    requested: normalizeBoolean(executionObject?.['requested']),
-    status: normalizeString(executionObject?.['status']),
-    executedTestIds: normalizeStringArray(executionObject?.['executedTestIds']),
-    testResults: Array.isArray(executionObject?.['testResults'])
-      ? executionObject['testResults'].map(normalizeTestExecution)
-      : [],
-    cleanupActions: normalizeStringArray(executionObject?.['cleanupActions']),
-    manualCleanupSql: normalizeNullableString(executionObject?.['manualCleanupSql']),
-    visibilityLimits: normalizeStringArray(executionObject?.['visibilityLimits'])
-  };
-}
-
-function normalizeTestExecution(testExecution: unknown): ChangeVerificationSmokeTestExecution {
-  const testExecutionObject = asObject(testExecution);
-  return {
-    testId: normalizeString(testExecutionObject?.['testId']),
-    name: normalizeString(testExecutionObject?.['name']),
-    status: normalizeString(testExecutionObject?.['status']),
-    http: asObject(testExecutionObject?.['http']) ? normalizeHttpResult(testExecutionObject?.['http']) : null,
-    responseAssertions: Array.isArray(testExecutionObject?.['responseAssertions'])
-      ? testExecutionObject['responseAssertions'].map(normalizeAssertionResult)
-      : [],
-    dbAssertions: Array.isArray(testExecutionObject?.['dbAssertions'])
-      ? testExecutionObject['dbAssertions'].map(normalizeAssertionResult)
-      : [],
-    cleanup: asObject(testExecutionObject?.['cleanup'])
-      ? normalizeCleanupResult(testExecutionObject?.['cleanup'])
-      : null
-  };
-}
-
-function normalizeHttpResult(http: unknown): ChangeVerificationSmokeHttpResult {
-  const httpObject = asObject(http);
-  return {
-    method: normalizeString(httpObject?.['method']),
-    url: normalizeString(httpObject?.['url']),
-    statusCode: normalizeNullableNumber(httpObject?.['statusCode']),
-    durationMillis: normalizeNumber(httpObject?.['durationMillis']),
-    bodyExcerpt: normalizeNullableString(httpObject?.['bodyExcerpt']),
-    headers: Array.isArray(httpObject?.['headers']) ? httpObject['headers'].map(normalizeNameValue) : [],
-    errorMessage: normalizeNullableString(httpObject?.['errorMessage'])
-  };
-}
-
-function normalizeAssertionResult(assertion: unknown): ChangeVerificationSmokeAssertionResult {
-  const assertionObject = asObject(assertion);
-  return {
-    type: normalizeString(assertionObject?.['type']),
-    target: normalizeString(assertionObject?.['target']),
-    status: normalizeString(assertionObject?.['status']),
-    message: normalizeString(assertionObject?.['message'])
-  };
-}
-
-function normalizeCleanupResult(cleanup: unknown): ChangeVerificationSmokeCleanupResult {
-  const cleanupObject = asObject(cleanup);
-  return {
-    strategy: normalizeString(cleanupObject?.['strategy']),
-    status: normalizeString(cleanupObject?.['status']),
-    action: normalizeNullableString(cleanupObject?.['action']),
-    manualSql: normalizeNullableString(cleanupObject?.['manualSql']),
-    message: normalizeString(cleanupObject?.['message'])
-  };
-}
-
 function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
   const usageObject = asObject(usage);
   if (!usageObject) {
@@ -652,21 +467,12 @@ function uniqueValues(values: string[]): string[] {
   return Array.from(new Set(values.filter((value) => Boolean(value?.trim()))));
 }
 
-function normalizeModes(value: unknown): ChangeVerificationJobMode[] {
-  const modes = normalizeStringArray(value).filter(isChangeVerificationMode);
-  return modes.length > 0 ? Array.from(new Set(modes)) : ['CHECK_COMPLIANCE'];
-}
-
 function normalizeSeverity(value: unknown): ChangeVerificationFindingSeverity {
   const normalized = normalizeString(value).toUpperCase();
   if (['INFO', 'LOW', 'MEDIUM', 'HIGH', 'BLOCKER'].includes(normalized)) {
     return normalized as ChangeVerificationFindingSeverity;
   }
   return 'INFO';
-}
-
-function isChangeVerificationMode(value: string): value is ChangeVerificationJobMode {
-  return value === 'CHECK_COMPLIANCE' || value === 'GENERATE_SMOKE_PACK' || value === 'EXECUTE_SMOKE_PACK';
 }
 
 function normalizeString(value: unknown): string {

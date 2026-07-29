@@ -1,5 +1,9 @@
 # Frontend Features AGENTS
 
+Przed utworzeniem dedicated feature'a albo zmiana L1-L3 istniejacego feature'a
+przeczytaj `docs/architecture/14-analysis-feature-delivery-playbook.md` i
+wykonaj baseline/conformance delta wymagane dla tego poziomu.
+
 ## Feature vs Workbench
 
 `Incident Analysis` jest pierwszym dedicated feature'em. Elastic Logs,
@@ -33,8 +37,8 @@ Incident Analysis ma byc codziennym workspace'em, nie landing page.
 Zasady:
 
 - bez hero jako pierwszego viewportu,
-- kompaktowy panel startu z `Correlation ID`, `Model AI`,
-  `Reasoning effort` i primary `Run analysis`,
+- kompaktowy panel startu ze zrodlem logow, odpowiadajacym mu inputem,
+  `Model AI`, `Reasoning effort` i primary `Run analysis`,
 - po starcie pokazuj pasek kontekstu runu,
 - finalny wynik ma miec pelna szerokosc,
 - przebieg analizy i tok pracy AI sa sekcjami pomocniczymi, domyslnie
@@ -42,8 +46,9 @@ Zasady:
 - usage moze byc kompaktowe, ale szczegoly tokenow/kosztu musza byc dostepne
   w tooltipie.
 
-Publiczny start analizy wysyla tylko `correlationId`, `model` i
-`reasoningEffort`. Nie przywracaj request fields dla branch, environment ani
+Publiczny start analizy wysyla `source`; dla `ELASTICSEARCH` takze
+`correlationId`, dla `CSV_UPLOAD` multipart `logFile`, oraz opcjonalne `model`
+i `reasoningEffort`. Nie przywracaj request fields dla branch, environment ani
 GitLab group.
 
 ## Tool Workbench screens

@@ -4,26 +4,14 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationAiResponse;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysisProvider;
-import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysis;
-import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationSmokePackAnalysisProvider;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparationService;
-import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationSmokePackPromptPreparationService;
-import pl.mkn.tdw.features.changeverification.execution.ChangeVerificationExecutionProperties;
-import pl.mkn.tdw.features.changeverification.execution.ChangeVerificationSmokeExecutionService;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationNameValueResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeAssertionResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeCleanupResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokePackResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeTestResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
 import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatcher;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryService;
-import pl.mkn.tdw.features.changeverification.smoke.ChangeVerificationPostmanCollectionRenderer;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestCommit;
@@ -64,7 +52,6 @@ class ChangeVerificationJobServiceTest {
         var snapshot = service.startJob(new ChangeVerificationJobStartRequest(
                 "CRM-123",
                 null,
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE, ChangeVerificationJobMode.GENERATE_SMOKE_PACK),
                 true,
                 true,
                 null,
@@ -95,7 +82,6 @@ class ChangeVerificationJobServiceTest {
         var snapshot = service.startJob(new ChangeVerificationJobStartRequest(
                 "CRM-123",
                 null,
-                List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE, ChangeVerificationJobMode.GENERATE_SMOKE_PACK),
                 true,
                 true,
                 null,
@@ -111,9 +97,7 @@ class ChangeVerificationJobServiceTest {
                 "CHANGED_FILES",
                 "INSTRUCTION_CONTEXT",
                 "INITIAL_SOURCE_SNAPSHOT",
-                "AI_VERIFICATION",
-                "SMOKE_PACK_GENERATION",
-                "EXECUTION"
+                "AI_VERIFICATION"
         );
         assertThat(snapshot.contextSections())
                 .extracting("category")
@@ -128,8 +112,8 @@ class ChangeVerificationJobServiceTest {
                 .filteredOn(section -> "tool-discovery".equals(section.category()))
                 .singleElement()
                 .extracting(section -> section.items().size())
-                .isEqualTo(2);
-        assertThat(snapshot.aiActivityEvents()).hasSize(2);
+                .isEqualTo(1);
+        assertThat(snapshot.aiActivityEvents()).hasSize(1);
         assertThat(snapshot.steps())
                 .filteredOn(step -> "INSTRUCTION_CONTEXT".equals(step.code()))
                 .singleElement()
@@ -146,37 +130,7 @@ class ChangeVerificationJobServiceTest {
         assertThat(snapshot.result().compliance().findings()).singleElement()
                 .extracting(ChangeVerificationFindingResponse::source)
                 .isEqualTo("INSTRUCTIONS");
-        assertThat(snapshot.result().smokePack().requested()).isTrue();
-        assertThat(snapshot.result().smokePack().status()).isEqualTo("READY");
-        assertThat(snapshot.result().smokePack().tests()).singleElement()
-                .extracting(ChangeVerificationSmokeTestResponse::reviewStatus)
-                .isEqualTo("READY");
-        assertThat(snapshot.result().execution().requested()).isFalse();
         assertThat(service.getJob(snapshot.jobId())).isEqualTo(snapshot);
-    }
-
-    @Test
-    void shouldSkipComplianceWhenOnlySmokePackIsRequested() {
-        var service = service();
-        var snapshot = service.startJob(new ChangeVerificationJobStartRequest(
-                "CRM-123",
-                null,
-                List.of(ChangeVerificationJobMode.GENERATE_SMOKE_PACK),
-                false,
-                false,
-                null,
-                null,
-                null
-        ));
-
-        assertThat(snapshot.result().compliance().status()).isEqualTo("SKIPPED");
-        assertThat(snapshot.steps())
-                .filteredOn(step -> "AI_VERIFICATION".equals(step.code()))
-                .singleElement()
-                .extracting("status")
-                .isEqualTo("SKIPPED");
-        assertThat(snapshot.result().smokePack().requested()).isTrue();
-        assertThat(snapshot.result().smokePack().tests()).hasSize(1);
     }
 
     @Test
@@ -184,39 +138,6 @@ class ChangeVerificationJobServiceTest {
         var service = service();
         assertThatThrownBy(() -> service.getJob("missing-job"))
                 .isInstanceOf(ChangeVerificationJobNotFoundException.class);
-    }
-
-    @Test
-    void shouldExecuteAcceptedSmokePack() {
-        var service = service();
-        var snapshot = service.startJob(new ChangeVerificationJobStartRequest(
-                "CRM-123",
-                null,
-                List.of(ChangeVerificationJobMode.GENERATE_SMOKE_PACK),
-                false,
-                false,
-                null,
-                null,
-                null
-        ));
-
-        var execution = service.executeSmokePack(
-                snapshot.jobId(),
-                new pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationSmokeExecutionRequest(
-                        "http://127.0.0.1:1",
-                        null,
-                        null,
-                        List.of(),
-                        Map.of("customerId", "123"),
-                        false
-                )
-        );
-
-        assertThat(execution.requested()).isTrue();
-        assertThat(execution.testResults()).singleElement()
-                .extracting("testId")
-                .isEqualTo("smoke-001");
-        assertThat(service.getJob(snapshot.jobId()).result().execution().testResults()).hasSize(1);
     }
 
     private static ChangeVerificationJobService service() {
@@ -239,14 +160,7 @@ class ChangeVerificationJobServiceTest {
                         new ChangeVerificationOperationalContextMatcher(ignored -> OperationalContextCatalog.empty())
                 ),
                 new ChangeVerificationPromptPreparationService(),
-                new ChangeVerificationSmokePackPromptPreparationService(),
                 new TestComplianceAnalysisProvider(),
-                new TestSmokePackAnalysisProvider(),
-                new ChangeVerificationPostmanCollectionRenderer(),
-                new ChangeVerificationSmokeExecutionService(
-                        org.springframework.web.client.RestClient.builder(),
-                        new ChangeVerificationExecutionProperties()
-                ),
                 ChangeVerificationLocalRunPersistence.NO_OP,
                 taskExecutor
         );
@@ -326,74 +240,6 @@ class ChangeVerificationJobServiceTest {
         }
     }
 
-    private static final class TestSmokePackAnalysisProvider implements ChangeVerificationSmokePackAnalysisProvider {
-
-        @Override
-        public ChangeVerificationSmokePackAnalysis analyze(
-                String jobId,
-                ChangeVerificationJobStartRequest request,
-                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-                ChangeVerificationComplianceAnalysis complianceAnalysis
-        ) {
-            return analyze(jobId, request, sourceDiscovery, complianceAnalysis, AnalysisAiToolEvidenceListener.NO_OP);
-        }
-
-        @Override
-        public ChangeVerificationSmokePackAnalysis analyze(
-                String jobId,
-                ChangeVerificationJobStartRequest request,
-                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-                ChangeVerificationComplianceAnalysis complianceAnalysis,
-                AnalysisAiToolEvidenceListener toolEvidenceListener
-        ) {
-            return analyze(jobId, request, sourceDiscovery, complianceAnalysis, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
-        }
-
-        @Override
-        public ChangeVerificationSmokePackAnalysis analyze(
-                String jobId,
-                ChangeVerificationJobStartRequest request,
-                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-                ChangeVerificationComplianceAnalysis complianceAnalysis,
-                AnalysisAiToolEvidenceListener toolEvidenceListener,
-                AnalysisAiActivityListener activityListener
-        ) {
-            toolEvidenceListener.onToolEvidenceUpdated(toolEvidence("gitlab_find_flow_context", "COMPLETED"));
-            activityListener.onAiActivity(aiActivity("USAGE", "INFO", null));
-            return new ChangeVerificationSmokePackAnalysis(
-                    new ChangeVerificationSmokePackResponse(
-                            true,
-                            "READY",
-                            "CRM-123 smoke verification",
-                            List.of(new ChangeVerificationSmokeTestResponse(
-                                    "smoke-001",
-                                    "Customer profile exposes status",
-                                    "GET",
-                                    "/api/customers/{{customerId}}",
-                                    "Verify status field for active customer.",
-                                    List.of(new ChangeVerificationNameValueResponse("Accept", "application/json", true)),
-                                    List.of(),
-                                    null,
-                                    List.of(new ChangeVerificationSmokeAssertionResponse("STATUS", "status", "EQUALS", "200")),
-                                    List.of("select status from customer where id = :customerId"),
-                                    List.of(),
-                                    new ChangeVerificationSmokeCleanupResponse("NONE", null, null, null, null, List.of()),
-                                    List.of("No cleanup needed for readonly GET."),
-                                    List.of("change-verification/merge-requests.md"),
-                                    "Acceptance criterion: status is returned.",
-                                    "READY"
-                            )),
-                            List.of(),
-                            List.of("Review customerId environment variable."),
-                            "medium"
-                    ),
-                    null,
-                    "Change Verification smoke prompt",
-                    "session-smoke-test"
-            );
-        }
-    }
-
     private static AnalysisEvidenceSection toolEvidence(String toolName, String outcome) {
         return new AnalysisEvidenceSection(
                 "gitlab",
@@ -434,7 +280,7 @@ class ChangeVerificationJobServiceTest {
             return new JiraIssueMaterial(
                     issueKey,
                     "https://jira.example.com/browse/" + issueKey,
-                    "Customer profile smoke verification",
+                    "Customer profile verification",
                     "As a release owner I want the profile endpoint to expose new status.",
                     "Story",
                     "Ready for Test",

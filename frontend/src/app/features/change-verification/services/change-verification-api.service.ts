@@ -4,10 +4,7 @@ import { Observable } from 'rxjs';
 
 import {
   ChangeVerificationJobStartRequest,
-  ChangeVerificationJobStateSnapshot,
-  ChangeVerificationExecution,
-  ChangeVerificationSmokeExecutionRequest,
-  ChangeVerificationSmokePack
+  ChangeVerificationJobStateSnapshot
 } from '../models/change-verification.models';
 
 @Injectable({
@@ -26,32 +23,6 @@ export class ChangeVerificationApiService {
   getJob(jobId: string): Observable<ChangeVerificationJobStateSnapshot> {
     return this.http.get<ChangeVerificationJobStateSnapshot>(
       `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}`
-    );
-  }
-
-  updateSmokePack(
-    jobId: string,
-    smokePack: ChangeVerificationSmokePack
-  ): Observable<ChangeVerificationSmokePack> {
-    return this.http.put<ChangeVerificationSmokePack>(
-      `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/smoke-pack`,
-      smokePack
-    );
-  }
-
-  getPostmanCollection(jobId: string): Observable<unknown> {
-    return this.http.get<unknown>(
-      `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/postman/collection`
-    );
-  }
-
-  executeSmokePack(
-    jobId: string,
-    request: ChangeVerificationSmokeExecutionRequest
-  ): Observable<ChangeVerificationExecution> {
-    return this.http.post<ChangeVerificationExecution>(
-      `${this.baseUrl}/jobs/${encodeURIComponent(jobId)}/smoke-executions`,
-      request
     );
   }
 }

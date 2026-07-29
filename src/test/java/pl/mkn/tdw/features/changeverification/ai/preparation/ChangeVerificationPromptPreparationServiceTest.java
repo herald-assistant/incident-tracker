@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.changeverification.ai.preparation;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobMode;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
@@ -25,7 +24,6 @@ class ChangeVerificationPromptPreparationServiceTest {
                 new ChangeVerificationJobStartRequest(
                         "CRM-123",
                         null,
-                        List.of(ChangeVerificationJobMode.CHECK_COMPLIANCE),
                         true,
                         true,
                         "Focus cleanup.",
