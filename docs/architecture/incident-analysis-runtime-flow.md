@@ -1,12 +1,12 @@
-# Runtime Flow
+# Incident Analysis Runtime Flow
 
 Ten dokument opisuje aktualny przeplyw pierwszego feature'a platformy:
 analizy incydentu dla job API, evidence pipeline i providera AI opartego o
 Copilot SDK.
 
-Nie opisuje calego docelowego produktu. Platforma ma obslugiwac takze kolejne
-feature'y, np. flow explorer, pytania o logike funkcjonalna use case'ow oraz
-natural-language data diagnostics. Te feature'y powinny reuse'owac
+Nie opisuje calego produktu ani runtime Flow Explorera i Change Verification.
+Kolejne feature'y, np. functional logic explorer i natural-language data
+diagnostics, powinny reuse'owac
 `aiplatform`, `agenttools`, `integrations` i shared/operator API, ale miec
 wlasny runtime flow i result contract.
 

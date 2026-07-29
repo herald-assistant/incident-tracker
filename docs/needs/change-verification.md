@@ -1,11 +1,18 @@
 # Change Verification - Business Need
 
+Status: active
+
+Ostatnio zweryfikowano zakres potrzeby: 2026-07-29. Stan implementacji i
+kolejnosc kolejnych zmian naleza do kodu oraz zatwierdzonych dokumentow w
+`../plans/`, nie do tego pliku.
+
 ## Cel dokumentu
 
 Ten dokument opisuje biznesowa potrzebe i oczekiwany rezultat feature'u
-`Change Verification`. Nie jest jeszcze planem implementacji. Plan techniczny
-powinien powstac dopiero po potwierdzeniu, ze opisany tu problem, zakres i
-wynik sa wlasciwe.
+`Change Verification`. Nie opisuje stanu implementacji ani technicznego
+rozwiazania. Kazdy nowy plan rozwoju tego feature'a powinien wskazywac ten
+plik jako `Source need` i zaczynac od potwierdzenia, ktora czesc potrzeby jest
+aktualnie realizowana.
 
 ## Kontekst biznesowy
 
@@ -338,9 +345,9 @@ W pierwszym zakresie `Change Verification` nie powinno byc:
 
 Feature ma zaczac od konkretnej zmiany i dawac szybki, praktyczny wynik.
 
-## Otwarte decyzje produktowe przed planem implementacji
+## Otwarte decyzje produktowe przed kolejnym planem
 
-Przed planem implementacji trzeba doprecyzowac:
+Przed planem obejmujacym dany zakres trzeba doprecyzowac:
 
 - czy pierwszym wejsciem MVP ma byc tylko Jira key/link, czy takze bezposredni
   MR link,
@@ -355,4 +362,3 @@ Przed planem implementacji trzeba doprecyzowac:
 - jaki poziom source refs jest wymagany w pierwszej wersji,
 - czy manual cleanup SQL ma byc tylko tekstem do skopiowania, czy osobnym
   zatwierdzanym artefaktem w wyniku.
-

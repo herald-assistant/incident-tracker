@@ -57,8 +57,8 @@ Nie obejmuje:
 
 ## Dokumenty do aktualizacji po wiekszej zmianie
 
-- `docs/architecture/01-system-overview.md`
-- `docs/architecture/02-key-decisions.md`
-- `docs/architecture/03-runtime-flow.md`
-- `docs/architecture/04-codex-continuation-guide.md`
-- `docs/architecture/08-operational-context-model-tools-and-usage.md`
+- `docs/architecture/system-overview.md`
+- `docs/architecture/key-decisions.md`
+- `docs/architecture/incident-analysis-runtime-flow.md`
+- `docs/architecture/codex-continuation-guide.md`
+- `docs/architecture/operational-context-model-tools-and-usage.md`

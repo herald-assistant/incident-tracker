@@ -1,7 +1,7 @@
 # Frontend Features AGENTS
 
 Przed utworzeniem dedicated feature'a albo zmiana L1-L3 istniejacego feature'a
-przeczytaj `docs/architecture/14-analysis-feature-delivery-playbook.md` i
+przeczytaj `docs/architecture/analysis-feature-delivery-playbook.md` i
 wykonaj baseline/conformance delta wymagane dla tego poziomu.
 
 ## Feature vs Workbench

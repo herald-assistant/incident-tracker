@@ -77,20 +77,21 @@ wlasnym jezykiem interakcji. Jezeli drugi feature potrzebuje podobnego panelu
 albo modelu zasilania, kierunek domyslny to wydzielenie shared modelu i
 komponentu, a nie lokalna kopia.
 
-## Planowane rodziny feature'ow
+## Rodziny feature'ow
 
 ### Incident analysis
 
-Operator podaje `correlationId`. System zbiera logi, deployment/runtime
-signals, code evidence i operational context, a AI zwraca diagnoze,
-uzasadnienie oraz rekomendowany kolejny krok. Follow-up chat pozwala dopytac o
-wynik i wykonac dodatkowe, session-bound sprawdzenia przez tools.
+Operator wybiera Elasticsearch i podaje `correlationId` albo zalacza plik CSV
+z logami. System zbiera deployment/runtime signals, code evidence i
+operational context, a AI zwraca diagnoze, uzasadnienie oraz rekomendowany
+kolejny krok. Follow-up chat pozwala dopytac o wynik i wykonac dodatkowe,
+session-bound sprawdzenia przez tools.
 
 Obecny publiczny kontrakt:
 
-- `POST /analysis/jobs`
-- `GET /analysis/jobs/{analysisId}`
-- `POST /analysis/jobs/{analysisId}/chat/messages`
+- `POST /api/analysis/jobs`
+- `GET /api/analysis/jobs/{analysisId}`
+- `POST /api/analysis/jobs/{analysisId}/chat/messages`
 
 To jest pierwszy feature, a nie generyczny core dla pozostalych analiz.
 
@@ -109,6 +110,14 @@ case. Feature powinien umiec odkryc i opisac:
 Naturalne capability reusable dla tego feature'a to GitLab tools, operational
 context tools, Database tools, a w przyszlosci takze runtime/log tools, ale
 prompt, result DTO, policy i UI powinny byc lokalne dla `features.flow...`.
+
+### Change Verification
+
+Uzytkownik wskazuje zmiane i wybiera zakres weryfikacji. Feature laczy
+material zadania, instrukcje repozytorium oraz evidence implementacyjne, aby
+pokazac zgodnosc, rozbieznosci i ograniczenia widocznosci. Dalsze inkrementy
+powinny wynikac z `../needs/change-verification.md` oraz osobno zatwierdzonych
+planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
 
 ### Functional logic explorer
 
@@ -218,16 +227,15 @@ generycznym silnikiem analitycznym.
 
 ## Najwazniejszy dowod architektury
 
-Kolejny duzy krok powinien potwierdzic, ze platforma nie jest tylko
-przemianowanym incident trackerem. Najlepszym dowodem bedzie drugi feature,
-np. flow explorer albo change verification, ktory:
+Flow Explorer i Change Verification sa kolejnymi feature'ami obok Incident
+Analysis i stanowia praktyczny test, czy platforma nie jest tylko
+przemianowanym incident trackerem. Kazdy obecny i kolejny feature:
 
 1. ma wlasny request/result contract,
 2. uzywa `aiplatform.copilot` przez neutralny run request,
 3. wybiera reusable tools z `agenttools`,
 4. korzysta z adapterow `integrations`,
 5. nie importuje `features.incidentanalysis`,
-6. publikuje przebieg przez wspolny run/event model, gdy ten zostanie
-   wprowadzony,
+6. publikuje przebieg przez wspolne modele run/activity/evidence,
 7. reuse'uje wspolne modele i komponenty UI dla znanych elementow workflow,
    takich jak przebieg, AI activity, follow-up chat, evidence i usage.

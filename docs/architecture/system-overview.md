@@ -38,9 +38,10 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
    biznesowo-systemowego oraz `technicalAnalysis` jako konkretny handoff do
    naprawy, weryfikacji albo przekazania dalej.
 
-Planowane kolejne rodziny feature'ow to m.in. flow explorer, pytania o logike
-funkcjonalna use case'ow oraz natural-language data diagnostics. Szczegolowy
-kierunek produktu jest opisany w `00-product-direction.md`.
+Dostepne obok Incident Analysis sa Flow Explorer i Change Verification.
+Kolejne rodziny moga obejmowac functional logic explorer oraz
+natural-language data diagnostics. Szczegolowy kierunek produktu jest opisany
+w `product-direction.md`.
 
 ## Aktualny stan
 
@@ -241,7 +242,7 @@ Na dzisiaj projekt ma:
 ## Glowny podzial pakietow
 
 Szczegolowy diagram runtime/data-flow i compile-time importow jest w
-`05-package-dependencies.md`.
+`package-dependencies.md`.
 
 - `pl.mkn.tdw`
   Glowna aplikacja Spring Boot.

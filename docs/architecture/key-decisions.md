@@ -691,13 +691,11 @@ wynik zgodnosci zmiany i smoke pack, a natural-language data diagnostics moze
 miec kontrakt nad readonly DB queries. Te roznice musza zostac w
 `features.<feature>`, nie w `aiplatform.copilot`.
 
-Stan obecny jest przejsciowy: `features.incidentanalysis.ai.copilot` zawiera
+Obowiazujacy ownership: `features.incidentanalysis.ai.copilot` zawiera
 incident-specific prompt, coverage, policy i GitLab/DB capture evidence, a
-`aiplatform.copilot.tools` zawiera coraz wieksza czesc neutralnej mechaniki
-invocation. Podczas dalszej ekstrakcji trzeba rozdzielic pozostale klasy na:
-
-- generic runtime Copilota,
-- feature-owned incident preparation/policy/skills/evidence mapping.
+`aiplatform.copilot` posiada neutralna mechanike runtime i invocation. Nowa
+klasa trafia do platformy tylko wtedy, gdy nie wymaga semantyki jednego
+feature'a i ma stabilny kontrakt reusable.
 
 ## 23. Shared/operator API jest osobna kategoria
 

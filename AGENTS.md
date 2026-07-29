@@ -30,18 +30,20 @@ Przyklady docelowych feature'ow poza incident analysis:
 
 Przed wieksza zmiana zacznij od:
 
-1. `docs/architecture/00-product-direction.md`
-2. `docs/architecture/01-system-overview.md`
-3. `docs/architecture/02-key-decisions.md`
-4. `docs/architecture/03-runtime-flow.md`
-5. `docs/architecture/04-codex-continuation-guide.md`
-6. `docs/architecture/05-package-dependencies.md`
-7. `docs/architecture/06-modular-architecture-roadmap.md`
-8. `docs/architecture/07-open-work-plan.md`
-9. `docs/architecture/08-operational-context-model-tools-and-usage.md`
-10. `docs/architecture/14-analysis-feature-delivery-playbook.md` przy tworzeniu
+1. `docs/AGENTS.md`
+2. `docs/architecture/product-direction.md`
+3. `docs/architecture/system-overview.md`
+4. `docs/architecture/key-decisions.md`
+5. `docs/architecture/incident-analysis-runtime-flow.md` dla zmian Incident
+   Analysis
+6. `docs/architecture/package-dependencies.md`
+7. `docs/architecture/operational-context-model-tools-and-usage.md`
+8. `docs/architecture/codex-continuation-guide.md`
+9. `docs/architecture/analysis-feature-delivery-playbook.md` przy tworzeniu
     feature'a oraz zmianach L1-L3 istniejacego feature'a lub mechanizmu
     wspolnego
+10. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
+    dla realizowanej zmiany
 
 ## Najwazniejsze niezmienniki
 
@@ -297,7 +299,9 @@ Zasady granic:
 
 ### Gdy dodajesz nowy feature analityczny
 
-- Zacznij od `docs/architecture/14-analysis-feature-delivery-playbook.md`.
+- Zacznij od `docs/architecture/analysis-feature-delivery-playbook.md`.
+- Opisz potrzebe w `docs/needs/`, przygotuj plan zgodny z `docs/AGENTS.md` i
+  implementuj tylko kroki zatwierdzone przez uzytkownika.
 - Utworz dedykowany pakiet `features.<feature>`.
 - Nie reuse'uj `features.incidentanalysis.flow/job/evidence` jako generycznego
   core.
@@ -308,7 +312,9 @@ Zasady granic:
 ### Gdy rozwijasz istniejacy feature
 
 - Sklasyfikuj zmiane jako L0-L3 wedlug
-  `docs/architecture/14-analysis-feature-delivery-playbook.md`.
+  `docs/architecture/analysis-feature-delivery-playbook.md`.
+- Dla zmiany wymagajacej planu wskaz `Source need`, utrzymuj checkliste
+  `[ ]` / `[x]` i respektuj bramki zatwierdzania z `docs/AGENTS.md`.
 - Dla L1-L3 przygotuj baseline, conformance delta, liste konsumentow i
   adekwatna macierz testow przed implementacja.
 - Zmiana nie moze dodawac architecture drift ani rozszerzac zasiegu

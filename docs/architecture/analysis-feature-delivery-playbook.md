@@ -55,16 +55,16 @@ Przy rozbieznosci stosuj ponizsza kolejnosc:
 
 1. aktualne polecenie uzytkownika oraz najblizsze `AGENTS.md`,
 2. twarde niezmienniki z root `AGENTS.md`,
-3. ten playbook oraz stabilne decyzje z `00-product-direction.md`,
-   `02-key-decisions.md`, `05-package-dependencies.md` i
-   `08-operational-context-model-tools-and-usage.md`,
+3. ten playbook oraz stabilne decyzje z `product-direction.md`,
+   `key-decisions.md`, `package-dependencies.md` i
+   `operational-context-model-tools-and-usage.md`,
 4. aktualny kod produkcyjny i jego testy jako prawda o dostepnych mechanizmach,
 5. Incident Analysis jako tie-breaker wspolnego lifecycle, safety,
    observability i UX, ale nie feature-specific requestu, wyniku, evidence ani
    tool scope'u,
 6. Flow Explorer i Change Verification jako dodatkowe przyklady drugiego i
    trzeciego konsumenta platformy,
-7. dokumenty planistyczne i roadmapy jako material pomocniczy, nie automatyczny
+7. zatwierdzone dokumenty z `../plans/` jako zakres wykonawczy, ale nie
    kontrakt aktualnego systemu.
 
 Incident Analysis jest wzorcem do czytania i porownania, ale nie jest
@@ -74,12 +74,14 @@ importowalnym core. Nowy feature nie moze zalezec od
 Przed edycja:
 
 1. przeczytaj root `AGENTS.md`,
-2. przeczytaj dokumenty `00`-`08` wskazane w root `AGENTS.md`,
-3. przeczytaj ten playbook,
-4. przeczytaj wszystkie lokalne `AGENTS.md` na sciezkach, ktore beda zmieniane,
-5. sprawdz `git status` i zachowaj zmiany uzytkownika,
-6. porownaj przynajmniej Incident Analysis oraz jeden inny feature,
-7. sprawdz aktualny kod i testy zamiast zgadywac na podstawie nazwy klasy albo
+2. przeczytaj `docs/AGENTS.md` i dokumenty wskazane w root `AGENTS.md`,
+3. przeczytaj ten playbook oraz odpowiedni dokument z `../needs/`,
+4. przeczytaj zatwierdzony plan z `../plans/`; jezeli go brakuje, przygotuj go
+   zgodnie z `docs/AGENTS.md` i poczekaj na zatwierdzenie,
+5. przeczytaj wszystkie lokalne `AGENTS.md` na sciezkach, ktore beda zmieniane,
+6. sprawdz `git status` i zachowaj zmiany uzytkownika,
+7. porownaj przynajmniej Incident Analysis oraz jeden inny feature,
+8. sprawdz aktualny kod i testy zamiast zgadywac na podstawie nazwy klasy albo
    starego planu.
 
 ## Tryby zmiany i kontrola architecture drift
@@ -211,7 +213,7 @@ Po zmianie L1-L3 wykonaj architecture diff:
 8. uruchom `PackageDependencyGuardTest` oraz testy regresji adekwatne do
    poziomu zmiany,
 9. zaktualizuj dokumentacje stanu, jesli delta zmienila invariant albo runtime,
-10. zapisz pozostaly drift w `07-open-work-plan.md` z powodem i warunkiem
+10. zapisz pozostaly drift w `../plans/open-work.md` z powodem i warunkiem
     usuniecia.
 
 Review powinno umiec odpowiedziec nie tylko "czy dziala", ale tez:
@@ -245,7 +247,8 @@ Obowiazuje architecture-drift ratchet:
 - drift na bezposrednio zmienianej granicy napraw albo ogranicz adapterem i
   testem kompatybilnosci; wyjatek wymaga jawnego uzasadnienia,
 - drift poza zakresem pozostaw nietkniety; jesli ma realny skutek, zapisz w
-  `07-open-work-plan.md` skutek, wlasciciela, nastepny krok i warunek usuniecia,
+  `../plans/open-work.md` skutek, wlasciciela, nastepny krok i warunek
+  usuniecia,
 - jesli usuniecie driftu jest konieczne dla bezpiecznej zmiany, podnies poziom
   zmiany i zaktualizuj plan zamiast ukrywac dodatkowy zakres.
 
@@ -401,9 +404,11 @@ Kazdy blok ma jednego wlasciciela:
 ## Faza 0 dla nowego feature'a: kontrakt i Definition of Ready
 
 Nie zaczynaj od kopiowania katalogu innego feature'a. Najpierw zapisz krotki
-kontrakt discovery, najlepiej jako osobny dokument biznesowy/planistyczny.
-Przy rozwoju istniejacego feature'a odpowiednikiem tej fazy sa baseline i
-conformance delta z sekcji kontroli driftu.
+kontrakt discovery w `../needs/<feature>.md`, bez technicznego rozwiazania.
+Nastepnie przygotuj osobny `../plans/<feature>.md` z propozycja rozwiazania,
+checklista `[ ]` / `[x]` i bramkami zatwierdzania z `../AGENTS.md`. Przy
+rozwoju istniejacego feature'a odpowiednikiem tej fazy sa aktualna potrzeba,
+baseline i conformance delta z sekcji kontroli driftu.
 
 Minimalny szablon:
 
@@ -436,6 +441,8 @@ Definition of Ready:
 - [ ] mutacje zewnetrzne maja osobny human-approval boundary,
 - [ ] wiadomo, czy MVP obejmuje chat, persistence i import/export,
 - [ ] lista reusable mechanizmow i rzeczywistych luk jest gotowa.
+- [ ] plan linkuje do potrzeby, ma kroki z kryteriami akceptacji i zakres
+  przeznaczony do implementacji zostal zatwierdzony przez uzytkownika.
 
 ## Faza 1: reuse-first i capability gap analysis
 
@@ -1071,10 +1078,10 @@ Wzorzec:
 - polling tego samego job snapshotu po wyslaniu wiadomosci,
 - brak rownoleglych follow-upow dla jednego runu.
 
-Aktualny stan: initial report jest report-first, ale plan
-`11-report-follow-up-chat-plan.md` nie jest wdrozony. Incident Analysis
-follow-up nie przekazuje `initialReport`, nie udostepnia report scope i nie
-aktualizuje publicznego reportu. Nie zakladaj mutacji reportu podczas chatu.
+Aktualny stan: initial report jest report-first, ale mutacja reportu przez
+follow-up chat nie jest wdrozona. Incident Analysis follow-up nie przekazuje
+`initialReport`, nie udostepnia report scope i nie aktualizuje publicznego
+reportu. Nie zakladaj mutacji reportu podczas chatu.
 Jesli follow-up nie rejestruje aktualnego reportu i hidden report scope, usun
 report tools z `availableTools`; globalnie zarejestrowany callback nie jest
 powodem, by wystawiac dangling tool.
@@ -1587,17 +1594,21 @@ W przeciwnym razie zapisz follow-up i nie kopiuj problemu.
 Nowy feature albo zmiana L1-L3 aktualizuje wszystkie dotkniete zrodla prawdy:
 
 - root `AGENTS.md`, jesli powstaje nowy niezmiennik lub mapa pakietow,
+- `docs/AGENTS.md`, jesli zmienia sie lifecycle needs/plan/architecture,
 - lokalnego `features/AGENTS.md`,
 - `features/<feature>/AGENTS.md` - utworzonego dla nowego feature'a albo
   zmienionego, gdy ewoluuje jego lokalny kontrakt,
 - frontendowych `AGENTS.md`, jesli zmienia sie wzorzec reuse,
-- `00-product-direction.md`, jesli zmienia sie oferta produktu,
-- `01-system-overview.md` i `03-runtime-flow.md`, jesli zmienia sie runtime,
-- `02-key-decisions.md`, jesli podjeto nowa stabilna decyzje,
-- `05-package-dependencies.md` i architecture guard, jesli zmienia sie graf,
-- `07-open-work-plan.md`, jesli pozostaja jawne follow-upy,
-- `08-operational-context-model-tools-and-usage.md`, jesli zmienia sie katalog
+- `product-direction.md`, jesli zmienia sie oferta produktu,
+- `system-overview.md` i odpowiedni dokument runtime, jesli zmienia sie
+  wykonanie feature'a,
+- `key-decisions.md`, jesli podjeto nowa stabilna decyzje,
+- `package-dependencies.md` i architecture guard, jesli zmienia sie graf,
+- `../plans/open-work.md`, jesli pozostaja jawne follow-upy,
+- `operational-context-model-tools-and-usage.md`, jesli zmienia sie katalog
   lub policy jego uzycia,
+- odpowiedni dokument w `../needs/` i zatwierdzony plan w `../plans/`, jesli
+  zmienia sie problem, zakres albo kolejnosc wykonania,
 - `docs/README.md` i landing/navigation opisujacych widoczne feature'y.
 
 Plan implementacji nie zastepuje dokumentacji stanu. Po zakonczeniu etapu
@@ -1660,12 +1671,16 @@ Gdy uzytkownik prosi o nowy feature albo rozwoj istniejacego, Codex powinien:
 7. wypisac konsumentow zmienianych kontraktow i shared mechanizmow,
 8. porownac Incident Analysis oraz drugiego konsumenta tam, gdzie dotyczy to
    wspolnego lifecycle/UX/platformy,
-9. przygotowac pionowy plan z testami, kompatybilnoscia i non-goals,
-10. implementowac inkrementami, utrzymujac kompilowalny stan,
-11. po kazdym duzym kroku sprawdzac granice i publiczny kontrakt,
-12. wykonac testy celowane, architecture diff i weryfikacje poziomu L0-L3,
-13. zaktualizowac dokumentacje stanu, nie tylko plan,
-14. oddac wynik z lista plikow, testow, migracji i pozostalych ograniczen.
+9. przygotowac w `docs/plans/` pionowy plan linkujacy do potrzeby, z testami,
+   kompatybilnoscia, non-goals i krokami `[ ]` / `[x]`,
+10. uzyskac zatwierdzenie uzytkownika dla wykonywanego kroku albo jawnie
+    wskazanego zakresu krokow,
+11. implementowac tylko zatwierdzone kroki, utrzymujac kompilowalny stan,
+12. po kazdym kroku sprawdzac granice i publiczny kontrakt oraz oznaczac `[x]`
+    dopiero po weryfikacji,
+13. wykonac testy celowane, architecture diff i weryfikacje poziomu L0-L3,
+14. zaktualizowac dokumentacje stanu, nie tylko plan,
+15. oddac wynik z lista plikow, testow, migracji i pozostalych ograniczen.
 
 Przy braku decyzji wybieraj najmniejszy pionowy MVP, ktory:
 

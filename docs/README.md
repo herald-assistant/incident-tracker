@@ -1,82 +1,101 @@
-# Dokumentacja Projektu
+# Dokumentacja projektu
 
-Ten katalog ma jeden glowny obszar:
+Dokumentacja rozdziela stan systemu, potrzeby i propozycje wykonania. Zasady
+tworzenia oraz aktualizowania dokumentow sa w `AGENTS.md`.
 
-1. `architecture/`
-   stabilny opis kierunku produktu, architektury, decyzji, runtime flow i
-   zasad dalszego rozwoju.
-
-Dookola tej dokumentacji sa jeszcze dwa istotne runtime obszary:
-
-- `../src/main/resources/copilot/skills`
-  skille Copilota pakowane do runtime aplikacji,
-- `../src/main/resources/operational-context`
-  realny katalog operacyjny czytany przez enrichment provider.
-
-## Od czego zaczac
-
-Jesli dopiero wchodzisz do projektu, czytaj w tej kolejnosci:
-
-1. `architecture/00-product-direction.md`
-2. `architecture/01-system-overview.md`
-3. `architecture/02-key-decisions.md`
-4. `architecture/03-runtime-flow.md`
-5. `architecture/04-codex-continuation-guide.md`
-6. `architecture/05-package-dependencies.md`
-7. `architecture/06-modular-architecture-roadmap.md`
-8. `architecture/07-open-work-plan.md`
-9. `architecture/08-operational-context-model-tools-and-usage.md`
-10. `architecture/14-analysis-feature-delivery-playbook.md` przy tworzeniu
-    feature'a oraz zmianach L1-L3 istniejacego feature'a lub mechanizmu
-    wspolnego
-
-## Co jest gdzie
+## Struktura
 
 - `architecture/`
-  source of truth dla architektury i zasad dalszego rozwoju.
-- `architecture/14-analysis-feature-delivery-playbook.md`
-  kompletna instrukcja dostarczania i rozwoju feature'a analitycznego:
+  kanoniczny opis obowiazujacego i docelowego stanu: decyzje, granice,
+  zaleznosci, publiczne kontrakty, runtime flow i niezmienniki.
+- `needs/`
+  problemy, wartosc biznesowa, oczekiwane rezultaty, success criteria,
+  ograniczenia i non-goals, bez wybierania implementacji.
+- `plans/`
+  zatwierdzane propozycje implementacji i aktywny backlog. Plany wynikajace z
+  potrzeby biznesowej linkuja do odpowiedniego pliku w `needs/`.
+- `local-workspace-and-launcher.md`
+  instrukcja lokalnego uruchamiania JAR-a, katalogu `tdw-data`, backupu oraz
+  roznicy pomiedzy local workspace i exportem.
+- `presentations/`
+  materialy prezentacyjne i ich zrodla.
+
+Git przechowuje historie dochodzenia do rozwiazania. Dokumenty w
+`architecture/` opisuja wynikowy stan, a nie zakonczone fazy migracji.
+
+## Kolejnosc czytania
+
+Przed wieksza zmiana przeczytaj:
+
+1. `AGENTS.md`
+2. `architecture/product-direction.md`
+3. `architecture/system-overview.md`
+4. `architecture/key-decisions.md`
+5. `architecture/incident-analysis-runtime-flow.md`
+6. `architecture/package-dependencies.md`
+7. `architecture/operational-context-model-tools-and-usage.md`
+8. `architecture/codex-continuation-guide.md`
+
+Przy tworzeniu nowego feature'a albo zmianie L1-L3 istniejacego feature'a lub
+mechanizmu wspolnego przeczytaj dodatkowo:
+
+9. `architecture/analysis-feature-delivery-playbook.md`
+
+Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
+zmiany. Dokument architektoniczny ani business need nie sa zgoda na
+implementacje niezatwierdzonego planu.
+
+## Aktualne potrzeby i plany
+
+- `needs/change-verification.md`
+  opisuje problem, wartosc, oczekiwany wynik i granice Change Verification.
+  Nowy plan implementacji powinien wskazywac ten plik jako `Source need`.
+- `plans/open-work.md`
+  jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
+  a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
+
+## Odpowiedzialnosc dokumentow architektonicznych
+
+- `architecture/product-direction.md`
+  definiuje oferte produktu i model rozszerzalnosci.
+- `architecture/system-overview.md`
+  opisuje elementy systemu, publiczne wejscia oraz ownership implementacji.
+- `architecture/key-decisions.md`
+  utrwala decyzje, ktore maja pozostac stabilne po refaktorach.
+- `architecture/incident-analysis-runtime-flow.md`
+  opisuje wykonanie glownych sciezek Incident Analysis oraz jego uzycie
+  neutralnego runtime Copilota.
+- `architecture/package-dependencies.md`
+  definiuje dozwolony graf zaleznosci i odpowiedzialnosc warstw.
+- `architecture/operational-context-model-tools-and-usage.md`
+  definiuje katalog Operational Context, jego API, tools i zasady uzycia.
+- `architecture/codex-continuation-guide.md`
+  wskazuje kanoniczne miejsca w kodzie oraz bezpieczny sposob kontynuowania
+  rozwoju.
+- `architecture/analysis-feature-delivery-playbook.md`
+  jest kompletna instrukcja dostarczania i rozwoju feature'a analitycznego:
   ownership, kontrola architecture drift, backend, Copilot runtime, tools,
   frontend, historia, testy i Definition of Done.
-- `architecture/07-open-work-plan.md`
-  jedyny aktywny backlog planistyczny; stare plany robocze zostaly do niego
-  scalone i oczyszczone z wykonanych zadan.
-- `architecture/12-change-verification-business-need.md`
-  biznesowy opis planowanego feature'u Change Verification: problem, wynik,
-  tryby uzycia, wartosc i granice przed przygotowaniem planu implementacji.
-- `architecture/13-change-verification-implementation-plan.md`
-  plan techniczny Change Verification: integracje, MCP tools, nowy feature,
-  UI, runtime, testy i etapowanie MVP.
-- `../operational-context-maintenance`
-  prompty i procedury utrzymania katalogu operational context.
+
+## Powiazane zasoby runtime
+
+- `../src/main/resources/copilot/skills`
+  skille Copilota pakowane do runtime aplikacji.
+- `../src/main/resources/operational-context`
+  realny katalog operacyjny czytany przez integracje, tools i feature'y.
 - `../frontend`
-  zrodlowy workspace Angular dla ekranu operacyjnego.
+  zrodlowy workspace Angular dla aplikacji operatorskiej.
 - `../src/main/resources/static`
   wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
-- `local-workspace-and-launcher.md`
-  instrukcja lokalnego uruchamiania JAR-a, katalogu `tdw-data`, backupu i
-  roznicy miedzy local workspace a exportem.
 
 ## Frontend workflow
 
 - `cd ../frontend && npm start`
   Angular dev server z proxy na lokalny backend Spring Boot.
 - `cd ../frontend && npm test`
-  Testy UI Angulara. Nie sa uruchamiane przez `mvn test`.
+  testy UI Angulara; nie sa uruchamiane przez `mvn test`.
 - `cd ../frontend && npm run build`
-  Produkcyjny build Angulara zapisujacy `index.html`, `js`, `css` i assets do
-  `../src/main/resources/static`.
+  produkcyjny build Angulara zapisywany w `../src/main/resources/static`.
 - `mvn -q -DskipTests package`
-  Buduje backend oraz uruchamia produkcyjny build Angulara w fazie
-  `prepare-package`, a potem pakuje wynik do JAR-a.
-
-## Jak czytac te dokumenty
-
-- `architecture/` odpowiada na pytanie: "jakie sa stale decyzje i granice odpowiedzialnosci?"
-- `architecture/08-operational-context-model-tools-and-usage.md` odpowiada na
-  pytanie: "jak utrzymywac katalog operacyjny uzywany przez analizy i tools?"
-- `architecture/14-analysis-feature-delivery-playbook.md` odpowiada na pytanie:
-  "jak dostarczyc albo rozwinac feature bez duplikowania platformy, UI i
-  zwiekszania architecture drift?"
-- `architecture/07-open-work-plan.md` odpowiada na pytanie: "co zostalo do
-  zrobienia i jakie decyzje czekaja na pozniejsze rozstrzygniecie?"
+  buduje backend, uruchamia produkcyjny build Angulara w `prepare-package` i
+  pakuje wynik do JAR-a.
