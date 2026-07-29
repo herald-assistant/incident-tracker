@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 import java.util.List;
 
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest;
 import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -398,6 +399,43 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("AGENTS.md", file.path());
         assertEquals("Use repository boundaries.", file.content());
         assertFalse(file.truncated());
+
+        server.verify();
+    }
+
+    @Test
+    void shouldLoadInstructionRepositoryInventoryForNestedGitLabGroup() {
+        var properties = gitLabProperties("CRM");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties, new GitLabRestClientFactory(properties, restClientBuilder));
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fprocesses%2Fcustomer-api/repository/tree?recursive=true&per_page=100&ref=main&page=1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        [
+                          {
+                            "path": "AGENTS.md",
+                            "type": "blob"
+                          },
+                          {
+                            "path": "src/main/java/com/example/customer/AGENTS.md",
+                            "type": "blob"
+                          }
+                        ]
+                        """, MediaType.APPLICATION_JSON));
+
+        var inventory = adapter.loadFileInventory(new InstructionRepositoryInventoryRequest(
+                "CRM/processes/customer-api",
+                "main"
+        ));
+
+        assertTrue(inventory.available());
+        assertEquals(
+                List.of("AGENTS.md", "src/main/java/com/example/customer/AGENTS.md"),
+                inventory.paths()
+        );
 
         server.verify();
     }

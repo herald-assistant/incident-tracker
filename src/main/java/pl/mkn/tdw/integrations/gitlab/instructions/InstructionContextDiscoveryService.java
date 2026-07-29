@@ -10,7 +10,9 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,9 +43,31 @@ public class InstructionContextDiscoveryService {
             return List.of();
         }
 
+        var inventory = repositoryPort.loadFileInventory(new InstructionRepositoryInventoryRequest(
+                scope.repositoryKey(),
+                scope.ref()
+        ));
+        var existingPaths = inventory != null && inventory.available()
+                ? normalizedPaths(inventory.paths())
+                : Set.<String>of();
+        if (inventory != null && !inventory.available() && StringUtils.hasText(inventory.limitation())) {
+            limitations.add(inventory.limitation());
+        }
+
         var candidates = candidateInstructionPaths(scope.changedFilePaths());
-        if (candidates.size() > properties.getMaxInstructionFiles()) {
-            limitations.add("Instruction file candidate limit reached for " + scope.repositoryKey() + ".");
+        if (inventory != null && inventory.available()) {
+            candidates = candidates.stream()
+                    .filter(existingPaths::contains)
+                    .toList();
+        }
+        if (inventory != null
+                && inventory.available()
+                && candidates.size() > properties.getMaxInstructionFiles()) {
+            limitations.add("Applicable instruction file limit reached for %s: discovered %d, included %d."
+                    .formatted(scope.repositoryKey(), candidates.size(), properties.getMaxInstructionFiles()));
+            candidates = candidates.subList(0, properties.getMaxInstructionFiles());
+        } else if ((inventory == null || !inventory.available())
+                && candidates.size() > properties.getMaxInstructionFiles()) {
             candidates = candidates.subList(0, properties.getMaxInstructionFiles());
         }
 
@@ -53,8 +77,14 @@ public class InstructionContextDiscoveryService {
         }
 
         var referenced = referencedInstructionPaths(discovered);
+        if (inventory != null && inventory.available()) {
+            referenced = referenced.stream()
+                    .filter(reference -> existingPaths.contains(reference.path()))
+                    .toList();
+        }
         if (referenced.size() > properties.getMaxReferencedFiles()) {
-            limitations.add("Referenced instruction file limit reached for " + scope.repositoryKey() + ".");
+            limitations.add("Referenced instruction file limit reached for %s: discovered %d, included %d."
+                    .formatted(scope.repositoryKey(), referenced.size(), properties.getMaxReferencedFiles()));
             referenced = referenced.subList(0, properties.getMaxReferencedFiles());
         }
         for (var reference : referenced) {
@@ -161,11 +191,15 @@ public class InstructionContextDiscoveryService {
 
     private void addReference(LinkedHashSet<String> references, String candidate) {
         var normalized = normalizePath(candidate);
+        while (normalized.startsWith("./")) {
+            normalized = normalized.substring(2);
+        }
         if (!StringUtils.hasText(normalized)
                 || normalized.startsWith("http:")
                 || normalized.startsWith("https:")
                 || normalized.startsWith("#")
-                || normalized.startsWith(".")) {
+                || normalized.equals("..")
+                || normalized.startsWith("../")) {
             return;
         }
         var lower = normalized.toLowerCase();
@@ -218,6 +252,16 @@ public class InstructionContextDiscoveryService {
             normalized = normalized.replace("//", "/");
         }
         return normalized;
+    }
+
+    private Set<String> normalizedPaths(List<String> paths) {
+        if (paths == null) {
+            return Set.of();
+        }
+        return paths.stream()
+                .map(this::normalizePath)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private record ReferencedInstructionPath(String path, String referencedBy) {

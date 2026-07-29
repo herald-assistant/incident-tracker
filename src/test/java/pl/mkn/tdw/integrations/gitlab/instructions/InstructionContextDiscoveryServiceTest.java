@@ -11,6 +11,8 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -43,6 +45,59 @@ class InstructionContextDiscoveryServiceTest {
         assertThat(result.limitations()).isEmpty();
     }
 
+    @Test
+    void shouldApplyInstructionLimitOnlyAfterRepositoryConfirmsExistingFiles() {
+        var properties = new InstructionDiscoveryProperties();
+        properties.setMaxInstructionFiles(3);
+        var service = new InstructionContextDiscoveryService(new TestGitLabRepositoryPort(), properties);
+        var changedFiles = Stream.concat(
+                        IntStream.range(0, 100)
+                                .mapToObj(index -> "src/main/java/com/example/module" + index + "/Handler.java"),
+                        Stream.of("src/main/java/com/example/customer/CustomerController.java")
+                )
+                .toList();
+
+        var result = service.discover(new InstructionContextRequest(List.of(new InstructionRepositoryScope(
+                "CRM/runtime/customer-api",
+                "main",
+                changedFiles
+        ))));
+
+        assertThat(result.sources())
+                .extracting(InstructionSource::path)
+                .containsExactly(
+                        "AGENTS.md",
+                        ".github/copilot-instructions.md",
+                        "src/main/java/com/example/customer/AGENTS.md",
+                        "docs/architecture-instructions.md"
+                );
+        assertThat(result.limitations()).isEmpty();
+    }
+
+    @Test
+    void shouldDescribeLimitForExistingApplicableInstructionFiles() {
+        var properties = new InstructionDiscoveryProperties();
+        properties.setMaxInstructionFiles(2);
+        var service = new InstructionContextDiscoveryService(new TestGitLabRepositoryPort(), properties);
+
+        var result = service.discover(new InstructionContextRequest(List.of(new InstructionRepositoryScope(
+                "CRM/runtime/customer-api",
+                "main",
+                List.of("src/main/java/com/example/customer/CustomerController.java")
+        ))));
+
+        assertThat(result.sources())
+                .extracting(InstructionSource::path)
+                .containsExactly(
+                        "AGENTS.md",
+                        ".github/copilot-instructions.md",
+                        "docs/architecture-instructions.md"
+                );
+        assertThat(result.limitations()).containsExactly(
+                "Applicable instruction file limit reached for CRM/runtime/customer-api: discovered 3, included 2."
+        );
+    }
+
     private static final class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
         private static final Map<String, String> FILES = Map.of(
@@ -71,6 +126,11 @@ class InstructionContextDiscoveryServiceTest {
                     false,
                     null
             );
+        }
+
+        @Override
+        public InstructionRepositoryInventory loadFileInventory(InstructionRepositoryInventoryRequest request) {
+            return InstructionRepositoryInventory.available(FILES.keySet().stream().toList());
         }
 
         @Override

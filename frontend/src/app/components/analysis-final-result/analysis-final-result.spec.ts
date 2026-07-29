@@ -42,6 +42,11 @@ describe('AnalysisFinalResultComponent', () => {
     const fixture = await renderResult(report());
     const compiled = fixture.nativeElement as HTMLElement;
 
+    expect(compiled.querySelector('app-analysis-result-header')).not.toBeNull();
+    expect(compiled.querySelector('app-analysis-result-header h3')?.textContent?.trim()).toBe(
+      'Finalna analiza'
+    );
+    expect(compiled.querySelector('app-analysis-result-tabs')).not.toBeNull();
     expect(compiled.textContent).toContain('Rezultat analizy funkcjonalnej');
     expect(compiled.textContent).toContain('Rezultat analizy technicznej');
     expect(compiled.textContent).toContain('Proces biznesowy zatrzymuje się na walidacji.');

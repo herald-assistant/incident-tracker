@@ -50,6 +50,8 @@ class ChangeVerificationPromptPreparationServiceTest {
                 "CRM/runtime/customer-api",
                 "src/main/java/CustomerController.java",
                 "AGENTS.md",
+                "Limity discovery platformy nie sa kryteriami zgodnosci projektu",
+                "nie tworz z nich checkow, findings, gaps, open questions ani suggested actions",
                 "Response Contract"
         );
         assertThat(preparation.artifactContents().keySet()).containsExactly(

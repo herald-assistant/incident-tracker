@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.analysis-result-header {
+  align-items: flex-start;
+}
+
+.analysis-result-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.analysis-result-header__confidence {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.analysis-result-header__confidence .result-card-label {
+  margin-bottom: 0;
+}
+
+.analysis-result-header__confidence-value {
+  padding: 5px 8px;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.analysis-result-header__copy-button {
+  min-height: 36px;
+}
+
+.analysis-result-header__copy-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+@media (max-width: 860px) {
+  .analysis-result-header__actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .analysis-result-header__confidence {
+    align-items: flex-start;
+    text-align: left;
+  }
+}

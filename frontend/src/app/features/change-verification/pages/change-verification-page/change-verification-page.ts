@@ -30,6 +30,8 @@ import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-f
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
 import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
+import { AnalysisResultHeaderComponent } from '../../../../components/analysis-result-header/analysis-result-header';
+import { AnalysisResultTabsComponent } from '../../../../components/analysis-result-tabs/analysis-result-tabs';
 import { ChangeVerificationComplianceResultComponent } from '../../components/change-verification-compliance-result/change-verification-compliance-result';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
@@ -57,7 +59,6 @@ type SelectOption = {
 interface ChangeVerificationReportDisplay {
   report: AnalysisReport;
   title: string;
-  subTitle: string;
   confidence: string;
   sections: ChangeVerificationReportSectionDisplay[];
   appendix: AnalysisReportMeta;
@@ -81,6 +82,8 @@ interface ChangeVerificationReportSectionDisplay {
     AnalysisStepsPanelComponent,
     AnalysisReportMetaComponent,
     AnalysisReportSectionContentComponent,
+    AnalysisResultHeaderComponent,
+    AnalysisResultTabsComponent,
     ChangeVerificationComplianceResultComponent,
     ReactiveFormsModule
   ],
@@ -831,7 +834,6 @@ function changeVerificationReportDisplay(
   return {
     report,
     title: cleanText(report.header) || 'Change Verification result',
-    subTitle: cleanText(report.subHeader),
     confidence: cleanText(report.meta?.confidence),
     sections: changeVerificationReportSections(report.sections, compliance),
     appendix: normalizedMeta(report.meta)

@@ -1,41 +1,12 @@
 @if (display(); as analysisResult) {
   <section class="final-analysis">
-    <div class="panel-card__header panel-card__header--compact final-analysis__header">
-      <div>
-        <p class="section-eyebrow">Wynik</p>
-        <h3>{{ status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza' }}</h3>
-        @if (hasMeaningfulValue(analysisResult.subTitle)) {
-          <p>{{ analysisResult.subTitle }}</p>
-        }
-      </div>
-
-      <div class="final-analysis__actions">
-        @if (hasMeaningfulValue(analysisResult.confidence)) {
-          <div
-            class="final-analysis__confidence"
-            [attr.aria-label]="'Confidence: ' + analysisResult.confidence"
-          >
-            <span class="result-card-label">Confidence</span>
-            <code class="problem-badge final-analysis__confidence-value">
-              {{ analysisResult.confidence }}
-            </code>
-          </div>
-        }
-
-        <button
-          class="secondary-button final-analysis__copy-button"
-          type="button"
-          [attr.aria-label]="resultCopied() ? 'Skopiowano wynik analizy' : 'Kopiuj wynik analizy'"
-          [title]="resultCopied() ? 'Skopiowano' : 'Kopiuj wynik jako markdown'"
-          (click)="copyResultMarkdown()"
-        >
-          <span class="material-symbols-outlined" aria-hidden="true">
-            {{ resultCopied() ? 'task_alt' : 'content_copy' }}
-          </span>
-          <span>{{ resultCopied() ? 'Copied' : 'Copy result' }}</span>
-        </button>
-      </div>
-    </div>
+    <app-analysis-result-header
+      [title]="status() === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza'"
+      [context]="analysisResult.subTitle"
+      [confidence]="analysisResult.confidence"
+      [copied]="resultCopied()"
+      (copyRequested)="copyResultMarkdown()"
+    ></app-analysis-result-header>
 
     @if (copyError()) {
       <p class="form-error">{{ copyError() }}</p>
@@ -50,29 +21,18 @@
       </div>
     }
 
-    <div class="analysis-result-tabs" role="tablist" aria-label="Sekcje finalnej analizy">
-      @for (section of analysisResult.sections; track section.id) {
-        <button
-          [id]="'analysis-tab-' + section.id"
-          class="analysis-result-tab"
-          [class.analysis-result-tab--active]="activeAnalysisTab() === section.id"
-          type="button"
-          role="tab"
-          [attr.aria-controls]="'analysis-panel-' + section.id"
-          [attr.aria-selected]="activeAnalysisTab() === section.id"
-          [attr.tabindex]="activeAnalysisTab() === section.id ? 0 : -1"
-          (click)="selectAnalysisTab(section.id)"
-        >
-          {{ section.tabLabel }}
-        </button>
-      }
-    </div>
+    <app-analysis-result-tabs
+      [tabs]="analysisResult.sections"
+      [activeTabId]="activeAnalysisTab()"
+      ariaLabel="Sekcje finalnej analizy"
+      (tabSelected)="selectAnalysisTab($event)"
+    ></app-analysis-result-tabs>
 
     @for (section of analysisResult.sections; track section.id) {
       @if (activeAnalysisTab() === section.id) {
         <div
           [id]="'analysis-panel-' + section.id"
-          class="analysis-summary analysis-summary--tab-panel"
+          class="analysis-summary analysis-result-tab-panel"
           role="tabpanel"
           [attr.aria-labelledby]="'analysis-tab-' + section.id"
           tabindex="0"

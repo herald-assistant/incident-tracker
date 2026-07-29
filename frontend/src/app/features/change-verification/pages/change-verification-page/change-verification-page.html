@@ -184,36 +184,15 @@
       <section class="change-verification-result-grid">
         @if (reportDisplay(); as resultReport) {
           <article class="change-verification-report panel-card">
-            <div class="panel-card__header panel-card__header--compact change-verification-report__header">
-              <div>
-                <p class="section-eyebrow">AI result</p>
-                <h3>{{ resultReport.title }}</h3>
-                @if (hasText(resultReport.subTitle)) {
-                  <p>{{ resultReport.subTitle }}</p>
-                }
-              </div>
-
-              <div class="change-verification-report__actions">
-                @if (hasText(resultReport.confidence)) {
-                  <span class="panel-chip">
-                    {{ resultReport.confidence }}
-                  </span>
-                }
-                <span [attr.class]="statusPillClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
-                <button
-                  type="button"
-                  class="secondary-button"
-                  [attr.aria-label]="resultCopied() ? 'Skopiowano wynik Change Verification' : 'Kopiuj wynik Change Verification'"
-                  [title]="resultCopied() ? 'Skopiowano' : 'Kopiuj wynik jako markdown'"
-                  (click)="copyResultMarkdown()"
-                >
-                  <span class="material-symbols-outlined" aria-hidden="true">
-                    {{ resultCopied() ? 'task_alt' : 'content_copy' }}
-                  </span>
-                  <span>{{ resultCopied() ? 'Copied' : 'Copy result' }}</span>
-                </button>
-              </div>
-            </div>
+            <app-analysis-result-header
+              [title]="currentJob.status === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza'"
+              [context]="resultReport.title"
+              [confidence]="resultReport.confidence"
+              [copied]="resultCopied()"
+              copyAriaLabel="Kopiuj wynik Change Verification"
+              copiedAriaLabel="Skopiowano wynik Change Verification"
+              (copyRequested)="copyResultMarkdown()"
+            ></app-analysis-result-header>
 
             @if (resultCopyError()) {
               <p class="change-verification-error">{{ resultCopyError() }}</p>
@@ -228,29 +207,19 @@
               ></app-analysis-report-section-content>
             }
 
-            <div class="change-verification-result-tabs" role="tablist" aria-label="Change Verification result sections">
-              @for (section of resultReport.sections; track section.id) {
-                <button
-                  [id]="'change-verification-tab-' + section.id"
-                  class="change-verification-result-tab"
-                  [class.change-verification-result-tab--active]="activeResultTabId(resultReport.sections) === section.id"
-                  type="button"
-                  role="tab"
-                  [attr.aria-controls]="'change-verification-panel-' + section.id"
-                  [attr.aria-selected]="activeResultTabId(resultReport.sections) === section.id"
-                  [attr.tabindex]="activeResultTabId(resultReport.sections) === section.id ? 0 : -1"
-                  (click)="selectResultTab(section.id)"
-                >
-                  {{ section.tabLabel }}
-                </button>
-              }
-            </div>
+            <app-analysis-result-tabs
+              [tabs]="resultReport.sections"
+              [activeTabId]="activeResultTabId(resultReport.sections)"
+              idPrefix="change-verification"
+              ariaLabel="Change Verification result sections"
+              (tabSelected)="selectResultTab($event)"
+            ></app-analysis-result-tabs>
 
             @for (section of resultReport.sections; track section.id) {
               @if (activeResultTabId(resultReport.sections) === section.id) {
                 <section
                   [id]="'change-verification-panel-' + section.id"
-                  class="change-verification-report-section"
+                  class="analysis-summary analysis-result-tab-panel change-verification-report-section"
                   role="tabpanel"
                   [attr.aria-labelledby]="'change-verification-tab-' + section.id"
                   tabindex="0"

@@ -73,14 +73,17 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
                 "INSTRUCTION_COMPLIANCE",
                 "applicableChangedFiles",
                 "interpretationType",
-                "Markdown ma byc raportem dla czlowieka"
+                "Markdown ma byc raportem dla czlowieka",
+                "metadanymi pokrycia platformy",
+                "nie uwzgledniaj ich przy wyznaczaniu statusu sekcji"
         );
         assertThat(skill("change-verification-write-report")).contains(
                 "report_upsert_section",
                 "report_update_meta",
                 "report_get_current",
                 "human-first Markdown",
-                "## Szczegoly kryteriow"
+                "## Szczegoly kryteriow",
+                "Limity discovery platformy sa wylacznie `visibilityLimits`"
         );
     }
 

@@ -2,6 +2,8 @@ package pl.mkn.tdw.integrations.gitlab;
 
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFile;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventory;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest;
 
 import java.util.List;
 
@@ -73,6 +75,12 @@ public interface GitLabRepositoryPort {
                 request.ref(),
                 request.path(),
                 "GitLab instruction file read is not implemented by this port."
+        );
+    }
+
+    default InstructionRepositoryInventory loadFileInventory(InstructionRepositoryInventoryRequest request) {
+        return InstructionRepositoryInventory.unavailable(
+                "GitLab repository file inventory is not implemented by this port."
         );
     }
 

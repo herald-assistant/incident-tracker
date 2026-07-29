@@ -1,0 +1,17 @@
+<div class="analysis-result-tabs" role="tablist" [attr.aria-label]="ariaLabel()">
+  @for (tab of tabs(); track tab.id) {
+    <button
+      [id]="idPrefix() + '-tab-' + tab.id"
+      class="analysis-result-tab"
+      [class.analysis-result-tab--active]="activeTabId() === tab.id"
+      type="button"
+      role="tab"
+      [attr.aria-controls]="idPrefix() + '-panel-' + tab.id"
+      [attr.aria-selected]="activeTabId() === tab.id"
+      [attr.tabindex]="activeTabId() === tab.id ? 0 : -1"
+      (click)="tabSelected.emit(tab.id)"
+    >
+      {{ tab.tabLabel }}
+    </button>
+  }
+</div>

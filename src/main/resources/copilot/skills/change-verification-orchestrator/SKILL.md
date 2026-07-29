@@ -36,6 +36,10 @@ zakresu.
 8. Zaladuj `change-verification-write-report` i przekaz mu ledger, aktywne
    drafty sekcji, findings, actions, source refs, gaps, open questions,
    visibility limits i confidence.
+9. Przed handoffem usun z ledgeru, findings, gaps, open questions i actions
+   wpisy utworzone wylacznie z limitow `source-discovery-limits` albo
+   `instruction-source-limits`. Takie wpisy zachowaj tylko jako
+   `visibilityLimits`.
 
 ## Readiness Gate
 
@@ -63,6 +67,8 @@ Przed write-report potwierdz:
   maja zastosowanie,
 - mocne twierdzenia maja source refs,
 - sprzecznosci i braki widocznosci nie zostaly ukryte.
+- limity techniczne platformy nie zostaly przedstawione jako wymagania,
+  checki, findings ani problemy projektu.
 
 ## Handoff
 

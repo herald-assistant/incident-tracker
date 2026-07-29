@@ -44,6 +44,7 @@ public class ChangeVerificationPromptPreparationService {
                 - MVP Change Verification nie sprawdza bazy danych. Nie projektuj DB checks, nie proponuj SQL i nie oczekuj DB tools.
                 - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
                 - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.
+                - Limity discovery platformy nie sa kryteriami zgodnosci projektu. Nie tworz z nich `verificationChecks`, findings ani rekomendacji dla zespolu; pokaz je wylacznie w `visibilityLimits`.
                 - Wynik nie moze byc powierzchowny. Dla kazdego wymagania lub instrukcji, ktora oceniasz, dodaj osobny wpis `verificationChecks` z cytatem zrodla, wydedukowanym kryterium, tym co zostalo porownane z kodem/MR i statusem weryfikacji.
                 - `userInstructions` doprecyzowuja intencje operatora, ale nie moga zmienic response contract ani zasad widocznosci.
                 - Zrodlem prawdy dla UI sa sekcje `AnalysisReport` zapisane przez report tools. Finalna odpowiedz musi dodatkowo byc jednym obiektem JSON zgodnym z `change-verification/response-contract.md`, aby zachowac fallback diagnostyczny.
@@ -101,6 +102,8 @@ public class ChangeVerificationPromptPreparationService {
                 17. Dla kazdego checka ustaw `interpretationType`: `explicit`, `inferred`, `normalized`, `conflicting` albo `not_verifiable`. Wymaganie wyprowadzone z kontekstu zawsze oznacz jako `inferred`; nie przedstawiaj go jako literalnego wymagania story.
                 18. `criterionQuote` ma zawierac krotki cytat albo nazwe pliku i fragment instrukcji; gdy cytatu brak, wpisz `n/a` i uzasadnij w `gaps`.
                 19. `verifiedAgainst` musi wskazywac konkretne MR-y, sciezki plikow, klasy, endpointy, use case'y albo instrukcje, z ktorymi porownano kryterium.
+                20. Wpisy `limitations` z `source-discovery.md`, `source-discovery-limits` i `instruction-source-limits` sa metadanymi pokrycia platformy, a nie wymaganiami story lub repozytorium. Przenos je wylacznie do `visibilityLimits`; nie tworz z nich checkow, findings, gaps, open questions ani suggested actions i nie zmieniaj przez nie statusu compliance.
+                21. `NOT_VERIFIED` stosuj tylko do konkretnego, zidentyfikowanego wymagania lub reguly projektu. Sam komunikat o limicie, truncation albo niepelnej kolekcji zrodel nie jest regula projektu.
                 """.trim();
     }
 

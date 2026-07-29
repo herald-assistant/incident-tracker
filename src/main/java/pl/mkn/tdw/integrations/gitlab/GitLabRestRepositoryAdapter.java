@@ -11,6 +11,8 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriUtils;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFile;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryFileRequest;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventory;
+import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -246,6 +248,33 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
             );
         } catch (RuntimeException exception) {
             return InstructionRepositoryFile.missing(request.repositoryKey(), request.ref(), request.path());
+        }
+    }
+
+    @Override
+    public InstructionRepositoryInventory loadFileInventory(InstructionRepositoryInventoryRequest request) {
+        var target = resolveInstructionRepositoryTarget(request.repositoryKey());
+        if (!StringUtils.hasText(target.group()) || !StringUtils.hasText(target.projectName())) {
+            return InstructionRepositoryInventory.unavailable(
+                    "GitLab instruction repository target could not be resolved for " + request.repositoryKey() + "."
+            );
+        }
+
+        try {
+            var paths = listRepositoryFiles(
+                    target.group(),
+                    target.projectName(),
+                    request.ref(),
+                    null
+            ).stream()
+                    .map(GitLabRepositoryFile::filePath)
+                    .toList();
+            return InstructionRepositoryInventory.available(paths);
+        } catch (RuntimeException exception) {
+            return InstructionRepositoryInventory.unavailable(
+                    "GitLab repository file inventory could not be loaded for "
+                            + request.repositoryKey() + "@" + request.ref() + "."
+            );
         }
     }
 

@@ -34,6 +34,8 @@ Przed zapisem potwierdz:
   wymagan,
 - inferred requirements sa jawnie oznaczone,
 - kazdy aktywny instruction source majacy zastosowanie ma check albo limit,
+- zaden check ani finding nie zostal utworzony z komunikatu platformy z
+  `source-discovery-limits` albo `instruction-source-limits`,
 - mocne twierdzenia maja source refs,
 - drafty nie maja statusu `needs_deeper_evidence`.
 
@@ -106,6 +108,9 @@ pelny JSON. Nie zwracaj opisu przed ani po JSON.
 - Wymagania inferowane nie sa przedstawione jako literalne.
 - Parent, subtaski i Confluence nie rozszerzaja po cichu target scope.
 - `FAILED` oznacza widoczny rozjazd, a brak proof oznacza `NOT_VERIFIED`.
+- Limity discovery platformy sa wylacznie `visibilityLimits`; nie zmieniaja
+  statusu compliance i nie sa najwazniejszym ryzykiem, checkiem, findingiem,
+  gapem, pytaniem ani rekomendacja dla zespolu.
 - Report meta pokazuje refs, gaps, open questions i visibility limits.
 - Najwazniejsze rozjazdy sa widoczne przed pozycjami potwierdzonymi.
 - Markdown nie wymaga znajomosci nazw pol kontraktu JSON.
@@ -118,5 +123,6 @@ Nie:
 - zapisuj jednego zbiorczego eseju zamiast osobnych sekcji,
 - pomijaj cytatow i source refs,
 - uznawaj braku dowodu za dowod niezgodnosci,
+- przedstawiaj limit platformy jako kryterium lub problem projektu,
 - ukrywaj dedukcji z nieprecyzyjnego materialu,
 - koncz bez `report_get_current`, gdy report tools sa dostepne.

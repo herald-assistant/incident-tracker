@@ -529,6 +529,18 @@ class ChangeVerificationJobServiceTest {
         }
 
         @Override
+        public pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventory loadFileInventory(
+                pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest request
+        ) {
+            return pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventory.available(List.of(
+                    "AGENTS.md",
+                    ".github/copilot-instructions.md",
+                    "src/main/java/AGENTS.md",
+                    "docs/architecture-instructions.md"
+            ));
+        }
+
+        @Override
         public pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk readFileChunk(
                 String group,
                 String projectName,

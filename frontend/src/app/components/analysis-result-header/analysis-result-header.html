@@ -1,0 +1,36 @@
+<div class="panel-card__header panel-card__header--compact analysis-result-header">
+  <div>
+    <p class="section-eyebrow">Wynik</p>
+    <h3>{{ title() }}</h3>
+    @if (hasMeaningfulValue(context())) {
+      <p>{{ context() }}</p>
+    }
+  </div>
+
+  <div class="analysis-result-header__actions">
+    @if (hasMeaningfulValue(confidence())) {
+      <div
+        class="analysis-result-header__confidence"
+        [attr.aria-label]="'Confidence: ' + confidence()"
+      >
+        <span class="result-card-label">Confidence</span>
+        <code class="problem-badge analysis-result-header__confidence-value">
+          {{ confidence() }}
+        </code>
+      </div>
+    }
+
+    <button
+      class="secondary-button analysis-result-header__copy-button"
+      type="button"
+      [attr.aria-label]="copied() ? copiedAriaLabel() : copyAriaLabel()"
+      [title]="copied() ? 'Skopiowano' : 'Kopiuj wynik jako markdown'"
+      (click)="copyRequested.emit()"
+    >
+      <span class="material-symbols-outlined" aria-hidden="true">
+        {{ copied() ? 'task_alt' : 'content_copy' }}
+      </span>
+      <span>{{ copied() ? 'Copied' : 'Copy result' }}</span>
+    </button>
+  </div>
+</div>

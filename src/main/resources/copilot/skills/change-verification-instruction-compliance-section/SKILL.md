@@ -25,6 +25,14 @@ Nie traktuj instrukcji jako wymagania biznesowego. Instrukcja jest regula
 architektoniczna, implementacyjna, testowa albo repozytoryjna i musi byc
 powiazana z konkretnym fragmentem zmiany, do ktorego ma zastosowanie.
 
+Wpisy `limitations` z `source-discovery.md`, `source-discovery-limits` i
+`instruction-source-limits` sa metadanymi pokrycia platformy, a nie
+instrukcjami repozytorium. Pokaz je wylacznie w `visibilityLimits`. Nie tworz
+z nich checkow, findings, gaps, open questions ani rekomendacji dla zespolu
+i nie uwzgledniaj ich przy wyznaczaniu statusu sekcji. `NOT_VERIFIED` wymaga
+konkretnej, zidentyfikowanej reguly projektu; sam komunikat o limicie lub
+truncation nie jest regula.
+
 ## Wymagana Struktura
 
 Sekcja musi zawierac:
@@ -75,6 +83,8 @@ Sekcja jest `ready`, gdy:
   maja jawny limit widocznosci,
 - kazdy zarzut wskazuje konkretna regule i konkretny element zmiany,
 - brak proof jest `NOT_VERIFIED`, a nie `FAILED`.
+- zaden check ani glowny wniosek nie opisuje ograniczenia platformy jako
+  niezgodnosci projektu.
 
 ## Handoff
 

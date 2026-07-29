@@ -12,6 +12,8 @@ import { hasMeaningfulValue } from '../../core/utils/analysis-display.utils';
 import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 import { AnalysisReportMetaComponent } from '../analysis-report-meta/analysis-report-meta';
 import { AnalysisReportSectionContentComponent } from '../analysis-report-section-content/analysis-report-section-content';
+import { AnalysisResultHeaderComponent } from '../analysis-result-header/analysis-result-header';
+import { AnalysisResultTabsComponent } from '../analysis-result-tabs/analysis-result-tabs';
 
 type AnalysisResultTab = 'FUNCTIONAL_ANALYSIS' | 'TECHNICAL_HANDOFF';
 
@@ -44,7 +46,12 @@ const EMPTY_REPORT_META: AnalysisReportMeta = {
 
 @Component({
   selector: 'app-analysis-final-result',
-  imports: [AnalysisReportMetaComponent, AnalysisReportSectionContentComponent],
+  imports: [
+    AnalysisReportMetaComponent,
+    AnalysisReportSectionContentComponent,
+    AnalysisResultHeaderComponent,
+    AnalysisResultTabsComponent
+  ],
   templateUrl: './analysis-final-result.html',
   styleUrl: './analysis-final-result.scss'
 })
@@ -60,8 +67,10 @@ export class AnalysisFinalResultComponent implements OnDestroy {
   protected readonly hasMeaningfulValue = hasMeaningfulValue;
   private resultCopyFeedbackHandle: number | null = null;
 
-  protected selectAnalysisTab(tab: AnalysisResultTab): void {
-    this.activeAnalysisTab.set(tab);
+  protected selectAnalysisTab(tab: string): void {
+    if (tab === 'FUNCTIONAL_ANALYSIS' || tab === 'TECHNICAL_HANDOFF') {
+      this.activeAnalysisTab.set(tab);
+    }
   }
 
   protected async copyResultMarkdown(): Promise<void> {

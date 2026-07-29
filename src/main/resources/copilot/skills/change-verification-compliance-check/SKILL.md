@@ -82,6 +82,15 @@ wlaczone narzedzia.
    - `normalized`,
    - `conflicting`,
    - `not_verifiable`.
+10. Oddziel metadane pokrycia platformy od materialu projektu:
+   - wpisy `limitations` z `source-discovery.md`,
+     `source-discovery-limits` i `instruction-source-limits` nie sa
+     wymaganiami ani instrukcjami repozytorium,
+   - przenies je wylacznie do `visibilityLimits`,
+   - nie tworz z nich `verificationChecks`, findings, gaps, open questions
+     ani suggested actions i nie zmieniaj przez nie statusu compliance,
+   - `NOT_VERIFIED` moze dotyczyc tylko konkretnego, zidentyfikowanego
+     wymagania albo reguly projektu, nigdy samego komunikatu o limicie.
 
 ## Interpretacja zrodel
 
@@ -154,6 +163,10 @@ Kazdy finding musi miec:
 
 Nie tworz findingu jako mocnego zarzutu, jezeli masz tylko brak widocznosci.
 Wtedy uzyj `VISIBILITY` i wpisz ograniczenie.
+
+Limit techniczny discovery nie jest samodzielnym findingiem `VISIBILITY`.
+Zapisz go tylko w `visibilityLimits`. Finding `VISIBILITY` utworz dopiero,
+gdy brak widocznosci uniemozliwia ocene konkretnego wymagania projektu.
 
 ## Handoff
 

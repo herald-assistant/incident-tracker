@@ -1714,6 +1714,21 @@ body .flow-tree-node__badges .confidence-pill,
   background: rgba(255, 255, 255, 0.88);
 }
 
+.analysis-result-tab-panel {
+  position: relative;
+  z-index: 1;
+}
+
+.analysis-result-tab-panel app-analysis-report-section-content {
+  display: block;
+  min-width: 0;
+}
+
+.analysis-result-tab-panel:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 .problem-badge {
   display: inline-flex;
   align-items: center;
