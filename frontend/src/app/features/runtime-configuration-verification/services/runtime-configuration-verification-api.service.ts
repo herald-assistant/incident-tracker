@@ -7,8 +7,14 @@ import {
   RuntimeConfigurationVerificationInputOptions,
   RuntimeConfigurationVerificationJobStartRequest,
   RuntimeConfigurationVerificationJobStateSnapshot,
+  RuntimeConfigurationWorkbenchAiInputResponse,
+  RuntimeConfigurationWorkbenchAnonymizationPage,
+  RuntimeConfigurationWorkbenchArtifactResponse,
+  RuntimeConfigurationWorkbenchDeepResponse,
+  RuntimeConfigurationWorkbenchMappingPage,
   RuntimeConfigurationWorkbenchPreviewRequest,
-  RuntimeConfigurationWorkbenchPreviewResponse
+  RuntimeConfigurationWorkbenchPreviewResponse,
+  RuntimeConfigurationWorkbenchSourceResponse
 } from '../models/runtime-configuration-verification.models';
 
 @Injectable({
@@ -70,5 +76,67 @@ export class RuntimeConfigurationVerificationApiService {
       `${this.baseUrl}/workbench/preview`,
       request
     );
+  }
+
+  getWorkbenchSource(previewId: string): Observable<RuntimeConfigurationWorkbenchSourceResponse> {
+    return this.http.get<RuntimeConfigurationWorkbenchSourceResponse>(
+      `${this.previewUrl(previewId)}/source`
+    );
+  }
+
+  getWorkbenchMapping(
+    previewId: string,
+    offset: number,
+    limit: number,
+    changedOnly: boolean
+  ): Observable<RuntimeConfigurationWorkbenchMappingPage> {
+    const params = new HttpParams()
+      .set('offset', offset)
+      .set('limit', limit)
+      .set('changedOnly', changedOnly);
+    return this.http.get<RuntimeConfigurationWorkbenchMappingPage>(
+      `${this.previewUrl(previewId)}/mapping`,
+      { params }
+    );
+  }
+
+  getWorkbenchAnonymization(
+    previewId: string,
+    offset: number,
+    limit: number
+  ): Observable<RuntimeConfigurationWorkbenchAnonymizationPage> {
+    const params = new HttpParams().set('offset', offset).set('limit', limit);
+    return this.http.get<RuntimeConfigurationWorkbenchAnonymizationPage>(
+      `${this.previewUrl(previewId)}/anonymization`,
+      { params }
+    );
+  }
+
+  getWorkbenchDeep(previewId: string): Observable<RuntimeConfigurationWorkbenchDeepResponse> {
+    return this.http.get<RuntimeConfigurationWorkbenchDeepResponse>(
+      `${this.previewUrl(previewId)}/deep`
+    );
+  }
+
+  getWorkbenchAiInput(
+    previewId: string
+  ): Observable<RuntimeConfigurationWorkbenchAiInputResponse> {
+    return this.http.get<RuntimeConfigurationWorkbenchAiInputResponse>(
+      `${this.previewUrl(previewId)}/ai-input`
+    );
+  }
+
+  getWorkbenchArtifact(
+    previewId: string,
+    name: string
+  ): Observable<RuntimeConfigurationWorkbenchArtifactResponse> {
+    return this.http.get<RuntimeConfigurationWorkbenchArtifactResponse>(
+      `${this.previewUrl(previewId)}/artifact`,
+      { params: new HttpParams().set('name', name) }
+    );
+  }
+
+  private previewUrl(previewId: string): string {
+    return `${this.baseUrl}/workbench/preview/${encodeURIComponent(previewId)}`;
   }
 }

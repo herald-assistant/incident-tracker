@@ -1,48 +1,47 @@
 package pl.mkn.tdw.features.runtimeconfigurationverification.workbench.api;
 
-import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationChangeKind;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationSensitivity;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationValueType;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationBranchCoverage;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationFileRole;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 public record RuntimeConfigurationWorkbenchPreviewResponse(
+        String previewId,
+        Instant expiresAt,
         RuntimeConfigurationVerificationMode mode,
         String repositoryId,
         String systemId,
         String sourceBranch,
         String targetBranch,
         String codeRef,
-        SourceAcquisition sourceAcquisition,
-        RuntimeConfigurationDeterministicContext mapping,
+        SourceSummary source,
+        Counts counts,
         AnonymizationSummary anonymization,
-        RuntimeConfigurationDeepContext deepContext,
-        String preparedPrompt,
-        Map<String, String> artifactContents,
+        DeepSummary deep,
         List<ArtifactSummary> artifacts,
         List<String> visibilityLimits
 ) {
 
     public RuntimeConfigurationWorkbenchPreviewResponse {
-        artifactContents = artifactContents != null
-                ? Collections.unmodifiableMap(new LinkedHashMap<>(artifactContents))
-                : Map.of();
         artifacts = artifacts != null ? List.copyOf(artifacts) : List.of();
         visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
     }
 
-    public record SourceAcquisition(
+    public record SourceSummary(
             String configurationDirectory,
-            RuntimeConfigurationBranchCoverage source,
-            RuntimeConfigurationBranchCoverage target
+            boolean sourceBranchExists,
+            boolean sourceComplete,
+            boolean targetBranchExists,
+            boolean targetComplete
+    ) {
+    }
+
+    public record Counts(
+            int documents,
+            int nodes,
+            int differences,
+            int findings,
+            int references
     ) {
     }
 
@@ -51,39 +50,24 @@ public record RuntimeConfigurationWorkbenchPreviewResponse(
             int pseudonymizedRepresentations,
             int suppressedRepresentations,
             int structureOnlyRepresentations,
-            int notPresentRepresentations,
-            List<AnonymizationDecision> decisions
-    ) {
-
-        public AnonymizationSummary {
-            decisions = decisions != null ? List.copyOf(decisions) : List.of();
-        }
-    }
-
-    public record AnonymizationDecision(
-            RuntimeConfigurationFileRole role,
-            int documentIndex,
-            String path,
-            RuntimeConfigurationChangeKind relation,
-            RuntimeConfigurationSensitivity sensitivity,
-            RuntimeConfigurationValueType sourceType,
-            RuntimeConfigurationValueType targetType,
-            ValueRepresentation sourceRepresentation,
-            ValueRepresentation targetRepresentation,
-            String sourceValueToken,
-            String targetValueToken
+            int notPresentRepresentations
     ) {
     }
 
-    public enum ValueRepresentation {
-        PSEUDONYMIZED,
-        SUPPRESSED,
-        STRUCTURE_ONLY,
-        NOT_PRESENT
+    public record DeepSummary(
+            boolean requested,
+            String status,
+            String preflightStatus,
+            int repositoryScopes,
+            int blockers,
+            int codeGroundings,
+            int primaryOwners
+    ) {
     }
 
     public record ArtifactSummary(
             String name,
+            String mediaType,
             int characterCount,
             boolean truncated
     ) {

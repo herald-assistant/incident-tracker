@@ -6,17 +6,29 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
-import pl.mkn.tdw.features.runtimeconfigurationverification.workbench
-        .RuntimeConfigurationWorkbenchPreviewService;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationChangeKind;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationSensitivity;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationValueType;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationFileRole;
+import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
+        .RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.workbench
         .RuntimeConfigurationWorkbenchPreviewException;
+import pl.mkn.tdw.features.runtimeconfigurationverification.workbench
+        .RuntimeConfigurationWorkbenchPreviewNotFoundException;
+import pl.mkn.tdw.features.runtimeconfigurationverification.workbench
+        .RuntimeConfigurationWorkbenchPreviewService;
 
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -25,6 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(RuntimeConfigurationWorkbenchPreviewController.class)
 class RuntimeConfigurationWorkbenchPreviewControllerTest {
 
+    private static final String PREVIEW_ID = "019fb000-1f4d-79e0-8de1-daae931197ac";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -32,7 +46,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
     private RuntimeConfigurationWorkbenchPreviewService previewService;
 
     @Test
-    void shouldReturnNormalizedReadonlyPreview() throws Exception {
+    void shouldReturnNormalizedCompactPreviewWithoutLegacyPayload() throws Exception {
         var request = new RuntimeConfigurationWorkbenchPreviewRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
@@ -55,16 +69,78 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.previewId").value(PREVIEW_ID))
                 .andExpect(jsonPath("$.mode").value("BASIC"))
                 .andExpect(jsonPath("$.repositoryId").value("runtime-config"))
                 .andExpect(jsonPath("$.systemId").value("billing-api"))
-                .andExpect(jsonPath("$.preparedPrompt").value("AI-safe prompt"))
-                .andExpect(jsonPath("$.artifactContents['manifest.json']").value("{}"))
+                .andExpect(jsonPath("$.counts.nodes").value(3))
+                .andExpect(jsonPath("$.artifacts[0].name")
+                        .value("runtime-configuration/configuration-tree.yaml"))
+                .andExpect(jsonPath("$.preparedPrompt").doesNotExist())
+                .andExpect(jsonPath("$.artifactContents").doesNotExist())
+                .andExpect(jsonPath("$.mapping").doesNotExist())
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("raw-secret")
                 )));
 
         verify(previewService).preview(request);
+    }
+
+    @Test
+    void shouldServeOnlyRequestedMappingPage() throws Exception {
+        var page = new RuntimeConfigurationWorkbenchMappingPage(
+                PREVIEW_ID,
+                100,
+                50,
+                136,
+                855,
+                false,
+                List.of(new RuntimeConfigurationWorkbenchMappingPage.Item(
+                        RuntimeConfigurationFileRole.APPLICATION_YAML,
+                        0,
+                        2,
+                        "timeout",
+                        "service.timeout",
+                        RuntimeConfigurationValueType.NUMBER,
+                        RuntimeConfigurationValueType.NUMBER,
+                        RuntimeConfigurationChangeKind.CHANGED,
+                        RuntimeConfigurationSensitivity.NON_SENSITIVE
+                ))
+        );
+        when(previewService.mapping(PREVIEW_ID, 100, 50, false)).thenReturn(page);
+
+        mockMvc.perform(get(
+                        "/api/runtime-configuration-verification/workbench/preview/{previewId}/mapping",
+                        PREVIEW_ID
+                )
+                        .param("offset", "100")
+                        .param("limit", "50")
+                        .param("changedOnly", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.offset").value(100))
+                .andExpect(jsonPath("$.limit").value(50))
+                .andExpect(jsonPath("$.totalItems").value(136))
+                .andExpect(jsonPath("$.totalNodes").value(855))
+                .andExpect(jsonPath("$.items[0].path").value("service.timeout"));
+
+        verify(previewService).mapping(PREVIEW_ID, 100, 50, false);
+    }
+
+    @Test
+    void shouldReturnSafeNotFoundForMissingOrExpiredSnapshot() throws Exception {
+        when(previewService.source(PREVIEW_ID))
+                .thenThrow(new RuntimeConfigurationWorkbenchPreviewNotFoundException());
+
+        mockMvc.perform(get(
+                        "/api/runtime-configuration-verification/workbench/preview/{previewId}/source",
+                        PREVIEW_ID
+                ))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("RUNTIME_CONFIGURATION_WORKBENCH_PREVIEW_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value(
+                        "Runtime configuration preview is missing or expired. Run a new preview."
+                ));
     }
 
     @Test
@@ -140,28 +216,42 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
 
     private RuntimeConfigurationWorkbenchPreviewResponse response() {
         return new RuntimeConfigurationWorkbenchPreviewResponse(
+                PREVIEW_ID,
+                Instant.parse("2026-07-30T10:10:00Z"),
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
                 "billing-api",
                 "dev1",
                 "zt001",
                 null,
-                null,
-                null,
-                new RuntimeConfigurationWorkbenchPreviewResponse.AnonymizationSummary(
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        List.of()
+                new RuntimeConfigurationWorkbenchPreviewResponse.SourceSummary(
+                        "backend",
+                        true,
+                        true,
+                        true,
+                        true
                 ),
-                null,
-                "AI-safe prompt",
-                Map.of("manifest.json", "{}"),
-                List.of(new RuntimeConfigurationWorkbenchPreviewResponse.ArtifactSummary(
-                        "manifest.json",
+                new RuntimeConfigurationWorkbenchPreviewResponse.Counts(1, 3, 1, 1, 0),
+                new RuntimeConfigurationWorkbenchPreviewResponse.AnonymizationSummary(
+                        3,
                         2,
+                        2,
+                        2,
+                        0
+                ),
+                new RuntimeConfigurationWorkbenchPreviewResponse.DeepSummary(
+                        false,
+                        null,
+                        null,
+                        0,
+                        0,
+                        0,
+                        0
+                ),
+                List.of(new RuntimeConfigurationWorkbenchPreviewResponse.ArtifactSummary(
+                        "runtime-configuration/configuration-tree.yaml",
+                        "application/yaml",
+                        512,
                         false
                 )),
                 List.of()

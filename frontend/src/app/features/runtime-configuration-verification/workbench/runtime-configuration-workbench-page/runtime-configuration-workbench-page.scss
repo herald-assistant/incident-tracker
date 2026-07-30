@@ -72,11 +72,54 @@
 
 .guardrail-banner p,
 .perspective-heading p,
+.page-caption,
 .render-limit,
 .visibility-item,
 .ownership-item {
   margin: 4px 0 0;
   color: var(--text-muted);
+}
+
+.compact-summary {
+  gap: 16px;
+}
+
+.detail-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(183, 45, 45, 0.26);
+  border-radius: 8px;
+  background: #fff2f0;
+  color: #9f231f;
+}
+
+.inline-toggle,
+.pagination-actions,
+.on-demand-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inline-toggle {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.page-caption {
+  font-size: 0.8rem;
+}
+
+.pagination-actions {
+  justify-content: flex-end;
+}
+
+.on-demand-actions {
+  flex-wrap: wrap;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--surface-alt);
 }
 
 .perspective-panel,
@@ -247,7 +290,8 @@ code {
 
   .perspective-heading,
   .text-preview__header,
-  .ownership-item {
+  .ownership-item,
+  .on-demand-actions {
     flex-direction: column;
   }
 }

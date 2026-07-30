@@ -5,11 +5,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationSensitivity;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationDocument;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationNode;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationDeterministicContext;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationDifference;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationSensitivity;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationValueType;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .SanitizedConfigurationDocument;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .SanitizedConfigurationNode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
+        .RuntimeConfigurationVerificationMode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,10 +30,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RuntimeConfigurationAiArtifactService {
 
-    static final int MAX_ARTIFACT_CHARACTERS = 120_000;
-    static final int MAX_MANIFEST_CHARACTERS = 360_000;
-    private static final String TRUNCATION_MARKER =
-            "\n\n{\"truncated\":true,\"reason\":\"sanitized AI artifact character limit reached\"}";
+    static final int MAX_STRUCTURE_CHARACTERS = 120_000;
+    static final int MAX_CHANGES_CHARACTERS = 80_000;
+    static final int MAX_DEEP_CHARACTERS = 60_000;
+    private static final String YAML_TRUNCATION_MARKER =
+            "\ntruncated: true\ntruncationReason: \"sanitized AI artifact character limit reached\"\n";
 
     private final ObjectMapper objectMapper;
 
@@ -36,49 +46,32 @@ public class RuntimeConfigurationAiArtifactService {
         if (deterministic == null) {
             throw new IllegalArgumentException("deterministic context is required");
         }
+
         var artifacts = new LinkedHashMap<String, String>();
         var visibilityLimits = new ArrayList<String>();
         artifacts.put("runtime-configuration/scope.json", json(scope(deterministic, mode)));
-        artifacts.put("runtime-configuration/coverage.json", boundedJson(Map.of(
+        artifacts.put("runtime-configuration/coverage.json", json(Map.of(
                 "source", deterministic.sourceCoverage(),
                 "target", deterministic.targetCoverage()
-        ), "coverage", visibilityLimits));
-        artifacts.put("runtime-configuration/differences-and-findings.json", boundedJson(Map.of(
-                "deterministicStatus", deterministic.status(),
-                "differences", deterministic.differences().stream().map(this::safeDifference).toList(),
-                "findings", deterministic.findings(),
-                "references", deterministic.references()
-        ), "differences-and-findings", visibilityLimits));
-
-        var manifestCharacters = 0;
-        for (var document : deterministic.documents()) {
-            var artifactName = "runtime-configuration/manifest/"
-                    + document.role().name().toLowerCase()
-                    + "-document-" + document.documentIndex() + ".json";
-            var rendered = json(safeDocument(document));
-            var remaining = Math.max(0, MAX_MANIFEST_CHARACTERS - manifestCharacters);
-            if (rendered.length() > MAX_ARTIFACT_CHARACTERS || rendered.length() > remaining) {
-                var limit = Math.min(MAX_ARTIFACT_CHARACTERS, remaining);
-                rendered = truncate(rendered, limit);
-                visibilityLimits.add("Sanitized manifest group `" + artifactName
-                        + "` was truncated for the AI context; deterministic comparison remains complete.");
-            }
-            artifacts.put(artifactName, rendered);
-            manifestCharacters += Math.min(rendered.length(), remaining);
-        }
-        artifacts.put("runtime-configuration/manifest-index.json", json(Map.of(
-                "documentCount", deterministic.documents().size(),
-                "includesChangedAndUnchangedParameters", true,
-                "preservesYamlDocumentAndProfileBoundaries", true,
-                "artifactNames", artifacts.keySet().stream()
-                        .filter(name -> name.startsWith("runtime-configuration/manifest/"))
-                        .toList()
         )));
+        artifacts.put(
+                "runtime-configuration/configuration-tree.yaml",
+                boundedYaml(configurationTree(deterministic.documents()), visibilityLimits)
+        );
+        artifacts.put(
+                "runtime-configuration/changes.json",
+                boundedJson(changes(deterministic), MAX_CHANGES_CHARACTERS, "changes", visibilityLimits)
+        );
 
         if (mode == RuntimeConfigurationVerificationMode.DEEP && deepContext != null) {
             artifacts.put(
                     "runtime-configuration/deep-context.json",
-                    boundedJson(deepContext, "deep-context", visibilityLimits)
+                    boundedJson(
+                            deepContext,
+                            MAX_DEEP_CHARACTERS,
+                            "deep-context",
+                            visibilityLimits
+                    )
             );
             visibilityLimits.addAll(deepContext.visibilityLimits());
         }
@@ -91,6 +84,7 @@ public class RuntimeConfigurationAiArtifactService {
             RuntimeConfigurationVerificationMode mode
     ) {
         var result = new LinkedHashMap<String, Object>();
+        result.put("formatVersion", 2);
         result.put("mode", mode);
         result.put("repositoryId", context.repositoryId());
         result.put("systemId", context.systemId());
@@ -98,91 +92,308 @@ public class RuntimeConfigurationAiArtifactService {
         result.put("configurationDirectory", context.configurationDirectory());
         result.put("sourceBranch", context.sourceBranch());
         result.put("targetBranch", context.targetBranch());
+        result.put("includesChangedAndUnchangedParameters", true);
+        result.put("valueTokensAreRunLocalPseudonyms", true);
         return result;
     }
 
-    private Map<String, Object> safeDocument(SanitizedConfigurationDocument document) {
+    private String configurationTree(List<SanitizedConfigurationDocument> documents) {
+        var result = new StringBuilder();
+        result.append("formatVersion: 2\n");
+        result.append("documentColumns: [role, documentIndex, sourcePath, targetPath, ");
+        result.append("sourcePresent, targetPresent, sourceProfileToken, targetProfileToken]\n");
+        result.append("columns: [name, relation, sourceType, targetType, sensitivity, ");
+        result.append("sourceRepresentation, targetRepresentation, sourceCardinality, targetCardinality]\n");
+        result.append("relationCodes: {U: UNCHANGED, A: ADDED, R: REMOVED, C: CHANGED, ");
+        result.append("T: TYPE_CHANGED, E: EFFECTIVE_CHANGED}\n");
+        result.append("typeCodes: {M: MAP, L: LIST, S: STRING, N: NUMBER, B: BOOLEAN, ");
+        result.append("Z: NULL, X: UNKNOWN}\n");
+        result.append("sensitivityCodes: {N: NON_SENSITIVE, S: SENSITIVE}\n");
+        result.append("representationLegend:\n");
+        result.append("  A: value does not exist on this side\n");
+        result.append("  O: map/list node without scalar value\n");
+        result.append("  M: sensitive scalar suppressed before AI\n");
+        result.append("  \"p:*\": run-local pseudonym preserving equality only\n");
+        result.append("documents:\n");
+        for (var document : documents) {
+            appendDocument(result, document);
+        }
+        return result.toString();
+    }
+
+    private void appendDocument(StringBuilder result, SanitizedConfigurationDocument document) {
+        result.append("  - meta: [")
+                .append(yamlScalar(document.role() != null ? document.role().name() : null))
+                .append(", ").append(document.documentIndex())
+                .append(", ").append(yamlScalar(document.sourcePath()))
+                .append(", ").append(yamlScalar(document.targetPath()))
+                .append(", ").append(document.sourcePresent())
+                .append(", ").append(document.targetPresent())
+                .append(", ").append(yamlScalar(document.sourceProfileToken()))
+                .append(", ").append(yamlScalar(document.targetProfileToken()))
+                .append("]\n");
+        if (document.root() == null) {
+            result.append("    tree: []\n");
+            return;
+        }
+        result.append("    tree:\n");
+        appendNode(result, document.root(), 6);
+    }
+
+    private void appendNode(StringBuilder result, SanitizedConfigurationNode node, int indent) {
+        result.append(" ".repeat(indent)).append("- n: [")
+                .append(yamlScalar(node.name()))
+                .append(", ").append(yamlScalar(relationCode(node.relation())))
+                .append(", ").append(yamlScalar(typeCode(node.sourceType())))
+                .append(", ").append(yamlScalar(typeCode(node.targetType())))
+                .append(", ").append(yamlScalar(sensitivityCode(node.sensitivity())))
+                .append(", ").append(yamlScalar(representation(
+                        node.sourceType(),
+                        node.sensitivity(),
+                        node.sourceValueToken()
+                )))
+                .append(", ").append(yamlScalar(representation(
+                        node.targetType(),
+                        node.sensitivity(),
+                        node.targetValueToken()
+                )))
+                .append(", ").append(number(node.sourceCardinality()))
+                .append(", ").append(number(node.targetCardinality()))
+                .append("]\n");
+        if (!node.children().isEmpty()) {
+            result.append(" ".repeat(indent + 2)).append("c:\n");
+            for (var child : node.children()) {
+                appendNode(result, child, indent + 4);
+            }
+        }
+    }
+
+    private Map<String, Object> changes(RuntimeConfigurationDeterministicContext context) {
         var result = new LinkedHashMap<String, Object>();
-        result.put("role", document.role());
-        result.put("sourcePath", document.sourcePath());
-        result.put("targetPath", document.targetPath());
-        result.put("documentIndex", document.documentIndex());
-        result.put("sourcePresent", document.sourcePresent());
-        result.put("targetPresent", document.targetPresent());
-        result.put("sourceProfileToken", document.sourceProfileToken());
-        result.put("targetProfileToken", document.targetProfileToken());
-        result.put("root", safeNode(document.root()));
+        result.put("formatVersion", 2);
+        result.put("deterministicStatus", context.status());
+        result.put("codes", codes());
+        result.put("differenceColumns", List.of(
+                "differenceId",
+                "role",
+                "documentIndex",
+                "path",
+                "kind",
+                "sourceType",
+                "targetType",
+                "sensitivity",
+                "sourceRepresentation",
+                "targetRepresentation"
+        ));
+        result.put(
+                "differences",
+                context.differences().stream().map(this::compactDifference).toList()
+        );
+        result.put("findingColumns", List.of(
+                "findingId", "code", "severity", "path", "differenceIds", "referenceIds"
+        ));
+        result.put(
+                "findings",
+                context.findings().stream()
+                        .map(finding -> List.of(
+                                value(finding.findingId()),
+                                value(finding.code()),
+                                value(finding.severity()),
+                                value(finding.path()),
+                                finding.differenceIds(),
+                                finding.referenceIds()
+                        ))
+                        .toList()
+        );
+        result.put("referenceColumns", List.of(
+                "referenceId",
+                "sourceRole",
+                "documentIndex",
+                "sourcePath",
+                "targetPath",
+                "referenceKind",
+                "sourceStatus",
+                "targetStatus"
+        ));
+        result.put(
+                "references",
+                context.references().stream()
+                        .map(reference -> List.of(
+                                value(reference.referenceId()),
+                                value(reference.sourceRole()),
+                                reference.documentIndex(),
+                                value(reference.sourcePath()),
+                                value(reference.targetPath()),
+                                value(reference.referenceKind()),
+                                value(reference.sourceStatus()),
+                                value(reference.targetStatus())
+                        ))
+                        .toList()
+        );
         return result;
     }
 
-    private Object safeNode(SanitizedConfigurationNode node) {
-        if (node == null) {
+    private List<Object> compactDifference(RuntimeConfigurationDifference difference) {
+        return List.of(
+                value(difference.differenceId()),
+                value(difference.role()),
+                difference.documentIndex(),
+                value(difference.path()),
+                relationCode(difference.kind()),
+                typeCode(difference.sourceType()),
+                typeCode(difference.targetType()),
+                sensitivityCode(difference.sensitivity()),
+                representation(
+                        difference.sourceType(),
+                        difference.sensitivity(),
+                        difference.sourceValueToken()
+                ),
+                representation(
+                        difference.targetType(),
+                        difference.sensitivity(),
+                        difference.targetValueToken()
+                )
+        );
+    }
+
+    private String representation(
+            RuntimeConfigurationValueType type,
+            RuntimeConfigurationSensitivity sensitivity,
+            String token
+    ) {
+        if (type == null) {
+            return "A";
+        }
+        if (sensitivity == RuntimeConfigurationSensitivity.SENSITIVE) {
+            return "M";
+        }
+        return token != null ? "p:" + token : "O";
+    }
+
+    private Map<String, Object> codes() {
+        var result = new LinkedHashMap<String, Object>();
+        result.put("relation", Map.of(
+                "U", "UNCHANGED",
+                "A", "ADDED",
+                "R", "REMOVED",
+                "C", "CHANGED",
+                "T", "TYPE_CHANGED",
+                "E", "EFFECTIVE_CHANGED"
+        ));
+        result.put("type", Map.of(
+                "M", "MAP",
+                "L", "LIST",
+                "S", "STRING",
+                "N", "NUMBER",
+                "B", "BOOLEAN",
+                "Z", "NULL",
+                "X", "UNKNOWN"
+        ));
+        result.put("sensitivity", Map.of("N", "NON_SENSITIVE", "S", "SENSITIVE"));
+        result.put("representation", Map.of(
+                "A", "ABSENT",
+                "O", "STRUCTURE_ONLY",
+                "M", "SENSITIVE_MASKED",
+                "p:*", "RUN_LOCAL_PSEUDONYM"
+        ));
+        return result;
+    }
+
+    private String relationCode(
+            pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+                    .RuntimeConfigurationChangeKind value
+    ) {
+        if (value == null) {
             return null;
         }
-        var result = new LinkedHashMap<String, Object>();
-        result.put("name", node.name());
-        result.put("path", node.path());
-        result.put("sourceType", node.sourceType());
-        result.put("targetType", node.targetType());
-        result.put("relation", node.relation());
-        result.put("sensitivity", node.sensitivity());
-        if (node.sensitivity() == RuntimeConfigurationSensitivity.SENSITIVE) {
-            result.put("sourceValue", node.sourceType() != null ? "MASKED" : null);
-            result.put("targetValue", node.targetType() != null ? "MASKED" : null);
-        } else {
-            result.put("sourceValueToken", node.sourceValueToken());
-            result.put("targetValueToken", node.targetValueToken());
-        }
-        result.put("sourceCardinality", node.sourceCardinality());
-        result.put("targetCardinality", node.targetCardinality());
-        result.put("children", node.children().stream().map(this::safeNode).toList());
-        return result;
+        return switch (value) {
+            case UNCHANGED -> "U";
+            case ADDED -> "A";
+            case REMOVED -> "R";
+            case CHANGED -> "C";
+            case TYPE_CHANGED -> "T";
+            case EFFECTIVE_CHANGED -> "E";
+        };
     }
 
-    private Map<String, Object> safeDifference(
-            pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
-                    .RuntimeConfigurationDifference difference
+    private String typeCode(RuntimeConfigurationValueType value) {
+        if (value == null) {
+            return null;
+        }
+        return switch (value) {
+            case MAP -> "M";
+            case LIST -> "L";
+            case STRING -> "S";
+            case NUMBER -> "N";
+            case BOOLEAN -> "B";
+            case NULL -> "Z";
+            case UNKNOWN -> "X";
+        };
+    }
+
+    private String sensitivityCode(RuntimeConfigurationSensitivity value) {
+        if (value == null) {
+            return null;
+        }
+        return value == RuntimeConfigurationSensitivity.SENSITIVE ? "S" : "N";
+    }
+
+    private String boundedYaml(String content, List<String> visibilityLimits) {
+        if (content.length() <= MAX_STRUCTURE_CHARACTERS) {
+            return content;
+        }
+        visibilityLimits.add(
+                "Compact configuration tree was truncated for the AI context; "
+                        + "deterministic comparison remains complete."
+        );
+        var limit = Math.max(0, MAX_STRUCTURE_CHARACTERS - YAML_TRUNCATION_MARKER.length());
+        var boundary = content.lastIndexOf('\n', Math.min(content.length() - 1, limit));
+        var safeBoundary = Math.max(0, boundary + 1);
+        return content.substring(0, safeBoundary) + YAML_TRUNCATION_MARKER;
+    }
+
+    private String boundedJson(
+            Object value,
+            int maxCharacters,
+            String label,
+            List<String> visibilityLimits
     ) {
-        var result = new LinkedHashMap<String, Object>();
-        result.put("differenceId", difference.differenceId());
-        result.put("role", difference.role());
-        result.put("documentIndex", difference.documentIndex());
-        result.put("path", difference.path());
-        result.put("kind", difference.kind());
-        result.put("sourceType", difference.sourceType());
-        result.put("targetType", difference.targetType());
-        result.put("sensitivity", difference.sensitivity());
-        if (difference.sensitivity() == RuntimeConfigurationSensitivity.SENSITIVE) {
-            result.put("sourceValue", difference.sourceType() != null ? "MASKED" : null);
-            result.put("targetValue", difference.targetType() != null ? "MASKED" : null);
-        } else {
-            result.put("sourceValueToken", difference.sourceValueToken());
-            result.put("targetValueToken", difference.targetValueToken());
-        }
-        return result;
-    }
-
-    private String boundedJson(Object value, String label, List<String> visibilityLimits) {
         var rendered = json(value);
-        if (rendered.length() <= MAX_ARTIFACT_CHARACTERS) {
+        if (rendered.length() <= maxCharacters) {
             return rendered;
         }
         visibilityLimits.add("AI artifact `" + label
                 + "` was truncated; the immutable deterministic result remains available.");
-        return truncate(rendered, MAX_ARTIFACT_CHARACTERS);
+        var prefixLength = Math.min(rendered.length(), Math.max(0, maxCharacters / 2));
+        String result;
+        do {
+            result = json(Map.of(
+                    "formatVersion", 2,
+                    "truncated", true,
+                    "reason", "sanitized AI artifact character limit reached",
+                    "originalCharacterCount", rendered.length(),
+                    "sanitizedContentPrefix", rendered.substring(0, prefixLength)
+            ));
+            prefixLength = Math.max(0, prefixLength - Math.max(1, result.length() - maxCharacters));
+        } while (result.length() > maxCharacters && prefixLength > 0);
+        return result;
     }
 
-    private String truncate(String value, int maxCharacters) {
-        if (maxCharacters <= TRUNCATION_MARKER.length()) {
-            return TRUNCATION_MARKER.trim();
-        }
-        return value.substring(0, Math.min(value.length(), maxCharacters - TRUNCATION_MARKER.length()))
-                + TRUNCATION_MARKER;
+    private String yamlScalar(Object value) {
+        return value != null ? json(String.valueOf(value)) : "null";
+    }
+
+    private String number(Integer value) {
+        return value != null ? value.toString() : "null";
+    }
+
+    private Object value(Object value) {
+        return value != null ? value : "";
     }
 
     private String json(Object value) {
         try {
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(value);
+            return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Sanitized AI artifact could not be rendered.", exception);
         }

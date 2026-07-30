@@ -6,12 +6,16 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import {
   RuntimeConfigurationBranchCoverage,
-  RuntimeConfigurationDeepContext,
   RuntimeConfigurationVerificationInputOptions,
   RuntimeConfigurationVerificationMode,
+  RuntimeConfigurationWorkbenchAiInputResponse,
+  RuntimeConfigurationWorkbenchAnonymizationPage,
+  RuntimeConfigurationWorkbenchArtifactResponse,
+  RuntimeConfigurationWorkbenchDeepResponse,
+  RuntimeConfigurationWorkbenchMappingPage,
   RuntimeConfigurationWorkbenchPreviewRequest,
   RuntimeConfigurationWorkbenchPreviewResponse,
-  SanitizedConfigurationNode
+  RuntimeConfigurationWorkbenchSourceResponse
 } from '../../models/runtime-configuration-verification.models';
 import { RuntimeConfigurationVerificationApiService } from '../../services/runtime-configuration-verification-api.service';
 
@@ -19,17 +23,9 @@ type PreviewStatus = 'idle' | 'loading' | 'success' | 'error';
 type Perspective = 'source' | 'mapping' | 'anonymization' | 'ai' | 'deep';
 type CopyTarget = 'request' | 'response' | 'prompt' | 'artifact';
 
-interface MappingRow {
-  role: string;
-  documentIndex: number;
-  depth: number;
-  node: SanitizedConfigurationNode;
-}
-
 interface SourceFileRow {
   side: 'SOURCE' | 'TARGET';
   branch: string;
-  branchExists: boolean;
   role: string;
   path: string;
   status: string;
@@ -40,7 +36,7 @@ interface SourceFileRow {
 }
 
 const ENDPOINT = '/api/runtime-configuration-verification/workbench/preview';
-const MAX_RENDERED_ROWS = 500;
+const PAGE_SIZE = 100;
 const EMPTY_OPTIONS: RuntimeConfigurationVerificationInputOptions = {
   modes: ['BASIC', 'DEEP'],
   branches: [],
@@ -67,15 +63,25 @@ export class RuntimeConfigurationWorkbenchPageComponent {
   readonly status = signal<PreviewStatus>('idle');
   readonly statusCode = signal<number | null>(null);
   readonly message = signal(
-    'Wybierz scope, aby prześledzić dokładnie ten sam bezpieczny pipeline co analiza.'
+    'Wybierz scope, aby utworzyć lekki, tymczasowy i sanitizowany preview.'
   );
   readonly durationMs = signal<number | null>(null);
-  readonly response = signal<RuntimeConfigurationWorkbenchPreviewResponse | null>(null);
+  readonly summary = signal<RuntimeConfigurationWorkbenchPreviewResponse | null>(null);
   readonly requestJson = signal('');
   readonly responseJson = signal('');
   readonly selectedPerspective = signal<Perspective>('source');
-  readonly selectedArtifactName = signal('');
   readonly copiedTarget = signal<CopyTarget | null>(null);
+  readonly detailLoading = signal<Perspective | 'artifact' | 'prompt' | null>(null);
+  readonly detailError = signal('');
+
+  readonly sourceDetail = signal<RuntimeConfigurationWorkbenchSourceResponse | null>(null);
+  readonly mappingPage = signal<RuntimeConfigurationWorkbenchMappingPage | null>(null);
+  readonly mappingChangedOnly = signal(true);
+  readonly anonymizationPage =
+    signal<RuntimeConfigurationWorkbenchAnonymizationPage | null>(null);
+  readonly deepDetail = signal<RuntimeConfigurationWorkbenchDeepResponse | null>(null);
+  readonly aiInput = signal<RuntimeConfigurationWorkbenchAiInputResponse | null>(null);
+  readonly artifact = signal<RuntimeConfigurationWorkbenchArtifactResponse | null>(null);
 
   readonly form = new FormGroup({
     mode: new FormControl<RuntimeConfigurationVerificationMode>('BASIC', {
@@ -108,43 +114,23 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     tag: string;
   }> = [
     { id: 'source', label: 'Source acquisition', detail: 'Pliki i metadata', tag: 'FETCHED METADATA' },
-    { id: 'mapping', label: 'Mapping', detail: 'Struktura i różnice', tag: 'DERIVED' },
-    { id: 'anonymization', label: 'Anonymization', detail: 'Decyzje ochrony', tag: 'AI-SAFE' },
-    { id: 'ai', label: 'AI input', detail: 'Prompt i artefakty', tag: 'AI-SAFE' },
+    { id: 'mapping', label: 'Mapping', detail: 'Zmiany, stronicowane', tag: 'DERIVED' },
+    { id: 'anonymization', label: 'Anonymization', detail: 'Decyzje, stronicowane', tag: 'AI-SAFE' },
+    { id: 'ai', label: 'AI input', detail: 'Ładowany na żądanie', tag: 'AI-SAFE' },
     { id: 'deep', label: 'DEEP scope', detail: 'Kod i ownership', tag: 'DERIVED' }
   ];
 
   readonly hasResult = computed(() => this.status() !== 'idle');
-  readonly sourceRows = computed(() => this.buildSourceRows(this.response()?.sourceAcquisition));
-  readonly mappingRows = computed(() => this.buildMappingRows(this.response()));
-  readonly mappingRowsTruncated = computed(
-    () => this.totalMappingNodes() > this.mappingRows().length
-  );
-  readonly totalMappingNodes = computed(
-    () =>
-      this.response()?.mapping.documents.reduce(
-        (total, document) => total + this.countNodes(document.root),
-        0
-      ) ?? 0
-  );
-  readonly anonymizationRows = computed(
-    () => this.response()?.anonymization.decisions.slice(0, MAX_RENDERED_ROWS) ?? []
-  );
-  readonly anonymizationRowsTruncated = computed(
-    () =>
-      (this.response()?.anonymization.decisions.length ?? 0) >
-      this.anonymizationRows().length
-  );
-  readonly selectedArtifactContent = computed(() => {
-    const result = this.response();
-    return result?.artifactContents[this.selectedArtifactName()] ?? '';
+  readonly sourceRows = computed(() => {
+    const detail = this.sourceDetail();
+    return detail
+      ? [
+          ...this.coverageRows('SOURCE', detail.source),
+          ...this.coverageRows('TARGET', detail.target)
+        ]
+      : [];
   });
-  readonly deepContext = computed<RuntimeConfigurationDeepContext | null>(
-    () => this.response()?.deepContext ?? null
-  );
-  readonly branchPairInvalid = (): boolean =>
-    !!this.form.controls.sourceBranch.value &&
-    this.form.controls.sourceBranch.value === this.form.controls.targetBranch.value;
+  readonly initialPayloadCharacters = computed(() => this.responseJson().length);
 
   constructor() {
     this.api
@@ -169,6 +155,20 @@ export class RuntimeConfigurationWorkbenchPageComponent {
 
   selectPerspective(perspective: Perspective): void {
     this.selectedPerspective.set(perspective);
+    this.detailError.set('');
+    const previewId = this.summary()?.previewId;
+    if (!previewId) {
+      return;
+    }
+    if (perspective === 'source' && !this.sourceDetail()) {
+      this.loadSource(previewId);
+    } else if (perspective === 'mapping' && !this.mappingPage()) {
+      this.loadMapping(0);
+    } else if (perspective === 'anonymization' && !this.anonymizationPage()) {
+      this.loadAnonymization(0);
+    } else if (perspective === 'deep' && !this.deepDetail()) {
+      this.loadDeep(previewId);
+    }
   }
 
   submit(event: Event): void {
@@ -195,30 +195,29 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     };
     const requestJson = this.toJson({ endpoint: ENDPOINT, method: 'POST', body: payload });
     const startedAt = Date.now();
+    this.clearSnapshotDetails();
     this.requestJson.set(requestJson);
     this.responseJson.set('');
-    this.response.set(null);
+    this.summary.set(null);
     this.status.set('loading');
     this.statusCode.set(null);
     this.durationMs.set(null);
-    this.message.set('Pobieramy metadata i przygotowujemy bezpieczny snapshot dla AI…');
+    this.message.set('Budujemy sanitizowany snapshot i jego kompaktowy model AI…');
 
     this.api
       .preview(payload)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (response) => {
-          this.response.set(response);
-          this.responseJson.set(this.toJson(response));
-          this.selectedArtifactName.set(response.artifacts[0]?.name ?? '');
+        next: (summary) => {
+          this.summary.set(summary);
+          this.responseJson.set(this.toJson(summary));
           this.status.set('success');
           this.statusCode.set(200);
           this.durationMs.set(Date.now() - startedAt);
           this.message.set(
-            response.visibilityLimits.length
-              ? `Preview gotowy z ${response.visibilityLimits.length} ograniczeniem/ograniczeniami widoczności.`
-              : 'Preview gotowy. AI nie zostało uruchomione.'
+            `Lekki preview gotowy. Szczegóły wygasną ${new Date(summary.expiresAt).toLocaleTimeString()}.`
           );
+          this.loadSource(summary.previewId);
         },
         error: (error: unknown) => {
           const normalized = this.normalizeError(error);
@@ -233,7 +232,8 @@ export class RuntimeConfigurationWorkbenchPageComponent {
 
   reset(): void {
     this.applyDefaults(this.options());
-    this.response.set(null);
+    this.clearSnapshotDetails();
+    this.summary.set(null);
     this.requestJson.set('');
     this.responseJson.set('');
     this.status.set('idle');
@@ -241,7 +241,84 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     this.durationMs.set(null);
     this.message.set('Scope został zresetowany. Pipeline nie został uruchomiony.');
     this.selectedPerspective.set('source');
-    this.selectedArtifactName.set('');
+  }
+
+  setMappingChangedOnly(value: boolean): void {
+    this.mappingChangedOnly.set(value);
+    this.loadMapping(0);
+  }
+
+  previousMappingPage(): void {
+    const page = this.mappingPage();
+    if (page) {
+      this.loadMapping(Math.max(0, page.offset - page.limit));
+    }
+  }
+
+  nextMappingPage(): void {
+    const page = this.mappingPage();
+    if (page && page.offset + page.items.length < page.totalItems) {
+      this.loadMapping(page.offset + page.limit);
+    }
+  }
+
+  previousAnonymizationPage(): void {
+    const page = this.anonymizationPage();
+    if (page) {
+      this.loadAnonymization(Math.max(0, page.offset - page.limit));
+    }
+  }
+
+  nextAnonymizationPage(): void {
+    const page = this.anonymizationPage();
+    if (page && page.offset + page.items.length < page.totalItems) {
+      this.loadAnonymization(page.offset + page.limit);
+    }
+  }
+
+  loadAiInput(): void {
+    const previewId = this.summary()?.previewId;
+    if (!previewId || this.detailLoading()) {
+      return;
+    }
+    this.detailLoading.set('prompt');
+    this.detailError.set('');
+    this.api
+      .getWorkbenchAiInput(previewId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.aiInput.set(response);
+          this.detailLoading.set(null);
+        },
+        error: (error) => this.detailFailed(error)
+      });
+  }
+
+  loadArtifact(name: string): void {
+    const previewId = this.summary()?.previewId;
+    if (!previewId || this.detailLoading()) {
+      return;
+    }
+    this.detailLoading.set('artifact');
+    this.detailError.set('');
+    this.api
+      .getWorkbenchArtifact(previewId, name)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.artifact.set(response);
+          this.detailLoading.set(null);
+        },
+        error: (error) => this.detailFailed(error)
+      });
+  }
+
+  branchPairInvalid(): boolean {
+    return (
+      !!this.form.controls.sourceBranch.value &&
+      this.form.controls.sourceBranch.value === this.form.controls.targetBranch.value
+    );
   }
 
   statusLabel(status: PreviewStatus): string {
@@ -255,7 +332,13 @@ export class RuntimeConfigurationWorkbenchPageComponent {
 
   statusPillClass(status: PreviewStatus): string {
     return `status-pill status-pill--${
-      status === 'success' ? 'done' : status === 'loading' ? 'running' : status === 'error' ? 'error' : 'queued'
+      status === 'success'
+        ? 'done'
+        : status === 'loading'
+          ? 'running'
+          : status === 'error'
+            ? 'error'
+            : 'queued'
     }`;
   }
 
@@ -285,6 +368,91 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     }, 1600);
   }
 
+  private loadSource(previewId: string): void {
+    this.detailLoading.set('source');
+    this.api
+      .getWorkbenchSource(previewId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.sourceDetail.set(response);
+          this.detailLoading.set(null);
+        },
+        error: (error) => this.detailFailed(error)
+      });
+  }
+
+  private loadMapping(offset: number): void {
+    const previewId = this.summary()?.previewId;
+    if (!previewId) {
+      return;
+    }
+    this.detailLoading.set('mapping');
+    this.detailError.set('');
+    this.api
+      .getWorkbenchMapping(previewId, offset, PAGE_SIZE, this.mappingChangedOnly())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.mappingPage.set(response);
+          this.detailLoading.set(null);
+        },
+        error: (error) => this.detailFailed(error)
+      });
+  }
+
+  private loadAnonymization(offset: number): void {
+    const previewId = this.summary()?.previewId;
+    if (!previewId) {
+      return;
+    }
+    this.detailLoading.set('anonymization');
+    this.detailError.set('');
+    this.api
+      .getWorkbenchAnonymization(previewId, offset, PAGE_SIZE)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.anonymizationPage.set(response);
+          this.detailLoading.set(null);
+        },
+        error: (error) => this.detailFailed(error)
+      });
+  }
+
+  private loadDeep(previewId: string): void {
+    this.detailLoading.set('deep');
+    this.detailError.set('');
+    this.api
+      .getWorkbenchDeep(previewId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.deepDetail.set(response);
+          this.detailLoading.set(null);
+        },
+        error: (error) => this.detailFailed(error)
+      });
+  }
+
+  private detailFailed(error: unknown): void {
+    const normalized = this.normalizeError(error);
+    this.detailError.set(normalized.message);
+    this.detailLoading.set(null);
+  }
+
+  private clearSnapshotDetails(): void {
+    this.sourceDetail.set(null);
+    this.mappingPage.set(null);
+    this.anonymizationPage.set(null);
+    this.deepDetail.set(null);
+    this.aiInput.set(null);
+    this.artifact.set(null);
+    this.detailLoading.set(null);
+    this.detailError.set('');
+    this.mappingChangedOnly.set(true);
+  }
+
   private applyDefaults(options: RuntimeConfigurationVerificationInputOptions): void {
     const branches = options.branches;
     const sourceBranch = branches.includes('dev1') ? 'dev1' : (branches[0] ?? '');
@@ -302,18 +470,6 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     });
   }
 
-  private buildSourceRows(
-    acquisition: RuntimeConfigurationWorkbenchPreviewResponse['sourceAcquisition'] | undefined
-  ): SourceFileRow[] {
-    if (!acquisition) {
-      return [];
-    }
-    return [
-      ...this.coverageRows('SOURCE', acquisition.source),
-      ...this.coverageRows('TARGET', acquisition.target)
-    ];
-  }
-
   private coverageRows(
     side: SourceFileRow['side'],
     coverage: RuntimeConfigurationBranchCoverage | null
@@ -324,7 +480,6 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     return coverage.files.map((file) => ({
       side,
       branch: coverage.branch,
-      branchExists: coverage.branchExists,
       role: file.role,
       path: file.path,
       status: file.status,
@@ -333,42 +488,6 @@ export class RuntimeConfigurationWorkbenchPageComponent {
       sizeBytes: file.sizeBytes,
       errorCode: file.errorCode
     }));
-  }
-
-  private buildMappingRows(
-    response: RuntimeConfigurationWorkbenchPreviewResponse | null
-  ): MappingRow[] {
-    if (!response) {
-      return [];
-    }
-    const rows: MappingRow[] = [];
-    for (const document of response.mapping.documents) {
-      this.appendMappingNode(rows, document.role, document.documentIndex, document.root, 0);
-      if (rows.length >= MAX_RENDERED_ROWS) {
-        break;
-      }
-    }
-    return rows.slice(0, MAX_RENDERED_ROWS);
-  }
-
-  private appendMappingNode(
-    rows: MappingRow[],
-    role: string,
-    documentIndex: number,
-    node: SanitizedConfigurationNode,
-    depth: number
-  ): void {
-    if (rows.length >= MAX_RENDERED_ROWS) {
-      return;
-    }
-    rows.push({ role, documentIndex, node, depth });
-    for (const child of node.children) {
-      this.appendMappingNode(rows, role, documentIndex, child, depth + 1);
-    }
-  }
-
-  private countNodes(node: SanitizedConfigurationNode): number {
-    return 1 + node.children.reduce((total, child) => total + this.countNodes(child), 0);
   }
 
   private normalizeError(error: unknown): {

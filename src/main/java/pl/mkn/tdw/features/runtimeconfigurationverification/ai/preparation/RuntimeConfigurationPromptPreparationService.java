@@ -32,9 +32,10 @@ public class RuntimeConfigurationPromptPreparationService {
 
                 ## Zadanie
                 - Najpierw załaduj skill `%s` przez built-in tool `skill`.
-                - Przeanalizuj pełny zanonimizowany manifest, structural diff i deterministic findings.
-                - Manifest obejmuje parametry zmienione i niezmienione oraz zachowuje dokumenty/profile i zagnieżdżenie YAML.
-                - Nie próbuj odtwarzać wartości z `valueToken`; token oznacza wyłącznie relację w bieżącym runie.
+                - Przeanalizuj kompaktowe `configuration-tree.yaml`, `changes.json` i deterministic findings.
+                - Drzewo obejmuje parametry zmienione i niezmienione, zachowuje granice dokumentów/profile i zagnieżdżenie YAML.
+                - Rozwiń kody wyłącznie według legend artefaktu: `p:*` to run-local pseudonym, representation `M` to suppression sekretu, `O` to węzeł struktury, a `A` to brak po jednej stronie.
+                - Nie próbuj odtwarzać wartości z pseudonimu; służy wyłącznie do porównania relacji w bieżącym runie.
                 - Wynik deterministyczny jest niemutowalny. Nie usuwaj findingów, nie zmieniaj diffu, coverage, ownershipu ani statusu.
                 - Obserwacja typu `GROUNDED_OBSERVATION` musi wskazywać co najmniej jeden istniejący `differenceId` lub `findingId`.
                 - Wniosek bez takiego oparcia oznacz jako `HYPOTHESIS`.
@@ -51,7 +52,8 @@ public class RuntimeConfigurationPromptPreparationService {
                         : "runtime-configuration-basic-review",
                 modeInstruction(mode),
                 artifacts.contents().entrySet().stream()
-                        .map(entry -> "\n### " + entry.getKey() + "\n```json\n" + entry.getValue() + "\n```")
+                        .map(entry -> "\n### " + entry.getKey() + "\n```"
+                                + language(entry.getKey()) + "\n" + entry.getValue() + "\n```")
                         .collect(Collectors.joining("\n"))
         ).trim();
         return new RuntimeConfigurationPromptPreparation(
@@ -59,6 +61,13 @@ public class RuntimeConfigurationPromptPreparationService {
                 artifacts.contents(),
                 artifacts.visibilityLimits()
         );
+    }
+
+    private String language(String artifactName) {
+        return artifactName != null
+                && (artifactName.endsWith(".yaml") || artifactName.endsWith(".yml"))
+                ? "yaml"
+                : "json";
     }
 
     private String modeInstruction(RuntimeConfigurationVerificationMode mode) {

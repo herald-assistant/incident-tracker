@@ -4,8 +4,13 @@ import { of, throwError } from 'rxjs';
 
 import {
   RuntimeConfigurationVerificationInputOptions,
+  RuntimeConfigurationWorkbenchAiInputResponse,
+  RuntimeConfigurationWorkbenchAnonymizationPage,
+  RuntimeConfigurationWorkbenchArtifactResponse,
+  RuntimeConfigurationWorkbenchDeepResponse,
+  RuntimeConfigurationWorkbenchMappingPage,
   RuntimeConfigurationWorkbenchPreviewResponse,
-  SanitizedConfigurationNode
+  RuntimeConfigurationWorkbenchSourceResponse
 } from '../../models/runtime-configuration-verification.models';
 import { RuntimeConfigurationVerificationApiService } from '../../services/runtime-configuration-verification-api.service';
 import { RuntimeConfigurationWorkbenchPageComponent } from './runtime-configuration-workbench-page';
@@ -15,12 +20,24 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
   let api: {
     getInputOptions: ReturnType<typeof vi.fn>;
     preview: ReturnType<typeof vi.fn>;
+    getWorkbenchSource: ReturnType<typeof vi.fn>;
+    getWorkbenchMapping: ReturnType<typeof vi.fn>;
+    getWorkbenchAnonymization: ReturnType<typeof vi.fn>;
+    getWorkbenchDeep: ReturnType<typeof vi.fn>;
+    getWorkbenchAiInput: ReturnType<typeof vi.fn>;
+    getWorkbenchArtifact: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     api = {
       getInputOptions: vi.fn(() => of(inputOptions())),
-      preview: vi.fn(() => of(previewResponse()))
+      preview: vi.fn(() => of(previewResponse())),
+      getWorkbenchSource: vi.fn(() => of(sourceResponse())),
+      getWorkbenchMapping: vi.fn(() => of(mappingPage())),
+      getWorkbenchAnonymization: vi.fn(() => of(anonymizationPage())),
+      getWorkbenchDeep: vi.fn(() => of(deepResponse())),
+      getWorkbenchAiInput: vi.fn(() => of(aiInputResponse())),
+      getWorkbenchArtifact: vi.fn(() => of(artifactResponse()))
     };
 
     await TestBed.configureTestingModule({
@@ -32,11 +49,9 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should load allowlisted scope and request an exact BASIC pipeline preview', () => {
+  it('should return a compact summary and fetch only source metadata initially', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Runtime Configuration Pipeline');
-    expect(compiled.textContent).toContain('Config repository · runtime-config');
-    expect(compiled.textContent).toContain('Backend · backend');
     expect(compiled.textContent).toContain('Raw configuration pozostaje poza Workbenchem');
 
     buttonContaining(compiled, 'Run preview')?.click();
@@ -49,74 +64,94 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
       sourceBranch: 'dev1',
       targetBranch: 'zt001'
     });
-    expect(compiled.textContent).toContain('FETCHED METADATA');
+    expect(api.getWorkbenchSource).toHaveBeenCalledWith(PREVIEW_ID);
+    expect(api.getWorkbenchMapping).not.toHaveBeenCalled();
+    expect(api.getWorkbenchAnonymization).not.toHaveBeenCalled();
+    expect(api.getWorkbenchDeep).not.toHaveBeenCalled();
+    expect(api.getWorkbenchAiInput).not.toHaveBeenCalled();
+    expect(api.getWorkbenchArtifact).not.toHaveBeenCalled();
     expect(compiled.textContent).toContain('backend/application.yml.kv');
-    expect(compiled.textContent).toContain('AI nie zostało uruchomione');
+    expect(compiled.textContent).toContain('855 nodes');
+    expect(fixture.componentInstance.responseJson().length).toBeLessThan(50_000);
+    expect(fixture.componentInstance.responseJson()).not.toContain('preparedPrompt');
+    expect(fixture.componentInstance.responseJson()).not.toContain('artifactContents');
+    expect(fixture.componentInstance.responseJson()).not.toContain('raw-password');
   });
 
-  it('should render mapping, anonymization and exact AI-safe input without raw values', () => {
+  it('should load paged mapping and anonymization only after perspective selection', () => {
     buttonContaining(fixture.nativeElement, 'Run preview')?.click();
     fixture.detectChanges();
-    let compiled = fixture.nativeElement as HTMLElement;
+    const compiled = fixture.nativeElement as HTMLElement;
 
     buttonContaining(compiled, 'Mapping')?.click();
     fixture.detectChanges();
+    expect(api.getWorkbenchMapping).toHaveBeenCalledWith(PREVIEW_ID, 0, 100, true);
     expect(compiled.textContent).toContain('Canonical mapping');
     expect(compiled.textContent).toContain('spring.datasource.password');
-    expect(compiled.textContent).toContain('VALUE_CHANGED');
+    expect(compiled.textContent).toContain('CHANGED');
+
+    fixture.componentInstance.setMappingChangedOnly(false);
+    fixture.detectChanges();
+    expect(api.getWorkbenchMapping).toHaveBeenLastCalledWith(PREVIEW_ID, 0, 100, false);
 
     buttonContaining(compiled, 'Anonymization')?.click();
     fixture.detectChanges();
+    expect(api.getWorkbenchAnonymization).toHaveBeenCalledWith(PREVIEW_ID, 0, 100);
     expect(compiled.textContent).toContain('Anonymization decisions');
-    expect(compiled.textContent).toContain('PSEUDONYMIZED');
-    expect(compiled.textContent).toContain('cfg_1');
+    expect(compiled.textContent).toContain('SUPPRESSED');
+    expect(compiled.textContent).not.toContain('raw-password-do-not-render');
+  });
+
+  it('should require explicit actions before loading the exact prompt or an artifact', () => {
+    buttonContaining(fixture.nativeElement, 'Run preview')?.click();
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
 
     buttonContaining(compiled, 'AI input')?.click();
     fixture.detectChanges();
-    expect(compiled.textContent).toContain('Exact AI input');
-    expect((compiled.querySelector('textarea[aria-label="Prepared prompt"]') as HTMLTextAreaElement).value)
-      .toContain('Review sanitized configuration');
-    expect((compiled.querySelector('textarea[aria-label="Wybrany AI artifact"]') as HTMLTextAreaElement).value)
-      .toContain('"sourceValueToken":"cfg_1"');
+    expect(api.getWorkbenchAiInput).not.toHaveBeenCalled();
+    expect(api.getWorkbenchArtifact).not.toHaveBeenCalled();
+    expect(compiled.querySelector('textarea[aria-label="Prepared prompt"]')).toBeNull();
+
+    buttonContaining(compiled, 'Załaduj dokładny input AI')?.click();
+    fixture.detectChanges();
+    expect(api.getWorkbenchAiInput).toHaveBeenCalledWith(PREVIEW_ID);
+    expect(
+      (compiled.querySelector('textarea[aria-label="Prepared prompt"]') as HTMLTextAreaElement)
+        .value
+    ).toContain('Review compact sanitized configuration');
+
+    buttonContaining(compiled, 'configuration-tree.yaml')?.click();
+    fixture.detectChanges();
+    expect(api.getWorkbenchArtifact).toHaveBeenCalledWith(
+      PREVIEW_ID,
+      'runtime-configuration/configuration-tree.yaml'
+    );
+    expect(
+      (compiled.querySelector('textarea[aria-label="Wybrany AI artifact"]') as HTMLTextAreaElement)
+        .value
+    ).toContain('formatVersion: 2');
     expect(compiled.textContent).not.toContain('raw-password-do-not-render');
-    expect(fixture.componentInstance.responseJson()).not.toContain('raw-password-do-not-render');
   });
 
-  it('should expose a DEEP partial preflight blocker, ownership and truncation', () => {
-    api.preview.mockReturnValue(of(previewResponse({ deep: true, large: true })));
+  it('should lazy-load DEEP blockers and ownership from the same snapshot', () => {
+    api.preview.mockReturnValue(of(previewResponse(true)));
     buttonContaining(fixture.nativeElement, 'Deep')?.click();
-    fixture.componentInstance.form.controls.codeRef.setValue('release/42');
+    fixture.componentInstance.form.controls.codeRef.setValue('release-42');
     buttonContaining(fixture.nativeElement, 'Run preview')?.click();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
 
     buttonContaining(compiled, 'DEEP scope')?.click();
     fixture.detectChanges();
+
     expect(api.preview).toHaveBeenCalledWith(expect.objectContaining({
       mode: 'DEEP',
-      codeRef: 'release/42'
+      codeRef: 'release-42'
     }));
-    expect(compiled.textContent).toContain('Preflight: BLOCKED');
+    expect(api.getWorkbenchDeep).toHaveBeenCalledWith(PREVIEW_ID);
     expect(compiled.textContent).toContain('CODE_REF_NOT_FOUND');
     expect(compiled.textContent).toContain('Backend Team');
-
-    buttonContaining(compiled, 'Anonymization')?.click();
-    fixture.detectChanges();
-    expect(compiled.textContent).toContain('pierwsze 500 decyzji');
-  });
-
-  it('should expose accessible perspective and copy actions', () => {
-    buttonContaining(fixture.nativeElement, 'Run preview')?.click();
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    buttonContaining(compiled, 'AI input')?.click();
-    fixture.detectChanges();
-
-    expect(compiled.querySelector('[aria-label="Perspektywy Runtime Configuration"]')).not.toBeNull();
-    expect(buttonContaining(compiled, 'AI input')?.getAttribute('aria-pressed')).toBe('true');
-    expect(compiled.querySelector('button[aria-label="Kopiuj prepared prompt"]')).not.toBeNull();
-    expect(compiled.querySelector('button[aria-label="Kopiuj request preview"]')).not.toBeNull();
-    expect(compiled.querySelector('button[aria-label="Kopiuj JSON response"]')).not.toBeNull();
   });
 
   it('should block an invalid branch pair and render only a safe API error', () => {
@@ -151,6 +186,8 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
   });
 });
 
+const PREVIEW_ID = '019fb000-1f4d-79e0-8de1-daae931197ac';
+
 function inputOptions(): RuntimeConfigurationVerificationInputOptions {
   return {
     modes: ['BASIC', 'DEEP'],
@@ -160,158 +197,186 @@ function inputOptions(): RuntimeConfigurationVerificationInputOptions {
   };
 }
 
-function previewResponse(
-  options: { deep?: boolean; large?: boolean } = {}
-): RuntimeConfigurationWorkbenchPreviewResponse {
-  const root = node('spring', 'OBJECT', 'OBJECT', 'UNCHANGED', [
-    node('spring.datasource.password', 'STRING', 'STRING', 'VALUE_CHANGED')
-  ]);
-  const baseDecision = {
-    role: 'APPLICATION_YAML',
-    documentIndex: 0,
-    path: 'spring.datasource.password',
-    relation: 'VALUE_CHANGED',
-    sensitivity: 'SECRET',
-    sourceType: 'STRING',
-    targetType: 'STRING',
-    sourceRepresentation: 'PSEUDONYMIZED' as const,
-    targetRepresentation: 'PSEUDONYMIZED' as const,
-    sourceValueToken: 'cfg_1',
-    targetValueToken: 'cfg_2'
-  };
-  const decisions = options.large
-    ? Array.from({ length: 501 }, (_, index) => ({
-        ...baseDecision,
-        path: `features.feature-${index}`
-      }))
-    : [baseDecision];
-
+function previewResponse(deep = false): RuntimeConfigurationWorkbenchPreviewResponse {
   return {
-    mode: options.deep ? 'DEEP' : 'BASIC',
+    previewId: PREVIEW_ID,
+    expiresAt: '2026-07-30T10:10:00Z',
+    mode: deep ? 'DEEP' : 'BASIC',
     repositoryId: 'runtime-config',
     systemId: 'backend',
     sourceBranch: 'dev1',
     targetBranch: 'zt001',
-    codeRef: options.deep ? 'release/42' : null,
-    sourceAcquisition: {
+    codeRef: deep ? 'release-42' : null,
+    source: {
       configurationDirectory: 'backend',
-      source: coverage('dev1'),
-      target: coverage('zt001')
+      sourceBranchExists: true,
+      sourceComplete: true,
+      targetBranchExists: true,
+      targetComplete: true
     },
-    mapping: {
-      repositoryId: 'runtime-config',
-      systemId: 'backend',
-      systemLabel: 'Backend',
-      configurationDirectory: 'backend',
-      sourceBranch: 'dev1',
-      targetBranch: 'zt001',
-      status: 'COMPLETE',
-      sourceCoverage: coverage('dev1'),
-      targetCoverage: coverage('zt001'),
-      documents: [{
-        role: 'APPLICATION_YAML',
-        sourcePath: 'backend/application.yml.kv',
-        targetPath: 'backend/application.yml.kv',
-        documentIndex: 0,
-        sourcePresent: true,
-        targetPresent: true,
-        sourceProfileToken: null,
-        targetProfileToken: null,
-        root
-      }],
-      references: [],
-      differences: [{
-        differenceId: 'diff-1',
-        role: 'APPLICATION_YAML',
-        documentIndex: 0,
-        path: 'spring.datasource.password',
-        kind: 'VALUE_CHANGED',
-        sourceType: 'STRING',
-        targetType: 'STRING',
-        sensitivity: 'SECRET',
-        sourceValueToken: 'cfg_1',
-        targetValueToken: 'cfg_2'
-      }],
-      findings: [{
-        findingId: 'finding-1',
-        code: 'SECRET_CHANGED',
-        severity: 'WARNING',
-        path: 'spring.datasource.password',
-        differenceIds: ['diff-1'],
-        referenceIds: []
-      }]
+    counts: {
+      documents: 3,
+      nodes: 855,
+      differences: 136,
+      findings: 103,
+      references: 90
     },
     anonymization: {
-      totalNodes: decisions.length,
-      pseudonymizedRepresentations: decisions.length * 2,
-      suppressedRepresentations: 0,
-      structureOnlyRepresentations: 0,
-      notPresentRepresentations: 0,
-      decisions
+      totalNodes: 855,
+      pseudonymizedRepresentations: 1400,
+      suppressedRepresentations: 20,
+      structureOnlyRepresentations: 200,
+      notPresentRepresentations: 90
     },
-    deepContext: options.deep
-      ? {
-          status: 'PARTIAL',
-          preflight: {
-            status: 'BLOCKED',
-            repositoryId: 'runtime-config',
-            systemId: 'backend',
-            systemLabel: 'Backend',
-            resolvedConfigurationDirectory: 'backend',
-            repositories: [{
-              scopeId: 'backend-code',
-              repositoryId: 'backend-code',
-              role: 'SOURCE',
-              projectPath: 'apps/backend',
-              projectName: 'backend',
-              pathPrefixes: ['src/main/java'],
-              requestedRef: 'release/42',
-              usedRef: null,
-              refSource: 'REQUESTED',
-              refExists: false,
-              deploymentRefConfirmed: false,
-              ready: false,
-              visibilityLimits: ['Requested ref is unavailable']
-            }],
-            blockers: [{ code: 'CODE_REF_NOT_FOUND', message: 'Requested ref is unavailable.' }],
-            visibilityLimits: ['Code search was not executed.'],
-            ready: false
-          },
-          primarySystem: null,
-          affectedSystems: [],
-          integrations: [],
-          processes: [],
-          boundedContexts: [],
-          codeGrounding: [],
-          ownership: {
-            situationType: 'CONFIGURATION_CHANGE',
-            primaryOwners: [{
-              targetType: 'SYSTEM',
-              targetId: 'backend',
-              targetLabel: 'Backend',
-              ownerTeamIds: ['backend-team'],
-              ownerLabel: 'Backend Team',
-              source: 'OPERATIONAL_CONTEXT',
-              confidence: 'HIGH'
-            }],
-            partnerOwners: [],
-            resolutionPath: [],
-            handoffReason: null,
-            visibilityLimits: []
-          },
-          visibilityLimits: ['Code search was not executed.']
-        }
-      : null,
-    preparedPrompt: 'Review sanitized configuration. Use artifact://runtime-configuration.json.',
-    artifactContents: {
-      'runtime-configuration.json': '{"sourceValueToken":"cfg_1","targetValueToken":"cfg_2"}'
+    deep: {
+      requested: deep,
+      status: deep ? 'PARTIAL' : null,
+      preflightStatus: deep ? 'BLOCKED' : null,
+      repositoryScopes: deep ? 1 : 0,
+      blockers: deep ? 1 : 0,
+      codeGroundings: 0,
+      primaryOwners: deep ? 1 : 0
     },
     artifacts: [{
-      name: 'runtime-configuration.json',
-      characterCount: 61,
-      truncated: options.large ?? false
+      name: 'runtime-configuration/configuration-tree.yaml',
+      mediaType: 'application/yaml',
+      characterCount: 71_175,
+      truncated: false
     }],
-    visibilityLimits: options.deep ? ['DEEP context is partial.'] : []
+    visibilityLimits: deep ? ['Code search was not executed.'] : []
+  };
+}
+
+function sourceResponse(): RuntimeConfigurationWorkbenchSourceResponse {
+  return {
+    previewId: PREVIEW_ID,
+    configurationDirectory: 'backend',
+    source: coverage('dev1'),
+    target: coverage('zt001')
+  };
+}
+
+function mappingPage(): RuntimeConfigurationWorkbenchMappingPage {
+  return {
+    previewId: PREVIEW_ID,
+    offset: 0,
+    limit: 100,
+    totalItems: 136,
+    totalNodes: 855,
+    changedOnly: true,
+    items: [{
+      role: 'APPLICATION_YAML',
+      documentIndex: 0,
+      depth: 2,
+      name: 'password',
+      path: 'spring.datasource.password',
+      sourceType: 'STRING',
+      targetType: 'STRING',
+      relation: 'CHANGED',
+      sensitivity: 'SENSITIVE'
+    }]
+  };
+}
+
+function anonymizationPage(): RuntimeConfigurationWorkbenchAnonymizationPage {
+  return {
+    previewId: PREVIEW_ID,
+    offset: 0,
+    limit: 100,
+    totalItems: 855,
+    items: [{
+      role: 'APPLICATION_YAML',
+      documentIndex: 0,
+      path: 'spring.datasource.password',
+      relation: 'CHANGED',
+      sensitivity: 'SENSITIVE',
+      sourceType: 'STRING',
+      targetType: 'STRING',
+      sourceRepresentation: 'SUPPRESSED',
+      targetRepresentation: 'SUPPRESSED',
+      sourceValueToken: null,
+      targetValueToken: null
+    }]
+  };
+}
+
+function aiInputResponse(): RuntimeConfigurationWorkbenchAiInputResponse {
+  return {
+    previewId: PREVIEW_ID,
+    characterCount: 120,
+    prompt: 'Review compact sanitized configuration. Use configuration-tree.yaml.'
+  };
+}
+
+function artifactResponse(): RuntimeConfigurationWorkbenchArtifactResponse {
+  return {
+    previewId: PREVIEW_ID,
+    name: 'runtime-configuration/configuration-tree.yaml',
+    mediaType: 'application/yaml',
+    characterCount: 42,
+    truncated: false,
+    content: 'formatVersion: 2\ndocuments:\n  - meta: []'
+  };
+}
+
+function deepResponse(): RuntimeConfigurationWorkbenchDeepResponse {
+  return {
+    previewId: PREVIEW_ID,
+    requested: true,
+    context: {
+      status: 'PARTIAL',
+      preflight: {
+        status: 'BLOCKED',
+        repositoryId: 'runtime-config',
+        systemId: 'backend',
+        systemLabel: 'Backend',
+        resolvedConfigurationDirectory: 'backend',
+        repositories: [{
+          scopeId: 'backend-code',
+          repositoryId: 'backend-code',
+          role: 'SOURCE',
+          projectPath: 'apps/backend',
+          projectName: 'backend',
+          pathPrefixes: ['src/main/java'],
+          requestedRef: 'release-42',
+          usedRef: null,
+          refSource: 'REQUESTED',
+          refExists: false,
+          deploymentRefConfirmed: false,
+          ready: false,
+          visibilityLimits: ['Requested ref is unavailable']
+        }],
+        blockers: [{
+          code: 'CODE_REF_NOT_FOUND',
+          message: 'Requested ref is unavailable.'
+        }],
+        visibilityLimits: ['Code search was not executed.'],
+        ready: false
+      },
+      primarySystem: null,
+      affectedSystems: [],
+      integrations: [],
+      processes: [],
+      boundedContexts: [],
+      codeGrounding: [],
+      ownership: {
+        situationType: 'CONFIGURATION_CHANGE',
+        primaryOwners: [{
+          targetType: 'SYSTEM',
+          targetId: 'backend',
+          targetLabel: 'Backend',
+          ownerTeamIds: ['backend-team'],
+          ownerLabel: 'Backend Team',
+          source: 'OPERATIONAL_CONTEXT',
+          confidence: 'HIGH'
+        }],
+        partnerOwners: [],
+        resolutionPath: [],
+        handoffReason: null,
+        visibilityLimits: []
+      },
+      visibilityLimits: ['Code search was not executed.']
+    }
   };
 }
 
@@ -330,28 +395,6 @@ function coverage(branch: string) {
       errorCode: null
     }],
     complete: true
-  };
-}
-
-function node(
-  path: string,
-  sourceType: string,
-  targetType: string,
-  relation: string,
-  children: SanitizedConfigurationNode[] = []
-): SanitizedConfigurationNode {
-  return {
-    name: path.split('.').at(-1) ?? path,
-    path,
-    sourceType,
-    targetType,
-    relation,
-    sensitivity: path.includes('password') ? 'SECRET' : 'NORMAL',
-    sourceValueToken: path.includes('password') ? 'cfg_1' : null,
-    targetValueToken: path.includes('password') ? 'cfg_2' : null,
-    sourceCardinality: null,
-    targetCardinality: null,
-    children
   };
 }
 

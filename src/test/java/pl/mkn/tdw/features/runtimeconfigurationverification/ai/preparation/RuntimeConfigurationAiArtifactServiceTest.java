@@ -2,27 +2,38 @@ package pl.mkn.tdw.features.runtimeconfigurationverification.ai.preparation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.yaml.snakeyaml.Yaml;
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.RuntimeConfigurationAiTestFixtures;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationChangeKind;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationSensitivity;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationValueType;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationDocument;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationNode;
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationFileRole;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationChangeKind;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationSensitivity;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationValueType;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .SanitizedConfigurationDocument;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .SanitizedConfigurationNode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationFileRole;
+import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
+        .RuntimeConfigurationVerificationMode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RuntimeConfigurationAiArtifactServiceTest {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final RuntimeConfigurationAiArtifactService service =
-            new RuntimeConfigurationAiArtifactService(new ObjectMapper());
+            new RuntimeConfigurationAiArtifactService(objectMapper);
 
     @Test
-    void shouldRenderFullSanitizedSchemaIncludingUnchangedParametersWithoutSecretsOrHashes() {
+    void shouldRenderCompactV2TreeWithAllParametersAndWithoutSecretsOrLegacyManifests()
+            throws Exception {
         var result = service.render(
                 RuntimeConfigurationVerificationMode.BASIC,
                 RuntimeConfigurationAiTestFixtures.deterministic(
@@ -32,18 +43,46 @@ class RuntimeConfigurationAiArtifactServiceTest {
                 null
         );
 
+        assertThat(result.contents().keySet()).containsExactly(
+                "runtime-configuration/scope.json",
+                "runtime-configuration/coverage.json",
+                "runtime-configuration/configuration-tree.yaml",
+                "runtime-configuration/changes.json",
+                "runtime-configuration/response-contract.json"
+        );
+        assertThat(result.contents().keySet())
+                .noneMatch(name -> name.contains("/manifest/") || name.contains("manifest-index"));
+
+        var tree = result.contents().get("runtime-configuration/configuration-tree.yaml");
+        var changes = result.contents().get("runtime-configuration/changes.json");
         var all = String.join("\n", result.contents().values());
+
+        assertThat(tree)
+                .contains(
+                        "formatVersion: 2",
+                        "relationCodes:",
+                        "typeCodes:",
+                        "\"timeout\"",
+                        "\"password\"",
+                        "\"p:value-1\"",
+                        "M: sensitive scalar suppressed before AI"
+                );
+        assertThat((Object) new Yaml().load(tree)).isInstanceOf(Map.class);
+        assertThat(objectMapper.readTree(changes).get("formatVersion").asInt()).isEqualTo(2);
+        assertThat(changes)
+                .contains(
+                        "\"differenceColumns\"",
+                        "\"findingColumns\"",
+                        "\"difference-1\"",
+                        "\"finding-1\""
+                );
         assertThat(all)
-                .contains("\"name\" : \"timeout\"")
-                .contains("\"relation\" : \"UNCHANGED\"")
-                .contains("\"sourceProfileToken\" : \"profile-1\"")
-                .contains("\"documentIndex\" : 0")
-                .contains("\"sourceValueToken\" : \"value-1\"")
-                .contains("\"sourceValue\" : \"MASKED\"")
-                .doesNotContain("raw-secret-source")
-                .doesNotContain("raw-secret-target")
-                .doesNotContain("raw-difference-secret-source")
-                .doesNotContain("raw-difference-secret-target")
+                .doesNotContain(
+                        "raw-secret-source",
+                        "raw-secret-target",
+                        "raw-difference-secret-source",
+                        "raw-difference-secret-target"
+                )
                 .doesNotContainIgnoringCase("hmac")
                 .doesNotContainIgnoringCase("sha256")
                 .doesNotContainIgnoringCase("\"hash\"");
@@ -51,7 +90,7 @@ class RuntimeConfigurationAiArtifactServiceTest {
     }
 
     @Test
-    void shouldGroupAndMarkTruncatedLargeManifestWithoutChangingDeterministicResult() {
+    void shouldKeepTruncatedTreeValidAndLeaveDeterministicResultUnchanged() {
         var baseline = RuntimeConfigurationAiTestFixtures.deterministic(
                 pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
                         .RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
@@ -65,8 +104,8 @@ class RuntimeConfigurationAiArtifactServiceTest {
                     RuntimeConfigurationValueType.STRING,
                     RuntimeConfigurationChangeKind.UNCHANGED,
                     RuntimeConfigurationSensitivity.NON_SENSITIVE,
-                    "token-" + index,
-                    "token-" + index,
+                    "value-" + index,
+                    "value-" + index,
                     null,
                     null,
                     List.of()
@@ -113,11 +152,16 @@ class RuntimeConfigurationAiArtifactServiceTest {
         );
 
         var result = service.render(RuntimeConfigurationVerificationMode.BASIC, context, null);
+        var tree = result.contents().get("runtime-configuration/configuration-tree.yaml");
+        @SuppressWarnings("unchecked")
+        var parsed = (Map<String, Object>) new Yaml().load(tree);
 
-        assertThat(result.contents().get(
-                "runtime-configuration/manifest/application_yaml-document-1.json"
-        )).contains("\"truncated\":true");
-        assertThat(result.visibilityLimits()).anyMatch(limit -> limit.contains("manifest group"));
+        assertThat(tree.length())
+                .isLessThanOrEqualTo(RuntimeConfigurationAiArtifactService.MAX_STRUCTURE_CHARACTERS);
+        assertThat(parsed.get("truncated")).isEqualTo(true);
+        assertThat(result.visibilityLimits())
+                .anyMatch(limit -> limit.contains("configuration tree was truncated"));
+        assertThat(context.documents().get(0).root().children()).hasSize(5_000);
         assertThat(context.differences()).isEqualTo(baseline.differences());
         assertThat(context.findings()).isEqualTo(baseline.findings());
     }

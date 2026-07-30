@@ -47,16 +47,20 @@ orchestration preview, DTO i endpoint pozostaja w
 w `integrations.gitlab`; frontend dostaje osobny ekran diagnostyczny.
 
 Zmiana publicznego API/DTO:
-nowy `POST /api/runtime-configuration-verification/workbench/preview`.
-Input zawiera tylko mode, repositoryId, systemId, sourceBranch, targetBranch i
-opcjonalny codeRef. Output zawiera source coverage, sanitizowany deterministic
-context, anonymization summary, prompt/artifacts i visibility limits.
+`POST /api/runtime-configuration-verification/workbench/preview` przyjmuje
+mode, repositoryId, systemId, sourceBranch, targetBranch i opcjonalny codeRef.
+Po breaking redesignzie output zawiera tylko wygasajacy `previewId`, summary,
+liczniki, metadata artefaktow i visibility limits. Source coverage,
+stronicowany mapping/anonymization, DEEP context, exact prompt i pojedyncze
+artefakty sa pobierane przez dedykowane endpointy snapshotu.
 
 Zmiana context/evidence:
 bez zmian w algorytmie; preview reuse'uje produkcyjne serwisy.
 
 Zmiana prompt/artifacts/skills:
-bez zmian. Workbench pokazuje output istniejacego preparation service i nie
+artifact format v2 zastepuje verbose per-document manifesty jednym
+hierarchicznym `configuration-tree.yaml` oraz kolumnowym `changes.json`.
+Workbench nadal pokazuje output produkcyjnego preparation service i nie
 uruchamia skilla ani Copilota.
 
 Zmiana tools/policy/hidden scope/budzetu:
@@ -85,26 +89,28 @@ jest drugim. Regresja musi potwierdzic identyczny deterministic context i
 artifact contents dla tego samego inputu.
 
 Kompatybilnosc:
-zmiana addytywna. Istniejace endpointy, export schema, historia i UI feature'a
-pozostaja bez zmian.
+kontrakt Workbench preview i nazwy jego artefaktow sa zmienione breaking,
+bez aliasow i adapterow v1. Job API, export schema, historia i publiczny wynik
+Runtime Configuration pozostaja bez zmian.
 
 ## Proponowane rozwiazanie
 
 Dedykowany ekran `Tool Workbench / Runtime Configuration Pipeline` pod
-`/runtime-configuration-tools` pokazuje cztery perspektywy:
+`/runtime-configuration-tools` pokazuje piec perspektyw:
 
 1. `Source acquisition` — resolved repository/system/directory, file role,
    path, branch, status, commit, timestamp, size, truncation/error code.
-2. `Mapping` — dokument/profile, kanoniczna sciezka, typ, change kind,
-   sensitivity, diff/finding references.
-3. `Anonymization` — liczniki oraz per-node reprezentacja
+2. `Mapping` — stronicowane wezly z filtrem changed-only: dokument,
+   kanoniczna sciezka, typ, change kind i sensitivity.
+3. `Anonymization` — liczniki oraz stronicowana per-node reprezentacja
    `PSEUDONYMIZED`, `SUPPRESSED` albo `STRUCTURE_ONLY`; nigdy raw value/hash.
-4. `AI input` — dokladny prompt, lista artefaktow, ich rozmiar/truncation i
-   tresc JSON przekazywana przez production preparation service.
+4. `AI input` — metadata artefaktow w summary; dokladny prompt i tresc
+   pojedynczego artefaktu sa pobierane tylko po jawnej akcji.
+5. `DEEP scope` — scoped context, code grounding, blockers i ownership.
 
-Panel `DEEP scope` pokazuje wynik preflightu, used ref/ref source,
-repo/path-prefix scope, Operational Context entities, ownership i visibility
-limits. Nie duplikuje katalogowego Workbencha; linkuje do niego dla detailu.
+Sanitizowany snapshot jest przechowywany w pamieci przez 10 minut, ma limit
+32 wpisow i po wygasnieciu zwraca bezpieczne 404. Przelaczanie perspektyw nie
+powtarza odczytu GitLaba.
 
 ## Zakres
 
@@ -128,8 +134,8 @@ limits. Nie duplikuje katalogowego Workbencha; linkuje do niego dla detailu.
 
 - Najwazniejsze ryzyko to przypadkowa serializacja raw source albo exception
   cause. Response musi byc budowany wylacznie z sanitizowanych modeli.
-- Prompt moze byc duzy; obowiazuja istniejace limity artifact/manifest i
-  jawne truncation.
+- Prompt moze byc duzy; format v2 ma limity drzewa/changes/deep context,
+  syntaktycznie poprawny marker truncation i jawne visibility limits.
 - Preview wykonuje realne readonly odczyty GitLab i w `DEEP` code grounding,
   wiec UI musi pokazac czas, etap i visibility limits, ale nie tworzy joba.
 - Pseudonimy sa run-local; dwa preview nie musza miec identycznych tokenow.
@@ -205,11 +211,55 @@ limits. Nie duplikuje katalogowego Workbencha; linkuje do niego dla detailu.
   `npm run build` przeszedl i wygenerowal aktualny bundle. `git diff --check`
   nie wykazal bledow.
 
-- [ ] Krok 3: Hardening i zgodnosc konsumentow. Porownac preview z jobem dla
-  tego samego deterministic/deep fixture, przetestowac 401/403/404/timeout,
-  puste/niepelne Operational Context, limity payloadu i serializacje bledow.
+- [x] Krok 3: Breaking redesign kontraktu preview i AI artifacts bez
+  kompatybilnosci wstecznej. Zastapic monolityczny response lekkim,
+  wygasajacym sanitizowanym snapshotem `previewId`, summary oraz lazy
+  endpointami source/mapping/anonymization/DEEP/artifact/exact AI input.
+  Mapping i anonymization maja byc stronicowane, a UI summary-first nie moze
+  automatycznie materializowac pelnego JSON/promptu w DOM. Zastapic verbose
+  manifesty kompaktowym artifact format v2, ktory raz zachowuje hierarchie,
+  wszystkie changed/unchanged paths, typy, sensitivity i bezpieczna
+  reprezentacje source/target; bogaty material ma dotyczyc tylko
+  differences/findings/references. Usunac stare DTO/pola i stare nazwy
+  artefaktow zamiast utrzymywac aliasy.
+  Baseline z realnego Workbench fixture: response 2 100 659 znakow / 26 312
+  linii, `mapping` 346 962, `anonymization` 292 877, prompt 415 312 znakow,
+  przy 855 nodes, 136 differences, 103 findings i 90 references. Prototyp
+  kompaktowej reprezentacji zachowujacej semantyke zajal 114 297 znakow
+  zamiast 639 839 dla mapping + anonymization.
+  Kryteria: initial summary ponizej 50 000 znakow dla tego fixture, exact
+  prompt ponizej 150 000 znakow, wszystkie 855 paths i pseudonimy zachowane,
+  zero raw-secret leak, bounded TTL/cache, bezpieczne 404 po expiry, brak
+  ponownego odczytu GitLaba miedzy zakladkami. Porownac preview z jobem dla
+  tego samego fixture, przetestowac pagination, changed-only, expiry,
+  401/403/404/timeout, partial DEEP, truncation i serializacje bledow.
   Wykonac architecture diff, `PackageDependencyGuardTest`, testy feature'a i
   pelne testy frontendowe.
+  Zrealizowano bez warstwy kompatybilnosci: initial response nie serializuje
+  mappingu, decyzji anonimizacji, promptu ani artifact contents. Zwraca
+  `previewId`, `expiresAt`, summary/liczniki oraz metadata artefaktow.
+  Sanitizowany snapshot ma TTL 10 minut, limit 32 wpisow i bezpieczny kod
+  `RUNTIME_CONFIGURATION_WORKBENCH_PREVIEW_NOT_FOUND`; lazy endpointy
+  udostepniaja source, mapping, anonymization, DEEP, exact AI input i wybrany
+  artefakt. Mapping/anonymization sa stronicowane do 200 wpisow, z domyslnym
+  changed-only dla mappingu.
+  Artifact v2 usuwa manifest-index, per-document manifesty i
+  differences-and-findings. `configuration-tree.yaml` zachowuje hierarchie,
+  granice dokumentu/profile, wszystkie changed/unchanged nodes, typy,
+  sensitivity, cardinality oraz run-local pseudonimy przez opisane kody.
+  `changes.json` przechowuje kolumnowo differences/findings/references.
+  Truncation pozostawia poprawny YAML/JSON i nie modyfikuje deterministic
+  contextu. Skille `runtime-configuration-basic-review` i
+  `runtime-configuration-deep-review` zostaly przepisane bez nazw v1 i
+  natywnie interpretuja kolumny, legendy oraz hierarchie formatu v2.
+  Dowod: test reprezentatywny 855 nodes / 136 differences / 103 findings /
+  90 references zachowuje ostatni node i ostatnie ID bez truncation, a exact
+  prompt ma 115 891 znakow (limit 150 000). Initial summary ma test limitu
+  50 000 znakow. Testy pokrywaja raw-secret leak, pagination, changed-only,
+  TTL, eviction, bezpieczne 404, BASIC bez DEEP call, partial DEEP i brak
+  ponownego deterministic/GitLab build. Przeszly celowane testy feature'a,
+  `PackageDependencyGuardTest`, pelne `mvn -q clean test` (959 testow),
+  36 plikow / 216 testow frontendu, produkcyjny build i package.
 
 - [ ] Krok 4: Zaktualizowac kanoniczna dokumentacje wynikowego stanu i
   produkcyjny bundle. Uzupelnic system overview, runtime flow, Tool Workbench

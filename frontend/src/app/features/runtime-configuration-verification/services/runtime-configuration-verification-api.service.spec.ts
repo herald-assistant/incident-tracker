@@ -80,4 +80,47 @@ describe('RuntimeConfigurationVerificationApiService', () => {
     expect(request.request.body).toEqual(payload);
     request.flush({ mode: 'DEEP' });
   });
+
+  it('should request Workbench snapshot details through dedicated lazy endpoints', () => {
+    const previewId = 'preview/1';
+    const base = '/api/runtime-configuration-verification/workbench/preview/preview%2F1';
+
+    service.getWorkbenchSource(previewId).subscribe();
+    const source = http.expectOne(`${base}/source`);
+    expect(source.request.method).toBe('GET');
+    source.flush({ previewId });
+
+    service.getWorkbenchMapping(previewId, 100, 50, false).subscribe();
+    const mapping = http.expectOne((request) =>
+      request.url === `${base}/mapping`
+      && request.params.get('offset') === '100'
+      && request.params.get('limit') === '50'
+      && request.params.get('changedOnly') === 'false'
+    );
+    mapping.flush({ previewId, items: [] });
+
+    service.getWorkbenchAnonymization(previewId, 200, 100).subscribe();
+    const anonymization = http.expectOne((request) =>
+      request.url === `${base}/anonymization`
+      && request.params.get('offset') === '200'
+      && request.params.get('limit') === '100'
+    );
+    anonymization.flush({ previewId, items: [] });
+
+    service.getWorkbenchDeep(previewId).subscribe();
+    http.expectOne(`${base}/deep`).flush({ previewId, requested: true });
+
+    service.getWorkbenchAiInput(previewId).subscribe();
+    http.expectOne(`${base}/ai-input`).flush({ previewId, prompt: 'safe' });
+
+    service
+      .getWorkbenchArtifact(previewId, 'runtime-configuration/configuration-tree.yaml')
+      .subscribe();
+    const artifact = http.expectOne((request) =>
+      request.url === `${base}/artifact`
+      && request.params.get('name')
+        === 'runtime-configuration/configuration-tree.yaml'
+    );
+    artifact.flush({ previewId, content: 'safe' });
+  });
 });

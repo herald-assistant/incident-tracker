@@ -1,6 +1,6 @@
 ---
 name: runtime-configuration-deep-review
-description: Gleboka druga opinia o rozjezdzie runtime configuration, laczaca bezpieczny manifest z przygotowanym Operational Context, code grounding i ownershipem wybranego internal-system.
+description: Gleboka druga opinia o rozjezdzie runtime configuration, laczaca kompaktowe sanitizowane artefakty v2 z przygotowanym Operational Context, code grounding i ownershipem wybranego internal-system.
 ---
 
 # Runtime Configuration DEEP Review
@@ -20,12 +20,13 @@ Operational Context, code grounding i ownership pozostają faktami backendu.
 - Operational Context tools służą tylko do odczytu przygotowanych entity IDs.
 - Nie zmieniaj ownerów, `resolutionPath`, coverage, refów ani visibility
   limits.
-- Nie próbuj odtwarzać wartości z `valueToken`; `MASKED` jest sekretem.
+- Nie próbuj odtwarzać wartości z `p:*`; representation code `M` jest
+  suppressed sekretem.
 
 ## Procedura
 
-1. Wykonaj wszystkie kroki BASIC dla kompletnego zanonimizowanego manifestu,
-   diffu i findings.
+1. Wykonaj wszystkie kroki BASIC dla kompletnego `configuration-tree.yaml`
+   oraz kolumnowego `changes.json`.
 2. Przeczytaj `deep-context.json`: primary system, affected entities,
    codeGrounding, użyte refy, ownership i visibility limits.
 3. Najpierw korzystaj z przygotowanego contextu. Tool uruchom tylko wtedy,

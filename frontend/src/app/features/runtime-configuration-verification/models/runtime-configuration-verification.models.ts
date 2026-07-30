@@ -302,7 +302,94 @@ export type RuntimeConfigurationValueRepresentation =
   | 'STRUCTURE_ONLY'
   | 'NOT_PRESENT';
 
-export interface RuntimeConfigurationAnonymizationDecision {
+export interface RuntimeConfigurationWorkbenchSourceSummary {
+  configurationDirectory: string;
+  sourceBranchExists: boolean;
+  sourceComplete: boolean;
+  targetBranchExists: boolean;
+  targetComplete: boolean;
+}
+
+export interface RuntimeConfigurationWorkbenchCounts {
+  documents: number;
+  nodes: number;
+  differences: number;
+  findings: number;
+  references: number;
+}
+
+export interface RuntimeConfigurationWorkbenchAnonymizationSummary {
+  totalNodes: number;
+  pseudonymizedRepresentations: number;
+  suppressedRepresentations: number;
+  structureOnlyRepresentations: number;
+  notPresentRepresentations: number;
+}
+
+export interface RuntimeConfigurationWorkbenchDeepSummary {
+  requested: boolean;
+  status: string | null;
+  preflightStatus: string | null;
+  repositoryScopes: number;
+  blockers: number;
+  codeGroundings: number;
+  primaryOwners: number;
+}
+
+export interface RuntimeConfigurationWorkbenchArtifactSummary {
+  name: string;
+  mediaType: string;
+  characterCount: number;
+  truncated: boolean;
+}
+
+export interface RuntimeConfigurationWorkbenchPreviewResponse {
+  previewId: string;
+  expiresAt: string;
+  mode: RuntimeConfigurationVerificationMode;
+  repositoryId: string;
+  systemId: string;
+  sourceBranch: string;
+  targetBranch: string;
+  codeRef: string | null;
+  source: RuntimeConfigurationWorkbenchSourceSummary;
+  counts: RuntimeConfigurationWorkbenchCounts;
+  anonymization: RuntimeConfigurationWorkbenchAnonymizationSummary;
+  deep: RuntimeConfigurationWorkbenchDeepSummary;
+  artifacts: RuntimeConfigurationWorkbenchArtifactSummary[];
+  visibilityLimits: string[];
+}
+
+export interface RuntimeConfigurationWorkbenchSourceResponse {
+  previewId: string;
+  configurationDirectory: string;
+  source: RuntimeConfigurationBranchCoverage | null;
+  target: RuntimeConfigurationBranchCoverage | null;
+}
+
+export interface RuntimeConfigurationWorkbenchMappingItem {
+  role: string;
+  documentIndex: number;
+  depth: number;
+  name: string;
+  path: string;
+  sourceType: string | null;
+  targetType: string | null;
+  relation: string;
+  sensitivity: string;
+}
+
+export interface RuntimeConfigurationWorkbenchMappingPage {
+  previewId: string;
+  offset: number;
+  limit: number;
+  totalItems: number;
+  totalNodes: number;
+  changedOnly: boolean;
+  items: RuntimeConfigurationWorkbenchMappingItem[];
+}
+
+export interface RuntimeConfigurationWorkbenchAnonymizationItem {
   role: string;
   documentIndex: number;
   path: string;
@@ -316,42 +403,33 @@ export interface RuntimeConfigurationAnonymizationDecision {
   targetValueToken: string | null;
 }
 
-export interface RuntimeConfigurationAnonymizationSummary {
-  totalNodes: number;
-  pseudonymizedRepresentations: number;
-  suppressedRepresentations: number;
-  structureOnlyRepresentations: number;
-  notPresentRepresentations: number;
-  decisions: RuntimeConfigurationAnonymizationDecision[];
+export interface RuntimeConfigurationWorkbenchAnonymizationPage {
+  previewId: string;
+  offset: number;
+  limit: number;
+  totalItems: number;
+  items: RuntimeConfigurationWorkbenchAnonymizationItem[];
 }
 
-export interface RuntimeConfigurationWorkbenchArtifactSummary {
+export interface RuntimeConfigurationWorkbenchDeepResponse {
+  previewId: string;
+  requested: boolean;
+  context: RuntimeConfigurationDeepContext | null;
+}
+
+export interface RuntimeConfigurationWorkbenchAiInputResponse {
+  previewId: string;
+  characterCount: number;
+  prompt: string;
+}
+
+export interface RuntimeConfigurationWorkbenchArtifactResponse {
+  previewId: string;
   name: string;
+  mediaType: string;
   characterCount: number;
   truncated: boolean;
-}
-
-export interface RuntimeConfigurationWorkbenchSourceAcquisition {
-  configurationDirectory: string;
-  source: RuntimeConfigurationBranchCoverage | null;
-  target: RuntimeConfigurationBranchCoverage | null;
-}
-
-export interface RuntimeConfigurationWorkbenchPreviewResponse {
-  mode: RuntimeConfigurationVerificationMode;
-  repositoryId: string;
-  systemId: string;
-  sourceBranch: string;
-  targetBranch: string;
-  codeRef: string | null;
-  sourceAcquisition: RuntimeConfigurationWorkbenchSourceAcquisition;
-  mapping: RuntimeConfigurationDeterministicContext;
-  anonymization: RuntimeConfigurationAnonymizationSummary;
-  deepContext: RuntimeConfigurationDeepContext | null;
-  preparedPrompt: string;
-  artifactContents: Record<string, string>;
-  artifacts: RuntimeConfigurationWorkbenchArtifactSummary[];
-  visibilityLimits: string[];
+  content: string;
 }
 
 export interface RuntimeConfigurationVerificationResult {
