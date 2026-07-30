@@ -234,26 +234,26 @@ public class RuntimeConfigurationAiArtifactService {
     }
 
     private List<Object> compactDifference(RuntimeConfigurationDifference difference) {
-        return List.of(
-                value(difference.differenceId()),
-                value(difference.role()),
-                difference.documentIndex(),
-                value(difference.path()),
-                relationCode(difference.kind()),
-                typeCode(difference.sourceType()),
-                typeCode(difference.targetType()),
-                sensitivityCode(difference.sensitivity()),
-                representation(
-                        difference.sourceType(),
-                        difference.sensitivity(),
-                        difference.sourceValueToken()
-                ),
-                representation(
-                        difference.targetType(),
-                        difference.sensitivity(),
-                        difference.targetValueToken()
-                )
-        );
+        var row = new ArrayList<Object>(10);
+        row.add(value(difference.differenceId()));
+        row.add(value(difference.role()));
+        row.add(difference.documentIndex());
+        row.add(value(difference.path()));
+        row.add(relationCode(difference.kind()));
+        row.add(typeCode(difference.sourceType()));
+        row.add(typeCode(difference.targetType()));
+        row.add(sensitivityCode(difference.sensitivity()));
+        row.add(representation(
+                difference.sourceType(),
+                difference.sensitivity(),
+                difference.sourceValueToken()
+        ));
+        row.add(representation(
+                difference.targetType(),
+                difference.sensitivity(),
+                difference.targetValueToken()
+        ));
+        return Collections.unmodifiableList(row);
     }
 
     private String representation(

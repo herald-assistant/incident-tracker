@@ -7,6 +7,8 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.RuntimeConfigurat
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .RuntimeConfigurationChangeKind;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationDifference;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .RuntimeConfigurationSensitivity;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .RuntimeConfigurationValueType;
@@ -87,6 +89,70 @@ class RuntimeConfigurationAiArtifactServiceTest {
                 .doesNotContainIgnoringCase("sha256")
                 .doesNotContainIgnoringCase("\"hash\"");
         assertThat(result.contents()).doesNotContainKey("runtime-configuration/deep-context.json");
+    }
+
+    @Test
+    void shouldPreserveMissingSideTypesForAddedAndRemovedDifferences() throws Exception {
+        var baseline = RuntimeConfigurationAiTestFixtures.deterministic(
+                pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+                        .RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
+        );
+        var added = new RuntimeConfigurationDifference(
+                "difference-added",
+                RuntimeConfigurationFileRole.APPLICATION_YAML,
+                0,
+                "feature.new-setting",
+                RuntimeConfigurationChangeKind.ADDED,
+                null,
+                RuntimeConfigurationValueType.STRING,
+                RuntimeConfigurationSensitivity.NON_SENSITIVE,
+                null,
+                "target-token"
+        );
+        var removed = new RuntimeConfigurationDifference(
+                "difference-removed",
+                RuntimeConfigurationFileRole.APPLICATION_YAML,
+                0,
+                "feature.old-setting",
+                RuntimeConfigurationChangeKind.REMOVED,
+                RuntimeConfigurationValueType.STRING,
+                null,
+                RuntimeConfigurationSensitivity.NON_SENSITIVE,
+                "source-token",
+                null
+        );
+        var context = new pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+                .RuntimeConfigurationDeterministicContext(
+                baseline.repositoryId(),
+                baseline.systemId(),
+                baseline.systemLabel(),
+                baseline.configurationDirectory(),
+                baseline.sourceBranch(),
+                baseline.targetBranch(),
+                baseline.status(),
+                baseline.sourceCoverage(),
+                baseline.targetCoverage(),
+                baseline.documents(),
+                baseline.references(),
+                List.of(added, removed),
+                baseline.findings()
+        );
+
+        var result = service.render(RuntimeConfigurationVerificationMode.BASIC, context, null);
+        var rows = objectMapper.readTree(
+                result.contents().get("runtime-configuration/changes.json")
+        ).get("differences");
+
+        assertThat(rows.get(0).get(4).asText()).isEqualTo("A");
+        assertThat(rows.get(0).get(5).isNull()).isTrue();
+        assertThat(rows.get(0).get(6).asText()).isEqualTo("S");
+        assertThat(rows.get(0).get(8).asText()).isEqualTo("A");
+        assertThat(rows.get(0).get(9).asText()).isEqualTo("p:target-token");
+        assertThat(rows.get(1).get(4).asText()).isEqualTo("R");
+        assertThat(rows.get(1).get(5).asText()).isEqualTo("S");
+        assertThat(rows.get(1).get(6).isNull()).isTrue();
+        assertThat(rows.get(1).get(8).asText()).isEqualTo("p:source-token");
+        assertThat(rows.get(1).get(9).asText()).isEqualTo("A");
     }
 
     @Test
