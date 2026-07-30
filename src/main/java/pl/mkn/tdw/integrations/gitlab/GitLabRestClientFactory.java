@@ -48,16 +48,28 @@ public class GitLabRestClientFactory {
     private final AtomicBoolean insecureSslWarningLogged = new AtomicBoolean(false);
 
     public RestClient create() {
+        return create(new GitLabConnectionDetails(
+                "analysis.gitlab",
+                properties.getBaseUrl(),
+                properties.getToken(),
+                properties.isIgnoreSslErrors()
+        ));
+    }
+
+    public RestClient create(GitLabConnectionDetails connection) {
         var builder = restClientBuilder.clone()
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
 
-        if (StringUtils.hasText(properties.getToken())) {
-            builder.defaultHeader("PRIVATE-TOKEN", properties.getToken());
+        if (StringUtils.hasText(connection.token())) {
+            builder.defaultHeader("PRIVATE-TOKEN", connection.token());
         }
 
-        if (properties.isIgnoreSslErrors()) {
+        if (connection.ignoreSslErrors()) {
             if (insecureSslWarningLogged.compareAndSet(false, true)) {
-                log.warn("GitLab REST client is configured to ignore SSL certificate and hostname validation errors. Use only in trusted internal environments.");
+                log.warn(
+                        "GitLab REST client connection {} is configured to ignore SSL certificate and hostname validation errors. Use only in trusted internal environments.",
+                        connection.id()
+                );
             }
             builder.requestFactory(insecureRequestFactory());
         }

@@ -775,3 +775,27 @@ zmienia kontraktu konstruktora klasy implementacyjnej.
 
 Przyklad aktualnego wzorca: `AnalysisJobFacade` ma Lombokowy konstruktor
 runtime, a testy skladaja ja przez `AnalysisJobFacadeTestCreator`.
+
+## 26. Weryfikacja konfiguracji rozdziela fakty od drugiej opinii AI
+
+Runtime Configuration Verification ma dwie niezalezne warstwy wyniku.
+Deterministyczny parser/diff jest zrodlem faktow i pozostaje niemutowalny dla
+AI. AI otrzymuje sanitizowany manifest zachowujacy strukture YAML, typy,
+sciezki i pseudonimy niesensytywnych wartosci; zwraca osobna interpretacje z
+referencjami do diffow/findings oraz agreement/disagreement.
+
+Granica bezpieczenstwa:
+
+- raw configuration, raw value, hash i sekret nie trafiaja do promptu,
+  activity, reportu, historii, exportu ani user-facing bledu,
+- repozytorium konfiguracji uzywa allowlisty nazwanych polaczen GitLab i
+  backendowego limitu rozmiaru pliku,
+- `BASIC` nie ma dostepu do Operational Context ani GitLab code tools,
+- `DEEP` moze uzywac tylko code-search scope wybranego `internal-system`,
+  potwierdzonego refu i feature-specific budgetu,
+- brak lub awaria enrichmentu nie usuwa deterministic result; obniza
+  kompletnosc i jest widoczna jako blocker albo visibility limit.
+
+Zachowanie calego, sanitizowanego schematu jest celowe: niezmienione parametry
+pomagaja rozpoznac funkcjonalny kontekst rozjazdu bez przekazywania prawdziwej
+konfiguracji.

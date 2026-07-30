@@ -38,7 +38,8 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
    biznesowo-systemowego oraz `technicalAnalysis` jako konkretny handoff do
    naprawy, weryfikacji albo przekazania dalej.
 
-Dostepne obok Incident Analysis sa Flow Explorer i Change Verification.
+Dostepne obok Incident Analysis sa Flow Explorer, Change Verification i
+Runtime Configuration Verification.
 Kolejne rodziny moga obejmowac functional logic explorer oraz
 natural-language data diagnostics. Szczegolowy kierunek produktu jest opisany
 w `product-direction.md`.
@@ -57,6 +58,9 @@ Na dzisiaj projekt ma:
   platforma oszczedza czas w codziennej pracy,
 - ekran `GET /incident-analysis` serwowany przez Spring Boot z mozliwoscia
   importu i eksportu zapisu zakonczonej analizy jako JSON,
+- ekran `GET /runtime-configuration-verification` do porownania konfiguracji
+  `internal-system` pomiedzy branchami `devX` i `zt00X`, z oddzielonym wynikiem
+  deterministycznym i interpretacja AI w trybach `BASIC` oraz `DEEP`,
 - w ekranie `GET /incident-analysis` start analizy ma wybor zrodla logow:
   Elasticsearch po `correlationId` albo upload CSV; gdy konfiguracja
   Elasticsearch/Kibana jest niepelna, sciezka `correlationId` jest zablokowana,
@@ -112,6 +116,8 @@ Na dzisiaj projekt ma:
   `LOCAL_TOKEN` oraz `GITHUB_APP`,
 - shared/operator API `/api/operational-context/*` dla operator-facing widoku
   curated operational context,
+- feature-owned API `/api/runtime-configuration-verification/*` dla input
+  options, preflightu `DEEP`, asynchronicznych jobow oraz read-only importu,
 - AI-first flow oparty o `AnalysisEvidenceProvider`, `InitialAnalysisProvider` i
   osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
 - factory definicji tools dla GitHub Copilot Java SDK oparta o Spring tools,
@@ -133,6 +139,21 @@ Na dzisiaj projekt ma:
 - `GET /incident-analysis`
   Angularowy ekran `Analysis Features / Incident Analysis` do uruchamiania
   analizy z logow pobranych po `correlationId` albo z zalaczonego CSV.
+- `GET /runtime-configuration-verification`
+  Angularowy workspace porownania konfiguracji runtime. Formularz wybiera
+  repozytorium, `internal-system`, branch zrodlowy/docelowy, tryb
+  `BASIC/DEEP` oraz opcjonalny `codeRef`.
+- `GET /api/runtime-configuration-verification/input-options`
+  Zwraca dozwolone repozytoria konfiguracji, systemy, branche i tryby bez
+  ujawniania connection credentials.
+- `GET /api/runtime-configuration-verification/deep-preflight`
+  Sprawdza, czy system ma jednoznaczny configuration directory, code-search
+  scope i osiagalny ref kodu. Zwraca blocker albo ograniczenia widocznosci.
+- `POST /api/runtime-configuration-verification/jobs`
+  Uruchamia asynchroniczna weryfikacje. `GET` z `/{jobId}` zwraca postep,
+  sanitizowany wynik, report, activity i usage.
+- `POST /api/runtime-configuration-verification/imports`
+  Waliduje wersjonowany export i zwraca sanitizowany snapshot read-only.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.

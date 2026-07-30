@@ -391,6 +391,24 @@ Typowe uzycie:
 Operational context moze uzasadnic, gdzie szukac dalej. Nie jest samodzielnym
 dowodem root cause ani zamiennikiem deterministic evidence.
 
+## Runtime Configuration Verification Usage
+
+Publicznym targetem weryfikacji jest kanoniczny `system` o
+`systemType=internal-system`. Configuration directory jest rozstrzygany z
+runtime/deployment signalu systemu; nie jest swobodnym inputem operatora.
+
+Tryb `BASIC` nie laduje katalogu do interpretacji i nie wykonuje code search.
+Tryb `DEEP` wymaga jednoznacznego systemu oraz code-search scope targetujacego
+ten system. Preflight potwierdza ref repozytorium kodu albo jawnie oznacza
+fallback do default branch jako ograniczenie widocznosci. Dalsze wyszukiwanie
+jest ograniczone do repozytoriow i `pathPrefixes` ze scope'u.
+
+Operational Context pomaga powiazac zmienione klucze z systemem, procesem,
+bounded contextem i ownershipem. Nie zmienia deterministycznego diffu i nie
+potwierdza wdrozonej wersji kodu. Gdy katalog jest pusty, niepelny,
+niejednoznaczny albo niedostepny, `DEEP` jest blokowany w preflight lub konczy
+sie wynikiem czesciowym z jawnym visibility limit; `BASIC` pozostaje dostepny.
+
 ## Maintenance
 
 Prompty w `operational-context-maintenance` musza generowac tylko aktualny

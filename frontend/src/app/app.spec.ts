@@ -56,6 +56,7 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__breadcrumb')).toBeNull();
     expect(compiled.textContent).toContain('Sprawdź incydent');
     expect(compiled.textContent).toContain('Flow Explorer');
+    expect(compiled.textContent).toContain('Runtime Configuration Verification');
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
@@ -557,6 +558,63 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
     expect(navLink).not.toBeNull();
     expect(compiled.textContent).toContain('Verify a change before release');
+  });
+
+  it('should render the runtime configuration verification route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/runtime-configuration-verification');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-runtime-configuration-verification-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'Runtime Configuration Verification'
+    );
+    expect(compiled.textContent).toContain('Porównaj konfigurację środowisk');
+    expect(compiled.querySelector('app-runtime-configuration-verification-page button')).not.toBeNull();
+    expect(
+      compiled.querySelector(
+        'a.app-shell__nav-item[aria-label="Runtime Configuration Verification"]'
+      )
+    ).not.toBeNull();
+  });
+
+  it('should render the Runtime Configuration Pipeline in Tool Workbench', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/runtime-configuration-tools');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    http.expectOne('/api/runtime-configuration-verification/input-options').flush({
+      modes: ['BASIC', 'DEEP'],
+      branches: ['dev1', 'zt001'],
+      repositories: [{ id: 'runtime-config', label: 'Config repository' }],
+      systems: [{ id: 'backend', label: 'Backend', configurationDirectory: 'backend' }]
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('app-runtime-configuration-workbench-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'Runtime Configuration Pipeline'
+    );
+    expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
+      'POST /api/runtime-configuration-verification/workbench/preview'
+    );
+    expect(
+      compiled.querySelector('a.app-shell__nav-item[aria-label="Runtime Configuration"]')
+    ).not.toBeNull();
+    expect(compiled.textContent).toContain('Source acquisition');
+    expect(compiled.textContent).toContain('Raw configuration pozostaje poza Workbenchem');
   });
 
   it('should remount an active analysis feature from the sidebar as a fresh run screen', async () => {

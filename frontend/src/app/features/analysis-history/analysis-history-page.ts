@@ -234,6 +234,9 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'change-verification') {
       return 'Change Verification';
     }
+    if (feature === 'runtime-configuration-verification') {
+      return 'Runtime Configuration Verification';
+    }
     return feature
       ? feature
           .split(/[-_]/)
@@ -252,6 +255,9 @@ export class AnalysisHistoryPageComponent {
     }
     if (feature === 'change-verification') {
       return 'fact_check';
+    }
+    if (feature === 'runtime-configuration-verification') {
+      return 'difference';
     }
     return 'analytics';
   }
@@ -336,6 +342,9 @@ function routeForFeature(feature: string): string | null {
   }
   if (feature === 'change-verification') {
     return '/change-verification';
+  }
+  if (feature === 'runtime-configuration-verification') {
+    return '/runtime-configuration-verification';
   }
   return null;
 }

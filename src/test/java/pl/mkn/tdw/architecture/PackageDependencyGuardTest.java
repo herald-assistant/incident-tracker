@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,24 +92,6 @@ class PackageDependencyGuardTest {
                 Rule.closed("features must not depend on historical analysis options",
                         "pl.mkn.tdw.features",
                         "pl.mkn.tdw.analysis.options"),
-                Rule.closed("flow explorer must not depend on incident analysis internals",
-                        "pl.mkn.tdw.features.flowexplorer",
-                        "pl.mkn.tdw.features.incidentanalysis"),
-                Rule.closed("incident analysis must not depend on flow explorer internals",
-                        "pl.mkn.tdw.features.incidentanalysis",
-                        "pl.mkn.tdw.features.flowexplorer"),
-                Rule.closed("change verification must not depend on incident analysis internals",
-                        "pl.mkn.tdw.features.changeverification",
-                        "pl.mkn.tdw.features.incidentanalysis"),
-                Rule.closed("change verification must not depend on flow explorer internals",
-                        "pl.mkn.tdw.features.changeverification",
-                        "pl.mkn.tdw.features.flowexplorer"),
-                Rule.closed("incident analysis must not depend on change verification internals",
-                        "pl.mkn.tdw.features.incidentanalysis",
-                        "pl.mkn.tdw.features.changeverification"),
-                Rule.closed("flow explorer must not depend on change verification internals",
-                        "pl.mkn.tdw.features.flowexplorer",
-                        "pl.mkn.tdw.features.changeverification"),
                 Rule.closed("api must not depend on historical analysis evidence",
                         "pl.mkn.tdw.api",
                         "pl.mkn.tdw.analysis.evidence"),
@@ -204,6 +188,29 @@ class PackageDependencyGuardTest {
     }
 
     @Test
+    void shouldKeepSiblingFeaturesIsolated() throws IOException {
+        var featurePackages = findTopLevelFeaturePackages();
+        var rules = new ArrayList<Rule>();
+
+        for (var sourcePackage : featurePackages) {
+            for (var targetPackage : featurePackages) {
+                if (!sourcePackage.equals(targetPackage)) {
+                    rules.add(Rule.closed(
+                            "sibling features must stay isolated",
+                            sourcePackage,
+                            targetPackage
+                    ));
+                }
+            }
+        }
+
+        var violations = findViolations(rules);
+
+        assertTrue(violations.isEmpty(), () -> "Sibling feature dependency edge(s) were introduced:\n"
+                + String.join("\n", violations));
+    }
+
+    @Test
     void shouldNotRecreateClosedProductionPackages() throws IOException {
         var closedPackages = List.of(
                 "pl.mkn.tdw.analysis"
@@ -250,6 +257,36 @@ class PackageDependencyGuardTest {
             }
         }
         return violations;
+    }
+
+    private static Set<String> findTopLevelFeaturePackages() throws IOException {
+        var featureRoot = MAIN_JAVA.resolve(Path.of("pl", "mkn", "tdw", "features"));
+        var packages = new LinkedHashSet<String>();
+        if (!Files.isDirectory(featureRoot)) {
+            return Set.of();
+        }
+
+        try (var files = Files.walk(featureRoot)) {
+            for (var file : files.filter(path -> path.toString().endsWith(".java")).toList()) {
+                for (var line : Files.readAllLines(file)) {
+                    var matcher = PACKAGE_PATTERN.matcher(line);
+                    if (!matcher.matches()) {
+                        continue;
+                    }
+                    var packageName = matcher.group(1);
+                    var prefix = "pl.mkn.tdw.features.";
+                    if (!packageName.startsWith(prefix)) {
+                        break;
+                    }
+                    var remainder = packageName.substring(prefix.length());
+                    var separator = remainder.indexOf('.');
+                    var featureName = separator >= 0 ? remainder.substring(0, separator) : remainder;
+                    packages.add(prefix + featureName);
+                    break;
+                }
+            }
+        }
+        return Set.copyOf(packages);
     }
 
     private static List<String> findViolations(List<Rule> rules) throws IOException {

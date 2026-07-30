@@ -73,6 +73,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'runtime-configuration-verification',
+        loadComponent: () =>
+          import(
+            './features/runtime-configuration-verification/pages/runtime-configuration-verification-page/runtime-configuration-verification-page'
+          ).then((module) => module.RuntimeConfigurationVerificationPageComponent),
+        data: {
+          section: 'Analysis Features',
+          title: 'Runtime Configuration Verification'
+        }
+      },
+      {
         path: 'evidence',
         redirectTo: 'elastic',
         pathMatch: 'full'
@@ -190,6 +201,42 @@ export const routes: Routes = [
               {
                 label: 'Guardrails',
                 value: 'readonly REST call, Bearer PAT, URL allowlist i limit dlugosci tekstu'
+              }
+            ]
+          }
+        }
+      },
+      {
+        path: 'runtime-configuration-tools',
+        loadComponent: () =>
+          import(
+            './features/runtime-configuration-verification/workbench/runtime-configuration-workbench-page/runtime-configuration-workbench-page'
+          ).then((module) => module.RuntimeConfigurationWorkbenchPageComponent),
+        data: {
+          section: 'Tool Workbench',
+          title: 'Runtime Configuration Pipeline',
+          capabilityInfo: {
+            description:
+              'Readonly preview pobrania, mapowania, anonimizacji i dokładnego AI-safe inputu przygotowanego przez produkcyjny pipeline Runtime Configuration.',
+            badges: ['AI-safe preview', 'Readonly'],
+            meta: [
+              {
+                label: 'Endpoint',
+                value: 'POST /api/runtime-configuration-verification/workbench/preview'
+              },
+              {
+                label: 'Wymagany scope',
+                value:
+                  'allowlistowane configuration repository, internal-system i dwa branche devX/zt00X'
+              },
+              {
+                label: 'AI',
+                value: 'Pokazuje dokładny prompt i artifacts, ale nie uruchamia modelu'
+              },
+              {
+                label: 'Guardrails',
+                value:
+                  'brak raw values, sanitizowany mapping, backendowy code-search scope i jawne visibility limits'
               }
             ]
           }

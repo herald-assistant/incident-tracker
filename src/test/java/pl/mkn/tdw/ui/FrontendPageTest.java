@@ -100,6 +100,13 @@ class FrontendPageTest {
     }
 
     @Test
+    void shouldServeRuntimeConfigurationVerificationRoute() throws Exception {
+        mockMvc.perform(get("/runtime-configuration-verification"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
+    @Test
     void shouldServeAnyFutureFrontendRouteWithoutControllerUpdates() throws Exception {
         mockMvc.perform(get("/future-feature"))
                 .andExpect(status().isOk())

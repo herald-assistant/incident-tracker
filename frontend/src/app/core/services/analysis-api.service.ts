@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 
 import {
   AnalysisChatMessageRequest,
-  AnalysisAiModelOptionsResponse,
   AnalysisJobInputOptionsResponse,
   AnalysisJobStateSnapshot,
   AnalysisStartRequest
@@ -23,10 +22,6 @@ export class AnalysisApiService {
 
   getInputOptions(): Observable<AnalysisJobInputOptionsResponse> {
     return this.http.get<AnalysisJobInputOptionsResponse>(`${this.baseUrl}/jobs/input-options`);
-  }
-
-  getAiModelOptions(): Observable<AnalysisAiModelOptionsResponse> {
-    return this.http.get<AnalysisAiModelOptionsResponse>(`${this.baseUrl}/ai/options`);
   }
 
   getAnalysis(analysisId: string): Observable<AnalysisJobStateSnapshot> {

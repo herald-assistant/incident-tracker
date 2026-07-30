@@ -8,7 +8,7 @@ import {
   AnalysisAiModelOptionsResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
-import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
+import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import {
   FlowExplorerEndpointInventoryResponse,
@@ -21,12 +21,12 @@ import { FlowExplorerPageComponent } from './flow-explorer-page';
 
 describe('FlowExplorerPageComponent', () => {
   let flowExplorerApi: FlowExplorerApiServiceMock;
-  let analysisApi: AnalysisApiServiceMock;
+  let aiOptionsApi: AiOptionsApiServiceMock;
   let historyApi: AnalysisRunHistoryApiServiceMock;
 
   beforeEach(async () => {
-    analysisApi = {
-      getAiModelOptions: vi.fn(() => of(aiModelOptions()))
+    aiOptionsApi = {
+      getOptions: vi.fn(() => of(aiModelOptions()))
     };
     historyApi = {
       getRun: vi.fn(() => of(localFlowExplorerRunDetail())),
@@ -70,7 +70,7 @@ describe('FlowExplorerPageComponent', () => {
       imports: [FlowExplorerPageComponent],
       providers: [
         { provide: FlowExplorerApiService, useValue: flowExplorerApi },
-        { provide: AnalysisApiService, useValue: analysisApi },
+        { provide: AiOptionsApiService, useValue: aiOptionsApi },
         { provide: AnalysisRunHistoryApiService, useValue: historyApi },
         {
           provide: ActivatedRoute,
@@ -92,7 +92,7 @@ describe('FlowExplorerPageComponent', () => {
 
     expect(flowExplorerApi.getConfig).toHaveBeenCalledTimes(1);
     expect(flowExplorerApi.getSystems).toHaveBeenCalledTimes(1);
-    expect(analysisApi.getAiModelOptions).toHaveBeenCalledTimes(1);
+    expect(aiOptionsApi.getOptions).toHaveBeenCalledTimes(1);
     expect(branchInput.value).toBe('main');
     expect(compiled.textContent).toContain('Endpoint documentation workspace');
     expect(compiled.textContent).toContain('Select application');
@@ -109,7 +109,7 @@ describe('FlowExplorerPageComponent', () => {
     const modelOptions = new Subject<AnalysisAiModelOptionsResponse>();
     vi.mocked(flowExplorerApi.getSystems).mockReturnValue(systems.asObservable());
     vi.mocked(flowExplorerApi.getEndpointInventory).mockReturnValue(endpointInventoryResponse.asObservable());
-    vi.mocked(analysisApi.getAiModelOptions).mockReturnValue(modelOptions.asObservable());
+    vi.mocked(aiOptionsApi.getOptions).mockReturnValue(modelOptions.asObservable());
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
@@ -361,7 +361,7 @@ describe('FlowExplorerPageComponent', () => {
   });
 
   it('should use listed backend defaults without adding duplicate dropdown options', () => {
-    vi.mocked(analysisApi.getAiModelOptions).mockReturnValue(of(aiModelOptionsWithListedDefault()));
+    vi.mocked(aiOptionsApi.getOptions).mockReturnValue(of(aiModelOptionsWithListedDefault()));
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
@@ -829,7 +829,7 @@ type FlowExplorerApiServiceMock = Pick<
   FlowExplorerApiService,
   'getConfig' | 'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
 >;
-type AnalysisApiServiceMock = Pick<AnalysisApiService, 'getAiModelOptions'>;
+type AiOptionsApiServiceMock = Pick<AiOptionsApiService, 'getOptions'>;
 type AnalysisRunHistoryApiServiceMock = Pick<AnalysisRunHistoryApiService, 'getRun' | 'sendChatMessage'>;
 
 function setInputValue(nativeElement: HTMLElement, selector: string, value: string): void {

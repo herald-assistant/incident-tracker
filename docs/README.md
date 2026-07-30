@@ -32,14 +32,15 @@ Przed wieksza zmiana przeczytaj:
 3. `architecture/system-overview.md`
 4. `architecture/key-decisions.md`
 5. `architecture/incident-analysis-runtime-flow.md`
-6. `architecture/package-dependencies.md`
-7. `architecture/operational-context-model-tools-and-usage.md`
-8. `architecture/codex-continuation-guide.md`
+6. `architecture/runtime-configuration-verification-runtime-flow.md`
+7. `architecture/package-dependencies.md`
+8. `architecture/operational-context-model-tools-and-usage.md`
+9. `architecture/codex-continuation-guide.md`
 
 Przy tworzeniu nowego feature'a albo zmianie L1-L3 istniejacego feature'a lub
 mechanizmu wspolnego przeczytaj dodatkowo:
 
-9. `architecture/analysis-feature-delivery-playbook.md`
+10. `architecture/analysis-feature-delivery-playbook.md`
 
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
@@ -47,6 +48,17 @@ implementacje niezatwierdzonego planu.
 
 ## Aktualne potrzeby i plany
 
+- `needs/runtime-configuration-verification.md`
+  opisuje problem rozjazdu konfiguracji pomiedzy branchami srodowiskowymi,
+  oczekiwany bezpieczny wynik i granice weryfikacji przed wdrozeniem.
+- `plans/runtime-configuration-verification.md`
+  dokumentuje wykonany plan dostarczenia feature'a.
+- `needs/runtime-configuration-tool-workbench.md`
+  opisuje potrzebe diagnostycznego podgladu named GitLab, mapowania,
+  anonimizacji i AI-safe payloadu.
+- `plans/runtime-configuration-tool-workbench.md`
+  jest draftem addytywnego inkrementu Tool Workbench i wymaga zatwierdzania
+  kolejnych krokow.
 - `needs/change-verification.md`
   opisuje problem, wartosc, oczekiwany wynik i granice Change Verification.
   Nowy plan implementacji powinien wskazywac ten plik jako `Source need`.
@@ -65,6 +77,9 @@ implementacje niezatwierdzonego planu.
 - `architecture/incident-analysis-runtime-flow.md`
   opisuje wykonanie glownych sciezek Incident Analysis oraz jego uzycie
   neutralnego runtime Copilota.
+- `architecture/runtime-configuration-verification-runtime-flow.md`
+  opisuje deterministic/AI flow, tryby `BASIC/DEEP`, scope, limity i granice
+  bezpieczenstwa Runtime Configuration Verification.
 - `architecture/package-dependencies.md`
   definiuje dozwolony graf zaleznosci i odpowiedzialnosc warstw.
 - `architecture/operational-context-model-tools-and-usage.md`

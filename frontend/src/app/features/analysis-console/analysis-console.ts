@@ -27,6 +27,7 @@ import {
   TransportErrorState
 } from '../../core/models/analysis.models';
 import { AnalysisApiService } from '../../core/services/analysis-api.service';
+import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
 import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-history-api.service';
 import {
@@ -114,6 +115,7 @@ const DEFAULT_ANALYSIS_INPUT_OPTIONS: AnalysisJobInputOptionsResponse = {
 })
 export class AnalysisConsoleComponent {
   private readonly analysisApi = inject(AnalysisApiService);
+  private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly githubAuth = inject(GithubAuthService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly route = inject(ActivatedRoute);
@@ -773,8 +775,8 @@ export class AnalysisConsoleComponent {
 
   private loadAiModelOptions(): void {
     this.isAiModelOptionsLoading.set(true);
-    this.analysisApi
-      .getAiModelOptions()
+    this.aiOptionsApi
+      .getOptions()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isAiModelOptionsLoading.set(false))

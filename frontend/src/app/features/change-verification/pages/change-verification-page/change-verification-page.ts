@@ -3,7 +3,7 @@ import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@ang
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { finalize, Subscription, switchMap, timer } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 
 import {
   ChangeVerificationCompliance,
@@ -21,7 +21,8 @@ import {
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
-import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
+import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
+import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
@@ -89,7 +90,8 @@ interface ChangeVerificationReportSectionDisplay {
 })
 export class ChangeVerificationPageComponent implements OnDestroy {
   private readonly changeVerificationApi = inject(ChangeVerificationApiService);
-  private readonly analysisApi = inject(AnalysisApiService);
+  private readonly aiOptionsApi = inject(AiOptionsApiService);
+  private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -488,18 +490,17 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       return;
     }
 
-    this.pollingSubscription = timer(1000, 1500)
-      .pipe(
-        switchMap(() => this.changeVerificationApi.getJob(jobId)),
-        takeUntilDestroyed(this.destroyRef)
-      )
+    this.pollingSubscription = this.pollingService
+      .poll({
+        load: () => this.changeVerificationApi.getJob(jobId),
+        isTerminal: (job) => this.isTerminalStatus(job.status),
+        initialDelayMs: 1000,
+        intervalMs: 1500
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (job) => {
           this.setJob(job);
-          if (this.isTerminalStatus(job.status)) {
-            this.pollingSubscription?.unsubscribe();
-            this.pollingSubscription = undefined;
-          }
         },
         error: (error: HttpErrorResponse) => {
           this.jobError.set(this.errorMessage(error));
@@ -510,15 +511,17 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   }
 
   private isTerminalStatus(status: string | null | undefined): boolean {
-    return status === 'COMPLETED' || status === 'FAILED';
+    return status === 'COMPLETED'
+      || status === 'COMPLETED_WITH_LIMITATIONS'
+      || status === 'FAILED';
   }
 
   private loadAiModelOptions(): void {
     this.isAiModelOptionsLoading.set(true);
     this.aiModelOptionsError.set('');
 
-    this.analysisApi
-      .getAiModelOptions()
+    this.aiOptionsApi
+      .getOptions()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isAiModelOptionsLoading.set(false))

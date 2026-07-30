@@ -184,6 +184,28 @@ describe('AnalysisHistoryPageComponent', () => {
     });
   });
 
+  it('should route a runtime configuration run to its feature screen', async () => {
+    const { fixture, router } = await createComponent();
+    const run: LocalAnalysisRunListItemResponse = {
+      analysisId: 'runtime-configuration-1',
+      feature: 'runtime-configuration-verification',
+      name: 'dev1 to zt001',
+      status: 'COMPLETED_WITH_LIMITATIONS',
+      createdAt: '2026-07-30T10:00:00Z',
+      updatedAt: '2026-07-30T10:01:00Z',
+      completedAt: '2026-07-30T10:01:00Z'
+    };
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.openRun(run);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/runtime-configuration-verification'], {
+      queryParams: { localRunId: 'runtime-configuration-1' }
+    });
+  });
+
 
   it('should export the stored envelope without rebuilding the payload', async () => {
     const { fixture, historyApi } = await createComponent();

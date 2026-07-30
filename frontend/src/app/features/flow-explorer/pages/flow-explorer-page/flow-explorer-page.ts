@@ -3,7 +3,7 @@ import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal }
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 
 import {
   AnalysisAiUsage,
@@ -15,7 +15,8 @@ import {
   ApiErrorResponse,
   LocalAnalysisRunDetailResponse
 } from '../../../../core/models/analysis.models';
-import { AnalysisApiService } from '../../../../core/services/analysis-api.service';
+import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
+import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import {
   FlowExplorerAnalysisGoal,
@@ -200,11 +201,12 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
 })
 export class FlowExplorerPageComponent implements OnInit {
   private readonly flowExplorerApi = inject(FlowExplorerApiService);
-  private readonly analysisApi = inject(AnalysisApiService);
+  private readonly aiOptionsApi = inject(AiOptionsApiService);
+  private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
-  private pollingTimer: ReturnType<typeof setInterval> | null = null;
+  private pollingSubscription?: Subscription;
   private resultCopyFeedbackHandle: number | null = null;
   private followUpPromptCopyFeedbackHandle: number | null = null;
 
@@ -1258,8 +1260,8 @@ export class FlowExplorerPageComponent implements OnInit {
     this.isAiModelOptionsLoading.set(true);
     this.aiModelOptionsError.set('');
 
-    this.analysisApi
-      .getAiModelOptions()
+    this.aiOptionsApi
+      .getOptions()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isAiModelOptionsLoading.set(false))
@@ -1281,13 +1283,13 @@ export class FlowExplorerPageComponent implements OnInit {
 
   private startPolling(jobId: string): void {
     this.stopPolling();
-    this.pollingTimer = setInterval(() => this.refreshJob(jobId), POLL_INTERVAL_MS);
-    this.refreshJob(jobId);
-  }
-
-  private refreshJob(jobId: string): void {
-    this.flowExplorerApi
-      .getJob(jobId)
+    this.pollingSubscription = this.pollingService
+      .poll({
+        load: () => this.flowExplorerApi.getJob(jobId),
+        isTerminal: (snapshot) =>
+          this.isTerminalJobStatus(snapshot.status) && !this.hasActiveChat(snapshot),
+        intervalMs: POLL_INTERVAL_MS
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (snapshot) => {
@@ -1296,9 +1298,6 @@ export class FlowExplorerPageComponent implements OnInit {
             exportedAt: '',
             fileName: ''
           });
-          if (this.isTerminalJobStatus(snapshot.status) && !this.hasActiveChat(snapshot)) {
-            this.stopPolling();
-          }
         },
         error: (error: HttpErrorResponse) => {
           this.stopPolling();
@@ -1308,11 +1307,8 @@ export class FlowExplorerPageComponent implements OnInit {
   }
 
   private stopPolling(): void {
-    if (this.pollingTimer === null) {
-      return;
-    }
-    clearInterval(this.pollingTimer);
-    this.pollingTimer = null;
+    this.pollingSubscription?.unsubscribe();
+    this.pollingSubscription = undefined;
   }
 
   private clearResultCopyFeedback(): void {

@@ -14,6 +14,7 @@ import {
   LocalAnalysisRunDetailResponse
 } from '../../core/models/analysis.models';
 import { AnalysisApiService } from '../../core/services/analysis-api.service';
+import { AiOptionsApiService } from '../../core/services/ai-options-api.service';
 import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-history-api.service';
 import { GithubAuthService } from '../../core/services/github-auth.service';
 import { buildExportEnvelope } from '../../core/utils/analysis-import-export.utils';
@@ -25,14 +26,14 @@ describe('AnalysisConsoleComponent auth flow', () => {
   });
 
   it('should show local token badge and load AI model options', async () => {
-    const { fixture, analysisApi } = await createComponent(localStatus());
+    const { fixture, aiOptionsApi } = await createComponent(localStatus());
 
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Copilot: token lokalny');
-    expect(analysisApi.getAiModelOptions).toHaveBeenCalledTimes(1);
+    expect(aiOptionsApi.getOptions).toHaveBeenCalledTimes(1);
   });
 
   it('should not show a ready kicker before analysis starts', async () => {
@@ -50,7 +51,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
   });
 
   it('should show GitHub connect CTA and skip model options when disconnected', async () => {
-    const { fixture, analysisApi } = await createComponent(disconnectedStatus());
+    const { fixture, aiOptionsApi } = await createComponent(disconnectedStatus());
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -60,11 +61,11 @@ describe('AnalysisConsoleComponent auth flow', () => {
       'Połącz konto GitHub, aby uruchomić analizę AI przez Copilot.'
     );
     expect(fixture.nativeElement.textContent).toContain('Połącz GitHub');
-    expect(analysisApi.getAiModelOptions).not.toHaveBeenCalled();
+    expect(aiOptionsApi.getOptions).not.toHaveBeenCalled();
   });
 
   it('should show connected GitHub login and load AI model options', async () => {
-    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const { fixture, aiOptionsApi } = await createComponent(connectedStatus());
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -74,7 +75,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Zużycie Copilot będzie przypisane do tego konta GitHub.'
     );
-    expect(analysisApi.getAiModelOptions).toHaveBeenCalledTimes(1);
+    expect(aiOptionsApi.getOptions).toHaveBeenCalledTimes(1);
   });
 
   it('should show loaders while AI model options are loading', async () => {
@@ -596,10 +597,12 @@ describe('AnalysisConsoleComponent auth flow', () => {
   ) {
     const analysisApi = {
       getInputOptions: vi.fn(() => routeOptions.inputOptions$ ?? of(inputOptions())),
-      getAiModelOptions: vi.fn(() => aiModelOptions$),
       startAnalysis: vi.fn(() => of(queuedJob())),
       getAnalysis: vi.fn(() => of(routeOptions.liveJob ?? queuedJob())),
       sendChatMessage: vi.fn(() => of(queuedJob()))
+    };
+    const aiOptionsApi = {
+      getOptions: vi.fn(() => aiModelOptions$)
     };
     const historyApi = {
       getRun: vi.fn(() => of(routeOptions.localRunDetail ?? localRunDetail())),
@@ -632,6 +635,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
           }
         },
         { provide: AnalysisApiService, useValue: analysisApi },
+        { provide: AiOptionsApiService, useValue: aiOptionsApi },
         { provide: AnalysisRunHistoryApiService, useValue: historyApi },
         { provide: GithubAuthService, useValue: githubAuth }
       ]
@@ -640,6 +644,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     return {
       fixture: TestBed.createComponent(AnalysisConsoleComponent),
       analysisApi,
+      aiOptionsApi,
       historyApi,
       githubAuth,
       router: TestBed.inject(Router)

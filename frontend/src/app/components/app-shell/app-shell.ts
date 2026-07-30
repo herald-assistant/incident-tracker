@@ -80,6 +80,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: 'fact_check',
         reloadOnActiveClick: true
       },
+      {
+        label: 'Runtime Configuration Verification',
+        route: '/runtime-configuration-verification',
+        icon: 'difference',
+        reloadOnActiveClick: true
+      },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
     ]
   },
@@ -90,6 +96,11 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'GitLab Source', route: '/gitlab', icon: 'source' },
       { label: 'Jira Source', route: '/jira', icon: 'assignment' },
       { label: 'Confluence Source', route: '/confluence', icon: 'article' },
+      {
+        label: 'Runtime Configuration',
+        route: '/runtime-configuration-tools',
+        icon: 'security'
+      },
       { label: 'Database Tools', route: '/database', icon: 'database' },
       { label: 'Operational Context', route: '/operational-context', icon: 'hub' }
     ]

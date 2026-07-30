@@ -28,9 +28,10 @@ platforma analityczna ma obslugiwac wiele sposobow zadawania pytan o system.
 
 Glowny shell UI jest zorganizowany wokol trzech grup:
 
-- `Analysis Features` - dedykowane feature'y pracy operatora/zespolu, na razie
-  `Incident Analysis`, `Flow Explorer` i `Change Verification` oraz przyszle
-  miejsce na Data Diagnostics.
+- `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
+  `Incident Analysis`, `Flow Explorer`, `Change Verification` i
+  `Runtime Configuration Verification` oraz przyszle miejsce na Data
+  Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
   i Operational Context. Te widoki sluza do testow, debugowania i recznego
@@ -118,6 +119,22 @@ material zadania, instrukcje repozytorium oraz evidence implementacyjne, aby
 pokazac zgodnosc, rozbieznosci i ograniczenia widocznosci. Dalsze inkrementy
 powinny wynikac z `../needs/change-verification.md` oraz osobno zatwierdzonych
 planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
+
+### Runtime Configuration Verification
+
+Administrator porownuje runtime configuration wybranego `internal-system`
+pomiedzy branchami `devX` i `zt00X`. Wynik laczy dwa rownorzedne, ale jawnie
+rozdzielone spojrzenia:
+
+- niemutowalny, deterministyczny diff i findings z pokryciem zrodel,
+- interpretacje AI jako druga pare oczu, z agreement/disagreement i jawnymi
+  ograniczeniami widocznosci.
+
+Tryb `BASIC` pracuje tylko na sanitizowanym obrazie konfiguracji. Tryb `DEEP`
+dodatkowo korzysta z systemu, code-search scope, kodu oraz resolved ownership,
+aby wyjasnic znaczenie rozjazdu i wskazac handoff. Repozytorium konfiguracji
+moze lezec na innej nazwanej instancji GitLab niz kod; raw values i sekrety
+nie przekraczaja deterministycznej granicy feature'a.
 
 ### Functional logic explorer
 

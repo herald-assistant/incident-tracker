@@ -31,8 +31,9 @@ feature analityczny
   -> local workspace
 ```
 
-Incident Analysis, Flow Explorer i Change Verification sa rodzenstwem.
-Zaden z nich nie jest generycznym core dla pozostalych.
+Incident Analysis, Flow Explorer, Change Verification i Runtime Configuration
+Verification sa rodzenstwem. Zaden z nich nie jest generycznym core dla
+pozostalych.
 
 ## Docelowe warstwy backendu
 
@@ -250,6 +251,13 @@ flowchart LR
 Feature pozostaje composition rootem swojego use case'u. Platforma i tools
 wykonuja przekazana konfiguracje; nie rekonstruuja decyzji feature'a z nazw
 tooli, evidence albo endpointu.
+
+Runtime Configuration Verification realizuje ten graf bez dodatkowej warstwy
+posredniej: feature posiada parsing/diff, orchestration, prompt, skille,
+policy, persistence codec i API; korzysta z nazwanej integracji GitLab dla
+repozytorium konfiguracji, neutralnego GitLaba i Operational Context dla
+`DEEP`, platformy Copilot oraz `localworkspace`. Test architektoniczny blokuje
+importy do sibling feature'ow i odwrotne zaleznosci reusable warstw.
 
 ## Frontend
 
