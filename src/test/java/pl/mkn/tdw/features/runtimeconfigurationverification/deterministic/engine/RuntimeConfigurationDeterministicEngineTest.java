@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationChangeKind;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicStatus;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationFinding;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationFindingSeverity;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationSensitivity;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationNode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.parse.ParsedConfigurationFile;
@@ -221,6 +223,73 @@ class RuntimeConfigurationDeterministicEngineTest {
                 .anyMatch(finding -> finding.code().equals("UNRESOLVED_REFERENCE")));
         assertTrue(context.findings().stream()
                 .anyMatch(finding -> finding.code().equals("TARGET_YAML_PARSE_ERROR")));
+    }
+
+    @Test
+    void shouldCollapseParserCausedReferenceAndEscalateHardcodedSensitiveAdditions() {
+        var source = snapshot(
+                "dev1",
+                "locals {}",
+                "locals {}",
+                "app:\n  enabled: true"
+        );
+        var target = snapshot(
+                "dev2",
+                """
+                        locals {
+                          endpoints = {
+                            draftDocumentParentNodeId: "literal-node-id"
+                          }
+                        }
+                        """,
+                "locals {}",
+                """
+                        spring:
+                          rabbitmq:
+                            username: literal-user
+                            password: literal-password
+                        service:
+                          token: ${SERVICE_TOKEN}
+                        integration:
+                          docGen:
+                            draftDocumentParentNodeId: ${local.endpoints.draftDocumentParentNodeId}
+                        """
+        );
+
+        var context = engine.build(
+                scope(),
+                coverage("dev1"),
+                coverage("dev2"),
+                source,
+                target
+        );
+
+        assertEquals(RuntimeConfigurationDeterministicStatus.INCOMPLETE, context.status());
+        var parserFinding = context.findings().stream()
+                .filter(finding -> finding.code().equals("TARGET_VAR_UNSUPPORTED_SYNTAX"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(RuntimeConfigurationFindingSeverity.ERROR, parserFinding.severity());
+        assertEquals("local.endpoints.draftDocumentParentNodeId", parserFinding.path());
+        assertEquals("global.var", parserFinding.filePath());
+        assertEquals(3, parserFinding.line());
+        assertEquals(1, parserFinding.referenceIds().size());
+        assertFalse(context.findings().stream()
+                .anyMatch(finding -> finding.code().equals("UNRESOLVED_REFERENCE")));
+
+        var hardcodedSensitiveFindings = context.findings().stream()
+                .filter(finding -> finding.code().equals("HARDCODED_SENSITIVE_VALUE_ADDED"))
+                .toList();
+        assertEquals(2, hardcodedSensitiveFindings.size());
+        assertTrue(hardcodedSensitiveFindings.stream()
+                .allMatch(finding -> finding.severity() == RuntimeConfigurationFindingSeverity.ERROR));
+        assertTrue(hardcodedSensitiveFindings.stream()
+                .map(RuntimeConfigurationFinding::path)
+                .toList()
+                .containsAll(List.of("spring.rabbitmq.username", "spring.rabbitmq.password")));
+        assertTrue(context.findings().stream()
+                .anyMatch(finding -> finding.code().equals("SENSITIVE_VALUE_CHANGE")
+                        && finding.path().equals("service.token")));
     }
 
     private ParsedConfigurationSnapshot snapshot(

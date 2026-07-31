@@ -430,11 +430,22 @@
                       <span [attr.class]="statusClass(finding.severity)">{{ statusLabel(finding.severity) }}</span>
                       <code>{{ finding.path }}</code>
                     </div>
-                    <h4>{{ statusLabel(finding.code) }}</h4>
+                    <h4>{{ findingTitle(finding) }}</h4>
+                    @if (findingDescription(finding); as description) {
+                      <p>{{ description }}</p>
+                    }
+                    @if (findingLocation(finding); as location) {
+                      <small><strong>Lokalizacja:</strong> <code>{{ location }}</code></small>
+                    }
                     <small>{{ finding.findingId }}</small>
                     <div class="reference-links">
                       @for (reference of finding.differenceIds; track reference) {
                         <button type="button" (click)="focusReference(reference)">{{ reference }}</button>
+                      }
+                      @for (reference of finding.referenceIds; track reference) {
+                        <button type="button" (click)="focusReference(reference)">
+                          Reference · {{ reference }}
+                        </button>
                       }
                     </div>
                   </article>

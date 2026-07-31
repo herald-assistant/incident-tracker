@@ -81,6 +81,23 @@ class RuntimeConfigurationVarParserTest {
         assertTrue(parsed.issues().isEmpty());
     }
 
+    @Test
+    void shouldKeepKeyAndLineForUnsupportedColonAssignment() {
+        var parsed = parser.parse(RuntimeConfigurationFileRole.GLOBAL_VAR, "global.var", """
+                locals {
+                  draftDocumentParentNodeId: "literal-value"
+                }
+                """);
+
+        var issue = parsed.issues().stream()
+                .filter(candidate -> candidate.code().equals("VAR_UNSUPPORTED_SYNTAX"))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals("draftDocumentParentNodeId", issue.path());
+        assertEquals(2, issue.line());
+    }
+
     private static ParsedConfigurationNode find(ParsedConfigurationNode node, String path) {
         if (node.path().equals(path)) {
             return node;

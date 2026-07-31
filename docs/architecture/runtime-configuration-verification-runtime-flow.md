@@ -81,6 +81,13 @@ normalizowane do sciezek parametrow. Jeden deterministic build tworzy:
 Niesensytywne wartosci dostaja pseudonimy stabilne tylko w ramach runu.
 Wartosci sensytywne nie dostaja raw value, hash ani tokenu porownawczego.
 
+Finding parsera zachowuje lokalizacje plik:linia. Gdy nieobslugiwana skladnia
+konkretnego klucza bezposrednio powoduje unresolved reference, wynik publikuje
+jeden finding root-cause z powiazanym `referenceId`, zamiast liczyc skutek jako
+drugi niezalezny problem. Literalne dodanie wartosci sklasyfikowanej jako
+sensytywna ma kod `HARDCODED_SENSITIVE_VALUE_ADDED` i severity `ERROR`;
+placeholder pozostaje odroznialny od hardcoded value.
+
 ## Tryb BASIC
 
 `BASIC` konczy run po `DIFF`. Nie rozwiazuje auth Copilota, nie buduje promptu

@@ -396,6 +396,33 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     return finding.findingId;
   }
 
+  protected findingTitle(finding: RuntimeConfigurationFinding): string {
+    if (finding.code.endsWith('VAR_UNSUPPORTED_SYNTAX')) {
+      return 'Błędna składnia blokuje rozwiązanie referencji';
+    }
+    if (finding.code === 'HARDCODED_SENSITIVE_VALUE_ADDED') {
+      return 'Dodano literalną wartość wrażliwą';
+    }
+    return this.statusLabel(finding.code);
+  }
+
+  protected findingDescription(finding: RuntimeConfigurationFinding): string | null {
+    if (finding.code.endsWith('VAR_UNSUPPORTED_SYNTAX') && finding.referenceIds.length > 0) {
+      return 'Nierozwiązana referencja jest skutkiem tego samego błędu składni.';
+    }
+    if (finding.code === 'HARDCODED_SENSITIVE_VALUE_ADDED') {
+      return 'W target dodano wartość bez bezpiecznego placeholdera. Popraw ją przed wdrożeniem.';
+    }
+    return null;
+  }
+
+  protected findingLocation(finding: RuntimeConfigurationFinding): string | null {
+    if (!finding.filePath) {
+      return null;
+    }
+    return finding.line ? `${finding.filePath}:${finding.line}` : finding.filePath;
+  }
+
   ngOnDestroy(): void {
     this.stopPolling();
   }

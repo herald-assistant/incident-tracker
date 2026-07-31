@@ -231,6 +231,45 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(compiled.textContent).not.toContain('Systemy, kod i ownership');
   });
 
+  it('should present parser root cause and hardcoded sensitive additions as critical findings', () => {
+    const criticalResult = basicResult();
+    criticalResult.deterministicResult.findings = [
+      {
+        findingId: 'finding-parser',
+        code: 'TARGET_VAR_UNSUPPORTED_SYNTAX',
+        severity: 'ERROR',
+        path: 'local.endpoints.docGen.draftDocumentParentNodeId',
+        differenceIds: [],
+        referenceIds: ['reference-39'],
+        filePath: 'global.var',
+        line: 196
+      },
+      {
+        findingId: 'finding-secret',
+        code: 'HARDCODED_SENSITIVE_VALUE_ADDED',
+        severity: 'ERROR',
+        path: 'spring.rabbitmq.password',
+        differenceIds: ['difference-1'],
+        referenceIds: []
+      }
+    ];
+    fixture.componentInstance.job.set(job({
+      mode: 'BASIC',
+      status: 'COMPLETED_WITH_LIMITATIONS',
+      result: criticalResult,
+      report: null
+    }));
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Błędna składnia blokuje rozwiązanie referencji');
+    expect(compiled.textContent).toContain('Nierozwiązana referencja jest skutkiem tego samego błędu składni.');
+    expect(compiled.textContent).toContain('global.var:196');
+    expect(compiled.textContent).toContain('Dodano literalną wartość wrażliwą');
+    expect(compiled.textContent).toContain('Popraw ją przed wdrożeniem.');
+    expect(buttonContaining(compiled, 'Reference · reference-39')).not.toBeNull();
+  });
+
   it('should expose disagreement, unknown ownership and code-grounding navigation', () => {
     const base = result();
     const deep = base.deepAnalysis!;

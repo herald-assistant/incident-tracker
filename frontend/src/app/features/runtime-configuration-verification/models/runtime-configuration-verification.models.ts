@@ -141,6 +141,8 @@ export interface RuntimeConfigurationFinding {
   path: string;
   differenceIds: string[];
   referenceIds: string[];
+  filePath?: string | null;
+  line?: number | null;
 }
 
 export interface RuntimeConfigurationReference {

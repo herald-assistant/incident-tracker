@@ -456,15 +456,27 @@ public class RuntimeConfigurationDeterministicEngine {
         if (!targetCoverage.complete()) {
             addFinding(findings, "INCOMPLETE_TARGET_COVERAGE", RuntimeConfigurationFindingSeverity.ERROR, "", List.of(), List.of());
         }
-        addParserFindings(findings, source, "SOURCE");
-        addParserFindings(findings, target, "TARGET");
+        var parserCausedReferenceIds = new LinkedHashSet<String>();
+        parserCausedReferenceIds.addAll(addParserFindings(
+                findings, source, "SOURCE", false, references
+        ));
+        parserCausedReferenceIds.addAll(addParserFindings(
+                findings, target, "TARGET", true, references
+        ));
+
+        var targetLeaves = scalarMap(target);
 
         for (var difference : state.differences) {
             if (difference.sensitivity() == RuntimeConfigurationSensitivity.SENSITIVE) {
+                var hardcodedAddition = hardcodedSensitiveAddition(difference, targetLeaves);
                 addFinding(
                         findings,
-                        "SENSITIVE_VALUE_CHANGE",
-                        RuntimeConfigurationFindingSeverity.WARNING,
+                        hardcodedAddition
+                                ? "HARDCODED_SENSITIVE_VALUE_ADDED"
+                                : "SENSITIVE_VALUE_CHANGE",
+                        hardcodedAddition
+                                ? RuntimeConfigurationFindingSeverity.ERROR
+                                : RuntimeConfigurationFindingSeverity.WARNING,
                         difference.path(),
                         List.of(difference.differenceId()),
                         List.of()
@@ -501,8 +513,9 @@ public class RuntimeConfigurationDeterministicEngine {
                         List.of(),
                         List.of(reference.referenceId())
                 );
-            } else if (reference.sourceStatus() == RuntimeConfigurationReferenceStatus.UNRESOLVED
-                    || reference.targetStatus() == RuntimeConfigurationReferenceStatus.UNRESOLVED) {
+            } else if ((reference.sourceStatus() == RuntimeConfigurationReferenceStatus.UNRESOLVED
+                    || reference.targetStatus() == RuntimeConfigurationReferenceStatus.UNRESOLVED)
+                    && !parserCausedReferenceIds.contains(reference.referenceId())) {
                 addFinding(
                         findings,
                         "UNRESOLVED_REFERENCE",
@@ -519,25 +532,72 @@ public class RuntimeConfigurationDeterministicEngine {
         return List.copyOf(findings);
     }
 
-    private void addParserFindings(
+    private Set<String> addParserFindings(
             List<RuntimeConfigurationFinding> findings,
             ParsedConfigurationSnapshot snapshot,
-            String branchRole
+            String branchRole,
+            boolean targetSide,
+            List<RuntimeConfigurationReference> references
     ) {
+        var linkedReferenceIds = new LinkedHashSet<String>();
         for (var file : snapshot.files()) {
             for (var issue : file.issues()) {
+                var matchingReferences = references.stream()
+                        .filter(reference -> targetSide
+                                ? reference.targetStatus() == RuntimeConfigurationReferenceStatus.UNRESOLVED
+                                : reference.sourceStatus() == RuntimeConfigurationReferenceStatus.UNRESOLVED)
+                        .filter(reference -> matchesIssuePath(reference.targetPath(), issue.path()))
+                        .toList();
+                var linkedReferences = matchingReferences.size() == 1
+                        ? matchingReferences
+                        : List.<RuntimeConfigurationReference>of();
+                var referenceIds = linkedReferences.stream()
+                        .map(RuntimeConfigurationReference::referenceId)
+                        .toList();
+                linkedReferenceIds.addAll(referenceIds);
                 addFinding(
                         findings,
                         branchRole + "_" + issue.code(),
-                        issue.code().contains("UNSUPPORTED")
-                                ? RuntimeConfigurationFindingSeverity.WARNING
-                                : RuntimeConfigurationFindingSeverity.ERROR,
-                        issue.path(),
+                        !linkedReferences.isEmpty() || !issue.code().contains("UNSUPPORTED")
+                                ? RuntimeConfigurationFindingSeverity.ERROR
+                                : RuntimeConfigurationFindingSeverity.WARNING,
+                        linkedReferences.isEmpty()
+                                ? issue.path()
+                                : linkedReferences.get(0).targetPath(),
                         List.of(),
-                        List.of()
+                        referenceIds,
+                        file.path(),
+                        issue.line()
                 );
             }
         }
+        return Set.copyOf(linkedReferenceIds);
+    }
+
+    private boolean matchesIssuePath(String referencePath, String issuePath) {
+        return issuePath != null
+                && !issuePath.isBlank()
+                && referencePath != null
+                && (referencePath.equals(issuePath) || referencePath.endsWith("." + issuePath));
+    }
+
+    private boolean hardcodedSensitiveAddition(
+            RuntimeConfigurationDifference difference,
+            Map<NodeLocation, ParsedConfigurationNode> targetLeaves
+    ) {
+        if (difference.kind() != RuntimeConfigurationChangeKind.ADDED) {
+            return false;
+        }
+        var targetNode = targetLeaves.get(new NodeLocation(
+                difference.role(), difference.documentIndex(), difference.path()
+        ));
+        if (targetNode == null || targetNode.scalarValue() == null) {
+            return false;
+        }
+        if (targetNode.scalarValue() instanceof String value) {
+            return !value.isBlank() && !placeholder(value);
+        }
+        return true;
     }
 
     private void addEnvironmentFindings(
@@ -929,13 +989,28 @@ public class RuntimeConfigurationDeterministicEngine {
             List<String> differenceIds,
             List<String> referenceIds
     ) {
+        addFinding(findings, code, severity, path, differenceIds, referenceIds, null, null);
+    }
+
+    private void addFinding(
+            List<RuntimeConfigurationFinding> findings,
+            String code,
+            RuntimeConfigurationFindingSeverity severity,
+            String path,
+            List<String> differenceIds,
+            List<String> referenceIds,
+            String filePath,
+            Integer line
+    ) {
         findings.add(new RuntimeConfigurationFinding(
                 "finding-" + String.format("%03d", findings.size() + 1),
                 code,
                 severity,
                 path,
                 differenceIds,
-                referenceIds
+                referenceIds,
+                filePath,
+                line
         ));
     }
 
