@@ -1,0 +1,251 @@
+<section class="configuration-diff" aria-labelledby="configuration-diff-heading">
+  <header class="configuration-diff__header">
+    <div>
+      <h3 id="configuration-diff-heading">Różnice w plikach konfiguracyjnych</h3>
+      <p>
+        {{ totalChanges() }} zmian ·
+        {{ projection()?.sourceBranch || 'source' }} →
+        {{ projection()?.targetBranch || 'target' }}
+      </p>
+    </div>
+    @if (projection()) {
+      <div class="view-switch" role="group" aria-label="Zakres prezentacji konfiguracji">
+        <button
+          type="button"
+          [class.view-switch__active]="view() === 'CHANGES'"
+          [attr.aria-pressed]="view() === 'CHANGES'"
+          (click)="selectView('CHANGES')"
+        >
+          Zmiany
+        </button>
+        <button
+          type="button"
+          [class.view-switch__active]="view() === 'FULL'"
+          [attr.aria-pressed]="view() === 'FULL'"
+          (click)="selectView('FULL')"
+        >
+          Cały plik
+        </button>
+      </div>
+    }
+  </header>
+
+  @if (projection()) {
+    <div class="legend" aria-label="Legenda zmian">
+      <span><span aria-hidden="true">🔴</span> dodano, usunięto lub zmieniono typ</span>
+      <span><span aria-hidden="true">🟡</span> zmieniono wartość lub wartość efektywną</span>
+      <span>Bez symbolu · bez zmian / kontekst</span>
+    </div>
+
+    <div class="file-list">
+      @for (renderFile of files(); track renderFile.key) {
+        <details class="configuration-file" open>
+          <summary>
+            <span class="material-symbols-outlined" aria-hidden="true">description</span>
+            <span>
+              <strong>{{ fileLabel(renderFile.file) }}</strong>
+              <small>
+                {{ roleLabel(renderFile.file.role) }} · {{ renderFile.file.format }} ·
+                {{ renderFile.changeCount }} zmian
+              </small>
+            </span>
+            <span class="presence">
+              source: {{ renderFile.file.sourcePresent ? 'jest' : 'ABSENT' }} ·
+              target: {{ renderFile.file.targetPresent ? 'jest' : 'ABSENT' }}
+            </span>
+          </summary>
+
+          @if (renderFile.file.sourcePath !== renderFile.file.targetPath) {
+            <div class="path-comparison">
+              <span><small>source</small><code>{{ renderFile.file.sourcePath || 'ABSENT' }}</code></span>
+              <span><small>target</small><code>{{ renderFile.file.targetPath || 'ABSENT' }}</code></span>
+            </div>
+          }
+
+          <div class="document-list">
+            @for (renderDocument of renderFile.documents; track renderDocument.key) {
+              <details class="configuration-document" open>
+                <summary>
+                  <strong>Dokument {{ renderDocument.document.documentIndex + 1 }}</strong>
+                  <span>{{ renderDocument.changeCount }} zmian</span>
+                  <span>
+                    source: {{ renderDocument.document.sourcePresent ? 'jest' : 'ABSENT' }} ·
+                    target: {{ renderDocument.document.targetPresent ? 'jest' : 'ABSENT' }}
+                  </span>
+                </summary>
+
+                @if (renderDocument.document.documentIndex > 0) {
+                  <div class="document-separator" aria-label="Separator dokumentu YAML">---</div>
+                }
+
+                @if (profileVisible(renderDocument.document)) {
+                  <div class="profile-line">
+                    <code>spring.config.activate.on-profile:</code>
+                    <span>
+                      <small>source</small>
+                      <code>{{ formatValue(renderDocument.document.sourceProfile) }}</code>
+                    </span>
+                    <span aria-hidden="true">→</span>
+                    <span>
+                      <small>target</small>
+                      <code>{{ formatValue(renderDocument.document.targetProfile) }}</code>
+                    </span>
+                  </div>
+                }
+
+                <div
+                  class="configuration-code"
+                  [attr.aria-label]="'Zawartość ' + fileLabel(renderFile.file)"
+                >
+                  @for (row of renderDocument.rows; track row.key) {
+                    <article
+                      class="configuration-row"
+                      [class.configuration-row--focused]="isFocused(row)"
+                      [class.reference-focused]="isFocused(row)"
+                      [class.configuration-row--context]="!row.changed && row.descendantChanged"
+                      [style.--depth]="row.depth"
+                    >
+                      @for (differenceId of row.node.differenceIds; track differenceId) {
+                        <span
+                          class="difference-anchor"
+                          [id]="differenceId"
+                          [attr.data-difference-id]="differenceId"
+                          [attr.aria-label]="'Różnica ' + differenceId"
+                          tabindex="-1"
+                        ></span>
+                      }
+
+                      <div class="configuration-row__line">
+                        <span
+                          class="change-marker"
+                          [class]="markerClass(row.node.changeKind)"
+                          [attr.title]="changeLabel(row.node.changeKind)"
+                        >
+                          <span aria-hidden="true">{{ marker(row.node.changeKind) }}</span>
+                          <span class="sr-only">{{ changeLabel(row.node.changeKind) }}</span>
+                        </span>
+                        <code class="syntax-name">{{ syntaxName(renderFile.file, row) }}</code>
+
+                        @if (sameSides(row.node)) {
+                          <code class="configuration-value">{{ formatValue(row.node.source) }}</code>
+                        } @else {
+                          <span class="value-comparison">
+                            <span>
+                              <small>source</small>
+                              <code>{{ formatValue(row.node.source) }}</code>
+                            </span>
+                            <span aria-hidden="true">→</span>
+                            <span>
+                              <small>target</small>
+                              <code>{{ formatValue(row.node.target) }}</code>
+                            </span>
+                          </span>
+                        }
+
+                        @if (row.changed) {
+                          <span [class]="'change-label ' + markerClass(row.node.changeKind)">
+                            {{ changeLabel(row.node.changeKind) }}
+                          </span>
+                        } @else if (row.descendantChanged) {
+                          <span class="change-label change-label--context">kontekst</span>
+                        }
+
+                        @if (view() === 'FULL' && row.fullyUnchangedBranch) {
+                          <button
+                            type="button"
+                            class="branch-toggle"
+                            [attr.aria-expanded]="unchangedBranchExpanded(row)"
+                            (click)="toggleUnchangedBranch($event, row)"
+                          >
+                            {{
+                              unchangedBranchExpanded(row)
+                                ? 'Zwiń'
+                                : 'Rozwiń ' + row.hiddenDescendantCount + ' niezmienionych'
+                            }}
+                          </button>
+                        }
+                      </div>
+
+                      @if (row.annotations.length) {
+                        <div class="annotation-list" aria-label="Interpretacje AI dla tej różnicy">
+                          @for (annotation of row.annotations; track annotation.sourceId) {
+                            <button
+                              type="button"
+                              class="annotation"
+                              (click)="chooseAnnotation(annotation)"
+                            >
+                              <span>AI INTERPRETATION · {{ annotationLabel(annotation) }}</span>
+                              <strong>{{ annotation.comment }}</strong>
+                              <small>
+                                @if (annotation.hypothesis) {
+                                  hipoteza
+                                } @else {
+                                  ugruntowane
+                                }
+                                @if (annotation.confidence) {
+                                  · {{ annotation.confidence }}
+                                }
+                                · pokaż pełny kontekst
+                              </small>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </article>
+                  } @empty {
+                    <p class="empty-inline">
+                      {{
+                        view() === 'CHANGES'
+                          ? 'W tym dokumencie nie ma zmian.'
+                          : 'Dokument nie zawiera elementów.'
+                      }}
+                    </p>
+                  }
+                </div>
+              </details>
+            }
+          </div>
+        </details>
+      } @empty {
+        <p class="empty-inline">
+          {{
+            view() === 'CHANGES'
+              ? 'Brak różnic konfiguracyjnych. Przełącz na „Cały plik”, aby zobaczyć wspólną konfigurację.'
+              : 'Nie znaleziono plików konfiguracyjnych do wyświetlenia.'
+          }}
+        </p>
+      }
+    </div>
+  } @else {
+    <div class="legacy-notice" role="note">
+      Ten zapis powstał przed wprowadzeniem widoku plikowego. Pokazujemy dostępny,
+      uproszczony wykaz różnic bez wartości source/target.
+    </div>
+    @if (fallbackDifferences().length) {
+      <div class="legacy-differences">
+        @for (difference of fallbackDifferences(); track difference.differenceId) {
+          <article
+            [id]="difference.differenceId"
+            [attr.data-difference-id]="difference.differenceId"
+            [class.configuration-row--focused]="focusedReferenceId() === difference.differenceId"
+          >
+            <span
+              class="change-marker"
+              [class]="markerClass(difference.kind)"
+              [attr.title]="changeLabel(difference.kind)"
+            >
+              <span aria-hidden="true">{{ marker(difference.kind) }}</span>
+              <span class="sr-only">{{ changeLabel(difference.kind) }}</span>
+            </span>
+            <code>{{ difference.path }}</code>
+            <span>{{ roleLabel(difference.role) }} · dokument {{ difference.documentIndex + 1 }}</span>
+            <strong>{{ changeLabel(difference.kind) }}</strong>
+            <small>{{ difference.differenceId }}</small>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="empty-inline">Brak zarejestrowanych różnic.</p>
+    }
+  }
+</section>

@@ -21,6 +21,14 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .SanitizedConfigurationDocument;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .SanitizedConfigurationNode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffDocument;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffNode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationDeterministicBuildResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
         .RuntimeConfigurationDeterministicContextService;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
@@ -36,6 +44,8 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.workbench.api
         .RuntimeConfigurationWorkbenchAnonymizationPage.ValueRepresentation;
 import pl.mkn.tdw.features.runtimeconfigurationverification.workbench.api
         .RuntimeConfigurationWorkbenchArtifactResponse;
+import pl.mkn.tdw.features.runtimeconfigurationverification.workbench.api
+        .RuntimeConfigurationWorkbenchConfigurationDiffResponse;
 import pl.mkn.tdw.features.runtimeconfigurationverification.workbench.api
         .RuntimeConfigurationWorkbenchDeepResponse;
 import pl.mkn.tdw.features.runtimeconfigurationverification.workbench.api
@@ -57,7 +67,7 @@ import java.util.List;
 public class RuntimeConfigurationWorkbenchPreviewService {
 
     private static final String DEEP_FAILURE_LIMIT =
-            "DEEP enrichment did not complete; deterministic mapping and BASIC-safe AI input remain available.";
+            "DEEP enrichment did not complete; deterministic projection and sanitized AI input remain available.";
 
     private final RuntimeConfigurationScopeResolver scopeResolver;
     private final RuntimeConfigurationDeterministicContextService deterministicContextService;
@@ -69,20 +79,29 @@ public class RuntimeConfigurationWorkbenchPreviewService {
             RuntimeConfigurationWorkbenchPreviewRequest request
     ) {
         var scope = scopeResolver.resolve(request.repositoryId(), request.systemId());
-        var deterministic = buildDeterministic(request, scope);
+        var deterministicBuild = buildDeterministic(request, scope);
+        var deterministic = deterministicBuild.context();
+        var configurationDiff = deterministicBuild.configurationDiff();
         var visibilityLimits = new LinkedHashSet<String>();
-        var deepContext = buildDeepContext(request, deterministic, visibilityLimits);
-        var preparation = preparePrompt(request, deterministic, deepContext);
-        visibilityLimits.addAll(preparation.visibilityLimits());
-        if (deepContext != null) {
-            visibilityLimits.addAll(deepContext.visibilityLimits());
+        RuntimeConfigurationDeepContext deepContext = null;
+        RuntimeConfigurationPromptPreparation preparation = null;
+        List<RuntimeConfigurationWorkbenchMappingPage.Item> mappingItems = List.of();
+        List<RuntimeConfigurationWorkbenchAnonymizationPage.Item> anonymizationItems = List.of();
+        if (request.mode() == RuntimeConfigurationVerificationMode.DEEP) {
+            deepContext = buildDeepContext(request, deterministic, visibilityLimits);
+            preparation = preparePrompt(request, deterministic, deepContext);
+            visibilityLimits.addAll(preparation.visibilityLimits());
+            if (deepContext != null) {
+                visibilityLimits.addAll(deepContext.visibilityLimits());
+            }
+            mappingItems = mappingItems(deterministic.documents(), configurationDiff);
+            anonymizationItems = anonymizationItems(deterministic.documents());
         }
 
-        var mappingItems = mappingItems(deterministic.documents());
-        var anonymizationItems = anonymizationItems(deterministic.documents());
         var stored = previewStore.store(new RuntimeConfigurationWorkbenchPreviewSnapshot(
                 request.mode(),
                 deterministic,
+                configurationDiff,
                 deepContext,
                 preparation,
                 mappingItems,
@@ -101,21 +120,22 @@ public class RuntimeConfigurationWorkbenchPreviewService {
                 sourceSummary(deterministic),
                 new RuntimeConfigurationWorkbenchPreviewResponse.Counts(
                         deterministic.documents().size(),
-                        mappingItems.size(),
+                        nodeCount(configurationDiff),
                         deterministic.differences().size(),
                         deterministic.findings().size(),
                         deterministic.references().size()
                 ),
                 anonymizationSummary(anonymizationItems),
                 deepSummary(request.mode(), deepContext),
-                preparation.artifactContents().entrySet().stream()
+                preparation != null,
+                preparation != null ? preparation.artifactContents().entrySet().stream()
                         .map(entry -> new RuntimeConfigurationWorkbenchPreviewResponse.ArtifactSummary(
                                 entry.getKey(),
                                 mediaType(entry.getKey()),
                                 entry.getValue().length(),
                                 truncated(entry.getValue())
                         ))
-                        .toList(),
+                        .toList() : List.of(),
                 List.copyOf(visibilityLimits)
         );
     }
@@ -130,6 +150,16 @@ public class RuntimeConfigurationWorkbenchPreviewService {
         );
     }
 
+    public RuntimeConfigurationWorkbenchConfigurationDiffResponse configurationDiff(
+            String previewId
+    ) {
+        var snapshot = previewStore.require(previewId);
+        return new RuntimeConfigurationWorkbenchConfigurationDiffResponse(
+                previewId,
+                snapshot.configurationDiff()
+        );
+    }
+
     public RuntimeConfigurationWorkbenchMappingPage mapping(
             String previewId,
             int offset,
@@ -139,7 +169,7 @@ public class RuntimeConfigurationWorkbenchPreviewService {
         var snapshot = previewStore.require(previewId);
         var filtered = changedOnly
                 ? snapshot.mappingItems().stream()
-                        .filter(item -> item.relation() != RuntimeConfigurationChangeKind.UNCHANGED)
+                        .filter(item -> item.changeKind() != RuntimeConfigurationChangeKind.UNCHANGED)
                         .toList()
                 : snapshot.mappingItems();
         var page = page(filtered, offset, limit);
@@ -181,8 +211,17 @@ public class RuntimeConfigurationWorkbenchPreviewService {
 
     public RuntimeConfigurationWorkbenchAiInputResponse aiInput(String previewId) {
         var snapshot = previewStore.require(previewId);
+        if (snapshot.preparation() == null) {
+            return new RuntimeConfigurationWorkbenchAiInputResponse(
+                    previewId,
+                    false,
+                    0,
+                    null
+            );
+        }
         return new RuntimeConfigurationWorkbenchAiInputResponse(
                 previewId,
+                true,
                 snapshot.preparation().prompt().length(),
                 snapshot.preparation().prompt()
         );
@@ -193,7 +232,9 @@ public class RuntimeConfigurationWorkbenchPreviewService {
             String name
     ) {
         var snapshot = previewStore.require(previewId);
-        var content = snapshot.preparation().artifactContents().get(name);
+        var content = snapshot.preparation() != null
+                ? snapshot.preparation().artifactContents().get(name)
+                : null;
         if (content == null) {
             throw new RuntimeConfigurationWorkbenchPreviewNotFoundException();
         }
@@ -207,17 +248,19 @@ public class RuntimeConfigurationWorkbenchPreviewService {
         );
     }
 
-    private RuntimeConfigurationDeterministicContext buildDeterministic(
+    private RuntimeConfigurationDeterministicBuildResult buildDeterministic(
             RuntimeConfigurationWorkbenchPreviewRequest request,
             pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScope scope
     ) {
         try {
-            return RuntimeConfigurationVerificationSnapshotSanitizer.sanitize(
-                    deterministicContextService.build(
-                            scope,
-                            request.sourceBranch(),
-                            request.targetBranch()
-                    )
+            var build = deterministicContextService.build(
+                    scope,
+                    request.sourceBranch(),
+                    request.targetBranch()
+            );
+            return new RuntimeConfigurationDeterministicBuildResult(
+                    RuntimeConfigurationVerificationSnapshotSanitizer.sanitize(build.context()),
+                    build.configurationDiff()
             );
         } catch (RuntimeException exception) {
             throw safeFailure("deterministic", exception);
@@ -311,38 +354,83 @@ public class RuntimeConfigurationWorkbenchPreviewService {
     }
 
     private List<RuntimeConfigurationWorkbenchMappingPage.Item> mappingItems(
-            List<SanitizedConfigurationDocument> documents
+            List<SanitizedConfigurationDocument> documents,
+            RuntimeConfigurationDiffProjection configurationDiff
     ) {
         var items = new ArrayList<RuntimeConfigurationWorkbenchMappingPage.Item>();
         for (var document : documents) {
-            collectMapping(document, document.root(), 0, items);
+            var projected = projectionDocument(configurationDiff, document);
+            collectMapping(document, document.root(), projected.root(), 0, items);
         }
         return List.copyOf(items);
     }
 
     private void collectMapping(
             SanitizedConfigurationDocument document,
-            SanitizedConfigurationNode node,
+            SanitizedConfigurationNode sanitized,
+            RuntimeConfigurationDiffNode original,
             int depth,
             List<RuntimeConfigurationWorkbenchMappingPage.Item> items
     ) {
-        if (node == null) {
-            return;
+        if (sanitized == null || original == null
+                || sanitized.children().size() != original.children().size()) {
+            throw new IllegalArgumentException(
+                    "Operator projection does not match sanitized configuration tree"
+            );
         }
         items.add(new RuntimeConfigurationWorkbenchMappingPage.Item(
                 document.role(),
                 document.documentIndex(),
                 depth,
-                node.name(),
-                node.path(),
-                node.sourceType(),
-                node.targetType(),
-                node.relation(),
-                node.sensitivity()
+                original.name(),
+                original.path(),
+                sanitized.name(),
+                sanitized.path(),
+                sanitized.sourceType(),
+                sanitized.targetType(),
+                original.changeKind(),
+                sanitized.sensitivity(),
+                safeToken(sanitized.sensitivity(), sanitized.sourceValueToken()),
+                safeToken(sanitized.sensitivity(), sanitized.targetValueToken()),
+                original.differenceIds()
         ));
-        for (var child : node.children()) {
-            collectMapping(document, child, depth + 1, items);
+        for (var index = 0; index < sanitized.children().size(); index++) {
+            collectMapping(
+                    document,
+                    sanitized.children().get(index),
+                    original.children().get(index),
+                    depth + 1,
+                    items
+            );
         }
+    }
+
+    private RuntimeConfigurationDiffDocument projectionDocument(
+            RuntimeConfigurationDiffProjection configurationDiff,
+            SanitizedConfigurationDocument document
+    ) {
+        return configurationDiff.files().stream()
+                .filter(file -> file.role() == document.role())
+                .flatMap(file -> file.documents().stream())
+                .filter(candidate -> candidate.documentIndex() == document.documentIndex())
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Missing operator projection document for "
+                                + document.role()
+                                + " #"
+                                + document.documentIndex()
+                ));
+    }
+
+    private int nodeCount(RuntimeConfigurationDiffProjection configurationDiff) {
+        return configurationDiff.files().stream()
+                .flatMap(file -> file.documents().stream())
+                .mapToInt(document -> nodeCount(document.root()))
+                .sum();
+    }
+
+    private int nodeCount(RuntimeConfigurationDiffNode node) {
+        return 1 + node.children().stream().mapToInt(this::nodeCount).sum();
     }
 
     private List<RuntimeConfigurationWorkbenchAnonymizationPage.Item> anonymizationItems(

@@ -32,8 +32,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class RuntimeConfigurationCopilotRunRequestAssemblerTest {
@@ -45,39 +47,20 @@ class RuntimeConfigurationCopilotRunRequestAssemblerTest {
     Path tempDirectory;
 
     @Test
-    void shouldAssembleBasicWithOnlyReportToolsAndBasicSkill() {
+    void shouldRejectBasicBeforeCopilotAssembly() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
-        var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
-        when(toolFactory.createToolDefinitions(contextCaptor.capture(), eq(DESCRIPTION_CONTEXT)))
-                .thenReturn(registeredTools());
         var assembler = assembler(toolFactory);
 
-        var assembly = assembler.assemble(
+        assertThatThrownBy(() -> assembler.assemble(
                 "run-basic",
                 request(RuntimeConfigurationVerificationMode.BASIC),
                 RuntimeConfigurationAiTestFixtures.deterministic(RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED),
                 null,
                 preparation(),
                 AnalysisAiAuthRef.localToken(null)
-        );
-
-        assertThat(assembly.toolAccessPolicy().availableToolNames())
-                .containsExactly(
-                        CopilotReportToolNames.GET_CURRENT,
-                        CopilotReportToolNames.UPSERT_SECTION
-                );
-        assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames())
-                .contains("skill")
-                .doesNotContain(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK, OperationalContextToolNames.GET_ENTITY);
-        assertSelectedSkill(
-                assembly.runRequest().sessionConfigRequest().skillDirectories(),
-                RuntimeConfigurationCopilotRuntimeSkillNames.BASIC_REVIEW
-        );
-        var hidden = contextCaptor.getValue().hiddenContext();
-        assertThat(hidden.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS))
-                .isEqualTo(RuntimeConfigurationReportSectionIds.aiWritable(RuntimeConfigurationVerificationMode.BASIC));
-        assertThat(hidden.get(RuntimeConfigurationCopilotToolContextKeys.ALLOWED_REPOSITORIES))
-                .isEqualTo(List.of());
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("DEEP");
+        verifyNoInteractions(toolFactory);
     }
 
     @Test
@@ -118,6 +101,8 @@ class RuntimeConfigurationCopilotRunRequestAssemblerTest {
                 RuntimeConfigurationCopilotToolContextKeys.ALLOWED_OPERATIONAL_ENTITY_IDS
         )))
                 .contains("billing-api", "payments-api", "repository-1", "scope-1");
+        assertThat(hidden.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS))
+                .isEqualTo(RuntimeConfigurationReportSectionIds.aiWritable());
         assertThat(assembly.runRequest().initialReport().sections())
                 .extracting(section -> section.id())
                 .contains(RuntimeConfigurationReportSectionIds.OWNERSHIP_AND_HANDOFF);

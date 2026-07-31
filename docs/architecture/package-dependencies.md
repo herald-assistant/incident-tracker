@@ -257,7 +257,11 @@ posredniej: feature posiada parsing/diff, orchestration, prompt, skille,
 policy, persistence codec i API; korzysta z nazwanej integracji GitLab dla
 repozytorium konfiguracji, neutralnego GitLaba i Operational Context dla
 `DEEP`, platformy Copilot oraz `localworkspace`. Test architektoniczny blokuje
-importy do sibling feature'ow i odwrotne zaleznosci reusable warstw.
+importy do sibling feature'ow i odwrotne zaleznosci reusable warstw. Dodatkowa
+regula zabrania pakietowi
+`features.runtimeconfigurationverification.ai` importowania operatorskiej
+`deterministic.projection` z dokladnymi wartosciami oraz warstwy
+`presentation`; adnotacje DEEP sa laczone dopiero poza granica AI.
 
 ## Frontend
 

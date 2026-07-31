@@ -6,10 +6,18 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConf
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContextStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationDeterministicStatus;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationDeterministicBuildResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStartRequest;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationResult;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotation;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
@@ -49,6 +57,7 @@ public final class RuntimeConfigurationVerificationJobState {
     private String errorMessage;
     private String preparedPrompt;
     private RuntimeConfigurationDeterministicContext deterministic;
+    private RuntimeConfigurationDiffProjection configurationDiff;
     private RuntimeConfigurationDeepContext deepContext;
     private RuntimeConfigurationVerificationResult result;
     private AnalysisReport report;
@@ -88,15 +97,20 @@ public final class RuntimeConfigurationVerificationJobState {
         start(STEP_DIFF, "Deterministic comparison", "CONFIGURATION");
     }
 
-    public synchronized void markDiffCompleted(RuntimeConfigurationDeterministicContext context) {
-        deterministic = context;
+    public synchronized void markDiffCompleted(RuntimeConfigurationDeterministicBuildResult buildResult) {
+        deterministic = buildResult.context();
+        configurationDiff = buildResult.configurationDiff();
         complete(
                 STEP_DIFF,
                 "Deterministic result ready",
-                context != null ? context.differences().size() : 0,
+                deterministic.differences().size(),
                 null
         );
-        result = interimResult(context);
+        if (request.mode() == RuntimeConfigurationVerificationMode.BASIC) {
+            finishBasic();
+        } else {
+            result = interimResult();
+        }
     }
 
     public synchronized void markOperationalContextStarted() {
@@ -175,23 +189,25 @@ public final class RuntimeConfigurationVerificationJobState {
     public synchronized void markCompleted(
             RuntimeConfigurationDeepContext deep,
             RuntimeConfigurationAiRunResult aiRun,
-            String prompt
+            String prompt,
+            List<RuntimeConfigurationDiffAnnotation> annotations
     ) {
         deepContext = deep;
         preparedPrompt = prompt;
         var assessment = aiRun != null ? aiRun.assessment() : null;
         var usage = aiRun != null ? aiRun.usage() : null;
-        finishWithAssessment(assessment, usage, false);
+        finishWithAssessment(assessment, usage, false, annotations);
     }
 
     public synchronized void markAiFailed(
             RuntimeConfigurationDeepContext deep,
             RuntimeConfigurationAiAssessment fallback,
-            String prompt
+            String prompt,
+            List<RuntimeConfigurationDiffAnnotation> annotations
     ) {
         deepContext = deep;
         preparedPrompt = prompt;
-        finishWithAssessment(fallback, null, true);
+        finishWithAssessment(fallback, null, true, annotations);
     }
 
     public synchronized void markFailed(String code, String message) {
@@ -245,7 +261,8 @@ public final class RuntimeConfigurationVerificationJobState {
     private void finishWithAssessment(
             RuntimeConfigurationAiAssessment assessment,
             AnalysisAiUsage usage,
-            boolean aiFailed
+            boolean aiFailed,
+            List<RuntimeConfigurationDiffAnnotation> annotations
     ) {
         var now = Instant.now();
         var forcedIncomplete = aiFailed
@@ -261,6 +278,8 @@ public final class RuntimeConfigurationVerificationJobState {
                 finalStatus,
                 request.mode(),
                 deterministic,
+                configurationDiff,
+                annotations,
                 assessment != null ? assessment.aiSecondOpinion() : null,
                 assessment != null ? assessment.agreement() : null,
                 deepContext,
@@ -288,13 +307,13 @@ public final class RuntimeConfigurationVerificationJobState {
         updatedAt = now;
     }
 
-    private RuntimeConfigurationVerificationResult interimResult(
-            RuntimeConfigurationDeterministicContext context
-    ) {
+    private RuntimeConfigurationVerificationResult interimResult() {
         return new RuntimeConfigurationVerificationResult(
                 RuntimeConfigurationVerificationStatus.INCOMPLETE,
                 request.mode(),
-                context,
+                deterministic,
+                configurationDiff,
+                List.of(),
                 null,
                 null,
                 null,
@@ -302,6 +321,45 @@ public final class RuntimeConfigurationVerificationJobState {
                 null,
                 null
         );
+    }
+
+    private void finishBasic() {
+        var now = Instant.now();
+        var resultStatus = deterministicStatus(deterministic.status());
+        result = new RuntimeConfigurationVerificationResult(
+                resultStatus,
+                RuntimeConfigurationVerificationMode.BASIC,
+                deterministic,
+                configurationDiff,
+                List.of(),
+                null,
+                null,
+                null,
+                List.of(),
+                null,
+                null
+        );
+        report = null;
+        status = resultStatus == RuntimeConfigurationVerificationStatus.INCOMPLETE
+                ? STATUS_COMPLETED_WITH_LIMITATIONS
+                : STATUS_COMPLETED;
+        errorCode = null;
+        errorMessage = null;
+        currentStepCode = null;
+        currentStepLabel = null;
+        completedAt = now;
+        updatedAt = now;
+    }
+
+    private RuntimeConfigurationVerificationStatus deterministicStatus(
+            RuntimeConfigurationDeterministicStatus status
+    ) {
+        return switch (status) {
+            case NO_BLOCKING_ANOMALIES ->
+                    RuntimeConfigurationVerificationStatus.NO_BLOCKING_ANOMALIES;
+            case REVIEW_REQUIRED -> RuntimeConfigurationVerificationStatus.REVIEW_REQUIRED;
+            case INCOMPLETE -> RuntimeConfigurationVerificationStatus.INCOMPLETE;
+        };
     }
 
     private List<String> visibilityLimits(

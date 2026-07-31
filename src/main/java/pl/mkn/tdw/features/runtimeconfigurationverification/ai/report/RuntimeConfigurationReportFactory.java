@@ -4,7 +4,6 @@ import org.springframework.stereotype.Component;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationAffectedEntity;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
@@ -18,7 +17,6 @@ public class RuntimeConfigurationReportFactory {
 
     public AnalysisReport createInitialReport(
             String reportId,
-            RuntimeConfigurationVerificationMode mode,
             RuntimeConfigurationDeterministicContext deterministic,
             RuntimeConfigurationDeepContext deep
     ) {
@@ -58,34 +56,32 @@ public class RuntimeConfigurationReportFactory {
                 "AI recommendations are being prepared.",
                 AnalysisReportMeta.empty()
         ));
-        if (mode == RuntimeConfigurationVerificationMode.DEEP) {
-            sections.add(section(
-                    RuntimeConfigurationReportSectionIds.AFFECTED_SYSTEMS_AND_CONTEXT,
-                    "Affected systems and context",
-                    sections.size(),
-                    affectedContext(deep),
-                    deepMeta(deep)
-            ));
-            sections.add(section(
-                    RuntimeConfigurationReportSectionIds.FUNCTIONAL_IMPACT_AND_CODE_GROUNDING,
-                    "Functional impact and code grounding",
-                    sections.size(),
-                    codeGrounding(deep),
-                    codeMeta(deep)
-            ));
-            sections.add(section(
-                    RuntimeConfigurationReportSectionIds.OWNERSHIP_AND_HANDOFF,
-                    "Ownership and handoff",
-                    sections.size(),
-                    ownership(deep),
-                    deepMeta(deep)
-            ));
-        }
+        sections.add(section(
+                RuntimeConfigurationReportSectionIds.AFFECTED_SYSTEMS_AND_CONTEXT,
+                "Affected systems and context",
+                sections.size(),
+                affectedContext(deep),
+                deepMeta(deep)
+        ));
+        sections.add(section(
+                RuntimeConfigurationReportSectionIds.FUNCTIONAL_IMPACT_AND_CODE_GROUNDING,
+                "Functional impact and code grounding",
+                sections.size(),
+                codeGrounding(deep),
+                codeMeta(deep)
+        ));
+        sections.add(section(
+                RuntimeConfigurationReportSectionIds.OWNERSHIP_AND_HANDOFF,
+                "Ownership and handoff",
+                sections.size(),
+                ownership(deep),
+                deepMeta(deep)
+        ));
         sections.add(section(
                 RuntimeConfigurationReportSectionIds.VISIBILITY_AND_GAPS,
                 "Visibility and gaps",
                 sections.size(),
-                visibility(mode, deep),
+                visibility(deep),
                 new AnalysisReportMeta(
                         List.of(),
                         deep != null ? deep.visibilityLimits() : List.of(),
@@ -100,7 +96,7 @@ public class RuntimeConfigurationReportFactory {
                 reportId,
                 "Runtime Configuration Verification",
                 deterministic.sourceBranch() + " → " + deterministic.targetBranch()
-                        + " · " + mode,
+                        + " · DEEP",
                 "Deterministic facts and an independent AI second opinion are shown separately.",
                 sections,
                 deterministicMeta(deterministic)
@@ -224,11 +220,8 @@ public class RuntimeConfigurationReportFactory {
         return String.join("\n", lines);
     }
 
-    private String visibility(RuntimeConfigurationVerificationMode mode, RuntimeConfigurationDeepContext deep) {
+    private String visibility(RuntimeConfigurationDeepContext deep) {
         var lines = new ArrayList<String>();
-        if (mode == RuntimeConfigurationVerificationMode.BASIC) {
-            lines.add("- BASIC does not use Operational Context enrichment or source code.");
-        }
         if (deep != null) {
             deep.visibilityLimits().forEach(limit -> lines.add("- " + limit));
         }

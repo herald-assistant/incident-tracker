@@ -780,22 +780,30 @@ runtime, a testy skladaja ja przez `AnalysisJobFacadeTestCreator`.
 
 Runtime Configuration Verification ma dwie niezalezne warstwy wyniku.
 Deterministyczny parser/diff jest zrodlem faktow i pozostaje niemutowalny dla
-AI. AI otrzymuje sanitizowany manifest zachowujacy strukture YAML, typy,
+AI. Jeden deterministic build tworzy sanitizowany context oraz operatorski
+`configurationDiff` per plik. `BASIC` publikuje tylko wynik deterministyczny.
+W `DEEP` AI otrzymuje sanitizowany manifest zachowujacy strukture YAML, typy,
 sciezki i pseudonimy niesensytywnych wartosci; zwraca osobna interpretacje z
 referencjami do diffow/findings oraz agreement/disagreement.
 
 Granica bezpieczenstwa:
 
-- raw configuration, raw value, hash i sekret nie trafiaja do promptu,
-  activity, reportu, historii, exportu ani user-facing bledu,
+- dokladne wartosci odczytane z plikow moga trafic do operatorskiego UI,
+  lokalnej historii, eksportu i projekcji Workbench; nie trafiaja do promptu,
+  AI artifacts, activity, reportu, logow ani user-facing bledu,
+- `configurationDiff` nie zawiera byte-identical plikow, komentarzy, tokenu
+  GitLaba ani wartosci sekretow z Vault; DTO projekcji maja redacted
+  `toString`,
 - repozytorium konfiguracji uzywa allowlisty nazwanych polaczen GitLab i
   backendowego limitu rozmiaru pliku,
-- `BASIC` nie ma dostepu do Operational Context ani GitLab code tools,
+- `BASIC` nie rozwiazuje auth Copilota i nie uruchamia prompt preparation,
+  runtime skilla, reportu, runnera ani tools,
 - `DEEP` moze uzywac tylko code-search scope wybranego `internal-system`,
   potwierdzonego refu i feature-specific budgetu,
 - brak lub awaria enrichmentu nie usuwa deterministic result; obniza
   kompletnosc i jest widoczna jako blocker albo visibility limit.
 
-Zachowanie calego, sanitizowanego schematu jest celowe: niezmienione parametry
-pomagaja rozpoznac funkcjonalny kontekst rozjazdu bez przekazywania prawdziwej
-konfiguracji.
+Zachowanie calego, sanitizowanego schematu po stronie `DEEP` jest celowe:
+niezmienione parametry pomagaja rozpoznac funkcjonalny kontekst rozjazdu bez
+przekazywania prawdziwej konfiguracji. Warstwa AI nie moze zalezec od pakietu
+operatorskiej projekcji; te granice egzekwuje test architektoniczny.

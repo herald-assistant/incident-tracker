@@ -7,6 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.RuntimeConfigurationVerificationJobService;
+import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model
+        .RuntimeConfigurationVerificationStatus;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.error.RuntimeConfigurationVerificationJobNotFoundException;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScopeException;
 
@@ -104,6 +108,26 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 .andExpect(jsonPath("$.codeRef").doesNotExist());
 
         verify(jobService).startJob(request);
+    }
+
+    @Test
+    void shouldRejectDeepOnlyInputsInBasicMode() throws Exception {
+        mockMvc.perform(post("/api/runtime-configuration-verification/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mode": "BASIC",
+                                  "repositoryId": "runtime-config",
+                                  "systemId": "clp-backend",
+                                  "sourceBranch": "dev2",
+                                  "targetBranch": "zt004",
+                                  "codeRef": "release/2026.07",
+                                  "model": "gpt-5.4",
+                                  "reasoningEffort": "medium"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test
@@ -223,6 +247,23 @@ class RuntimeConfigurationVerificationJobControllerTest {
     }
 
     @Test
+    void shouldReturnConfigurationDiffInCompletedBasicJob() throws Exception {
+        var request = request();
+        var snapshot = completedSnapshot("job-completed", request);
+        when(jobService.getJob("job-completed")).thenReturn(snapshot);
+
+        mockMvc.perform(get("/api/runtime-configuration-verification/jobs/job-completed"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.result.mode").value("BASIC"))
+                .andExpect(jsonPath("$.result.configurationDiff.sourceBranch").value("dev1"))
+                .andExpect(jsonPath("$.result.configurationDiff.targetBranch").value("zt001"))
+                .andExpect(jsonPath("$.result.configurationDiff.files").isEmpty())
+                .andExpect(jsonPath("$.result.aiSecondOpinion").doesNotExist())
+                .andExpect(jsonPath("$.result.prompt").doesNotExist());
+    }
+
+    @Test
     void shouldReturnNotFoundWhenJobIsMissing() throws Exception {
         when(jobService.getJob("missing-job"))
                 .thenThrow(new RuntimeConfigurationVerificationJobNotFoundException("missing-job"));
@@ -284,6 +325,53 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 List.of(),
                 List.of(),
                 null
+        );
+    }
+
+    private static RuntimeConfigurationVerificationJobStateSnapshot completedSnapshot(
+            String jobId,
+            RuntimeConfigurationVerificationJobStartRequest request
+    ) {
+        var now = Instant.parse("2026-07-30T10:00:00Z");
+        var result = new RuntimeConfigurationVerificationResult(
+                RuntimeConfigurationVerificationStatus.NO_BLOCKING_ANOMALIES,
+                RuntimeConfigurationVerificationMode.BASIC,
+                null,
+                new RuntimeConfigurationDiffProjection("dev1", "zt001", List.of()),
+                List.of(),
+                null,
+                null,
+                null,
+                List.of(),
+                null,
+                null
+        );
+        return new RuntimeConfigurationVerificationJobStateSnapshot(
+                jobId,
+                request.mode(),
+                request.repositoryId(),
+                request.systemId(),
+                request.sourceBranch(),
+                request.targetBranch(),
+                null,
+                null,
+                null,
+                "COMPLETED",
+                null,
+                null,
+                null,
+                null,
+                now.minusSeconds(10),
+                now,
+                now,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                result,
+                null,
+                false
         );
     }
 }

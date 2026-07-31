@@ -16,6 +16,7 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.report.RuntimeCon
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStartRequest;
+import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 @Component
@@ -41,16 +42,17 @@ public class RuntimeConfigurationCopilotRunRequestAssembler {
             RuntimeConfigurationPromptPreparation preparation,
             AnalysisAiAuthRef authRef
     ) {
-        var mode = request.mode();
-        var skills = RuntimeConfigurationCopilotRuntimeSkillNames.forMode(mode);
+        if (request == null || request.mode() != RuntimeConfigurationVerificationMode.DEEP) {
+            throw new IllegalArgumentException("Copilot runtime is available only for DEEP verification.");
+        }
+        var skills = RuntimeConfigurationCopilotRuntimeSkillNames.deepReview();
         var skillDirectories = skillDirectoryResolver.resolveSkillDirectories(skills);
         if (skillDirectories.isEmpty()) {
             throw new IllegalStateException("Runtime Configuration Verification Copilot skill was not resolved.");
         }
         var toolContext = contextFactory.create(runReference, request, deepContext);
         var accessPolicy = RuntimeConfigurationCopilotToolAccessPolicy.fromRegisteredTools(
-                toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT),
-                mode
+                toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT)
         );
         var sessionConfig = new CopilotSessionConfigRequest(
                 toolContext.copilotSessionId(),
@@ -61,7 +63,7 @@ public class RuntimeConfigurationCopilotRunRequestAssembler {
                 DENIED_TOOL_MESSAGE
         );
         var reportId = (String) toolContext.hiddenContext().get(AgentToolContextKeys.REPORT_ID);
-        var initialReport = reportFactory.createInitialReport(reportId, mode, deterministic, deepContext);
+        var initialReport = reportFactory.createInitialReport(reportId, deterministic, deepContext);
         var runRequest = new CopilotRunRequest(
                 toolContext.analysisRunId(),
                 runAuthMapper.toRunAuth(authRef),

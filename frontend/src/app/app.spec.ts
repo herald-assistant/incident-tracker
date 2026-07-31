@@ -614,7 +614,11 @@ describe('App', () => {
       compiled.querySelector('a.app-shell__nav-item[aria-label="Runtime Configuration"]')
     ).not.toBeNull();
     expect(compiled.textContent).toContain('Source acquisition');
-    expect(compiled.textContent).toContain('Raw configuration pozostaje poza Workbenchem');
+    expect(compiled.textContent).toContain('Wartości operatorskie i granica AI są rozdzielone');
+    expect(compiled.textContent).toContain(
+      'prompt i artefakty korzystają wyłącznie z modelu sanitizowanego'
+    );
+    expect(compiled.textContent).toContain('BASIC nie generuje inputu AI');
   });
 
   it('should remount an active analysis feature from the sidebar as a fresh run screen', async () => {

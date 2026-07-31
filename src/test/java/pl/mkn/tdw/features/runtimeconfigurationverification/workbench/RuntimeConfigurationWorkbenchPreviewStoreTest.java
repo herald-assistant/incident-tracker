@@ -1,8 +1,8 @@
 package pl.mkn.tdw.features.runtimeconfigurationverification.workbench;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.runtimeconfigurationverification.ai.preparation
-        .RuntimeConfigurationPromptPreparation;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
         .RuntimeConfigurationVerificationMode;
 
@@ -12,7 +12,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RuntimeConfigurationWorkbenchPreviewStoreTest {
 
     @Test
-    void shouldExpireSanitizedSnapshot() {
+    void shouldExpireEphemeralSnapshotIncludingOperatorProjection() {
         var clock = new MutableClock(Instant.parse("2026-07-30T10:00:00Z"));
         var store = new RuntimeConfigurationWorkbenchPreviewStore(
                 clock,
@@ -59,8 +58,9 @@ class RuntimeConfigurationWorkbenchPreviewStoreTest {
         return new RuntimeConfigurationWorkbenchPreviewSnapshot(
                 RuntimeConfigurationVerificationMode.BASIC,
                 null,
+                new RuntimeConfigurationDiffProjection("dev1", "zt001", List.of()),
                 null,
-                new RuntimeConfigurationPromptPreparation("", Map.of(), List.of()),
+                null,
                 List.of(),
                 List.of()
         );

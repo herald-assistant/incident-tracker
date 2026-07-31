@@ -25,12 +25,21 @@ public record RuntimeConfigurationWorkbenchMappingPage(
             RuntimeConfigurationFileRole role,
             int documentIndex,
             int depth,
-            String name,
-            String path,
+            String originalName,
+            String originalPath,
+            String sanitizedName,
+            String sanitizedPath,
             RuntimeConfigurationValueType sourceType,
             RuntimeConfigurationValueType targetType,
-            RuntimeConfigurationChangeKind relation,
-            RuntimeConfigurationSensitivity sensitivity
+            RuntimeConfigurationChangeKind changeKind,
+            RuntimeConfigurationSensitivity sensitivity,
+            String sourceValueToken,
+            String targetValueToken,
+            List<String> differenceIds
     ) {
+
+        public Item {
+            differenceIds = differenceIds != null ? List.copyOf(differenceIds) : List.of();
+        }
     }
 }

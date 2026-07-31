@@ -7,7 +7,6 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConf
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConfigurationAiExecutionStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConfigurationAiSecondOpinion;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicStatus;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
@@ -27,7 +26,7 @@ class RuntimeConfigurationReportMapperTest {
                 RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
         );
         var deep = RuntimeConfigurationAiTestFixtures.deep();
-        var scaffold = factory.createInitialReport("report-1", RuntimeConfigurationVerificationMode.DEEP, deterministic, deep);
+        var scaffold = factory.createInitialReport("report-1", deterministic, deep);
         var malicious = new AnalysisReport(
                 "other-report",
                 "AI changed header",
@@ -44,7 +43,6 @@ class RuntimeConfigurationReportMapperTest {
         );
 
         var merged = mapper.merge(
-                RuntimeConfigurationVerificationMode.DEEP,
                 scaffold,
                 malicious,
                 opinion()
@@ -76,12 +74,11 @@ class RuntimeConfigurationReportMapperTest {
     void shouldUseTypedFallbackWhenAiReportIsMissing() {
         var scaffold = factory.createInitialReport(
                 "report-1",
-                RuntimeConfigurationVerificationMode.BASIC,
                 RuntimeConfigurationAiTestFixtures.deterministic(RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED),
                 null
         );
 
-        var merged = mapper.merge(RuntimeConfigurationVerificationMode.BASIC, scaffold, null, opinion());
+        var merged = mapper.merge(scaffold, null, opinion());
 
         assertThat(section(merged, RuntimeConfigurationReportSectionIds.AI_SECOND_OPINION).markdown())
                 .contains("REVIEW_REQUIRED")

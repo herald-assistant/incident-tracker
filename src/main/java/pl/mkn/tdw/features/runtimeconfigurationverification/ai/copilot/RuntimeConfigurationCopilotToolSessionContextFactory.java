@@ -34,15 +34,15 @@ public class RuntimeConfigurationCopilotToolSessionContextFactory {
             RuntimeConfigurationVerificationJobStartRequest request,
             RuntimeConfigurationDeepContext deepContext
     ) {
+        if (request == null || request.mode() != RuntimeConfigurationVerificationMode.DEEP) {
+            throw new IllegalArgumentException("Copilot tool context is available only for DEEP verification.");
+        }
         var runId = StringUtils.hasText(runReference) ? runReference.trim() : UUID.randomUUID().toString();
-        var mode = request != null && request.mode() != null
-                ? request.mode()
-                : RuntimeConfigurationVerificationMode.BASIC;
         var hidden = new LinkedHashMap<String, Object>();
         hidden.put(RuntimeConfigurationCopilotToolContextKeys.FEATURE,
                 RuntimeConfigurationCopilotToolContextKeys.FEATURE_VALUE);
-        hidden.put(RuntimeConfigurationCopilotToolContextKeys.MODE, mode.name());
-        if (request != null && StringUtils.hasText(request.systemId())) {
+        hidden.put(RuntimeConfigurationCopilotToolContextKeys.MODE, RuntimeConfigurationVerificationMode.DEEP.name());
+        if (StringUtils.hasText(request.systemId())) {
             hidden.put(RuntimeConfigurationCopilotToolContextKeys.SYSTEM_ID, request.systemId());
         }
         hidden.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
@@ -50,10 +50,10 @@ public class RuntimeConfigurationCopilotToolSessionContextFactory {
                 RuntimeConfigurationCopilotToolContextKeys.FEATURE_VALUE);
         hidden.put(
                 AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
-                RuntimeConfigurationReportSectionIds.aiWritable(mode)
+                RuntimeConfigurationReportSectionIds.aiWritable()
         );
 
-        if (mode == RuntimeConfigurationVerificationMode.DEEP && deepContext != null) {
+        if (deepContext != null) {
             hidden.put(
                     RuntimeConfigurationCopilotToolContextKeys.ALLOWED_REPOSITORIES,
                     repositoryScopes(deepContext)

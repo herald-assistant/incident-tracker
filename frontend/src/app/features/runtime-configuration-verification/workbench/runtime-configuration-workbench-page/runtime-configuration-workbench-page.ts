@@ -11,6 +11,7 @@ import {
   RuntimeConfigurationWorkbenchAiInputResponse,
   RuntimeConfigurationWorkbenchAnonymizationPage,
   RuntimeConfigurationWorkbenchArtifactResponse,
+  RuntimeConfigurationWorkbenchConfigurationDiffResponse,
   RuntimeConfigurationWorkbenchDeepResponse,
   RuntimeConfigurationWorkbenchMappingPage,
   RuntimeConfigurationWorkbenchPreviewRequest,
@@ -20,7 +21,7 @@ import {
 import { RuntimeConfigurationVerificationApiService } from '../../services/runtime-configuration-verification-api.service';
 
 type PreviewStatus = 'idle' | 'loading' | 'success' | 'error';
-type Perspective = 'source' | 'mapping' | 'anonymization' | 'ai' | 'deep';
+type Perspective = 'source' | 'projection' | 'mapping' | 'anonymization' | 'ai' | 'deep';
 type CopyTarget = 'request' | 'response' | 'prompt' | 'artifact';
 
 interface SourceFileRow {
@@ -63,7 +64,7 @@ export class RuntimeConfigurationWorkbenchPageComponent {
   readonly status = signal<PreviewStatus>('idle');
   readonly statusCode = signal<number | null>(null);
   readonly message = signal(
-    'Wybierz scope, aby utworzyć lekki, tymczasowy i sanitizowany preview.'
+    'Wybierz scope, aby utworzyć lekki i tymczasowy preview.'
   );
   readonly durationMs = signal<number | null>(null);
   readonly summary = signal<RuntimeConfigurationWorkbenchPreviewResponse | null>(null);
@@ -75,6 +76,12 @@ export class RuntimeConfigurationWorkbenchPageComponent {
   readonly detailError = signal('');
 
   readonly sourceDetail = signal<RuntimeConfigurationWorkbenchSourceResponse | null>(null);
+  readonly configurationDiff =
+    signal<RuntimeConfigurationWorkbenchConfigurationDiffResponse | null>(null);
+  readonly configurationDiffJson = computed(() => {
+    const response = this.configurationDiff();
+    return response ? this.toJson(response.configurationDiff) : '';
+  });
   readonly mappingPage = signal<RuntimeConfigurationWorkbenchMappingPage | null>(null);
   readonly mappingChangedOnly = signal(true);
   readonly anonymizationPage =
@@ -114,7 +121,8 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     tag: string;
   }> = [
     { id: 'source', label: 'Source acquisition', detail: 'Pliki i metadata', tag: 'FETCHED METADATA' },
-    { id: 'mapping', label: 'Mapping', detail: 'Zmiany, stronicowane', tag: 'DERIVED' },
+    { id: 'projection', label: 'Operator projection', detail: 'Nazwy i wartości', tag: 'FACT' },
+    { id: 'mapping', label: 'AI boundary mapping', detail: 'Ścieżki, tokeny i ID', tag: 'AI-SAFE' },
     { id: 'anonymization', label: 'Anonymization', detail: 'Decyzje, stronicowane', tag: 'AI-SAFE' },
     { id: 'ai', label: 'AI input', detail: 'Ładowany na żądanie', tag: 'AI-SAFE' },
     { id: 'deep', label: 'DEEP scope', detail: 'Kod i ownership', tag: 'DERIVED' }
@@ -162,11 +170,25 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     }
     if (perspective === 'source' && !this.sourceDetail()) {
       this.loadSource(previewId);
-    } else if (perspective === 'mapping' && !this.mappingPage()) {
+    } else if (perspective === 'projection' && !this.configurationDiff()) {
+      this.loadConfigurationDiff(previewId);
+    } else if (
+      perspective === 'mapping'
+      && this.summary()?.aiInputGenerated
+      && !this.mappingPage()
+    ) {
       this.loadMapping(0);
-    } else if (perspective === 'anonymization' && !this.anonymizationPage()) {
+    } else if (
+      perspective === 'anonymization'
+      && this.summary()?.aiInputGenerated
+      && !this.anonymizationPage()
+    ) {
       this.loadAnonymization(0);
-    } else if (perspective === 'deep' && !this.deepDetail()) {
+    } else if (
+      perspective === 'deep'
+      && this.summary()?.deep.requested
+      && !this.deepDetail()
+    ) {
       this.loadDeep(previewId);
     }
   }
@@ -191,7 +213,9 @@ export class RuntimeConfigurationWorkbenchPageComponent {
       systemId: value.systemId,
       sourceBranch: value.sourceBranch,
       targetBranch: value.targetBranch,
-      ...(value.codeRef.trim() ? { codeRef: value.codeRef.trim() } : {})
+      ...(value.mode === 'DEEP' && value.codeRef.trim()
+        ? { codeRef: value.codeRef.trim() }
+        : {})
     };
     const requestJson = this.toJson({ endpoint: ENDPOINT, method: 'POST', body: payload });
     const startedAt = Date.now();
@@ -199,10 +223,15 @@ export class RuntimeConfigurationWorkbenchPageComponent {
     this.requestJson.set(requestJson);
     this.responseJson.set('');
     this.summary.set(null);
+    this.selectedPerspective.set('source');
     this.status.set('loading');
     this.statusCode.set(null);
     this.durationMs.set(null);
-    this.message.set('Budujemy sanitizowany snapshot i jego kompaktowy model AI…');
+    this.message.set(
+      value.mode === 'BASIC'
+        ? 'Budujemy deterministyczną projekcję operatora…'
+        : 'Budujemy projekcję operatora oraz sanitizowany model AI…'
+    );
 
     this.api
       .preview(payload)
@@ -215,7 +244,9 @@ export class RuntimeConfigurationWorkbenchPageComponent {
           this.statusCode.set(200);
           this.durationMs.set(Date.now() - startedAt);
           this.message.set(
-            `Lekki preview gotowy. Szczegóły wygasną ${new Date(summary.expiresAt).toLocaleTimeString()}.`
+            summary.aiInputGenerated
+              ? `Preview z inputem AI gotowy. Szczegóły wygasną ${new Date(summary.expiresAt).toLocaleTimeString()}.`
+              : `Preview deterministyczny gotowy. AI input not generated. Szczegóły wygasną ${new Date(summary.expiresAt).toLocaleTimeString()}.`
           );
           this.loadSource(summary.previewId);
         },
@@ -278,7 +309,7 @@ export class RuntimeConfigurationWorkbenchPageComponent {
 
   loadAiInput(): void {
     const previewId = this.summary()?.previewId;
-    if (!previewId || this.detailLoading()) {
+    if (!previewId || !this.summary()?.aiInputGenerated || this.detailLoading()) {
       return;
     }
     this.detailLoading.set('prompt');
@@ -297,7 +328,7 @@ export class RuntimeConfigurationWorkbenchPageComponent {
 
   loadArtifact(name: string): void {
     const previewId = this.summary()?.previewId;
-    if (!previewId || this.detailLoading()) {
+    if (!previewId || !this.summary()?.aiInputGenerated || this.detailLoading()) {
       return;
     }
     this.detailLoading.set('artifact');
@@ -382,9 +413,24 @@ export class RuntimeConfigurationWorkbenchPageComponent {
       });
   }
 
+  private loadConfigurationDiff(previewId: string): void {
+    this.detailLoading.set('projection');
+    this.detailError.set('');
+    this.api
+      .getWorkbenchConfigurationDiff(previewId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.configurationDiff.set(response);
+          this.detailLoading.set(null);
+        },
+        error: (error) => this.detailFailed(error)
+      });
+  }
+
   private loadMapping(offset: number): void {
     const previewId = this.summary()?.previewId;
-    if (!previewId) {
+    if (!previewId || !this.summary()?.aiInputGenerated) {
       return;
     }
     this.detailLoading.set('mapping');
@@ -403,7 +449,7 @@ export class RuntimeConfigurationWorkbenchPageComponent {
 
   private loadAnonymization(offset: number): void {
     const previewId = this.summary()?.previewId;
-    if (!previewId) {
+    if (!previewId || !this.summary()?.aiInputGenerated) {
       return;
     }
     this.detailLoading.set('anonymization');
@@ -421,6 +467,9 @@ export class RuntimeConfigurationWorkbenchPageComponent {
   }
 
   private loadDeep(previewId: string): void {
+    if (!this.summary()?.deep.requested) {
+      return;
+    }
     this.detailLoading.set('deep');
     this.detailError.set('');
     this.api
@@ -443,6 +492,7 @@ export class RuntimeConfigurationWorkbenchPageComponent {
 
   private clearSnapshotDetails(): void {
     this.sourceDetail.set(null);
+    this.configurationDiff.set(null);
     this.mappingPage.set(null);
     this.anonymizationPage.set(null);
     this.deepDetail.set(null);

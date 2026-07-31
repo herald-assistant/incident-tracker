@@ -90,6 +90,11 @@ describe('RuntimeConfigurationVerificationApiService', () => {
     expect(source.request.method).toBe('GET');
     source.flush({ previewId });
 
+    service.getWorkbenchConfigurationDiff(previewId).subscribe();
+    const configurationDiff = http.expectOne(`${base}/configuration-diff`);
+    expect(configurationDiff.request.method).toBe('GET');
+    configurationDiff.flush({ previewId, configurationDiff: { files: [] } });
+
     service.getWorkbenchMapping(previewId, 100, 50, false).subscribe();
     const mapping = http.expectOne((request) =>
       request.url === `${base}/mapping`
@@ -111,7 +116,12 @@ describe('RuntimeConfigurationVerificationApiService', () => {
     http.expectOne(`${base}/deep`).flush({ previewId, requested: true });
 
     service.getWorkbenchAiInput(previewId).subscribe();
-    http.expectOne(`${base}/ai-input`).flush({ previewId, prompt: 'safe' });
+    http.expectOne(`${base}/ai-input`).flush({
+      previewId,
+      generated: true,
+      characterCount: 4,
+      prompt: 'safe'
+    });
 
     service
       .getWorkbenchArtifact(previewId, 'runtime-configuration/configuration-tree.yaml')

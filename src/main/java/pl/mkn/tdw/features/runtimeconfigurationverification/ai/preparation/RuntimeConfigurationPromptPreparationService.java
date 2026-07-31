@@ -20,15 +20,15 @@ public class RuntimeConfigurationPromptPreparationService {
             RuntimeConfigurationDeterministicContext deterministic,
             RuntimeConfigurationDeepContext deepContext
     ) {
-        var mode = request != null && request.mode() != null
-                ? request.mode()
-                : RuntimeConfigurationVerificationMode.BASIC;
-        var artifacts = artifactService.render(mode, deterministic, deepContext);
+        if (request == null || request.mode() != RuntimeConfigurationVerificationMode.DEEP) {
+            throw new IllegalArgumentException("AI prompt preparation is available only for DEEP verification.");
+        }
+        var artifacts = artifactService.render(deterministic, deepContext);
         var prompt = """
                 # Runtime Configuration Verification — druga opinia AI
 
                 ## Tryb
-                `%s`
+                `DEEP`
 
                 ## Zadanie
                 - Najpierw załaduj skill `%s` przez built-in tool `skill`.
@@ -46,11 +46,8 @@ public class RuntimeConfigurationPromptPreparationService {
                 ## Artefakty osadzone w promptcie
                 %s
                 """.formatted(
-                mode,
-                mode == RuntimeConfigurationVerificationMode.DEEP
-                        ? "runtime-configuration-deep-review"
-                        : "runtime-configuration-basic-review",
-                modeInstruction(mode),
+                "runtime-configuration-deep-review",
+                deepInstruction(),
                 artifacts.contents().entrySet().stream()
                         .map(entry -> "\n### " + entry.getKey() + "\n```"
                                 + language(entry.getKey()) + "\n" + entry.getValue() + "\n```")
@@ -70,18 +67,12 @@ public class RuntimeConfigurationPromptPreparationService {
                 : "json";
     }
 
-    private String modeInstruction(RuntimeConfigurationVerificationMode mode) {
-        if (mode == RuntimeConfigurationVerificationMode.DEEP) {
-            return """
-                    - Użyj przygotowanego deep context do nazwania systemów i funkcjonalności, których dotyczy rozjazd.
-                    - Operational Context i GitLab code tools są wyłącznie fallbackiem do focused verification w ukrytym scope wybranego `internal-system`.
-                    - `functionalImpacts` muszą używać wyłącznie przekazanych system/context/code IDs.
-                    - Ownership jest faktem backendowym: opisz, do kogo zwrócić się po szczegóły, ale nie zmieniaj ownerów ani resolution path.
-                    """.trim();
-        }
+    private String deepInstruction() {
         return """
-                - Nie używaj Operational Context ani kodu. W BASIC interpretuj wyłącznie konfigurację, diff i findings.
-                - `functionalImpacts` musi pozostać pustą listą.
+                - Użyj przygotowanego deep context do nazwania systemów i funkcjonalności, których dotyczy rozjazd.
+                - Operational Context i GitLab code tools są wyłącznie fallbackiem do focused verification w ukrytym scope wybranego `internal-system`.
+                - `functionalImpacts` muszą używać wyłącznie przekazanych system/context/code IDs.
+                - Ownership jest faktem backendowym: opisz, do kogo zwrócić się po szczegóły, ale nie zmieniaj ownerów ani resolution path.
                 """.trim();
     }
 }

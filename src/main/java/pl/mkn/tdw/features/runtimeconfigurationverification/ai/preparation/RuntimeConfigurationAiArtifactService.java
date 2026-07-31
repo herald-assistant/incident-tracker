@@ -17,8 +17,6 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .SanitizedConfigurationDocument;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .SanitizedConfigurationNode;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
-        .RuntimeConfigurationVerificationMode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +37,6 @@ public class RuntimeConfigurationAiArtifactService {
     private final ObjectMapper objectMapper;
 
     public RuntimeConfigurationAiArtifacts render(
-            RuntimeConfigurationVerificationMode mode,
             RuntimeConfigurationDeterministicContext deterministic,
             RuntimeConfigurationDeepContext deepContext
     ) {
@@ -49,7 +46,7 @@ public class RuntimeConfigurationAiArtifactService {
 
         var artifacts = new LinkedHashMap<String, String>();
         var visibilityLimits = new ArrayList<String>();
-        artifacts.put("runtime-configuration/scope.json", json(scope(deterministic, mode)));
+        artifacts.put("runtime-configuration/scope.json", json(scope(deterministic)));
         artifacts.put("runtime-configuration/coverage.json", json(Map.of(
                 "source", deterministic.sourceCoverage(),
                 "target", deterministic.targetCoverage()
@@ -63,7 +60,7 @@ public class RuntimeConfigurationAiArtifactService {
                 boundedJson(changes(deterministic), MAX_CHANGES_CHARACTERS, "changes", visibilityLimits)
         );
 
-        if (mode == RuntimeConfigurationVerificationMode.DEEP && deepContext != null) {
+        if (deepContext != null) {
             artifacts.put(
                     "runtime-configuration/deep-context.json",
                     boundedJson(
@@ -79,13 +76,10 @@ public class RuntimeConfigurationAiArtifactService {
         return new RuntimeConfigurationAiArtifacts(artifacts, visibilityLimits);
     }
 
-    private Map<String, Object> scope(
-            RuntimeConfigurationDeterministicContext context,
-            RuntimeConfigurationVerificationMode mode
-    ) {
+    private Map<String, Object> scope(RuntimeConfigurationDeterministicContext context) {
         var result = new LinkedHashMap<String, Object>();
         result.put("formatVersion", 2);
-        result.put("mode", mode);
+        result.put("mode", "DEEP");
         result.put("repositoryId", context.repositoryId());
         result.put("systemId", context.systemId());
         result.put("systemLabel", context.systemLabel());

@@ -6,9 +6,10 @@ Feature wykrywa rozjazd runtime configuration wybranego `internal-system`
 pomiedzy branchami srodowiskowymi przed wdrozeniem. Operator dostaje:
 
 1. deterministyczne fakty: coverage, diff i findings,
-2. oddzielna interpretacje AI jako druga pare oczu,
-3. w `DEEP` funkcjonalne znaczenie, code grounding i ownership/handoff,
-4. jawne ograniczenia widocznosci i status kompletności.
+2. operatorska projekcje per plik z dokladnymi wartosciami source/target,
+3. tylko w `DEEP`: oddzielna interpretacje AI, funkcjonalne znaczenie,
+   code grounding i ownership/handoff,
+4. jawne ograniczenia widocznosci i status kompletnosci.
 
 Publiczny target to `systemId`. Configuration directory jest rozstrzygany z
 Operational Context, a repozytorium konfiguracji z backendowej allowlisty.
@@ -24,10 +25,10 @@ GET  /api/runtime-configuration-verification/jobs/{jobId}
 POST /api/runtime-configuration-verification/imports
 ```
 
-Start joba przyjmuje tryb `BASIC` albo `DEEP`, repository id, `systemId`,
-source/target branch, opcjonalny `codeRef` i preferencje AI. Connection id,
-GitLab project path, tokeny i configuration directory nie sa swobodnym
-inputem klienta.
+Start joba przyjmuje tryb `BASIC` albo `DEEP`, repository id, `systemId` oraz
+source/target branch. `codeRef` i preferencje AI sa dozwolone tylko dla
+`DEEP`. Connection id, GitLab project path, tokeny i configuration directory
+nie sa swobodnym inputem klienta.
 
 ## Przeplyw wspolny
 
@@ -38,14 +39,14 @@ flowchart TD
     JOB --> SCOPE["Resolve repository + internal-system scope"]
     SCOPE --> SOURCE["Exact named GitLab reads"]
     SOURCE --> PARSE["Parse YAML.kv + var files"]
-    PARSE --> DIFF["Immutable deterministic context"]
-    DIFF --> MODE{"Mode"}
-    MODE -->|BASIC| SANITIZE["Sanitized AI manifest"]
+    PARSE --> BUILD["Sanitized context + operator configurationDiff"]
+    BUILD --> MODE{"Mode"}
+    MODE -->|BASIC| RESULT["Job snapshot / history / export"]
     MODE -->|DEEP| ENRICH["Operational context + scoped code grounding"]
-    ENRICH --> SANITIZE
+    ENRICH --> SANITIZE["Sanitized AI artifacts"]
     SANITIZE --> AI["Feature-configured Copilot run"]
-    AI --> MERGE["Separate AI opinion + agreement"]
-    MERGE --> RESULT["Job snapshot / report / history / export"]
+    AI --> MERGE["Separate AI opinion + annotations + agreement"]
+    MERGE --> RESULT
 ```
 
 Job publikuje kroki `SOURCE`, `PARSE`, `DIFF`, opcjonalne
@@ -67,9 +68,11 @@ niepelny/truncated odczyt i blad integracji trafiaja do coverage jako jawny
 status i stabilny error code.
 
 Parser zachowuje dokumenty i zagniezdzona strukture YAML. Var files sa
-normalizowane do sciezek parametrow. Deterministyczny engine tworzy:
+normalizowane do sciezek parametrow. Jeden deterministic build tworzy:
 
 - sanitizowany obraz calego schematu, rowniez niezmienionych parametrow,
+- operatorski `configurationDiff` per plik i dokument z oryginalnymi nazwami
+  oraz dokladnymi wartosciami `source`/`target`,
 - stabilne differences z typem `ADDED`, `REMOVED`, `CHANGED` lub
   type/structure change,
 - findings wynikajace z coverage, brakow i ryzyk strukturalnych,
@@ -80,14 +83,14 @@ Wartosci sensytywne nie dostaja raw value, hash ani tokenu porownawczego.
 
 ## Tryb BASIC
 
-`BASIC` konczy zbieranie kontekstu na deterministic result. Prompt zawiera
-sanitizowany manifest i kontrakt wyniku, ale nie Operational Context ani kod.
-Allowlista Copilota zawiera tylko narzedzia reportu; policy dodatkowo odrzuca
-GitLab i `opctx_*`, nawet gdyby zostaly omylkowo zarejestrowane.
+`BASIC` konczy run po `DIFF`. Nie rozwiazuje auth Copilota, nie buduje promptu
+ani artefaktow AI, nie laduje runtime skilla, nie tworzy sesji i nie publikuje
+reportu, activity, usage ani pustej sekcji AI. Status koncowy jest bezposrednim
+mapowaniem deterministic statusu.
 
-To jest sciezka o najmniejszym budzecie i opoznieniu. Gwarancja ma charakter
-strukturalny: brak wywolan enrichment/code tools, a nie wall-clock SLA zalezne
-od sieci i modelu.
+Gwarancja ma charakter strukturalny i jest testowana przez brak interakcji z
+auth resolverem, enrichmentem, prompt preparation, runnerem, assessmentem,
+reportem i adnotacjami AI.
 
 ## Tryb DEEP
 
@@ -111,9 +114,12 @@ Pusty lub niepelny katalog blokuje start, gdy nie da sie zbudowac bezpiecznego
 scope'u. Awaria enrichmentu juz po starcie nie usuwa deterministic result:
 job zwraca wynik czesciowy z visibility limit.
 
-## Granica AI
+## Granica AI w `DEEP`
 
-AI nie otrzymuje raw source files. Artefakty wejściowe zawieraja wylacznie:
+Warstwa AI jest wywolywana wylacznie dla `DEEP` i nie importuje operatorskiej
+projekcji `deterministic.projection`. AI nie otrzymuje raw source files ani
+dokladnych wartosci z `configurationDiff`. Artefakty wejściowe zawieraja
+wylacznie:
 
 - nazwy i sciezki parametrow,
 - typy i strukture,
@@ -127,7 +133,9 @@ bez modyfikowania deterministic result.
 
 AI zapisuje tylko feature-owned sekcje reportu. Parser odrzuca niezgodny
 response contract, a agreement evaluator porownuje referencje i wnioski z
-deterministycznym wynikiem. UI zawsze etykietuje `FACT`, `DERIVED` i
+deterministycznym wynikiem. Backend laczy krotkie adnotacje z liniami diffu
+tylko przez direct albo finding-transitive IDs i nie podmienia tokenow w
+swobodnym tekscie AI. UI zawsze etykietuje `FACT`, `DERIVED` i
 `AI INTERPRETATION`.
 
 ## Bledy i bezpieczenstwo integracji
@@ -147,12 +155,15 @@ awarii, bez tekstu wyjatku.
 
 ## Historia, import i export
 
-Sanitizowany snapshot jest zapisywany w shared local workspace od utworzenia
-joba i aktualizowany wraz z postepem. Feature nie wspiera chat continuation.
+Snapshot feature'a jest zapisywany w shared local workspace od utworzenia
+joba i aktualizowany wraz z postepem. `configurationDiff` zachowuje
+znormalizowane wartosci widoczne operatorowi, ale nie byte-identical pliki,
+komentarze ani token dostepowy GitLaba. Feature nie wspiera chat continuation.
 
 Export jest wersjonowany i read-only. Import waliduje wersje i nie tworzy
-kontynuowalnego runu. Przed persistence i exportem snapshot sanitizer usuwa
-ewentualne wartosci/tokenu z wezlow oznaczonych jako sensytywne.
+kontynuowalnego runu. Import starszego rekordu bez `configurationDiff` uzywa
+fallbacku prezentacji. Rekordy projekcji maja redacted `toString`, aby
+przypadkowe logowanie DTO nie ujawnilo wartosci.
 
 ## Architecture And Security Review
 
@@ -165,8 +176,8 @@ Stan wdrozony spelnia granice warstw:
 - persistence techniczne pozostaje w `localworkspace`,
 - sibling feature'y nie importuja sie wzajemnie.
 
-Security review obejmuje testy: raw-secret leak przez artifacts/report/history/
-export, limity duzych plikow i manifestu, 401/403/404/timeout, traversal,
-`BASIC` bez deep dependencies, `DEEP` scope i budget, puste/niepelne
-Operational Context oraz bezpieczne bledy joba. Regresje granic pakietow
-egzekwuje `PackageDependencyGuardTest`.
+Security review obejmuje testy: brak actual values w artefaktach/promptcie/
+raporcie/activity i zaleznosciach pakietu AI, limity duzych plikow i manifestu,
+401/403/404/timeout, traversal, `BASIC` bez auth ani AI dependencies, `DEEP`
+scope i budget, puste/niepelne Operational Context oraz bezpieczne bledy joba.
+Regresje granic pakietow egzekwuje `PackageDependencyGuardTest`.

@@ -18,6 +18,7 @@ public record RuntimeConfigurationWorkbenchPreviewResponse(
         Counts counts,
         AnonymizationSummary anonymization,
         DeepSummary deep,
+        boolean aiInputGenerated,
         List<ArtifactSummary> artifacts,
         List<String> visibilityLimits
 ) {

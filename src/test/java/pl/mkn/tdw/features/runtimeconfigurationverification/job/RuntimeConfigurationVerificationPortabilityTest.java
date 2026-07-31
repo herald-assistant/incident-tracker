@@ -12,6 +12,20 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationValueType;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationDocument;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationNode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffDocument;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffFile;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffFileFormat;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffNode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffValue;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffValuePresence;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationFileRole;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
@@ -21,6 +35,10 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.job.export.RuntimeCo
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.importing.RuntimeConfigurationVerificationImportService;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.localworkspace
         .RuntimeConfigurationVerificationLocalRunPersister;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotation;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotationKind;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
@@ -30,6 +48,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -58,6 +77,11 @@ class RuntimeConfigurationVerificationPortabilityTest {
         assertFalse(serialized.contains("raw-source-secret"));
         assertFalse(serialized.contains("raw-target-secret"));
         assertTrue(serialized.contains("\"sourceValueToken\":null"));
+        assertTrue(serialized.contains("vault:dev/db-password"));
+        assertTrue(serialized.contains("vault:zt/db-password"));
+        assertTrue(serialized.contains("Zmiana może przełączyć bazę danych."));
+        assertTrue(serialized.contains("\"preparedPrompt\":null"));
+        assertTrue(serialized.contains("\"prompt\":null"));
     }
 
     @Test
@@ -72,9 +96,38 @@ class RuntimeConfigurationVerificationPortabilityTest {
 
         assertEquals(source.jobId(), imported.jobId());
         assertEquals(source.result().status(), imported.result().status());
+        assertEquals(source.result().configurationDiff(), imported.result().configurationDiff());
+        assertEquals(
+                source.result().configurationDiffAnnotations(),
+                imported.result().configurationDiffAnnotations()
+        );
         assertTrue(imported.imported());
         assertFalse(document.toString().contains("raw-source-secret"));
         assertFalse(document.toString().contains("raw-target-secret"));
+        assertTrue(document.toString().contains("vault:dev/db-password"));
+        assertTrue(document.toString().contains("vault:zt/db-password"));
+    }
+
+    @Test
+    void shouldImportOlderSnapshotWithoutProjectionAnnotations() {
+        var document = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.valueToTree(
+                RuntimeConfigurationVerificationExportEnvelope.from(
+                        snapshotWithContaminatedSensitiveTokens(),
+                        Instant.parse("2026-07-30T08:00:00Z")
+                )
+        );
+        var result = (com.fasterxml.jackson.databind.node.ObjectNode) document
+                .path("payload")
+                .path("job")
+                .path("result");
+        result.remove("configurationDiffAnnotations");
+        result.putNull("configurationDiff");
+
+        var imported = new RuntimeConfigurationVerificationImportService(objectMapper)
+                .importReadOnly(document);
+
+        assertNull(imported.result().configurationDiff());
+        assertTrue(imported.result().configurationDiffAnnotations().isEmpty());
     }
 
     @Test
@@ -149,19 +202,29 @@ class RuntimeConfigurationVerificationPortabilityTest {
         );
         var result = new RuntimeConfigurationVerificationResult(
                 RuntimeConfigurationVerificationStatus.REVIEW_REQUIRED,
-                RuntimeConfigurationVerificationMode.BASIC,
+                RuntimeConfigurationVerificationMode.DEEP,
                 deterministic,
+                configurationDiff(),
+                List.of(new RuntimeConfigurationDiffAnnotation(
+                        "observation-1",
+                        RuntimeConfigurationDiffAnnotationKind.OBSERVATION,
+                        "Zmiana może przełączyć bazę danych.",
+                        null,
+                        false,
+                        List.of("difference-1"),
+                        List.of()
+                )),
                 null,
                 null,
                 null,
                 List.of(),
-                "safe prompt",
+                null,
                 null
         );
         var now = Instant.parse("2026-07-30T08:00:00Z");
         return new RuntimeConfigurationVerificationJobStateSnapshot(
                 "job-portable",
-                RuntimeConfigurationVerificationMode.BASIC,
+                RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
                 "clp-backend",
                 "dev1",
@@ -181,10 +244,50 @@ class RuntimeConfigurationVerificationPortabilityTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                "safe prompt",
+                null,
                 result,
                 null,
                 false
         );
+    }
+
+    private RuntimeConfigurationDiffProjection configurationDiff() {
+        var password = new RuntimeConfigurationDiffNode(
+                "datasource.password",
+                "datasource.password",
+                RuntimeConfigurationChangeKind.CHANGED,
+                new RuntimeConfigurationDiffValue(
+                        RuntimeConfigurationDiffValuePresence.PRESENT,
+                        RuntimeConfigurationValueType.STRING,
+                        "vault:dev/db-password",
+                        null
+                ),
+                new RuntimeConfigurationDiffValue(
+                        RuntimeConfigurationDiffValuePresence.PRESENT,
+                        RuntimeConfigurationValueType.STRING,
+                        "vault:zt/db-password",
+                        null
+                ),
+                List.of("difference-1"),
+                List.of()
+        );
+        var document = new RuntimeConfigurationDiffDocument(
+                0,
+                true,
+                true,
+                RuntimeConfigurationDiffValue.absent(),
+                RuntimeConfigurationDiffValue.absent(),
+                password
+        );
+        var file = new RuntimeConfigurationDiffFile(
+                RuntimeConfigurationFileRole.LOCAL_VAR,
+                RuntimeConfigurationDiffFileFormat.VAR,
+                "backend/local.var",
+                "backend/local.var",
+                true,
+                true,
+                List.of(document)
+        );
+        return new RuntimeConfigurationDiffProjection("dev1", "zt001", List.of(file));
     }
 }

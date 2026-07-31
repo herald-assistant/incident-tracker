@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RuntimeConfigurationPromptPreparationServiceTest {
 
@@ -47,25 +48,15 @@ class RuntimeConfigurationPromptPreparationServiceTest {
             );
 
     @Test
-    void shouldPrepareBasicPromptWithCompactV2ArtifactsOnly() {
-        var preparation = service.prepare(
+    void shouldRejectBasicPromptPreparation() {
+        assertThatThrownBy(() -> service.prepare(
                 request(RuntimeConfigurationVerificationMode.BASIC),
                 RuntimeConfigurationAiTestFixtures.deterministic(
                         RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
                 ),
                 RuntimeConfigurationAiTestFixtures.deep()
-        );
-
-        assertThat(preparation.prompt())
-                .contains("runtime-configuration-basic-review")
-                .contains("Nie używaj Operational Context ani kodu")
-                .contains("parametry zmienione i niezmienione")
-                .contains("runtime-configuration/configuration-tree.yaml")
-                .contains("runtime-configuration/changes.json")
-                .doesNotContain("runtime-configuration/deep-context.json")
-                .doesNotContain("runtime-configuration/manifest/");
-        assertThat(preparation.artifactContents())
-                .doesNotContainKey("runtime-configuration/deep-context.json");
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("DEEP");
     }
 
     @Test
@@ -90,7 +81,7 @@ class RuntimeConfigurationPromptPreparationServiceTest {
     @Test
     void shouldStayBelowTargetBudgetAndPreserveRepresentativeFixtureCoverage() {
         var preparation = service.prepare(
-                request(RuntimeConfigurationVerificationMode.BASIC),
+                request(RuntimeConfigurationVerificationMode.DEEP),
                 representativeContext(),
                 null
         );

@@ -170,6 +170,58 @@ export interface RuntimeConfigurationDeterministicContext {
   findings: RuntimeConfigurationFinding[];
 }
 
+export interface RuntimeConfigurationDiffValue {
+  presence: 'PRESENT' | 'ABSENT';
+  type: string | null;
+  value: unknown;
+  cardinality: number | null;
+}
+
+export interface RuntimeConfigurationDiffNode {
+  name: string;
+  path: string;
+  changeKind: string;
+  source: RuntimeConfigurationDiffValue;
+  target: RuntimeConfigurationDiffValue;
+  differenceIds: string[];
+  children: RuntimeConfigurationDiffNode[];
+}
+
+export interface RuntimeConfigurationDiffDocument {
+  documentIndex: number;
+  sourcePresent: boolean;
+  targetPresent: boolean;
+  sourceProfile: RuntimeConfigurationDiffValue;
+  targetProfile: RuntimeConfigurationDiffValue;
+  root: RuntimeConfigurationDiffNode;
+}
+
+export interface RuntimeConfigurationDiffFile {
+  role: string;
+  format: 'YAML' | 'VAR';
+  sourcePath: string | null;
+  targetPath: string | null;
+  sourcePresent: boolean;
+  targetPresent: boolean;
+  documents: RuntimeConfigurationDiffDocument[];
+}
+
+export interface RuntimeConfigurationDiffProjection {
+  sourceBranch: string;
+  targetBranch: string;
+  files: RuntimeConfigurationDiffFile[];
+}
+
+export interface RuntimeConfigurationDiffAnnotation {
+  sourceId: string;
+  kind: 'OBSERVATION' | 'FUNCTIONAL_IMPACT';
+  comment: string;
+  confidence: string | null;
+  hypothesis: boolean;
+  differenceIds: string[];
+  findingIds: string[];
+}
+
 export interface RuntimeConfigurationAiObservation {
   observationId: string;
   type: 'GROUNDED_OBSERVATION' | 'HYPOTHESIS';
@@ -356,8 +408,14 @@ export interface RuntimeConfigurationWorkbenchPreviewResponse {
   counts: RuntimeConfigurationWorkbenchCounts;
   anonymization: RuntimeConfigurationWorkbenchAnonymizationSummary;
   deep: RuntimeConfigurationWorkbenchDeepSummary;
+  aiInputGenerated: boolean;
   artifacts: RuntimeConfigurationWorkbenchArtifactSummary[];
   visibilityLimits: string[];
+}
+
+export interface RuntimeConfigurationWorkbenchConfigurationDiffResponse {
+  previewId: string;
+  configurationDiff: RuntimeConfigurationDiffProjection;
 }
 
 export interface RuntimeConfigurationWorkbenchSourceResponse {
@@ -371,12 +429,17 @@ export interface RuntimeConfigurationWorkbenchMappingItem {
   role: string;
   documentIndex: number;
   depth: number;
-  name: string;
-  path: string;
+  originalName: string;
+  originalPath: string;
+  sanitizedName: string;
+  sanitizedPath: string;
   sourceType: string | null;
   targetType: string | null;
-  relation: string;
+  changeKind: string;
   sensitivity: string;
+  sourceValueToken: string | null;
+  targetValueToken: string | null;
+  differenceIds: string[];
 }
 
 export interface RuntimeConfigurationWorkbenchMappingPage {
@@ -419,8 +482,9 @@ export interface RuntimeConfigurationWorkbenchDeepResponse {
 
 export interface RuntimeConfigurationWorkbenchAiInputResponse {
   previewId: string;
+  generated: boolean;
   characterCount: number;
-  prompt: string;
+  prompt: string | null;
 }
 
 export interface RuntimeConfigurationWorkbenchArtifactResponse {
@@ -436,6 +500,8 @@ export interface RuntimeConfigurationVerificationResult {
   status: RuntimeConfigurationVerificationStatus;
   mode: RuntimeConfigurationVerificationMode;
   deterministicResult: RuntimeConfigurationDeterministicContext;
+  configurationDiff: RuntimeConfigurationDiffProjection | null;
+  configurationDiffAnnotations?: RuntimeConfigurationDiffAnnotation[];
   aiSecondOpinion: RuntimeConfigurationAiSecondOpinion | null;
   agreement: RuntimeConfigurationAgreement | null;
   deepAnalysis: RuntimeConfigurationDeepContext | null;

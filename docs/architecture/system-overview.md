@@ -59,8 +59,9 @@ Na dzisiaj projekt ma:
 - ekran `GET /incident-analysis` serwowany przez Spring Boot z mozliwoscia
   importu i eksportu zapisu zakonczonej analizy jako JSON,
 - ekran `GET /runtime-configuration-verification` do porownania konfiguracji
-  `internal-system` pomiedzy branchami `devX` i `zt00X`, z oddzielonym wynikiem
-  deterministycznym i interpretacja AI w trybach `BASIC` oraz `DEEP`,
+  `internal-system` pomiedzy branchami `devX` i `zt00X`; `BASIC` pokazuje
+  wylacznie deterministyczny diff per plik, a `DEEP` dodaje oddzielna
+  interpretacje AI,
 - w ekranie `GET /incident-analysis` start analizy ma wybor zrodla logow:
   Elasticsearch po `correlationId` albo upload CSV; gdy konfiguracja
   Elasticsearch/Kibana jest niepelna, sciezka `correlationId` jest zablokowana,
@@ -151,7 +152,8 @@ Na dzisiaj projekt ma:
   scope i osiagalny ref kodu. Zwraca blocker albo ograniczenia widocznosci.
 - `POST /api/runtime-configuration-verification/jobs`
   Uruchamia asynchroniczna weryfikacje. `GET` z `/{jobId}` zwraca postep,
-  sanitizowany wynik, report, activity i usage.
+  operatorski `configurationDiff` z dokladnymi wartosciami oraz wynik
+  deterministyczny; report, activity i usage sa obecne tylko dla `DEEP`.
 - `POST /api/runtime-configuration-verification/imports`
   Waliduje wersjonowany export i zwraca sanitizowany snapshot read-only.
 - `GET /elastic`

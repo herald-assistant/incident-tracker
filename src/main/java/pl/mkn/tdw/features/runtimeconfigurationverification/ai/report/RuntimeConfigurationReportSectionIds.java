@@ -1,7 +1,5 @@
 package pl.mkn.tdw.features.runtimeconfigurationverification.ai.report;
 
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
-
 import java.util.List;
 
 public final class RuntimeConfigurationReportSectionIds {
@@ -19,9 +17,7 @@ public final class RuntimeConfigurationReportSectionIds {
     private RuntimeConfigurationReportSectionIds() {
     }
 
-    public static List<String> aiWritable(RuntimeConfigurationVerificationMode mode) {
-        return mode == RuntimeConfigurationVerificationMode.DEEP
-                ? List.of(AI_SECOND_OPINION, RECOMMENDED_HUMAN_CHECKS, FUNCTIONAL_IMPACT_AND_CODE_GROUNDING)
-                : List.of(AI_SECOND_OPINION, RECOMMENDED_HUMAN_CHECKS);
+    public static List<String> aiWritable() {
+        return List.of(AI_SECOND_OPINION, RECOMMENDED_HUMAN_CHECKS, FUNCTIONAL_IMPACT_AND_CODE_GROUNDING);
     }
 }

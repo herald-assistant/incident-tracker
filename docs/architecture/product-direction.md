@@ -123,18 +123,20 @@ planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
 ### Runtime Configuration Verification
 
 Administrator porownuje runtime configuration wybranego `internal-system`
-pomiedzy branchami `devX` i `zt00X`. Wynik laczy dwa rownorzedne, ale jawnie
-rozdzielone spojrzenia:
+pomiedzy branchami `devX` i `zt00X`. Wynik ma niemutowalny fundament
+deterministyczny, a `DEEP` dodaje jawnie oddzielona druga opinie:
 
 - niemutowalny, deterministyczny diff i findings z pokryciem zrodel,
 - interpretacje AI jako druga pare oczu, z agreement/disagreement i jawnymi
   ograniczeniami widocznosci.
 
-Tryb `BASIC` pracuje tylko na sanitizowanym obrazie konfiguracji. Tryb `DEEP`
-dodatkowo korzysta z systemu, code-search scope, kodu oraz resolved ownership,
-aby wyjasnic znaczenie rozjazdu i wskazac handoff. Repozytorium konfiguracji
-moze lezec na innej nazwanej instancji GitLab niz kod; raw values i sekrety
-nie przekraczaja deterministycznej granicy feature'a.
+Tryb `BASIC` nie uruchamia AI: zwraca operatorski diff per plik z dokladnymi
+wartosciami dostepnymi przez token operatora. Tryb `DEEP` korzysta dodatkowo z
+sanitizowanego obrazu konfiguracji, systemu, code-search scope, kodu oraz
+resolved ownership, aby wyjasnic znaczenie rozjazdu i wskazac handoff.
+Repozytorium konfiguracji moze lezec na innej nazwanej instancji GitLab niz
+kod; dokladne wartosci pozostaja po stronie operatorskiej i nie przekraczaja
+granicy AI.
 
 ### Functional logic explorer
 

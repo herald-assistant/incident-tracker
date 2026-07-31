@@ -25,12 +25,22 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeCo
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContextStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicStatus;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationDeterministicBuildResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationDeterministicContextListener;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationDeterministicContextService;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStartRequest;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.error.RuntimeConfigurationVerificationJobNotFoundException;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.localworkspace.RuntimeConfigurationVerificationLocalRunPersistence;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotation;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotationKind;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotationService;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScope;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScopeException;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScopeResolver;
@@ -55,6 +65,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doAnswer;
 
@@ -73,6 +84,8 @@ class RuntimeConfigurationVerificationJobServiceTest {
             mock(RuntimeConfigurationAiAssessmentService.class);
     private final RuntimeConfigurationReportFactory reportFactory =
             mock(RuntimeConfigurationReportFactory.class);
+    private final RuntimeConfigurationDiffAnnotationService diffAnnotationService =
+            mock(RuntimeConfigurationDiffAnnotationService.class);
     private final RuntimeConfigurationVerificationLocalRunPersistence persistence =
             mock(RuntimeConfigurationVerificationLocalRunPersistence.class);
     private final AnalysisAiAuthRefResolver authRefResolver = mock(AnalysisAiAuthRefResolver.class);
@@ -87,6 +100,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
                     aiRunner,
                     assessmentService,
                     reportFactory,
+                    diffAnnotationService,
                     persistence,
                     executor,
                     authRefResolver,
@@ -104,14 +118,14 @@ class RuntimeConfigurationVerificationJobServiceTest {
                             3,
                             RuntimeConfigurationDeterministicContextListener.class
                     );
-                    var context = deterministic();
+                    var build = deterministicBuild();
                     listener.onSourceStarted();
                     listener.onSourceCompleted();
                     listener.onParseStarted();
                     listener.onParseCompleted();
                     listener.onDiffStarted();
-                    listener.onDiffCompleted(context);
-                    return context;
+                    listener.onDiffCompleted(build);
+                    return build;
                 });
         when(promptService.prepare(any(), any(), any()))
                 .thenReturn(new RuntimeConfigurationPromptPreparation(
@@ -121,6 +135,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
                 ));
         when(aiRunner.run(anyString(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new RuntimeConfigurationAiRunResult(completedAssessment(), null));
+        when(diffAnnotationService.create(any(), any())).thenReturn(List.of(annotation()));
     }
 
     @Test
@@ -138,15 +153,75 @@ class RuntimeConfigurationVerificationJobServiceTest {
 
         assertEquals("COMPLETED", completed.status());
         assertEquals(
-                List.of("SOURCE", "PARSE", "DIFF", "AI"),
+                List.of("SOURCE", "PARSE", "DIFF"),
                 completed.steps().stream().map(step -> step.code()).toList()
         );
         assertEquals(RuntimeConfigurationVerificationStatus.NO_BLOCKING_ANOMALIES,
                 completed.result().status());
         assertNotNull(completed.result().deterministicResult());
+        assertEquals(configurationDiff(), completed.result().configurationDiff());
+        assertTrue(completed.result().configurationDiffAnnotations().isEmpty());
+        assertNull(completed.result().aiSecondOpinion());
+        assertNull(completed.result().agreement());
+        assertNull(completed.result().deepAnalysis());
+        assertTrue(completed.result().visibilityLimits().isEmpty());
+        assertNull(completed.result().prompt());
+        assertNull(completed.result().usage());
+        assertNull(completed.preparedPrompt());
+        assertNull(completed.report());
+        assertTrue(completed.aiActivityEvents().isEmpty());
+        assertTrue(completed.toolEvidenceSections().isEmpty());
         assertFalse(completed.imported());
-        verify(deepService, never()).build(any(), anyString(), anyString(), any(), any(), any());
+        verifyNoInteractions(
+                authRefResolver,
+                accessTokenResolver,
+                deepService,
+                promptService,
+                aiRunner,
+                assessmentService,
+                reportFactory,
+                diffAnnotationService
+        );
         verify(persistence, org.mockito.Mockito.atLeast(6)).persistRunSnapshot(any());
+    }
+
+    @Test
+    void shouldMapIncompleteDeterministicBasicResultWithoutInvokingAi() {
+        var incomplete = new RuntimeConfigurationDeterministicContext(
+                "runtime-config",
+                "clp-backend",
+                "CLP Backend",
+                "backend",
+                "dev1",
+                "zt001",
+                RuntimeConfigurationDeterministicStatus.INCOMPLETE,
+                null,
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
+        stubDeterministic(incomplete);
+
+        var created = service.startJob(request());
+        executor.runNext();
+        var completed = service.getJob(created.jobId());
+
+        assertEquals("COMPLETED_WITH_LIMITATIONS", completed.status());
+        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, completed.result().status());
+        assertTrue(completed.result().visibilityLimits().isEmpty());
+        assertNull(completed.errorCode());
+        verifyNoInteractions(
+                authRefResolver,
+                accessTokenResolver,
+                deepService,
+                promptService,
+                aiRunner,
+                assessmentService,
+                reportFactory,
+                diffAnnotationService
+        );
     }
 
     @Test
@@ -203,6 +278,12 @@ class RuntimeConfigurationVerificationJobServiceTest {
                 completed.steps().stream().map(step -> step.code()).toList()
         );
         assertEquals(deep, completed.result().deepAnalysis());
+        assertEquals(List.of(annotation()), completed.result().configurationDiffAnnotations());
+        verify(authRefResolver).resolveForCurrentRequest();
+        verify(accessTokenResolver).resolve(any());
+        verify(promptService).prepare(any(), any(), any());
+        verify(aiRunner).run(anyString(), any(), any(), any(), any(), any(), any(), any());
+        verify(diffAnnotationService).create(any(), any());
     }
 
     @Test
@@ -241,12 +322,13 @@ class RuntimeConfigurationVerificationJobServiceTest {
 
     @Test
     void shouldKeepDeterministicResultWhenAiFails() {
+        stubDeep(deepContext(RuntimeConfigurationDeepContextStatus.COMPLETE, List.of()));
         when(aiRunner.run(anyString(), any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new IllegalStateException("do-not-expose-ai-detail"));
-        when(assessmentService.assess(any(), any(), any(), any(), any(), any()))
+        when(assessmentService.assess(any(), any(), any(), any(), any()))
                 .thenReturn(incompleteAssessment());
 
-        var created = service.startJob(request());
+        var created = service.startJob(deepRequest());
         executor.runNext();
         var completed = service.getJob(created.jobId());
 
@@ -306,6 +388,17 @@ class RuntimeConfigurationVerificationJobServiceTest {
         );
     }
 
+    static RuntimeConfigurationDiffProjection configurationDiff() {
+        return new RuntimeConfigurationDiffProjection("dev1", "zt001", List.of());
+    }
+
+    static RuntimeConfigurationDeterministicBuildResult deterministicBuild() {
+        return new RuntimeConfigurationDeterministicBuildResult(
+                deterministic(),
+                configurationDiff()
+        );
+    }
+
     static RuntimeConfigurationAiAssessment completedAssessment() {
         return new RuntimeConfigurationAiAssessment(
                 new RuntimeConfigurationAiSecondOpinion(
@@ -343,6 +436,18 @@ class RuntimeConfigurationVerificationJobServiceTest {
         );
     }
 
+    private static RuntimeConfigurationDiffAnnotation annotation() {
+        return new RuntimeConfigurationDiffAnnotation(
+                "observation-1",
+                RuntimeConfigurationDiffAnnotationKind.OBSERVATION,
+                "Runtime behavior may change.",
+                null,
+                false,
+                List.of("difference-1"),
+                List.of()
+        );
+    }
+
     static RuntimeConfigurationVerificationJobStartRequest request() {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
@@ -356,7 +461,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
         );
     }
 
-    private static RuntimeConfigurationVerificationJobStartRequest deepRequest() {
+    static RuntimeConfigurationVerificationJobStartRequest deepRequest() {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
@@ -391,6 +496,28 @@ class RuntimeConfigurationVerificationJobServiceTest {
                     listener.onOwnershipCompleted(deep);
                     return Optional.of(deep);
                 });
+    }
+
+    private void stubDeterministic(RuntimeConfigurationDeterministicContext context) {
+        doAnswer(invocation -> {
+                    var listener = invocation.getArgument(
+                            3,
+                            RuntimeConfigurationDeterministicContextListener.class
+                    );
+                    var build = new RuntimeConfigurationDeterministicBuildResult(
+                            context,
+                            configurationDiff()
+                    );
+                    listener.onSourceStarted();
+                    listener.onSourceCompleted();
+                    listener.onParseStarted();
+                    listener.onParseCompleted();
+                    listener.onDiffStarted();
+                    listener.onDiffCompleted(build);
+                    return build;
+                })
+                .when(deterministicService)
+                .build(any(), anyString(), anyString(), any());
     }
 
     private static final class CapturingTaskExecutor implements TaskExecutor {

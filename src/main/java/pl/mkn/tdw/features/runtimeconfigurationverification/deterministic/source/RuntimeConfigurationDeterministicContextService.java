@@ -8,6 +8,8 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.parse.
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.parse.ParsedConfigurationSnapshot;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.parse.RuntimeConfigurationVarParser;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.parse.RuntimeConfigurationYamlParser;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjectionBuilder;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScope;
 
 import java.util.ArrayList;
@@ -20,8 +22,9 @@ public class RuntimeConfigurationDeterministicContextService {
     private final RuntimeConfigurationYamlParser yamlParser;
     private final RuntimeConfigurationVarParser varParser;
     private final RuntimeConfigurationDeterministicEngine deterministicEngine;
+    private final RuntimeConfigurationDiffProjectionBuilder diffProjectionBuilder;
 
-    public RuntimeConfigurationDeterministicContext build(
+    public RuntimeConfigurationDeterministicBuildResult build(
             RuntimeConfigurationScope scope,
             String sourceBranch,
             String targetBranch
@@ -34,7 +37,7 @@ public class RuntimeConfigurationDeterministicContextService {
         );
     }
 
-    public RuntimeConfigurationDeterministicContext build(
+    public RuntimeConfigurationDeterministicBuildResult build(
             RuntimeConfigurationScope scope,
             String sourceBranch,
             String targetBranch,
@@ -51,15 +54,19 @@ public class RuntimeConfigurationDeterministicContextService {
         var target = parse(snapshots.target());
         resolvedListener.onParseCompleted();
         resolvedListener.onDiffStarted();
-        var context = deterministicEngine.build(
+        RuntimeConfigurationDeterministicContext context = deterministicEngine.build(
                 scope,
                 snapshots.source().coverage(),
                 snapshots.target().coverage(),
                 source,
                 target
         );
-        resolvedListener.onDiffCompleted(context);
-        return context;
+        var result = new RuntimeConfigurationDeterministicBuildResult(
+                context,
+                diffProjectionBuilder.build(source, target, context)
+        );
+        resolvedListener.onDiffCompleted(result);
+        return result;
     }
 
     private ParsedConfigurationSnapshot parse(RuntimeConfigurationRawSnapshot snapshot) {

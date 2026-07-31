@@ -19,13 +19,20 @@ Operational Context, code-search scopes i kod systemu.
   runtime/deployment signalu systemu i nie jest publicznym `componentPath`.
 - Repozytorium konfiguracji i repozytoria kodu sa roznymi scope'ami oraz moga
   korzystac z roznych polaczen GitLab.
-- Surowa konfiguracja i sekrety nie moga trafic do promptu, evidence,
-  activity, reportu, historii, eksportu ani user-facing bledow.
+- Dokladne wartosci ze znormalizowanej projekcji operatorskiej moga trafic do
+  UI, lokalnej historii, eksportu i Workbench. Nie moga trafic do promptu,
+  AI artifacts, evidence, activity, reportu, logow ani user-facing bledow.
+- Projekcja operatorska nie zawiera byte-identical plikow, komentarzy, tokenu
+  GitLaba ani wartosci sekretow z Vault i ma redacted `toString`.
 - Wynik deterministyczny jest niemutowalny dla AI. AI dostarcza osobna,
   jawnie oznaczona druga opinie.
-- `BASIC` nie wykonuje operational enrichment ani odczytu kodu.
+- `BASIC` konczy run po deterministic `DIFF`: nie rozwiazuje auth Copilota,
+  nie przygotowuje promptu/artefaktow, nie laduje skilla i nie uruchamia AI,
+  reportu ani tools.
 - `DEEP` korzysta tylko z code-search scopes wybranego `internal-system` i
   rozwiazuje ownership z systemu albo bounded contextu.
+- Pakiet `ai` jest DEEP-only i nie moze importowac
+  `deterministic.projection` ani `presentation`.
 
 ## Weryfikacja
 

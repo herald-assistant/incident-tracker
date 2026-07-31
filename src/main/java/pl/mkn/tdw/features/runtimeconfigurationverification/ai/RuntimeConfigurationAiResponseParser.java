@@ -15,7 +15,6 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConf
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConfigurationFunctionalImpact;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -63,7 +62,6 @@ public class RuntimeConfigurationAiResponseParser {
 
     public RuntimeConfigurationAiSecondOpinion parse(
             String assistantContent,
-            RuntimeConfigurationVerificationMode mode,
             RuntimeConfigurationDeterministicContext deterministic,
             RuntimeConfigurationDeepContext deepContext
     ) {
@@ -104,10 +102,6 @@ public class RuntimeConfigurationAiResponseParser {
         if (functionalImpacts == null) {
             return fallback("AI response contained an invalid functional impact reference.");
         }
-        if (mode != RuntimeConfigurationVerificationMode.DEEP && !functionalImpacts.isEmpty()) {
-            return fallback("BASIC AI response attempted to add DEEP functional impact.");
-        }
-
         return new RuntimeConfigurationAiSecondOpinion(
                 RuntimeConfigurationAiExecutionStatus.COMPLETED,
                 conclusion,

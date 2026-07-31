@@ -15,12 +15,16 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deep.RuntimeConfigur
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationDeterministicContextListener;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationDeterministicContextService;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationDeterministicBuildResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStartRequest;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.error.RuntimeConfigurationVerificationJobNotFoundException;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.localworkspace.RuntimeConfigurationVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.state.RuntimeConfigurationVerificationJobState;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotationService;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScope;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScopeResolver;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
@@ -42,6 +46,7 @@ public class RuntimeConfigurationVerificationJobService {
     private final RuntimeConfigurationAiRunner aiRunner;
     private final RuntimeConfigurationAiAssessmentService assessmentService;
     private final RuntimeConfigurationReportFactory reportFactory;
+    private final RuntimeConfigurationDiffAnnotationService diffAnnotationService;
     private final RuntimeConfigurationVerificationLocalRunPersistence localRunPersistence;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
@@ -53,8 +58,7 @@ public class RuntimeConfigurationVerificationJobService {
             RuntimeConfigurationVerificationJobStartRequest request
     ) {
         var scope = scopeResolver.resolve(request.repositoryId(), request.systemId());
-        var authRef = authRefResolver.resolveForCurrentRequest();
-        accessTokenResolver.resolve(runAuthMapper.toRunAuth(authRef));
+        var authRef = resolveAiAuth(request);
 
         var jobId = UUID.randomUUID().toString();
         var job = new RuntimeConfigurationVerificationJobState(jobId, request);
@@ -81,12 +85,17 @@ public class RuntimeConfigurationVerificationJobService {
             AnalysisAiAuthRef authRef
     ) {
         try {
-            var deterministic = deterministicContextService.build(
+            var deterministicBuild = deterministicContextService.build(
                     scope,
                     request.sourceBranch(),
                     request.targetBranch(),
                     deterministicListener(job)
             );
+            var deterministic = deterministicBuild.context();
+            if (request.mode() == RuntimeConfigurationVerificationMode.BASIC) {
+                persistRunSnapshot(job);
+                return;
+            }
             var deep = buildDeepContext(job, request, deterministic);
             job.markAiStarted(null);
             persistRunSnapshot(job);
@@ -103,7 +112,7 @@ public class RuntimeConfigurationVerificationJobService {
                         deterministic,
                         deep,
                         preparation,
-                        authRef,
+                        java.util.Objects.requireNonNull(authRef),
                         section -> {
                             job.markAiToolEvidenceUpdated(section);
                             persistRunSnapshot(job);
@@ -113,7 +122,17 @@ public class RuntimeConfigurationVerificationJobService {
                             persistRunSnapshot(job);
                         }
                 );
-                job.markCompleted(deep, aiRun, safePrompt);
+                job.markCompleted(
+                        deep,
+                        aiRun,
+                        safePrompt,
+                        diffAnnotationService.create(
+                                deterministic,
+                                aiRun != null && aiRun.assessment() != null
+                                        ? aiRun.assessment().aiSecondOpinion()
+                                        : null
+                        )
+                );
             } catch (RuntimeException exception) {
                 log.warn(
                         "Runtime Configuration Verification AI failed jobId={} failureType={}",
@@ -122,19 +141,25 @@ public class RuntimeConfigurationVerificationJobService {
                 );
                 var scaffold = reportFactory.createInitialReport(
                         "runtime-configuration-" + jobId,
-                        request.mode(),
                         deterministic,
                         deep
                 );
                 var fallback = assessmentService.assess(
                         null,
-                        request.mode(),
                         deterministic,
                         deep,
                         scaffold,
                         null
                 );
-                job.markAiFailed(deep, fallback, safePrompt);
+                job.markAiFailed(
+                        deep,
+                        fallback,
+                        safePrompt,
+                        diffAnnotationService.create(
+                                deterministic,
+                                fallback != null ? fallback.aiSecondOpinion() : null
+                        )
+                );
             }
             persistRunSnapshot(job);
         } catch (RuntimeException exception) {
@@ -216,14 +241,20 @@ public class RuntimeConfigurationVerificationJobService {
             }
 
             @Override
-            public void onDiffCompleted(
-                    pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
-                            .RuntimeConfigurationDeterministicContext context
-            ) {
-                job.markDiffCompleted(context);
+            public void onDiffCompleted(RuntimeConfigurationDeterministicBuildResult result) {
+                job.markDiffCompleted(result);
                 persistRunSnapshot(job);
             }
         };
+    }
+
+    private AnalysisAiAuthRef resolveAiAuth(RuntimeConfigurationVerificationJobStartRequest request) {
+        if (request.mode() != RuntimeConfigurationVerificationMode.DEEP) {
+            return null;
+        }
+        var authRef = authRefResolver.resolveForCurrentRequest();
+        accessTokenResolver.resolve(runAuthMapper.toRunAuth(authRef));
+        return authRef;
     }
 
     private RuntimeConfigurationDeepContextListener deepListener(

@@ -272,6 +272,15 @@ code {
   text-align: center;
 }
 
+.ai-not-generated {
+  display: grid;
+  gap: 6px;
+}
+
+.ai-not-generated strong {
+  color: var(--text);
+}
+
 .visibility-panel {
   gap: 8px;
   background: #fffbeb;

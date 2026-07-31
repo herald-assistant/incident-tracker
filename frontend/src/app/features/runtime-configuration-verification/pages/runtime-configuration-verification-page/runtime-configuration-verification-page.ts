@@ -28,8 +28,10 @@ import {
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { downloadJsonFile, readJsonFile } from '../../../../core/utils/json-file.utils';
 import {
+  RuntimeConfigurationDiffRendererComponent
+} from '../../components/runtime-configuration-diff-renderer/runtime-configuration-diff-renderer';
+import {
   RuntimeConfigurationDeepPreflight,
-  RuntimeConfigurationDifference,
   RuntimeConfigurationFinding,
   RuntimeConfigurationVerificationInputOptions,
   RuntimeConfigurationVerificationJobStartRequest,
@@ -58,7 +60,8 @@ const EMPTY_INPUT_OPTIONS: RuntimeConfigurationVerificationInputOptions = {
     ReactiveFormsModule,
     AnalysisFeatureAsideComponent,
     AnalysisReportPanelComponent,
-    AnalysisStepsPanelComponent
+    AnalysisStepsPanelComponent,
+    RuntimeConfigurationDiffRendererComponent
   ],
   templateUrl: './runtime-configuration-verification-page.html',
   styleUrl: './runtime-configuration-verification-page.scss'
@@ -101,8 +104,6 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   readonly submitting = signal(false);
   readonly resultOrigin = signal<ResultOrigin>('live');
   readonly resultOriginLabel = signal('');
-  readonly differenceKindFilter = signal('ALL');
-  readonly differenceFileFilter = signal('ALL');
   readonly findingSeverityFilter = signal('ALL');
   readonly focusedReferenceId = signal('');
   private readonly formRevision = signal(0);
@@ -148,6 +149,10 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       && this.deepPreflight()?.status !== 'READY';
   });
   readonly githubAuthBlocked = computed(() => {
+    this.formRevision();
+    if (this.modeControl.value !== 'DEEP') {
+      return false;
+    }
     const status = this.githubAuthStatus();
     return status?.mode === 'GITHUB_APP' && (!status.connected || status.reauthRequired);
   });
@@ -187,13 +192,6 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       + job.toolEvidenceSections.reduce((count, section) => count + section.items.length, 0);
   });
   readonly deterministic = computed(() => this.job()?.result?.deterministicResult ?? null);
-  readonly filteredDifferences = computed(() => {
-    const differences = this.deterministic()?.differences ?? [];
-    return differences.filter((difference) =>
-      (this.differenceKindFilter() === 'ALL' || difference.kind === this.differenceKindFilter())
-      && (this.differenceFileFilter() === 'ALL' || difference.role === this.differenceFileFilter())
-    );
-  });
   readonly filteredFindings = computed(() => {
     const findings = this.deterministic()?.findings ?? [];
     return findings.filter((finding) =>
@@ -201,12 +199,6 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       || finding.severity === this.findingSeverityFilter()
     );
   });
-  readonly differenceKinds = computed(() =>
-    unique((this.deterministic()?.differences ?? []).map((difference) => difference.kind))
-  );
-  readonly differenceFiles = computed(() =>
-    unique((this.deterministic()?.differences ?? []).map((difference) => difference.role))
-  );
   readonly findingSeverities = computed(() =>
     unique((this.deterministic()?.findings ?? []).map((finding) => finding.severity))
   );
@@ -310,14 +302,6 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     this.modeControl.setValue(mode === 'DEEP' ? 'DEEP' : 'BASIC');
   }
 
-  protected setDifferenceKindFilter(value: string): void {
-    this.differenceKindFilter.set(value);
-  }
-
-  protected setDifferenceFileFilter(value: string): void {
-    this.differenceFileFilter.set(value);
-  }
-
   protected setFindingSeverityFilter(value: string): void {
     this.findingSeverityFilter.set(value);
   }
@@ -325,7 +309,10 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   protected focusReference(referenceId: string): void {
     this.focusedReferenceId.set(referenceId);
     window.setTimeout(() => {
-      document.getElementById(referenceId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const target = document.getElementById(referenceId);
+      if (target && typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     });
   }
 
@@ -403,10 +390,6 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       buildRuntimeConfigurationExportFileName(job),
       buildRuntimeConfigurationExportEnvelope(job, exportedAt)
     );
-  }
-
-  protected trackDifference(_: number, difference: RuntimeConfigurationDifference): string {
-    return difference.differenceId;
   }
 
   protected trackFinding(_: number, finding: RuntimeConfigurationFinding): string {
@@ -601,22 +584,30 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   }
 
   private startRequest(): RuntimeConfigurationVerificationJobStartRequest {
-    const model = this.aiModelControl.value.trim()
-      || listedDefaultAiModel(this.aiModelCatalog());
-    const reasoningEffort = this.reasoningEffortControl.value.trim()
-      || defaultReasoningEffortForAiModel(this.aiModelCatalog(), model);
-    return {
+    const deep = this.modeControl.value === 'DEEP';
+    const request: RuntimeConfigurationVerificationJobStartRequest = {
       mode: this.modeControl.value,
       repositoryId: this.repositoryControl.value,
       systemId: this.systemControl.value,
       sourceBranch: this.sourceBranchControl.value,
-      targetBranch: this.targetBranchControl.value,
-      codeRef: this.modeControl.value === 'DEEP' && this.codeRefControl.value.trim()
-        ? this.codeRefControl.value.trim()
-        : undefined,
-      model: model || undefined,
-      reasoningEffort: reasoningEffort || undefined
+      targetBranch: this.targetBranchControl.value
     };
+    if (!deep) {
+      return request;
+    }
+    const model = this.aiModelControl.value.trim() || listedDefaultAiModel(this.aiModelCatalog());
+    const reasoningEffort = this.reasoningEffortControl.value.trim()
+      || defaultReasoningEffortForAiModel(this.aiModelCatalog(), model);
+    if (this.codeRefControl.value.trim()) {
+      request.codeRef = this.codeRefControl.value.trim();
+    }
+    if (model) {
+      request.model = model;
+    }
+    if (reasoningEffort) {
+      request.reasoningEffort = reasoningEffort;
+    }
+    return request;
   }
 
   private syncReasoningEffort(): void {

@@ -97,7 +97,7 @@
               <p class="section-eyebrow">Perspectives</p>
               <h2 id="runtimeStagesTitle">Etapy do weryfikacji</h2>
             </div>
-            <span class="panel-chip">5</span>
+            <span class="panel-chip">6</span>
           </div>
           <div class="source-tool-list" aria-label="Perspektywy Runtime Configuration">
             @for (perspective of perspectives; track perspective.id) {
@@ -132,9 +132,9 @@
               <p class="section-eyebrow">Readonly compact preview</p>
               <h2>Runtime Configuration Pipeline</h2>
               <p class="field-hint">
-                Pierwsza odpowiedź zawiera tylko summary. Sanitizowane szczegóły są
-                stronicowane i pobierane z tymczasowego snapshotu dopiero po otwarciu
-                perspektywy.
+                Pierwsza odpowiedź zawiera tylko summary. Projekcja operatora oraz
+                szczegóły granicy AI są pobierane z tymczasowego snapshotu dopiero po
+                otwarciu perspektywy.
               </p>
             </div>
             <span class="panel-chip route-chip">POST {{ '/api/runtime-configuration-verification/workbench/preview' }}</span>
@@ -143,10 +143,11 @@
           <div class="guardrail-banner">
             <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
             <div>
-              <strong>Raw configuration pozostaje poza Workbenchem</strong>
+              <strong>Wartości operatorskie i granica AI są rozdzielone</strong>
               <p>
-                Snapshot przechowuje tylko sanitizowany model, wygasa automatycznie i nie
-                tworzy historii.
+                Workbench przechowuje znormalizowaną projekcję z dokładnymi wartościami,
+                ale prompt i artefakty korzystają wyłącznie z modelu sanitizowanego.
+                Snapshot wygasa automatycznie i nie tworzy historii.
               </p>
             </div>
           </div>
@@ -193,7 +194,7 @@
             @if (summary(); as preview) {
               <section class="source-summary compact-summary">
                 <div>
-                  <p class="tool-status__label">Ephemeral sanitized snapshot</p>
+                  <p class="tool-status__label">Ephemeral readonly snapshot</p>
                   <h3>{{ preview.sourceBranch }} → {{ preview.targetBranch }}</h3>
                   <p>{{ preview.repositoryId }} · {{ preview.systemId }} · {{ preview.mode }}</p>
                 </div>
@@ -201,6 +202,9 @@
                   <span class="panel-chip">{{ preview.counts.nodes }} nodes</span>
                   <span class="panel-chip">{{ preview.counts.differences }} differences</span>
                   <span class="panel-chip">{{ preview.counts.findings }} findings</span>
+                  <span class="panel-chip">
+                    {{ preview.aiInputGenerated ? 'AI input generated' : 'AI input not generated' }}
+                  </span>
                   <span class="panel-chip">{{ initialPayloadCharacters() }} summary chars</span>
                 </div>
               </section>
@@ -256,11 +260,36 @@
                       </table>
                     </div>
                   }
+                } @else if (selectedPerspective() === 'projection') {
+                  <div class="perspective-heading">
+                    <div>
+                      <span class="provenance-label">OPERATOR FACT</span>
+                      <h3>Normalized configurationDiff</h3>
+                    </div>
+                    <p>Dokładne nazwy i wartości · tylko widok operatora</p>
+                  </div>
+                  @if (detailLoading() === 'projection') {
+                    <div class="empty-state">Pobieramy projekcję operatora…</div>
+                  } @else if (configurationDiff()) {
+                    <div class="text-preview">
+                      <div class="text-preview__header">
+                        <span class="field-label">
+                          {{ preview.sourceBranch }} → {{ preview.targetBranch }}
+                        </span>
+                      </div>
+                      <textarea
+                        readonly
+                        spellcheck="false"
+                        aria-label="Operator configuration diff"
+                        [value]="configurationDiffJson()"
+                      ></textarea>
+                    </div>
+                  }
                 } @else if (selectedPerspective() === 'mapping') {
                   <div class="perspective-heading">
                     <div>
-                      <span class="provenance-label">DERIVED</span>
-                      <h3>Canonical mapping</h3>
+                      <span class="provenance-label provenance-label--safe">AI-SAFE</span>
+                      <h3>Original → sanitized mapping</h3>
                     </div>
                     <label class="inline-toggle">
                       <input
@@ -271,7 +300,11 @@
                       Tylko zmienione
                     </label>
                   </div>
-                  @if (detailLoading() === 'mapping') {
+                  @if (!preview.aiInputGenerated) {
+                    <div class="empty-state">
+                      AI boundary mapping not generated in BASIC.
+                    </div>
+                  } @else if (detailLoading() === 'mapping') {
                     <div class="empty-state">Pobieramy stronę mappingu…</div>
                   } @else if (mappingPage(); as page) {
                     <p class="page-caption">
@@ -283,20 +316,33 @@
                         <thead>
                           <tr>
                             <th>Document</th>
-                            <th>Canonical path</th>
-                            <th>Relation</th>
-                            <th>Types</th>
-                            <th>Sensitivity</th>
+                            <th>Original path</th>
+                            <th>Sanitized path</th>
+                            <th>Change / IDs</th>
+                            <th>Tokens</th>
+                            <th>Types / sensitivity</th>
                           </tr>
                         </thead>
                         <tbody>
-                          @for (item of page.items; track item.role + ':' + item.documentIndex + ':' + item.path) {
+                          @for (item of page.items; track item.role + ':' + item.documentIndex + ':' + item.originalPath) {
                             <tr>
                               <td>{{ item.role }} #{{ item.documentIndex }}</td>
-                              <td><code [style.padding-left.px]="item.depth * 8">{{ item.path }}</code></td>
-                              <td>{{ item.relation }}</td>
-                              <td>{{ item.sourceType || '—' }} → {{ item.targetType || '—' }}</td>
-                              <td>{{ item.sensitivity }}</td>
+                              <td><code [style.padding-left.px]="item.depth * 8">{{ item.originalPath }}</code></td>
+                              <td><code>{{ item.sanitizedPath }}</code></td>
+                              <td>
+                                {{ item.changeKind }}
+                                <br /><code>{{ item.differenceIds.join(', ') || '—' }}</code>
+                              </td>
+                              <td>
+                                <code>
+                                  {{ item.sourceValueToken || '—' }} →
+                                  {{ item.targetValueToken || '—' }}
+                                </code>
+                              </td>
+                              <td>
+                                {{ item.sourceType || '—' }} → {{ item.targetType || '—' }}
+                                <br />{{ item.sensitivity }}
+                              </td>
                             </tr>
                           }
                         </tbody>
@@ -329,27 +375,33 @@
                     </div>
                     <p>{{ preview.anonymization.totalNodes }} nodes</p>
                   </div>
-                  <div class="metric-grid">
-                    <div>
-                      <strong>{{ preview.anonymization.pseudonymizedRepresentations }}</strong>
-                      <span>Pseudonymized</span>
+                  @if (!preview.aiInputGenerated) {
+                    <div class="empty-state">
+                      Anonymization decisions not generated in BASIC.
                     </div>
-                    <div>
-                      <strong>{{ preview.anonymization.suppressedRepresentations }}</strong>
-                      <span>Suppressed</span>
+                  } @else {
+                    <div class="metric-grid">
+                      <div>
+                        <strong>{{ preview.anonymization.pseudonymizedRepresentations }}</strong>
+                        <span>Pseudonymized</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview.anonymization.suppressedRepresentations }}</strong>
+                        <span>Suppressed</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview.anonymization.structureOnlyRepresentations }}</strong>
+                        <span>Structure only</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview.anonymization.notPresentRepresentations }}</strong>
+                        <span>Not present</span>
+                      </div>
                     </div>
-                    <div>
-                      <strong>{{ preview.anonymization.structureOnlyRepresentations }}</strong>
-                      <span>Structure only</span>
-                    </div>
-                    <div>
-                      <strong>{{ preview.anonymization.notPresentRepresentations }}</strong>
-                      <span>Not present</span>
-                    </div>
-                  </div>
-                  @if (detailLoading() === 'anonymization') {
+                  }
+                  @if (preview.aiInputGenerated && detailLoading() === 'anonymization') {
                     <div class="empty-state">Pobieramy stronę decyzji…</div>
-                  } @else if (anonymizationPage(); as page) {
+                  } @else if (preview.aiInputGenerated && anonymizationPage(); as page) {
                     <p class="page-caption">
                       {{ page.offset + 1 }}–{{ page.offset + page.items.length }} z
                       {{ page.totalItems }}
@@ -406,76 +458,85 @@
                     <p>Nie jest częścią initial response</p>
                   </div>
 
-                  <div class="artifact-selector">
-                    @for (item of preview.artifacts; track item.name) {
-                      <button type="button" (click)="loadArtifact(item.name)">
-                        <span>{{ item.name }}</span>
-                        <small>
-                          {{ item.characterCount }} chars · {{ item.mediaType }}
-                          @if (item.truncated) {
-                            · TRUNCATED
-                          }
-                        </small>
+                  @if (!preview.aiInputGenerated) {
+                    <div class="empty-state ai-not-generated">
+                      <strong>AI input not generated</strong>
+                      <span>BASIC kończy preview po deterministycznej projekcji operatora.</span>
+                    </div>
+                  } @else {
+                    <div class="artifact-selector">
+                      @for (item of preview.artifacts; track item.name) {
+                        <button type="button" (click)="loadArtifact(item.name)">
+                          <span>{{ item.name }}</span>
+                          <small>
+                            {{ item.characterCount }} chars · {{ item.mediaType }}
+                            @if (item.truncated) {
+                              · TRUNCATED
+                            }
+                          </small>
+                        </button>
+                      }
+                    </div>
+
+                    <div class="on-demand-actions">
+                      <button
+                        type="button"
+                        class="primary-button"
+                        [disabled]="detailLoading() !== null"
+                        (click)="loadAiInput()"
+                      >
+                        Załaduj dokładny input AI
                       </button>
+                      <span class="field-hint">
+                        Pełny prompt pobieramy tylko na jawne żądanie operatora.
+                      </span>
+                    </div>
+
+                    @if (detailLoading() === 'prompt' || detailLoading() === 'artifact') {
+                      <div class="empty-state">Pobieramy wybraną treść snapshotu…</div>
                     }
-                  </div>
 
-                  <div class="on-demand-actions">
-                    <button
-                      type="button"
-                      class="primary-button"
-                      [disabled]="detailLoading() !== null"
-                      (click)="loadAiInput()"
-                    >
-                      Załaduj dokładny input AI
-                    </button>
-                    <span class="field-hint">
-                      Pełny prompt pobieramy tylko na jawne żądanie operatora.
-                    </span>
-                  </div>
+                    @if (aiInput(); as input) {
+                      @if (input.generated && input.prompt) {
+                        <div class="text-preview">
+                          <div class="text-preview__header">
+                            <span class="field-label">Exact prompt · {{ input.characterCount }} chars</span>
+                            <button
+                              type="button"
+                              class="json-icon-button"
+                              aria-label="Kopiuj prepared prompt"
+                              (click)="copy('prompt', input.prompt)"
+                            >
+                              <span class="material-symbols-outlined" aria-hidden="true">
+                                {{ copiedTarget() === 'prompt' ? 'task_alt' : 'content_copy' }}
+                              </span>
+                            </button>
+                          </div>
+                          <textarea readonly spellcheck="false" aria-label="Prepared prompt" [value]="input.prompt"></textarea>
+                        </div>
+                      }
+                    }
 
-                  @if (detailLoading() === 'prompt' || detailLoading() === 'artifact') {
-                    <div class="empty-state">Pobieramy wybraną treść snapshotu…</div>
-                  }
-
-                  @if (aiInput(); as input) {
-                    <div class="text-preview">
-                      <div class="text-preview__header">
-                        <span class="field-label">Exact prompt · {{ input.characterCount }} chars</span>
-                        <button
-                          type="button"
-                          class="json-icon-button"
-                          aria-label="Kopiuj prepared prompt"
-                          (click)="copy('prompt', input.prompt)"
-                        >
-                          <span class="material-symbols-outlined" aria-hidden="true">
-                            {{ copiedTarget() === 'prompt' ? 'task_alt' : 'content_copy' }}
+                    @if (artifact(); as selectedArtifact) {
+                      <div class="text-preview">
+                        <div class="text-preview__header">
+                          <span class="field-label">
+                            {{ selectedArtifact.name }} · {{ selectedArtifact.characterCount }} chars
                           </span>
-                        </button>
+                          <button
+                            type="button"
+                            class="json-icon-button"
+                            aria-label="Kopiuj wybrany artifact"
+                            (click)="copy('artifact', selectedArtifact.content)"
+                          >
+                            <span class="material-symbols-outlined" aria-hidden="true">
+                              {{ copiedTarget() === 'artifact' ? 'task_alt' : 'content_copy' }}
+                            </span>
+                          </button>
+                        </div>
+                        <textarea readonly spellcheck="false" aria-label="Wybrany AI artifact" [value]="selectedArtifact.content"></textarea>
                       </div>
-                      <textarea readonly spellcheck="false" aria-label="Prepared prompt" [value]="input.prompt"></textarea>
-                    </div>
-                  }
-
-                  @if (artifact(); as selectedArtifact) {
-                    <div class="text-preview">
-                      <div class="text-preview__header">
-                        <span class="field-label">
-                          {{ selectedArtifact.name }} · {{ selectedArtifact.characterCount }} chars
-                        </span>
-                        <button
-                          type="button"
-                          class="json-icon-button"
-                          aria-label="Kopiuj wybrany artifact"
-                          (click)="copy('artifact', selectedArtifact.content)"
-                        >
-                          <span class="material-symbols-outlined" aria-hidden="true">
-                            {{ copiedTarget() === 'artifact' ? 'task_alt' : 'content_copy' }}
-                          </span>
-                        </button>
-                      </div>
-                      <textarea readonly spellcheck="false" aria-label="Wybrany AI artifact" [value]="selectedArtifact.content"></textarea>
-                    </div>
+                    }
                   }
                 } @else {
                   <div class="perspective-heading">

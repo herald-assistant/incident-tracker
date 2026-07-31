@@ -19,6 +19,12 @@ describe('runtime configuration import/export utils', () => {
     );
     expect(envelope.payload.job.result?.deterministicResult.differences[0]?.path)
       .toBe('notifications.endpoint');
+    expect(
+      envelope.payload.job.result?.configurationDiff?.files[0]
+        ?.documents[0]?.root.children[0]?.source.value
+    ).toBe('https://notifications.dev.test');
+    expect(envelope.payload.job.result?.configurationDiffAnnotations?.[0]?.comment)
+      .toBe('Endpoint kieruje ruch do innego systemu.');
     expect(buildRuntimeConfigurationExportFileName(job))
       .toBe('runtime-configuration-backend-system-dev1-to-zt001.json');
   });
@@ -34,14 +40,14 @@ describe('runtime configuration import/export utils', () => {
 function portableJob(): RuntimeConfigurationVerificationJobStateSnapshot {
   return {
     jobId: 'job-1',
-    mode: 'BASIC',
+    mode: 'DEEP',
     repositoryId: 'runtime-config',
     systemId: 'backend/system',
     sourceBranch: 'dev1',
     targetBranch: 'zt001',
     codeRef: null,
-    aiModel: 'gpt-5.4',
-    reasoningEffort: 'medium',
+    aiModel: null,
+    reasoningEffort: null,
     status: 'COMPLETED',
     currentStepCode: null,
     currentStepLabel: null,
@@ -54,7 +60,7 @@ function portableJob(): RuntimeConfigurationVerificationJobStateSnapshot {
     contextSections: [],
     toolEvidenceSections: [],
     aiActivityEvents: [],
-    preparedPrompt: 'safe prompt',
+    preparedPrompt: null,
     result: portableResult(),
     report: null,
     imported: false
@@ -64,7 +70,7 @@ function portableJob(): RuntimeConfigurationVerificationJobStateSnapshot {
 function portableResult(): RuntimeConfigurationVerificationResult {
   return {
     status: 'REVIEW_REQUIRED',
-    mode: 'BASIC',
+    mode: 'DEEP',
     deterministicResult: {
       repositoryId: 'runtime-config',
       systemId: 'backend/system',
@@ -91,11 +97,86 @@ function portableResult(): RuntimeConfigurationVerificationResult {
       }],
       findings: []
     },
+    configurationDiff: {
+      sourceBranch: 'dev1',
+      targetBranch: 'zt001',
+      files: [{
+        role: 'APPLICATION_YAML',
+        format: 'YAML',
+        sourcePath: 'backend/application.yml.kv',
+        targetPath: 'backend/application.yml.kv',
+        sourcePresent: true,
+        targetPresent: true,
+        documents: [{
+          documentIndex: 0,
+          sourcePresent: true,
+          targetPresent: true,
+          sourceProfile: {
+            presence: 'ABSENT',
+            type: null,
+            value: null,
+            cardinality: null
+          },
+          targetProfile: {
+            presence: 'ABSENT',
+            type: null,
+            value: null,
+            cardinality: null
+          },
+          root: {
+            name: 'document-0',
+            path: '',
+            changeKind: 'UNCHANGED',
+            source: {
+              presence: 'PRESENT',
+              type: 'MAP',
+              value: null,
+              cardinality: 1
+            },
+            target: {
+              presence: 'PRESENT',
+              type: 'MAP',
+              value: null,
+              cardinality: 1
+            },
+            differenceIds: [],
+            children: [{
+              name: 'endpoint',
+              path: 'notifications.endpoint',
+              changeKind: 'CHANGED',
+              source: {
+                presence: 'PRESENT',
+                type: 'STRING',
+                value: 'https://notifications.dev.test',
+                cardinality: null
+              },
+              target: {
+                presence: 'PRESENT',
+                type: 'STRING',
+                value: 'https://notifications.zt.test',
+                cardinality: null
+              },
+              differenceIds: ['difference-1'],
+              children: []
+            }]
+          }
+        }]
+      }]
+    },
+    configurationDiffAnnotations: [{
+      sourceId: 'observation-1',
+      kind: 'OBSERVATION',
+      comment: 'Endpoint kieruje ruch do innego systemu.',
+      confidence: null,
+      hypothesis: false,
+      differenceIds: ['difference-1'],
+      findingIds: []
+    }],
     aiSecondOpinion: null,
     agreement: null,
     deepAnalysis: null,
     visibilityLimits: [],
-    prompt: 'safe prompt',
+    prompt: null,
     usage: null
   };
 }

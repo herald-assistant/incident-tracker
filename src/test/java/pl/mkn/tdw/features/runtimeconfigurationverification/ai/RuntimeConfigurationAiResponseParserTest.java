@@ -6,7 +6,6 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConf
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConfigurationAiExecutionStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConfigurationAiObservationType;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicStatus;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,7 +48,6 @@ class RuntimeConfigurationAiResponseParserTest {
                   "visibilityLimits": []
                 }
                 """,
-                RuntimeConfigurationVerificationMode.BASIC,
                 RuntimeConfigurationAiTestFixtures.deterministic(RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED),
                 null
         );
@@ -66,7 +64,6 @@ class RuntimeConfigurationAiResponseParserTest {
     @Test
     void shouldAcceptDeepFunctionalImpactOnlyWithKnownReferences() {
         var opinion = parser.parse(deepResponse("code-1", "context-system-1"),
-                RuntimeConfigurationVerificationMode.DEEP,
                 RuntimeConfigurationAiTestFixtures.deterministic(RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED),
                 RuntimeConfigurationAiTestFixtures.deep()
         );
@@ -80,7 +77,7 @@ class RuntimeConfigurationAiResponseParserTest {
     }
 
     @Test
-    void shouldFallbackForMissingGroundingUnknownReferenceOrBasicFunctionalImpact() {
+    void shouldFallbackForMissingGroundingOrUnknownReference() {
         var deterministic = RuntimeConfigurationAiTestFixtures.deterministic(
                 RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
         );
@@ -103,23 +100,15 @@ class RuntimeConfigurationAiResponseParserTest {
                   "functionalImpacts":[],
                   "visibilityLimits":[]
                 }
-                """, RuntimeConfigurationVerificationMode.BASIC, deterministic, null);
+                """, deterministic, null);
         var unknownCode = parser.parse(
                 deepResponse("invented-code", "context-system-1"),
-                RuntimeConfigurationVerificationMode.DEEP,
-                deterministic,
-                RuntimeConfigurationAiTestFixtures.deep()
-        );
-        var basicImpact = parser.parse(
-                deepResponse("code-1", "context-system-1"),
-                RuntimeConfigurationVerificationMode.BASIC,
                 deterministic,
                 RuntimeConfigurationAiTestFixtures.deep()
         );
 
         assertThat(missingGrounding.executionStatus()).isEqualTo(RuntimeConfigurationAiExecutionStatus.INCOMPLETE);
         assertThat(unknownCode.executionStatus()).isEqualTo(RuntimeConfigurationAiExecutionStatus.INCOMPLETE);
-        assertThat(basicImpact.executionStatus()).isEqualTo(RuntimeConfigurationAiExecutionStatus.INCOMPLETE);
     }
 
     @Test
@@ -141,7 +130,7 @@ class RuntimeConfigurationAiResponseParserTest {
                     }
                     """.formatted(protectedField);
 
-            var opinion = parser.parse(response, RuntimeConfigurationVerificationMode.BASIC, deterministic, null);
+            var opinion = parser.parse(response, deterministic, null);
 
             assertThat(opinion.executionStatus())
                     .as("protected field %s", protectedField)

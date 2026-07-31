@@ -3,7 +3,6 @@ package pl.mkn.tdw.features.runtimeconfigurationverification.ai.report;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConfigurationAiSecondOpinion;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
@@ -13,7 +12,6 @@ import java.util.LinkedHashMap;
 public class RuntimeConfigurationReportMapper {
 
     public AnalysisReport merge(
-            RuntimeConfigurationVerificationMode mode,
             AnalysisReport scaffold,
             AnalysisReport aiReport,
             RuntimeConfigurationAiSecondOpinion opinion
@@ -25,7 +23,7 @@ public class RuntimeConfigurationReportMapper {
         if (aiReport != null) {
             aiReport.sections().forEach(section -> aiSections.put(section.id(), section));
         }
-        var allowed = RuntimeConfigurationReportSectionIds.aiWritable(mode);
+        var allowed = RuntimeConfigurationReportSectionIds.aiWritable();
         var sections = scaffold.sections().stream()
                 .map(section -> {
                     if (!allowed.contains(section.id())) {

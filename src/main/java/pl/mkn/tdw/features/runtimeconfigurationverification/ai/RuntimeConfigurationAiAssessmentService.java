@@ -6,7 +6,6 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConf
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.report.RuntimeConfigurationReportMapper;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 @Service
@@ -20,18 +19,17 @@ public class RuntimeConfigurationAiAssessmentService {
 
     public RuntimeConfigurationAiAssessment assess(
             String assistantContent,
-            RuntimeConfigurationVerificationMode mode,
             RuntimeConfigurationDeterministicContext deterministic,
             RuntimeConfigurationDeepContext deepContext,
             AnalysisReport reportScaffold,
             AnalysisReport aiReport
     ) {
-        var opinion = responseParser.parse(assistantContent, mode, deterministic, deepContext);
+        var opinion = responseParser.parse(assistantContent, deterministic, deepContext);
         return new RuntimeConfigurationAiAssessment(
                 opinion,
                 agreementEvaluator.evaluate(deterministic, opinion),
                 statusEvaluator.evaluate(deterministic, opinion),
-                reportMapper.merge(mode, reportScaffold, aiReport, opinion)
+                reportMapper.merge(reportScaffold, aiReport, opinion)
         );
     }
 }

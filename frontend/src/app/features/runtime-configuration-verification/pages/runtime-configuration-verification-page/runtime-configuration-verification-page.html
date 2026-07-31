@@ -6,8 +6,11 @@
           <p class="section-eyebrow">Pre-deployment check</p>
           <h2 id="runtimeConfigurationWorkspaceTitle">Porównaj konfigurację środowisk</h2>
           <p class="field-hint">
-            Najpierw zobaczysz deterministyczne fakty. Druga opinia AI pozostaje osobną,
-            wyraźnie oznaczoną częścią wyniku.
+            @if (modeControl.value === 'BASIC') {
+              Basic pokazuje wyłącznie deterministyczne porównanie i nie uruchamia AI.
+            } @else {
+              Deep dodaje do deterministycznych faktów kontekst operacyjny, kod i interpretację AI.
+            }
           </p>
         </div>
         @if (inputOptionsLoading()) {
@@ -31,7 +34,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">difference</span>
             <span>
               <strong>Basic</strong>
-              <small>Konfiguracja, structural diff i druga opinia AI</small>
+              <small>Szybki, deterministyczny diff bez AI</small>
             </span>
           </button>
           <button
@@ -107,28 +110,30 @@
           </label>
         }
 
-        <label class="field-control">
-          <span class="field-label">Model AI</span>
-          <span class="select-loading-control">
-            <select class="select-input" [formControl]="aiModelControl">
-              @for (option of aiModelOptions(); track option.value) {
-                <option [value]="option.value">{{ option.label }}</option>
+        @if (modeControl.value === 'DEEP') {
+          <label class="field-control">
+            <span class="field-label">Model AI</span>
+            <span class="select-loading-control">
+              <select class="select-input" [formControl]="aiModelControl">
+                @for (option of aiModelOptions(); track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              @if (aiOptionsLoading()) {
+                <span class="runtime-spinner" aria-hidden="true"></span>
+              }
+            </span>
+          </label>
+
+          <label class="field-control">
+            <span class="field-label">Reasoning effort</span>
+            <select class="select-input" [formControl]="reasoningEffortControl">
+              @for (effort of reasoningEffortOptions(); track effort) {
+                <option [value]="effort">{{ statusLabel(effort) }}</option>
               }
             </select>
-            @if (aiOptionsLoading()) {
-              <span class="runtime-spinner" aria-hidden="true"></span>
-            }
-          </span>
-        </label>
-
-        <label class="field-control">
-          <span class="field-label">Reasoning effort</span>
-          <select class="select-input" [formControl]="reasoningEffortControl">
-            @for (effort of reasoningEffortOptions(); track effort) {
-              <option [value]="effort">{{ statusLabel(effort) }}</option>
-            }
-          </select>
-        </label>
+          </label>
+        }
       </div>
 
       @if (modeControl.value === 'DEEP') {
@@ -169,13 +174,13 @@
         </section>
       }
 
-      @if (inputOptionsError() || aiOptionsError()) {
+      @if (inputOptionsError() || modeControl.value === 'DEEP' && aiOptionsError()) {
         <div class="runtime-message runtime-message--warning" role="status">
-          {{ inputOptionsError() || aiOptionsError() }}
+          {{ inputOptionsError() || (modeControl.value === 'DEEP' ? aiOptionsError() : '') }}
         </div>
       }
 
-      @if (githubAuthStatus()?.mode === 'GITHUB_APP') {
+      @if (modeControl.value === 'DEEP' && githubAuthStatus()?.mode === 'GITHUB_APP') {
         <section
           class="runtime-auth-card"
           [class.runtime-auth-card--connected]="githubAuthStatus()?.connected && !githubAuthStatus()?.reauthRequired"
@@ -207,7 +212,7 @@
           }
         </section>
       }
-      @if (githubAuthError()) {
+      @if (modeControl.value === 'DEEP' && githubAuthError()) {
         <div class="runtime-message runtime-message--warning" role="status">
           {{ githubAuthError() }}
         </div>
@@ -291,7 +296,9 @@
               }}
             </span>
             <div>
-              <p class="section-eyebrow">Wspólny sygnał decyzji</p>
+              <p class="section-eyebrow">
+                {{ result.mode === 'BASIC' ? 'Deterministyczny sygnał decyzji' : 'Wspólny sygnał decyzji' }}
+              </p>
               <h2>{{ statusLabel(result.status) }}</h2>
             </div>
           </div>
@@ -300,17 +307,39 @@
               <small>Deterministic</small>
               <strong>{{ statusLabel(result.deterministicResult.status) }}</strong>
             </span>
-            <span>
-              <small>AI second opinion</small>
-              <strong>{{ statusLabel(result.aiSecondOpinion?.conclusion || 'NOT_ASSESSED') }}</strong>
-            </span>
-            <span>
-              <small>Agreement</small>
-              <strong>{{ statusLabel(result.agreement?.status || 'NOT_ASSESSED') }}</strong>
-            </span>
+            @if (result.mode === 'DEEP' || result.aiSecondOpinion) {
+              <span>
+                <small>AI second opinion</small>
+                <strong>{{ statusLabel(result.aiSecondOpinion?.conclusion || 'NOT_ASSESSED') }}</strong>
+              </span>
+              <span>
+                <small>Agreement</small>
+                <strong>{{ statusLabel(result.agreement?.status || 'NOT_ASSESSED') }}</strong>
+              </span>
+            }
           </div>
           @if (result.agreement?.explanation) {
             <p>{{ result.agreement?.explanation }}</p>
+          }
+          @if (
+            result.agreement?.alignedFindingIds?.length
+            || result.agreement?.disputedFindingIds?.length
+          ) {
+            <div
+              class="decision-bar__references reference-links"
+              aria-label="Powiązania oceny zgodności"
+            >
+              @for (reference of result.agreement?.alignedFindingIds || []; track reference) {
+                <button type="button" (click)="focusReference(reference)">
+                  zgodne · {{ reference }}
+                </button>
+              }
+              @for (reference of result.agreement?.disputedFindingIds || []; track reference) {
+                <button type="button" (click)="focusReference(reference)">
+                  sporne · {{ reference }}
+                </button>
+              }
+            </div>
           }
           @if (result.usage; as usage) {
             <div class="decision-bar__usage" aria-label="Wykorzystanie AI">
@@ -325,7 +354,10 @@
           <app-analysis-report-panel [report]="currentJob.report"></app-analysis-report-panel>
         }
 
-        <section class="result-columns">
+        <section
+          class="result-columns"
+          [class.result-columns--deterministic-only]="result.mode === 'BASIC' && !result.aiSecondOpinion"
+        >
           <article class="result-panel result-panel--deterministic">
             <header>
               <div>
@@ -359,76 +391,14 @@
             </section>
 
             <section class="result-section">
-              <div class="result-section__heading">
-                <div>
-                  <h3>Structural differences</h3>
-                  <p>{{ filteredDifferences().length }} z {{ result.deterministicResult.differences.length }}</p>
-                </div>
-                <div class="filter-row" aria-label="Filtry różnic">
-                  <select
-                    class="compact-select"
-                    aria-label="Filtr rodzaju zmiany"
-                    [value]="differenceKindFilter()"
-                    (change)="setDifferenceKindFilter($any($event.target).value)"
-                  >
-                    <option value="ALL">Wszystkie zmiany</option>
-                    @for (kind of differenceKinds(); track kind) {
-                      <option [value]="kind">{{ statusLabel(kind) }}</option>
-                    }
-                  </select>
-                  <select
-                    class="compact-select"
-                    aria-label="Filtr pliku"
-                    [value]="differenceFileFilter()"
-                    (change)="setDifferenceFileFilter($any($event.target).value)"
-                  >
-                    <option value="ALL">Wszystkie pliki</option>
-                    @for (file of differenceFiles(); track file) {
-                      <option [value]="file">{{ statusLabel(file) }}</option>
-                    }
-                  </select>
-                </div>
-              </div>
-
-              @if (filteredDifferences().length) {
-                <div class="difference-table-wrap">
-                  <table class="difference-table">
-                    <thead>
-                      <tr>
-                        <th>Ścieżka</th>
-                        <th>Plik</th>
-                        <th>Zmiana</th>
-                        <th>Typ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (difference of filteredDifferences(); track trackDifference($index, difference)) {
-                        <tr
-                          [id]="difference.differenceId"
-                          [class.reference-focused]="isFocused(difference.differenceId)"
-                        >
-                          <td>
-                            <code>{{ difference.path }}</code>
-                            <small>{{ difference.differenceId }}</small>
-                          </td>
-                          <td>{{ statusLabel(difference.role) }} · doc {{ difference.documentIndex }}</td>
-                          <td>
-                            <span class="change-kind">{{ statusLabel(difference.kind) }}</span>
-                          </td>
-                          <td>
-                            {{ statusLabel(difference.sourceType) }} → {{ statusLabel(difference.targetType) }}
-                            @if (difference.sensitivity === 'SENSITIVE') {
-                              <small class="sensitive-label">wartość ukryta</small>
-                            }
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              } @else {
-                <p class="empty-inline">Brak różnic dla wybranych filtrów.</p>
-              }
+              <app-runtime-configuration-diff-renderer
+                [projection]="result.configurationDiff"
+                [fallbackDifferences]="result.deterministicResult.differences"
+                [annotations]="result.configurationDiffAnnotations || []"
+                [mode]="result.mode"
+                [focusedReferenceId]="focusedReferenceId()"
+                (referenceSelected)="focusReference($event)"
+              ></app-runtime-configuration-diff-renderer>
             </section>
 
             <section class="result-section">
@@ -475,7 +445,8 @@
             </section>
           </article>
 
-          <article class="result-panel result-panel--ai">
+          @if (result.mode === 'DEEP' || result.aiSecondOpinion) {
+            <article class="result-panel result-panel--ai">
             <header>
               <div>
                 <p class="section-eyebrow">Druga para oczu · AI INTERPRETATION</p>
@@ -503,7 +474,12 @@
                 <h3>Observations</h3>
                 <div class="observation-list">
                   @for (observation of opinion.observations; track observation.observationId) {
-                    <article class="observation-card" [class.observation-card--hypothesis]="observation.type === 'HYPOTHESIS'">
+                    <article
+                      class="observation-card"
+                      [id]="observation.observationId"
+                      [class.observation-card--hypothesis]="observation.type === 'HYPOTHESIS'"
+                      [class.reference-focused]="isFocused(observation.observationId)"
+                    >
                       <div>
                         <span>{{ observation.type === 'HYPOTHESIS' ? 'Hypothesis' : 'Grounded observation' }}</span>
                         <small>{{ observation.observationId }}</small>
@@ -550,7 +526,10 @@
                   <h3>Functional impact</h3>
                   <div class="impact-list">
                     @for (impact of opinion.functionalImpacts; track impact.impactId) {
-                      <article>
+                      <article
+                        [id]="impact.impactId"
+                        [class.reference-focused]="isFocused(impact.impactId)"
+                      >
                         <div>
                           <span>{{ impact.hypothesis ? 'Hypothesis' : 'Grounded' }}</span>
                           <small>{{ statusLabel(impact.confidence) }}</small>
@@ -580,7 +559,8 @@
             } @else {
               <div class="empty-inline">AI second opinion nie jest dostępne. Wynik deterministyczny pozostaje ważny.</div>
             }
-          </article>
+            </article>
+          }
         </section>
 
         @if (result.mode === 'DEEP' && result.deepAnalysis; as deep) {
@@ -608,6 +588,11 @@
                     <small>{{ statusLabel(entity.type) }} · {{ statusLabel(entity.confidence) }}</small>
                     <h4>{{ entity.label }}</h4>
                     <p>{{ entity.summary }}</p>
+                    <div class="reference-links">
+                      @for (reference of entity.differenceIds; track reference) {
+                        <button type="button" (click)="focusReference(reference)">{{ reference }}</button>
+                      }
+                    </div>
                   </article>
                 }
                 @for (entity of deep.processes; track entity.contextId) {
@@ -615,6 +600,11 @@
                     <small>Process · {{ statusLabel(entity.confidence) }}</small>
                     <h4>{{ entity.label }}</h4>
                     <p>{{ entity.summary }}</p>
+                    <div class="reference-links">
+                      @for (reference of entity.differenceIds; track reference) {
+                        <button type="button" (click)="focusReference(reference)">{{ reference }}</button>
+                      }
+                    </div>
                   </article>
                 }
                 @for (entity of deep.integrations; track entity.contextId) {
@@ -622,6 +612,11 @@
                     <small>Integration · {{ statusLabel(entity.confidence) }}</small>
                     <h4>{{ entity.label }}</h4>
                     <p>{{ entity.summary }}</p>
+                    <div class="reference-links">
+                      @for (reference of entity.differenceIds; track reference) {
+                        <button type="button" (click)="focusReference(reference)">{{ reference }}</button>
+                      }
+                    </div>
                   </article>
                 }
               </section>
@@ -695,7 +690,13 @@
           <span class="runtime-spinner" aria-hidden="true"></span>
           <div>
             <h2>Analiza trwa</h2>
-            <p>Wynik deterministyczny pojawi się po kroku DIFF, jeszcze przed zakończeniem AI.</p>
+            <p>
+              @if (currentJob.mode === 'BASIC') {
+                Wynik pojawi się po zakończeniu deterministycznego kroku DIFF.
+              } @else {
+                Wynik deterministyczny pojawi się po kroku DIFF, jeszcze przed zakończeniem AI.
+              }
+            </p>
           </div>
         </section>
       }
@@ -706,6 +707,7 @@
         [aiActive]="aiWorkflowRunning()"
         [progressCount]="currentJob.steps.length"
         [aiCount]="aiWorkflowItemCount()"
+        [showAi]="currentJob.mode === 'DEEP' || currentJob.aiActivityEvents.length > 0"
         [showChat]="false"
         [showFeedback]="false"
       >

@@ -18,8 +18,6 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .SanitizedConfigurationNode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
         .RuntimeConfigurationFileRole;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
-        .RuntimeConfigurationVerificationMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +35,6 @@ class RuntimeConfigurationAiArtifactServiceTest {
     void shouldRenderCompactV2TreeWithAllParametersAndWithoutSecretsOrLegacyManifests()
             throws Exception {
         var result = service.render(
-                RuntimeConfigurationVerificationMode.BASIC,
                 RuntimeConfigurationAiTestFixtures.deterministic(
                         pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
                                 .RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
@@ -54,6 +51,8 @@ class RuntimeConfigurationAiArtifactServiceTest {
         );
         assertThat(result.contents().keySet())
                 .noneMatch(name -> name.contains("/manifest/") || name.contains("manifest-index"));
+        assertThat(objectMapper.readTree(result.contents().get("runtime-configuration/scope.json"))
+                .get("mode").asText()).isEqualTo("DEEP");
 
         var tree = result.contents().get("runtime-configuration/configuration-tree.yaml");
         var changes = result.contents().get("runtime-configuration/changes.json");
@@ -138,7 +137,7 @@ class RuntimeConfigurationAiArtifactServiceTest {
                 baseline.findings()
         );
 
-        var result = service.render(RuntimeConfigurationVerificationMode.BASIC, context, null);
+        var result = service.render(context, null);
         var rows = objectMapper.readTree(
                 result.contents().get("runtime-configuration/changes.json")
         ).get("differences");
@@ -217,7 +216,7 @@ class RuntimeConfigurationAiArtifactServiceTest {
                 baseline.findings()
         );
 
-        var result = service.render(RuntimeConfigurationVerificationMode.BASIC, context, null);
+        var result = service.render(context, null);
         var tree = result.contents().get("runtime-configuration/configuration-tree.yaml");
         @SuppressWarnings("unchecked")
         var parsed = (Map<String, Object>) new Yaml().load(tree);

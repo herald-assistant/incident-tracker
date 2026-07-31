@@ -7,6 +7,7 @@ import {
   RuntimeConfigurationWorkbenchAiInputResponse,
   RuntimeConfigurationWorkbenchAnonymizationPage,
   RuntimeConfigurationWorkbenchArtifactResponse,
+  RuntimeConfigurationWorkbenchConfigurationDiffResponse,
   RuntimeConfigurationWorkbenchDeepResponse,
   RuntimeConfigurationWorkbenchMappingPage,
   RuntimeConfigurationWorkbenchPreviewResponse,
@@ -21,6 +22,7 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
     getInputOptions: ReturnType<typeof vi.fn>;
     preview: ReturnType<typeof vi.fn>;
     getWorkbenchSource: ReturnType<typeof vi.fn>;
+    getWorkbenchConfigurationDiff: ReturnType<typeof vi.fn>;
     getWorkbenchMapping: ReturnType<typeof vi.fn>;
     getWorkbenchAnonymization: ReturnType<typeof vi.fn>;
     getWorkbenchDeep: ReturnType<typeof vi.fn>;
@@ -33,6 +35,7 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
       getInputOptions: vi.fn(() => of(inputOptions())),
       preview: vi.fn(() => of(previewResponse())),
       getWorkbenchSource: vi.fn(() => of(sourceResponse())),
+      getWorkbenchConfigurationDiff: vi.fn(() => of(configurationDiffResponse())),
       getWorkbenchMapping: vi.fn(() => of(mappingPage())),
       getWorkbenchAnonymization: vi.fn(() => of(anonymizationPage())),
       getWorkbenchDeep: vi.fn(() => of(deepResponse())),
@@ -52,7 +55,8 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
   it('should return a compact summary and fetch only source metadata initially', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Runtime Configuration Pipeline');
-    expect(compiled.textContent).toContain('Raw configuration pozostaje poza Workbenchem');
+    expect(compiled.textContent).toContain('Wartości operatorskie i granica AI są rozdzielone');
+    fixture.componentInstance.form.controls.codeRef.setValue('release-42');
 
     buttonContaining(compiled, 'Run preview')?.click();
     fixture.detectChanges();
@@ -65,6 +69,7 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
       targetBranch: 'zt001'
     });
     expect(api.getWorkbenchSource).toHaveBeenCalledWith(PREVIEW_ID);
+    expect(api.getWorkbenchConfigurationDiff).not.toHaveBeenCalled();
     expect(api.getWorkbenchMapping).not.toHaveBeenCalled();
     expect(api.getWorkbenchAnonymization).not.toHaveBeenCalled();
     expect(api.getWorkbenchDeep).not.toHaveBeenCalled();
@@ -72,22 +77,60 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
     expect(api.getWorkbenchArtifact).not.toHaveBeenCalled();
     expect(compiled.textContent).toContain('backend/application.yml.kv');
     expect(compiled.textContent).toContain('855 nodes');
+    expect(compiled.textContent).toContain('AI input not generated');
     expect(fixture.componentInstance.responseJson().length).toBeLessThan(50_000);
     expect(fixture.componentInstance.responseJson()).not.toContain('preparedPrompt');
     expect(fixture.componentInstance.responseJson()).not.toContain('artifactContents');
+    expect(fixture.componentInstance.responseJson()).not.toContain('${VAULT_DYNAMIC_DEV}');
     expect(fixture.componentInstance.responseJson()).not.toContain('raw-password');
   });
 
-  it('should load paged mapping and anonymization only after perspective selection', () => {
+  it('should show exact operator projection in BASIC without generating AI details', () => {
     buttonContaining(fixture.nativeElement, 'Run preview')?.click();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    buttonContaining(compiled, 'Mapping')?.click();
+    buttonContaining(compiled, 'Operator projection')?.click();
+    fixture.detectChanges();
+
+    expect(api.getWorkbenchConfigurationDiff).toHaveBeenCalledWith(PREVIEW_ID);
+    const projection = compiled.querySelector(
+      'textarea[aria-label="Operator configuration diff"]'
+    ) as HTMLTextAreaElement;
+    expect(projection.value).toContain('clients.customer-zt001.password');
+    expect(projection.value).toContain('${VAULT_DYNAMIC_DEV}');
+
+    buttonContaining(compiled, 'AI boundary mapping')?.click();
+    fixture.detectChanges();
+    expect(api.getWorkbenchMapping).not.toHaveBeenCalled();
+    expect(compiled.textContent).toContain('AI boundary mapping not generated in BASIC');
+
+    buttonContaining(compiled, 'Anonymization')?.click();
+    fixture.detectChanges();
+    expect(api.getWorkbenchAnonymization).not.toHaveBeenCalled();
+    expect(compiled.textContent).toContain('Anonymization decisions not generated in BASIC');
+
+    buttonContaining(compiled, 'AI input')?.click();
+    fixture.detectChanges();
+    expect(api.getWorkbenchAiInput).not.toHaveBeenCalled();
+    expect(api.getWorkbenchArtifact).not.toHaveBeenCalled();
+    expect(compiled.textContent).toContain('BASIC kończy preview');
+  });
+
+  it('should load DEEP mapping and anonymization only after perspective selection', () => {
+    api.preview.mockReturnValue(of(previewResponse(true)));
+    buttonContaining(fixture.nativeElement, 'Deep')?.click();
+    buttonContaining(fixture.nativeElement, 'Run preview')?.click();
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    buttonContaining(compiled, 'AI boundary mapping')?.click();
     fixture.detectChanges();
     expect(api.getWorkbenchMapping).toHaveBeenCalledWith(PREVIEW_ID, 0, 100, true);
-    expect(compiled.textContent).toContain('Canonical mapping');
+    expect(compiled.textContent).toContain('Original → sanitized mapping');
+    expect(compiled.textContent).toContain('clients.customer-zt001.password');
     expect(compiled.textContent).toContain('spring.datasource.password');
+    expect(compiled.textContent).toContain('difference-1');
     expect(compiled.textContent).toContain('CHANGED');
 
     fixture.componentInstance.setMappingChangedOnly(false);
@@ -103,6 +146,8 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
   });
 
   it('should require explicit actions before loading the exact prompt or an artifact', () => {
+    api.preview.mockReturnValue(of(previewResponse(true)));
+    buttonContaining(fixture.nativeElement, 'Deep')?.click();
     buttonContaining(fixture.nativeElement, 'Run preview')?.click();
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
@@ -222,11 +267,11 @@ function previewResponse(deep = false): RuntimeConfigurationWorkbenchPreviewResp
       references: 90
     },
     anonymization: {
-      totalNodes: 855,
-      pseudonymizedRepresentations: 1400,
-      suppressedRepresentations: 20,
-      structureOnlyRepresentations: 200,
-      notPresentRepresentations: 90
+      totalNodes: deep ? 855 : 0,
+      pseudonymizedRepresentations: deep ? 1400 : 0,
+      suppressedRepresentations: deep ? 20 : 0,
+      structureOnlyRepresentations: deep ? 200 : 0,
+      notPresentRepresentations: deep ? 90 : 0
     },
     deep: {
       requested: deep,
@@ -237,13 +282,70 @@ function previewResponse(deep = false): RuntimeConfigurationWorkbenchPreviewResp
       codeGroundings: 0,
       primaryOwners: deep ? 1 : 0
     },
-    artifacts: [{
-      name: 'runtime-configuration/configuration-tree.yaml',
-      mediaType: 'application/yaml',
-      characterCount: 71_175,
-      truncated: false
-    }],
+    aiInputGenerated: deep,
+    artifacts: deep
+      ? [{
+          name: 'runtime-configuration/configuration-tree.yaml',
+          mediaType: 'application/yaml',
+          characterCount: 71_175,
+          truncated: false
+        }]
+      : [],
     visibilityLimits: deep ? ['Code search was not executed.'] : []
+  };
+}
+
+function configurationDiffResponse(): RuntimeConfigurationWorkbenchConfigurationDiffResponse {
+  return {
+    previewId: PREVIEW_ID,
+    configurationDiff: {
+      sourceBranch: 'dev1',
+      targetBranch: 'zt001',
+      files: [{
+        role: 'APPLICATION_YAML',
+        format: 'YAML',
+        sourcePath: 'backend/application.yml.kv',
+        targetPath: 'backend/application.yml.kv',
+        sourcePresent: true,
+        targetPresent: true,
+        documents: [{
+          documentIndex: 0,
+          sourcePresent: true,
+          targetPresent: true,
+          sourceProfile: {
+            presence: 'ABSENT',
+            type: null,
+            value: null,
+            cardinality: null
+          },
+          targetProfile: {
+            presence: 'ABSENT',
+            type: null,
+            value: null,
+            cardinality: null
+          },
+          root: {
+            name: 'password',
+            path: 'clients.customer-zt001.password',
+            changeKind: 'CHANGED',
+            source: {
+              presence: 'PRESENT',
+              type: 'STRING',
+              value: '${VAULT_DYNAMIC_DEV}',
+              cardinality: null
+            },
+            target: {
+              presence: 'PRESENT',
+              type: 'STRING',
+              value: '${VAULT_DYNAMIC_ZT}',
+              cardinality: null
+            },
+            differenceIds: ['difference-1'],
+            children: []
+          }
+        }]
+      }]
+    }
   };
 }
 
@@ -268,12 +370,17 @@ function mappingPage(): RuntimeConfigurationWorkbenchMappingPage {
       role: 'APPLICATION_YAML',
       documentIndex: 0,
       depth: 2,
-      name: 'password',
-      path: 'spring.datasource.password',
+      originalName: 'password',
+      originalPath: 'clients.customer-zt001.password',
+      sanitizedName: 'property-1',
+      sanitizedPath: 'spring.datasource.password',
       sourceType: 'STRING',
       targetType: 'STRING',
-      relation: 'CHANGED',
-      sensitivity: 'SENSITIVE'
+      changeKind: 'CHANGED',
+      sensitivity: 'SENSITIVE',
+      sourceValueToken: null,
+      targetValueToken: null,
+      differenceIds: ['difference-1']
     }]
   };
 }
@@ -303,6 +410,7 @@ function anonymizationPage(): RuntimeConfigurationWorkbenchAnonymizationPage {
 function aiInputResponse(): RuntimeConfigurationWorkbenchAiInputResponse {
   return {
     previewId: PREVIEW_ID,
+    generated: true,
     characterCount: 120,
     prompt: 'Review compact sanitized configuration. Use configuration-tree.yaml.'
   };

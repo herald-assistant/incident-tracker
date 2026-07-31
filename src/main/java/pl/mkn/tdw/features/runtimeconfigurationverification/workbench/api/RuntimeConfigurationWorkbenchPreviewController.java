@@ -39,6 +39,13 @@ public class RuntimeConfigurationWorkbenchPreviewController {
         return previewService.source(previewId);
     }
 
+    @GetMapping("/preview/{previewId}/configuration-diff")
+    public RuntimeConfigurationWorkbenchConfigurationDiffResponse configurationDiff(
+            @PathVariable @Pattern(regexp = "[a-f0-9-]{36}") String previewId
+    ) {
+        return previewService.configurationDiff(previewId);
+    }
+
     @GetMapping("/preview/{previewId}/mapping")
     public RuntimeConfigurationWorkbenchMappingPage mapping(
             @PathVariable @Pattern(regexp = "[a-f0-9-]{36}") String previewId,

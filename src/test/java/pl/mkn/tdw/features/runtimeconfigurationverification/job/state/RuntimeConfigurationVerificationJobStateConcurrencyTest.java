@@ -19,14 +19,14 @@ class RuntimeConfigurationVerificationJobStateConcurrencyTest {
     void shouldCreateConsistentSnapshotsDuringConcurrentAiUpdates() throws Exception {
         var state = new RuntimeConfigurationVerificationJobState(
                 "job-1",
-                RuntimeConfigurationVerificationJobServiceTest.request()
+                RuntimeConfigurationVerificationJobServiceTest.deepRequest()
         );
         state.markSourceStarted();
         state.markSourceCompleted();
         state.markParseStarted();
         state.markParseCompleted();
         state.markDiffStarted();
-        state.markDiffCompleted(RuntimeConfigurationVerificationJobServiceTest.deterministic());
+        state.markDiffCompleted(RuntimeConfigurationVerificationJobServiceTest.deterministicBuild());
         state.markAiStarted("safe prompt");
 
         var executor = Executors.newFixedThreadPool(8);

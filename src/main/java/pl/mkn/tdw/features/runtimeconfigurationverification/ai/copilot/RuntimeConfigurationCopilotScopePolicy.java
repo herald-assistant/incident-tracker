@@ -36,7 +36,7 @@ public class RuntimeConfigurationCopilotScopePolicy implements CopilotToolInvoca
             return;
         }
         if (mode(request) != RuntimeConfigurationVerificationMode.DEEP) {
-            reject(request, "BASIC mode does not allow Operational Context or source-code tools.");
+            reject(request, "Only DEEP mode allows Runtime Configuration Verification AI tools.");
         }
         var arguments = arguments(request.rawArguments());
         if (arguments == null) {
@@ -114,7 +114,7 @@ public class RuntimeConfigurationCopilotScopePolicy implements CopilotToolInvoca
         try {
             return RuntimeConfigurationVerificationMode.valueOf(String.valueOf(value));
         } catch (RuntimeException exception) {
-            return RuntimeConfigurationVerificationMode.BASIC;
+            return null;
         }
     }
 

@@ -11,8 +11,30 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.preparation
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.RuntimeConfigurationDeepContextService;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
         .RuntimeConfigurationDeterministicStatus;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffDocument;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffFile;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffFileFormat;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffNode;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffValue;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffValuePresence;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationDeterministicBuildResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
         .RuntimeConfigurationDeterministicContextService;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
+        .RuntimeConfigurationFileRole;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationChangeKind;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationValueType;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api
         .RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScope;
@@ -26,6 +48,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +58,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +74,7 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
     private final RuntimeConfigurationDeepContextService deepService =
             mock(RuntimeConfigurationDeepContextService.class);
 
+    private RuntimeConfigurationPromptPreparationService promptService;
     private RuntimeConfigurationWorkbenchPreviewService service;
 
     @BeforeEach
@@ -59,53 +84,54 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
                 Duration.ofMinutes(10),
                 32
         );
+        promptService = spy(new RuntimeConfigurationPromptPreparationService(
+                new RuntimeConfigurationAiArtifactService(objectMapper)
+        ));
         service = new RuntimeConfigurationWorkbenchPreviewService(
                 scopeResolver,
                 deterministicService,
                 deepService,
-                new RuntimeConfigurationPromptPreparationService(
-                        new RuntimeConfigurationAiArtifactService(objectMapper)
-                ),
+                promptService,
                 store
         );
         when(scopeResolver.resolve("runtime-config", "billing-api")).thenReturn(scope());
         when(deterministicService.build(scope(), "dev1", "zt001"))
-                .thenReturn(RuntimeConfigurationAiTestFixtures.deterministic(
-                        RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
+                .thenReturn(new RuntimeConfigurationDeterministicBuildResult(
+                        RuntimeConfigurationAiTestFixtures.deterministic(
+                                RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED
+                        ),
+                        configurationDiff()
                 ));
     }
 
     @Test
-    void shouldReturnOnlyCompactBasicSummaryAndServeSanitizedDetailsLazily() throws Exception {
+    void shouldStopBasicAfterOperatorProjectionWithoutGeneratingAiInput() throws Exception {
         var result = service.preview(request(RuntimeConfigurationVerificationMode.BASIC));
         var serialized = objectMapper.writeValueAsString(result);
 
         assertThat(result.previewId()).matches("[a-f0-9-]{36}");
         assertThat(result.expiresAt()).isEqualTo(NOW.plus(Duration.ofMinutes(10)));
+        assertThat(result.aiInputGenerated()).isFalse();
         assertThat(result.source().sourceComplete()).isTrue();
         assertThat(result.source().targetComplete()).isTrue();
         assertThat(result.counts().documents()).isEqualTo(1);
         assertThat(result.counts().nodes()).isEqualTo(3);
         assertThat(result.counts().differences()).isEqualTo(1);
         assertThat(result.counts().findings()).isEqualTo(1);
-        assertThat(result.artifacts())
-                .extracting(artifact -> artifact.name())
-                .containsExactly(
-                        "runtime-configuration/scope.json",
-                        "runtime-configuration/coverage.json",
-                        "runtime-configuration/configuration-tree.yaml",
-                        "runtime-configuration/changes.json",
-                        "runtime-configuration/response-contract.json"
-                );
+        assertThat(result.artifacts()).isEmpty();
+        assertThat(result.anonymization().totalNodes()).isZero();
         assertThat(serialized.length()).isLessThan(50_000);
         var responseJson = objectMapper.readTree(serialized);
         assertThat(responseJson.has("preparedPrompt")).isFalse();
         assertThat(responseJson.has("artifactContents")).isFalse();
+        assertThat(responseJson.has("configurationDiff")).isFalse();
         assertThat(responseJson.has("mapping")).isFalse();
         assertThat(responseJson.has("anonymizationDecisions")).isFalse();
         assertThat(serialized)
                 .doesNotContain(
                         "\"decisions\"",
+                        "${VAULT_DYNAMIC_DEV}",
+                        "${VAULT_DYNAMIC_ZT}",
                         "raw-secret-source",
                         "raw-secret-target",
                         "raw-difference-secret-source",
@@ -116,16 +142,75 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
         assertThat(source.source().files()).hasSize(3);
         assertThat(source.target().files()).hasSize(3);
 
+        var operatorProjection = service.configurationDiff(result.previewId());
+        assertThat(operatorProjection.configurationDiff()).isEqualTo(configurationDiff());
+        assertThat(objectMapper.writeValueAsString(operatorProjection))
+                .contains(
+                        "clients.customer-zt001.password",
+                        "${VAULT_DYNAMIC_DEV}",
+                        "${VAULT_DYNAMIC_ZT}"
+                );
+
+        assertThat(service.mapping(result.previewId(), 0, 100, false).items()).isEmpty();
+        assertThat(service.anonymization(result.previewId(), 0, 100).items()).isEmpty();
+
+        var aiInput = service.aiInput(result.previewId());
+        assertThat(aiInput.generated()).isFalse();
+        assertThat(aiInput.characterCount()).isZero();
+        assertThat(aiInput.prompt()).isNull();
+
+        verify(deterministicService).build(scope(), "dev1", "zt001");
+        verify(deepService, never()).build(any(), anyString(), anyString(), any(), any());
+        verify(promptService, never()).prepare(any(), any(), any());
+    }
+
+    @Test
+    void shouldExposeProjectionAndSanitizedAiBoundaryForDeep() throws Exception {
+        var deep = RuntimeConfigurationAiTestFixtures.deep();
+        when(deepService.build(
+                eq(RuntimeConfigurationVerificationMode.DEEP),
+                eq("runtime-config"),
+                eq("billing-api"),
+                eq("release-42"),
+                any()
+        )).thenReturn(Optional.of(deep));
+
+        var result = service.preview(request(RuntimeConfigurationVerificationMode.DEEP));
+
+        assertThat(result.aiInputGenerated()).isTrue();
+        assertThat(result.deep().requested()).isTrue();
+        assertThat(result.deep().status()).isEqualTo("COMPLETE");
+        assertThat(result.deep().preflightStatus()).isEqualTo("READY");
+        assertThat(result.deep().repositoryScopes()).isEqualTo(1);
+        assertThat(result.deep().codeGroundings()).isEqualTo(1);
+        assertThat(result.artifacts())
+                .extracting(artifact -> artifact.name())
+                .contains("runtime-configuration/deep-context.json");
+        assertThat(service.configurationDiff(result.previewId()).configurationDiff())
+                .isEqualTo(configurationDiff());
+        assertThat(service.deep(result.previewId()).context()).isEqualTo(deep);
         var changedMapping = service.mapping(result.previewId(), 0, 100, true);
         assertThat(changedMapping.totalNodes()).isEqualTo(3);
         assertThat(changedMapping.totalItems()).isEqualTo(2);
         assertThat(changedMapping.items())
-                .extracting(item -> item.path())
-                .containsExactly("", "datasource.password");
-
-        var allMapping = service.mapping(result.previewId(), 0, 2, false);
+                .filteredOn(item -> "clients.customer-zt001.password".equals(item.originalPath()))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.sanitizedPath()).isEqualTo("datasource.password");
+                    assertThat(item.differenceIds()).containsExactly("difference-1");
+                    assertThat(item.sourceValueToken()).isNull();
+                    assertThat(item.targetValueToken()).isNull();
+                });
+        var allMapping = service.mapping(result.previewId(), 0, 100, false);
         assertThat(allMapping.totalItems()).isEqualTo(3);
-        assertThat(allMapping.items()).hasSize(2);
+        assertThat(allMapping.items())
+                .filteredOn(item -> "service.timeout".equals(item.originalPath()))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.sanitizedPath()).isEqualTo("service.timeout");
+                    assertThat(item.sourceValueToken()).isEqualTo("value-1");
+                    assertThat(item.targetValueToken()).isEqualTo("value-1");
+                });
 
         var anonymization = service.anonymization(result.previewId(), 0, 100);
         assertThat(anonymization.totalItems()).isEqualTo(3);
@@ -138,68 +223,27 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
                     assertThat(item.sourceValueToken()).isNull();
                     assertThat(item.targetValueToken()).isNull();
                 });
-        assertThat(anonymization.items())
-                .filteredOn(item -> "service.timeout".equals(item.path()))
-                .singleElement()
-                .satisfies(item -> {
-                    assertThat(item.sourceRepresentation())
-                            .isEqualTo(ValueRepresentation.PSEUDONYMIZED);
-                    assertThat(item.sourceValueToken()).isEqualTo("value-1");
-                });
 
         var aiInput = service.aiInput(result.previewId());
-        assertThat(aiInput.characterCount()).isEqualTo(aiInput.prompt().length());
+        assertThat(aiInput.generated()).isTrue();
         assertThat(aiInput.prompt())
-                .contains("runtime-configuration-basic-review")
-                .doesNotContain("raw-secret-source", "raw-secret-target");
-
+                .contains("runtime-configuration-deep-review")
+                .contains("runtime-configuration/deep-context.json")
+                .doesNotContain("${VAULT_DYNAMIC_DEV}", "${VAULT_DYNAMIC_ZT}");
         var tree = service.artifact(
                 result.previewId(),
                 "runtime-configuration/configuration-tree.yaml"
         );
-        assertThat(tree.mediaType()).isEqualTo("application/yaml");
         assertThat(tree.content())
-                .contains(
-                        "\"timeout\"",
-                        "\"p:value-1\"",
-                        "M: sensitive scalar suppressed before AI"
-                )
-                .doesNotContain("raw-secret-source", "raw-secret-target");
-        verify(deterministicService).build(scope(), "dev1", "zt001");
-        verify(deepService, never()).build(any(), anyString(), anyString(), any(), any());
-    }
-
-    @Test
-    void shouldIncludeScopedDeepSummaryAndExposeDeepDetailOnDemand() {
-        var deep = RuntimeConfigurationAiTestFixtures.deep();
-        when(deepService.build(
-                eq(RuntimeConfigurationVerificationMode.DEEP),
-                eq("runtime-config"),
-                eq("billing-api"),
-                eq("release-42"),
-                any()
-        )).thenReturn(Optional.of(deep));
-
-        var result = service.preview(request(RuntimeConfigurationVerificationMode.DEEP));
-
-        assertThat(result.deep().requested()).isTrue();
-        assertThat(result.deep().status()).isEqualTo("COMPLETE");
-        assertThat(result.deep().preflightStatus()).isEqualTo("READY");
-        assertThat(result.deep().repositoryScopes()).isEqualTo(1);
-        assertThat(result.deep().codeGroundings()).isEqualTo(1);
-        assertThat(result.artifacts())
-                .extracting(artifact -> artifact.name())
-                .contains("runtime-configuration/deep-context.json");
-        assertThat(service.deep(result.previewId()).context()).isEqualTo(deep);
-        assertThat(service.aiInput(result.previewId()).prompt())
-                .contains("runtime-configuration-deep-review")
-                .contains("runtime-configuration/deep-context.json");
+                .contains("\"p:value-1\"", "M: sensitive scalar suppressed before AI")
+                .doesNotContain("${VAULT_DYNAMIC_DEV}", "${VAULT_DYNAMIC_ZT}");
         assertThat(result.visibilityLimits())
                 .contains("The code ref is not confirmed as deployed.");
+        verify(promptService).prepare(any(), any(), any());
     }
 
     @Test
-    void shouldKeepBasicSnapshotAvailableWhenDeepEnrichmentFails() throws Exception {
+    void shouldKeepDeterministicSnapshotAvailableWhenDeepEnrichmentFails() throws Exception {
         when(deepService.build(any(), anyString(), anyString(), any(), any()))
                 .thenThrow(new IllegalStateException("token=unsafe-deep-secret"));
 
@@ -208,10 +252,11 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
 
         assertThat(result.deep().requested()).isTrue();
         assertThat(result.deep().status()).isEqualTo("UNAVAILABLE");
+        assertThat(result.aiInputGenerated()).isTrue();
         assertThat(service.deep(result.previewId()).context()).isNull();
         assertThat(service.mapping(result.previewId(), 0, 100, true).items()).isNotEmpty();
         assertThat(result.visibilityLimits()).contains(
-                "DEEP enrichment did not complete; deterministic mapping and BASIC-safe AI input remain available."
+                "DEEP enrichment did not complete; deterministic projection and sanitized AI input remain available."
         );
         assertThat(serialized).doesNotContain("unsafe-deep-secret");
     }
@@ -257,6 +302,80 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
                 "billing-api",
                 "Billing API",
                 "backend"
+        );
+    }
+
+    private RuntimeConfigurationDiffProjection configurationDiff() {
+        var timeout = new RuntimeConfigurationDiffNode(
+                "timeout",
+                "service.timeout",
+                RuntimeConfigurationChangeKind.UNCHANGED,
+                value(RuntimeConfigurationValueType.NUMBER, 30),
+                value(RuntimeConfigurationValueType.NUMBER, 30),
+                List.of(),
+                List.of()
+        );
+        var dynamicPassword = new RuntimeConfigurationDiffNode(
+                "password",
+                "clients.customer-zt001.password",
+                RuntimeConfigurationChangeKind.CHANGED,
+                value(RuntimeConfigurationValueType.STRING, "${VAULT_DYNAMIC_DEV}"),
+                value(RuntimeConfigurationValueType.STRING, "${VAULT_DYNAMIC_ZT}"),
+                List.of("difference-1"),
+                List.of()
+        );
+        var root = new RuntimeConfigurationDiffNode(
+                "root",
+                "",
+                RuntimeConfigurationChangeKind.CHANGED,
+                collectionValue(RuntimeConfigurationValueType.MAP, 2),
+                collectionValue(RuntimeConfigurationValueType.MAP, 2),
+                List.of(),
+                List.of(timeout, dynamicPassword)
+        );
+        return new RuntimeConfigurationDiffProjection(
+                "dev1",
+                "zt001",
+                List.of(new RuntimeConfigurationDiffFile(
+                        RuntimeConfigurationFileRole.APPLICATION_YAML,
+                        RuntimeConfigurationDiffFileFormat.YAML,
+                        "backend/application.yml.kv",
+                        "backend/application.yml.kv",
+                        true,
+                        true,
+                        List.of(new RuntimeConfigurationDiffDocument(
+                                0,
+                                true,
+                                true,
+                                RuntimeConfigurationDiffValue.absent(),
+                                RuntimeConfigurationDiffValue.absent(),
+                                root
+                        ))
+                ))
+        );
+    }
+
+    private RuntimeConfigurationDiffValue value(
+            RuntimeConfigurationValueType type,
+            Object value
+    ) {
+        return new RuntimeConfigurationDiffValue(
+                RuntimeConfigurationDiffValuePresence.PRESENT,
+                type,
+                value,
+                null
+        );
+    }
+
+    private RuntimeConfigurationDiffValue collectionValue(
+            RuntimeConfigurationValueType type,
+            int cardinality
+    ) {
+        return new RuntimeConfigurationDiffValue(
+                RuntimeConfigurationDiffValuePresence.PRESENT,
+                type,
+                null,
+                cardinality
         );
     }
 }

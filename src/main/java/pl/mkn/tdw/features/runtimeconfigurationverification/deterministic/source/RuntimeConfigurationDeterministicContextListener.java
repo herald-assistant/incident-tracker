@@ -1,7 +1,5 @@
 package pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source;
 
-import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
-
 public interface RuntimeConfigurationDeterministicContextListener {
 
     RuntimeConfigurationDeterministicContextListener NO_OP = new RuntimeConfigurationDeterministicContextListener() {
@@ -22,6 +20,6 @@ public interface RuntimeConfigurationDeterministicContextListener {
     default void onDiffStarted() {
     }
 
-    default void onDiffCompleted(RuntimeConfigurationDeterministicContext context) {
+    default void onDiffCompleted(RuntimeConfigurationDeterministicBuildResult result) {
     }
 }

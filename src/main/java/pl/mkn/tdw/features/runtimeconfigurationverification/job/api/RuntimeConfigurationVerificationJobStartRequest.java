@@ -75,6 +75,13 @@ public record RuntimeConfigurationVerificationJobStartRequest(
                 && !codeRef.endsWith(".");
     }
 
+    @AssertTrue(message = "codeRef, model and reasoningEffort are supported only in DEEP mode")
+    public boolean isDeepOnlyInputValid() {
+        return mode == null
+                || mode == RuntimeConfigurationVerificationMode.DEEP
+                || (codeRef == null && model == null && reasoningEffort == null);
+    }
+
     public AnalysisAiOptions aiOptions() {
         return new AnalysisAiOptions(model, reasoningEffort);
     }

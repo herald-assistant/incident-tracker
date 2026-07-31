@@ -178,7 +178,13 @@ class PackageDependencyGuardTest {
                         "pl.mkn.tdw.aiplatform"),
                 Rule.closed("common must stay below feature packages",
                         "pl.mkn.tdw.common",
-                        "pl.mkn.tdw.features")
+                        "pl.mkn.tdw.features"),
+                Rule.closed("runtime configuration AI must not depend on operator projection with actual values",
+                        "pl.mkn.tdw.features.runtimeconfigurationverification.ai",
+                        "pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection"),
+                Rule.closed("runtime configuration AI must not depend on operator presentation annotations",
+                        "pl.mkn.tdw.features.runtimeconfigurationverification.ai",
+                        "pl.mkn.tdw.features.runtimeconfigurationverification.presentation")
         );
 
         var violations = findViolations(rules);

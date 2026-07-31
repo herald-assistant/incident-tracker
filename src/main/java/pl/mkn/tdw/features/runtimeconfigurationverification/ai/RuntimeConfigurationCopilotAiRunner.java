@@ -47,7 +47,6 @@ public class RuntimeConfigurationCopilotAiRunner implements RuntimeConfiguration
         var execution = executionGateway.execute(preparedSession);
         var assessment = assessmentService.assess(
                 execution.content(),
-                request.mode(),
                 deterministic,
                 deepContext,
                 assembly.runRequest().initialReport(),

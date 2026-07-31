@@ -3,6 +3,8 @@ package pl.mkn.tdw.features.runtimeconfigurationverification.workbench;
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.preparation.RuntimeConfigurationPromptPreparation;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.workbench.api
         .RuntimeConfigurationWorkbenchAnonymizationPage;
@@ -14,6 +16,7 @@ import java.util.List;
 record RuntimeConfigurationWorkbenchPreviewSnapshot(
         RuntimeConfigurationVerificationMode mode,
         RuntimeConfigurationDeterministicContext deterministic,
+        RuntimeConfigurationDiffProjection configurationDiff,
         RuntimeConfigurationDeepContext deepContext,
         RuntimeConfigurationPromptPreparation preparation,
         List<RuntimeConfigurationWorkbenchMappingPage.Item> mappingItems,

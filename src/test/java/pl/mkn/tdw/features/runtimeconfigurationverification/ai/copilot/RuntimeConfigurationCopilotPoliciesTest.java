@@ -20,7 +20,7 @@ class RuntimeConfigurationCopilotPoliciesTest {
             new RuntimeConfigurationCopilotScopePolicy(new ObjectMapper());
 
     @Test
-    void shouldDenyDeepCapabilitiesInBasicEvenIfToolWasAccidentallyRegistered() {
+    void shouldDenyToolsForAnyNonDeepSessionEvenIfAccidentallyRegistered() {
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 basicContext(),
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
@@ -28,7 +28,7 @@ class RuntimeConfigurationCopilotPoliciesTest {
                         {"projectName":"billing-api","branchRef":"release-1","filePath":"src/main/java/A.java"}
                         """
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("BASIC");
+                .hasMessageContaining("DEEP");
     }
 
     @Test

@@ -10,6 +10,7 @@ import {
   RuntimeConfigurationWorkbenchAiInputResponse,
   RuntimeConfigurationWorkbenchAnonymizationPage,
   RuntimeConfigurationWorkbenchArtifactResponse,
+  RuntimeConfigurationWorkbenchConfigurationDiffResponse,
   RuntimeConfigurationWorkbenchDeepResponse,
   RuntimeConfigurationWorkbenchMappingPage,
   RuntimeConfigurationWorkbenchPreviewRequest,
@@ -81,6 +82,14 @@ export class RuntimeConfigurationVerificationApiService {
   getWorkbenchSource(previewId: string): Observable<RuntimeConfigurationWorkbenchSourceResponse> {
     return this.http.get<RuntimeConfigurationWorkbenchSourceResponse>(
       `${this.previewUrl(previewId)}/source`
+    );
+  }
+
+  getWorkbenchConfigurationDiff(
+    previewId: string
+  ): Observable<RuntimeConfigurationWorkbenchConfigurationDiffResponse> {
+    return this.http.get<RuntimeConfigurationWorkbenchConfigurationDiffResponse>(
+      `${this.previewUrl(previewId)}/configuration-diff`
     );
   }
 

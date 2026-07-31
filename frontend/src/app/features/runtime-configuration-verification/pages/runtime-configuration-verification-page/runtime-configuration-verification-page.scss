@@ -343,6 +343,10 @@
   gap: 8px;
 }
 
+.decision-bar__references {
+  grid-column: 1 / -1;
+}
+
 .decision-bar__usage span {
   padding: 4px 8px;
   color: var(--text-muted);
@@ -357,6 +361,10 @@
   grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.85fr);
   gap: 16px;
   align-items: start;
+}
+
+.result-columns--deterministic-only {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .result-panel {
@@ -433,59 +441,10 @@
   background: var(--color-surface);
 }
 
-.difference-table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.difference-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.difference-table th {
-  color: var(--text-muted);
-  text-align: left;
-  background: var(--color-surface-subtle, #f8fafc);
-}
-
-.difference-table th,
-.difference-table td {
-  padding: 9px 10px;
-  border-bottom: 1px solid var(--color-border);
-  vertical-align: top;
-}
-
-.difference-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.difference-table td:first-child {
-  min-width: 220px;
-}
-
-.difference-table code,
 .code-grounding-list code {
   display: block;
   color: var(--text-main);
   overflow-wrap: anywhere;
-}
-
-.difference-table small,
-.sensitive-label {
-  display: block;
-  margin-top: 3px;
-  color: var(--text-muted);
-}
-
-.change-kind {
-  font-weight: 700;
-}
-
-.sensitive-label {
-  color: #8d4b14;
 }
 
 .finding-list,

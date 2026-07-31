@@ -25,7 +25,8 @@ wdrozeniowy ma wlasny katalog, np. `backend/`, z:
 
 Plik aplikacyjny moze zawierac wiele dokumentow YAML oraz odwolania do
 wartosci z plikow `.var`. Pliki `.var` zawieraja zagniezdzone wartosci,
-adresy srodowiskowe, flagi i dane wrazliwe.
+adresy srodowiskowe, flagi i referencje do wartosci podstawianych w runtime.
+Prawdziwe sekrety sa utrzymywane w Vault, a nie w porownywanym repozytorium.
 
 Podczas recznego przenoszenia konfiguracji administrator moze:
 
@@ -76,6 +77,10 @@ Oba branche musza byc roznymi branchami zgodnymi z formatem `devX` albo
 branchami; system nie powinien zgadywac kierunku promocji tylko na podstawie
 nazwy.
 
+`BASIC` nie wymaga tokena Copilota ani preferencji modelu. `model` i
+`reasoningEffort` sa istotne tylko dla `DEEP` i nie powinny byc pokazywane ani
+wysylane przez UI w trybie `BASIC`.
+
 ## Tryby analizy
 
 ### `BASIC`
@@ -85,18 +90,20 @@ Tryb szybki koncentruje sie na konfiguracji:
 - porownuje wymagane pliki,
 - buduje structural i effective diff,
 - pokazuje deterministic findings,
-- buduje pelny, zanonimizowany manifest konfiguracji obejmujacy takze
-  niezmienione parametry i zachowujacy schemat wielodokumentowego YAML,
-- uruchamia druga opinie AI nad zanonimizowanym manifestem, roznicami
-  konfiguracyjnymi i findings,
+- pokazuje znormalizowany `configurationDiff` per plik, z dokladnymi
+  wartosciami source/target, struktura wielodokumentowego YAML i `.var`,
+  stanami `PRESENT`/`ABSENT` oraz czytelnymi markerami zmian,
 - uzywa Operational Context tylko do wyboru kanonicznego `internal-system` i
   jego katalogu konfiguracji; nie wykorzystuje katalogu do interpretacji
   roznic ani nie czyta kodu systemu,
+- nie uruchamia AI, nie przygotowuje promptu, nie sprawdza tokena Copilota i
+  nie generuje AI usage/cost,
 - jawnie informuje, ze nie potwierdza funkcjonalnego znaczenia kluczy ani
   ownershipu.
 
-Ten tryb ma byc szybszy, tanszy i dostepny, gdy dostepne sa repozytorium
-konfiguracji oraz jednoznaczny `internal-system` z katalogiem komponentu.
+Ten tryb ma byc szybki, w pelni deterministyczny i dostepny bez konfiguracji
+AI, gdy dostepne sa repozytorium konfiguracji oraz jednoznaczny
+`internal-system` z katalogiem komponentu.
 
 ### `DEEP`
 
@@ -113,7 +120,10 @@ Tryb gleboki zaczyna od identycznego wyniku jak `BASIC`, a nastepnie:
 5. interpretuje, jaka funkcjonalnosc albo zachowanie runtime moze ulec
    zmianie,
 6. rozwiazuje ownership na podstawie systemu albo bounded contextu i wskazuje,
-   do kogo zwrocic sie w przypadku niejasnosci.
+   do kogo zwrocic sie w przypadku niejasnosci,
+7. buduje zanonimizowany manifest konfiguracji i uruchamia AI, ktore dodaje
+   komentarze o ryzyku, rekomendacje i functional impact powiazane przez
+   `differenceId`/`findingId`.
 
 Komponent wdrozeniowy nie jest osobnym bytem obok systemu. Jego katalog
 konfiguracji jest runtime/deployment signalem kanonicznego `internal-system`.
@@ -131,18 +141,17 @@ wdrozona na porownywanym srodowisku.
 
 ## Oczekiwany rezultat
 
-Wynik powinien rozdzielac fakty od interpretacji i traktowac dwa tory jako
-rownorzedne elementy decyzji:
+Wynik powinien rozdzielac fakty od interpretacji:
 
-1. **wynik deterministyczny** - kompletne fakty o odczycie, strukturze,
-   roznicach, odwolaniach i wykrytych regulami anomaliach,
-2. **druga opinia AI** - interpretacja znaczenia tych faktow, mozliwy
-   scenariusz pomylki i wskazanie, co czlowiek powinien sprawdzic.
+1. **wynik deterministyczny** - zawsze obecne, kompletne fakty o odczycie,
+   strukturze, roznicach, odwolaniach i wykrytych regulami anomaliach,
+2. **interpretacja AI w `DEEP`** - komentarze o ryzyku, mozliwy scenariusz
+   pomylki, functional impact, rekomendacje i ownership/handoff.
 
-Uzytkownik nie powinien musiec wybierac miedzy surowym diffem a opisem AI.
-Oba wyniki musza byc widoczne, czytelne i powiazane precyzyjnymi
-referencjami. Interpretacja AI nie moze zastapic, ukryc ani zmienic faktow
-deterministycznych.
+`BASIC` konczy sie na wyniku deterministycznym i nie pokazuje pustych sekcji
+AI. `DEEP` zachowuje ten sam czytelny diff i dodaje do niego interpretacje
+powiazana precyzyjnymi referencjami. Interpretacja AI nie moze zastapic,
+ukryc ani zmienic faktow deterministycznych.
 
 Wynik powinien zawierac:
 
@@ -171,10 +180,12 @@ Kazde ostrzezenie powinno miec:
 
 - kategorie i poziom istotnosci,
 - wskazanie brancha, pliku i sciezki klucza,
-- rozroznienie faktu, wyprowadzonego wniosku i interpretacji,
-- krotkie uzasadnienie,
-- sugerowana czynnosc weryfikacyjna,
-- poziom pewnosci lub jawna informacje, ze potrzebna jest decyzja czlowieka.
+- rozroznienie faktu i wyprowadzonego deterministycznie wniosku,
+- krotkie uzasadnienie reguly,
+- jawna informacje, gdy potrzebna jest decyzja czlowieka.
+
+W `DEEP` ostrzezenie moze dodatkowo otrzymac jawnie oznaczona interpretacje
+AI, poziom pewnosci i sugerowana czynnosc weryfikacyjna.
 
 Analiza powinna umiec wskazac co najmniej:
 
@@ -184,7 +195,7 @@ Analiza powinna umiec wskazac co najmniej:
 - konflikt albo niejednoznacznosc definicji,
 - marker innego obslugiwanego srodowiska w wartosci brancha porownywanego,
 - podejrzanie niezmieniona wartosc o charakterze srodowiskowym,
-- nowa albo zmieniona wartosc wrazliwa bez ujawniania jej tresci,
+- nowa albo zmieniona referencja do wartosci podstawianej w runtime,
 - brak mozliwosci przeprowadzenia pelnej analizy.
 
 Nie kazda roznica jest bledem. Wynik ma odroznic oczekiwana zmiane
@@ -217,10 +228,13 @@ lub kodzie. Samo podobienstwo nazwy klucza nie jest wystarczajacym dowodem.
 Widok powinien pokazac osobno:
 
 - stan deterministic verification,
-- stan wykonania i wniosek AI,
-- laczny stan wymagajacy ludzkiej decyzji,
-- wyrazny sygnal, gdy AI i reguly deterministyczne prowadza do roznych
-  wnioskow.
+- dla `DEEP`: stan wykonania i wniosek AI, laczny stan wymagajacy ludzkiej
+  decyzji oraz wyrazny sygnal, gdy AI i reguly deterministyczne prowadza do
+  roznych wnioskow.
+
+W `BASIC` koncowy status wynika bezposrednio z deterministic verification.
+Brak AI jest zamierzonym kontraktem trybu i nie moze powodowac statusu
+`INCOMPLETE`, bledu ani visibility limitu.
 
 Laczny wynik koncowy powinien miec jeden z czytelnych stanow:
 
@@ -241,12 +255,13 @@ Pierwszy widok wyniku powinien pozwolic w kilkadziesiat sekund odpowiedziec:
 - czy wszystkie wymagane pliki zostaly odczytane i poprawnie sparsowane,
 - ile jest zmian oraz ile z nich wymaga uwagi,
 - jaki jest deterministic status,
-- jaka jest niezalezna opinia AI i jej confidence,
-- czy AI wskazuje te same miejsca co reguly, czy dodaje nowa hipoteze,
-- jakie sa trzy najwazniejsze rzeczy do sprawdzenia przed wdrozeniem.
+- ktore pliki i galezie konfiguracji trzeba zweryfikowac przed wdrozeniem.
 
 W trybie `DEEP` pierwszy widok powinien dodatkowo pokazac:
 
+- jaka jest opinia AI i jej confidence,
+- czy AI wskazuje te same miejsca co reguly, czy dodaje nowa hipoteze,
+- jakie sa najwazniejsze rekomendacje przed wdrozeniem,
 - dotkniete systemy i funkcjonalnosci,
 - stopien code grounding,
 - ownera lub jawny brak rozstrzygnietego ownershipu,
@@ -254,29 +269,68 @@ W trybie `DEEP` pierwszy widok powinien dodatkowo pokazac:
 
 Szczegoly powinny byc dostepne bez utraty kontekstu:
 
-- filtrowalna i grupowana lista faktow deterministycznych,
-- osobna sekcja lub zakladka drugiej opinii AI,
-- linki z obserwacji AI do konkretnych pozycji diffu i findings,
-- czytelne oznaczenie `FACT`, `DERIVED` i `AI INTERPRETATION`,
-- przed/po dla wartosci niewrazliwych oraz stan zmiany bez tresci dla
-  sekretow,
+- podstawowy widok deterministyczny grupowany per plik i dokument, renderowany
+  w zagniezdzonej postaci przypominajacej znormalizowany format zrodlowy
+  (`YAML` dla `application.y[a]ml.kv`, zapis blokowy dla plikow `.var`),
+- domyslny widok tylko zmienionych galezi z zachowaniem ich rodzicow oraz
+  przelacznik pelnego pliku; niezmienione galezie moga byc zwijane, aby duza
+  konfiguracja nie wymuszala przegladania tabeli po jednym polu,
+- czerwone oznaczenie dla `ADDED`, `REMOVED` i potencjalnie lamliwego
+  `TYPE_CHANGED`, zolte dla `CHANGED` i `EFFECTIVE_CHANGED`, bez oznaczenia dla
+  `UNCHANGED`,
+- tylko dla `DEEP`: osobna sekcja interpretacji AI, krotka adnotacja przy
+  powiazanej linii konfiguracji oraz linki z pelnej obserwacji do konkretnych
+  pozycji diffu i findings; powiazanie musi korzystac ze stabilnego
+  `differenceId`/`findingId`, a nie z dopasowania tekstu albo sciezki,
+- czytelne oznaczenie `FACT` i `DERIVED` oraz - tylko dla `DEEP` -
+  `AI INTERPRETATION`,
+- rzeczywiste przed/po dla wszystkich wartosci dostepnych operatorowi przez
+  jego lokalnie skonfigurowany token GitLaba,
 - stale widoczny scope, coverage i visibility limits.
+
+Widok podobny do pliku jest projekcja operatorska, a nie nowym zrodlem faktow.
+Backend podstawia do niego rzeczywiste wartosci deterministycznie, poza
+odpowiedzia AI. Uprawnienie operatora do ich zobaczenia wynika z lokalnego,
+jednouzytkownikowego uruchomienia i jego wlasnego tokenu GitLaba, ktory daje
+mu dostep do tych samych plikow zrodlowych. AI dostarcza tylko komentarz
+powiazany przez identyfikator w `DEEP` i nie moze zmienic rodzaju zmiany,
+wartosci source/target ani struktury pliku. Nie wykonujemy globalnego
+podmieniania pseudonimow w swobodnym tekscie AI.
+
+Tool Workbench musi pokazywac ten podzial wprost:
+
+- dla `BASIC`: operatorski `configurationDiff` oraz jawny stan
+  `AI input not generated`,
+- dla `DEEP`: ten sam `configurationDiff`, zanonimizowany model i artefakty
+  przekazywane AI oraz mapowanie przez stabilne identyfikatory.
+
+Workbench sluzy do inspekcji pobrania, parsowania, mapowania i granicy
+anonimizacji. Nie moze sugerowac, ze `BASIC` przygotowuje albo wysyla prompt.
 
 ## Bezpieczenstwo i poufnosc
 
-Konfiguracja moze zawierac hasla, tokeny, sekrety klientow, dane polaczen i
-inne wartosci wrazliwe.
+Repozytorium konfiguracji zawiera wartosci i referencje, do ktorych operator
+ma dostep swoim tokenem GitLaba. Prawdziwe sekrety sa przechowywane w Vault i
+podstawiane w runtime; feature nie laczy sie z Vault ani nie odczytuje ich
+tresci. Feature obsluguje wylacznie testowe branche `devX` i `zt00X`; zakres
+produkcyjny nie jest obslugiwany.
 
 Wymagania:
 
 - dane dostepowe do GitLaba nie sa inputem uzytkownika,
-- surowe wartosci wrazliwe nie sa pokazywane w UI, promptach, logach,
-  historii ani eksporcie,
-- porownanie moze poinformowac, czy wartosc wrazliwa zostala dodana, usunieta
-  albo zmieniona, bez ujawniania jej tresci,
-- zanonimizowany manifest zachowuje granice dokumentow, profile, zagniezdzenie,
-  nazwy statycznych parametrow, typy, ksztalt kolekcji, zrodla definicji,
-  relacje odwołan i stan `UNCHANGED`, `CHANGED`, `ADDED` albo `REMOVED`,
+- token GitLaba pozostaje backend-only i nie jest wartoscia konfiguracji
+  pokazywana w diffie,
+- wynik operatorski pokazuje bez anonimizacji dokladne wartosci i referencje
+  odczytane z plikow source/target,
+- ten sam czytelny wynik moze byc zachowany w lokalnej historii oraz
+  imporcie/eksporcie; nie przechowuje byte-identical plikow ani komentarzy,
+- brak po stronie source albo target jest pokazywany jako stan `ABSENT`, a nie
+  jako pusta wartosc,
+- `BASIC` nie buduje promptu ani wejscia AI i nie wymaga dostepu do Copilota,
+- zanonimizowany manifest budowany dla `DEEP` zachowuje granice dokumentow,
+  profile, zagniezdzenie, nazwy statycznych parametrow, typy, ksztalt
+  kolekcji, zrodla definicji, relacje odwołan i stan `UNCHANGED`, `CHANGED`,
+  `ADDED` albo `REMOVED`,
 - wartosci niewrazliwe moga otrzymac nieodwracalny pseudonim stabilny tylko
   wewnatrz jednego uruchomienia; AI nie dostaje surowego hasha ani stalego
   identyfikatora umozliwiajacego korelacje miedzy analizami,
@@ -288,8 +342,8 @@ Wymagania:
 - surowe komentarze YAML nie sa przekazywane do AI, poniewaz moga zawierac
   dane operacyjne albo sekrety,
 - surowe pliki nie sa trwale zapisywane jako rezultat analizy,
-- eksport i historia zawieraja tylko bezpieczny, zanonimizowany manifest,
-  model roznic i findings,
+- eksport i historia zawieraja znormalizowany wynik per plik, model roznic,
+  findings oraz - tylko dla `DEEP` - interpretacje AI,
 - analiza nie zapisuje niczego w repozytorium konfiguracji.
 
 ## Uzytkownicy i moment pracy
@@ -324,8 +378,13 @@ Typowy moment uzycia:
 - zestaw testowych przypadkow obejmuje brak klucza, zmiane typu,
   nierozwiazane odwolanie, marker zlego srodowiska, podejrzanie skopiowana
   wartosc, brak pliku i blad skladni,
-- zadna wartosc oznaczona jako wrazliwa nie trafia do publicznego wyniku,
-  promptu, logu, historii ani eksportu,
+- UI, historia i eksport pokazuja dokladne wartosci source/target odczytane z
+  plikow, bez maskowania przed operatorem,
+- `BASIC` dziala bez tokena Copilota, promptu, sesji AI, AI usage i sekcji AI,
+- zadna rzeczywista wartosc konfiguracji nie trafia do promptu ani odpowiedzi
+  AI; w `DEEP` AI pracuje wylacznie na zanonimizowanym modelu,
+- uzytkownik moze przejrzec roznice per plik w zagniezdzonej postaci bez
+  tabeli zawierajacej osobny wiersz dla kazdego pola,
 - dla `DEEP` kazda funkcjonalna interpretacja ma referencje do Operational
   Context lub konkretnego miejsca w kodzie,
 - dla `DEEP` kazdy wewnetrzny system analizowany przez kod ma poprawny
@@ -361,6 +420,8 @@ Typowy moment uzycia:
 - automatyczne wdrozenie albo zablokowanie wdrozenia,
 - zapis lub automatyczna naprawa plikow w GitLabie,
 - porownanie paczek binarnych albo kodu aplikacji,
+- porownanie konfiguracji produkcyjnej albo branchy innych niz `devX` i
+  `zt00X`,
 - pelna analiza calego systemu niezalezna od zmienionych kluczy
   konfiguracyjnych,
 - odczyt faktycznej konfiguracji z uruchomionych podow, maszyn lub managera

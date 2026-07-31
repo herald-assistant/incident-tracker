@@ -70,6 +70,13 @@ public record RuntimeConfigurationWorkbenchPreviewRequest(
                 && !codeRef.endsWith(".");
     }
 
+    @AssertTrue(message = "codeRef is supported only in DEEP mode")
+    public boolean isCodeReferenceModeValid() {
+        return mode == null
+                || mode == RuntimeConfigurationVerificationMode.DEEP
+                || codeRef == null;
+    }
+
     public RuntimeConfigurationVerificationJobStartRequest asPreparationRequest() {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 mode,

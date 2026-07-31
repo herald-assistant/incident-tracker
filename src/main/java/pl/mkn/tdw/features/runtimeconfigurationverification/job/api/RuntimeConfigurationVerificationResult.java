@@ -5,6 +5,10 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConf
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model.RuntimeConfigurationVerificationStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deep.model.RuntimeConfigurationDeepContext;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicContext;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
+        .RuntimeConfigurationDiffProjection;
+import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
+        .RuntimeConfigurationDiffAnnotation;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 
 import java.util.List;
@@ -13,6 +17,8 @@ public record RuntimeConfigurationVerificationResult(
         RuntimeConfigurationVerificationStatus status,
         RuntimeConfigurationVerificationMode mode,
         RuntimeConfigurationDeterministicContext deterministicResult,
+        RuntimeConfigurationDiffProjection configurationDiff,
+        List<RuntimeConfigurationDiffAnnotation> configurationDiffAnnotations,
         RuntimeConfigurationAiSecondOpinion aiSecondOpinion,
         RuntimeConfigurationAgreement agreement,
         RuntimeConfigurationDeepContext deepAnalysis,
@@ -22,6 +28,9 @@ public record RuntimeConfigurationVerificationResult(
 ) {
 
     public RuntimeConfigurationVerificationResult {
+        configurationDiffAnnotations = configurationDiffAnnotations != null
+                ? List.copyOf(configurationDiffAnnotations)
+                : List.of();
         visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
     }
 }

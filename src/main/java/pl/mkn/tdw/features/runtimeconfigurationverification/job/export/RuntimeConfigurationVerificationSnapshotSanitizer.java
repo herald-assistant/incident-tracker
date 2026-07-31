@@ -27,6 +27,8 @@ public final class RuntimeConfigurationVerificationSnapshotSanitizer {
                 result.status(),
                 result.mode(),
                 sanitize(result.deterministicResult()),
+                result.configurationDiff(),
+                result.configurationDiffAnnotations(),
                 result.aiSecondOpinion(),
                 result.agreement(),
                 result.deepAnalysis(),

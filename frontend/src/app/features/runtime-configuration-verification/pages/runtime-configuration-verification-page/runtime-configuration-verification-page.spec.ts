@@ -13,6 +13,7 @@ import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis
 import { GithubAuthService } from '../../../../core/services/github-auth.service';
 import {
   RuntimeConfigurationDeepPreflight,
+  RuntimeConfigurationDiffProjection,
   RuntimeConfigurationVerificationInputOptions,
   RuntimeConfigurationVerificationJobStateSnapshot,
   RuntimeConfigurationVerificationResult
@@ -80,8 +81,54 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(compiled.textContent).toContain('Porównaj konfigurację środowisk');
     expect(compiled.textContent).toContain('Backend · backend');
     expect(compiled.textContent).toContain('Gotowe do porównania konfiguracji');
+    expect(compiled.textContent).toContain('deterministyczny diff bez AI');
+    expect(compiled.textContent).not.toContain('Model AI');
+    expect(compiled.textContent).not.toContain('Reasoning effort');
+    expect(compiled.textContent).not.toContain('Preferowany ref kodu');
     expect(runButton?.disabled).toBe(false);
     expect(api.getDeepPreflight).not.toHaveBeenCalled();
+  });
+
+  it('should start BASIC verification without AI-only request fields or AI result state', () => {
+    const completed = job({
+      mode: 'BASIC',
+      codeRef: null,
+      aiModel: null,
+      reasoningEffort: null,
+      status: 'COMPLETED',
+      preparedPrompt: null,
+      result: basicResult(),
+      report: null
+    });
+    api.startJob.mockReturnValue(of(job({
+      mode: 'BASIC',
+      codeRef: null,
+      aiModel: null,
+      reasoningEffort: null,
+      status: 'QUEUED',
+      completedAt: null,
+      preparedPrompt: null,
+      result: null,
+      report: null
+    })));
+    polling.poll.mockReturnValue(of(completed));
+
+    buttonContaining(fixture.nativeElement, 'Run verification')?.click();
+    fixture.detectChanges();
+
+    expect(api.startJob).toHaveBeenCalledWith({
+      mode: 'BASIC',
+      repositoryId: 'runtime-config',
+      systemId: 'backend',
+      sourceBranch: 'dev1',
+      targetBranch: 'zt001'
+    });
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Deterministyczny sygnał decyzji');
+    expect(compiled.textContent).toContain('Configuration result');
+    expect(compiled.textContent).not.toContain('AI second opinion');
+    expect(compiled.textContent).not.toContain('NOT_ASSESSED');
+    expect(compiled.textContent).not.toContain('Raport operatora');
   });
 
   it('should show the DEEP blocker and prevent starting the job', () => {
@@ -113,6 +160,12 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     fixture.detectChanges();
 
     let compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).not.toContain('Połącz GitHub przed analizą');
+    expect(buttonContaining(compiled, 'Run verification')?.disabled).toBe(false);
+
+    buttonContaining(compiled, 'Deep')?.click();
+    fixture.detectChanges();
+    compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Połącz GitHub przed analizą');
     expect(buttonContaining(compiled, 'Run verification')?.disabled).toBe(true);
     buttonContaining(compiled, 'Połącz GitHub')?.click();
@@ -159,27 +212,22 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
   });
 
   it('should keep deterministic facts usable when AI result is unavailable', () => {
-    const deterministicOnly: RuntimeConfigurationVerificationResult = {
-      ...result(),
-      mode: 'BASIC',
-      aiSecondOpinion: null,
-      agreement: null,
-      deepAnalysis: null
-    };
     fixture.componentInstance.job.set(job({
       mode: 'BASIC',
       codeRef: null,
-      result: deterministicOnly,
+      aiModel: null,
+      reasoningEffort: null,
+      preparedPrompt: null,
+      result: basicResult(),
       report: null
     }));
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Configuration result');
-    expect(compiled.textContent).toContain(
-      'AI second opinion nie jest dostępne. Wynik deterministyczny pozostaje ważny.'
-    );
-    expect(compiled.textContent).toContain('NOT_ASSESSED');
+    expect(compiled.textContent).toContain('Deterministyczny sygnał decyzji');
+    expect(compiled.textContent).not.toContain('AI second opinion');
+    expect(compiled.textContent).not.toContain('NOT_ASSESSED');
     expect(compiled.textContent).not.toContain('Systemy, kod i ownership');
   });
 
@@ -245,27 +293,23 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(fixture.componentInstance.job()?.status).toBe('COMPLETED_WITH_LIMITATIONS');
   });
 
-  it('should filter differences and navigate from an AI reference to deterministic evidence', () => {
+  it('should render file-oriented differences and navigate from AI to deterministic evidence', () => {
     fixture.componentInstance['job'].set(job());
     fixture.detectChanges();
 
-    const fileFilter = fixture.nativeElement.querySelector(
-      'select[aria-label="Filtr pliku"]'
-    ) as HTMLSelectElement;
-    fileFilter.value = 'LOCAL_VAR';
-    fileFilter.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('backend/application.yml.kv');
+    expect(compiled.textContent).toContain('backend/local.var');
+    expect(compiled.textContent).toContain('"https://notifications.dev.test"');
+    expect(compiled.textContent).toContain('"https://notifications.zt.test"');
+    expect(compiled.querySelector('select[aria-label="Filtr pliku"]')).toBeNull();
 
-    const differenceTable = fixture.nativeElement.querySelector('.difference-table') as HTMLElement;
-    expect(differenceTable.textContent).not.toContain('notifications.endpoint');
-    expect(differenceTable.textContent).toContain('feature.enabled');
-
-    const referenceButton = buttonContaining(fixture.nativeElement, 'difference-2');
+    const referenceButton = buttonContaining(compiled, 'Difference · difference-2');
     referenceButton?.click();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.focusedReferenceId()).toBe('difference-2');
-    expect(fixture.nativeElement.querySelector('#difference-2')?.classList)
+    expect(fixture.nativeElement.querySelector('#difference-2')?.closest('.configuration-row')?.classList)
       .toContain('reference-focused');
   });
 
@@ -481,6 +525,27 @@ function result(): RuntimeConfigurationVerificationResult {
         referenceIds: []
       }]
     },
+    configurationDiff: configurationDiffProjection(),
+    configurationDiffAnnotations: [
+      {
+        sourceId: 'observation-1',
+        kind: 'OBSERVATION',
+        comment: 'Zmiana może przełączyć integrację.',
+        confidence: null,
+        hypothesis: false,
+        differenceIds: ['difference-2'],
+        findingIds: []
+      },
+      {
+        sourceId: 'impact-1',
+        kind: 'FUNCTIONAL_IMPACT',
+        comment: 'Wysyłka powiadomień: możliwa zmiana systemu docelowego.',
+        confidence: 'MEDIUM',
+        hypothesis: false,
+        differenceIds: ['difference-1'],
+        findingIds: ['finding-1']
+      }
+    ],
     aiSecondOpinion: {
       executionStatus: 'COMPLETED',
       conclusion: 'REVIEW_REQUIRED',
@@ -579,6 +644,137 @@ function result(): RuntimeConfigurationVerificationResult {
       contextCurrentTokens: null,
       contextMessages: null
     }
+  };
+}
+
+function basicResult(): RuntimeConfigurationVerificationResult {
+  return {
+    ...result(),
+    status: 'REVIEW_REQUIRED',
+    mode: 'BASIC',
+    configurationDiff: configurationDiffProjection(),
+    configurationDiffAnnotations: [],
+    aiSecondOpinion: null,
+    agreement: null,
+    deepAnalysis: null,
+    visibilityLimits: [],
+    prompt: null,
+    usage: null
+  };
+}
+
+function configurationDiffProjection(): RuntimeConfigurationDiffProjection {
+  const absent = {
+    presence: 'ABSENT' as const,
+    type: null,
+    value: null,
+    cardinality: null
+  };
+  return {
+    sourceBranch: 'dev1',
+    targetBranch: 'zt001',
+    files: [
+      {
+        role: 'APPLICATION_YAML',
+        format: 'YAML',
+        sourcePath: 'backend/application.yml.kv',
+        targetPath: 'backend/application.yml.kv',
+        sourcePresent: true,
+        targetPresent: true,
+        documents: [{
+          documentIndex: 0,
+          sourcePresent: true,
+          targetPresent: true,
+          sourceProfile: absent,
+          targetProfile: absent,
+          root: {
+            name: 'document-0',
+            path: '',
+            changeKind: 'UNCHANGED',
+            source: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+            target: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+            differenceIds: [],
+            children: [{
+              name: 'notifications',
+              path: 'notifications',
+              changeKind: 'UNCHANGED',
+              source: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+              target: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+              differenceIds: [],
+              children: [{
+                name: 'endpoint',
+                path: 'notifications.endpoint',
+                changeKind: 'CHANGED',
+                source: {
+                  presence: 'PRESENT',
+                  type: 'STRING',
+                  value: 'https://notifications.dev.test',
+                  cardinality: null
+                },
+                target: {
+                  presence: 'PRESENT',
+                  type: 'STRING',
+                  value: 'https://notifications.zt.test',
+                  cardinality: null
+                },
+                differenceIds: ['difference-1'],
+                children: []
+              }]
+            }]
+          }
+        }]
+      },
+      {
+        role: 'LOCAL_VAR',
+        format: 'VAR',
+        sourcePath: 'backend/local.var',
+        targetPath: 'backend/local.var',
+        sourcePresent: true,
+        targetPresent: true,
+        documents: [{
+          documentIndex: 0,
+          sourcePresent: true,
+          targetPresent: true,
+          sourceProfile: absent,
+          targetProfile: absent,
+          root: {
+            name: 'document-0',
+            path: '',
+            changeKind: 'UNCHANGED',
+            source: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+            target: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+            differenceIds: [],
+            children: [{
+              name: 'feature',
+              path: 'feature',
+              changeKind: 'UNCHANGED',
+              source: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+              target: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
+              differenceIds: [],
+              children: [{
+                name: 'enabled',
+                path: 'feature.enabled',
+                changeKind: 'CHANGED',
+                source: {
+                  presence: 'PRESENT',
+                  type: 'BOOLEAN',
+                  value: false,
+                  cardinality: null
+                },
+                target: {
+                  presence: 'PRESENT',
+                  type: 'BOOLEAN',
+                  value: true,
+                  cardinality: null
+                },
+                differenceIds: ['difference-2'],
+                children: []
+              }]
+            }]
+          }
+        }]
+      }
+    ]
   };
 }
 

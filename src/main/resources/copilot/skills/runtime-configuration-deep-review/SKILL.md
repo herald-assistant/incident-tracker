@@ -25,26 +25,31 @@ Operational Context, code grounding i ownership pozostają faktami backendu.
 
 ## Procedura
 
-1. Wykonaj wszystkie kroki BASIC dla kompletnego `configuration-tree.yaml`
-   oraz kolumnowego `changes.json`.
-2. Przeczytaj `deep-context.json`: primary system, affected entities,
+1. Przeczytaj `scope.json`, `coverage.json`, kompletne
+   `configuration-tree.yaml` oraz kolumnowy `changes.json`. Rozwin legendy
+   kolumn i kodow przed interpretacja danych. Uwzglednij parametry zmienione
+   i niezmienione, granice dokumentow/profile, typy, cardinality i relacje
+   run-local pseudonimow.
+2. Oddziel fakt z `differenceId`/`findingId`, interpretacje faktu i hipoteze
+   wymagajaca recznego potwierdzenia.
+3. Przeczytaj `deep-context.json`: primary system, affected entities,
    codeGrounding, użyte refy, ownership i visibility limits.
-3. Najpierw korzystaj z przygotowanego contextu. Tool uruchom tylko wtedy,
+4. Najpierw korzystaj z przygotowanego contextu. Tool uruchom tylko wtedy,
    gdy jeden focused odczyt może istotnie potwierdzić albo obalić konkretną
    hipotezę.
-4. Dla każdego `functionalImpact` podaj:
+5. Dla każdego `functionalImpact` podaj:
    - rozpoznaną funkcjonalność,
    - znaczenie zmiany dla zachowania systemu,
    - confidence,
    - istniejące `differenceId`/`findingId`,
    - istniejące `contextId`/`codeGroundingId`,
    - `hypothesis=true`, gdy kod nie potwierdza wpływu.
-5. Gdy ownership jest `UNKNOWN` albo `AMBIGUOUS`, powiedz to wprost. Nie
+6. Gdy ownership jest `UNKNOWN` albo `AMBIGUOUS`, powiedz to wprost. Nie
    wybieraj ownera na podstawie podobnej nazwy repozytorium lub klucza.
-6. Zapisz `ai-second-opinion`, `recommended-human-checks` i narrację
+7. Zapisz `ai-second-opinion`, `recommended-human-checks` i narrację
    `functional-impact-and-code-grounding` przez `report_upsert_section`.
    Backend zachowa referencje i meta tej sekcji.
-7. Potwierdź raport przez `report_get_current`, następnie zwróć jeden JSON
+8. Potwierdź raport przez `report_get_current`, następnie zwróć jeden JSON
    zgodny z `response-contract.json`.
 
 ## Observation vs hypothesis

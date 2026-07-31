@@ -217,8 +217,8 @@ export const routes: Routes = [
           title: 'Runtime Configuration Pipeline',
           capabilityInfo: {
             description:
-              'Readonly preview pobrania, mapowania, anonimizacji i dokładnego AI-safe inputu przygotowanego przez produkcyjny pipeline Runtime Configuration.',
-            badges: ['AI-safe preview', 'Readonly'],
+              'Readonly preview projekcji operatorskiej oraz — tylko w DEEP — mapowania, anonimizacji i dokładnego AI-safe inputu przygotowanego przez produkcyjny pipeline Runtime Configuration.',
+            badges: ['Operator preview', 'AI-safe boundary', 'Readonly'],
             meta: [
               {
                 label: 'Endpoint',
@@ -231,12 +231,13 @@ export const routes: Routes = [
               },
               {
                 label: 'AI',
-                value: 'Pokazuje dokładny prompt i artifacts, ale nie uruchamia modelu'
+                value:
+                  'BASIC nie generuje inputu AI; DEEP pokazuje dokładny sanitizowany prompt i artifacts, ale nie uruchamia modelu'
               },
               {
                 label: 'Guardrails',
                 value:
-                  'brak raw values, sanitizowany mapping, backendowy code-search scope i jawne visibility limits'
+                  'dokładne wartości tylko w projekcji operatora; sanitizowany mapping i input AI, backendowy code-search scope i jawne visibility limits'
               }
             ]
           }
