@@ -37,7 +37,7 @@ preparation i annotation linking, modele Angulara oraz lista findingow.
   i nie publikowac drugiego findingu bedacego tylko skutkiem tego samego bledu.
 - Literalne dodanie wartosci sklasyfikowanej jako sensitive publikowac jako
   `HARDCODED_SENSITIVE_VALUE_ADDED` o severity `ERROR`. Placeholdery i zwykle
-  zmiany sensytywne zachowuja dotychczasowa klasyfikacje.
+  zmiany sensytywne pozostaja faktami diffu bez deterministycznego warningu.
 - W UI pokazac polski tytul, wyjasnienie, lokalizacje i linki do reference IDs.
 
 ## Zakres
@@ -47,7 +47,7 @@ testy backend/frontend oraz kanoniczny runtime flow.
 
 ## Non-goals
 
-- kalibracja `SUSPICIOUS_UNCHANGED_ENVIRONMENT_VALUE`,
+- integracja AI oceniajaca wspoldzielona infrastrukture,
 - zmiana zatwierdzonego kontraktu widocznosci dokladnych wartosci operatorowi,
 - ogolny parser Terraform/HCL,
 - przebudowa calego ekranu wyniku.

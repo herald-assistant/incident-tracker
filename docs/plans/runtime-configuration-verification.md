@@ -518,8 +518,9 @@ Verification. Sibling feature'y sa tylko wzorcami zachowania.
   unchanged inventory, rownosci tokenow w jednym runie i braku korelacji
   miedzy runami, dynamic key pseudonymization, global/local reference, missing
   key/file, type change, duplicate, malformed syntax, unresolved/cyclic
-  reference, wrong-environment marker, unchanged environment value, secret
-  change bez cross-key tokenu, unrelated global diff i truncation; test
+  reference, literalny secret addition i truncation. Type/effective/sensitive
+  placeholder differences oraz wartosci srodowiskowe pozostaja faktami bez
+  heurystycznych findingow; test
   serializacji potwierdzajacy brak raw wartosci, komentarzy, HMAC i hashy.
   Weryfikacja 2026-07-30: testy `RuntimeConfigurationSourceLoaderTest`,
   `RuntimeConfigurationYamlParserTest`, `RuntimeConfigurationVarParserTest`

@@ -87,6 +87,11 @@ jeden finding root-cause z powiazanym `referenceId`, zamiast liczyc skutek jako
 drugi niezalezny problem. Literalne dodanie wartosci sklasyfikowanej jako
 sensytywna ma kod `HARDCODED_SENSITIVE_VALUE_ADDED` i severity `ERROR`;
 placeholder pozostaje odroznialny od hardcoded value.
+Deterministic findings sa ograniczone do technicznej niekompletnosci wyniku
+(coverage, parser, unresolved/cyclic reference) i twardej polityki literalnego
+sekretu. Zmiana typu, zmiana efektywna, sensitive placeholder, rowny parametr
+srodowiskowy, marker nazwy brancha oraz unrelated global diff pozostaja faktami
+w diffie/referencjach i nie tworza findingow. Ich znaczenie ocenia warstwa AI.
 W plikach `.var` operatory przypisania `=` i `:` sa rownowazne dla wartosci
 skalarnych, list i map. Uzycie `:` nie tworzy issue parsera ani unresolved
 reference.

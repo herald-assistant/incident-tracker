@@ -128,12 +128,7 @@ class RuntimeConfigurationDeterministicEngineTest {
                         && difference.kind() == RuntimeConfigurationChangeKind.EFFECTIVE_CHANGED));
         assertTrue(context.references().stream()
                 .anyMatch(reference -> reference.targetPath().equals("local.endpoints.backend")));
-        assertTrue(context.findings().stream()
-                .anyMatch(finding -> finding.code().equals("WRONG_ENVIRONMENT_MARKER")));
-        assertTrue(context.findings().stream()
-                .anyMatch(finding -> finding.code().equals("SUSPICIOUS_UNCHANGED_ENVIRONMENT_VALUE")));
-        assertTrue(context.findings().stream()
-                .anyMatch(finding -> finding.code().equals("UNRELATED_GLOBAL_DIFFERENCE")));
+        assertTrue(context.findings().isEmpty());
 
         var json = new ObjectMapper().writeValueAsString(context);
         assertFalse(json.contains("source-password"));
@@ -175,8 +170,7 @@ class RuntimeConfigurationDeterministicEngineTest {
                 findNode(first, "app.stable").sourceValueToken(),
                 findNode(second, "app.stable").sourceValueToken()
         );
-        assertTrue(first.findings().stream()
-                .anyMatch(finding -> finding.code().equals("SUSPICIOUS_UNCHANGED_ENVIRONMENT_VALUE")));
+        assertTrue(first.findings().isEmpty());
     }
 
     @Test
@@ -198,7 +192,7 @@ class RuntimeConfigurationDeterministicEngineTest {
                         varParser.parse(
                                 RuntimeConfigurationFileRole.GLOBAL_VAR,
                                 "global.var",
-                                "locals {\n  a = \"local.b\"\n  b = \"local.a\"\n}"
+                                "locals {\n  a = \"local.b\"\n  b = \"local.a\"\n  broken ???\n}"
                         ),
                         varParser.parse(
                                 RuntimeConfigurationFileRole.LOCAL_VAR,
@@ -224,6 +218,9 @@ class RuntimeConfigurationDeterministicEngineTest {
                 .anyMatch(finding -> finding.code().equals("UNRESOLVED_REFERENCE")));
         assertTrue(context.findings().stream()
                 .anyMatch(finding -> finding.code().equals("TARGET_YAML_PARSE_ERROR")));
+        assertTrue(context.findings().stream()
+                .anyMatch(finding -> finding.code().equals("TARGET_VAR_UNSUPPORTED_SYNTAX")
+                        && finding.severity() == RuntimeConfigurationFindingSeverity.ERROR));
     }
 
     @Test
@@ -285,9 +282,8 @@ class RuntimeConfigurationDeterministicEngineTest {
                 .map(RuntimeConfigurationFinding::path)
                 .toList()
                 .containsAll(List.of("spring.rabbitmq.username", "spring.rabbitmq.password")));
-        assertTrue(context.findings().stream()
-                .anyMatch(finding -> finding.code().equals("SENSITIVE_VALUE_CHANGE")
-                        && finding.path().equals("service.token")));
+        assertFalse(context.findings().stream()
+                .anyMatch(finding -> finding.path().equals("service.token")));
     }
 
     private ParsedConfigurationSnapshot snapshot(

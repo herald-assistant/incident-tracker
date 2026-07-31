@@ -41,17 +41,6 @@ public class RuntimeConfigurationDeterministicEngine {
     private static final Pattern LOCAL_EXPRESSION = Pattern.compile(
             "(?<![A-Za-z0-9_.])((?:local|variable)\\.[A-Za-z0-9_.-]+)"
     );
-    private static final Set<String> ENVIRONMENTAL_PATH_TOKENS = Set.of(
-            "environment",
-            "env",
-            "host",
-            "url",
-            "jdbcurl",
-            "schema",
-            "queuename",
-            "exchange"
-    );
-
     private final RuntimeConfigurationSensitivityClassifier sensitivityClassifier =
             new RuntimeConfigurationSensitivityClassifier();
     private final RuntimeConfigurationDynamicKeyClassifier dynamicKeyClassifier =
@@ -467,34 +456,12 @@ public class RuntimeConfigurationDeterministicEngine {
         var targetLeaves = scalarMap(target);
 
         for (var difference : state.differences) {
-            if (difference.sensitivity() == RuntimeConfigurationSensitivity.SENSITIVE) {
-                var hardcodedAddition = hardcodedSensitiveAddition(difference, targetLeaves);
+            if (difference.sensitivity() == RuntimeConfigurationSensitivity.SENSITIVE
+                    && hardcodedSensitiveAddition(difference, targetLeaves)) {
                 addFinding(
                         findings,
-                        hardcodedAddition
-                                ? "HARDCODED_SENSITIVE_VALUE_ADDED"
-                                : "SENSITIVE_VALUE_CHANGE",
-                        hardcodedAddition
-                                ? RuntimeConfigurationFindingSeverity.ERROR
-                                : RuntimeConfigurationFindingSeverity.WARNING,
-                        difference.path(),
-                        List.of(difference.differenceId()),
-                        List.of()
-                );
-            } else if (difference.kind() == RuntimeConfigurationChangeKind.TYPE_CHANGED) {
-                addFinding(
-                        findings,
-                        "CONFIGURATION_TYPE_CHANGE",
-                        RuntimeConfigurationFindingSeverity.WARNING,
-                        difference.path(),
-                        List.of(difference.differenceId()),
-                        List.of()
-                );
-            } else if (difference.kind() == RuntimeConfigurationChangeKind.EFFECTIVE_CHANGED) {
-                addFinding(
-                        findings,
-                        "EFFECTIVE_VALUE_CHANGE",
-                        RuntimeConfigurationFindingSeverity.WARNING,
+                        "HARDCODED_SENSITIVE_VALUE_ADDED",
+                        RuntimeConfigurationFindingSeverity.ERROR,
                         difference.path(),
                         List.of(difference.differenceId()),
                         List.of()
@@ -527,8 +494,6 @@ public class RuntimeConfigurationDeterministicEngine {
             }
         }
 
-        addEnvironmentFindings(findings, source, target, state);
-        addUnrelatedGlobalFindings(findings, references, state);
         return List.copyOf(findings);
     }
 
@@ -558,9 +523,7 @@ public class RuntimeConfigurationDeterministicEngine {
                 addFinding(
                         findings,
                         branchRole + "_" + issue.code(),
-                        !linkedReferences.isEmpty() || !issue.code().contains("UNSUPPORTED")
-                                ? RuntimeConfigurationFindingSeverity.ERROR
-                                : RuntimeConfigurationFindingSeverity.WARNING,
+                        RuntimeConfigurationFindingSeverity.ERROR,
                         linkedReferences.isEmpty()
                                 ? issue.path()
                                 : linkedReferences.get(0).targetPath(),
@@ -598,84 +561,6 @@ public class RuntimeConfigurationDeterministicEngine {
             return !value.isBlank() && !placeholder(value);
         }
         return true;
-    }
-
-    private void addEnvironmentFindings(
-            List<RuntimeConfigurationFinding> findings,
-            ParsedConfigurationSnapshot source,
-            ParsedConfigurationSnapshot target,
-            BuildState state
-    ) {
-        var sourceLeaves = scalarMap(source);
-        var targetLeaves = scalarMap(target);
-        for (var entry : targetLeaves.entrySet()) {
-            var value = entry.getValue().scalarValue();
-            if (value instanceof String text
-                    && containsBranchMarker(text, source.branch())
-                    && !source.branch().equals(target.branch())) {
-                var safePath = state.safePaths.getOrDefault(
-                        entry.getKey(),
-                        sanitizeReferencePath(entry.getKey().rawPath, state.pseudonymizer)
-                );
-                addFinding(
-                        findings,
-                        "WRONG_ENVIRONMENT_MARKER",
-                        RuntimeConfigurationFindingSeverity.ERROR,
-                        safePath,
-                        state.differenceIds(entry.getKey()),
-                        List.of()
-                );
-            }
-        }
-
-        for (var entry : sourceLeaves.entrySet()) {
-            var targetNode = targetLeaves.get(entry.getKey());
-            if (targetNode == null
-                    || !environmentalPath(entry.getKey().rawPath)
-                    || placeholder(entry.getValue().scalarValue())
-                    || !Objects.equals(
-                    canonical(entry.getValue().scalarValue()),
-                    canonical(targetNode.scalarValue())
-            )) {
-                continue;
-            }
-            var safePath = state.safePaths.getOrDefault(
-                    entry.getKey(),
-                    sanitizeReferencePath(entry.getKey().rawPath, state.pseudonymizer)
-            );
-            addFinding(
-                    findings,
-                    "SUSPICIOUS_UNCHANGED_ENVIRONMENT_VALUE",
-                    RuntimeConfigurationFindingSeverity.WARNING,
-                    safePath,
-                    List.of(),
-                    List.of()
-            );
-        }
-    }
-
-    private void addUnrelatedGlobalFindings(
-            List<RuntimeConfigurationFinding> findings,
-            List<RuntimeConfigurationReference> references,
-            BuildState state
-    ) {
-        var referenced = references.stream()
-                .map(RuntimeConfigurationReference::targetPath)
-                .collect(java.util.stream.Collectors.toSet());
-        for (var difference : state.differences) {
-            if (difference.role() != RuntimeConfigurationFileRole.GLOBAL_VAR
-                    || referenced.contains(difference.path())) {
-                continue;
-            }
-            addFinding(
-                    findings,
-                    "UNRELATED_GLOBAL_DIFFERENCE",
-                    RuntimeConfigurationFindingSeverity.INFO,
-                    difference.path(),
-                    List.of(difference.differenceId()),
-                    List.of()
-            );
-        }
     }
 
     private RuntimeConfigurationDeterministicStatus status(
@@ -955,25 +840,6 @@ public class RuntimeConfigurationDeterministicEngine {
 
     private String canonical(Object value) {
         return value == null ? "<null>" : value.getClass().getName() + ":" + value;
-    }
-
-    private boolean containsBranchMarker(String value, String branch) {
-        return Pattern.compile("(?i)(^|[^A-Za-z0-9])" + Pattern.quote(branch) + "([^A-Za-z0-9]|$)")
-                .matcher(value)
-                .find();
-    }
-
-    private boolean environmentalPath(String path) {
-        var normalized = (path != null ? path : "")
-                .replaceAll("([a-z0-9])([A-Z])", "$1.$2")
-                .toLowerCase(java.util.Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", ".");
-        for (var token : normalized.split("\\.")) {
-            if (ENVIRONMENTAL_PATH_TOKENS.contains(token)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean placeholder(Object value) {
