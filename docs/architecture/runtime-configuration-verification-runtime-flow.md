@@ -87,6 +87,19 @@ jeden finding root-cause z powiazanym `referenceId`, zamiast liczyc skutek jako
 drugi niezalezny problem. Literalne dodanie wartosci sklasyfikowanej jako
 sensytywna ma kod `HARDCODED_SENSITIVE_VALUE_ADDED` i severity `ERROR`;
 placeholder pozostaje odroznialny od hardcoded value.
+W plikach `.var` operatory przypisania `=` i `:` sa rownowazne dla wartosci
+skalarnych, list i map. Uzycie `:` nie tworzy issue parsera ani unresolved
+reference.
+
+Projekcja operatorska jest prezentowana jako pelne drzewo source/target.
+Kardynalnosc kolekcji nie jest wyswietlana. Sygnal zmiany wystepuje tylko przy
+lisciu: czerwony dla dodania/usuniecia, pomaranczowy dla zmiany lub zmiany typu
+i zolty dla zmiany efektywnej; opis pozostaje w tooltipie. Niezmieniony lisc
+pokazuje jawnie `source = target` oraz wspolna wartosc bez znacznika.
+Pojedynczy dokument jest renderowany bezposrednio w ramce pliku. Dodatkowe
+sekcje `Dokument N` pojawiaja sie tylko dla pliku wielodokumentowego.
+Pliki sa porzadkowane od konfiguracji najbardziej szczegolowej do najbardziej
+ogolnej: application `.kv`, `local.var`, `global.var`.
 
 ## Tryb BASIC
 

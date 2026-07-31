@@ -7,6 +7,7 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationDeterministicStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationFinding;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationFindingSeverity;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationReferenceStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.RuntimeConfigurationSensitivity;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationNode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.parse.ParsedConfigurationFile;
@@ -226,7 +227,7 @@ class RuntimeConfigurationDeterministicEngineTest {
     }
 
     @Test
-    void shouldCollapseParserCausedReferenceAndEscalateHardcodedSensitiveAdditions() {
+    void shouldResolveColonAssignmentAndEscalateHardcodedSensitiveAdditions() {
         var source = snapshot(
                 "dev1",
                 "locals {}",
@@ -249,7 +250,7 @@ class RuntimeConfigurationDeterministicEngineTest {
                             username: literal-user
                             password: literal-password
                         service:
-                          token: ${SERVICE_TOKEN}
+                          token: $SERVICE_TOKEN$
                         integration:
                           docGen:
                             draftDocumentParentNodeId: ${local.endpoints.draftDocumentParentNodeId}
@@ -264,18 +265,15 @@ class RuntimeConfigurationDeterministicEngineTest {
                 target
         );
 
-        assertEquals(RuntimeConfigurationDeterministicStatus.INCOMPLETE, context.status());
-        var parserFinding = context.findings().stream()
-                .filter(finding -> finding.code().equals("TARGET_VAR_UNSUPPORTED_SYNTAX"))
-                .findFirst()
-                .orElseThrow();
-        assertEquals(RuntimeConfigurationFindingSeverity.ERROR, parserFinding.severity());
-        assertEquals("local.endpoints.draftDocumentParentNodeId", parserFinding.path());
-        assertEquals("global.var", parserFinding.filePath());
-        assertEquals(3, parserFinding.line());
-        assertEquals(1, parserFinding.referenceIds().size());
+        assertEquals(RuntimeConfigurationDeterministicStatus.REVIEW_REQUIRED, context.status());
+        assertFalse(context.findings().stream()
+                .anyMatch(finding -> finding.code().equals("TARGET_VAR_UNSUPPORTED_SYNTAX")));
         assertFalse(context.findings().stream()
                 .anyMatch(finding -> finding.code().equals("UNRESOLVED_REFERENCE")));
+        assertTrue(context.references().stream()
+                .anyMatch(reference -> reference.targetPath()
+                        .equals("local.endpoints.draftDocumentParentNodeId")
+                        && reference.targetStatus() == RuntimeConfigurationReferenceStatus.RESOLVED));
 
         var hardcodedSensitiveFindings = context.findings().stream()
                 .filter(finding -> finding.code().equals("HARDCODED_SENSITIVE_VALUE_ADDED"))

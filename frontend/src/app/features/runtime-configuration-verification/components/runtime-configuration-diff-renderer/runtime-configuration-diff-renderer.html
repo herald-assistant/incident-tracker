@@ -31,12 +31,6 @@
   </header>
 
   @if (projection()) {
-    <div class="legend" aria-label="Legenda zmian">
-      <span><span aria-hidden="true">🔴</span> dodano, usunięto lub zmieniono typ</span>
-      <span><span aria-hidden="true">🟡</span> zmieniono wartość lub wartość efektywną</span>
-      <span>Bez symbolu · bez zmian / kontekst</span>
-    </div>
-
     <div class="file-list">
       @for (renderFile of files(); track renderFile.key) {
         <details class="configuration-file" open>
@@ -64,15 +58,21 @@
 
           <div class="document-list">
             @for (renderDocument of renderFile.documents; track renderDocument.key) {
-              <details class="configuration-document" open>
-                <summary>
-                  <strong>Dokument {{ renderDocument.document.documentIndex + 1 }}</strong>
-                  <span>{{ renderDocument.changeCount }} zmian</span>
-                  <span>
-                    source: {{ renderDocument.document.sourcePresent ? 'jest' : 'ABSENT' }} ·
-                    target: {{ renderDocument.document.targetPresent ? 'jest' : 'ABSENT' }}
-                  </span>
-                </summary>
+              <details
+                class="configuration-document"
+                [class.configuration-document--single]="renderFile.documents.length === 1"
+                open
+              >
+                @if (renderFile.documents.length > 1) {
+                  <summary>
+                    <strong>Dokument {{ renderDocument.document.documentIndex + 1 }}</strong>
+                    <span>{{ renderDocument.changeCount }} zmian</span>
+                    <span>
+                      source: {{ renderDocument.document.sourcePresent ? 'jest' : 'ABSENT' }} ·
+                      target: {{ renderDocument.document.targetPresent ? 'jest' : 'ABSENT' }}
+                    </span>
+                  </summary>
+                }
 
                 @if (renderDocument.document.documentIndex > 0) {
                   <div class="document-separator" aria-label="Separator dokumentu YAML">---</div>
@@ -116,19 +116,28 @@
                       }
 
                       <div class="configuration-row__line">
-                        <span
-                          class="change-marker"
-                          [class]="markerClass(row.node.changeKind)"
-                          [attr.title]="changeLabel(row.node.changeKind)"
-                        >
-                          <span aria-hidden="true">{{ marker(row.node.changeKind) }}</span>
-                          <span class="sr-only">{{ changeLabel(row.node.changeKind) }}</span>
-                        </span>
+                        @if (leaf(row.node) && marker(row.node.changeKind)) {
+                          <span
+                            class="change-marker"
+                            [class]="markerClass(row.node.changeKind)"
+                            [attr.title]="changeLabel(row.node.changeKind)"
+                          >
+                            <span aria-hidden="true">{{ marker(row.node.changeKind) }}</span>
+                            <span class="sr-only">{{ changeLabel(row.node.changeKind) }}</span>
+                          </span>
+                        } @else {
+                          <span class="change-marker change-marker--empty" aria-hidden="true"></span>
+                        }
                         <code class="syntax-name">{{ syntaxName(renderFile.file, row) }}</code>
 
-                        @if (sameSides(row.node)) {
-                          <code class="configuration-value">{{ formatValue(row.node.source) }}</code>
-                        } @else {
+                        @if (!collection(row.node) && sameSides(row.node)) {
+                          <span class="value-comparison value-comparison--same">
+                            <small>source</small>
+                            <span aria-hidden="true">=</span>
+                            <small>target</small>
+                            <code>{{ formatValue(row.node.source) }}</code>
+                          </span>
+                        } @else if (!collection(row.node)) {
                           <span class="value-comparison">
                             <span>
                               <small>source</small>
@@ -140,29 +149,6 @@
                               <code>{{ formatValue(row.node.target) }}</code>
                             </span>
                           </span>
-                        }
-
-                        @if (row.changed) {
-                          <span [class]="'change-label ' + markerClass(row.node.changeKind)">
-                            {{ changeLabel(row.node.changeKind) }}
-                          </span>
-                        } @else if (row.descendantChanged) {
-                          <span class="change-label change-label--context">kontekst</span>
-                        }
-
-                        @if (view() === 'FULL' && row.fullyUnchangedBranch) {
-                          <button
-                            type="button"
-                            class="branch-toggle"
-                            [attr.aria-expanded]="unchangedBranchExpanded(row)"
-                            (click)="toggleUnchangedBranch($event, row)"
-                          >
-                            {{
-                              unchangedBranchExpanded(row)
-                                ? 'Zwiń'
-                                : 'Rozwiń ' + row.hiddenDescendantCount + ' niezmienionych'
-                            }}
-                          </button>
                         }
                       </div>
 
@@ -239,7 +225,6 @@
             </span>
             <code>{{ difference.path }}</code>
             <span>{{ roleLabel(difference.role) }} · dokument {{ difference.documentIndex + 1 }}</span>
-            <strong>{{ changeLabel(difference.kind) }}</strong>
             <small>{{ difference.differenceId }}</small>
           </article>
         }

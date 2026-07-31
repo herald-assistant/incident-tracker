@@ -23,13 +23,11 @@ public class RuntimeConfigurationVarParser {
     private static final Pattern EMPTY_NAMED_BLOCK =
             Pattern.compile("^([A-Za-z0-9_.-]+)\\s*\\{\\s*}[,;]?$");
     private static final Pattern MAP_ASSIGNMENT =
-            Pattern.compile("^([A-Za-z0-9_.-]+)\\s*=\\s*\\{\\s*$");
+            Pattern.compile("^([A-Za-z0-9_.-]+)\\s*[=:]\\s*\\{\\s*$");
     private static final Pattern EMPTY_MAP_ASSIGNMENT =
-            Pattern.compile("^([A-Za-z0-9_.-]+)\\s*=\\s*\\{\\s*}[,;]?$");
+            Pattern.compile("^([A-Za-z0-9_.-]+)\\s*[=:]\\s*\\{\\s*}[,;]?$");
     private static final Pattern ASSIGNMENT =
-            Pattern.compile("^([A-Za-z0-9_.-]+)\\s*=\\s*(.+)$");
-    private static final Pattern UNSUPPORTED_COLON_ASSIGNMENT =
-            Pattern.compile("^([A-Za-z0-9_.-]+)\\s*:\\s*(.+)$");
+            Pattern.compile("^([A-Za-z0-9_.-]+)\\s*[=:]\\s*(.+)$");
 
     public ParsedConfigurationFile parse(
             RuntimeConfigurationFileRole role,
@@ -121,16 +119,6 @@ public class RuntimeConfigurationVarParser {
                     expression = collected.toString();
                 }
                 putValue(stack.peek(), key, parseExpression(expression, issues, lineNumber), issues, lineNumber);
-                continue;
-            }
-
-            var unsupportedColonAssignment = UNSUPPORTED_COLON_ASSIGNMENT.matcher(line);
-            if (unsupportedColonAssignment.matches()) {
-                issues.add(new ParsedConfigurationIssue(
-                        "VAR_UNSUPPORTED_SYNTAX",
-                        unsupportedColonAssignment.group(1),
-                        lineNumber
-                ));
                 continue;
             }
 

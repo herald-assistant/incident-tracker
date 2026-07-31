@@ -23,7 +23,7 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     });
   });
 
-  it('should render changed YAML and VAR syntax with actual values, markers and explicit ABSENT', () => {
+  it('should render leaf-only markers, tooltips and unchanged values without collection counts', () => {
     fixture.componentRef.setInput('projection', projection());
     fixture.componentRef.setInput('mode', 'BASIC');
     fixture.componentRef.setInput('annotations', annotations());
@@ -39,36 +39,90 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     expect(compiled.textContent).toContain('ABSENT');
     expect(compiled.textContent).toContain('feature {');
     expect(compiled.textContent).toContain('enabled =');
-    expect(compiled.textContent).not.toContain('ttl:');
+    expect(compiled.textContent).toContain('ttl:');
+    expect(compiled.textContent).toContain('queueName:');
+    const unchangedComparison = compiled.querySelector('.value-comparison--same');
+    expect(unchangedComparison?.querySelectorAll('small')[0]?.textContent).toBe('source');
+    expect(unchangedComparison?.querySelector('span')?.textContent).toBe('=');
+    expect(unchangedComparison?.querySelectorAll('small')[1]?.textContent).toBe('target');
+    expect(compiled.textContent).toContain('"CLP_SF_SF_CHANGE_STATUS_DEV1"');
+    expect(compiled.textContent).not.toContain('pól');
+    expect(compiled.textContent).not.toContain('elementów');
     expect(compiled.textContent).not.toContain('Ryzyko błędnej bazy');
-    expect(compiled.querySelector('[title="zmieniono"]')?.textContent).toContain('🟡');
+    expect(compiled.querySelector('[title="zmieniono"]')?.textContent).toContain('🟠');
     expect(compiled.querySelector('[title="usunięto"]')?.textContent).toContain('🔴');
-    expect(buttonContaining(compiled, 'Zmiany')?.getAttribute('aria-pressed')).toBe('true');
-    expect(buttonContaining(compiled, 'Cały plik')?.getAttribute('aria-pressed')).toBe('false');
+    expect(compiled.querySelector('[title="zmiana efektywna"]')?.textContent).toContain('🟡');
+    expect(compiled.querySelectorAll('.change-label')).toHaveLength(0);
+    expect(rowContaining(compiled, 'spring:')?.querySelector('.change-marker:not(.change-marker--empty)'))
+      .toBeNull();
+    expect(buttonContaining(compiled, 'Zmiany')?.getAttribute('aria-pressed')).toBe('false');
+    expect(buttonContaining(compiled, 'Cały plik')?.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('should show the full file while keeping unchanged branches collapsed until requested', () => {
+  it('should allow narrowing the full tree to changed branches', () => {
     fixture.componentRef.setInput('projection', projection());
     fixture.detectChanges();
 
-    buttonContaining(fixture.nativeElement, 'Cały plik')?.click();
+    buttonContaining(fixture.nativeElement, 'Zmiany')?.click();
     fixture.detectChanges();
 
     let compiled = fixture.nativeElement as HTMLElement;
-    expect(buttonContaining(compiled, 'Cały plik')?.getAttribute('aria-pressed')).toBe('true');
-    expect(compiled.textContent).toContain('cache:');
+    expect(buttonContaining(compiled, 'Zmiany')?.getAttribute('aria-pressed')).toBe('true');
+    expect(compiled.textContent).not.toContain('cache:');
     expect(compiled.textContent).not.toContain('ttl:');
-    const expand = buttonContaining(compiled, 'Rozwiń 2 niezmienionych');
-    expect(expand?.getAttribute('aria-expanded')).toBe('false');
+    expect(compiled.textContent).not.toContain('queueName:');
 
-    expand?.click();
+    buttonContaining(compiled, 'Cały plik')?.click();
     fixture.detectChanges();
     compiled = fixture.nativeElement as HTMLElement;
 
+    expect(compiled.textContent).toContain('cache:');
     expect(compiled.textContent).toContain('ttl:');
-    expect(buttonContaining(compiled, 'Zwiń')?.getAttribute('aria-expanded')).toBe('true');
+    expect(compiled.textContent).toContain('queueName:');
     expect(compiled.textContent).toContain('---');
     expect(compiled.textContent).toContain('spring.config.activate.on-profile:');
+  });
+
+  it('should omit the document frame for a single document and keep it for multi-document YAML', () => {
+    fixture.componentRef.setInput('projection', projection());
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const localVar = fileContaining(compiled, 'backend/local.var');
+    const applicationYaml = fileContaining(compiled, 'backend/application.yml.kv');
+
+    expect(localVar?.querySelector('.configuration-document--single')).not.toBeNull();
+    expect(localVar?.querySelector('.configuration-document > summary')).toBeNull();
+    expect(applicationYaml?.querySelectorAll('.configuration-document--single')).toHaveLength(0);
+    expect(applicationYaml?.querySelectorAll('.configuration-document > summary')).toHaveLength(2);
+    expect(applicationYaml?.textContent).toContain('Dokument 1');
+    expect(applicationYaml?.textContent).toContain('Dokument 2');
+  });
+
+  it('should order files from detailed kv configuration through local to global variables', () => {
+    const shuffled = projection();
+    const application = shuffled.files[0];
+    const local = shuffled.files[1];
+    const global = {
+      ...local,
+      role: 'GLOBAL_VAR' as const,
+      sourcePath: 'global.var',
+      targetPath: 'global.var'
+    };
+    shuffled.files = [global, local, application];
+
+    fixture.componentRef.setInput('projection', shuffled);
+    fixture.detectChanges();
+
+    const labels = Array.from(
+      (fixture.nativeElement as HTMLElement)
+        .querySelectorAll<HTMLElement>('.configuration-file > summary strong')
+    ).map((label) => label.textContent?.trim());
+    expect(labels).toEqual([
+      'backend/application.yml.kv',
+      'backend/local.var',
+      'global.var'
+    ]);
   });
 
   it('should attach DEEP annotations by difference id and navigate to their AI source', () => {
@@ -190,8 +244,8 @@ function projection(): RuntimeConfigurationDiffProjection {
                   name: 'cache',
                   path: 'cache',
                   changeKind: 'UNCHANGED',
-                  source: mapValue(2),
-                  target: mapValue(2),
+                  source: mapValue(3),
+                  target: mapValue(3),
                   differenceIds: [],
                   children: [
                     {
@@ -211,6 +265,15 @@ function projection(): RuntimeConfigurationDiffProjection {
                       target: scalar('NUMBER', 60),
                       differenceIds: [],
                       children: []
+                    },
+                    {
+                      name: 'queueName',
+                      path: 'cache.queueName',
+                      changeKind: 'UNCHANGED',
+                      source: scalar('STRING', 'CLP_SF_SF_CHANGE_STATUS_DEV1'),
+                      target: scalar('STRING', 'CLP_SF_SF_CHANGE_STATUS_DEV1'),
+                      differenceIds: [],
+                      children: []
                     }
                   ]
                 }
@@ -226,7 +289,7 @@ function projection(): RuntimeConfigurationDiffProjection {
             root: {
               name: 'document-1',
               path: 'logging.level',
-              changeKind: 'CHANGED',
+              changeKind: 'EFFECTIVE_CHANGED',
               source: scalar('STRING', 'DEBUG'),
               target: scalar('STRING', 'INFO'),
               differenceIds: ['difference-3'],
@@ -309,4 +372,14 @@ function legacyDifferences(): RuntimeConfigurationDifference[] {
 function buttonContaining(root: HTMLElement, text: string): HTMLButtonElement | null {
   return Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.includes(text)) ?? null;
+}
+
+function rowContaining(root: HTMLElement, text: string): HTMLElement | null {
+  return Array.from(root.querySelectorAll<HTMLElement>('.configuration-row'))
+    .find((row) => row.querySelector('.syntax-name')?.textContent?.includes(text)) ?? null;
+}
+
+function fileContaining(root: HTMLElement, text: string): HTMLElement | null {
+  return Array.from(root.querySelectorAll<HTMLElement>('.configuration-file'))
+    .find((file) => file.querySelector('summary strong')?.textContent?.includes(text)) ?? null;
 }

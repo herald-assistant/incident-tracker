@@ -30,8 +30,8 @@ preparation i annotation linking, modele Angulara oraz lista findingow.
 
 ## Proponowane rozwiazanie
 
-- Zachowac w issue parsera nazwe klucza dla przypisania `key: value`, ktore nie
-  jest wspierane w pliku VAR.
+- Traktowac przypisania `key: value` i `key = value` jako rownowazna skladnie
+  pliku VAR, takze dla list i map.
 - Powiazac issue parsera z unresolved reference po docelowej sciezce klucza,
   opublikowac jeden finding root-cause z referencja oraz lokalizacja plik:linia
   i nie publikowac drugiego findingu bedacego tylko skutkiem tego samego bledu.
@@ -60,9 +60,8 @@ jednoznacznie powiazac unresolved reference po docelowej sciezce.
 
 ## Kryteria akceptacji
 
-- blad `draftDocumentParentNodeId: ...` daje jeden finding root-cause z
-  `global.var:<linia>` i powiazanym reference ID,
-- zalezne `UNRESOLVED_REFERENCE` nie jest liczone drugi raz,
+- `draftDocumentParentNodeId: ...` nie daje findingu parsera, a zalezne
+  odwolanie zostaje rozwiazane,
 - literalnie dodane username/password daja dwa findingi `ERROR`,
 - dodany sensitive placeholder nie jest oznaczany jako hardcoded,
 - stare konstruktory i importy bez lokalizacji pozostaja kompatybilne,
@@ -75,6 +74,8 @@ jednoznacznie powiazac unresolved reference po docelowej sciezce.
 - [x] Krok 2: rozszerzyc prezentacje findingow i test Angulara.
 - [x] Krok 3: zaktualizowac runtime flow, uruchomic testy celowane, build
   frontendu i architecture guard.
+- [x] Krok 4: uznac operatory `:` i `=` za rownowazne oraz zweryfikowac
+  ponownie scenariusz referencji.
 
 ## Dowody weryfikacji
 
@@ -83,4 +84,6 @@ jednoznacznie powiazac unresolved reference po docelowej sciezce.
   przygotowaniem promptu, annotation linking i architecture guard: zaliczony,
 - testy frontendu: 223/223 zaliczone,
 - produkcyjny build frontendu: zaliczony,
-- `git diff --check`: bez bledow.
+- `git diff --check`: bez bledow,
+- test regresyjny `:`/`=` oraz rozszerzony zestaw parser/engine/portability/
+  controller/prompt/annotation/architecture guard: zaliczone.

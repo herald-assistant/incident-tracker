@@ -19,8 +19,6 @@ interface ConfigurationRenderRow {
   depth: number;
   changed: boolean;
   descendantChanged: boolean;
-  fullyUnchangedBranch: boolean;
-  hiddenDescendantCount: number;
   annotations: RuntimeConfigurationDiffAnnotation[];
 }
 
@@ -53,8 +51,7 @@ export class RuntimeConfigurationDiffRendererComponent {
   readonly focusedReferenceId = input('');
   readonly referenceSelected = output<string>();
 
-  readonly view = signal<ConfigurationDiffView>('CHANGES');
-  private readonly expandedUnchangedBranches = signal<ReadonlySet<string>>(new Set());
+  readonly view = signal<ConfigurationDiffView>('FULL');
 
   private readonly annotationsByDifferenceId = computed(() => {
     const index = new Map<string, RuntimeConfigurationDiffAnnotation[]>();
@@ -76,7 +73,8 @@ export class RuntimeConfigurationDiffRendererComponent {
     }
     return projection.files
       .map((file, fileIndex) => this.renderFile(file, fileIndex))
-      .filter((file) => this.view() === 'FULL' || file.changeCount > 0);
+      .filter((file) => this.view() === 'FULL' || file.changeCount > 0)
+      .sort((left, right) => this.fileOrder(left.file) - this.fileOrder(right.file));
   });
 
   readonly totalChanges = computed(() =>
@@ -114,42 +112,28 @@ export class RuntimeConfigurationDiffRendererComponent {
     this.view.set(view);
   }
 
-  protected toggleUnchangedBranch(event: Event, row: ConfigurationRenderRow): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.expandedUnchangedBranches.update((current) => {
-      const next = new Set(current);
-      if (next.has(row.key)) {
-        next.delete(row.key);
-      } else {
-        next.add(row.key);
-      }
-      return next;
-    });
-  }
-
-  protected unchangedBranchExpanded(row: ConfigurationRenderRow): boolean {
-    return this.expandedUnchangedBranches().has(row.key);
-  }
-
   protected isFocused(row: ConfigurationRenderRow): boolean {
     return row.node.differenceIds.includes(this.focusedReferenceId());
   }
 
   protected markerClass(kind: string): string {
-    return ['ADDED', 'REMOVED', 'TYPE_CHANGED'].includes(kind)
+    return ['ADDED', 'REMOVED'].includes(kind)
       ? 'change-marker--critical'
-      : ['CHANGED', 'EFFECTIVE_CHANGED'].includes(kind)
+      : ['CHANGED', 'TYPE_CHANGED'].includes(kind)
         ? 'change-marker--changed'
-        : '';
+        : kind === 'EFFECTIVE_CHANGED'
+          ? 'change-marker--effective'
+          : '';
   }
 
   protected marker(kind: string): string {
-    return ['ADDED', 'REMOVED', 'TYPE_CHANGED'].includes(kind)
+    return ['ADDED', 'REMOVED'].includes(kind)
       ? '🔴'
-      : ['CHANGED', 'EFFECTIVE_CHANGED'].includes(kind)
-        ? '🟡'
-        : '';
+      : ['CHANGED', 'TYPE_CHANGED'].includes(kind)
+        ? '🟠'
+        : kind === 'EFFECTIVE_CHANGED'
+          ? '🟡'
+          : '';
   }
 
   protected changeLabel(kind: string): string {
@@ -182,10 +166,10 @@ export class RuntimeConfigurationDiffRendererComponent {
       return 'ABSENT';
     }
     if (value.type === 'MAP') {
-      return `{ ${value.cardinality ?? 0} pól }`;
+      return '{}';
     }
     if (value.type === 'LIST') {
-      return `[ ${value.cardinality ?? 0} elementów ]`;
+      return '[]';
     }
     if (value.type === 'NULL') {
       return 'null';
@@ -203,6 +187,10 @@ export class RuntimeConfigurationDiffRendererComponent {
 
   protected sameSides(node: RuntimeConfigurationDiffNode): boolean {
     return this.sameValue(node.source, node.target);
+  }
+
+  protected leaf(node: RuntimeConfigurationDiffNode): boolean {
+    return node.children.length === 0;
   }
 
   protected syntaxName(
@@ -230,6 +218,15 @@ export class RuntimeConfigurationDiffRendererComponent {
 
   protected annotationLabel(annotation: RuntimeConfigurationDiffAnnotation): string {
     return annotation.kind === 'FUNCTIONAL_IMPACT' ? 'Wpływ funkcjonalny' : 'Obserwacja AI';
+  }
+
+  private fileOrder(file: RuntimeConfigurationDiffFile): number {
+    const order: Record<string, number> = {
+      APPLICATION_YAML: 0,
+      LOCAL_VAR: 1,
+      GLOBAL_VAR: 2
+    };
+    return order[file.role] ?? 3;
   }
 
   private renderFile(file: RuntimeConfigurationDiffFile, fileIndex: number): ConfigurationRenderFile {
@@ -279,26 +276,16 @@ export class RuntimeConfigurationDiffRendererComponent {
     }
 
     const key = `${fileKey}:${document.documentIndex}:${node.path || node.name}`;
-    const fullyUnchangedBranch = !changed && !descendantChanged && node.children.length > 0;
     const row: ConfigurationRenderRow = {
       key,
       node,
       depth,
       changed,
       descendantChanged,
-      fullyUnchangedBranch,
-      hiddenDescendantCount: this.descendantCount(node),
       annotations: this.annotationsFor(node)
     };
     rows.push(row);
 
-    if (
-      this.view() === 'FULL'
-      && fullyUnchangedBranch
-      && !this.expandedUnchangedBranches().has(key)
-    ) {
-      return;
-    }
     node.children.forEach((child) =>
       this.appendNode(rows, file, document, child, depth + 1, fileKey)
     );
@@ -334,13 +321,6 @@ export class RuntimeConfigurationDiffRendererComponent {
   private subtreeChanged(node: RuntimeConfigurationDiffNode): boolean {
     return node.changeKind !== 'UNCHANGED'
       || node.children.some((child) => this.subtreeChanged(child));
-  }
-
-  private descendantCount(node: RuntimeConfigurationDiffNode): number {
-    return node.children.reduce(
-      (total, child) => total + 1 + this.descendantCount(child),
-      0
-    );
   }
 
   private sameValue(
