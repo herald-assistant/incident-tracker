@@ -126,7 +126,7 @@ class RuntimeConfigurationDeepContextServiceTest {
                 "runtime-config",
                 "backend",
                 null,
-                deterministicContext("billing.endpoint")
+                deterministicContext("crm.customer-profile.endpoint")
         ).orElseThrow();
 
         assertEquals(OperationalContextOwnershipResolution.AMBIGUOUS, result.ownership().situationType());
@@ -258,7 +258,7 @@ class RuntimeConfigurationDeepContextServiceTest {
                 List.of(),
                 List.of(
                         system("backend", List.of(), null),
-                        system("billing", List.of("billing"), null)
+                        system("customer-profile", List.of("customer-profile"), null)
                 ),
                 List.of(),
                 List.of(repository(List.of("backend"))),

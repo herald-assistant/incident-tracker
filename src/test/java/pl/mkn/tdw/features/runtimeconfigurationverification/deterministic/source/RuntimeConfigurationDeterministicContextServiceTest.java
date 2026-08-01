@@ -48,8 +48,8 @@ class RuntimeConfigurationDeterministicContextServiceTest {
                 "runtime-config",
                 "config-gitlab",
                 "platform/runtime-config",
-                "clp-backend",
-                "CLP Backend",
+                "crm-backend",
+                "CRM Backend",
                 "backend"
         );
         var sourceCoverage = new RuntimeConfigurationBranchCoverage("dev1", true, List.of());

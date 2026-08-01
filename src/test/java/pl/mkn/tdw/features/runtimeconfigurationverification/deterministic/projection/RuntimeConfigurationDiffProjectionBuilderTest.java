@@ -169,6 +169,8 @@ class RuntimeConfigurationDiffProjectionBuilderTest {
         assertEquals(RuntimeConfigurationChangeKind.EFFECTIVE_CHANGED, effective.changeKind());
         assertEquals("${local.backend_url}", effective.source().value());
         assertEquals("${local.backend_url}", effective.target().value());
+        assertEquals("https://dev1.internal", effective.sourceEffective().value());
+        assertEquals("https://zt001.internal", effective.targetEffective().value());
         assertEquals(
                 List.of(differenceId(deterministicContext, 0, "app.endpoint")),
                 effective.differenceIds()
@@ -217,6 +219,7 @@ class RuntimeConfigurationDiffProjectionBuilderTest {
         var deterministicJson = new ObjectMapper().writeValueAsString(deterministicContext);
         assertTrue(projectionJson.contains("source-value"));
         assertTrue(projectionJson.contains("https://dev1.internal"));
+        assertTrue(projectionJson.contains("https://zt001.internal"));
         assertTrue(projectionJson.contains("$VAULT_DB_PASSWORD_DEV$"));
         assertTrue(projectionJson.contains(DYNAMIC_TENANT_KEY));
         assertFalse(deterministicJson.contains("source-value"));

@@ -185,6 +185,8 @@ export interface RuntimeConfigurationDiffNode {
   changeKind: string;
   source: RuntimeConfigurationDiffValue;
   target: RuntimeConfigurationDiffValue;
+  sourceEffective?: RuntimeConfigurationDiffValue | null;
+  targetEffective?: RuntimeConfigurationDiffValue | null;
   differenceIds: string[];
   children: RuntimeConfigurationDiffNode[];
 }

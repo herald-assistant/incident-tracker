@@ -52,7 +52,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
         var request = new RuntimeConfigurationWorkbenchPreviewRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "billing-api",
+                "crm-api",
                 "dev1",
                 "zt001",
                 null
@@ -65,7 +65,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "repositoryId": " runtime-config ",
-                                  "systemId": " billing-api ",
+                                  "systemId": " crm-api ",
                                   "sourceBranch": " dev1 ",
                                   "targetBranch": " zt001 "
                                 }
@@ -74,7 +74,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                 .andExpect(jsonPath("$.previewId").value(PREVIEW_ID))
                 .andExpect(jsonPath("$.mode").value("BASIC"))
                 .andExpect(jsonPath("$.repositoryId").value("runtime-config"))
-                .andExpect(jsonPath("$.systemId").value("billing-api"))
+                .andExpect(jsonPath("$.systemId").value("crm-api"))
                 .andExpect(jsonPath("$.counts.nodes").value(3))
                 .andExpect(jsonPath("$.aiInputGenerated").value(false))
                 .andExpect(jsonPath("$.artifacts").isEmpty())
@@ -94,7 +94,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
         var request = new RuntimeConfigurationWorkbenchPreviewRequest(
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
-                "billing-api",
+                "crm-api",
                 "dev1",
                 "zt001",
                 "release-42"
@@ -107,7 +107,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                 {
                                   "mode": "DEEP",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "billing-api",
+                                  "systemId": "crm-api",
                                   "sourceBranch": "dev1",
                                   "targetBranch": "zt001",
                                   "codeRef": "release-42"
@@ -213,7 +213,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "billing-api",
+                                  "systemId": "crm-api",
                                   "sourceBranch": "dev1",
                                   "targetBranch": "dev1"
                                 }
@@ -230,7 +230,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                 {
                                   "mode": "DEEP",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "billing-api",
+                                  "systemId": "crm-api",
                                   "sourceBranch": "dev1",
                                   "targetBranch": "zt001",
                                   "codeRef": "release/../secret"
@@ -248,7 +248,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "billing-api",
+                                  "systemId": "crm-api",
                                   "sourceBranch": "dev1",
                                   "targetBranch": "zt001",
                                   "codeRef": "release-42"
@@ -263,7 +263,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
         var request = new RuntimeConfigurationWorkbenchPreviewRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "billing-api",
+                "crm-api",
                 "dev1",
                 "zt001",
                 null
@@ -277,7 +277,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "billing-api",
+                                  "systemId": "crm-api",
                                   "sourceBranch": "dev1",
                                   "targetBranch": "zt001"
                                 }
@@ -302,7 +302,7 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                         ? RuntimeConfigurationVerificationMode.DEEP
                         : RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "billing-api",
+                "crm-api",
                 "dev1",
                 "zt001",
                 deep ? "release-42" : null,

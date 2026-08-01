@@ -101,8 +101,22 @@ Kardynalnosc kolekcji nie jest wyswietlana. Sygnal zmiany wystepuje tylko przy
 lisciu: czerwony dla dodania/usuniecia, pomaranczowy dla zmiany lub zmiany typu
 i zolty dla zmiany efektywnej; opis pozostaje w tooltipie. Niezmieniony lisc
 pokazuje jawnie `source = target` oraz wspolna wartosc bez znacznika.
-Pojedynczy dokument jest renderowany bezposrednio w ramce pliku. Dodatkowe
-sekcje `Dokument N` pojawiaja sie tylko dla pliku wielodokumentowego.
+Rozne wartosci skalarne sa prezentowane jako `source != target` i inline diff:
+dla tekstu z czerwonym fragmentem usunietym oraz zielonym fragmentem dodanym,
+a dla pozostalych typow z cala wartoscia source oznaczona na czerwono i cala
+wartoscia target oznaczona na zielono.
+Dodanie i usuniecie sa prezentowane bez ramek i etykiet source/target:
+strzalka pokazuje kierunek, brakujaca strona jest oznaczona jako czerwone
+`BRAK` z tlem i obramowaniem, dodana wartosc jest zielona, a usuwana wartosc
+jest czerwona i przekreslona.
+Zmiana efektywna zachowuje literalna wartosc w drzewie, a po hover/focus
+pokazuje po prawej resolved source/target inline diff z tym samym kodem
+czerwono-zielonym.
+Wielodokumentowy YAML jest renderowany jako jeden ciagly plik z separatorami
+`---`, bez zagniezdzonych ramek i naglowkow `Dokument N`. Profil
+`spring.config.activate.on-profile` pozostaje zwyklym lisciem drzewa: wspolna
+wartosc jest pokazywana jako `source = target`, a w widoku samych zmian
+niezmieniony profil jest pomijany.
 Pliki sa porzadkowane od konfiguracji najbardziej szczegolowej do najbardziej
 ogolnej: application `.kv`, `local.var`, `global.var`.
 

@@ -110,7 +110,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(scopeResolver.resolve("runtime-config", "clp-backend")).thenReturn(scope());
+        when(scopeResolver.resolve("runtime-config", "crm-backend")).thenReturn(scope());
         when(authRefResolver.resolveForCurrentRequest()).thenReturn(AnalysisAiAuthRef.localToken(null));
         when(deterministicService.build(any(), anyString(), anyString(), any()))
                 .thenAnswer(invocation -> {
@@ -189,8 +189,8 @@ class RuntimeConfigurationVerificationJobServiceTest {
     void shouldMapIncompleteDeterministicBasicResultWithoutInvokingAi() {
         var incomplete = new RuntimeConfigurationDeterministicContext(
                 "runtime-config",
-                "clp-backend",
-                "CLP Backend",
+                "crm-backend",
+                "CRM Backend",
                 "backend",
                 "dev1",
                 "zt001",
@@ -242,8 +242,8 @@ class RuntimeConfigurationVerificationJobServiceTest {
 
     @Test
     void shouldRejectInvalidScopeBeforeCreatingJob() {
-        when(scopeResolver.resolve("runtime-config", "clp-backend")).thenThrow(
-                RuntimeConfigurationScopeException.configurationDirectoryMissing("clp-backend")
+        when(scopeResolver.resolve("runtime-config", "crm-backend")).thenThrow(
+                RuntimeConfigurationScopeException.configurationDirectoryMissing("crm-backend")
         );
 
         var exception = assertThrows(
@@ -364,8 +364,8 @@ class RuntimeConfigurationVerificationJobServiceTest {
                 "runtime-config",
                 "config-gitlab",
                 "platform/runtime-config",
-                "clp-backend",
-                "CLP Backend",
+                "crm-backend",
+                "CRM Backend",
                 "backend"
         );
     }
@@ -373,8 +373,8 @@ class RuntimeConfigurationVerificationJobServiceTest {
     static RuntimeConfigurationDeterministicContext deterministic() {
         return new RuntimeConfigurationDeterministicContext(
                 "runtime-config",
-                "clp-backend",
-                "CLP Backend",
+                "crm-backend",
+                "CRM Backend",
                 "backend",
                 "dev1",
                 "zt001",
@@ -452,7 +452,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "clp-backend",
+                "crm-backend",
                 "dev1",
                 "zt001",
                 null,
@@ -465,7 +465,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
-                "clp-backend",
+                "crm-backend",
                 "dev1",
                 "zt001",
                 "release-42",

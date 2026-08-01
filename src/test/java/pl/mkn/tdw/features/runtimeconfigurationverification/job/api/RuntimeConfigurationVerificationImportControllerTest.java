@@ -75,7 +75,7 @@ class RuntimeConfigurationVerificationImportControllerTest {
                 "imported-job",
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "clp-backend",
+                "crm-backend",
                 "dev1",
                 "zt001",
                 null,

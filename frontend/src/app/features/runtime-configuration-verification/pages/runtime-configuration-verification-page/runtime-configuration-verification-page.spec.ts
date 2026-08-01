@@ -238,7 +238,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
         findingId: 'finding-parser',
         code: 'TARGET_VAR_UNSUPPORTED_SYNTAX',
         severity: 'ERROR',
-        path: 'local.endpoints.docGen.draftDocumentParentNodeId',
+        path: 'local.endpoints.crmRecords.customerRecordParentNodeId',
         differenceIds: [],
         referenceIds: ['reference-39'],
         filePath: 'global.var',
@@ -339,8 +339,29 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('backend/application.yml.kv');
     expect(compiled.textContent).toContain('backend/local.var');
-    expect(compiled.textContent).toContain('"https://notifications.dev.test"');
-    expect(compiled.textContent).toContain('"https://notifications.zt.test"');
+    const inlineDiff = compiled.querySelector('.value-comparison--inline-diff');
+    expect(inlineDiff?.textContent).toContain('source≠target');
+    expect(inlineDiff?.querySelector('.inline-diff__removed')?.textContent).toBe('dev');
+    expect(inlineDiff?.querySelector('.inline-diff__added')?.textContent).toBe('zt');
+    expect(inlineDiff?.querySelector('code')?.getAttribute('aria-label')).toBe(
+      'source "https://notifications.dev.test", target "https://notifications.zt.test"'
+    );
+    const booleanInlineDiff = Array.from(
+      compiled.querySelectorAll<HTMLElement>('.value-comparison--inline-diff')
+    ).find((diff) =>
+      diff.querySelector('code')?.getAttribute('aria-label') === 'source false, target true'
+    );
+    expect(booleanInlineDiff?.textContent).toContain('source≠target');
+    expect(booleanInlineDiff?.querySelector('.inline-diff__removed')?.textContent).toBe('false');
+    expect(booleanInlineDiff?.querySelector('.inline-diff__added')?.textContent).toBe('true');
+    const resolvedInlineDiff = compiled.querySelector('.effective-resolved-diff');
+    expect(resolvedInlineDiff?.textContent).toContain('resolved');
+    expect(resolvedInlineDiff?.textContent).toContain('source≠target');
+    expect(resolvedInlineDiff?.querySelector('.inline-diff__removed')?.textContent).toBe('DEBUG');
+    expect(resolvedInlineDiff?.querySelector('.inline-diff__added')?.textContent).toBe('INFO');
+    expect(resolvedInlineDiff?.querySelector('code')?.getAttribute('aria-label')).toBe(
+      'resolved source "DEBUG", target "INFO"'
+    );
     expect(compiled.querySelector('select[aria-label="Filtr pliku"]')).toBeNull();
 
     const referenceButton = buttonContaining(compiled, 'Difference · difference-2');
@@ -740,25 +761,58 @@ function configurationDiffProjection(): RuntimeConfigurationDiffProjection {
               source: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
               target: { presence: 'PRESENT', type: 'MAP', value: null, cardinality: 1 },
               differenceIds: [],
-              children: [{
-                name: 'endpoint',
-                path: 'notifications.endpoint',
-                changeKind: 'CHANGED',
-                source: {
-                  presence: 'PRESENT',
-                  type: 'STRING',
-                  value: 'https://notifications.dev.test',
-                  cardinality: null
+              children: [
+                {
+                  name: 'endpoint',
+                  path: 'notifications.endpoint',
+                  changeKind: 'CHANGED',
+                  source: {
+                    presence: 'PRESENT',
+                    type: 'STRING',
+                    value: 'https://notifications.dev.test',
+                    cardinality: null
+                  },
+                  target: {
+                    presence: 'PRESENT',
+                    type: 'STRING',
+                    value: 'https://notifications.zt.test',
+                    cardinality: null
+                  },
+                  differenceIds: ['difference-1'],
+                  children: []
                 },
-                target: {
-                  presence: 'PRESENT',
-                  type: 'STRING',
-                  value: 'https://notifications.zt.test',
-                  cardinality: null
-                },
-                differenceIds: ['difference-1'],
-                children: []
-              }]
+                {
+                  name: 'level',
+                  path: 'notifications.level',
+                  changeKind: 'EFFECTIVE_CHANGED',
+                  source: {
+                    presence: 'PRESENT',
+                    type: 'STRING',
+                    value: '${local.notificationLevel}',
+                    cardinality: null
+                  },
+                  target: {
+                    presence: 'PRESENT',
+                    type: 'STRING',
+                    value: '${local.notificationLevel}',
+                    cardinality: null
+                  },
+                  sourceEffective: {
+                    presence: 'PRESENT',
+                    type: 'STRING',
+                    value: 'DEBUG',
+                    cardinality: null
+                  },
+                  targetEffective: {
+                    presence: 'PRESENT',
+                    type: 'STRING',
+                    value: 'INFO',
+                    cardinality: null
+                  },
+                  differenceIds: ['difference-3'],
+                  children: []
+                }
+              ]
             }]
           }
         }]

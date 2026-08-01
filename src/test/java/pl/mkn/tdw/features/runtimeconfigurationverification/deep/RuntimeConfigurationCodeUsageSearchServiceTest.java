@@ -45,7 +45,7 @@ class RuntimeConfigurationCodeUsageSearchServiceTest {
             capturedQuery.set(invocation.getArgument(0));
             return List.of(
                     candidate("src/main/java/NotificationProperties.java"),
-                    candidate("src/main/java/PaymentClient.java"),
+                    candidate("src/main/java/CustomerProfileClient.java"),
                     candidate("src/test/java/OutOfScopeTest.java")
             );
         });
@@ -68,15 +68,15 @@ class RuntimeConfigurationCodeUsageSearchServiceTest {
                 "platform",
                 "backend",
                 "release-42",
-                "src/main/java/PaymentClient.java",
+                "src/main/java/CustomerProfileClient.java",
                 250_000
         )).thenReturn(content(
-                "src/main/java/PaymentClient.java",
+                "src/main/java/CustomerProfileClient.java",
                 """
-                        public class PaymentClient {
-                            @Value("${feature.payment.url}")
+                        public class CustomerProfileClient {
+                            @Value("${feature.customer-profile.url}")
                             private String url;
-                            private static final String ENV = "FEATURE_PAYMENT_URL";
+                            private static final String ENV = "FEATURE_CUSTOMER_PROFILE_URL";
                         }
                         """
         ));
@@ -86,7 +86,7 @@ class RuntimeConfigurationCodeUsageSearchServiceTest {
 
         assertEquals(List.of("src/main/java"), capturedQuery.get().pathPrefixes());
         assertTrue(capturedQuery.get().keywords().contains("client.notifications"));
-        assertTrue(capturedQuery.get().keywords().contains("FEATURE_PAYMENT_URL"));
+        assertTrue(capturedQuery.get().keywords().contains("FEATURE_CUSTOMER_PROFILE_URL"));
         assertTrue(result.groundings().stream()
                 .anyMatch(grounding ->
                         grounding.matchedPropertyPath().equals("client.notifications.maxRetries")
@@ -95,13 +95,13 @@ class RuntimeConfigurationCodeUsageSearchServiceTest {
                                 && "NotificationProperties".equals(grounding.symbol())));
         assertTrue(result.groundings().stream()
                 .anyMatch(grounding ->
-                        grounding.matchedPropertyPath().equals("feature.payment.url")
+                        grounding.matchedPropertyPath().equals("feature.customer-profile.url")
                                 && grounding.usageKind()
                                 == RuntimeConfigurationCodeUsageKind.VALUE_ANNOTATION
-                                && "PaymentClient".equals(grounding.symbol())));
+                                && "CustomerProfileClient".equals(grounding.symbol())));
         assertTrue(result.groundings().stream()
                 .anyMatch(grounding ->
-                        grounding.matchedPropertyPath().equals("feature.payment.url")
+                        grounding.matchedPropertyPath().equals("feature.customer-profile.url")
                                 && grounding.usageKind()
                                 == RuntimeConfigurationCodeUsageKind.RELAXED_BINDING));
         assertTrue(result.groundings().stream()
@@ -162,7 +162,7 @@ class RuntimeConfigurationCodeUsageSearchServiceTest {
                 List.of(),
                 List.of(
                         difference("difference-001", "client.notifications.maxRetries"),
-                        difference("difference-002", "feature.payment.url")
+                        difference("difference-002", "feature.customer-profile.url")
                 ),
                 List.of()
         );

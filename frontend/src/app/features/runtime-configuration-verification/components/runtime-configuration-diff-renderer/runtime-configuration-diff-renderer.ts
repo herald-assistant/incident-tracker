@@ -36,6 +36,19 @@ interface ConfigurationRenderFile {
   changeCount: number;
 }
 
+type InlineDiffSegmentKind = 'SAME' | 'REMOVED' | 'ADDED';
+
+interface InlineDiffSegment {
+  kind: InlineDiffSegmentKind;
+  text: string;
+}
+
+interface InlineValueDiff {
+  sourceText: string;
+  targetText: string;
+  segments: InlineDiffSegment[];
+}
+
 @Component({
   selector: 'app-runtime-configuration-diff-renderer',
   templateUrl: './runtime-configuration-diff-renderer.html',
@@ -156,14 +169,9 @@ export class RuntimeConfigurationDiffRendererComponent {
     return role.toLowerCase().replaceAll('_', ' ');
   }
 
-  protected profileVisible(document: RuntimeConfigurationDiffDocument): boolean {
-    return document.sourceProfile.presence === 'PRESENT'
-      || document.targetProfile.presence === 'PRESENT';
-  }
-
   protected formatValue(value: RuntimeConfigurationDiffValue): string {
     if (value.presence === 'ABSENT') {
-      return 'ABSENT';
+      return 'BRAK';
     }
     if (value.type === 'MAP') {
       return '{}';
@@ -187,6 +195,86 @@ export class RuntimeConfigurationDiffRendererComponent {
 
   protected sameSides(node: RuntimeConfigurationDiffNode): boolean {
     return this.sameValue(node.source, node.target);
+  }
+
+  protected presenceDiff(node: RuntimeConfigurationDiffNode): boolean {
+    return node.source.presence !== node.target.presence;
+  }
+
+  protected inlineValueDiff(node: RuntimeConfigurationDiffNode): InlineValueDiff | null {
+    if (
+      node.source.presence !== 'PRESENT'
+      || node.target.presence !== 'PRESENT'
+      || this.sameSides(node)
+    ) {
+      return null;
+    }
+    return this.buildInlineValueDiff(node.source, node.target);
+  }
+
+  protected effectiveValueDiff(node: RuntimeConfigurationDiffNode): InlineValueDiff | null {
+    if (
+      node.changeKind !== 'EFFECTIVE_CHANGED'
+      || node.sourceEffective?.presence !== 'PRESENT'
+      || node.targetEffective?.presence !== 'PRESENT'
+    ) {
+      return null;
+    }
+    return this.buildInlineValueDiff(node.sourceEffective, node.targetEffective);
+  }
+
+  private buildInlineValueDiff(
+    source: RuntimeConfigurationDiffValue,
+    target: RuntimeConfigurationDiffValue
+  ): InlineValueDiff {
+    const sourceText = this.formatValue(source);
+    const targetText = this.formatValue(target);
+    if (source.type !== 'STRING' || target.type !== 'STRING') {
+      return {
+        sourceText,
+        targetText,
+        segments: [
+          { kind: 'REMOVED', text: sourceText },
+          { kind: 'ADDED', text: targetText }
+        ]
+      };
+    }
+
+    let prefixLength = 0;
+    const sharedLength = Math.min(sourceText.length, targetText.length);
+    while (
+      prefixLength < sharedLength
+      && sourceText[prefixLength] === targetText[prefixLength]
+    ) {
+      prefixLength++;
+    }
+
+    let suffixLength = 0;
+    while (
+      suffixLength < sharedLength - prefixLength
+      && sourceText[sourceText.length - 1 - suffixLength]
+        === targetText[targetText.length - 1 - suffixLength]
+    ) {
+      suffixLength++;
+    }
+
+    const sourceDifferenceEnd = sourceText.length - suffixLength;
+    const targetDifferenceEnd = targetText.length - suffixLength;
+    const segments: InlineDiffSegment[] = [];
+    this.appendInlineSegment(segments, 'SAME', sourceText.slice(0, prefixLength));
+    this.appendInlineSegment(
+      segments,
+      'REMOVED',
+      sourceText.slice(prefixLength, sourceDifferenceEnd)
+    );
+    this.appendInlineSegment(
+      segments,
+      'ADDED',
+      targetText.slice(prefixLength, targetDifferenceEnd)
+    );
+    this.appendInlineSegment(segments, 'SAME', sourceText.slice(sourceDifferenceEnd));
+
+    return { sourceText, targetText, segments };
   }
 
   protected leaf(node: RuntimeConfigurationDiffNode): boolean {
@@ -331,5 +419,15 @@ export class RuntimeConfigurationDiffRendererComponent {
       && source.type === target.type
       && source.cardinality === target.cardinality
       && JSON.stringify(source.value) === JSON.stringify(target.value);
+  }
+
+  private appendInlineSegment(
+    segments: InlineDiffSegment[],
+    kind: InlineDiffSegmentKind,
+    text: string
+  ): void {
+    if (text) {
+      segments.push({ kind, text });
+    }
   }
 }

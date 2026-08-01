@@ -22,9 +22,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class RuntimeConfigurationDiffProjectionBuilder {
+
+    private static final Pattern SPRING_REFERENCE = Pattern.compile("\\$\\{([^}:]+)(?::[^}]*)?}");
 
     public RuntimeConfigurationDiffProjection build(
             ParsedConfigurationSnapshot source,
@@ -38,6 +43,8 @@ public class RuntimeConfigurationDiffProjectionBuilder {
 
         var sanitizedDocuments = indexDocuments(deterministicContext.documents());
         var differences = indexDifferences(deterministicContext.differences());
+        var sourceValues = varScalarValues(source);
+        var targetValues = varScalarValues(target);
         var attachedDifferenceIds = new LinkedHashSet<String>();
         var files = new ArrayList<RuntimeConfigurationDiffFile>();
 
@@ -53,6 +60,8 @@ public class RuntimeConfigurationDiffProjectionBuilder {
                     targetFile,
                     sanitizedDocuments,
                     differences,
+                    sourceValues,
+                    targetValues,
                     attachedDifferenceIds
             ));
         }
@@ -81,6 +90,8 @@ public class RuntimeConfigurationDiffProjectionBuilder {
             ParsedConfigurationFile targetFile,
             Map<DocumentLocation, SanitizedConfigurationDocument> sanitizedDocuments,
             Map<DifferenceLocation, List<RuntimeConfigurationDifference>> differences,
+            Map<String, Object> sourceValues,
+            Map<String, Object> targetValues,
             LinkedHashSet<String> attachedDifferenceIds
     ) {
         var documents = new ArrayList<RuntimeConfigurationDiffDocument>();
@@ -101,6 +112,8 @@ public class RuntimeConfigurationDiffProjectionBuilder {
                     targetDocument,
                     sanitizedDocument,
                     differences,
+                    sourceValues,
+                    targetValues,
                     attachedDifferenceIds
             ));
         }
@@ -123,6 +136,8 @@ public class RuntimeConfigurationDiffProjectionBuilder {
             ParsedConfigurationDocument target,
             SanitizedConfigurationDocument sanitized,
             Map<DifferenceLocation, List<RuntimeConfigurationDifference>> differences,
+            Map<String, Object> sourceValues,
+            Map<String, Object> targetValues,
             LinkedHashSet<String> attachedDifferenceIds
     ) {
         if (sanitized.sourcePresent() != (source != null)
@@ -146,6 +161,8 @@ public class RuntimeConfigurationDiffProjectionBuilder {
                         target != null ? target.root() : null,
                         sanitized.root(),
                         differences,
+                        sourceValues,
+                        targetValues,
                         attachedDifferenceIds
                 )
         );
@@ -158,6 +175,8 @@ public class RuntimeConfigurationDiffProjectionBuilder {
             ParsedConfigurationNode target,
             SanitizedConfigurationNode sanitized,
             Map<DifferenceLocation, List<RuntimeConfigurationDifference>> differences,
+            Map<String, Object> sourceValues,
+            Map<String, Object> targetValues,
             LinkedHashSet<String> attachedDifferenceIds
     ) {
         if (source == null && target == null) {
@@ -211,17 +230,22 @@ public class RuntimeConfigurationDiffProjectionBuilder {
                     targetChildren.get(name),
                     sanitized.children().get(sanitizedIndex++),
                     differences,
+                    sourceValues,
+                    targetValues,
                     attachedDifferenceIds
             ));
         }
 
         var rawNode = source != null ? source : target;
+        var effectiveValues = effectiveValues(changeKind, source, target, sourceValues, targetValues);
         return new RuntimeConfigurationDiffNode(
                 rawNode.name(),
                 rawNode.path(),
                 changeKind,
                 nodeValue(source),
                 nodeValue(target),
+                effectiveValues.source(),
+                effectiveValues.target(),
                 differenceIds,
                 children
         );
@@ -295,6 +319,116 @@ public class RuntimeConfigurationDiffProjectionBuilder {
                 value,
                 cardinality(value)
         );
+    }
+
+    private EffectiveValues effectiveValues(
+            RuntimeConfigurationChangeKind changeKind,
+            ParsedConfigurationNode source,
+            ParsedConfigurationNode target,
+            Map<String, Object> sourceValues,
+            Map<String, Object> targetValues
+    ) {
+        if (changeKind != RuntimeConfigurationChangeKind.EFFECTIVE_CHANGED
+                || source == null
+                || target == null
+                || !source.scalar()
+                || !target.scalar()) {
+            return EffectiveValues.empty();
+        }
+        var sourceEffective = resolveEffective(source.scalarValue(), sourceValues, new LinkedHashSet<>());
+        var targetEffective = resolveEffective(target.scalarValue(), targetValues, new LinkedHashSet<>());
+        if (sourceEffective == null || targetEffective == null) {
+            return EffectiveValues.empty();
+        }
+        return new EffectiveValues(
+                value(sourceEffective),
+                value(targetEffective)
+        );
+    }
+
+    private RuntimeConfigurationDiffValue value(Object rawValue) {
+        var value = immutableValue(rawValue);
+        var type = valueType(value);
+        return new RuntimeConfigurationDiffValue(
+                RuntimeConfigurationDiffValuePresence.PRESENT,
+                type,
+                value,
+                cardinality(value)
+        );
+    }
+
+    private Object resolveEffective(
+            Object value,
+            Map<String, Object> values,
+            Set<String> visited
+    ) {
+        if (!(value instanceof String text)) {
+            return value;
+        }
+        var matcher = SPRING_REFERENCE.matcher(text);
+        var result = new StringBuffer();
+        var replaced = false;
+        while (matcher.find()) {
+            var target = matcher.group(1);
+            if (!(target.startsWith("local.") || target.startsWith("variable."))) {
+                return null;
+            }
+            var resolved = resolveReference(target, values, visited);
+            if (resolved == null) {
+                return null;
+            }
+            matcher.appendReplacement(result, Matcher.quoteReplacement(String.valueOf(resolved)));
+            replaced = true;
+        }
+        matcher.appendTail(result);
+        return replaced ? result.toString() : value;
+    }
+
+    private Object resolveReference(
+            String path,
+            Map<String, Object> values,
+            Set<String> visited
+    ) {
+        if (!visited.add(path)) {
+            return null;
+        }
+        var value = values.get(path);
+        var resolved = resolveEffective(value, values, visited);
+        visited.remove(path);
+        return resolved;
+    }
+
+    private Map<String, Object> varScalarValues(ParsedConfigurationSnapshot snapshot) {
+        var values = new LinkedHashMap<String, Object>();
+        addVarValues(values, snapshot.file(RuntimeConfigurationFileRole.GLOBAL_VAR));
+        addVarValues(values, snapshot.file(RuntimeConfigurationFileRole.LOCAL_VAR));
+        return values;
+    }
+
+    private void addVarValues(Map<String, Object> values, ParsedConfigurationFile file) {
+        if (file == null) {
+            return;
+        }
+        for (var document : file.documents()) {
+            flattenScalars(document.root()).forEach(node -> values.put(node.path(), node.scalarValue()));
+        }
+    }
+
+    private List<ParsedConfigurationNode> flattenScalars(ParsedConfigurationNode root) {
+        var values = new ArrayList<ParsedConfigurationNode>();
+        collectScalars(root, values);
+        return values;
+    }
+
+    private void collectScalars(
+            ParsedConfigurationNode node,
+            List<ParsedConfigurationNode> values
+    ) {
+        if (node.scalar()) {
+            values.add(node);
+            return;
+        }
+        node.children().forEach(child -> collectScalars(child, values));
     }
 
     private Object immutableValue(Object value) {
@@ -405,5 +539,15 @@ public class RuntimeConfigurationDiffProjectionBuilder {
             int documentIndex,
             String path
     ) {
+    }
+
+    private record EffectiveValues(
+            RuntimeConfigurationDiffValue source,
+            RuntimeConfigurationDiffValue target
+    ) {
+
+        private static EffectiveValues empty() {
+            return new EffectiveValues(null, null);
+        }
     }
 }

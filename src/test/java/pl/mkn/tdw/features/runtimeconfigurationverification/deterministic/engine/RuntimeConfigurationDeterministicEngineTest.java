@@ -236,7 +236,7 @@ class RuntimeConfigurationDeterministicEngineTest {
                 """
                         locals {
                           endpoints = {
-                            draftDocumentParentNodeId: "literal-node-id"
+                            customerRecordParentNodeId: "literal-node-id"
                           }
                         }
                         """,
@@ -249,8 +249,8 @@ class RuntimeConfigurationDeterministicEngineTest {
                         service:
                           token: $SERVICE_TOKEN$
                         integration:
-                          docGen:
-                            draftDocumentParentNodeId: ${local.endpoints.draftDocumentParentNodeId}
+                          crmRecords:
+                            customerRecordParentNodeId: ${local.endpoints.customerRecordParentNodeId}
                         """
         );
 
@@ -269,7 +269,7 @@ class RuntimeConfigurationDeterministicEngineTest {
                 .anyMatch(finding -> finding.code().equals("UNRESOLVED_REFERENCE")));
         assertTrue(context.references().stream()
                 .anyMatch(reference -> reference.targetPath()
-                        .equals("local.endpoints.draftDocumentParentNodeId")
+                        .equals("local.endpoints.customerRecordParentNodeId")
                         && reference.targetStatus() == RuntimeConfigurationReferenceStatus.RESOLVED));
 
         var hardcodedSensitiveFindings = context.findings().stream()

@@ -70,7 +70,7 @@ class RuntimeConfigurationAiResponseParserTest {
 
         assertThat(opinion.executionStatus()).isEqualTo(RuntimeConfigurationAiExecutionStatus.COMPLETED);
         assertThat(opinion.functionalImpacts()).singleElement().satisfies(impact -> {
-            assertThat(impact.affectedFunctionality()).isEqualTo("Obsługa płatności");
+            assertThat(impact.affectedFunctionality()).isEqualTo("Obsługa klientów");
             assertThat(impact.codeGroundingIds()).containsExactly("code-1");
             assertThat(impact.contextIds()).containsExactly("context-system-1");
         });
@@ -144,11 +144,11 @@ class RuntimeConfigurationAiResponseParserTest {
                 {
                   "conclusion":"LIKELY_CONFIGURATION_ERROR",
                   "confidence":"HIGH",
-                  "summary":"Rozjazd może dotyczyć płatności.",
+                  "summary":"Rozjazd może dotyczyć obsługi klientów.",
                   "observations":[{
                     "observationId":"o1",
                     "type":"GROUNDED_OBSERVATION",
-                    "summary":"Kod wiąże właściwość z obsługą płatności.",
+                    "summary":"Kod wiąże właściwość z obsługą klientów.",
                     "explanation":"Potwierdzenie w kodzie.",
                     "differenceIds":["difference-1"],
                     "findingIds":["finding-1"],
@@ -158,11 +158,11 @@ class RuntimeConfigurationAiResponseParserTest {
                   "recommendedHumanChecks":["Potwierdź intencję z ownerem."],
                   "functionalImpacts":[{
                     "impactId":"impact-1",
-                    "affectedFunctionality":"Obsługa płatności",
+                    "affectedFunctionality":"Obsługa klientów",
                     "impact":"Połączenie może używać innego sekretu.",
                     "confidence":"HIGH",
                     "hypothesis":false,
-                    "systemIds":["billing-api"],
+                    "systemIds":["crm-api"],
                     "differenceIds":["difference-1"],
                     "findingIds":["finding-1"],
                     "contextIds":["%s"],

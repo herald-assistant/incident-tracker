@@ -325,16 +325,16 @@ class OperationalContextReadModelValidatorTest {
                 List.of(
                         map("id", "crm-customer-service", "kind", "internal-application"),
                         map("id", "api-gateway", "kind", "api-gateway"),
-                        map("id", "billing-service", "kind", "internal-service"),
+                        map("id", "crm-service", "kind", "internal-service"),
                         map("id", "salesforce", "kind", "external-saas")
                 ),
                 List.of(),
-                List.of(map("id", "billing-service-repo")),
+                List.of(map("id", "crm-service-repo")),
                 List.of(map(
-                        "id", "billing-service-scope",
-                        "target", map("type", "system", "id", "billing-service"),
+                        "id", "crm-service-scope",
+                        "target", map("type", "system", "id", "crm-service"),
                         "repositories", List.of(map(
-                                "repoId", "billing-service-repo",
+                                "repoId", "crm-service-repo",
                                 "role", "primary",
                                 "priority", 1,
                                 "searchMode", "whole-repository"
@@ -359,7 +359,7 @@ class OperationalContextReadModelValidatorTest {
         );
         assertFalse(findings.stream()
                 .filter(finding -> finding.code().equals("INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE"))
-                .anyMatch(finding -> finding.message().contains("billing-service")
+                .anyMatch(finding -> finding.message().contains("crm-service")
                         || finding.message().contains("salesforce")));
     }
 

@@ -33,25 +33,68 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     expect(compiled.textContent).toContain('backend/application.yml.kv');
     expect(compiled.textContent).toContain('spring:');
     expect(compiled.textContent).toContain('url:');
-    expect(compiled.textContent).toContain('"jdbc:dev"');
-    expect(compiled.textContent).toContain('"jdbc:zt"');
+    const changedUrl = rowContaining(compiled, 'url:');
+    const inlineDiff = changedUrl?.querySelector('.value-comparison--inline-diff');
+    expect(inlineDiff?.querySelectorAll('small')[0]?.textContent).toBe('source');
+    expect(inlineDiff?.querySelector('span[aria-hidden="true"]')?.textContent).toBe('≠');
+    expect(inlineDiff?.querySelectorAll('small')[1]?.textContent).toBe('target');
+    expect(inlineDiff?.querySelector('.inline-diff__removed')?.textContent).toBe('1');
+    expect(inlineDiff?.querySelector('.inline-diff__added')?.textContent).toBe('2');
+    expect(inlineDiff?.querySelector('code')?.getAttribute('aria-label')).toContain(
+      'source "https://customer-profile.crm-main-dev1.svc.cluster.local:8443"'
+    );
+    expect(inlineDiff?.querySelector('code')?.getAttribute('aria-label')).toContain(
+      'target "https://customer-profile.crm-main-dev2.svc.cluster.local:8443"'
+    );
     expect(compiled.textContent).toContain('username:');
-    expect(compiled.textContent).toContain('ABSENT');
+    const removedUsername = rowContaining(compiled, 'username:');
+    const removedPresenceDiff = removedUsername?.querySelector('.value-comparison--presence-diff');
+    expect(removedPresenceDiff?.querySelectorAll('small')).toHaveLength(0);
+    expect(removedPresenceDiff?.querySelector('.presence-diff__removed')?.textContent).toBe('"operator"');
+    expect(removedPresenceDiff?.querySelector('.presence-diff__absent')?.textContent).toBe('BRAK');
+    expect(removedPresenceDiff?.textContent).toContain('→');
+    const addedOwner = rowContaining(compiled, 'owner =');
+    const addedPresenceDiff = addedOwner?.querySelector('.value-comparison--presence-diff');
+    expect(addedPresenceDiff?.querySelectorAll('small')).toHaveLength(0);
+    expect(addedPresenceDiff?.querySelector('.presence-diff__absent')?.textContent).toBe('BRAK');
+    expect(addedPresenceDiff?.querySelector('.presence-diff__added')?.textContent).toBe('"crm-team"');
+    expect(compiled.textContent).not.toContain('ABSENT');
     expect(compiled.textContent).toContain('feature {');
     expect(compiled.textContent).toContain('enabled =');
+    const changedBoolean = rowContaining(compiled, 'enabled =');
+    const booleanInlineDiff = changedBoolean?.querySelector('.value-comparison--inline-diff');
+    expect(booleanInlineDiff?.textContent).toContain('source≠target');
+    expect(booleanInlineDiff?.querySelector('.inline-diff__removed')?.textContent).toBe('false');
+    expect(booleanInlineDiff?.querySelector('.inline-diff__added')?.textContent).toBe('true');
+    expect(booleanInlineDiff?.querySelector('code')?.getAttribute('aria-label')).toBe(
+      'source false, target true'
+    );
+    expect(changedBoolean?.querySelector('.value-comparison > span:not([aria-hidden])'))
+      .toBeNull();
     expect(compiled.textContent).toContain('ttl:');
     expect(compiled.textContent).toContain('queueName:');
     const unchangedComparison = compiled.querySelector('.value-comparison--same');
     expect(unchangedComparison?.querySelectorAll('small')[0]?.textContent).toBe('source');
     expect(unchangedComparison?.querySelector('span')?.textContent).toBe('=');
     expect(unchangedComparison?.querySelectorAll('small')[1]?.textContent).toBe('target');
-    expect(compiled.textContent).toContain('"CLP_SF_SF_CHANGE_STATUS_DEV1"');
+    expect(compiled.textContent).toContain('"CRM_CASE_STATUS_DEV1"');
     expect(compiled.textContent).not.toContain('pól');
     expect(compiled.textContent).not.toContain('elementów');
     expect(compiled.textContent).not.toContain('Ryzyko błędnej bazy');
     expect(compiled.querySelector('[title="zmieniono"]')?.textContent).toContain('🟠');
     expect(compiled.querySelector('[title="usunięto"]')?.textContent).toContain('🔴');
     expect(compiled.querySelector('[title="zmiana efektywna"]')?.textContent).toContain('🟡');
+    const effectiveRow = rowContaining(compiled, 'logging.level:');
+    expect(effectiveRow?.querySelector('.value-comparison--same')?.textContent)
+      .toContain('"${local.logging_level}"');
+    const effectiveResolved = effectiveRow?.querySelector('.effective-resolved-diff');
+    expect(effectiveResolved?.textContent).toContain('resolved');
+    expect(effectiveResolved?.textContent).toContain('source≠target');
+    expect(effectiveResolved?.querySelector('.inline-diff__removed')?.textContent).toBe('DEBUG');
+    expect(effectiveResolved?.querySelector('.inline-diff__added')?.textContent).toBe('INFO');
+    expect(effectiveResolved?.querySelector('code')?.getAttribute('aria-label')).toBe(
+      'resolved source "DEBUG", target "INFO"'
+    );
     expect(compiled.querySelectorAll('.change-label')).toHaveLength(0);
     expect(rowContaining(compiled, 'spring:')?.querySelector('.change-marker:not(.change-marker--empty)'))
       .toBeNull();
@@ -71,6 +114,7 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     expect(compiled.textContent).not.toContain('cache:');
     expect(compiled.textContent).not.toContain('ttl:');
     expect(compiled.textContent).not.toContain('queueName:');
+    expect(compiled.textContent).not.toContain('on-profile:');
 
     buttonContaining(compiled, 'Cały plik')?.click();
     fixture.detectChanges();
@@ -80,10 +124,10 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     expect(compiled.textContent).toContain('ttl:');
     expect(compiled.textContent).toContain('queueName:');
     expect(compiled.textContent).toContain('---');
-    expect(compiled.textContent).toContain('spring.config.activate.on-profile:');
+    expect(compiled.textContent).toContain('on-profile:');
   });
 
-  it('should omit the document frame for a single document and keep it for multi-document YAML', () => {
+  it('should render multi-document YAML as one file without nested details or document headers', () => {
     fixture.componentRef.setInput('projection', projection());
     fixture.detectChanges();
 
@@ -91,12 +135,18 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     const localVar = fileContaining(compiled, 'backend/local.var');
     const applicationYaml = fileContaining(compiled, 'backend/application.yml.kv');
 
-    expect(localVar?.querySelector('.configuration-document--single')).not.toBeNull();
-    expect(localVar?.querySelector('.configuration-document > summary')).toBeNull();
-    expect(applicationYaml?.querySelectorAll('.configuration-document--single')).toHaveLength(0);
-    expect(applicationYaml?.querySelectorAll('.configuration-document > summary')).toHaveLength(2);
-    expect(applicationYaml?.textContent).toContain('Dokument 1');
-    expect(applicationYaml?.textContent).toContain('Dokument 2');
+    expect(localVar?.querySelectorAll('.configuration-document')).toHaveLength(1);
+    expect(applicationYaml?.querySelectorAll('.configuration-document')).toHaveLength(2);
+    expect(applicationYaml?.querySelectorAll('details')).toHaveLength(0);
+    expect(applicationYaml?.querySelectorAll('.document-separator')).toHaveLength(1);
+    expect(applicationYaml?.textContent).not.toContain('Dokument 1');
+    expect(applicationYaml?.textContent).not.toContain('Dokument 2');
+    expect(applicationYaml?.textContent).not.toContain('Szczegóły');
+    expect(applicationYaml?.querySelector('.profile-line')).toBeNull();
+    const profileRow = rowContaining(applicationYaml!, 'on-profile:');
+    expect(profileRow).not.toBeNull();
+    expect(profileRow?.querySelector('.value-comparison--same')?.textContent).toContain('=');
+    expect(applicationYaml?.textContent?.match(/on-profile:/g)).toHaveLength(1);
   });
 
   it('should order files from detailed kv configuration through local to global variables', () => {
@@ -223,8 +273,14 @@ function projection(): RuntimeConfigurationDiffProjection {
                         name: 'url',
                         path: 'spring.datasource.url',
                         changeKind: 'CHANGED',
-                        source: scalar('STRING', 'jdbc:dev'),
-                        target: scalar('STRING', 'jdbc:zt'),
+                        source: scalar(
+                          'STRING',
+                          'https://customer-profile.crm-main-dev1.svc.cluster.local:8443'
+                        ),
+                        target: scalar(
+                          'STRING',
+                          'https://customer-profile.crm-main-dev2.svc.cluster.local:8443'
+                        ),
                         differenceIds: ['difference-1'],
                         children: []
                       },
@@ -270,8 +326,8 @@ function projection(): RuntimeConfigurationDiffProjection {
                       name: 'queueName',
                       path: 'cache.queueName',
                       changeKind: 'UNCHANGED',
-                      source: scalar('STRING', 'CLP_SF_SF_CHANGE_STATUS_DEV1'),
-                      target: scalar('STRING', 'CLP_SF_SF_CHANGE_STATUS_DEV1'),
+                      source: scalar('STRING', 'CRM_CASE_STATUS_DEV1'),
+                      target: scalar('STRING', 'CRM_CASE_STATUS_DEV1'),
                       differenceIds: [],
                       children: []
                     }
@@ -284,16 +340,61 @@ function projection(): RuntimeConfigurationDiffProjection {
             documentIndex: 1,
             sourcePresent: true,
             targetPresent: true,
-            sourceProfile: scalar('STRING', 'dev'),
-            targetProfile: scalar('STRING', 'zt'),
+            sourceProfile: scalar('STRING', 'default, withCustomerProfileMock'),
+            targetProfile: scalar('STRING', 'default, withCustomerProfileMock'),
             root: {
               name: 'document-1',
-              path: 'logging.level',
-              changeKind: 'EFFECTIVE_CHANGED',
-              source: scalar('STRING', 'DEBUG'),
-              target: scalar('STRING', 'INFO'),
-              differenceIds: ['difference-3'],
-              children: []
+              path: '',
+              changeKind: 'UNCHANGED',
+              source: mapValue(2),
+              target: mapValue(2),
+              differenceIds: [],
+              children: [
+                {
+                  name: 'spring',
+                  path: 'spring',
+                  changeKind: 'UNCHANGED',
+                  source: mapValue(1),
+                  target: mapValue(1),
+                  differenceIds: [],
+                  children: [{
+                    name: 'config',
+                    path: 'spring.config',
+                    changeKind: 'UNCHANGED',
+                    source: mapValue(1),
+                    target: mapValue(1),
+                    differenceIds: [],
+                    children: [{
+                      name: 'activate',
+                      path: 'spring.config.activate',
+                      changeKind: 'UNCHANGED',
+                      source: mapValue(1),
+                      target: mapValue(1),
+                      differenceIds: [],
+                      children: [{
+                        name: 'on-profile',
+                        path: 'spring.config.activate.on-profile',
+                        changeKind: 'UNCHANGED',
+                        source: scalar('STRING', 'default, withCustomerProfileMock'),
+                        target: scalar('STRING', 'default, withCustomerProfileMock'),
+                        differenceIds: [],
+                        children: []
+                      }]
+                    }]
+                  }]
+                },
+                {
+                  name: 'logging.level',
+                  path: 'logging.level',
+                  changeKind: 'EFFECTIVE_CHANGED',
+                  source: scalar('STRING', '${local.logging_level}'),
+                  target: scalar('STRING', '${local.logging_level}'),
+                  sourceEffective: scalar('STRING', 'DEBUG'),
+                  targetEffective: scalar('STRING', 'INFO'),
+                  differenceIds: ['difference-3'],
+                  children: []
+                }
+              ]
             }
           }
         ]
@@ -323,17 +424,28 @@ function projection(): RuntimeConfigurationDiffProjection {
               path: 'feature',
               changeKind: 'UNCHANGED',
               source: mapValue(1),
-              target: mapValue(1),
+              target: mapValue(2),
               differenceIds: [],
-              children: [{
-                name: 'enabled',
-                path: 'feature.enabled',
-                changeKind: 'CHANGED',
-                source: scalar('BOOLEAN', false),
-                target: scalar('BOOLEAN', true),
-                differenceIds: ['difference-4'],
-                children: []
-              }]
+              children: [
+                {
+                  name: 'enabled',
+                  path: 'feature.enabled',
+                  changeKind: 'CHANGED',
+                  source: scalar('BOOLEAN', false),
+                  target: scalar('BOOLEAN', true),
+                  differenceIds: ['difference-4'],
+                  children: []
+                },
+                {
+                  name: 'owner',
+                  path: 'feature.owner',
+                  changeKind: 'ADDED',
+                  source: absent,
+                  target: scalar('STRING', 'crm-team'),
+                  differenceIds: ['difference-5'],
+                  children: []
+                }
+              ]
             }]
           }
         }]

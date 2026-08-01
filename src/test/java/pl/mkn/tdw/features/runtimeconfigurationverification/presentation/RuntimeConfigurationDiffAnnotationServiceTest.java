@@ -70,7 +70,7 @@ class RuntimeConfigurationDiffAnnotationServiceTest {
                 List.of(),
                 List.of(new RuntimeConfigurationFunctionalImpact(
                         "impact-1",
-                        "Obsługa płatności",
+                        "Obsługa klientów",
                         "Może kierować ruch do innej bazy.",
                         RuntimeConfigurationAiConfidence.MEDIUM,
                         true,
@@ -85,7 +85,7 @@ class RuntimeConfigurationDiffAnnotationServiceTest {
         var annotation = service.create(deterministic(), opinion).get(0);
 
         assertEquals(RuntimeConfigurationDiffAnnotationKind.FUNCTIONAL_IMPACT, annotation.kind());
-        assertEquals("Obsługa płatności: Może kierować ruch do innej bazy.", annotation.comment());
+        assertEquals("Obsługa klientów: Może kierować ruch do innej bazy.", annotation.comment());
         assertEquals(RuntimeConfigurationAiConfidence.MEDIUM, annotation.confidence());
         assertTrue(annotation.hypothesis());
         assertEquals(List.of("difference-2"), annotation.differenceIds());

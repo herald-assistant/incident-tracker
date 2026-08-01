@@ -94,7 +94,7 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
                 promptService,
                 store
         );
-        when(scopeResolver.resolve("runtime-config", "billing-api")).thenReturn(scope());
+        when(scopeResolver.resolve("runtime-config", "crm-api")).thenReturn(scope());
         when(deterministicService.build(scope(), "dev1", "zt001"))
                 .thenReturn(new RuntimeConfigurationDeterministicBuildResult(
                         RuntimeConfigurationAiTestFixtures.deterministic(
@@ -170,7 +170,7 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
         when(deepService.build(
                 eq(RuntimeConfigurationVerificationMode.DEEP),
                 eq("runtime-config"),
-                eq("billing-api"),
+                eq("crm-api"),
                 eq("release-42"),
                 any()
         )).thenReturn(Optional.of(deep));
@@ -287,7 +287,7 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
         return new RuntimeConfigurationWorkbenchPreviewRequest(
                 mode,
                 "runtime-config",
-                "billing-api",
+                "crm-api",
                 "dev1",
                 "zt001",
                 mode == RuntimeConfigurationVerificationMode.DEEP ? "release-42" : null
@@ -299,8 +299,8 @@ class RuntimeConfigurationWorkbenchPreviewServiceTest {
                 "runtime-config",
                 "config-gitlab",
                 "platform/runtime-config",
-                "billing-api",
-                "Billing API",
+                "crm-api",
+                "CRM API",
                 "backend"
         );
     }

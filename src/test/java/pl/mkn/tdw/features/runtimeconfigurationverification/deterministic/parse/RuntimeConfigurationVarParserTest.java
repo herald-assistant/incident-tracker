@@ -86,7 +86,7 @@ class RuntimeConfigurationVarParserTest {
         var parsed = parser.parse(RuntimeConfigurationFileRole.GLOBAL_VAR, "global.var", """
                 locals {
                   endpoints: {
-                    draftDocumentParentNodeId: "literal-value"
+                    customerRecordParentNodeId: "literal-value"
                     fallbackDocumentParentNodeId = "fallback-value"
                   }
                   flags: [true, false]
@@ -96,7 +96,7 @@ class RuntimeConfigurationVarParserTest {
         assertEquals(
                 "literal-value",
                 find(parsed.documents().get(0).root(),
-                        "local.endpoints.draftDocumentParentNodeId").scalarValue()
+                        "local.endpoints.customerRecordParentNodeId").scalarValue()
         );
         assertEquals(
                 "fallback-value",

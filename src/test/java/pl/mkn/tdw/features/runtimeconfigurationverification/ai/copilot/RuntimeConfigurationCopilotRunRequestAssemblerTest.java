@@ -96,11 +96,11 @@ class RuntimeConfigurationCopilotRunRequestAssemblerTest {
         assertThat((List<?>) hidden.get(RuntimeConfigurationCopilotToolContextKeys.ALLOWED_REPOSITORIES))
                 .singleElement()
                 .asString()
-                .contains("billing-api", "release-1", "src/main/java");
+                .contains("crm-api", "release-1", "src/main/java");
         assertThat(stringList(hidden.get(
                 RuntimeConfigurationCopilotToolContextKeys.ALLOWED_OPERATIONAL_ENTITY_IDS
         )))
-                .contains("billing-api", "payments-api", "repository-1", "scope-1");
+                .contains("crm-api", "customer-profile-api", "repository-1", "scope-1");
         assertThat(hidden.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS))
                 .isEqualTo(RuntimeConfigurationReportSectionIds.aiWritable());
         assertThat(assembly.runRequest().initialReport().sections())
@@ -156,7 +156,7 @@ class RuntimeConfigurationCopilotRunRequestAssemblerTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 mode,
                 "runtime-config",
-                "billing-api",
+                "crm-api",
                 "dev1",
                 "zt001",
                 "release-1",

@@ -25,7 +25,7 @@ class RuntimeConfigurationCopilotPoliciesTest {
                 basicContext(),
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                 """
-                        {"projectName":"billing-api","branchRef":"release-1","filePath":"src/main/java/A.java"}
+                        {"projectName":"crm-api","branchRef":"release-1","filePath":"src/main/java/A.java"}
                         """
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("DEEP");
@@ -38,14 +38,14 @@ class RuntimeConfigurationCopilotPoliciesTest {
                 context,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                 """
-                        {"projectName":"billing-api","branchRef":"release-1","filePath":"src/main/java/A.java"}
+                        {"projectName":"crm-api","branchRef":"release-1","filePath":"src/main/java/A.java"}
                         """
         ))).doesNotThrowAnyException();
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                 """
-                        {"projectName":"billing-api","branchRef":"main","filePath":"src/main/java/A.java"}
+                        {"projectName":"crm-api","branchRef":"main","filePath":"src/main/java/A.java"}
                         """
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("outside");
@@ -53,7 +53,7 @@ class RuntimeConfigurationCopilotPoliciesTest {
                 context,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                 """
-                        {"projectName":"billing-api","branchRef":"release-1","filePath":"infra/secrets.yml"}
+                        {"projectName":"crm-api","branchRef":"release-1","filePath":"infra/secrets.yml"}
                         """
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("filePath");
@@ -61,7 +61,7 @@ class RuntimeConfigurationCopilotPoliciesTest {
                 context,
                 OperationalContextToolNames.GET_ENTITY,
                 """
-                        {"type":"system","id":"billing-api"}
+                        {"type":"system","id":"crm-api"}
                         """
         ))).doesNotThrowAnyException();
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
@@ -126,12 +126,12 @@ class RuntimeConfigurationCopilotPoliciesTest {
                         "DEEP",
                         RuntimeConfigurationCopilotToolContextKeys.ALLOWED_REPOSITORIES,
                         List.of(Map.of(
-                                "projectName", "billing-api",
+                                "projectName", "crm-api",
                                 "branchRef", "release-1",
                                 "pathPrefixes", List.of("src/main/java")
                         )),
                         RuntimeConfigurationCopilotToolContextKeys.ALLOWED_OPERATIONAL_ENTITY_IDS,
-                        List.of("billing-api")
+                        List.of("crm-api")
                 )
         );
     }

@@ -199,7 +199,7 @@ class RuntimeConfigurationPromptPreparationServiceTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 mode,
                 "runtime-config",
-                "billing-api",
+                "crm-api",
                 "dev1",
                 "zt001",
                 "release-1",

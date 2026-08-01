@@ -44,53 +44,23 @@
               </small>
             </span>
             <span class="presence">
-              source: {{ renderFile.file.sourcePresent ? 'jest' : 'ABSENT' }} ·
-              target: {{ renderFile.file.targetPresent ? 'jest' : 'ABSENT' }}
+              source: {{ renderFile.file.sourcePresent ? 'jest' : 'BRAK' }} ·
+              target: {{ renderFile.file.targetPresent ? 'jest' : 'BRAK' }}
             </span>
           </summary>
 
           @if (renderFile.file.sourcePath !== renderFile.file.targetPath) {
             <div class="path-comparison">
-              <span><small>source</small><code>{{ renderFile.file.sourcePath || 'ABSENT' }}</code></span>
-              <span><small>target</small><code>{{ renderFile.file.targetPath || 'ABSENT' }}</code></span>
+              <span><small>source</small><code>{{ renderFile.file.sourcePath || 'BRAK' }}</code></span>
+              <span><small>target</small><code>{{ renderFile.file.targetPath || 'BRAK' }}</code></span>
             </div>
           }
 
           <div class="document-list">
             @for (renderDocument of renderFile.documents; track renderDocument.key) {
-              <details
-                class="configuration-document"
-                [class.configuration-document--single]="renderFile.documents.length === 1"
-                open
-              >
-                @if (renderFile.documents.length > 1) {
-                  <summary>
-                    <strong>Dokument {{ renderDocument.document.documentIndex + 1 }}</strong>
-                    <span>{{ renderDocument.changeCount }} zmian</span>
-                    <span>
-                      source: {{ renderDocument.document.sourcePresent ? 'jest' : 'ABSENT' }} ·
-                      target: {{ renderDocument.document.targetPresent ? 'jest' : 'ABSENT' }}
-                    </span>
-                  </summary>
-                }
-
+              <div class="configuration-document">
                 @if (renderDocument.document.documentIndex > 0) {
                   <div class="document-separator" aria-label="Separator dokumentu YAML">---</div>
-                }
-
-                @if (profileVisible(renderDocument.document)) {
-                  <div class="profile-line">
-                    <code>spring.config.activate.on-profile:</code>
-                    <span>
-                      <small>source</small>
-                      <code>{{ formatValue(renderDocument.document.sourceProfile) }}</code>
-                    </span>
-                    <span aria-hidden="true">→</span>
-                    <span>
-                      <small>target</small>
-                      <code>{{ formatValue(renderDocument.document.targetProfile) }}</code>
-                    </span>
-                  </div>
                 }
 
                 <div
@@ -138,15 +108,58 @@
                             <code>{{ formatValue(row.node.source) }}</code>
                           </span>
                         } @else if (!collection(row.node)) {
-                          <span class="value-comparison">
-                            <span>
-                              <small>source</small>
-                              <code>{{ formatValue(row.node.source) }}</code>
+                          @if (presenceDiff(row.node)) {
+                            <span class="value-comparison value-comparison--presence-diff">
+                              @if (row.node.source.presence === 'ABSENT') {
+                                <span class="presence-diff__absent" title="source">{{ formatValue(row.node.source) }}</span>
+                              } @else {
+                                <code [class.presence-diff__removed]="row.node.changeKind === 'REMOVED'">{{ formatValue(row.node.source) }}</code>
+                              }
+                              <span aria-hidden="true">→</span>
+                              @if (row.node.target.presence === 'ABSENT') {
+                                <span class="presence-diff__absent" title="target">{{ formatValue(row.node.target) }}</span>
+                              } @else {
+                                <code [class.presence-diff__added]="row.node.changeKind === 'ADDED'">{{ formatValue(row.node.target) }}</code>
+                              }
                             </span>
-                            <span aria-hidden="true">→</span>
-                            <span>
+                          } @else {
+                            @if (inlineValueDiff(row.node); as inlineDiff) {
+                              <span class="value-comparison value-comparison--inline-diff">
+                                <small>source</small>
+                                <span aria-hidden="true">≠</span>
+                                <small>target</small>
+                                <code
+                                  class="inline-diff"
+                                  [attr.aria-label]="'source ' + inlineDiff.sourceText + ', target ' + inlineDiff.targetText"
+                                >@for (segment of inlineDiff.segments; track $index) {@switch (segment.kind) {@case ('REMOVED') {<del class="inline-diff__removed" title="source">{{ segment.text }}</del>} @case ('ADDED') {<ins class="inline-diff__added" title="target">{{ segment.text }}</ins>} @default {<span>{{ segment.text }}</span>}}}</code>
+                              </span>
+                            } @else {
+                              <span class="value-comparison">
+                                <span>
+                                  <small>source</small>
+                                  <code>{{ formatValue(row.node.source) }}</code>
+                                </span>
+                                <span aria-hidden="true">→</span>
+                                <span>
+                                  <small>target</small>
+                                  <code>{{ formatValue(row.node.target) }}</code>
+                                </span>
+                              </span>
+                            }
+                          }
+                        }
+
+                        @if (effectiveValueDiff(row.node); as effectiveDiff) {
+                          <span class="effective-resolved-diff">
+                            <small>resolved</small>
+                            <span class="value-comparison value-comparison--inline-diff">
+                              <small>source</small>
+                              <span aria-hidden="true">≠</span>
                               <small>target</small>
-                              <code>{{ formatValue(row.node.target) }}</code>
+                              <code
+                                class="inline-diff"
+                                [attr.aria-label]="'resolved source ' + effectiveDiff.sourceText + ', target ' + effectiveDiff.targetText"
+                              >@for (segment of effectiveDiff.segments; track $index) {@switch (segment.kind) {@case ('REMOVED') {<del class="inline-diff__removed" title="source">{{ segment.text }}</del>} @case ('ADDED') {<ins class="inline-diff__added" title="target">{{ segment.text }}</ins>} @default {<span>{{ segment.text }}</span>}}}</code>
                             </span>
                           </span>
                         }
@@ -188,7 +201,7 @@
                     </p>
                   }
                 </div>
-              </details>
+              </div>
             }
           </div>
         </details>

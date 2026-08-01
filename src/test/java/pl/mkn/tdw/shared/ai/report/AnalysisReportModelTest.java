@@ -34,7 +34,7 @@ class AnalysisReportModelTest {
         references.add(new AnalysisReportReference("evidence", "Logs", "elastic/logs", "Initial logs"));
         var visibilityLimits = new ArrayList<>(List.of("Only initial logs are visible."));
         var openQuestions = new ArrayList<>(List.of("Is downstream service healthy?"));
-        var gaps = new ArrayList<>(List.of("No trace from payment gateway."));
+        var gaps = new ArrayList<>(List.of("No trace from customer profile service."));
         var warnings = new ArrayList<>(List.of("Low source coverage."));
         var meta = new AnalysisReportMeta(references, visibilityLimits, openQuestions, gaps, "medium", warnings);
         var sections = new ArrayList<AnalysisReportSection>();

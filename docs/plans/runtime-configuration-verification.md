@@ -976,7 +976,7 @@ Bez zmian. Nie rozszerzamy obslugiwanych branchy poza testowe `devX` i
   placeholderami dla BASIC. Mode jest wystarczajacym rozroznieniem
   `not requested` od `failed`.
 - UI, historia i eksport pokazuja dokladne source/target value dla wszystkich
-  parametrow i referencji z plikow. Dla brakujacej strony pokazuja `ABSENT`.
+  parametrow i referencji z plikow. Dla brakujacej strony UI pokazuje `BRAK`.
   Token dostepowy GitLaba nie jest czescia pliku ani projekcji.
 - Operator projection zachowuje oryginalne nazwy, takze dynamiczne klucze.
   Osobny sanitized deterministic context nadal pseudonimizuje je dla AI,
@@ -988,10 +988,13 @@ Bez zmian. Nie rozszerzamy obslugiwanych branchy poza testowe `devX` i
 - Widok domyslny pokazuje zmienione liscie oraz koniecznych rodzicow.
   Przelacznik `Caly plik` pokazuje takze `UNCHANGED`; niezmienione galezie sa
   zwijalne.
-- Linia `UNCHANGED` pokazuje jedna wspolna wartosc bez markera. Linia
-  zmieniona pokazuje jawne `source` i `target`, a `ADDED`/`REMOVED` pokazuje
-  brakujaca strone jako `ABSENT`, dzieki czemu widok nadal przypomina plik i
-  nie powtarza dwoch identycznych wartosci.
+- Linia `UNCHANGED` pokazuje jedna wspolna wartosc bez markera. Rozna wartosc
+  skalarna pokazuje `source != target` oraz inline diff; tekst ma roznice na
+  fragmencie, a boolean/liczba/null pelna wartosc source na czerwono i target na
+  zielono. `ADDED`/`REMOVED` pokazuje kierunek strzalka bez ramek i etykiet
+  source/target; brakujaca strona jest widoczna jako czerwone `BRAK` z tlem i
+  obramowaniem. `EFFECTIVE_CHANGED` pokazuje literalna wartosc w drzewie, a po
+  hover/focus pokazuje resolved source/target inline diff po prawej.
 - `application.y[a]ml.kv` jest renderowane jako znormalizowany YAML z
   separatorami dokumentow. `global.var` i `local.var` sa renderowane jako
   znormalizowane zagniezdzone bloki/assignmenty. Nie obiecujemy zachowania
@@ -1085,7 +1088,7 @@ Bez zmian. Nie rozszerzamy obslugiwanych branchy poza testowe `devX` i
    fallbacku i client export oraz production frontend build.
   Weryfikacja 2026-07-31: primary structural table zostala zastapiona
   file/document accordion z trybami `Zmiany` i `Caly plik`, zagniezdzonym
-  YAML/.var, pelnymi wartosciami source/target, jawnym `ABSENT`, markerami
+  YAML/.var, pelnymi wartosciami source/target, jawnym `BRAK`, markerami
   koloru i tekstu oraz zwijaniem niezmienionych galezi. BASIC pozostaje
   deterministyczny i nie dostaje adnotacji AI. DEEP dolacza krotkie komentarze
   observations/functional impacts przez direct i finding-transitive IDs bez

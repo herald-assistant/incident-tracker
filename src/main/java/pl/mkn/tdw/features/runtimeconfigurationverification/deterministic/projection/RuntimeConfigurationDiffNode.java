@@ -11,9 +11,33 @@ public record RuntimeConfigurationDiffNode(
         RuntimeConfigurationChangeKind changeKind,
         RuntimeConfigurationDiffValue source,
         RuntimeConfigurationDiffValue target,
+        RuntimeConfigurationDiffValue sourceEffective,
+        RuntimeConfigurationDiffValue targetEffective,
         List<String> differenceIds,
         List<RuntimeConfigurationDiffNode> children
 ) {
+
+    public RuntimeConfigurationDiffNode(
+            String name,
+            String path,
+            RuntimeConfigurationChangeKind changeKind,
+            RuntimeConfigurationDiffValue source,
+            RuntimeConfigurationDiffValue target,
+            List<String> differenceIds,
+            List<RuntimeConfigurationDiffNode> children
+    ) {
+        this(
+                name,
+                path,
+                changeKind,
+                source,
+                target,
+                null,
+                null,
+                differenceIds,
+                children
+        );
+    }
 
     public RuntimeConfigurationDiffNode {
         Objects.requireNonNull(changeKind, "changeKind is required");
@@ -30,6 +54,8 @@ public record RuntimeConfigurationDiffNode(
                 + ", changeKind=" + changeKind
                 + ", source=<redacted>"
                 + ", target=<redacted>"
+                + ", sourceEffective=<redacted>"
+                + ", targetEffective=<redacted>"
                 + ", differenceIds=" + differenceIds
                 + ", children=<redacted:" + children.size() + ">"
                 + "]";

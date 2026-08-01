@@ -33,6 +33,13 @@ adnotacji do difference IDs oraz statyczny bundle aplikacji.
   zwykla zmiana lub zmiana typu, zolta zmiana efektywna,
 - usunac tekstowe etykiety i legende; znaczenie kropki udostepnic w tooltipie,
 - wspolna wartosc liscia pokazac jako `source = target <wartosc>` bez kropki.
+- zmieniona wartosc skalarna ma zawsze uzywac `source != target` i inline diff,
+  niezaleznie od typu wartosci.
+- dodanie/usuniecie pokazac bez ramek i etykiet source/target: strzalka pokazuje
+  kierunek, `BRAK` jest czerwone z tlem i obramowaniem, dodana wartosc zielona,
+  a usuwana wartosc czerwona i przekreslona.
+- dla zmiany efektywnej pokazac resolved source/target inline diff po prawej
+  dopiero po hover/focus wiersza.
 
 ## Non-goals
 
@@ -47,6 +54,10 @@ adnotacji do difference IDs oraz statyczny bundle aplikacji.
 - zmiana ma kropke pomaranczowa, a efektywna zmiana zolta,
 - wiersze nie zawieraja tekstowych etykiet statusu,
 - niezmieniony lisc pokazuje `source = target` i wspolna wartosc bez kropki,
+- zmieniony boolean/liczba/null nie wraca do ramek source/target,
+- dodanie/usuniecie nie ma ramek ani stalych etykiet source/target przy
+  wartosciach,
+- hover/focus na zmianie efektywnej pokazuje resolved wartosc przed i po,
 - testy komponentu i pelny zestaw testow frontendu przechodza.
 
 ## Kroki
@@ -57,10 +68,14 @@ adnotacji do difference IDs oraz statyczny bundle aplikacji.
 - [x] Odsunac znaczniki lisci od pionowych prowadnic bez przesuwania tresci.
 - [x] Usunac techniczna ramke dokumentu dla pliku z jednym dokumentem.
 - [x] Uporzadkowac pliki od konfiguracji szczegolowej do globalnej.
+- [x] Uspojnic dodanie/usuniecie z inline diffem przez czerwone `BRAK` i
+      zielona wartosc dodana.
+- [x] Uzyc inline diffu takze dla nietekstowych wartosci skalarnych.
+- [x] Dodac hover/focus preview resolved wartosci dla zmian efektywnych.
 
 ## Dowody weryfikacji
 
-- testy frontendu: 223/223 zaliczone,
+- testy frontendu: 225/225 zaliczone,
 - produkcyjny build frontendu: zaliczony,
 - architecture guard: zaliczony,
 - `git diff --check`: bez bledow.

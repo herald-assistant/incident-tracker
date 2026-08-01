@@ -166,8 +166,8 @@ class RuntimeConfigurationVerificationPortabilityTest {
         );
         var deterministic = new RuntimeConfigurationDeterministicContext(
                 "runtime-config",
-                "clp-backend",
-                "CLP Backend",
+                "crm-backend",
+                "CRM Backend",
                 "backend",
                 "dev1",
                 "zt001",
@@ -226,7 +226,7 @@ class RuntimeConfigurationVerificationPortabilityTest {
                 "job-portable",
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
-                "clp-backend",
+                "crm-backend",
                 "dev1",
                 "zt001",
                 null,

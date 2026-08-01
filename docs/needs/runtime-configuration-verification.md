@@ -324,8 +324,8 @@ Wymagania:
   odczytane z plikow source/target,
 - ten sam czytelny wynik moze byc zachowany w lokalnej historii oraz
   imporcie/eksporcie; nie przechowuje byte-identical plikow ani komentarzy,
-- brak po stronie source albo target jest pokazywany jako stan `ABSENT`, a nie
-  jako pusta wartosc,
+- brak po stronie source albo target jest pokazywany operatorowi jako `BRAK`,
+  a nie jako pusta wartosc,
 - `BASIC` nie buduje promptu ani wejscia AI i nie wymaga dostepu do Copilota,
 - zanonimizowany manifest budowany dla `DEEP` zachowuje granice dokumentow,
   profile, zagniezdzenie, nazwy statycznych parametrow, typy, ksztalt

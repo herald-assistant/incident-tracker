@@ -20,7 +20,7 @@ describe('ContextEntityDrawerComponent', () => {
 
     expect(text).toContain('Resolved ownership');
     expect(text).toContain('bounded context boundary');
-    expect(text).toContain('Credit Decision Domain Owner');
+    expect(text).toContain('Customer Profile Domain Owner');
     expect(text).toContain('Customer Consent Domain Owner');
     expect(text).toContain('Resolution path');
     expect(text).toContain('Visibility limits');
@@ -31,8 +31,8 @@ describe('ContextEntityDrawerComponent', () => {
 function entityDetail(): OperationalContextEntityDetailDto {
   return {
     type: 'bounded-context',
-    id: 'credit-decision-management',
-    title: 'Credit Decision Management',
+    id: 'customer-profile-management',
+    title: 'Customer Profile Management',
     subtitle: '',
     overviewSections: [
       {
@@ -42,10 +42,10 @@ function entityDetail(): OperationalContextEntityDetailDto {
           primaryOwners: [
             {
               targetType: 'bounded-context',
-              targetId: 'credit-decision-management',
-              targetLabel: 'Credit Decision Management',
+              targetId: 'customer-profile-management',
+              targetLabel: 'Customer Profile Management',
               ownerTeamIds: [],
-              ownerLabel: 'Credit Decision Domain Owner',
+              ownerLabel: 'Customer Profile Domain Owner',
               source: 'inferred-owner',
               confidence: 'medium'
             }
@@ -63,11 +63,11 @@ function entityDetail(): OperationalContextEntityDetailDto {
           ],
           handoffReason: 'Problem type bounded-context-boundary requires both domain owners.',
           resolutionPath: [
-            'request.boundedContextIds -> credit-decision-management',
+            'request.boundedContextIds -> customer-profile-management',
             'bounded-context:customer-consent-management -> inferred owner'
           ],
           visibilityLimits: [
-            'Bounded context credit-decision-management has no explicit owner.'
+            'Bounded context customer-profile-management has no explicit owner.'
           ]
         }
       }
