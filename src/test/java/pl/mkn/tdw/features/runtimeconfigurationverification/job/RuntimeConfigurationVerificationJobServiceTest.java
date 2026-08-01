@@ -91,8 +91,8 @@ class RuntimeConfigurationVerificationJobServiceTest {
     private final AnalysisAiAuthRefResolver authRefResolver = mock(AnalysisAiAuthRefResolver.class);
     private final CopilotAccessTokenResolver accessTokenResolver = mock(CopilotAccessTokenResolver.class);
     private final CapturingTaskExecutor executor = new CapturingTaskExecutor();
-    private final RuntimeConfigurationVerificationJobService service =
-            new RuntimeConfigurationVerificationJobService(
+    private final RuntimeConfigurationComponentRunner componentRunner =
+            new RuntimeConfigurationComponentRunner(
                     scopeResolver,
                     deterministicService,
                     deepService,
@@ -100,9 +100,17 @@ class RuntimeConfigurationVerificationJobServiceTest {
                     aiRunner,
                     assessmentService,
                     reportFactory,
-                    diffAnnotationService,
+                    diffAnnotationService
+            );
+    private final RuntimeConfigurationVerificationJobService service =
+            new RuntimeConfigurationVerificationJobService(
+                    componentRunner,
                     persistence,
                     executor,
+                    task -> {
+                        task.run();
+                        return java.util.concurrent.CompletableFuture.completedFuture(null);
+                    },
                     authRefResolver,
                     new CopilotRunAuthMapper(),
                     accessTokenResolver
@@ -150,27 +158,28 @@ class RuntimeConfigurationVerificationJobServiceTest {
 
         executor.runNext();
         var completed = service.getJob(created.jobId());
+        var component = completed.components().get(0);
 
         assertEquals("COMPLETED", completed.status());
         assertEquals(
                 List.of("SOURCE", "PARSE", "DIFF"),
-                completed.steps().stream().map(step -> step.code()).toList()
+                component.steps().stream().map(step -> step.code()).toList()
         );
         assertEquals(RuntimeConfigurationVerificationStatus.NO_BLOCKING_ANOMALIES,
-                completed.result().status());
-        assertNotNull(completed.result().deterministicResult());
-        assertEquals(configurationDiff(), completed.result().configurationDiff());
-        assertTrue(completed.result().configurationDiffAnnotations().isEmpty());
-        assertNull(completed.result().aiSecondOpinion());
-        assertNull(completed.result().agreement());
-        assertNull(completed.result().deepAnalysis());
-        assertTrue(completed.result().visibilityLimits().isEmpty());
-        assertNull(completed.result().prompt());
-        assertNull(completed.result().usage());
-        assertNull(completed.preparedPrompt());
-        assertNull(completed.report());
-        assertTrue(completed.aiActivityEvents().isEmpty());
-        assertTrue(completed.toolEvidenceSections().isEmpty());
+                component.result().status());
+        assertNotNull(component.result().deterministicResult());
+        assertEquals(configurationDiff(), component.result().configurationDiff());
+        assertTrue(component.result().configurationDiffAnnotations().isEmpty());
+        assertNull(component.result().aiSecondOpinion());
+        assertNull(component.result().agreement());
+        assertNull(component.result().deepAnalysis());
+        assertTrue(component.result().visibilityLimits().isEmpty());
+        assertNull(component.result().prompt());
+        assertNull(component.result().usage());
+        assertNull(component.preparedPrompt());
+        assertNull(component.report());
+        assertTrue(component.aiActivityEvents().isEmpty());
+        assertTrue(component.toolEvidenceSections().isEmpty());
         assertFalse(completed.imported());
         verifyNoInteractions(
                 authRefResolver,
@@ -207,10 +216,11 @@ class RuntimeConfigurationVerificationJobServiceTest {
         var created = service.startJob(request());
         executor.runNext();
         var completed = service.getJob(created.jobId());
+        var component = completed.components().get(0);
 
         assertEquals("COMPLETED_WITH_LIMITATIONS", completed.status());
-        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, completed.result().status());
-        assertTrue(completed.result().visibilityLimits().isEmpty());
+        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, component.result().status());
+        assertTrue(component.result().visibilityLimits().isEmpty());
         assertNull(completed.errorCode());
         verifyNoInteractions(
                 authRefResolver,
@@ -233,6 +243,46 @@ class RuntimeConfigurationVerificationJobServiceTest {
     }
 
     @Test
+    void shouldPreserveRequestOrderInComponentSnapshots() {
+        when(scopeResolver.resolve("runtime-config", "billing-backend")).thenReturn(new RuntimeConfigurationScope(
+                "runtime-config",
+                "config-gitlab",
+                "platform/runtime-config",
+                "billing-backend",
+                "Billing Backend",
+                "billing"
+        ));
+        var batchRequest = new RuntimeConfigurationVerificationJobStartRequest(
+                RuntimeConfigurationVerificationMode.BASIC,
+                "runtime-config",
+                List.of("crm-backend", "billing-backend"),
+                "dev1",
+                "zt001",
+                null,
+                null,
+                null
+        );
+
+        var created = service.startJob(batchRequest);
+        assertEquals(List.of("crm-backend", "billing-backend"), created.systemIds());
+        assertEquals(2, created.components().size());
+        assertEquals(1, executor.size());
+
+        executor.runNext();
+        var completed = service.getJob(created.jobId());
+        assertEquals("COMPLETED", completed.status());
+        assertEquals(
+                List.of("crm-backend", "billing-backend"),
+                completed.components().stream().map(component -> component.systemId()).toList()
+        );
+        assertTrue(completed.components().stream().allMatch(component -> "COMPLETED".equals(component.status())));
+        assertNotEquals(
+                completed.components().get(0).componentRunId(),
+                completed.components().get(1).componentRunId()
+        );
+    }
+
+    @Test
     void shouldRejectUnknownJob() {
         assertThrows(
                 RuntimeConfigurationVerificationJobNotFoundException.class,
@@ -241,18 +291,54 @@ class RuntimeConfigurationVerificationJobServiceTest {
     }
 
     @Test
-    void shouldRejectInvalidScopeBeforeCreatingJob() {
+    void shouldKeepInvalidScopeFailureInsideComponentRun() {
         when(scopeResolver.resolve("runtime-config", "crm-backend")).thenThrow(
                 RuntimeConfigurationScopeException.configurationDirectoryMissing("crm-backend")
         );
 
-        var exception = assertThrows(
-                RuntimeConfigurationScopeException.class,
-                () -> service.startJob(request())
+        var created = service.startJob(request());
+        assertEquals("QUEUED", created.status());
+        assertEquals(1, executor.size());
+
+        executor.runNext();
+        var failed = service.getJob(created.jobId());
+        assertEquals("FAILED", failed.status());
+        assertEquals("RUNTIME_CONFIGURATION_VERIFICATION_FAILED", failed.components().get(0).errorCode());
+    }
+
+    @Test
+    void shouldCompleteWithLimitationsWhenOneComponentFails() {
+        when(scopeResolver.resolve("runtime-config", "billing-backend")).thenThrow(
+                RuntimeConfigurationScopeException.configurationDirectoryMissing("billing-backend")
         );
 
-        assertEquals("RUNTIME_CONFIGURATION_DIRECTORY_MISSING", exception.code());
-        assertEquals(0, executor.size());
+        var created = service.startJob(batchRequest());
+        executor.runNext();
+        var completed = service.getJob(created.jobId());
+
+        assertEquals("COMPLETED_WITH_LIMITATIONS", completed.status());
+        assertNotNull(completed.components().get(0).result());
+        assertEquals("COMPLETED", completed.components().get(0).status());
+        assertNull(completed.components().get(1).result());
+        assertEquals("FAILED", completed.components().get(1).status());
+    }
+
+    @Test
+    void shouldFailBatchWhenNoComponentProducesResult() {
+        when(scopeResolver.resolve("runtime-config", "crm-backend")).thenThrow(
+                RuntimeConfigurationScopeException.configurationDirectoryMissing("crm-backend")
+        );
+        when(scopeResolver.resolve("runtime-config", "billing-backend")).thenThrow(
+                RuntimeConfigurationScopeException.configurationDirectoryMissing("billing-backend")
+        );
+
+        var created = service.startJob(batchRequest());
+        executor.runNext();
+        var failed = service.getJob(created.jobId());
+
+        assertEquals("FAILED", failed.status());
+        assertTrue(failed.components().stream().allMatch(component -> "FAILED".equals(component.status())));
+        assertTrue(failed.components().stream().allMatch(component -> component.result() == null));
     }
 
     @Test
@@ -263,6 +349,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
         var created = service.startJob(deepRequest());
         executor.runNext();
         var completed = service.getJob(created.jobId());
+        var component = completed.components().get(0);
 
         assertEquals("COMPLETED", completed.status());
         assertEquals(
@@ -275,10 +362,10 @@ class RuntimeConfigurationVerificationJobServiceTest {
                         "OWNERSHIP",
                         "AI"
                 ),
-                completed.steps().stream().map(step -> step.code()).toList()
+                component.steps().stream().map(step -> step.code()).toList()
         );
-        assertEquals(deep, completed.result().deepAnalysis());
-        assertEquals(List.of(annotation()), completed.result().configurationDiffAnnotations());
+        assertEquals(deep, component.result().deepAnalysis());
+        assertEquals(List.of(annotation()), component.result().configurationDiffAnnotations());
         verify(authRefResolver).resolveForCurrentRequest();
         verify(accessTokenResolver).resolve(any());
         verify(promptService).prepare(any(), any(), any());
@@ -297,11 +384,12 @@ class RuntimeConfigurationVerificationJobServiceTest {
         var created = service.startJob(deepRequest());
         executor.runNext();
         var completed = service.getJob(created.jobId());
+        var component = completed.components().get(0);
 
         assertEquals("COMPLETED_WITH_LIMITATIONS", completed.status());
-        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, completed.result().status());
-        assertNotNull(completed.result().deterministicResult());
-        assertTrue(completed.result().visibilityLimits().contains("Code ref was not confirmed."));
+        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, component.result().status());
+        assertNotNull(component.result().deterministicResult());
+        assertTrue(component.result().visibilityLimits().contains("Code ref was not confirmed."));
     }
 
     @Test
@@ -313,10 +401,11 @@ class RuntimeConfigurationVerificationJobServiceTest {
         var created = service.startJob(deepRequest());
         executor.runNext();
         var completed = service.getJob(created.jobId());
+        var component = completed.components().get(0);
 
         assertEquals("COMPLETED_WITH_LIMITATIONS", completed.status());
-        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, completed.result().status());
-        assertNotNull(completed.result().deterministicResult());
+        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, component.result().status());
+        assertNotNull(component.result().deterministicResult());
         assertFalse(completed.toString().contains("do-not-expose-deep-detail"));
     }
 
@@ -331,11 +420,12 @@ class RuntimeConfigurationVerificationJobServiceTest {
         var created = service.startJob(deepRequest());
         executor.runNext();
         var completed = service.getJob(created.jobId());
+        var component = completed.components().get(0);
 
         assertEquals("COMPLETED_WITH_LIMITATIONS", completed.status());
-        assertEquals("RUNTIME_CONFIGURATION_AI_INCOMPLETE", completed.errorCode());
-        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, completed.result().status());
-        assertNotNull(completed.result().deterministicResult());
+        assertEquals("RUNTIME_CONFIGURATION_AI_INCOMPLETE", component.errorCode());
+        assertEquals(RuntimeConfigurationVerificationStatus.INCOMPLETE, component.result().status());
+        assertNotNull(component.result().deterministicResult());
         assertFalse(completed.toString().contains("do-not-expose-ai-detail"));
     }
 
@@ -452,7 +542,7 @@ class RuntimeConfigurationVerificationJobServiceTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "crm-backend",
+                List.of("crm-backend"),
                 "dev1",
                 "zt001",
                 null,
@@ -465,10 +555,23 @@ class RuntimeConfigurationVerificationJobServiceTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
-                "crm-backend",
+                List.of("crm-backend"),
                 "dev1",
                 "zt001",
                 "release-42",
+                null,
+                null
+        );
+    }
+
+    static RuntimeConfigurationVerificationJobStartRequest batchRequest() {
+        return new RuntimeConfigurationVerificationJobStartRequest(
+                RuntimeConfigurationVerificationMode.BASIC,
+                "runtime-config",
+                List.of("crm-backend", "billing-backend"),
+                "dev1",
+                "zt001",
+                null,
                 null,
                 null
         );

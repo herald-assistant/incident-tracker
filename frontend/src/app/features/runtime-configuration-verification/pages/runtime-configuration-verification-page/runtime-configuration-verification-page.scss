@@ -21,6 +21,17 @@
   box-shadow: var(--shadow-soft);
 }
 
+.component-result-tabs {
+  margin-top: 2px;
+  margin-bottom: -16px;
+}
+
+.component-result-panel {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
 .section-heading,
 .run-context,
 .result-panel > header,
@@ -28,7 +39,8 @@
 .result-section__heading,
 .runtime-actions,
 .runtime-message,
-.runtime-pending {
+.runtime-pending,
+.runtime-component-error {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -41,6 +53,7 @@
 .deep-result h2,
 .visibility-panel h2,
 .runtime-pending h2,
+.runtime-component-error h2,
 .runtime-empty h2,
 .decision-bar h2 {
   margin: 0;
@@ -53,6 +66,7 @@
 .deep-result h2,
 .visibility-panel h2,
 .runtime-pending h2,
+.runtime-component-error h2,
 .runtime-empty h2 {
   font-size: 1.05rem;
 }
@@ -138,6 +152,99 @@
 
 .field-control {
   align-content: start;
+}
+
+.system-multiselect {
+  position: relative;
+}
+
+.system-multiselect__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  color: var(--text-main);
+  text-align: left;
+  cursor: pointer;
+}
+
+.system-multiselect__trigger--invalid {
+  border-color: var(--color-danger, #b42318);
+}
+
+.system-multiselect__trigger .material-symbols-outlined {
+  color: var(--text-muted);
+  font-size: 1.15rem;
+}
+
+.system-multiselect__panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  width: max(100%, 320px);
+  max-width: min(460px, 90vw);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  background: var(--color-surface);
+}
+
+.system-multiselect__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.system-multiselect__actions button {
+  padding: 3px 5px;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 750;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.system-multiselect__options {
+  display: grid;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.system-multiselect__option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 8px 9px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.system-multiselect__option:hover {
+  background: var(--color-surface-muted);
+}
+
+.system-multiselect__option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.system-multiselect__option span {
+  overflow-wrap: anywhere;
+  font-size: 0.82rem;
 }
 
 .field-error {
@@ -641,6 +748,28 @@
 .runtime-pending {
   justify-content: flex-start;
   border: 1px solid var(--color-border);
+}
+
+.runtime-component-error {
+  justify-content: flex-start;
+  border: 1px solid #efb4b4;
+  background: #fff7f7;
+}
+
+.runtime-component-error > .material-symbols-outlined {
+  color: #b42318;
+  font-size: 1.6rem;
+}
+
+.runtime-component-error p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+}
+
+.runtime-component-error code {
+  display: inline-block;
+  margin-top: 8px;
+  color: #8f1d1d;
 }
 
 .runtime-pending p {

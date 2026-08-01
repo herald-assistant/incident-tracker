@@ -9,6 +9,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.RuntimeConfigurationVerificationJobService;
 import pl.mkn.tdw.features.runtimeconfigurationverification.ai.model
         .RuntimeConfigurationVerificationStatus;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationDeterministicContext;
+import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model
+        .RuntimeConfigurationDeterministicStatus;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection
         .RuntimeConfigurationDiffProjection;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.error.RuntimeConfigurationVerificationJobNotFoundException;
@@ -38,7 +42,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
         var request = new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
-                "crm-backend",
+                java.util.List.of("crm-backend"),
                 "dev12",
                 "uat345",
                 "release/2026.07",
@@ -53,7 +57,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                                 {
                                   "mode": "DEEP",
                                   "repositoryId": " runtime-config ",
-                                  "systemId": " crm-backend ",
+                                  "systemIds": [" crm-backend "],
                                   "sourceBranch": " dev12 ",
                                   "targetBranch": " uat345 ",
                                   "codeRef": " release/2026.07 ",
@@ -65,7 +69,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 .andExpect(jsonPath("$.jobId").value("job-123"))
                 .andExpect(jsonPath("$.mode").value("DEEP"))
                 .andExpect(jsonPath("$.repositoryId").value("runtime-config"))
-                .andExpect(jsonPath("$.systemId").value("crm-backend"))
+                .andExpect(jsonPath("$.systemIds[0]").value("crm-backend"))
                 .andExpect(jsonPath("$.sourceBranch").value("dev12"))
                 .andExpect(jsonPath("$.targetBranch").value("uat345"))
                 .andExpect(jsonPath("$.codeRef").value("release/2026.07"))
@@ -83,7 +87,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
         var request = new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "crm-backend",
+                java.util.List.of("crm-backend"),
                 "dev2",
                 "uat2",
                 null,
@@ -98,7 +102,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "crm-backend",
+                                  "systemIds": ["crm-backend"],
                                   "sourceBranch": "dev2",
                                   "targetBranch": "uat2"
                                 }
@@ -118,7 +122,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "crm-backend",
+                                  "systemIds": ["crm-backend"],
                                   "sourceBranch": "dev2",
                                   "targetBranch": "zt004",
                                   "codeRef": "release/2026.07",
@@ -131,11 +135,65 @@ class RuntimeConfigurationVerificationJobControllerTest {
     }
 
     @Test
+    void shouldRejectEmptySystemSelection() throws Exception {
+        mockMvc.perform(post("/api/runtime-configuration-verification/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mode": "BASIC",
+                                  "repositoryId": "runtime-config",
+                                  "systemIds": [],
+                                  "sourceBranch": "dev1",
+                                  "targetBranch": "uat1"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void shouldRejectDuplicateSystemSelectionAfterNormalization() throws Exception {
+        mockMvc.perform(post("/api/runtime-configuration-verification/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mode": "BASIC",
+                                  "repositoryId": "runtime-config",
+                                  "systemIds": ["crm-backend", " crm-backend "],
+                                  "sourceBranch": "dev1",
+                                  "targetBranch": "uat1"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void shouldRejectMoreThanFiftySystems() throws Exception {
+        var systemIds = java.util.stream.IntStream.rangeClosed(1, 51)
+                .mapToObj(index -> "\"system-" + index + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+        mockMvc.perform(post("/api/runtime-configuration-verification/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mode": "BASIC",
+                                  "repositoryId": "runtime-config",
+                                  "systemIds": [%s],
+                                  "sourceBranch": "dev1",
+                                  "targetBranch": "uat1"
+                                }
+                                """.formatted(systemIds)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void shouldExposeSafeScopeValidationError() throws Exception {
         var request = new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "crm-backend",
+                java.util.List.of("crm-backend"),
                 "dev1",
                 "zt001",
                 null,
@@ -152,7 +210,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "crm-backend",
+                                  "systemIds": ["crm-backend"],
                                   "sourceBranch": "dev1",
                                   "targetBranch": "zt001"
                                 }
@@ -224,7 +282,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                                 {
                                   "mode": "EXTREME",
                                   "repositoryId": "runtime-config",
-                                  "systemId": "crm-backend",
+                                  "systemIds": ["crm-backend"],
                                   "sourceBranch": "dev3",
                                   "targetBranch": "zt003"
                                 }
@@ -255,12 +313,12 @@ class RuntimeConfigurationVerificationJobControllerTest {
         mockMvc.perform(get("/api/runtime-configuration-verification/jobs/job-completed"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
-                .andExpect(jsonPath("$.result.mode").value("BASIC"))
-                .andExpect(jsonPath("$.result.configurationDiff.sourceBranch").value("dev1"))
-                .andExpect(jsonPath("$.result.configurationDiff.targetBranch").value("zt001"))
-                .andExpect(jsonPath("$.result.configurationDiff.files").isEmpty())
-                .andExpect(jsonPath("$.result.aiSecondOpinion").doesNotExist())
-                .andExpect(jsonPath("$.result.prompt").doesNotExist());
+                .andExpect(jsonPath("$.components[0].result.mode").value("BASIC"))
+                .andExpect(jsonPath("$.components[0].result.configurationDiff.sourceBranch").value("dev1"))
+                .andExpect(jsonPath("$.components[0].result.configurationDiff.targetBranch").value("zt001"))
+                .andExpect(jsonPath("$.components[0].result.configurationDiff.files").isEmpty())
+                .andExpect(jsonPath("$.components[0].result.aiSecondOpinion").doesNotExist())
+                .andExpect(jsonPath("$.components[0].result.prompt").doesNotExist());
     }
 
     @Test
@@ -278,7 +336,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 {
                   "mode": "DEEP",
                   "repositoryId": "runtime-config",
-                  "systemId": "crm-backend",
+                  "systemIds": ["crm-backend"],
                   %s
                 }
                 """.formatted(branchFields);
@@ -288,7 +346,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
-                "crm-backend",
+                java.util.List.of("crm-backend"),
                 "dev1",
                 "zt001",
                 null,
@@ -306,7 +364,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 jobId,
                 request.mode(),
                 request.repositoryId(),
-                request.systemId(),
+                request.systemIds(),
                 request.sourceBranch(),
                 request.targetBranch(),
                 request.codeRef(),
@@ -321,10 +379,28 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 now,
                 null,
                 List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                null
+                List.of(new RuntimeConfigurationComponentRunSnapshot(
+                        jobId + ":0",
+                        request.componentSystemId(),
+                        "CRM backend",
+                        "backend",
+                        "QUEUED",
+                        null,
+                        null,
+                        null,
+                        null,
+                        now,
+                        now,
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        null,
+                        null,
+                        null
+                )),
+                false
         );
     }
 
@@ -336,7 +412,21 @@ class RuntimeConfigurationVerificationJobControllerTest {
         var result = new RuntimeConfigurationVerificationResult(
                 RuntimeConfigurationVerificationStatus.NO_BLOCKING_ANOMALIES,
                 RuntimeConfigurationVerificationMode.BASIC,
-                null,
+                new RuntimeConfigurationDeterministicContext(
+                        request.repositoryId(),
+                        request.componentSystemId(),
+                        "CRM backend",
+                        "backend",
+                        request.sourceBranch(),
+                        request.targetBranch(),
+                        RuntimeConfigurationDeterministicStatus.NO_BLOCKING_ANOMALIES,
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of()
+                ),
                 new RuntimeConfigurationDiffProjection("dev1", "zt001", List.of()),
                 List.of(),
                 null,
@@ -350,7 +440,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 jobId,
                 request.mode(),
                 request.repositoryId(),
-                request.systemId(),
+                request.systemIds(),
                 request.sourceBranch(),
                 request.targetBranch(),
                 null,
@@ -365,12 +455,27 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 now,
                 now,
                 List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                null,
-                result,
-                null,
+                List.of(new RuntimeConfigurationComponentRunSnapshot(
+                        jobId + ":0",
+                        request.componentSystemId(),
+                        "CRM backend",
+                        "backend",
+                        "COMPLETED",
+                        null,
+                        null,
+                        null,
+                        null,
+                        now.minusSeconds(10),
+                        now,
+                        now,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        null,
+                        result,
+                        null
+                )),
                 false
         );
     }

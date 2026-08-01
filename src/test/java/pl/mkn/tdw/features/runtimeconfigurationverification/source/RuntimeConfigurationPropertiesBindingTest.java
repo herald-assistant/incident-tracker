@@ -33,7 +33,9 @@ class RuntimeConfigurationPropertiesBindingTest {
                 "features.runtime-configuration-verification.branches[0]",
                 "dev",
                 "features.runtime-configuration-verification.branches[1]",
-                "uat2"
+                "uat2",
+                "features.runtime-configuration-verification.max-parallel-components",
+                "7"
         ));
         var binder = new Binder(source);
         var namedConnections = new GitLabNamedConnectionsProperties();
@@ -60,5 +62,11 @@ class RuntimeConfigurationPropertiesBindingTest {
                 repositories.getRepositories().get("runtime-config").getProjectPath()
         );
         assertEquals(java.util.List.of("dev", "uat2"), repositories.getBranches());
+        assertEquals(7, repositories.getMaxParallelComponents());
+    }
+
+    @Test
+    void shouldDefaultComponentParallelismToTwenty() {
+        assertEquals(20, new RuntimeConfigurationRepositoryProperties().getMaxParallelComponents());
     }
 }

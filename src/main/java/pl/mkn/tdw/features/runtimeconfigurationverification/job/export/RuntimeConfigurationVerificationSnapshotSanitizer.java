@@ -6,6 +6,7 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationDocument;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.model.SanitizedConfigurationNode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStateSnapshot;
+import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationComponentRunSnapshot;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationResult;
 
 import java.util.List;
@@ -21,7 +22,36 @@ public final class RuntimeConfigurationVerificationSnapshotSanitizer {
         if (snapshot == null) {
             return null;
         }
-        var result = snapshot.result();
+        return new RuntimeConfigurationVerificationJobStateSnapshot(
+                snapshot.jobId(),
+                snapshot.mode(),
+                snapshot.repositoryId(),
+                snapshot.systemIds(),
+                snapshot.sourceBranch(),
+                snapshot.targetBranch(),
+                snapshot.codeRef(),
+                snapshot.aiModel(),
+                snapshot.reasoningEffort(),
+                snapshot.status(),
+                snapshot.currentStepCode(),
+                snapshot.currentStepLabel(),
+                snapshot.errorCode(),
+                snapshot.errorMessage(),
+                snapshot.createdAt(),
+                snapshot.updatedAt(),
+                snapshot.completedAt(),
+                snapshot.steps(),
+                snapshot.components().stream()
+                        .map(RuntimeConfigurationVerificationSnapshotSanitizer::sanitize)
+                        .toList(),
+                snapshot.imported()
+        );
+    }
+
+    private static RuntimeConfigurationComponentRunSnapshot sanitize(
+            RuntimeConfigurationComponentRunSnapshot component
+    ) {
+        var result = component.result();
         var safeResult = result != null
                 ? new RuntimeConfigurationVerificationResult(
                 result.status(),
@@ -37,32 +67,26 @@ public final class RuntimeConfigurationVerificationSnapshotSanitizer {
                 result.usage()
         )
                 : null;
-        return new RuntimeConfigurationVerificationJobStateSnapshot(
-                snapshot.jobId(),
-                snapshot.mode(),
-                snapshot.repositoryId(),
-                snapshot.systemId(),
-                snapshot.sourceBranch(),
-                snapshot.targetBranch(),
-                snapshot.codeRef(),
-                snapshot.aiModel(),
-                snapshot.reasoningEffort(),
-                snapshot.status(),
-                snapshot.currentStepCode(),
-                snapshot.currentStepLabel(),
-                snapshot.errorCode(),
-                snapshot.errorMessage(),
-                snapshot.createdAt(),
-                snapshot.updatedAt(),
-                snapshot.completedAt(),
-                snapshot.steps(),
-                snapshot.contextSections(),
-                snapshot.toolEvidenceSections(),
-                snapshot.aiActivityEvents(),
-                snapshot.preparedPrompt(),
+        return new RuntimeConfigurationComponentRunSnapshot(
+                component.componentRunId(),
+                component.systemId(),
+                component.systemLabel(),
+                component.configurationDirectory(),
+                component.status(),
+                component.currentStepCode(),
+                component.currentStepLabel(),
+                component.errorCode(),
+                component.errorMessage(),
+                component.createdAt(),
+                component.updatedAt(),
+                component.completedAt(),
+                component.steps(),
+                component.contextSections(),
+                component.toolEvidenceSections(),
+                component.aiActivityEvents(),
+                component.preparedPrompt(),
                 safeResult,
-                snapshot.report(),
-                snapshot.imported()
+                component.report()
         );
     }
 

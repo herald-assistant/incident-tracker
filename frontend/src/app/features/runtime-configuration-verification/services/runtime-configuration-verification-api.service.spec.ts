@@ -40,7 +40,7 @@ describe('RuntimeConfigurationVerificationApiService', () => {
     const start = {
       mode: 'BASIC' as const,
       repositoryId: 'runtime-config',
-      systemId: 'backend',
+      systemIds: ['backend'],
       sourceBranch: 'dev1',
       targetBranch: 'zt001'
     };

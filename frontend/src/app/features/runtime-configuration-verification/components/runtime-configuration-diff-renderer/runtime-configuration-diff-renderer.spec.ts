@@ -2,8 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import {
   RuntimeConfigurationDiffAnnotation,
-  RuntimeConfigurationDiffProjection,
-  RuntimeConfigurationDifference
+  RuntimeConfigurationDiffProjection
 } from '../../models/runtime-configuration-verification.models';
 import {
   RuntimeConfigurationDiffRendererComponent
@@ -194,19 +193,6 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     expect(selected).toEqual(['observation-1']);
   });
 
-  it('should provide an explicit fallback for older results without a file projection', () => {
-    fixture.componentRef.setInput('projection', null);
-    fixture.componentRef.setInput('fallbackDifferences', legacyDifferences());
-    fixture.componentRef.setInput('focusedReferenceId', 'legacy-difference');
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('przed wprowadzeniem widoku plikowego');
-    expect(compiled.textContent).toContain('legacy.path');
-    expect(compiled.textContent).toContain('bez wartości source/target');
-    expect(compiled.querySelector('#legacy-difference')?.classList)
-      .toContain('configuration-row--focused');
-  });
 });
 
 function projection(): RuntimeConfigurationDiffProjection {
@@ -463,21 +449,6 @@ function annotations(): RuntimeConfigurationDiffAnnotation[] {
     hypothesis: false,
     differenceIds: ['difference-1'],
     findingIds: ['finding-1']
-  }];
-}
-
-function legacyDifferences(): RuntimeConfigurationDifference[] {
-  return [{
-    differenceId: 'legacy-difference',
-    role: 'LOCAL_VAR',
-    documentIndex: 0,
-    path: 'legacy.path',
-    kind: 'ADDED',
-    sourceType: null,
-    targetType: 'STRING',
-    sensitivity: 'NON_SENSITIVE',
-    sourceValueToken: null,
-    targetValueToken: 'value-1'
   }];
 }
 

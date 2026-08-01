@@ -13,11 +13,12 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projec
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source
         .RuntimeConfigurationDeterministicBuildResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStartRequest;
-import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStateSnapshot;
+import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationComponentRunSnapshot;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
         .RuntimeConfigurationDiffAnnotation;
+import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationScope;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
@@ -45,8 +46,10 @@ public final class RuntimeConfigurationVerificationJobState {
     public static final String STEP_OWNERSHIP = "OWNERSHIP";
     public static final String STEP_AI = "AI";
 
-    private final String jobId;
+    private final String componentRunId;
     private final RuntimeConfigurationVerificationJobStartRequest request;
+    private String systemLabel;
+    private String configurationDirectory;
     private final Instant createdAt;
     private Instant updatedAt;
     private Instant completedAt;
@@ -67,14 +70,31 @@ public final class RuntimeConfigurationVerificationJobState {
     private final List<AnalysisAiActivityEvent> aiActivityEvents = new ArrayList<>();
 
     public RuntimeConfigurationVerificationJobState(
-            String jobId,
+            String componentRunId,
             RuntimeConfigurationVerificationJobStartRequest request
     ) {
-        this.jobId = jobId;
+        this.componentRunId = componentRunId;
         this.request = request;
         this.createdAt = Instant.now();
         this.updatedAt = createdAt;
         this.status = STATUS_QUEUED;
+    }
+
+    public synchronized void markScopeResolved(RuntimeConfigurationScope scope) {
+        if (scope == null) {
+            return;
+        }
+        systemLabel = scope.systemLabel();
+        configurationDirectory = scope.configurationDirectory();
+        updatedAt = Instant.now();
+    }
+
+    public String componentRunId() {
+        return componentRunId;
+    }
+
+    public String systemId() {
+        return request.componentSystemId();
     }
 
     public synchronized void markSourceStarted() {
@@ -228,17 +248,12 @@ public final class RuntimeConfigurationVerificationJobState {
         currentStepLabel = null;
     }
 
-    public synchronized RuntimeConfigurationVerificationJobStateSnapshot snapshot() {
-        return new RuntimeConfigurationVerificationJobStateSnapshot(
-                jobId,
-                request.mode(),
-                request.repositoryId(),
-                request.systemId(),
-                request.sourceBranch(),
-                request.targetBranch(),
-                request.codeRef(),
-                request.model(),
-                request.reasoningEffort(),
+    public synchronized RuntimeConfigurationComponentRunSnapshot snapshot() {
+        return new RuntimeConfigurationComponentRunSnapshot(
+                componentRunId,
+                request.componentSystemId(),
+                systemLabel,
+                configurationDirectory,
                 status,
                 currentStepCode,
                 currentStepLabel,
@@ -253,8 +268,7 @@ public final class RuntimeConfigurationVerificationJobState {
                 List.copyOf(aiActivityEvents),
                 preparedPrompt,
                 result,
-                report,
-                false
+                report
         );
     }
 

@@ -67,17 +67,67 @@
           </select>
         </label>
 
-        <label class="field-control">
+        <div class="field-control">
           <span class="field-label">Komponent / internal-system</span>
-          <select class="select-input" [formControl]="systemControl">
-            @for (option of systemOptions(); track option.value) {
-              <option [value]="option.value">{{ option.label }}</option>
+          <div
+            class="system-multiselect"
+            (click)="$event.stopPropagation()"
+            (keydown.escape)="closeSystemSelect()"
+          >
+            <button
+              type="button"
+              class="select-input system-multiselect__trigger"
+              [class.system-multiselect__trigger--invalid]="systemSelectionInvalid()"
+              aria-haspopup="listbox"
+              aria-controls="runtimeConfigurationSystemOptions"
+              [attr.aria-expanded]="systemSelectOpen()"
+              (click)="toggleSystemSelect($event)"
+            >
+              <span>{{ systemSelectionLabel() }}</span>
+              <span class="material-symbols-outlined" aria-hidden="true">
+                {{ systemSelectOpen() ? 'expand_less' : 'expand_more' }}
+              </span>
+            </button>
+
+            @if (systemSelectOpen()) {
+              <div
+                id="runtimeConfigurationSystemOptions"
+                class="system-multiselect__panel"
+                role="listbox"
+                aria-label="Komponenty do porównania"
+                aria-multiselectable="true"
+              >
+                <div class="system-multiselect__actions">
+                  <button type="button" (click)="selectAllSystems()">Zaznacz wszystkie</button>
+                  <button type="button" (click)="clearSystems()">Wyczyść</button>
+                </div>
+                <div class="system-multiselect__options">
+                  @for (option of systemOptions(); track option.value) {
+                    <label
+                      class="system-multiselect__option"
+                      role="option"
+                      [attr.aria-selected]="isSystemSelected(option.value)"
+                    >
+                      <input
+                        type="checkbox"
+                        [checked]="isSystemSelected(option.value)"
+                        (change)="setSystemSelected(option.value, $any($event.target).checked)"
+                      />
+                      <span>{{ option.label }}</span>
+                    </label>
+                  } @empty {
+                    <p class="field-hint">Brak dostępnych komponentów.</p>
+                  }
+                </div>
+              </div>
             }
-          </select>
-          @if (selectedSystem(); as system) {
-            <span class="field-hint">Katalog: {{ system.configurationDirectory }}</span>
+          </div>
+          @if (systemSelectionInvalid()) {
+            <span class="field-error">Wybierz co najmniej jeden komponent.</span>
+          } @else {
+            <span class="field-hint">Porównania wybranych komponentów uruchomią się równolegle.</span>
           }
-        </label>
+        </div>
 
         <label class="field-control">
           <span class="field-label">Środowisko źródłowe</span>
@@ -273,21 +323,51 @@
     </section>
 
     @if (job(); as currentJob) {
+      @if (activeComponent(); as component) {
+      <app-analysis-result-tabs
+        class="component-result-tabs"
+        idPrefix="runtime-configuration-component"
+        ariaLabel="Wyniki komponentów"
+        [tabs]="componentTabs()"
+        [activeTabId]="component.systemId"
+        (tabSelected)="selectComponent($event)"
+      ></app-analysis-result-tabs>
+
+      <section
+        class="component-result-panel"
+        role="tabpanel"
+        [id]="'runtime-configuration-component-panel-' + component.systemId"
+        [attr.aria-labelledby]="'runtime-configuration-component-tab-' + component.systemId"
+      >
       <section class="run-context analysis-card">
         <div>
           <p class="section-eyebrow">{{ currentJob.mode }} · {{ currentJob.repositoryId }}</p>
-          <h2>{{ currentJob.systemId }} · {{ currentJob.sourceBranch }} → {{ currentJob.targetBranch }}</h2>
+          <h2>{{ component.systemLabel || component.systemId }} · {{ currentJob.sourceBranch }} → {{ currentJob.targetBranch }}</h2>
           <p class="field-hint">
-            {{ currentJob.currentStepLabel || 'Analiza zakończona' }}
+            {{ component.currentStepLabel || currentJob.currentStepLabel || 'Analiza zakończona' }}
             @if (currentJob.codeRef) {
               <span> · code ref {{ currentJob.codeRef }}</span>
             }
           </p>
         </div>
-        <span [attr.class]="statusClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
+        <span [attr.class]="statusClass(component.status)">
+          {{ statusLabel(component.status) }}
+        </span>
       </section>
 
-      @if (currentJob.result; as result) {
+      @if (component.status === 'FAILED') {
+        <section class="runtime-component-error analysis-card" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <div>
+            <p class="section-eyebrow">Błąd komponentu</p>
+            <h2>Nie udało się porównać {{ component.systemLabel || component.systemId }}</h2>
+            <p>{{ component.errorMessage || 'Porównanie komponentu zakończyło się błędem.' }}</p>
+            @if (component.errorCode) {
+              <code>{{ component.errorCode }}</code>
+            }
+          </div>
+        </section>
+      } @else if (component.result; as result) {
         <section class="decision-bar" [attr.data-status]="result.status">
           <div class="decision-bar__signal">
             <span class="material-symbols-outlined" aria-hidden="true">
@@ -354,8 +434,8 @@
           }
         </section>
 
-        @if (currentJob.report) {
-          <app-analysis-report-panel [report]="currentJob.report"></app-analysis-report-panel>
+        @if (component.report; as report) {
+          <app-analysis-report-panel [report]="report"></app-analysis-report-panel>
         }
 
         <section
@@ -397,8 +477,7 @@
             <section class="result-section">
               <app-runtime-configuration-diff-renderer
                 [projection]="result.configurationDiff"
-                [fallbackDifferences]="result.deterministicResult.differences"
-                [annotations]="result.configurationDiffAnnotations || []"
+                [annotations]="result.configurationDiffAnnotations"
                 [mode]="result.mode"
                 [focusedReferenceId]="focusedReferenceId()"
                 (referenceSelected)="focusReference($event)"
@@ -720,19 +799,19 @@
         ariaLabel="Panel pracy Config Drift Verification"
         [progressActive]="workflowRunning()"
         [aiActive]="aiWorkflowRunning()"
-        [progressCount]="currentJob.steps.length"
+        [progressCount]="component.steps.length || currentJob.steps.length"
         [aiCount]="aiWorkflowItemCount()"
-        [showAi]="currentJob.mode === 'DEEP' || currentJob.aiActivityEvents.length > 0"
+        [showAi]="currentJob.mode === 'DEEP' || component.aiActivityEvents.length > 0"
         [showChat]="false"
         [showFeedback]="false"
       >
         <div progressPanel>
           <app-analysis-steps-panel
-            [steps]="currentJob.steps"
-            [evidenceSections]="currentJob.contextSections"
-            [toolEvidenceSections]="currentJob.toolEvidenceSections"
-            [aiActivityEvents]="currentJob.aiActivityEvents"
-            [preparedPrompt]="currentJob.preparedPrompt || ''"
+            [steps]="component.steps.length ? component.steps : currentJob.steps"
+            [evidenceSections]="component.contextSections"
+            [toolEvidenceSections]="component.toolEvidenceSections"
+            [aiActivityEvents]="component.aiActivityEvents"
+            [preparedPrompt]="component.preparedPrompt || ''"
             [showAiWorkflow]="false"
             [showToolFeedback]="false"
             [staticPanels]="true"
@@ -740,17 +819,19 @@
         </div>
         <div aiPanel>
           <app-analysis-steps-panel
-            [steps]="currentJob.steps"
-            [evidenceSections]="currentJob.contextSections"
-            [toolEvidenceSections]="currentJob.toolEvidenceSections"
-            [aiActivityEvents]="currentJob.aiActivityEvents"
-            [preparedPrompt]="currentJob.preparedPrompt || ''"
+            [steps]="component.steps.length ? component.steps : currentJob.steps"
+            [evidenceSections]="component.contextSections"
+            [toolEvidenceSections]="component.toolEvidenceSections"
+            [aiActivityEvents]="component.aiActivityEvents"
+            [preparedPrompt]="component.preparedPrompt || ''"
             [showProgress]="false"
             [showToolFeedback]="false"
             [staticPanels]="true"
           ></app-analysis-steps-panel>
         </div>
       </app-analysis-feature-aside>
+      </section>
+      }
     } @else {
       <section class="runtime-empty analysis-card analysis-empty-state">
         <span class="material-symbols-outlined" aria-hidden="true">rule_settings</span>

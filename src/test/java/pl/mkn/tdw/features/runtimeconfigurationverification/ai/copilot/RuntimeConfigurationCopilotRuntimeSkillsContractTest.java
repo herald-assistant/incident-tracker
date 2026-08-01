@@ -18,7 +18,7 @@ class RuntimeConfigurationCopilotRuntimeSkillsContractTest {
     }
 
     @Test
-    void shouldKeepDeepSkillAlignedWithCompactArtifactV2() throws Exception {
+    void shouldKeepDeepSkillAlignedWithCompactArtifactV1() throws Exception {
         var deep = skill(RuntimeConfigurationCopilotRuntimeSkillNames.DEEP_REVIEW);
 
         assertThat(deep).contains(

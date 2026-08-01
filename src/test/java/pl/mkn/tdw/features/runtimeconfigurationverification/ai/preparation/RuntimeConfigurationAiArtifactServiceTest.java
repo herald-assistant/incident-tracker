@@ -32,7 +32,7 @@ class RuntimeConfigurationAiArtifactServiceTest {
             new RuntimeConfigurationAiArtifactService(objectMapper);
 
     @Test
-    void shouldRenderCompactV2TreeWithAllParametersAndWithoutSecretsOrLegacyManifests()
+    void shouldRenderCompactV1TreeWithAllParametersAndWithoutSecretsOrLegacyManifests()
             throws Exception {
         var result = service.render(
                 RuntimeConfigurationAiTestFixtures.deterministic(
@@ -60,7 +60,7 @@ class RuntimeConfigurationAiArtifactServiceTest {
 
         assertThat(tree)
                 .contains(
-                        "formatVersion: 2",
+                        "formatVersion: 1",
                         "relationCodes:",
                         "typeCodes:",
                         "\"timeout\"",
@@ -69,7 +69,7 @@ class RuntimeConfigurationAiArtifactServiceTest {
                         "M: sensitive scalar suppressed before AI"
                 );
         assertThat((Object) new Yaml().load(tree)).isInstanceOf(Map.class);
-        assertThat(objectMapper.readTree(changes).get("formatVersion").asInt()).isEqualTo(2);
+        assertThat(objectMapper.readTree(changes).get("formatVersion").asInt()).isEqualTo(1);
         assertThat(changes)
                 .contains(
                         "\"differenceColumns\"",

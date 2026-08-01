@@ -1,5 +1,7 @@
 package pl.mkn.tdw.features.runtimeconfigurationverification.source;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
@@ -22,6 +24,9 @@ public class RuntimeConfigurationRepositoryProperties {
 
     @NotEmpty
     private List<@Pattern(regexp = "(?:dev|test|uat|zt)\\d*") String> branches = new ArrayList<>();
+    @Min(1)
+    @Max(50)
+    private int maxParallelComponents = 20;
     private Map<String, Repository> repositories = new LinkedHashMap<>();
 
     @Getter

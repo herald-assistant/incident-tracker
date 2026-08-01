@@ -4,8 +4,8 @@
       <h3 id="configuration-diff-heading">Różnice w plikach konfiguracyjnych</h3>
       <p>
         {{ totalChanges() }} zmian ·
-        {{ projection()?.sourceBranch || 'source' }} →
-        {{ projection()?.targetBranch || 'target' }}
+        {{ projection().sourceBranch }} →
+        {{ projection().targetBranch }}
       </p>
     </div>
     @if (projection()) {
@@ -215,35 +215,5 @@
         </p>
       }
     </div>
-  } @else {
-    <div class="legacy-notice" role="note">
-      Ten zapis powstał przed wprowadzeniem widoku plikowego. Pokazujemy dostępny,
-      uproszczony wykaz różnic bez wartości source/target.
-    </div>
-    @if (fallbackDifferences().length) {
-      <div class="legacy-differences">
-        @for (difference of fallbackDifferences(); track difference.differenceId) {
-          <article
-            [id]="difference.differenceId"
-            [attr.data-difference-id]="difference.differenceId"
-            [class.configuration-row--focused]="focusedReferenceId() === difference.differenceId"
-          >
-            <span
-              class="change-marker"
-              [class]="markerClass(difference.kind)"
-              [attr.title]="changeLabel(difference.kind)"
-            >
-              <span aria-hidden="true">{{ marker(difference.kind) }}</span>
-              <span class="sr-only">{{ changeLabel(difference.kind) }}</span>
-            </span>
-            <code>{{ difference.path }}</code>
-            <span>{{ roleLabel(difference.role) }} · dokument {{ difference.documentIndex + 1 }}</span>
-            <small>{{ difference.differenceId }}</small>
-          </article>
-        }
-      </div>
-    } @else {
-      <p class="empty-inline">Brak zarejestrowanych różnic.</p>
-    }
   }
 </section>

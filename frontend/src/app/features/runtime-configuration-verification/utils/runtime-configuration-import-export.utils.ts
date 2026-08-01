@@ -7,7 +7,7 @@ export function buildRuntimeConfigurationExportEnvelope(
   job: RuntimeConfigurationVerificationJobStateSnapshot,
   exportedAt: string
 ): RuntimeConfigurationExportEnvelope {
-  if (!job.result || !isTerminal(job.status)) {
+  if (!job.components.some((component) => component.result) || !isTerminal(job.status)) {
     throw new Error('Eksport wymaga zakończonego wyniku Config Drift Verification.');
   }
   return {
@@ -25,7 +25,8 @@ export function buildRuntimeConfigurationExportEnvelope(
 export function buildRuntimeConfigurationExportFileName(
   job: RuntimeConfigurationVerificationJobStateSnapshot
 ): string {
-  return `runtime-configuration-${safePart(job.systemId)}-${safePart(job.sourceBranch)}-to-${safePart(job.targetBranch)}.json`;
+  const componentPart = `${job.systemIds.length}-components`;
+  return `runtime-configuration-${safePart(componentPart)}-${safePart(job.sourceBranch)}-to-${safePart(job.targetBranch)}.json`;
 }
 
 function isTerminal(status: string): boolean {

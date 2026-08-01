@@ -81,7 +81,7 @@ public record RuntimeConfigurationWorkbenchPreviewRequest(
         return new RuntimeConfigurationVerificationJobStartRequest(
                 mode,
                 repositoryId,
-                systemId,
+                java.util.List.of(systemId),
                 sourceBranch,
                 targetBranch,
                 codeRef,

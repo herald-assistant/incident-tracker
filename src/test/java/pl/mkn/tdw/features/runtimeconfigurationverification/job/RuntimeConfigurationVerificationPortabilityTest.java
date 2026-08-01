@@ -28,6 +28,7 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projec
         .RuntimeConfigurationDiffValuePresence;
 import pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.source.RuntimeConfigurationFileRole;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationJobStateSnapshot;
+import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationComponentRunSnapshot;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationMode;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.api.RuntimeConfigurationVerificationResult;
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.error.RuntimeConfigurationVerificationImportException;
@@ -48,7 +49,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -64,7 +64,7 @@ class RuntimeConfigurationVerificationPortabilityTest {
         var store = mock(LocalAnalysisRunStore.class);
         var persister = new RuntimeConfigurationVerificationLocalRunPersister(objectMapper, store);
 
-        persister.persistRunSnapshot(snapshotWithContaminatedSensitiveTokens());
+        persister.persistRunSnapshot(batchSnapshot());
 
         var indexCaptor = ArgumentCaptor.forClass(LocalAnalysisRunIndexEntry.class);
         var recordCaptor = ArgumentCaptor.forClass(LocalAnalysisRunRecord.class);
@@ -72,6 +72,7 @@ class RuntimeConfigurationVerificationPortabilityTest {
         var serialized = objectMapper.writeValueAsString(recordCaptor.getValue());
 
         assertEquals("runtime-configuration-verification", indexCaptor.getValue().feature());
+        assertTrue(indexCaptor.getValue().name().startsWith("2 komponentów · "));
         assertTrue(indexCaptor.getValue().name().contains("dev1 → zt001"));
         assertFalse(recordCaptor.getValue().continuation().enabled());
         assertFalse(serialized.contains("raw-source-secret"));
@@ -86,20 +87,31 @@ class RuntimeConfigurationVerificationPortabilityTest {
 
     @Test
     void shouldRoundTripCompletedExportAsReadOnlySnapshot() {
-        var source = snapshotWithContaminatedSensitiveTokens();
+        var source = batchSnapshot();
         var document = objectMapper.valueToTree(
                 RuntimeConfigurationVerificationExportEnvelope.from(source, Instant.parse("2026-07-30T08:00:00Z"))
         );
 
         var imported = new RuntimeConfigurationVerificationImportService(objectMapper)
                 .importReadOnly(document);
+        var sourceResult = source.components().get(0).result();
+        var importedResult = imported.components().get(0).result();
 
         assertEquals(source.jobId(), imported.jobId());
-        assertEquals(source.result().status(), imported.result().status());
-        assertEquals(source.result().configurationDiff(), imported.result().configurationDiff());
+        assertEquals(1, document.path("version").asInt());
         assertEquals(
-                source.result().configurationDiffAnnotations(),
-                imported.result().configurationDiffAnnotations()
+                "runtime-configuration-verification-result-v1",
+                document.at("/payload/resultContract").asText()
+        );
+        assertEquals(sourceResult.status(), importedResult.status());
+        assertEquals(List.of("crm-backend", "billing-backend"), imported.systemIds());
+        assertEquals(2, imported.components().size());
+        assertEquals("FAILED", imported.components().get(1).status());
+        assertEquals("BILLING_SCOPE_FAILED", imported.components().get(1).errorCode());
+        assertEquals(sourceResult.configurationDiff(), importedResult.configurationDiff());
+        assertEquals(
+                sourceResult.configurationDiffAnnotations(),
+                importedResult.configurationDiffAnnotations()
         );
         assertTrue(imported.imported());
         assertFalse(document.toString().contains("raw-source-secret"));
@@ -109,7 +121,7 @@ class RuntimeConfigurationVerificationPortabilityTest {
     }
 
     @Test
-    void shouldImportOlderSnapshotWithoutProjectionAnnotations() {
+    void shouldRejectIncompleteV1WithoutProjectionAnnotations() {
         var document = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.valueToTree(
                 RuntimeConfigurationVerificationExportEnvelope.from(
                         snapshotWithContaminatedSensitiveTokens(),
@@ -119,15 +131,62 @@ class RuntimeConfigurationVerificationPortabilityTest {
         var result = (com.fasterxml.jackson.databind.node.ObjectNode) document
                 .path("payload")
                 .path("job")
+                .path("components")
+                .path(0)
                 .path("result");
         result.remove("configurationDiffAnnotations");
         result.putNull("configurationDiff");
 
-        var imported = new RuntimeConfigurationVerificationImportService(objectMapper)
-                .importReadOnly(document);
+        var exception = assertThrows(
+                RuntimeConfigurationVerificationImportException.class,
+                () -> new RuntimeConfigurationVerificationImportService(objectMapper)
+                        .importReadOnly(document)
+        );
 
-        assertNull(imported.result().configurationDiff());
-        assertTrue(imported.result().configurationDiffAnnotations().isEmpty());
+        assertEquals("RUNTIME_CONFIGURATION_VERIFICATION_IMPORT_INVALID", exception.code());
+        assertTrue(exception.getMessage().contains("invalid structure"));
+    }
+
+    @Test
+    void shouldRejectFormerV2WithoutCompatibility() {
+        var document = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.valueToTree(
+                RuntimeConfigurationVerificationExportEnvelope.from(
+                        snapshotWithContaminatedSensitiveTokens(),
+                        Instant.now()
+                )
+        );
+        document.put("version", 2);
+
+        var exception = assertThrows(
+                RuntimeConfigurationVerificationImportException.class,
+                () -> new RuntimeConfigurationVerificationImportService(objectMapper)
+                        .importReadOnly(document)
+        );
+
+        assertEquals("RUNTIME_CONFIGURATION_VERIFICATION_IMPORT_INVALID", exception.code());
+        assertTrue(exception.getMessage().contains("version"));
+    }
+
+    @Test
+    void shouldRejectV1WithMismatchedBatchOrder() {
+        var document = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.valueToTree(
+                RuntimeConfigurationVerificationExportEnvelope.from(
+                        batchSnapshot(),
+                        Instant.now()
+                )
+        );
+        var systemIds = (com.fasterxml.jackson.databind.node.ArrayNode) document
+                .at("/payload/job/systemIds");
+        systemIds.set(1, objectMapper.getNodeFactory().textNode("other-system"));
+
+        var exception = assertThrows(
+                RuntimeConfigurationVerificationImportException.class,
+                () -> new RuntimeConfigurationVerificationImportService(objectMapper)
+                        .importReadOnly(document)
+        );
+
+        assertEquals("RUNTIME_CONFIGURATION_VERIFICATION_IMPORT_INVALID", exception.code());
+        assertTrue(exception.getMessage().contains("batch structure"));
     }
 
     @Test
@@ -226,7 +285,7 @@ class RuntimeConfigurationVerificationPortabilityTest {
                 "job-portable",
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
-                "crm-backend",
+                List.of("crm-backend"),
                 "dev1",
                 "zt001",
                 null,
@@ -241,12 +300,77 @@ class RuntimeConfigurationVerificationPortabilityTest {
                 now,
                 now,
                 List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
+                List.of(new RuntimeConfigurationComponentRunSnapshot(
+                        "job-portable:0",
+                        "crm-backend",
+                        "CRM Backend",
+                        "backend",
+                        "COMPLETED",
+                        null,
+                        null,
+                        null,
+                        null,
+                        now.minusSeconds(10),
+                        now,
+                        now,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        null,
+                        result,
+                        null
+                )),
+                false
+        );
+    }
+
+    private RuntimeConfigurationVerificationJobStateSnapshot batchSnapshot() {
+        var source = snapshotWithContaminatedSensitiveTokens();
+        var now = source.completedAt();
+        return new RuntimeConfigurationVerificationJobStateSnapshot(
+                source.jobId(),
+                source.mode(),
+                source.repositoryId(),
+                List.of("crm-backend", "billing-backend"),
+                source.sourceBranch(),
+                source.targetBranch(),
+                source.codeRef(),
+                source.aiModel(),
+                source.reasoningEffort(),
+                "COMPLETED_WITH_LIMITATIONS",
                 null,
-                result,
                 null,
+                null,
+                null,
+                source.createdAt(),
+                now,
+                now,
+                source.steps(),
+                List.of(
+                        source.components().get(0),
+                        new RuntimeConfigurationComponentRunSnapshot(
+                                source.jobId() + ":1",
+                                "billing-backend",
+                                "Billing Backend",
+                                "billing",
+                                "FAILED",
+                                null,
+                                null,
+                                "BILLING_SCOPE_FAILED",
+                                "Billing configuration scope could not be resolved.",
+                                source.createdAt(),
+                                now,
+                                now,
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                null,
+                                null,
+                                null
+                        )
+                ),
                 false
         );
     }

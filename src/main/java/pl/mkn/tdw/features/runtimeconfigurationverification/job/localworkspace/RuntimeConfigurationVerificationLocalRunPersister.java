@@ -45,7 +45,7 @@ public class RuntimeConfigurationVerificationLocalRunPersister
                 LocalAnalysisRunRecord.VERSION,
                 "runs/" + snapshot.jobId() + "/run.json",
                 FEATURE,
-                snapshot.systemId() + " · " + snapshot.sourceBranch() + " → "
+                snapshot.systemIds().size() + " komponentów · " + snapshot.sourceBranch() + " → "
                         + snapshot.targetBranch() + " · " + snapshot.mode(),
                 snapshot.status(),
                 snapshot.createdAt(),

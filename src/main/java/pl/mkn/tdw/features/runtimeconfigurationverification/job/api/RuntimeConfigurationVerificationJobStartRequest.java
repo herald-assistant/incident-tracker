@@ -1,12 +1,16 @@
 package pl.mkn.tdw.features.runtimeconfigurationverification.job.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
+
+import java.util.List;
 
 public record RuntimeConfigurationVerificationJobStartRequest(
         @NotNull(message = "mode must be provided")
@@ -18,13 +22,15 @@ public record RuntimeConfigurationVerificationJobStartRequest(
                 message = "repositoryId contains unsupported characters"
         )
         String repositoryId,
-        @NotBlank(message = "systemId must be provided")
-        @Size(max = 100, message = "systemId must not exceed 100 characters")
-        @Pattern(
-                regexp = "[A-Za-z0-9][A-Za-z0-9._-]*",
-                message = "systemId contains unsupported characters"
-        )
-        String systemId,
+        @NotEmpty(message = "systemIds must contain at least one system")
+        @Size(max = 50, message = "systemIds must not contain more than 50 systems")
+        List<
+                @NotBlank(message = "systemIds must not contain blank values")
+                @Size(max = 100, message = "systemId must not exceed 100 characters")
+                @Pattern(
+                        regexp = "[A-Za-z0-9][A-Za-z0-9._-]*",
+                        message = "systemId contains unsupported characters"
+                ) String> systemIds,
         @NotBlank(message = "sourceBranch must be provided")
         @Pattern(
                 regexp = "(?:dev|test|uat|zt)\\d*",
@@ -47,12 +53,19 @@ public record RuntimeConfigurationVerificationJobStartRequest(
 
     public RuntimeConfigurationVerificationJobStartRequest {
         repositoryId = normalize(repositoryId);
-        systemId = normalize(systemId);
+        systemIds = systemIds != null
+                ? systemIds.stream().map(RuntimeConfigurationVerificationJobStartRequest::normalize).toList()
+                : null;
         sourceBranch = normalize(sourceBranch);
         targetBranch = normalize(targetBranch);
         codeRef = normalize(codeRef);
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);
+    }
+
+    @AssertTrue(message = "systemIds must contain unique values")
+    public boolean isSystemSelectionUnique() {
+        return systemIds == null || systemIds.stream().distinct().count() == systemIds.size();
     }
 
     @AssertTrue(message = "sourceBranch and targetBranch must be different")
@@ -84,6 +97,27 @@ public record RuntimeConfigurationVerificationJobStartRequest(
 
     public AnalysisAiOptions aiOptions() {
         return new AnalysisAiOptions(model, reasoningEffort);
+    }
+
+    public RuntimeConfigurationVerificationJobStartRequest forSystem(String systemId) {
+        return new RuntimeConfigurationVerificationJobStartRequest(
+                mode,
+                repositoryId,
+                List.of(systemId),
+                sourceBranch,
+                targetBranch,
+                codeRef,
+                model,
+                reasoningEffort
+        );
+    }
+
+    @JsonIgnore
+    public String componentSystemId() {
+        if (systemIds == null || systemIds.size() != 1) {
+            throw new IllegalStateException("A component-scoped request must contain exactly one systemId.");
+        }
+        return systemIds.get(0);
     }
 
     private static String normalize(String value) {

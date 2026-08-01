@@ -65,8 +65,9 @@ Uzytkownik wskazuje:
 
 - tryb analizy `BASIC` albo `DEEP`,
 - repozytorium konfiguracji, jezeli dostepnych jest kilka,
-- komponent wdrozeniowy reprezentowany w Operational Context jako
-  `internal-system`,
+- jeden lub wiele komponentow wdrozeniowych reprezentowanych w Operational
+  Context jako `internal-system`; formularz inicjalnie zaznacza wszystkie
+  dostepne komponenty,
 - branch bazowy,
 - branch porownywany,
 - opcjonalny ref kodu dla trybu `DEEP`, jezeli uzytkownik chce analizowac
@@ -273,6 +274,10 @@ W trybie `DEEP` pierwszy widok powinien dodatkowo pokazac:
 
 Szczegoly powinny byc dostepne bez utraty kontekstu:
 
+- wynik wielokomponentowy jest dzielony na zakladki: jedna zakladka na
+  `internal-system`, z jego statusem, pokryciem i lista porownanych plikow,
+- zmiana aktywnej zakladki nie miesza findingow, identyfikatorow roznic ani
+  ograniczen widocznosci pomiedzy komponentami,
 - podstawowy widok deterministyczny grupowany per plik i dokument, renderowany
   w zagniezdzonej postaci przypominajacej znormalizowany format zrodlowy
   (`YAML` dla `application.y[a]ml.kv`, zapis blokowy dla plikow `.var`),

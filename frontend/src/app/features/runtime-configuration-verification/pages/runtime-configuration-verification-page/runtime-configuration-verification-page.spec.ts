@@ -14,6 +14,7 @@ import { GithubAuthService } from '../../../../core/services/github-auth.service
 import {
   RuntimeConfigurationDeepPreflight,
   RuntimeConfigurationDiffProjection,
+  RuntimeConfigurationComponentRunSnapshot,
   RuntimeConfigurationVerificationInputOptions,
   RuntimeConfigurationVerificationJobStateSnapshot,
   RuntimeConfigurationVerificationResult
@@ -79,7 +80,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     const runButton = buttonContaining(compiled, 'Run verification');
 
     expect(compiled.textContent).toContain('Porównaj konfigurację środowisk');
-    expect(compiled.textContent).toContain('Backend · backend');
+    expect(compiled.textContent).toContain('3 z 3 wybranych');
     expect(compiled.textContent).toContain('Gotowe do porównania konfiguracji');
     expect(compiled.textContent).toContain('deterministyczny diff bez AI');
     expect(compiled.textContent).not.toContain('Model AI');
@@ -88,6 +89,49 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(runButton?.disabled).toBe(false);
     expect(buttonContaining(compiled, 'Basic')?.querySelector('.mode-option__copy')).not.toBeNull();
     expect(api.getDeepPreflight).not.toHaveBeenCalled();
+  });
+
+  it('should select all systems by default and support clear, select all and checkbox changes', () => {
+    expect(fixture.componentInstance.systemControl.value).toEqual([
+      'backend',
+      'billing',
+      'notifications'
+    ]);
+
+    buttonContaining(fixture.nativeElement, '3 z 3 wybranych')?.click();
+    fixture.detectChanges();
+    let compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Backend · backend');
+    expect(compiled.textContent).toContain('Billing · billing');
+    expect(compiled.textContent).toContain('Notifications · notifications');
+
+    buttonContaining(compiled, 'Wyczyść')?.click();
+    fixture.detectChanges();
+    compiled = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.systemControl.value).toEqual([]);
+    expect(compiled.textContent).toContain('0 z 3 wybranych');
+    expect(compiled.textContent).toContain('Wybierz co najmniej jeden komponent');
+    expect(buttonContaining(compiled, 'Run verification')?.disabled).toBe(true);
+
+    buttonContaining(compiled, 'Zaznacz wszystkie')?.click();
+    fixture.detectChanges();
+    compiled = fixture.nativeElement as HTMLElement;
+    const billing = labelContaining(compiled, 'Billing · billing')
+      ?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    billing?.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.systemControl.value).toEqual([
+      'backend',
+      'notifications'
+    ]);
+    expect(fixture.nativeElement.textContent).toContain('2 z 3 wybranych');
+    expect(buttonContaining(fixture.nativeElement, 'Run verification')?.disabled).toBe(false);
+
+    buttonContaining(fixture.nativeElement, 'Run verification')?.click();
+    expect(api.startJob).toHaveBeenCalledWith(expect.objectContaining({
+      systemIds: ['backend', 'notifications']
+    }));
   });
 
   it('should expose DEEP as coming soon without allowing the operator to select it', () => {
@@ -135,7 +179,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(api.startJob).toHaveBeenCalledWith({
       mode: 'BASIC',
       repositoryId: 'runtime-config',
-      systemId: 'backend',
+      systemIds: ['backend', 'billing', 'notifications'],
       sourceBranch: 'dev1',
       targetBranch: 'zt001'
     });
@@ -145,6 +189,93 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(compiled.textContent).not.toContain('AI second opinion');
     expect(compiled.textContent).not.toContain('NOT_ASSESSED');
     expect(compiled.textContent).not.toContain('Raport operatora');
+  });
+
+  it('should render ordered component tabs, switch file results and isolate a failed component', () => {
+    const backendJob = job({
+      mode: 'BASIC',
+      status: 'COMPLETED',
+      codeRef: null,
+      aiModel: null,
+      reasoningEffort: null,
+      preparedPrompt: null,
+      result: basicResult(),
+      report: null
+    });
+    const backend = backendJob.components[0]!;
+    const billingResult = basicResult();
+    billingResult.deterministicResult = {
+      ...billingResult.deterministicResult,
+      systemId: 'billing',
+      systemLabel: 'Billing',
+      configurationDirectory: 'billing'
+    };
+    billingResult.configurationDiff = {
+      ...billingResult.configurationDiff!,
+      files: billingResult.configurationDiff!.files.map((file) => ({
+        ...file,
+        sourcePath: file.sourcePath?.replace('backend/', 'billing/') ?? null,
+        targetPath: file.targetPath?.replace('backend/', 'billing/') ?? null
+      }))
+    };
+    const billing: RuntimeConfigurationComponentRunSnapshot = {
+      ...backend,
+      componentRunId: 'job-1:1',
+      systemId: 'billing',
+      systemLabel: 'Billing',
+      configurationDirectory: 'billing',
+      result: billingResult
+    };
+    const notifications: RuntimeConfigurationComponentRunSnapshot = {
+      ...backend,
+      componentRunId: 'job-1:2',
+      systemId: 'notifications',
+      systemLabel: 'Notifications',
+      configurationDirectory: 'notifications',
+      status: 'FAILED',
+      errorCode: 'RUNTIME_CONFIG_SOURCE_FAILED',
+      errorMessage: 'Nie udało się pobrać konfiguracji Notifications.',
+      result: null,
+      report: null
+    };
+
+    fixture.componentInstance.job.set({
+      ...backendJob,
+      status: 'COMPLETED_WITH_LIMITATIONS',
+      systemIds: ['backend', 'billing', 'notifications'],
+      components: [backend, billing, notifications]
+    });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    let tabs = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.analysis-result-tab')
+    );
+    expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
+      'Backend · Zakończona',
+      'Billing · Zakończona',
+      'Notifications · Błąd'
+    ]);
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
+    expect(fixture.nativeElement.textContent).toContain('backend/application.yml.kv');
+
+    tabs[1]?.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.activeComponent()?.systemId).toBe('billing');
+    expect(fixture.nativeElement.textContent).toContain('billing/application.yml.kv');
+    expect(fixture.nativeElement.textContent).not.toContain('backend/application.yml.kv');
+
+    tabs = Array.from(
+      compiled.querySelectorAll<HTMLButtonElement>('.analysis-result-tab')
+    );
+    tabs[2]?.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.activeComponent()?.systemId).toBe('notifications');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Nie udało się pobrać konfiguracji Notifications.'
+    );
+    expect(fixture.nativeElement.textContent).toContain('RUNTIME_CONFIG_SOURCE_FAILED');
+    expect(fixture.nativeElement.textContent).not.toContain('Configuration result');
   });
 
   it('should show the DEEP blocker and prevent starting the job', () => {
@@ -209,7 +340,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(api.startJob).toHaveBeenCalledWith({
       mode: 'DEEP',
       repositoryId: 'runtime-config',
-      systemId: 'backend',
+      systemIds: ['backend', 'billing', 'notifications'],
       sourceBranch: 'dev1',
       targetBranch: 'zt001',
       codeRef: 'release/42',
@@ -418,6 +549,8 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
       schema: 'tdw.runtime-configuration-verification-export',
       version: 1
     });
+    expect(fixture.componentInstance.systemControl.value).toEqual(['backend']);
+    expect(fixture.nativeElement.textContent).toContain('1 z 3 wybranych');
     expect(fixture.componentInstance.job()?.imported).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('Import read-only');
   });
@@ -428,7 +561,15 @@ function inputOptions(): RuntimeConfigurationVerificationInputOptions {
     modes: ['BASIC', 'DEEP'],
     branches: ['dev1', 'zt001', 'dev2'],
     repositories: [{ id: 'runtime-config', label: 'Runtime config' }],
-    systems: [{ id: 'backend', label: 'Backend', configurationDirectory: 'backend' }]
+    systems: [
+      { id: 'backend', label: 'Backend', configurationDirectory: 'backend' },
+      { id: 'billing', label: 'Billing', configurationDirectory: 'billing' },
+      {
+        id: 'notifications',
+        label: 'Notifications',
+        configurationDirectory: 'notifications'
+      }
+    ]
   };
 }
 
@@ -497,44 +638,16 @@ function blockedPreflight(): RuntimeConfigurationDeepPreflight {
 }
 
 function job(
-  overrides: Partial<RuntimeConfigurationVerificationJobStateSnapshot> = {}
+  overrides: Partial<RuntimeConfigurationVerificationJobStateSnapshot> & {
+    preparedPrompt?: string | null;
+    result?: RuntimeConfigurationVerificationResult | null;
+    report?: RuntimeConfigurationComponentRunSnapshot['report'];
+  } = {}
 ): RuntimeConfigurationVerificationJobStateSnapshot {
-  return {
-    jobId: 'job-1',
-    mode: 'DEEP',
-    repositoryId: 'runtime-config',
-    systemId: 'backend',
-    sourceBranch: 'dev1',
-    targetBranch: 'zt001',
-    codeRef: 'release/42',
-    aiModel: 'gpt-5.4',
-    reasoningEffort: 'medium',
-    status: 'COMPLETED_WITH_LIMITATIONS',
-    currentStepCode: null,
-    currentStepLabel: null,
-    errorCode: null,
-    errorMessage: null,
-    createdAt: '2026-07-30T10:00:00Z',
-    updatedAt: '2026-07-30T10:01:00Z',
-    completedAt: '2026-07-30T10:01:00Z',
-    steps: [
-      {
-        code: 'DIFF',
-        label: 'Deterministic comparison',
-        phase: 'CONFIGURATION',
-        status: 'COMPLETED',
-        message: 'Ready',
-        itemCount: 2,
-        startedAt: '2026-07-30T10:00:01Z',
-        completedAt: '2026-07-30T10:00:02Z'
-      }
-    ],
-    contextSections: [],
-    toolEvidenceSections: [],
-    aiActivityEvents: [],
-    preparedPrompt: 'safe prompt',
-    result: result(),
-    report: {
+  const {
+    preparedPrompt = 'safe prompt',
+    result: componentResult = result(),
+    report = {
       reportId: 'runtime-report-1',
       header: 'Raport operatora',
       subHeader: 'Deterministic facts and AI interpretation',
@@ -549,8 +662,66 @@ function job(
         warnings: []
       }
     },
+    ...jobOverrides
+  } = overrides;
+  const status = jobOverrides.status ?? 'COMPLETED_WITH_LIMITATIONS';
+  const completedAt = jobOverrides.completedAt === undefined
+    ? '2026-07-30T10:01:00Z'
+    : jobOverrides.completedAt;
+  const componentSteps = [
+    {
+      code: 'DIFF',
+      label: 'Deterministic comparison',
+      phase: 'CONFIGURATION',
+      status: 'COMPLETED',
+      message: 'Ready',
+      itemCount: 2,
+      startedAt: '2026-07-30T10:00:01Z',
+      completedAt: '2026-07-30T10:00:02Z'
+    }
+  ];
+  return {
+    jobId: 'job-1',
+    mode: 'DEEP',
+    repositoryId: 'runtime-config',
+    systemIds: ['backend'],
+    sourceBranch: 'dev1',
+    targetBranch: 'zt001',
+    codeRef: 'release/42',
+    aiModel: 'gpt-5.4',
+    reasoningEffort: 'medium',
+    status,
+    currentStepCode: null,
+    currentStepLabel: null,
+    errorCode: null,
+    errorMessage: null,
+    createdAt: '2026-07-30T10:00:00Z',
+    updatedAt: '2026-07-30T10:01:00Z',
+    completedAt,
+    steps: [],
+    components: [{
+      componentRunId: 'job-1:0',
+      systemId: 'backend',
+      systemLabel: 'Backend',
+      configurationDirectory: 'backend',
+      status,
+      currentStepCode: null,
+      currentStepLabel: null,
+      errorCode: null,
+      errorMessage: null,
+      createdAt: '2026-07-30T10:00:00Z',
+      updatedAt: '2026-07-30T10:01:00Z',
+      completedAt,
+      steps: componentSteps,
+      contextSections: [],
+      toolEvidenceSections: [],
+      aiActivityEvents: [],
+      preparedPrompt,
+      result: componentResult,
+      report
+    }],
     imported: false,
-    ...overrides
+    ...jobOverrides
   };
 }
 
@@ -894,4 +1065,9 @@ function configurationDiffProjection(): RuntimeConfigurationDiffProjection {
 function buttonContaining(root: HTMLElement, text: string): HTMLButtonElement | null {
   return Array.from(root.querySelectorAll<HTMLButtonElement>('button'))
     .find((button) => button.textContent?.includes(text)) ?? null;
+}
+
+function labelContaining(root: HTMLElement, text: string): HTMLLabelElement | null {
+  return Array.from(root.querySelectorAll<HTMLLabelElement>('label'))
+    .find((label) => label.textContent?.includes(text)) ?? null;
 }

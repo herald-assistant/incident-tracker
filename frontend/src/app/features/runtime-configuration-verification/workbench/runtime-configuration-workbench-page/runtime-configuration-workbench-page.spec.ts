@@ -175,7 +175,7 @@ describe('RuntimeConfigurationWorkbenchPageComponent', () => {
     expect(
       (compiled.querySelector('textarea[aria-label="Wybrany AI artifact"]') as HTMLTextAreaElement)
         .value
-    ).toContain('formatVersion: 2');
+    ).toContain('formatVersion: 1');
     expect(compiled.textContent).not.toContain('raw-password-do-not-render');
   });
 
@@ -423,7 +423,7 @@ function artifactResponse(): RuntimeConfigurationWorkbenchArtifactResponse {
     mediaType: 'application/yaml',
     characterCount: 42,
     truncated: false,
-    content: 'formatVersion: 2\ndocuments:\n  - meta: []'
+    content: 'formatVersion: 1\ndocuments:\n  - meta: []'
   };
 }
 

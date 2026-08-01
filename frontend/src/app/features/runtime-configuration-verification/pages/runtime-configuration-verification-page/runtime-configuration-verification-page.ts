@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -7,6 +7,10 @@ import { finalize, Subscription } from 'rxjs';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisReportPanelComponent } from '../../../../components/analysis-report-panel/analysis-report-panel';
+import {
+  AnalysisResultTabItem,
+  AnalysisResultTabsComponent
+} from '../../../../components/analysis-result-tabs/analysis-result-tabs';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import {
   AnalysisAiModelOptionsResponse,
@@ -60,6 +64,7 @@ const EMPTY_INPUT_OPTIONS: RuntimeConfigurationVerificationInputOptions = {
     ReactiveFormsModule,
     AnalysisFeatureAsideComponent,
     AnalysisReportPanelComponent,
+    AnalysisResultTabsComponent,
     AnalysisStepsPanelComponent,
     RuntimeConfigurationDiffRendererComponent
   ],
@@ -82,7 +87,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   });
   protected readonly deepModeSelectionDisabled = signal(true);
   readonly repositoryControl = new FormControl('', { nonNullable: true });
-  readonly systemControl = new FormControl('', { nonNullable: true });
+  readonly systemControl = new FormControl<string[]>([], { nonNullable: true });
   readonly sourceBranchControl = new FormControl('', { nonNullable: true });
   readonly targetBranchControl = new FormControl('', { nonNullable: true });
   readonly codeRefControl = new FormControl('', { nonNullable: true });
@@ -107,6 +112,8 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   readonly resultOriginLabel = signal('');
   readonly findingSeverityFilter = signal('ALL');
   readonly focusedReferenceId = signal('');
+  readonly activeComponentId = signal('');
+  readonly systemSelectOpen = signal(false);
   private readonly formRevision = signal(0);
 
   readonly repositoryOptions = computed<SelectOption[]>(() =>
@@ -130,12 +137,17 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   readonly reasoningEffortOptions = computed(() =>
     reasoningEffortsForAiModel(this.aiModelCatalog(), this.aiModelControl.value)
   );
-  readonly selectedSystem = computed(() => {
+  readonly selectedSystemIds = computed(() => {
     this.formRevision();
-    return this.inputOptions().systems.find(
-      (system) => system.id === this.systemControl.value
-    ) ?? null;
+    const selected = new Set(this.systemControl.value);
+    return this.inputOptions().systems
+      .map((system) => system.id)
+      .filter((systemId) => selected.has(systemId));
   });
+  readonly systemSelectionLabel = computed(() =>
+    `${this.selectedSystemIds().length} z ${this.inputOptions().systems.length} wybranych`
+  );
+  readonly systemSelectionInvalid = computed(() => this.selectedSystemIds().length === 0);
   readonly branchPairInvalid = computed(() => {
     this.formRevision();
     return Boolean(
@@ -164,7 +176,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     this.formRevision();
     return Boolean(
       this.repositoryControl.value
-      && this.systemControl.value
+      && this.selectedSystemIds().length > 0
       && this.sourceBranchControl.value
       && this.targetBranchControl.value
       && !this.branchPairInvalid()
@@ -179,20 +191,32 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     const job = this.job();
     return Boolean(job && !this.isTerminal(job.status));
   });
+  readonly componentTabs = computed<AnalysisResultTabItem[]>(() =>
+    (this.job()?.components ?? []).map((component) => ({
+      id: component.systemId,
+      tabLabel: `${component.systemLabel || component.systemId} · ${formatStatus(component.status)}`
+    }))
+  );
+  readonly activeComponent = computed(() => {
+    const components = this.job()?.components ?? [];
+    return components.find((component) => component.systemId === this.activeComponentId())
+      ?? components[0]
+      ?? null;
+  });
   readonly aiWorkflowRunning = computed(() =>
-    Boolean(this.job()?.steps.some((step) =>
+    Boolean(this.activeComponent()?.steps.some((step) =>
       step.phase === 'AI' && ['RUNNING', 'IN_PROGRESS'].includes(step.status)
     ))
   );
   readonly aiWorkflowItemCount = computed(() => {
-    const job = this.job();
-    if (!job) {
+    const component = this.activeComponent();
+    if (!component) {
       return 0;
     }
-    return job.aiActivityEvents.length
-      + job.toolEvidenceSections.reduce((count, section) => count + section.items.length, 0);
+    return component.aiActivityEvents.length
+      + component.toolEvidenceSections.reduce((count, section) => count + section.items.length, 0);
   });
-  readonly deterministic = computed(() => this.job()?.result?.deterministicResult ?? null);
+  readonly deterministic = computed(() => this.activeComponent()?.result?.deterministicResult ?? null);
   readonly filteredFindings = computed(() => {
     const findings = this.deterministic()?.findings ?? [];
     return findings.filter((finding) =>
@@ -203,8 +227,10 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   readonly findingSeverities = computed(() =>
     unique((this.deterministic()?.findings ?? []).map((finding) => finding.severity))
   );
-  readonly resultAvailable = computed(() => Boolean(this.job()?.result));
-  readonly canExport = computed(() => Boolean(this.job()?.result && this.isTerminal(this.job()?.status)));
+  readonly resultAvailable = computed(() => Boolean(this.activeComponent()?.result));
+  readonly canExport = computed(() => Boolean(
+    this.job()?.components.some((component) => component.result) && this.isTerminal(this.job()?.status)
+  ));
 
   constructor() {
     this.modeControl.valueChanges
@@ -267,6 +293,8 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     this.stopPolling();
     this.jobError.set('');
     this.submitting.set(true);
+    this.activeComponentId.set('');
+    this.resetComponentViewState();
     this.resultOrigin.set('live');
     this.resultOriginLabel.set('');
     this.api
@@ -277,7 +305,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       )
       .subscribe({
         next: (job) => {
-          this.job.set(job);
+          this.applyJobSnapshot(job);
           this.startPolling(job.jobId);
         },
         error: (error: HttpErrorResponse) => {
@@ -285,6 +313,46 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
           this.jobError.set(this.errorMessage(error));
         }
       });
+  }
+
+  protected toggleSystemSelect(event: MouseEvent): void {
+    event.stopPropagation();
+    this.systemSelectOpen.update((open) => !open);
+  }
+
+  protected selectAllSystems(): void {
+    this.systemControl.setValue(this.inputOptions().systems.map((system) => system.id));
+  }
+
+  protected clearSystems(): void {
+    this.systemControl.setValue([]);
+  }
+
+  protected setSystemSelected(systemId: string, selected: boolean): void {
+    const next = new Set(this.systemControl.value);
+    if (selected) {
+      next.add(systemId);
+    } else {
+      next.delete(systemId);
+    }
+    this.systemControl.setValue(
+      this.inputOptions().systems
+        .map((system) => system.id)
+        .filter((candidate) => next.has(candidate))
+    );
+  }
+
+  protected isSystemSelected(systemId: string): boolean {
+    return this.systemControl.value.includes(systemId);
+  }
+
+  protected closeSystemSelect(): void {
+    this.systemSelectOpen.set(false);
+  }
+
+  @HostListener('document:click')
+  protected closeSystemSelectFromOutside(): void {
+    this.closeSystemSelect();
   }
 
   protected connectGithub(): void {
@@ -308,6 +376,14 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
 
   protected setFindingSeverityFilter(value: string): void {
     this.findingSeverityFilter.set(value);
+  }
+
+  protected selectComponent(systemId: string): void {
+    if (!this.job()?.components.some((component) => component.systemId === systemId)) {
+      return;
+    }
+    this.activeComponentId.set(systemId);
+    this.resetComponentViewState();
   }
 
   protected focusReference(referenceId: string): void {
@@ -370,7 +446,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
           next: (job) => {
             this.stopPolling();
             this.applyJobToForm(job);
-            this.job.set(job);
+            this.applyJobSnapshot(job, true);
             this.resultOrigin.set('imported');
             this.resultOriginLabel.set(file.name);
             this.jobError.set('');
@@ -386,7 +462,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
 
   protected exportResult(): void {
     const job = this.job();
-    if (!job?.result) {
+    if (!job?.components.some((component) => component.result)) {
       return;
     }
     const exportedAt = new Date().toISOString();
@@ -492,7 +568,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     if (
       this.modeControl.value !== 'DEEP'
       || !this.repositoryControl.value
-      || !this.systemControl.value
+      || this.selectedSystemIds().length === 0
     ) {
       this.preflightLoading.set(false);
       return;
@@ -501,7 +577,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     this.api
       .getDeepPreflight(
         this.repositoryControl.value,
-        this.systemControl.value,
+        this.selectedSystemIds()[0],
         this.codeRefControl.value
       )
       .pipe(
@@ -540,7 +616,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (job) => this.job.set(job),
+        next: (job) => this.applyJobSnapshot(job),
         error: (error: HttpErrorResponse) => {
           this.jobError.set(this.errorMessage(error));
           this.stopPolling();
@@ -578,7 +654,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       .subscribe({
         next: (job) => {
           this.applyJobToForm(job);
-          this.job.set(job);
+          this.applyJobSnapshot(job, true);
           this.resultOrigin.set('local');
           this.resultOriginLabel.set(detail.name || detail.analysisId);
         },
@@ -590,8 +666,8 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     if (!this.repositoryControl.value) {
       this.repositoryControl.setValue(options.repositories[0]?.id ?? '');
     }
-    if (!this.systemControl.value) {
-      this.systemControl.setValue(options.systems[0]?.id ?? '');
+    if (this.systemControl.value.length === 0) {
+      this.systemControl.setValue(options.systems.map((system) => system.id));
     }
     if (!this.sourceBranchControl.value) {
       this.sourceBranchControl.setValue(options.branches[0] ?? '');
@@ -606,12 +682,33 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   private applyJobToForm(job: RuntimeConfigurationVerificationJobStateSnapshot): void {
     this.modeControl.setValue(job.mode, { emitEvent: false });
     this.repositoryControl.setValue(job.repositoryId, { emitEvent: false });
-    this.systemControl.setValue(job.systemId, { emitEvent: false });
+    this.systemControl.setValue(job.systemIds, { emitEvent: false });
     this.sourceBranchControl.setValue(job.sourceBranch, { emitEvent: false });
     this.targetBranchControl.setValue(job.targetBranch, { emitEvent: false });
     this.codeRefControl.setValue(job.codeRef ?? '', { emitEvent: false });
     this.aiModelControl.setValue(job.aiModel ?? '', { emitEvent: false });
     this.reasoningEffortControl.setValue(job.reasoningEffort ?? '', { emitEvent: false });
+    this.bumpFormRevision();
+  }
+
+  private applyJobSnapshot(
+    job: RuntimeConfigurationVerificationJobStateSnapshot,
+    resetSelection = false
+  ): void {
+    if (resetSelection) {
+      this.activeComponentId.set('');
+      this.resetComponentViewState();
+    }
+    this.job.set(job);
+    if (!job.components.some((component) => component.systemId === this.activeComponentId())) {
+      this.activeComponentId.set(job.components[0]?.systemId ?? '');
+      this.resetComponentViewState();
+    }
+  }
+
+  private resetComponentViewState(): void {
+    this.findingSeverityFilter.set('ALL');
+    this.focusedReferenceId.set('');
   }
 
   private startRequest(): RuntimeConfigurationVerificationJobStartRequest {
@@ -619,7 +716,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     const request: RuntimeConfigurationVerificationJobStartRequest = {
       mode: this.modeControl.value,
       repositoryId: this.repositoryControl.value,
-      systemId: this.systemControl.value,
+      systemIds: this.selectedSystemIds(),
       sourceBranch: this.sourceBranchControl.value,
       targetBranch: this.targetBranchControl.value
     };

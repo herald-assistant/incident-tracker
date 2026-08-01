@@ -156,7 +156,7 @@ class RuntimeConfigurationCopilotRunRequestAssemblerTest {
         return new RuntimeConfigurationVerificationJobStartRequest(
                 mode,
                 "runtime-config",
-                "crm-api",
+                java.util.List.of("crm-api"),
                 "dev1",
                 "zt001",
                 "release-1",

@@ -78,7 +78,7 @@ public class RuntimeConfigurationAiArtifactService {
 
     private Map<String, Object> scope(RuntimeConfigurationDeterministicContext context) {
         var result = new LinkedHashMap<String, Object>();
-        result.put("formatVersion", 2);
+        result.put("formatVersion", 1);
         result.put("mode", "DEEP");
         result.put("repositoryId", context.repositoryId());
         result.put("systemId", context.systemId());
@@ -93,7 +93,7 @@ public class RuntimeConfigurationAiArtifactService {
 
     private String configurationTree(List<SanitizedConfigurationDocument> documents) {
         var result = new StringBuilder();
-        result.append("formatVersion: 2\n");
+        result.append("formatVersion: 1\n");
         result.append("documentColumns: [role, documentIndex, sourcePath, targetPath, ");
         result.append("sourcePresent, targetPresent, sourceProfileToken, targetProfileToken]\n");
         result.append("columns: [name, relation, sourceType, targetType, sensitivity, ");
@@ -164,7 +164,7 @@ public class RuntimeConfigurationAiArtifactService {
 
     private Map<String, Object> changes(RuntimeConfigurationDeterministicContext context) {
         var result = new LinkedHashMap<String, Object>();
-        result.put("formatVersion", 2);
+        result.put("formatVersion", 1);
         result.put("deterministicStatus", context.status());
         result.put("codes", codes());
         result.put("differenceColumns", List.of(
@@ -362,7 +362,7 @@ public class RuntimeConfigurationAiArtifactService {
         String result;
         do {
             result = json(Map.of(
-                    "formatVersion", 2,
+                    "formatVersion", 1,
                     "truncated", true,
                     "reason", "sanitized AI artifact character limit reached",
                     "originalCharacterCount", rendered.length(),

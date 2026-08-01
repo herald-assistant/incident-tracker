@@ -16,7 +16,7 @@ export type RuntimeConfigurationVerificationStatus =
 export interface RuntimeConfigurationVerificationJobStartRequest {
   mode: RuntimeConfigurationVerificationMode;
   repositoryId: string;
-  systemId: string;
+  systemIds: string[];
   sourceBranch: string;
   targetBranch: string;
   codeRef?: string;
@@ -504,8 +504,8 @@ export interface RuntimeConfigurationVerificationResult {
   status: RuntimeConfigurationVerificationStatus;
   mode: RuntimeConfigurationVerificationMode;
   deterministicResult: RuntimeConfigurationDeterministicContext;
-  configurationDiff: RuntimeConfigurationDiffProjection | null;
-  configurationDiffAnnotations?: RuntimeConfigurationDiffAnnotation[];
+  configurationDiff: RuntimeConfigurationDiffProjection;
+  configurationDiffAnnotations: RuntimeConfigurationDiffAnnotation[];
   aiSecondOpinion: RuntimeConfigurationAiSecondOpinion | null;
   agreement: RuntimeConfigurationAgreement | null;
   deepAnalysis: RuntimeConfigurationDeepContext | null;
@@ -514,16 +514,11 @@ export interface RuntimeConfigurationVerificationResult {
   usage: AnalysisAiUsage | null;
 }
 
-export interface RuntimeConfigurationVerificationJobStateSnapshot {
-  jobId: string;
-  mode: RuntimeConfigurationVerificationMode;
-  repositoryId: string;
+export interface RuntimeConfigurationComponentRunSnapshot {
+  componentRunId: string;
   systemId: string;
-  sourceBranch: string;
-  targetBranch: string;
-  codeRef: string | null;
-  aiModel: string | null;
-  reasoningEffort: string | null;
+  systemLabel: string | null;
+  configurationDirectory: string | null;
   status: string;
   currentStepCode: string | null;
   currentStepLabel: string | null;
@@ -539,6 +534,28 @@ export interface RuntimeConfigurationVerificationJobStateSnapshot {
   preparedPrompt: string | null;
   result: RuntimeConfigurationVerificationResult | null;
   report: AnalysisReport | null;
+}
+
+export interface RuntimeConfigurationVerificationJobStateSnapshot {
+  jobId: string;
+  mode: RuntimeConfigurationVerificationMode;
+  repositoryId: string;
+  systemIds: string[];
+  sourceBranch: string;
+  targetBranch: string;
+  codeRef: string | null;
+  aiModel: string | null;
+  reasoningEffort: string | null;
+  status: string;
+  currentStepCode: string | null;
+  currentStepLabel: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  steps: AnalysisJobStepResponse[];
+  components: RuntimeConfigurationComponentRunSnapshot[];
   imported: boolean;
 }
 

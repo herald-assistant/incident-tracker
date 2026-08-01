@@ -11,8 +11,9 @@ pomiedzy branchami srodowiskowymi przed wdrozeniem. Operator dostaje:
    code grounding i ownership/handoff,
 4. jawne ograniczenia widocznosci i status kompletnosci.
 
-Publiczny target to `systemId`. Configuration directory jest rozstrzygany z
-Operational Context, a repozytorium konfiguracji z backendowej allowlisty.
+Publiczny target joba to uporzadkowane `systemIds`. Configuration directory
+jest rozstrzygany niezaleznie dla kazdego systemu z Operational Context, a
+repozytorium konfiguracji z backendowej allowlisty.
 Domyslna lista branchy to `dev`, `dev2`, `uat`, `uat2`. Lista prezentowana
 przez input-options jest konfigurowana przez
 `features.runtime-configuration-verification.branches` w
@@ -31,10 +32,11 @@ GET  /api/runtime-configuration-verification/jobs/{jobId}
 POST /api/runtime-configuration-verification/imports
 ```
 
-Start joba przyjmuje tryb `BASIC` albo `DEEP`, repository id, `systemId` oraz
-source/target branch. `codeRef` i preferencje AI sa dozwolone tylko dla
-`DEEP`. Connection id, GitLab project path, tokeny i configuration directory
-nie sa swobodnym inputem klienta.
+Start joba przyjmuje tryb `BASIC` albo `DEEP`, repository id, niepusta liste
+unikalnych `systemIds` oraz source/target branch. Kolejnosc listy jest
+zachowana w snapshotach komponentow. `codeRef` i preferencje AI sa dozwolone
+tylko dla `DEEP`. Connection id, GitLab project path, tokeny i configuration
+directory nie sa swobodnym inputem klienta.
 
 Named connection `runtime-config` bierze wartosci bazowe z
 `integrations.gitlab.named.connections.runtime-config.base-url` oraz `token`.
@@ -46,6 +48,18 @@ Podczas aktualnego rollout readiness glowny formularz operatorski pozwala
 wybrac tylko `BASIC`. Opcja `DEEP` pozostaje widoczna jako disabled z badgem
 `SOON`; publiczny kontrakt backendu, Workbench oraz renderowanie zapisanych i
 importowanych wynikow `DEEP` pozostaja bez zmian.
+
+Pole `Komponent / internal-system` jest rozwijanym multi-selectem. Po
+zaladowaniu input-options wszystkie dostepne systemy sa zaznaczone. Operator
+moze zaznaczyc albo wyczysc cala liste oraz zmieniac pojedyncze checkboxy;
+pusty wybor blokuje start. Request zachowuje kolejnosc systemow z katalogu, a
+historia i import odtwarzaja zapisane `systemIds`.
+
+Wynik batcha jest prezentowany przez shared `AnalysisResultTabsComponent`.
+Zakladki zachowuja kolejnosc `systemIds`, pokazuja etykiete i status komponentu,
+a aktywny panel renderuje jego wlasny diff plikowy, findings, report i przebieg
+pracy. Blad jednego komponentu pozostaje lokalny dla jego zakladki i nie ukrywa
+poprawnych wynikow pozostalych komponentow.
 
 ## Przeplyw wspolny
 
@@ -66,10 +80,13 @@ flowchart TD
     MERGE --> RESULT
 ```
 
-Job publikuje kroki `SOURCE`, `PARSE`, `DIFF`, opcjonalne
-`OPERATIONAL_CONTEXT`, `CODE_GROUNDING`, `OWNERSHIP` oraz `AI`. Snapshot jest
-dostepny od stanu `QUEUED` i jest aktualizowany bez nakladajacych sie odczytow
-pollingu.
+Parent job publikuje postep calego batcha, a kazdy component snapshot publikuje
+wlasne kroki `SOURCE`, `PARSE`, `DIFF`, opcjonalne `OPERATIONAL_CONTEXT`,
+`CODE_GROUNDING`, `OWNERSHIP` oraz `AI`. Komponenty wykonuja sie rownolegle na
+feature-owned executorze z konfigurowalnym limitem, domyslnie `20`. Awaria
+jednego komponentu nie zatrzymuje pozostalych. Snapshot jest dostepny od stanu
+`QUEUED`, zachowuje kolejnosc `systemIds` i jest utrwalany bez nakladajacych
+sie zapisow.
 
 ## Deterministyczne zrodla i wynik
 
@@ -216,10 +233,12 @@ joba i aktualizowany wraz z postepem. `configurationDiff` zachowuje
 znormalizowane wartosci widoczne operatorowi, ale nie byte-identical pliki,
 komentarze ani token dostepowy GitLaba. Feature nie wspiera chat continuation.
 
-Export jest wersjonowany i read-only. Import waliduje wersje i nie tworzy
-kontynuowalnego runu. Import starszego rekordu bez `configurationDiff` uzywa
-fallbacku prezentacji. Rekordy projekcji maja redacted `toString`, aby
-przypadkowe logowanie DTO nie ujawnilo wartosci.
+Export V1 jest wersjonowany i read-only. Zawiera parent job oraz pelna liste
+component snapshots. Import akceptuje wylacznie kompletny kontrakt V1,
+waliduje zgodnosc i kolejnosc `systemIds` z komponentami oraz nie tworzy
+kontynuowalnego runu. Inne wersje i rekordy bez `configurationDiff` sa odrzucane bez
+migracji albo fallbacku prezentacji. Rekordy projekcji maja redacted
+`toString`, aby przypadkowe logowanie DTO nie ujawnilo wartosci.
 
 ## Architecture And Security Review
 

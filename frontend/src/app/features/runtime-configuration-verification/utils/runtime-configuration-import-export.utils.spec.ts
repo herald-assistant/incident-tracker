@@ -17,21 +17,25 @@ describe('runtime configuration import/export utils', () => {
     expect(envelope.payload.resultContract).toBe(
       'runtime-configuration-verification-result-v1'
     );
-    expect(envelope.payload.job.result?.deterministicResult.differences[0]?.path)
+    expect(envelope.payload.job.components[0]?.result?.deterministicResult.differences[0]?.path)
       .toBe('notifications.endpoint');
     expect(
-      envelope.payload.job.result?.configurationDiff?.files[0]
+      envelope.payload.job.components[0]?.result?.configurationDiff?.files[0]
         ?.documents[0]?.root.children[0]?.source.value
     ).toBe('https://notifications.dev.test');
-    expect(envelope.payload.job.result?.configurationDiffAnnotations?.[0]?.comment)
+    expect(envelope.payload.job.components[0]?.result?.configurationDiffAnnotations?.[0]?.comment)
       .toBe('Endpoint kieruje ruch do innego systemu.');
     expect(buildRuntimeConfigurationExportFileName(job))
-      .toBe('runtime-configuration-backend-system-dev1-to-zt001.json');
+      .toBe('runtime-configuration-1-components-dev1-to-zt001.json');
   });
 
   it('should reject an unfinished job', () => {
     expect(() => buildRuntimeConfigurationExportEnvelope(
-      { ...portableJob(), status: 'RUNNING', result: null },
+      {
+        ...portableJob(),
+        status: 'RUNNING',
+        components: [{ ...portableJob().components[0]!, status: 'RUNNING', result: null }]
+      },
       '2026-07-30T10:00:00Z'
     )).toThrow('Eksport wymaga zakończonego wyniku');
   });
@@ -42,7 +46,7 @@ function portableJob(): RuntimeConfigurationVerificationJobStateSnapshot {
     jobId: 'job-1',
     mode: 'DEEP',
     repositoryId: 'runtime-config',
-    systemId: 'backend/system',
+    systemIds: ['backend/system'],
     sourceBranch: 'dev1',
     targetBranch: 'zt001',
     codeRef: null,
@@ -57,12 +61,27 @@ function portableJob(): RuntimeConfigurationVerificationJobStateSnapshot {
     updatedAt: '2026-07-30T10:00:00Z',
     completedAt: '2026-07-30T10:00:00Z',
     steps: [],
-    contextSections: [],
-    toolEvidenceSections: [],
-    aiActivityEvents: [],
-    preparedPrompt: null,
-    result: portableResult(),
-    report: null,
+    components: [{
+      componentRunId: 'job-1:0',
+      systemId: 'backend/system',
+      systemLabel: 'Backend',
+      configurationDirectory: 'backend',
+      status: 'COMPLETED',
+      currentStepCode: null,
+      currentStepLabel: null,
+      errorCode: null,
+      errorMessage: null,
+      createdAt: '2026-07-30T09:59:00Z',
+      updatedAt: '2026-07-30T10:00:00Z',
+      completedAt: '2026-07-30T10:00:00Z',
+      steps: [],
+      contextSections: [],
+      toolEvidenceSections: [],
+      aiActivityEvents: [],
+      preparedPrompt: null,
+      result: portableResult(),
+      report: null
+    }],
     imported: false
   };
 }

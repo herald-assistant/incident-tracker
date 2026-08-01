@@ -10,6 +10,7 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.job.export.RuntimeCo
 import pl.mkn.tdw.features.runtimeconfigurationverification.job.export.RuntimeConfigurationVerificationSnapshotSanitizer;
 
 import java.util.Set;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -59,8 +60,18 @@ public class RuntimeConfigurationVerificationImportService {
             throw invalid("Unsupported Runtime Configuration Verification result contract.");
         }
         var job = envelope.payload().job();
-        if (job == null || job.result() == null || !TERMINAL_STATUSES.contains(job.status())) {
+        if (job == null
+                || job.components().stream().noneMatch(component -> component.result() != null)
+                || !TERMINAL_STATUSES.contains(job.status())) {
             throw invalid("Only a completed Runtime Configuration Verification result can be imported.");
+        }
+        if (job.systemIds().isEmpty()
+                || job.components().isEmpty()
+                || job.systemIds().size() != job.components().size()
+                || job.systemIds().stream().distinct().count() != job.systemIds().size()
+                || IntStream.range(0, job.systemIds().size()).anyMatch(index ->
+                !job.systemIds().get(index).equals(job.components().get(index).systemId()))) {
+            throw invalid("Runtime Configuration Verification export has an invalid batch structure.");
         }
     }
 

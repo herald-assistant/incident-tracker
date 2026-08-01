@@ -42,8 +42,8 @@ public class RuntimeConfigurationCopilotToolSessionContextFactory {
         hidden.put(RuntimeConfigurationCopilotToolContextKeys.FEATURE,
                 RuntimeConfigurationCopilotToolContextKeys.FEATURE_VALUE);
         hidden.put(RuntimeConfigurationCopilotToolContextKeys.MODE, RuntimeConfigurationVerificationMode.DEEP.name());
-        if (StringUtils.hasText(request.systemId())) {
-            hidden.put(RuntimeConfigurationCopilotToolContextKeys.SYSTEM_ID, request.systemId());
+        if (StringUtils.hasText(request.componentSystemId())) {
+            hidden.put(RuntimeConfigurationCopilotToolContextKeys.SYSTEM_ID, request.componentSystemId());
         }
         hidden.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
         hidden.put(AgentToolContextKeys.REPORT_FEATURE,

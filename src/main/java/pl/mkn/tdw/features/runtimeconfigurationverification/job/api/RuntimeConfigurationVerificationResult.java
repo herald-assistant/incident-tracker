@@ -12,6 +12,7 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.presentation
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 
 import java.util.List;
+import java.util.Objects;
 
 public record RuntimeConfigurationVerificationResult(
         RuntimeConfigurationVerificationStatus status,
@@ -28,9 +29,18 @@ public record RuntimeConfigurationVerificationResult(
 ) {
 
     public RuntimeConfigurationVerificationResult {
-        configurationDiffAnnotations = configurationDiffAnnotations != null
-                ? List.copyOf(configurationDiffAnnotations)
-                : List.of();
-        visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
+        deterministicResult = Objects.requireNonNull(
+                deterministicResult,
+                "deterministicResult is required"
+        );
+        configurationDiff = Objects.requireNonNull(configurationDiff, "configurationDiff is required");
+        configurationDiffAnnotations = List.copyOf(Objects.requireNonNull(
+                configurationDiffAnnotations,
+                "configurationDiffAnnotations are required"
+        ));
+        visibilityLimits = List.copyOf(Objects.requireNonNull(
+                visibilityLimits,
+                "visibilityLimits are required"
+        ));
     }
 }

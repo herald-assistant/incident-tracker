@@ -7,7 +7,6 @@ import {
   RuntimeConfigurationDiffNode,
   RuntimeConfigurationDiffProjection,
   RuntimeConfigurationDiffValue,
-  RuntimeConfigurationDifference,
   RuntimeConfigurationVerificationMode
 } from '../../models/runtime-configuration-verification.models';
 
@@ -57,8 +56,7 @@ interface InlineValueDiff {
 export class RuntimeConfigurationDiffRendererComponent {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  readonly projection = input<RuntimeConfigurationDiffProjection | null>(null);
-  readonly fallbackDifferences = input<RuntimeConfigurationDifference[]>([]);
+  readonly projection = input.required<RuntimeConfigurationDiffProjection>();
   readonly annotations = input<RuntimeConfigurationDiffAnnotation[]>([]);
   readonly mode = input<RuntimeConfigurationVerificationMode>('BASIC');
   readonly focusedReferenceId = input('');
@@ -81,9 +79,6 @@ export class RuntimeConfigurationDiffRendererComponent {
 
   readonly files = computed<ConfigurationRenderFile[]>(() => {
     const projection = this.projection();
-    if (!projection) {
-      return [];
-    }
     return projection.files
       .map((file, fileIndex) => this.renderFile(file, fileIndex))
       .filter((file) => this.view() === 'FULL' || file.changeCount > 0)
@@ -91,7 +86,7 @@ export class RuntimeConfigurationDiffRendererComponent {
   });
 
   readonly totalChanges = computed(() =>
-    this.projection()?.files.reduce((total, file) => total + this.changeCount(file), 0) ?? 0
+    this.projection().files.reduce((total, file) => total + this.changeCount(file), 0)
   );
 
   constructor() {

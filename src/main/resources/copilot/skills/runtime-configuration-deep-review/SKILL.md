@@ -1,6 +1,6 @@
 ---
 name: runtime-configuration-deep-review
-description: Gleboka druga opinia o rozjezdzie runtime configuration, laczaca kompaktowe sanitizowane artefakty v2 z przygotowanym Operational Context, code grounding i ownershipem wybranego internal-system.
+description: Gleboka druga opinia o rozjezdzie runtime configuration, laczaca kompaktowe sanitizowane artefakty v1 z przygotowanym Operational Context, code grounding i ownershipem wybranego internal-system.
 ---
 
 # Runtime Configuration DEEP Review
