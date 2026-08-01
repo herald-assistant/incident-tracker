@@ -30,7 +30,7 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
 
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
   `Incident Analysis`, `Flow Explorer`, `Change Verification` i
-  `Runtime Configuration Verification` oraz przyszle miejsce na Data
+  `Config Drift Verification` oraz przyszle miejsce na Data
   Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
@@ -120,7 +120,7 @@ pokazac zgodnosc, rozbieznosci i ograniczenia widocznosci. Dalsze inkrementy
 powinny wynikac z `../needs/change-verification.md` oraz osobno zatwierdzonych
 planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
 
-### Runtime Configuration Verification
+### Config Drift Verification
 
 Administrator porownuje runtime configuration wybranego `internal-system`
 pomiedzy branchami `devX` i `zt00X`. Wynik ma niemutowalny fundament

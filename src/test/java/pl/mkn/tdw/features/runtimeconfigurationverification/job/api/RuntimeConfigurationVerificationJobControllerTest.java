@@ -39,8 +39,8 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 RuntimeConfigurationVerificationMode.DEEP,
                 "runtime-config",
                 "crm-backend",
-                "dev1",
-                "zt001",
+                "dev12",
+                "uat345",
                 "release/2026.07",
                 "gpt-5.4",
                 "medium"
@@ -54,8 +54,8 @@ class RuntimeConfigurationVerificationJobControllerTest {
                                   "mode": "DEEP",
                                   "repositoryId": " runtime-config ",
                                   "systemId": " crm-backend ",
-                                  "sourceBranch": " dev1 ",
-                                  "targetBranch": " zt001 ",
+                                  "sourceBranch": " dev12 ",
+                                  "targetBranch": " uat345 ",
                                   "codeRef": " release/2026.07 ",
                                   "model": " gpt-5.4 ",
                                   "reasoningEffort": " medium "
@@ -66,8 +66,8 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 .andExpect(jsonPath("$.mode").value("DEEP"))
                 .andExpect(jsonPath("$.repositoryId").value("runtime-config"))
                 .andExpect(jsonPath("$.systemId").value("crm-backend"))
-                .andExpect(jsonPath("$.sourceBranch").value("dev1"))
-                .andExpect(jsonPath("$.targetBranch").value("zt001"))
+                .andExpect(jsonPath("$.sourceBranch").value("dev12"))
+                .andExpect(jsonPath("$.targetBranch").value("uat345"))
                 .andExpect(jsonPath("$.codeRef").value("release/2026.07"))
                 .andExpect(jsonPath("$.aiModel").value("gpt-5.4"))
                 .andExpect(jsonPath("$.reasoningEffort").value("medium"))
@@ -85,7 +85,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                 "runtime-config",
                 "crm-backend",
                 "dev2",
-                "zt004",
+                "uat2",
                 null,
                 null,
                 null
@@ -100,7 +100,7 @@ class RuntimeConfigurationVerificationJobControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemId": "crm-backend",
                                   "sourceBranch": "dev2",
-                                  "targetBranch": "zt004"
+                                  "targetBranch": "uat2"
                                 }
                                 """))
                 .andExpect(status().isAccepted())
@@ -165,11 +165,11 @@ class RuntimeConfigurationVerificationJobControllerTest {
     }
 
     @Test
-    void shouldRejectUnsupportedBranch() throws Exception {
+    void shouldRejectUnsafeBranch() throws Exception {
         mockMvc.perform(post("/api/runtime-configuration-verification/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequest("""
-                                "sourceBranch": "dev10",
+                                "sourceBranch": "dev@unsafe",
                                 "targetBranch": "zt001"
                                 """)))
                 .andExpect(status().isBadRequest())

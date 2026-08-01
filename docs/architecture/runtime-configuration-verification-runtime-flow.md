@@ -1,4 +1,4 @@
-# Runtime Configuration Verification Runtime Flow
+# Config Drift Verification Runtime Flow
 
 ## Cel
 
@@ -13,7 +13,13 @@ pomiedzy branchami srodowiskowymi przed wdrozeniem. Operator dostaje:
 
 Publiczny target to `systemId`. Configuration directory jest rozstrzygany z
 Operational Context, a repozytorium konfiguracji z backendowej allowlisty.
-Obslugiwane branche maja format `devX` i `zt00X`, gdzie `X` jest jedna cyfra.
+Domyslna lista branchy to `dev`, `dev2`, `uat`, `uat2`. Lista prezentowana
+przez input-options jest konfigurowana przez
+`features.runtime-configuration-verification.branches` w
+`application.properties`; glowny formularz i Tool Workbench korzystaja z tego
+samego kontraktu opcji. Walidacja requestu dopuszcza bezpieczne nazwy refow Git,
+z rodzin `dev`, `test`, `uat` i `zt`, opcjonalnie zakonczone wielocyfrowym
+numerem. Brak sufiksu pozostaje dozwolony dla domyslnych `dev` i `uat`.
 
 ## Publiczne wejscia
 
@@ -29,6 +35,17 @@ Start joba przyjmuje tryb `BASIC` albo `DEEP`, repository id, `systemId` oraz
 source/target branch. `codeRef` i preferencje AI sa dozwolone tylko dla
 `DEEP`. Connection id, GitLab project path, tokeny i configuration directory
 nie sa swobodnym inputem klienta.
+
+Named connection `runtime-config` bierze wartosci bazowe z
+`integrations.gitlab.named.connections.runtime-config.base-url` oraz `token`.
+Oba pola moga byc lokalnie nadpisane w Workspace Settings. Zapis aktualizuje
+ten sam properties bean, ktory przy kazdym odczycie rozwiazuje
+`GitLabNamedConnectionRegistry`, dlatego nowa wartosc obowiazuje bez restartu.
+
+Podczas aktualnego rollout readiness glowny formularz operatorski pozwala
+wybrac tylko `BASIC`. Opcja `DEEP` pozostaje widoczna jako disabled z badgem
+`SOON`; publiczny kontrakt backendu, Workbench oraz renderowanie zapisanych i
+importowanych wynikow `DEEP` pozostaja bez zmian.
 
 ## Przeplyw wspolny
 

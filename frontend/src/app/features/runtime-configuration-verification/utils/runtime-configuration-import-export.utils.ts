@@ -8,7 +8,7 @@ export function buildRuntimeConfigurationExportEnvelope(
   exportedAt: string
 ): RuntimeConfigurationExportEnvelope {
   if (!job.result || !isTerminal(job.status)) {
-    throw new Error('Eksport wymaga zakończonego wyniku Runtime Configuration Verification.');
+    throw new Error('Eksport wymaga zakończonego wyniku Config Drift Verification.');
   }
   return {
     schema: 'tdw.runtime-configuration-verification-export',

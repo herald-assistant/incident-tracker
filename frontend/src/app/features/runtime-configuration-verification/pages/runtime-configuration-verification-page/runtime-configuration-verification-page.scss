@@ -78,6 +78,7 @@
 }
 
 .mode-option {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -90,8 +91,13 @@
   cursor: pointer;
 }
 
-.mode-option:hover {
+.mode-option:hover:not(:disabled) {
   border-color: var(--color-primary);
+}
+
+.mode-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
 .mode-option--active {
@@ -100,7 +106,7 @@
   background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
 }
 
-.mode-option > span:last-child {
+.mode-option__copy {
   display: grid;
   gap: 3px;
 }
@@ -108,6 +114,20 @@
 .mode-option small {
   color: var(--text-muted);
   line-height: 1.35;
+}
+
+.mode-option .mode-option__badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--text-soft);
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: normal;
+  text-transform: uppercase;
 }
 
 .runtime-form-grid {

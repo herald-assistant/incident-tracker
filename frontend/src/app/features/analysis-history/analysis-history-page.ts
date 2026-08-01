@@ -235,7 +235,7 @@ export class AnalysisHistoryPageComponent {
       return 'Change Verification';
     }
     if (feature === 'runtime-configuration-verification') {
-      return 'Runtime Configuration Verification';
+      return 'Config Drift Verification';
     }
     return feature
       ? feature
@@ -257,7 +257,7 @@ export class AnalysisHistoryPageComponent {
       return 'fact_check';
     }
     if (feature === 'runtime-configuration-verification') {
-      return 'difference';
+      return 'build_circle';
     }
     return 'analytics';
   }

@@ -391,7 +391,7 @@ Typowe uzycie:
 Operational context moze uzasadnic, gdzie szukac dalej. Nie jest samodzielnym
 dowodem root cause ani zamiennikiem deterministic evidence.
 
-## Runtime Configuration Verification Usage
+## Config Drift Verification Usage
 
 Publicznym targetem weryfikacji jest kanoniczny `system` o
 `systemType=internal-system`. Configuration directory jest rozstrzygany z

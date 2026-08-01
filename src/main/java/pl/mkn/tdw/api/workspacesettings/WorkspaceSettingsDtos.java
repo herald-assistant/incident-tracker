@@ -22,6 +22,7 @@ public final class WorkspaceSettingsDtos {
             WorkspaceSettingsCopilotResponse copilot,
             WorkspaceSettingsJiraResponse jira,
             WorkspaceSettingsGitLabResponse gitLab,
+            WorkspaceSettingsRuntimeConfigGitLabResponse runtimeConfigGitLab,
             WorkspaceSettingsElasticsearchResponse elasticsearch,
             WorkspaceSettingsDynatraceResponse dynatrace
     ) {
@@ -46,6 +47,12 @@ public final class WorkspaceSettingsDtos {
     public record WorkspaceSettingsGitLabResponse(
             WorkspaceSettingsFieldResponse baseUrl,
             WorkspaceSettingsFieldResponse group,
+            WorkspaceSettingsFieldResponse token
+    ) {
+    }
+
+    public record WorkspaceSettingsRuntimeConfigGitLabResponse(
+            WorkspaceSettingsFieldResponse baseUrl,
             WorkspaceSettingsFieldResponse token
     ) {
     }
@@ -79,6 +86,7 @@ public final class WorkspaceSettingsDtos {
             WorkspaceSettingsCopilotUpdate copilot,
             WorkspaceSettingsJiraUpdate jira,
             WorkspaceSettingsGitLabUpdate gitLab,
+            WorkspaceSettingsRuntimeConfigGitLabUpdate runtimeConfigGitLab,
             WorkspaceSettingsElasticsearchUpdate elasticsearch,
             WorkspaceSettingsDynatraceUpdate dynatrace
     ) {
@@ -103,6 +111,12 @@ public final class WorkspaceSettingsDtos {
     public record WorkspaceSettingsGitLabUpdate(
             String baseUrl,
             String group,
+            String token
+    ) {
+    }
+
+    public record WorkspaceSettingsRuntimeConfigGitLabUpdate(
+            String baseUrl,
             String token
     ) {
     }

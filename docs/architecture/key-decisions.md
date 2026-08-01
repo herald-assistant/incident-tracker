@@ -61,7 +61,9 @@ Decyzje:
   podobnych ustawien.
 - Zakres Workspace Settings obejmuje `app.ui.title`, podstawowe connection
   settings GitLaba (`analysis.gitlab.base-url`, `analysis.gitlab.group`,
-  `analysis.gitlab.token`), Elasticsearch (`analysis.elasticsearch.base-url`,
+  `analysis.gitlab.token`) oraz GitLaba konfiguracji runtime
+  (`integrations.gitlab.named.connections.runtime-config.base-url`,
+  `integrations.gitlab.named.connections.runtime-config.token`), Elasticsearch (`analysis.elasticsearch.base-url`,
   `analysis.elasticsearch.kibana-space-id`,
   `analysis.elasticsearch.index-pattern`,
   `analysis.elasticsearch.authorization-header`) oraz Dynatrace
@@ -778,7 +780,7 @@ runtime, a testy skladaja ja przez `AnalysisJobFacadeTestCreator`.
 
 ## 26. Weryfikacja konfiguracji rozdziela fakty od drugiej opinii AI
 
-Runtime Configuration Verification ma dwie niezalezne warstwy wyniku.
+Config Drift Verification ma dwie niezalezne warstwy wyniku.
 Deterministyczny parser/diff jest zrodlem faktow i pozostaje niemutowalny dla
 AI. Jeden deterministic build tworzy sanitizowany context oraz operatorski
 `configurationDiff` per plik. `BASIC` publikuje tylko wynik deterministyczny.

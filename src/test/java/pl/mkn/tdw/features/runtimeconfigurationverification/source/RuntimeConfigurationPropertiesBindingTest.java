@@ -29,7 +29,11 @@ class RuntimeConfigurationPropertiesBindingTest {
                 "features.runtime-configuration-verification.repositories.runtime-config.connection-id",
                 "config-one",
                 "features.runtime-configuration-verification.repositories.runtime-config.project-path",
-                "platform/runtime-config"
+                "platform/runtime-config",
+                "features.runtime-configuration-verification.branches[0]",
+                "dev",
+                "features.runtime-configuration-verification.branches[1]",
+                "uat2"
         ));
         var binder = new Binder(source);
         var namedConnections = new GitLabNamedConnectionsProperties();
@@ -55,5 +59,6 @@ class RuntimeConfigurationPropertiesBindingTest {
                 "platform/runtime-config",
                 repositories.getRepositories().get("runtime-config").getProjectPath()
         );
+        assertEquals(java.util.List.of("dev", "uat2"), repositories.getBranches());
     }
 }

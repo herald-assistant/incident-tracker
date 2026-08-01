@@ -1,4 +1,4 @@
-# Runtime Configuration Verification - Business Need
+# Config Drift Verification - Business Need
 
 ## Cel dokumentu
 
@@ -10,12 +10,12 @@ analizy.
 
 Konfiguracja uruchomieniowa systemu jest utrzymywana w dedykowanym
 repozytorium GitLaba, innym niz repozytoria kodu uzywane do budowania paczek.
-Kazde srodowisko ma osobny branch. Obslugiwane nazwy branchy maja postac:
+Kazde srodowisko ma osobny branch. Domyslna lista branchy testowych to:
 
-- `devX`,
-- `zt00X`,
-
-gdzie `X` jest pojedyncza cyfra.
+- `dev`,
+- `dev2`,
+- `uat`,
+- `uat2`.
 
 Repozytorium ma wspolny plik `global.var` w katalogu glownym. Kazdy komponent
 wdrozeniowy ma wlasny katalog, np. `backend/`, z:
@@ -72,10 +72,14 @@ Uzytkownik wskazuje:
 - opcjonalny ref kodu dla trybu `DEEP`, jezeli uzytkownik chce analizowac
   konkretna wersje zamiast jawnie oznaczonego domyslnego refu repozytorium.
 
-Oba branche musza byc roznymi branchami zgodnymi z formatem `devX` albo
-`zt00X`. Potrzeba obejmuje porownania miedzy dowolnymi dwoma obslugiwanymi
-branchami; system nie powinien zgadywac kierunku promocji tylko na podstawie
-nazwy.
+Oba branche musza byc roznymi branchami dostepnymi na skonfigurowanej liscie.
+Potrzeba obejmuje porownania miedzy dowolnymi dwoma obslugiwanymi branchami;
+system nie powinien zgadywac kierunku promocji tylko na podstawie nazwy.
+
+Lista branchy prezentowana operatorowi ma byc konfigurowalna po stronie
+aplikacji. Dozwolone nazwy naleza do rodzin `dev`, `test`, `uat` albo `zt` i
+moga miec wielocyfrowy sufiks, np. `dev12`, `test3`, `uat20`, `zt7`. Brak
+sufiksu pozostaje dozwolony dla domyslnych `dev` i `uat`.
 
 `BASIC` nie wymaga tokena Copilota ani preferencji modelu. `model` i
 `reasoningEffort` sa istotne tylko dla `DEEP` i nie powinny byc pokazywane ani
@@ -312,7 +316,7 @@ anonimizacji. Nie moze sugerowac, ze `BASIC` przygotowuje albo wysyla prompt.
 Repozytorium konfiguracji zawiera wartosci i referencje, do ktorych operator
 ma dostep swoim tokenem GitLaba. Prawdziwe sekrety sa przechowywane w Vault i
 podstawiane w runtime; feature nie laczy sie z Vault ani nie odczytuje ich
-tresci. Feature obsluguje wylacznie testowe branche `devX` i `zt00X`; zakres
+tresci. Feature obsluguje wylacznie skonfigurowane branche testowe; zakres
 produkcyjny nie jest obslugiwany.
 
 Wymagania:
@@ -420,8 +424,8 @@ Typowy moment uzycia:
 - automatyczne wdrozenie albo zablokowanie wdrozenia,
 - zapis lub automatyczna naprawa plikow w GitLabie,
 - porownanie paczek binarnych albo kodu aplikacji,
-- porownanie konfiguracji produkcyjnej albo branchy innych niz `devX` i
-  `zt00X`,
+- porownanie konfiguracji produkcyjnej albo branchy spoza skonfigurowanego
+  zakresu testowego,
 - pelna analiza calego systemu niezalezna od zmienionych kluczy
   konfiguracyjnych,
 - odczyt faktycznej konfiguracji z uruchomionych podow, maszyn lub managera

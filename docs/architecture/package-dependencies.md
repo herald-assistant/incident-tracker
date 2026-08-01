@@ -31,8 +31,8 @@ feature analityczny
   -> local workspace
 ```
 
-Incident Analysis, Flow Explorer, Change Verification i Runtime Configuration
-Verification sa rodzenstwem. Zaden z nich nie jest generycznym core dla
+Incident Analysis, Flow Explorer, Change Verification i Config Drift
+Varification sa rodzenstwem. Zaden z nich nie jest generycznym core dla
 pozostalych.
 
 ## Docelowe warstwy backendu
@@ -252,7 +252,7 @@ Feature pozostaje composition rootem swojego use case'u. Platforma i tools
 wykonuja przekazana konfiguracje; nie rekonstruuja decyzji feature'a z nazw
 tooli, evidence albo endpointu.
 
-Runtime Configuration Verification realizuje ten graf bez dodatkowej warstwy
+Config Drift Verification realizuje ten graf bez dodatkowej warstwy
 posredniej: feature posiada parsing/diff, orchestration, prompt, skille,
 policy, persistence codec i API; korzysta z nazwanej integracji GitLab dla
 repozytorium konfiguracji, neutralnego GitLaba i Operational Context dla

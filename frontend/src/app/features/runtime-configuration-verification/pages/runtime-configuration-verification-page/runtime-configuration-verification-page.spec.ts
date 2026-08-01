@@ -86,6 +86,22 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(compiled.textContent).not.toContain('Reasoning effort');
     expect(compiled.textContent).not.toContain('Preferowany ref kodu');
     expect(runButton?.disabled).toBe(false);
+    expect(buttonContaining(compiled, 'Basic')?.querySelector('.mode-option__copy')).not.toBeNull();
+    expect(api.getDeepPreflight).not.toHaveBeenCalled();
+  });
+
+  it('should expose DEEP as coming soon without allowing the operator to select it', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const deepButton = buttonContaining(compiled, 'Deep');
+
+    expect(deepButton?.disabled).toBe(true);
+    expect(deepButton?.getAttribute('aria-label')).toBe('Deep — wkrótce');
+    expect(deepButton?.querySelector('.mode-option__badge')?.textContent?.trim()).toBe('Soon');
+
+    deepButton?.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modeControl.value).toBe('BASIC');
     expect(api.getDeepPreflight).not.toHaveBeenCalled();
   });
 
@@ -133,7 +149,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
 
   it('should show the DEEP blocker and prevent starting the job', () => {
     api.getDeepPreflight.mockReturnValue(of(blockedPreflight()));
-    buttonContaining(fixture.nativeElement, 'Deep')?.click();
+    fixture.componentInstance.modeControl.setValue('DEEP');
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -163,7 +179,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(compiled.textContent).not.toContain('Połącz GitHub przed analizą');
     expect(buttonContaining(compiled, 'Run verification')?.disabled).toBe(false);
 
-    buttonContaining(compiled, 'Deep')?.click();
+    fixture.componentInstance.modeControl.setValue('DEEP');
     fixture.detectChanges();
     compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Połącz GitHub przed analizą');
@@ -179,6 +195,10 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
   });
 
   it('should start DEEP verification and render partial deterministic and AI results', () => {
+    (fixture.componentInstance as unknown as {
+      deepModeSelectionDisabled: { set: (value: boolean) => void };
+    }).deepModeSelectionDisabled.set(false);
+    fixture.detectChanges();
     buttonContaining(fixture.nativeElement, 'Deep')?.click();
     fixture.componentInstance.codeRefControl.setValue('release/42');
     fixture.detectChanges();

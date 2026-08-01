@@ -17,6 +17,7 @@ import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceJiraSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceRuntimeConfigGitLabSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspacePaths;
@@ -161,6 +162,10 @@ class LocalWorkspaceStoreTest {
                         "platform/backend",
                         "glpat_secret"
                 ),
+                new LocalWorkspaceRuntimeConfigGitLabSettings(
+                        "https://runtime-config.example.com",
+                        "glpat_runtime_config_secret"
+                ),
                 new LocalWorkspaceElasticsearchSettings(
                         "https://elastic.example.com",
                         "default",
@@ -182,6 +187,8 @@ class LocalWorkspaceStoreTest {
         assertTrue(settingsJson.contains("\"copilot\""));
         assertTrue(settingsJson.contains("\"localGithubToken\" : \"ghu_copilot_secret\""));
         assertTrue(settingsJson.contains("\"token\" : \"glpat_secret\""));
+        assertTrue(settingsJson.contains("\"runtimeConfigGitLab\""));
+        assertTrue(settingsJson.contains("\"token\" : \"glpat_runtime_config_secret\""));
         assertTrue(settingsJson.contains("\"elasticsearch\""));
         assertTrue(settingsJson.contains("\"indexPattern\" : \"logs-*\""));
         assertTrue(settingsJson.contains("\"authorizationHeader\" : \"Bearer elastic-secret\""));
@@ -194,6 +201,8 @@ class LocalWorkspaceStoreTest {
         assertEquals("https://gitlab.example.com", settings.gitLab().baseUrl());
         assertEquals("platform/backend", settings.gitLab().group());
         assertEquals("glpat_secret", settings.gitLab().token());
+        assertEquals("https://runtime-config.example.com", settings.runtimeConfigGitLab().baseUrl());
+        assertEquals("glpat_runtime_config_secret", settings.runtimeConfigGitLab().token());
         assertEquals("https://elastic.example.com", settings.elasticsearch().baseUrl());
         assertEquals("default", settings.elasticsearch().kibanaSpaceId());
         assertEquals("logs-*", settings.elasticsearch().indexPattern());

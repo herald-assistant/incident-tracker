@@ -56,7 +56,7 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__breadcrumb')).toBeNull();
     expect(compiled.textContent).toContain('Sprawdź incydent');
     expect(compiled.textContent).toContain('Flow Explorer');
-    expect(compiled.textContent).toContain('Runtime Configuration Verification');
+    expect(compiled.textContent).toContain('Config Drift Verification');
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
@@ -160,6 +160,7 @@ describe('App', () => {
     expect(compiled.textContent).toContain('tdw-data/settings.json');
     expect(compiled.textContent).toContain('Copilot');
     expect(compiled.textContent).toContain('Jira');
+    expect(compiled.textContent).toContain('Config Drift GitLab');
     expect(compiled.textContent).toContain('Elasticsearch');
     expect(compiled.textContent).toContain('Dynatrace');
     expect(compiled.querySelector('.workspace-settings-baseline')).toBeNull();
@@ -183,6 +184,8 @@ describe('App', () => {
       'CUSTOM',
       'CUSTOM',
       'CUSTOM',
+      'CUSTOM',
+      'CUSTOM',
       'DEFAULT',
       'CUSTOM',
       'CUSTOM',
@@ -201,6 +204,8 @@ describe('App', () => {
       'Default: https://gitlab.example.com',
       'Default: platform/app',
       '',
+      'Default: https://runtime-config.app',
+      '',
       'Default: https://elastic.example.com',
       'Default: default',
       'Default: logs-*',
@@ -214,6 +219,8 @@ describe('App', () => {
       false,
       true,
       false,
+      false,
+      true,
       false,
       true,
       false,
@@ -232,6 +239,8 @@ describe('App', () => {
       'Restore default for Jira personal access token',
       'Restore default for Group',
       'Restore default for Token',
+      'Restore default for Config Drift GitLab Base URL',
+      'Restore default for Config Drift GitLab token',
       'Restore default for Elasticsearch Base URL',
       'Restore default for Index pattern',
       'Restore default for Authorization header',
@@ -243,6 +252,8 @@ describe('App', () => {
         .queryAll(By.css('.workspace-settings-field-reset-button'))
         .map((element) => element.injector.get(MatTooltip).message)
     ).toEqual([
+      'Restore default',
+      'Restore default',
       'Restore default',
       'Restore default',
       'Restore default',
@@ -277,13 +288,15 @@ describe('App', () => {
       'DEFAULT',
       'CUSTOM',
       'CUSTOM',
+      'CUSTOM',
+      'CUSTOM',
       'DEFAULT',
       'CUSTOM',
       'CUSTOM',
       'CUSTOM',
       'CUSTOM'
     ]);
-    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(8);
+    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(10);
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -574,15 +587,20 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-runtime-configuration-verification-page')).not.toBeNull();
     expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
-      'Runtime Configuration Verification'
+      'Config Drift Verification'
     );
     expect(compiled.textContent).toContain('Porównaj konfigurację środowisk');
     expect(compiled.querySelector('app-runtime-configuration-verification-page button')).not.toBeNull();
     expect(
       compiled.querySelector(
-        'a.app-shell__nav-item[aria-label="Runtime Configuration Verification"]'
+        'a.app-shell__nav-item[aria-label="Config Drift Verification"]'
       )
     ).not.toBeNull();
+    expect(
+      compiled.querySelector(
+        'a.app-shell__nav-item[aria-label="Config Drift Verification"] .material-symbols-outlined'
+      )?.textContent?.trim()
+    ).toBe('build_circle');
   });
 
   it('should render the Runtime Configuration Pipeline in Tool Workbench', async () => {
@@ -742,6 +760,24 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           value: 'glpat_secret',
           applicationValue: '',
           workspaceValue: 'glpat_secret',
+          source: 'WORKSPACE_SETTINGS',
+          secret: true
+        }
+      },
+      runtimeConfigGitLab: {
+        baseUrl: {
+          propertyKey: 'integrations.gitlab.named.connections.runtime-config.base-url',
+          value: 'https://runtime-config.workspace.example.com',
+          applicationValue: 'https://runtime-config.app',
+          workspaceValue: 'https://runtime-config.workspace.example.com',
+          source: 'WORKSPACE_SETTINGS',
+          secret: false
+        },
+        token: {
+          propertyKey: 'integrations.gitlab.named.connections.runtime-config.token',
+          value: 'glpat_runtime_config_secret',
+          applicationValue: '',
+          workspaceValue: 'glpat_runtime_config_secret',
           source: 'WORKSPACE_SETTINGS',
           secret: true
         }

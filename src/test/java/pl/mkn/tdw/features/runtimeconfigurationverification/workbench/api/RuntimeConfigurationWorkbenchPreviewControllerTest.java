@@ -53,8 +53,8 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                 RuntimeConfigurationVerificationMode.BASIC,
                 "runtime-config",
                 "crm-api",
-                "dev1",
-                "zt001",
+                "test12",
+                "zt345",
                 null
         );
         when(previewService.preview(request)).thenReturn(response(false));
@@ -66,8 +66,8 @@ class RuntimeConfigurationWorkbenchPreviewControllerTest {
                                   "mode": "BASIC",
                                   "repositoryId": " runtime-config ",
                                   "systemId": " crm-api ",
-                                  "sourceBranch": " dev1 ",
-                                  "targetBranch": " zt001 "
+                                  "sourceBranch": " test12 ",
+                                  "targetBranch": " zt345 "
                                 }
                                 """))
                 .andExpect(status().isOk())

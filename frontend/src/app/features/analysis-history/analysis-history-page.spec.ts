@@ -39,6 +39,18 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('analysis-1');
   });
 
+  it('should use the Config Drift Verification product label and icon for stored runs', async () => {
+    const { fixture } = await createComponent();
+    const component = fixture.componentInstance as unknown as {
+      featureLabel: (feature: string) => string;
+      featureIcon: (feature: string) => string;
+    };
+
+    expect(component.featureLabel('runtime-configuration-verification'))
+      .toBe('Config Drift Verification');
+    expect(component.featureIcon('runtime-configuration-verification')).toBe('build_circle');
+  });
+
   it('should keep history action labels in tooltips instead of visible button text', async () => {
     const { fixture } = await createComponent();
 

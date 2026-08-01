@@ -39,7 +39,7 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
    naprawy, weryfikacji albo przekazania dalej.
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification i
-Runtime Configuration Verification.
+Config Drift Verification.
 Kolejne rodziny moga obejmowac functional logic explorer oraz
 natural-language data diagnostics. Szczegolowy kierunek produktu jest opisany
 w `product-direction.md`.
@@ -60,8 +60,10 @@ Na dzisiaj projekt ma:
   importu i eksportu zapisu zakonczonej analizy jako JSON,
 - ekran `GET /runtime-configuration-verification` do porownania konfiguracji
   `internal-system` pomiedzy branchami `devX` i `zt00X`; `BASIC` pokazuje
-  wylacznie deterministyczny diff per plik, a `DEEP` dodaje oddzielna
-  interpretacje AI,
+  wylacznie deterministyczny diff per plik, a zaimplementowany `DEEP` dodaje
+  oddzielna interpretacje AI; podczas aktualnego rollout readiness nowy wybor
+  `DEEP` w glownym formularzu jest tymczasowo disabled i oznaczony `SOON`,
+  natomiast zapisane/importowane wyniki `DEEP` nadal sa renderowane,
 - w ekranie `GET /incident-analysis` start analizy ma wybor zrodla logow:
   Elasticsearch po `correlationId` albo upload CSV; gdy konfiguracja
   Elasticsearch/Kibana jest niepelna, sciezka `correlationId` jest zablokowana,
@@ -142,8 +144,10 @@ Na dzisiaj projekt ma:
   analizy z logow pobranych po `correlationId` albo z zalaczonego CSV.
 - `GET /runtime-configuration-verification`
   Angularowy workspace porownania konfiguracji runtime. Formularz wybiera
-  repozytorium, `internal-system`, branch zrodlowy/docelowy, tryb
-  `BASIC/DEEP` oraz opcjonalny `codeRef`.
+  repozytorium, `internal-system` i branch zrodlowy/docelowy. `BASIC` jest
+  aktualnie jedynym trybem mozliwym do wybrania; widoczny `DEEP` ma disabled
+  affordance `SOON`. Backendowy kontrakt i prezentacja zapisanych wynikow
+  `DEEP` pozostaja dostepne.
 - `GET /api/runtime-configuration-verification/input-options`
   Zwraca dozwolone repozytoria konfiguracji, systemy, branche i tryby bez
   ujawniania connection credentials.
@@ -187,7 +191,8 @@ Na dzisiaj projekt ma:
   `${tdw.workspace.directory}/settings.json`. Aktualny zakres obejmuje
   `app.ui.title`, lokalny token Copilota
   (`analysis.ai.copilot.auth.local.github-token`), podstawowe connection
-  settings GitLaba, Elasticsearch i Dynatrace oraz sekrety tych integracji.
+  settings głównego GitLaba i named connection `runtime-config`, Elasticsearch
+  i Dynatrace oraz sekrety tych integracji.
 - `GET /api/analysis/jobs/input-options`
   Feature-owned endpoint dla UI startu analizy. Zwraca dostepne zrodla logow i
   powod blokady Elasticsearch, jezeli brakuje wymaganej konfiguracji

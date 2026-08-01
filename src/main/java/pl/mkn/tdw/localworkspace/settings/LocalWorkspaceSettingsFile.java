@@ -7,12 +7,13 @@ public record LocalWorkspaceSettingsFile(
         LocalWorkspaceCopilotSettings copilot,
         LocalWorkspaceJiraSettings jira,
         LocalWorkspaceGitLabSettings gitLab,
+        LocalWorkspaceRuntimeConfigGitLabSettings runtimeConfigGitLab,
         LocalWorkspaceElasticsearchSettings elasticsearch,
         LocalWorkspaceDynatraceSettings dynatrace
 ) {
 
     public static final String SCHEMA = "tdw.workspace-settings";
-    public static final int VERSION = 5;
+    public static final int VERSION = 6;
 
     public LocalWorkspaceSettingsFile {
         if (schema == null || schema.isBlank()) {
@@ -33,6 +34,9 @@ public record LocalWorkspaceSettingsFile(
         if (gitLab == null) {
             gitLab = LocalWorkspaceGitLabSettings.empty();
         }
+        if (runtimeConfigGitLab == null) {
+            runtimeConfigGitLab = LocalWorkspaceRuntimeConfigGitLabSettings.empty();
+        }
         if (elasticsearch == null) {
             elasticsearch = LocalWorkspaceElasticsearchSettings.empty();
         }
@@ -49,6 +53,7 @@ public record LocalWorkspaceSettingsFile(
                 LocalWorkspaceCopilotSettings.empty(),
                 LocalWorkspaceJiraSettings.empty(),
                 LocalWorkspaceGitLabSettings.empty(),
+                LocalWorkspaceRuntimeConfigGitLabSettings.empty(),
                 LocalWorkspaceElasticsearchSettings.empty(),
                 LocalWorkspaceDynatraceSettings.empty()
         );

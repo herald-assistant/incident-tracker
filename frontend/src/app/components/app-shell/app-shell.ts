@@ -81,9 +81,9 @@ const NAV_GROUPS: NavGroup[] = [
         reloadOnActiveClick: true
       },
       {
-        label: 'Runtime Configuration Verification',
+        label: 'Config Drift Verification',
         route: '/runtime-configuration-verification',
-        icon: 'difference',
+        icon: 'build_circle',
         reloadOnActiveClick: true
       },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }

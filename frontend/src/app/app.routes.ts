@@ -80,7 +80,7 @@ export const routes: Routes = [
           ).then((module) => module.RuntimeConfigurationVerificationPageComponent),
         data: {
           section: 'Analysis Features',
-          title: 'Runtime Configuration Verification'
+          title: 'Config Drift Verification'
         }
       },
       {

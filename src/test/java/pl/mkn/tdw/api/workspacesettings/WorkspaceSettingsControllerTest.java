@@ -19,6 +19,7 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsFieldResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsRuntimeConfigGitLabResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsSource;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsValuesResponse;
@@ -43,6 +44,8 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(jsonPath("$.values.copilot.localGithubToken.value").value("ghu_secret"))
                 .andExpect(jsonPath("$.values.jira.baseUrl.value").value("https://jira.example.com"))
                 .andExpect(jsonPath("$.values.gitLab.group.source").value("WORKSPACE_SETTINGS"))
+                .andExpect(jsonPath("$.values.runtimeConfigGitLab.baseUrl.value")
+                        .value("https://runtime-config.example.com"))
                 .andExpect(jsonPath("$.values.elasticsearch.indexPattern.value").value("logs-platform-*"))
                 .andExpect(jsonPath("$.values.dynatrace.baseUrl.value").value("https://dynatrace.example.com"));
     }
@@ -70,6 +73,10 @@ class WorkspaceSettingsControllerTest {
                                     "group": "platform/backend",
                                     "token": "glpat_secret"
                                   },
+                                  "runtimeConfigGitLab": {
+                                    "baseUrl": "https://runtime-config.example.com",
+                                    "token": "glpat_runtime_config_secret"
+                                  },
                                   "elasticsearch": {
                                     "baseUrl": "https://elastic.example.com",
                                     "kibanaSpaceId": "default",
@@ -86,6 +93,7 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(jsonPath("$.values.copilot.localGithubToken.secret").value(true))
                 .andExpect(jsonPath("$.values.jira.token.secret").value(true))
                 .andExpect(jsonPath("$.values.gitLab.token.secret").value(true))
+                .andExpect(jsonPath("$.values.runtimeConfigGitLab.token.secret").value(true))
                 .andExpect(jsonPath("$.values.elasticsearch.authorizationHeader.secret").value(true))
                 .andExpect(jsonPath("$.values.dynatrace.apiToken.secret").value(true));
     }
@@ -151,6 +159,24 @@ class WorkspaceSettingsControllerTest {
                                         "glpat_secret",
                                         "",
                                         "glpat_secret",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        true
+                                )
+                        ),
+                        new WorkspaceSettingsRuntimeConfigGitLabResponse(
+                                new WorkspaceSettingsFieldResponse(
+                                        "integrations.gitlab.named.connections.runtime-config.base-url",
+                                        "https://runtime-config.example.com",
+                                        "https://runtime-config.app",
+                                        "https://runtime-config.example.com",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        false
+                                ),
+                                new WorkspaceSettingsFieldResponse(
+                                        "integrations.gitlab.named.connections.runtime-config.token",
+                                        "glpat_runtime_config_secret",
+                                        "",
+                                        "glpat_runtime_config_secret",
                                         WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                         true
                                 )

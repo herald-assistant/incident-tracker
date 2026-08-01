@@ -8,6 +8,7 @@ import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
+import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.jira.JiraProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
@@ -16,6 +17,7 @@ import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceGitLabSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceJiraSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceRuntimeConfigGitLabSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsStore;
 
@@ -34,6 +36,8 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsRuntimeConfigGitLabResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsRuntimeConfigGitLabUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsSource;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsUpdateRequest;
@@ -43,11 +47,14 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 @RequiredArgsConstructor
 public class WorkspaceSettingsService {
 
+    private static final String RUNTIME_CONFIG_CONNECTION_ID = "runtime-config";
+
     private final LocalWorkspaceSettingsStore settingsStore;
     private final UiConfigProperties uiConfigProperties;
     private final CopilotSdkProperties copilotSdkProperties;
     private final JiraProperties jiraProperties;
     private final GitLabProperties gitLabProperties;
+    private final GitLabNamedConnectionsProperties gitLabNamedConnectionsProperties;
     private final ElasticProperties elasticProperties;
     private final DynatraceProperties dynatraceProperties;
 
@@ -81,6 +88,9 @@ public class WorkspaceSettingsService {
         var gitLab = request != null && request.gitLab() != null
                 ? request.gitLab()
                 : new WorkspaceSettingsGitLabUpdate(null, null, null);
+        var runtimeConfigGitLab = request != null && request.runtimeConfigGitLab() != null
+                ? request.runtimeConfigGitLab()
+                : new WorkspaceSettingsRuntimeConfigGitLabUpdate(null, null);
         var elasticsearch = request != null && request.elasticsearch() != null
                 ? request.elasticsearch()
                 : new WorkspaceSettingsElasticsearchUpdate(null, null, null, null);
@@ -106,6 +116,16 @@ public class WorkspaceSettingsService {
                         overrideValue(gitLab.baseUrl(), application().gitLab().baseUrl()),
                         overrideValue(gitLab.group(), application().gitLab().group()),
                         overrideValue(gitLab.token(), application().gitLab().token())
+                ),
+                new LocalWorkspaceRuntimeConfigGitLabSettings(
+                        overrideValue(
+                                runtimeConfigGitLab.baseUrl(),
+                                application().runtimeConfigGitLab().baseUrl()
+                        ),
+                        overrideValue(
+                                runtimeConfigGitLab.token(),
+                                application().runtimeConfigGitLab().token()
+                        )
                 ),
                 new LocalWorkspaceElasticsearchSettings(
                         overrideValue(elasticsearch.baseUrl(), application().elasticsearch().baseUrl()),
@@ -155,6 +175,20 @@ public class WorkspaceSettingsService {
                                 field("analysis.gitlab.base-url", app.gitLab().baseUrl(), file.gitLab().baseUrl(), false),
                                 field("analysis.gitlab.group", app.gitLab().group(), file.gitLab().group(), false),
                                 field("analysis.gitlab.token", app.gitLab().token(), file.gitLab().token(), true)
+                        ),
+                        new WorkspaceSettingsRuntimeConfigGitLabResponse(
+                                field(
+                                        "integrations.gitlab.named.connections.runtime-config.base-url",
+                                        app.runtimeConfigGitLab().baseUrl(),
+                                        file.runtimeConfigGitLab().baseUrl(),
+                                        false
+                                ),
+                                field(
+                                        "integrations.gitlab.named.connections.runtime-config.token",
+                                        app.runtimeConfigGitLab().token(),
+                                        file.runtimeConfigGitLab().token(),
+                                        true
+                                )
                         ),
                         new WorkspaceSettingsElasticsearchResponse(
                                 field(
@@ -235,6 +269,15 @@ public class WorkspaceSettingsService {
         gitLabProperties.setBaseUrl(effectiveValue(file.gitLab().baseUrl(), app.gitLab().baseUrl()));
         gitLabProperties.setGroup(effectiveValue(file.gitLab().group(), app.gitLab().group()));
         gitLabProperties.setToken(effectiveValue(file.gitLab().token(), app.gitLab().token()));
+        var runtimeConfigConnection = runtimeConfigGitLabConnection();
+        runtimeConfigConnection.setBaseUrl(effectiveValue(
+                file.runtimeConfigGitLab().baseUrl(),
+                app.runtimeConfigGitLab().baseUrl()
+        ));
+        runtimeConfigConnection.setToken(effectiveValue(
+                file.runtimeConfigGitLab().token(),
+                app.runtimeConfigGitLab().token()
+        ));
         elasticProperties.setBaseUrl(effectiveValue(file.elasticsearch().baseUrl(), app.elasticsearch().baseUrl()));
         elasticProperties.setKibanaSpaceId(effectiveValue(
                 file.elasticsearch().kibanaSpaceId(),
@@ -260,6 +303,8 @@ public class WorkspaceSettingsService {
     }
 
     private WorkspaceSettingsValues snapshotApplicationValues() {
+        var runtimeConfigConnection = gitLabNamedConnectionsProperties.getConnections()
+                .get(RUNTIME_CONFIG_CONNECTION_ID);
         return new WorkspaceSettingsValues(
                 new AppUiSettings(normalize(uiConfigProperties.getTitle())),
                 new CopilotSettings(normalize(copilotLocalGithubToken())),
@@ -271,6 +316,10 @@ public class WorkspaceSettingsService {
                         normalize(gitLabProperties.getBaseUrl()),
                         normalize(gitLabProperties.getGroup()),
                         normalize(gitLabProperties.getToken())
+                ),
+                new RuntimeConfigGitLabSettings(
+                        normalize(runtimeConfigConnection != null ? runtimeConfigConnection.getBaseUrl() : null),
+                        normalize(runtimeConfigConnection != null ? runtimeConfigConnection.getToken() : null)
                 ),
                 new ElasticsearchSettings(
                         normalize(elasticProperties.getBaseUrl()),
@@ -322,6 +371,13 @@ public class WorkspaceSettingsService {
         return copilotSdkProperties.getAuth().getLocal();
     }
 
+    private GitLabNamedConnectionsProperties.Connection runtimeConfigGitLabConnection() {
+        return gitLabNamedConnectionsProperties.getConnections().computeIfAbsent(
+                RUNTIME_CONFIG_CONNECTION_ID,
+                ignored -> new GitLabNamedConnectionsProperties.Connection()
+        );
+    }
+
     private String normalize(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
@@ -331,6 +387,7 @@ public class WorkspaceSettingsService {
             CopilotSettings copilot,
             JiraSettings jira,
             GitLabSettings gitLab,
+            RuntimeConfigGitLabSettings runtimeConfigGitLab,
             ElasticsearchSettings elasticsearch,
             DynatraceSettings dynatrace
     ) {
@@ -355,6 +412,12 @@ public class WorkspaceSettingsService {
     private record GitLabSettings(
             String baseUrl,
             String group,
+            String token
+    ) {
+    }
+
+    private record RuntimeConfigGitLabSettings(
+            String baseUrl,
             String token
     ) {
     }

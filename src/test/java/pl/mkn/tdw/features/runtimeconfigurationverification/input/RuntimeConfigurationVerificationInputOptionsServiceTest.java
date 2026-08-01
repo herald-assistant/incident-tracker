@@ -5,6 +5,7 @@ import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigu
 import pl.mkn.tdw.features.runtimeconfigurationverification.scope.RuntimeConfigurationSystemOption;
 import pl.mkn.tdw.features.runtimeconfigurationverification.source.RuntimeConfigurationRepositoryCatalog;
 import pl.mkn.tdw.features.runtimeconfigurationverification.source.RuntimeConfigurationRepositoryProfile;
+import pl.mkn.tdw.features.runtimeconfigurationverification.source.RuntimeConfigurationRepositoryProperties;
 
 import java.util.List;
 
@@ -29,17 +30,18 @@ class RuntimeConfigurationVerificationInputOptionsServiceTest {
         when(scopeResolver.availableSystems()).thenReturn(List.of(
                 new RuntimeConfigurationSystemOption("backend", "Backend", "backend")
         ));
+        var properties = new RuntimeConfigurationRepositoryProperties();
+        properties.setBranches(List.of("dev", "dev2", "uat", "uat2"));
         var service = new RuntimeConfigurationVerificationInputOptionsService(
                 repositoryCatalog,
-                scopeResolver
+                scopeResolver,
+                properties
         );
 
         var options = service.getOptions();
 
         assertEquals(List.of("BASIC", "DEEP"), options.modes().stream().map(Enum::name).toList());
-        assertEquals(20, options.branches().size());
-        assertEquals("dev0", options.branches().get(0));
-        assertEquals("zt009", options.branches().get(19));
+        assertEquals(List.of("dev", "dev2", "uat", "uat2"), options.branches());
         assertEquals("runtime-config", options.repositories().get(0).id());
         assertEquals("backend", options.systems().get(0).id());
     }

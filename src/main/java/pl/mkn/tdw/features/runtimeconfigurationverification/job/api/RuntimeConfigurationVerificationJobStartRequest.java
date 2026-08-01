@@ -27,14 +27,14 @@ public record RuntimeConfigurationVerificationJobStartRequest(
         String systemId,
         @NotBlank(message = "sourceBranch must be provided")
         @Pattern(
-                regexp = "(?:dev\\d|zt00\\d)",
-                message = "sourceBranch must match devX or zt00X"
+                regexp = "(?:dev|test|uat|zt)\\d*",
+                message = "sourceBranch must use dev, test, uat or zt with an optional numeric suffix"
         )
         String sourceBranch,
         @NotBlank(message = "targetBranch must be provided")
         @Pattern(
-                regexp = "(?:dev\\d|zt00\\d)",
-                message = "targetBranch must match devX or zt00X"
+                regexp = "(?:dev|test|uat|zt)\\d*",
+                message = "targetBranch must use dev, test, uat or zt with an optional numeric suffix"
         )
         String targetBranch,
         @Size(max = 255, message = "codeRef must not exceed 255 characters")

@@ -30,6 +30,7 @@ export class WorkspaceSettingsPageComponent {
   readonly errorMessage = signal('');
   readonly saveMessage = signal('');
   readonly showToken = signal(false);
+  readonly showRuntimeConfigGitLabToken = signal(false);
   readonly showCopilotGithubToken = signal(false);
   readonly showJiraToken = signal(false);
   readonly showElasticsearchAuthorizationHeader = signal(false);
@@ -49,6 +50,10 @@ export class WorkspaceSettingsPageComponent {
     gitLab: new FormGroup({
       baseUrl: new FormControl('', { nonNullable: true }),
       group: new FormControl('', { nonNullable: true }),
+      token: new FormControl('', { nonNullable: true })
+    }),
+    runtimeConfigGitLab: new FormGroup({
+      baseUrl: new FormControl('', { nonNullable: true }),
       token: new FormControl('', { nonNullable: true })
     }),
     elasticsearch: new FormGroup({
@@ -126,6 +131,10 @@ export class WorkspaceSettingsPageComponent {
     this.showToken.update((visible) => !visible);
   }
 
+  toggleRuntimeConfigGitLabTokenVisibility(): void {
+    this.showRuntimeConfigGitLabToken.update((visible) => !visible);
+  }
+
   toggleCopilotGithubTokenVisibility(): void {
     this.showCopilotGithubToken.update((visible) => !visible);
   }
@@ -197,6 +206,10 @@ export class WorkspaceSettingsPageComponent {
         group: settings.values.gitLab.group.value,
         token: settings.values.gitLab.token.value
       },
+      runtimeConfigGitLab: {
+        baseUrl: settings.values.runtimeConfigGitLab.baseUrl.value,
+        token: settings.values.runtimeConfigGitLab.token.value
+      },
       elasticsearch: {
         baseUrl: settings.values.elasticsearch.baseUrl.value,
         kibanaSpaceId: settings.values.elasticsearch.kibanaSpaceId.value,
@@ -227,6 +240,10 @@ export class WorkspaceSettingsPageComponent {
         group: this.form.controls.gitLab.controls.group.value.trim(),
         token: this.form.controls.gitLab.controls.token.value.trim()
       },
+      runtimeConfigGitLab: {
+        baseUrl: this.form.controls.runtimeConfigGitLab.controls.baseUrl.value.trim(),
+        token: this.form.controls.runtimeConfigGitLab.controls.token.value.trim()
+      },
       elasticsearch: {
         baseUrl: this.form.controls.elasticsearch.controls.baseUrl.value.trim(),
         kibanaSpaceId: this.form.controls.elasticsearch.controls.kibanaSpaceId.value.trim(),
@@ -250,6 +267,8 @@ export class WorkspaceSettingsPageComponent {
       settings.values.gitLab.baseUrl,
       settings.values.gitLab.group,
       settings.values.gitLab.token,
+      settings.values.runtimeConfigGitLab.baseUrl,
+      settings.values.runtimeConfigGitLab.token,
       settings.values.elasticsearch.baseUrl,
       settings.values.elasticsearch.kibanaSpaceId,
       settings.values.elasticsearch.indexPattern,

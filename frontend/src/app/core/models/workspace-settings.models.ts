@@ -11,6 +11,7 @@ export interface WorkspaceSettingsValues {
   copilot: WorkspaceSettingsCopilot;
   jira: WorkspaceSettingsJira;
   gitLab: WorkspaceSettingsGitLab;
+  runtimeConfigGitLab: WorkspaceSettingsRuntimeConfigGitLab;
   elasticsearch: WorkspaceSettingsElasticsearch;
   dynatrace: WorkspaceSettingsDynatrace;
 }
@@ -31,6 +32,11 @@ export interface WorkspaceSettingsJira {
 export interface WorkspaceSettingsGitLab {
   baseUrl: WorkspaceSettingsField;
   group: WorkspaceSettingsField;
+  token: WorkspaceSettingsField;
+}
+
+export interface WorkspaceSettingsRuntimeConfigGitLab {
+  baseUrl: WorkspaceSettingsField;
   token: WorkspaceSettingsField;
 }
 
@@ -69,6 +75,10 @@ export interface WorkspaceSettingsUpdateRequest {
   gitLab: {
     baseUrl: string;
     group: string;
+    token: string;
+  };
+  runtimeConfigGitLab: {
+    baseUrl: string;
     token: string;
   };
   elasticsearch: {

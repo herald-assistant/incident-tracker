@@ -80,6 +80,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   readonly modeControl = new FormControl<RuntimeConfigurationVerificationMode>('BASIC', {
     nonNullable: true
   });
+  protected readonly deepModeSelectionDisabled = signal(true);
   readonly repositoryControl = new FormControl('', { nonNullable: true });
   readonly systemControl = new FormControl('', { nonNullable: true });
   readonly sourceBranchControl = new FormControl('', { nonNullable: true });
@@ -299,6 +300,9 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
   }
 
   protected onModeSelected(mode: string): void {
+    if (mode === 'DEEP' && this.deepModeSelectionDisabled()) {
+      return;
+    }
     this.modeControl.setValue(mode === 'DEEP' ? 'DEEP' : 'BASIC');
   }
 
@@ -565,7 +569,7 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
 
   private importLocalRun(detail: LocalAnalysisRunDetailResponse): void {
     if (detail.feature !== 'runtime-configuration-verification') {
-      this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Runtime Configuration Verification.`);
+      this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Config Drift Verification.`);
       return;
     }
     this.api

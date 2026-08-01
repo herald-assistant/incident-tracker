@@ -491,6 +491,135 @@
         }
       </section>
 
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsRuntimeConfigGitLabTitle">
+        <div class="workspace-settings-panel__header">
+          <div>
+            <p class="section-eyebrow">Config Drift GitLab</p>
+            <h2 id="workspaceSettingsRuntimeConfigGitLabTitle">Configuration source capability</h2>
+          </div>
+        </div>
+
+        @if (settings(); as currentSettings) {
+          <div class="workspace-settings-grid">
+            <label class="workspace-settings-field" for="runtimeConfigGitLabBaseUrl">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.runtimeConfigGitLab.baseUrl.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Base URL
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.runtimeConfigGitLab.baseUrl, form.controls.runtimeConfigGitLab.controls.baseUrl.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.runtimeConfigGitLab.baseUrl) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.runtimeConfigGitLab.baseUrl)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.runtimeConfigGitLab.baseUrl, form.controls.runtimeConfigGitLab.controls.baseUrl.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.runtimeConfigGitLab.baseUrl, form.controls.runtimeConfigGitLab.controls.baseUrl.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Config Drift GitLab Base URL"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.runtimeConfigGitLab.controls.baseUrl, currentSettings.values.runtimeConfigGitLab.baseUrl)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <input
+                id="runtimeConfigGitLabBaseUrl"
+                class="text-input"
+                type="url"
+                autocomplete="off"
+                spellcheck="false"
+                [formControl]="form.controls.runtimeConfigGitLab.controls.baseUrl"
+              />
+            </label>
+
+            <label class="workspace-settings-field" for="runtimeConfigGitLabToken">
+              <span class="workspace-settings-field__header">
+                <span>
+                  <span
+                    class="field-label"
+                    [matTooltip]="currentSettings.values.runtimeConfigGitLab.token.propertyKey"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    Token
+                  </span>
+                </span>
+                <span class="workspace-settings-source-controls">
+                  <span
+                    [class]="sourceClass(currentSettings.values.runtimeConfigGitLab.token, form.controls.runtimeConfigGitLab.controls.token.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.runtimeConfigGitLab.token) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.runtimeConfigGitLab.token)"
+                    matTooltipPosition="above"
+                    [matTooltipShowDelay]="120"
+                  >
+                    {{ sourceLabel(currentSettings.values.runtimeConfigGitLab.token, form.controls.runtimeConfigGitLab.controls.token.value) }}
+                  </span>
+                  @if (usesCustomValue(currentSettings.values.runtimeConfigGitLab.token, form.controls.runtimeConfigGitLab.controls.token.value)) {
+                    <button
+                      class="secondary-button workspace-settings-field-reset-button"
+                      type="button"
+                      aria-label="Restore default for Config Drift GitLab token"
+                      matTooltip="Restore default"
+                      matTooltipPosition="above"
+                      [matTooltipShowDelay]="120"
+                      [disabled]="isSaving()"
+                      (click)="resetFieldToDefault($event, form.controls.runtimeConfigGitLab.controls.token, currentSettings.values.runtimeConfigGitLab.token)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+                    </button>
+                  }
+                </span>
+              </span>
+              <span class="workspace-settings-secret-control">
+                <input
+                  id="runtimeConfigGitLabToken"
+                  class="text-input"
+                  [type]="showRuntimeConfigGitLabToken() ? 'text' : 'password'"
+                  autocomplete="off"
+                  spellcheck="false"
+                  [formControl]="form.controls.runtimeConfigGitLab.controls.token"
+                />
+                <button
+                  class="secondary-button workspace-settings-icon-button"
+                  type="button"
+                  [attr.aria-label]="showRuntimeConfigGitLabToken() ? 'Hide Config Drift GitLab token' : 'Show Config Drift GitLab token'"
+                  [matTooltip]="showRuntimeConfigGitLabToken() ? 'Hide Config Drift GitLab token' : 'Show Config Drift GitLab token'"
+                  matTooltipPosition="above"
+                  [matTooltipShowDelay]="120"
+                  (click)="toggleRuntimeConfigGitLabTokenVisibility()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ showRuntimeConfigGitLabToken() ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </span>
+            </label>
+          </div>
+        } @else {
+          <div class="workspace-settings-placeholder">
+            <span class="workspace-settings-spinner" aria-hidden="true"></span>
+            <span>Loading settings...</span>
+          </div>
+        }
+      </section>
+
       <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsElasticsearchTitle">
         <div class="workspace-settings-panel__header">
           <div>

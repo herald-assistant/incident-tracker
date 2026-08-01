@@ -32,7 +32,7 @@
             (click)="onModeSelected('BASIC')"
           >
             <span class="material-symbols-outlined" aria-hidden="true">difference</span>
-            <span>
+            <span class="mode-option__copy">
               <strong>Basic</strong>
               <small>Szybki, deterministyczny diff bez AI</small>
             </span>
@@ -42,13 +42,17 @@
             class="mode-option"
             [class.mode-option--active]="modeControl.value === 'DEEP'"
             [attr.aria-pressed]="modeControl.value === 'DEEP'"
+            [disabled]="deepModeSelectionDisabled()"
+            aria-label="Deep — wkrótce"
+            title="Deep — wkrótce"
             (click)="onModeSelected('DEEP')"
           >
             <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
-            <span>
+            <span class="mode-option__copy">
               <strong>Deep</strong>
               <small>Wpływ funkcjonalny, kod i ownership</small>
             </span>
+            <small class="mode-option__badge">Soon</small>
           </button>
         </div>
       </fieldset>
@@ -713,7 +717,7 @@
       }
 
       <app-analysis-feature-aside
-        ariaLabel="Panel pracy Runtime Configuration Verification"
+        ariaLabel="Panel pracy Config Drift Verification"
         [progressActive]="workflowRunning()"
         [aiActive]="aiWorkflowRunning()"
         [progressCount]="currentJob.steps.length"
