@@ -184,8 +184,14 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
       targetBranch: 'zt001'
     });
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Deterministyczny sygnał decyzji');
     expect(compiled.textContent).toContain('Configuration result');
+    expect(compiled.textContent).toContain('REVIEW_REQUIRED');
+    expect(compiled.textContent).toContain('różnice: 2');
+    expect(compiled.textContent).toContain('findings: 1');
+    expect(compiled.textContent).toContain('dev1: Complete, 0 plików');
+    expect(compiled.textContent).toContain('zt001: Complete, 0 plików');
+    expect(compiled.querySelector('.metric-grid')).toBeNull();
+    expect(compiled.querySelector('.coverage-grid')).toBeNull();
     expect(compiled.textContent).not.toContain('AI second opinion');
     expect(compiled.textContent).not.toContain('NOT_ASSESSED');
     expect(compiled.textContent).not.toContain('Raport operatora');
@@ -350,13 +356,11 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(polling.poll).toHaveBeenCalledTimes(1);
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('INCOMPLETE');
     expect(compiled.textContent).toContain('Configuration result');
     expect(compiled.textContent).toContain('notifications.endpoint');
     expect(compiled.textContent).toContain('AI second opinion');
     expect(compiled.textContent).toContain('AI INTERPRETATION');
     expect(compiled.textContent).toContain('Raport operatora');
-    expect(compiled.textContent).toContain('1 wywołań AI');
     expect(compiled.textContent).toContain('Functional impact');
     expect(compiled.textContent).toContain('Platform Team');
     expect(compiled.textContent).toContain('backend@release/42');
@@ -376,7 +380,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Configuration result');
-    expect(compiled.textContent).toContain('Deterministyczny sygnał decyzji');
+    expect(compiled.textContent).toContain('REVIEW_REQUIRED');
     expect(compiled.textContent).not.toContain('AI second opinion');
     expect(compiled.textContent).not.toContain('NOT_ASSESSED');
     expect(compiled.textContent).not.toContain('Systemy, kod i ownership');
@@ -421,7 +425,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     expect(buttonContaining(compiled, 'Reference · reference-39')).not.toBeNull();
   });
 
-  it('should expose disagreement, unknown ownership and code-grounding navigation', () => {
+  it('should expose unknown ownership and code-grounding navigation without the removed decision bar', () => {
     const base = result();
     const deep = base.deepAnalysis!;
     const opinion = base.aiSecondOpinion!;
@@ -454,7 +458,7 @@ describe('RuntimeConfigurationVerificationPageComponent', () => {
     fixture.detectChanges();
 
     let compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('DISAGREEMENT');
+    expect(compiled.textContent).not.toContain('DISAGREEMENT');
     expect(compiled.textContent).toContain('Ownership jest nieznany');
     expect(compiled.textContent).toContain('Deployed ref was not confirmed');
     buttonContaining(compiled, 'Code grounding · grounding-1')?.click();

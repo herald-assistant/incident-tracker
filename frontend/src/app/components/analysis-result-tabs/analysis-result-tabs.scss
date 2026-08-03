@@ -9,17 +9,23 @@
   z-index: 2;
   display: flex;
   align-items: stretch;
+  box-sizing: border-box;
   width: 100%;
   max-width: 100%;
   gap: 2px;
   margin-bottom: -15px;
   padding: 0 18px;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
 }
 
 .analysis-result-tab {
   position: relative;
   z-index: 1;
+  flex: 0 0 auto;
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid transparent;
@@ -66,15 +72,4 @@
   height: 3px;
   background: rgba(255, 255, 255, 0.88);
   content: '';
-}
-
-@media (max-width: 860px) {
-  .analysis-result-tabs {
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .analysis-result-tab {
-    flex: 1 0 max-content;
-  }
 }

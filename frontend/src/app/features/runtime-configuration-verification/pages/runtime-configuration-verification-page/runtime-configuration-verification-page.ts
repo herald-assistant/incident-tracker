@@ -36,6 +36,7 @@ import {
 } from '../../components/runtime-configuration-diff-renderer/runtime-configuration-diff-renderer';
 import {
   RuntimeConfigurationDeepPreflight,
+  RuntimeConfigurationDeterministicContext,
   RuntimeConfigurationFinding,
   RuntimeConfigurationVerificationInputOptions,
   RuntimeConfigurationVerificationJobStartRequest,
@@ -412,6 +413,19 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
     return value?.trim() || '—';
   }
 
+  protected deterministicSummary(result: RuntimeConfigurationDeterministicContext): string {
+    return [
+      `różnice: ${result.differences.length}`,
+      `findings: ${result.findings.length}`,
+      `dokumenty: ${result.documents.length}`,
+      `referencje: ${result.references.length}`,
+      `${this.coverageSummary(result.sourceBranch, result.sourceCoverage)} → ${this.coverageSummary(
+        result.targetBranch,
+        result.targetCoverage
+      )}`
+    ].join(' · ');
+  }
+
   protected referenceLabel(id: string): string {
     return id.startsWith('difference')
       ? 'Difference'
@@ -501,6 +515,19 @@ export class RuntimeConfigurationVerificationPageComponent implements OnDestroy 
       return null;
     }
     return finding.line ? `${finding.filePath}:${finding.line}` : finding.filePath;
+  }
+
+  private coverageSummary(
+    branch: string,
+    coverage: RuntimeConfigurationDeterministicContext['sourceCoverage']
+  ): string {
+    const status = coverage?.complete ? 'Complete' : 'Incomplete';
+    const files = coverage?.files?.length ?? 0;
+    return `${branch}: ${status}, ${this.fileCountLabel(files)}`;
+  }
+
+  private fileCountLabel(files: number): string {
+    return files === 1 ? '1 plik' : `${files} plików`;
   }
 
   ngOnDestroy(): void {

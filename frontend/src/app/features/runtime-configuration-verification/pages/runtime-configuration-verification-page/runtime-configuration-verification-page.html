@@ -368,72 +368,6 @@
           </div>
         </section>
       } @else if (component.result; as result) {
-        <section class="decision-bar" [attr.data-status]="result.status">
-          <div class="decision-bar__signal">
-            <span class="material-symbols-outlined" aria-hidden="true">
-              {{
-                result.status === 'NO_BLOCKING_ANOMALIES'
-                  ? 'check_circle'
-                  : result.status === 'INCOMPLETE'
-                    ? 'error'
-                    : 'warning'
-              }}
-            </span>
-            <div>
-              <p class="section-eyebrow">
-                {{ result.mode === 'BASIC' ? 'Deterministyczny sygnał decyzji' : 'Wspólny sygnał decyzji' }}
-              </p>
-              <h2>{{ statusLabel(result.status) }}</h2>
-            </div>
-          </div>
-          <div class="decision-bar__facts">
-            <span>
-              <small>Deterministic</small>
-              <strong>{{ statusLabel(result.deterministicResult.status) }}</strong>
-            </span>
-            @if (result.mode === 'DEEP' || result.aiSecondOpinion) {
-              <span>
-                <small>AI second opinion</small>
-                <strong>{{ statusLabel(result.aiSecondOpinion?.conclusion || 'NOT_ASSESSED') }}</strong>
-              </span>
-              <span>
-                <small>Agreement</small>
-                <strong>{{ statusLabel(result.agreement?.status || 'NOT_ASSESSED') }}</strong>
-              </span>
-            }
-          </div>
-          @if (result.agreement?.explanation) {
-            <p>{{ result.agreement?.explanation }}</p>
-          }
-          @if (
-            result.agreement?.alignedFindingIds?.length
-            || result.agreement?.disputedFindingIds?.length
-          ) {
-            <div
-              class="decision-bar__references reference-links"
-              aria-label="Powiązania oceny zgodności"
-            >
-              @for (reference of result.agreement?.alignedFindingIds || []; track reference) {
-                <button type="button" (click)="focusReference(reference)">
-                  zgodne · {{ reference }}
-                </button>
-              }
-              @for (reference of result.agreement?.disputedFindingIds || []; track reference) {
-                <button type="button" (click)="focusReference(reference)">
-                  sporne · {{ reference }}
-                </button>
-              }
-            </div>
-          }
-          @if (result.usage; as usage) {
-            <div class="decision-bar__usage" aria-label="Wykorzystanie AI">
-              <span>{{ usage.apiCallCount }} wywołań AI</span>
-              <span>{{ usage.totalTokens }} tokenów</span>
-              <span>{{ usage.model }}</span>
-            </div>
-          }
-        </section>
-
         @if (component.report; as report) {
           <app-analysis-report-panel [report]="report"></app-analysis-report-panel>
         }
@@ -447,32 +381,14 @@
               <div>
                 <p class="section-eyebrow">Deterministyczne fakty · FACT</p>
                 <h2>Configuration result</h2>
+                <small class="deterministic-summary">
+                  {{ deterministicSummary(result.deterministicResult) }}
+                </small>
               </div>
               <span [attr.class]="statusClass(result.deterministicResult.status)">
                 {{ statusLabel(result.deterministicResult.status) }}
               </span>
             </header>
-
-            <div class="metric-grid">
-              <span><strong>{{ result.deterministicResult.differences.length }}</strong> różnic</span>
-              <span><strong>{{ result.deterministicResult.findings.length }}</strong> findings</span>
-              <span><strong>{{ result.deterministicResult.documents.length }}</strong> dokumentów</span>
-              <span><strong>{{ result.deterministicResult.references.length }}</strong> referencji</span>
-            </div>
-
-            <section class="coverage-grid" aria-label="Pokrycie konfiguracji">
-              <div>
-                <small>{{ result.deterministicResult.sourceBranch }}</small>
-                <strong>{{ result.deterministicResult.sourceCoverage?.complete ? 'Complete' : 'Incomplete' }}</strong>
-                <span>{{ result.deterministicResult.sourceCoverage?.files?.length || 0 }} pliki</span>
-              </div>
-              <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
-              <div>
-                <small>{{ result.deterministicResult.targetBranch }}</small>
-                <strong>{{ result.deterministicResult.targetCoverage?.complete ? 'Complete' : 'Incomplete' }}</strong>
-                <span>{{ result.deterministicResult.targetCoverage?.files?.length || 0 }} pliki</span>
-              </div>
-            </section>
 
             <section class="result-section">
               <app-runtime-configuration-diff-renderer
