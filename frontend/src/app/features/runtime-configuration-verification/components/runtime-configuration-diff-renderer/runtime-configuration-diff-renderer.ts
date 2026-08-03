@@ -62,7 +62,7 @@ export class RuntimeConfigurationDiffRendererComponent {
   readonly focusedReferenceId = input('');
   readonly referenceSelected = output<string>();
 
-  readonly view = signal<ConfigurationDiffView>('FULL');
+  readonly view = signal<ConfigurationDiffView>('CHANGES');
 
   private readonly annotationsByDifferenceId = computed(() => {
     const index = new Map<string, RuntimeConfigurationDiffAnnotation[]>();

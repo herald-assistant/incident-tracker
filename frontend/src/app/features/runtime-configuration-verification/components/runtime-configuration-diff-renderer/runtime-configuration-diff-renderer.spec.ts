@@ -28,7 +28,14 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     fixture.componentRef.setInput('annotations', annotations());
     fixture.detectChanges();
 
-    const compiled = fixture.nativeElement as HTMLElement;
+    let compiled = fixture.nativeElement as HTMLElement;
+    expect(buttonContaining(compiled, 'Zmiany')?.getAttribute('aria-pressed')).toBe('true');
+    expect(buttonContaining(compiled, 'Cały plik')?.getAttribute('aria-pressed')).toBe('false');
+
+    buttonContaining(compiled, 'Cały plik')?.click();
+    fixture.detectChanges();
+    compiled = fixture.nativeElement as HTMLElement;
+
     expect(compiled.textContent).toContain('backend/application.yml.kv');
     expect(compiled.textContent).toContain('spring:');
     expect(compiled.textContent).toContain('url:');
@@ -101,11 +108,8 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
     expect(buttonContaining(compiled, 'Cały plik')?.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('should allow narrowing the full tree to changed branches', () => {
+  it('should render changed branches by default and allow expanding to full tree', () => {
     fixture.componentRef.setInput('projection', projection());
-    fixture.detectChanges();
-
-    buttonContaining(fixture.nativeElement, 'Zmiany')?.click();
     fixture.detectChanges();
 
     let compiled = fixture.nativeElement as HTMLElement;
@@ -128,6 +132,9 @@ describe('RuntimeConfigurationDiffRendererComponent', () => {
 
   it('should render multi-document YAML as one file without nested details or document headers', () => {
     fixture.componentRef.setInput('projection', projection());
+    fixture.detectChanges();
+
+    buttonContaining(fixture.nativeElement, 'Cały plik')?.click();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
