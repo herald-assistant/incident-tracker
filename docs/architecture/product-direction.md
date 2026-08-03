@@ -122,8 +122,10 @@ planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
 
 ### Config Drift Verification
 
-Administrator porownuje runtime configuration wybranego `internal-system`
-pomiedzy branchami `devX` i `zt00X`. Wynik ma niemutowalny fundament
+Administrator porownuje runtime configuration jednego lub wielu
+`internal-system` pomiedzy allowlistowanymi branchami srodowisk testowych.
+Porownania komponentow sa izolowane i wykonywane rownolegle, a wynik ma
+niemutowalny fundament
 deterministyczny, a `DEEP` dodaje jawnie oddzielona druga opinie:
 
 - niemutowalny, deterministyczny diff i findings z pokryciem zrodel,
@@ -137,6 +139,11 @@ resolved ownership, aby wyjasnic znaczenie rozjazdu i wskazac handoff.
 Repozytorium konfiguracji moze lezec na innej nazwanej instancji GitLab niz
 kod; dokladne wartosci pozostaja po stronie operatorskiej i nie przekraczaja
 granicy AI.
+
+Readonly `Runtime Configuration` w Tool Workbench pokazuje source metadata,
+operatorski diff, mapping, anonimizacje oraz dokladny AI-safe input tego samego
+pipeline'u dla pojedynczego scope'u. Nie uruchamia modelu i nie jest batchowym
+jobem ani historia analizy.
 
 ### Functional logic explorer
 

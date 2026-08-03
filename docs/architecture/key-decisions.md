@@ -809,3 +809,15 @@ Zachowanie calego, sanitizowanego schematu po stronie `DEEP` jest celowe:
 niezmienione parametry pomagaja rozpoznac funkcjonalny kontekst rozjazdu bez
 przekazywania prawdziwej konfiguracji. Warstwa AI nie moze zalezec od pakietu
 operatorskiej projekcji; te granice egzekwuje test architektoniczny.
+
+Publiczny job Config Drift Verification jest batchowy: przyjmuje uporzadkowane
+`systemIds`, utrzymuje izolowany component snapshot dla kazdego systemu i
+agreguje parent status bez zatrzymywania pozostalych komponentow po lokalnym
+bledzie. Wykonanie ma konfigurowalny, ograniczony fan-out, a UI zachowuje
+kolejnosc requestu w zakladkach.
+
+Export/result contract oraz kompaktowy format AI/Workbench sa pierwsza
+kanoniczna wersja V1. Poniewaz feature nie mial konsumentow wymagajacych
+migracji, nie utrzymujemy aliasow, parserow ani fallbacku poprzednich wersji.
+Tool Workbench reuse'uje produkcyjny pipeline w readonly preview pojedynczego
+scope'u, ale nie tworzy joba, historii, eksportu ani sesji AI.

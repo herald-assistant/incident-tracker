@@ -20,7 +20,8 @@ przez input-options jest konfigurowana przez
 `application.properties`; glowny formularz i Tool Workbench korzystaja z tego
 samego kontraktu opcji. Walidacja requestu dopuszcza bezpieczne nazwy refow Git,
 z rodzin `dev`, `test`, `uat` i `zt`, opcjonalnie zakonczone wielocyfrowym
-numerem. Brak sufiksu pozostaje dozwolony dla domyslnych `dev` i `uat`.
+numerem. Brak sufiksu pozostaje dozwolony dla kazdej rodziny; domyslna lista
+udostepnia bez sufiksu `dev` i `uat`.
 
 ## Publiczne wejscia
 
@@ -87,6 +88,52 @@ feature-owned executorze z konfigurowalnym limitem, domyslnie `20`. Awaria
 jednego komponentu nie zatrzymuje pozostalych. Snapshot jest dostepny od stanu
 `QUEUED`, zachowuje kolejnosc `systemIds` i jest utrwalany bez nakladajacych
 sie zapisow.
+
+## Tool Workbench
+
+Readonly ekran `GET /runtime-configuration-tools` pozwala sprawdzic ten sam
+pipeline dla jednego repozytorium, jednego `internal-system` i jednej pary
+branchy bez tworzenia joba, historii, eksportu ani sesji AI. `BASIC` nie
+wywoluje zaleznosci DEEP; `DEEP` reuse'uje preflight, Operational Context,
+code-search scope i ownership.
+
+Workbench uzywa feature-owned API:
+
+```http
+POST /api/runtime-configuration-verification/workbench/preview
+GET  /api/runtime-configuration-verification/workbench/preview/{previewId}/source
+GET  /api/runtime-configuration-verification/workbench/preview/{previewId}/configuration-diff
+GET  /api/runtime-configuration-verification/workbench/preview/{previewId}/mapping
+GET  /api/runtime-configuration-verification/workbench/preview/{previewId}/anonymization
+GET  /api/runtime-configuration-verification/workbench/preview/{previewId}/deep
+GET  /api/runtime-configuration-verification/workbench/preview/{previewId}/ai-input
+GET  /api/runtime-configuration-verification/workbench/preview/{previewId}/artifact
+```
+
+Pierwsza odpowiedz jest summary-first: zawiera `previewId`, `expiresAt`, scope,
+liczniki, metadata artefaktow i visibility limits, ale nie materializuje
+mappingu, decyzji anonimizacji, promptu ani tresci artefaktow. Sanitizowany
+snapshot jest przechowywany w pamieci przez 10 minut, maksymalnie 32 wpisy;
+wygasly albo usuniety identyfikator zwraca bezpieczne 404 bez odczytu GitLaba.
+Zakladki pobieraja dane leniwie z tego samego snapshotu, wiec nie powtarzaja
+source acquisition. Mapping i anonimizacja sa stronicowane z limitem do 200
+elementow; mapping domyslnie pokazuje tylko zmienione wezly.
+
+Perspektywy operatorskie obejmuja source metadata, dokladny
+`configurationDiff`, kanoniczny mapping, decyzje `PSEUDONYMIZED`, `SUPPRESSED`,
+`STRUCTURE_ONLY` albo `NOT_PRESENT`, AI-safe input oraz warunkowy DEEP scope.
+Workbench nie udostepnia byte-identical raw source, GitLab tokenu ani
+credentials i nie pozwala podac dowolnego connection id, project path lub
+configuration directory.
+
+Kompaktowy format artefaktow feature'a ma jedna kanoniczna wersje V1.
+`configuration-tree.yaml` zachowuje hierarchie, granice dokumentow, wszystkie
+zmienione i niezmienione sciezki, typy, sensitivity oraz bezpieczne
+reprezentacje stron. `changes.json` przechowuje kolumnowo differences,
+findings i references. Dokladny prompt oraz tresc pojedynczego artefaktu sa
+pobierane dopiero po jawnej akcji operatora. Limity i truncation pozostaja
+widoczne i nie modyfikuja deterministic result. Nie istnieje alias ani parser
+poprzedniej wersji formatu.
 
 ## Deterministyczne zrodla i wynik
 

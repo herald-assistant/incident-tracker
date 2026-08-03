@@ -39,7 +39,8 @@ Operational Context, code-search scopes i kod systemu.
 - `PackageDependencyGuardTest` pilnuje izolacji sibling feature'ow.
 - Request/job API testuj przez `MockMvc`.
 - Zmiany w deterministic parsing/diff, AI runtime, GitLab i Operational
-  Context wymagaja testow wskazanych w zatwierdzonym planie
-  `docs/plans/runtime-configuration-verification.md`.
+  Context wymagaja macierzy testow adekwatnej do poziomu L1-L3 z
+  `docs/architecture/analysis-feature-delivery-playbook.md` oraz nowego,
+  jawnie zatwierdzonego planu dla konkretnej zmiany.
 - Kanoniczny runtime flow i security boundary sa opisane w
   `docs/architecture/runtime-configuration-verification-runtime-flow.md`.

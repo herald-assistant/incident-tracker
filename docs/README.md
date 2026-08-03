@@ -48,17 +48,10 @@ implementacje niezatwierdzonego planu.
 
 ## Aktualne potrzeby i plany
 
-- `needs/runtime-configuration-verification.md`
-  opisuje problem rozjazdu konfiguracji pomiedzy branchami srodowiskowymi,
-  oczekiwany bezpieczny wynik i granice weryfikacji przed wdrozeniem.
-- `plans/runtime-configuration-verification.md`
-  dokumentuje wykonany plan dostarczenia feature'a.
-- `needs/runtime-configuration-tool-workbench.md`
-  opisuje potrzebe diagnostycznego podgladu named GitLab, mapowania,
-  anonimizacji i AI-safe payloadu.
-- `plans/runtime-configuration-tool-workbench.md`
-  jest draftem addytywnego inkrementu Tool Workbench i wymaga zatwierdzania
-  kolejnych krokow.
+- Config Drift Verification wraz z Runtime Configuration Tool Workbench jest
+  zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
+  ograniczenia sa opisane kanonicznie w
+  `architecture/runtime-configuration-verification-runtime-flow.md`.
 - `needs/change-verification.md`
   opisuje problem, wartosc, oczekiwany wynik i granice Change Verification.
   Nowy plan implementacji powinien wskazywac ten plik jako `Source need`.

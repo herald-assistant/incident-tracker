@@ -58,8 +58,9 @@ Na dzisiaj projekt ma:
   platforma oszczedza czas w codziennej pracy,
 - ekran `GET /incident-analysis` serwowany przez Spring Boot z mozliwoscia
   importu i eksportu zapisu zakonczonej analizy jako JSON,
-- ekran `GET /runtime-configuration-verification` do porownania konfiguracji
-  `internal-system` pomiedzy branchami `devX` i `zt00X`; `BASIC` pokazuje
+- ekran `GET /runtime-configuration-verification` do rownoleglego porownania
+  konfiguracji wielu `internal-system` pomiedzy branchami z rodzin `dev`,
+  `test`, `uat` i `zt`; `BASIC` pokazuje
   wylacznie deterministyczny diff per plik, a zaimplementowany `DEEP` dodaje
   oddzielna interpretacje AI; podczas aktualnego rollout readiness nowy wybor
   `DEEP` w glownym formularzu jest tymczasowo disabled i oznaczony `SOON`,
@@ -82,7 +83,8 @@ Na dzisiaj projekt ma:
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
 - ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /jira`,
-  `GET /confluence`, `GET /database` i `GET /operational-context` do recznego
+  `GET /confluence`, `GET /runtime-configuration-tools`, `GET /database` i
+  `GET /operational-context` do recznego
   testowania, debugowania i zbierania inputu z reusable capability bez
   przenoszenia logiki incident analysis do tych widokow,
 - ekran `GET /operational-context` w Tool Workbench do utrzymania katalogu
@@ -144,7 +146,10 @@ Na dzisiaj projekt ma:
   analizy z logow pobranych po `correlationId` albo z zalaczonego CSV.
 - `GET /runtime-configuration-verification`
   Angularowy workspace porownania konfiguracji runtime. Formularz wybiera
-  repozytorium, `internal-system` i branch zrodlowy/docelowy. `BASIC` jest
+  repozytorium, wiele `internal-system` oraz branch zrodlowy/docelowy.
+  Wszystkie systemy sa domyslnie zaznaczone, backend wykonuje izolowane
+  porownania z limitem rownoleglosci, a wynik pokazuje zakladke per komponent.
+  `BASIC` jest
   aktualnie jedynym trybem mozliwym do wybrania; widoczny `DEEP` ma disabled
   affordance `SOON`. Backendowy kontrakt i prezentacja zapisanych wynikow
   `DEEP` pozostaja dostepne.
@@ -155,11 +160,12 @@ Na dzisiaj projekt ma:
   Sprawdza, czy system ma jednoznaczny configuration directory, code-search
   scope i osiagalny ref kodu. Zwraca blocker albo ograniczenia widocznosci.
 - `POST /api/runtime-configuration-verification/jobs`
-  Uruchamia asynchroniczna weryfikacje. `GET` z `/{jobId}` zwraca postep,
-  operatorski `configurationDiff` z dokladnymi wartosciami oraz wynik
-  deterministyczny; report, activity i usage sa obecne tylko dla `DEEP`.
+  Uruchamia asynchroniczny batch dla uporzadkowanych `systemIds`. `GET` z
+  `/{jobId}` zwraca postep parent joba oraz izolowane component snapshots z
+  operatorskim `configurationDiff`; report, activity i usage sa per komponent
+  i sa obecne tylko dla `DEEP`.
 - `POST /api/runtime-configuration-verification/imports`
-  Waliduje wersjonowany export i zwraca sanitizowany snapshot read-only.
+  Waliduje kompletny kontrakt V1 calego batcha i zwraca snapshot read-only.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.
@@ -176,6 +182,11 @@ Na dzisiaj projekt ma:
   Angularowy ekran `Tool Workbench / Confluence Source` do recznego pobierania
   tekstu strony przez `POST /api/confluence/page/content`, wraz z
   rozpoznanym `pageId`, wersja i jawnymi ograniczeniami adaptera.
+- `GET /runtime-configuration-tools`
+  Angularowy ekran `Tool Workbench / Runtime Configuration`. Tworzy
+  krotkozyjacy readonly preview pojedynczego scope'u i leniwie pokazuje source
+  metadata, operatorski diff, mapping, anonimizacje, AI-safe prompt/artefakty
+  oraz warunkowy DEEP scope bez uruchamiania AI albo tworzenia historii.
 - `GET /database`
   Angularowy ekran `Tool Workbench / Database Tools` do recznego testowania
   Database tools przez shared/operator endpointy `/api/database/*`.
