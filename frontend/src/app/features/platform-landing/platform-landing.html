@@ -38,7 +38,11 @@
       </div>
     </section>
 
-    <section class="platform-landing__features" aria-labelledby="platformLandingFeaturesTitle">
+    <section
+      id="platformLandingFeatures"
+      class="platform-landing__features"
+      aria-labelledby="platformLandingFeaturesTitle"
+    >
       <div class="platform-landing__section-heading">
         <div>
           <p class="section-eyebrow">Codzienna praca</p>
@@ -51,7 +55,10 @@
       </div>
 
       <div class="platform-landing__feature-grid">
-        <a class="platform-landing__feature-card" routerLink="/incident-analysis">
+        <a
+          class="platform-landing__feature-card platform-landing__feature-card--incident"
+          routerLink="/incident-analysis"
+        >
           <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
             troubleshoot
           </span>
@@ -65,7 +72,10 @@
           </div>
         </a>
 
-        <a class="platform-landing__feature-card" routerLink="/flow-explorer">
+        <a
+          class="platform-landing__feature-card platform-landing__feature-card--flow"
+          routerLink="/flow-explorer"
+        >
           <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
             account_tree
           </span>
@@ -79,7 +89,10 @@
           </div>
         </a>
 
-        <a class="platform-landing__feature-card" routerLink="/change-verification">
+        <a
+          class="platform-landing__feature-card platform-landing__feature-card--change"
+          routerLink="/change-verification"
+        >
           <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
             fact_check
           </span>
@@ -94,7 +107,7 @@
         </a>
 
         <a
-          class="platform-landing__feature-card"
+          class="platform-landing__feature-card platform-landing__feature-card--config"
           routerLink="/config-drift-viewer"
         >
           <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">

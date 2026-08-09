@@ -23,11 +23,25 @@ describe('PlatformLandingPageComponent', () => {
     );
 
     expect(compiled.querySelector('.platform-landing__actions')).toBeNull();
+    expect(compiled.querySelectorAll('.platform-landing__intro a')).toHaveLength(0);
+    expect(compiled.querySelector('#platformLandingFeatures')).not.toBeNull();
     expect(featureLinks.map((link) => link.getAttribute('href'))).toEqual([
       '/incident-analysis',
       '/flow-explorer',
       '/change-verification',
       '/config-drift-viewer'
+    ]);
+    expect(
+      featureLinks.map((link) =>
+        Array.from(link.classList).find((className) =>
+          className.startsWith('platform-landing__feature-card--')
+        )
+      )
+    ).toEqual([
+      'platform-landing__feature-card--incident',
+      'platform-landing__feature-card--flow',
+      'platform-landing__feature-card--change',
+      'platform-landing__feature-card--config'
     ]);
     expect(featureGrid?.textContent).not.toContain('Data Diagnostics');
     expect(plannedFeature?.textContent).toContain('W planie');
