@@ -55,6 +55,12 @@ implementacje niezatwierdzonego planu.
 - `needs/change-verification.md`
   opisuje problem, wartosc, oczekiwany wynik i granice Change Verification.
   Nowy plan implementacji powinien wskazywac ten plik jako `Source need`.
+- `needs/domain-skill-generation.md`
+  opisuje potrzebe przygotowania source-backed, zatwierdzonego i
+  zwalidowanego Agent Skill dla jednego modulu.
+- `plans/domain-skill-generation.md`
+  jest aktywnym planem MVP Domain Skill Generation. Read-only preflight jest
+  zakonczony; kazdy kolejny krok nadal wymaga jawnego zatwierdzenia.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
