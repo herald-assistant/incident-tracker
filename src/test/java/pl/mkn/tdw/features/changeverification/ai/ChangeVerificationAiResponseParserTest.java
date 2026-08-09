@@ -101,6 +101,44 @@ class ChangeVerificationAiResponseParserTest {
     }
 
     @Test
+    void shouldKeepValidDefinedCheckWhenAnotherCheckViolatesCurrentContract() {
+        var response = parser.parse("""
+                {
+                  "status": "PASSED",
+                  "verificationChecks": [
+                    {
+                      "id": "story-001",
+                      "origin": "DEFINED",
+                      "scope": "STORY_COMPLIANCE",
+                      "verificationStatus": "PASSED",
+                      "evidenceRefs": [],
+                      "gaps": []
+                    },
+                    {
+                      "id": "critical-invalid",
+                      "origin": "INFERRED_CRITICAL",
+                      "scope": "INFERRED_CRITICAL_CHECKS",
+                      "verificationStatus": "WARNING",
+                      "inferenceSignals": []
+                    }
+                  ],
+                  "findings": [],
+                  "suggestedActions": [],
+                  "visibilityLimits": [],
+                  "confidence": "medium"
+                }
+                """);
+
+        assertThat(response.status()).isEqualTo("PASSED");
+        assertThat(response.verificationChecks()).singleElement()
+                .extracting(check -> check.id())
+                .isEqualTo("story-001");
+        assertThat(response.visibilityLimits()).singleElement()
+                .asString()
+                .contains("critical-invalid", "ignored", "incomplete");
+    }
+
+    @Test
     void shouldCapInferredChecksAndExcludeThemFromComplianceStatus() {
         var inferredChecks = java.util.stream.IntStream.rangeClosed(1, 6)
                 .mapToObj(index -> """

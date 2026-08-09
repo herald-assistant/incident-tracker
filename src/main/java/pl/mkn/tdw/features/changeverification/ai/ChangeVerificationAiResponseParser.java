@@ -1,13 +1,18 @@
 package pl.mkn.tdw.features.changeverification.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Component
@@ -23,56 +28,199 @@ public class ChangeVerificationAiResponseParser {
         }
 
         try {
-            var response = objectMapper.readValue(json, ChangeVerificationAiResponse.class);
-            if (!StringUtils.hasText(response.status())) {
+            var root = objectMapper.readTree(json);
+            if (root == null || !root.isObject()) {
+                return fallback("AI response JSON was not an object.");
+            }
+            if (!StringUtils.hasText(text(root, "status"))) {
                 return fallback("AI response did not contain compliance status.");
             }
-            var validationError = validateChecks(response.verificationChecks());
-            if (StringUtils.hasText(validationError)) {
-                return fallback(validationError);
+            var checksNode = requiredArray(root, "verificationChecks");
+            var findingsNode = requiredArray(root, "findings");
+            var suggestedActions = requiredTextList(root, "suggestedActions");
+            var visibilityLimits = requiredTextList(root, "visibilityLimits");
+            if (checksNode == null || findingsNode == null
+                    || suggestedActions == null || visibilityLimits == null) {
+                return fallback("AI response did not satisfy the required collection contract.");
             }
-            return response;
+
+            var parsedChecks = parseChecks(checksNode);
+            var findings = parseFindings(findingsNode);
+            if (findings == null) {
+                return fallback("AI response contained an invalid finding.");
+            }
+            var mergedVisibilityLimits = new ArrayList<>(visibilityLimits);
+            mergedVisibilityLimits.addAll(parsedChecks.visibilityLimits());
+
+            return new ChangeVerificationAiResponse(
+                    text(root, "status"),
+                    parsedChecks.checks(),
+                    findings,
+                    suggestedActions,
+                    mergedVisibilityLimits,
+                    text(root, "confidence")
+            );
         } catch (JsonProcessingException exception) {
             return fallback("AI response JSON could not be parsed: " + exception.getMessage());
         }
     }
 
-    private String validateChecks(List<ChangeVerificationVerificationCheckResponse> checks) {
+    private ParsedChecks parseChecks(JsonNode checksNode) {
+        var checks = new ArrayList<ChangeVerificationVerificationCheckResponse>();
+        var visibilityLimits = new ArrayList<String>();
+        for (var index = 0; index < checksNode.size(); index++) {
+            var node = checksNode.get(index);
+            var parsed = parseCheck(node);
+            if (parsed == null) {
+                visibilityLimits.add("AI response verification check at index " + index
+                        + " was ignored because its field types were invalid.");
+                continue;
+            }
+            var validationError = validationError(parsed);
+            if (StringUtils.hasText(validationError)) {
+                var checkLabel = StringUtils.hasText(parsed.id()) ? "`" + parsed.id() + "`" : "at index " + index;
+                visibilityLimits.add("AI response verification check " + checkLabel
+                        + " was ignored: " + validationError);
+                continue;
+            }
+            checks.add(parsed);
+        }
+        return new ParsedChecks(List.copyOf(checks), List.copyOf(visibilityLimits));
+    }
+
+    private ChangeVerificationVerificationCheckResponse parseCheck(JsonNode node) {
+        if (node == null || !node.isObject()) {
+            return null;
+        }
+        var inferenceSignals = optionalTextList(node.get("inferenceSignals"));
+        var evidenceRefs = optionalTextList(node.get("evidenceRefs"));
+        var gaps = optionalTextList(node.get("gaps"));
+        if (inferenceSignals == null || evidenceRefs == null || gaps == null) {
+            return null;
+        }
+        return new ChangeVerificationVerificationCheckResponse(
+                text(node, "id"),
+                text(node, "origin"),
+                text(node, "scope"),
+                text(node, "criterionSource"),
+                text(node, "criterionQuote"),
+                text(node, "interpretationType"),
+                text(node, "criticality"),
+                text(node, "inferenceRationale"),
+                inferenceSignals,
+                text(node, "riskIfOmitted"),
+                text(node, "confidence"),
+                text(node, "expectedCriterion"),
+                text(node, "verificationStatus"),
+                text(node, "verifiedAgainst"),
+                text(node, "analysis"),
+                evidenceRefs,
+                gaps,
+                text(node, "suggestedAction")
+        );
+    }
+
+    private String validationError(ChangeVerificationVerificationCheckResponse check) {
         var allowedOrigins = Set.of("DEFINED", "INFERRED_CRITICAL");
         var allowedDefinedScopes = Set.of("STORY_COMPLIANCE", "INSTRUCTION_COMPLIANCE");
         var allowedStatuses = Set.of("PASSED", "WARNING", "FAILED", "NOT_VERIFIED");
-        for (var check : checks) {
-            if (check == null || !StringUtils.hasText(check.id())) {
-                return "AI response contained a verification check without id.";
+        if (check == null || !StringUtils.hasText(check.id())) {
+            return "verification check did not contain id.";
+        }
+        var origin = normalized(check.origin());
+        if (!allowedOrigins.contains(origin)) {
+            return "verification check did not contain a supported origin.";
+        }
+        if ("DEFINED".equals(origin) && !allowedDefinedScopes.contains(normalized(check.scope()))) {
+            return "defined verification check contained an unsupported scope.";
+        }
+        if (!allowedStatuses.contains(normalized(check.verificationStatus()))) {
+            return "verification check contained an unsupported status.";
+        }
+        if ("INFERRED_CRITICAL".equals(origin)) {
+            if (!"INFERRED_CRITICAL_CHECKS".equals(normalized(check.scope()))) {
+                return "inferred critical check contained an unsupported scope.";
             }
-            var origin = normalized(check.origin());
-            if (!allowedOrigins.contains(origin)) {
-                return "AI response contained a verification check without a supported origin.";
+            if (!StringUtils.hasText(check.criticality())
+                    || !StringUtils.hasText(check.inferenceRationale())
+                    || check.inferenceSignals().isEmpty()
+                    || !StringUtils.hasText(check.riskIfOmitted())
+                    || !StringUtils.hasText(check.confidence())) {
+                return "inferred critical check was incomplete.";
             }
-            if ("DEFINED".equals(origin) && !allowedDefinedScopes.contains(normalized(check.scope()))) {
-                return "AI response contained a defined verification check with unsupported scope.";
-            }
-            if (!allowedStatuses.contains(normalized(check.verificationStatus()))) {
-                return "AI response contained a verification check with unsupported status.";
-            }
-            if ("INFERRED_CRITICAL".equals(origin)) {
-                if (!"INFERRED_CRITICAL_CHECKS".equals(normalized(check.scope()))) {
-                    return "AI response contained an inferred critical check with unsupported scope.";
-                }
-                if (!StringUtils.hasText(check.criticality())
-                        || !StringUtils.hasText(check.inferenceRationale())
-                        || check.inferenceSignals().isEmpty()
-                        || !StringUtils.hasText(check.riskIfOmitted())
-                        || !StringUtils.hasText(check.confidence())) {
-                    return "AI response contained an incomplete inferred critical check.";
-                }
-                if (!Set.of("HIGH", "BLOCKER").contains(normalized(check.criticality()))
-                        || !Set.of("HIGH", "MEDIUM", "LOW").contains(normalized(check.confidence()))) {
-                    return "AI response contained inferred critical metadata outside the supported contract.";
-                }
+            if (!Set.of("HIGH", "BLOCKER").contains(normalized(check.criticality()))
+                    || !Set.of("HIGH", "MEDIUM", "LOW").contains(normalized(check.confidence()))) {
+                return "inferred critical metadata was outside the supported contract.";
             }
         }
         return null;
+    }
+
+    private List<ChangeVerificationFindingResponse> parseFindings(JsonNode findingsNode) {
+        var findings = new ArrayList<ChangeVerificationFindingResponse>();
+        for (var node : findingsNode) {
+            if (node == null || !node.isObject()) {
+                return null;
+            }
+            var severity = severity(text(node, "severity"));
+            var references = optionalTextList(node.get("references"));
+            if (severity == null || references == null) {
+                return null;
+            }
+            findings.add(new ChangeVerificationFindingResponse(
+                    text(node, "id"),
+                    severity,
+                    text(node, "source"),
+                    text(node, "summary"),
+                    text(node, "details"),
+                    references,
+                    text(node, "suggestedAction")
+            ));
+        }
+        return List.copyOf(findings);
+    }
+
+    private JsonNode requiredArray(JsonNode root, String fieldName) {
+        var node = root.get(fieldName);
+        return node != null && node.isArray() ? node : null;
+    }
+
+    private List<String> requiredTextList(JsonNode root, String fieldName) {
+        var node = requiredArray(root, fieldName);
+        return node != null ? optionalTextList(node) : null;
+    }
+
+    private List<String> optionalTextList(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return List.of();
+        }
+        if (!node.isArray()) {
+            return null;
+        }
+        var values = new ArrayList<String>();
+        for (var item : node) {
+            if (!item.isTextual()) {
+                return null;
+            }
+            values.add(item.asText());
+        }
+        return List.copyOf(values);
+    }
+
+    private String text(JsonNode node, String fieldName) {
+        var value = node != null ? node.get(fieldName) : null;
+        return value != null && value.isTextual() ? value.asText() : null;
+    }
+
+    private ChangeVerificationFindingSeverity severity(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return ChangeVerificationFindingSeverity.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
     }
 
     private String normalized(String value) {
@@ -116,5 +264,11 @@ public class ChangeVerificationAiResponseParser {
         }
 
         return null;
+    }
+
+    private record ParsedChecks(
+            List<ChangeVerificationVerificationCheckResponse> checks,
+            List<String> visibilityLimits
+    ) {
     }
 }
