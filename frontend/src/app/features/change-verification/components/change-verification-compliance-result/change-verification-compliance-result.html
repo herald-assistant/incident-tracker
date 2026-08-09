@@ -1,12 +1,20 @@
 @if (checks().length) {
   <div class="change-verification-compliance">
     @if (inferredCritical()) {
-      <aside class="change-verification-compliance__inferred-notice" aria-label="Charakter sugestii AI">
+      <aside
+        class="change-verification-compliance__inferred-notice"
+        aria-labelledby="inferred-critical-notice-title"
+      >
         <span class="material-symbols-outlined" aria-hidden="true">lightbulb</span>
-        <p>
-          To nie są wymagania zapisane w Jira, Confluence ani instrukcjach repozytorium.
-          AI wskazuje je jako materiał do manualnej decyzji; ich status nie zmienia wyniku Story Compliance.
-        </p>
+        <div>
+          <strong id="inferred-critical-notice-title">
+            To nie są wymagania zapisane w Jira, Confluence ani instrukcjach repozytorium
+          </strong>
+          <p>
+            AI wskazuje je jako materiał do manualnej decyzji; ich status nie zmienia wyniku Story
+            Compliance.
+          </p>
+        </div>
       </aside>
     }
     <section class="change-verification-compliance__summary" aria-labelledby="compliance-section-summary">

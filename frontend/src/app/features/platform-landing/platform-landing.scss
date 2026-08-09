@@ -43,7 +43,8 @@
 
 .platform-landing__copy h2,
 .platform-landing__section-heading h3,
-.platform-landing__feature-card h4 {
+.platform-landing__feature-card h4,
+.platform-landing__planned-feature h4 {
   margin: 0;
   color: var(--text-main);
   overflow-wrap: anywhere;
@@ -58,6 +59,7 @@
 .platform-landing__copy p,
 .platform-landing__section-heading p,
 .platform-landing__feature-card p,
+.platform-landing__planned-feature p,
 .platform-landing__impact-item p {
   margin: 0;
   color: var(--text-muted);
@@ -70,27 +72,11 @@
   font-size: 0.96rem;
 }
 
-.platform-landing__actions,
 .platform-landing__section-heading {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-}
-
-.platform-landing__actions {
-  margin-top: 2px;
-}
-
-.platform-landing__primary-link,
-.platform-landing__secondary-link {
-  gap: 8px;
-  text-decoration: none;
-}
-
-.platform-landing__primary-link .material-symbols-outlined,
-.platform-landing__secondary-link .material-symbols-outlined {
-  font-size: 20px;
 }
 
 .platform-landing__hero-points {
@@ -121,15 +107,15 @@
   display: grid;
   place-items: center;
   min-width: 0;
-  min-height: 300px;
+  min-height: 250px;
   padding: 0 14px;
   overflow: visible;
 }
 
 .platform-landing__brand-logo {
   display: block;
-  width: min(90%, 410px);
-  max-height: 360px;
+  width: min(82%, 350px);
+  max-height: 305px;
   object-fit: contain;
   filter: drop-shadow(0 20px 32px rgba(12, 102, 228, 0.18));
 }
@@ -191,10 +177,6 @@ a.platform-landing__feature-card:focus-visible {
   outline: none;
 }
 
-.platform-landing__feature-card--planned {
-  background: #fbfcfe;
-}
-
 .platform-landing__feature-icon {
   display: inline-grid;
   place-items: center;
@@ -207,7 +189,7 @@ a.platform-landing__feature-card:focus-visible {
   font-size: 21px;
 }
 
-.platform-landing__feature-card--planned .platform-landing__feature-icon {
+.platform-landing__feature-icon--planned {
   border-color: rgba(94, 108, 132, 0.2);
   color: var(--text-soft);
 }
@@ -228,6 +210,33 @@ a.platform-landing__feature-card:focus-visible {
   font-size: 0.86rem;
 }
 
+.platform-landing__planned-feature {
+  display: grid;
+  grid-template-columns: 36px minmax(170px, 230px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px dashed rgba(94, 108, 132, 0.3);
+  border-radius: var(--radius-xl);
+  background: #fbfcfe;
+}
+
+.platform-landing__planned-feature-heading {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.platform-landing__planned-feature h4 {
+  font-size: 0.94rem;
+  line-height: 1.25;
+}
+
+.platform-landing__planned-feature p {
+  font-size: 0.84rem;
+}
+
 .platform-landing__feature-status {
   color: var(--primary);
   font-size: 0.68rem;
@@ -237,7 +246,7 @@ a.platform-landing__feature-card:focus-visible {
   text-transform: uppercase;
 }
 
-.platform-landing__feature-card--planned .platform-landing__feature-status {
+.platform-landing__feature-status--planned {
   color: var(--text-soft);
 }
 
@@ -293,7 +302,20 @@ a.platform-landing__feature-card:focus-visible {
   }
 
   .platform-landing__brand-visual {
-    min-height: 220px;
+    min-height: 190px;
+  }
+
+  .platform-landing__brand-logo {
+    width: min(62%, 260px);
+    max-height: 260px;
+  }
+
+  .platform-landing__planned-feature {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .platform-landing__planned-feature p {
+    grid-column: 2;
   }
 
   .platform-landing__copy h2 {
@@ -325,16 +347,14 @@ a.platform-landing__feature-card:focus-visible {
   }
 
   .platform-landing__brand-visual {
-    min-height: 200px;
+    min-height: 170px;
     padding: 0;
   }
 
   .platform-landing__brand-logo {
-    width: min(78%, 270px);
+    width: min(72%, 230px);
   }
 
-  .platform-landing__actions .primary-button,
-  .platform-landing__actions .secondary-button,
   .platform-landing__section-heading .secondary-button {
     width: 100%;
   }

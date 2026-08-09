@@ -49,14 +49,15 @@ describe('App', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-platform-landing-page')).not.toBeNull();
+    const landing = compiled.querySelector<HTMLElement>('app-platform-landing-page');
+
+    expect(landing).not.toBeNull();
+    expect(landing?.querySelector('#platformLandingTitle')).not.toBeNull();
+    expect(landing?.querySelector('.platform-landing__feature-grid')).not.toBeNull();
     expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
       'Team Delivery Workspace'
     );
     expect(compiled.querySelector('.app-shell__breadcrumb')).toBeNull();
-    expect(compiled.textContent).toContain('Sprawdź incydent');
-    expect(compiled.textContent).toContain('Flow Explorer');
-    expect(compiled.textContent).toContain('Config Drift Viewer');
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 

@@ -27,17 +27,6 @@
             <span>Dostajesz wynik do rozmowy</span>
           </div>
         </div>
-
-        <div class="platform-landing__actions" aria-label="Primary workspace actions">
-          <a class="primary-button platform-landing__primary-link" routerLink="/incident-analysis">
-            <span class="material-symbols-outlined" aria-hidden="true">troubleshoot</span>
-            <span>Sprawdź incydent</span>
-          </a>
-          <a class="secondary-button platform-landing__secondary-link" routerLink="/flow-explorer">
-            <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
-            <span>Poznaj przebieg procesu</span>
-          </a>
-        </div>
       </div>
 
       <div class="platform-landing__brand-visual" aria-hidden="true">
@@ -121,20 +110,29 @@
           </div>
         </a>
 
-        <article class="platform-landing__feature-card platform-landing__feature-card--planned">
-          <span class="platform-landing__feature-icon material-symbols-outlined" aria-hidden="true">
-            database_search
-          </span>
-          <div>
-            <span class="platform-landing__feature-status">W planie</span>
-            <h4>Data Diagnostics</h4>
-            <p>
-              Bezpieczne pytania o dane w języku naturalnym, z wynikiem gotowym do rozmowy z
-              biznesem, supportem albo zespołem technicznym.
-            </p>
-          </div>
-        </article>
       </div>
+
+      <article
+        class="platform-landing__planned-feature"
+        aria-labelledby="platformLandingPlannedFeatureTitle"
+      >
+        <span
+          class="platform-landing__feature-icon platform-landing__feature-icon--planned material-symbols-outlined"
+          aria-hidden="true"
+        >
+          database_search
+        </span>
+        <div class="platform-landing__planned-feature-heading">
+          <span class="platform-landing__feature-status platform-landing__feature-status--planned">
+            W planie
+          </span>
+          <h4 id="platformLandingPlannedFeatureTitle">Data Diagnostics</h4>
+        </div>
+        <p>
+          Bezpieczne pytania o dane w języku naturalnym, z wynikiem gotowym do rozmowy z biznesem,
+          supportem albo zespołem technicznym.
+        </p>
+      </article>
     </section>
 
     <section class="platform-landing__capabilities" aria-labelledby="platformLandingCapabilitiesTitle">

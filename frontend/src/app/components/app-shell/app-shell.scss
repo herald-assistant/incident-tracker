@@ -30,6 +30,16 @@
   overflow-x: hidden;
 }
 
+@media (min-width: 981px) {
+  .app-shell__sidebar {
+    direction: rtl;
+  }
+
+  .app-shell__sidebar > * {
+    direction: ltr;
+  }
+}
+
 .app-shell__sidebar-header {
   display: flex;
   align-items: flex-start;

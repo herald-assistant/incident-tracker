@@ -82,7 +82,19 @@ describe('ChangeVerificationComplianceResultComponent', () => {
     ]);
     fixture.detectChanges();
 
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    const element = fixture.nativeElement as HTMLElement;
+    const notice = element.querySelector<HTMLElement>(
+      '.change-verification-compliance__inferred-notice'
+    );
+    const text = element.textContent ?? '';
+
+    expect(notice?.getAttribute('aria-labelledby')).toBe('inferred-critical-notice-title');
+    expect(notice?.querySelector('strong')?.textContent).toContain(
+      'To nie są wymagania zapisane w Jira, Confluence ani instrukcjach repozytorium'
+    );
+    expect(notice?.querySelector('p')?.textContent).toContain(
+      'AI wskazuje je jako materiał do manualnej decyzji'
+    );
     expect(text).toContain('To nie są wymagania zapisane');
     expect(text).toContain('Idempotencja publikacji');
     expect(text).toContain('Ponowienie może utworzyć duplikat.');
