@@ -780,7 +780,7 @@ runtime, a testy skladaja ja przez `AnalysisJobFacadeTestCreator`.
 
 ## 26. Weryfikacja konfiguracji rozdziela fakty od drugiej opinii AI
 
-Config Drift Verification ma dwie niezalezne warstwy wyniku.
+Config Drift Viewer ma dwie niezalezne warstwy wyniku.
 Deterministyczny parser/diff jest zrodlem faktow i pozostaje niemutowalny dla
 AI. Jeden deterministic build tworzy sanitizowany context oraz operatorski
 `configurationDiff` per plik. `BASIC` publikuje tylko wynik deterministyczny.
@@ -810,7 +810,7 @@ niezmienione parametry pomagaja rozpoznac funkcjonalny kontekst rozjazdu bez
 przekazywania prawdziwej konfiguracji. Warstwa AI nie moze zalezec od pakietu
 operatorskiej projekcji; te granice egzekwuje test architektoniczny.
 
-Publiczny job Config Drift Verification jest batchowy: przyjmuje uporzadkowane
+Publiczny job Config Drift Viewer jest batchowy: przyjmuje uporzadkowane
 `systemIds`, utrzymuje izolowany component snapshot dla kazdego systemu i
 agreguje parent status bez zatrzymywania pozostalych komponentow po lokalnym
 bledzie. Wykonanie ma konfigurowalny, ograniczony fan-out, a UI zachowuje

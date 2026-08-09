@@ -30,7 +30,7 @@ export class WorkspaceSettingsPageComponent {
   readonly errorMessage = signal('');
   readonly saveMessage = signal('');
   readonly showToken = signal(false);
-  readonly showRuntimeConfigGitLabToken = signal(false);
+  readonly showConfigDriftViewerGitLabToken = signal(false);
   readonly showCopilotGithubToken = signal(false);
   readonly showJiraToken = signal(false);
   readonly showElasticsearchAuthorizationHeader = signal(false);
@@ -52,7 +52,7 @@ export class WorkspaceSettingsPageComponent {
       group: new FormControl('', { nonNullable: true }),
       token: new FormControl('', { nonNullable: true })
     }),
-    runtimeConfigGitLab: new FormGroup({
+    configDriftViewerGitLab: new FormGroup({
       baseUrl: new FormControl('', { nonNullable: true }),
       token: new FormControl('', { nonNullable: true })
     }),
@@ -131,8 +131,8 @@ export class WorkspaceSettingsPageComponent {
     this.showToken.update((visible) => !visible);
   }
 
-  toggleRuntimeConfigGitLabTokenVisibility(): void {
-    this.showRuntimeConfigGitLabToken.update((visible) => !visible);
+  toggleConfigDriftViewerGitLabTokenVisibility(): void {
+    this.showConfigDriftViewerGitLabToken.update((visible) => !visible);
   }
 
   toggleCopilotGithubTokenVisibility(): void {
@@ -206,9 +206,9 @@ export class WorkspaceSettingsPageComponent {
         group: settings.values.gitLab.group.value,
         token: settings.values.gitLab.token.value
       },
-      runtimeConfigGitLab: {
-        baseUrl: settings.values.runtimeConfigGitLab.baseUrl.value,
-        token: settings.values.runtimeConfigGitLab.token.value
+      configDriftViewerGitLab: {
+        baseUrl: settings.values.configDriftViewerGitLab.baseUrl.value,
+        token: settings.values.configDriftViewerGitLab.token.value
       },
       elasticsearch: {
         baseUrl: settings.values.elasticsearch.baseUrl.value,
@@ -240,9 +240,9 @@ export class WorkspaceSettingsPageComponent {
         group: this.form.controls.gitLab.controls.group.value.trim(),
         token: this.form.controls.gitLab.controls.token.value.trim()
       },
-      runtimeConfigGitLab: {
-        baseUrl: this.form.controls.runtimeConfigGitLab.controls.baseUrl.value.trim(),
-        token: this.form.controls.runtimeConfigGitLab.controls.token.value.trim()
+      configDriftViewerGitLab: {
+        baseUrl: this.form.controls.configDriftViewerGitLab.controls.baseUrl.value.trim(),
+        token: this.form.controls.configDriftViewerGitLab.controls.token.value.trim()
       },
       elasticsearch: {
         baseUrl: this.form.controls.elasticsearch.controls.baseUrl.value.trim(),
@@ -267,8 +267,8 @@ export class WorkspaceSettingsPageComponent {
       settings.values.gitLab.baseUrl,
       settings.values.gitLab.group,
       settings.values.gitLab.token,
-      settings.values.runtimeConfigGitLab.baseUrl,
-      settings.values.runtimeConfigGitLab.token,
+      settings.values.configDriftViewerGitLab.baseUrl,
+      settings.values.configDriftViewerGitLab.token,
       settings.values.elasticsearch.baseUrl,
       settings.values.elasticsearch.kibanaSpaceId,
       settings.values.elasticsearch.indexPattern,

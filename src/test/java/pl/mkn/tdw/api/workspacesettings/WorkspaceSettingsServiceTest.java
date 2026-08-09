@@ -20,7 +20,7 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsGitLabUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsJiraUpdate;
-import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsRuntimeConfigGitLabUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsConfigDriftViewerGitLabUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsSource;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsUpdateRequest;
 
@@ -44,11 +44,11 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().gitLab().baseUrl().value()).isEqualTo("https://gitlab.app");
         assertThat(response.values().gitLab().group().value()).isEqualTo("app/group");
         assertThat(response.values().gitLab().token().value()).isEqualTo("app-token");
-        assertThat(response.values().runtimeConfigGitLab().baseUrl().value())
+        assertThat(response.values().configDriftViewerGitLab().baseUrl().value())
                 .isEqualTo("https://runtime-config.app");
-        assertThat(response.values().runtimeConfigGitLab().token().value())
+        assertThat(response.values().configDriftViewerGitLab().token().value())
                 .isEqualTo("runtime-config-app-token");
-        assertThat(response.values().runtimeConfigGitLab().token().secret()).isTrue();
+        assertThat(response.values().configDriftViewerGitLab().token().secret()).isTrue();
         assertThat(response.values().elasticsearch().baseUrl().value()).isEqualTo("https://elastic.app");
         assertThat(response.values().elasticsearch().kibanaSpaceId().value()).isEqualTo("default");
         assertThat(response.values().elasticsearch().indexPattern().value()).isEqualTo("logs-*");
@@ -61,7 +61,7 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.app");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
-        assertThat(fixture.runtimeConfigConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
+        assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
         assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.app");
         assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.app");
     }
@@ -83,7 +83,7 @@ class WorkspaceSettingsServiceTest {
                         "workspace/group",
                         "workspace-token"
                 ),
-                new WorkspaceSettingsRuntimeConfigGitLabUpdate(
+                new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
                         "https://runtime-config.workspace",
                         "runtime-config-workspace-token"
                 ),
@@ -105,9 +105,9 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.store.saved.gitLab().baseUrl()).isNull();
         assertThat(fixture.store.saved.gitLab().group()).isEqualTo("workspace/group");
         assertThat(fixture.store.saved.gitLab().token()).isEqualTo("workspace-token");
-        assertThat(fixture.store.saved.runtimeConfigGitLab().baseUrl())
+        assertThat(fixture.store.saved.configDriftViewerGitLab().baseUrl())
                 .isEqualTo("https://runtime-config.workspace");
-        assertThat(fixture.store.saved.runtimeConfigGitLab().token())
+        assertThat(fixture.store.saved.configDriftViewerGitLab().token())
                 .isEqualTo("runtime-config-workspace-token");
         assertThat(fixture.store.saved.elasticsearch().baseUrl()).isEqualTo("https://elastic.workspace");
         assertThat(fixture.store.saved.elasticsearch().kibanaSpaceId()).isNull();
@@ -121,9 +121,9 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().jira().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().jira().token().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().gitLab().group().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
-        assertThat(response.values().runtimeConfigGitLab().baseUrl().source())
+        assertThat(response.values().configDriftViewerGitLab().baseUrl().source())
                 .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
-        assertThat(response.values().runtimeConfigGitLab().token().source())
+        assertThat(response.values().configDriftViewerGitLab().token().source())
                 .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().elasticsearch().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().elasticsearch().kibanaSpaceId().source())
@@ -140,9 +140,9 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("workspace/group");
         assertThat(fixture.gitLabProperties.getToken()).isEqualTo("workspace-token");
-        assertThat(fixture.runtimeConfigConnection().getBaseUrl())
+        assertThat(fixture.configDriftViewerConnection().getBaseUrl())
                 .isEqualTo("https://runtime-config.workspace");
-        assertThat(fixture.runtimeConfigConnection().getToken())
+        assertThat(fixture.configDriftViewerConnection().getToken())
                 .isEqualTo("runtime-config-workspace-token");
         assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.workspace");
         assertThat(fixture.elasticProperties.getKibanaSpaceId()).isEqualTo("default");
@@ -164,7 +164,7 @@ class WorkspaceSettingsServiceTest {
                         "jira-workspace-token"
                 ),
                 new WorkspaceSettingsGitLabUpdate("https://gitlab.workspace", "workspace/group", "workspace-token"),
-                new WorkspaceSettingsRuntimeConfigGitLabUpdate(
+                new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
                         "https://runtime-config.workspace",
                         "runtime-config-workspace-token"
                 ),
@@ -188,7 +188,7 @@ class WorkspaceSettingsServiceTest {
                         "jira-app-token"
                 ),
                 new WorkspaceSettingsGitLabUpdate("https://gitlab.app", "app/group", "app-token"),
-                new WorkspaceSettingsRuntimeConfigGitLabUpdate(
+                new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
                         "https://runtime-config.app",
                         "runtime-config-app-token"
                 ),
@@ -211,8 +211,8 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.store.saved.gitLab().baseUrl()).isNull();
         assertThat(fixture.store.saved.gitLab().group()).isNull();
         assertThat(fixture.store.saved.gitLab().token()).isNull();
-        assertThat(fixture.store.saved.runtimeConfigGitLab().baseUrl()).isNull();
-        assertThat(fixture.store.saved.runtimeConfigGitLab().token()).isNull();
+        assertThat(fixture.store.saved.configDriftViewerGitLab().baseUrl()).isNull();
+        assertThat(fixture.store.saved.configDriftViewerGitLab().token()).isNull();
         assertThat(fixture.store.saved.elasticsearch().baseUrl()).isNull();
         assertThat(fixture.store.saved.elasticsearch().kibanaSpaceId()).isNull();
         assertThat(fixture.store.saved.elasticsearch().indexPattern()).isNull();
@@ -231,8 +231,8 @@ class WorkspaceSettingsServiceTest {
                 .isEqualTo("copilot-app-token");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("app/group");
-        assertThat(fixture.runtimeConfigConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
-        assertThat(fixture.runtimeConfigConnection().getToken()).isEqualTo("runtime-config-app-token");
+        assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
+        assertThat(fixture.configDriftViewerConnection().getToken()).isEqualTo("runtime-config-app-token");
         assertThat(fixture.elasticProperties.getIndexPattern()).isEqualTo("logs-*");
         assertThat(fixture.dynatraceProperties.getApiToken()).isEqualTo("dt0c01.app-token");
     }
@@ -250,10 +250,10 @@ class WorkspaceSettingsServiceTest {
         gitLabProperties.setGroup("app/group");
         gitLabProperties.setToken("app-token");
         var gitLabNamedConnectionsProperties = new GitLabNamedConnectionsProperties();
-        var runtimeConfigConnection = new GitLabNamedConnectionsProperties.Connection();
-        runtimeConfigConnection.setBaseUrl("https://runtime-config.app");
-        runtimeConfigConnection.setToken("runtime-config-app-token");
-        gitLabNamedConnectionsProperties.getConnections().put("runtime-config", runtimeConfigConnection);
+        var configDriftViewerConnection = new GitLabNamedConnectionsProperties.Connection();
+        configDriftViewerConnection.setBaseUrl("https://runtime-config.app");
+        configDriftViewerConnection.setToken("runtime-config-app-token");
+        gitLabNamedConnectionsProperties.getConnections().put("runtime-config", configDriftViewerConnection);
         var elasticProperties = new ElasticProperties();
         elasticProperties.setBaseUrl("https://elastic.app");
         elasticProperties.setKibanaSpaceId("default");
@@ -297,7 +297,7 @@ class WorkspaceSettingsServiceTest {
             WorkspaceSettingsService service
     ) {
 
-        private GitLabNamedConnectionsProperties.Connection runtimeConfigConnection() {
+        private GitLabNamedConnectionsProperties.Connection configDriftViewerConnection() {
             return gitLabNamedConnectionsProperties.getConnections().get("runtime-config");
         }
     }

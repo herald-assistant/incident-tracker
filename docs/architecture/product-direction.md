@@ -30,7 +30,7 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
 
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
   `Incident Analysis`, `Flow Explorer`, `Change Verification` i
-  `Config Drift Verification` oraz przyszle miejsce na Data
+  `Config Drift Viewer` oraz przyszle miejsce na Data
   Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
@@ -131,7 +131,7 @@ Dalsze inkrementy
 powinny wynikac z `../needs/change-verification.md` oraz osobno zatwierdzonych
 planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
 
-### Config Drift Verification
+### Config Drift Viewer
 
 Administrator porownuje runtime configuration jednego lub wielu
 `internal-system` pomiedzy allowlistowanymi branchami srodowisk testowych.

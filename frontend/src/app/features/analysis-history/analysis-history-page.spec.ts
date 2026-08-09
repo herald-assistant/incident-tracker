@@ -39,16 +39,16 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('analysis-1');
   });
 
-  it('should use the Config Drift Verification product label and icon for stored runs', async () => {
+  it('should use the Config Drift Viewer product label and icon for stored runs', async () => {
     const { fixture } = await createComponent();
     const component = fixture.componentInstance as unknown as {
       featureLabel: (feature: string) => string;
       featureIcon: (feature: string) => string;
     };
 
-    expect(component.featureLabel('runtime-configuration-verification'))
-      .toBe('Config Drift Verification');
-    expect(component.featureIcon('runtime-configuration-verification')).toBe('build_circle');
+    expect(component.featureLabel('config-drift-viewer'))
+      .toBe('Config Drift Viewer');
+    expect(component.featureIcon('config-drift-viewer')).toBe('build_circle');
   });
 
   it('should keep history action labels in tooltips instead of visible button text', async () => {
@@ -196,11 +196,11 @@ describe('AnalysisHistoryPageComponent', () => {
     });
   });
 
-  it('should route a runtime configuration run to its feature screen', async () => {
+  it('should route a config drift viewer run to its feature screen', async () => {
     const { fixture, router } = await createComponent();
     const run: LocalAnalysisRunListItemResponse = {
-      analysisId: 'runtime-configuration-1',
-      feature: 'runtime-configuration-verification',
+      analysisId: 'config-drift-viewer-1',
+      feature: 'config-drift-viewer',
       name: 'dev1 to zt001',
       status: 'COMPLETED_WITH_LIMITATIONS',
       createdAt: '2026-07-30T10:00:00Z',
@@ -213,8 +213,8 @@ describe('AnalysisHistoryPageComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/runtime-configuration-verification'], {
-      queryParams: { localRunId: 'runtime-configuration-1' }
+    expect(navigateSpy).toHaveBeenCalledWith(['/config-drift-viewer'], {
+      queryParams: { localRunId: 'config-drift-viewer-1' }
     });
   });
 

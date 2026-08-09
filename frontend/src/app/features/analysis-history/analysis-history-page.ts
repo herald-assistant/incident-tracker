@@ -234,8 +234,8 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'change-verification') {
       return 'Change Verification';
     }
-    if (feature === 'runtime-configuration-verification') {
-      return 'Config Drift Verification';
+    if (feature === 'config-drift-viewer') {
+      return 'Config Drift Viewer';
     }
     return feature
       ? feature
@@ -256,7 +256,7 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'change-verification') {
       return 'fact_check';
     }
-    if (feature === 'runtime-configuration-verification') {
+    if (feature === 'config-drift-viewer') {
       return 'build_circle';
     }
     return 'analytics';
@@ -343,8 +343,8 @@ function routeForFeature(feature: string): string | null {
   if (feature === 'change-verification') {
     return '/change-verification';
   }
-  if (feature === 'runtime-configuration-verification') {
-    return '/runtime-configuration-verification';
+  if (feature === 'config-drift-viewer') {
+    return '/config-drift-viewer';
   }
   return null;
 }

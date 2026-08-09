@@ -7,7 +7,7 @@ public record LocalWorkspaceSettingsFile(
         LocalWorkspaceCopilotSettings copilot,
         LocalWorkspaceJiraSettings jira,
         LocalWorkspaceGitLabSettings gitLab,
-        LocalWorkspaceRuntimeConfigGitLabSettings runtimeConfigGitLab,
+        LocalWorkspaceConfigDriftViewerGitLabSettings configDriftViewerGitLab,
         LocalWorkspaceElasticsearchSettings elasticsearch,
         LocalWorkspaceDynatraceSettings dynatrace
 ) {
@@ -34,8 +34,8 @@ public record LocalWorkspaceSettingsFile(
         if (gitLab == null) {
             gitLab = LocalWorkspaceGitLabSettings.empty();
         }
-        if (runtimeConfigGitLab == null) {
-            runtimeConfigGitLab = LocalWorkspaceRuntimeConfigGitLabSettings.empty();
+        if (configDriftViewerGitLab == null) {
+            configDriftViewerGitLab = LocalWorkspaceConfigDriftViewerGitLabSettings.empty();
         }
         if (elasticsearch == null) {
             elasticsearch = LocalWorkspaceElasticsearchSettings.empty();
@@ -53,7 +53,7 @@ public record LocalWorkspaceSettingsFile(
                 LocalWorkspaceCopilotSettings.empty(),
                 LocalWorkspaceJiraSettings.empty(),
                 LocalWorkspaceGitLabSettings.empty(),
-                LocalWorkspaceRuntimeConfigGitLabSettings.empty(),
+                LocalWorkspaceConfigDriftViewerGitLabSettings.empty(),
                 LocalWorkspaceElasticsearchSettings.empty(),
                 LocalWorkspaceDynatraceSettings.empty()
         );

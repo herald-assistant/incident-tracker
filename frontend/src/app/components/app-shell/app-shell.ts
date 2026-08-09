@@ -81,8 +81,8 @@ const NAV_GROUPS: NavGroup[] = [
         reloadOnActiveClick: true
       },
       {
-        label: 'Config Drift Verification',
-        route: '/runtime-configuration-verification',
+        label: 'Config Drift Viewer',
+        route: '/config-drift-viewer',
         icon: 'build_circle',
         reloadOnActiveClick: true
       },
@@ -97,8 +97,8 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Jira Source', route: '/jira', icon: 'assignment' },
       { label: 'Confluence Source', route: '/confluence', icon: 'article' },
       {
-        label: 'Runtime Configuration',
-        route: '/runtime-configuration-tools',
+        label: 'Config Drift Viewer',
+        route: '/config-drift-viewer-tools',
         icon: 'security'
       },
       { label: 'Database Tools', route: '/database', icon: 'database' },

@@ -73,14 +73,14 @@ export const routes: Routes = [
         }
       },
       {
-        path: 'runtime-configuration-verification',
+        path: 'config-drift-viewer',
         loadComponent: () =>
           import(
-            './features/runtime-configuration-verification/pages/runtime-configuration-verification-page/runtime-configuration-verification-page'
-          ).then((module) => module.RuntimeConfigurationVerificationPageComponent),
+            './features/config-drift-viewer/pages/config-drift-viewer-page/config-drift-viewer-page'
+          ).then((module) => module.ConfigDriftViewerPageComponent),
         data: {
           section: 'Analysis Features',
-          title: 'Config Drift Verification'
+          title: 'Config Drift Viewer'
         }
       },
       {
@@ -207,22 +207,22 @@ export const routes: Routes = [
         }
       },
       {
-        path: 'runtime-configuration-tools',
+        path: 'config-drift-viewer-tools',
         loadComponent: () =>
           import(
-            './features/runtime-configuration-verification/workbench/runtime-configuration-workbench-page/runtime-configuration-workbench-page'
-          ).then((module) => module.RuntimeConfigurationWorkbenchPageComponent),
+            './features/config-drift-viewer/workbench/config-drift-viewer-workbench-page/config-drift-viewer-workbench-page'
+          ).then((module) => module.ConfigDriftViewerWorkbenchPageComponent),
         data: {
           section: 'Tool Workbench',
-          title: 'Runtime Configuration Pipeline',
+          title: 'Config Drift Viewer Pipeline',
           capabilityInfo: {
             description:
-              'Readonly preview projekcji operatorskiej oraz — tylko w DEEP — mapowania, anonimizacji i dokładnego AI-safe inputu przygotowanego przez produkcyjny pipeline Runtime Configuration.',
+              'Readonly preview projekcji operatorskiej oraz — tylko w DEEP — mapowania, anonimizacji i dokładnego AI-safe inputu przygotowanego przez produkcyjny pipeline Config Drift Viewer.',
             badges: ['Operator preview', 'AI-safe boundary', 'Readonly'],
             meta: [
               {
                 label: 'Endpoint',
-                value: 'POST /api/runtime-configuration-verification/workbench/preview'
+                value: 'POST /api/config-drift-viewer/v1/workbench/preview'
               },
               {
                 label: 'Wymagany scope',

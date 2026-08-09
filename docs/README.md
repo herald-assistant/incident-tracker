@@ -32,7 +32,7 @@ Przed wieksza zmiana przeczytaj:
 3. `architecture/system-overview.md`
 4. `architecture/key-decisions.md`
 5. `architecture/incident-analysis-runtime-flow.md`
-6. `architecture/runtime-configuration-verification-runtime-flow.md`
+6. `architecture/config-drift-viewer-runtime-flow.md`
 7. `architecture/package-dependencies.md`
 8. `architecture/operational-context-model-tools-and-usage.md`
 9. `architecture/codex-continuation-guide.md`
@@ -48,10 +48,10 @@ implementacje niezatwierdzonego planu.
 
 ## Aktualne potrzeby i plany
 
-- Config Drift Verification wraz z Runtime Configuration Tool Workbench jest
+- Config Drift Viewer wraz z Runtime Configuration Tool Workbench jest
   zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
   ograniczenia sa opisane kanonicznie w
-  `architecture/runtime-configuration-verification-runtime-flow.md`.
+  `architecture/config-drift-viewer-runtime-flow.md`.
 - `needs/change-verification.md`
   opisuje problem, wartosc, oczekiwany wynik i granice Change Verification.
   Nowy plan implementacji powinien wskazywac ten plik jako `Source need`.
@@ -76,9 +76,9 @@ implementacje niezatwierdzonego planu.
 - `architecture/incident-analysis-runtime-flow.md`
   opisuje wykonanie glownych sciezek Incident Analysis oraz jego uzycie
   neutralnego runtime Copilota.
-- `architecture/runtime-configuration-verification-runtime-flow.md`
+- `architecture/config-drift-viewer-runtime-flow.md`
   opisuje deterministic/AI flow, tryby `BASIC/DEEP`, scope, limity i granice
-  bezpieczenstwa Runtime Configuration Verification.
+  bezpieczenstwa Config Drift Viewer.
 - `architecture/package-dependencies.md`
   definiuje dozwolony graf zaleznosci i odpowiedzialnosc warstw.
 - `architecture/operational-context-model-tools-and-usage.md`

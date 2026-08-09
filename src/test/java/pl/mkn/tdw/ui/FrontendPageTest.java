@@ -100,8 +100,8 @@ class FrontendPageTest {
     }
 
     @Test
-    void shouldServeRuntimeConfigurationVerificationRoute() throws Exception {
-        mockMvc.perform(get("/runtime-configuration-verification"))
+    void shouldServeConfigDriftViewerRoute() throws Exception {
+        mockMvc.perform(get("/config-drift-viewer"))
                 .andExpect(status().isOk())
                 .andExpect(forwardedUrl("/index.html"));
     }

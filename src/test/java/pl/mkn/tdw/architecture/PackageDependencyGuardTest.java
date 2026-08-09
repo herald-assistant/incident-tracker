@@ -180,11 +180,11 @@ class PackageDependencyGuardTest {
                         "pl.mkn.tdw.common",
                         "pl.mkn.tdw.features"),
                 Rule.closed("runtime configuration AI must not depend on operator projection with actual values",
-                        "pl.mkn.tdw.features.runtimeconfigurationverification.ai",
-                        "pl.mkn.tdw.features.runtimeconfigurationverification.deterministic.projection"),
+                        "pl.mkn.tdw.features.configdriftviewer.ai",
+                        "pl.mkn.tdw.features.configdriftviewer.deterministic.projection"),
                 Rule.closed("runtime configuration AI must not depend on operator presentation annotations",
-                        "pl.mkn.tdw.features.runtimeconfigurationverification.ai",
-                        "pl.mkn.tdw.features.runtimeconfigurationverification.presentation")
+                        "pl.mkn.tdw.features.configdriftviewer.ai",
+                        "pl.mkn.tdw.features.configdriftviewer.presentation")
         );
 
         var violations = findViolations(rules);

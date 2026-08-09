@@ -252,14 +252,14 @@ Feature pozostaje composition rootem swojego use case'u. Platforma i tools
 wykonuja przekazana konfiguracje; nie rekonstruuja decyzji feature'a z nazw
 tooli, evidence albo endpointu.
 
-Config Drift Verification realizuje ten graf bez dodatkowej warstwy
+Config Drift Viewer realizuje ten graf bez dodatkowej warstwy
 posredniej: feature posiada parsing/diff, orchestration, prompt, skille,
 policy, persistence codec i API; korzysta z nazwanej integracji GitLab dla
 repozytorium konfiguracji, neutralnego GitLaba i Operational Context dla
 `DEEP`, platformy Copilot oraz `localworkspace`. Test architektoniczny blokuje
 importy do sibling feature'ow i odwrotne zaleznosci reusable warstw. Dodatkowa
 regula zabrania pakietowi
-`features.runtimeconfigurationverification.ai` importowania operatorskiej
+`features.configdriftviewer.ai` importowania operatorskiej
 `deterministic.projection` z dokladnymi wartosciami oraz warstwy
 `presentation`; adnotacje DEEP sa laczone dopiero poza granica AI.
 

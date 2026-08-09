@@ -42,8 +42,8 @@ Przed wieksza zmiana zacznij od:
 9. `docs/architecture/analysis-feature-delivery-playbook.md` przy tworzeniu
     feature'a oraz zmianach L1-L3 istniejacego feature'a lub mechanizmu
     wspolnego
-10. `docs/architecture/runtime-configuration-verification-runtime-flow.md`
-    dla zmian Runtime Configuration Verification
+10. `docs/architecture/config-drift-viewer-runtime-flow.md`
+    dla zmian Config Drift Viewer
 11. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
 
@@ -257,7 +257,7 @@ Zasady granic:
   `features.incidentanalysis.ai.copilot` zawiera incident prompt/artifacts/tool
   policy, coverage heurystyki, providery Copilota oraz GitLab/DB tool evidence
   capture.
-- `src/main/java/pl/mkn/tdw/features/runtimeconfigurationverification`
+- `src/main/java/pl/mkn/tdw/features/configdriftviewer`
   Feature porownania runtime configuration pomiedzy branchami: named GitLab
   source, deterministyczny parsing/diff, sanitizowana druga opinia AI,
   ograniczony `DEEP`, job API, historia/import-export i report.
@@ -384,6 +384,6 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/tdw/features/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/flow/AGENTS.md`
-- `src/main/java/pl/mkn/tdw/features/runtimeconfigurationverification/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/configdriftviewer/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/ai/AGENTS.md`

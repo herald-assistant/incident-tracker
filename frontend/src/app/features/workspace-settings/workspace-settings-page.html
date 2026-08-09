@@ -491,22 +491,22 @@
         }
       </section>
 
-      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsRuntimeConfigGitLabTitle">
+      <section class="workspace-settings-panel" aria-labelledby="workspaceSettingsConfigDriftViewerGitLabTitle">
         <div class="workspace-settings-panel__header">
           <div>
             <p class="section-eyebrow">Config Drift GitLab</p>
-            <h2 id="workspaceSettingsRuntimeConfigGitLabTitle">Configuration source capability</h2>
+            <h2 id="workspaceSettingsConfigDriftViewerGitLabTitle">Configuration source capability</h2>
           </div>
         </div>
 
         @if (settings(); as currentSettings) {
           <div class="workspace-settings-grid">
-            <label class="workspace-settings-field" for="runtimeConfigGitLabBaseUrl">
+            <label class="workspace-settings-field" for="configDriftViewerGitLabBaseUrl">
               <span class="workspace-settings-field__header">
                 <span>
                   <span
                     class="field-label"
-                    [matTooltip]="currentSettings.values.runtimeConfigGitLab.baseUrl.propertyKey"
+                    [matTooltip]="currentSettings.values.configDriftViewerGitLab.baseUrl.propertyKey"
                     matTooltipPosition="above"
                     [matTooltipShowDelay]="120"
                   >
@@ -515,15 +515,15 @@
                 </span>
                 <span class="workspace-settings-source-controls">
                   <span
-                    [class]="sourceClass(currentSettings.values.runtimeConfigGitLab.baseUrl, form.controls.runtimeConfigGitLab.controls.baseUrl.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.runtimeConfigGitLab.baseUrl) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.runtimeConfigGitLab.baseUrl)"
+                    [class]="sourceClass(currentSettings.values.configDriftViewerGitLab.baseUrl, form.controls.configDriftViewerGitLab.controls.baseUrl.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.configDriftViewerGitLab.baseUrl) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.configDriftViewerGitLab.baseUrl)"
                     matTooltipPosition="above"
                     [matTooltipShowDelay]="120"
                   >
-                    {{ sourceLabel(currentSettings.values.runtimeConfigGitLab.baseUrl, form.controls.runtimeConfigGitLab.controls.baseUrl.value) }}
+                    {{ sourceLabel(currentSettings.values.configDriftViewerGitLab.baseUrl, form.controls.configDriftViewerGitLab.controls.baseUrl.value) }}
                   </span>
-                  @if (usesCustomValue(currentSettings.values.runtimeConfigGitLab.baseUrl, form.controls.runtimeConfigGitLab.controls.baseUrl.value)) {
+                  @if (usesCustomValue(currentSettings.values.configDriftViewerGitLab.baseUrl, form.controls.configDriftViewerGitLab.controls.baseUrl.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
                       type="button"
@@ -532,7 +532,7 @@
                       matTooltipPosition="above"
                       [matTooltipShowDelay]="120"
                       [disabled]="isSaving()"
-                      (click)="resetFieldToDefault($event, form.controls.runtimeConfigGitLab.controls.baseUrl, currentSettings.values.runtimeConfigGitLab.baseUrl)"
+                      (click)="resetFieldToDefault($event, form.controls.configDriftViewerGitLab.controls.baseUrl, currentSettings.values.configDriftViewerGitLab.baseUrl)"
                     >
                       <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
                     </button>
@@ -540,21 +540,21 @@
                 </span>
               </span>
               <input
-                id="runtimeConfigGitLabBaseUrl"
+                id="configDriftViewerGitLabBaseUrl"
                 class="text-input"
                 type="url"
                 autocomplete="off"
                 spellcheck="false"
-                [formControl]="form.controls.runtimeConfigGitLab.controls.baseUrl"
+                [formControl]="form.controls.configDriftViewerGitLab.controls.baseUrl"
               />
             </label>
 
-            <label class="workspace-settings-field" for="runtimeConfigGitLabToken">
+            <label class="workspace-settings-field" for="configDriftViewerGitLabToken">
               <span class="workspace-settings-field__header">
                 <span>
                   <span
                     class="field-label"
-                    [matTooltip]="currentSettings.values.runtimeConfigGitLab.token.propertyKey"
+                    [matTooltip]="currentSettings.values.configDriftViewerGitLab.token.propertyKey"
                     matTooltipPosition="above"
                     [matTooltipShowDelay]="120"
                   >
@@ -563,15 +563,15 @@
                 </span>
                 <span class="workspace-settings-source-controls">
                   <span
-                    [class]="sourceClass(currentSettings.values.runtimeConfigGitLab.token, form.controls.runtimeConfigGitLab.controls.token.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.runtimeConfigGitLab.token) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.runtimeConfigGitLab.token)"
+                    [class]="sourceClass(currentSettings.values.configDriftViewerGitLab.token, form.controls.configDriftViewerGitLab.controls.token.value)"
+                    [matTooltip]="defaultTooltip(currentSettings.values.configDriftViewerGitLab.token) || ''"
+                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.configDriftViewerGitLab.token)"
                     matTooltipPosition="above"
                     [matTooltipShowDelay]="120"
                   >
-                    {{ sourceLabel(currentSettings.values.runtimeConfigGitLab.token, form.controls.runtimeConfigGitLab.controls.token.value) }}
+                    {{ sourceLabel(currentSettings.values.configDriftViewerGitLab.token, form.controls.configDriftViewerGitLab.controls.token.value) }}
                   </span>
-                  @if (usesCustomValue(currentSettings.values.runtimeConfigGitLab.token, form.controls.runtimeConfigGitLab.controls.token.value)) {
+                  @if (usesCustomValue(currentSettings.values.configDriftViewerGitLab.token, form.controls.configDriftViewerGitLab.controls.token.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
                       type="button"
@@ -580,7 +580,7 @@
                       matTooltipPosition="above"
                       [matTooltipShowDelay]="120"
                       [disabled]="isSaving()"
-                      (click)="resetFieldToDefault($event, form.controls.runtimeConfigGitLab.controls.token, currentSettings.values.runtimeConfigGitLab.token)"
+                      (click)="resetFieldToDefault($event, form.controls.configDriftViewerGitLab.controls.token, currentSettings.values.configDriftViewerGitLab.token)"
                     >
                       <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
                     </button>
@@ -589,24 +589,24 @@
               </span>
               <span class="workspace-settings-secret-control">
                 <input
-                  id="runtimeConfigGitLabToken"
+                  id="configDriftViewerGitLabToken"
                   class="text-input"
-                  [type]="showRuntimeConfigGitLabToken() ? 'text' : 'password'"
+                  [type]="showConfigDriftViewerGitLabToken() ? 'text' : 'password'"
                   autocomplete="off"
                   spellcheck="false"
-                  [formControl]="form.controls.runtimeConfigGitLab.controls.token"
+                  [formControl]="form.controls.configDriftViewerGitLab.controls.token"
                 />
                 <button
                   class="secondary-button workspace-settings-icon-button"
                   type="button"
-                  [attr.aria-label]="showRuntimeConfigGitLabToken() ? 'Hide Config Drift GitLab token' : 'Show Config Drift GitLab token'"
-                  [matTooltip]="showRuntimeConfigGitLabToken() ? 'Hide Config Drift GitLab token' : 'Show Config Drift GitLab token'"
+                  [attr.aria-label]="showConfigDriftViewerGitLabToken() ? 'Hide Config Drift GitLab token' : 'Show Config Drift GitLab token'"
+                  [matTooltip]="showConfigDriftViewerGitLabToken() ? 'Hide Config Drift GitLab token' : 'Show Config Drift GitLab token'"
                   matTooltipPosition="above"
                   [matTooltipShowDelay]="120"
-                  (click)="toggleRuntimeConfigGitLabTokenVisibility()"
+                  (click)="toggleConfigDriftViewerGitLabTokenVisibility()"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">
-                    {{ showRuntimeConfigGitLabToken() ? 'visibility_off' : 'visibility' }}
+                    {{ showConfigDriftViewerGitLabToken() ? 'visibility_off' : 'visibility' }}
                   </span>
                 </button>
               </span>

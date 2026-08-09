@@ -39,7 +39,7 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
    naprawy, weryfikacji albo przekazania dalej.
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification i
-Config Drift Verification.
+Config Drift Viewer.
 Kolejne rodziny moga obejmowac functional logic explorer oraz
 natural-language data diagnostics. Szczegolowy kierunek produktu jest opisany
 w `product-direction.md`.
@@ -70,7 +70,7 @@ Na dzisiaj projekt ma:
   `SOON`. Eksporty i lokalne snapshoty tych dwoch wycofanych goals nie sa
   importowane, odtwarzane ani kontynuowane; aktualne wyniki `DEEP_DISCOVERY`
   pozostaja obslugiwane,
-- ekran `GET /runtime-configuration-verification` do rownoleglego porownania
+- ekran `GET /config-drift-viewer` do rownoleglego porownania
   konfiguracji wielu `internal-system` pomiedzy branchami z rodzin `dev`,
   `test`, `uat` i `zt`; `BASIC` pokazuje
   wylacznie deterministyczny diff per plik, a zaimplementowany `DEEP` dodaje
@@ -95,7 +95,7 @@ Na dzisiaj projekt ma:
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
   nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
 - ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /jira`,
-  `GET /confluence`, `GET /runtime-configuration-tools`, `GET /database` i
+  `GET /confluence`, `GET /config-drift-viewer-tools`, `GET /database` i
   `GET /operational-context` do recznego
   testowania, debugowania i zbierania inputu z reusable capability bez
   przenoszenia logiki incident analysis do tych widokow,
@@ -133,7 +133,7 @@ Na dzisiaj projekt ma:
   `LOCAL_TOKEN` oraz `GITHUB_APP`,
 - shared/operator API `/api/operational-context/*` dla operator-facing widoku
   curated operational context,
-- feature-owned API `/api/runtime-configuration-verification/*` dla input
+- feature-owned API `/api/config-drift-viewer/v1/*` dla input
   options, preflightu `DEEP`, asynchronicznych jobow oraz read-only importu,
 - feature-owned `POST /api/change-verification/jobs` i
   `GET /api/change-verification/jobs/{jobId}` dla asynchronicznego source
@@ -169,7 +169,7 @@ Na dzisiaj projekt ma:
   Uruchamia asynchroniczna weryfikacje. `GET` z `/{jobId}` zwraca snapshot
   krokow, source/tool evidence, activity, prompt, usage, strukturalne checki i
   kanoniczny `AnalysisReport`.
-- `GET /runtime-configuration-verification`
+- `GET /config-drift-viewer`
   Angularowy workspace porownania konfiguracji runtime. Formularz wybiera
   repozytorium, wiele `internal-system` oraz branch zrodlowy/docelowy.
   Wszystkie systemy sa domyslnie zaznaczone, backend wykonuje izolowane
@@ -178,18 +178,18 @@ Na dzisiaj projekt ma:
   aktualnie jedynym trybem mozliwym do wybrania; widoczny `DEEP` ma disabled
   affordance `SOON`. Backendowy kontrakt i prezentacja zapisanych wynikow
   `DEEP` pozostaja dostepne.
-- `GET /api/runtime-configuration-verification/input-options`
+- `GET /api/config-drift-viewer/v1/input-options`
   Zwraca dozwolone repozytoria konfiguracji, systemy, branche i tryby bez
   ujawniania connection credentials.
-- `GET /api/runtime-configuration-verification/deep-preflight`
+- `GET /api/config-drift-viewer/v1/deep-preflight`
   Sprawdza, czy system ma jednoznaczny configuration directory, code-search
   scope i osiagalny ref kodu. Zwraca blocker albo ograniczenia widocznosci.
-- `POST /api/runtime-configuration-verification/jobs`
+- `POST /api/config-drift-viewer/v1/jobs`
   Uruchamia asynchroniczny batch dla uporzadkowanych `systemIds`. `GET` z
   `/{jobId}` zwraca postep parent joba oraz izolowane component snapshots z
   operatorskim `configurationDiff`; report, activity i usage sa per komponent
   i sa obecne tylko dla `DEEP`.
-- `POST /api/runtime-configuration-verification/imports`
+- `POST /api/config-drift-viewer/v1/imports`
   Waliduje kompletny kontrakt V1 calego batcha i zwraca snapshot read-only.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
@@ -207,8 +207,8 @@ Na dzisiaj projekt ma:
   Angularowy ekran `Tool Workbench / Confluence Source` do recznego pobierania
   tekstu strony przez `POST /api/confluence/page/content`, wraz z
   rozpoznanym `pageId`, wersja i jawnymi ograniczeniami adaptera.
-- `GET /runtime-configuration-tools`
-  Angularowy ekran `Tool Workbench / Runtime Configuration`. Tworzy
+- `GET /config-drift-viewer-tools`
+  Angularowy ekran `Tool Workbench / Config Drift Viewer`. Tworzy
   krotkozyjacy readonly preview pojedynczego scope'u i leniwie pokazuje source
   metadata, operatorski diff, mapping, anonimizacje, AI-safe prompt/artefakty
   oraz warunkowy DEEP scope bez uruchamiania AI albo tworzenia historii.

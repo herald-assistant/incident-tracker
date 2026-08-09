@@ -56,7 +56,7 @@ describe('App', () => {
     expect(compiled.querySelector('.app-shell__breadcrumb')).toBeNull();
     expect(compiled.textContent).toContain('Sprawdź incydent');
     expect(compiled.textContent).toContain('Flow Explorer');
-    expect(compiled.textContent).toContain('Config Drift Verification');
+    expect(compiled.textContent).toContain('Config Drift Viewer');
     expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
   });
 
@@ -573,45 +573,45 @@ describe('App', () => {
     expect(compiled.textContent).toContain('Verify a change before release');
   });
 
-  it('should render the runtime configuration verification route', async () => {
+  it('should render the config drift viewer verification route', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
     const http = TestBed.inject(HttpTestingController);
 
-    await router.navigateByUrl('/runtime-configuration-verification');
+    await router.navigateByUrl('/config-drift-viewer');
     fixture.detectChanges();
     flushUiConfig(http, 'CRM Workspace');
     await fixture.whenStable();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-runtime-configuration-verification-page')).not.toBeNull();
+    expect(compiled.querySelector('app-config-drift-viewer-page')).not.toBeNull();
     expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
-      'Config Drift Verification'
+      'Config Drift Viewer'
     );
     expect(compiled.textContent).toContain('Porównaj konfigurację środowisk');
-    expect(compiled.querySelector('app-runtime-configuration-verification-page button')).not.toBeNull();
+    expect(compiled.querySelector('app-config-drift-viewer-page button')).not.toBeNull();
     expect(
       compiled.querySelector(
-        'a.app-shell__nav-item[aria-label="Config Drift Verification"]'
+        'a.app-shell__nav-item[aria-label="Config Drift Viewer"]'
       )
     ).not.toBeNull();
     expect(
       compiled.querySelector(
-        'a.app-shell__nav-item[aria-label="Config Drift Verification"] .material-symbols-outlined'
+        'a.app-shell__nav-item[aria-label="Config Drift Viewer"] .material-symbols-outlined'
       )?.textContent?.trim()
     ).toBe('build_circle');
   });
 
-  it('should render the Runtime Configuration Pipeline in Tool Workbench', async () => {
+  it('should render the Config Drift Viewer Pipeline in Tool Workbench', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
     const http = TestBed.inject(HttpTestingController);
 
-    await router.navigateByUrl('/runtime-configuration-tools');
+    await router.navigateByUrl('/config-drift-viewer-tools');
     fixture.detectChanges();
     flushUiConfig(http, 'CRM Workspace');
-    http.expectOne('/api/runtime-configuration-verification/input-options').flush({
+    http.expectOne('/api/config-drift-viewer/v1/input-options').flush({
       modes: ['BASIC', 'DEEP'],
       branches: ['dev1', 'zt001'],
       repositories: [{ id: 'runtime-config', label: 'Config repository' }],
@@ -621,15 +621,15 @@ describe('App', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-runtime-configuration-workbench-page')).not.toBeNull();
+    expect(compiled.querySelector('app-config-drift-viewer-workbench-page')).not.toBeNull();
     expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
-      'Runtime Configuration Pipeline'
+      'Config Drift Viewer Pipeline'
     );
     expect(compiled.querySelector('.app-shell__info-tooltip')?.textContent).toContain(
-      'POST /api/runtime-configuration-verification/workbench/preview'
+      'POST /api/config-drift-viewer/v1/workbench/preview'
     );
     expect(
-      compiled.querySelector('a.app-shell__nav-item[aria-label="Runtime Configuration"]')
+      compiled.querySelector('a.app-shell__nav-item[aria-label="Config Drift Viewer"]')
     ).not.toBeNull();
     expect(compiled.textContent).toContain('Source acquisition');
     expect(compiled.textContent).toContain('Wartości operatorskie i granica AI są rozdzielone');
@@ -764,7 +764,7 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           secret: true
         }
       },
-      runtimeConfigGitLab: {
+      configDriftViewerGitLab: {
         baseUrl: {
           propertyKey: 'integrations.gitlab.named.connections.runtime-config.base-url',
           value: 'https://runtime-config.workspace.example.com',

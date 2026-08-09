@@ -1,0 +1,658 @@
+<div class="page-shell config-drift-viewer-workbench">
+  <main class="source-workspace">
+    <form class="source-layout" novalidate (submit)="submit($event)">
+      <aside class="analysis-card source-tool-panel">
+        <section class="source-scope-section" aria-labelledby="runtimeScopeTitle">
+          <div class="section-heading">
+            <div>
+              <p class="section-eyebrow">Shared scope</p>
+              <h2 id="runtimeScopeTitle">Zakres pipeline'u</h2>
+            </div>
+          </div>
+
+          @if (optionsLoading()) {
+            <p class="field-hint">Pobieramy allowlistę repozytoriów i systemów…</p>
+          } @else if (optionsError()) {
+            <p class="form-error">{{ optionsError() }}</p>
+          }
+
+          <div class="mode-selector" role="group" aria-label="Tryb preview">
+            <button
+              type="button"
+              [attr.aria-pressed]="form.controls.mode.value === 'BASIC'"
+              (click)="selectMode('BASIC')"
+            >
+              Basic
+            </button>
+            <button
+              type="button"
+              [attr.aria-pressed]="form.controls.mode.value === 'DEEP'"
+              (click)="selectMode('DEEP')"
+            >
+              Deep
+            </button>
+          </div>
+
+          <label class="form-field">
+            <span class="field-label">Configuration repository</span>
+            <select class="select-input" [formControl]="form.controls.repositoryId">
+              @for (repository of options().repositories; track repository.id) {
+                <option [value]="repository.id">
+                  {{ repository.label }} · {{ repository.id }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span class="field-label">Internal system</span>
+            <select class="select-input" [formControl]="form.controls.systemId">
+              @for (system of options().systems; track system.id) {
+                <option [value]="system.id">{{ system.label }} · {{ system.id }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="scope-pair">
+            <label class="form-field">
+              <span class="field-label">Source branch</span>
+              <select class="select-input" [formControl]="form.controls.sourceBranch">
+                @for (branch of options().branches; track branch) {
+                  <option [value]="branch">{{ branch }}</option>
+                }
+              </select>
+            </label>
+            <label class="form-field">
+              <span class="field-label">Target branch</span>
+              <select class="select-input" [formControl]="form.controls.targetBranch">
+                @for (branch of options().branches; track branch) {
+                  <option [value]="branch">{{ branch }}</option>
+                }
+              </select>
+            </label>
+          </div>
+          @if (branchPairInvalid()) {
+            <p class="form-error">Wybierz dwa różne branche środowiskowe.</p>
+          }
+
+          @if (form.controls.mode.value === 'DEEP') {
+            <label class="form-field">
+              <span class="field-label">
+                Code ref <span class="optional-label">(opcjonalnie)</span>
+              </span>
+              <input
+                class="text-input"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="np. release/42"
+                [formControl]="form.controls.codeRef"
+              />
+            </label>
+          }
+        </section>
+
+        <section class="source-tool-section" aria-labelledby="runtimeStagesTitle">
+          <div class="section-heading source-tool-section__heading">
+            <div>
+              <p class="section-eyebrow">Perspectives</p>
+              <h2 id="runtimeStagesTitle">Etapy do weryfikacji</h2>
+            </div>
+            <span class="panel-chip">6</span>
+          </div>
+          <div class="source-tool-list" aria-label="Perspektywy Config Drift Viewer">
+            @for (perspective of perspectives; track perspective.id) {
+              <button
+                class="source-tool-button"
+                [class.source-tool-button--active]="
+                  selectedPerspective() === perspective.id
+                "
+                type="button"
+                [attr.aria-pressed]="selectedPerspective() === perspective.id"
+                (click)="selectPerspective(perspective.id)"
+              >
+                <span class="source-tool-button__content">
+                  <span>{{ perspective.label }}</span>
+                  <small>{{ perspective.detail }}</small>
+                </span>
+                <span
+                  class="source-tool-button__state"
+                  [attr.data-status]="status()"
+                  aria-hidden="true"
+                ></span>
+              </button>
+            }
+          </div>
+        </section>
+      </aside>
+
+      <section class="source-main">
+        <article class="analysis-card source-runner">
+          <div class="section-heading source-runner__header">
+            <div>
+              <p class="section-eyebrow">Readonly compact preview</p>
+              <h2>Config Drift Viewer Pipeline</h2>
+              <p class="field-hint">
+                Pierwsza odpowiedź zawiera tylko summary. Projekcja operatora oraz
+                szczegóły granicy AI są pobierane z tymczasowego snapshotu dopiero po
+                otwarciu perspektywy.
+              </p>
+            </div>
+            <span class="panel-chip route-chip">POST {{ '/api/config-drift-viewer/v1/workbench/preview' }}</span>
+          </div>
+
+          <div class="guardrail-banner">
+            <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
+            <div>
+              <strong>Wartości operatorskie i granica AI są rozdzielone</strong>
+              <p>
+                Workbench przechowuje znormalizowaną projekcję z dokładnymi wartościami,
+                ale prompt i artefakty korzystają wyłącznie z modelu sanitizowanego.
+                Snapshot wygasa automatycznie i nie tworzy historii.
+              </p>
+            </div>
+          </div>
+
+          <div class="source-runner__actions">
+            <button class="secondary-button" type="button" (click)="reset()">
+              <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+              Reset scope
+            </button>
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="
+                status() === 'loading' ||
+                optionsLoading() ||
+                !!optionsError() ||
+                branchPairInvalid()
+              "
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              Run preview
+            </button>
+          </div>
+        </article>
+
+        @if (hasResult()) {
+          <article class="analysis-card source-result">
+            <div class="tool-status" [attr.data-status]="status()">
+              <div>
+                <p class="tool-status__label">{{ '/api/config-drift-viewer/v1/workbench/preview' }}</p>
+                <p class="tool-status__message">{{ message() }}</p>
+              </div>
+              <div class="tool-status__badges">
+                @if (statusCode() !== null) {
+                  <span class="tool-status__code">HTTP {{ statusCode() }}</span>
+                }
+                @if (durationMs() !== null) {
+                  <span class="tool-status__code">{{ durationLabel(durationMs()) }}</span>
+                }
+                <span [class]="statusPillClass(status())">{{ statusLabel(status()) }}</span>
+              </div>
+            </div>
+
+            @if (summary(); as preview) {
+              <section class="source-summary compact-summary">
+                <div>
+                  <p class="tool-status__label">Ephemeral readonly snapshot</p>
+                  <h3>{{ preview.sourceBranch }} → {{ preview.targetBranch }}</h3>
+                  <p>{{ preview.repositoryId }} · {{ preview.systemId }} · {{ preview.mode }}</p>
+                </div>
+                <div class="source-summary__badges">
+                  <span class="panel-chip">{{ preview.counts.nodes }} nodes</span>
+                  <span class="panel-chip">{{ preview.counts.differences }} differences</span>
+                  <span class="panel-chip">{{ preview.counts.findings }} findings</span>
+                  <span class="panel-chip">
+                    {{ preview.aiInputGenerated ? 'AI input generated' : 'AI input not generated' }}
+                  </span>
+                  <span class="panel-chip">{{ initialPayloadCharacters() }} summary chars</span>
+                </div>
+              </section>
+
+              @if (detailError()) {
+                <p class="detail-error">{{ detailError() }}</p>
+              }
+
+              <section class="perspective-panel" aria-live="polite">
+                @if (selectedPerspective() === 'source') {
+                  <div class="perspective-heading">
+                    <div>
+                      <span class="provenance-label">FETCHED METADATA</span>
+                      <h3>Source acquisition</h3>
+                    </div>
+                    <p>{{ preview.source.configurationDirectory }}</p>
+                  </div>
+                  @if (detailLoading() === 'source') {
+                    <div class="empty-state">Pobieramy metadata snapshotu…</div>
+                  } @else {
+                    <div class="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Side / branch</th>
+                            <th>Role i path</th>
+                            <th>Status</th>
+                            <th>Commit / modified</th>
+                            <th>Size</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of sourceRows(); track row.side + row.path) {
+                            <tr>
+                              <td><strong>{{ row.side }}</strong><br />{{ row.branch }}</td>
+                              <td><strong>{{ row.role }}</strong><br /><code>{{ row.path }}</code></td>
+                              <td>
+                                {{ row.status }}
+                                @if (row.errorCode) {
+                                  <br /><code>{{ row.errorCode }}</code>
+                                }
+                              </td>
+                              <td>
+                                <code>{{ row.commitId || 'n/a' }}</code>
+                                <br />{{ row.lastModifiedAt || 'n/a' }}
+                              </td>
+                              <td>{{ sizeLabel(row.sizeBytes) }}</td>
+                            </tr>
+                          } @empty {
+                            <tr><td colspan="5">Brak metadata plików.</td></tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                } @else if (selectedPerspective() === 'projection') {
+                  <div class="perspective-heading">
+                    <div>
+                      <span class="provenance-label">OPERATOR FACT</span>
+                      <h3>Normalized configurationDiff</h3>
+                    </div>
+                    <p>Dokładne nazwy i wartości · tylko widok operatora</p>
+                  </div>
+                  @if (detailLoading() === 'projection') {
+                    <div class="empty-state">Pobieramy projekcję operatora…</div>
+                  } @else if (configurationDiff()) {
+                    <div class="text-preview">
+                      <div class="text-preview__header">
+                        <span class="field-label">
+                          {{ preview.sourceBranch }} → {{ preview.targetBranch }}
+                        </span>
+                      </div>
+                      <textarea
+                        readonly
+                        spellcheck="false"
+                        aria-label="Operator configuration diff"
+                        [value]="configurationDiffJson()"
+                      ></textarea>
+                    </div>
+                  }
+                } @else if (selectedPerspective() === 'mapping') {
+                  <div class="perspective-heading">
+                    <div>
+                      <span class="provenance-label provenance-label--safe">AI-SAFE</span>
+                      <h3>Original → sanitized mapping</h3>
+                    </div>
+                    <label class="inline-toggle">
+                      <input
+                        type="checkbox"
+                        [checked]="mappingChangedOnly()"
+                        (change)="setMappingChangedOnly($any($event.target).checked)"
+                      />
+                      Tylko zmienione
+                    </label>
+                  </div>
+                  @if (!preview.aiInputGenerated) {
+                    <div class="empty-state">
+                      AI boundary mapping not generated in BASIC.
+                    </div>
+                  } @else if (detailLoading() === 'mapping') {
+                    <div class="empty-state">Pobieramy stronę mappingu…</div>
+                  } @else if (mappingPage(); as page) {
+                    <p class="page-caption">
+                      {{ page.offset + 1 }}–{{ page.offset + page.items.length }} z
+                      {{ page.totalItems }}; pełne drzewo ma {{ page.totalNodes }} węzłów.
+                    </p>
+                    <div class="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Document</th>
+                            <th>Original path</th>
+                            <th>Sanitized path</th>
+                            <th>Change / IDs</th>
+                            <th>Tokens</th>
+                            <th>Types / sensitivity</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (item of page.items; track item.role + ':' + item.documentIndex + ':' + item.originalPath) {
+                            <tr>
+                              <td>{{ item.role }} #{{ item.documentIndex }}</td>
+                              <td><code [style.padding-left.px]="item.depth * 8">{{ item.originalPath }}</code></td>
+                              <td><code>{{ item.sanitizedPath }}</code></td>
+                              <td>
+                                {{ item.changeKind }}
+                                <br /><code>{{ item.differenceIds.join(', ') || '—' }}</code>
+                              </td>
+                              <td>
+                                <code>
+                                  {{ item.sourceValueToken || '—' }} →
+                                  {{ item.targetValueToken || '—' }}
+                                </code>
+                              </td>
+                              <td>
+                                {{ item.sourceType || '—' }} → {{ item.targetType || '—' }}
+                                <br />{{ item.sensitivity }}
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="pagination-actions">
+                      <button
+                        type="button"
+                        class="secondary-button"
+                        [disabled]="page.offset === 0"
+                        (click)="previousMappingPage()"
+                      >
+                        Poprzednie
+                      </button>
+                      <button
+                        type="button"
+                        class="secondary-button"
+                        [disabled]="page.offset + page.items.length >= page.totalItems"
+                        (click)="nextMappingPage()"
+                      >
+                        Następne
+                      </button>
+                    </div>
+                  }
+                } @else if (selectedPerspective() === 'anonymization') {
+                  <div class="perspective-heading">
+                    <div>
+                      <span class="provenance-label provenance-label--safe">AI-SAFE</span>
+                      <h3>Anonymization decisions</h3>
+                    </div>
+                    <p>{{ preview.anonymization.totalNodes }} nodes</p>
+                  </div>
+                  @if (!preview.aiInputGenerated) {
+                    <div class="empty-state">
+                      Anonymization decisions not generated in BASIC.
+                    </div>
+                  } @else {
+                    <div class="metric-grid">
+                      <div>
+                        <strong>{{ preview.anonymization.pseudonymizedRepresentations }}</strong>
+                        <span>Pseudonymized</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview.anonymization.suppressedRepresentations }}</strong>
+                        <span>Suppressed</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview.anonymization.structureOnlyRepresentations }}</strong>
+                        <span>Structure only</span>
+                      </div>
+                      <div>
+                        <strong>{{ preview.anonymization.notPresentRepresentations }}</strong>
+                        <span>Not present</span>
+                      </div>
+                    </div>
+                  }
+                  @if (preview.aiInputGenerated && detailLoading() === 'anonymization') {
+                    <div class="empty-state">Pobieramy stronę decyzji…</div>
+                  } @else if (preview.aiInputGenerated && anonymizationPage(); as page) {
+                    <p class="page-caption">
+                      {{ page.offset + 1 }}–{{ page.offset + page.items.length }} z
+                      {{ page.totalItems }}
+                    </p>
+                    <div class="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Path</th>
+                            <th>Relation</th>
+                            <th>Source</th>
+                            <th>Target</th>
+                            <th>Tokens</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (item of page.items; track item.role + ':' + item.documentIndex + ':' + item.path) {
+                            <tr>
+                              <td><code>{{ item.path }}</code><br />{{ item.role }} #{{ item.documentIndex }}</td>
+                              <td>{{ item.relation }}<br />{{ item.sensitivity }}</td>
+                              <td>{{ item.sourceRepresentation }}</td>
+                              <td>{{ item.targetRepresentation }}</td>
+                              <td><code>{{ item.sourceValueToken || '—' }} → {{ item.targetValueToken || '—' }}</code></td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="pagination-actions">
+                      <button
+                        type="button"
+                        class="secondary-button"
+                        [disabled]="page.offset === 0"
+                        (click)="previousAnonymizationPage()"
+                      >
+                        Poprzednie
+                      </button>
+                      <button
+                        type="button"
+                        class="secondary-button"
+                        [disabled]="page.offset + page.items.length >= page.totalItems"
+                        (click)="nextAnonymizationPage()"
+                      >
+                        Następne
+                      </button>
+                    </div>
+                  }
+                } @else if (selectedPerspective() === 'ai') {
+                  <div class="perspective-heading">
+                    <div>
+                      <span class="provenance-label provenance-label--safe">AI-SAFE V1</span>
+                      <h3>Compact AI input</h3>
+                    </div>
+                    <p>Nie jest częścią initial response</p>
+                  </div>
+
+                  @if (!preview.aiInputGenerated) {
+                    <div class="empty-state ai-not-generated">
+                      <strong>AI input not generated</strong>
+                      <span>BASIC kończy preview po deterministycznej projekcji operatora.</span>
+                    </div>
+                  } @else {
+                    <div class="artifact-selector">
+                      @for (item of preview.artifacts; track item.name) {
+                        <button type="button" (click)="loadArtifact(item.name)">
+                          <span>{{ item.name }}</span>
+                          <small>
+                            {{ item.characterCount }} chars · {{ item.mediaType }}
+                            @if (item.truncated) {
+                              · TRUNCATED
+                            }
+                          </small>
+                        </button>
+                      }
+                    </div>
+
+                    <div class="on-demand-actions">
+                      <button
+                        type="button"
+                        class="primary-button"
+                        [disabled]="detailLoading() !== null"
+                        (click)="loadAiInput()"
+                      >
+                        Załaduj dokładny input AI
+                      </button>
+                      <span class="field-hint">
+                        Pełny prompt pobieramy tylko na jawne żądanie operatora.
+                      </span>
+                    </div>
+
+                    @if (detailLoading() === 'prompt' || detailLoading() === 'artifact') {
+                      <div class="empty-state">Pobieramy wybraną treść snapshotu…</div>
+                    }
+
+                    @if (aiInput(); as input) {
+                      @if (input.generated && input.prompt) {
+                        <div class="text-preview">
+                          <div class="text-preview__header">
+                            <span class="field-label">Exact prompt · {{ input.characterCount }} chars</span>
+                            <button
+                              type="button"
+                              class="json-icon-button"
+                              aria-label="Kopiuj prepared prompt"
+                              (click)="copy('prompt', input.prompt)"
+                            >
+                              <span class="material-symbols-outlined" aria-hidden="true">
+                                {{ copiedTarget() === 'prompt' ? 'task_alt' : 'content_copy' }}
+                              </span>
+                            </button>
+                          </div>
+                          <textarea readonly spellcheck="false" aria-label="Prepared prompt" [value]="input.prompt"></textarea>
+                        </div>
+                      }
+                    }
+
+                    @if (artifact(); as selectedArtifact) {
+                      <div class="text-preview">
+                        <div class="text-preview__header">
+                          <span class="field-label">
+                            {{ selectedArtifact.name }} · {{ selectedArtifact.characterCount }} chars
+                          </span>
+                          <button
+                            type="button"
+                            class="json-icon-button"
+                            aria-label="Kopiuj wybrany artifact"
+                            (click)="copy('artifact', selectedArtifact.content)"
+                          >
+                            <span class="material-symbols-outlined" aria-hidden="true">
+                              {{ copiedTarget() === 'artifact' ? 'task_alt' : 'content_copy' }}
+                            </span>
+                          </button>
+                        </div>
+                        <textarea readonly spellcheck="false" aria-label="Wybrany AI artifact" [value]="selectedArtifact.content"></textarea>
+                      </div>
+                    }
+                  }
+                } @else {
+                  <div class="perspective-heading">
+                    <div>
+                      <span class="provenance-label">DERIVED</span>
+                      <h3>DEEP scope and ownership</h3>
+                    </div>
+                    <p>{{ preview.deep.requested ? (preview.deep.status || 'UNAVAILABLE') : 'Not requested in BASIC' }}</p>
+                  </div>
+                  @if (detailLoading() === 'deep') {
+                    <div class="empty-state">Pobieramy DEEP detail…</div>
+                  } @else if (!preview.deep.requested) {
+                    <div class="empty-state">Uruchom preview w trybie DEEP.</div>
+                  } @else if (deepDetail()?.context; as deep) {
+                    <div class="deep-summary">
+                      <span>{{ preview.deep.repositoryScopes }} repository scopes</span>
+                      <span>{{ preview.deep.blockers }} blockers</span>
+                      <span>{{ preview.deep.codeGroundings }} code grounding</span>
+                      <span>{{ preview.deep.primaryOwners }} primary owners</span>
+                    </div>
+                    @if (deep.preflight; as preflight) {
+                      @for (blocker of preflight.blockers; track blocker.code) {
+                        <p class="visibility-item">
+                          <strong>{{ blocker.code }}</strong> — {{ blocker.message }}
+                        </p>
+                      }
+                      <div class="table-scroll">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Scope</th>
+                              <th>Repository / paths</th>
+                              <th>Requested / used ref</th>
+                              <th>Ready</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (repository of preflight.repositories; track repository.scopeId) {
+                              <tr>
+                                <td><code>{{ repository.scopeId }}</code><br />{{ repository.role }}</td>
+                                <td>{{ repository.projectPath }}<br /><code>{{ (repository.pathPrefixes || []).join(', ') || 'all allowed paths' }}</code></td>
+                                <td><code>{{ repository.requestedRef || '—' }} → {{ repository.usedRef || '—' }}</code></td>
+                                <td>{{ repository.ready ? 'YES' : 'NO' }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    }
+                    @for (owner of deep.ownership?.primaryOwners || []; track owner.targetType + owner.targetId) {
+                      <p class="ownership-item">
+                        <strong>{{ owner.ownerLabel }}</strong>
+                        <span>{{ owner.targetLabel }} · {{ owner.source }} · {{ owner.confidence }}</span>
+                      </p>
+                    }
+                  } @else {
+                    <div class="empty-state">DEEP context jest niedostępny lub częściowy.</div>
+                  }
+                }
+              </section>
+
+              @if (preview.visibilityLimits.length) {
+                <section class="visibility-panel">
+                  <span class="field-label">Visibility limits</span>
+                  @for (limit of preview.visibilityLimits; track limit) {
+                    <p class="visibility-item">{{ limit }}</p>
+                  }
+                </section>
+              }
+            }
+
+            @if (requestJson()) {
+              <details class="json-response-panel source-json-panel source-json-panel--request">
+                <summary class="json-response-panel__header">
+                  <span class="json-response-panel__title">
+                    <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">chevron_right</span>
+                    <span class="field-label">Request preview</span>
+                  </span>
+                  <button
+                    type="button"
+                    class="json-icon-button"
+                    aria-label="Kopiuj request preview"
+                    (click)="$event.stopPropagation(); copy('request', requestJson())"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ copiedTarget() === 'request' ? 'task_alt' : 'content_copy' }}
+                    </span>
+                  </button>
+                </summary>
+                <textarea class="json-output" readonly spellcheck="false" aria-label="Request preview" [value]="requestJson()"></textarea>
+              </details>
+            }
+            @if (responseJson()) {
+              <details class="json-response-panel source-json-panel">
+                <summary class="json-response-panel__header">
+                  <span class="json-response-panel__title">
+                    <span class="material-symbols-outlined json-panel-toggle-icon" aria-hidden="true">chevron_right</span>
+                    <span class="field-label">Summary JSON response</span>
+                  </span>
+                  <button
+                    type="button"
+                    class="json-icon-button"
+                    aria-label="Kopiuj JSON response"
+                    (click)="$event.stopPropagation(); copy('response', responseJson())"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ copiedTarget() === 'response' ? 'task_alt' : 'content_copy' }}
+                    </span>
+                  </button>
+                </summary>
+                <textarea class="json-output" readonly spellcheck="false" aria-label="JSON response" [value]="responseJson()"></textarea>
+              </details>
+            }
+          </article>
+        }
+      </section>
+    </form>
+  </main>
+</div>
