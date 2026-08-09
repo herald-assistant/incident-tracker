@@ -64,6 +64,10 @@ import { appendOptimisticChatTurn } from '../../../../core/utils/analysis-chat-o
 
 type CatalogState = 'empty' | 'loading' | 'ready' | 'error';
 type EndpointState = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
+type FlowExplorerGoalOptionValue =
+  | FlowExplorerAnalysisGoal
+  | 'TEST_SCENARIOS'
+  | 'RISK_DETECTION';
 
 interface FlowExplorerChoice<T extends string> {
   value: T;
@@ -120,7 +124,7 @@ type FlowExplorerExportMetadata = Pick<
 
 const POLL_INTERVAL_MS = 1500;
 
-const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerAnalysisGoal>[] = [
+const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerGoalOptionValue>[] = [
   {
     value: 'DEEP_DISCOVERY',
     label: 'Deep Discovery',
@@ -129,12 +133,14 @@ const ANALYSIS_GOALS: FlowExplorerChoice<FlowExplorerAnalysisGoal>[] = [
   {
     value: 'TEST_SCENARIOS',
     label: 'Test scenarios',
-    hint: 'Prepare test coverage, data setup and negative paths.'
+    hint: 'Prepare test coverage, data setup and negative paths.',
+    disabled: true
   },
   {
     value: 'RISK_DETECTION',
     label: 'Risk detection',
-    hint: 'Find risks, visibility gaps and likely regression areas.'
+    hint: 'Find risks, visibility gaps and likely regression areas.',
+    disabled: true
   }
 ];
 
@@ -634,7 +640,7 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectEndpoint(endpoint);
   }
 
-  protected selectGoalFromDropdown(value: FlowExplorerAnalysisGoal, event: Event): void {
+  protected selectGoalFromDropdown(value: FlowExplorerGoalOptionValue, event: Event): void {
     event.stopPropagation();
     this.goalSelectOpen.set(false);
     this.selectGoal(value);
@@ -721,9 +727,9 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedEndpointId.set(endpoint.endpointId);
   }
 
-  protected selectGoal(value: FlowExplorerAnalysisGoal): void {
+  protected selectGoal(value: FlowExplorerGoalOptionValue): void {
     const goal = ANALYSIS_GOALS.find((candidate) => candidate.value === value);
-    if (!goal || goal.disabled || this.analysisGoal() === value) {
+    if (!goal || goal.disabled || value !== 'DEEP_DISCOVERY' || this.analysisGoal() === value) {
       return;
     }
     this.resetJobState();
@@ -1021,7 +1027,7 @@ export class FlowExplorerPageComponent implements OnInit {
       : 'flow-explorer-select-option';
   }
 
-  protected goalOptionClass(value: FlowExplorerAnalysisGoal): string {
+  protected goalOptionClass(value: FlowExplorerGoalOptionValue): string {
     return this.analysisGoal() === value
       ? 'flow-explorer-select-option flow-explorer-select-option--selected'
       : 'flow-explorer-select-option';
@@ -1506,7 +1512,7 @@ export class FlowExplorerPageComponent implements OnInit {
     );
   }
 
-  private selectedGoalChoice(): FlowExplorerChoice<FlowExplorerAnalysisGoal> {
+  private selectedGoalChoice(): FlowExplorerChoice<FlowExplorerGoalOptionValue> {
     return (
       ANALYSIS_GOALS.find((goal) => goal.value === this.analysisGoal()) ??
       ANALYSIS_GOALS[0]

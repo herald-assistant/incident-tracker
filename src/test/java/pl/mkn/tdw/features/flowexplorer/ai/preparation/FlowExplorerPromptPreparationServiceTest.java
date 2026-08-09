@@ -60,7 +60,9 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("MUST: flow-explorer-orchestrator"));
         assertTrue(prompt.contains("MUST: flow-explorer-write-report"));
         assertTrue(prompt.contains("Jedyny wlasciciel finalnego `AnalysisReport`, report tools i fallback JSON"));
-        assertTrue(prompt.contains("MUST: flow-explorer-test-scenario-design"));
+        assertTrue(prompt.contains("MUST: flow-explorer-deep-discovery"));
+        assertFalse(prompt.contains("flow-explorer-test-scenario-design"));
+        assertFalse(prompt.contains("flow-explorer-risk-assessment"));
         assertTrue(prompt.contains("SHOULD: flow-explorer-operational-grounding"));
         assertTrue(prompt.contains("SHOULD: flow-explorer-code-grounding"));
         assertFalse(prompt.contains("SHOULD: flow-explorer-map-persistence-section"));
@@ -106,18 +108,6 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("GitLab endpoint use-case context reached maxFiles=100"));
         assertTrue(prompt.contains("snippet-cards.md was truncated to maxCards=20"));
         assertTrue(prompt.contains("1 snippet card(s) were truncated by GitLab read output limits"));
-    }
-
-    @Test
-    void shouldRenderRiskDetectionGoalInCanonicalPrompt() {
-        var preparation = service.prepare(riskDetectionRequest(), contextSnapshot());
-        var prompt = preparation.prompt();
-
-        assertTrue(prompt.contains("goal: RISK_DETECTION"));
-        assertTrue(prompt.contains("MUST: flow-explorer-risk-assessment"));
-        assertTrue(prompt.contains("focusAreas: [VALIDATIONS, INTEGRATIONS]"));
-        assertTrue(prompt.contains("reasoningEffort: high"));
-        assertTrue(prompt.contains("Skup sie na ryzykach regresji CRM."));
     }
 
     @Test
@@ -185,26 +175,10 @@ class FlowExplorerPromptPreparationServiceTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
                 "Skup sie na jezyku zrozumialym dla testera.",
-                "gpt-5.4-mini",
-                "high"
-        );
-    }
-
-    private static FlowExplorerJobStartRequest riskDetectionRequest() {
-        return new FlowExplorerJobStartRequest(
-                "crm-service",
-                "crm-service:GET:/api/customers/{id}",
-                null,
-                null,
-                "feature/FLOW-42",
-                FlowExplorerAnalysisGoal.RISK_DETECTION,
-                List.of(FlowExplorerFocusArea.VALIDATIONS, FlowExplorerFocusArea.INTEGRATIONS),
-                null,
-                "Skup sie na ryzykach regresji CRM.",
                 "gpt-5.4-mini",
                 "high"
         );
@@ -233,7 +207,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 null,
                 null,
                 "feature/FLOW-42",
-                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 List.of(
                         new FlowExplorerSectionModeRequest(

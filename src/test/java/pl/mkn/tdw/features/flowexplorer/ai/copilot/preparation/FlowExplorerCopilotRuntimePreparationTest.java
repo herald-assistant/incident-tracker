@@ -193,7 +193,6 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "flow-explorer-job-123",
                 policy,
                 request().aiOptions(),
-                request().goal(),
                 request().resolvedSectionModes()
         );
 
@@ -202,7 +201,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals(List.of(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT), request.availableToolNames());
         assertSkillDirectories(
                 request.skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.DEEP_DISCOVERY)
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames()
         );
         assertTrue(request.effectiveAvailableToolNames().contains("skill"));
         assertEquals("gpt-5.4", request.modelSelection().model());
@@ -211,51 +210,6 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "Use only the inline Flow Explorer artifacts and the explicitly enabled Flow Explorer tools for this session.",
                 request.deniedToolUseMessage()
         );
-    }
-
-    @Test
-    void shouldBuildSessionConfigWithTestScenariosGoalSkillOnly() {
-        var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
-        var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
-        var factory = sessionConfigRequestFactory();
-
-        var request = factory.create(
-                "flow-explorer-job-123",
-                policy,
-                testScenariosRequest().aiOptions(),
-                testScenariosRequest().goal(),
-                testScenariosRequest().resolvedSectionModes()
-        );
-
-        assertSkillDirectories(
-                request.skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.TEST_SCENARIOS)
-        );
-        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME);
-        assertSelectedSkillMissing(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME);
-    }
-
-    @Test
-    void shouldBuildSessionConfigWithRiskDetectionGoalSkillOnly() {
-        var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
-        var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
-        var factory = sessionConfigRequestFactory();
-
-        var request = factory.create(
-                "flow-explorer-job-123",
-                policy,
-                riskDetectionRequest().aiOptions(),
-                riskDetectionRequest().goal(),
-                riskDetectionRequest().resolvedSectionModes()
-        );
-
-        assertSkillDirectories(
-                request.skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.RISK_DETECTION)
-        );
-        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME);
-        assertSelectedSkillMissing(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME);
-        assertSelectedSkillMissing(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME);
     }
 
     @Test
@@ -291,7 +245,6 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "flow-explorer-job-123",
                 policy,
                 startRequest.aiOptions(),
-                startRequest.goal(),
                 startRequest.resolvedSectionModes()
         );
 
@@ -359,7 +312,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         );
         assertSkillDirectories(
                 runRequest.sessionConfigRequest().skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(FlowExplorerAnalysisGoal.DEEP_DISCOVERY)
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames()
         );
         assertFalse(assembly.toolAccessPolicy().databaseToolsEnabled());
 
@@ -474,38 +427,6 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "Skup sie na jezyku zrozumialym dla testera.",
                 "gpt-5.4",
                 "medium"
-        );
-    }
-
-    private static FlowExplorerJobStartRequest testScenariosRequest() {
-        return new FlowExplorerJobStartRequest(
-                "crm-service",
-                "crm-service:GET:/api/customers/{id}",
-                null,
-                null,
-                "feature/FLOW-42",
-                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
-                List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW, FlowExplorerFocusArea.VALIDATIONS),
-                null,
-                "Skup sie na scenariuszach regresyjnych CRM.",
-                "gpt-5.4",
-                "high"
-        );
-    }
-
-    private static FlowExplorerJobStartRequest riskDetectionRequest() {
-        return new FlowExplorerJobStartRequest(
-                "crm-service",
-                "crm-service:GET:/api/customers/{id}",
-                null,
-                null,
-                "feature/FLOW-42",
-                FlowExplorerAnalysisGoal.RISK_DETECTION,
-                List.of(FlowExplorerFocusArea.VALIDATIONS, FlowExplorerFocusArea.INTEGRATIONS),
-                null,
-                "Skup sie na ryzykach regresji CRM.",
-                "gpt-5.4",
-                "high"
         );
     }
 

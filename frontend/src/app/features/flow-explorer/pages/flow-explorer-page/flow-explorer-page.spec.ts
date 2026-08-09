@@ -288,7 +288,6 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
     selectSystem(fixture, 'CRM Service');
     selectEndpoint(fixture, '/api/customers/{id}');
-    selectGoal(fixture, 'Test scenarios');
     selectSectionMode(fixture, 'Validations', 'Deep');
     selectAiModel(fixture, 'GPT-5.4 mini');
     selectReasoningEffort(fixture, 'High');
@@ -307,7 +306,7 @@ describe('FlowExplorerPageComponent', () => {
       httpMethod: 'GET',
       endpointPath: '/api/customers/{id}',
       branch: 'main',
-      goal: 'TEST_SCENARIOS',
+      goal: 'DEEP_DISCOVERY',
       focusAreas: ['FUNCTIONAL_FLOW', 'VALIDATIONS'],
       sectionModes: [
         { id: 'FUNCTIONAL_FLOW', mode: 'DEEP' },
@@ -327,37 +326,29 @@ describe('FlowExplorerPageComponent', () => {
     expect(compiled.querySelector('details.flow-explorer-prompt-preview')).toBeNull();
   });
 
-  it('should start a risk detection job from the selected endpoint', () => {
+  it('should show future goals as disabled Soon options and keep Deep Discovery selected', () => {
     const fixture = TestBed.createComponent(FlowExplorerPageComponent);
 
     fixture.detectChanges();
-    selectSystem(fixture, 'CRM Service');
-    selectEndpoint(fixture, '/api/customers/{id}');
-    selectGoal(fixture, 'Risk detection');
-    selectSectionMode(fixture, 'Integrations', 'Deep');
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    openGoalSelect(nativeElement);
     fixture.detectChanges();
 
-    clickButtonContaining(fixture.nativeElement, 'Run Flow Explorer');
-    fixture.detectChanges();
+    for (const label of ['Test scenarios', 'Risk detection']) {
+      const option = Array.from(
+        nativeElement.querySelectorAll<HTMLButtonElement>('[role="option"]')
+      ).find((candidate) => candidate.textContent?.includes(label));
 
-    expect(flowExplorerApi.startJob).toHaveBeenCalledWith({
-      systemId: 'crm-service',
-      endpointId: 'crm-api:GET /api/customers/{id}',
-      httpMethod: 'GET',
-      endpointPath: '/api/customers/{id}',
-      branch: 'main',
-      goal: 'RISK_DETECTION',
-      focusAreas: ['FUNCTIONAL_FLOW', 'INTEGRATIONS'],
-      sectionModes: [
-        { id: 'FUNCTIONAL_FLOW', mode: 'DEEP' },
-        { id: 'VALIDATIONS', mode: 'COMPACT' },
-        { id: 'PERSISTENCE', mode: 'COMPACT' },
-        { id: 'INTEGRATIONS', mode: 'DEEP' }
-      ],
-      userInstructions: undefined,
-      model: undefined,
-      reasoningEffort: 'medium'
-    });
+      expect(option).toBeTruthy();
+      expect(option?.disabled).toBe(true);
+      expect(option?.getAttribute('aria-label')).toBe(label + ' — wkrótce');
+      expect(option?.getAttribute('title')).toBe(label + ' — wkrótce');
+      expect(option?.querySelector('.flow-explorer-select-option__badge')?.textContent?.trim()).toBe('Soon');
+      option?.click();
+    }
+
+    expect(fixture.componentInstance.analysisGoal()).toBe('DEEP_DISCOVERY');
+    expect(flowExplorerApi.startJob).not.toHaveBeenCalled();
   });
 
   it('should use listed backend defaults without adding duplicate dropdown options', () => {
@@ -907,14 +898,6 @@ function selectSectionMode(
     (candidate) => candidate.textContent?.trim() === modeLabel
   );
   button?.click();
-  fixture.detectChanges();
-}
-
-function selectGoal(fixture: ComponentFixture<FlowExplorerPageComponent>, label: string): void {
-  const nativeElement = fixture.nativeElement as HTMLElement;
-  openGoalSelect(nativeElement);
-  fixture.detectChanges();
-  buttonContaining(nativeElement, label)?.click();
   fixture.detectChanges();
 }
 

@@ -115,7 +115,7 @@ public class FlowExplorerAiResponseParser {
 
         var parsedGoal = goalStrict(text(node, "goal"));
         if (parsedGoal == null) {
-            return "AI response contract violation: goal must be one of DEEP_DISCOVERY, TEST_SCENARIOS, RISK_DETECTION.";
+            return "AI response contract violation: goal must be DEEP_DISCOVERY.";
         }
         if (requestedGoal != null && parsedGoal != requestedGoal) {
             return "AI response goal does not match requested goal.";

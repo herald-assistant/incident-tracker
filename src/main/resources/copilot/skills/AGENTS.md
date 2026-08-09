@@ -133,8 +133,8 @@ Aktualny podzial:
   dla `COMPACT` i `DEEP`,
 - `flow-explorer-write-report`: jedyny wlasciciel finalnego raportu,
   fallback JSON, source refs, confidence i walidacji `AnalysisReport`,
-- `flow-explorer-deep-discovery`, `flow-explorer-test-scenario-design`,
-  `flow-explorer-risk-assessment`: soczewki celu, nie techniczne procedury,
+- `flow-explorer-deep-discovery`: jedyna aktualnie obslugiwana soczewka celu,
+  nie techniczna procedura,
 - `flow-explorer-follow-up-chat`: sciezka po initial runie, bez pelnej
   orkiestracji ani przepisywania zasad finalnego raportu.
 

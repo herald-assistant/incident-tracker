@@ -1,6 +1,5 @@
 package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeResolver;
@@ -17,17 +16,12 @@ final class FlowExplorerCopilotRuntimeSkillNames {
     static final String WRITE_REPORT_SKILL_NAME = "flow-explorer-write-report";
     static final String FOLLOW_UP_CHAT_SKILL_NAME = "flow-explorer-follow-up-chat";
     static final String DEEP_DISCOVERY_SKILL_NAME = "flow-explorer-deep-discovery";
-    static final String TEST_SCENARIOS_SKILL_NAME = "flow-explorer-test-scenario-design";
-    static final String RISK_DETECTION_SKILL_NAME = "flow-explorer-risk-assessment";
 
-    static List<String> initialSkillNames(FlowExplorerAnalysisGoal goal) {
-        return initialSkillNames(goal, null);
+    static List<String> initialSkillNames() {
+        return initialSkillNames(null);
     }
 
-    static List<String> initialSkillNames(
-            FlowExplorerAnalysisGoal goal,
-            List<FlowExplorerResultSectionModeAssignment> sectionModes
-    ) {
+    static List<String> initialSkillNames(List<FlowExplorerResultSectionModeAssignment> sectionModes) {
         var skillNames = new java.util.ArrayList<>(List.of(
                 STARTER_SKILL_NAME,
                 CODE_GROUNDING_SKILL_NAME,
@@ -35,15 +29,7 @@ final class FlowExplorerCopilotRuntimeSkillNames {
         ));
         addSectionSkillNames(skillNames, sectionModes);
         skillNames.add(WRITE_REPORT_SKILL_NAME);
-        if (goal == FlowExplorerAnalysisGoal.DEEP_DISCOVERY) {
-            skillNames.add(DEEP_DISCOVERY_SKILL_NAME);
-        }
-        if (goal == FlowExplorerAnalysisGoal.TEST_SCENARIOS) {
-            skillNames.add(TEST_SCENARIOS_SKILL_NAME);
-        }
-        if (goal == FlowExplorerAnalysisGoal.RISK_DETECTION) {
-            skillNames.add(RISK_DETECTION_SKILL_NAME);
-        }
+        skillNames.add(DEEP_DISCOVERY_SKILL_NAME);
         return List.copyOf(skillNames);
     }
 
@@ -56,9 +42,7 @@ final class FlowExplorerCopilotRuntimeSkillNames {
                 INTEGRATIONS_SECTION_SKILL_NAME,
                 WRITE_REPORT_SKILL_NAME,
                 FOLLOW_UP_CHAT_SKILL_NAME,
-                DEEP_DISCOVERY_SKILL_NAME,
-                TEST_SCENARIOS_SKILL_NAME,
-                RISK_DETECTION_SKILL_NAME
+                DEEP_DISCOVERY_SKILL_NAME
         );
     }
 

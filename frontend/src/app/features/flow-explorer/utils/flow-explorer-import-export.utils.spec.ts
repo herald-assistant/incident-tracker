@@ -133,6 +133,17 @@ describe('flow-explorer-import-export utils', () => {
     );
   });
 
+  it('should reject archived results created with retired analysis goals', () => {
+    for (const retiredGoal of ['TEST_SCENARIOS', 'RISK_DETECTION']) {
+      const envelope = buildFlowExplorerExportEnvelope(flowExplorerJob(), '2026-06-18T10:00:00Z');
+      (envelope.payload.job as unknown as Record<string, unknown>)['goal'] = retiredGoal;
+
+      expect(() => parseImportedFlowExplorerAnalysis(envelope)).toThrow(
+        'Flow Explorer export zawiera nieznany cel analizy.'
+      );
+    }
+  });
+
   it('should reject incomplete section sets on import', () => {
     const envelope = buildFlowExplorerExportEnvelope(flowExplorerJob(), '2026-06-18T10:00:00Z');
     envelope.payload.job.result!.aiResponse!.sections = envelope.payload.job.result!.aiResponse!.sections.filter(

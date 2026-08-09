@@ -25,7 +25,7 @@ Uzyj tego skilla, gdy:
 - `sectionModes.INTEGRATIONS` ma tryb `COMPACT` albo `DEEP`,
 - endpoint wywoluje downstream/upstream HTTP, publikuje lub konsumuje event,
   uzywa kolejki/topicu/streamu, pliku albo innego handoffu poza komponent,
-- goal wymaga scenariuszy testowych albo ryzyk integracyjnych,
+- `DEEP_DISCOVERY` wymaga domkniecia konkretnego handoffu albo visibility limit,
 - operational context albo kod sugeruje boundary do innego systemu.
 
 Nie uzywaj tego skilla, gdy:

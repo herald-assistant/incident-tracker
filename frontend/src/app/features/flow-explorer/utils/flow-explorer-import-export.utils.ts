@@ -897,7 +897,7 @@ function sectionTitle(id: FlowExplorerResultSectionId): string {
 }
 
 function isFlowExplorerGoal(value: string): value is FlowExplorerAnalysisGoal {
-  return value === 'DEEP_DISCOVERY' || value === 'TEST_SCENARIOS' || value === 'RISK_DETECTION';
+  return value === 'DEEP_DISCOVERY';
 }
 
 function isFlowExplorerFocusArea(value: string): value is FlowExplorerFocusArea {

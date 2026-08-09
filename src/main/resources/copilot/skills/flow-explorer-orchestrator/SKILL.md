@@ -54,11 +54,8 @@ limit.
 
 ## Sterowanie Analiza
 
-`goal` wybiera goal skill:
-
-- `flow-explorer-deep-discovery`,
-- `flow-explorer-test-scenario-design`,
-- `flow-explorer-risk-assessment`.
+Jedynym obslugiwanym `goal` jest `DEEP_DISCOVERY`; uzyj
+`flow-explorer-deep-discovery` jako soczewki celu.
 
 `sectionModes` sluzy orkiestratorowi tylko do decyzji, ktore summary artifacts
 sa potrzebne przed skillem wyniku. Szczegoly sekcji, trybow `OFF`, `COMPACT`,

@@ -127,7 +127,7 @@ zwroc dokladnie jeden obiekt JSON zgodny z polami:
 
 ```json
 {
-  "goal": "DEEP_DISCOVERY|TEST_SCENARIOS|RISK_DETECTION",
+  "goal": "DEEP_DISCOVERY",
   "audience": "business_or_system_analyst_tester",
   "overview": {
     "markdown": "string",
@@ -249,9 +249,8 @@ kolejnosci:
   zapisuje stan, publikuje event, wysyla request, zleca prace kolejce albo
   zwraca odpowiedz. Szczegoly persistence zostaw sekcji `PERSISTENCE`, a
   szczegoly integracji sekcji `INTEGRATIONS`.
-- **Akcent goal:** material zalezy od `goal`: dla `DEEP_DISCOVERY` najwazniejsze
-  warianty flow, dla `TEST_SCENARIOS` sciezki do pokrycia testami, dla
-  `RISK_DETECTION` ryzyka i pytania wokol functional flow.
+- **Akcent goal:** dla jedynego obslugiwanego `goal`, `DEEP_DISCOVERY`,
+  najwazniejsze sa warianty flow i samowystarczalne zrozumienie endpointu.
 
 Kazdy z tych punktow ma byc czytelny jako lista albo kroki, a nie jako jeden
 dlugi ciag tekstu. Jezeli punkt zawiera wiecej niz jeden krok, warunek, regule,

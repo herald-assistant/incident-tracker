@@ -449,6 +449,18 @@ article.flow-explorer-select-option {
   box-shadow: none;
 }
 
+.flow-explorer-select-option__badge {
+  align-self: start;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--text-soft);
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: normal;
+  text-transform: uppercase;
+}
+
 .flow-explorer-select-option__check {
   color: var(--primary-dark);
   font-size: 20px;

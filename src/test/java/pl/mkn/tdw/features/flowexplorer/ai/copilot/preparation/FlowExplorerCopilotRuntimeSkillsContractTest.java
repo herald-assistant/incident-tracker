@@ -31,9 +31,6 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertEquals("flow-explorer-write-report", FlowExplorerCopilotRuntimeSkillNames.WRITE_REPORT_SKILL_NAME);
         assertEquals("flow-explorer-follow-up-chat", FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
         assertEquals("flow-explorer-deep-discovery", FlowExplorerCopilotRuntimeSkillNames.DEEP_DISCOVERY_SKILL_NAME);
-        assertEquals("flow-explorer-test-scenario-design",
-                FlowExplorerCopilotRuntimeSkillNames.TEST_SCENARIOS_SKILL_NAME);
-        assertEquals("flow-explorer-risk-assessment", FlowExplorerCopilotRuntimeSkillNames.RISK_DETECTION_SKILL_NAME);
 
         assertEquals(List.of(
                 "flow-explorer-orchestrator",
@@ -43,9 +40,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "flow-explorer-map-integrations-section",
                 "flow-explorer-write-report",
                 "flow-explorer-follow-up-chat",
-                "flow-explorer-deep-discovery",
-                "flow-explorer-test-scenario-design",
-                "flow-explorer-risk-assessment"
+                "flow-explorer-deep-discovery"
         ), FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
         assertEquals(List.of(
                 "flow-explorer-follow-up-chat",
@@ -58,16 +53,17 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
 
     @Test
     void shouldExposeSectionSkillsForInitialSessionsWhenSectionsAreActive() {
-        for (var goal : FlowExplorerAnalysisGoal.values()) {
-            var fallbackSkillNames = FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(goal);
+        assertEquals(
+                List.of(FlowExplorerAnalysisGoal.DEEP_DISCOVERY),
+                List.of(FlowExplorerAnalysisGoal.values())
+        );
+        var fallbackSkillNames = FlowExplorerCopilotRuntimeSkillNames.initialSkillNames();
 
-            assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
-            assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
-            assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.WRITE_REPORT_SKILL_NAME));
-        }
+        assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
+        assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
+        assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.WRITE_REPORT_SKILL_NAME));
 
         var persistenceOnly = FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(
-                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(
                         sectionMode(FlowExplorerResultSectionId.PERSISTENCE, FlowExplorerResultSectionMode.COMPACT),
                         sectionMode(FlowExplorerResultSectionId.INTEGRATIONS, FlowExplorerResultSectionMode.OFF)
@@ -113,6 +109,8 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 legacyFlowSkill("goal", "deep-discovery"),
                 legacyFlowSkill("goal", "test-scenarios"),
                 legacyFlowSkill("goal", "risk-detection"),
+                "flow-explorer-test-scenario-design",
+                "flow-explorer-risk-assessment",
                 legacyFlowSkill("map", "persistence-deep"),
                 legacyFlowSkill("map", "integration-boundaries")
         )) {
@@ -142,8 +140,6 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         var integrationMapping = skillContent("flow-explorer-map-integrations-section");
         var writeReport = skillContent("flow-explorer-write-report");
         var deepDiscovery = skillContent("flow-explorer-deep-discovery");
-        var testScenarioDesign = skillContent("flow-explorer-test-scenario-design");
-        var riskAssessment = skillContent("flow-explorer-risk-assessment");
         var followUpChat = skillContent("flow-explorer-follow-up-chat");
 
         assertContainsAll(orchestrator, List.of(
@@ -211,7 +207,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertFalse(writeReport.contains("## Persistence Deep Contract"));
         assertFalse(writeReport.contains("## Integration Boundary Contract"));
 
-        for (var goalSkill : List.of(deepDiscovery, testScenarioDesign, riskAssessment)) {
+        for (var goalSkill : List.of(deepDiscovery)) {
             assertTrue(goalSkill.contains("GoalGuidance"));
             assertTrue(goalSkill.contains("PersistenceMappingSummary"));
             assertTrue(goalSkill.contains("IntegrationBoundarySummary"));

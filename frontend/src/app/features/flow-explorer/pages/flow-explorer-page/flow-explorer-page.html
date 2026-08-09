@@ -414,12 +414,17 @@
                       role="option"
                       [disabled]="goal.disabled || isSubmitting() || isJobActive()"
                       [attr.aria-selected]="analysisGoal() === goal.value"
+                      [attr.aria-label]="goal.disabled ? goal.label + ' — wkrótce' : null"
+                      [attr.title]="goal.disabled ? goal.label + ' — wkrótce' : null"
                       (click)="selectGoalFromDropdown(goal.value, $event)"
                     >
                       <span class="flow-explorer-select-option__body">
                         <strong>{{ goal.label }}</strong>
                         <small>{{ goal.hint }}</small>
                       </span>
+                      @if (goal.disabled) {
+                        <small class="flow-explorer-select-option__badge">Soon</small>
+                      }
                     </button>
                   }
                 </div>

@@ -108,7 +108,6 @@ public class FlowExplorerCopilotRunRequestAssembler {
                         toolSessionContext.copilotSessionId(),
                         toolAccessPolicy,
                         aiOptions,
-                        request != null ? request.goal() : null,
                         request != null ? request.resolvedSectionModes() : null
                 );
         var runRequest = new CopilotRunRequest(

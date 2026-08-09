@@ -64,6 +64,12 @@ Na dzisiaj projekt ma:
   `INFERRED_CRITICAL_CHECKS`; sugestie AI sa oceniane wobec tego samego evidence,
   ale nie zmieniaja werdyktu source-defined compliance. Import/eksport uzywa
   tylko aktualnego `change-verification-result-v4` i odrzuca starsze wersje,
+- ekran `GET /flow-explorer` do endpoint-first dokumentacji flow; nowe runy,
+  kontrakt API i runtime obsluguja obecnie tylko `DEEP_DISCOVERY`, a
+  `Test scenarios` oraz `Risk detection` sa widoczne jako disabled z oznaczeniem
+  `SOON`. Eksporty i lokalne snapshoty tych dwoch wycofanych goals nie sa
+  importowane, odtwarzane ani kontynuowane; aktualne wyniki `DEEP_DISCOVERY`
+  pozostaja obslugiwane,
 - ekran `GET /runtime-configuration-verification` do rownoleglego porownania
   konfiguracji wielu `internal-system` pomiedzy branchami z rodzin `dev`,
   `test`, `uat` i `zt`; `BASIC` pokazuje

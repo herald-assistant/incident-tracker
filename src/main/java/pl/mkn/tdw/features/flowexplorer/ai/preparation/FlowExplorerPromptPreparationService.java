@@ -6,7 +6,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.tdw.features.flowexplorer.ai.report.FlowExplorerReportSectionIds;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerContextSnapshot;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
@@ -190,7 +189,7 @@ public class FlowExplorerPromptPreparationService {
                 COULD: record_tool_feedback
                 - Gdy luka w katalogu, glossary, ownerach, integracjach albo code-search scope obniza jakosc wyniku.
                 """.formatted(
-                goalSkillUsage(request != null ? request.goal() : null),
+                goalSkillUsage(),
                 sectionSkillUsage(sectionModes)
         );
     }
@@ -227,19 +226,7 @@ public class FlowExplorerPromptPreparationService {
                         """.formatted(skillName, sectionId.name(), assignment.mode()).stripTrailing()));
     }
 
-    private String goalSkillUsage(FlowExplorerAnalysisGoal goal) {
-        if (goal == FlowExplorerAnalysisGoal.TEST_SCENARIOS) {
-            return """
-                    MUST: flow-explorer-test-scenario-design
-                    - Obowiazuje dla celu TEST_SCENARIOS.
-                    """.stripTrailing();
-        }
-        if (goal == FlowExplorerAnalysisGoal.RISK_DETECTION) {
-            return """
-                    MUST: flow-explorer-risk-assessment
-                    - Obowiazuje dla celu RISK_DETECTION.
-                    """.stripTrailing();
-        }
+    private String goalSkillUsage() {
         return """
                 MUST: flow-explorer-deep-discovery
                 - Obowiazuje dla celu DEEP_DISCOVERY.

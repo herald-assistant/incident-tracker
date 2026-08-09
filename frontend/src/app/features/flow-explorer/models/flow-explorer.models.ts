@@ -8,10 +8,7 @@ import {
   AnalysisReport
 } from '../../../core/models/analysis.models';
 
-export type FlowExplorerAnalysisGoal =
-  | 'DEEP_DISCOVERY'
-  | 'TEST_SCENARIOS'
-  | 'RISK_DETECTION';
+export type FlowExplorerAnalysisGoal = 'DEEP_DISCOVERY';
 
 export type FlowExplorerFocusArea =
   | 'FUNCTIONAL_FLOW'

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotModelSelection;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
@@ -26,14 +25,13 @@ public class FlowExplorerCopilotSessionConfigRequestFactory {
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
             AnalysisAiOptions options,
-            FlowExplorerAnalysisGoal goal,
             List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
-        return create(
+        return createSessionConfig(
                 copilotSessionId,
                 toolAccessPolicy,
                 options,
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(goal, sectionModes)
+                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(sectionModes)
         );
     }
 
@@ -43,7 +41,7 @@ public class FlowExplorerCopilotSessionConfigRequestFactory {
             AnalysisAiOptions options,
             List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
-        return create(
+        return createSessionConfig(
                 copilotSessionId,
                 toolAccessPolicy,
                 options,
@@ -51,7 +49,7 @@ public class FlowExplorerCopilotSessionConfigRequestFactory {
         );
     }
 
-    private CopilotSessionConfigRequest create(
+    private CopilotSessionConfigRequest createSessionConfig(
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
             AnalysisAiOptions options,

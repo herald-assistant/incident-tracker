@@ -33,6 +33,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -128,6 +129,24 @@ class FlowExplorerJobControllerTest {
                 "gpt-5.4",
                 "medium"
         ));
+    }
+
+    @Test
+    void shouldRejectRetiredAnalysisGoals() throws Exception {
+        for (var retiredGoal : List.of("TEST_SCENARIOS", "RISK_DETECTION")) {
+            mockMvc.perform(post("/api/flow-explorer/jobs")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "systemId": "crm-service",
+                                      "endpointId": "GET:/api/customers/{id}",
+                                      "goal": "%s"
+                                    }
+                                    """.formatted(retiredGoal)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        verifyNoInteractions(flowExplorerJobService);
     }
 
     @Test

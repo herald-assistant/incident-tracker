@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.flowexplorer.job.localworkspace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.copilot.rpc.CopilotClientOptions;
@@ -190,6 +191,31 @@ class FlowExplorerLocalRunChatHandlerTest {
         );
 
         assertEquals(LocalAnalysisRunContinuationException.Reason.CORRUPTED, exception.reason());
+    }
+
+    @Test
+    void shouldRejectContinuationOfRunsCreatedWithRetiredGoals() {
+        var handler = new FlowExplorerLocalRunChatHandler(
+                objectMapper,
+                mock(FlowExplorerCopilotRunRequestAssembler.class),
+                new FlowExplorerFollowUpPromptPreparationService(),
+                mock(CopilotRunPreparationService.class),
+                mock(CopilotSdkExecutionGateway.class),
+                new CopilotRunAuthMapper(),
+                auth -> new CopilotAccessToken("token", null, null, false)
+        );
+
+        for (var retiredGoal : List.of("TEST_SCENARIOS", "RISK_DETECTION")) {
+            var retiredRecord = record(snapshot());
+            ((ObjectNode) retiredRecord.exportEnvelope().at("/payload/job")).put("goal", retiredGoal);
+
+            var exception = assertThrows(
+                    LocalAnalysisRunContinuationException.class,
+                    () -> handler.continueRun(indexEntry(), retiredRecord, "Dopytaj")
+            );
+
+            assertEquals(LocalAnalysisRunContinuationException.Reason.CORRUPTED, exception.reason());
+        }
     }
 
     private LocalAnalysisRunRecord record(FlowExplorerJobStateSnapshot snapshot) {

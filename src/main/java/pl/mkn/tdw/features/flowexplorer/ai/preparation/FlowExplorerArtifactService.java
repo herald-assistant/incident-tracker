@@ -243,7 +243,7 @@ public class FlowExplorerArtifactService {
     public String responseContract() {
         return """
                 {
-                  "goal": "DEEP_DISCOVERY|TEST_SCENARIOS|RISK_DETECTION",
+                  "goal": "DEEP_DISCOVERY",
                   "audience": "business_or_system_analyst_tester",
                   "overview": {
                     "markdown": "string",

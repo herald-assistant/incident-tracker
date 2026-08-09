@@ -92,10 +92,10 @@ class FlowExplorerAiResponseParserTest {
     }
 
     @Test
-    void shouldParseTestScenariosGoalResponse() {
+    void shouldParseDeepDiscoveryResponseWithDeepValidationSection() {
         var response = parser.parse("""
                 {
-                  "goal": "TEST_SCENARIOS",
+                  "goal": "DEEP_DISCOVERY",
                   "audience": "business_or_system_analyst_tester",
                   "overview": {
                     "markdown": "Plan testow dla odczytu profilu klienta CRM powinien pokryc happy path, brak klienta i dane niepoprawne.",
@@ -149,7 +149,7 @@ class FlowExplorerAiResponseParserTest {
                         "Scenariusze testowe: aktywny klient, brak klienta i niepoprawne id."
                 )));
 
-        assertEquals(FlowExplorerAnalysisGoal.TEST_SCENARIOS, response.goal());
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, response.goal());
         assertEquals("medium", response.confidence());
         assertEquals(4, response.sections().size());
         assertEquals(FlowExplorerResultSectionId.VALIDATIONS, response.sections().get(1).id());
@@ -160,10 +160,10 @@ class FlowExplorerAiResponseParserTest {
     }
 
     @Test
-    void shouldParseRiskDetectionGoalResponse() {
+    void shouldParseDeepDiscoveryResponseWithDeepIntegrationSection() {
         var response = parser.parse("""
                 {
-                  "goal": "RISK_DETECTION",
+                  "goal": "DEEP_DISCOVERY",
                   "audience": "business_or_system_analyst_tester",
                   "overview": {
                     "markdown": "Najwieksze ryzyko dla odczytu profilu klienta CRM to niejednoznaczne zachowanie dla brakujacego albo nieaktywnego klienta.",
@@ -217,7 +217,7 @@ class FlowExplorerAiResponseParserTest {
                         "Ryzyko: potwierdzic zachowanie dla nieaktywnego albo nieistniejacego klienta."
                 )));
 
-        assertEquals(FlowExplorerAnalysisGoal.RISK_DETECTION, response.goal());
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, response.goal());
         assertEquals("medium", response.confidence());
         assertEquals(4, response.sections().size());
         assertEquals(FlowExplorerResultSectionMode.COMPACT, response.sections().get(0).mode());
@@ -231,12 +231,12 @@ class FlowExplorerAiResponseParserTest {
     @Test
     void shouldValidateSectionModesAgainstFocusAreas() {
         var response = parser.parseForFocusAreas(
-                responseJsonWithModes("TEST_SCENARIOS", "deep", "deep", "compact", "compact"),
-                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                responseJsonWithModes("DEEP_DISCOVERY", "deep", "deep", "compact", "compact"),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW, FlowExplorerFocusArea.VALIDATIONS)
         );
 
-        assertEquals(FlowExplorerAnalysisGoal.TEST_SCENARIOS, response.goal());
+        assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, response.goal());
         assertEquals(FlowExplorerResultSectionMode.DEEP, response.sections().get(0).mode());
         assertEquals(FlowExplorerResultSectionMode.DEEP, response.sections().get(1).mode());
         assertEquals(FlowExplorerResultSectionMode.COMPACT, response.sections().get(2).mode());
@@ -328,17 +328,25 @@ class FlowExplorerAiResponseParserTest {
     }
 
     @Test
-    void shouldReturnFallbackWhenGoalIsUnknown() {
-        var response = parser.parse(responseJsonWithModes("UNKNOWN", "deep", "compact", "compact", "compact"));
+    void shouldReturnFallbackWhenGoalIsUnsupported() {
+        for (var unsupportedGoal : List.of("TEST_SCENARIOS", "RISK_DETECTION", "UNKNOWN")) {
+            var response = parser.parse(responseJsonWithModes(
+                    unsupportedGoal,
+                    "deep",
+                    "compact",
+                    "compact",
+                    "compact"
+            ));
 
-        assertFallback(response, "goal must be one of");
+            assertFallback(response, "goal must be DEEP_DISCOVERY");
+        }
     }
 
     @Test
     void shouldReturnFallbackWhenSectionModeDoesNotMatchFocusAreas() {
         var response = parser.parseForFocusAreas(
-                responseJsonWithModes("TEST_SCENARIOS", "compact", "deep", "compact", "compact"),
-                FlowExplorerAnalysisGoal.TEST_SCENARIOS,
+                responseJsonWithModes("DEEP_DISCOVERY", "compact", "deep", "compact", "compact"),
+                FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW, FlowExplorerFocusArea.VALIDATIONS)
         );
 

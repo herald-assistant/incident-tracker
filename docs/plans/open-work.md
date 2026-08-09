@@ -69,22 +69,21 @@ pozostalych ograniczeniach.
   upstream `github/copilot-sdk`, szczegolnie dokumentacje Node SDK i protokol
   `@github/copilot`.
 
-## 1. Cross-goal smoke test Flow Explorera
+## 1. Deep Discovery smoke test Flow Explorera
 
 Status: draft
 
-Potrzeba / dlaczego: potwierdzic, ze goal-based result contract daje
-uzyteczny i ekonomiczny wynik dla kazdego glownego celu, a nie tylko
-przechodzi przez parser.
+Potrzeba / dlaczego: potwierdzic, ze aktualny kontrakt `DEEP_DISCOVERY` daje
+uzyteczny i ekonomiczny wynik, a nie tylko przechodzi przez parser.
 
 Proponowane rozwiazanie: wykonac porownywalne smoke testy na jednym
-zanonimizowanym use case i na ich podstawie korygowac kontrakt, skille oraz
-template'y.
+zanonimizowanym use case i na ich podstawie korygowac kontrakt, skill oraz
+template'y. Ponowne wlaczenie `TEST_SCENARIOS` albo `RISK_DETECTION` wymaga
+osobnego zatwierdzonego planu i wlasnego quality baseline.
 
 - [ ] Potwierdzic baseline i przygotowac jeden realny albo zanonimizowany
-  CRM-specific endpoint dla `DEEP_DISCOVERY`, `TEST_SCENARIOS` i
-  `RISK_DETECTION`.
-- [ ] Uruchomic trzy cele i zapisac jakosc wyniku, usage oraz token cost.
+  CRM-specific endpoint dla `DEEP_DISCOVERY`.
+- [ ] Uruchomic `DEEP_DISCOVERY` i zapisac jakosc wyniku, usage oraz token cost.
 - [ ] Ocenic, czy initial result jest samowystarczalny, overview daje szybkie
   zrozumienie, a kazda aktywna sekcja wnosi wartosc.
 - [ ] Porownac `compact` i `deep`: `compact` nie moze byc zbyt plytkie, a
