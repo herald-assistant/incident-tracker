@@ -9,6 +9,22 @@
   min-width: 0;
 }
 
+.change-verification-compliance__inferred-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warning-text);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+}
+
+.change-verification-compliance__inferred-notice p {
+  margin: 0;
+}
+
 .change-verification-compliance--empty {
   gap: 14px;
 }

@@ -61,6 +61,7 @@ Nie pokazuj pustych wartosci, `[]`, `n/a`, `Brak` ani pustych sekcji.
 
 Kazdy check musi miec ten sam kontrakt co `verificationChecks`, z:
 
+- `origin=DEFINED`,
 - `scope=INSTRUCTION_COMPLIANCE`,
 - cytatem i sciezka pliku instrukcji,
 - `interpretationType`,
@@ -71,7 +72,8 @@ Pelny kontrakt checka pozostaje wymagany w finalnym JSON niezaleznie od
 human-first formy Markdown.
 
 Gdy instrukcja jest ogolna, ale jej zastosowanie do zmiany wymaga
-interpretacji, uzyj `interpretationType=inferred`. Gdy kilka instrukcji jest
+interpretacji, nadal zachowaj `origin=DEFINED`, poniewaz regula pochodzi z
+jawnego source; opisz interpretacje w `analysis`. Gdy kilka instrukcji jest
 sprzecznych, uzyj `conflicting` i nie wybieraj jednej po cichu.
 
 ## Readiness

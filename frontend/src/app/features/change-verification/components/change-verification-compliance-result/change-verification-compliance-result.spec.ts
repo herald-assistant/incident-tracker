@@ -60,6 +60,35 @@ describe('ChangeVerificationComplianceResultComponent', () => {
     expect(element.querySelector('table')).toBeNull();
     expect(element.querySelector('app-analysis-report-section-content')).toBeNull();
   });
+
+  it('shows inferred critical checks as non-contractual AI suggestions', () => {
+    fixture.componentRef.setInput('variant', 'inferred-critical');
+    fixture.componentRef.setInput('checks', [
+      check({
+        id: 'critical-001',
+        origin: 'INFERRED_CRITICAL',
+        scope: 'INFERRED_CRITICAL_CHECKS',
+        criterionSource: 'AI_SUGGESTION',
+        criterionQuote: 'n/a',
+        interpretationType: 'inferred',
+        criticality: 'HIGH',
+        inferenceRationale: 'Zmiana publikuje event w ścieżce z retry.',
+        inferenceSignals: ['EventPublisher', 'retry path'],
+        riskIfOmitted: 'Ponowienie może utworzyć duplikat.',
+        confidence: 'medium',
+        expectedCriterion: 'Idempotencja publikacji',
+        verificationStatus: 'NOT_VERIFIED'
+      })
+    ]);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('To nie są wymagania zapisane');
+    expect(text).toContain('Idempotencja publikacji');
+    expect(text).toContain('Ponowienie może utworzyć duplikat.');
+    expect(text).toContain('EventPublisher; retry path');
+    expect(text).toContain('nie zmienia wyniku Story Compliance');
+  });
 });
 
 function check(
@@ -67,10 +96,16 @@ function check(
 ): ChangeVerificationVerificationCheck {
   return {
     id: 'story-check',
+    origin: 'DEFINED',
     scope: 'STORY_COMPLIANCE',
     criterionSource: 'Jira acceptance criteria',
     criterionQuote: 'System powinien opublikować event.',
     interpretationType: 'explicit',
+    criticality: null,
+    inferenceRationale: null,
+    inferenceSignals: [],
+    riskIfOmitted: null,
+    confidence: null,
     expectedCriterion: 'System publikuje event.',
     verificationStatus: 'PASSED',
     verifiedAgainst: 'backend/src/EventPublisher.java',

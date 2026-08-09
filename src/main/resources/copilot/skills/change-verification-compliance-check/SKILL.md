@@ -67,7 +67,8 @@ wlaczone narzedzia.
    - fakt potwierdzony przez artefakt,
    - inferencje z nazw plikow, branchy albo commitow,
    - luki widocznosci.
-7. Zbuduj szczegolowe `verificationChecks`. Kazdy check musi wskazywac:
+7. Zbuduj szczegolowe source-defined `verificationChecks` z `origin=DEFINED`.
+   Kazdy check musi wskazywac:
    - konkretne kryterium z AC, opisu, komentarza, Confluence albo instrukcji,
    - krotki cytat zrodla lub nazwe pliku instrukcji,
    - co porownano z implementacja z MR lub dociagnietym kodem,
@@ -75,14 +76,23 @@ wlaczone narzedzia.
    - gaps i rekomendacje, jezeli nie da sie uczciwie potwierdzic kryterium.
 8. Po rozpisaniu jawnych acceptance criteria przejrzyj pozostale pola Jira,
    powiazany fragment Confluence, instrukcje i widoczny kod pod katem
-   dodatkowych wymagan. Istnienie AC nie zamyka analizy.
-9. Dla kazdego checka ustaw `interpretationType`:
+   brakujacych kontroli release-critical. Nie dopisuj ich do Story Compliance;
+   zbuduj osobne `INFERRED_CRITICAL` checks.
+9. Dla source-defined checka ustaw `interpretationType`:
    - `explicit`,
-   - `inferred`,
    - `normalized`,
    - `conflicting`,
    - `not_verifiable`.
-10. Oddziel metadane pokrycia platformy od materialu projektu:
+10. Zbuduj od zera do pieciu `INFERRED_CRITICAL` checks. Kazdy musi miec:
+    - `origin=INFERRED_CRITICAL`,
+    - `scope=INFERRED_CRITICAL_CHECKS`,
+    - `interpretationType=inferred`,
+    - `criticality=HIGH` albo `BLOCKER`,
+    - konkretne `inferenceSignals`, `inferenceRationale`, `riskIfOmitted` i
+      `confidence`,
+    - status wynikajacy z aktualnego evidence.
+    Pomijaj ogolne best practices i nie wypelniaj limitu na sile.
+11. Oddziel metadane pokrycia platformy od materialu projektu:
    - wpisy `limitations` z `source-discovery.md`,
      `source-discovery-limits` i `instruction-source-limits` nie sa
      wymaganiami ani instrukcjami repozytorium,
@@ -146,7 +156,8 @@ Ustaw `status` wedlug zasad:
 
 ## Findings
 
-`verificationChecks` sa podstawowym, szczegolowym raportem. `findings` sluza
+Source-defined `verificationChecks` sa podstawowym, szczegolowym raportem.
+`findings` sluza
 do zebrania najwazniejszych rozjazdow, ryzyk albo luk widocznosci wynikajacych
 z checkow. Nie zastapuj listy checkow jednym ogolnym findingiem.
 
@@ -175,6 +186,7 @@ Przekaz orkiestratorowi:
 ```text
 RequirementLedger
 verificationChecks
+inferredCriticalChecks
 findings
 suggestedActions
 visibilityLimits
@@ -189,11 +201,17 @@ Kazdy wpis ledgeru ma pola:
 
 ```text
 id
+origin
 scope
 sourceRole
 sourceRef
 criterionQuote
 interpretationType
+criticality
+inferenceRationale
+inferenceSignals
+riskIfOmitted
+confidence
 expectedCriterion
 verifiedAgainst
 verificationStatus

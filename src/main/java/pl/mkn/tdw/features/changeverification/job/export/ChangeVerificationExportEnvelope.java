@@ -14,9 +14,9 @@ public record ChangeVerificationExportEnvelope(
         Payload payload
 ) {
     public static final String SCHEMA = "tdw.change-verification-export";
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
     public static final String PAYLOAD_TYPE = "change-verification-analysis";
-    public static final String RESULT_CONTRACT = "change-verification-result-v3";
+    public static final String RESULT_CONTRACT = "change-verification-result-v4";
 
     public static ChangeVerificationExportEnvelope from(
             ChangeVerificationJobStateSnapshot snapshot,

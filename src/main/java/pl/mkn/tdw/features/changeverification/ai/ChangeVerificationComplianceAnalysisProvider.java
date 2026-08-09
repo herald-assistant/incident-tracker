@@ -10,25 +10,8 @@ public interface ChangeVerificationComplianceAnalysisProvider {
     ChangeVerificationComplianceAnalysis analyze(
             String jobId,
             ChangeVerificationJobStartRequest request,
-            ChangeVerificationSourceDiscoveryResult sourceDiscovery
-    );
-
-    default ChangeVerificationComplianceAnalysis analyze(
-            String jobId,
-            ChangeVerificationJobStartRequest request,
-            ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-            AnalysisAiToolEvidenceListener toolEvidenceListener
-    ) {
-        return analyze(jobId, request, sourceDiscovery);
-    }
-
-    default ChangeVerificationComplianceAnalysis analyze(
-            String jobId,
-            ChangeVerificationJobStartRequest request,
             ChangeVerificationSourceDiscoveryResult sourceDiscovery,
             AnalysisAiToolEvidenceListener toolEvidenceListener,
             AnalysisAiActivityListener activityListener
-    ) {
-        return analyze(jobId, request, sourceDiscovery, toolEvidenceListener);
-    }
+    );
 }

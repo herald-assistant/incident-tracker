@@ -8,6 +8,7 @@ import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationP
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
 import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatcher;
@@ -190,25 +191,6 @@ class ChangeVerificationJobServiceTest {
         public ChangeVerificationComplianceAnalysis analyze(
                 String jobId,
                 ChangeVerificationJobStartRequest request,
-                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery
-        ) {
-            return analyze(jobId, request, sourceDiscovery, AnalysisAiToolEvidenceListener.NO_OP);
-        }
-
-        @Override
-        public ChangeVerificationComplianceAnalysis analyze(
-                String jobId,
-                ChangeVerificationJobStartRequest request,
-                pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-                AnalysisAiToolEvidenceListener toolEvidenceListener
-        ) {
-            return analyze(jobId, request, sourceDiscovery, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
-        }
-
-        @Override
-        public ChangeVerificationComplianceAnalysis analyze(
-                String jobId,
-                ChangeVerificationJobStartRequest request,
                 pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult sourceDiscovery,
                 AnalysisAiToolEvidenceListener toolEvidenceListener,
                 AnalysisAiActivityListener activityListener
@@ -218,7 +200,26 @@ class ChangeVerificationJobServiceTest {
             return new ChangeVerificationComplianceAnalysis(
                     new ChangeVerificationAiResponse(
                             "PASSED_WITH_WARNINGS",
-                            List.of(),
+                            List.of(new ChangeVerificationVerificationCheckResponse(
+                                    "instruction-001",
+                                    "DEFINED",
+                                    "INSTRUCTION_COMPLIANCE",
+                                    "AGENTS.md",
+                                    "Review local instructions.",
+                                    "explicit",
+                                    null,
+                                    null,
+                                    List.of(),
+                                    null,
+                                    null,
+                                    "Local instructions apply to the changed files.",
+                                    "WARNING",
+                                    "AGENTS.md and changed files",
+                                    "Instruction context is available but requires manual confirmation.",
+                                    List.of("change-verification/instruction-context"),
+                                    List.of(),
+                                    "Review local AGENTS.md before approving the change."
+                            )),
                             List.of(new ChangeVerificationFindingResponse(
                                     "cv-001",
                                     ChangeVerificationFindingSeverity.LOW,

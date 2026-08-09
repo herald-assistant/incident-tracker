@@ -58,6 +58,12 @@ Na dzisiaj projekt ma:
   platforma oszczedza czas w codziennej pracy,
 - ekran `GET /incident-analysis` serwowany przez Spring Boot z mozliwoscia
   importu i eksportu zapisu zakonczonej analizy jako JSON,
+- ekran `GET /change-verification` dla compliance-only review Jira/Confluence,
+  instrukcji repozytorium i implementacji z MR. Wynik rozdziela source-defined
+  `STORY_COMPLIANCE`, `INSTRUCTION_COMPLIANCE` oraz maksymalnie piec
+  `INFERRED_CRITICAL_CHECKS`; sugestie AI sa oceniane wobec tego samego evidence,
+  ale nie zmieniaja werdyktu source-defined compliance. Import/eksport uzywa
+  tylko aktualnego `change-verification-result-v4` i odrzuca starsze wersje,
 - ekran `GET /runtime-configuration-verification` do rownoleglego porownania
   konfiguracji wielu `internal-system` pomiedzy branchami z rodzin `dev`,
   `test`, `uat` i `zt`; `BASIC` pokazuje
@@ -123,6 +129,10 @@ Na dzisiaj projekt ma:
   curated operational context,
 - feature-owned API `/api/runtime-configuration-verification/*` dla input
   options, preflightu `DEEP`, asynchronicznych jobow oraz read-only importu,
+- feature-owned `POST /api/change-verification/jobs` i
+  `GET /api/change-verification/jobs/{jobId}` dla asynchronicznego source
+  discovery, AI compliance i snapshotu z reportem, activity, evidence oraz
+  usage,
 - AI-first flow oparty o `AnalysisEvidenceProvider`, `InitialAnalysisProvider` i
   osobny `AnalysisAiChatProvider` dla kontynuacji zakonczonego joba,
 - factory definicji tools dla GitHub Copilot Java SDK oparta o Spring tools,
@@ -144,6 +154,15 @@ Na dzisiaj projekt ma:
 - `GET /incident-analysis`
   Angularowy ekran `Analysis Features / Incident Analysis` do uruchamiania
   analizy z logow pobranych po `correlationId` albo z zalaczonego CSV.
+- `GET /change-verification`
+  Angularowy ekran `Analysis Features / Change Verification`. Operator podaje
+  Jira key albo URL i wybiera Story Compliance oraz Instruction Compliance.
+  Raport pokazuje wymagania zrodlowe osobno od niekontraktowych kontroli
+  krytycznych zasugerowanych przez AI.
+- `POST /api/change-verification/jobs`
+  Uruchamia asynchroniczna weryfikacje. `GET` z `/{jobId}` zwraca snapshot
+  krokow, source/tool evidence, activity, prompt, usage, strukturalne checki i
+  kanoniczny `AnalysisReport`.
 - `GET /runtime-configuration-verification`
   Angularowy workspace porownania konfiguracji runtime. Formularz wybiera
   repozytorium, wiele `internal-system` oraz branch zrodlowy/docelowy.

@@ -59,11 +59,11 @@ class ChangeVerificationLocalRunPersisterTest {
 
         var exportEnvelope = store.savedRecord.exportEnvelope();
         assertEquals("tdw.change-verification-export", exportEnvelope.path("schema").asText());
-        assertEquals(3, exportEnvelope.path("version").asInt());
+        assertEquals(4, exportEnvelope.path("version").asInt());
         assertEquals(COMPLETED_AT.toString(), exportEnvelope.path("exportedAt").asText());
         assertEquals("change-verification-analysis", exportEnvelope.at("/payload/type").asText());
-        assertEquals("change-verification-result-v3", exportEnvelope.at("/payload/resultContract").asText());
-        assertEquals("change-verification-result-v3", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
+        assertEquals("change-verification-result-v4", exportEnvelope.at("/payload/resultContract").asText());
+        assertEquals("change-verification-result-v4", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
         assertEquals("change-job-1", exportEnvelope.at("/payload/job/jobId").asText());
         assertEquals("CRM-123", exportEnvelope.at("/payload/job/issueKey").asText());
         assertEquals("change-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
@@ -81,7 +81,7 @@ class ChangeVerificationLocalRunPersisterTest {
         assertNull(store.savedEntry.completedAt());
         assertEquals(UPDATED_AT.toString(), store.savedRecord.exportEnvelope().path("exportedAt").asText());
         assertEquals("RUNNING", store.savedRecord.exportEnvelope().at("/payload/job/status").asText());
-        assertEquals("change-verification-result-v3",
+        assertEquals("change-verification-result-v4",
                 store.savedRecord.exportEnvelope().at("/payload/diagnostics/resultContract").asText());
         assertFalse(store.savedRecord.continuation().enabled());
     }

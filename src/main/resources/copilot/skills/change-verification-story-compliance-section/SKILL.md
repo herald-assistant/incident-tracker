@@ -1,6 +1,6 @@
 ---
 name: change-verification-story-compliance-section
-description: Buduje szczegolowa sekcje STORY_COMPLIANCE z jawnych i inferowanych wymagan Jira oraz kontekstu Confluence.
+description: Buduje szczegolowa sekcje STORY_COMPLIANCE z wymagan zdefiniowanych w Jira oraz jawnie wlaczonym materiale Confluence.
 ---
 
 # Change Verification Story Compliance Section
@@ -31,7 +31,7 @@ Sekcja musi zawierac:
 4. `Szczegoly kryteriow`:
    - osobny blok dla kazdego jawnego acceptance criterion,
    - osobne bloki dla wymagan z opisu i komentarzy,
-   - osobne bloki dla uzasadnionych wymagan inferowanych z kontekstu.
+   - bez kontroli `INFERRED_CRITICAL`, ktore naleza do osobnej sekcji.
 5. `Rekomendowane dzialania`, tylko gdy istnieja konkretne dzialania.
 
 Raport jest czytany przez czlowieka. Nie wypisuj nazw pol kontraktu jako
@@ -52,8 +52,6 @@ Nie pokazuj pustych wartosci, `[]`, `n/a`, `Brak` ani sekcji bez tresci.
 - `explicit`: wymaganie zapisane wprost.
 - `normalized`: znaczenie zapisane nieprecyzyjnie, ale uporzadkowane bez
   dodawania nowego obowiazku.
-- `inferred`: dodatkowe wymaganie wyprowadzone z kilku sygnalow. Zawsze
-  napisz, ze jest inferowane i dlaczego.
 - `conflicting`: zrodla daja sprzeczne oczekiwania.
 - `not_verifiable`: nie ma wystarczajacego proof w widocznym kodzie lub MR.
 
@@ -67,6 +65,7 @@ intencji autora po cichu.
 Kazdy check musi miec:
 
 - `id`,
+- `origin=DEFINED`,
 - `scope=STORY_COMPLIANCE`,
 - `criterionSource`,
 - `criterionQuote`,
@@ -86,8 +85,9 @@ go w bardziej zwartej, human-first formie.
 
 Zwroc `needs_deeper_evidence`, gdy konkretny odczyt kodu moze rozstrzygnac
 status checka. Zwroc `visibility_limited`, gdy dalszy proof nie jest dostepny.
-Sekcja jest `ready` dopiero, gdy wszystkie jawne AC maja check i wymagania
-inferowane sa wyraznie oznaczone.
+Sekcja jest `ready` dopiero, gdy wszystkie jawne AC i inne wymagania zapisane
+w materialach maja check, a zadna brakujaca kontrola AI nie zostala domieszana
+do Story Compliance.
 
 ## Handoff
 

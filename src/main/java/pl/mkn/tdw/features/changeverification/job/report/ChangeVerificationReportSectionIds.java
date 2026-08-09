@@ -9,6 +9,7 @@ public final class ChangeVerificationReportSectionIds {
 
     public static final String STORY_COMPLIANCE = "STORY_COMPLIANCE";
     public static final String INSTRUCTION_COMPLIANCE = "INSTRUCTION_COMPLIANCE";
+    public static final String INFERRED_CRITICAL_CHECKS = "INFERRED_CRITICAL_CHECKS";
 
     private ChangeVerificationReportSectionIds() {
     }
@@ -20,6 +21,9 @@ public final class ChangeVerificationReportSectionIds {
         }
         if (request != null && request.checkInstructionCompliance()) {
             sectionIds.add(INSTRUCTION_COMPLIANCE);
+        }
+        if (request != null && request.checkStoryCompliance()) {
+            sectionIds.add(INFERRED_CRITICAL_CHECKS);
         }
         return List.copyOf(sectionIds);
     }

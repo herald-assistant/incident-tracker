@@ -1,9 +1,18 @@
 @if (checks().length) {
   <div class="change-verification-compliance">
+    @if (inferredCritical()) {
+      <aside class="change-verification-compliance__inferred-notice" aria-label="Charakter sugestii AI">
+        <span class="material-symbols-outlined" aria-hidden="true">lightbulb</span>
+        <p>
+          To nie są wymagania zapisane w Jira, Confluence ani instrukcjach repozytorium.
+          AI wskazuje je jako materiał do manualnej decyzji; ich status nie zmienia wyniku Story Compliance.
+        </p>
+      </aside>
+    }
     <section class="change-verification-compliance__summary" aria-labelledby="compliance-section-summary">
       <div class="change-verification-compliance__verdict">
         <div>
-          <span class="field-label">Wynik sekcji</span>
+          <span class="field-label">{{ inferredCritical() ? 'Ocena sugestii AI' : 'Wynik sekcji' }}</span>
           <h4 id="compliance-section-summary">{{ sectionSummary() }}</h4>
         </div>
         <span [attr.class]="statusClass(sectionStatus())">{{ statusLabel(sectionStatus()) }}</span>
@@ -11,7 +20,7 @@
 
       <dl class="change-verification-compliance__counts" aria-label="Podsumowanie kryteriów">
         <div>
-          <dt>Zweryfikowane</dt>
+          <dt>{{ inferredCritical() ? 'Ocenione' : 'Zweryfikowane' }}</dt>
           <dd>{{ checks().length }}</dd>
         </div>
         <div>
@@ -28,7 +37,7 @@
         <div class="change-verification-compliance__highlight change-verification-compliance__highlight--positive">
           <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
           <div>
-            <strong>Najważniejsze potwierdzenie</strong>
+            <strong>{{ inferredCritical() ? 'Najważniejsza potwierdzona kontrola' : 'Najważniejsze potwierdzenie' }}</strong>
             <p>{{ confirmedHighlight() }}</p>
           </div>
         </div>
@@ -40,7 +49,7 @@
             {{ attentionChecks().length ? 'warning' : 'verified' }}
           </span>
           <div>
-            <strong>Najważniejsze ryzyko</strong>
+            <strong>{{ inferredCritical() ? 'Ryzyko pominięcia' : 'Najważniejsze ryzyko' }}</strong>
             <p>{{ riskHighlight() }}</p>
           </div>
         </div>
@@ -59,7 +68,7 @@
         <div class="change-verification-compliance__section-heading">
           <div>
             <span class="field-label">Priorytet review</span>
-            <h4 id="attention-checks-heading">Wymaga uwagi</h4>
+            <h4 id="attention-checks-heading">{{ inferredCritical() ? 'Wymaga manualnej decyzji' : 'Wymaga uwagi' }}</h4>
           </div>
           <span class="change-verification-compliance__section-count">{{ attentionChecks().length }}</span>
         </div>
@@ -69,7 +78,7 @@
             <thead>
               <tr>
                 <th>Status</th>
-                <th>Kryterium</th>
+                <th>{{ inferredCritical() ? 'Krytyczna kontrola' : 'Kryterium' }}</th>
                 <th>Wniosek</th>
                 <th>Rekomendowane działanie</th>
               </tr>
@@ -103,8 +112,8 @@
       <section class="change-verification-compliance__section" aria-labelledby="passed-checks-heading">
         <div class="change-verification-compliance__section-heading">
           <div>
-            <span class="field-label">Potwierdzony zakres</span>
-            <h4 id="passed-checks-heading">Potwierdzone wymagania</h4>
+            <span class="field-label">{{ inferredCritical() ? 'Sprawdzone sugestie' : 'Potwierdzony zakres' }}</span>
+            <h4 id="passed-checks-heading">{{ inferredCritical() ? 'Potwierdzone kontrole' : 'Potwierdzone wymagania' }}</h4>
           </div>
           <span class="change-verification-compliance__section-count change-verification-compliance__section-count--positive">
             {{ passedChecks().length }}
@@ -115,7 +124,7 @@
           <table class="change-verification-compliance__table">
             <thead>
               <tr>
-                <th>Wymaganie</th>
+                <th>{{ inferredCritical() ? 'Kontrola' : 'Wymaganie' }}</th>
                 <th>Źródło</th>
                 <th>Co potwierdzono</th>
                 <th>Status</th>
@@ -147,7 +156,7 @@
       <div class="change-verification-compliance__section-heading">
         <div>
           <span class="field-label">Pełny materiał</span>
-          <h4 id="criteria-details-heading">Szczegóły kryteriów</h4>
+          <h4 id="criteria-details-heading">{{ inferredCritical() ? 'Szczegóły sugestii' : 'Szczegóły kryteriów' }}</h4>
         </div>
       </div>
 
@@ -178,7 +187,7 @@
                 <p>{{ conclusion(check) }}</p>
               </div>
 
-              @if (hasText(check.criterionQuote) && isMeaningful(check.criterionQuote)) {
+              @if (!inferredCritical() && hasText(check.criterionQuote) && isMeaningful(check.criterionQuote)) {
                 <blockquote>
                   <span class="field-label">Fragment materiału źródłowego</span>
                   <p>{{ check.criterionQuote }}</p>
@@ -186,6 +195,28 @@
               }
 
               <dl class="change-verification-compliance__detail-grid">
+                @if (inferredCritical()) {
+                  <div>
+                    <dt>Dlaczego kontrola jest krytyczna</dt>
+                    <dd>{{ rationale(check) }}</dd>
+                  </div>
+                  <div>
+                    <dt>Ryzyko pominięcia</dt>
+                    <dd>{{ riskIfOmitted(check) }}</dd>
+                  </div>
+                  @if (signals(check)) {
+                    <div>
+                      <dt>Sygnały wykorzystane przez AI</dt>
+                      <dd>{{ signals(check) }}</dd>
+                    </div>
+                  }
+                  @if (hasText(check.confidence)) {
+                    <div>
+                      <dt>Pewność AI</dt>
+                      <dd>{{ check.confidence }}</dd>
+                    </div>
+                  }
+                }
                 @if (hasText(check.interpretationType)) {
                   <div>
                     <dt>Sposób interpretacji</dt>
@@ -218,8 +249,12 @@
     <section class="change-verification-compliance__empty-state">
       <span class="material-symbols-outlined" aria-hidden="true">rule</span>
       <div>
-        <h4>Brak strukturalnego wyniku weryfikacji</h4>
-        <p>Analiza nie zwróciła kryteriów wymaganych przez aktualny kontrakt.</p>
+        <h4>{{ inferredCritical() ? 'Brak dodatkowych kontroli krytycznych' : 'Brak strukturalnego wyniku weryfikacji' }}</h4>
+        <p>
+          {{ inferredCritical()
+            ? 'Na podstawie widocznego materiału AI nie zidentyfikowało dodatkowej kontroli krytycznej.'
+            : 'Analiza nie zwróciła kryteriów wymaganych przez aktualny kontrakt.' }}
+        </p>
       </div>
     </section>
     <app-analysis-report-meta [meta]="meta()" align="start"></app-analysis-report-meta>

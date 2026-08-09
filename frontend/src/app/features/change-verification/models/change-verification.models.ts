@@ -37,10 +37,16 @@ export interface ChangeVerificationFinding {
 
 export interface ChangeVerificationVerificationCheck {
   id: string;
+  origin: 'DEFINED' | 'INFERRED_CRITICAL' | string;
   scope: string;
   criterionSource: string;
   criterionQuote: string;
   interpretationType: string;
+  criticality: string | null;
+  inferenceRationale: string | null;
+  inferenceSignals: string[];
+  riskIfOmitted: string | null;
+  confidence: string | null;
   expectedCriterion: string;
   verificationStatus: string;
   verifiedAgainst: string;

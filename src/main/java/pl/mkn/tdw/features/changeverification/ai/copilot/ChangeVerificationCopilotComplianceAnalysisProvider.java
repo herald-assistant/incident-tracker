@@ -30,25 +30,6 @@ public class ChangeVerificationCopilotComplianceAnalysisProvider implements Chan
     public ChangeVerificationComplianceAnalysis analyze(
             String jobId,
             ChangeVerificationJobStartRequest request,
-            ChangeVerificationSourceDiscoveryResult sourceDiscovery
-    ) {
-        return analyze(jobId, request, sourceDiscovery, AnalysisAiToolEvidenceListener.NO_OP);
-    }
-
-    @Override
-    public ChangeVerificationComplianceAnalysis analyze(
-            String jobId,
-            ChangeVerificationJobStartRequest request,
-            ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-            AnalysisAiToolEvidenceListener toolEvidenceListener
-    ) {
-        return analyze(jobId, request, sourceDiscovery, toolEvidenceListener, AnalysisAiActivityListener.NO_OP);
-    }
-
-    @Override
-    public ChangeVerificationComplianceAnalysis analyze(
-            String jobId,
-            ChangeVerificationJobStartRequest request,
             ChangeVerificationSourceDiscoveryResult sourceDiscovery,
             AnalysisAiToolEvidenceListener toolEvidenceListener,
             AnalysisAiActivityListener activityListener

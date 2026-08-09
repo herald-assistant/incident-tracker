@@ -23,20 +23,23 @@ zakresu.
 2. Zbuduj `RequirementLedger` obejmujacy:
    - kazde jawne acceptance criterion,
    - wymagania z opisu i komentarzy,
-   - wymagania inferowane z Jira, Confluence i widocznego kodu,
-   - reguly z aktywnych instrukcji repozytorium.
+   - reguly z aktywnych instrukcji repozytorium,
+   - od zera do pieciu osobnych `INFERRED_CRITICAL` checks wynikajacych z
+     konkretnych sygnalow Jira, Confluence, MR, kodu albo operational context.
 3. Dla `checkStoryCompliance=true` zaladuj
    `change-verification-story-compliance-section`.
 4. Dla `checkInstructionCompliance=true` zaladuj
    `change-verification-instruction-compliance-section`.
-5. Po kazdej sekcji wykonaj readiness gate.
-6. Gdy brak jest rozstrzygalny jednym focused odczytem GitLab albo Operational
+5. Dla `checkStoryCompliance=true` zaladuj
+   `change-verification-inferred-critical-checks-section`.
+6. Po kazdej sekcji wykonaj readiness gate.
+7. Gdy brak jest rozstrzygalny jednym focused odczytem GitLab albo Operational
    Context, wykonaj go i ponow tylko odpowiednia czesc analizy.
-7. Gdy brak nie jest rozstrzygalny, oznacz go jako `visibility_limited`.
-8. Zaladuj `change-verification-write-report` i przekaz mu ledger, aktywne
+8. Gdy brak nie jest rozstrzygalny, oznacz go jako `visibility_limited`.
+9. Zaladuj `change-verification-write-report` i przekaz mu ledger, aktywne
    drafty sekcji, findings, actions, source refs, gaps, open questions,
    visibility limits i confidence.
-9. Przed handoffem usun z ledgeru, findings, gaps, open questions i actions
+10. Przed handoffem usun z ledgeru, findings, gaps, open questions i actions
    wpisy utworzone wylacznie z limitow `source-discovery-limits` albo
    `instruction-source-limits`. Takie wpisy zachowaj tylko jako
    `visibilityLimits`.
@@ -58,11 +61,15 @@ Przed write-report potwierdz:
 
 - target issue pozostaje glownym zakresem,
 - kazde jawne acceptance criterion ma osobny check,
-- opis, komentarze i Confluence zostaly przejrzane pod katem wymagan
-  inferowanych,
+- opis, komentarze, Confluence i implementacja zostaly przejrzane pod katem
+  brakujacych kontroli release-critical,
 - istnienie jawnego AC nie zatrzymalo dalszej dedukcji z innych zrodel,
 - kazdy check ma `interpretationType`,
-- kazda inferencja ma `interpretationType=inferred` i wskazane zrodlo,
+- kazdy `INFERRED_CRITICAL` check ma `interpretationType=inferred`, maksymalnie
+  piec pozycji, konkretne `inferenceSignals`, `inferenceRationale`,
+  `riskIfOmitted` i `confidence`,
+- zadna kontrola `INFERRED_CRITICAL` nie znajduje sie w Story Compliance ani
+  Instruction Compliance,
 - instrukcje zostaly powiazane z plikami albo elementami zmiany, do ktorych
   maja zastosowanie,
 - mocne twierdzenia maja source refs,
@@ -78,6 +85,7 @@ Przekaz do `change-verification-write-report`:
 RequirementLedger
 StoryComplianceSectionDraft?
 InstructionComplianceSectionDraft?
+InferredCriticalChecksSectionDraft?
 findings
 suggestedActions
 references

@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
 
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -25,10 +27,56 @@ public class ChangeVerificationAiResponseParser {
             if (!StringUtils.hasText(response.status())) {
                 return fallback("AI response did not contain compliance status.");
             }
+            var validationError = validateChecks(response.verificationChecks());
+            if (StringUtils.hasText(validationError)) {
+                return fallback(validationError);
+            }
             return response;
         } catch (JsonProcessingException exception) {
             return fallback("AI response JSON could not be parsed: " + exception.getMessage());
         }
+    }
+
+    private String validateChecks(List<ChangeVerificationVerificationCheckResponse> checks) {
+        var allowedOrigins = Set.of("DEFINED", "INFERRED_CRITICAL");
+        var allowedDefinedScopes = Set.of("STORY_COMPLIANCE", "INSTRUCTION_COMPLIANCE");
+        var allowedStatuses = Set.of("PASSED", "WARNING", "FAILED", "NOT_VERIFIED");
+        for (var check : checks) {
+            if (check == null || !StringUtils.hasText(check.id())) {
+                return "AI response contained a verification check without id.";
+            }
+            var origin = normalized(check.origin());
+            if (!allowedOrigins.contains(origin)) {
+                return "AI response contained a verification check without a supported origin.";
+            }
+            if ("DEFINED".equals(origin) && !allowedDefinedScopes.contains(normalized(check.scope()))) {
+                return "AI response contained a defined verification check with unsupported scope.";
+            }
+            if (!allowedStatuses.contains(normalized(check.verificationStatus()))) {
+                return "AI response contained a verification check with unsupported status.";
+            }
+            if ("INFERRED_CRITICAL".equals(origin)) {
+                if (!"INFERRED_CRITICAL_CHECKS".equals(normalized(check.scope()))) {
+                    return "AI response contained an inferred critical check with unsupported scope.";
+                }
+                if (!StringUtils.hasText(check.criticality())
+                        || !StringUtils.hasText(check.inferenceRationale())
+                        || check.inferenceSignals().isEmpty()
+                        || !StringUtils.hasText(check.riskIfOmitted())
+                        || !StringUtils.hasText(check.confidence())) {
+                    return "AI response contained an incomplete inferred critical check.";
+                }
+                if (!Set.of("HIGH", "BLOCKER").contains(normalized(check.criticality()))
+                        || !Set.of("HIGH", "MEDIUM", "LOW").contains(normalized(check.confidence()))) {
+                    return "AI response contained inferred critical metadata outside the supported contract.";
+                }
+            }
+        }
+        return null;
+    }
+
+    private String normalized(String value) {
+        return StringUtils.hasText(value) ? value.trim().toUpperCase(java.util.Locale.ROOT) : "";
     }
 
     public ChangeVerificationAiResponse fallback(String limitation) {

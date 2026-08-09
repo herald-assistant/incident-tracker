@@ -71,6 +71,7 @@ interface ChangeVerificationReportSectionDisplay {
   meta: AnalysisReportMeta;
   complianceChecks: ChangeVerificationVerificationCheck[];
   isComplianceSection: boolean;
+  complianceVariant: 'defined' | 'inferred-critical';
 }
 
 @Component({
@@ -653,7 +654,8 @@ function changeVerificationReportSections(
       emptyText: `No confirmed details for ${changeVerificationTabLabel(id, section.title)}.`,
       meta: normalizedMeta(section.meta),
       complianceChecks: complianceChecksForSection(compliance, normalizedId),
-      isComplianceSection: ['STORY_COMPLIANCE', 'INSTRUCTION_COMPLIANCE'].includes(normalizedId)
+      isComplianceSection: ['STORY_COMPLIANCE', 'INSTRUCTION_COMPLIANCE', 'INFERRED_CRITICAL_CHECKS'].includes(normalizedId),
+      complianceVariant: normalizedId === 'INFERRED_CRITICAL_CHECKS' ? 'inferred-critical' : 'defined'
     };
   });
 }
@@ -664,11 +666,15 @@ function complianceChecksForSection(
 ): ChangeVerificationVerificationCheck[] {
   return [...(compliance?.verificationChecks ?? [])].filter((check) => {
     const scope = cleanText(check.scope).toUpperCase();
+    const origin = cleanText(check.origin).toUpperCase();
     if (sectionId === 'STORY_COMPLIANCE') {
-      return ['STORY', 'ACCEPTANCE', 'JIRA', 'CONFLUENCE'].some((value) => scope.includes(value));
+      return origin === 'DEFINED' && scope === 'STORY_COMPLIANCE';
     }
     if (sectionId === 'INSTRUCTION_COMPLIANCE') {
-      return ['INSTRUCTION', 'AGENTS', 'COPILOT'].some((value) => scope.includes(value));
+      return origin === 'DEFINED' && scope === 'INSTRUCTION_COMPLIANCE';
+    }
+    if (sectionId === 'INFERRED_CRITICAL_CHECKS') {
+      return origin === 'INFERRED_CRITICAL' && scope === 'INFERRED_CRITICAL_CHECKS';
     }
     return false;
   });
@@ -680,6 +686,8 @@ function changeVerificationTabLabel(id: string, title: string | null | undefined
       return 'Story compliance';
     case 'INSTRUCTION_COMPLIANCE':
       return 'Instruction compliance';
+    case 'INFERRED_CRITICAL_CHECKS':
+      return 'AI-suggested critical checks';
     default:
       return cleanText(title) || cleanText(id) || 'Result';
   }

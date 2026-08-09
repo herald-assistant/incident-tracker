@@ -16,6 +16,8 @@ type ComplianceTone = 'positive' | 'warning' | 'critical' | 'neutral';
 export class ChangeVerificationComplianceResultComponent {
   readonly checks = input<ChangeVerificationVerificationCheck[]>([]);
   readonly meta = input<AnalysisReportMeta | null>(null);
+  readonly variant = input<'defined' | 'inferred-critical'>('defined');
+  protected readonly inferredCritical = computed(() => this.variant() === 'inferred-critical');
 
   protected readonly orderedChecks = computed(() =>
     [...this.checks()].sort((left, right) => statusRank(left.verificationStatus) - statusRank(right.verificationStatus))
@@ -41,10 +43,14 @@ export class ChangeVerificationComplianceResultComponent {
     const passed = this.passedChecks().length;
     const attention = this.attentionChecks().length;
     if (total === 0) {
-      return 'Brak strukturalnych kryteriów pozwalających podsumować ten zakres.';
+      return this.inferredCritical()
+        ? 'AI nie zidentyfikowało dodatkowych kontroli krytycznych.'
+        : 'Brak strukturalnych kryteriów pozwalających podsumować ten zakres.';
     }
     if (attention === 0) {
-      return `Potwierdzono wszystkie ${total} kryteria objęte weryfikacją.`;
+      return this.inferredCritical()
+        ? `Potwierdzono wszystkie ${total} kontrole zasugerowane przez AI.`
+        : `Potwierdzono wszystkie ${total} kryteria objęte weryfikacją.`;
     }
     return `Potwierdzono ${passed} z ${total} kryteriów. ${attention} wymaga decyzji, korekty albo dodatkowego dowodu.`;
   });
@@ -55,10 +61,12 @@ export class ChangeVerificationComplianceResultComponent {
     )
   );
   protected readonly riskHighlight = computed(() =>
-    this.highlightText(
-      this.attentionChecks()[0],
-      'Nie wykryto rozbieżności wymagających uwagi.'
-    )
+    this.inferredCritical()
+      ? this.riskIfOmitted(this.attentionChecks()[0] ?? this.checks()[0])
+      : this.highlightText(
+          this.attentionChecks()[0],
+          'Nie wykryto rozbieżności wymagających uwagi.'
+        )
   );
   protected readonly actionHighlight = computed(() => {
     const action = this.attentionChecks()
@@ -96,6 +104,9 @@ export class ChangeVerificationComplianceResultComponent {
   }
 
   protected sourceLabel(check: ChangeVerificationVerificationCheck): string {
+    if (this.inferredCritical()) {
+      return firstText(check.criticality ? `Krytyczność: ${check.criticality}` : '', 'Sugestia AI');
+    }
     return firstText(check.criterionSource, check.scope, 'Źródło nieokreślone');
   }
 
@@ -106,6 +117,21 @@ export class ChangeVerificationComplianceResultComponent {
   protected action(check: ChangeVerificationVerificationCheck): string {
     const action = cleanText(check.suggestedAction);
     return isMeaningfulText(action) ? action : 'Brak dodatkowego działania.';
+  }
+
+  protected rationale(check: ChangeVerificationVerificationCheck): string {
+    return firstText(check.inferenceRationale, check.analysis, 'Brak uzasadnienia inferencji.');
+  }
+
+  protected riskIfOmitted(check: ChangeVerificationVerificationCheck | undefined): string {
+    if (!check) {
+      return 'Nie wykryto dodatkowego ryzyka wymagającego uwagi.';
+    }
+    return firstText(check.riskIfOmitted, 'Ryzyko wymaga decyzji ownera.');
+  }
+
+  protected signals(check: ChangeVerificationVerificationCheck): string {
+    return (check.inferenceSignals ?? []).map(cleanText).filter(Boolean).join('; ');
   }
 
   protected interpretationLabel(value: string | null | undefined): string {

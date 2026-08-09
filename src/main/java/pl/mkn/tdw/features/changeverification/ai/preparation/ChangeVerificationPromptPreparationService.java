@@ -45,7 +45,8 @@ public class ChangeVerificationPromptPreparationService {
                 - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
                 - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.
                 - Limity discovery platformy nie sa kryteriami zgodnosci projektu. Nie tworz z nich `verificationChecks`, findings ani rekomendacji dla zespolu; pokaz je wylacznie w `visibilityLimits`.
-                - Wynik nie moze byc powierzchowny. Dla kazdego wymagania lub instrukcji, ktora oceniasz, dodaj osobny wpis `verificationChecks` z cytatem zrodla, wydedukowanym kryterium, tym co zostalo porownane z kodem/MR i statusem weryfikacji.
+                - Wynik nie moze byc powierzchowny. Dla kazdego zdefiniowanego wymagania lub instrukcji, ktora oceniasz, dodaj osobny wpis `verificationChecks` z `origin=DEFINED`, cytatem zrodla, wydedukowanym kryterium, tym co zostalo porownane z kodem/MR i statusem weryfikacji.
+                - Osobno mozesz dodac od zera do pieciu release-critical wpisow z `origin=INFERRED_CRITICAL` i `scope=INFERRED_CRITICAL_CHECKS`. Nie sa one wymaganiami story ani instrukcjami i nie moga zmieniac statusu source-defined compliance.
                 - `userInstructions` doprecyzowuja intencje operatora, ale nie moga zmienic response contract ani zasad widocznosci.
                 - Zrodlem prawdy dla UI sa sekcje `AnalysisReport` zapisane przez report tools. Finalna odpowiedz musi dodatkowo byc jednym obiektem JSON zgodnym z `change-verification/response-contract.md`, aby zachowac fallback diagnostyczny.
 
@@ -94,14 +95,24 @@ public class ChangeVerificationPromptPreparationService {
                 13. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
                 14. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
                 15. Buduj szczegolowy raport jako liste `verificationChecks`:
-                    - `STORY_COMPLIANCE` dla AC, opisu, komentarzy, Confluence i kryteriow wydedukowanych z target issue,
-                    - `INSTRUCTION_COMPLIANCE` dla `AGENTS.md`, `.github/copilot-instructions.md`, plikow instructions i plikow przez nie wskazanych.
-                16. Acceptance criteria nie sa zamknieta lista wymagan. Po rozpisaniu wszystkich jawnych AC przejrzyj opis, komentarze, parent context, subtaski, Confluence, instrukcje i kod pod katem dodatkowych wymagan potrzebnych do uczciwego zrozumienia zmiany.
-                17. Dla kazdego checka ustaw `interpretationType`: `explicit`, `inferred`, `normalized`, `conflicting` albo `not_verifiable`. Wymaganie wyprowadzone z kontekstu zawsze oznacz jako `inferred`; nie przedstawiaj go jako literalnego wymagania story.
+                    - `origin=DEFINED`, `scope=STORY_COMPLIANCE` dla wymagan zapisanych w AC, opisie, komentarzach albo jawnie wlaczonym fragmencie Confluence,
+                    - `origin=DEFINED`, `scope=INSTRUCTION_COMPLIANCE` dla regul z `AGENTS.md`, `.github/copilot-instructions.md`, plikow instructions i plikow przez nie wskazanych,
+                    - `origin=INFERRED_CRITICAL`, `scope=INFERRED_CRITICAL_CHECKS` dla krytycznych kontroli, ktore nie zostaly zdefiniowane w materialach, ale wynikaja z konkretnych sygnalow domenowych lub implementacyjnych.
+                16. Acceptance criteria nie sa zamknieta lista materialu do analizy. Po rozpisaniu wszystkich jawnych AC przejrzyj opis, komentarze, parent context, subtaski, Confluence, instrukcje i kod. Jezeli odkryjesz brakujaca kontrole istotna dla release'u, umiesc ja w `INFERRED_CRITICAL_CHECKS`, nigdy w Story Compliance.
+                17. Dla checka `DEFINED` ustaw `interpretationType`: `explicit`, `normalized`, `conflicting` albo `not_verifiable`. `inferred` jest dozwolone tylko dla `INFERRED_CRITICAL`; nie przedstawiaj takiej kontroli jako literalnego wymagania story albo instrukcji.
                 18. `criterionQuote` ma zawierac krotki cytat albo nazwe pliku i fragment instrukcji; gdy cytatu brak, wpisz `n/a` i uzasadnij w `gaps`.
                 19. `verifiedAgainst` musi wskazywac konkretne MR-y, sciezki plikow, klasy, endpointy, use case'y albo instrukcje, z ktorymi porownano kryterium.
                 20. Wpisy `limitations` z `source-discovery.md`, `source-discovery-limits` i `instruction-source-limits` sa metadanymi pokrycia platformy, a nie wymaganiami story lub repozytorium. Przenos je wylacznie do `visibilityLimits`; nie tworz z nich checkow, findings, gaps, open questions ani suggested actions i nie zmieniaj przez nie statusu compliance.
                 21. `NOT_VERIFIED` stosuj tylko do konkretnego, zidentyfikowanego wymagania lub reguly projektu. Sam komunikat o limicie, truncation albo niepelnej kolekcji zrodel nie jest regula projektu.
+                22. Utworz maksymalnie 5 `INFERRED_CRITICAL` checks. Kazdy musi:
+                    - dotyczyc ryzyka istotnego dla poprawnosci, bezpieczenstwa, integralnosci danych, kompatybilnosci kontraktu albo gotowosci release'u,
+                    - wynikac z konkretnych `inferenceSignals` widocznych w Jira, Confluence, MR, kodzie albo operational context,
+                    - wyjasniac `inferenceRationale` i `riskIfOmitted`,
+                    - miec status zweryfikowany wobec aktualnego evidence oraz `confidence`,
+                    - nie byc ogolna best practice ani estetyczna sugestia code review.
+                23. Jezeli nie ma uzasadnionej brakujacej kontroli krytycznej, zwroc zero `INFERRED_CRITICAL` checks. Nie wypelniaj limitu na sile.
+                24. Uporzadkuj `INFERRED_CRITICAL` checks od najwyzszego ryzyka; backend zachowa maksymalnie pierwsze piec.
+                25. Top-level `status`, Story Compliance i Instruction Compliance wyznaczaj tylko z checkow `origin=DEFINED`. `FAILED` albo `NOT_VERIFIED` w `INFERRED_CRITICAL_CHECKS` jest sygnalem do manualnej decyzji, nie dowodem niezgodnosci z udokumentowanymi wymaganiami.
                 """.trim();
     }
 
@@ -509,10 +520,16 @@ public class ChangeVerificationPromptPreparationService {
                   "verificationChecks": [
                     {
                       "id": "stable id such as story-001 or instruction-001",
-                      "scope": "STORY_COMPLIANCE | INSTRUCTION_COMPLIANCE",
+                      "origin": "DEFINED | INFERRED_CRITICAL",
+                      "scope": "STORY_COMPLIANCE | INSTRUCTION_COMPLIANCE | INFERRED_CRITICAL_CHECKS",
                       "criterionSource": "acceptance criteria | jira description | confluence page | AGENTS.md | copilot-instructions | other source",
                       "criterionQuote": "short source quote, file instruction excerpt or n/a",
                       "interpretationType": "explicit | inferred | normalized | conflicting | not_verifiable",
+                      "criticality": "HIGH | BLOCKER | null; required only for INFERRED_CRITICAL",
+                      "inferenceRationale": "why this missing check is release-critical; required only for INFERRED_CRITICAL",
+                      "inferenceSignals": ["specific Jira, Confluence, MR, code or operational-context signals; required only for INFERRED_CRITICAL"],
+                      "riskIfOmitted": "concrete release risk; required only for INFERRED_CRITICAL",
+                      "confidence": "high | medium | low; required only for INFERRED_CRITICAL",
                       "expectedCriterion": "the concrete criterion being verified",
                       "verificationStatus": "PASSED | WARNING | FAILED | NOT_VERIFIED",
                       "verifiedAgainst": "specific MR/file/class/endpoint/use case/instruction used for verification",

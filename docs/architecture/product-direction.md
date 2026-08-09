@@ -116,7 +116,18 @@ prompt, result DTO, policy i UI powinny byc lokalne dla `features.flow...`.
 
 Uzytkownik wskazuje zmiane i wybiera zakres weryfikacji. Feature laczy
 material zadania, instrukcje repozytorium oraz evidence implementacyjne, aby
-pokazac zgodnosc, rozbieznosci i ograniczenia widocznosci. Dalsze inkrementy
+pokazac zgodnosc, rozbieznosci i ograniczenia widocznosci. Source-defined
+Story Compliance i Instruction Compliance sa oddzielone od maksymalnie pieciu
+`INFERRED_CRITICAL_CHECKS`, ktore AI moze zaproponowac na podstawie konkretnych
+sygnalow, gdy dokumentacja pomija istotny aspekt release'u. Sugestie sa od razu
+oceniane wobec tego samego evidence, ale nie sa wymaganiami kontraktowymi i nie
+zmieniaja werdyktu source-defined compliance.
+
+Change Verification utrzymuje jeden aktualny kontrakt eksportu/importu. W
+fazie V1 zmiana tego kontraktu nie utrzymuje migratorow ani odczytu starszych
+wersji feature'a; nieaktualny eksport jest jawnie odrzucany.
+
+Dalsze inkrementy
 powinny wynikac z `../needs/change-verification.md` oraz osobno zatwierdzonych
 planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
 

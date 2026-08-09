@@ -19,6 +19,8 @@ public final class ChangeVerificationReportMapper {
     public static final String SECTION_STORY_COMPLIANCE = ChangeVerificationReportSectionIds.STORY_COMPLIANCE;
     public static final String SECTION_INSTRUCTION_COMPLIANCE =
             ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE;
+    public static final String SECTION_INFERRED_CRITICAL_CHECKS =
+            ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS;
 
     private ChangeVerificationReportMapper() {
     }
@@ -35,22 +37,34 @@ public final class ChangeVerificationReportMapper {
             return null;
         }
 
-        var fallbackSections = List.of(
-                new AnalysisReportSection(
+        var fallbackSections = new ArrayList<AnalysisReportSection>();
+        if (result.compliance() != null && result.compliance().storyComplianceRequested()) {
+            fallbackSections.add(new AnalysisReportSection(
                         SECTION_STORY_COMPLIANCE,
                         "Story compliance",
-                        0,
+                        fallbackSections.size(),
                         storyComplianceMarkdown(result),
                         storyComplianceMeta(result)
-                ),
-                new AnalysisReportSection(
+                ));
+        }
+        if (result.compliance() != null && result.compliance().instructionComplianceRequested()) {
+            fallbackSections.add(new AnalysisReportSection(
                         SECTION_INSTRUCTION_COMPLIANCE,
                         "Instruction compliance",
-                        1,
+                        fallbackSections.size(),
                         instructionComplianceMarkdown(result),
                         instructionComplianceMeta(result)
-                )
-        );
+                ));
+        }
+        if (result.compliance() != null && result.compliance().storyComplianceRequested()) {
+            fallbackSections.add(new AnalysisReportSection(
+                    SECTION_INFERRED_CRITICAL_CHECKS,
+                    "AI-suggested critical checks",
+                    fallbackSections.size(),
+                    inferredCriticalChecksMarkdown(result),
+                    inferredCriticalChecksMeta(result)
+            ));
+        }
         var sections = fallbackSections.stream()
                 .map(section -> mergeAiSection(aiComplianceReport, section))
                 .toList();
@@ -163,6 +177,77 @@ public final class ChangeVerificationReportMapper {
                 "Instruction compliance was not requested in this run.",
                 "Repository instructions, AGENTS.md, copilot-instructions and referenced instruction files"
         );
+    }
+
+    private static String inferredCriticalChecksMarkdown(ChangeVerificationResultResponse result) {
+        var compliance = result.compliance();
+        if (compliance == null) {
+            return "Inferred critical checks are not available.";
+        }
+
+        var checks = checksForScope(compliance.verificationChecks(), SECTION_INFERRED_CRITICAL_CHECKS);
+        var passedChecks = checks.stream().filter(ChangeVerificationReportMapper::isPassedCheck).toList();
+        var attentionChecks = checks.stream().filter(check -> !isPassedCheck(check)).toList();
+        var lines = new ArrayList<String>();
+        lines.add("## Krytyczne kontrole zasugerowane przez AI");
+        lines.add("Te pozycje nie sa wymaganiami zapisanymi w Jira, Confluence ani instrukcjach repozytorium. "
+                + "Wspieraja manualna decyzje i nie zmieniaja werdyktu source-defined compliance.");
+        if (checks.isEmpty()) {
+            lines.add("");
+            lines.add("Na podstawie widocznego evidence AI nie zidentyfikowalo dodatkowej kontroli krytycznej.");
+            return compactMarkdown(lines);
+        }
+
+        lines.add("");
+        lines.add("**Wszystkie:** " + checks.size()
+                + " · **Potwierdzone:** " + passedChecks.size()
+                + " · **Wymagaja uwagi:** " + attentionChecks.size());
+        lines.add("");
+        lines.add("| Status | Krytyczna kontrola | Dlaczego | Ryzyko | Dzialanie |");
+        lines.add("| --- | --- | --- | --- | --- |");
+        for (var check : checks) {
+            lines.add("| " + markdownTableCell(safeStatus(check.verificationStatus()))
+                    + " | " + markdownTableCell(fallback(check.expectedCriterion(), check.id(), "Kontrola"))
+                    + " | " + markdownTableCell(fallback(check.inferenceRationale(), check.analysis(), "Brak uzasadnienia."))
+                    + " | " + markdownTableCell(fallback(check.riskIfOmitted(), "Wymaga decyzji ownera."))
+                    + " | " + markdownTableCell(fallback(check.suggestedAction(), "Potwierdz podczas manualnego review."))
+                    + " |");
+        }
+        lines.add("");
+        lines.add("## Szczegoly kontroli");
+        for (var check : checks) {
+            appendInferredCriticalCheck(lines, check);
+        }
+        return compactMarkdown(lines);
+    }
+
+    private static void appendInferredCriticalCheck(
+            List<String> lines,
+            ChangeVerificationVerificationCheckResponse check
+    ) {
+        lines.add("");
+        lines.add("### " + safeStatus(check.verificationStatus()) + " · "
+                + fallback(check.expectedCriterion(), check.id(), "Kontrola"));
+        lines.add("- **Krytycznosc:** " + fallback(check.criticality(), "Nieokreslona"));
+        lines.add("- **Pewność AI:** " + fallback(check.confidence(), "Nieokreslona"));
+        lines.add("- **Dlaczego warto sprawdzic:** "
+                + fallback(check.inferenceRationale(), check.analysis(), "Brak uzasadnienia."));
+        lines.add("- **Ryzyko pominiecia:** "
+                + fallback(check.riskIfOmitted(), "Wymaga decyzji ownera."));
+        if (!check.inferenceSignals().isEmpty()) {
+            lines.add("- **Sygnaly:** " + String.join("; ", check.inferenceSignals()));
+        }
+        if (StringUtils.hasText(check.verifiedAgainst())) {
+            lines.add("- **Zweryfikowano wzgledem:** " + check.verifiedAgainst().trim());
+        }
+        if (StringUtils.hasText(check.analysis())) {
+            lines.add("");
+            lines.add(check.analysis().trim());
+        }
+        if (meaningfulText(check.suggestedAction())) {
+            lines.add("");
+            lines.add("**Rekomendowane dzialanie:** " + check.suggestedAction().trim());
+        }
     }
 
     private static String complianceSectionMarkdown(
@@ -331,6 +416,10 @@ public final class ChangeVerificationReportMapper {
         return complianceMeta(result, SECTION_INSTRUCTION_COMPLIANCE);
     }
 
+    private static AnalysisReportMeta inferredCriticalChecksMeta(ChangeVerificationResultResponse result) {
+        return complianceMeta(result, SECTION_INFERRED_CRITICAL_CHECKS);
+    }
+
     private static AnalysisReportMeta complianceMeta(ChangeVerificationResultResponse result, String scope) {
         var compliance = result.compliance();
         if (compliance == null) {
@@ -449,7 +538,7 @@ public final class ChangeVerificationReportMapper {
             String scope
     ) {
         return checks.stream()
-                .filter(check -> check != null && matchesScope(check.scope(), scope))
+                .filter(check -> check != null && matchesScope(check, scope))
                 .toList();
     }
 
@@ -462,20 +551,14 @@ public final class ChangeVerificationReportMapper {
                 .toList();
     }
 
-    private static boolean matchesScope(String value, String scope) {
-        var normalized = fallback(value, "").toUpperCase(Locale.ROOT);
-        if (SECTION_STORY_COMPLIANCE.equals(scope)) {
-            return normalized.contains("STORY")
-                    || normalized.contains("ACCEPTANCE")
-                    || normalized.contains("JIRA")
-                    || normalized.contains("CONFLUENCE");
+    private static boolean matchesScope(ChangeVerificationVerificationCheckResponse check, String scope) {
+        var normalizedScope = fallback(check.scope(), "").toUpperCase(Locale.ROOT);
+        var normalizedOrigin = fallback(check.origin(), "").toUpperCase(Locale.ROOT);
+        if (SECTION_INFERRED_CRITICAL_CHECKS.equals(scope)) {
+            return "INFERRED_CRITICAL".equals(normalizedOrigin)
+                    && SECTION_INFERRED_CRITICAL_CHECKS.equals(normalizedScope);
         }
-        if (SECTION_INSTRUCTION_COMPLIANCE.equals(scope)) {
-            return normalized.contains("INSTRUCTION")
-                    || normalized.contains("AGENTS")
-                    || normalized.contains("COPILOT");
-        }
-        return normalized.equals(scope);
+        return "DEFINED".equals(normalizedOrigin) && scope.equals(normalizedScope);
     }
 
     private static boolean matchesFindingScope(String value, String scope) {

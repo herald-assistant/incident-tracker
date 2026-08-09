@@ -36,6 +36,13 @@ public class ChangeVerificationReportFactory {
                     sections.size()
             ));
         }
+        if (request != null && request.checkStoryCompliance()) {
+            sections.add(section(
+                    ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS,
+                    "AI-suggested critical checks",
+                    sections.size()
+            ));
+        }
 
         return new AnalysisReport(
                 reportId(toolSessionContext),

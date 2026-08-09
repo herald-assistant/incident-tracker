@@ -70,7 +70,7 @@ class ChangeVerificationReportMapperTest {
         var report = ChangeVerificationReportMapper.toReport(result, aiReport);
 
         assertThat(report.header()).isEqualTo("Change Verification: CRM-123");
-        assertThat(report.sections()).hasSize(2);
+        assertThat(report.sections()).hasSize(3);
         assertThat(section(report, ChangeVerificationReportSectionIds.STORY_COMPLIANCE).markdown())
                 .contains("AI-authored story report");
         assertThat(section(report, ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE).markdown())
@@ -79,11 +79,55 @@ class ChangeVerificationReportMapperTest {
                 .doesNotContain("Dodatkowe ustalenia")
                 .doesNotContain("fallback")
                 .doesNotContain("verificationChecks");
+        assertThat(section(report, ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS).markdown())
+                .contains("nie zidentyfikowalo dodatkowej kontroli krytycznej");
         assertThat(report.meta().visibilityLimits()).contains(
                 "Repository dependency was not visible.",
                 "Diff visibility is partial."
         );
         assertThat(report.meta().confidence()).isEqualTo("high");
+    }
+
+    @Test
+    void shouldKeepInferredCriticalChecksSeparateFromStoryCompliance() {
+        var result = new ChangeVerificationResultResponse(
+                "COMPLETED",
+                "CRM-123",
+                "https://jira.example.com/browse/CRM-123",
+                "prompt",
+                new ChangeVerificationComplianceResponse(
+                        true,
+                        false,
+                        "PASSED",
+                        List.of(
+                                check(
+                                        "story-001",
+                                        "PASSED",
+                                        "Status klienta jest zwracany.",
+                                        "DTO zawiera status.",
+                                        ""
+                                ),
+                                inferredCheck()
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of()
+                ),
+                null
+        );
+
+        var report = ChangeVerificationReportMapper.toReport(result);
+        var storyMarkdown = section(report, ChangeVerificationReportSectionIds.STORY_COMPLIANCE).markdown();
+        var inferredMarkdown = section(report, ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS).markdown();
+
+        assertThat(storyMarkdown)
+                .contains("Status klienta jest zwracany")
+                .doesNotContain("Idempotencja publikacji");
+        assertThat(inferredMarkdown)
+                .contains("nie sa wymaganiami zapisanymi")
+                .contains("Idempotencja publikacji")
+                .contains("Ponowienie moze utworzyc duplikat")
+                .contains("event publisher i retry path");
     }
 
     @Test
@@ -149,10 +193,16 @@ class ChangeVerificationReportMapperTest {
     ) {
         return new ChangeVerificationVerificationCheckResponse(
                 id,
+                "DEFINED",
                 "STORY_COMPLIANCE",
                 "Jira acceptance criteria",
                 "System powinien opublikować event.",
                 "explicit",
+                null,
+                null,
+                List.of(),
+                null,
+                null,
                 criterion,
                 status,
                 "backend/src/EventPublisher.java",
@@ -160,6 +210,29 @@ class ChangeVerificationReportMapperTest {
                 List.of("backend/src/EventPublisher.java"),
                 List.of(),
                 suggestedAction
+        );
+    }
+
+    private ChangeVerificationVerificationCheckResponse inferredCheck() {
+        return new ChangeVerificationVerificationCheckResponse(
+                "critical-001",
+                "INFERRED_CRITICAL",
+                "INFERRED_CRITICAL_CHECKS",
+                "AI_SUGGESTION",
+                "n/a",
+                "inferred",
+                "HIGH",
+                "Zmiana publikuje event w sciezce z retry.",
+                List.of("event publisher i retry path"),
+                "Ponowienie moze utworzyc duplikat.",
+                "medium",
+                "Idempotencja publikacji",
+                "NOT_VERIFIED",
+                "backend/src/EventPublisher.java",
+                "Nie znaleziono klucza idempotencji.",
+                List.of("backend/src/EventPublisher.java"),
+                List.of("Brak widocznego testu retry."),
+                "Potwierdz wymaganie z ownerem."
         );
     }
 

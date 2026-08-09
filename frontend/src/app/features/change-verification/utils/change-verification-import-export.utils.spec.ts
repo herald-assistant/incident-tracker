@@ -14,7 +14,7 @@ describe('change-verification-import-export utils', () => {
     const imported = parseImportedChangeVerificationResult(envelope);
 
     expect(envelope.schema).toBe('tdw.change-verification-export');
-    expect(envelope.version).toBe(3);
+    expect(envelope.version).toBe(4);
     expect(envelope.payload.type).toBe('change-verification-analysis');
     expect(envelope.payload.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
@@ -31,6 +31,18 @@ describe('change-verification-import-export utils', () => {
   it('should reject non Change Verification payloads', () => {
     expect(() => parseImportedChangeVerificationResult({ schema: 'tdw.flow-explorer-export' })).toThrow(
       'Wybierz plik wyeksportowany z Change Verification.'
+    );
+  });
+
+  it('should reject the previous v3 contract without migration', () => {
+    const envelope = buildChangeVerificationExportEnvelope(
+      changeVerificationJob(),
+      '2026-07-26T10:00:00Z'
+    ) as unknown as { version: number };
+    envelope.version = 3;
+
+    expect(() => parseImportedChangeVerificationResult(envelope)).toThrow(
+      'Ten plik eksportu Change Verification ma nieobsługiwaną wersję formatu.'
     );
   });
 
@@ -55,7 +67,7 @@ describe('change-verification-import-export utils', () => {
   it('should parse a running local history envelope when completed result is not required', () => {
     const envelope = {
       schema: 'tdw.change-verification-export',
-      version: 3,
+      version: 4,
       exportedAt: '2026-07-26T09:02:00Z',
       payload: {
         type: 'change-verification-analysis',
@@ -164,10 +176,16 @@ function changeVerificationJob(
         verificationChecks: [
           {
             id: 'story-001',
+            origin: 'DEFINED',
             scope: 'STORY_COMPLIANCE',
             criterionSource: 'acceptance criteria',
             criterionQuote: 'Customer can be created.',
             interpretationType: 'explicit',
+            criticality: null,
+            inferenceRationale: null,
+            inferenceSignals: [],
+            riskIfOmitted: null,
+            confidence: null,
             expectedCriterion: 'Customer creation endpoint persists the requested customer.',
             verificationStatus: 'PASSED',
             verifiedAgainst: 'CustomerController',
@@ -218,6 +236,20 @@ function changeVerificationJob(
           title: 'Instruction compliance',
           order: 1,
           markdown: 'Instruction alignment confirmed.',
+          meta: {
+            references: [],
+            visibilityLimits: [],
+            openQuestions: [],
+            gaps: [],
+            confidence: 'MEDIUM',
+            warnings: []
+          }
+        },
+        {
+          id: 'INFERRED_CRITICAL_CHECKS',
+          title: 'AI-suggested critical checks',
+          order: 2,
+          markdown: 'No additional critical checks identified.',
           meta: {
             references: [],
             visibilityLimits: [],

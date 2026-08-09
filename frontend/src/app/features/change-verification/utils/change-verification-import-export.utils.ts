@@ -18,9 +18,9 @@ import {
 } from '../models/change-verification.models';
 
 export const CHANGE_VERIFICATION_EXPORT_SCHEMA = 'tdw.change-verification-export';
-export const CHANGE_VERIFICATION_EXPORT_VERSION = 3;
+export const CHANGE_VERIFICATION_EXPORT_VERSION = 4;
 export const CHANGE_VERIFICATION_EXPORT_PAYLOAD_TYPE = 'change-verification-analysis';
-export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v3';
+export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v4';
 
 export interface ChangeVerificationExportEnvelope {
   schema: string;
@@ -290,6 +290,22 @@ function assertCompletedExportableJob(
   if (!job.report) {
     throw new Error('Change Verification export wymaga kanonicznego raportu analizy.');
   }
+  const inferredChecks = job.result.compliance.verificationChecks.filter(
+    (check) => check.origin === 'INFERRED_CRITICAL'
+  );
+  if (inferredChecks.length > 5) {
+    throw new Error('Change Verification obsługuje maksymalnie 5 krytycznych sugestii AI.');
+  }
+  const sectionIds = new Set(job.report.sections.map((section) => normalizeString(section.id).toUpperCase()));
+  if (job.checkStoryCompliance && (
+    !sectionIds.has('STORY_COMPLIANCE')
+    || !sectionIds.has('INFERRED_CRITICAL_CHECKS')
+  )) {
+    throw new Error('Raport Change Verification nie zawiera kompletu sekcji aktualnego kontraktu.');
+  }
+  if (job.checkInstructionCompliance && !sectionIds.has('INSTRUCTION_COMPLIANCE')) {
+    throw new Error('Raport Change Verification nie zawiera sekcji Instruction Compliance.');
+  }
 }
 
 function normalizeStep(step: unknown): AnalysisJobStepResponse {
@@ -400,12 +416,33 @@ function normalizeCompliance(compliance: unknown): ChangeVerificationCompliance 
 
 function normalizeVerificationCheck(check: unknown) {
   const checkObject = asObject(check);
-  return {
+  if (!checkObject) {
+    throw new Error('Check Change Verification nie jest poprawnym obiektem aktualnego kontraktu.');
+  }
+  const origin = normalizeString(checkObject['origin']).toUpperCase();
+  const scope = normalizeString(checkObject['scope']).toUpperCase();
+  if (!['DEFINED', 'INFERRED_CRITICAL'].includes(origin)) {
+    throw new Error('Check Change Verification nie zawiera obsługiwanego pola origin.');
+  }
+  if (origin === 'DEFINED' && !['STORY_COMPLIANCE', 'INSTRUCTION_COMPLIANCE'].includes(scope)) {
+    throw new Error('Zdefiniowany check Change Verification ma nieobsługiwany scope.');
+  }
+  if (origin === 'INFERRED_CRITICAL' && scope !== 'INFERRED_CRITICAL_CHECKS') {
+    throw new Error('Krytyczna sugestia AI ma nieobsługiwany scope.');
+  }
+
+  const normalized = {
     id: normalizeString(checkObject?.['id']),
-    scope: normalizeString(checkObject?.['scope']),
+    origin,
+    scope,
     criterionSource: normalizeString(checkObject?.['criterionSource']),
     criterionQuote: normalizeString(checkObject?.['criterionQuote']),
     interpretationType: normalizeString(checkObject?.['interpretationType']),
+    criticality: normalizeNullableString(checkObject?.['criticality']),
+    inferenceRationale: normalizeNullableString(checkObject?.['inferenceRationale']),
+    inferenceSignals: normalizeStringArray(checkObject?.['inferenceSignals']),
+    riskIfOmitted: normalizeNullableString(checkObject?.['riskIfOmitted']),
+    confidence: normalizeNullableString(checkObject?.['confidence']),
     expectedCriterion: normalizeString(checkObject?.['expectedCriterion']),
     verificationStatus: normalizeString(checkObject?.['verificationStatus']),
     verifiedAgainst: normalizeString(checkObject?.['verifiedAgainst']),
@@ -414,6 +451,19 @@ function normalizeVerificationCheck(check: unknown) {
     gaps: normalizeStringArray(checkObject?.['gaps']),
     suggestedAction: normalizeString(checkObject?.['suggestedAction'])
   };
+  if (!normalized.id || !normalized.verificationStatus) {
+    throw new Error('Check Change Verification nie zawiera wymaganych pól aktualnego kontraktu.');
+  }
+  if (origin === 'INFERRED_CRITICAL' && (
+    !normalized.criticality
+    || !normalized.inferenceRationale
+    || normalized.inferenceSignals.length === 0
+    || !normalized.riskIfOmitted
+    || !normalized.confidence
+  )) {
+    throw new Error('Krytyczna sugestia AI nie zawiera pełnych metadanych aktualnego kontraktu.');
+  }
+  return normalized;
 }
 
 function normalizeFinding(finding: unknown): ChangeVerificationFinding {

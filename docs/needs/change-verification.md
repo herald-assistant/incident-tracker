@@ -2,7 +2,7 @@
 
 Status: active
 
-Ostatnio zweryfikowano zakres potrzeby: 2026-07-29. Stan implementacji i
+Ostatnio zweryfikowano zakres potrzeby: 2026-08-09. Stan implementacji i
 kolejnosc kolejnych zmian naleza do kodu oraz zatwierdzonych dokumentow w
 `../plans/`, nie do tego pliku.
 
@@ -120,6 +120,22 @@ Feature powinien rozrozniac:
 - niejednoznacznosc story,
 - potencjalna potrzebe korekty story zamiast kodu,
 - potrzebe pytania do PO, analityka, tech leada albo ownera systemu.
+
+Slaba albo niepelna dokumentacja nie powinna ograniczac manualnego review do
+statusu `Insufficient story`. Po ocenie wymagan zapisanych w Jira i Confluence
+AI moze zaproponowac maksymalnie piec dodatkowych kontroli krytycznych dla
+release'u i od razu ocenic je wzgledem widocznej implementacji. Takie kontrole:
+
+- musza byc pokazane osobno od `Story Compliance` i `Instruction Compliance`,
+- nie sa wymaganiami kontraktowymi ani rekonstrukcja ustnych ustalen z
+  refinementu,
+- musza wskazywac konkretne sygnaly, powod krytycznosci, status, evidence,
+  ryzyko pominiecia, rekomendacje i pewnosc AI,
+- nie moga byc ogolna best practice ani sugestia stylistyczna,
+- nie zmieniaja werdyktu zgodnosci z materialem zrodlowym.
+
+Brak uzasadnionej dodatkowej kontroli jest poprawnym wynikiem; AI nie powinno
+wypelniac limitu na sile.
 
 ### 1b. Instruction Compliance
 
@@ -316,6 +332,9 @@ Zasady:
   testowych.
 - Feature nie powinien automatycznie zmieniac kodu ani story. Moze proponowac
   korekty, rozszerzenia i pytania do potwierdzenia.
+- Kontrole zasugerowane przez AI musza byc jawnie oznaczone jako
+  niekontraktowe i nie moga byc przedstawiane jako naruszenie story lub
+  instrukcji.
 
 ## Relacja do pozostalych feature'ow
 

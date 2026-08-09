@@ -20,6 +20,7 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
                 "change-verification-compliance-check",
                 "change-verification-story-compliance-section",
                 "change-verification-instruction-compliance-section",
+                "change-verification-inferred-critical-checks-section",
                 "change-verification-write-report"
         );
     }
@@ -38,6 +39,7 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
 
         assertThat(ChangeVerificationCopilotRuntimeSkillNames.initialSkillNames(storyOnly))
                 .contains(ChangeVerificationCopilotRuntimeSkillNames.STORY_COMPLIANCE_SECTION)
+                .contains(ChangeVerificationCopilotRuntimeSkillNames.INFERRED_CRITICAL_CHECKS_SECTION)
                 .doesNotContain(ChangeVerificationCopilotRuntimeSkillNames.INSTRUCTION_COMPLIANCE_SECTION)
                 .endsWith(ChangeVerificationCopilotRuntimeSkillNames.WRITE_REPORT);
     }
@@ -61,7 +63,7 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
         assertThat(skill("change-verification-story-compliance-section")).contains(
                 "STORY_COMPLIANCE",
                 "interpretationType",
-                "wymagan inferowanych",
+                "INFERRED_CRITICAL",
                 "Wymaga uwagi",
                 "Potwierdzone wymagania"
         );
@@ -72,6 +74,12 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
                 "Markdown ma byc raportem dla czlowieka",
                 "metadanymi pokrycia platformy",
                 "nie uwzgledniaj ich przy wyznaczaniu statusu sekcji"
+        );
+        assertThat(skill("change-verification-inferred-critical-checks-section")).contains(
+                "INFERRED_CRITICAL_CHECKS",
+                "maksymalnie pieciu",
+                "inferenceSignals",
+                "nie zmieniaja Story Compliance"
         );
         assertThat(skill("change-verification-write-report")).contains(
                 "report_upsert_section",
@@ -90,6 +98,7 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
                 "change-verification-compliance-check",
                 "change-verification-story-compliance-section",
                 "change-verification-instruction-compliance-section",
+                "change-verification-inferred-critical-checks-section",
                 "change-verification-write-report"
         )) {
             var content = skill(skillName);

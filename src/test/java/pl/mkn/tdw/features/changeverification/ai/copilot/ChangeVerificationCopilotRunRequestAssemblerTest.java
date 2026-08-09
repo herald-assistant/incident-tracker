@@ -123,7 +123,8 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         assertEquals(
                 List.of(
                         ChangeVerificationReportSectionIds.STORY_COMPLIANCE,
-                        ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE
+                        ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE,
+                        ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS
                 ),
                 hiddenContext.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS)
         );
