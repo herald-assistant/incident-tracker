@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class ConfigDriftViewerScopeResolver {
 
-    static final String INTERNAL_SYSTEM_KIND = "internal-system";
+    static final String INTERNAL_SERVICE_KIND = "internal-service";
     static final String CONFIGURATION_DIRECTORIES_SIGNAL = "configurationDirectories";
 
     private static final Pattern SAFE_DIRECTORY =
@@ -46,7 +46,7 @@ public class ConfigDriftViewerScopeResolver {
 
     public List<ConfigDriftViewerSystemOption> availableSystems() {
         return systems().stream()
-                .filter(this::isInternalSystem)
+                .filter(this::isInternalService)
                 .map(this::toAvailableOption)
                 .filter(java.util.Objects::nonNull)
                 .sorted((left, right) -> left.label().compareToIgnoreCase(right.label()))
@@ -54,8 +54,8 @@ public class ConfigDriftViewerScopeResolver {
     }
 
     String resolveConfigurationDirectory(OperationalContextSystem system) {
-        if (!isInternalSystem(system)) {
-            throw ConfigDriftViewerScopeException.systemNotInternal(system.id());
+        if (!isInternalService(system)) {
+            throw ConfigDriftViewerScopeException.systemNotInternalService(system.id());
         }
 
         var candidates = new LinkedHashSet<String>();
@@ -93,10 +93,10 @@ public class ConfigDriftViewerScopeResolver {
         }
     }
 
-    private boolean isInternalSystem(OperationalContextSystem system) {
+    private boolean isInternalService(OperationalContextSystem system) {
         return system != null
                 && StringUtils.hasText(system.id())
-                && INTERNAL_SYSTEM_KIND.equalsIgnoreCase(system.kind());
+                && INTERNAL_SERVICE_KIND.equalsIgnoreCase(system.kind());
     }
 
     private void addAll(LinkedHashSet<String> candidates, List<String> values) {

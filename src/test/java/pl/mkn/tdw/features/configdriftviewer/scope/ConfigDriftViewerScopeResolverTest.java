@@ -22,7 +22,7 @@ class ConfigDriftViewerScopeResolverTest {
     void shouldResolveRepositoryAndSafeDirectoryFromInternalSystem() {
         var resolver = resolver(List.of(system(
                 "backend-system",
-                "internal-system",
+                "internal-service",
                 Map.of("runtime", Map.of("configurationDirectory", "services/backend"))
         )));
 
@@ -39,7 +39,7 @@ class ConfigDriftViewerScopeResolverTest {
     void shouldResolveExactConfigurationDirectorySignal() {
         var resolver = resolver(List.of(system(
                 "backend-system",
-                "internal-system",
+                "internal-service",
                 Map.of(
                         "matchSignals",
                         Map.of("exact", Map.of("configurationDirectories", List.of("backend")))
@@ -58,7 +58,7 @@ class ConfigDriftViewerScopeResolverTest {
                 "RUNTIME_CONFIGURATION_DIRECTORY_MISSING",
                 assertThrows(
                         ConfigDriftViewerScopeException.class,
-                        () -> resolver(List.of(system("missing", "internal-system", Map.of())))
+                        () -> resolver(List.of(system("missing", "internal-service", Map.of())))
                                 .resolve("runtime-config", "missing")
                 ).code()
         );
@@ -68,7 +68,7 @@ class ConfigDriftViewerScopeResolverTest {
                         ConfigDriftViewerScopeException.class,
                         () -> resolver(List.of(system(
                                 "ambiguous",
-                                "internal-system",
+                                "internal-service",
                                 Map.of(
                                         "runtime", Map.of("configurationDirectory", "backend"),
                                         "deployment", Map.of("configurationDirectory", "worker")
@@ -82,7 +82,7 @@ class ConfigDriftViewerScopeResolverTest {
                         ConfigDriftViewerScopeException.class,
                         () -> resolver(List.of(system(
                                 "unsafe",
-                                "internal-system",
+                                "internal-service",
                                 Map.of("runtime", Map.of("configurationDirectory", "../backend"))
                         ))).resolve("runtime-config", "unsafe")
                 ).code()
@@ -105,7 +105,7 @@ class ConfigDriftViewerScopeResolverTest {
                 ).code()
         );
         assertEquals(
-                "RUNTIME_CONFIGURATION_SYSTEM_NOT_INTERNAL",
+                "RUNTIME_CONFIGURATION_SYSTEM_NOT_INTERNAL_SERVICE",
                 assertThrows(
                         ConfigDriftViewerScopeException.class,
                         () -> resolver.resolve("runtime-config", "partner")
@@ -118,10 +118,10 @@ class ConfigDriftViewerScopeResolverTest {
         var resolver = resolver(List.of(
                 system(
                         "ready",
-                        "internal-system",
+                        "internal-service",
                         Map.of("runtime", Map.of("configurationDirectory", "backend"))
                 ),
-                system("missing", "internal-system", Map.of()),
+                system("missing", "internal-service", Map.of()),
                 system(
                         "external",
                         "external-system",

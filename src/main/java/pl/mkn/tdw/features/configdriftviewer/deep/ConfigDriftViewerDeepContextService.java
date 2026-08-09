@@ -176,7 +176,7 @@ public class ConfigDriftViewerDeepContextService {
                         ? new ConfigDriftViewerPrimarySystem(
                         preflight.systemId(),
                         preflight.systemLabel(),
-                        "internal-system",
+                        "internal-service",
                         preflight.resolvedConfigurationDirectory(),
                         "runtime/deployment signal",
                         List.of()
@@ -219,7 +219,7 @@ public class ConfigDriftViewerDeepContextService {
         return new ConfigDriftViewerPrimarySystem(
                 systemId,
                 system != null ? system.label() : preflight.systemLabel(),
-                system != null ? system.kind() : "internal-system",
+                system != null ? system.kind() : "internal-service",
                 preflight.resolvedConfigurationDirectory(),
                 "runtime/deployment signal",
                 scopeIds
@@ -254,7 +254,7 @@ public class ConfigDriftViewerDeepContextService {
                     .findFirst()
                     .orElse(null);
             if (system == null
-                    || !"internal-system".equalsIgnoreCase(system.kind())
+                    || !"internal-service".equalsIgnoreCase(system.kind())
                     || !codeSearchBuilder.buildForEntity(catalog, "system", systemId).scopes().isEmpty()) {
                 continue;
             }

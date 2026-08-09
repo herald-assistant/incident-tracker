@@ -100,7 +100,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
         var scopeResolver = mock(ConfigDriftViewerScopeResolver.class);
         when(scopeResolver.resolve(anyString(), anyString()))
                 .thenThrow(ConfigDriftViewerScopeException.systemNotFound("unknown"))
-                .thenThrow(ConfigDriftViewerScopeException.systemNotInternal("external"))
+                .thenThrow(ConfigDriftViewerScopeException.systemNotInternalService("external"))
                 .thenThrow(ConfigDriftViewerScopeException.configurationDirectoryMissing("missing"))
                 .thenThrow(ConfigDriftViewerScopeException.configurationDirectoryAmbiguous("ambiguous"));
         var service = new ConfigDriftViewerDeepPreflightService(
@@ -116,7 +116,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 service.check("runtime-config", "unknown", null).blockers().get(0).code()
         );
         assertEquals(
-                "RUNTIME_CONFIGURATION_SYSTEM_NOT_INTERNAL",
+                "RUNTIME_CONFIGURATION_SYSTEM_NOT_INTERNAL_SERVICE",
                 service.check("runtime-config", "external", null).blockers().get(0).code()
         );
         assertEquals(
@@ -227,7 +227,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 id,
                 "Backend",
                 "Backend",
-                "internal-system",
+                "internal-service",
                 "active",
                 "available",
                 "high",

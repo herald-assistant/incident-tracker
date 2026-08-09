@@ -134,7 +134,7 @@ planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
 ### Config Drift Viewer
 
 Administrator porownuje runtime configuration jednego lub wielu
-`internal-system` pomiedzy allowlistowanymi branchami srodowisk testowych.
+`internal-service` pomiedzy allowlistowanymi branchami srodowisk testowych.
 Porownania komponentow sa izolowane i wykonywane rownolegle, a wynik ma
 niemutowalny fundament
 deterministyczny, a `DEEP` dodaje jawnie oddzielona druga opinie:

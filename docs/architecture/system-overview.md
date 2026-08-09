@@ -71,7 +71,7 @@ Na dzisiaj projekt ma:
   importowane, odtwarzane ani kontynuowane; aktualne wyniki `DEEP_DISCOVERY`
   pozostaja obslugiwane,
 - ekran `GET /config-drift-viewer` do rownoleglego porownania
-  konfiguracji wielu `internal-system` pomiedzy branchami z rodzin `dev`,
+  konfiguracji wielu `internal-service` pomiedzy branchami z rodzin `dev`,
   `test`, `uat` i `zt`; `BASIC` pokazuje
   wylacznie deterministyczny diff per plik, a zaimplementowany `DEEP` dodaje
   oddzielna interpretacje AI; podczas aktualnego rollout readiness nowy wybor
@@ -171,7 +171,7 @@ Na dzisiaj projekt ma:
   kanoniczny `AnalysisReport`.
 - `GET /config-drift-viewer`
   Angularowy workspace porownania konfiguracji runtime. Formularz wybiera
-  repozytorium, wiele `internal-system` oraz branch zrodlowy/docelowy.
+  repozytorium, wiele `internal-service` oraz branch zrodlowy/docelowy.
   Wszystkie systemy sa domyslnie zaznaczone, backend wykonuje izolowane
   porownania z limitem rownoleglosci, a wynik pokazuje zakladke per komponent.
   `BASIC` jest

@@ -800,7 +800,7 @@ Granica bezpieczenstwa:
   backendowego limitu rozmiaru pliku,
 - `BASIC` nie rozwiazuje auth Copilota i nie uruchamia prompt preparation,
   runtime skilla, reportu, runnera ani tools,
-- `DEEP` moze uzywac tylko code-search scope wybranego `internal-system`,
+- `DEEP` moze uzywac tylko code-search scope wybranego `internal-service`,
   potwierdzonego refu i feature-specific budgetu,
 - brak lub awaria enrichmentu nie usuwa deterministic result; obniza
   kompletnosc i jest widoczna jako blocker albo visibility limit.

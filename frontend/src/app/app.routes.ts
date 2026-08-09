@@ -227,7 +227,7 @@ export const routes: Routes = [
               {
                 label: 'Wymagany scope',
                 value:
-                  'allowlistowane configuration repository, internal-system i dwa branche devX/zt00X'
+                  'allowlistowane configuration repository, internal-service i dwa branche devX/zt00X'
               },
               {
                 label: 'AI',

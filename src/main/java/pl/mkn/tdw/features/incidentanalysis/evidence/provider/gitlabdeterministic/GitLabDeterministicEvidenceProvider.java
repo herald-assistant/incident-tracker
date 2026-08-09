@@ -47,7 +47,7 @@ public class GitLabDeterministicEvidenceProvider implements AnalysisEvidenceProv
     );
     private static final int DEFAULT_MAX_CONTENT_CHARACTERS = 4_000;
     private static final int DEFAULT_CHUNK_RADIUS = 20;
-    private static final List<String> LOW_VALUE_CLASS_SUFFIXES = List.of("ExceptionHandler", "Filter", "Logger");
+    private static final List<String> LOW_VALUE_CLASS_SUFFIXES = List.of();
     private static final List<String> IGNORED_STACKTRACE_PREFIXES = List.of(
             "java.",
             "javax.",

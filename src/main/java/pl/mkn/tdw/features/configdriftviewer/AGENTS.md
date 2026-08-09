@@ -3,7 +3,7 @@
 ## Zakres
 
 Ten katalog zawiera dedykowany feature Config Drift Viewer.
-Feature porownuje konfiguracje wybranego `internal-system` pomiedzy branchami
+Feature porownuje konfiguracje wybranego `internal-service` pomiedzy branchami
 srodowiskowymi, a w trybie `DEEP` moze dodatkowo interpretowac roznice przez
 Operational Context, code-search scopes i kod systemu.
 
@@ -29,7 +29,7 @@ Operational Context, code-search scopes i kod systemu.
 - `BASIC` konczy run po deterministic `DIFF`: nie rozwiazuje auth Copilota,
   nie przygotowuje promptu/artefaktow, nie laduje skilla i nie uruchamia AI,
   reportu ani tools.
-- `DEEP` korzysta tylko z code-search scopes wybranego `internal-system` i
+- `DEEP` korzysta tylko z code-search scopes wybranego `internal-service` i
   rozwiazuje ownership z systemu albo bounded contextu.
 - Pakiet `ai` jest DEEP-only i nie moze importowac
   `deterministic.projection` ani `presentation`.

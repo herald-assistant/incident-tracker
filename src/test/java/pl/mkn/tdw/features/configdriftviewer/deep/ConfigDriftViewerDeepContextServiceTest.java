@@ -279,7 +279,7 @@ class ConfigDriftViewerDeepContextServiceTest {
         var values = map(
                 "id", id,
                 "name", Character.toUpperCase(id.charAt(0)) + id.substring(1),
-                "kind", "internal-system",
+                "kind", "internal-service",
                 "aliases", aliases
         );
         if (ownerLabel != null) {

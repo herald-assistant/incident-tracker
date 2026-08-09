@@ -37,11 +37,11 @@ public class ConfigDriftViewerScopeException extends UserFacingApplicationExcept
         );
     }
 
-    public static ConfigDriftViewerScopeException systemNotInternal(String systemId) {
+    public static ConfigDriftViewerScopeException systemNotInternalService(String systemId) {
         return new ConfigDriftViewerScopeException(
-                "RUNTIME_CONFIGURATION_SYSTEM_NOT_INTERNAL",
+                "RUNTIME_CONFIGURATION_SYSTEM_NOT_INTERNAL_SERVICE",
                 UserFacingErrorType.BAD_REQUEST,
-                "Operational Context system must have kind internal-system: " + safeId(systemId)
+                "Operational Context system must have kind internal-service: " + safeId(systemId)
         );
     }
 

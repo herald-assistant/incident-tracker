@@ -68,7 +68,7 @@
         </label>
 
         <div class="field-control">
-          <span class="field-label">Komponent / internal-system</span>
+          <span class="field-label">Komponent / internal-service</span>
           <div
             class="system-multiselect"
             (click)="$event.stopPropagation()"
@@ -588,7 +588,7 @@
                 <h3>Dotknięty kontekst</h3>
                 @if (deep.primarySystem) {
                   <article class="entity-card entity-card--primary">
-                    <small>Primary internal-system</small>
+                    <small>Primary internal-service</small>
                     <h4>{{ deep.primarySystem.label }}</h4>
                     <p>{{ deep.primarySystem.systemId }} · {{ deep.primarySystem.resolvedConfigurationDirectory }}</p>
                   </article>

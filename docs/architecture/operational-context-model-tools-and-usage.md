@@ -394,7 +394,7 @@ dowodem root cause ani zamiennikiem deterministic evidence.
 ## Config Drift Viewer Usage
 
 Publicznym targetem weryfikacji jest kanoniczny `system` o
-`systemType=internal-system`. Configuration directory jest rozstrzygany z
+`systemType=internal-service`. Configuration directory jest rozstrzygany z
 runtime/deployment signalu systemu; nie jest swobodnym inputem operatora.
 
 Tryb `BASIC` nie laduje katalogu do interpretacji i nie wykonuje code search.

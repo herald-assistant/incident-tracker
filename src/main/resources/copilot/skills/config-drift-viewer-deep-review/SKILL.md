@@ -1,6 +1,6 @@
 ---
 name: config-drift-viewer-deep-review
-description: Gleboka druga opinia o rozjezdzie config drift viewer, laczaca kompaktowe sanitizowane artefakty v1 z przygotowanym Operational Context, code grounding i ownershipem wybranego internal-system.
+description: Gleboka druga opinia o rozjezdzie config drift viewer, laczaca kompaktowe sanitizowane artefakty v1 z przygotowanym Operational Context, code grounding i ownershipem wybranego internal-service.
 ---
 
 # Config Drift Viewer DEEP Review
@@ -15,7 +15,7 @@ Operational Context, code grounding i ownership pozostają faktami backendu.
 
 - Repozytorium konfiguracji nie jest dostępne przez tools.
 - GitLab tools służą tylko do focused verification w repozytoriach, refach i
-  `pathPrefixes` z ukrytego scope wybranego `internal-system`.
+  `pathPrefixes` z ukrytego scope wybranego `internal-service`.
 - Nie wykonuj repository rediscovery ani broad code exploration.
 - Operational Context tools służą tylko do odczytu przygotowanych entity IDs.
 - Nie zmieniaj ownerów, `resolutionPath`, coverage, refów ani visibility
@@ -64,6 +64,6 @@ Nie:
 
 - przedstawiaj default branch jako potwierdzonej wersji wdrożonej,
 - czytaj pliku poza `pathPrefixes`,
-- rozszerzaj zakres poza wybrany `internal-system`,
+- rozszerzaj zakres poza wybrany `internal-service`,
 - modyfikuj deterministic result albo ownership,
 - zamieniaj brak evidence w pewny opis funkcjonalności.

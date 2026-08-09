@@ -185,7 +185,7 @@ public final class ConfigDriftViewerAiTestFixtures {
                 new ConfigDriftViewerPrimarySystem(
                         "crm-api",
                         "CRM API",
-                        "internal-system",
+                        "internal-service",
                         "backend",
                         "runtime signal",
                         List.of("scope-1")

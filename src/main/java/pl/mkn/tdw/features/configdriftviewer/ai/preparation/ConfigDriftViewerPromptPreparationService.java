@@ -70,7 +70,7 @@ public class ConfigDriftViewerPromptPreparationService {
     private String deepInstruction() {
         return """
                 - Użyj przygotowanego deep context do nazwania systemów i funkcjonalności, których dotyczy rozjazd.
-                - Operational Context i GitLab code tools są wyłącznie fallbackiem do focused verification w ukrytym scope wybranego `internal-system`.
+                - Operational Context i GitLab code tools są wyłącznie fallbackiem do focused verification w ukrytym scope wybranego `internal-service`.
                 - `functionalImpacts` muszą używać wyłącznie przekazanych system/context/code IDs.
                 - Ownership jest faktem backendowym: opisz, do kogo zwrócić się po szczegóły, ale nie zmieniaj ownerów ani resolution path.
                 """.trim();

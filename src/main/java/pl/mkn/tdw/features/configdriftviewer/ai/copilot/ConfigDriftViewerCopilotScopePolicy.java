@@ -73,7 +73,7 @@ public class ConfigDriftViewerCopilotScopePolicy implements CopilotToolInvocatio
                     .findFirst()
                     .orElse(null);
             if (scope == null) {
-                reject(request, "Repository or ref is outside the selected internal-system code-search scope.");
+                reject(request, "Repository or ref is outside the selected internal-service code-search scope.");
             }
             var requestedPrefixes = textList(arguments.get("pathPrefixes"));
             if (!requestedPrefixes.isEmpty()

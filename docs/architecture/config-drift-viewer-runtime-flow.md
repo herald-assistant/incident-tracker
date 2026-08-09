@@ -2,7 +2,7 @@
 
 ## Cel
 
-Feature wykrywa rozjazd runtime configuration wybranego `internal-system`
+Feature wykrywa rozjazd runtime configuration wybranego `internal-service`
 pomiedzy branchami srodowiskowymi przed wdrozeniem. Operator dostaje:
 
 1. deterministyczne fakty: coverage, diff i findings,
@@ -50,7 +50,7 @@ wybrac tylko `BASIC`. Opcja `DEEP` pozostaje widoczna jako disabled z badgem
 `SOON`; publiczny kontrakt backendu, Workbench oraz renderowanie zapisanych i
 importowanych wynikow `DEEP` pozostaja bez zmian.
 
-Pole `Komponent / internal-system` jest rozwijanym multi-selectem. Po
+Pole `Komponent / internal-service` jest rozwijanym multi-selectem. Po
 zaladowaniu input-options wszystkie dostepne systemy sa zaznaczone. Operator
 moze zaznaczyc albo wyczysc cala liste oraz zmieniac pojedyncze checkboxy;
 pusty wybor blokuje start. Request zachowuje kolejnosc systemow z katalogu, a
@@ -68,7 +68,7 @@ poprawnych wynikow pozostalych komponentow.
 flowchart TD
     UI["Operator UI"] --> OPTIONS["Input options / DEEP preflight"]
     OPTIONS --> JOB["Job start"]
-    JOB --> SCOPE["Resolve repository + internal-system scope"]
+    JOB --> SCOPE["Resolve repository + internal-service scope"]
     SCOPE --> SOURCE["Exact named GitLab reads"]
     SOURCE --> PARSE["Parse YAML.kv + var files"]
     PARSE --> BUILD["Sanitized context + operator configurationDiff"]
@@ -92,7 +92,7 @@ sie zapisow.
 ## Tool Workbench
 
 Readonly ekran `GET /config-drift-viewer-tools` pozwala sprawdzic ten sam
-pipeline dla jednego repozytorium, jednego `internal-system` i jednej pary
+pipeline dla jednego repozytorium, jednego `internal-service` i jednej pary
 branchy bez tworzenia joba, historii, eksportu ani sesji AI. `BASIC` nie
 wywoluje zaleznosci DEEP; `DEEP` reuse'uje preflight, Operational Context,
 code-search scope i ownership.
@@ -217,7 +217,7 @@ reportem i adnotacjami AI.
 Preflight `DEEP` wymaga:
 
 - wlaczonego i dostepnego Operational Context,
-- jednoznacznego `internal-system` i configuration directory,
+- jednoznacznego `internal-service` i configuration directory,
 - code-search scope targetujacego system,
 - repozytorium kodu i bezpiecznego refu.
 

@@ -842,7 +842,7 @@ function result(): ConfigDriftViewerResult {
       primarySystem: {
         systemId: 'backend',
         label: 'Backend',
-        kind: 'internal-system',
+        kind: 'internal-service',
         resolvedConfigurationDirectory: 'backend',
         configurationDirectoryResolution: 'runtime/deployment signal',
         codeSearchScopeIds: ['backend-code']
