@@ -38,6 +38,15 @@ konfiguracji Elasticsearch/Kibana. Pozostale scope'y sa ustalane przez backend:
 - `gitLabGroup` z konfiguracji,
 - DB scope z resolved environment i konfiguracji database tools.
 
+Przed uruchomieniem AI feature buduje tez hidden allowliste GitLaba z
+kanonicznych systemow dopasowanych w operational context evidence. Obejmuje
+ona wszystkie wykryte `internal-service` majace code-search scope, rowniez gdy
+CSV lub evidence zawiera wiele neutralnych CRM service/container/deployment
+names. Ta allowlista jest domyslnym zakresem, gdy AI nie poda
+`applicationNames`; nie jest jednak sufitem dla jawnego rozszerzenia analizy.
+Jawnie podane `applicationNames` moga wskazac dodatkowy CRM system tylko
+wtedy, gdy istnieje on w operational context i ma `codeSearchScope`.
+
 Operational context tools nie dostaja `correlationId`, `environment`,
 `gitLabGroup` ani `gitLabBranch` jako model-facing input. Czytaja neutralny
 katalog z `integrations.operationalcontext`; jedynym argumentem operatorskim
@@ -357,6 +366,15 @@ GitLab tools:
   oraz `searchMode/pathPrefixes`; `projectName` z odpowiedzi jest inputem dla
   pozostalych GitLab tools, a `pathPrefixes` ogranicza
   search/flow/class-reference tools,
+- wszystkie GitLab tools przyjmuja opcjonalne `applicationNames`; pusta lista
+  lub brak pola uzywa wszystkich systemow z hidden allowlisty sesji, a jawna
+  lista wybiera systemy do danego callu. Moze rozszerzyc zakres poza domyslny
+  evidence scope tylko dla CRM systemow istniejacych w operational context i
+  majacych `codeSearchScope`,
+- code-search scope wywolania jest unia scope'ow aktywnych systemow. Dzieki
+  temu repozytorium wspierajace dla jednego systemu moze byc przeszukiwane
+  szeroko, jezeli jest `primary` dla innego systemu nalezacego do tej samej
+  sesji,
 - broad search zostaje dla braku deterministic GitLab evidence,
 - `gitlab_find_flow_context` przyjmuje focused `keywords`, bez osobnych
   parametrow klasy/metody/pliku.

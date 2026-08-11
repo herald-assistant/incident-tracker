@@ -49,7 +49,6 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.Operati
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
@@ -142,12 +141,12 @@ public class GitLabMcpTools {
 
     private GitLabToolScope scope(
             String projectName,
-            String applicationName,
+            List<String> applicationNames,
             String branchRef,
             ToolContext toolContext
     ) {
         return new GitLabToolScopeResolver(gitLabProperties, operationalContextPort)
-                .resolve(branchRef, projectName, applicationName, toolContext);
+                .resolve(branchRef, projectName, applicationNames, toolContext);
     }
 
     private String canonicalProjectName(GitLabToolScope scope, String projectName) {
@@ -188,7 +187,7 @@ public class GitLabMcpTools {
 
     private List<String> effectiveBroadDiscoveryProjectNames(
             String group,
-            String applicationName,
+            List<String> applicationNames,
             List<String> projectNames,
             String purpose
     ) {
@@ -197,7 +196,7 @@ public class GitLabMcpTools {
         if (!safeProjectNames.isEmpty()) {
             safeProjectNames.forEach(projectName -> requirePrimaryRepositoryForBroadDiscovery(
                     group,
-                    applicationName,
+                    applicationNames,
                     projectName,
                     purpose,
                     catalog
@@ -205,13 +204,13 @@ public class GitLabMcpTools {
             return safeProjectNames;
         }
 
-        var matchingSystemIds = matchingSystemIds(applicationName, catalog);
-        if (matchingSystemIds.isEmpty()) {
+        var relevantScopes = applicationCodeSearchScopes(catalog, applicationNames);
+        if (relevantScopes.isEmpty()) {
             return safeProjectNames;
         }
 
         var projectNamesFromScope = new LinkedHashSet<String>();
-        for (var codeSearchScope : systemCodeSearchScopes(catalog, matchingSystemIds)) {
+        for (var codeSearchScope : relevantScopes) {
             for (var scopedRepository : codeSearchScope.repositories()) {
                 if (!isPrimaryScopeRepository(scopedRepository)) {
                     continue;
@@ -229,13 +228,13 @@ public class GitLabMcpTools {
 
     private void requirePrimaryRepositoryForBroadDiscovery(
             String group,
-            String applicationName,
+            List<String> applicationNames,
             String projectName,
             String purpose
     ) {
         requirePrimaryRepositoryForBroadDiscovery(
                 group,
-                applicationName,
+                applicationNames,
                 projectName,
                 purpose,
                 loadBroadDiscoveryCatalog()
@@ -244,7 +243,7 @@ public class GitLabMcpTools {
 
     private void requirePrimaryRepositoryForBroadDiscovery(
             String group,
-            String applicationName,
+            List<String> applicationNames,
             String projectName,
             String purpose,
             OperationalContextCatalog catalog
@@ -254,25 +253,31 @@ public class GitLabMcpTools {
             return;
         }
 
-        var matchingSystemIds = matchingSystemIds(applicationName, catalog);
-        var relevantScopes = !matchingSystemIds.isEmpty()
-                ? systemCodeSearchScopes(catalog, matchingSystemIds)
-                : defaultList(catalog.codeSearchScopes());
-        var scopedRepositories = relevantScopes.stream()
+        var relevantScopes = applicationCodeSearchScopes(catalog, applicationNames);
+        if (!applicationNames.isEmpty() && relevantScopes.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Broad GitLab %s has no code search scope for applications %s."
+                            .formatted(purpose, applicationNames)
+            );
+        }
+        var scopesToCheck = applicationNames.isEmpty()
+                ? defaultList(catalog.codeSearchScopes())
+                : relevantScopes;
+        var scopedRepositories = scopesToCheck.stream()
                 .flatMap(scope -> scope.repositories().stream())
                 .filter(scopedRepository -> sameCatalogId(repository.id(), scopedRepository.repoId()))
                 .toList();
 
-        if (!matchingSystemIds.isEmpty()
-                && scopedRepositories.isEmpty()
-                && !systemCodeSearchScopes(catalog, matchingSystemIds).isEmpty()) {
+        if (!applicationNames.isEmpty()
+                && scopedRepositories.isEmpty()) {
             throw new IllegalArgumentException(
-                    "Broad GitLab %s is limited to repositories from the primary code search scope for application '%s'."
-                            .formatted(purpose, applicationName)
+                    "Broad GitLab %s is limited to repositories from code search scopes for applications %s."
+                            .formatted(purpose, applicationNames)
             );
         }
 
-        if (scopedRepositories.isEmpty() || scopedRepositories.stream().anyMatch(this::isPrimaryScopeRepository)) {
+        if (scopedRepositories.isEmpty()
+                || scopedRepositories.stream().anyMatch(this::isPrimaryScopeRepository)) {
             return;
         }
 
@@ -280,6 +285,29 @@ public class GitLabMcpTools {
                 "Broad GitLab %s is limited to primary repositories; repository '%s' is available for focused reads when a class or file path is known."
                         .formatted(purpose, projectName)
         );
+    }
+
+    private void requireRepositoryWithinApplicationScope(
+            GitLabToolScope scope,
+            String projectName
+    ) {
+        if (scope == null
+                || !scope.restrictedByApplicationScope()
+                || !StringUtils.hasText(projectName)) {
+            return;
+        }
+        var catalog = loadBroadDiscoveryCatalog();
+        var repository = findRepository(scope.group(), projectName, catalog.repositories());
+        var relevantScopes = applicationCodeSearchScopes(catalog, scope.applicationNames());
+        var allowed = repository != null && relevantScopes.stream()
+                .flatMap(codeSearchScope -> codeSearchScope.repositories().stream())
+                .anyMatch(scopedRepository -> sameCatalogId(repository.id(), scopedRepository.repoId()));
+        if (!allowed) {
+            throw new IllegalArgumentException(
+                    "GitLab project '%s' is outside code search scopes for applications %s."
+                            .formatted(projectName, scope.applicationNames())
+            );
+        }
     }
 
     private OperationalContextCatalog loadBroadDiscoveryCatalog() {
@@ -291,46 +319,6 @@ public class GitLabMcpTools {
                 List.of(),
                 false
         ));
-    }
-
-    private List<OperationalContextRepositorySearchScope> systemCodeSearchScopes(
-            OperationalContextCatalog catalog,
-            Set<String> matchingSystemIds
-    ) {
-        return defaultList(catalog.codeSearchScopes()).stream()
-                .filter(scope -> scope.target() != null
-                        && "system".equalsIgnoreCase(trimToEmpty(scope.target().type()))
-                        && matchingSystemIds.contains(normalizeComparable(scope.target().id())))
-                .toList();
-    }
-
-    private LinkedHashSet<String> matchingSystemIds(
-            String applicationName,
-            OperationalContextCatalog catalog
-    ) {
-        var normalizedApplicationName = normalizeComparable(applicationName);
-        var matchingSystemIds = new LinkedHashSet<String>();
-        if (!StringUtils.hasText(normalizedApplicationName)) {
-            return matchingSystemIds;
-        }
-        for (var system : defaultList(catalog.systems())) {
-            if (systemMatches(system, normalizedApplicationName)) {
-                add(matchingSystemIds, normalizeComparable(system.id()));
-            }
-        }
-        return matchingSystemIds;
-    }
-
-    private boolean systemMatches(OperationalContextSystem system, String normalizedApplicationName) {
-        var values = new LinkedHashSet<String>();
-        add(values, system.id());
-        add(values, system.name());
-        add(values, system.shortName());
-        addAll(values, system.aliases());
-        addAll(values, system.genericSignals());
-        return values.stream()
-                .map(this::normalizeComparable)
-                .anyMatch(normalizedApplicationName::equals);
     }
 
     private OperationalContextRepository findRepository(
@@ -408,50 +396,61 @@ public class GitLabMcpTools {
                     values from the matching scope as inputs for GitLab search, flow context and read tools. When a repository
                     in the matching scope has searchMode=path-prefixes, pass its pathPrefixes to search/flow/class discovery.
                     Pass branchRef explicitly from the prompt, an artifact or a previous tool result. The GitLab group is
-                    resolved from projectName/applicationName via operational context or from application configuration.
+                    resolved from projectName/applicationNames via operational context or from application configuration.
                     """
     )
     public GitLabListAvailableRepositoriesToolResponse listAvailableRepositories(
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, for example crm-service.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names from prompt or operational context. Omit to use all applications detected for the session; provide explicit systems only when they exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
             @ToolParam(required = false, description = "Krotki powod po polsku: dlaczego model potrzebuje katalogu repozytoriow.")
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(null, applicationName, branchRef, toolContext);
+        var scope = scope(null, applicationNames, branchRef, toolContext);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={}",
                 LIST_AVAILABLE_REPOSITORIES,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId()
         );
 
-        var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
-                Set.of(
-                        OperationalContextEntryType.REPOSITORY,
-                        OperationalContextEntryType.CODE_SEARCH_SCOPE
-                ),
-                List.of(),
-                false
-        ));
-        var repositories = GitLabAvailableRepositoryMapper.fromCatalog(scope.group(), catalog);
-        var codeSearchScopes = GitLabAvailableRepositoryMapper.codeSearchScopesFromCatalog(scope.group(), catalog);
+        var catalog = loadBroadDiscoveryCatalog();
+        var relevantScopes = applicationCodeSearchScopes(catalog, scope.applicationNames());
+        var allowedScopeIds = relevantScopes.stream()
+                .map(OperationalContextRepositorySearchScope::id)
+                .map(this::normalizeComparable)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        var allowedRepositoryIds = relevantScopes.stream()
+                .flatMap(codeSearchScope -> codeSearchScope.repositories().stream())
+                .map(OperationalContextRepositorySearchRepository::repoId)
+                .map(this::normalizeComparable)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        var repositories = GitLabAvailableRepositoryMapper.fromCatalog(scope.group(), catalog).stream()
+                .filter(repository -> scope.applicationNames().isEmpty()
+                        || allowedRepositoryIds.contains(normalizeComparable(repository.repositoryId())))
+                .toList();
+        var codeSearchScopes = GitLabAvailableRepositoryMapper.codeSearchScopesFromCatalog(scope.group(), catalog).stream()
+                .filter(codeSearchScope -> scope.applicationNames().isEmpty()
+                        || allowedScopeIds.contains(normalizeComparable(codeSearchScope.scopeId())))
+                .toList();
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} repositoryCount={} codeSearchScopeCount={} projectNames={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} repositoryCount={} codeSearchScopeCount={} projectNames={}",
                 LIST_AVAILABLE_REPOSITORIES,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 repositories.size(),
                 codeSearchScopes.size(),
                 abbreviateList(repositories.stream()
@@ -482,8 +481,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(required = false, description = "Optional endpoint path prefix, for example /api/orders.")
             String endpointPathPrefix,
             @ToolParam(required = false, description = "Optional HTTP method filter, for example GET, POST, PUT or DELETE.")
@@ -494,16 +493,16 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} maxScannedFiles={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointPathPrefix={} httpMethod={} maxScannedFiles={}",
                 LIST_REPOSITORY_ENDPOINTS,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -515,7 +514,7 @@ public class GitLabMcpTools {
 
         requirePrimaryRepositoryForBroadDiscovery(
                 scope.group(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 effectiveProjectName,
                 "endpoint inventory"
         );
@@ -530,12 +529,12 @@ public class GitLabMcpTools {
         ));
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} endpointCount={} candidateFileCount={} scannedFileCount={} scannedFileLimitReached={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} endpointCount={} candidateFileCount={} scannedFileCount={} scannedFileLimitReached={}",
                 LIST_REPOSITORY_ENDPOINTS,
                 scope.runReference(),
                 result.group(),
                 result.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 result.projectName(),
                 result.endpoints().size(),
                 result.candidateFileCount(),
@@ -571,8 +570,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(required = false, description = "Exact endpointId returned by gitlab_list_repository_endpoints.")
             String endpointId,
             @ToolParam(required = false, description = "HTTP method when endpointId is unknown, for example GET, POST, PUT or DELETE.")
@@ -587,16 +586,16 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} maxDepth={} maxFiles={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} endpointId={} httpMethod={} endpointPath={} maxDepth={} maxFiles={}",
                 BUILD_ENDPOINT_USE_CASE_CONTEXT,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -623,12 +622,12 @@ public class GitLabMcpTools {
         var response = GitLabBuildEndpointUseCaseContextToolResponse.from(result);
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} endpointResolved={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} endpointResolved={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
                 BUILD_ENDPOINT_USE_CASE_CONTEXT,
                 scope.runReference(),
                 response.group(),
                 response.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 response.projectName(),
                 response.endpoint() != null,
                 response.files().size(),
@@ -657,8 +656,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(required = false, description = "Optional repository Java file path when known.")
             String filePath,
             @ToolParam(description = "Fully qualified, relative or simple Java class/type name.")
@@ -679,16 +678,16 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} className={} methodName={} lineNumber={} parameterCount={} parameterTypes={} maxDepth={} maxResults={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} className={} methodName={} lineNumber={} parameterCount={} parameterTypes={} maxDepth={} maxResults={}",
                 BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -721,12 +720,12 @@ public class GitLabMcpTools {
         var response = GitLabBuildJavaMethodUseCaseContextToolResponse.from(result);
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} entryStatus={} entryFilePath={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} entryStatus={} entryFilePath={} fileCount={} relationCount={} unresolvedCount={} suggestedNextReadCount={} confidence={}",
                 BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
                 scope.runReference(),
                 response.group(),
                 response.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 response.projectName(),
                 response.entryMethod() != null ? response.entryMethod().status() : null,
                 response.entryMethod() != null ? response.entryMethod().filePath() : null,
@@ -757,8 +756,8 @@ public class GitLabMcpTools {
             List<String> pathPrefixes,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(required = false, description = "Operation names inferred from traces.")
             List<String> operationNames,
             @ToolParam(required = false, description = "Keywords inferred from logs, traces, code identifiers or the current hypothesis.")
@@ -767,25 +766,26 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
+        var scope = scope(firstProjectName(projectNames), applicationNames, branchRef, toolContext);
         var safeProjectNames = canonicalProjectNames(scope, projectNames);
         var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var safeKeywords = defaultList(keywords);
+        safeProjectNames.forEach(projectName -> requireRepositoryWithinApplicationScope(scope, projectName));
         var effectiveProjectNames = effectiveBroadDiscoveryProjectNames(
                 scope.group(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 safeProjectNames,
                 "repository candidate search"
         );
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} keywords={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} keywords={}",
                 SEARCH_REPOSITORY_CANDIDATES,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -807,12 +807,12 @@ public class GitLabMcpTools {
         var candidates = gitLabRepositoryPort.searchCandidateFiles(query);
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} candidateCount={} candidatePaths={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} candidateCount={} candidatePaths={}",
                 SEARCH_REPOSITORY_CANDIDATES,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 candidates.size(),
                 abbreviateList(candidates.stream()
                         .map(candidate -> candidate.projectName() + ":" + candidate.filePath())
@@ -834,8 +834,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Repository file path.")
             String filePath,
             @ToolParam(required = false, description = "Maximum number of characters to return. Defaults to 4000.")
@@ -844,17 +844,17 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
                 READ_REPOSITORY_FILE,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -875,12 +875,12 @@ public class GitLabMcpTools {
         var fileContent = readResult.fileContent();
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} returnedCharacters={} truncated={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} filePath={} returnedCharacters={} truncated={}",
                 READ_REPOSITORY_FILE,
                 scope.runReference(),
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
-                scope.applicationName(),
+                scope.applicationNames(),
                 responseProjectName(fileContent, effectiveProjectName),
                 responseFilePath(fileContent, filePath),
                 fileContent != null && fileContent.content() != null ? fileContent.content().length() : 0,
@@ -913,8 +913,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Repository Java file path.")
             String filePath,
             @ToolParam(required = false, description = "Optional declaring class/simple type name when the file contains nested or multiple types.")
@@ -933,17 +933,17 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, effectiveProjectName, filePath, true);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} declaringTypeName={} methodSelectors={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} declaringTypeName={} methodSelectors={} maxCharacters={}",
                 READ_JAVA_METHOD_SLICE,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -968,12 +968,12 @@ public class GitLabMcpTools {
         ));
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} status={} returnedCharacters={} truncated={} candidateCount={} limitationCount={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} filePath={} status={} returnedCharacters={} truncated={} candidateCount={} limitationCount={}",
                 READ_JAVA_METHOD_SLICE,
                 scope.runReference(),
                 response.group(),
                 response.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 response.projectName(),
                 response.filePath(),
                 response.status(),
@@ -1001,8 +1001,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Repository OpenAPI YAML file path.")
             String filePath,
             @ToolParam(description = "HTTP method, for example GET, POST, PUT or DELETE.")
@@ -1019,17 +1019,17 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var resolvedFilePath = resolvedRepositoryFilePathOrRequested(scope, effectiveProjectName, filePath, false);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} httpMethod={} endpointPath={} schemaDepth={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} httpMethod={} endpointPath={} schemaDepth={} maxCharacters={}",
                 READ_OPENAPI_ENDPOINT_SLICE,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -1054,12 +1054,12 @@ public class GitLabMcpTools {
         ));
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} status={} matchedPath={} returnedCharacters={} truncated={} limitationCount={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} filePath={} status={} matchedPath={} returnedCharacters={} truncated={} limitationCount={}",
                 READ_OPENAPI_ENDPOINT_SLICE,
                 scope.runReference(),
                 response.group(),
                 response.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 response.projectName(),
                 response.filePath(),
                 response.status(),
@@ -1085,8 +1085,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Exact repository file paths. Maximum 100 distinct paths are processed.")
             List<String> filePaths,
             @ToolParam(required = false, description = "Maximum characters returned per file. Defaults to 4000.")
@@ -1097,7 +1097,7 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var requestedFilePaths = normalizeRepositoryFilePaths(filePaths, effectiveProjectName);
         var processedFilePaths = requestedFilePaths.stream()
@@ -1107,12 +1107,12 @@ public class GitLabMcpTools {
         var effectiveMaxTotalCharacters = normalizePositiveLimit(maxTotalCharacters, DEFAULT_MAX_TOTAL_FILE_CHARACTERS);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} requestedFileCount={} processedFileCount={} filePaths={} maxCharactersPerFile={} maxTotalCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} requestedFileCount={} processedFileCount={} filePaths={} maxCharactersPerFile={} maxTotalCharacters={}",
                 READ_REPOSITORY_FILES_BY_PATH,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -1183,12 +1183,12 @@ public class GitLabMcpTools {
                 failedFileCount++;
                 var error = readResult.error();
                 log.warn(
-                        "Tool partial failure [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} reason={}",
+                        "Tool partial failure [{}] runReference={} group={} branch={} applicationNames={} projectName={} filePath={} reason={}",
                         READ_REPOSITORY_FILES_BY_PATH,
                         scope.runReference(),
                         scope.group(),
                         scope.branch(),
-                        scope.applicationName(),
+                        scope.applicationNames(),
                         effectiveProjectName,
                         requestedPath,
                         error
@@ -1216,12 +1216,12 @@ public class GitLabMcpTools {
         }
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} requestedFileCount={} processedFileCount={} returnedFileCount={} failedFileCount={} totalReturnedCharacters={} fileCountTruncated={} totalCharacterLimitReached={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} requestedFileCount={} processedFileCount={} returnedFileCount={} failedFileCount={} totalReturnedCharacters={} fileCountTruncated={} totalCharacterLimitReached={}",
                 READ_REPOSITORY_FILES_BY_PATH,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 effectiveProjectName,
                 requestedFilePaths.size(),
                 results.size(),
@@ -1257,7 +1257,7 @@ public class GitLabMcpTools {
         var readErrors = new ArrayList<String>();
         for (var candidatePath : expandedRepositoryFilePathCandidates(
                 scope.group(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 projectName,
                 requestedPath
         )) {
@@ -1320,7 +1320,7 @@ public class GitLabMcpTools {
         var readErrors = new ArrayList<String>();
         for (var candidatePath : expandedRepositoryFilePathCandidates(
                 scope.group(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 projectName,
                 requestedPath
         )) {
@@ -1366,7 +1366,7 @@ public class GitLabMcpTools {
         var attemptedPaths = new LinkedHashSet<String>();
         for (var candidatePath : expandedRepositoryFilePathCandidates(
                 scope.group(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 projectName,
                 requestedPath
         )) {
@@ -1412,13 +1412,13 @@ public class GitLabMcpTools {
 
     private List<String> expandedRepositoryFilePathCandidates(
             String group,
-            String applicationName,
+            List<String> applicationNames,
             String projectName,
             String requestedPath
     ) {
         var candidates = new LinkedHashSet<String>();
         add(candidates, requestedPath);
-        for (var pathPrefix : scopedRepositoryPathPrefixes(group, applicationName, projectName)) {
+        for (var pathPrefix : scopedRepositoryPathPrefixes(group, applicationNames, projectName)) {
             var normalizedPrefix = normalizeRepositoryFilePath(pathPrefix, projectName);
             if (!StringUtils.hasText(normalizedPrefix)) {
                 continue;
@@ -1433,7 +1433,7 @@ public class GitLabMcpTools {
 
     private List<String> scopedRepositoryPathPrefixes(
             String group,
-            String applicationName,
+            List<String> applicationNames,
             String projectName
     ) {
         var catalog = loadBroadDiscoveryCatalog();
@@ -1442,8 +1442,8 @@ public class GitLabMcpTools {
             return List.of();
         }
 
-        var relevantScopes = applicationCodeSearchScopes(catalog, applicationName);
-        var scopesToCheck = relevantScopes.isEmpty()
+        var relevantScopes = applicationCodeSearchScopes(catalog, applicationNames);
+        var scopesToCheck = applicationNames.isEmpty()
                 ? defaultList(catalog.codeSearchScopes())
                 : relevantScopes;
         var pathPrefixes = new LinkedHashSet<String>();
@@ -1459,58 +1459,9 @@ public class GitLabMcpTools {
 
     private List<OperationalContextRepositorySearchScope> applicationCodeSearchScopes(
             OperationalContextCatalog catalog,
-            String applicationName
+            List<String> applicationNames
     ) {
-        var targetIds = applicationScopeTargetIds(applicationName, catalog);
-        if (targetIds.systemIds().isEmpty() && targetIds.boundedContextIds().isEmpty()) {
-            return List.of();
-        }
-        return defaultList(catalog.codeSearchScopes()).stream()
-                .filter(scope -> scopeTargetsApplication(scope, targetIds))
-                .toList();
-    }
-
-    private ApplicationScopeTargetIds applicationScopeTargetIds(
-            String applicationName,
-            OperationalContextCatalog catalog
-    ) {
-        var normalizedApplicationName = normalizeComparable(applicationName);
-        var systemIds = new LinkedHashSet<String>();
-        var boundedContextIds = new LinkedHashSet<String>();
-        if (!StringUtils.hasText(normalizedApplicationName)) {
-            return new ApplicationScopeTargetIds(systemIds, boundedContextIds);
-        }
-        for (var system : defaultList(catalog.systems())) {
-            if (systemMatches(system, normalizedApplicationName)) {
-                add(systemIds, normalizeComparable(system.id()));
-                system.references().boundedContexts().forEach(contextId ->
-                        add(boundedContextIds, normalizeComparable(contextId)));
-            }
-        }
-        add(systemIds, normalizedApplicationName);
-        add(boundedContextIds, normalizedApplicationName);
-        return new ApplicationScopeTargetIds(systemIds, boundedContextIds);
-    }
-
-    private boolean scopeTargetsApplication(
-            OperationalContextRepositorySearchScope scope,
-            ApplicationScopeTargetIds targetIds
-    ) {
-        if (scope.target() == null) {
-            return false;
-        }
-        var targetType = normalizeComparable(scope.target().type());
-        var targetId = normalizeComparable(scope.target().id());
-        if (!StringUtils.hasText(targetId)) {
-            return false;
-        }
-        if (Set.of("system", "systems").contains(targetType)) {
-            return targetIds.systemIds().contains(targetId);
-        }
-        if (Set.of("bounded_context", "bounded_contexts").contains(targetType)) {
-            return targetIds.boundedContextIds().contains(targetId);
-        }
-        return false;
+        return new GitLabApplicationScopeResolver().codeSearchScopes(catalog, applicationNames);
     }
 
     private List<String> javaTypeDefinitionCandidatePaths(
@@ -1600,8 +1551,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Repository file path.")
             String filePath,
             @ToolParam(description = "First line to return. Uses 1-based inclusive numbering.")
@@ -1614,17 +1565,17 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} requestedStartLine={} requestedEndLine={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} requestedStartLine={} requestedEndLine={} maxCharacters={}",
                 READ_REPOSITORY_FILE_CHUNK,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -1645,12 +1596,12 @@ public class GitLabMcpTools {
         );
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} returnedStartLine={} returnedEndLine={} totalLines={} returnedCharacters={} truncated={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} filePath={} returnedStartLine={} returnedEndLine={} totalLines={} returnedCharacters={} truncated={}",
                 READ_REPOSITORY_FILE_CHUNK,
                 scope.runReference(),
                 fileChunk != null ? fileChunk.group() : scope.group(),
                 fileChunk != null ? fileChunk.branch() : scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 fileChunk != null ? fileChunk.projectName() : effectiveProjectName,
                 fileChunk != null ? fileChunk.filePath() : filePath,
                 fileChunk != null ? fileChunk.returnedStartLine() : 0,
@@ -1689,8 +1640,8 @@ public class GitLabMcpTools {
             String projectName,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Repository file path.")
             String filePath,
             @ToolParam(required = false, description = "Maximum number of characters to read before extracting outline. Defaults to 30000.")
@@ -1699,17 +1650,17 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(projectName, applicationName, branchRef, toolContext);
+        var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_OUTLINE_MAX_CHARACTERS);
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectName={} filePath={} maxCharacters={}",
                 READ_REPOSITORY_FILE_OUTLINE,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -1735,12 +1686,12 @@ public class GitLabMcpTools {
         );
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} packageName={} importCount={} typeSummaryCount={} fieldSummaryCount={} constructorSummaryCount={} methodSummaryCount={} inferredRole={} truncated={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} projectName={} filePath={} packageName={} importCount={} typeSummaryCount={} fieldSummaryCount={} constructorSummaryCount={} methodSummaryCount={} inferredRole={} truncated={}",
                 READ_REPOSITORY_FILE_OUTLINE,
                 scope.runReference(),
                 responseGroup(fileContent, scope.group()),
                 responseBranch(fileContent, scope.branch()),
-                scope.applicationName(),
+                scope.applicationNames(),
                 responseProjectName(fileContent, effectiveProjectName),
                 responseFilePath(fileContent, filePath),
                 outline.packageName(),
@@ -1782,8 +1733,8 @@ public class GitLabMcpTools {
             List<GitLabFileChunkRequest> chunks,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(required = false, description = "Maximum total characters returned across all chunks. Defaults to 20000.")
             Integer maxTotalCharacters,
             @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta te fragmenty plikow.")
@@ -1791,23 +1742,26 @@ public class GitLabMcpTools {
             ToolContext toolContext
     ) {
         var safeChunks = defaultList(chunks);
-        var scope = scope(firstChunkProjectName(safeChunks), applicationName, branchRef, toolContext);
+        var scope = scope(firstChunkProjectName(safeChunks), applicationNames, branchRef, toolContext);
         var processedChunks = safeChunks.stream()
                 .filter(chunk -> chunk != null)
                 .limit(MAX_BATCH_CHUNKS)
                 .toList();
+        processedChunks.stream()
+                .map(GitLabFileChunkRequest::projectName)
+                .forEach(projectName -> requireRepositoryWithinApplicationScope(scope, projectName));
         var effectiveMaxTotalCharacters = normalizePositiveLimit(
                 maxTotalCharacters,
                 DEFAULT_MAX_TOTAL_CHUNK_CHARACTERS
         );
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} requestedChunkCount={} processedChunkCount={} chunkTargets={} maxTotalCharacters={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} requestedChunkCount={} processedChunkCount={} chunkTargets={} maxTotalCharacters={}",
                 READ_REPOSITORY_FILE_CHUNKS,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -1867,12 +1821,12 @@ public class GitLabMcpTools {
         }
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} chunkCount={} chunkCountTruncated={} totalCharacterLimitReached={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} chunkCount={} chunkCountTruncated={} totalCharacterLimitReached={}",
                 READ_REPOSITORY_FILE_CHUNKS,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 results.size(),
                 safeChunks.size() > MAX_BATCH_CHUNKS,
                 totalCharacterLimitReached
@@ -1904,8 +1858,8 @@ public class GitLabMcpTools {
             List<String> pathPrefixes,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(description = "Grounded fully qualified or simple class name, for example pl.mkn.orders.domain.OrderEntity.")
             String className,
             @ToolParam(required = false, description = "Optional relation or mapping hints such as @Entity, @Table, repository method, JoinColumn, mappedBy, business key or exception name.")
@@ -1918,7 +1872,7 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
+        var scope = scope(firstProjectName(projectNames), applicationNames, branchRef, toolContext);
         var safeProjectNames = canonicalProjectNames(scope, projectNames);
         var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
@@ -1927,19 +1881,26 @@ public class GitLabMcpTools {
                 defaultList(relatedHints)
         ));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
+        safeProjectNames.forEach(projectName -> requireRepositoryWithinApplicationScope(scope, projectName));
+        var effectiveProjectNames = effectiveBroadDiscoveryProjectNames(
+                scope.group(),
+                scope.applicationNames(),
+                safeProjectNames,
+                "class reference search"
+        );
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} pathPrefixes={} operationNames={} searchKeywords={} maxFilesPerRole={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} className={} projectNames={} pathPrefixes={} operationNames={} searchKeywords={} maxFilesPerRole={}",
                 FIND_CLASS_REFERENCES,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
                 className,
-                abbreviateList(safeProjectNames),
+                abbreviateList(effectiveProjectNames),
                 abbreviateList(safePathPrefixes),
                 abbreviateList(safeOperationNames),
                 abbreviateList(searchKeywords),
@@ -1950,7 +1911,7 @@ public class GitLabMcpTools {
                 null,
                 scope.group(),
                 scope.branch(),
-                safeProjectNames,
+                effectiveProjectNames,
                 safeOperationNames,
                 searchKeywords,
                 safePathPrefixes
@@ -1960,12 +1921,12 @@ public class GitLabMcpTools {
         var recommendedNextReads = recommendedNextReads(flowCandidates);
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
                 FIND_CLASS_REFERENCES,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 flowCandidates.size(),
                 groups.size(),
                 recommendedNextReads.size()
@@ -1999,8 +1960,8 @@ public class GitLabMcpTools {
             List<String> pathPrefixes,
             @ToolParam(description = "Git branch/ref from prompt, artifact or previous tool result.")
             String branchRef,
-            @ToolParam(required = false, description = "Application/system name from prompt or operational context, used to validate repository scope.")
-            String applicationName,
+            @ToolParam(required = false, description = "Optional application/system names used to choose repository scope. Omit to use all applications detected for the session; explicit systems must exist in operational context and have codeSearchScope.")
+            List<String> applicationNames,
             @ToolParam(required = false, description = "Focused keywords such as grounded class, method, entity, repository method, endpoint, queue, event type, exception or downstream client.")
             List<String> keywords,
             @ToolParam(required = false, description = "Operation names inferred from logs/traces.")
@@ -2011,26 +1972,27 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
-        var scope = scope(firstProjectName(projectNames), applicationName, branchRef, toolContext);
+        var scope = scope(firstProjectName(projectNames), applicationNames, branchRef, toolContext);
         var safeProjectNames = canonicalProjectNames(scope, projectNames);
         var safePathPrefixes = defaultList(pathPrefixes);
         var safeOperationNames = defaultList(operationNames);
         var searchKeywords = deduplicate(defaultList(keywords));
         var effectiveMaxFilesPerRole = normalizeMaxFilesPerRole(maxFilesPerRole);
+        safeProjectNames.forEach(projectName -> requireRepositoryWithinApplicationScope(scope, projectName));
         var effectiveProjectNames = effectiveBroadDiscoveryProjectNames(
                 scope.group(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 safeProjectNames,
                 "flow context search"
         );
 
         log.info(
-                "Tool request [{}] runReference={} group={} branch={} applicationName={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} searchKeywords={} maxFilesPerRole={}",
+                "Tool request [{}] runReference={} group={} branch={} applicationNames={} analysisRunId={} copilotSessionId={} toolCallId={} projectNames={} pathPrefixes={} operationNames={} searchKeywords={} maxFilesPerRole={}",
                 FIND_FLOW_CONTEXT,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 scope.analysisRunId(),
                 scope.copilotSessionId(),
                 scope.toolCallId(),
@@ -2055,12 +2017,12 @@ public class GitLabMcpTools {
         var recommendedNextReads = recommendedNextReads(flowCandidates);
 
         log.info(
-                "Tool result [{}] runReference={} group={} branch={} applicationName={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
+                "Tool result [{}] runReference={} group={} branch={} applicationNames={} candidateCount={} groupCount={} recommendedNextReadsCount={}",
                 FIND_FLOW_CONTEXT,
                 scope.runReference(),
                 scope.group(),
                 scope.branch(),
-                scope.applicationName(),
+                scope.applicationNames(),
                 flowCandidates.size(),
                 groups.size(),
                 recommendedNextReads.size()
@@ -2624,12 +2586,6 @@ public class GitLabMcpTools {
     ) {
     }
 
-    private record ApplicationScopeTargetIds(
-            Set<String> systemIds,
-            Set<String> boundedContextIds
-    ) {
-    }
-
     private FileMetadataSnapshot readFileMetadata(GitLabToolScope scope, String projectName, String filePath) {
         try {
             var metadata = gitLabRepositoryPort.readFileMetadata(
@@ -2642,12 +2598,12 @@ public class GitLabMcpTools {
         } catch (RuntimeException exception) {
             var error = toolErrorMessage(exception);
             log.warn(
-                    "Tool partial metadata failure [{}] runReference={} group={} branch={} applicationName={} projectName={} filePath={} reason={}",
+                    "Tool partial metadata failure [{}] runReference={} group={} branch={} applicationNames={} projectName={} filePath={} reason={}",
                     READ_REPOSITORY_FILES_BY_PATH,
                     scope.runReference(),
                     scope.group(),
                     scope.branch(),
-                    scope.applicationName(),
+                    scope.applicationNames(),
                     projectName,
                     filePath,
                     error

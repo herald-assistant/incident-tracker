@@ -70,7 +70,7 @@ Dozwolone GitLab tools:
 GitLab tools nie czytaja functional scope'u z hidden `ToolContext`. Gdy tool
 wymaga scope'u, przekaz jawnie:
 
-- `branchRef`, `applicationName` i `projectName` z
+- `branchRef`, liste `applicationNames` i `projectName` z
   `flow-explorer/canonical-tool-inputs.md`,
 - `pathPrefixes` z operational-context `codeSearchScopes`, jezeli dany
   repository ma `searchMode=path-prefixes`,
@@ -218,7 +218,7 @@ visibilityLimits:
 Przed powrotem sprawdz:
 
 - kazdy tool call odpowiadal na konkretne pytanie,
-- `branchRef`, `applicationName`, `projectName`, `filePath` i selectors
+- `branchRef`, `applicationNames`, `projectName`, `filePath` i selectors
   pochodzily z artefaktow albo tool results,
 - nie przeczytales ponownie fragmentu juz widocznego w `snippet-cards.md` bez
   nowego powodu,

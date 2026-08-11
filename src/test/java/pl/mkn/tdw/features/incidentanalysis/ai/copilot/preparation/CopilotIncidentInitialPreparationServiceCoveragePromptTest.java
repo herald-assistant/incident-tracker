@@ -95,7 +95,7 @@ class CopilotIncidentInitialPreparationServiceCoveragePromptTest {
             assertTrue(prompt.contains("coverage-aware and may be enabled for targeted gap filling"));
             assertFalse(prompt.contains("GitLab and Elasticsearch tools are fallback-only"));
             assertTrue(prompt.contains("GitLab code: inspect class references/imports, method slices, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps."));
-            assertTrue(prompt.contains("Pass explicit `branchRef` from `gitLabBranch`, known `projectName`, and optional `applicationName`; do not pass `gitLabGroup`."));
+            assertTrue(prompt.contains("Pass explicit `branchRef` from `gitLabBranch`, known `projectName`, and optional `applicationNames`; omit `applicationNames` for systems detected in this session, or provide explicit CRM systems from operational context when they have `codeSearchScope` and are needed outside the default evidence scope. Do not pass `gitLabGroup`."));
 
             var manifest = prepared.session().artifactContents().get("00-incident-manifest.json");
             assertTrue(manifest.contains("\"evidenceCoverage\""));

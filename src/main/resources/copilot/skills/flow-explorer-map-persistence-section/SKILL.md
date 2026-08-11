@@ -45,7 +45,7 @@ Wymagane:
 
 - `EndpointFlowSummary`: entry point, use-case service, write operations i
   znane role plikow z artefaktow,
-- canonical `branchRef`, `applicationName`, `projectName` i `filePath` z
+- canonical `branchRef`, `applicationNames`, `projectName` i `filePath` z
   `flow-explorer/canonical-tool-inputs.md` oraz
   `flow-explorer/compact-flow-manifest.md`,
 - aktualny `goal`, `sectionModes` i `reasoningEffort`,

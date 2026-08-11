@@ -87,7 +87,7 @@ class CopilotIncidentPromptRendererTest {
         assertTrue(prompt.contains("pass `branchRef` explicitly from `gitLabBranch`"));
         assertTrue(prompt.contains("Pass known `projectName` values"));
         assertTrue(prompt.contains("Do not pass `gitLabGroup` to GitLab tools"));
-        assertTrue(prompt.contains("Pass explicit `branchRef` from `gitLabBranch`, known `projectName`, and optional `applicationName`; do not pass `gitLabGroup`."));
+        assertTrue(prompt.contains("Pass explicit `branchRef` from `gitLabBranch`, known `projectName`, and optional `applicationNames`; omit `applicationNames` for systems detected in this session, or provide explicit CRM systems from operational context when they have `codeSearchScope` and are needed outside the default evidence scope. Do not pass `gitLabGroup`."));
         assertTrue(prompt.contains("- Database diagnostics: before table/column discovery, ground table and relation hints from deterministic GitLab evidence or enabled GitLab tools when `DB_CODE_GROUNDING_NEEDED` is listed"));
         assertTrue(prompt.contains("- Operational context catalog: browse or search systems, repositories, code-search scopes, processes, integrations, bounded contexts, teams, glossary terms and handoff rules"));
         assertTrue(prompt.contains("The platform tool `record_tool_feedback` is available for visible tool-quality feedback."));

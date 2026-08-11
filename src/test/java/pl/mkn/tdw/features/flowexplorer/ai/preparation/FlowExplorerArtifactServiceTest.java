@@ -41,7 +41,7 @@ class FlowExplorerArtifactServiceTest {
                 FlowExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT
         ));
         assertEquals("flow-explorer-artifacts-v1", contextJson.get("artifactFormatVersion").asText());
-        assertEquals("crm-service", contextJson.get("applicationName").asText());
+        assertEquals("crm-service", contextJson.get("applicationNames").get(0).asText());
         assertEquals("crm-service", contextJson.get("systemId").asText());
         assertEquals("DEEP_DISCOVERY", contextJson.get("goal").asText());
         assertEquals("feature/FLOW-42", contextJson.get("branchRef").asText());
@@ -57,7 +57,7 @@ class FlowExplorerArtifactServiceTest {
 
         var canonicalToolInputs = artifactContents.get(FlowExplorerArtifactService.CANONICAL_TOOL_INPUTS_ARTIFACT);
         assertTrue(canonicalToolInputs.contains("# Canonical Tool Inputs"));
-        assertTrue(canonicalToolInputs.contains("applicationName: `crm-service`"));
+        assertTrue(canonicalToolInputs.contains("applicationNames: [`crm-service`]"));
         assertTrue(canonicalToolInputs.contains("branchRef: `feature/FLOW-42`"));
         assertTrue(canonicalToolInputs.contains("selected projectName: `crm-service`"));
         assertTrue(canonicalToolInputs.contains("projectPath: `platform/backend/crm-service`"));

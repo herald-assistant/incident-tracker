@@ -6,6 +6,9 @@ import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentHiddenToolContextFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolSessionContextFactory;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.List;
 
@@ -26,7 +29,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
                 "zt01",
                 "release/2026.04",
                 "CRM/runtime",
-                List.of()
+                List.of(operationalContextEvidence())
         );
 
         var context = factory.fromInitialRequest(request);
@@ -44,6 +47,10 @@ class CopilotIncidentToolSessionContextFactoryTest {
         );
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_GROUP));
+        assertEquals(
+                List.of("crm-entry", "crm-support"),
+                context.hiddenContext().get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES)
+        );
         assertEquals(context.analysisRunId(), context.hiddenContext().get(AgentToolContextKeys.ANALYSIS_RUN_ID));
         assertEquals(context.copilotSessionId(), context.hiddenContext().get(AgentToolContextKeys.COPILOT_SESSION_ID));
     }
@@ -55,7 +62,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
                 "prod",
                 "main",
                 "CRM/runtime",
-                List.of(),
+                List.of(operationalContextEvidence()),
                 List.of(),
                 null,
                 List.of(),
@@ -74,5 +81,31 @@ class CopilotIncidentToolSessionContextFactoryTest {
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS));
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_BRANCH));
         assertFalse(context.hiddenContext().containsKey(AgentToolContextKeys.GITLAB_GROUP));
+        assertEquals(
+                List.of("crm-entry", "crm-support"),
+                context.hiddenContext().get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES)
+        );
+    }
+
+    private AnalysisEvidenceSection operationalContextEvidence() {
+        return new AnalysisEvidenceSection(
+                "operational-context",
+                "matched-context",
+                List.of(
+                        systemItem("crm-entry", "crm-entry-code-search"),
+                        systemItem("crm-support", "crm-support-code-search")
+                )
+        );
+    }
+
+    private AnalysisEvidenceItem systemItem(String systemId, String codeSearchScopeId) {
+        return new AnalysisEvidenceItem(
+                "Operational system " + systemId,
+                List.of(
+                        new AnalysisEvidenceAttribute("systemId", systemId),
+                        new AnalysisEvidenceAttribute("name", systemId),
+                        new AnalysisEvidenceAttribute("codeSearchScopeIds", codeSearchScopeId)
+                )
+        );
     }
 }

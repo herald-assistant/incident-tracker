@@ -137,7 +137,7 @@ class CopilotIncidentRuntimeSkillsContractTest {
         assertContainsAll(content, List.of(
                 "`branchRef`",
                 "`projectName`",
-                "`applicationName`",
+                "`applicationNames`",
                 "Nie przekazuj `gitLabGroup` do GitLab tools",
                 "Backend rozstrzyga GitLab group",
                 "`gitlab_build_java_method_use_case_context`",

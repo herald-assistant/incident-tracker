@@ -167,7 +167,11 @@ public class FlowExplorerArtifactService {
                 .append(System.lineSeparator()).append(System.lineSeparator());
 
         builder.append("## Request Scope").append(System.lineSeparator());
-        appendKeyValue(builder, "applicationName", request.systemId());
+        builder.append("- applicationNames: [");
+        if (StringUtils.hasText(request.systemId())) {
+            builder.append('`').append(safe(request.systemId())).append('`');
+        }
+        builder.append(']').append(System.lineSeparator());
         appendKeyValue(builder, "systemId", request.systemId());
         appendKeyValue(builder, "endpointId", contextSnapshot != null ? contextSnapshot.endpointId() : request.endpointId());
         appendKeyValue(builder, "httpMethod", contextSnapshot != null ? contextSnapshot.httpMethod() : request.httpMethod());
@@ -178,7 +182,7 @@ public class FlowExplorerArtifactService {
         builder.append("## GitLab Repository Scope").append(System.lineSeparator());
         var repositories = contextSnapshot != null ? contextSnapshot.repositories() : List.<FlowExplorerRepositoryContext>of();
         if (repositories.isEmpty()) {
-            builder.append("- repository scope not resolved; use `applicationName` for narrow discovery only if code evidence is required")
+            builder.append("- repository scope not resolved; use `applicationNames` for narrow discovery only if code evidence is required")
                     .append(System.lineSeparator());
         } else {
             repositories.stream()
@@ -317,7 +321,7 @@ public class FlowExplorerArtifactService {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("artifactFormatVersion", "flow-explorer-artifacts-v1");
         payload.put("generatedAt", Instant.now().toString());
-        payload.put("applicationName", request.systemId());
+        payload.put("applicationNames", applicationNames(request.systemId()));
         payload.put("systemId", request.systemId());
         payload.put("endpointId", request.endpointId());
         payload.put("httpMethod", request.httpMethod());
@@ -337,7 +341,7 @@ public class FlowExplorerArtifactService {
         }
 
         var manifest = new LinkedHashMap<String, Object>();
-        manifest.put("applicationName", contextSnapshot.systemId());
+        manifest.put("applicationNames", applicationNames(contextSnapshot.systemId()));
         manifest.put("systemId", contextSnapshot.systemId());
         manifest.put("systemName", contextSnapshot.systemName());
         manifest.put("requestedBranch", contextSnapshot.requestedBranch());
@@ -550,6 +554,10 @@ public class FlowExplorerArtifactService {
     private void appendKeyValue(StringBuilder builder, String key, String value) {
         builder.append("- ").append(key).append(": `").append(safe(value)).append("`")
                 .append(System.lineSeparator());
+    }
+
+    private List<String> applicationNames(String systemId) {
+        return StringUtils.hasText(systemId) ? List.of(systemId.trim()) : List.of();
     }
 
     private String discoverySearchMode(FlowExplorerRepositoryContext repository) {

@@ -31,7 +31,7 @@ Zachowanie endpointu potwierdzaj artefaktami albo GitLab tools.
 
 ## Wejscia
 
-Korzystaj z `applicationName`, `systemId`, endpoint scope, operational clues z
+Korzystaj z `applicationNames`, `systemId`, endpoint scope, operational clues z
 artefaktow, aktualnego `goal`, `sectionModes` oraz konkretnej luki katalogowej.
 
 ## Procedura
@@ -71,7 +71,7 @@ Operational context tools nie przyjmuja `gitLabGroup`, `gitLabBranch`,
 `reason`, gdy tool tego wymaga.
 
 Jezeli potrzebujesz wyszukac albo potwierdzic system, zacznij od
-`applicationName` albo `systemId` z `flow-explorer/canonical-tool-inputs.md`.
+`applicationNames` albo `systemId` z `flow-explorer/canonical-tool-inputs.md`.
 Nie wyszukuj szeroko katalogu tylko po to, zeby potwierdzic system juz wybrany
 przez Flow Explorer UI.
 

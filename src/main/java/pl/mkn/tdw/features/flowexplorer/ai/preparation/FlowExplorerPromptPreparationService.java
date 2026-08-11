@@ -41,7 +41,7 @@ public class FlowExplorerPromptPreparationService {
                 %s
 
                 ## User request
-                applicationName: %s
+                applicationNames: [%s]
                 systemId: %s
                 endpointId: %s
                 httpMethod: %s

@@ -5,8 +5,12 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.features.incidentanalysis.ai.chat.AnalysisAiChatRequest;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext.OperationalContextEvidenceView;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,7 +26,8 @@ public class CopilotIncidentHiddenToolContextFactory {
 
         var context = fromIncidentScope(
                 request.correlationId(),
-                request.environment()
+                request.environment(),
+                request.evidenceSections()
         );
         putReportScope(context);
         return context;
@@ -35,18 +40,40 @@ public class CopilotIncidentHiddenToolContextFactory {
 
         return fromIncidentScope(
                 request.correlationId(),
-                request.environment()
+                request.environment(),
+                request.evidenceSections()
         );
     }
 
     private Map<String, Object> fromIncidentScope(
             String correlationId,
-            String environment
+            String environment,
+            List<AnalysisEvidenceSection> evidenceSections
     ) {
         var context = new LinkedHashMap<String, Object>();
         putIfNotBlank(context, AgentToolContextKeys.CORRELATION_ID, correlationId);
         putIfNotBlank(context, AgentToolContextKeys.ENVIRONMENT, environment);
+        putGitLabApplicationScope(context, evidenceSections);
         return context;
+    }
+
+    private void putGitLabApplicationScope(
+            Map<String, Object> context,
+            List<AnalysisEvidenceSection> evidenceSections
+    ) {
+        var applicationNames = new LinkedHashSet<String>();
+        OperationalContextEvidenceView.from(evidenceSections).systems().stream()
+                .filter(system -> !system.codeSearchScopeIds().isEmpty())
+                .map(OperationalContextEvidenceView.SystemItem::systemId)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .forEach(applicationNames::add);
+        if (!applicationNames.isEmpty()) {
+            context.put(
+                    AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES,
+                    List.copyOf(applicationNames)
+            );
+        }
     }
 
     private void putReportScope(Map<String, Object> context) {

@@ -188,62 +188,62 @@ class CopilotSdkToolFactoryTest {
 
         assertSchemaProperties(
                 toolsByName.get("gitlab_list_available_repositories"),
-                Set.of("applicationName", "branchRef", "reason"),
+                Set.of("applicationNames", "branchRef", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_search_repository_candidates"),
-                Set.of("projectNames", "branchRef", "applicationName", "operationNames", "keywords", "reason"),
+                Set.of("projectNames", "branchRef", "applicationNames", "operationNames", "keywords", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file"),
-                Set.of("projectName", "branchRef", "applicationName", "filePath", "maxCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationNames", "filePath", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_files_by_path"),
-                Set.of("projectName", "branchRef", "applicationName", "filePaths", "maxCharactersPerFile", "maxTotalCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationNames", "filePaths", "maxCharactersPerFile", "maxTotalCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunk"),
-                Set.of("projectName", "branchRef", "applicationName", "filePath", "startLine", "endLine", "maxCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationNames", "filePath", "startLine", "endLine", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_outline"),
-                Set.of("projectName", "branchRef", "applicationName", "filePath", "maxCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationNames", "filePath", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_repository_file_chunks"),
-                Set.of("chunks", "branchRef", "applicationName", "maxTotalCharacters", "reason"),
+                Set.of("chunks", "branchRef", "applicationNames", "maxTotalCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_list_repository_endpoints"),
-                Set.of("projectName", "branchRef", "applicationName", "endpointPathPrefix", "httpMethod", "maxScannedFiles", "reason"),
+                Set.of("projectName", "branchRef", "applicationNames", "endpointPathPrefix", "httpMethod", "maxScannedFiles", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_build_endpoint_use_case_context"),
-                Set.of("projectName", "branchRef", "applicationName", "endpointId", "httpMethod", "endpointPath", "maxDepth", "maxFiles", "reason"),
+                Set.of("projectName", "branchRef", "applicationNames", "endpointId", "httpMethod", "endpointPath", "maxDepth", "maxFiles", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_read_openapi_endpoint_slice"),
-                Set.of("projectName", "branchRef", "applicationName", "filePath", "httpMethod", "endpointPath", "includeReferencedSchemas", "schemaDepth", "maxCharacters", "reason"),
+                Set.of("projectName", "branchRef", "applicationNames", "filePath", "httpMethod", "endpointPath", "includeReferencedSchemas", "schemaDepth", "maxCharacters", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_find_class_references"),
-                Set.of("projectNames", "branchRef", "applicationName", "className", "relatedHints", "operationNames", "maxFilesPerRole", "reason"),
+                Set.of("projectNames", "branchRef", "applicationNames", "className", "relatedHints", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
         assertSchemaProperties(
                 toolsByName.get("gitlab_find_flow_context"),
-                Set.of("projectNames", "branchRef", "applicationName", "keywords", "operationNames", "maxFilesPerRole", "reason"),
+                Set.of("projectNames", "branchRef", "applicationNames", "keywords", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
         );
     }
@@ -267,7 +267,7 @@ class CopilotSdkToolFactoryTest {
                 .setArguments(objectMapper.valueToTree(Map.of(
                         "projectName", "crm-customer-client-service",
                         "branchRef", "release/2026.04",
-                        "applicationName", "crm-runtime",
+                        "applicationNames", List.of("crm-runtime"),
                         "filePath", "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                         "startLine", 5,
                         "endLine", 12,
@@ -332,7 +332,7 @@ class CopilotSdkToolFactoryTest {
                                 )
                         ),
                         "branchRef", "release/2026.04",
-                        "applicationName", "crm-runtime",
+                        "applicationNames", List.of("crm-runtime"),
                         "maxTotalCharacters", 20_000,
                         "reason", "Sprawdzam dwa fragmenty powiazane z przeplywem."
                 )));
@@ -371,6 +371,9 @@ class CopilotSdkToolFactoryTest {
         assertNotNull(properties);
         assertTrue(properties.keySet().containsAll(expectedProperties));
         forbiddenProperties.forEach(property -> assertFalse(properties.containsKey(property)));
+        if (expectedProperties.contains("applicationNames")) {
+            assertFalse(properties.containsKey("applicationName"));
+        }
     }
 
     private CopilotToolSessionContext gitLabSessionContext() {

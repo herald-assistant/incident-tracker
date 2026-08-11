@@ -20,7 +20,11 @@ import java.util.Set;
 final class GitLabToolScopeResolver {
 
     private static final Set<OperationalContextEntryType> GITLAB_SCOPE_ENTRY_TYPES =
-            Set.of(OperationalContextEntryType.SYSTEM, OperationalContextEntryType.REPOSITORY);
+            Set.of(
+                    OperationalContextEntryType.SYSTEM,
+                    OperationalContextEntryType.REPOSITORY,
+                    OperationalContextEntryType.CODE_SEARCH_SCOPE
+            );
 
     private final GitLabProperties gitLabProperties;
     private final OperationalContextPort operationalContextPort;
@@ -36,18 +40,34 @@ final class GitLabToolScopeResolver {
     GitLabToolScope resolve(
             String branchRef,
             String projectName,
-            String applicationName,
+            List<String> applicationNames,
             ToolContext toolContext
     ) {
         var branch = requiredBranch(branchRef);
         var catalog = loadCatalog();
-        var group = resolveGroup(projectName, applicationName, catalog);
-        return GitLabToolScope.fromResolvedScope(group, branch, trimToNull(applicationName), toolContext);
+        var applicationScopeResolver = new GitLabApplicationScopeResolver();
+        var applicationScope = applicationScopeResolver.resolve(applicationNames, toolContext, catalog);
+        var group = resolveGroup(projectName, applicationScope.applicationNames(), catalog);
+        if (applicationScope.restrictedByApplicationScope() && StringUtils.hasText(projectName)) {
+            requireRepositoryInApplicationScope(
+                    projectName,
+                    applicationScope.applicationNames(),
+                    catalog,
+                    applicationScopeResolver
+            );
+        }
+        return GitLabToolScope.fromResolvedScope(
+                group,
+                branch,
+                applicationScope.applicationNames(),
+                applicationScope.restrictedByApplicationScope(),
+                toolContext
+        );
     }
 
     private String resolveGroup(
             String projectName,
-            String applicationName,
+            List<String> applicationNames,
             OperationalContextCatalog catalog
     ) {
         var configuredGroup = configuredGroup();
@@ -65,15 +85,15 @@ final class GitLabToolScopeResolver {
             return StringUtils.hasText(configuredGroup) ? configuredGroup : repositoryGroup;
         }
 
-        var applicationGroups = applicationRepositoryGroups(applicationName, catalog);
+        var applicationGroups = applicationRepositoryGroups(applicationNames, catalog);
         if (!applicationGroups.isEmpty()) {
             if (StringUtils.hasText(configuredGroup)) {
                 var configuredGroupAllowed = applicationGroups.stream()
                         .anyMatch(group -> GitLabPathUtils.isSameOrNestedPath(configuredGroup, group));
                 if (!configuredGroupAllowed) {
                     throw new IllegalArgumentException(
-                            "Application '%s' repositories do not belong to configured GitLab group '%s'."
-                                    .formatted(applicationName, configuredGroup)
+                            "Applications %s have repositories outside configured GitLab group '%s'."
+                                    .formatted(applicationNames, configuredGroup)
                     );
                 }
                 return configuredGroup;
@@ -82,8 +102,8 @@ final class GitLabToolScopeResolver {
                 return applicationGroups.iterator().next();
             }
             throw new IllegalArgumentException(
-                    "Application '%s' maps to multiple GitLab groups; configure analysis.gitlab.group."
-                            .formatted(applicationName)
+                    "Applications %s map to multiple GitLab groups; configure analysis.gitlab.group."
+                            .formatted(applicationNames)
             );
         }
 
@@ -132,17 +152,23 @@ final class GitLabToolScopeResolver {
     }
 
     private LinkedHashSet<String> applicationRepositoryGroups(
-            String applicationName,
+            List<String> applicationNames,
             OperationalContextCatalog catalog
     ) {
-        var normalizedApplicationName = normalizeComparable(applicationName);
         var matchingSystemIds = new LinkedHashSet<String>();
-        if (!StringUtils.hasText(normalizedApplicationName)) {
+        var normalizedApplicationNames = new LinkedHashSet<String>();
+        for (var applicationName : applicationNames != null ? applicationNames : List.<String>of()) {
+            var normalizedApplicationName = normalizeComparable(applicationName);
+            if (StringUtils.hasText(normalizedApplicationName)) {
+                normalizedApplicationNames.add(normalizedApplicationName);
+            }
+        }
+        if (normalizedApplicationNames.isEmpty()) {
             return new LinkedHashSet<>();
         }
 
         for (var system : catalog.systems()) {
-            if (systemMatches(system, normalizedApplicationName)) {
+            if (normalizedApplicationNames.stream().anyMatch(name -> systemMatches(system, name))) {
                 add(matchingSystemIds, normalizeComparable(system.id()));
             }
         }
@@ -155,11 +181,36 @@ final class GitLabToolScopeResolver {
                     .anyMatch(matchingSystemIds::contains);
             if (repositoryMatchesSystem || repositorySystems.stream()
                     .map(this::normalizeComparable)
-                    .anyMatch(normalizedApplicationName::equals)) {
+                    .anyMatch(normalizedApplicationNames::contains)) {
                 add(groups, repository.git().group());
             }
         }
         return groups;
+    }
+
+    private void requireRepositoryInApplicationScope(
+            String projectName,
+            List<String> applicationNames,
+            OperationalContextCatalog catalog,
+            GitLabApplicationScopeResolver applicationScopeResolver
+    ) {
+        var repository = findRepository(projectName, catalog.repositories());
+        if (repository == null) {
+            throw new IllegalArgumentException(
+                    "GitLab project '%s' is not registered in the session application scope."
+                            .formatted(projectName)
+            );
+        }
+        var relevantScopes = applicationScopeResolver.codeSearchScopes(catalog, applicationNames);
+        var repositoryAllowed = relevantScopes.stream()
+                .flatMap(scope -> scope.repositories().stream())
+                .anyMatch(scopedRepository -> sameId(repository.id(), scopedRepository.repoId()));
+        if (!repositoryAllowed) {
+            throw new IllegalArgumentException(
+                    "GitLab project '%s' is outside code search scopes for applications %s."
+                            .formatted(projectName, applicationNames)
+            );
+        }
     }
 
     private boolean systemMatches(OperationalContextSystem system, String normalizedApplicationName) {
@@ -197,6 +248,12 @@ final class GitLabToolScopeResolver {
                         .replace('-', '_')
                         .replaceAll("[^a-z0-9/_]+", "_")
                 : null;
+    }
+
+    private boolean sameId(String left, String right) {
+        var normalizedLeft = normalizeComparable(left);
+        var normalizedRight = normalizeComparable(right);
+        return StringUtils.hasText(normalizedLeft) && normalizedLeft.equals(normalizedRight);
     }
 
     private String trimToNull(String value) {

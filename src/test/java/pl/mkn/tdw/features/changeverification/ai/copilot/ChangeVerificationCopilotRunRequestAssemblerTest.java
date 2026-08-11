@@ -19,6 +19,7 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStart
 import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportFactory;
 import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportSectionIds;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
+import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatch;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
@@ -115,6 +116,10 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 hiddenContext.get(ChangeVerificationCopilotToolContextKeys.RUN_KIND)
         );
         assertEquals(true, hiddenContext.get(ChangeVerificationCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED));
+        assertEquals(
+                List.of("crm-entry", "crm-support"),
+                hiddenContext.get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES)
+        );
         assertThat(hiddenContext.get(AgentToolContextKeys.REPORT_ID)).isInstanceOf(String.class);
         assertEquals(
                 ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE,
@@ -219,7 +224,31 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                                 List.of("src/main/java/CustomerController.java")
                         )),
                         List.of()
-                )),
+                ).withOperationalContextMatches(List.of(
+                        operationalContextMatch("crm-entry", "crm-entry-code-search"),
+                        operationalContextMatch("crm-support", "crm-support-code-search")
+                ))),
+                List.of()
+        );
+    }
+
+    private static ChangeVerificationOperationalContextMatch operationalContextMatch(
+            String systemId,
+            String codeSearchScopeId
+    ) {
+        return new ChangeVerificationOperationalContextMatch(
+                "repository-1",
+                codeSearchScopeId,
+                codeSearchScopeId,
+                "runtime",
+                "system",
+                systemId,
+                "primary",
+                1,
+                "Runtime repository for " + systemId,
+                List.of("code"),
+                "whole-repository",
+                List.of(),
                 List.of()
         );
     }

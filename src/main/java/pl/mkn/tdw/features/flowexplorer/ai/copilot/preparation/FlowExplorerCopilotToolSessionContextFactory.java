@@ -11,6 +11,7 @@ import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryContext;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerJobStartRequest;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -76,6 +77,12 @@ public class FlowExplorerCopilotToolSessionContextFactory {
                 FlowExplorerCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED,
                 repositoryScopeResolved(contextSnapshot)
         );
+        var systemId = contextSnapshot != null && StringUtils.hasText(contextSnapshot.systemId())
+                ? contextSnapshot.systemId()
+                : request != null ? request.systemId() : null;
+        if (StringUtils.hasText(systemId)) {
+            context.put(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES, List.of(systemId.trim()));
+        }
         if (!followUp) {
             context.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
             context.put(AgentToolContextKeys.REPORT_FEATURE, FlowExplorerCopilotToolContextKeys.FEATURE_VALUE);

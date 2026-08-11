@@ -36,11 +36,7 @@ public class OperationalContextCatalogMatcher {
             OperationalContextCatalog catalog,
             OperationalContextIncidentSignals signals
     ) {
-        var systemMatches = matchEntries(
-                catalog.systems(),
-                entry -> scoreSystem(entry, signals),
-                properties.getMaxItemsPerType()
-        );
+        var systemMatches = matchSystems(catalog.systems(), signals);
         var integrationMatches = matchEntries(
                 catalog.integrations(),
                 entry -> scoreIntegration(entry, signals, systemMatches),
@@ -107,6 +103,52 @@ public class OperationalContextCatalogMatcher {
                         .thenComparing(match -> match.entry().id(), Comparator.nullsLast(String::compareTo)))
                 .limit(limit)
                 .toList();
+    }
+
+    private List<OperationalContextMatchedEntry<OperationalContextSystem>> matchSystems(
+            List<OperationalContextSystem> systems,
+            OperationalContextIncidentSignals signals
+    ) {
+        var sortedMatches = systems.stream()
+                .map(system -> new OperationalContextMatchedEntry<>(system, scoreSystem(system, signals)))
+                .filter(match -> match.score().score() > 0 || isDirectInternalServiceMatch(match.entry(), signals))
+                .sorted(Comparator
+                        .comparingInt((OperationalContextMatchedEntry<OperationalContextSystem> match) -> match.score().score())
+                        .reversed()
+                        .thenComparing(match -> match.entry().id(), Comparator.nullsLast(String::compareTo)))
+                .toList();
+
+        var selectedSystems = new LinkedHashSet<OperationalContextSystem>();
+        sortedMatches.stream()
+                .limit(properties.getMaxItemsPerType())
+                .map(OperationalContextMatchedEntry::entry)
+                .forEach(selectedSystems::add);
+        sortedMatches.stream()
+                .map(OperationalContextMatchedEntry::entry)
+                .filter(system -> isDirectInternalServiceMatch(system, signals))
+                .forEach(selectedSystems::add);
+
+        return sortedMatches.stream()
+                .filter(match -> selectedSystems.contains(match.entry()))
+                .toList();
+    }
+
+    private boolean isDirectInternalServiceMatch(
+            OperationalContextSystem system,
+            OperationalContextIncidentSignals signals
+    ) {
+        if (!"internal-service".equals(normalize(system.kind()).replace('_', '-'))) {
+            return false;
+        }
+        var candidates = new LinkedHashSet<String>();
+        candidates.add(system.id());
+        candidates.add(system.name());
+        candidates.add(system.shortName());
+        candidates.addAll(system.aliases());
+        candidates.addAll(system.matchSignals().allValues());
+        return candidates.stream().anyMatch(candidate ->
+                signals.containsRuntimeServiceName(candidate) || signals.contains(candidate)
+        );
     }
 
     private List<OperationalContextMatchedEntry<OperationalContextGlossaryTerm>> matchGlossaryTerms(

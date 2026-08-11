@@ -93,6 +93,8 @@ class ConfigDriftViewerCopilotRunRequestAssemblerTest {
         );
         var hidden = contextCaptor.getValue().hiddenContext();
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_GROUP)).isEqualTo("platform");
+        assertThat(hidden.get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES))
+                .isEqualTo(List.of("crm-api"));
         assertThat((List<?>) hidden.get(ConfigDriftViewerCopilotToolContextKeys.ALLOWED_REPOSITORIES))
                 .singleElement()
                 .asString()

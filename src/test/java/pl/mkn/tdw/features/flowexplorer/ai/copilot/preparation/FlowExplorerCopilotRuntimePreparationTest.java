@@ -143,7 +143,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
         assertEquals("flow-explorer-job-123", sessionContext.copilotSessionId());
         assertEquals("job-123", hiddenContext.get(AgentToolContextKeys.ANALYSIS_RUN_ID));
         assertEquals("flow-explorer-job-123", hiddenContext.get(AgentToolContextKeys.COPILOT_SESSION_ID));
-        assertEquals(9, hiddenContext.size());
+        assertEquals(10, hiddenContext.size());
         assertEquals(
                 FlowExplorerCopilotToolContextKeys.FEATURE_VALUE,
                 hiddenContext.get(FlowExplorerCopilotToolContextKeys.FEATURE)
@@ -154,6 +154,10 @@ class FlowExplorerCopilotRuntimePreparationTest {
         );
         assertEquals(true, hiddenContext.get(FlowExplorerCopilotToolContextKeys.ENDPOINT_CONTEXT_EMBEDDED));
         assertEquals(true, hiddenContext.get(FlowExplorerCopilotToolContextKeys.REPOSITORY_SCOPE_RESOLVED));
+        assertEquals(
+                List.of("crm-service"),
+                hiddenContext.get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES)
+        );
         assertInstanceOf(String.class, hiddenContext.get(AgentToolContextKeys.REPORT_ID));
         assertTrue(((String) hiddenContext.get(AgentToolContextKeys.REPORT_ID)).startsWith("report-"));
         assertEquals("flow-explorer", hiddenContext.get(AgentToolContextKeys.REPORT_FEATURE));

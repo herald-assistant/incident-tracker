@@ -248,7 +248,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
         assertFalse(orchestrator.contains("`sectionModes` sa zrodlem prawdy dla sekcji wyniku"));
         assertContainsAll(codeGrounding, List.of(
                 "GitLab tools nie czytaja functional scope'u z hidden `ToolContext`",
-                "`branchRef`, `applicationName` i `projectName`",
+                "`branchRef`, liste `applicationNames` i `projectName`",
                 "`filePath` i `methodSelectors`",
                 "`searchMode/pathPrefixes` sa domyslnym discovery scope",
                 "poza domyslny discovery scope",

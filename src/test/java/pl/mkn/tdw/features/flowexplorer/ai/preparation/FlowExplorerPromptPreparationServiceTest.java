@@ -40,7 +40,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(preparation.artifactContents().containsKey(FlowExplorerArtifactService.COMPACT_FLOW_MANIFEST_ARTIFACT));
         assertTrue(preparation.artifactContents().containsKey(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT));
         assertTrue(prompt.contains("userInstructions"));
-        assertTrue(prompt.contains("applicationName: crm-service"));
+        assertTrue(prompt.contains("applicationNames: [crm-service]"));
         assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
         assertTrue(prompt.contains("Runtime envelope"));
         assertTrue(prompt.contains("Ten prompt przekazuje dane biezacego runu"));

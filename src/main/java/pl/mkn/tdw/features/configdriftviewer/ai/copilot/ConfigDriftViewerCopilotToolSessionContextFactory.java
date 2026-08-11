@@ -44,6 +44,10 @@ public class ConfigDriftViewerCopilotToolSessionContextFactory {
         hidden.put(ConfigDriftViewerCopilotToolContextKeys.MODE, ConfigDriftViewerMode.DEEP.name());
         if (StringUtils.hasText(request.componentSystemId())) {
             hidden.put(ConfigDriftViewerCopilotToolContextKeys.SYSTEM_ID, request.componentSystemId());
+            hidden.put(
+                    AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES,
+                    List.of(request.componentSystemId().trim())
+            );
         }
         hidden.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
         hidden.put(AgentToolContextKeys.REPORT_FEATURE,

@@ -42,7 +42,7 @@ public class CopilotIncidentPromptRenderer {
                 - Do not claim that you only see the artifact list when the artifact contents are embedded below.
                 - Treat environment, gitLabBranch and gitLabGroup from this prompt/artifacts as fixed incident context.
                 - GitLab tools do not read branch/group from hidden ToolContext. When calling GitLab tools, pass `branchRef` explicitly from `gitLabBranch` or a previous tool result.
-                - Pass known `projectName` values from deterministic evidence, operational context or previous GitLab tool results. Pass `applicationName` only when it helps validate repository scope.
+                - Pass known `projectName` values from deterministic evidence, operational context or previous GitLab tool results. Omit `applicationNames` to use all systems detected for the session. Provide explicit `applicationNames` only when a CRM system exists in operational context, has `codeSearchScope`, and its code is needed outside the default evidence scope.
                 - Do not pass `gitLabGroup` to GitLab tools; backend resolves the group through operational context or configuration.
                 - Only the explicitly listed capability groups are enabled for this session.
                 - Local workspace, filesystem and shell or terminal tools are blocked. Do not inspect the local disk.
@@ -186,7 +186,7 @@ public class CopilotIncidentPromptRenderer {
         }
 
         if (toolAccessPolicy.gitLabToolsEnabled()) {
-            rendered.append("- GitLab code: inspect class references/imports, method slices, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps. Pass explicit `branchRef` from `gitLabBranch`, known `projectName`, and optional `applicationName`; do not pass `gitLabGroup`. Include a short Polish `reason` in every GitLab tool call.\n");
+            rendered.append("- GitLab code: inspect class references/imports, method slices, focused chunks, outlines or flow context only for listed code, flow, technical-analysis or DB code-grounding gaps. Pass explicit `branchRef` from `gitLabBranch`, known `projectName`, and optional `applicationNames`; omit `applicationNames` for systems detected in this session, or provide explicit CRM systems from operational context when they have `codeSearchScope` and are needed outside the default evidence scope. Do not pass `gitLabGroup`. Include a short Polish `reason` in every GitLab tool call.\n");
         }
 
         if (toolAccessPolicy.databaseToolsEnabled()) {

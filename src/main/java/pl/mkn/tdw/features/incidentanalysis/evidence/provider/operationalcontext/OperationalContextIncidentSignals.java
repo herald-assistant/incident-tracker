@@ -2,6 +2,8 @@ package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontex
 
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.deployment.DeploymentContextEvidenceView;
+import pl.mkn.tdw.features.incidentanalysis.evidence.provider.elasticsearch.ElasticLogEvidenceView;
 
 import java.util.LinkedHashSet;
 import java.util.Locale;
@@ -12,13 +14,15 @@ import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextMaps.
 record OperationalContextIncidentSignals(
         String corpus,
         Set<String> exactValues,
-        Set<String> attributeNames
+        Set<String> attributeNames,
+        Set<String> runtimeServiceNames
 ) {
 
     static OperationalContextIncidentSignals from(AnalysisContext context) {
         var corpusBuilder = new StringBuilder();
         var exactValues = new LinkedHashSet<String>();
         var attributeNames = new LinkedHashSet<String>();
+        var runtimeServiceNames = new LinkedHashSet<String>();
 
         for (var section : context.evidenceSections()) {
             addText(corpusBuilder, section.provider());
@@ -37,10 +41,20 @@ record OperationalContextIncidentSignals(
             }
         }
 
+        ElasticLogEvidenceView.from(context).entries().forEach(entry -> {
+            addExactValue(runtimeServiceNames, entry.serviceName());
+            addExactValue(runtimeServiceNames, entry.containerName());
+        });
+        DeploymentContextEvidenceView.from(context).deployments().forEach(deployment -> {
+            addExactValue(runtimeServiceNames, deployment.projectNameHint());
+            addExactValue(runtimeServiceNames, deployment.containerName());
+        });
+
         return new OperationalContextIncidentSignals(
                 normalize(corpusBuilder.toString()),
                 Set.copyOf(exactValues),
-                Set.copyOf(attributeNames)
+                Set.copyOf(attributeNames),
+                Set.copyOf(runtimeServiceNames)
         );
     }
 
@@ -71,6 +85,11 @@ record OperationalContextIncidentSignals(
             }
         }
         return false;
+    }
+
+    boolean containsRuntimeServiceName(String candidate) {
+        var normalizedCandidate = normalize(candidate);
+        return StringUtils.hasText(normalizedCandidate) && runtimeServiceNames.contains(normalizedCandidate);
     }
 
     boolean isEmpty() {

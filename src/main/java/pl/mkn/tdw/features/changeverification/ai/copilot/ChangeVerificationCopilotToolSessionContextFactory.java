@@ -12,6 +12,7 @@ import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDis
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -53,6 +54,10 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
                         .map(this::repositoryScope)
                         .toList()
         );
+        var allowedApplicationNames = allowedApplicationNames(repositories);
+        if (!allowedApplicationNames.isEmpty()) {
+            context.put(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES, allowedApplicationNames);
+        }
         if (ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE.equals(normalizeRunKind(runKind))) {
             context.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
             context.put(AgentToolContextKeys.REPORT_FEATURE, ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE);
@@ -62,6 +67,18 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
             );
         }
         return context;
+    }
+
+    private List<String> allowedApplicationNames(List<ChangeVerificationRepositorySnapshot> repositories) {
+        var systemIds = new LinkedHashSet<String>();
+        repositories.stream()
+                .flatMap(repository -> repository.operationalContextMatches().stream())
+                .filter(match -> "system".equalsIgnoreCase(match.targetType()))
+                .map(match -> match.targetId())
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .forEach(systemIds::add);
+        return List.copyOf(systemIds);
     }
 
     private Map<String, Object> repositoryScope(ChangeVerificationRepositorySnapshot repository) {

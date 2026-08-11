@@ -32,12 +32,15 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryStatus
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaTypeKind;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFileChunkRequest;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaMethodSummary;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabJavaFieldSummary;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +63,7 @@ class GitLabMcpToolsTest {
 
     private static final String DEFAULT_GROUP = "CRM/backend";
     private static final String DEFAULT_BRANCH_REF = "feature/INC-123";
-    private static final String DEFAULT_APPLICATION_NAME = "backend";
+    private static final List<String> DEFAULT_APPLICATION_NAMES = List.of("backend");
 
     private final GitLabMcpTools gitLabMcpTools = GitLabMcpToolsTestCreator.create(
             new TestGitLabRepositoryPort(),
@@ -131,7 +134,7 @@ class GitLabMcpToolsTest {
         );
 
         var response = tools.listAvailableRepositories(
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "release/2026.04",
                 "Sprawdzam katalog repozytoriow.",
                 gitLabToolContext()
@@ -192,7 +195,7 @@ class GitLabMcpToolsTest {
                 List.of("crm-customer-profile-service", "crm-customer-segment-service"),
                 List.of("src/main/java/com/example/crm/customer"),
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 List.of("GET /crm/customers"),
                 List.of("timeout", "customer-profile"),
                 "Sprawdzam kandydatow repozytorium dla testu.",
@@ -222,7 +225,7 @@ class GitLabMcpToolsTest {
                 null,
                 null,
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 null,
                 null,
                 "Sprawdzam puste wejscie.",
@@ -245,7 +248,7 @@ class GitLabMcpToolsTest {
                 List.of("crm-customer-workflow"),
                 List.of(),
                 "release-candidate",
-                "customer",
+                List.of("customer"),
                 List.of(),
                 List.of("customer-profile"),
                 "Sprawdzam zagniezdzony projekt.",
@@ -272,7 +275,7 @@ class GitLabMcpToolsTest {
                 List.of(),
                 List.of(),
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 List.of(),
                 List.of("CustomerController"),
                 "Szukam kandydatow dla systemu backend.",
@@ -298,7 +301,7 @@ class GitLabMcpToolsTest {
                 List.of("shared-lib"),
                 List.of(),
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 List.of(),
                 List.of("CustomerMapper"),
                 "Probuję szeroko szukac w libce.",
@@ -310,11 +313,170 @@ class GitLabMcpToolsTest {
     }
 
     @Test
+    void shouldAllowBroadSearchInRepositoryThatIsSupportingForCurrentApplicationButPrimaryForAnotherScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> crmMultiApplicationCatalog(),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of());
+
+        tools.searchRepositoryCandidates(
+                List.of("crm-support"),
+                List.of(),
+                DEFAULT_BRANCH_REF,
+                List.of("crm-support"),
+                List.of("PUT /api/crm/v1/customer-context"),
+                List.of("crm-entry", "FeignClient"),
+                "Szukam szeroko w crm-support, bo scope analizy obejmuje tez ten system CRM.",
+                gitLabToolContext(List.of("crm-entry", "crm-support"))
+        );
+
+        verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
+                "CRM".equals(query.group())
+                        && List.of("crm-support").equals(query.projectNames())
+                        && List.of("PUT /api/crm/v1/customer-context").equals(query.operationNames())
+                        && List.of("crm-entry", "FeignClient").equals(query.keywords())
+        ));
+    }
+
+    @Test
+    void shouldUseAllHiddenApplicationsWhenApplicationNamesAreOmitted() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var catalogQueries = new ArrayList<OperationalContextQuery>();
+        var catalog = crmMultiApplicationCatalog();
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                query -> {
+                    catalogQueries.add(query);
+                    return catalog;
+                },
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of());
+
+        tools.searchRepositoryCandidates(
+                List.of(),
+                List.of(),
+                DEFAULT_BRANCH_REF,
+                List.of(),
+                List.of(),
+                List.of("FeignClient"),
+                "Szukam w systemach CRM wykrytych dla sesji.",
+                gitLabToolContext(List.of("crm-entry", "crm-support"))
+        );
+
+        verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
+                List.of("crm-entry", "crm-support").equals(query.projectNames())
+        ));
+        assertTrue(catalogQueries.get(0).includedEntryTypes().containsAll(List.of(
+                OperationalContextEntryType.SYSTEM,
+                OperationalContextEntryType.REPOSITORY,
+                OperationalContextEntryType.CODE_SEARCH_SCOPE
+        )));
+    }
+
+    @Test
+    void shouldAllowExplicitApplicationOutsideHiddenSessionScopeWhenCodeSearchScopeExists() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> crmMultiApplicationCatalog(),
+                gitLabProperties("CRM")
+        );
+        when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of());
+
+        tools.searchRepositoryCandidates(
+                List.of(),
+                List.of(),
+                DEFAULT_BRANCH_REF,
+                List.of("crm-support"),
+                List.of(),
+                List.of("CustomerController"),
+                "Rozszerzam scope o crm-support, bo analiza CRM wymaga kodu pomocniczego systemu.",
+                gitLabToolContext(List.of("crm-entry"))
+        );
+
+        verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
+                "CRM".equals(query.group())
+                        && List.of("crm-support").equals(query.projectNames())
+                        && List.of("CustomerController").equals(query.keywords())
+        ));
+    }
+
+    @Test
+    void shouldRejectExplicitApplicationWithoutCodeSearchScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> operationalContextCatalogWithSystems(
+                        List.of(system("crm-support", "CRM Support")),
+                        List.of(),
+                        repository(
+                                "crm-support-repo",
+                                "CRM Support",
+                                "service",
+                                "active",
+                                "CRM",
+                                "CRM/crm-support",
+                                "crm-support",
+                                List.of("crm-support"),
+                                List.of("crm-support"),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                List.of()
+                        )
+                ),
+                gitLabProperties("CRM")
+        );
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> tools.searchRepositoryCandidates(
+                List.of(),
+                List.of(),
+                DEFAULT_BRANCH_REF,
+                List.of("crm-support"),
+                List.of(),
+                List.of("CustomerController"),
+                "Probuję rozszerzyc scope o system bez codeSearchScope.",
+                gitLabToolContext(List.of("crm-entry"))
+        ));
+
+        assertTrue(exception.getMessage().contains("without configured code search scope"));
+        verifyNoMoreInteractions(gitLabRepositoryPort);
+    }
+
+    @Test
+    void shouldRejectEveryExplicitProjectOutsideHiddenSessionScope() {
+        var gitLabRepositoryPort = mock(GitLabRepositoryPort.class);
+        var tools = GitLabMcpToolsTestCreator.create(
+                gitLabRepositoryPort,
+                ignored -> crmMultiApplicationCatalog(),
+                gitLabProperties("CRM")
+        );
+
+        var exception = assertThrows(IllegalArgumentException.class, () -> tools.searchRepositoryCandidates(
+                List.of("crm-entry", "outside-project"),
+                List.of(),
+                DEFAULT_BRANCH_REF,
+                List.of(),
+                List.of(),
+                List.of("FeignClient"),
+                "Probuje dodac drugi projekt spoza zakresu sesji.",
+                gitLabToolContext(List.of("crm-entry"))
+        ));
+
+        assertTrue(exception.getMessage().contains("outside code search scopes"));
+        verifyNoMoreInteractions(gitLabRepositoryPort);
+    }
+
+    @Test
     void shouldListRepositoryEndpointsUsingSessionBoundScope() {
         var response = gitLabMcpTools.listRepositoryEndpoints(
                 "crm-customer-api",
                 "feature/FLOW-1",
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "/api/customers",
                 "GET",
                 50,
@@ -361,7 +523,7 @@ class GitLabMcpToolsTest {
         var exception = assertThrows(IllegalArgumentException.class, () -> tools.listRepositoryEndpoints(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 null,
                 null,
                 null,
@@ -435,7 +597,7 @@ class GitLabMcpToolsTest {
         var response = tools.buildEndpointUseCaseContext(
                 "crm-customer-api",
                 "feature/FLOW-1",
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                 null,
                 null,
@@ -540,7 +702,7 @@ class GitLabMcpToolsTest {
         var response = tools.buildJavaMethodUseCaseContext(
                 "crm-customer-api",
                 "feature/FLOW-1",
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/crm/customer/CustomerService.java",
                 "com.example.crm.customer.CustomerService",
                 "getCustomer",
@@ -601,7 +763,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFile(
                 "crm-customer-client-service",
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 120,
                 "Czytam plik w tescie delegacji.",
@@ -645,7 +807,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFile(
                 "CRM/backend",
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/crm/CustomerController.java",
                 500,
                 "Czytam plik po kanonicznej nazwie projektu.",
@@ -685,7 +847,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFilesByPath(
                 "CRM/backend",
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 List.of("src/main/java/com/example/crm/CustomerController.java"),
                 500,
                 500,
@@ -772,7 +934,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFilesByPath(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 List.of("src/main/java/com/example/shared/CustomerMapper.java"),
                 500,
                 500,
@@ -840,7 +1002,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFilesByPath(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 List.of("src/main/java/com/example/shared/CustomerMapper.java"),
                 500,
                 500,
@@ -882,7 +1044,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFile(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 200,
                 "Czytam konkretny plik z libki.",
@@ -922,7 +1084,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFile(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 500,
                 "Czytam konkretny plik z prefiksem scope.",
@@ -970,7 +1132,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFileOutline(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 null,
                 "Sprawdzam zarys pliku z prefiksem scope.",
@@ -1020,7 +1182,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFileChunk(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 3,
                 5,
@@ -1086,7 +1248,7 @@ class GitLabMcpToolsTest {
         var response = tools.readJavaMethodSlice(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 "src/main/java/com/example/shared/CustomerMapper.java",
                 "CustomerMapper",
                 List.of(new GitLabJavaMethodSliceMethodSelector("map", null)),
@@ -1160,7 +1322,7 @@ class GitLabMcpToolsTest {
         var response = tools.readOpenApiEndpointSlice(
                 "shared-lib",
                 DEFAULT_BRANCH_REF,
-                "backend",
+                List.of("backend"),
                 "src/main/resources/openapi/customer-api.yml",
                 "GET",
                 "/customers/{customerId}",
@@ -1217,7 +1379,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFile(
                 "PROCESSES/CRM_CUSTOMER_PROCESS",
                 "main",
-                "customer-process",
+                List.of("customer-process"),
                 "src/main/java/com/example/crm/customer/CustomerProcessController.java",
                 120,
                 "Czytam repozytorium z podgrupy GitLaba.",
@@ -1242,7 +1404,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFile(
                 "crm-customer-account-service",
                 "release/2026.04",
-                "crm-runtime",
+                List.of("crm-runtime"),
                 "src/main/java/com/example/crm/customer/account/CustomerAccountService.java",
                 null,
                 "Czytam plik z domyslnym limitem.",
@@ -1260,7 +1422,7 @@ class GitLabMcpToolsTest {
         var response = gitLabMcpTools.readJavaMethodSlice(
                 "crm-customer-api",
                 "feature/FLOW-1",
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/crm/customer/api/CustomerProfileController.java",
                 "CustomerController",
                 List.of(new GitLabJavaMethodSliceMethodSelector("getCustomer", null)),
@@ -1358,7 +1520,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFilesByPath(
                 "crm-customer-api",
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 List.of(
                         "/src/main/java/com/example/crm/customer/MissingCustomerService.java",
                         "crm-customer-api:src/main/java/com/example/crm/customer/CustomerService.java via gitlab_read_repository_file_outline",
@@ -1463,7 +1625,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFileChunk(
                 "crm-customer-client-service",
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 5,
                 12,
@@ -1539,7 +1701,7 @@ class GitLabMcpToolsTest {
         var response = tools.readRepositoryFileOutline(
                 "crm-customer-profile-service",
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 null,
                 "Sprawdzam zarys pliku w tescie.",
@@ -1673,7 +1835,7 @@ class GitLabMcpToolsTest {
                         new GitLabFileChunkRequest("crm-customer-profile-service", "src/main/java/com/example/crm/customerprofile/Extra.java", 1, 5, 100)
                 ),
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 15,
                 "Czytam kilka fragmentow w tescie limitow.",
                 gitLabToolContext()
@@ -1767,7 +1929,7 @@ class GitLabMcpToolsTest {
                 List.of("crm-customer-api", "crm-customer-core"),
                 List.of(),
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 List.of(
                         "com.example.crm.customer.CustomerController",
                         "CustomerController",
@@ -1856,7 +2018,7 @@ class GitLabMcpToolsTest {
                 List.of("crm-customer-core"),
                 List.of(),
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "com.example.crm.customer.domain.CustomerEntity",
                 List.of("@Entity", "@Table", "mappedBy", "CustomerRepository"),
                 List.of("GET /crm/customers/{customerId}"),
@@ -1974,7 +2136,7 @@ class GitLabMcpToolsTest {
         var tools = GitLabMcpToolsTestCreator.create(mock(GitLabRepositoryPort.class));
 
         var exception = assertThrows(IllegalStateException.class, () -> tools.listAvailableRepositories(
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 DEFAULT_BRANCH_REF,
                 "Sprawdzam brak konfiguracji grupy.",
                 gitLabToolContext()
@@ -1991,7 +2153,7 @@ class GitLabMcpToolsTest {
         var exception = assertThrows(IllegalArgumentException.class, () -> gitLabMcpTools.readRepositoryFile(
                 "crm-customer-client-service",
                 null,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 120,
                 "Czytam plik bez brancha.",
@@ -2009,7 +2171,7 @@ class GitLabMcpToolsTest {
         var response = gitLabMcpTools.readRepositoryFile(
                 "crm-customer-client-service",
                 DEFAULT_BRANCH_REF,
-                DEFAULT_APPLICATION_NAME,
+                DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 120,
                 "Czytam plik bez legacy hidden scope.",
@@ -2021,11 +2183,18 @@ class GitLabMcpToolsTest {
     }
 
     private ToolContext gitLabToolContext() {
+        return gitLabToolContext(List.of());
+    }
+
+    private ToolContext gitLabToolContext(List<String> allowedApplicationNames) {
         var context = new LinkedHashMap<String, Object>();
         context.put(AgentToolContextKeys.ANALYSIS_RUN_ID, "run-1");
         context.put(AgentToolContextKeys.COPILOT_SESSION_ID, "analysis-run-1");
         context.put(AgentToolContextKeys.TOOL_CALL_ID, "tool-call-1");
         context.put(AgentToolContextKeys.TOOL_NAME, "gitlab_test_tool");
+        if (!allowedApplicationNames.isEmpty()) {
+            context.put(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES, allowedApplicationNames);
+        }
         return new ToolContext(context);
     }
 
@@ -2147,6 +2316,62 @@ class GitLabMcpToolsTest {
                         List.of(),
                         List.of(),
                         List.of()
+                )
+        );
+    }
+
+    private OperationalContextCatalog crmMultiApplicationCatalog() {
+        return operationalContextCatalogWithSystems(
+                List.of(
+                        system("crm-support", "CRM Support"),
+                        system("crm-entry", "CRM Entry")
+                ),
+                List.of(
+                        codeSearchScope(
+                                "crm-entry-code-search",
+                                "system",
+                                "crm-entry",
+                                List.of(
+                                        scopeRepository("crm-entry-repo", "primary", 1),
+                                        scopeRepository("crm-support-repo", "supporting", 2)
+                                )
+                        ),
+                        codeSearchScope(
+                                "crm-support-code-search",
+                                "system",
+                                "crm-support",
+                                List.of(scopeRepository("crm-support-repo", "primary", 1))
+                        )
+                ),
+                repository(
+                        "crm-entry-repo",
+                        "CRM Entry",
+                        "service",
+                        "active",
+                        "CRM",
+                        "CRM/crm-entry",
+                        "crm-entry",
+                        List.of("crm-entry"),
+                        List.of("crm-entry"),
+                        List.of("crm-case-management"),
+                        List.of(),
+                        List.of(),
+                        List.of("crm-support-repo")
+                ),
+                repository(
+                        "crm-support-repo",
+                        "CRM Support",
+                        "service",
+                        "active",
+                        "CRM",
+                        "CRM/crm-support",
+                        "crm-support",
+                        List.of("crm-support"),
+                        List.of("crm-support"),
+                        List.of("crm-reference-data"),
+                        List.of(),
+                        List.of(),
+                        List.of("crm-entry-repo")
                 )
         );
     }

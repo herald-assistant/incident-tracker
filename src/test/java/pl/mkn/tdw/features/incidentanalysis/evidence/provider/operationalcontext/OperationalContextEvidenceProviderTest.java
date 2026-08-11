@@ -2,13 +2,17 @@ package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontex
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.features.incidentanalysis.evidence.AnalysisContext;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -98,6 +102,100 @@ class OperationalContextEvidenceProviderTest {
         assertTrue(view.handoffRules().get(0).requiredEvidence().contains("host"));
     }
 
+    @Test
+    void shouldKeepAllDirectlyDetectedInternalServicesAboveGenericLimit() {
+        var properties = new OperationalContextProperties();
+        properties.setMaxItemsPerType(1);
+        var matcher = new OperationalContextCatalogMatcher(properties);
+        var context = AnalysisContext.initialize("corr-multi-service")
+                .withSection(new AnalysisEvidenceSection(
+                        "elasticsearch",
+                        "logs",
+                        List.of(
+                                logItem("crm-entry-service"),
+                                logItem("crm-support-service"),
+                                logItem("crm-decision-service")
+                        )
+                ));
+        var catalog = new OperationalContextCatalog(
+                List.of(),
+                List.of(),
+                List.of(
+                        internalService("crm-entry", "crm-entry-service"),
+                        internalService("crm-support", "crm-support-service"),
+                        internalService("crm-decision", "crm-decision-service")
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                ""
+        );
+
+        var matches = matcher.match(catalog, OperationalContextIncidentSignals.from(context));
+
+        assertEquals(
+                List.of("crm-decision", "crm-entry", "crm-support"),
+                matches.systemMatches().stream()
+                        .map(match -> match.entry().id())
+                        .sorted()
+                        .toList()
+        );
+    }
+
+    @Test
+    void shouldKeepInternalServicesMentionedInLogMessagesAboveGenericLimit() {
+        var properties = new OperationalContextProperties();
+        properties.setMaxItemsPerType(1);
+        var matcher = new OperationalContextCatalogMatcher(properties);
+        var context = AnalysisContext.initialize("corr-multi-service-message")
+                .withSection(new AnalysisEvidenceSection(
+                        "elasticsearch",
+                        "logs",
+                        List.of(
+                                logItem("crm-entry-service"),
+                                logItem(
+                                        "crm-entry-service",
+                                        "Calling https://crm-support-service.runtime.svc.cluster.local"
+                                ),
+                                logItem(
+                                        "crm-entry-service",
+                                        "Calling https://crm-decision-service.runtime.svc.cluster.local"
+                                )
+                        )
+                ));
+        var catalog = new OperationalContextCatalog(
+                List.of(),
+                List.of(),
+                List.of(
+                        internalService("crm-entry", "crm-entry-service"),
+                        internalService("crm-support", "crm-support-service"),
+                        internalService("crm-decision", "crm-decision-service")
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                ""
+        );
+
+        var matches = matcher.match(catalog, OperationalContextIncidentSignals.from(context));
+
+        assertEquals(
+                List.of("crm-decision", "crm-entry", "crm-support"),
+                matches.systemMatches().stream()
+                        .map(match -> match.entry().id())
+                        .sorted()
+                        .toList()
+        );
+    }
+
     private AnalysisContext sampleContext() {
         return AnalysisContext.initialize("corr-123")
                 .withSection(new AnalysisEvidenceSection(
@@ -131,6 +229,32 @@ class OperationalContextEvidenceProviderTest {
 
     private AnalysisEvidenceAttribute attribute(String name, String value) {
         return new AnalysisEvidenceAttribute(name, value);
+    }
+
+    private AnalysisEvidenceItem logItem(String serviceName) {
+        return logItem(serviceName, null);
+    }
+
+    private AnalysisEvidenceItem logItem(String serviceName, String message) {
+        var attributes = new ArrayList<AnalysisEvidenceAttribute>();
+        attributes.add(attribute("serviceName", serviceName));
+        attributes.add(attribute("containerName", serviceName));
+        if (message != null) {
+            attributes.add(attribute("message", message));
+        }
+        return new AnalysisEvidenceItem(
+                "ERROR " + serviceName,
+                List.copyOf(attributes)
+        );
+    }
+
+    private OperationalContextDtos.OperationalContextSystem internalService(String id, String runtimeName) {
+        return OperationalContextDtos.system(Map.of(
+                "id", id,
+                "name", id,
+                "kind", "internal-service",
+                "aliases", List.of(runtimeName)
+        ));
     }
 
 }

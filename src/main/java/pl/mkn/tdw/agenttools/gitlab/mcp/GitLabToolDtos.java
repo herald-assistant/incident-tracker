@@ -436,34 +436,61 @@ public final class GitLabToolDtos {
     public record GitLabToolScope(
             String group,
             String branch,
-            String applicationName,
+            List<String> applicationNames,
+            boolean restrictedByApplicationScope,
             String runReference,
             String analysisRunId,
             String copilotSessionId,
             String toolCallId,
             String toolName
     ) {
+        public GitLabToolScope {
+            applicationNames = applicationNames != null ? List.copyOf(applicationNames) : List.of();
+        }
 
         public static GitLabToolScope fromResolvedScope(
                 String group,
                 String branch,
-                String applicationName,
+                List<String> applicationNames,
                 ToolContext toolContext
         ) {
             var context = toolContext != null && toolContext.getContext() != null
                     ? toolContext.getContext()
                     : Map.<String, Object>of();
             var analysisRunId = optional(context, ANALYSIS_RUN_ID);
+            var safeApplicationNames = applicationNames != null ? applicationNames : List.<String>of();
 
             return new GitLabToolScope(
                     group,
                     branch,
-                    applicationName,
+                    safeApplicationNames,
+                    false,
                     analysisRunId,
                     analysisRunId,
                     firstNonBlank(optional(context, ACTUAL_COPILOT_SESSION_ID), optional(context, COPILOT_SESSION_ID)),
                     optional(context, TOOL_CALL_ID),
                     optional(context, TOOL_NAME)
+            );
+        }
+
+        public static GitLabToolScope fromResolvedScope(
+                String group,
+                String branch,
+                List<String> applicationNames,
+                boolean restrictedByApplicationScope,
+                ToolContext toolContext
+        ) {
+            var base = fromResolvedScope(group, branch, applicationNames, toolContext);
+            return new GitLabToolScope(
+                    base.group(),
+                    base.branch(),
+                    base.applicationNames(),
+                    restrictedByApplicationScope,
+                    base.runReference(),
+                    base.analysisRunId(),
+                    base.copilotSessionId(),
+                    base.toolCallId(),
+                    base.toolName()
             );
         }
 

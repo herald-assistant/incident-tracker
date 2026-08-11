@@ -443,6 +443,23 @@ granice, model powinien wykonac osobne focused calls dla repozytoriow/prefixow,
 zamiast mieszac niezgodne prefixy w jednym zapytaniu. Po wyborze repozytorium
 model uzywa GitLab search/read tools do odkrywania faktycznego kodu.
 
+Wszystkie GitLab MCP tools uzywaja opcjonalnej listy `applicationNames`.
+Feature przekazuje w hidden tool context allowliste kanonicznych `system.id`.
+Brak `applicationNames` w wywolaniu oznacza wszystkie systemy dozwolone dla
+sesji. Jawnie podana lista wybiera systemy do uzycia w danym callu i moze
+rozszerzyc zakres poza domyslny evidence scope tylko wtedy, gdy kazdy podany
+CRM system istnieje w operational context i ma zdefiniowany `codeSearchScope`.
+Repozytoria oraz projekty sa nadal walidowane wobec aktywnej unii
+`codeSearchScope`; proba podania systemu bez scope'u albo projektu spoza tej
+unii jest odrzucana.
+
+Aktywny code-search scope jest unia scope'ow wszystkich wybranych systemow.
+Obejmuje scope targetujacy bezposrednio `system` oraz scope targetujacy jego
+referencjonowany `process`, `bounded-context` albo `integration`. Broad
+discovery moze przeszukiwac tylko repozytoria `primary` w tej unii;
+repozytoria wspierajace pozostaja dostepne dla focused reads po znanej klasie
+albo sciezce.
+
 ## Incident Analysis Usage
 
 W incident flow operational context jest enrichment stepem nad zebranym
@@ -459,6 +476,14 @@ Typowe uzycie:
 5. AI uzywa GitLab tools do `technicalAnalysis`, gdy trzeba znalezc konkretny
    kod.
 6. AI uzywa DB tools tylko zgodnie z feature policy i resolved environment.
+
+Ogolny `max-items-per-type` nie usuwa bezposrednio wykrytych systemow
+`internal-service`. Wszystkie neutralne CRM systemy rozpoznane przez
+service/container name, deployment signal albo nazwe z `matchSignals` sa
+zachowywane w evidence, tak aby feature mogl zbudowac kompletny domyslny scope
+GitLaba. AI moze jawnie poprosic o dodatkowy CRM system spoza domyslnego
+scope'u, ale tylko przez `applicationNames` przechodzace przez operational
+context i `codeSearchScope`.
 
 Operational context moze uzasadnic, gdzie szukac dalej. Nie jest samodzielnym
 dowodem root cause ani zamiennikiem deterministic evidence.

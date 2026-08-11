@@ -207,9 +207,12 @@ toola.
 
 Nie zmieniaj branch. Nie wymyslaj project names. Wyprowadzaj `projectName` i
 file paths tylko z evidence, operational context albo eksploracji repozytorium.
-Gdy tool dotyczy kodu konkretnej aplikacji/systemu i prompt albo operational
-context podaje nazwe aplikacji, przekaz `applicationName` jako dodatkowe
-zawężenie scope'u.
+Domyslnie pomin `applicationNames`, aby uzyc wszystkich systemow wykrytych dla
+sesji. Gdy tool dotyczy kodu tylko czesci tych systemow, przekaz
+`applicationNames` jako liste nazw. Mozesz tez podac dodatkowy system CRM
+spoza domyslnego evidence scope, jezeli najpierw wynika on z operational
+context/flow/integracji, istnieje jako `system` i ma zdefiniowany
+`codeSearchScope`. W `reason` nazwij, dlaczego rozszerzasz zakres.
 
 ## Semantyczny Code-Search Scope
 
