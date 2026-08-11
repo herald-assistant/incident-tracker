@@ -20,6 +20,7 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.Operati
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadSession;
 
 import java.util.List;
 import java.util.Map;
@@ -28,11 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextValidationTestCreator.create;
 
 class ConfigDriftViewerDeepPreflightServiceTest {
 
@@ -52,6 +56,8 @@ class ConfigDriftViewerDeepPreflightServiceTest {
         var json = new ObjectMapper().writeValueAsString(result);
         assertFalse(json.contains("secret-code-token"));
         assertFalse(json.contains("https://code-gitlab.invalid"));
+        verify(fixture.contextPort, times(1)).capture();
+        verify(fixture.contextPort, never()).loadContext(any());
     }
 
     @Test
@@ -83,7 +89,8 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 contextPort,
                 scopeResolver,
                 gitLabProperties(),
-                gitLabPort
+                gitLabPort,
+                create()
         );
 
         var result = service.check("runtime-config", "backend", null);
@@ -98,7 +105,9 @@ class ConfigDriftViewerDeepPreflightServiceTest {
         var properties = enabledProperties();
         var contextPort = mock(OperationalContextPort.class);
         var scopeResolver = mock(ConfigDriftViewerScopeResolver.class);
-        when(scopeResolver.resolve(anyString(), anyString()))
+        var emptySession = session(OperationalContextCatalog.empty());
+        when(contextPort.capture()).thenReturn(emptySession);
+        when(scopeResolver.resolve(anyString(), anyString(), any(OperationalContextCatalog.class)))
                 .thenThrow(ConfigDriftViewerScopeException.systemNotFound("unknown"))
                 .thenThrow(ConfigDriftViewerScopeException.systemNotInternalService("external"))
                 .thenThrow(ConfigDriftViewerScopeException.configurationDirectoryMissing("missing"))
@@ -108,7 +117,8 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 contextPort,
                 scopeResolver,
                 gitLabProperties(),
-                mock(GitLabRepositoryPort.class)
+                mock(GitLabRepositoryPort.class),
+                create()
         );
 
         assertEquals(
@@ -127,7 +137,6 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 "RUNTIME_CONFIGURATION_DIRECTORY_AMBIGUOUS",
                 service.check("runtime-config", "ambiguous", null).blockers().get(0).code()
         );
-        verifyNoInteractions(contextPort);
     }
 
     @Test
@@ -141,7 +150,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 .anyMatch(blocker -> blocker.code().equals("DEEP_CODE_SEARCH_SCOPE_MISSING")));
         verify(fixture.gitLabPort, never()).branchExists(anyString(), anyString(), anyString());
 
-        when(fixture.contextPort.loadContext(org.mockito.ArgumentMatchers.any()))
+        when(fixture.contextPort.capture())
                 .thenThrow(new IllegalStateException("unsafe upstream details"));
         var unavailable = fixture.service.check("runtime-config", "backend", null);
         assertTrue(unavailable.blockers().stream()
@@ -168,9 +177,14 @@ class ConfigDriftViewerDeepPreflightServiceTest {
     private static Fixture fixture(OperationalContextCatalog catalog) {
         var properties = enabledProperties();
         var contextPort = mock(OperationalContextPort.class);
-        when(contextPort.loadContext(org.mockito.ArgumentMatchers.any())).thenReturn(catalog);
+        var readSession = session(catalog);
+        when(contextPort.capture()).thenReturn(readSession);
         var scopeResolver = mock(ConfigDriftViewerScopeResolver.class);
-        when(scopeResolver.resolve("runtime-config", "backend")).thenReturn(new ConfigDriftViewerScope(
+        when(scopeResolver.resolve(
+                org.mockito.ArgumentMatchers.eq("runtime-config"),
+                org.mockito.ArgumentMatchers.eq("backend"),
+                any(OperationalContextCatalog.class)
+        )).thenReturn(new ConfigDriftViewerScope(
                 "runtime-config",
                 "hidden-config-connection",
                 "hidden/config-project",
@@ -185,11 +199,18 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                         contextPort,
                         scopeResolver,
                         gitLabProperties(),
-                        gitLabPort
+                        gitLabPort,
+                        create()
                 ),
                 contextPort,
                 gitLabPort
         );
+    }
+
+    private static OperationalContextReadSession session(OperationalContextCatalog catalog) {
+        var session = mock(OperationalContextReadSession.class);
+        when(session.query(any())).thenReturn(catalog);
+        return session;
     }
 
     private static OperationalContextProperties enabledProperties() {

@@ -16,11 +16,11 @@ import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModelBuilder;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadModelValidator;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -41,10 +41,9 @@ public class ConfigDriftViewerDeepPreflightService {
     private final ConfigDriftViewerScopeResolver scopeResolver;
     private final GitLabProperties gitLabProperties;
     private final GitLabRepositoryPort gitLabRepositoryPort;
+    private final OperationalContextCatalogValidationService validationService;
     private final OperationalContextCodeSearchReadModelBuilder codeSearchBuilder =
             new OperationalContextCodeSearchReadModelBuilder();
-    private final OperationalContextReadModelValidator catalogValidator =
-            new OperationalContextReadModelValidator();
 
     public ConfigDriftViewerDeepPreflight check(
             String repositoryId,
@@ -70,9 +69,29 @@ public class ConfigDriftViewerDeepPreflightService {
             return result(repositoryId, systemId, null, List.of(), blockers, visibilityLimits);
         }
 
+        OperationalContextCatalog catalog;
+        try {
+            var session = operationalContextPort.capture();
+            catalog = session.query(OperationalContextQuery.all());
+        } catch (RuntimeException exception) {
+            addBlocker(
+                    blockers,
+                    "OPERATIONAL_CONTEXT_UNAVAILABLE",
+                    "Operational Context could not be loaded."
+            );
+            return result(
+                    repositoryId,
+                    systemId,
+                    null,
+                    List.of(),
+                    blockers,
+                    visibilityLimits
+            );
+        }
+
         ConfigDriftViewerScope configurationScope;
         try {
-            configurationScope = scopeResolver.resolve(repositoryId, systemId);
+            configurationScope = scopeResolver.resolve(repositoryId, systemId, catalog);
         } catch (ConfigDriftViewerScopeException exception) {
             addBlocker(blockers, exception.code(), exception.getMessage());
             return result(repositoryId, systemId, null, List.of(), blockers, visibilityLimits);
@@ -85,26 +104,7 @@ public class ConfigDriftViewerDeepPreflightService {
             return result(repositoryId, systemId, null, List.of(), blockers, visibilityLimits);
         }
 
-        OperationalContextCatalog catalog;
-        try {
-            catalog = operationalContextPort.loadContext(OperationalContextQuery.all());
-        } catch (RuntimeException exception) {
-            addBlocker(
-                    blockers,
-                    "OPERATIONAL_CONTEXT_UNAVAILABLE",
-                    "Operational Context could not be loaded."
-            );
-            return result(
-                    repositoryId,
-                    systemId,
-                    configurationScope,
-                    List.of(),
-                    blockers,
-                    visibilityLimits
-            );
-        }
-
-        for (var finding : catalogValidator.validate(catalog)) {
+        for (var finding : validationService.validate(catalog).findings()) {
             if ("error".equalsIgnoreCase(finding.severity())) {
                 addBlocker(
                         blockers,

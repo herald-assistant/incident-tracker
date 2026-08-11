@@ -1,8 +1,9 @@
 import { provideLocationMocks } from '@angular/common/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import {
   ExplainableAggregateDto,
@@ -15,6 +16,7 @@ import {
   ValidationFindingDto
 } from '../../models/operational-context.models';
 import { OperationalContextApiService } from '../../services/operational-context-api.service';
+import { OperationalContextMaintenanceFacade } from '../../services/operational-context-maintenance.facade';
 import { ContextHomePageComponent } from './context-home-page';
 
 describe('ContextHomePageComponent', () => {
@@ -33,7 +35,7 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain(
-      'Operational context catalogue is currently empty or incomplete.'
+      'Operational context catalogue is empty or incomplete.'
     );
   });
 
@@ -58,6 +60,40 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).not.toContain('App Core');
+  });
+
+  it('shows Add for both new structured CRM catalogue types only when supported', async () => {
+    const { fixture, maintenance } = await createComponent(readySummary(), [systemRow()]);
+    maintenance.writable.set(true);
+    maintenance.supports.mockImplementation((type: string) =>
+      ['glossary-term', 'handoff-rule'].includes(type)
+    );
+    fixture.componentInstance.selectTab('glossary');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Add glossary-term');
+    fixture.componentInstance.addEntity();
+    expect(maintenance.openCreate).toHaveBeenCalledWith('glossary-term');
+
+    fixture.componentInstance.selectTab('handoff');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Add handoff-rule');
+    fixture.componentInstance.addEntity();
+    expect(maintenance.openCreate).toHaveBeenCalledWith('handoff-rule');
+
+    fixture.componentInstance.selectTab('systems');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Add system');
+  });
+
+  it('builds anonymized CRM reference options for structured maintenance controls', async () => {
+    const crmSystem = { ...systemRow(), id: 'crm-contact-core', name: 'CRM Contact Core' };
+    const { fixture } = await createComponent(readySummary(), [crmSystem]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.referenceOptions()['system']).toEqual([
+      { id: 'crm-contact-core', label: 'CRM Contact Core' }
+    ]);
   });
 
   it('should open entity drawer with details', async () => {
@@ -176,7 +212,7 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Who owns this process?');
-    expect(fixture.nativeElement.textContent).not.toContain('Should this context be renamed?');
+    expect(fixture.nativeElement.textContent).not.toContain('Should this CRM context be renamed?');
   });
 
   it('should expose maintenance targets and filters for validation findings', async () => {
@@ -244,7 +280,7 @@ describe('ContextHomePageComponent', () => {
   it('should expose maintenance filters for open questions', async () => {
     const { fixture } = await createComponent(readySummary(), [], [
       openQuestion('question-warning', 'warning', 'Who owns this process?', 'systems.yml', 'system'),
-      openQuestion('question-info', 'info', 'Should this context be renamed?', 'glossary.md', 'glossary-term')
+      openQuestion('question-info', 'info', 'Should this CRM context be renamed?', 'glossary.yml', 'glossary-term')
     ]);
     const component = fixture.componentInstance;
 
@@ -255,7 +291,7 @@ describe('ContextHomePageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('systems.yml');
     expect(fixture.nativeElement.textContent).toContain('system/app-core');
-    expect(fixture.nativeElement.textContent).toContain('glossary.md');
+    expect(fixture.nativeElement.textContent).toContain('glossary.yml');
     expect(fixture.nativeElement.querySelector('.maintenance-card--question')).not.toBeNull();
 
     component.questionSourceFileControl.setValue('systems.yml');
@@ -268,7 +304,7 @@ describe('ContextHomePageComponent', () => {
 
   it('should render open question maintenance target without null entity id noise', async () => {
     const { fixture } = await createComponent(readySummary(), [], [
-      openQuestion('question-without-entity-id', 'info', 'Clarify glossary term?', 'glossary.md', 'glossary-term', null)
+      openQuestion('question-without-entity-id', 'info', 'Clarify CRM glossary term?', 'glossary.yml', 'glossary-term', null)
     ]);
     const component = fixture.componentInstance;
 
@@ -358,6 +394,30 @@ async function createComponent(
       }
     )
   };
+  const maintenance = {
+    capabilities: signal(null),
+    capabilitiesLoading: signal(false),
+    capabilitiesError: signal(''),
+    writable: signal(false),
+    editor: signal(null),
+    busy: signal(false),
+    error: signal(''),
+    fieldErrors: signal([]),
+    deleteImpact: signal(null),
+    deleteLoading: signal(false),
+    deleteError: signal(''),
+    saved$: new Subject(),
+    deleted$: new Subject(),
+    supports: vi.fn((_type: string) => false),
+    loadCapabilities: vi.fn(),
+    openCreate: vi.fn(),
+    openEdit: vi.fn(),
+    closeEditor: vi.fn(),
+    save: vi.fn(),
+    requestDelete: vi.fn(),
+    cancelDelete: vi.fn(),
+    confirmDelete: vi.fn()
+  };
 
   await TestBed.configureTestingModule({
     imports: [ContextHomePageComponent],
@@ -365,13 +425,15 @@ async function createComponent(
       provideAnimationsAsync('noop'),
       provideLocationMocks(),
       provideRouter([]),
-      { provide: OperationalContextApiService, useValue: api }
+      { provide: OperationalContextApiService, useValue: api },
+      { provide: OperationalContextMaintenanceFacade, useValue: maintenance }
     ]
   }).compileComponents();
 
   return {
     fixture: TestBed.createComponent(ContextHomePageComponent),
-    api
+    api,
+    maintenance
   };
 }
 

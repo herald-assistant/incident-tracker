@@ -79,6 +79,10 @@ tdw-data/
   index.json
   tokens.json
   copilot/
+  operational-context/
+    systems.yml
+    processes.yml
+    ...
   runs/
     <analysisId>/
       run.json
@@ -96,6 +100,12 @@ exportu i nie powinien byc udostepniany innym osobom.
 
 `copilot/` przechowuje lokalny stan GitHub Copilot SDK/CLI, w tym material
 potrzebny do kontynuacji tej samej sesji.
+
+`operational-context/` jest tworzony przy pierwszym odczycie katalogu przez
+skopiowanie bundled seeda. Od tej chwili UI, tools i feature'y korzystaja
+wylacznie z tej lokalnej, niewersjonowanej kopii. Aktualizacja JAR-a jej nie
+nadpisuje. Aplikacja nie tworzy historii ani rollbacku Operational Context;
+backup polega na skopiowaniu tego katalogu albo calego `tdw-data`.
 
 ## Local Workspace A Export
 

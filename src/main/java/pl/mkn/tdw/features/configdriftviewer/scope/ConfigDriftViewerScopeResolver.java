@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.configdriftviewer.source.ConfigDriftViewerRepositoryCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
@@ -28,8 +29,16 @@ public class ConfigDriftViewerScopeResolver {
     private final OperationalContextPort operationalContextPort;
 
     public ConfigDriftViewerScope resolve(String repositoryId, String systemId) {
+        return resolve(repositoryId, systemId, catalog());
+    }
+
+    public ConfigDriftViewerScope resolve(
+            String repositoryId,
+            String systemId,
+            OperationalContextCatalog catalog
+    ) {
         var repository = repositoryCatalog.require(repositoryId);
-        var system = systems().stream()
+        var system = catalog.systems().stream()
                 .filter(candidate -> candidate.id().equals(systemId))
                 .findFirst()
                 .orElseThrow(() -> ConfigDriftViewerScopeException.systemNotFound(systemId));
@@ -74,11 +83,15 @@ public class ConfigDriftViewerScopeResolver {
     }
 
     private List<OperationalContextSystem> systems() {
-        return operationalContextPort.loadContext(new OperationalContextQuery(
+        return catalog().systems();
+    }
+
+    private OperationalContextCatalog catalog() {
+        return operationalContextPort.capture().query(new OperationalContextQuery(
                 Set.of(OperationalContextEntryType.SYSTEM),
                 List.of(),
                 false
-        )).systems();
+        ));
     }
 
     private ConfigDriftViewerSystemOption toAvailableOption(OperationalContextSystem system) {

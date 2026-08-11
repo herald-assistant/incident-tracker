@@ -4,7 +4,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -204,6 +203,10 @@ public final class OperationalContextDtos {
             values.addAll(matchSignals.allValues());
             return copyTextList(values);
         }
+
+        public OperationalContextSystemRuntime runtime() {
+            return systemRuntime(payload.get("runtime"));
+        }
     }
 
     public record OperationalContextRepository(
@@ -242,7 +245,16 @@ public final class OperationalContextDtos {
             values.add(git.project());
             values.add(git.projectPath());
             values.addAll(git.aliases());
+            values.addAll(llmToolHints().answerWhenUserMentions());
             return copyTextList(values);
+        }
+
+        public List<OperationalContextRepositoryEvidence> evidence() {
+            return repositoryEvidence(payload.get("evidence"));
+        }
+
+        public OperationalContextRepositoryToolHints llmToolHints() {
+            return repositoryToolHints(payload.get("llmToolHints"));
         }
     }
 
@@ -289,7 +301,11 @@ public final class OperationalContextDtos {
             values.addAll(participants.externalSystems());
             values.addAll(processBoundary.endsWhen());
             values.addAll(outcomes.successArtifacts());
-            values.addAll(failureModes);
+            values.addAll(textLeaves(payload.get("processBoundary")));
+            values.addAll(textLeaves(payload.get("lifecycle")));
+            values.addAll(textLeaves(payload.get("completionSignals")));
+            values.addAll(textLeaves(payload.get("failureModes")));
+            values.addAll(textLeaves(payload.get("dataAndArtifacts")));
             steps.forEach(step -> values.addAll(step.genericSignals()));
             return copyTextList(values);
         }
@@ -330,7 +346,7 @@ public final class OperationalContextDtos {
         @Override
         public List<String> genericSignals() {
             var values = new LinkedHashSet<String>(OperationalContextEntry.super.genericSignals());
-            values.addAll(failureModes);
+            values.addAll(textLeaves(payload.get("failureModes")));
             return copyTextList(values);
         }
     }
@@ -364,11 +380,40 @@ public final class OperationalContextDtos {
         @Override
         public List<String> genericSignals() {
             var values = new LinkedHashSet<String>(OperationalContextEntry.super.genericSignals());
+            values.addAll(localLanguageSummary());
+            values.addAll(scope().allValues());
+            values.addAll(semanticBoundary().allValues());
+            values.addAll(llmToolHints().answerWhenUserMentions());
+            values.addAll(llmToolHints().usefulSearchKeywords());
             relations.forEach(relation -> {
                 values.add(relation.target());
                 values.addAll(relation.via());
             });
             return copyTextList(values);
+        }
+
+        public String contextType() {
+            return value("type");
+        }
+
+        public List<String> localLanguageSummary() {
+            return textList(payload, "localLanguageSummary");
+        }
+
+        public OperationalContextBoundedContextScope scope() {
+            return boundedContextScope(payload.get("scope"));
+        }
+
+        public OperationalContextBoundedContextSemanticBoundary semanticBoundary() {
+            return boundedContextSemanticBoundary(payload.get("semanticBoundary"));
+        }
+
+        public List<OperationalContextBoundedContextEvidence> evidence() {
+            return boundedContextEvidence(payload.get("evidence"));
+        }
+
+        public OperationalContextBoundedContextToolHints llmToolHints() {
+            return boundedContextToolHints(payload.get("llmToolHints"));
         }
     }
 
@@ -469,6 +514,104 @@ public final class OperationalContextDtos {
 
         public static OperationalContextSystemParticipants empty() {
             return new OperationalContextSystemParticipants(null);
+        }
+    }
+
+    public record OperationalContextSystemRuntime(String configurationDirectory) {
+
+        public static OperationalContextSystemRuntime empty() {
+            return new OperationalContextSystemRuntime(null);
+        }
+    }
+
+    public record OperationalContextRepositoryEvidence(
+            String sourceRef,
+            String evidenceType,
+            String note
+    ) {
+    }
+
+    public record OperationalContextRepositoryToolHints(
+            List<String> answerWhenUserMentions,
+            List<String> disambiguateFrom
+    ) {
+
+        public OperationalContextRepositoryToolHints {
+            answerWhenUserMentions = copyList(answerWhenUserMentions);
+            disambiguateFrom = copyList(disambiguateFrom);
+        }
+
+        public static OperationalContextRepositoryToolHints empty() {
+            return new OperationalContextRepositoryToolHints(List.of(), List.of());
+        }
+    }
+
+    public record OperationalContextBoundedContextScope(
+            List<String> includes,
+            List<String> excludes,
+            List<String> businessCapabilities,
+            List<String> coreEntities,
+            List<String> keyDecisions
+    ) {
+
+        public OperationalContextBoundedContextScope {
+            includes = copyList(includes);
+            excludes = copyList(excludes);
+            businessCapabilities = copyList(businessCapabilities);
+            coreEntities = copyList(coreEntities);
+            keyDecisions = copyList(keyDecisions);
+        }
+
+        public List<String> allValues() {
+            return join(includes, excludes, businessCapabilities, coreEntities, keyDecisions);
+        }
+    }
+
+    public record OperationalContextBoundedContextSemanticBoundary(
+            List<String> coreConcepts,
+            List<String> localConcepts,
+            List<String> canonicalEntities,
+            List<String> commands,
+            List<String> events,
+            List<String> invariants,
+            List<String> ownsLanguage,
+            List<String> doesNotOwn
+    ) {
+
+        public OperationalContextBoundedContextSemanticBoundary {
+            coreConcepts = copyList(coreConcepts);
+            localConcepts = copyList(localConcepts);
+            canonicalEntities = copyList(canonicalEntities);
+            commands = copyList(commands);
+            events = copyList(events);
+            invariants = copyList(invariants);
+            ownsLanguage = copyList(ownsLanguage);
+            doesNotOwn = copyList(doesNotOwn);
+        }
+
+        public List<String> allValues() {
+            return join(coreConcepts, localConcepts, canonicalEntities, commands, events, invariants, ownsLanguage, doesNotOwn);
+        }
+    }
+
+    public record OperationalContextBoundedContextEvidence(
+            String sourceRef,
+            String evidenceType,
+            String note
+    ) {
+    }
+
+    public record OperationalContextBoundedContextToolHints(
+            List<String> answerWhenUserMentions,
+            List<String> disambiguateFrom,
+            List<String> usefulSearchKeywords,
+            String explanationStyle
+    ) {
+
+        public OperationalContextBoundedContextToolHints {
+            answerWhenUserMentions = copyList(answerWhenUserMentions);
+            disambiguateFrom = copyList(disambiguateFrom);
+            usefulSearchKeywords = copyList(usefulSearchKeywords);
         }
     }
 
@@ -1108,6 +1251,53 @@ public final class OperationalContextDtos {
         );
     }
 
+    public static OperationalContextGlossaryTerm glossaryTerm(Map<String, Object> source) {
+        var canonicalReferences = new ArrayList<String>();
+        canonicalReferences.addAll(textList(source, "canonicalReferences"));
+        canonicalReferences.addAll(textList(source, "relatedTerms"));
+        var notes = new ArrayList<String>();
+        addLabelled(notes, "Use For", textList(source, "useFor"));
+        addLabelled(notes, "Lifecycle Status", textList(source, "lifecycleStatus"));
+        addLabelled(notes, "Llm Tool Hints", textList(source, "llmToolHints"));
+        addLabelled(notes, "Responsibility Hints", textList(source, "responsibilityHints"));
+        notes.addAll(textList(source, "notes"));
+        return new OperationalContextGlossaryTerm(
+                text(source, "id"),
+                text(source, "term"),
+                text(source, "category"),
+                text(source, "definition"),
+                textList(source, "localMeaningAndBoundaries"),
+                textList(source, "doNotConfuseWith"),
+                matchSignals(source.get("matchSignals")).allValues(),
+                List.copyOf(new java.util.LinkedHashSet<>(canonicalReferences)),
+                textList(source, "aliases"),
+                List.copyOf(new java.util.LinkedHashSet<>(notes))
+        );
+    }
+
+    public static OperationalContextHandoffRule handoffRule(Map<String, Object> source) {
+        var notes = new ArrayList<String>();
+        notes.addAll(textList(source, "notes"));
+        notes.addAll(textList(source, "llmToolHints"));
+        notes.addAll(textList(source, "limitations"));
+        return new OperationalContextHandoffRule(
+                text(source, "id"),
+                text(source, "title"),
+                textList(source, "useWhen"),
+                textList(source, "doNotUseWhen"),
+                textList(source, "requiredEvidence"),
+                textList(source, "expectedFirstAction"),
+                references(source.get("references")),
+                List.copyOf(new java.util.LinkedHashSet<>(notes))
+        );
+    }
+
+    private static void addLabelled(List<String> target, String label, List<String> values) {
+        for (var value : values) {
+            target.add(label + ": " + value);
+        }
+    }
+
     private static OperationalContextReferences references(Object value) {
         var source = map(value);
         return new OperationalContextReferences(
@@ -1138,6 +1328,80 @@ public final class OperationalContextDtos {
         var source = map(value);
         return new OperationalContextSystemParticipants(
                 text(source, "externalOwner")
+        );
+    }
+
+    private static OperationalContextSystemRuntime systemRuntime(Object value) {
+        var source = map(value);
+        if (source.isEmpty()) {
+            return OperationalContextSystemRuntime.empty();
+        }
+        return new OperationalContextSystemRuntime(text(source, "configurationDirectory"));
+    }
+
+    private static List<OperationalContextRepositoryEvidence> repositoryEvidence(Object value) {
+        return mapList(value).stream()
+                .map(source -> new OperationalContextRepositoryEvidence(
+                        text(source, "sourceRef"),
+                        text(source, "evidenceType"),
+                        text(source, "note")
+                ))
+                .toList();
+    }
+
+    private static OperationalContextRepositoryToolHints repositoryToolHints(Object value) {
+        var source = map(value);
+        if (source.isEmpty()) {
+            return OperationalContextRepositoryToolHints.empty();
+        }
+        return new OperationalContextRepositoryToolHints(
+                textList(source, "answerWhenUserMentions"),
+                textList(source, "disambiguateFrom")
+        );
+    }
+
+    private static OperationalContextBoundedContextScope boundedContextScope(Object value) {
+        var source = map(value);
+        return new OperationalContextBoundedContextScope(
+                textList(source, "includes"),
+                textList(source, "excludes"),
+                textList(source, "businessCapabilities"),
+                textList(source, "coreEntities"),
+                textList(source, "keyDecisions")
+        );
+    }
+
+    private static OperationalContextBoundedContextSemanticBoundary boundedContextSemanticBoundary(Object value) {
+        var source = map(value);
+        return new OperationalContextBoundedContextSemanticBoundary(
+                textList(source, "coreConcepts"),
+                textList(source, "localConcepts"),
+                textList(source, "canonicalEntities"),
+                textList(source, "commands"),
+                textList(source, "events"),
+                textList(source, "invariants"),
+                textList(source, "ownsLanguage"),
+                textList(source, "doesNotOwn")
+        );
+    }
+
+    private static List<OperationalContextBoundedContextEvidence> boundedContextEvidence(Object value) {
+        return mapList(value).stream()
+                .map(source -> new OperationalContextBoundedContextEvidence(
+                        text(source, "sourceRef"),
+                        text(source, "evidenceType"),
+                        text(source, "note")
+                ))
+                .toList();
+    }
+
+    private static OperationalContextBoundedContextToolHints boundedContextToolHints(Object value) {
+        var source = map(value);
+        return new OperationalContextBoundedContextToolHints(
+                textList(source, "answerWhenUserMentions"),
+                textList(source, "disambiguateFrom"),
+                textList(source, "usefulSearchKeywords"),
+                text(source, "explanationStyle")
         );
     }
 
@@ -1402,14 +1666,43 @@ public final class OperationalContextDtos {
     }
 
     private static Map<String, Object> copyMap(Map<String, Object> source) {
-        if (source == null || source.isEmpty()) {
-            return Map.of();
+        return OperationalContextImmutableValues.copyMap(source);
+    }
+
+    private static List<String> textLeaves(Object value) {
+        var result = new LinkedHashSet<String>();
+        collectTextLeaves(value, result);
+        return copyTextList(result);
+    }
+
+    private static void collectTextLeaves(Object value, Collection<String> result) {
+        if (value instanceof Map<?, ?> map) {
+            map.values().forEach(item -> collectTextLeaves(item, result));
+            return;
         }
-        return Collections.unmodifiableMap(new LinkedHashMap<>(source));
+        if (value instanceof Iterable<?> iterable) {
+            iterable.forEach(item -> collectTextLeaves(item, result));
+            return;
+        }
+        var rendered = text(value);
+        if (StringUtils.hasText(rendered)) {
+            result.add(rendered);
+        }
     }
 
     private static <T> List<T> copyList(List<T> values) {
         return values != null ? List.copyOf(values) : List.of();
+    }
+
+    @SafeVarargs
+    private static List<String> join(List<String>... groups) {
+        var values = new LinkedHashSet<String>();
+        for (var group : groups) {
+            if (group != null) {
+                values.addAll(group);
+            }
+        }
+        return copyTextList(values);
     }
 
     private static String firstNonBlank(String... values) {

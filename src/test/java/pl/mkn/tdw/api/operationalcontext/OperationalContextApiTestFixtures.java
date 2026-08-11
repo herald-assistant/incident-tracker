@@ -65,6 +65,8 @@ final class OperationalContextApiTestFixtures {
                                 "name", "CRM Consent Service",
                                 "kind", "internal-application",
                                 "purpose", "Owns customer consent capture decisions.",
+                                "participants", map("externalOwner", "CRM managed platform provider"),
+                                "runtime", map("configurationDirectory", "crm/consent-service"),
                                 "aliases", List.of("consents"),
                                 "references", map(
                                         "repositories", List.of("crm-consent-repo"),
@@ -117,6 +119,15 @@ final class OperationalContextApiTestFixtures {
                                 "processes", List.of("customer-consent-capture-process"),
                                 "boundedContexts", List.of("customer-consent-context"),
                                 "teams", List.of("team-a")
+                        ),
+                        "evidence", List.of(map(
+                                "sourceRef", "crm/consent-service/pom.xml",
+                                "evidenceType", "build-definition",
+                                "note", "Anonymized CRM consent module."
+                        )),
+                        "llmToolHints", map(
+                                "answerWhenUserMentions", List.of("CRM consent validation"),
+                                "disambiguateFrom", List.of("CRM authentication account service")
                         )
                 )),
                 List.of(
@@ -161,6 +172,34 @@ final class OperationalContextApiTestFixtures {
                         "id", "customer-consent-context",
                         "name", "Customer Consent Context",
                         "summary", "Bounded context for customer consent decisions.",
+                        "type", "core-domain",
+                        "localLanguageSummary", List.of("In CRM, consent means a recorded contact preference."),
+                        "scope", map(
+                                "includes", List.of("CRM contact consent decisions"),
+                                "excludes", List.of("Authentication credential lifecycle"),
+                                "businessCapabilities", List.of("CRM Consent Management"),
+                                "coreEntities", List.of("ConsentPreference"),
+                                "keyDecisions", List.of("Whether anonymized CRM consent can be recorded")
+                        ),
+                        "semanticBoundary", map(
+                                "coreConcepts", List.of("CRM contact consent"),
+                                "canonicalEntities", List.of("ConsentPreference"),
+                                "commands", List.of("RecordConsentPreference"),
+                                "events", List.of("ConsentPreferenceRecorded"),
+                                "invariants", List.of("One active CRM consent preference per channel"),
+                                "ownsLanguage", List.of("contact consent"),
+                                "doesNotOwn", List.of("authentication account")
+                        ),
+                        "evidence", List.of(map(
+                                "sourceRef", "Anonymized CRM consent glossary",
+                                "evidenceType", "domain-documentation"
+                        )),
+                        "llmToolHints", map(
+                                "answerWhenUserMentions", List.of("CRM contact consent"),
+                                "disambiguateFrom", List.of("Authentication account consent"),
+                                "usefulSearchKeywords", List.of("ConsentPreference"),
+                                "explanationStyle", "Explain as the CRM consent boundary."
+                        ),
                         "references", map(
                                 "systems", List.of("crm-consent-service"),
                                 "repositories", List.of("crm-consent-repo"),

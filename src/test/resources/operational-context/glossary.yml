@@ -1,0 +1,18 @@
+schemaVersion: 1
+catalogKind: operational-context-glossary
+terms:
+  - id: remote-api-error
+    term: Remote API Error
+    category: integration-term
+    definition: Error returned by a synchronous HTTP integration.
+    matchSignals:
+      exact:
+        keyword:
+          - RemoteApiError
+          - api.notifications.local
+    canonicalReferences:
+      - crm-customer-to-notification-sync
+gaps:
+  - id: confirm-remote-api-error-taxonomy
+    type: human-confirmation-required
+    summary: Confirm whether remote API error terminology needs CRM-specific subtypes.

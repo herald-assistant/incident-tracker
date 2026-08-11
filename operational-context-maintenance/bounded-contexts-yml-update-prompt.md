@@ -1,5 +1,8 @@
 # bounded-contexts.yml update prompt
 
+Field formats, constrained values and runtime/AI effects are defined in
+[`operational-context-field-guidance.md`](operational-context-field-guidance.md).
+
 ## Purpose
 
 Update `bounded-contexts.yml` as the semantic boundary catalog. A bounded context
@@ -31,63 +34,113 @@ fields.
 
 ```yaml
 boundedContexts:
-  - id: customer-requests
-    name: Customer Requests
-    shortName: Requests
+  - id: crm-contact-preferences
+    name: CRM Contact Preferences
+    shortName: Contact Preferences
+    type: core-domain
     lifecycleStatus: active
-    summary: Context for request intake, validation, and user-facing request status.
-    purpose: Separates customer request language from downstream case handling language.
+    summary: Maintains channel preferences for anonymized CRM contacts.
+    purpose: Separates contact preference language from CRM campaign audience language.
     aliases:
-      - request intake
-      - customer request
+      - CRM channel preference
     useFor:
-      - Explain user-facing request concepts to analysts and testers.
-      - Disambiguate request intake from case lifecycle handling.
-      - Resolve domain ownership before falling back to system ownership.
+      - Explain how an anonymized CRM contact preference is interpreted.
+      - Disambiguate contact preferences from CRM campaign selection.
+    localLanguageSummary:
+      - A preferred channel is the channel enabled for an anonymized CRM contact.
+    scope:
+      includes:
+        - Validate and maintain CRM contact preferences.
+      excludes:
+        - Manage authentication credentials.
+      businessCapabilities:
+        - CRM contact preference management
+      coreEntities:
+        - ContactPreference
+      keyDecisions:
+        - Whether a requested CRM channel can be enabled.
+    semanticBoundary:
+      coreConcepts:
+        - CRM contact preference
+      localConcepts:
+        - preferred channel
+      canonicalEntities:
+        - ContactPreference
+      commands:
+        - Change CRM contact preference
+      events:
+        - CRM contact preference changed
+      invariants:
+        - An enabled CRM channel must be supported for the anonymized contact.
+      ownsLanguage:
+        - contact preference
+      doesNotOwn:
+        - authentication credential
     ownership:
       ownerTeamIds:
-        - customer-experience-team
-      ownerLabel: ""
+        - crm-domain-team
       ownershipStatus: explicit
       confidence: high
       source: bounded-contexts.yml
       notes:
-        - Product owner confirmed for local language and business behavior.
+        - CRM domain owner confirmed the local language and boundary.
     references:
       systems:
-        - customer-portal
+        - crm-contact-core
       processes:
-        - customer-request-handling
+        - crm-contact-preference-management
       integrations:
-        - portal-to-case-management
+        - crm-contact-to-profile-store
       terms:
-        - customer-request
+        - crm-contact-preference
       teams:
-        - customer-experience-team
+        - crm-domain-team
       handoffRules:
-        - customer-request-boundary
+        - crm-contact-preference-boundary
     matchSignals:
       exact:
         terms:
-          - customer request
+          - CRM contact preference
       strong:
         aliases:
-          - request intake
+          - preferred channel
       weak:
         phrases:
-          - portal request status
+          - CRM channel choice
     relations:
       - type: hands-off-to
         targetType: bounded-context
-        target: case-lifecycle
+        target: crm-engagement
         via:
-          - portal-to-case-management
-        evidence: accepted request becomes a case for handling
+          - crm-contact-to-profile-store
+        evidence: confirmed contact preferences become input to CRM engagement decisions
+    evidence:
+      - sourceRef: crm-domain-notes.md
+        evidenceType: domain-note
+        note: Defines the CRM contact preference boundary without customer data.
+    llmToolHints:
+      answerWhenUserMentions:
+        - CRM contact preference
+      disambiguateFrom:
+        - CRM campaign audience
+      usefulSearchKeywords:
+        - contact preference changed
+      explanationStyle: Explain the CRM boundary in business language and state visibility limits.
 ```
 
 ## Update rules
 
 - Capture local language, semantic boundaries, ownership and relations.
+- Maintain `localLanguageSummary`, `scope`, `semanticBoundary`, `evidence` and
+  `llmToolHints` through the guided UI fields. No supported bounded-context
+  field requires raw JSON.
+- A legacy scalar `localLanguageSummary` remains readable and is normalized to
+  a list only after it is edited.
+- Treat `scope` and `semanticBoundary` as semantic descriptions, never as an
+  inventory of Java classes, tables, endpoints or executable workflow rules.
+- Treat `evidence` as provenance only. It does not fetch a source or prove a
+  diagnosis. `llmToolHints` guides discovery and explanation but never grants
+  access or ownership and cannot override evidence or visibility limits.
 - Keep ownership at bounded-context level only when it describes durable domain
   accountability.
 - Use `references.terms` for glossary entries that define the local language.
@@ -108,3 +161,5 @@ boundedContexts:
   code-search scope when code navigation is needed, with an optional
   bounded-context scope only as a semantic slice for attribution.
 - It does not duplicate code details that tools can discover.
+- Every guided field explains what to enter, its runtime/AI effect and accepted
+  format, using only strongly anonymized CRM examples where an example helps.

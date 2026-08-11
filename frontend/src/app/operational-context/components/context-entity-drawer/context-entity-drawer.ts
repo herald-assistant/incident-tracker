@@ -32,6 +32,9 @@ export class ContextEntityDrawerComponent {
   readonly aiApiPreviewProfile = input<OperationalContextReadModelProfile>('default');
   readonly aiApiPreviewProfileChange = output<OperationalContextReadModelProfile>();
   readonly closeDrawer = output<void>();
+  readonly writable = input(false);
+  readonly editEntity = output<void>();
+  readonly deleteEntity = output<void>();
   readonly copiedEntity = signal(false);
 
   protected fieldEntries(fields: Record<string, unknown>): DrawerField[] {

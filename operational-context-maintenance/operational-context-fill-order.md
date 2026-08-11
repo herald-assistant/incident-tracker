@@ -1,5 +1,9 @@
 # Operational context fill order
 
+Use [`operational-context-field-guidance.md`](operational-context-field-guidance.md)
+for the accepted field formats, value conventions and the runtime/AI effect
+shown by maintenance UI tooltips.
+
 ## Goal
 
 Use this order when creating or updating operational context. The catalog should
@@ -29,7 +33,7 @@ bounded contexts. If a concrete team is not cataloged, the resolver may expose
 an inferred label such as "owner of system Salesforce" or "owner of domain
 customer".
 
-Generated YAML/Markdown should follow the current shapes in the file-specific
+Generated YAML should follow the current shapes in the file-specific
 prompts. If a fact does not fit a shape, link the right catalog entity or record
 an open question instead of inventing extra ownership or routing fields.
 
@@ -44,8 +48,8 @@ an open question instead of inventing extra ownership or routing fields.
 | Business or operational process path | `processes.yml` |
 | System-to-system or partner boundary relationship | `integrations.yml` |
 | Team identifiers, labels and collaboration clues | `teams.yml` |
-| Business terms and disambiguation | `glossary.md` |
-| Handoff situation, evidence needs and first actions | `handoff-rules.md` |
+| Business terms and disambiguation | `glossary.yml` |
+| Handoff situation, evidence needs and first actions | `handoff-rules.yml` |
 | Catalog rules, quality notes and current open questions | `operational-context-index.md` |
 
 ## Recommended order
@@ -81,7 +85,7 @@ through exactly one system-targeted entry in `code-search-scopes.yml`.
 
 ### 3. Add bounded context and glossary language
 
-Update `bounded-contexts.yml` and `glossary.md` when the main risk is language
+Update `bounded-contexts.yml` and `glossary.yml` when the main risk is language
 ambiguity or domain ownership. This is especially useful for business analysts,
 testers and requirements work.
 
@@ -148,7 +152,7 @@ Keep detailed source-specific facts and owner assignments outside this file.
 
 ### 7. Add handoff rules for evidence, not routing
 
-Update `handoff-rules.md` when an analyst needs a repeatable way to decide
+Update `handoff-rules.yml` when an analyst needs a repeatable way to decide
 whether a boundary handoff is needed and what evidence must be collected.
 
 Minimum useful entry:

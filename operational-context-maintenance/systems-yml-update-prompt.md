@@ -1,5 +1,8 @@
 # systems.yml update prompt
 
+Field formats, constrained values and runtime/AI effects are defined in
+[`operational-context-field-guidance.md`](operational-context-field-guidance.md).
+
 ## Purpose
 
 Update `systems.yml` as the canonical catalog of durable systems. A system entry
@@ -41,27 +44,26 @@ open question or validation note instead.
 
 ```yaml
 systems:
-  - id: customer-portal
-    name: Customer Portal
-    shortName: Portal
-    kind: internal-application
+  - id: crm-contact-core
+    name: CRM Contact Core
+    shortName: Contact Core
+    systemType: internal-service
     lifecycleStatus: active
     operationalStatus: live
     criticality: high
-    summary: Customer-facing area used to start and track customer requests.
-    purpose: Gives business users one recognizable entry point for request handling.
+    summary: Anonymized CRM service responsible for contact preference handling.
+    purpose: Gives analysts one durable system boundary for CRM contact changes.
     aliases:
-      - portal
-      - customer self service
+      - contact service
+      - crm contacts
     useFor:
-      - Start incident or requirement analysis when the signal points to customer request handling.
+      - Start analysis when a signal concerns anonymized CRM contact preferences.
       - Resolve system-level ownership when the bounded context is unknown.
-    participants:
-      externalOwner: ""
+    runtime:
+      configurationDirectory: crm/contact-service
     ownership:
       ownerTeamIds:
-        - customer-experience-team
-      ownerLabel: ""
+        - crm-domain-team
       ownershipStatus: explicit
       confidence: high
       source: systems.yml
@@ -69,32 +71,38 @@ systems:
         - Confirmed system-level accountable owner.
     references:
       processes:
-        - customer-request-handling
+        - crm-contact-preference-update
       boundedContexts:
-        - customer-requests
+        - crm-contact-preferences
       integrations:
-        - portal-to-case-management
+        - crm-contact-to-consent
       teams:
-        - customer-experience-team
+        - crm-domain-team
       handoffRules:
-        - customer-request-boundary
+        - crm-contact-boundary
     matchSignals:
       exact:
-        terms:
-          - Customer Portal
+        serviceNames:
+          - crm-contact-service
       strong:
-        aliases:
-          - portal
-          - self service
+        businessTerms:
+          - CRM contact preference
       weak:
         phrases:
-          - customer request screen
+          - anonymized CRM contact update
     relations:
       - type: uses
         targetType: process
-        target: customer-request-handling
-        evidence: primary business process for the system
+        target: crm-contact-preference-update
+        evidence: Primary anonymized CRM process for the system.
 ```
+
+The UI exposes `participants.externalOwner` and
+`runtime.configurationDirectory` as guided inputs. Add `participants` only for
+an externally operated boundary, for example `externalOwner: CRM managed
+platform provider`; omit it for a locally operated system. Use `runtime` only
+for the repository-relative Config Drift configuration directory. Keep service,
+deployment and application identities in `matchSignals`.
 
 ## Update rules
 
@@ -110,6 +118,11 @@ systems:
 - Ensure this system has exactly one system-targeted code-search scope when it
   is an internal system or otherwise requires code discovery.
 - Keep `matchSignals` small and durable. Use names, aliases and business terms.
+- Keep the optional `runtime.configurationDirectory` safe and
+  repository-relative. Do not put service or deployment identities in
+  `runtime`.
+- Use `participants.externalOwner` only for external operational
+  responsibility; local team ownership belongs in `ownership`.
 - Use `relations` for meaningful navigation that is not already obvious from
   another typed field.
 - If ownership is uncertain, set low confidence or add an open question instead

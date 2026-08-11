@@ -14,7 +14,13 @@
 
       <div class="context-toolbar__note">
         <span class="material-symbols-outlined" aria-hidden="true">hub</span>
-        <span>Readonly context/catalog capability for feature and tool grounding.</span>
+        @if (maintenance.capabilitiesLoading()) {
+          <span>Loading local catalogue metadata…</span>
+        } @else if (maintenance.capabilities(); as capabilities) {
+          <span>Editable local copy · {{ capabilities.source }}</span>
+        } @else {
+          <span>Local catalogue copy unavailable.</span>
+        }
       </div>
     </section>
 
@@ -53,9 +59,7 @@
 
           @if (isIncomplete()) {
             <div class="empty-state">
-              Operational context catalogue is currently empty or incomplete. Fill systems.yml first,
-              then repo-map.yml, code-search-scopes.yml, processes.yml, integrations.yml, bounded-contexts.yml, teams.yml,
-              glossary.md and handoff-rules.md.
+              Operational context catalogue is empty or incomplete. Open a supported catalogue tab and use Add to update the local copy.
             </div>
           }
 
@@ -267,6 +271,9 @@
                         {{ copiedMaintenanceTarget() === 'validation:' + finding.id ? 'task_alt' : 'content_copy' }}
                       </mat-icon>
                     </button>
+                    @if (canEditSource(finding.entityType, finding.entityId)) {
+                      <button type="button" class="secondary-button secondary-button--compact" (click)="$event.stopPropagation(); editSource(finding.entityType, finding.entityId)">Edit source</button>
+                    }
                     <button
                       type="button"
                       class="secondary-button secondary-button--compact"
@@ -366,6 +373,9 @@
                         {{ copiedMaintenanceTarget() === 'question:' + question.id ? 'task_alt' : 'content_copy' }}
                       </mat-icon>
                     </button>
+                    @if (canEditSource(question.entityType, question.entityId)) {
+                      <button type="button" class="secondary-button secondary-button--compact" (click)="editSource(question.entityType, question.entityId)">Edit source</button>
+                    }
                     @if (question.entityId) {
                       <button
                         type="button"
@@ -388,6 +398,9 @@
               <p class="section-eyebrow">Catalogue</p>
               <h2>{{ selectedTabLabel() }}</h2>
             </div>
+            @if (writableTypeForTab(); as writableType) {
+              <button type="button" class="primary-button" (click)="addEntity()">Add {{ writableType }}</button>
+            }
           </div>
           <ng-container *ngTemplateOutlet="filters"></ng-container>
           <div
@@ -410,6 +423,17 @@
     @if (detailError()) {
       <p class="form-error">{{ detailError() }}</p>
     }
+    @if (maintenance.capabilitiesError()) {
+      <p class="form-error" role="alert">{{ maintenance.capabilitiesError() }}</p>
+    }
+    @if (maintenance.deleteLoading()) {
+      <p class="maintenance-notice" role="status">Checking delete impact…</p>
+    } @else if (maintenance.deleteError() && !maintenance.deleteImpact()) {
+      <p class="form-error" role="alert">{{ maintenance.deleteError() }}</p>
+    }
+    @if (maintenanceNotice()) {
+      <p class="maintenance-notice" role="status">{{ maintenanceNotice() }}</p>
+    }
 
     <app-context-entity-drawer
       [detail]="detail()"
@@ -417,9 +441,36 @@
       [aiApiPreviewLoading]="aiApiPreviewLoading()"
       [aiApiPreviewError]="aiApiPreviewError()"
       [aiApiPreviewProfile]="aiApiPreviewProfile()"
+      [writable]="selectedEntityWritable()"
       (aiApiPreviewProfileChange)="loadAiApiPreview($event)"
+      (editEntity)="editSelectedEntity()"
+      (deleteEntity)="deleteSelectedEntity()"
       (closeDrawer)="closeDrawer()"
     ></app-context-entity-drawer>
+
+    @if (maintenance.editor(); as editor) {
+      <app-context-entity-editor-drawer
+        [state]="editor"
+        [busy]="maintenance.busy()"
+        [error]="maintenance.error()"
+        [fieldErrors]="maintenance.fieldErrors()"
+        [referenceOptions]="referenceOptions()"
+        (dirtyChange)="editorDirty.set($event)"
+        (saveEntity)="maintenance.save($event)"
+        (cancelEditor)="cancelEditor()"
+      ></app-context-entity-editor-drawer>
+    }
+
+    @if (maintenance.deleteImpact(); as impact) {
+      <app-context-delete-confirmation
+        [impact]="impact"
+        [busy]="maintenance.busy()"
+        [error]="maintenance.deleteError()"
+        (cancelDelete)="maintenance.cancelDelete()"
+        (confirmDelete)="maintenance.confirmDelete()"
+        (openReference)="openDeleteReference($event)"
+      ></app-context-delete-confirmation>
+    }
   </main>
 </div>
 

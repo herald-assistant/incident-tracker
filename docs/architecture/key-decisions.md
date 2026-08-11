@@ -821,3 +821,21 @@ kanoniczna wersja V1. Poniewaz feature nie mial konsumentow wymagajacych
 migracji, nie utrzymujemy aliasow, parserow ani fallbacku poprzednich wersji.
 Tool Workbench reuse'uje produkcyjny pipeline w readonly preview pojedynczego
 scope'u, ale nie tworzy joba, historii, eksportu ani sesji AI.
+
+## 27. Operational Context MVP ma jedna lokalna, niewersjonowana kopie
+
+`src/main/resources/operational-context` jest immutable seedem dystrybucyjnym.
+Pierwszy start kopiuje komplet dokumentow do
+`${tdw.workspace.directory}/operational-context`, domyslnie
+`tdw-data/operational-context`. Runtime nie ma trybu classpath/workspace:
+wszystkie odczyty, tools, feature'y i mutacje korzystaja z lokalnej kopii, a
+restart lub aktualizacja JAR-a nie nadpisuje jej seedem.
+
+MVP jest przeznaczony do lokalnej pracy uzytkownika na jego danych. Dlatego
+maintenance API nie ma security/rollout gate, revision, ETag, `If-Match`,
+manifestow, historii ani rollbacku katalogu. Pozostaja walidacje kontraktu,
+referencji i spojnosci oraz `RESTRICT` delete. Jedna komenda zmienia dokladnie
+jeden logiczny dokument, ktory jest podmieniany atomowo po walidacji. Backup i
+odzyskanie poprzedniego stanu sa odpowiedzialnoscia uzytkownika. Deployment
+wspoldzielony albo sieciowy wymaga osobnej decyzji obejmujacej security,
+concurrency i persistence.

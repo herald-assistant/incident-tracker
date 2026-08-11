@@ -290,7 +290,7 @@ class OperationalContextReadModelValidatorTest {
     }
 
     @Test
-    void shouldReportCodeSearchScopeTargetOutsideSystem() {
+    void shouldAcceptCodeSearchScopeTargetingCrmBoundedContext() {
         var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
@@ -314,7 +314,8 @@ class OperationalContextReadModelValidatorTest {
                 "index"
         ));
 
-        assertHasError(findings, "CODE_SEARCH_SCOPE_TARGET_NOT_SYSTEM");
+        assertFalse(findings.stream().anyMatch(finding ->
+                finding.code().equals("CODE_SEARCH_SCOPE_TARGET_UNSUPPORTED")));
     }
 
     @Test

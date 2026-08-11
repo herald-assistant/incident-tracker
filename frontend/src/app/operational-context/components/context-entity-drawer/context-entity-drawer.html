@@ -9,6 +9,16 @@
         }
       </div>
       <div class="entity-drawer__actions" aria-label="Entity drawer actions">
+        @if (writable()) {
+          <button type="button" class="entity-drawer__action" (click)="editEntity.emit()">
+            <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
+            <span>Edit</span>
+          </button>
+          <button type="button" class="entity-drawer__action entity-drawer__action--danger" (click)="deleteEntity.emit()">
+            <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
+            <span>Delete</span>
+          </button>
+        }
         <button type="button" class="entity-drawer__action" (click)="copyEntityDetail()">
           <mat-icon fontSet="material-symbols-outlined">
             {{ copiedEntity() ? 'task_alt' : 'content_copy' }}

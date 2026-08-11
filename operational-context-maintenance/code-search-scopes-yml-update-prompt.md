@@ -1,5 +1,8 @@
 # code-search-scopes.yml update prompt
 
+Field formats, constrained values and runtime/AI effects are defined in
+[`operational-context-field-guidance.md`](operational-context-field-guidance.md).
+
 ## Purpose
 
 Update `code-search-scopes.yml` as the code-navigation index for agents and team
@@ -86,6 +89,8 @@ codeSearchScopes:
   stable and system-oriented, for example `<system-id>-code-scope`.
 - The required system scope target must be `target.type: system` and `target.id`
   must match the system id.
+- In the maintenance UI, choose the target first. The UI derives `scopeType`
+  from `target.type`; do not maintain two independent values.
 - The required system scope must contain the system's `primary` repository and
   any directly imported internal library repositories needed to understand the
   system code.
@@ -104,6 +109,9 @@ codeSearchScopes:
 - `priority` is the read order. `1` means start here.
 - `searchMode` is required for every repository and must be either
   `whole-repository` or `path-prefixes`.
+- The maintenance UI represents repositories as repeatable rows and restricts
+  `searchMode` to these two values; use the repository picker instead of
+  entering a raw JSON list.
 - Use `whole-repository` when the repository mostly belongs to the semantic
   target or the relevant area cannot be separated safely.
 - Use `path-prefixes` when the semantic target lives only in specific modules

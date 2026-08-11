@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
 
 import java.util.LinkedHashMap;
@@ -17,8 +18,11 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class OperationalContextRepositoryProjectPathResolver {
 
-    private static final Set<OperationalContextEntryType> SYSTEM_AND_REPOSITORY =
-            Set.of(OperationalContextEntryType.SYSTEM, OperationalContextEntryType.REPOSITORY);
+    private static final Set<OperationalContextEntryType> SYSTEM_REPOSITORY_AND_SCOPE = Set.of(
+            OperationalContextEntryType.SYSTEM,
+            OperationalContextEntryType.REPOSITORY,
+            OperationalContextEntryType.CODE_SEARCH_SCOPE
+    );
 
     private final OperationalContextPort operationalContextPort;
 
@@ -29,19 +33,24 @@ public class OperationalContextRepositoryProjectPathResolver {
         }
 
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
-                SYSTEM_AND_REPOSITORY,
+                SYSTEM_REPOSITORY_AND_SCOPE,
                 List.of(),
                 false
         ));
         var repositoriesById = repositoriesById(catalog.repositories());
+        var matchedSystemIds = catalog.systems().stream()
+                .filter(system -> matchesSystemId(system, normalizedHints))
+                .map(OperationalContextSystem::id)
+                .map(this::normalizeComparable)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         var resolvedProjectPaths = new LinkedHashSet<String>();
 
-        for (var system : catalog.systems()) {
-            if (!matchesSystemId(system, normalizedHints)) {
+        for (var scope : catalog.codeSearchScopes()) {
+            if (!targetsSystem(scope, matchedSystemIds)) {
                 continue;
             }
-
-            for (var repositoryId : systemRepositoryIds(system)) {
+            for (var repositoryId : scopeRepositoryIds(scope)) {
                 var repository = repositoriesById.get(normalizeComparable(repositoryId));
                 if (repository == null || !groupMatches(configuredGroup, repository)) {
                     continue;
@@ -80,8 +89,20 @@ public class OperationalContextRepositoryProjectPathResolver {
         return StringUtils.hasText(normalizedSystemId) && normalizedHints.contains(normalizedSystemId);
     }
 
-    private List<String> systemRepositoryIds(OperationalContextSystem system) {
-        return system.references().repositories();
+    private boolean targetsSystem(
+            OperationalContextRepositorySearchScope scope,
+            Set<String> matchedSystemIds
+    ) {
+        return "system".equals(normalizeComparable(scope.target().type()))
+                && matchedSystemIds.contains(normalizeComparable(scope.target().id()));
+    }
+
+    private List<String> scopeRepositoryIds(OperationalContextRepositorySearchScope scope) {
+        return scope.repositories().stream()
+                .map(OperationalContextDtos.OperationalContextRepositorySearchRepository::repoId)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .toList();
     }
 
     private List<String> projectPaths(String configuredGroup, OperationalContextRepository repository) {

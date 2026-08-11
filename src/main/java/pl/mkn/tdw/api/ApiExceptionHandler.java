@@ -17,6 +17,8 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchResponse;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveException;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveResponse;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextStoreException;
 import pl.mkn.tdw.shared.error.UserFacingApplicationException;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 import org.springframework.http.HttpStatus;
@@ -71,6 +73,39 @@ public class ApiExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(OperationalContextCatalogMaintenanceException.class)
+    public ResponseEntity<ApiErrorResponse> handleOperationalContextCatalogMaintenance(
+            OperationalContextCatalogMaintenanceException exception
+    ) {
+        var response = new ApiErrorResponse(
+                exception.code().name(),
+                exception.getMessage(),
+                exception.fieldErrors().stream()
+                        .map(error -> new ApiFieldError(error.pointer(), error.message()))
+                        .toList()
+        );
+        var status = switch (exception.code()) {
+            case ENTITY_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case DUPLICATE_ID, ID_MISMATCH, DELETE_RESTRICTED -> HttpStatus.CONFLICT;
+            case ENTITY_TYPE_UNSUPPORTED, VALIDATION_FAILED -> HttpStatus.UNPROCESSABLE_ENTITY;
+        };
+        return ResponseEntity.status(status).body(response);
+    }
+
+    @ExceptionHandler(OperationalContextStoreException.class)
+    public ResponseEntity<ApiErrorResponse> handleOperationalContextStore(OperationalContextStoreException exception) {
+        var fieldErrors = exception.code() == OperationalContextStoreException.Code.INVALID_CANDIDATE
+                ? List.of(new ApiFieldError("/payload", "Candidate catalog failed validation"))
+                : List.<ApiFieldError>of();
+        var response = new ApiErrorResponse(exception.code().name(), exception.getMessage(), fieldErrors);
+        var status = switch (exception.code()) {
+            case INVALID_CANDIDATE -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case INVALID_STORAGE_PATH, LOCAL_COPY_UNAVAILABLE, CORRUPT_STORE ->
+                    HttpStatus.SERVICE_UNAVAILABLE;
+        };
+        return ResponseEntity.status(status).body(response);
     }
 
     @ExceptionHandler(GitHubCopilotAuthRequiredException.class)

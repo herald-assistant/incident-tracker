@@ -281,10 +281,10 @@ export const routes: Routes = [
               'Manualne przegladanie i walidacja Operational Context jako reusable capability dla featureow i tooli, bez logiki konkretnej analizy.',
             badges: ['Reusable przez AI', 'Catalog'],
             meta: [
-              { label: 'Endpointy', value: 'GET /api/operational-context/*' },
+              { label: 'Endpointy', value: 'Read API + capability-driven maintenance API' },
               {
                 label: 'Wymagany scope',
-                value: 'Konfiguracja katalogu operational-context z zasobow aplikacji'
+                value: 'Lokalna kopia katalogu w tdw-data/operational-context'
               },
               {
                 label: 'Reusable przez AI',
@@ -292,7 +292,7 @@ export const routes: Routes = [
               },
               {
                 label: 'Guardrails',
-                value: 'Readonly catalog view, walidacja katalogu i jawne open questions'
+                value: 'Walidacja domenowa i delete-impact bez cascade'
               }
             ]
           }

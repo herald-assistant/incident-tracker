@@ -77,6 +77,10 @@
   color: var(--primary-dark);
 }
 
+.entity-drawer__action--danger {
+  color: var(--danger-text);
+}
+
 .entity-drawer__action:disabled {
   color: var(--text-soft);
   cursor: not-allowed;

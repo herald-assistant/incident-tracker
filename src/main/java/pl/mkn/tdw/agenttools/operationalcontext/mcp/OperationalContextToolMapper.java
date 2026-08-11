@@ -258,6 +258,9 @@ public class OperationalContextToolMapper {
                 "lifecycleStatus", system.lifecycleStatus(),
                 "operationalStatus", system.operationalStatus(),
                 "criticality", system.criticality(),
+                "runtime", values(
+                        "configurationDirectory", system.runtime().configurationDirectory()
+                ),
                 "aliases", system.aliases(),
                 "useFor", system.useFor()
         );
@@ -288,7 +291,7 @@ public class OperationalContextToolMapper {
                 signals,
                 codeSearch,
                 handoff,
-                values("sourceRefs", List.of("systems.yml#" + system.id())),
+                sourceCoverage(system, "systems.yml#" + system.id()),
                 openQuestionsFor(openQuestions, TYPE_SYSTEM, system.id()),
                 List.of("systems.yml#" + system.id()),
                 join(system.genericSignals(), flattenFacets(facets))
@@ -321,6 +324,13 @@ public class OperationalContextToolMapper {
                 "lifecycleStatus", repository.lifecycleStatus(),
                 "criticality", repository.criticality(),
                 "git", git(repository.git()),
+                "evidence", repository.evidence().stream()
+                        .map(evidence -> values(
+                                "sourceRef", evidence.sourceRef(),
+                                "evidenceType", evidence.evidenceType(),
+                                "note", evidence.note()
+                        ))
+                        .toList(),
                 "aliases", repository.aliases(),
                 "useFor", repository.useFor()
         );
@@ -331,6 +341,10 @@ public class OperationalContextToolMapper {
         var signals = values("matchSignals", matchSignals(repository.matchSignals()));
         var codeSearch = values(
                 "git", git(repository.git()),
+                "llmToolHints", values(
+                        "answerWhenUserMentions", repository.llmToolHints().answerWhenUserMentions(),
+                        "disambiguateFrom", repository.llmToolHints().disambiguateFrom()
+                ),
                 "codeSearchScopes", codeSearchScopes.stream()
                         .map(scope -> codeSearchScopeSummary(scope, catalog.repositories()))
                         .toList()
@@ -350,7 +364,7 @@ public class OperationalContextToolMapper {
                 signals,
                 codeSearch,
                 resolvedOwnershipHandoff(resolvedOwnership),
-                values("sourceRefs", List.of("repo-map.yml#repositories/" + repository.id())),
+                sourceCoverage(repository, "repo-map.yml#repositories/" + repository.id()),
                 openQuestionsFor(openQuestions, TYPE_REPOSITORY, repository.id()),
                 List.of("repo-map.yml#repositories/" + repository.id()),
                 join(repository.genericSignals(), flattenFacets(facets))
@@ -430,7 +444,7 @@ public class OperationalContextToolMapper {
                 "boundedContexts", process.references().boundedContexts(),
                 "repositories", process.references().repositories(),
                 "integrations", process.references().integrations(),
-                "failureModes", process.failureModes()
+                "failureModes", failureModes(process, true)
         );
         var overview = values(
                 "type", process.type(),
@@ -439,7 +453,11 @@ public class OperationalContextToolMapper {
                 "aliases", process.aliases(),
                 "useFor", process.useFor(),
                 "endsWhen", process.processBoundary().endsWhen(),
-                "successArtifacts", process.outcomes().successArtifacts()
+                "processBoundary", processBoundary(process),
+                "lifecycle", processLifecycle(process),
+                "completionSignals", completionSignals(process),
+                "successArtifacts", process.outcomes().successArtifacts(),
+                "dataAndArtifacts", dataAndArtifacts(process)
         );
         var relations = values(
                 "participants", values(
@@ -465,7 +483,8 @@ public class OperationalContextToolMapper {
                 facets,
                 overview,
                 relations,
-                values("matchSignals", matchSignals(process.matchSignals()), "failureModes", process.failureModes()),
+                values("matchSignals", matchSignals(process.matchSignals()),
+                        "failureModes", failureModes(process, true)),
                 Map.of(),
                 resolvedOwnershipHandoff(resolvedOwnership),
                 values("sourceRefs", List.of("processes.yml#" + process.id())),
@@ -513,7 +532,7 @@ public class OperationalContextToolMapper {
         );
         var signals = values(
                 "matchSignals", matchSignals(integration.matchSignals()),
-                "failureModes", integration.failureModes()
+                "failureModes", failureModes(integration, false)
         );
 
         return entity(
@@ -543,6 +562,8 @@ public class OperationalContextToolMapper {
             List<OperationalContextOpenQuestion> openQuestions
     ) {
         var resolvedOwnership = ownershipResolver.resolve(catalog, ownershipRequest(context));
+        var scope = context.scope();
+        var semanticBoundary = context.semanticBoundary();
         var facets = facets(
                 "ownerTeamIds", ownerTeamIds(resolvedOwnership),
                 "ownerLabels", ownerLabels(resolvedOwnership),
@@ -563,18 +584,52 @@ public class OperationalContextToolMapper {
                 context.useFor(),
                 facets,
                 values(
+                        "contextType", context.contextType(),
                         "lifecycleStatus", context.lifecycleStatus(),
                         "aliases", context.aliases(),
-                        "useFor", context.useFor()
+                        "useFor", context.useFor(),
+                        "localLanguageSummary", context.localLanguageSummary(),
+                        "scope", values(
+                                "includes", scope.includes(),
+                                "excludes", scope.excludes(),
+                                "businessCapabilities", scope.businessCapabilities(),
+                                "coreEntities", scope.coreEntities(),
+                                "keyDecisions", scope.keyDecisions()
+                        ),
+                        "semanticBoundary", values(
+                                "coreConcepts", semanticBoundary.coreConcepts(),
+                                "localConcepts", semanticBoundary.localConcepts(),
+                                "canonicalEntities", semanticBoundary.canonicalEntities(),
+                                "commands", semanticBoundary.commands(),
+                                "events", semanticBoundary.events(),
+                                "invariants", semanticBoundary.invariants(),
+                                "ownsLanguage", semanticBoundary.ownsLanguage(),
+                                "doesNotOwn", semanticBoundary.doesNotOwn()
+                        ),
+                        "evidence", context.evidence().stream()
+                                .map(evidence -> values(
+                                        "sourceRef", evidence.sourceRef(),
+                                        "evidenceType", evidence.evidenceType(),
+                                        "note", evidence.note()
+                                ))
+                                .toList()
                 ),
                 values(
                         "references", references(context.references()),
                         "relations", relations(context.relations())
                 ),
-                values("matchSignals", matchSignals(context.matchSignals())),
+                values(
+                        "matchSignals", matchSignals(context.matchSignals()),
+                        "llmToolHints", values(
+                                "answerWhenUserMentions", context.llmToolHints().answerWhenUserMentions(),
+                                "disambiguateFrom", context.llmToolHints().disambiguateFrom(),
+                                "usefulSearchKeywords", context.llmToolHints().usefulSearchKeywords(),
+                                "explanationStyle", context.llmToolHints().explanationStyle()
+                        )
+                ),
                 Map.of(),
                 resolvedOwnershipHandoff(resolvedOwnership),
-                values("sourceRefs", List.of("bounded-contexts.yml#" + context.id())),
+                sourceCoverage(context, "bounded-contexts.yml#" + context.id()),
                 openQuestionsFor(openQuestions, TYPE_BOUNDED_CONTEXT, context.id()),
                 List.of("bounded-contexts.yml#" + context.id()),
                 join(context.genericSignals(), flattenFacets(facets))
@@ -654,9 +709,9 @@ public class OperationalContextToolMapper {
                 values("matchSignals", term.matchSignals(), "synonyms", term.synonyms()),
                 Map.of(),
                 Map.of(),
-                values("sourceRefs", List.of("glossary.md#" + term.id())),
+                values("sourceRefs", List.of("glossary.yml#" + term.id())),
                 openQuestionsFor(openQuestions, TYPE_GLOSSARY_TERM, term.id()),
-                List.of("glossary.md#" + term.id()),
+                List.of("glossary.yml#" + term.id()),
                 join(term.matchSignals(), join(term.canonicalReferences(), term.synonyms()))
         );
     }
@@ -688,9 +743,9 @@ public class OperationalContextToolMapper {
                         "expectedFirstAction", rule.expectedFirstAction(),
                         "notes", rule.notes()
                 ),
-                values("sourceRefs", List.of("handoff-rules.md#" + rule.id())),
+                values("sourceRefs", List.of("handoff-rules.yml#" + rule.id())),
                 openQuestionsFor(openQuestions, TYPE_HANDOFF_RULE, rule.id()),
-                List.of("handoff-rules.md#" + rule.id()),
+                List.of("handoff-rules.yml#" + rule.id()),
                 join(rule.useWhen(), join(rule.requiredEvidence(), rule.expectedFirstAction()))
         );
     }
@@ -1189,6 +1244,137 @@ public class OperationalContextToolMapper {
     private List<String> limitationsFromSourceCoverage(Map<String, Object> sourceCoverage) {
         var limitations = sourceCoverage.get("limitations");
         return limitText(textValues(limitations), DEFAULT_SECTION_LIST_LIMIT);
+    }
+
+    private Map<String, Object> sourceCoverage(OperationalContextEntry entry, String sourceRef) {
+        var raw = entry.payload().get("sourceCoverage");
+        Map<?, ?> coverage = raw instanceof Map<?, ?> map ? map : null;
+        if (coverage == null && raw instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof Map<?, ?> map) {
+            coverage = map;
+        }
+        return values(
+                "status", coverage != null ? coverage.get("status") : null,
+                "scannedSources", coverage != null && coverage.get("scannedSources") != null
+                        ? coverage.get("scannedSources") : coverage != null ? coverage.get("sources") : null,
+                "expectedSources", coverage != null ? coverage.get("expectedSources") : null,
+                "limitations", coverage != null ? coverage.get("limitations") : null,
+                "sourceRefs", List.of(sourceRef)
+        );
+    }
+
+    private Map<String, Object> dataAndArtifacts(OperationalContextEntry entry) {
+        var raw = entry.payload().get("dataAndArtifacts");
+        if (!(raw instanceof Map<?, ?> artifacts)) {
+            return Map.of();
+        }
+        return values(
+                "primaryObjects", artifacts.get("primaryObjects"),
+                "inputArtifacts", artifacts.get("inputArtifacts"),
+                "outputArtifacts", artifacts.get("outputArtifacts"),
+                "persistedEntities", artifacts.get("persistedEntities"),
+                "readModels", artifacts.get("readModels"),
+                "auditArtifacts", artifacts.get("auditArtifacts"),
+                "notes", artifacts.get("notes")
+        );
+    }
+
+    private Map<String, Object> processBoundary(OperationalContextEntry entry) {
+        var raw = entry.payload().get("processBoundary");
+        if (raw instanceof Map<?, ?> boundary) {
+            return values(
+                    "businessCapability", boundary.get("businessCapability"),
+                    "startsWhen", boundary.get("startsWhen"),
+                    "endsWhen", boundary.get("endsWhen"),
+                    "includes", boundary.get("includes"),
+                    "excludes", boundary.get("excludes"),
+                    "assumptions", boundary.get("assumptions")
+            );
+        }
+        return values("endsWhen", raw);
+    }
+
+    private Map<String, Object> processLifecycle(OperationalContextEntry entry) {
+        var raw = entry.payload().get("lifecycle");
+        if (!(raw instanceof Map<?, ?> lifecycle)) {
+            return values("statuses", raw);
+        }
+        var triggers = new ArrayList<Object>();
+        if (lifecycle.get("triggers") instanceof List<?> rawTriggers) {
+            for (var item : rawTriggers) {
+                if (item instanceof Map<?, ?> trigger) {
+                    triggers.add(values(
+                            "type", trigger.get("type"),
+                            "name", trigger.get("name"),
+                            "exchange", trigger.get("exchange")
+                    ));
+                }
+            }
+        }
+        var transitions = new ArrayList<Object>();
+        if (lifecycle.get("transitions") instanceof List<?> rawTransitions) {
+            for (var item : rawTransitions) {
+                if (item instanceof Map<?, ?> transition) {
+                    transitions.add(values(
+                            "from", transition.get("from"),
+                            "to", transition.get("to"),
+                            "trigger", transition.get("trigger")
+                    ));
+                }
+            }
+        }
+        return values(
+                "triggers", triggers,
+                "entryCriteria", lifecycle.get("entryCriteria"),
+                "statuses", lifecycle.get("statuses"),
+                "transitions", transitions,
+                "terminalStates", lifecycle.get("terminalStates"),
+                "successOutcomes", lifecycle.get("successOutcomes"),
+                "partialOutcomes", lifecycle.get("partialOutcomes"),
+                "failedOutcomes", lifecycle.get("failedOutcomes"),
+                "cancellationOutcomes", lifecycle.get("cancellationOutcomes")
+        );
+    }
+
+    private Map<String, Object> completionSignals(OperationalContextEntry entry) {
+        var raw = entry.payload().get("completionSignals");
+        if (raw instanceof Map<?, ?> signals) {
+            return values(
+                    "successful", signals.get("successful"),
+                    "partial", signals.get("partial"),
+                    "failed", signals.get("failed"),
+                    "cancelled", signals.get("cancelled")
+            );
+        }
+        return values("successful", raw);
+    }
+
+    private List<Object> failureModes(OperationalContextEntry entry, boolean process) {
+        var raw = entry.payload().get("failureModes");
+        if (!(raw instanceof List<?> modes)) {
+            return entry.values("failureModes").stream().map(value -> (Object) value).toList();
+        }
+        var result = new ArrayList<Object>();
+        for (var item : modes) {
+            if (item instanceof String string && StringUtils.hasText(string)) {
+                result.add(string.trim());
+            } else if (item instanceof Map<?, ?> mode) {
+                result.add(process
+                        ? values(
+                        "id", mode.get("id"),
+                        "name", mode.get("name"),
+                        "summary", mode.get("summary"),
+                        "affectedStep", mode.get("affectedStep"),
+                        "signals", mode.get("signals")
+                )
+                        : values(
+                        "name", mode.get("name"),
+                        "type", mode.get("type"),
+                        "symptom", mode.get("symptom"),
+                        "impact", mode.get("impact")
+                ));
+            }
+        }
+        return List.copyOf(result);
     }
 
     private String labelForType(String type) {

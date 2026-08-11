@@ -48,6 +48,16 @@ implementacje niezatwierdzonego planu.
 
 ## Aktualne potrzeby i plany
 
+- `needs/operational-context-catalog-editing.md`
+  opisuje potrzebe bezpiecznego create, edit i delete katalogu Operational
+  Context z poziomu UI przy zachowaniu spojnosci relacji i wszystkich
+  konsumentow.
+- `plans/operational-context-catalog-editing.md`
+  dokumentuje wykonana ewolucje L3 oraz wynikowy prosty MVP: bundled seed jest
+  kopiowany raz do `tdw-data/operational-context`, wszystkie dziewiec typow ma
+  CRUD przez UI, a zapis korzysta z walidacji domenowej i atomowej podmiany
+  jednego dokumentu. Wynik nie ma storage modes, security gate, rewizji,
+  historii ani rollbacku Operational Context.
 - Config Drift Viewer wraz z Runtime Configuration Tool Workbench jest
   zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
   ograniczenia sa opisane kanonicznie w

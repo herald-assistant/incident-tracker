@@ -30,6 +30,7 @@ import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.SourceRefere
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.ValidationFindingDto;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModel;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCodeSearchReadModelBuilder;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextBoundedContext;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextEntry;
@@ -53,7 +54,6 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationInde
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.SourceRef;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndexBuilder;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadModelValidator;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution.Owner;
@@ -93,15 +93,14 @@ public class OperationalContextViewService {
             INTEGRATION, "integrations.yml",
             BOUNDED_CONTEXT, "bounded-contexts.yml",
             TEAM, "teams.yml",
-            GLOSSARY_TERM, "glossary.md",
-            HANDOFF_RULE, "handoff-rules.md"
+            GLOSSARY_TERM, "glossary.yml",
+            HANDOFF_RULE, "handoff-rules.yml"
     );
 
     private final OperationalContextPort operationalContextPort;
+    private final OperationalContextCatalogValidationService validationService;
     private final OperationalContextRelationIndexBuilder relationIndexBuilder =
             new OperationalContextRelationIndexBuilder();
-    private final OperationalContextReadModelValidator readModelValidator =
-            new OperationalContextReadModelValidator(relationIndexBuilder);
     private final OperationalContextCodeSearchReadModelBuilder codeSearchReadModelBuilder =
             new OperationalContextCodeSearchReadModelBuilder(relationIndexBuilder);
     private final OperationalContextProfiledReadModelMapper profiledReadModelMapper =
@@ -247,12 +246,12 @@ public class OperationalContextViewService {
     public OperationalContextEntityDetailDto entity(String type, String id) {
         var view = view();
         return switch (normalizeType(type)) {
-            case SYSTEM -> entryDetail(view, SYSTEM, require(view.systemsById(), SYSTEM, id));
+            case SYSTEM -> systemDetail(view, require(view.systemsById(), SYSTEM, id));
             case REPOSITORY -> repositoryDetail(view, require(view.repositoriesById(), REPOSITORY, id));
             case CODE_SEARCH_SCOPE -> codeSearchScopeDetail(view, id);
             case PROCESS -> processDetail(view, require(view.processesById(), PROCESS, id));
             case INTEGRATION -> integrationDetail(view, require(view.integrationsById(), INTEGRATION, id));
-            case BOUNDED_CONTEXT -> entryDetail(view, BOUNDED_CONTEXT, require(view.contextsById(), BOUNDED_CONTEXT, id));
+            case BOUNDED_CONTEXT -> boundedContextDetail(view, require(view.contextsById(), BOUNDED_CONTEXT, id));
             case TEAM -> entryDetail(view, TEAM, require(view.teamsById(), TEAM, id));
             case GLOSSARY_TERM -> glossaryDetail(view, id);
             case HANDOFF_RULE -> handoffRuleDetail(view, id);
@@ -462,6 +461,77 @@ public class OperationalContextViewService {
                 "defaultBranch", repository.git().defaultBranch(),
                 "url", repository.git().url()
         )));
+        sections.add(section("Evidence", map(
+                "items", repository.evidence().stream()
+                        .map(evidence -> map(
+                                "sourceRef", evidence.sourceRef(),
+                                "evidenceType", evidence.evidenceType(),
+                                "note", evidence.note()
+                        ))
+                        .toList()
+        )));
+        sections.add(section("AI exploration guidance", map(
+                "answerWhenUserMentions", repository.llmToolHints().answerWhenUserMentions(),
+                "disambiguateFrom", repository.llmToolHints().disambiguateFrom()
+        )));
+        return replaceSections(detail, sections);
+    }
+
+    private OperationalContextEntityDetailDto systemDetail(CatalogView view, OperationalContextSystem system) {
+        var detail = entryDetail(view, SYSTEM, system);
+        var sections = new ArrayList<>(detail.overviewSections());
+        sections.add(section("System runtime and responsibility", map(
+                "systemType", system.kind(),
+                "operationalStatus", system.operationalStatus(),
+                "criticality", system.criticality(),
+                "externalOwner", system.participants().externalOwner(),
+                "configurationDirectory", system.runtime().configurationDirectory()
+        )));
+        return replaceSections(detail, sections);
+    }
+
+    private OperationalContextEntityDetailDto boundedContextDetail(
+            CatalogView view,
+            OperationalContextBoundedContext context
+    ) {
+        var detail = entryDetail(view, BOUNDED_CONTEXT, context);
+        var sections = new ArrayList<>(detail.overviewSections());
+        var scope = context.scope();
+        var semanticBoundary = context.semanticBoundary();
+        sections.add(section("Local language and scope", map(
+                "contextType", context.contextType(),
+                "localLanguageSummary", context.localLanguageSummary(),
+                "includes", scope.includes(),
+                "excludes", scope.excludes(),
+                "businessCapabilities", scope.businessCapabilities(),
+                "coreEntities", scope.coreEntities(),
+                "keyDecisions", scope.keyDecisions()
+        )));
+        sections.add(section("Semantic boundary", map(
+                "coreConcepts", semanticBoundary.coreConcepts(),
+                "localConcepts", semanticBoundary.localConcepts(),
+                "canonicalEntities", semanticBoundary.canonicalEntities(),
+                "commands", semanticBoundary.commands(),
+                "events", semanticBoundary.events(),
+                "invariants", semanticBoundary.invariants(),
+                "ownsLanguage", semanticBoundary.ownsLanguage(),
+                "doesNotOwn", semanticBoundary.doesNotOwn()
+        )));
+        sections.add(section("Evidence", map(
+                "items", context.evidence().stream()
+                        .map(evidence -> map(
+                                "sourceRef", evidence.sourceRef(),
+                                "evidenceType", evidence.evidenceType(),
+                                "note", evidence.note()
+                        ))
+                        .toList()
+        )));
+        sections.add(section("AI exploration guidance", map(
+                "answerWhenUserMentions", context.llmToolHints().answerWhenUserMentions(),
+                "disambiguateFrom", context.llmToolHints().disambiguateFrom(),
+                "usefulSearchKeywords", context.llmToolHints().usefulSearchKeywords(),
+                "explanationStyle", context.llmToolHints().explanationStyle()
+        )));
         return replaceSections(detail, sections);
     }
 
@@ -479,7 +549,11 @@ public class OperationalContextViewService {
                 "steps", process.steps().stream()
                         .map(step -> map("id", step.id(), "name", step.name(), "type", step.type(), "summary", step.summary()))
                         .toList(),
-                "failureModes", process.failureModes()
+                "processBoundary", payloadValue(process, "processBoundary", map("endsWhen", process.processBoundary().endsWhen())),
+                "lifecycle", payloadValue(process, "lifecycle", Map.of()),
+                "completionSignals", payloadValue(process, "completionSignals", Map.of()),
+                "failureModes", payloadValue(process, "failureModes", process.failureModes()),
+                "dataAndArtifacts", payloadValue(process, "dataAndArtifacts", Map.of())
         )));
         return replaceSections(detail, sections);
     }
@@ -495,7 +569,7 @@ public class OperationalContextViewService {
                 "targets", integration.participants().targets().stream().map(this::participantMap).toList(),
                 "intermediaries", integration.participants().intermediaries().stream().map(this::participantMap).toList(),
                 "finalTargets", integration.participants().finalTargets().stream().map(this::participantMap).toList(),
-                "failureModes", integration.failureModes()
+                "failureModes", payloadValue(integration, "failureModes", integration.failureModes())
         )));
         return replaceSections(detail, sections);
     }
@@ -598,10 +672,11 @@ public class OperationalContextViewService {
     }
 
     private CatalogView view() {
-        var loaded = operationalContextPort.loadContext(OperationalContextQuery.all());
+        var session = operationalContextPort.capture();
+        var loaded = session.query(OperationalContextQuery.all());
         var catalog = loaded != null ? loaded : OperationalContextCatalog.empty();
         var relationIndex = relationIndexBuilder.build(catalog);
-        var validation = readModelValidator.validateCatalogContract(catalog).stream()
+        var validation = validationService.validate(catalog).findings().stream()
                 .map(this::validationFinding)
                 .toList();
         var openQuestions = catalog.openQuestions().stream()
@@ -1714,6 +1789,11 @@ public class OperationalContextViewService {
             }
         }
         return Map.copyOf(values);
+    }
+
+    private Object payloadValue(OperationalContextEntry entry, String key, Object fallback) {
+        var value = entry.payload().get(key);
+        return value != null ? value : fallback;
     }
 
     private String rawPreview(Object value) {

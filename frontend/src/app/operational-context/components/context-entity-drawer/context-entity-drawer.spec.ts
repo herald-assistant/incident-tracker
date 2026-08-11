@@ -26,6 +26,20 @@ describe('ContextEntityDrawerComponent', () => {
     expect(text).toContain('Visibility limits');
     expect(text).not.toContain('[object Object]');
   });
+
+  it('keeps standard actions and adds maintenance actions only when writable', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityDrawerComponent], providers: [provideAnimationsAsync('noop')] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityDrawerComponent);
+    fixture.componentRef.setInput('detail', { ...entityDetail(), id: 'crm-contact-domain', title: 'CRM Contact Domain' });
+    fixture.componentRef.setInput('writable', true);
+    fixture.detectChanges();
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Edit');
+    expect(text).toContain('Delete');
+    expect(text).toContain('Copy');
+    expect(text).toContain('Open raw');
+    expect(text).toContain('Close');
+  });
 });
 
 function entityDetail(): OperationalContextEntityDetailDto {

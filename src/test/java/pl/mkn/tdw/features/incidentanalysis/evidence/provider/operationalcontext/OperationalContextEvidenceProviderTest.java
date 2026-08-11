@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapter;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
@@ -23,7 +23,7 @@ class OperationalContextEvidenceProviderTest {
 
         var provider = new OperationalContextEvidenceProvider(
                 properties,
-                new OperationalContextAdapter(properties),
+                OperationalContextAdapterTestCreator.create(properties),
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );
@@ -43,7 +43,7 @@ class OperationalContextEvidenceProviderTest {
 
         var provider = new OperationalContextEvidenceProvider(
                 properties,
-                new OperationalContextAdapter(properties),
+                OperationalContextAdapterTestCreator.create(properties),
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );

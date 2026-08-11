@@ -1,0 +1,24 @@
+schemaVersion: 1
+catalogKind: operational-context-handoff-rules
+handoffRules:
+  - id: integration-external-sync-failure
+    title: External synchronous integration failure
+    requiredEvidence:
+      - correlationId
+      - environment
+      - host
+      - exception
+    expectedFirstAction:
+      - Verify the external call path, timeout status, and contract ownership
+  - id: retain-with-current-owner
+    title: Keep the incident with the current owner
+    useWhen:
+      - Evidence still points to the current team or repository
+    expectedFirstAction:
+      - Continue diagnosis locally
+gaps:
+  - id: confirm-integration-ownership-boundary
+    type: ownership-boundary
+    severity: medium
+    status: open
+    description: Confirm ownership boundary evidence for the anonymized CRM notification boundary.

@@ -1,5 +1,13 @@
 # processes.yml update prompt
 
+Field formats, constrained values and runtime/AI effects are defined in
+[`operational-context-field-guidance.md`](operational-context-field-guidance.md).
+
+The maintenance UI uses actor/system selectors for `participants` and ordered
+cards for `steps`. Step references use the canonical `references` object read
+by the runtime relation graph; legacy `match` is preserved by the backend but
+new guided signals are written to `matchSignals.strong.terms`.
+
 ## Purpose
 
 Update `processes.yml` as the business and operational process catalog. A
@@ -118,8 +126,81 @@ processes:
             terms:
               - accepted for case handling
     failureModes:
-      - Customer cannot complete request intake.
-      - Request appears accepted but the next context cannot continue.
+      - id: crm-request-validation-failed
+        name: CRM request validation failed
+        summary: The anonymized CRM request is rejected before it can be accepted for handling.
+        affectedStep: submit-request
+        signals:
+          - CRM request validation rejection
+          - CRM case confirmation is absent
+    dataAndArtifacts:
+      primaryObjects:
+        - CrmCustomerRequest
+      inputArtifacts:
+        - Anonymized CRM customer request
+      outputArtifacts:
+        - CRM case acceptance confirmation
+      persistedEntities:
+        - CrmCustomerRequest
+      readModels:
+        - CRM case handling view
+      auditArtifacts:
+        - CRM request change audit metadata
+      notes:
+        - Store artifact kinds only, never CRM customer records or payloads.
+```
+
+## Guided CRM process semantics
+
+Maintain the process boundary, lifecycle and completion evidence as separate
+canonical objects. The example is strongly anonymized and uses only the CRM
+domain:
+
+```yaml
+processBoundary:
+  businessCapability: CRM Contact Preference Management
+  startsWhen:
+    - An anonymized CRM contact update is accepted.
+  endsWhen:
+    - The CRM contact view confirms the update.
+  includes:
+    - CRM contact preference validation
+  excludes:
+    - Authentication credential lifecycle
+  assumptions:
+    - CRM contact identity is already resolved.
+lifecycle:
+  triggers:
+    - type: api
+      name: CRM contact update
+  entryCriteria:
+    - CRM contact identity is available.
+  statuses:
+    - requested
+    - applied
+  transitions:
+    - from: requested
+      to: applied
+      trigger: CRM validation succeeds.
+  terminalStates:
+    - applied
+  successOutcomes:
+    - CRM contact preference is applied.
+  partialOutcomes:
+    - CRM projection remains pending.
+  failedOutcomes:
+    - CRM validation rejects the update.
+  cancellationOutcomes:
+    - CRM agent cancels the update.
+completionSignals:
+  successful:
+    - CRM contact confirmation is recorded.
+  partial:
+    - CRM projection remains pending.
+  failed:
+    - CRM validation rejection is recorded.
+  cancelled:
+    - CRM cancellation is recorded.
 ```
 
 ## Update rules
@@ -129,6 +210,24 @@ processes:
 - Use `references` to connect systems, repositories, contexts, integrations,
   glossary terms and handoff rules.
 - Keep step `matchSignals` as business words or durable labels.
+- Keep `processBoundary` limited to `businessCapability`, `startsWhen`,
+  `endsWhen`, `includes`, `excludes` and `assumptions`. Boundary assumptions
+  are limitations, never confirmed runtime evidence.
+- Keep lifecycle trigger cards explicit (`type`, `name`, optional `exchange`)
+  and transition cards explicit (`from`, required `to`, required `trigger`).
+  Lifecycle is descriptive operational context, not workflow configuration.
+- Keep `completionSignals` as observable evidence grouped into `successful`,
+  `partial`, `failed` and `cancelled`. Do not copy lifecycle outcomes into this
+  field unless they are independently observable facts.
+- Legacy non-blank string/list shapes remain readable. Normalize them only
+  after actual editing: boundary to `endsWhen`, lifecycle to `statuses` and
+  completion signals to `successful`. Preserve unknown object extensions.
+- Keep process `failureModes` as guided cards with unique kebab-case `id`,
+  required `name` and `summary`, optional existing `affectedStep`, and
+  observable `signals`; they are hypotheses, not confirmed root causes.
+- Keep `dataAndArtifacts` to durable artifact kinds in `primaryObjects`,
+  `inputArtifacts`, `outputArtifacts`, `persistedEntities`, `readModels`,
+  `auditArtifacts` and `notes`; never copy CRM records or payloads.
 - Put uncertainty in open questions rather than inventing a process path.
 
 ## Quality check

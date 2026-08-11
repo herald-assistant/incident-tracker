@@ -2,7 +2,7 @@ package pl.mkn.tdw.agenttools.operationalcontext.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapter;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextGlossaryTerm;
@@ -113,7 +113,9 @@ class OperationalContextMcpToolsTest {
         assertTrue(result.affordances().suggestedNextReads().stream()
                 .anyMatch(read -> read.contains("include=[codeSearch]")));
         assertEquals("high", result.overview().get("criticality"));
+        assertTrue(result.overview().get("runtime").toString().contains("crm/notifications"));
         assertTrue(result.relations().containsKey("references"));
+        assertEquals("CRM managed platform provider", result.relations().get("externalOwner"));
         assertTrue(result.signals().containsKey("matchSignals"));
         assertEquals(1, result.signals().size());
         assertTrue(result.codeSearch().containsKey("codeSearchScopes"));
@@ -125,6 +127,76 @@ class OperationalContextMcpToolsTest {
         assertFalse(result.overview().containsKey("payload"));
         assertFalse(result.relations().containsKey("rawSourcePreview"));
         assertFalse(result.toString().contains("rawSourcePreview"));
+        assertFalse(result.toString().contains("futureCrmRuntimeHint"));
+    }
+
+    @Test
+    void shouldExposeAnonymizedCrmRepositoryEvidenceAndExplorationGuidanceWithoutRawExtensions() {
+        var result = tools.getEntity(
+                "repository",
+                "notifications-service",
+                List.of("overview", "codeSearch"),
+                "Sprawdzam zanonimizowane wskazowki repozytorium CRM.",
+                null
+        );
+
+        assertTrue(result.overview().get("evidence").toString().contains("crm/notifications/pom.xml"));
+        assertTrue(result.overview().get("evidence").toString().contains("build-definition"));
+        assertTrue(result.codeSearch().get("llmToolHints").toString().contains("CRM contact notification"));
+        assertTrue(result.codeSearch().get("llmToolHints").toString().contains("CRM authentication account service"));
+        assertFalse(result.toString().contains("futureCrmEvidenceHint"));
+        assertFalse(result.toString().contains("futureCrmToolHint"));
+    }
+
+    @Test
+    void shouldExposeAnonymizedCrmBoundedContextSemanticsWithoutRawExtensions() {
+        var result = tools.getEntity(
+                "bounded-context",
+                "notifications",
+                List.of("overview", "signals"),
+                "Ground an anonymized CRM notification question",
+                null
+        );
+
+        assertTrue(result.overview().get("localLanguageSummary").toString().contains("CRM notification"));
+        assertTrue(result.overview().get("scope").toString().contains("CRM contact notification delivery"));
+        assertTrue(result.overview().get("semanticBoundary").toString().contains("CRM notification acknowledgement"));
+        assertTrue(result.overview().get("evidence").toString().contains("Anonymized CRM notification glossary"));
+        assertTrue(result.signals().get("llmToolHints").toString().contains("CRM contact notification"));
+        assertTrue(result.signals().get("llmToolHints").toString().contains("NotificationTemplate"));
+        assertFalse(result.toString().contains("futureCrmScopeHint"));
+        assertFalse(result.toString().contains("futureCrmSemanticHint"));
+        assertFalse(result.toString().contains("futureCrmEvidenceHint"));
+        assertFalse(result.toString().contains("futureCrmToolHint"));
+    }
+
+    @Test
+    void shouldExposeStructuredAnonymousCrmFailureArtifactsAndCoverageWithoutRawPayload() {
+        var process = tools.getEntity(
+                "process",
+                "customer-notification",
+                List.of("overview", "signals"),
+                "Sprawdzam zanonimizowany proces CRM.",
+                null
+        );
+        assertTrue(process.overview().get("dataAndArtifacts").toString().contains("Anonymized CRM contact change request"));
+        assertTrue(process.overview().get("processBoundary").toString().contains("CRM Contact Preference Management"));
+        assertTrue(process.overview().get("lifecycle").toString().contains("CRM contact validation succeeds"));
+        assertTrue(process.overview().get("completionSignals").toString().contains("CRM contact confirmation is recorded"));
+        assertTrue(process.signals().get("failureModes").toString().contains("crm-notification-timeout"));
+        assertFalse(process.toString().contains("futureCrmRawHint"));
+
+        var system = tools.getEntity(
+                "system",
+                "notifications",
+                List.of("sourceCoverage"),
+                "Sprawdzam zanonimizowane pokrycie zrodel CRM.",
+                null
+        );
+        assertEquals("partial", system.sourceCoverage().get("status"));
+        assertTrue(system.sourceCoverage().get("limitations").toString().contains("CRM provider internals were not reviewed"));
+        assertTrue(system.affordances().limitations().stream().anyMatch(limit -> limit.contains("CRM provider internals")));
+        assertFalse(system.sourceCoverage().containsKey("futureCrmRawHint"));
     }
 
     @Test
@@ -151,7 +223,7 @@ class OperationalContextMcpToolsTest {
     @Test
     void shouldKeepEntityPayloadCompactForLargeCodeSearchScope() throws Exception {
         var catalogTools = new OperationalContextMcpTools(
-                new OperationalContextAdapter(new OperationalContextProperties()),
+                OperationalContextAdapterTestCreator.create(new OperationalContextProperties()),
                 new OperationalContextToolMapper()
         );
 
@@ -271,7 +343,52 @@ class OperationalContextMcpToolsTest {
                         "systems", List.of("notifications"),
                         "boundedContexts", List.of("notifications")
                 ),
-                "failureModes", List.of("Notification delivery timeout")
+                "processBoundary", map(
+                        "businessCapability", "CRM Contact Preference Management",
+                        "startsWhen", List.of("An anonymized CRM contact update is accepted."),
+                        "endsWhen", List.of("The CRM contact view confirms the update."),
+                        "includes", List.of("CRM contact preference validation"),
+                        "excludes", List.of("Authentication credential lifecycle"),
+                        "assumptions", List.of("CRM contact identity is already resolved."),
+                        "futureCrmRawHint", "must-not-leak"
+                ),
+                "lifecycle", map(
+                        "triggers", List.of(map(
+                                "type", "api",
+                                "name", "CRM contact update",
+                                "futureCrmRawHint", "must-not-leak"
+                        )),
+                        "statuses", List.of("requested", "applied"),
+                        "transitions", List.of(map(
+                                "from", "requested",
+                                "to", "applied",
+                                "trigger", "CRM contact validation succeeds.",
+                                "futureCrmRawHint", "must-not-leak"
+                        )),
+                        "terminalStates", List.of("applied"),
+                        "successOutcomes", List.of("CRM contact preference is applied."),
+                        "futureCrmRawHint", "must-not-leak"
+                ),
+                "completionSignals", map(
+                        "successful", List.of("CRM contact confirmation is recorded."),
+                        "partial", List.of("CRM projection remains pending."),
+                        "failed", List.of("CRM validation rejection is recorded."),
+                        "cancelled", List.of("CRM cancellation is recorded."),
+                        "futureCrmRawHint", "must-not-leak"
+                ),
+                "failureModes", List.of(map(
+                        "id", "crm-notification-timeout",
+                        "name", "CRM notification timeout",
+                        "summary", "An anonymized CRM notification is not confirmed in time.",
+                        "affectedStep", "publish-crm-notification",
+                        "signals", List.of("CRM confirmation missing"),
+                        "futureCrmRawHint", "must-not-leak"
+                )),
+                "dataAndArtifacts", map(
+                        "inputArtifacts", List.of("Anonymized CRM contact change request"),
+                        "outputArtifacts", List.of("CRM contact notification confirmation"),
+                        "futureCrmRawHint", "must-not-leak"
+                )
         );
     }
 
@@ -281,6 +398,12 @@ class OperationalContextMcpToolsTest {
                 "name", name,
                 "criticality", id.equals("notifications") ? "high" : "medium",
                 "summary", name + " system.",
+                "participants", id.equals("notifications")
+                        ? map("externalOwner", "CRM managed platform provider", "futureCrmParticipantHint", "must-not-leak")
+                        : map(),
+                "runtime", id.equals("notifications")
+                        ? map("configurationDirectory", "crm/notifications", "futureCrmRuntimeHint", "must-not-leak")
+                        : map(),
                 "aliases", List.of(alias),
                 "references", map(
                         "repositories", id.equals("notifications") ? List.of("notifications-service") : List.of(),
@@ -295,6 +418,13 @@ class OperationalContextMcpToolsTest {
                         "strong", map(
                                 "markers", List.of(alias)
                         )
+                ),
+                "sourceCoverage", map(
+                        "status", "partial",
+                        "scannedSources", List.of("Anonymized CRM service notes"),
+                        "expectedSources", List.of("CRM provider contract"),
+                        "limitations", List.of("CRM provider internals were not reviewed"),
+                        "futureCrmRawHint", "must-not-leak"
                 )
         );
     }
@@ -339,6 +469,17 @@ class OperationalContextMcpToolsTest {
                                 "projectNames", List.of("notifications-service"),
                                 "domainTerms", List.of("notification delivery")
                         )
+                ),
+                "evidence", List.of(map(
+                        "sourceRef", "crm/notifications/pom.xml",
+                        "evidenceType", "build-definition",
+                        "note", "Anonymized CRM notification module.",
+                        "futureCrmEvidenceHint", "must-not-leak"
+                )),
+                "llmToolHints", map(
+                        "answerWhenUserMentions", List.of("CRM contact notification"),
+                        "disambiguateFrom", List.of("CRM authentication account service"),
+                        "futureCrmToolHint", "must-not-leak"
                 )
         );
     }
@@ -367,6 +508,35 @@ class OperationalContextMcpToolsTest {
                 "id", "notifications",
                 "name", "Notifications context",
                 "summary", "Notification delivery context.",
+                "type", "supporting-domain",
+                "localLanguageSummary", List.of("CRM notification means a contact message, not an authentication challenge."),
+                "scope", map(
+                        "includes", List.of("CRM contact notification delivery"),
+                        "excludes", List.of("Authentication challenge delivery"),
+                        "businessCapabilities", List.of("CRM Contact Communication"),
+                        "coreEntities", List.of("NotificationTemplate"),
+                        "keyDecisions", List.of("Whether a CRM contact notification is ready"),
+                        "futureCrmScopeHint", "must-not-leak"
+                ),
+                "semanticBoundary", map(
+                        "coreConcepts", List.of("CRM contact notification"),
+                        "invariants", List.of("CRM notification acknowledgement is recorded once"),
+                        "ownsLanguage", List.of("contact notification"),
+                        "doesNotOwn", List.of("authentication challenge"),
+                        "futureCrmSemanticHint", "must-not-leak"
+                ),
+                "evidence", List.of(map(
+                        "sourceRef", "Anonymized CRM notification glossary",
+                        "evidenceType", "domain-documentation",
+                        "futureCrmEvidenceHint", "must-not-leak"
+                )),
+                "llmToolHints", map(
+                        "answerWhenUserMentions", List.of("CRM contact notification"),
+                        "disambiguateFrom", List.of("CRM authentication challenge"),
+                        "usefulSearchKeywords", List.of("NotificationTemplate"),
+                        "explanationStyle", "Explain as the CRM notification boundary.",
+                        "futureCrmToolHint", "must-not-leak"
+                ),
                 "references", map(
                         "systems", List.of("notifications"),
                         "repositories", List.of("notifications-service"),

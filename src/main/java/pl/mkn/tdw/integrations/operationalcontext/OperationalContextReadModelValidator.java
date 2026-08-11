@@ -231,8 +231,7 @@ public class OperationalContextReadModelValidator {
             String relationRole
     ) {
         return new SourceRef(
-                "src/main/resources/operational-context/"
-                        + SOURCE_FILES.getOrDefault(entityType, "operational-context"),
+                SOURCE_FILES.getOrDefault(entityType, "operational-context"),
                 entityType,
                 entityId,
                 fieldPath,
@@ -402,10 +401,10 @@ public class OperationalContextReadModelValidator {
                     "System " + system.id() + " keeps dependency " + target + " in " + fieldPath
                             + ", but the same directed dependency is derivable from integrations.yml participants.",
                     List.of(new SourceRef(
-                            "src/main/resources/operational-context/systems.yml",
+                                "systems.yml",
                             SYSTEM,
                             system.id(),
-                            "$.systems[id=" + system.id() + "]." + fieldPath,
+                            "$.systems[id=" + system.id() + "]." + fieldPath + "[system=" + target + "]",
                             relationRole
                     ))
             ));
@@ -498,10 +497,10 @@ public class OperationalContextReadModelValidator {
                     "Bounded context " + boundedContextId + " keeps " + targetId + " in " + fieldPath
                             + ", but the same relation is derivable from integration participants/references or code-search targets.",
                     List.of(new SourceRef(
-                            "src/main/resources/operational-context/bounded-contexts.yml",
+                                "bounded-contexts.yml",
                             BOUNDED_CONTEXT,
                             boundedContextId,
-                            "$.boundedContexts[id=" + boundedContextId + "]." + fieldPath,
+                            "$.boundedContexts[id=" + boundedContextId + "]." + fieldPath + "[id=" + targetId + "]",
                             relationRole
                     ))
             ));
@@ -566,10 +565,10 @@ public class OperationalContextReadModelValidator {
                         "Process " + process.id() + " keeps " + systemId
                                 + " both in participants and references.systems.",
                         List.of(new SourceRef(
-                                "src/main/resources/operational-context/processes.yml",
+                                    "processes.yml",
                                 "process",
                                 process.id(),
-                                "$.processes[id=" + process.id() + "].references.systems",
+                                "$.processes[id=" + process.id() + "].references.systems[id=" + systemId + "]",
                                 "references-system"
                         ))
                 ));
@@ -711,12 +710,12 @@ public class OperationalContextReadModelValidator {
                     "Code-search scope " + scope.id() + " has no operational target.",
                     List.of(scopeRef(scope, "target", "scope-target"))
             ));
-        } else if (!isSystemTarget(scope)) {
+        } else if (!isSupportedOperationalTarget(scope)) {
             findings.add(new ValidationFinding(
                     "error",
-                    "CODE_SEARCH_SCOPE_TARGET_NOT_SYSTEM",
+                    "CODE_SEARCH_SCOPE_TARGET_UNSUPPORTED",
                     "Code-search scope " + scope.id()
-                            + " must target a system; repository discovery uses only system code-search scopes.",
+                            + " must target a system or bounded-context.",
                     List.of(scopeRef(scope, "target", "scope-target"))
             ));
         }
@@ -817,6 +816,12 @@ public class OperationalContextReadModelValidator {
         return SYSTEM.equals(normalize(scope.target().type())) && StringUtils.hasText(scope.target().id());
     }
 
+    private boolean isSupportedOperationalTarget(OperationalContextRepositorySearchScope scope) {
+        var targetType = normalize(scope.target().type());
+        return (SYSTEM.equals(targetType) || BOUNDED_CONTEXT.equals(targetType))
+                && StringUtils.hasText(scope.target().id());
+    }
+
     private boolean needsCodeSearchScope(OperationalContextSystem system) {
         var kind = normalize(system.kind());
         return "internal".equals(kind) || kind.startsWith("internal-") || "api-gateway".equals(kind);
@@ -828,7 +833,7 @@ public class OperationalContextReadModelValidator {
             String relationRole
     ) {
         return new SourceRef(
-                "src/main/resources/operational-context/code-search-scopes.yml",
+                "code-search-scopes.yml",
                 CODE_SEARCH_SCOPE,
                 scope.id(),
                 "$.codeSearchScopes[id=" + scope.id() + "]." + fieldPath,

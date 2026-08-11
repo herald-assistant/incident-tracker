@@ -1,0 +1,18 @@
+schemaVersion: 1
+catalogKind: operational-context-glossary
+terms:
+- id: soap-fault
+  term: SOAP Fault
+  category: integration-term
+  definition: Error returned by a synchronous SOAP integration.
+  matchSignals:
+    exact:
+      keyword:
+      - SOAPFault
+      - api.partner.local
+  canonicalReferences:
+  - app-core-to-partner-sync
+gaps:
+- id: confirm-soap-fault-taxonomy
+  type: human-confirmation-required
+  summary: Confirm whether SOAP fault terminology needs separate domain-specific subtypes.

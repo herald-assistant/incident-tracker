@@ -1,0 +1,24 @@
+<div class="dialog-backdrop" (click)="cancelDelete.emit()">
+  <section class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()">
+    <p class="section-eyebrow">Delete catalogue entry</p>
+    <h2 id="delete-title">{{ impact().type }}/{{ impact().id }}</h2>
+    <p class="delete-dialog__meta">{{ impact().sourceFile }} · local catalogue copy</p>
+    @if (!impact().allowed) {
+      <div class="blocked-message" role="alert"><strong>Delete is blocked.</strong><p>Remove the inbound references first. Cascade delete is not available.</p></div>
+    } @else {
+      <p>This removes the entry from the local catalogue copy. This action does not cascade.</p>
+    }
+    @if (impact().inboundReferences.length) {
+      <ul class="reference-list">
+        @for (reference of impact().inboundReferences; track reference.sourceType + reference.sourceId + reference.fieldPath) {
+          <li><button type="button" (click)="openReference.emit(reference)">{{ reference.sourceType }}/{{ reference.sourceId }}</button><span>{{ reference.relationType }} · {{ reference.fieldPath || 'unknown field' }}</span></li>
+        }
+      </ul>
+    }
+    @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+    <footer>
+      <button type="button" class="secondary-button" cdkFocusInitial (click)="cancelDelete.emit()">Cancel</button>
+      <button type="button" class="danger-button" [disabled]="!impact().allowed || busy()" (click)="confirmDelete.emit()">{{ busy() ? 'Deleting…' : 'Delete' }}</button>
+    </footer>
+  </section>
+</div>

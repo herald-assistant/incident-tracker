@@ -6,6 +6,7 @@ import pl.mkn.tdw.features.configdriftviewer.source.ConfigDriftViewerRepositoryP
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextReadSession;
 
 import java.util.List;
 import java.util.Map;
@@ -21,34 +22,34 @@ class ConfigDriftViewerScopeResolverTest {
     @Test
     void shouldResolveRepositoryAndSafeDirectoryFromInternalSystem() {
         var resolver = resolver(List.of(system(
-                "backend-system",
+                "crm-customer-service",
                 "internal-service",
-                Map.of("runtime", Map.of("configurationDirectory", "services/backend"))
+                Map.of("runtime", Map.of("configurationDirectory", "crm/customer-service"))
         )));
 
-        var scope = resolver.resolve("runtime-config", "backend-system");
+        var scope = resolver.resolve("crm-runtime-config", "crm-customer-service");
 
-        assertEquals("runtime-config", scope.repositoryId());
-        assertEquals("config-gitlab", scope.connectionId());
-        assertEquals("platform/runtime-config", scope.projectPath());
-        assertEquals("backend-system", scope.systemId());
-        assertEquals("services/backend", scope.configurationDirectory());
+        assertEquals("crm-runtime-config", scope.repositoryId());
+        assertEquals("crm-config-connection", scope.connectionId());
+        assertEquals("crm/runtime-config", scope.projectPath());
+        assertEquals("crm-customer-service", scope.systemId());
+        assertEquals("crm/customer-service", scope.configurationDirectory());
     }
 
     @Test
     void shouldResolveExactConfigurationDirectorySignal() {
         var resolver = resolver(List.of(system(
-                "backend-system",
+                "crm-customer-service",
                 "internal-service",
                 Map.of(
                         "matchSignals",
-                        Map.of("exact", Map.of("configurationDirectories", List.of("backend")))
+                        Map.of("exact", Map.of("configurationDirectories", List.of("crm/customer-service")))
                 )
         )));
 
         assertEquals(
-                "backend",
-                resolver.resolve("runtime-config", "backend-system").configurationDirectory()
+                "crm/customer-service",
+                resolver.resolve("crm-runtime-config", "crm-customer-service").configurationDirectory()
         );
     }
 
@@ -58,8 +59,8 @@ class ConfigDriftViewerScopeResolverTest {
                 "RUNTIME_CONFIGURATION_DIRECTORY_MISSING",
                 assertThrows(
                         ConfigDriftViewerScopeException.class,
-                        () -> resolver(List.of(system("missing", "internal-service", Map.of())))
-                                .resolve("runtime-config", "missing")
+                        () -> resolver(List.of(system("crm-missing", "internal-service", Map.of())))
+                                .resolve("crm-runtime-config", "crm-missing")
                 ).code()
         );
         assertEquals(
@@ -67,13 +68,13 @@ class ConfigDriftViewerScopeResolverTest {
                 assertThrows(
                         ConfigDriftViewerScopeException.class,
                         () -> resolver(List.of(system(
-                                "ambiguous",
+                                "crm-ambiguous",
                                 "internal-service",
                                 Map.of(
-                                        "runtime", Map.of("configurationDirectory", "backend"),
-                                        "deployment", Map.of("configurationDirectory", "worker")
+                                        "runtime", Map.of("configurationDirectory", "crm/customer-service"),
+                                        "deployment", Map.of("configurationDirectory", "crm/contact-worker")
                                 )
-                        ))).resolve("runtime-config", "ambiguous")
+                        ))).resolve("crm-runtime-config", "crm-ambiguous")
                 ).code()
         );
         assertEquals(
@@ -81,10 +82,10 @@ class ConfigDriftViewerScopeResolverTest {
                 assertThrows(
                         ConfigDriftViewerScopeException.class,
                         () -> resolver(List.of(system(
-                                "unsafe",
+                                "crm-unsafe",
                                 "internal-service",
-                                Map.of("runtime", Map.of("configurationDirectory", "../backend"))
-                        ))).resolve("runtime-config", "unsafe")
+                                Map.of("runtime", Map.of("configurationDirectory", "../crm"))
+                        ))).resolve("crm-runtime-config", "crm-unsafe")
                 ).code()
         );
     }
@@ -92,23 +93,23 @@ class ConfigDriftViewerScopeResolverTest {
     @Test
     void shouldRejectUnknownAndNonInternalSystems() {
         var resolver = resolver(List.of(system(
-                "partner",
+                "crm-partner",
                 "external-system",
-                Map.of("runtime", Map.of("configurationDirectory", "partner"))
+                Map.of("runtime", Map.of("configurationDirectory", "crm/partner"))
         )));
 
         assertEquals(
                 "RUNTIME_CONFIGURATION_SYSTEM_NOT_FOUND",
                 assertThrows(
                         ConfigDriftViewerScopeException.class,
-                        () -> resolver.resolve("runtime-config", "unknown")
+                        () -> resolver.resolve("crm-runtime-config", "crm-unknown")
                 ).code()
         );
         assertEquals(
                 "RUNTIME_CONFIGURATION_SYSTEM_NOT_INTERNAL_SERVICE",
                 assertThrows(
                         ConfigDriftViewerScopeException.class,
-                        () -> resolver.resolve("runtime-config", "partner")
+                        () -> resolver.resolve("crm-runtime-config", "crm-partner")
                 ).code()
         );
     }
@@ -117,39 +118,41 @@ class ConfigDriftViewerScopeResolverTest {
     void shouldExposeOnlyInternalSystemsWithUnambiguousSafeDirectories() {
         var resolver = resolver(List.of(
                 system(
-                        "ready",
+                        "crm-ready",
                         "internal-service",
-                        Map.of("runtime", Map.of("configurationDirectory", "backend"))
+                        Map.of("runtime", Map.of("configurationDirectory", "crm/customer-service"))
                 ),
-                system("missing", "internal-service", Map.of()),
+                system("crm-missing", "internal-service", Map.of()),
                 system(
-                        "external",
+                        "crm-external",
                         "external-system",
-                        Map.of("runtime", Map.of("configurationDirectory", "external"))
+                        Map.of("runtime", Map.of("configurationDirectory", "crm/external"))
                 )
         ));
 
         var options = resolver.availableSystems();
 
         assertEquals(1, options.size());
-        assertEquals("ready", options.get(0).id());
-        assertEquals("backend", options.get(0).configurationDirectory());
+        assertEquals("crm-ready", options.get(0).id());
+        assertEquals("crm/customer-service", options.get(0).configurationDirectory());
     }
 
     private static ConfigDriftViewerScopeResolver resolver(
             List<OperationalContextDtos.OperationalContextSystem> systems
     ) {
         var repositoryCatalog = mock(ConfigDriftViewerRepositoryCatalog.class);
-        when(repositoryCatalog.require("runtime-config")).thenReturn(
+        when(repositoryCatalog.require("crm-runtime-config")).thenReturn(
                 new ConfigDriftViewerRepositoryProfile(
-                        "runtime-config",
-                        "Runtime configuration",
-                        "config-gitlab",
-                        "platform/runtime-config"
+                        "crm-runtime-config",
+                        "CRM runtime configuration",
+                        "crm-config-connection",
+                        "crm/runtime-config"
                 )
         );
         var operationalContextPort = mock(OperationalContextPort.class);
-        when(operationalContextPort.loadContext(any())).thenReturn(catalog(systems));
+        var readSession = mock(OperationalContextReadSession.class);
+        when(readSession.query(any())).thenReturn(catalog(systems));
+        when(operationalContextPort.capture()).thenReturn(readSession);
         return new ConfigDriftViewerScopeResolver(repositoryCatalog, operationalContextPort);
     }
 

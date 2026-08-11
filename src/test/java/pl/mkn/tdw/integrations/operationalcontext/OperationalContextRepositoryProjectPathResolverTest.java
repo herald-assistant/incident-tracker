@@ -12,50 +12,90 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OperationalContextRepositoryProjectPathResolverTest {
 
     @Test
-    void shouldResolveProjectPathsThroughSystemRepositoryIds() {
+    void shouldResolveProjectPathsThroughSystemCodeSearchScope() {
         var resolver = resolver(
-                List.of(system("backend", List.of("backend-repo", "shared-repo"))),
+                List.of(system("crm-customer-service")),
                 List.of(
-                        repository("backend-repo", "CRM/WORKFLOWS/BACKEND", "CRM", Map.of()),
-                        repository("shared-repo", "CRM/LIBS/SHARED", "CRM", Map.of()),
-                        repository("unrelated-repo", "CRM/OTHER/UNRELATED", "CRM", Map.of())
-                )
+                        repository("crm-customer-repo", "CRM/SERVICES/CRM_CUSTOMER", "CRM", Map.of()),
+                        repository("crm-shared-repo", "CRM/LIBS/CRM_SHARED", "CRM", Map.of()),
+                        repository("crm-unrelated-repo", "CRM/OTHER/CRM_UNUSED", "CRM", Map.of())
+                ),
+                List.of(scope(
+                        "crm-customer-search",
+                        "system",
+                        "crm-customer-service",
+                        List.of("crm-customer-repo", "crm-shared-repo")
+                ))
         );
 
         assertEquals(
-                List.of("WORKFLOWS/BACKEND", "LIBS/SHARED"),
-                resolver.resolveProjectPaths("crm", List.of("backend", "backend-7d547497bf-j44wj"))
+                List.of("SERVICES/CRM_CUSTOMER", "LIBS/CRM_SHARED"),
+                resolver.resolveProjectPaths(
+                        "crm",
+                        List.of("crm-customer-service", "crm-customer-service-7d547497bf-j44wj")
+                )
         );
     }
 
     @Test
     void shouldNotResolveRepositoryOnlySignalWithoutMatchingSystemId() {
         var resolver = resolver(
-                List.of(system("crm-customer", List.of("crm-customer-repo"))),
+                List.of(system("crm-customer-service")),
                 List.of(repository(
-                        "backend-repo",
-                        "CRM/WORKFLOWS/BACKEND",
+                        "crm-customer-repo",
+                        "CRM/SERVICES/CRM_CUSTOMER",
                         "CRM",
-                        Map.of("markers", List.of("backend"))
+                        Map.of("markers", List.of("crm-customer"))
+                )),
+                List.of(scope(
+                        "crm-customer-search",
+                        "system",
+                        "crm-customer-service",
+                        List.of("crm-customer-repo")
                 ))
         );
 
-        assertEquals(List.of(), resolver.resolveProjectPaths("CRM", List.of("backend")));
+        assertEquals(List.of(), resolver.resolveProjectPaths("CRM", List.of("crm-customer")));
+    }
+
+    @Test
+    void shouldIgnoreScopeThatTargetsBoundedContextForSystemResolution() {
+        var resolver = resolver(
+                List.of(system("crm-customer-service")),
+                List.of(repository(
+                        "crm-customer-repo",
+                        "CRM/SERVICES/CRM_CUSTOMER",
+                        "CRM",
+                        Map.of()
+                )),
+                List.of(scope(
+                        "crm-customer-context-search",
+                        "bounded-context",
+                        "crm-customer-profile",
+                        List.of("crm-customer-repo")
+                ))
+        );
+
+        assertEquals(List.of(), resolver.resolveProjectPaths("CRM", List.of("crm-customer-service")));
     }
 
     private static OperationalContextRepositoryProjectPathResolver resolver(
             List<Map<String, Object>> systems,
-            List<Map<String, Object>> repositories
+            List<Map<String, Object>> repositories,
+            List<Map<String, Object>> codeSearchScopes
     ) {
         return new OperationalContextRepositoryProjectPathResolver(query -> {
             assertTrue(query.includes(OperationalContextEntryType.SYSTEM));
             assertTrue(query.includes(OperationalContextEntryType.REPOSITORY));
+            assertTrue(query.includes(OperationalContextEntryType.CODE_SEARCH_SCOPE));
             return OperationalContextDtos.catalogFromRaw(
                     List.of(),
                     List.of(),
                     systems,
                     List.of(),
                     repositories,
+                    codeSearchScopes,
+                    List.of(),
                     List.of(),
                     List.of(),
                     List.of(),
@@ -64,11 +104,25 @@ class OperationalContextRepositoryProjectPathResolverTest {
         });
     }
 
-    private static Map<String, Object> system(String id, List<String> repositoryIds) {
+    private static Map<String, Object> system(String id) {
         var system = new LinkedHashMap<String, Object>();
         system.put("id", id);
-        system.put("references", Map.of("repositories", repositoryIds));
         return system;
+    }
+
+    private static Map<String, Object> scope(
+            String id,
+            String targetType,
+            String targetId,
+            List<String> repositoryIds
+    ) {
+        return Map.of(
+                "id", id,
+                "target", Map.of("type", targetType, "id", targetId),
+                "repositories", repositoryIds.stream()
+                        .map(repositoryId -> Map.<String, Object>of("repoId", repositoryId))
+                        .toList()
+        );
     }
 
     private static Map<String, Object> repository(

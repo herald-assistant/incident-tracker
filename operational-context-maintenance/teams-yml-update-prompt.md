@@ -1,5 +1,8 @@
 # teams.yml update prompt
 
+Field formats, constrained values and runtime/AI effects are defined in
+[`operational-context-field-guidance.md`](operational-context-field-guidance.md).
+
 ## Purpose
 
 Update `teams.yml` as the catalog of team identifiers, labels and collaboration

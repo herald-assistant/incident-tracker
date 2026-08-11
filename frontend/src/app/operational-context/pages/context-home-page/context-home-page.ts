@@ -27,8 +27,18 @@ import {
   ContextCatalogTableComponent
 } from '../../components/context-catalog-table/context-catalog-table';
 import { ContextEntityDrawerComponent } from '../../components/context-entity-drawer/context-entity-drawer';
+import { ContextEntityEditorDrawerComponent } from '../../components/context-entity-editor-drawer/context-entity-editor-drawer';
+import { ContextDeleteConfirmationComponent } from '../../components/context-delete-confirmation/context-delete-confirmation';
 import { WhyPopoverComponent } from '../../components/why-popover/why-popover';
 import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
+import { OperationalContextMaintenanceFacade } from '../../services/operational-context-maintenance.facade';
+import {
+  isOperationalContextWritableType,
+  OperationalContextInboundReference,
+  OperationalContextReferenceOption,
+  OperationalContextReferenceOptions,
+  OperationalContextWritableType
+} from '../../models/operational-context-maintenance.models';
 
 type ContextTab =
   | 'overview'
@@ -653,6 +663,8 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
     AiApiPreviewPanelComponent,
     ContextCatalogTableComponent,
     ContextEntityDrawerComponent,
+    ContextEntityEditorDrawerComponent,
+    ContextDeleteConfirmationComponent,
     WhyPopoverComponent
   ],
   templateUrl: './context-home-page.html',
@@ -660,6 +672,7 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
 })
 export class ContextHomePageComponent {
   private readonly api = inject(OperationalContextApiService);
+  readonly maintenance = inject(OperationalContextMaintenanceFacade);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly tabs = TABS;
@@ -712,9 +725,22 @@ export class ContextHomePageComponent {
   readonly questionSourceFile = signal('');
   readonly questionStatus = signal('');
   readonly copiedMaintenanceTarget = signal('');
+  readonly editorDirty = signal(false);
+  readonly maintenanceNotice = signal('');
 
   readonly currentColumns = computed(() => COLUMNS[this.selectedTab()] ?? []);
   readonly currentRows = computed(() => this.filteredRows(this.selectedTab()));
+  readonly referenceOptions = computed<OperationalContextReferenceOptions>(() => ({
+    system: this.referenceOptionRows(this.data().systems, 'name'),
+    repository: this.referenceOptionRows(this.data().repositories, 'project'),
+    'code-search-scope': this.referenceOptionRows(this.data().codeSearchScopes, 'name'),
+    process: this.referenceOptionRows(this.data().processes, 'name'),
+    integration: this.referenceOptionRows(this.data().integrations, 'name'),
+    'bounded-context': this.referenceOptionRows(this.data().boundedContexts, 'name'),
+    team: this.referenceOptionRows(this.data().teams, 'name'),
+    'glossary-term': this.referenceOptionRows(this.data().glossary, 'term'),
+    'handoff-rule': this.referenceOptionRows(this.data().handoffRules, 'title')
+  }));
   readonly tableColumnCount = computed(() => Math.max(this.currentColumns().length, 1));
   readonly searchAiApiPreviewEndpoints = computed<OperationalContextAiApiPreviewEndpoint[]>(() => {
     const preview = this.searchAiApiPreview();
@@ -770,6 +796,14 @@ export class ContextHomePageComponent {
       : 0;
     return status === 'empty' || status === 'partial' || indexedEntities === 0;
   });
+  readonly writableTypeForTab = computed<OperationalContextWritableType | null>(() => {
+    const type = this.entityTypeForTab(this.selectedTab());
+    return isOperationalContextWritableType(type) && this.maintenance.supports(type) ? type : null;
+  });
+  readonly selectedEntityWritable = computed(() => {
+    const target = this.selectedEntityTarget();
+    return Boolean(target && isOperationalContextWritableType(target.type) && this.maintenance.supports(target.type));
+  });
 
   constructor() {
     this.localFilterControl.valueChanges
@@ -808,11 +842,68 @@ export class ContextHomePageComponent {
     this.questionStatusControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.questionStatus.set(value));
+    this.maintenance.saved$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        this.maintenanceNotice.set(`${event.entity.type}/${event.entity.id} saved.`);
+        this.reloadAfterMutation({ type: event.entity.type, id: event.entity.id });
+      });
+    this.maintenance.deleted$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        this.maintenanceNotice.set(`${event.type}/${event.id} deleted.`);
+        this.reloadAfterMutation(null);
+      });
+    this.maintenance.loadCapabilities();
     this.loadCatalogue();
   }
 
   selectTab(tab: ContextTab): void {
+    if (!this.confirmDiscard()) return;
     this.selectedTab.set(tab);
+  }
+
+  addEntity(): void {
+    const type = this.writableTypeForTab();
+    if (type && this.confirmDiscard()) {
+      this.maintenanceNotice.set('');
+      this.maintenance.openCreate(type);
+    }
+  }
+
+  editSelectedEntity(): void {
+    const target = this.selectedEntityTarget();
+    if (target && isOperationalContextWritableType(target.type) && this.confirmDiscard()) {
+      this.maintenanceNotice.set('');
+      this.maintenance.openEdit(target.type, target.id);
+    }
+  }
+
+  deleteSelectedEntity(): void {
+    const target = this.selectedEntityTarget();
+    if (target && isOperationalContextWritableType(target.type)) this.maintenance.requestDelete(target.type, target.id);
+  }
+
+  cancelEditor(): void {
+    if (!this.confirmDiscard()) return;
+    this.editorDirty.set(false);
+    this.maintenance.closeEditor();
+  }
+
+  editSource(type: string, id: string | null | undefined): void {
+    if (id && isOperationalContextWritableType(type) && this.maintenance.supports(type) && this.confirmDiscard()) {
+      this.maintenanceNotice.set('');
+      this.maintenance.openEdit(type, id);
+    }
+  }
+
+  canEditSource(type: string, id: string | null | undefined): boolean {
+    return Boolean(id && isOperationalContextWritableType(type) && this.maintenance.supports(type));
+  }
+
+  openDeleteReference(reference: OperationalContextInboundReference): void {
+    this.maintenance.cancelDelete();
+    this.openEntity({ type: reference.sourceType, id: reference.sourceId });
   }
 
   runSignalSearch(event?: Event): void {
@@ -888,6 +979,7 @@ export class ContextHomePageComponent {
     if (!target.type || !target.id) {
       return;
     }
+    if (!this.confirmDiscard()) return;
     if (target.type === 'validation') {
       this.selectTab('validation');
       return;
@@ -1111,7 +1203,7 @@ export class ContextHomePageComponent {
     return this.selectedTab() === 'systems';
   }
 
-  private loadCatalogue(): void {
+  private loadCatalogue(afterLoad?: () => void): void {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
@@ -1147,12 +1239,35 @@ export class ContextHomePageComponent {
             openQuestions: response.openQuestions
           });
           this.isLoading.set(false);
+          afterLoad?.();
         },
         error: () => {
           this.errorMessage.set('Could not load operational context catalogue.');
           this.isLoading.set(false);
         }
       });
+  }
+
+  private reloadAfterMutation(target: { type: string; id: string } | null): void {
+    this.editorDirty.set(false);
+    this.maintenance.cancelDelete();
+    this.maintenance.loadCapabilities();
+    this.searchResults.set([]);
+    this.resetSearchAiApiPreview();
+    if (!target) this.closeDrawer();
+    this.loadCatalogue(() => {
+      if (target) this.openEntity(target);
+    });
+  }
+
+  private confirmDiscard(): boolean {
+    if (!this.maintenance.editor() || !this.editorDirty()) return true;
+    const discard = globalThis.confirm('Discard unsaved operational context changes?');
+    if (discard) {
+      this.editorDirty.set(false);
+      this.maintenance.closeEditor();
+    }
+    return discard;
   }
 
   private supportsReadModels(type: string): boolean {
@@ -1182,6 +1297,21 @@ export class ContextHomePageComponent {
           .filter(Boolean)
       )
     ).sort((left, right) => left.localeCompare(right));
+  }
+
+  private referenceOptionRows(
+    rows: OperationalContextCatalogRow[],
+    labelKey: string
+  ): OperationalContextReferenceOption[] {
+    return rows
+      .map((row) => {
+        const values = row as unknown as Record<string, unknown>;
+        const id = String(values['id'] || '').trim();
+        const label = String(values[labelKey] || id).trim();
+        return { id, label };
+      })
+      .filter((option) => option.id)
+      .sort((left, right) => left.label.localeCompare(right.label));
   }
 
   private exactMatch(left: string | null | undefined, right: string): boolean {

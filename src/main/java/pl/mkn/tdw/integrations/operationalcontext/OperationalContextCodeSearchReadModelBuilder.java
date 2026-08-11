@@ -25,8 +25,8 @@ public class OperationalContextCodeSearchReadModelBuilder {
 
     private static final String CODE_SEARCH_SCOPE = "code-search-scope";
     private static final String REPOSITORY = "repository";
-    private static final String CODE_SEARCH_SCOPES_FILE = "src/main/resources/operational-context/code-search-scopes.yml";
-    private static final String REPO_MAP_FILE = "src/main/resources/operational-context/repo-map.yml";
+    private static final String CODE_SEARCH_SCOPES_FILE = "code-search-scopes.yml";
+    private static final String REPO_MAP_FILE = "repo-map.yml";
 
     private final OperationalContextRelationIndexBuilder relationIndexBuilder;
 

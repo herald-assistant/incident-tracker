@@ -7,7 +7,7 @@ import pl.mkn.tdw.integrations.elasticsearch.TestElasticLogPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveService;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapter;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextAdapterTestCreator;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextProperties;
 import pl.mkn.tdw.features.incidentanalysis.testsupport.TestOperationalContextProjectPathResolver;
 import pl.mkn.tdw.features.incidentanalysis.ai.initial.InitialAnalysisRequest;
@@ -110,7 +110,7 @@ class AnalysisOrchestratorPreparedAiFlowTest {
         properties.setEnabled(false);
         return new OperationalContextEvidenceProvider(
                 properties,
-                new OperationalContextAdapter(properties),
+                OperationalContextAdapterTestCreator.create(properties),
                 new OperationalContextCatalogMatcher(properties),
                 new OperationalContextEvidenceMapper()
         );

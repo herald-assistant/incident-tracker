@@ -204,7 +204,7 @@ public class OperationalContextRelationIndexBuilder {
                     state,
                     source,
                     rule.references(),
-                    "handoff-rules.md",
+                    "handoff-rules.yml",
                     HANDOFF_RULE,
                     rule.id(),
                     "$.handoffRules[id=" + rule.id() + "].operationalContextLinks",
@@ -236,7 +236,7 @@ public class OperationalContextRelationIndexBuilder {
                     false,
                     "direct-markdown",
                     "medium",
-                    sourceRef("glossary.md", TERM, termId, "$.terms[id=" + termId + "].canonicalReferences", "canonical-reference")
+                    sourceRef("glossary.yml", TERM, termId, "$.terms[id=" + termId + "].canonicalReferences", "canonical-reference")
             );
             return;
         }
@@ -257,7 +257,7 @@ public class OperationalContextRelationIndexBuilder {
                 false,
                 "direct-markdown",
                 "medium",
-                sourceRef("glossary.md", TERM, termId, "$.terms[id=" + termId + "].canonicalReferences", "canonical-reference")
+                sourceRef("glossary.yml", TERM, termId, "$.terms[id=" + termId + "].canonicalReferences", "canonical-reference")
         );
     }
 
@@ -357,7 +357,13 @@ public class OperationalContextRelationIndexBuilder {
                     !canonical,
                     canonical ? "direct-yaml" : "supporting-yaml-reference",
                     canonical ? "high" : "medium",
-                    sourceRef(file, sourceRefEntityType, sourceEntityId, fieldPath, relationType)
+                    sourceRef(
+                            file,
+                            sourceRefEntityType,
+                            sourceEntityId,
+                            fieldPath + "[id=" + targetId + "]",
+                            relationType
+                    )
             );
         }
     }
@@ -386,7 +392,13 @@ public class OperationalContextRelationIndexBuilder {
                     !canonical,
                     canonical ? "direct-markdown" : "supporting-markdown-reference",
                     canonical ? "high" : "medium",
-                    sourceRef(file, sourceRefEntityType, sourceEntityId, fieldPath, relationType)
+                    sourceRef(
+                            file,
+                            sourceRefEntityType,
+                            sourceEntityId,
+                            fieldPath + "[id=" + targetId + "]",
+                            relationType
+                    )
             );
         }
     }
@@ -619,18 +631,19 @@ public class OperationalContextRelationIndexBuilder {
         if (participant == null || !StringUtils.hasText(participant.system())) {
             return;
         }
+        var selectedParticipantPath = participantPath + "[system=" + participant.system() + "]";
         relation(
                 state,
                 source,
                 relationType,
                 new EntityKey(SYSTEM, participant.system()),
-                firstNonBlank(participant.role(), participantPath),
+                firstNonBlank(participant.role(), selectedParticipantPath),
                 source,
                 true,
                 false,
                 "direct-yaml",
                 "high",
-                sourceRef("integrations.yml", INTEGRATION, integration.id(), "$.integrations[id=" + integration.id() + "].participants." + participantPath, relationType)
+                sourceRef("integrations.yml", INTEGRATION, integration.id(), "$.integrations[id=" + integration.id() + "].participants." + selectedParticipantPath, relationType)
         );
         if (StringUtils.hasText(participant.boundedContext())) {
             relation(
@@ -638,16 +651,16 @@ public class OperationalContextRelationIndexBuilder {
                     source,
                     "participant-bounded-context",
                     new EntityKey(BOUNDED_CONTEXT, participant.boundedContext()),
-                    firstNonBlank(participant.role(), participantPath),
+                    firstNonBlank(participant.role(), selectedParticipantPath),
                     source,
                     true,
                     false,
                     "direct-yaml",
                     "high",
-                    sourceRef("integrations.yml", INTEGRATION, integration.id(), "$.integrations[id=" + integration.id() + "].participants." + participantPath + ".boundedContext", "participant-bounded-context")
+                    sourceRef("integrations.yml", INTEGRATION, integration.id(), "$.integrations[id=" + integration.id() + "].participants." + selectedParticipantPath + ".boundedContext", "participant-bounded-context")
             );
         }
-        referenceList(state, source, "participant-repository", REPOSITORY, participant.repositories(), "integrations.yml", integration.id(), "$.integrations[id=" + integration.id() + "].participants." + participantPath + ".repositories", true);
+        referenceList(state, source, "participant-repository", REPOSITORY, participant.repositories(), "integrations.yml", integration.id(), "$.integrations[id=" + integration.id() + "].participants." + selectedParticipantPath + ".repositories", true);
     }
 
     private void dependencyRelations(
@@ -760,7 +773,7 @@ public class OperationalContextRelationIndexBuilder {
     }
 
     private SourceRef sourceRef(String file, String entityType, String entityId, String fieldPath, String role) {
-        return new SourceRef("src/main/resources/operational-context/" + file, entityType, entityId, fieldPath, role);
+        return new SourceRef(file, entityType, entityId, fieldPath, role);
     }
 
     private Map<String, OperationalContextRepository> repositoriesById(List<OperationalContextRepository> repositories) {

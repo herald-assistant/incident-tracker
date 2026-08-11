@@ -15,12 +15,13 @@ import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixture
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.map;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.port;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.typicalCatalog;
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextValidationTestCreator.create;
 
 class OperationalContextViewServiceTest {
 
     @Test
     void shouldReturnEmptySummaryForStarterTemplates() {
-        var service = new OperationalContextViewService(port(emptyCatalog()));
+        var service = new OperationalContextViewService(port(emptyCatalog()), create());
 
         var summary = service.summary();
 
@@ -34,7 +35,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldExposeCatalogueRowsFromSimplifiedContract() {
-        var service = new OperationalContextViewService(port(typicalCatalog()));
+        var service = new OperationalContextViewService(port(typicalCatalog()), create());
 
         var system = service.systems().get(0);
         assertEquals("crm-consent-service", system.id());
@@ -92,7 +93,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldExposeOnlyRelationsAndCodeSearchReadModelsForOperatorApi() {
-        var service = new OperationalContextViewService(port(typicalCatalog()));
+        var service = new OperationalContextViewService(port(typicalCatalog()), create());
 
         var relations = service.entityRelationsReadModel("system", "crm-consent-service");
         assertEquals("operational-context.entity-relations", relations.contract());
@@ -108,7 +109,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldExposeCompactProfilesWithoutRemovedExpansions() {
-        var service = new OperationalContextViewService(port(typicalCatalog()));
+        var service = new OperationalContextViewService(port(typicalCatalog()), create());
 
         var compactEntity = (OperationalContextProfiledReadModelDto) service.entity(
                 "system",
@@ -144,7 +145,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldValidateBrokenReferences() {
-        var service = new OperationalContextViewService(port(brokenCatalog()));
+        var service = new OperationalContextViewService(port(brokenCatalog()), create());
 
         var findings = service.validation();
 
@@ -170,7 +171,7 @@ class OperationalContextViewServiceTest {
                 List.of(),
                 List.of(),
                 "index"
-        )));
+        )), create());
 
         var findings = service.validation();
 
@@ -181,7 +182,7 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldSearchByBusinessAndCatalogTerms() {
-        var service = new OperationalContextViewService(port(typicalCatalog()));
+        var service = new OperationalContextViewService(port(typicalCatalog()), create());
 
         assertFalse(service.search("crm-consent-service").isEmpty());
         assertTrue(service.search("business-analysis").stream()
@@ -194,13 +195,44 @@ class OperationalContextViewServiceTest {
 
     @Test
     void shouldReturnEntityDetailsAndControlledNotFound() {
-        var service = new OperationalContextViewService(port(typicalCatalog()));
+        var service = new OperationalContextViewService(port(typicalCatalog()), create());
 
         var detail = service.entity("system", "crm-consent-service");
+        var repositoryDetail = service.entity("repository", "crm-consent-repo");
+        var contextDetail = service.entity("bounded-context", "customer-consent-context");
 
         assertEquals("system", detail.type());
         assertEquals("crm-consent-service", detail.id());
         assertFalse(detail.recognitionSignals().isEmpty());
+        assertTrue(detail.overviewSections().stream().anyMatch(section ->
+                section.title().equals("System runtime and responsibility")
+                        && section.fields().get("configurationDirectory").equals("crm/consent-service")
+                        && section.fields().get("externalOwner").equals("CRM managed platform provider")
+        ));
+        assertTrue(repositoryDetail.overviewSections().stream().anyMatch(section ->
+                section.title().equals("Evidence")
+                        && section.fields().toString().contains("crm/consent-service/pom.xml")
+        ));
+        assertTrue(repositoryDetail.overviewSections().stream().anyMatch(section ->
+                section.title().equals("AI exploration guidance")
+                        && section.fields().toString().contains("CRM consent validation")
+        ));
+        assertTrue(contextDetail.overviewSections().stream().anyMatch(section ->
+                section.title().equals("Local language and scope")
+                        && section.fields().toString().contains("CRM contact consent decisions")
+        ));
+        assertTrue(contextDetail.overviewSections().stream().anyMatch(section ->
+                section.title().equals("Semantic boundary")
+                        && section.fields().toString().contains("ConsentPreferenceRecorded")
+        ));
+        assertTrue(contextDetail.overviewSections().stream().anyMatch(section ->
+                section.title().equals("Evidence")
+                        && section.fields().toString().contains("Anonymized CRM consent glossary")
+        ));
+        assertTrue(contextDetail.overviewSections().stream().anyMatch(section ->
+                section.title().equals("AI exploration guidance")
+                        && section.fields().toString().contains("ConsentPreference")
+        ));
         assertThrows(
                 OperationalContextEntityNotFoundException.class,
                 () -> service.entity("system", "missing")

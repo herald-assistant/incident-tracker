@@ -131,8 +131,9 @@ Na dzisiaj projekt ma:
   `GET /api/auth/github/start`, `GET /api/auth/github/callback` i
   `POST /api/auth/github/logout` dla autoryzacji Copilot SDK w trybach
   `LOCAL_TOKEN` oraz `GITHUB_APP`,
-- shared/operator API `/api/operational-context/*` dla operator-facing widoku
-  curated operational context,
+- shared/operator API `/api/operational-context/*` dla operator-facing odczytu
+  curated operational context oraz capability-gated maintenance dziewieciu
+  typow YAML w lokalnym workspace,
 - feature-owned API `/api/config-drift-viewer/v1/*` dla input
   options, preflightu `DEEP`, asynchronicznych jobow oraz read-only importu,
 - feature-owned `POST /api/change-verification/jobs` i
@@ -219,7 +220,9 @@ Na dzisiaj projekt ma:
   Angularowy ekran `Tool Workbench / Operational Context` dla curated
   operational context: katalogu systemow, repozytoriow, code-search scopes,
   procesow, integracji, bounded contexts, zespolow, glossary, handoff rules,
-  validation findings i open questions.
+  validation findings i open questions. Bundled resources sa tylko seedem;
+  widok utrzymuje lokalna kopie w `tdw-data/operational-context` i udostepnia
+  Add/Edit/Delete dla dziewieciu typow YAML.
 - `GET /workspace-settings`
   Angularowy ekran `Platform / Workspace Settings` do lokalnej customizacji
   workspace'u. Ekran pokazuje efektywne wartosci z `application.properties`
@@ -301,7 +304,11 @@ Na dzisiaj projekt ma:
 - `GET /api/operational-context/*`
   Shared/operator API dla katalogu operational context: summary, listy encji,
   search, szczegoly encji, validation i open questions. To jest fasada nad
-  `integrations.operationalcontext`, a nie incident job flow.
+  `integrations.operationalcontext`, a nie incident job flow. Osobny kontrakt
+  `/api/operational-context/catalog/*` wystawia capabilities, editable entity,
+  create/complete-PUT, delete impact i RESTRICT delete. Mutacje zapisuja jedna
+  lokalna kopie i podlegaja walidacji domenowej; nie maja ETagu, security gate
+  ani wersjonowania katalogu.
 
 ## Glowny podzial pakietow
 
@@ -368,8 +375,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.tdw.features.incidentanalysis.evidence.provider.operationalcontext`
   Enrichment katalogiem operacyjnym: sygnaly incydentu, matcher i mapper evidence.
 - `pl.mkn.tdw.integrations.operationalcontext`
-  Query-based adapter curated operational context catalog i filtrowania go do
-  reuse'u przez evidence i kolejne capability.
+  Query-based adapter curated operational context catalog, niezalezny codec,
+  classpath seed source, lokalny store biezacych dokumentow, captured snapshot,
+  walidacja i neutralna logika maintenance do reuse'u przez API, evidence i
+  kolejne capability.
 - `pl.mkn.tdw.features.incidentanalysis.ai.copilot`
   Incidentowe initial/chat providery oraz budowanie promptu, artifact digestu,
   skill selection, tool policy, response parser i initial/follow-up run assembly.
@@ -725,9 +734,11 @@ katalogu systemow:
    `/api/operational-context/*`,
 2. backendowa fasada w `api.operationalcontext` deleguje do
    `integrations.operationalcontext`,
-3. UI pokazuje summary, signal resolver, listy encji, validation findings,
-   open questions i szczegoly encji,
-4. ten sam katalog jest reuse'owany przez incident evidence provider,
+3. UI pobiera metadane gotowosci maintenance lokalnej kopii,
+4. UI pokazuje summary, signal resolver, listy encji, validation findings,
+   open questions i szczegoly encji oraz utrzymuje dziewiec typow YAML przez
+   editor drawer i delete impact,
+5. ten sam captured snapshot katalogu jest reuse'owany przez incident evidence provider,
    `opctx_*` tools, GitLab repository discovery i przyszle feature'y.
 
 To nie jest osobny krok incident job flow. To shared/operator powierzchnia do
@@ -736,6 +747,14 @@ utrzymania jakosci katalogu, ktory ma byc reusable poza analiza incydentow.
 UI `/operational-context` pokazuje kompaktowy status katalogu, zakladki
 katalogowe, Signal Resolver, listy encji, inbox `Validation`, inbox
 `Open Questions` oraz prawy detail drawer. Drawer ma stale akcje `Copy`,
-`Open raw` i `Close`; szczegoly encji i raw preview nie powinny byc modalem
-blokujacym prace.
+`Open raw` i `Close`; dla wspieranych typow dodaje `Edit` i `Delete`, a Add jest
+dostepne tylko na ich zakladkach. Szczegoly encji i raw preview nie
+powinny byc modalem blokujacym prace. Dialog delete jest blokujacy, pokazuje
+inbound references i nie oferuje cascade.
+
+`src/main/resources/operational-context` jest bundled, immutable seedem.
+Pierwszy start kopiuje go do `tdw-data/operational-context`; wszystkie kolejne
+odczyty i mutacje korzystaja tylko z tej lokalnej kopii. Store nie ma trybow,
+rewizji, manifestow, historii ani rollbacku. Zapis podmienia atomowo jeden
+zmieniany dokument po walidacji domenowej.
 

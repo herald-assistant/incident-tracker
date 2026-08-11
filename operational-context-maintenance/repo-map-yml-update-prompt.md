@@ -1,5 +1,13 @@
 # repo-map.yml update prompt
 
+Field formats, constrained values and runtime/AI effects are defined in
+[`operational-context-field-guidance.md`](operational-context-field-guidance.md).
+
+The maintenance UI edits `git`, `evidence` and `llmToolHints` through guided
+fields rather than raw JSON. It preserves server-owned `git.inferred`, while
+`projectPath` remains the canonical provider-relative path used by runtime
+discovery and code tools.
+
 ## Purpose
 
 Update `repo-map.yml` as the catalog of GitLab projects and their business
@@ -29,56 +37,65 @@ code-search scope instead of adding owner-like fields here.
 
 ```yaml
 repositories:
-  - id: customer-portal-ui
-    name: Customer Portal UI
-    shortName: Portal UI
-    repositoryType: frontend
+  - id: crm-contact-service
+    name: CRM Contact Service
+    shortName: Contact Service
+    repositoryType: service
     lifecycleStatus: active
     criticality: high
-    summary: User interface for customer request handling.
-    purpose: Primary project to inspect when the question concerns portal screens and user-facing behavior.
+    summary: Anonymized CRM service repository for contact preference handling.
+    purpose: Primary project to inspect after the CRM contact system or process is identified.
     aliases:
-      - portal-ui
-      - customer portal frontend
+      - contact-service
+      - crm contacts
     useFor:
-      - Inspect portal-facing behavior after the system or process is identified.
-      - Confirm visible labels and user journey assumptions.
+      - Inspect anonymized CRM contact behavior after the semantic target is known.
+      - Distinguish contact preference logic from CRM authentication concerns.
     git:
       provider: gitlab
-      group: business-platform
-      project: customer-portal-ui
-      projectPath: business-platform/customer-portal-ui
+      group: crm
+      project: contact-service
+      projectPath: crm/contact-service
       defaultBranch: main
-      url: https://gitlab.example.com/business-platform/customer-portal-ui
+      url: https://gitlab.example.com/crm/contact-service
       aliases:
-        - customer-portal
+        - crm-contact-core
       inferred: false
     references:
       systems:
-        - customer-portal
+        - crm-contact-core
       processes:
-        - customer-request-handling
+        - crm-contact-preference-update
       boundedContexts:
-        - customer-requests
+        - crm-contact-preferences
       integrations:
-        - portal-to-case-management
+        - crm-contact-to-consent
       handoffRules:
-        - customer-request-boundary
+        - crm-contact-boundary
     matchSignals:
       exact:
-        projects:
-          - customer-portal-ui
+        projectPaths:
+          - crm/contact-service
       strong:
-        terms:
-          - portal UI
+        businessTerms:
+          - CRM contact validation
       weak:
         phrases:
-          - customer request screen
+          - anonymized CRM contact change
+    evidence:
+      - sourceRef: crm/contact-service/pom.xml
+        evidenceType: build-definition
+        note: Anonymized CRM service module identity.
+    llmToolHints:
+      answerWhenUserMentions:
+        - CRM contact validation
+      disambiguateFrom:
+        - CRM authentication account service
     relations:
       - type: supports
         targetType: system
-        target: customer-portal
-        evidence: primary user-facing project for the system
+        target: crm-contact-core
+        evidence: Primary anonymized CRM repository for the system.
 ```
 
 ## Update rules
@@ -88,6 +105,12 @@ repositories:
   contexts, integrations and handoff rules as recognition signals.
 - Do not add team references to imply repository ownership.
 - Add aliases only when they help resolve a real user or tool signal.
+- Use guided `evidence` cards only for durable provenance labels or safe
+  relative references. They explain why the entry exists; runtime does not
+  fetch those sources automatically.
+- Use `llmToolHints.answerWhenUserMentions` for repository-selection phrases
+  and `disambiguateFrom` for explicit contrasts. These values guide AI
+  exploration but never grant access or define ownership.
 - Leave code reading order, module boundaries and bounded-context-to-code
   ownership routing to the system-targeted scope in `code-search-scopes.yml`.
 - When a repository is a direct internal library dependency of a system's

@@ -116,23 +116,35 @@ Katalog nie odpowiada samodzielnie na pytania:
 Na takie pytania katalog moze jedynie wskazac repo/system/proces, od ktorego
 tool powinien zaczac dalsze czytanie.
 
-## Pliki Katalogu
+## Pliki Katalogu I Storage
 
-Domyslny katalog runtime znajduje sie w:
+`src/main/resources/operational-context` jest immutable bundled seedem
+pakowanym do JAR-a. Nie jest writable source of truth i UI nie zapisuje do
+`src/main/resources`.
 
-```properties
-src/main/resources/operational-context
-```
+Runtime ma jeden model storage. Przy pierwszym uruchomieniu kompletny bundled
+seed jest kopiowany do `${tdw.workspace.directory}/operational-context`
+(domyslnie `tdw-data/operational-context`). Od tego momentu read API, tools,
+feature'y i maintenance czytaja oraz zapisuja wylacznie lokalna kopie. Kolejne
+uruchomienia nie nadpisuja jej nowszym seedem z aplikacji.
 
-Runtime root jest konfigurowany przez:
+Konfiguracja:
 
 ```properties
 analysis.operational-context.enabled=false
 # analysis.operational-context.resource-root=operational-context
+analysis.operational-context.storage-directory=${tdw.workspace.directory}/operational-context
 # analysis.operational-context.max-items-per-type=2
 # analysis.operational-context.max-glossary-terms=3
 # analysis.operational-context.max-handoff-rules=2
 ```
+
+MVP nie ma security/rollout gate, trybu read-only, rewizji, manifestow,
+historii ani rollbacku Operational Context. Uzytkownik pracuje lokalnie na
+swojej kopii danych. Mutacje przechodza przez walidacje kontraktu i spojnosci
+katalogu, a pojedynczy zmieniany dokument jest podmieniany atomowo przez plik
+tymczasowy w tym samym katalogu. Backup calego katalogu jest odpowiedzialnoscia
+uzytkownika.
 
 Pliki katalogu:
 
@@ -146,8 +158,8 @@ Pliki katalogu:
 | `bounded-contexts.yml` | bounded contexty, jezyk lokalny, zakres odpowiedzialnosci i granice |
 | `integrations.yml` | integracje jako relacje systemowe: source, target, category, style i direction |
 | `teams.yml` | identyfikatory, etykiety i opis zespolow uzywanych przez ownership |
-| `glossary.md` | slownik pojec biznesowo-systemowych |
-| `handoff-rules.md` | sytuacje handoffu, wymagane evidence i pierwsze akcje |
+| `glossary.yml` | strukturalny slownik pojec biznesowo-systemowych |
+| `handoff-rules.yml` | strukturalne sytuacje handoffu, wymagane evidence i pierwsze akcje |
 
 ## Model
 
@@ -159,11 +171,16 @@ Pliki katalogu:
 - `systemType`, `lifecycleStatus`, `criticality`,
 - `summary`,
 - `references` do procesow, integracji, bounded contextow, zespolow i pojec,
-- `ownership`, `relations`, `sourceCoverage`, `gaps` tam, gdzie sa potrzebne.
+- `ownership`, `relations`, `sourceCoverage`, `gaps` tam, gdzie sa potrzebne,
+- opcjonalne `participants.externalOwner` dla odpowiedzialnosci zewnetrznej,
+- opcjonalne `runtime.configurationDirectory` jako bezpieczna, wzgledna sciezke
+  konfiguracji wykorzystywana przez Config Drift Viewer.
 
 System nie powinien miec osobnego katalogu runtime names, deployment names,
-container names, endpointow ani `references.repositories`. Code discovery dla
-systemu zaczyna sie od code-search scope'u targetujacego ten system.
+container names, endpointow ani `references.repositories`. Nazwy serwisow,
+deploymentow i aplikacji pozostaja sygnalami w `matchSignals`, a nie druga
+prawda w `runtime`. Code discovery dla systemu zaczyna sie od code-search
+scope'u targetujacego ten system.
 
 ### Repository
 
@@ -174,12 +191,16 @@ katalogowych sie odnosi. Powinno zawierac:
 - purpose/summary,
 - status, criticality, aliases,
 - references do systemow, procesow, integracji i bounded contextow,
-- limitations i open questions.
+- limitations i open questions,
+- opcjonalne typowane karty `evidence` z `sourceRef`, `evidenceType` i `note`,
+- opcjonalne `llmToolHints.answerWhenUserMentions` oraz `disambiguateFrom` jako
+  wskazowki wyboru repozytorium dla AI.
 
 Repository nie opisuje ukladu katalogow, plikow build/deployment ani sciezek
 implementacji. Repository nie definiuje ownera; owner endpointu, klasy albo
 repozytorium jest rozstrzygany przez system/bounded context znaleziony przez
-code-search scope.
+code-search scope. `evidence` jest provenance i nie uruchamia pobrania zrodla,
+a `llmToolHints` nie przyznaje dostepu ani nie tworzy ownershipu.
 
 ### Code Search Scope
 
@@ -223,12 +244,21 @@ Process nie przechowuje per-step endpointow, klas, pakietow ani kolejek.
 
 Bounded context opisuje odpowiedzialnosc domenowa i lokalny jezyk:
 
-- summary i local language,
-- includes/excludes,
-- business capabilities,
-- invariants,
+- summary oraz `localLanguageSummary`,
+- `scope` z includes/excludes, business capabilities, core entities i key
+  decisions,
+- `semanticBoundary` z core/local concepts, canonical entities, commands,
+  events, invariants oraz owns/does-not-own language,
+- typowane provenance `evidence` i wskazowki eksploracji `llmToolHints`,
 - relacje do systemow, procesow i integracji,
 - ownership oraz limitations.
+
+Znane pola scope, semantic boundary, evidence i AI hints sa jawnie walidowane,
+indeksowane i projektowane do widoku operatora oraz `opctx_get_entity`.
+Nieznane rozszerzenia sa zachowywane przy round-tripie edycji, ale nie sa
+wysylane do AI. `evidence` nie uruchamia pobrania zrodla ani nie dowodzi root
+cause, a `llmToolHints` nie nadaje dostepu, ownershipu ani prawa do pominiecia
+visibility limits.
 
 Bounded context moze wskazac pojecia domenowe, ale nie powinien przechowywac
 list klas encji, Java-owych implementation hints ani list repozytoriow. Code
@@ -256,25 +286,31 @@ Te pliki maja najwieksza wartosc, gdy tlumacza jezyk i sytuacje przekazania:
 
 - `teams.yml` opisuje team id/label zwracane przez ownership systemu albo
   bounded contextu,
-- `glossary.md` tlumaczy pojecia i rozroznienia,
-- `handoff-rules.md` opisuje, kiedy i z jakim evidence przekazac temat.
+- `glossary.yml` tlumaczy pojecia i rozroznienia,
+- `handoff-rules.yml` opisuje, kiedy i z jakim evidence przekazac temat.
 
 Nie nalezy uzywac ich jako miejsca na techniczne instrukcje czytania kodu ani
 na reczny routing teamow.
 
-## Loader I Read Models
+## Loader, Snapshot I Read Models
 
 Katalog jest ladowany przez
 `integrations.operationalcontext.OperationalContextAdapter`.
 
 Adapter:
 
-1. normalizuje `analysis.operational-context.resource-root`,
-2. laduje pliki YAML z classpath,
-3. parsuje `glossary.md`, `handoff-rules.md` i index,
+1. zapewnia istnienie lokalnej kopii, bootstrapujac ja z seeda tylko raz,
+2. parsuje dokumenty przez wspolny codec,
+3. parsuje strukturalne `glossary.yml`, `handoff-rules.yml` oraz index,
 4. mapuje encje do neutralnych DTO,
 5. buduje open questions i validation findings,
 6. udostepnia filtrowanie przez `OperationalContextQuery`.
+
+Read API, tools i feature'y korzystaja z jednego immutable captured snapshotu
+biezacej zawartosci. Logic source references zawieraja nazwe dokumentu i field
+path, ale nie absolute local path. Wewnetrzny digest zawartosci sluzy tylko do
+identyfikacji captured snapshotu; nie jest publiczna wersja, ETagiem ani
+historia katalogu.
 
 Aktywne read modele sa celowo waskie:
 
@@ -290,7 +326,8 @@ DB, Elasticsearch albo inne tools.
 ## Shared/Operator API
 
 Shared/operator API pod `/api/operational-context/*` jest fasada do czytania
-aktualnego katalogu przez UI i narzedzia operatorskie.
+aktualnego katalogu przez UI i narzedzia operatorskie. Istniejace read modele
+zachowuja dotychczasowa semantyke odczytu.
 
 Aktywne endpointy:
 
@@ -317,8 +354,43 @@ GET /api/operational-context/read-model/entities/{type}/code-search?id=...
 ```
 
 API nie wystawia endpointow dla implementation, flow ani blast-radius
-projekcji. UI `/operational-context` jest tylko widokiem aktualnego katalogu i
-ma dopasowywac sie do kontraktu backendu bez kompatybilnosci wstecznej.
+projekcji.
+
+Maintenance korzysta z osobnego kontraktu:
+
+```http
+GET    /api/operational-context/catalog/capabilities
+GET    /api/operational-context/catalog/entities/{type}/{id}
+POST   /api/operational-context/catalog/entities/{type}
+PUT    /api/operational-context/catalog/entities/{type}/{id}
+GET    /api/operational-context/catalog/entities/{type}/{id}/delete-impact
+DELETE /api/operational-context/catalog/entities/{type}/{id}
+```
+
+Maintenance DTO zawiera kanoniczny editable payload i nie przyjmuje read
+projection ani `rawSourcePreview`. Update jest complete PUT, ID po utworzeniu
+jest immutable, a delete stosuje `RESTRICT` bez cascade. Field errors uzywaja
+JSON Pointer. API nie wystawia `revision`, ETag ani `If-Match`; zwraca m.in.
+`409` dla konfliktu encji lub referencji, `422` dla walidacji oraz `503` dla
+niedostepnej lokalnej kopii.
+
+## Etap B: strukturalne glossary i handoff rules
+
+Zapis jest wspierany dla wszystkich dziewieciu strukturalnych typow:
+
+- `system`,
+- `repository`,
+- `code-search-scope`,
+- `process`,
+- `integration`,
+- `bounded-context`,
+- `team`,
+- `glossary-term`,
+- `handoff-rule`.
+
+Kanoniczne zrodla glossary i handoff rules to `glossary.yml` oraz
+`handoff-rules.yml`. MVP odczytuje jeden aktualny strukturalny format i nie
+utrzymuje decoderow historycznych formatow Markdown.
 
 ## Agent Tools
 
@@ -395,7 +467,9 @@ dowodem root cause ani zamiennikiem deterministic evidence.
 
 Publicznym targetem weryfikacji jest kanoniczny `system` o
 `systemType=internal-service`. Configuration directory jest rozstrzygany z
-runtime/deployment signalu systemu; nie jest swobodnym inputem operatora.
+`runtime.configurationDirectory` systemu (z tolerancja zastanego legacy
+`deployment.configurationDirectory`); nie jest swobodnym inputem operatora
+uruchamiajacego analize.
 
 Tryb `BASIC` nie laduje katalogu do interpretacji i nie wykonuje code search.
 Tryb `DEEP` wymaga jednoznacznego systemu oraz code-search scope targetujacego
@@ -449,6 +523,8 @@ Walidacja katalogu powinna pilnowac:
 - niepoprawne `pathPrefixes`,
 - `ownership` poza `system` i `bounded-context`,
 - ownera zapisanego jako inferowany zamiast jawnie potwierdzonego,
+- poprawnych struktur `localLanguageSummary`, `scope`, `semanticBoundary`,
+  `evidence` i `llmToolHints` dla bounded contextu,
 - open questions dla realnych luk widocznosci.
 
 Validation pilnuje aktualnego kontraktu API/read-modelu, a nie historycznych
@@ -471,8 +547,32 @@ UI pokazuje:
 - search boundary dla code-search scopes,
 - open questions.
 
-UI nie utrzymuje kompatybilnosci ze starym payloadem i nie renderuje
-technicznych read modeli usunietych z backendu.
+UI najpierw pobiera metadane maintenance lokalnej kopii. Podczas ladowania albo
+bledu endpointu caly read view pozostaje dostepny, ale akcje zapisu sa
+wylaczone, bo backend nie potwierdzil gotowosci katalogu. Gdy lokalna kopia
+jest dostepna:
+
+- `Add` jest dostepne tylko na zakladkach dziewieciu wspieranych typow YAML,
+- detail drawer zachowuje `Copy`, `Open raw` i `Close` oraz dodaje `Edit` i
+  `Delete`,
+- editor wysyla kanoniczny maintenance payload i zachowuje immutable ID,
+- zlozone pola systemu i repozytorium (`participants.externalOwner`,
+  `runtime.configurationDirectory`, `evidence`, `llmToolHints`) maja prowadzone
+  kontrolki z tooltipami opisujacymi format oraz skutek runtime/AI; UI nie
+  wymaga dla nich surowego JSON,
+- `localLanguageSummary`, `scope`, `semanticBoundary`, `evidence` i
+  `llmToolHints` bounded contextu maja listy, karty i tooltipy zgodne z ich
+  rzeczywistym uzyciem; zaden wspierany field kanoniczny nie wymaga raw JSON,
+- delete dialog pokazuje inbound references i blokuje usuniecie, gdy impact
+  nie jest dozwolony,
+- po zapisie UI odswieza wszystkie listy, read modele, validation, open
+  questions, Signal Resolver i previews.
+
+Validation i Open Questions pozostaja read-only projekcjami. `Copy` targetu
+utrzymaniowego zawsze zostaje; `Edit source` jest tylko dodatkowa akcja dla
+jednoznacznego, writable i wspieranego targetu. UI nie utrzymuje
+kompatybilnosci ze starym payloadem i nie renderuje technicznych read modeli
+usunietych z backendu.
 
 ## Rozwoj Nowych Feature'ow
 

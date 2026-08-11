@@ -1,0 +1,14 @@
+.dialog-backdrop { position: fixed; inset: 0; z-index: 1300; display: grid; place-items: center; padding: 20px; background: rgba(9,30,66,.48); }
+.delete-dialog { width: min(620px, 100%); max-height: calc(100vh - 40px); overflow: auto; padding: 22px; border-radius: 12px; background: #fff; box-shadow: 0 24px 80px rgba(9,30,66,.3); }
+.delete-dialog h2 { margin: 0; }
+.delete-dialog__meta { color: var(--text-soft); }
+.blocked-message { padding: 12px; border: 1px solid #fecaca; border-radius: 8px; background: var(--danger-soft); color: var(--danger-text); }
+.blocked-message p { margin: 5px 0 0; }
+.reference-list { display: grid; gap: 8px; padding: 0; list-style: none; }
+.reference-list li { display: grid; gap: 3px; padding: 9px; border: 1px solid var(--border); border-radius: 8px; }
+.reference-list button { width: fit-content; padding: 0; border: 0; background: transparent; color: var(--primary-dark); font: inherit; font-weight: 800; cursor: pointer; }
+.reference-list span { color: var(--text-soft); font-size: .75rem; }
+.delete-dialog footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.danger-button { min-height: 38px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--danger-text); color: #fff; font-weight: 800; cursor: pointer; }
+.danger-button:disabled { opacity: .45; cursor: not-allowed; }
+.form-error { color: var(--danger-text); }

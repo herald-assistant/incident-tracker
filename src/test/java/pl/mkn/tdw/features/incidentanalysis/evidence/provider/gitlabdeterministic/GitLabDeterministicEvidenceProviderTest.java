@@ -291,7 +291,7 @@ class GitLabDeterministicEvidenceProviderTest {
                 sourceResolveService,
                 deploymentContextResolver,
                 repositoryProjectPathResolver(
-                        List.of(systemEntry("backend", List.of("case-workflow-repo"))),
+                        List.of(systemEntry("backend")),
                         List.of(repoMapEntry(
                                 "case-workflow-repo",
                                 "WORKFLOWS/CASE_BACKEND",
@@ -299,6 +299,11 @@ class GitLabDeterministicEvidenceProviderTest {
                                 List.of("backend"),
                                 List.of("case-evaluation-service"),
                                 List.of("backend")
+                        )),
+                        List.of(codeSearchScope(
+                                "crm-case-backend-search",
+                                "backend",
+                                List.of("case-workflow-repo")
                         ))
                 )
         );
@@ -416,12 +421,13 @@ class GitLabDeterministicEvidenceProviderTest {
     }
 
     private static OperationalContextRepositoryProjectPathResolver emptyRepositoryProjectPathResolver() {
-        return repositoryProjectPathResolver(List.of(), List.of());
+        return repositoryProjectPathResolver(List.of(), List.of(), List.of());
     }
 
     private static OperationalContextRepositoryProjectPathResolver repositoryProjectPathResolver(
             List<Map<String, Object>> systems,
-            List<Map<String, Object>> repositories
+            List<Map<String, Object>> repositories,
+            List<Map<String, Object>> codeSearchScopes
     ) {
         return new OperationalContextRepositoryProjectPathResolver(query -> OperationalContextDtos.catalogFromRaw(
                 List.of(),
@@ -429,6 +435,8 @@ class GitLabDeterministicEvidenceProviderTest {
                 systems,
                 List.of(),
                 repositories,
+                codeSearchScopes,
+                List.of(),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -436,11 +444,24 @@ class GitLabDeterministicEvidenceProviderTest {
         ));
     }
 
-    private static Map<String, Object> systemEntry(String id, List<String> repositoryIds) {
+    private static Map<String, Object> systemEntry(String id) {
         var system = new LinkedHashMap<String, Object>();
         system.put("id", id);
-        system.put("references", Map.of("repositories", repositoryIds));
         return system;
+    }
+
+    private static Map<String, Object> codeSearchScope(
+            String id,
+            String systemId,
+            List<String> repositoryIds
+    ) {
+        return Map.of(
+                "id", id,
+                "target", Map.of("type", "system", "id", systemId),
+                "repositories", repositoryIds.stream()
+                        .map(repositoryId -> Map.<String, Object>of("repoId", repositoryId))
+                        .toList()
+        );
     }
 
     private static Map<String, Object> repoMapEntry(

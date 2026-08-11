@@ -1,5 +1,14 @@
 # integrations.yml update prompt
 
+Field formats, constrained values and runtime/AI effects are defined in
+[`operational-context-field-guidance.md`](operational-context-field-guidance.md).
+
+The maintenance UI uses structured participant cards for `source`, `targets`,
+`intermediaries` and `finalTargets`; it serializes the same canonical YAML
+shape shown below. Participant-level `repositories` from older data are
+preserve-only and are not shown as editable controls; use top-level
+`references.repositories` and code-search scopes for code navigation.
+
 ## Purpose
 
 Update `integrations.yml` as the catalog of relationships between systems and
@@ -46,8 +55,6 @@ integrations:
       source:
         system: customer-portal
         boundedContext: customer-requests
-        repositories:
-          - customer-portal-ui
         role: initiates customer request handoff
         externalOwner: ""
         notes:
@@ -55,8 +62,6 @@ integrations:
       targets:
         - system: case-management
           boundedContext: case-lifecycle
-          repositories:
-            - case-management-service
           role: receives accepted case state
           externalOwner: ""
           notes:
@@ -97,17 +102,24 @@ integrations:
         target: case-management
         evidence: participant target
     failureModes:
-      - Handoff accepted by source but not visible to target context.
-      - Target context rejects or cannot continue the business process.
+      - name: CRM case handoff not visible
+        type: delivery-failure
+        symptom: The source accepts the anonymized CRM request but the target context does not expose the case.
+        impact: CRM case handling cannot continue.
 ```
 
 ## Update rules
 
 - Use `participants` as the source of source/target relationships.
+- Do not add or change `participants.*.repositories`; the backend preserves
+  legacy values, while editable repository navigation belongs in top-level
+  `references` and code-search scopes.
 - Use `references` for navigation only; do not duplicate every participant
   unless it helps the UI or AI start analysis.
 - `integrationStyle` and `flowDirection` are high-level labels, not a detailed
   detail list.
-- Keep `failureModes` business-visible and useful for triage.
+- Keep `failureModes` as guided cards with required `name` and `type`, plus at
+  least an observable `symptom` or durable `impact`. They ground CRM triage and
+  handoff hypotheses but never confirm root cause by themselves.
 - Prefer clear boundary language over internal labels.
 - Do not add team references to imply source or target ownership.
