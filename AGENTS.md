@@ -364,11 +364,48 @@ Zasady granic:
 
 ## Weryfikacja
 
-Podstawowe komendy:
+Dobieraj weryfikacje do faktycznie zmienionych warstw. Nie uruchamiaj pelnego
+builda backendu i frontendu tylko z przyzwyczajenia.
 
-- `mvn -q clean test`
-- `cd frontend && npm test`
-- `mvn -q -DskipTests package`
+Klasyfikuj zakres po zmienionych kontraktach i konsumentach, nie tylko po
+katalogach. Zmiana backendowego API albo DTO konsumowanego przez UI jest
+zmiana wspolna, nawet jezeli diff nie zawiera plikow w `frontend/`.
+
+- Dla zmian tylko w backendzie uruchamiaj adekwatne testy Maven, a przed
+  przekazaniem zmiany co najmniej `mvn -q test`. Nie uruchamiaj `npm ci`,
+  testow Angulara ani builda frontendu, jezeli zmiana nie dotyka kontraktu lub
+  integracji z UI.
+- Dla zmian tylko we frontendzie uruchamiaj
+  `npm --prefix frontend test -- --watch=false` oraz
+  `npm --prefix frontend run build`. Nie uruchamiaj calego builda ani calego
+  zestawu testow backendu, jezeli zmiana nie dotyka kontraktu, routingu
+  statycznych zasobow ani integracji z backendem. Celowany test backendowy,
+  np. `FrontendPageTest`, pozostaje wymagany, gdy zmiana dotyka takiej granicy.
+- Dla zmian wspolnych albo kontraktu backend-frontend uruchamiaj kolejno:
+  `npm --prefix frontend test -- --watch=false`,
+  `npm --prefix frontend run build`, a nastepnie
+  `mvn -q -Pbackend-dev clean package`. Build Angulara zapisuje najpierw
+  aktualny bundle w `src/main/resources/static`, a profil `backend-dev`
+  pakuje go i uruchamia testy backendu bez ponownego `npm ci`, instalacji Node
+  i builda UI. `clean` zapobiega pozostawieniu starych klas albo hashowanych
+  chunkow w wynikowym JAR-ze.
+- `npm ci` uruchamiaj, gdy brakuje lokalnych zaleznosci frontendu albo zmienily
+  sie `frontend/package.json` lub `frontend/package-lock.json`; nie wykonuj go
+  automatycznie w kazdej petli developerskiej.
+- Pelny, czysty i reprodukowalny build `mvn -q clean package` uruchamiaj, gdy
+  uzytkownik prosi o pelny build, wynikowym artefaktem jest finalny JAR/release,
+  zadanie dotyka konfiguracji `frontend-maven-plugin`, instalacji Node,
+  lifecycle pakowania lub kopiowania resources, plikow
+  `frontend/package.json`, `frontend/package-lock.json`, `.npmrc`,
+  `frontend/angular.json`, produkcyjnego `tsconfig` albo sposobu generowania i
+  osadzania SPA, albo trzeba zweryfikowac stan bez lokalnych cache. Ta sciezka
+  pozostaje kanoniczna dla CI/release, ale nie uruchamia testow Angulara; w
+  CI/release wykonaj je osobno.
+- Nie uzywaj domyslnie `clean` w zwyklej petli backendowej. Usuwa ono rowniez
+  `target/frontend`, przez co kolejny pelny build musi ponownie zainstalowac
+  Node. Uzyj `mvn -q clean test`, gdy usunieto lub przeniesiono klasy albo
+  resources, zmieniono generated sources/package structure lub istnieje
+  podejrzenie starego `target`.
 
 ## Lokalne AGENTS
 

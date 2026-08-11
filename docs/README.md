@@ -112,8 +112,10 @@ implementacje niezatwierdzonego planu.
 - `../src/main/resources/static`
   wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 
-## Frontend workflow
+## Build i frontend workflow
 
+- `mvn -q test`
+  uruchamia testy backendu bez instalowania Node, `npm ci` i budowania Angulara.
 - `cd ../frontend && npm start`
   Angular dev server z proxy na lokalny backend Spring Boot.
 - `cd ../frontend && npm test`
@@ -123,3 +125,8 @@ implementacje niezatwierdzonego planu.
 - `mvn -q -DskipTests package`
   buduje backend, uruchamia produkcyjny build Angulara w `prepare-package` i
   pakuje wynik do JAR-a.
+- `mvn -q -Pbackend-dev -DskipTests package`
+  tworzy szybka lokalna paczke backendu bez przebudowy frontendu. JAR zawiera
+  zastany bundle z `src/main/resources/static`, wiec ten wariant nie potwierdza
+  spojnosci zmian backendu i UI i nie powinien zastepowac pelnego builda przed
+  wydaniem.
