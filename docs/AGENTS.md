@@ -161,6 +161,6 @@ status checklisty i te same bramki zatwierdzania.
 - Uzywaj nazw `kebab-case.md` bez prefiksow numerycznych.
 - Kolejnosc czytania utrzymuj w `docs/README.md`, nie w nazwach plikow.
 - Linki z planow do potrzeb zapisuj relatywnie, np.
-  `../needs/change-verification.md`.
+  `../needs/operational-context-catalog-editing.md`.
 - Po przeniesieniu lub zmianie nazwy pliku zaktualizuj wszystkie referencje w
   repozytorium i sprawdz, czy nie pozostaly martwe linki.

@@ -31,8 +31,8 @@ feature analityczny
   -> local workspace
 ```
 
-Incident Analysis, Flow Explorer, Change Verification i Config Drift
-Varification sa rodzenstwem. Zaden z nich nie jest generycznym core dla
+Incident Analysis, Flow Explorer, Change Verification i Config Drift Viewer sa
+rodzenstwem. Zaden z nich nie jest generycznym core dla
 pozostalych.
 
 ## Docelowe warstwy backendu

@@ -18,7 +18,7 @@ kanoniczny opis i kod.
 6. Dla nowego feature'a albo zmiany L1-L3 przeczytaj
    `analysis-feature-delivery-playbook.md`.
 7. Odszukaj odpowiadajacy dokument w `../needs/` i zatwierdzony plan w
-   `../plans/`.
+   `../plans/`, jesli zmiana ma aktywny albo wymagany zakres wykonawczy.
 8. Przeczytaj lokalne `AGENTS.md` dla wszystkich dotykanych katalogow.
 
 Brak planu nie jest zgoda na wyprowadzenie rozwiazania bezposrednio z business
@@ -41,9 +41,11 @@ need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
 - `analysis-feature-delivery-playbook.md`
   procedure bezpiecznego dostarczania i rozwoju feature'ow.
 - `../needs/`
-  problem, wartosc, success criteria i ograniczenia.
+  aktywne albo potrzebne dla kolejnego inkrementu opisy problemu, wartosci,
+  success criteria i ograniczen.
 - `../plans/`
-  zatwierdzane propozycje wykonania oraz checklisty aktywnego backlogu.
+  zatwierdzane propozycje wykonania oraz checklisty aktywnego backlogu; nie
+  jest to archiwum zakonczonych prac.
 
 Gdy kod i dokumentacja sa rozbiezne, nie wybieraj automatycznie nowszego
 timestampu. Ustal ownership kontraktu, sprawdz testy oraz runtime i zastosuj
@@ -112,9 +114,9 @@ komponentu innego feature'a tylko dlatego, ze wyglada podobnie.
 2. Nazwij potrzebe oraz ownership zmiany.
 3. Sklasyfikuj zmiane L0-L3 wedlug playbooka.
 4. Dla L1-L3 wykonaj baseline, conformance delta i liste konsumentow.
-5. Sprawdz istniejacy dokument potrzeby i plan.
-6. Jezeli planu brakuje albo zakres sie zmienil, zaktualizuj `../plans/`
-   zgodnie z `../AGENTS.md` i uzyskaj zatwierdzenie.
+5. Sprawdz istniejacy dokument potrzeby i plan, jezeli dotycza zmiany.
+6. Jezeli plan jest wymagany, ale go brakuje albo zakres sie zmienil,
+   zaktualizuj `../plans/` zgodnie z `../AGENTS.md` i uzyskaj zatwierdzenie.
 7. Implementuj tylko zatwierdzone kroki, reuse-first.
 8. Po kazdym kroku wykonaj przypisana weryfikacje i oznacz `[x]` dopiero po
    spelnieniu kryterium akceptacji.

@@ -48,14 +48,10 @@ implementacje niezatwierdzonego planu.
 
 ## Aktualne potrzeby i plany
 
-- `needs/workspace-settings-confluence-overrides.md`
-  opisuje potrzebe lokalnego nadpisywania podstawowych ustawien Confluence w
-  tym samym modelu `DEFAULT` / `CUSTOM`, ktory Workspace Settings stosuje dla
-  Jira.
-- `plans/workspace-settings-confluence-overrides.md`
-  dokumentuje zakonczona zmiane L2: shared API, `settings.json` i Angularowy
-  Workspace Settings obsluguja lokalne `base-url` i `token` Confluence, a
-  `url-pattern` pozostaje deploymentowa allowlista.
+`needs/` i `plans/` nie sa archiwum zakonczonych prac. Po zamknieciu zmiany
+trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
+a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
+
 - `needs/operational-context-catalog-editing.md`
   opisuje potrzebe bezpiecznego create, edit i delete katalogu Operational
   Context z poziomu UI przy zachowaniu spojnosci relacji i wszystkich
@@ -70,18 +66,13 @@ implementacje niezatwierdzonego planu.
   zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
   ograniczenia sa opisane kanonicznie w
   `architecture/config-drift-viewer-runtime-flow.md`.
-- `needs/change-verification.md`
-  opisuje problem, wartosc, oczekiwany wynik i granice Change Verification.
-  Nowy plan implementacji powinien wskazywac ten plik jako `Source need`.
-- `needs/domain-skill-generation.md`
-  opisuje potrzebe przygotowania source-backed, zatwierdzonego i
-  zwalidowanego Agent Skill dla jednego modulu.
-- `plans/domain-skill-generation.md`
-  jest aktywnym planem MVP Domain Skill Generation. Read-only preflight jest
-  zakonczony; kazdy kolejny krok nadal wymaga jawnego zatwierdzenia.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
+
+Dla nowego feature'a albo kolejnego inkrementu L1-L3 utworz lub zaktualizuj
+konkretny dokument w `needs/` oraz zatwierdzony plan w `plans/`, zamiast
+odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 
 ## Odpowiedzialnosc dokumentow architektonicznych
 

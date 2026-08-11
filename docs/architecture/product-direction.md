@@ -127,9 +127,8 @@ Change Verification utrzymuje jeden aktualny kontrakt eksportu/importu. W
 fazie V1 zmiana tego kontraktu nie utrzymuje migratorow ani odczytu starszych
 wersji feature'a; nieaktualny eksport jest jawnie odrzucany.
 
-Dalsze inkrementy
-powinny wynikac z `../needs/change-verification.md` oraz osobno zatwierdzonych
-planow, a nie z kopiowania Incident Analysis albo Flow Explorera.
+Dalsze inkrementy powinny wynikac z aktualnej, osobno opisanej potrzeby oraz
+zatwierdzonego planu, a nie z kopiowania Incident Analysis albo Flow Explorera.
 
 ### Config Drift Viewer
 
