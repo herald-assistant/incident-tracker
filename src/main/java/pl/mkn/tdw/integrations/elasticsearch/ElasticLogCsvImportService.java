@@ -150,6 +150,7 @@ public class ElasticLogCsvImportService {
     private ElasticLogCsvImportResult parseRows(String csvText) {
         var entries = new ArrayList<ElasticLogEntry>();
         var correlationIds = new LinkedHashSet<String>();
+        var traceIds = new LinkedHashSet<String>();
         var rowNumber = 1;
 
         try (MappingIterator<LinkedHashMap<String, String>> iterator = csvMapper
@@ -164,6 +165,10 @@ public class ElasticLogCsvImportService {
                 var correlationId = value(row, "fields.correlationId");
                 if (StringUtils.hasText(correlationId)) {
                     correlationIds.add(correlationId);
+                }
+                var traceId = value(row, "fields.traceId");
+                if (StringUtils.hasText(traceId)) {
+                    traceIds.add(traceId);
                 }
 
                 entries.add(mapEntry(row, rowNumber));
@@ -187,6 +192,9 @@ public class ElasticLogCsvImportService {
             );
         }
         if (correlationIds.size() > 1) {
+            if (traceIds.size() == 1) {
+                return new ElasticLogCsvImportResult(traceIds.iterator().next(), entries, entries.size());
+            }
             throw new ElasticLogCsvImportException(
                     ElasticLogCsvImportException.Reason.MULTIPLE_CORRELATION_IDS,
                     "CSV file contains logs for multiple correlation ids.",

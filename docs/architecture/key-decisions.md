@@ -60,8 +60,10 @@ Decyzje:
   workspace settings, personalizacji, autentykacji, konfiguracji modeli i
   podobnych ustawien.
 - Zakres Workspace Settings obejmuje `app.ui.title`, podstawowe connection
-  settings GitLaba (`analysis.gitlab.base-url`, `analysis.gitlab.group`,
-  `analysis.gitlab.token`) oraz GitLaba konfiguracji runtime
+  settings Jiry (`analysis.jira.base-url`, `analysis.jira.token`) i Confluence
+  (`analysis.confluence.base-url`, `analysis.confluence.token`) oraz GitLaba
+  (`analysis.gitlab.base-url`, `analysis.gitlab.group`,
+  `analysis.gitlab.token`), a takze GitLaba konfiguracji runtime
   (`integrations.gitlab.named.connections.runtime-config.base-url`,
   `integrations.gitlab.named.connections.runtime-config.token`), Elasticsearch (`analysis.elasticsearch.base-url`,
   `analysis.elasticsearch.kibana-space-id`,
@@ -71,7 +73,9 @@ Decyzje:
   token Copilota (`analysis.ai.copilot.auth.local.github-token`). MVP nie
   wystawia `analysis.ai.copilot.auth.mode`,
   `analysis.ai.copilot.auth.local.display-name`, flag SSL ani technicznych
-  limitow odpowiedzi integracji.
+  limitow odpowiedzi integracji. W szczegolnosci Workspace Settings nie
+  wystawia `analysis.confluence.url-pattern` ani
+  `analysis.confluence.max-text-characters`.
 
 Konsekwencje UI:
 

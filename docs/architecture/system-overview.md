@@ -105,7 +105,8 @@ Na dzisiaj projekt ma:
 - ekran `GET /workspace-settings` w sekcji `Platform` do podgladu efektywnych
   wartosci z `application.properties` i zapisu lokalnych override'ow do
   `${tdw.workspace.directory}/settings.json` dla brandu UI oraz podstawowych
-  parametrow Copilota, GitLaba, Elasticsearch i Dynatrace,
+  parametrow Copilota, Jiry, Confluence, GitLaba, Elasticsearch i Dynatrace;
+  dla Jiry i Confluence zakres obejmuje tylko `base-url` oraz `token`,
 - glowne job-based API: `POST /api/analysis/jobs` i
   `GET /api/analysis/jobs/{analysisId}`,
   z wyborem zrodla logow oraz opcjonalnym wyborem modelu AI i
@@ -230,8 +231,13 @@ Na dzisiaj projekt ma:
   `${tdw.workspace.directory}/settings.json`. Aktualny zakres obejmuje
   `app.ui.title`, lokalny token Copilota
   (`analysis.ai.copilot.auth.local.github-token`), podstawowe connection
-  settings głównego GitLaba i named connection `runtime-config`, Elasticsearch
-  i Dynatrace oraz sekrety tych integracji.
+  settings Jiry (`analysis.jira.base-url`, `analysis.jira.token`), Confluence
+  (`analysis.confluence.base-url`, `analysis.confluence.token`), głównego
+  GitLaba i named connection `runtime-config`, Elasticsearch i Dynatrace oraz
+  sekrety tych integracji. `analysis.confluence.url-pattern` pozostaje
+  deploymentowa allowlista adresow, a
+  `analysis.confluence.max-text-characters` technicznym limitem odpowiedzi;
+  zadne z tych dwoch pol nie jest eksponowane w Workspace Settings.
 - `GET /api/analysis/jobs/input-options`
   Feature-owned endpoint dla UI startu analizy. Zwraca dostepne zrodla logow i
   powod blokady Elasticsearch, jezeli brakuje wymaganej konfiguracji
@@ -270,7 +276,9 @@ Na dzisiaj projekt ma:
 - `PUT /api/workspace/settings`
   Shared/operator API zapisu lokalnych override'ow do `settings.json`. Pusta
   wartosc albo wartosc identyczna z `application.properties` usuwa override.
-  Endpoint nie wystawia flag SSL ani limitow odpowiedzi integracji.
+  Endpoint nie wystawia flag SSL ani technicznych ustawien Confluence
+  `analysis.confluence.url-pattern` i
+  `analysis.confluence.max-text-characters`.
 - `GET /api/auth/github/status`
   Shared/operator API statusu autoryzacji Copilota. W `LOCAL_TOKEN` pokazuje
   lokalny token jako backendowy tryb dev, a w `GITHUB_APP` tworzy backendowa

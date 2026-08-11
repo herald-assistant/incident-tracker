@@ -10,6 +10,7 @@ export interface WorkspaceSettingsValues {
   appUi: WorkspaceSettingsAppUi;
   copilot: WorkspaceSettingsCopilot;
   jira: WorkspaceSettingsJira;
+  confluence: WorkspaceSettingsConfluence;
   gitLab: WorkspaceSettingsGitLab;
   configDriftViewerGitLab: WorkspaceSettingsConfigDriftViewerGitLab;
   elasticsearch: WorkspaceSettingsElasticsearch;
@@ -25,6 +26,11 @@ export interface WorkspaceSettingsCopilot {
 }
 
 export interface WorkspaceSettingsJira {
+  baseUrl: WorkspaceSettingsField;
+  token: WorkspaceSettingsField;
+}
+
+export interface WorkspaceSettingsConfluence {
   baseUrl: WorkspaceSettingsField;
   token: WorkspaceSettingsField;
 }
@@ -69,6 +75,10 @@ export interface WorkspaceSettingsUpdateRequest {
     localGithubToken: string;
   };
   jira: {
+    baseUrl: string;
+    token: string;
+  };
+  confluence: {
     baseUrl: string;
     token: string;
   };

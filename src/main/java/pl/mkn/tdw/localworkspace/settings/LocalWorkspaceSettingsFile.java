@@ -6,6 +6,7 @@ public record LocalWorkspaceSettingsFile(
         LocalWorkspaceAppUiSettings appUi,
         LocalWorkspaceCopilotSettings copilot,
         LocalWorkspaceJiraSettings jira,
+        LocalWorkspaceConfluenceSettings confluence,
         LocalWorkspaceGitLabSettings gitLab,
         LocalWorkspaceConfigDriftViewerGitLabSettings configDriftViewerGitLab,
         LocalWorkspaceElasticsearchSettings elasticsearch,
@@ -13,7 +14,7 @@ public record LocalWorkspaceSettingsFile(
 ) {
 
     public static final String SCHEMA = "tdw.workspace-settings";
-    public static final int VERSION = 6;
+    public static final int VERSION = 7;
 
     public LocalWorkspaceSettingsFile {
         if (schema == null || schema.isBlank()) {
@@ -30,6 +31,9 @@ public record LocalWorkspaceSettingsFile(
         }
         if (jira == null) {
             jira = LocalWorkspaceJiraSettings.empty();
+        }
+        if (confluence == null) {
+            confluence = LocalWorkspaceConfluenceSettings.empty();
         }
         if (gitLab == null) {
             gitLab = LocalWorkspaceGitLabSettings.empty();
@@ -52,6 +56,7 @@ public record LocalWorkspaceSettingsFile(
                 LocalWorkspaceAppUiSettings.empty(),
                 LocalWorkspaceCopilotSettings.empty(),
                 LocalWorkspaceJiraSettings.empty(),
+                LocalWorkspaceConfluenceSettings.empty(),
                 LocalWorkspaceGitLabSettings.empty(),
                 LocalWorkspaceConfigDriftViewerGitLabSettings.empty(),
                 LocalWorkspaceElasticsearchSettings.empty(),

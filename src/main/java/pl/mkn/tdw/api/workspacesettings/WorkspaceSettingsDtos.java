@@ -21,6 +21,7 @@ public final class WorkspaceSettingsDtos {
             WorkspaceSettingsAppUiResponse appUi,
             WorkspaceSettingsCopilotResponse copilot,
             WorkspaceSettingsJiraResponse jira,
+            WorkspaceSettingsConfluenceResponse confluence,
             WorkspaceSettingsGitLabResponse gitLab,
             WorkspaceSettingsConfigDriftViewerGitLabResponse configDriftViewerGitLab,
             WorkspaceSettingsElasticsearchResponse elasticsearch,
@@ -39,6 +40,12 @@ public final class WorkspaceSettingsDtos {
     }
 
     public record WorkspaceSettingsJiraResponse(
+            WorkspaceSettingsFieldResponse baseUrl,
+            WorkspaceSettingsFieldResponse token
+    ) {
+    }
+
+    public record WorkspaceSettingsConfluenceResponse(
             WorkspaceSettingsFieldResponse baseUrl,
             WorkspaceSettingsFieldResponse token
     ) {
@@ -85,6 +92,7 @@ public final class WorkspaceSettingsDtos {
             WorkspaceSettingsAppUiUpdate appUi,
             WorkspaceSettingsCopilotUpdate copilot,
             WorkspaceSettingsJiraUpdate jira,
+            WorkspaceSettingsConfluenceUpdate confluence,
             WorkspaceSettingsGitLabUpdate gitLab,
             WorkspaceSettingsConfigDriftViewerGitLabUpdate configDriftViewerGitLab,
             WorkspaceSettingsElasticsearchUpdate elasticsearch,
@@ -103,6 +111,12 @@ public final class WorkspaceSettingsDtos {
     }
 
     public record WorkspaceSettingsJiraUpdate(
+            String baseUrl,
+            String token
+    ) {
+    }
+
+    public record WorkspaceSettingsConfluenceUpdate(
             String baseUrl,
             String token
     ) {

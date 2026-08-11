@@ -3,11 +3,13 @@ package pl.mkn.tdw.api.workspacesettings;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.integrations.confluence.ConfluenceProperties;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.jira.JiraProperties;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceConfluenceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsFile;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceSettingsStore;
 
@@ -15,6 +17,7 @@ import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsConfluenceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchUpdate;
@@ -41,6 +44,9 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().jira().baseUrl().value()).isEqualTo("https://jira.app");
         assertThat(response.values().jira().token().value()).isEqualTo("jira-app-token");
         assertThat(response.values().jira().token().secret()).isTrue();
+        assertThat(response.values().confluence().baseUrl().value()).isEqualTo("https://confluence.app");
+        assertThat(response.values().confluence().token().value()).isEqualTo("confluence-app-token");
+        assertThat(response.values().confluence().token().secret()).isTrue();
         assertThat(response.values().gitLab().baseUrl().value()).isEqualTo("https://gitlab.app");
         assertThat(response.values().gitLab().group().value()).isEqualTo("app/group");
         assertThat(response.values().gitLab().token().value()).isEqualTo("app-token");
@@ -60,10 +66,44 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken()).isEqualTo("copilot-app-token");
         assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.app");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.app");
+        assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-app-token");
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
         assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
         assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.app");
         assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.app");
+    }
+
+    @Test
+    void shouldApplyStoredConfluenceOverridesDuringInitialization() {
+        var fixture = fixture();
+        fixture.store.save(new LocalWorkspaceSettingsFile(
+                LocalWorkspaceSettingsFile.SCHEMA,
+                LocalWorkspaceSettingsFile.VERSION,
+                null,
+                null,
+                null,
+                new LocalWorkspaceConfluenceSettings(
+                        "https://confluence.workspace",
+                        "confluence-workspace-token"
+                ),
+                null,
+                null,
+                null,
+                null
+        ));
+
+        fixture.service.initialize();
+        var response = fixture.service.currentSettings();
+
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.workspace");
+        assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-workspace-token");
+        assertThat(response.values().confluence().baseUrl().applicationValue())
+                .isEqualTo("https://confluence.app");
+        assertThat(response.values().confluence().baseUrl().source())
+                .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
+        assertThat(response.values().confluence().token().source())
+                .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
     }
 
     @Test
@@ -77,6 +117,10 @@ class WorkspaceSettingsServiceTest {
                 new WorkspaceSettingsJiraUpdate(
                         "https://jira.app",
                         "jira-workspace-token"
+                ),
+                new WorkspaceSettingsConfluenceUpdate(
+                        "https://confluence.workspace",
+                        "confluence-workspace-token"
                 ),
                 new WorkspaceSettingsGitLabUpdate(
                         "https://gitlab.app",
@@ -102,6 +146,8 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.store.saved.copilot().localGithubToken()).isEqualTo("copilot-workspace-token");
         assertThat(fixture.store.saved.jira().baseUrl()).isNull();
         assertThat(fixture.store.saved.jira().token()).isEqualTo("jira-workspace-token");
+        assertThat(fixture.store.saved.confluence().baseUrl()).isEqualTo("https://confluence.workspace");
+        assertThat(fixture.store.saved.confluence().token()).isEqualTo("confluence-workspace-token");
         assertThat(fixture.store.saved.gitLab().baseUrl()).isNull();
         assertThat(fixture.store.saved.gitLab().group()).isEqualTo("workspace/group");
         assertThat(fixture.store.saved.gitLab().token()).isEqualTo("workspace-token");
@@ -120,6 +166,10 @@ class WorkspaceSettingsServiceTest {
                 .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().jira().baseUrl().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().jira().token().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
+        assertThat(response.values().confluence().baseUrl().source())
+                .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
+        assertThat(response.values().confluence().token().source())
+                .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().gitLab().group().source()).isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().configDriftViewerGitLab().baseUrl().source())
                 .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
@@ -137,6 +187,8 @@ class WorkspaceSettingsServiceTest {
                 .isEqualTo("copilot-workspace-token");
         assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.app");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-workspace-token");
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.workspace");
+        assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-workspace-token");
         assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("workspace/group");
         assertThat(fixture.gitLabProperties.getToken()).isEqualTo("workspace-token");
@@ -163,6 +215,10 @@ class WorkspaceSettingsServiceTest {
                         "https://jira.workspace",
                         "jira-workspace-token"
                 ),
+                new WorkspaceSettingsConfluenceUpdate(
+                        "https://confluence.workspace",
+                        "confluence-workspace-token"
+                ),
                 new WorkspaceSettingsGitLabUpdate("https://gitlab.workspace", "workspace/group", "workspace-token"),
                 new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
                         "https://runtime-config.workspace",
@@ -187,6 +243,10 @@ class WorkspaceSettingsServiceTest {
                         "https://jira.app",
                         "jira-app-token"
                 ),
+                new WorkspaceSettingsConfluenceUpdate(
+                        "https://confluence.app",
+                        "confluence-app-token"
+                ),
                 new WorkspaceSettingsGitLabUpdate("https://gitlab.app", "app/group", "app-token"),
                 new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
                         "https://runtime-config.app",
@@ -208,6 +268,8 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.store.saved.copilot().localGithubToken()).isNull();
         assertThat(fixture.store.saved.jira().baseUrl()).isNull();
         assertThat(fixture.store.saved.jira().token()).isNull();
+        assertThat(fixture.store.saved.confluence().baseUrl()).isNull();
+        assertThat(fixture.store.saved.confluence().token()).isNull();
         assertThat(fixture.store.saved.gitLab().baseUrl()).isNull();
         assertThat(fixture.store.saved.gitLab().group()).isNull();
         assertThat(fixture.store.saved.gitLab().token()).isNull();
@@ -224,12 +286,18 @@ class WorkspaceSettingsServiceTest {
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().jira().token().source())
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
+        assertThat(response.values().confluence().baseUrl().source())
+                .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
+        assertThat(response.values().confluence().token().source())
+                .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().elasticsearch().indexPattern().source())
                 .isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("App workspace");
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken())
                 .isEqualTo("copilot-app-token");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.app");
+        assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-app-token");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("app/group");
         assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
         assertThat(fixture.configDriftViewerConnection().getToken()).isEqualTo("runtime-config-app-token");
@@ -245,6 +313,9 @@ class WorkspaceSettingsServiceTest {
         var jiraProperties = new JiraProperties();
         jiraProperties.setBaseUrl("https://jira.app");
         jiraProperties.setToken("jira-app-token");
+        var confluenceProperties = new ConfluenceProperties();
+        confluenceProperties.setBaseUrl("https://confluence.app");
+        confluenceProperties.setToken("confluence-app-token");
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setBaseUrl("https://gitlab.app");
         gitLabProperties.setGroup("app/group");
@@ -267,6 +338,7 @@ class WorkspaceSettingsServiceTest {
                 uiConfigProperties,
                 copilotSdkProperties,
                 jiraProperties,
+                confluenceProperties,
                 gitLabProperties,
                 gitLabNamedConnectionsProperties,
                 elasticProperties,
@@ -277,6 +349,7 @@ class WorkspaceSettingsServiceTest {
                         uiConfigProperties,
                         copilotSdkProperties,
                         jiraProperties,
+                        confluenceProperties,
                         gitLabProperties,
                         gitLabNamedConnectionsProperties,
                         elasticProperties,
@@ -289,6 +362,7 @@ class WorkspaceSettingsServiceTest {
             UiConfigProperties uiConfigProperties,
             CopilotSdkProperties copilotSdkProperties,
             JiraProperties jiraProperties,
+            ConfluenceProperties confluenceProperties,
             GitLabProperties gitLabProperties,
             GitLabNamedConnectionsProperties gitLabNamedConnectionsProperties,
             ElasticProperties elasticProperties,

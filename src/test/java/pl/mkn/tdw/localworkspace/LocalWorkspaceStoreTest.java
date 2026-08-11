@@ -12,6 +12,7 @@ import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.settings.FileSystemLocalWorkspaceSettingsStore;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceConfluenceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceCopilotSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LocalWorkspaceStoreTest {
@@ -157,6 +159,10 @@ class LocalWorkspaceStoreTest {
                         "https://jira.example.com",
                         "jira_secret"
                 ),
+                new LocalWorkspaceConfluenceSettings(
+                        "https://confluence.example.com",
+                        "confluence_secret"
+                ),
                 new LocalWorkspaceGitLabSettings(
                         "https://gitlab.example.com",
                         "platform/backend",
@@ -183,9 +189,12 @@ class LocalWorkspaceStoreTest {
 
         var settingsJson = Files.readString(fixture.paths.settingsFile(), StandardCharsets.UTF_8);
         assertTrue(settingsJson.contains("\"schema\" : \"tdw.workspace-settings\""));
+        assertTrue(settingsJson.contains("\"version\" : 7"));
         assertTrue(settingsJson.contains("\"title\" : \"CRM workspace\""));
         assertTrue(settingsJson.contains("\"copilot\""));
         assertTrue(settingsJson.contains("\"localGithubToken\" : \"ghu_copilot_secret\""));
+        assertTrue(settingsJson.contains("\"confluence\""));
+        assertTrue(settingsJson.contains("\"token\" : \"confluence_secret\""));
         assertTrue(settingsJson.contains("\"token\" : \"glpat_secret\""));
         assertTrue(settingsJson.contains("\"configDriftViewerGitLab\""));
         assertTrue(settingsJson.contains("\"token\" : \"glpat_runtime_config_secret\""));
@@ -198,6 +207,8 @@ class LocalWorkspaceStoreTest {
         var settings = fixture.settingsStore.read();
         assertEquals("CRM workspace", settings.appUi().title());
         assertEquals("ghu_copilot_secret", settings.copilot().localGithubToken());
+        assertEquals("https://confluence.example.com", settings.confluence().baseUrl());
+        assertEquals("confluence_secret", settings.confluence().token());
         assertEquals("https://gitlab.example.com", settings.gitLab().baseUrl());
         assertEquals("platform/backend", settings.gitLab().group());
         assertEquals("glpat_secret", settings.gitLab().token());
@@ -209,6 +220,33 @@ class LocalWorkspaceStoreTest {
         assertEquals("Bearer elastic-secret", settings.elasticsearch().authorizationHeader());
         assertEquals("https://dynatrace.example.com", settings.dynatrace().baseUrl());
         assertEquals("dt0c01_secret", settings.dynatrace().apiToken());
+    }
+
+    @Test
+    void shouldReadVersionSixWorkspaceSettingsWithoutConfluenceSection() throws Exception {
+        var fixture = fixture(true);
+        Files.createDirectories(fixture.paths.settingsFile().getParent());
+        Files.writeString(fixture.paths.settingsFile(), """
+                {
+                  "schema": "tdw.workspace-settings",
+                  "version": 6,
+                  "appUi": {
+                    "title": "Legacy workspace"
+                  },
+                  "jira": {
+                    "baseUrl": "https://jira.legacy",
+                    "token": "jira-legacy-token"
+                  }
+                }
+                """, StandardCharsets.UTF_8);
+
+        var settings = fixture.settingsStore.read();
+
+        assertEquals(6, settings.version());
+        assertEquals("Legacy workspace", settings.appUi().title());
+        assertEquals("https://jira.legacy", settings.jira().baseUrl());
+        assertNull(settings.confluence().baseUrl());
+        assertNull(settings.confluence().token());
     }
 
     @Test

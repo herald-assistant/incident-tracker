@@ -7,12 +7,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsConfluenceResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
@@ -43,6 +46,14 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(jsonPath("$.values.appUi.title.value").value("CRM workspace"))
                 .andExpect(jsonPath("$.values.copilot.localGithubToken.value").value("ghu_secret"))
                 .andExpect(jsonPath("$.values.jira.baseUrl.value").value("https://jira.example.com"))
+                .andExpect(jsonPath("$.values.confluence.baseUrl.value")
+                        .value("https://confluence.example.com"))
+                .andExpect(jsonPath("$.values.confluence.baseUrl.propertyKey")
+                        .value("analysis.confluence.base-url"))
+                .andExpect(jsonPath("$.values.confluence.baseUrl.source").value("WORKSPACE_SETTINGS"))
+                .andExpect(jsonPath("$.values.confluence.token.propertyKey")
+                        .value("analysis.confluence.token"))
+                .andExpect(jsonPath("$.values.confluence.token.secret").value(true))
                 .andExpect(jsonPath("$.values.gitLab.group.source").value("WORKSPACE_SETTINGS"))
                 .andExpect(jsonPath("$.values.configDriftViewerGitLab.baseUrl.value")
                         .value("https://runtime-config.example.com"))
@@ -68,6 +79,10 @@ class WorkspaceSettingsControllerTest {
                                     "baseUrl": "https://jira.example.com",
                                     "token": "jira_secret"
                                   },
+                                  "confluence": {
+                                    "baseUrl": "https://confluence.example.com",
+                                    "token": "confluence_secret"
+                                  },
                                   "gitLab": {
                                     "baseUrl": "https://gitlab.example.com",
                                     "group": "platform/backend",
@@ -92,10 +107,17 @@ class WorkspaceSettingsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.values.copilot.localGithubToken.secret").value(true))
                 .andExpect(jsonPath("$.values.jira.token.secret").value(true))
+                .andExpect(jsonPath("$.values.confluence.token.secret").value(true))
                 .andExpect(jsonPath("$.values.gitLab.token.secret").value(true))
                 .andExpect(jsonPath("$.values.configDriftViewerGitLab.token.secret").value(true))
                 .andExpect(jsonPath("$.values.elasticsearch.authorizationHeader.secret").value(true))
                 .andExpect(jsonPath("$.values.dynatrace.apiToken.secret").value(true));
+
+        verify(workspaceSettingsService).saveSettings(argThat(request ->
+                request.confluence() != null
+                        && "https://confluence.example.com".equals(request.confluence().baseUrl())
+                        && "confluence_secret".equals(request.confluence().token())
+        ));
     }
 
     private WorkspaceSettingsResponse response() {
@@ -133,6 +155,24 @@ class WorkspaceSettingsControllerTest {
                                         "jira_secret",
                                         "",
                                         "jira_secret",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        true
+                                )
+                        ),
+                        new WorkspaceSettingsConfluenceResponse(
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.confluence.base-url",
+                                        "https://confluence.example.com",
+                                        "https://confluence.app",
+                                        "https://confluence.example.com",
+                                        WorkspaceSettingsSource.WORKSPACE_SETTINGS,
+                                        false
+                                ),
+                                new WorkspaceSettingsFieldResponse(
+                                        "analysis.confluence.token",
+                                        "confluence_secret",
+                                        "",
+                                        "confluence_secret",
                                         WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                         true
                                 )

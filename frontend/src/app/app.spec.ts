@@ -161,12 +161,14 @@ describe('App', () => {
     expect(compiled.textContent).toContain('tdw-data/settings.json');
     expect(compiled.textContent).toContain('Copilot');
     expect(compiled.textContent).toContain('Jira');
+    expect(compiled.textContent).toContain('Confluence');
     expect(compiled.textContent).toContain('Config Drift GitLab');
     expect(compiled.textContent).toContain('Elasticsearch');
     expect(compiled.textContent).toContain('Dynatrace');
     expect(compiled.querySelector('.workspace-settings-baseline')).toBeNull();
     expect(compiled.textContent).not.toContain('analysis.ai.copilot');
     expect(compiled.textContent).not.toContain('analysis.jira');
+    expect(compiled.textContent).not.toContain('analysis.confluence');
     expect(compiled.textContent).not.toContain('analysis.gitlab');
     expect(compiled.textContent).not.toContain('analysis.elasticsearch');
     expect(compiled.textContent).not.toContain('analysis.dynatrace');
@@ -180,6 +182,8 @@ describe('App', () => {
       'DEFAULT',
       'CUSTOM',
       'DEFAULT',
+      'CUSTOM',
+      'CUSTOM',
       'CUSTOM',
       'DEFAULT',
       'CUSTOM',
@@ -202,6 +206,8 @@ describe('App', () => {
       '',
       'Default: https://jira.example.com',
       '',
+      'Default: https://confluence.example.com',
+      '',
       'Default: https://gitlab.example.com',
       'Default: platform/app',
       '',
@@ -215,6 +221,8 @@ describe('App', () => {
       ''
     ]);
     expect(sourceBadgeTooltips.map((tooltip) => tooltip.disabled)).toEqual([
+      false,
+      true,
       false,
       true,
       false,
@@ -238,6 +246,8 @@ describe('App', () => {
     expect(resetButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
       'Restore default for GitHub token',
       'Restore default for Jira personal access token',
+      'Restore default for Confluence Base URL',
+      'Restore default for Confluence personal access token',
       'Restore default for Group',
       'Restore default for Token',
       'Restore default for Config Drift GitLab Base URL',
@@ -263,24 +273,48 @@ describe('App', () => {
       'Restore default',
       'Restore default',
       'Restore default',
+      'Restore default',
+      'Restore default',
       'Restore default'
     ]);
 
+    const confluenceTokenInput = compiled.querySelector<HTMLInputElement>('#confluenceToken');
+    const showConfluenceTokenButton = compiled.querySelector<HTMLButtonElement>(
+      'button[aria-label="Show Confluence personal access token"]'
+    );
+    expect(confluenceTokenInput?.type).toBe('password');
+    expect(showConfluenceTokenButton).not.toBeNull();
+    showConfluenceTokenButton?.click();
+    fixture.detectChanges();
+    expect(confluenceTokenInput?.type).toBe('text');
+    expect(
+      compiled.querySelector('button[aria-label="Hide Confluence personal access token"]')
+    ).not.toBeNull();
+
+    const confluenceBaseUrlResetButton = resetButtons.find(
+      (button) => button.getAttribute('aria-label') === 'Restore default for Confluence Base URL'
+    );
     const groupResetButton = resetButtons.find(
       (button) => button.getAttribute('aria-label') === 'Restore default for Group'
     );
+    expect(confluenceBaseUrlResetButton).toBeTruthy();
     expect(groupResetButton).toBeTruthy();
+    confluenceBaseUrlResetButton?.click();
     groupResetButton?.click();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
+    const confluenceBaseUrlInput = compiled.querySelector<HTMLInputElement>('#confluenceBaseUrl');
     const groupInput = compiled.querySelector<HTMLInputElement>('#gitlabGroup');
     const updatedSourceBadges = Array.from(
       compiled.querySelectorAll<HTMLElement>('.workspace-settings-source')
     );
+    expect(confluenceBaseUrlInput?.value).toBe('https://confluence.example.com');
     expect(groupInput?.value).toBe('platform/app');
     expect(updatedSourceBadges.map((badge) => badge.textContent?.trim())).toEqual([
+      'DEFAULT',
+      'CUSTOM',
       'DEFAULT',
       'CUSTOM',
       'DEFAULT',
@@ -297,7 +331,57 @@ describe('App', () => {
       'CUSTOM',
       'CUSTOM'
     ]);
-    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(10);
+    expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(11);
+  });
+
+  it('should send Confluence overrides in the workspace settings update', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/workspace-settings');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    http.expectOne('/api/workspace/settings').flush(workspaceSettingsResponse());
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const baseUrlInput = compiled.querySelector<HTMLInputElement>('#confluenceBaseUrl');
+    const tokenInput = compiled.querySelector<HTMLInputElement>('#confluenceToken');
+    const saveButton = compiled.querySelector<HTMLButtonElement>(
+      '.workspace-settings-actions button[type="submit"]'
+    );
+
+    expect(baseUrlInput).not.toBeNull();
+    expect(tokenInput).not.toBeNull();
+    expect(saveButton).not.toBeNull();
+
+    if (baseUrlInput && tokenInput) {
+      baseUrlInput.value = '  https://confluence.new.example.com/  ';
+      baseUrlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      tokenInput.value = '  confluence_new_secret  ';
+      tokenInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    fixture.detectChanges();
+
+    saveButton?.click();
+
+    const updateRequest = http.expectOne(
+      (request) => request.method === 'PUT' && request.url === '/api/workspace/settings'
+    );
+    expect(updateRequest.request.body.confluence).toEqual({
+      baseUrl: 'https://confluence.new.example.com/',
+      token: 'confluence_new_secret'
+    });
+    expect(updateRequest.request.body.confluence.urlPattern).toBeUndefined();
+
+    updateRequest.flush(workspaceSettingsResponse());
+    flushUiConfig(http, 'CRM Workspace');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(compiled.textContent).toContain('Settings saved.');
   });
 
   it('should collapse the left navigation into an icon rail', async () => {
@@ -735,6 +819,24 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           value: 'jira_secret',
           applicationValue: '',
           workspaceValue: 'jira_secret',
+          source: 'WORKSPACE_SETTINGS',
+          secret: true
+        }
+      },
+      confluence: {
+        baseUrl: {
+          propertyKey: 'analysis.confluence.base-url',
+          value: 'https://confluence.workspace.example.com',
+          applicationValue: 'https://confluence.example.com',
+          workspaceValue: 'https://confluence.workspace.example.com',
+          source: 'WORKSPACE_SETTINGS',
+          secret: false
+        },
+        token: {
+          propertyKey: 'analysis.confluence.token',
+          value: 'confluence_secret',
+          applicationValue: '',
+          workspaceValue: 'confluence_secret',
           source: 'WORKSPACE_SETTINGS',
           secret: true
         }

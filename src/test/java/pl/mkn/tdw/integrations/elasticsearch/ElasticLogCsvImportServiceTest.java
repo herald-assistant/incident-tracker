@@ -104,6 +104,36 @@ class ElasticLogCsvImportServiceTest {
     }
 
     @Test
+    void shouldUseSingleTraceIdWhenCorrelationIdsAreAmbiguous() {
+        var csv = headerWithTraceId() + "\n"
+                + rowWithTraceId(
+                        "2026-07-04T08:57:36.860Z",
+                        "00-trace-aaa-00",
+                        "trace-1",
+                        "INFO",
+                        "first",
+                        "-",
+                        "thread-1",
+                        "span-1"
+                )
+                + rowWithTraceId(
+                        "2026-07-04T08:57:37.860Z",
+                        "00-trace-bbb-00",
+                        "trace-1",
+                        "INFO",
+                        "second",
+                        "-",
+                        "thread-2",
+                        "span-2"
+                );
+
+        var result = service.importCsv(new StringReader(csv));
+
+        assertEquals("trace-1", result.correlationId());
+        assertEquals(2, result.importedRecords());
+    }
+
+    @Test
     void shouldRejectInvalidTimestamp() {
         var exception = assertThrows(
                 ElasticLogCsvImportException.class,
@@ -139,6 +169,13 @@ class ElasticLogCsvImportServiceTest {
                 + "\"container.image.name\"";
     }
 
+    private String headerWithTraceId() {
+        return "\"@timestamp\",\"fields.correlationId\",\"fields.traceId\",\"fields.type\",\"fields.microservice\","
+                + "\"fields.class\",\"fields.message\",\"fields.exception\",\"fields.thread\",\"fields.spanId\","
+                + "\"kubernetes.namespace\",\"kubernetes.pod.name\",\"kubernetes.container.name\","
+                + "\"container.image.name\"";
+    }
+
     private String row(
             String timestamp,
             String correlationId,
@@ -150,6 +187,21 @@ class ElasticLogCsvImportServiceTest {
     ) {
         return "\"%s\",\"%s\",\"%s\",\"test-service\",\"pl.example.TestClass\",\"%s\",\"%s\",\"%s\",\"%s\","
                 .formatted(timestamp, correlationId, level, message, exception, thread, spanId)
+                + "\"test-dev1\",\"test-pod\",\"test-container\",\"registry.example/test-dev1/test:tag\"\n";
+    }
+
+    private String rowWithTraceId(
+            String timestamp,
+            String correlationId,
+            String traceId,
+            String level,
+            String message,
+            String exception,
+            String thread,
+            String spanId
+    ) {
+        return "\"%s\",\"%s\",\"%s\",\"%s\",\"test-service\",\"pl.example.TestClass\",\"%s\",\"%s\",\"%s\",\"%s\","
+                .formatted(timestamp, correlationId, traceId, level, message, exception, thread, spanId)
                 + "\"test-dev1\",\"test-pod\",\"test-container\",\"registry.example/test-dev1/test:tag\"\n";
     }
 }

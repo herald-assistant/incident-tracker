@@ -48,6 +48,14 @@ implementacje niezatwierdzonego planu.
 
 ## Aktualne potrzeby i plany
 
+- `needs/workspace-settings-confluence-overrides.md`
+  opisuje potrzebe lokalnego nadpisywania podstawowych ustawien Confluence w
+  tym samym modelu `DEFAULT` / `CUSTOM`, ktory Workspace Settings stosuje dla
+  Jira.
+- `plans/workspace-settings-confluence-overrides.md`
+  dokumentuje zakonczona zmiane L2: shared API, `settings.json` i Angularowy
+  Workspace Settings obsluguja lokalne `base-url` i `token` Confluence, a
+  `url-pattern` pozostaje deploymentowa allowlista.
 - `needs/operational-context-catalog-editing.md`
   opisuje potrzebe bezpiecznego create, edit i delete katalogu Operational
   Context z poziomu UI przy zachowaniu spojnosci relacji i wszystkich

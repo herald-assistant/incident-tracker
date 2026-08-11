@@ -6,12 +6,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.api.uiconfig.UiConfigProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.integrations.confluence.ConfluenceProperties;
 import pl.mkn.tdw.integrations.dynatrace.DynatraceProperties;
 import pl.mkn.tdw.integrations.elasticsearch.ElasticProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabNamedConnectionsProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.jira.JiraProperties;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceAppUiSettings;
+import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceConfluenceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceCopilotSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceDynatraceSettings;
 import pl.mkn.tdw.localworkspace.settings.LocalWorkspaceElasticsearchSettings;
@@ -27,6 +29,8 @@ import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSe
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsAppUiUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsCopilotUpdate;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsConfluenceResponse;
+import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsConfluenceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceResponse;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsDynatraceUpdate;
 import static pl.mkn.tdw.api.workspacesettings.WorkspaceSettingsDtos.WorkspaceSettingsElasticsearchResponse;
@@ -53,6 +57,7 @@ public class WorkspaceSettingsService {
     private final UiConfigProperties uiConfigProperties;
     private final CopilotSdkProperties copilotSdkProperties;
     private final JiraProperties jiraProperties;
+    private final ConfluenceProperties confluenceProperties;
     private final GitLabProperties gitLabProperties;
     private final GitLabNamedConnectionsProperties gitLabNamedConnectionsProperties;
     private final ElasticProperties elasticProperties;
@@ -85,6 +90,9 @@ public class WorkspaceSettingsService {
         var jira = request != null && request.jira() != null
                 ? request.jira()
                 : new WorkspaceSettingsJiraUpdate(null, null);
+        var confluence = request != null && request.confluence() != null
+                ? request.confluence()
+                : new WorkspaceSettingsConfluenceUpdate(null, null);
         var gitLab = request != null && request.gitLab() != null
                 ? request.gitLab()
                 : new WorkspaceSettingsGitLabUpdate(null, null, null);
@@ -111,6 +119,10 @@ public class WorkspaceSettingsService {
                 new LocalWorkspaceJiraSettings(
                         overrideValue(jira.baseUrl(), application().jira().baseUrl()),
                         overrideValue(jira.token(), application().jira().token())
+                ),
+                new LocalWorkspaceConfluenceSettings(
+                        overrideValue(confluence.baseUrl(), application().confluence().baseUrl()),
+                        overrideValue(confluence.token(), application().confluence().token())
                 ),
                 new LocalWorkspaceGitLabSettings(
                         overrideValue(gitLab.baseUrl(), application().gitLab().baseUrl()),
@@ -170,6 +182,20 @@ public class WorkspaceSettingsService {
                         new WorkspaceSettingsJiraResponse(
                                 field("analysis.jira.base-url", app.jira().baseUrl(), file.jira().baseUrl(), false),
                                 field("analysis.jira.token", app.jira().token(), file.jira().token(), true)
+                        ),
+                        new WorkspaceSettingsConfluenceResponse(
+                                field(
+                                        "analysis.confluence.base-url",
+                                        app.confluence().baseUrl(),
+                                        file.confluence().baseUrl(),
+                                        false
+                                ),
+                                field(
+                                        "analysis.confluence.token",
+                                        app.confluence().token(),
+                                        file.confluence().token(),
+                                        true
+                                )
                         ),
                         new WorkspaceSettingsGitLabResponse(
                                 field("analysis.gitlab.base-url", app.gitLab().baseUrl(), file.gitLab().baseUrl(), false),
@@ -266,6 +292,11 @@ public class WorkspaceSettingsService {
         ));
         jiraProperties.setBaseUrl(effectiveValue(file.jira().baseUrl(), app.jira().baseUrl()));
         jiraProperties.setToken(effectiveValue(file.jira().token(), app.jira().token()));
+        confluenceProperties.setBaseUrl(effectiveValue(
+                file.confluence().baseUrl(),
+                app.confluence().baseUrl()
+        ));
+        confluenceProperties.setToken(effectiveValue(file.confluence().token(), app.confluence().token()));
         gitLabProperties.setBaseUrl(effectiveValue(file.gitLab().baseUrl(), app.gitLab().baseUrl()));
         gitLabProperties.setGroup(effectiveValue(file.gitLab().group(), app.gitLab().group()));
         gitLabProperties.setToken(effectiveValue(file.gitLab().token(), app.gitLab().token()));
@@ -311,6 +342,10 @@ public class WorkspaceSettingsService {
                 new JiraSettings(
                         normalize(jiraProperties.getBaseUrl()),
                         normalize(jiraProperties.getToken())
+                ),
+                new ConfluenceSettings(
+                        normalize(confluenceProperties.getBaseUrl()),
+                        normalize(confluenceProperties.getToken())
                 ),
                 new GitLabSettings(
                         normalize(gitLabProperties.getBaseUrl()),
@@ -386,6 +421,7 @@ public class WorkspaceSettingsService {
             AppUiSettings appUi,
             CopilotSettings copilot,
             JiraSettings jira,
+            ConfluenceSettings confluence,
             GitLabSettings gitLab,
             ConfigDriftViewerGitLabSettings configDriftViewerGitLab,
             ElasticsearchSettings elasticsearch,
@@ -404,6 +440,12 @@ public class WorkspaceSettingsService {
     }
 
     private record JiraSettings(
+            String baseUrl,
+            String token
+    ) {
+    }
+
+    private record ConfluenceSettings(
             String baseUrl,
             String token
     ) {
