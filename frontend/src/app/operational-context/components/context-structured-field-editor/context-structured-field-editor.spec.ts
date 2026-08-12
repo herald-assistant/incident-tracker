@@ -19,6 +19,9 @@ describe('ContextStructuredFieldEditorComponent', () => {
     expect(fixture.componentInstance.targetOptions()).toEqual([{ id: 'crm-contact-core', label: 'CRM Contact Core' }]);
     const targetTypeOptions = Array.from(fixture.nativeElement.querySelectorAll('#code-target-type option')) as Element[];
     expect(targetTypeOptions.map((option) => option.getAttribute('value'))).toEqual(['', 'system', 'bounded-context']);
+    const targetSelect = fixture.nativeElement.querySelector('#code-target-id') as HTMLSelectElement;
+    expect(targetSelect.value).toBe('crm-contact-core');
+    expect(targetSelect.selectedOptions[0]?.textContent).toContain('CRM Contact Core');
   });
 
   it('builds anonymized CRM repository rows without asking for JSON', async () => {
@@ -33,6 +36,24 @@ describe('ContextStructuredFieldEditorComponent', () => {
     fixture.detectChanges();
     fixture.componentInstance.updateRepository(0, 'searchMode', 'whole-repository');
     expect(emitted).toHaveBeenLastCalledWith([{ repoId: 'crm-contact-repository', role: 'primary', priority: 1, searchMode: 'whole-repository' }]);
+  });
+
+  it('shows the selected anonymized CRM repository after options arrive dynamically', async () => {
+    const fixture = await createFixture('code-search-scope', 'repositories', [{
+      repoId: 'crm-contact-repository',
+      role: 'primary',
+      priority: 1,
+      searchMode: 'whole-repository'
+    }]);
+
+    fixture.componentRef.setInput('referenceOptions', {
+      repository: [{ id: 'crm-contact-repository', label: 'CRM Contact Repository' }]
+    });
+    fixture.detectChanges();
+
+    const repositorySelect = fixture.nativeElement.querySelector('#repo-id-0') as HTMLSelectElement;
+    expect(repositorySelect.value).toBe('crm-contact-repository');
+    expect(repositorySelect.selectedOptions[0]?.textContent).toContain('CRM Contact Repository');
   });
 
   it('preserves unknown CRM ownership extensions while editing canonical controls', async () => {

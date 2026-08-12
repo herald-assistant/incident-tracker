@@ -380,7 +380,6 @@ class FlowExplorerLocalRunChatHandlerTest {
                         "initial-session-1",
                         List.of(),
                         List.of(),
-                        List.of(),
                         null,
                         "Denied"
                 ),

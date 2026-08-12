@@ -90,10 +90,11 @@ Warstwa posiada neutralna mechanike uruchamiania AI:
 - model/options catalog,
 - user-visible usage i techniczne wykonanie requestu.
 
-Feature przekazuje platformie prompt, skille, available tools, hidden context,
-policy, evidence sink i kontrakt obslugi odpowiedzi. Platforma nie wybiera
-incidentowego promptu, tooli ani response contractu i nie traktuje
-`correlationId` jako uniwersalnego inputu.
+Feature przekazuje platformie prompt, guidance do uzycia skilli, available
+tools, hidden context, policy, evidence sink i kontrakt obslugi odpowiedzi.
+Platforma sama udostepnia wszystkim sesjom pelny katalog runtime skilli, ale
+nie wybiera incidentowego workflow, promptu, tooli ani response contractu i
+nie traktuje `correlationId` jako uniwersalnego inputu.
 
 ### `features.<feature>`
 
@@ -102,7 +103,7 @@ Feature posiada:
 - publiczny request i result contract use case'u,
 - API, job/run state i orchestration,
 - deterministic context albo evidence pipeline,
-- prompt, skille i result parser,
+- prompt, tresc skilli, guidance ich uzycia i result parser,
 - feature-owned tool policy i hidden scope,
 - mapowanie tool evidence na rezultat dla operatora,
 - feature-specific persistence codec i UI mapping.

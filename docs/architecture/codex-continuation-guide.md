@@ -102,7 +102,9 @@ komponentu innego feature'a tylko dlatego, ze wyglada podobnie.
 ## Runtime resources
 
 - `src/main/resources/copilot/skills`
-  skille pakowane do runtime. Tresc procedur pozostaje po polsku.
+  zrodlo skilli pakowanych do runtime. Przy starcie platforma odtwarza ich
+  pelny mirror pod `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
+  `tdw-data/copilot/skills`. Tresc procedur pozostaje po polsku.
 - `src/main/resources/operational-context`
   katalog systemow, procesow, bounded contexts, repozytoriow i handoffow.
 - `src/main/resources/static`
@@ -131,8 +133,10 @@ sprawdz upstream `github/copilot-sdk`, zwlaszcza `nodejs/README.md` oraz
 schemat/protokol `@github/copilot`. Nie zgaduj defaultow, limitow,
 `infiniteSessions`, workspace sesji ani zachowania skill directories.
 
-`SessionConfig.skillDirectories` otrzymuje rooty zawierajace podkatalogi
-skilli z `SKILL.md`. Runtime przekazuje do `MessageOptions` tylko wykonany
+`SessionConfig.skillDirectories` i `ResumeSessionConfig.skillDirectories`
+otrzymuja dokladnie jeden wspolny root `${copilot-home}/skills` zawierajacy
+wszystkie podkatalogi skilli z `SKILL.md`. Feature nie przekazuje katalogow ani
+podzbioru nazw skilli. Runtime przekazuje do `MessageOptions` tylko wykonany
 prompt. Zmiana delivery mode, session semantics, allowlisty albo hidden scope
 jest zmiana architektoniczna i wymaga planu, testow oraz rollbacku.
 

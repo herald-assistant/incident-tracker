@@ -2,13 +2,9 @@ package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
@@ -25,8 +21,6 @@ import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDis
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -43,9 +37,6 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
     private static final CopilotToolDescriptionContext CHANGE_VERIFICATION_DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("change-verification");
 
-    @TempDir
-    Path tempDirectory;
-
     @Test
     void shouldAssembleRunRequestWithRepositoryScopeAndOnlyChangeVerificationTools() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
@@ -53,7 +44,6 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         var assembler = new ChangeVerificationCopilotRunRequestAssembler(
                 toolFactory,
                 new ChangeVerificationCopilotToolSessionContextFactory(),
-                skillDirectoryResolver(),
                 new CopilotRunAuthMapper(),
                 new ChangeVerificationReportFactory()
         );
@@ -102,7 +92,6 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 sessionConfig.availableToolNames()
         );
         assertThat(sessionConfig.effectiveAvailableToolNames()).contains("skill");
-        assertSkillDirectories(sessionConfig.skillDirectories(), ChangeVerificationCopilotRuntimeSkillNames.initialSkillNames());
 
         var hiddenContext = toolContext.hiddenContext();
         assertEquals("cv-123", hiddenContext.get(AgentToolContextKeys.ANALYSIS_RUN_ID));
@@ -149,26 +138,9 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         verify(toolFactory).createToolDefinitions(toolContext, CHANGE_VERIFICATION_DESCRIPTION_CONTEXT);
     }
 
-    private CopilotNamedSkillDirectoryResolver skillDirectoryResolver() {
-        var properties = new CopilotSdkProperties();
-        properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
-        return new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties));
-    }
-
     @SuppressWarnings("unchecked")
     private static Map<String, Object> repositoryScope(Object value) {
         return (Map<String, Object>) value;
-    }
-
-    private static void assertSkillDirectories(List<String> skillDirectories, List<String> expectedSkillNames) {
-        assertEquals(1, skillDirectories.size());
-        var selectedRoot = Path.of(skillDirectories.get(0));
-        assertThat(Files.isDirectory(selectedRoot)).isTrue();
-        for (var expectedSkillName : expectedSkillNames) {
-            assertThat(Files.isRegularFile(selectedRoot.resolve(expectedSkillName).resolve("SKILL.md")))
-                    .as("Missing selected skill in root: %s", expectedSkillName)
-                    .isTrue();
-        }
     }
 
     private static ChangeVerificationPromptPreparation preparation() {

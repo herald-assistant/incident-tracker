@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CopilotSessionConfigFactoryTest {
 
@@ -38,7 +39,6 @@ class CopilotSessionConfigFactoryTest {
                 sessionId(),
                 tools,
                 List.of("gitlab_find_flow_context"),
-                List.of("C:\\runtime\\copilot_skills"),
                 CopilotModelSelection.DEFAULT,
                 "Use only the enabled test tools."
         );
@@ -47,7 +47,6 @@ class CopilotSessionConfigFactoryTest {
 
         assertEquals(List.of("gitlab_find_flow_context", "skill"), sessionConfigRequest.effectiveAvailableToolNames());
         assertEquals(true, sessionConfigRequest.skillToolAvailable());
-        assertEquals(true, sessionConfigRequest.skillDirectoriesConfigured());
         assertEquals("C:\\tools\\copilot.exe", clientOptions.getCliPath());
         assertEquals("C:\\workspace", clientOptions.getCwd());
         assertEquals(normalized("C:\\tdw-data\\copilot"), clientOptions.getCopilotHome());
@@ -59,7 +58,10 @@ class CopilotSessionConfigFactoryTest {
         assertFalse(sessionConfig.isStreaming());
         assertEquals(tools, sessionConfig.getTools());
         assertEquals(List.of("gitlab_find_flow_context", "skill"), sessionConfig.getAvailableTools());
-        assertEquals(List.of("C:\\runtime\\copilot_skills"), sessionConfig.getSkillDirectories());
+        assertEquals(
+                List.of(normalized("C:\\tdw-data\\copilot\\skills")),
+                sessionConfig.getSkillDirectories()
+        );
         assertEquals(List.of("incident-code-grounding"), sessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", sessionConfig.getModel());
         assertEquals("medium", sessionConfig.getReasoningEffort());
@@ -71,7 +73,10 @@ class CopilotSessionConfigFactoryTest {
         assertFalse(resumeSessionConfig.isStreaming());
         assertEquals(tools, resumeSessionConfig.getTools());
         assertEquals(List.of("gitlab_find_flow_context", "skill"), resumeSessionConfig.getAvailableTools());
-        assertEquals(List.of("C:\\runtime\\copilot_skills"), resumeSessionConfig.getSkillDirectories());
+        assertEquals(
+                List.of(normalized("C:\\tdw-data\\copilot\\skills")),
+                resumeSessionConfig.getSkillDirectories()
+        );
         assertEquals(List.of("incident-code-grounding"), resumeSessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", resumeSessionConfig.getModel());
         assertEquals("medium", resumeSessionConfig.getReasoningEffort());
@@ -99,15 +104,13 @@ class CopilotSessionConfigFactoryTest {
     }
 
     @Test
-    void shouldKeepCopilotHomeUnsetWhenDisabledByBlankConfiguration() {
+    void shouldRejectBlankCopilotHome() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         properties.setCopilotHome(" ");
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
 
-        var clientOptions = factory.clientOptions();
-
-        assertNull(clientOptions.getCopilotHome());
+        assertThrows(IllegalStateException.class, factory::clientOptions);
     }
 
     @Test
@@ -120,7 +123,6 @@ class CopilotSessionConfigFactoryTest {
 
         var sessionConfig = factory.sessionConfig(new CopilotSessionConfigRequest(
                 sessionId(),
-                List.of(),
                 List.of(),
                 List.of(),
                 new CopilotModelSelection("gpt-5.3-codex", "high"),
@@ -155,7 +157,6 @@ class CopilotSessionConfigFactoryTest {
                 sessionId(),
                 List.of(),
                 List.of(),
-                null,
                 CopilotModelSelection.DEFAULT,
                 null
         ));
@@ -165,8 +166,11 @@ class CopilotSessionConfigFactoryTest {
                 .join();
 
         assertEquals(PermissionRequestResultKind.DENIED_BY_RULES.toString(), decision.getKind());
-        assertEquals(List.of(), sessionConfig.getAvailableTools());
-        assertEquals(List.of(), sessionConfig.getSkillDirectories());
+        assertEquals(List.of("skill"), sessionConfig.getAvailableTools());
+        assertEquals(
+                List.of(properties.resolvedSkillDirectory().toString()),
+                sessionConfig.getSkillDirectories()
+        );
         assertEquals(List.of(), sessionConfig.getDisabledSkills());
     }
 

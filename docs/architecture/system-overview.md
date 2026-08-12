@@ -389,12 +389,12 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   kolejne capability.
 - `pl.mkn.tdw.features.incidentanalysis.ai.copilot`
   Incidentowe initial/chat providery oraz budowanie promptu, artifact digestu,
-  skill selection, tool policy, response parser i initial/follow-up run assembly.
-  Ten pakiet sklada parametry dla platformowego runtime Copilota.
+  guidance do uzycia skilli, tool policy, response parser i initial/follow-up
+  run assembly. Ten pakiet sklada parametry dla platformowego runtime Copilota.
 - `pl.mkn.tdw.aiplatform.copilot.runtime`
   Neutralne elementy runtime SDK: properties, model listing, client options,
-  `SessionConfig`, `MessageOptions` i prepared session bez znajomosci incident
-  promptu ani incident policy.
+  materializacja wspolnego katalogu skilli, `SessionConfig`, `MessageOptions`
+  i prepared session bez znajomosci incident promptu ani incident policy.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
   Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
   `CopilotClientOptions`. Runtime zawsze przekazuje `githubToken` jawnie i
@@ -596,8 +596,11 @@ Znaczenie grup UI:
   generyczne `shared.ai.AnalysisAiActivityEvent`: turny, komunikaty,
   wywolania tooli, snapshoty context tokens/messages i usage eventy. Frontend
   merge'uje te eventy z `toolEvidenceSections` w jeden timeline analizy.
-- Skill Copilota jest pakowany jako resource aplikacji i wypakowywany do
-  katalogu runtime.
+- Wszystkie skille Copilota sa pakowane jako resources aplikacji i przy starcie
+  odtwarzane w jednym platformowym katalogu
+  `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
+  `tdw-data/copilot/skills`. Kazda nowa i wznawiana sesja dostaje ten sam root;
+  feature wskazuje potrzebny workflow w prompcie.
 - Frontend Angular jest buildowany w tym samym repo i serwowany z tego samego
   JAR-a jako statyczne zasoby.
 

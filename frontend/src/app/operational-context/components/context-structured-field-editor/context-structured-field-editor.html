@@ -651,8 +651,8 @@
         <div class="structured-control">
           <label class="structured-label" for="code-target-id">Target entity <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('targetId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <select id="code-target-id" [disabled]="!targetType()" [value]="objectText('id')" (change)="updateObject('id', $any($event.target).value)">
-            <option value="">Choose existing target…</option>
-            @for (option of targetOptions(); track option.id) { <option [value]="option.id">{{ option.label }} · {{ option.id }}</option> }
+            <option value="" [selected]="!objectText('id')">Choose existing target…</option>
+            @for (option of targetOptions(); track option.id) { <option [value]="option.id" [selected]="option.id === objectText('id')">{{ option.label }} · {{ option.id }}</option> }
           </select>
         </div>
       </div>
@@ -667,8 +667,8 @@
               <div class="structured-control structured-control--wide">
                 <label class="structured-label" [for]="'repo-id-' + index">Repository <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('repoId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'repo-id-' + index" [value]="$any(repository)['repoId'] || ''" (change)="updateRepository(index, 'repoId', $any($event.target).value)">
-                  <option value="">Choose existing repository…</option>
-                  @for (option of repositoryOptions(index); track option.id) { <option [value]="option.id">{{ option.label }} · {{ option.id }}</option> }
+                  <option value="" [selected]="!$any(repository)['repoId']">Choose existing repository…</option>
+                  @for (option of repositoryOptions(index); track option.id) { <option [value]="option.id" [selected]="option.id === $any(repository)['repoId']">{{ option.label }} · {{ option.id }}</option> }
                 </select>
               </div>
               <div class="structured-control">

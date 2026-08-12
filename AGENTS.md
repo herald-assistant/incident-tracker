@@ -163,18 +163,21 @@ Zasady granic:
   sesji albo domyslne wartosci, bywa lepiej opisana w dokumentacji Node/CLI
   niz w klasach Javy. Nie zgaduj defaultow ani zakresow parametrow bez takiej
   weryfikacji.
-- `SessionConfig.skillDirectories` musi dostawac katalogi-rooty zawierajace
-  podkatalogi skilli z `SKILL.md`, a nie bezposrednie katalogi pojedynczych
-  skilli. Gdy feature wybiera podzbior runtime skilli, platforma ma zbudowac
-  techniczny selected root z tylko tymi skillami i przekazac ten root do SDK;
-  nie wracaj do przekazywania listy bezposrednich katalogow skilli, bo
-  wbudowany tool `skill` moze wtedy nie widziec siblingow i zwracac
-  `Skill not found`.
+- `CopilotSkillRuntimeLoader` przy starcie materializuje caly packaged katalog
+  `src/main/resources/copilot/skills` pod
+  `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
+  `tdw-data/copilot/skills`. `SessionConfig.skillDirectories` i
+  `ResumeSessionConfig.skillDirectories` zawsze dostaja ten jeden wspolny
+  root, a built-in tool `skill` jest zawsze w effective allowliscie.
+- Feature nie przekazuje katalogow ani podzbioru nazw skilli do platformy.
+  Feature posiada tresc i workflow swoich skilli oraz wskazuje w prompcie,
+  ktory starter albo skill follow-up warto zaladowac. Nie przywracaj selected
+  roots, bezposrednich katalogow pojedynczych skilli ani selekcji per run.
 - Docelowa platforma Copilot ma byc parametryzowana przez feature. Aktualnym
-  pierwszym inputem runtime jest `CopilotRunRequest`; prompt, skille,
-  available tools, hidden context, evidence sink i response parser maja
-  przychodzic w inpucie uruchomienia, a nie byc zakodowane jako stale zalozenia
-  platformy.
+  pierwszym inputem runtime jest `CopilotRunRequest`; prompt, guidance do
+  uzycia skilli, available tools, hidden context, evidence sink i response
+  parser maja pochodzic od feature'a, a nie byc zakodowane jako stale
+  zalozenia platformy.
 - Aktualny runtime nie uzywa SDK attachments jako zrodla evidence. Artefakty
   incydentu sa renderowane jako logiczne pliki i osadzane inline w promptcie,
   a `MessageOptions` dostaje tylko `setPrompt(prompt)`.

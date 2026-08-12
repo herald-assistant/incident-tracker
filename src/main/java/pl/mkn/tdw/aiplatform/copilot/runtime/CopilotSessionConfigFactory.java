@@ -14,7 +14,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -24,6 +23,7 @@ public class CopilotSessionConfigFactory {
 
     private final CopilotSdkProperties properties;
     private final CopilotAccessTokenResolver accessTokenResolver;
+    private final CopilotSkillRuntimeLoader skillRuntimeLoader;
 
     public CopilotClientOptions clientOptions(CopilotRunAuth auth) {
         var accessToken = accessTokenResolver.resolve(auth);
@@ -32,19 +32,13 @@ public class CopilotSessionConfigFactory {
                 .setGitHubToken(accessToken.value())
                 .setCwd(properties.getWorkingDirectory());
 
-        if (StringUtils.hasText(properties.getCopilotHome())) {
-            clientOptions.setCopilotHome(normalizedPath(properties.getCopilotHome()));
-        }
+        clientOptions.setCopilotHome(properties.resolvedCopilotHome().toString());
 
         if (properties.getCliPath() != null && !properties.getCliPath().isBlank()) {
             clientOptions.setCliPath(properties.getCliPath());
         }
 
         return clientOptions;
-    }
-
-    private String normalizedPath(String value) {
-        return Path.of(value.trim()).toAbsolutePath().normalize().toString();
     }
 
     public CopilotClientOptions clientOptions() {
@@ -60,7 +54,7 @@ public class CopilotSessionConfigFactory {
                 .setStreaming(false)
                 .setTools(request.tools())
                 .setAvailableTools(availableToolNames)
-                .setSkillDirectories(request.skillDirectories())
+                .setSkillDirectories(platformSkillDirectories())
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
@@ -86,7 +80,7 @@ public class CopilotSessionConfigFactory {
                 .setStreaming(false)
                 .setTools(request.tools())
                 .setAvailableTools(availableToolNames)
-                .setSkillDirectories(request.skillDirectories())
+                .setSkillDirectories(platformSkillDirectories())
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
@@ -114,6 +108,10 @@ public class CopilotSessionConfigFactory {
         return modelSelection != null && StringUtils.hasText(modelSelection.reasoningEffort())
                 ? modelSelection.reasoningEffort()
                 : properties.getReasoningEffort();
+    }
+
+    private List<String> platformSkillDirectories() {
+        return skillRuntimeLoader.platformSkillDirectories();
     }
 
     private PermissionHandler permissionHandler() {

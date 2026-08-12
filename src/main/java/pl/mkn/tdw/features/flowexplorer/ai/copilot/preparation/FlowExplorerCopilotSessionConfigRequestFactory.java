@@ -1,84 +1,47 @@
 package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
-import lombok.extern.slf4j.Slf4j;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotModelSelection;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
 import java.util.List;
 
 @Component
-@Slf4j
-@RequiredArgsConstructor
 public class FlowExplorerCopilotSessionConfigRequestFactory {
 
     private static final String FLOW_EXPLORER_TOOL_DENIED_MESSAGE =
             "Use only the inline Flow Explorer artifacts and the explicitly enabled Flow Explorer tools for this session.";
 
-    private final CopilotNamedSkillDirectoryResolver skillDirectoryResolver;
-
     public CopilotSessionConfigRequest create(
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
-            AnalysisAiOptions options,
-            List<FlowExplorerResultSectionModeAssignment> sectionModes
+            AnalysisAiOptions options
     ) {
-        return createSessionConfig(
-                copilotSessionId,
-                toolAccessPolicy,
-                options,
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(sectionModes)
-        );
+        return createSessionConfig(copilotSessionId, toolAccessPolicy, options);
     }
 
     public CopilotSessionConfigRequest createForFollowUp(
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
-            AnalysisAiOptions options,
-            List<FlowExplorerResultSectionModeAssignment> sectionModes
+            AnalysisAiOptions options
     ) {
-        return createSessionConfig(
-                copilotSessionId,
-                toolAccessPolicy,
-                options,
-                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(sectionModes)
-        );
+        return createSessionConfig(copilotSessionId, toolAccessPolicy, options);
     }
 
     private CopilotSessionConfigRequest createSessionConfig(
             String copilotSessionId,
             FlowExplorerCopilotToolAccessPolicy toolAccessPolicy,
-            AnalysisAiOptions options,
-            List<String> skillNames
+            AnalysisAiOptions options
     ) {
         var policy = toolAccessPolicy != null
                 ? toolAccessPolicy
                 : FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of());
-        var skillDirectories = skillDirectoryResolver.resolveSkillDirectories(skillNames);
-
-        if (skillNames == null || skillNames.isEmpty() || skillDirectories.isEmpty()) {
-            throw new IllegalStateException(
-                    "Flow Explorer Copilot runtime skills were not resolved for session: " + copilotSessionId
-            );
-        }
-
-        log.info(
-                "Flow Explorer Copilot session skills resolved sessionId={} skillCount={} skills={} skillDirectories={}",
-                copilotSessionId,
-                skillNames.size(),
-                skillNames,
-                skillDirectories
-        );
 
         return new CopilotSessionConfigRequest(
                 copilotSessionId,
                 policy.enabledTools(),
                 policy.availableToolNames(),
-                skillDirectories,
                 modelSelection(options),
                 FLOW_EXPLORER_TOOL_DENIED_MESSAGE
         );

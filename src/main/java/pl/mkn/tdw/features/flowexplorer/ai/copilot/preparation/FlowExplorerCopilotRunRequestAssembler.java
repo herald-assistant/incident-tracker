@@ -101,14 +101,12 @@ public class FlowExplorerCopilotRunRequestAssembler {
                 ? sessionConfigRequestFactory.createForFollowUp(
                         toolSessionContext.copilotSessionId(),
                         toolAccessPolicy,
-                        aiOptions,
-                        request != null ? request.resolvedSectionModes() : null
+                        aiOptions
                 )
                 : sessionConfigRequestFactory.create(
                         toolSessionContext.copilotSessionId(),
                         toolAccessPolicy,
-                        aiOptions,
-                        request != null ? request.resolvedSectionModes() : null
+                        aiOptions
                 );
         var runRequest = new CopilotRunRequest(
                 toolSessionContext.analysisRunId(),

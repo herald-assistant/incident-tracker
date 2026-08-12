@@ -11,7 +11,7 @@ testy i dokumentacje, przy maksymalnym reuse obecnych mechanizmow.
 
 Status: kanoniczny playbook wykonawczy dla calego cyklu zycia feature'ow.
 
-Ostatnio zweryfikowano z kodem: 2026-07-29. Przy zmianie mechanizmow
+Ostatnio zweryfikowano z kodem: 2026-08-12. Przy zmianie mechanizmow
 opisanych w playbooku aktualizuj jednoczesnie ten dokument.
 
 Playbook stosuj:
@@ -284,7 +284,7 @@ Nowy feature analityczny powinien miec:
 - jasno nazwanego uzytkownika i decyzje, ktora wynik wspiera,
 - wlasny request, wynik, prompt, policy i publiczne API,
 - wlasny lifecycle joba oraz stan potrzebny UI,
-- wlasny wybor sources, artifacts, runtime skills i tools,
+- wlasny wybor sources, artifacts, workflow runtime skilli i tools,
 - jawne visibility limits i sposob prezentacji niepewnosci,
 - brak importow do lub z innych feature'ow.
 
@@ -302,8 +302,8 @@ feature'em.
    klasy Incident Analysis.
 5. Nie przenos feature-specific DTO do `shared` tylko po to, by usunac cykl.
 6. Deterministic context/evidence i AI-guided tool reads to dwa rozne kanaly.
-7. Prompt, policy, artifacts, hidden context, skille i result mapping sa
-   skladane przez feature i przekazywane do platformy.
+7. Prompt, policy, artifacts, hidden context, guidance do uzycia skilli i
+   result mapping sa skladane przez feature i przekazywane do platformy.
 8. Publiczny wynik jest report-first; finalny tekst modelu jest co najwyzej
    fallbackiem diagnostycznym.
 9. Scope znany aplikacji pozostaje w hidden context, a nie w model-facing
@@ -824,10 +824,12 @@ Zasady:
 - tresc proceduralna jest po polsku,
 - techniczne nazwy tooli, pol JSON, klas i endpointow pozostaja oryginalne,
 - jeden skill ma jedna czytelna odpowiedzialnosc,
-- feature jawnie wybiera potrzebny podzbior,
-- platforma nie wybiera skilli za feature,
+- feature jawnie definiuje starter i workflow uzycia swoich skilli,
+- platforma udostepnia pelny wspolny katalog, ale nie wybiera workflow za
+  feature,
 - prompt mowi, ktore skille sa wymagane i kiedy maja byc uzyte,
-- kontrakt skillu ma test frontmatter/nazwy oraz test feature-owned selection.
+- kontrakt skillu ma test frontmatter/nazwy oraz test feature-owned prompt
+  guidance.
 
 Dobry podzial:
 
@@ -837,12 +839,12 @@ Dobry podzial:
 - zapis konkretnych sekcji reportu,
 - follow-up chat.
 
-`SessionConfig.skillDirectories` musi dostac root zawierajacy wybrane
-podkatalogi-siblings z `SKILL.md`. Uzyj
-`CopilotNamedSkillDirectoryResolver` i `CopilotSkillRuntimeLoader`. Nie
-przekazuj listy bezposrednich katalogow pojedynczych skilli, bo built-in tool
-`skill` moze nie zobaczyc siblingow. Przy skonfigurowanych skill directories
-`CopilotSessionConfigRequest` dodaje `skill` do efektywnej allowlisty.
+`CopilotSkillRuntimeLoader` przy starcie materializuje wszystkie packaged
+skille w jednym katalogu `${analysis.ai.copilot.copilot-home}/skills`.
+`SessionConfig` i `ResumeSessionConfig` zawsze dostaja ten root, a
+`CopilotSessionConfigRequest` zawsze dodaje built-in `skill` do efektywnej
+allowlisty. Feature nie przekazuje nazw ani katalogow skilli do session
+requestu; potrzebny starter i kolejnosc pracy sa kontraktem promptu.
 
 ## Tools, scope i polityki
 
@@ -1445,7 +1447,7 @@ diffem.
 - waski AI contract,
 - artifacts, prompt i coverage,
 - report factory/mapper/fallback,
-- runtime skill selection,
+- runtime skill workflow i prompt guidance,
 - `CopilotRunRequest`,
 - tool policy i hidden scope,
 - test assemblera bez live Copilota.
@@ -1496,7 +1498,8 @@ wszystkich DTO, a dopiero na koncu jednego nieweryfikowalnego runtime flow.
 - [ ] prompt/artifacts/digest/coverage,
 - [ ] initial run assembler: NEW session, auth, prompt, artifacts i report,
 - [ ] jesli jest chat: follow-up assembler, EXISTING session i scope,
-- [ ] jesli sa runtime skills: names, frontmatter, selected root i selection,
+- [ ] jesli sa runtime skills: names, frontmatter, wspolny platformowy root i
+      feature-owned prompt guidance,
 - [ ] jesli sa tools: callback names, schema, provider registration i context,
 - [ ] jesli sa tools: feature policy allow/deny, unknown tool i availability,
 - [ ] jesli sa tools: effective names sa podzbiorem definitions poza `skill`,
@@ -1561,7 +1564,8 @@ docelowym wzorcem:
 - incidentowa semantyka w neutralnym opisie toola,
 - feature-specific global listener bez filtra feature/run-kind,
 - zalozenie, ze `@Tool` automatycznie tworzy callback provider i allowliste,
-- bezposrednie katalogi pojedynczych skilli w `skillDirectories`,
+- feature-owned katalogi, selected roots albo bezposrednie katalogi
+  pojedynczych skilli w `skillDirectories`,
 - traktowanie inline artifacts jak SDK attachments lub plikow,
 - aktualizacja reportu przez follow-up - obecnie to tylko niewdrozony plan,
 - report tools dopuszczone w follow-up bez aktywnego report store/scope,

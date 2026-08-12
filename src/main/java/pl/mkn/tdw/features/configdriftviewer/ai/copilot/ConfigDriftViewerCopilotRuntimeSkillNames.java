@@ -9,7 +9,7 @@ public final class ConfigDriftViewerCopilotRuntimeSkillNames {
     private ConfigDriftViewerCopilotRuntimeSkillNames() {
     }
 
-    public static List<String> deepReview() {
+    public static List<String> featureSkillNames() {
         return List.of(DEEP_REVIEW);
     }
 }

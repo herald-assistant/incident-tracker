@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
@@ -36,15 +37,23 @@ public class CopilotSdkProperties {
     private String githubToken;
     private Auth auth = new Auth();
     private PermissionMode permissionMode = PermissionMode.APPROVE_ALL;
-    private List<String> skillResourceRoots = List.of("copilot/skills");
-    private String skillRuntimeDirectory = defaultSkillRuntimeDirectory();
-    private List<String> skillDirectories = List.of();
+    private String skillResourceRoot = "copilot/skills";
     private List<String> disabledSkills = List.of();
 
-    private static String defaultSkillRuntimeDirectory() {
-        return System.getProperty("java.io.tmpdir") + java.io.File.separator
-                + "incident-tracker" + java.io.File.separator
-                + "copilot-runtime";
+    public Path resolvedCopilotHome() {
+        if (copilotHome == null || copilotHome.isBlank()) {
+            throw new IllegalStateException("analysis.ai.copilot.copilot-home must not be blank");
+        }
+
+        var path = Path.of(copilotHome.trim()).toAbsolutePath().normalize();
+        if (path.getParent() == null) {
+            throw new IllegalStateException("analysis.ai.copilot.copilot-home cannot be a filesystem root");
+        }
+        return path;
+    }
+
+    public Path resolvedSkillDirectory() {
+        return resolvedCopilotHome().resolve("skills");
     }
 
     @Getter

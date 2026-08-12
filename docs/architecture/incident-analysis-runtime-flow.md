@@ -187,11 +187,11 @@ renderingu i konfiguracji SDK:
   `CopilotToolSessionContext`: run id, session id i hidden tool context dla
   initial/follow-up,
 - `CopilotIncidentSessionConfigRequestFactory` sklada incidentowe parametry
-  sesji: enabled tools, available tool names, skill directories, model
-  selection i komunikat odmowy tooli,
-- `CopilotSessionConfigRequest` wylicza effective available tools; gdy
-  skonfigurowano skill directories, dodaje built-in tool `skill`, zeby model
-  mogl ladowac runtime skille przez mechanike Copilot SDK,
+  sesji: enabled tools, available tool names, model selection i komunikat
+  odmowy tooli,
+- `CopilotSessionConfigRequest` wylicza effective available tools i zawsze
+  dodaje built-in tool `skill`, zeby model mogl ladowac skille ze wspolnego
+  katalogu platformy przez mechanike Copilot SDK,
 - `CopilotIncidentRunRequestFactory` tworzy neutralny `CopilotRunRequest` z
   run reference, `sessionTarget`, promptu, session config request i artifact
   contents,
@@ -283,9 +283,10 @@ Manifest zawiera:
 - `artifactPolicy.deliveryMode=embedded-prompt`,
 - enabled/disabled tool groups,
 - `toolPolicy.enabledToolNames`, czyli efektywna allowlista sesji, wlacznie z
-  built-in `skill`, gdy skill directories sa skonfigurowane,
-- `runtimeSkills`, czyli nazwe built-in toola `skill`, flage dostepnosci
-  skilli i preferowane nazwy runtime skilli bez lokalnych sciezek plikowych,
+  zawsze dostepnym built-in `skill`,
+- `runtimeSkills`, czyli nazwe built-in toola `skill`, flage dostepnosci oraz
+  preferowane przez incident workflow nazwy skilli bez lokalnych sciezek
+  plikowych,
 - `evidenceCoverage`,
 - indeks artefaktow i ich `itemIds`.
 
@@ -438,8 +439,12 @@ neutralnego `runReference`; incident assembler przekazuje tam obecny
 `correlationId`.
 
 Effective available tools sa wyliczane z `CopilotSessionConfigRequest`.
-Jezeli session request ma runtime skill directories, allowlista dostaje
-built-in `skill`. Ten sam effective zestaw trafia do `SessionConfig`, hooks
+Built-in `skill` jest zawsze dodawany do allowlisty. Przy starcie
+`CopilotSkillRuntimeLoader` waliduje wszystkie packaged skille i odtwarza ich
+pelny mirror pod `${analysis.ai.copilot.copilot-home}/skills`.
+`CopilotSessionConfigFactory` przekazuje ten sam pojedynczy root do
+`SessionConfig` i `ResumeSessionConfig`; feature request nie niesie katalogow
+ani listy wybranych skilli. Ten sam effective zestaw tools trafia do hooks
 `onPreToolUse` i manifestu, zeby prompt/debug/export nie rozjezdzal sie z tym,
 co realnie widzi Copilot SDK.
 
@@ -819,12 +824,12 @@ analysis.database.environments.sandbox-1.connection=dev
 analysis.database.environments.sandbox-1.application-user-suffix=_1
 
 analysis.ai.copilot.working-directory=${user.dir}
+analysis.ai.copilot.copilot-home=${tdw.workspace.directory:tdw-data}/copilot
 analysis.ai.copilot.permission-mode=approve-all
 analysis.ai.copilot.send-and-wait-timeout=5m
 analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
-analysis.ai.copilot.skill-resource-roots=copilot/skills
-analysis.ai.copilot.skill-runtime-directory=${java.io.tmpdir}/incident-tracker/copilot-runtime
+analysis.ai.copilot.skill-resource-root=copilot/skills
 
 analysis.ai.copilot.tool-budget.enabled=true
 analysis.ai.copilot.tool-budget.mode=soft

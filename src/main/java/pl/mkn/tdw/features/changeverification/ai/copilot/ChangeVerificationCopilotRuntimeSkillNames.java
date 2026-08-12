@@ -1,8 +1,5 @@
 package pl.mkn.tdw.features.changeverification.ai.copilot;
 
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-
-import java.util.ArrayList;
 import java.util.List;
 
 public final class ChangeVerificationCopilotRuntimeSkillNames {
@@ -18,23 +15,15 @@ public final class ChangeVerificationCopilotRuntimeSkillNames {
     private ChangeVerificationCopilotRuntimeSkillNames() {
     }
 
-    public static List<String> initialSkillNames() {
-        return initialSkillNames(null);
-    }
-
-    public static List<String> initialSkillNames(ChangeVerificationJobStartRequest request) {
-        var skillNames = new ArrayList<>(List.of(ORCHESTRATOR, COMPLIANCE_CHECK));
-        if (request == null || request.checkStoryCompliance()) {
-            skillNames.add(STORY_COMPLIANCE_SECTION);
-        }
-        if (request == null || request.checkInstructionCompliance()) {
-            skillNames.add(INSTRUCTION_COMPLIANCE_SECTION);
-        }
-        if (request == null || request.checkStoryCompliance()) {
-            skillNames.add(INFERRED_CRITICAL_CHECKS_SECTION);
-        }
-        skillNames.add(WRITE_REPORT);
-        return List.copyOf(skillNames);
+    public static List<String> featureSkillNames() {
+        return List.of(
+                ORCHESTRATOR,
+                COMPLIANCE_CHECK,
+                STORY_COMPLIANCE_SECTION,
+                INSTRUCTION_COMPLIANCE_SECTION,
+                INFERRED_CRITICAL_CHECKS_SECTION,
+                WRITE_REPORT
+        );
     }
 
 }

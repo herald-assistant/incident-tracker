@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotModelSelection;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
@@ -16,8 +15,6 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStart
 import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportFactory;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
-
-import java.util.List;
 
 @Component
 @Slf4j
@@ -31,7 +28,6 @@ public class ChangeVerificationCopilotRunRequestAssembler {
 
     private final CopilotSdkToolFactory toolFactory;
     private final ChangeVerificationCopilotToolSessionContextFactory toolSessionContextFactory;
-    private final CopilotNamedSkillDirectoryResolver skillDirectoryResolver;
     private final CopilotRunAuthMapper runAuthMapper;
     private final ChangeVerificationReportFactory reportFactory;
 
@@ -51,61 +47,21 @@ public class ChangeVerificationCopilotRunRequestAssembler {
             ChangeVerificationPromptPreparation preparation,
             AnalysisAiAuthRef authRef
     ) {
-        return assemble(
+        var toolSessionContext = toolSessionContextFactory.create(
                 runReference,
                 request,
                 sourceDiscovery,
-                preparation,
-                authRef,
-                ChangeVerificationCopilotRuntimeSkillNames.initialSkillNames(request),
                 ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE
         );
-    }
-
-    public CopilotRunRequest assemble(
-            String runReference,
-            ChangeVerificationJobStartRequest request,
-            ChangeVerificationPromptPreparation preparation,
-            AnalysisAiAuthRef authRef,
-            List<String> skillNames
-    ) {
-        return assemble(
-                runReference,
-                request,
-                null,
-                preparation,
-                authRef,
-                skillNames,
-                ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE
-        );
-    }
-
-    public CopilotRunRequest assemble(
-            String runReference,
-            ChangeVerificationJobStartRequest request,
-            ChangeVerificationSourceDiscoveryResult sourceDiscovery,
-            ChangeVerificationPromptPreparation preparation,
-            AnalysisAiAuthRef authRef,
-            List<String> skillNames,
-            String runKind
-    ) {
-        var skillDirectories = skillDirectoryResolver.resolveSkillDirectories(skillNames);
-        if (skillDirectories.isEmpty()) {
-            throw new IllegalStateException("Change Verification Copilot runtime skills were not resolved.");
-        }
-        var toolSessionContext = toolSessionContextFactory.create(runReference, request, sourceDiscovery, runKind);
         var toolAccessPolicy = ChangeVerificationCopilotToolAccessPolicy.fromRegisteredTools(
                 toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT),
-                ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE.equals(runKind)
+                true
         );
 
         log.info(
-                "Change Verification Copilot session prepared runReference={} sessionId={} skillCount={} skills={} skillDirectories={} gitLabToolsRegistered={} gitLabToolsEnabled={} operationalContextToolsRegistered={} operationalContextToolsEnabled={} reportToolsEnabled={}",
+                "Change Verification Copilot session prepared runReference={} sessionId={} gitLabToolsRegistered={} gitLabToolsEnabled={} operationalContextToolsRegistered={} operationalContextToolsEnabled={} reportToolsEnabled={}",
                 runReference,
                 toolSessionContext.copilotSessionId(),
-                skillNames.size(),
-                skillNames,
-                skillDirectories,
                 toolAccessPolicy.gitLabToolsRegistered(),
                 toolAccessPolicy.gitLabToolsEnabled(),
                 toolAccessPolicy.operationalContextToolsRegistered(),
@@ -117,7 +73,6 @@ public class ChangeVerificationCopilotRunRequestAssembler {
                 toolSessionContext.copilotSessionId(),
                 toolAccessPolicy.enabledTools(),
                 toolAccessPolicy.availableToolNames(),
-                skillDirectories,
                 modelSelection(request),
                 DENIED_TOOL_MESSAGE
         );
@@ -131,13 +86,11 @@ public class ChangeVerificationCopilotRunRequestAssembler {
                 preparation.artifactContents(),
                 null
         );
-        return ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE.equals(runKind)
-                ? runRequest.withInitialReport(reportFactory.createInitialReport(
-                        request,
-                        sourceDiscovery,
-                        toolSessionContext
-                ))
-                : runRequest;
+        return runRequest.withInitialReport(reportFactory.createInitialReport(
+                request,
+                sourceDiscovery,
+                toolSessionContext
+        ));
     }
 
     private CopilotModelSelection modelSelection(ChangeVerificationJobStartRequest request) {

@@ -221,12 +221,9 @@ public class CopilotIncidentArtifactService {
 
     private Map<String, Object> buildRuntimeSkillsPayload(CopilotSessionConfigRequest sessionConfigRequest) {
         var skillToolAvailable = sessionConfigRequest != null && sessionConfigRequest.skillToolAvailable();
-        var skillDirectoriesConfigured = sessionConfigRequest != null && sessionConfigRequest.skillDirectoriesConfigured();
         var payload = new LinkedHashMap<String, Object>();
         payload.put("skillToolName", CopilotSessionConfigRequest.SKILL_TOOL_NAME);
         payload.put("skillToolAvailable", skillToolAvailable);
-        payload.put("skillDirectoriesConfigured", skillDirectoriesConfigured);
-        payload.put("skillDirectoryCount", sessionConfigRequest != null ? sessionConfigRequest.skillDirectories().size() : 0);
         payload.put("starterSkillName", skillToolAvailable
                 ? CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME
                 : null);

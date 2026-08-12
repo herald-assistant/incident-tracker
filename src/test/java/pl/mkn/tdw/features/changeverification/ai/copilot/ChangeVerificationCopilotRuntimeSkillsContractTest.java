@@ -1,8 +1,6 @@
 package pl.mkn.tdw.features.changeverification.ai.copilot;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -14,8 +12,8 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
     private static final Path SKILLS_ROOT = Path.of("src", "main", "resources", "copilot", "skills");
 
     @Test
-    void shouldDeclareOrchestratorSectionAndWriteReportSkillsForCompliance() {
-        assertThat(ChangeVerificationCopilotRuntimeSkillNames.initialSkillNames()).containsExactly(
+    void shouldDeclareFeatureSkillNamesUsedByThePromptWorkflow() {
+        assertThat(ChangeVerificationCopilotRuntimeSkillNames.featureSkillNames()).containsExactly(
                 "change-verification-orchestrator",
                 "change-verification-compliance-check",
                 "change-verification-story-compliance-section",
@@ -26,27 +24,8 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
     }
 
     @Test
-    void shouldSelectOnlyRequestedComplianceSectionSkills() {
-        var storyOnly = new ChangeVerificationJobStartRequest(
-                "CRM-123",
-                null,
-                true,
-                false,
-                null,
-                null,
-                null
-        );
-
-        assertThat(ChangeVerificationCopilotRuntimeSkillNames.initialSkillNames(storyOnly))
-                .contains(ChangeVerificationCopilotRuntimeSkillNames.STORY_COMPLIANCE_SECTION)
-                .contains(ChangeVerificationCopilotRuntimeSkillNames.INFERRED_CRITICAL_CHECKS_SECTION)
-                .doesNotContain(ChangeVerificationCopilotRuntimeSkillNames.INSTRUCTION_COMPLIANCE_SECTION)
-                .endsWith(ChangeVerificationCopilotRuntimeSkillNames.WRITE_REPORT);
-    }
-
-    @Test
-    void shouldKeepSelectedSkillFilesAlignedWithRuntimeContract() throws Exception {
-        for (var skillName : ChangeVerificationCopilotRuntimeSkillNames.initialSkillNames()) {
+    void shouldKeepFeatureSkillFilesAlignedWithRuntimeContract() throws Exception {
+        for (var skillName : ChangeVerificationCopilotRuntimeSkillNames.featureSkillNames()) {
             var skillFile = SKILLS_ROOT.resolve(skillName).resolve("SKILL.md");
             assertThat(Files.isRegularFile(skillFile))
                     .as("Missing Change Verification runtime skill: %s", skillName)

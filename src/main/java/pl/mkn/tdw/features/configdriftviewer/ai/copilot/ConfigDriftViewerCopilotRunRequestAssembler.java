@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotModelSelection;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
@@ -30,7 +29,6 @@ public class ConfigDriftViewerCopilotRunRequestAssembler {
 
     private final CopilotSdkToolFactory toolFactory;
     private final ConfigDriftViewerCopilotToolSessionContextFactory contextFactory;
-    private final CopilotNamedSkillDirectoryResolver skillDirectoryResolver;
     private final CopilotRunAuthMapper runAuthMapper;
     private final ConfigDriftViewerReportFactory reportFactory;
 
@@ -45,11 +43,6 @@ public class ConfigDriftViewerCopilotRunRequestAssembler {
         if (request == null || request.mode() != ConfigDriftViewerMode.DEEP) {
             throw new IllegalArgumentException("Copilot runtime is available only for DEEP verification.");
         }
-        var skills = ConfigDriftViewerCopilotRuntimeSkillNames.deepReview();
-        var skillDirectories = skillDirectoryResolver.resolveSkillDirectories(skills);
-        if (skillDirectories.isEmpty()) {
-            throw new IllegalStateException("Config Drift Viewer Copilot skill was not resolved.");
-        }
         var toolContext = contextFactory.create(runReference, request, deepContext);
         var accessPolicy = ConfigDriftViewerCopilotToolAccessPolicy.fromRegisteredTools(
                 toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT)
@@ -58,7 +51,6 @@ public class ConfigDriftViewerCopilotRunRequestAssembler {
                 toolContext.copilotSessionId(),
                 accessPolicy.enabledTools(),
                 accessPolicy.availableToolNames(),
-                skillDirectories,
                 new CopilotModelSelection(request.model(), request.reasoningEffort()),
                 DENIED_TOOL_MESSAGE
         );

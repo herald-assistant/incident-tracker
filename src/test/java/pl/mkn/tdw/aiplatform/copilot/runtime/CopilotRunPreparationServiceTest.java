@@ -21,6 +21,7 @@ class CopilotRunPreparationServiceTest {
     void shouldPrepareSessionFromNeutralRunRequest() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
+        properties.setCopilotHome("C:\\tdw-data\\copilot");
         Consumer<AnalysisEvidenceSection> evidenceSink = section -> {
         };
         var service = new CopilotRunPreparationService(
@@ -30,7 +31,6 @@ class CopilotRunPreparationServiceTest {
                 "session-123",
                 List.of(),
                 List.of("tool-a"),
-                List.of("copilot-skills/incident"),
                 new CopilotModelSelection("gpt-5.4", "medium"),
                 "Denied"
         );
@@ -55,7 +55,10 @@ class CopilotRunPreparationServiceTest {
             assertEquals("gpt-5.4", prepared.sessionConfig().getModel());
             assertEquals("medium", prepared.sessionConfig().getReasoningEffort());
             assertEquals(List.of("tool-a", "skill"), prepared.sessionConfig().getAvailableTools());
-            assertEquals(List.of("copilot-skills/incident"), prepared.sessionConfig().getSkillDirectories());
+            assertEquals(
+                    List.of(properties.resolvedSkillDirectory().toString()),
+                    prepared.sessionConfig().getSkillDirectories()
+            );
         }
     }
 
@@ -63,6 +66,7 @@ class CopilotRunPreparationServiceTest {
     void shouldPrepareExistingSessionTargetForResume() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
+        properties.setCopilotHome("C:\\tdw-data\\copilot");
         Consumer<AnalysisEvidenceSection> evidenceSink = section -> {
         };
         var service = new CopilotRunPreparationService(
@@ -72,7 +76,6 @@ class CopilotRunPreparationServiceTest {
                 "session-456",
                 List.of(),
                 List.of("tool-a"),
-                List.of("copilot-skills/incident"),
                 new CopilotModelSelection("gpt-5.4", "medium"),
                 "Denied"
         );
@@ -94,6 +97,10 @@ class CopilotRunPreparationServiceTest {
             assertSame(evidenceSink, prepared.evidenceSink());
             assertNotNull(prepared.resumeSessionConfig());
             assertEquals(List.of("tool-a", "skill"), prepared.resumeSessionConfig().getAvailableTools());
+            assertEquals(
+                    List.of(properties.resolvedSkillDirectory().toString()),
+                    prepared.resumeSessionConfig().getSkillDirectories()
+            );
         }
     }
 

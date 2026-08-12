@@ -21,7 +21,6 @@ import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncide
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigFactory;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
@@ -30,7 +29,6 @@ import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCon
 import java.nio.file.Path;
 import java.util.List;
 
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -53,7 +51,6 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
     void shouldPromptForDigestVerificationAndSplitResultContract() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
-        properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
         var factory = mock(CopilotSdkToolFactory.class);
         when(factory.createToolDefinitions(
                 any(CopilotToolSessionContext.class),
@@ -63,7 +60,7 @@ class CopilotIncidentInitialPreparationServiceEvidenceReferencePromptTest {
                 new CopilotIncidentInitialRunAssembler(
                         factory,
                         new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
-                        new CopilotIncidentSessionConfigRequestFactory(new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties))),
+                        new CopilotIncidentSessionConfigRequestFactory(),
                         artifactService(new ObjectMapper()),
                         policyFactoryWithConfiguredElastic(),
                         new CopilotIncidentPromptRenderer(),

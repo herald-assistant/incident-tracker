@@ -12,8 +12,8 @@ class ConfigDriftViewerCopilotRuntimeSkillsContractTest {
             Path.of("src", "main", "resources", "copilot", "skills");
 
     @Test
-    void shouldSelectOnlyTheDeepReviewSkill() {
-        assertThat(ConfigDriftViewerCopilotRuntimeSkillNames.deepReview())
+    void shouldDeclareTheFeatureSkillNamedByThePrompt() {
+        assertThat(ConfigDriftViewerCopilotRuntimeSkillNames.featureSkillNames())
                 .containsExactly("config-drift-viewer-deep-review");
     }
 

@@ -206,8 +206,17 @@ najlepszy snapshot przed AI, a tools sa tylko do uzupelniania luk.
 Skille Copilota sa pakowane z aplikacja z `src/main/resources/copilot/skills`.
 Nie traktujemy ich jako plikow `.github` repozytorium hosta.
 
+Przy starcie `CopilotSkillRuntimeLoader` waliduje i odtwarza caly katalog pod
+`${analysis.ai.copilot.copilot-home}/skills`, domyslnie
+`tdw-data/copilot/skills`. Ten sam pojedynczy root trafia do kazdego
+`SessionConfig` i `ResumeSessionConfig`, a built-in tool `skill` jest zawsze w
+effective allowliscie. Nie tworzymy selected roots ani katalogow per feature
+lub per analiza.
+
 Skill przechowuje stale zasady pracy modelu. Dane konkretnego incydentu
-niesie prompt i artefakty przygotowane w runtime.
+niesie prompt i artefakty przygotowane w runtime. Feature posiada tresc i
+workflow swoich skilli oraz wskazuje starter w prompcie; nie przekazuje
+platformie katalogow ani listy wybranych nazw.
 
 ## 6. Granica AI pozostaje generyczna
 
@@ -423,7 +432,8 @@ nie nowy kontrakt do rozszerzania.
 SessionConfig ma jawna allowliste tools, a `SessionHooks.onPreToolUse`
 blokuje lokalny workspace/filesystem/shell/terminal w glownym flow analizy.
 Incident preparation sklada `CopilotSessionConfigRequest`: wybiera allowed
-tools, skill directories, model options i incidentowy komunikat odmowy toola.
+tools, model options i incidentowy komunikat odmowy toola. Wspolny katalog
+skilli oraz built-in `skill` doklada platforma.
 Incident preparation sklada tez `CopilotToolSessionContext`: tworzy
 `analysis-*`/`analysis-chat-*` session id i hidden tool context ze scope'u
 incydentu.
@@ -621,8 +631,9 @@ Decyzje:
   `flow-explorer-follow-up-chat`, zeby odpowiedz domyslnie byla Markdownem,
   nie initial JSON result contract, i zeby poglebianie przez tools oraz jezyk
   domenowy byly jawna czescia kontraktu rozmowy,
-- przy resume backend ponownie przekazuje aktualne tools, skille, hidden
-  context, hooks, permission handler, model i `reasoningEffort`,
+- przy resume backend ponownie przekazuje aktualne tools, hidden context,
+  hooks, permission handler, model i `reasoningEffort`; platforma podpina ten
+  sam wspolny katalog skilli co dla nowej sesji,
 - GitLab i Database tools nadal sa session-bound przez hidden `ToolContext`;
   Elasticsearch korzysta z zakonczonej analizy jako scope'u sesji, ale ma
   jeszcze zastany jawny `correlationId` w schema toola i jest nadal blokowany,
@@ -679,17 +690,18 @@ Feature ma przekazac platformie gotowa konfiguracje uruchomienia, np.:
 
 - prompt albo gotowy input do modelu,
 - model i `reasoningEffort`,
-- skille albo katalogi skilli,
+- promptowe guidance wskazujace starter i workflow skilli,
 - tool definitions/callbacks oraz allowliste `availableTools`,
 - hidden tool context jako mape danych sesji,
 - evidence sink/listeners dla wynikow tooli,
 - neutralny identyfikator runu do logow, np. `runReference`,
 - parser albo handler odpowiedzi feature'a.
 
-Platforma nie powinna sama wybierac incident promptu, incident skilli,
-GitLab/DB/Elastic tool policy ani JSON response contractu incydentu. Nie
-powinna tez zakladac, ze kazda sesja ma `correlationId`, `environment`,
-`gitLabBranch` albo `gitLabGroup`.
+Platforma udostepnia pelny wspolny katalog skilli, ale nie powinna sama
+wybierac incident promptu, startera/workflow skilli, GitLab/DB/Elastic tool
+policy ani JSON response contractu incydentu. Nie powinna tez zakladac, ze
+kazda sesja ma `correlationId`, `environment`, `gitLabBranch` albo
+`gitLabGroup`.
 
 To jest warunek dla kolejnych feature'ow. Flow explorer moze potrzebowac
 requestu opisowego zamiast `correlationId`, change verification moze budowac

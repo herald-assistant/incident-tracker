@@ -25,7 +25,8 @@ oraz pokazac wynik dokumentacyjny dla analityka albo testera.
   promptu, response contractu ani polityki tools.
 - Aktualny publiczny i runtime contract obsluguje tylko goal
   `DEEP_DISCOVERY`. Przyszle goals moga byc widoczne w UI jako disabled
-  `SOON`, ale nie naleza do DTO, parsera, eksportu ani selected runtime skills.
+  `SOON`, ale nie naleza do DTO, parsera, eksportu ani promptowego workflow
+  runtime skilli.
 - Nie utrzymuj kompatybilnosci importu, odtwarzania ani kontynuacji dla
   wycofanych goals; nie mapuj ich cicho na `DEEP_DISCOVERY`.
 - Domyslny MVP opisuje persistence code-first i nie wlacza DB tools jako

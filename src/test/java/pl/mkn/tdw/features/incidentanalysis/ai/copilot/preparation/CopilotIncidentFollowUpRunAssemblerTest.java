@@ -68,7 +68,6 @@ class CopilotIncidentFollowUpRunAssemblerTest {
                 "copilot-session-123",
                 List.of(),
                 List.of(),
-                List.of("copilot-skills/incident"),
                 null,
                 "Denied"
         );

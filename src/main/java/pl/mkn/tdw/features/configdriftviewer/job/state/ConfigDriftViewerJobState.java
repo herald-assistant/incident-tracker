@@ -73,9 +73,17 @@ public final class ConfigDriftViewerJobState {
             String componentRunId,
             ConfigDriftViewerJobStartRequest request
     ) {
+        this(componentRunId, request, Instant.now());
+    }
+
+    ConfigDriftViewerJobState(
+            String componentRunId,
+            ConfigDriftViewerJobStartRequest request,
+            Instant createdAt
+    ) {
         this.componentRunId = componentRunId;
         this.request = request;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
         this.updatedAt = createdAt;
         this.status = STATUS_QUEUED;
     }

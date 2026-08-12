@@ -2,14 +2,14 @@ package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotSkillRuntimeLoaderTest {
@@ -18,103 +18,116 @@ class CopilotSkillRuntimeLoaderTest {
     Path tempDirectory;
 
     @Test
-    void shouldUseRuntimeDirectoryAsBaseDirectory() {
+    void shouldResolvePlatformSkillDirectoryUnderCopilotHome() {
         var properties = new CopilotSdkProperties();
 
-        assertTrue(Path.of(properties.getSkillRuntimeDirectory())
-                .endsWith(Path.of("incident-tracker", "copilot-runtime")));
+        assertTrue(properties.resolvedSkillDirectory().endsWith(Path.of("tdw-data", "copilot", "skills")));
     }
 
     @Test
-    void shouldExtractClasspathSkillsToRuntimeDirectory() throws Exception {
-        var properties = new CopilotSdkProperties();
-        properties.setSkillResourceRoots(List.of("copilot/skills"));
-        properties.setSkillRuntimeDirectory(tempDirectory.toString());
-
+    void shouldMirrorAllClasspathSkillsToPlatformDirectory() throws Exception {
+        var properties = propertiesWithCopilotHome(tempDirectory.resolve("copilot"));
         var loader = new CopilotSkillRuntimeLoader(properties);
 
-        var resolvedDirectories = loader.resolveSkillDirectories();
+        var directories = loader.platformSkillDirectories();
 
-        assertEquals(1, resolvedDirectories.size());
-
-        var runtimeRoot = Path.of(resolvedDirectories.get(0));
-        var skillFile = runtimeRoot.resolve("incident-analysis-orchestrator").resolve("SKILL.md");
-
-        assertTrue(Files.exists(skillFile));
-        var skillContent = Files.readString(skillFile);
-        assertTrue(skillContent.contains("name: incident-analysis-orchestrator"));
-        assertTrue(skillContent.contains("# Skill Orkiestratora Analizy Incydentu"));
+        assertEquals(List.of(properties.resolvedSkillDirectory().toString()), directories);
+        var skillFile = properties.resolvedSkillDirectory()
+                .resolve("incident-analysis-orchestrator")
+                .resolve("SKILL.md");
+        assertTrue(Files.isRegularFile(skillFile));
+        assertTrue(Files.readString(skillFile).contains("name: incident-analysis-orchestrator"));
+        assertTrue(loader.availableSkillNames().containsAll(List.of(
+                "incident-analysis-orchestrator",
+                "flow-explorer-orchestrator",
+                "change-verification-orchestrator",
+                "config-drift-viewer-deep-review"
+        )));
     }
 
     @Test
-    void shouldFallbackToDevelopmentResourceRootWhenClasspathSkillsAreMissing() throws Exception {
+    void shouldReplacePreviousPlatformMirrorWithoutSelectedRoots() throws Exception {
+        var properties = propertiesWithCopilotHome(tempDirectory.resolve("copilot"));
+        var targetRoot = properties.resolvedSkillDirectory();
+        Files.createDirectories(targetRoot.resolve("selected-skills-stale"));
+        Files.writeString(targetRoot.resolve("stale.txt"), "stale");
+
+        var loader = new CopilotSkillRuntimeLoader(properties);
+        loader.platformSkillDirectories();
+
+        assertFalse(Files.exists(targetRoot.resolve("stale.txt")));
+        assertFalse(Files.exists(targetRoot.resolve("selected-skills-stale")));
+        try (var paths = Files.list(targetRoot)) {
+            assertFalse(paths.anyMatch(path -> path.getFileName().toString().startsWith("selected-skills-")));
+        }
+    }
+
+    @Test
+    void shouldCopyDevelopmentResourcesIntoTheSamePlatformDirectory() throws Exception {
         var projectRoot = tempDirectory.resolve("project");
-        var sourceSkillRoot = projectRoot
-                .resolve(Path.of("src", "main", "resources", "copilot", "dev-skills", "local-skill"));
-        Files.createDirectories(sourceSkillRoot);
-        Files.writeString(
-                sourceSkillRoot.resolve("SKILL.md"),
-                """
-                ---
-                name: local-skill
-                ---
-
-                # Local Skill
-                """
-        );
-
-        var properties = new CopilotSdkProperties();
+        var sourceRoot = projectRoot.resolve(Path.of("src", "main", "resources", "copilot", "dev-skills"));
+        writeSkill(sourceRoot.resolve("local-skill"), "local-skill");
+        var properties = propertiesWithCopilotHome(tempDirectory.resolve("platform-copilot"));
         properties.setWorkingDirectory(projectRoot.toString());
-        properties.setSkillResourceRoots(List.of("copilot/dev-skills"));
-        properties.setSkillRuntimeDirectory(tempDirectory.resolve("runtime").toString());
-
+        properties.setSkillResourceRoot("copilot/dev-skills");
         var loader = new CopilotSkillRuntimeLoader(properties);
 
-        var resolvedDirectories = loader.resolveSkillDirectories();
+        var directories = loader.platformSkillDirectories();
 
-        assertEquals(1, resolvedDirectories.size());
-        assertEquals(
-                projectRoot.resolve(Path.of("src", "main", "resources", "copilot", "dev-skills")).toString(),
-                resolvedDirectories.get(0)
-        );
-
-        var runtimeRoot = Path.of(resolvedDirectories.get(0));
-        var skillFile = runtimeRoot.resolve("local-skill").resolve("SKILL.md");
-
-        assertTrue(Files.exists(skillFile));
-        assertTrue(Files.readString(skillFile).contains("name: local-skill"));
+        assertEquals(List.of(properties.resolvedSkillDirectory().toString()), directories);
+        assertTrue(Files.isRegularFile(
+                properties.resolvedSkillDirectory().resolve("local-skill").resolve("SKILL.md")
+        ));
+        assertFalse(directories.contains(sourceRoot.toString()));
     }
 
     @Test
-    void shouldAppendAdditionalExternalSkillDirectories() {
-        var properties = new CopilotSdkProperties();
-        properties.setSkillResourceRoots(List.of());
-        properties.setSkillDirectories(List.of("C:\\external\\skills"));
-        properties.setSkillRuntimeDirectory(tempDirectory.toString());
-
+    void shouldFailWhenPackagedSkillRootDoesNotExist() {
+        var properties = propertiesWithCopilotHome(tempDirectory.resolve("copilot"));
+        properties.setWorkingDirectory(tempDirectory.resolve("project").toString());
+        properties.setSkillResourceRoot("copilot/missing-skills");
         var loader = new CopilotSkillRuntimeLoader(properties);
 
-        var resolvedDirectories = loader.resolveSkillDirectories();
+        var exception = assertThrows(IllegalStateException.class, loader::platformSkillDirectories);
 
-        assertEquals(List.of("C:\\external\\skills"), resolvedDirectories);
+        assertTrue(exception.getMessage().contains("No Copilot skills were found"));
     }
 
     @Test
-    void shouldListAvailableSkillNamesFromResolvedRoots() throws Exception {
-        var skillRoot = tempDirectory.resolve("skills");
-        writeSkill(skillRoot.resolve("zeta-skill"), "zeta-skill");
-        writeSkill(skillRoot.resolve("alpha-skill"), "alpha-skill");
-        var directSkillRoot = tempDirectory.resolve("direct-skill");
-        writeSkill(directSkillRoot, "direct-skill");
-
-        var properties = new CopilotSdkProperties();
-        properties.setSkillResourceRoots(List.of());
-        properties.setSkillDirectories(List.of(skillRoot.toString(), directSkillRoot.toString()));
-        properties.setSkillRuntimeDirectory(tempDirectory.resolve("runtime").toString());
-
+    void shouldFailWhenSkillDirectoryHasNoSkillDefinition() throws Exception {
+        var projectRoot = tempDirectory.resolve("project");
+        var sourceRoot = projectRoot.resolve(Path.of("src", "main", "resources", "copilot", "broken-skills"));
+        Files.createDirectories(sourceRoot.resolve("broken-skill"));
+        Files.writeString(sourceRoot.resolve("broken-skill").resolve("README.md"), "broken");
+        var properties = propertiesWithCopilotHome(tempDirectory.resolve("copilot"));
+        properties.setWorkingDirectory(projectRoot.toString());
+        properties.setSkillResourceRoot("copilot/broken-skills");
         var loader = new CopilotSkillRuntimeLoader(properties);
 
-        assertEquals(List.of("alpha-skill", "zeta-skill", "direct-skill"), loader.availableSkillNames());
+        var exception = assertThrows(IllegalStateException.class, loader::platformSkillDirectories);
+
+        assertTrue(exception.getMessage().contains("Missing SKILL.md"));
+    }
+
+    @Test
+    void shouldFailWhenFrontmatterNameDoesNotMatchDirectory() throws Exception {
+        var projectRoot = tempDirectory.resolve("project");
+        var sourceRoot = projectRoot.resolve(Path.of("src", "main", "resources", "copilot", "invalid-skills"));
+        writeSkill(sourceRoot.resolve("alpha-skill"), "beta-skill");
+        var properties = propertiesWithCopilotHome(tempDirectory.resolve("copilot"));
+        properties.setWorkingDirectory(projectRoot.toString());
+        properties.setSkillResourceRoot("copilot/invalid-skills");
+        var loader = new CopilotSkillRuntimeLoader(properties);
+
+        var exception = assertThrows(IllegalStateException.class, loader::platformSkillDirectories);
+
+        assertTrue(exception.getMessage().contains("must match directory 'alpha-skill'"));
+    }
+
+    private CopilotSdkProperties propertiesWithCopilotHome(Path copilotHome) {
+        var properties = new CopilotSdkProperties();
+        properties.setCopilotHome(copilotHome.toString());
+        return properties;
     }
 
     private void writeSkill(Path skillDirectory, String skillName) throws Exception {
@@ -124,11 +137,11 @@ class CopilotSkillRuntimeLoaderTest {
                 """
                 ---
                 name: %s
+                description: Test skill.
                 ---
 
                 # Test Skill
                 """.formatted(skillName)
         );
     }
-
 }

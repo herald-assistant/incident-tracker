@@ -166,7 +166,7 @@ public class CopilotIncidentPromptRenderer {
                     - starter skill to load before classifying the incident: `%s`
                     - diagnostic skills to load only when required by the starter algorithm: %s
                     - result skills to load after diagnosis for final answer synthesis: %s
-                    - source: runtime skill directories configured by the backend; do not inspect local paths
+                    - source: shared platform runtime skill catalog; do not inspect local paths
                     - if a listed skill is unavailable or disabled, continue with embedded artifacts and state any resulting limitation only when it affects the answer
                     """.formatted(
                     CopilotIncidentRuntimeSkillNames.STARTER_SKILL_NAME,

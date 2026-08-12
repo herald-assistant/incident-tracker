@@ -3,9 +3,10 @@
 ## Zakres
 
 Ten katalog zawiera runtime skille Copilota pakowane z aplikacja. Skille sa
-zasobem runtime, a nie dokumentacja `.github` ani kod Javy. Feature wybiera
-podzbior skilli, platforma materializuje selected root z podkatalogami
-`SKILL.md`, a GitHub Copilot laduje je przez built-in tool `skill`.
+zasobem runtime, a nie dokumentacja `.github` ani kod Javy. Platforma przy
+starcie materializuje caly katalog pod `${copilot-home}/skills` i udostepnia
+ten sam root kazdej sesji. Feature wskazuje potrzebny starter i workflow w
+prompcie, a GitHub Copilot laduje skille przez built-in tool `skill`.
 
 Zmiany w tym katalogu moga zmienic zachowanie AI bez zmiany publicznych HTTP
 API, DTO ani pakietow Javy. Traktuj je jak kontrakt wykonawczy feature'a.
@@ -138,16 +139,16 @@ Aktualny podzial:
 - `flow-explorer-follow-up-chat`: sciezka po initial runie, bez pelnej
   orkiestracji ani przepisywania zasad finalnego raportu.
 
-Skille sekcyjne wlaczaj wtedy, gdy sekcja nie jest `OFF`, nie tylko wtedy, gdy
-tryb jest `DEEP`.
+Prompt powinien zlecac zaladowanie skilli sekcyjnych wtedy, gdy sekcja nie jest
+`OFF`, nie tylko wtedy, gdy tryb jest `DEEP`.
 
 ## Ladowanie Przez Copilota
 
-- Feature ma przekazywac do runtime wybrane nazwy skilli.
-- Platforma ma przekazac do SDK katalog-root zawierajacy podkatalogi skilli z
-  `SKILL.md`, nie bezposredni katalog pojedynczego skilla.
-- Gdy `skillDirectories` nie sa puste, `skill` musi byc w effective
-  `availableTools`.
+- Platforma kopiuje pelny packaged katalog do stalego
+  `${analysis.ai.copilot.copilot-home}/skills` przy starcie aplikacji.
+- `SessionConfig` i `ResumeSessionConfig` dostaja ten sam pojedynczy root, a
+  `skill` zawsze jest w effective `availableTools`.
+- Feature nie przekazuje do runtime listy nazw ani katalogow skilli.
 - Prompt albo manifest powinien mowic modelowi, ktory starter skill zaladowac
   i kiedy dociagac pozostale skille.
 - Model nie powinien twierdzic, ze zna szczegoly `SKILL.md`, dopoki nie
@@ -187,13 +188,13 @@ ze katalog i plik `SKILL.md` fizycznie istnieja.
 
 ## Testy I Weryfikacja
 
-Po zmianie nazw, katalogow albo doboru skilli uruchom odpowiednie testy:
+Po zmianie nazw, katalogow albo workflow skilli uruchom odpowiednie testy:
 
 - contract test runtime skilli danego feature'a,
 - `CopilotRuntimeSkillFrontmatterTest`, ktory parsuje YAML frontmatter
   wszystkich runtime skilli,
-- preparation/session config test, ktory sprawdza selected root i `skill` w
-  `availableTools`,
+- platform loader/session config test, ktory sprawdza pelny wspolny root oraz
+  `skill` w `availableTools` dla NEW i EXISTING,
 - prompt preparation/rendering test, ktory sprawdza aktualne nazwy w
   promptcie/manifest,
 - `mvn -q -DskipTests compile`.

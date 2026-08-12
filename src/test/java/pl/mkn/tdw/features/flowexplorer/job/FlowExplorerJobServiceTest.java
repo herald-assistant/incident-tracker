@@ -490,7 +490,6 @@ class FlowExplorerJobServiceTest {
                         "flow-explorer-job-123",
                         List.of(),
                         List.of(),
-                        List.of(),
                         null,
                         "Denied"
                 ),
@@ -505,7 +504,6 @@ class FlowExplorerJobServiceTest {
                 "Gdzie jest walidacja?",
                 new CopilotSessionConfigRequest(
                         "flow-explorer-follow-up-123",
-                        List.of(),
                         List.of(),
                         List.of(),
                         null,

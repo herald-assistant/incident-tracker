@@ -27,7 +27,8 @@ public final class ConfigDriftViewerBatchJobState {
         this.components = java.util.stream.IntStream.range(0, request.systemIds().size())
                 .mapToObj(index -> new ConfigDriftViewerJobState(
                         jobId + ":" + index,
-                        request.forSystem(request.systemIds().get(index))
+                        request.forSystem(request.systemIds().get(index)),
+                        createdAt
                 ))
                 .toList();
     }

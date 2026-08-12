@@ -167,7 +167,7 @@ public class FlowExplorerPromptPreparationService {
             List<FlowExplorerResultSectionModeAssignment> sectionModes
     ) {
         return """
-                Dostepne runtime skills sa podlaczone jako skill directories w tej sesji.
+                Wspolny platformowy katalog runtime skilli jest dostepny w tej sesji.
                 Pobierz i zastosuj wymagane skille przez built-in tool `skill`; nie czekaj, az uzytkownik o nie poprosi.
                 Ten prompt nie powiela playbookow. Szczegolowe reguly pracy, wyboru tools, source refs, widocznosci i formatu odpowiedzi sa w skillach.
 

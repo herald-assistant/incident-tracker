@@ -2,15 +2,12 @@ package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.database.DatabaseToolNames;
 import pl.mkn.tdw.agenttools.elasticsearch.ElasticToolNames;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
@@ -34,13 +31,10 @@ import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerSectionModeRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -58,9 +52,6 @@ class FlowExplorerCopilotRuntimePreparationTest {
 
     private static final CopilotToolDescriptionContext FLOW_EXPLORER_DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("flow-explorer");
-
-    @TempDir
-    Path tempDirectory;
 
     @Test
     void shouldAllowOnlyFlowExplorerGitLabOperationalContextAndFeedbackTools() {
@@ -188,7 +179,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
-    void shouldBuildSessionConfigWithFlowExplorerSkillsOnly() {
+    void shouldBuildSessionConfigWithPlatformSkillTool() {
         var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
         var factory = sessionConfigRequestFactory();
@@ -196,17 +187,12 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var request = factory.create(
                 "flow-explorer-job-123",
                 policy,
-                request().aiOptions(),
-                request().resolvedSectionModes()
+                request().aiOptions()
         );
 
         assertEquals("flow-explorer-job-123", request.sessionId());
         assertEquals(List.of(tool), request.tools());
         assertEquals(List.of(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT), request.availableToolNames());
-        assertSkillDirectories(
-                request.skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames()
-        );
         assertTrue(request.effectiveAvailableToolNames().contains("skill"));
         assertEquals("gpt-5.4", request.modelSelection().model());
         assertEquals("medium", request.modelSelection().reasoningEffort());
@@ -217,7 +203,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
-    void shouldBuildFollowUpSessionConfigWithChatSkillWithoutResultContractSkill() {
+    void shouldBuildFollowUpSessionConfigWithPlatformSkillTool() {
         var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
         var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
         var factory = sessionConfigRequestFactory();
@@ -225,37 +211,13 @@ class FlowExplorerCopilotRuntimePreparationTest {
         var request = factory.createForFollowUp(
                 "flow-explorer-follow-up-123",
                 policy,
-                request().aiOptions(),
-                request().resolvedSectionModes()
+                request().aiOptions()
         );
 
         assertEquals("flow-explorer-follow-up-123", request.sessionId());
         assertEquals(List.of(tool), request.tools());
         assertEquals(List.of(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT), request.availableToolNames());
-        assertSkillDirectories(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
-        assertSelectedSkillIncluded(request.skillDirectories(), FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
-        assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-orchestrator");
-        assertSelectedSkillMissing(request.skillDirectories(), "flow-explorer-write-report");
-    }
-
-    @Test
-    void shouldIncludeSectionSkillsOnlyForActiveSectionModes() {
-        var tool = tool(GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT);
-        var policy = FlowExplorerCopilotToolAccessPolicy.fromRegisteredTools(List.of(tool));
-        var factory = sessionConfigRequestFactory();
-        var startRequest = requestWithSectionModes();
-
-        var request = factory.create(
-                "flow-explorer-job-123",
-                policy,
-                startRequest.aiOptions(),
-                startRequest.resolvedSectionModes()
-        );
-
-        assertSelectedSkillIncluded(request.skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME);
-        assertSelectedSkillMissing(request.skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME);
+        assertTrue(request.effectiveAvailableToolNames().contains("skill"));
     }
 
     @Test
@@ -314,10 +276,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 ),
                 runRequest.sessionConfigRequest().availableToolNames()
         );
-        assertSkillDirectories(
-                runRequest.sessionConfigRequest().skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.initialSkillNames()
-        );
+        assertTrue(runRequest.sessionConfigRequest().effectiveAvailableToolNames().contains("skill"));
         assertFalse(assembly.toolAccessPolicy().databaseToolsEnabled());
 
         verify(toolFactory).createToolDefinitions(
@@ -327,7 +286,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     @Test
-    void shouldAssembleFollowUpCopilotRunRequestWithoutResultContractSkill() {
+    void shouldAssembleFollowUpCopilotRunRequestWithPlatformSkillTool() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var toolSessionContextFactory = new FlowExplorerCopilotToolSessionContextFactory();
         var toolAccessPolicyFactory = new FlowExplorerCopilotToolAccessPolicyFactory();
@@ -370,14 +329,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 FlowExplorerCopilotToolContextKeys.RUN_KIND_FOLLOW_UP,
                 hiddenContext.get(FlowExplorerCopilotToolContextKeys.RUN_KIND)
         );
-        assertSkillDirectories(
-                runRequest.sessionConfigRequest().skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames()
-        );
-        assertSelectedSkillIncluded(runRequest.sessionConfigRequest().skillDirectories(),
-                FlowExplorerCopilotRuntimeSkillNames.FOLLOW_UP_CHAT_SKILL_NAME);
-        assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-orchestrator");
-        assertSelectedSkillMissing(runRequest.sessionConfigRequest().skillDirectories(), "flow-explorer-write-report");
+        assertTrue(runRequest.sessionConfigRequest().effectiveAvailableToolNames().contains("skill"));
 
         verify(toolFactory).createToolDefinitions(
                 assembly.toolSessionContext(),
@@ -386,36 +338,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
     }
 
     private FlowExplorerCopilotSessionConfigRequestFactory sessionConfigRequestFactory() {
-        var properties = new CopilotSdkProperties();
-        properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
-        return new FlowExplorerCopilotSessionConfigRequestFactory(new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties)));
-    }
-
-    private static void assertSkillDirectories(List<String> skillDirectories) {
-        assertSkillDirectories(skillDirectories, FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
-    }
-
-    private static void assertSkillDirectories(List<String> skillDirectories, List<String> expectedSkillNames) {
-        assertEquals(1, skillDirectories.size());
-        var selectedRoot = Path.of(skillDirectories.get(0));
-        assertTrue(Files.isDirectory(selectedRoot));
-        for (var expectedSkillName : expectedSkillNames) {
-            assertTrue(
-                    Files.isRegularFile(selectedRoot.resolve(expectedSkillName).resolve("SKILL.md")),
-                    () -> "Missing selected skill in root: " + expectedSkillName
-            );
-        }
-        assertFalse(Files.exists(selectedRoot.resolve("incident-analysis-orchestrator")));
-    }
-
-    private static void assertSelectedSkillIncluded(List<String> skillDirectories, String skillName) {
-        assertEquals(1, skillDirectories.size());
-        assertTrue(Files.isRegularFile(Path.of(skillDirectories.get(0)).resolve(skillName).resolve("SKILL.md")));
-    }
-
-    private static void assertSelectedSkillMissing(List<String> skillDirectories, String skillName) {
-        assertEquals(1, skillDirectories.size());
-        assertFalse(Files.exists(Path.of(skillDirectories.get(0)).resolve(skillName)));
+        return new FlowExplorerCopilotSessionConfigRequestFactory();
     }
 
     private static FlowExplorerJobStartRequest request() {

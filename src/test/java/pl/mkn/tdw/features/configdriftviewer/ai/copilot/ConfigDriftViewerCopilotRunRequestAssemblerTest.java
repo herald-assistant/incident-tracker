@@ -2,14 +2,10 @@ package pl.mkn.tdw.features.configdriftviewer.ai.copilot;
 
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.operationalcontext.OperationalContextToolNames;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
@@ -25,8 +21,6 @@ import pl.mkn.tdw.features.configdriftviewer.job.api.ConfigDriftViewerMode;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -42,9 +36,6 @@ class ConfigDriftViewerCopilotRunRequestAssemblerTest {
 
     private static final CopilotToolDescriptionContext DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("config-drift-viewer");
-
-    @TempDir
-    Path tempDirectory;
 
     @Test
     void shouldRejectBasicBeforeCopilotAssembly() {
@@ -64,7 +55,7 @@ class ConfigDriftViewerCopilotRunRequestAssemblerTest {
     }
 
     @Test
-    void shouldAssembleDeepWithOnlyFocusedToolsResolvedScopesAndDeepSkill() {
+    void shouldAssembleDeepWithOnlyFocusedToolsAndResolvedScopes() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var contextCaptor = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
         when(toolFactory.createToolDefinitions(contextCaptor.capture(), eq(DESCRIPTION_CONTEXT)))
@@ -87,10 +78,7 @@ class ConfigDriftViewerCopilotRunRequestAssemblerTest {
                         OperationalContextToolNames.GET_ENTITY
                 )
                 .doesNotContain(GitLabToolNames.READ_REPOSITORY_FILE, "db_describe_table");
-        assertSelectedSkill(
-                assembly.runRequest().sessionConfigRequest().skillDirectories(),
-                ConfigDriftViewerCopilotRuntimeSkillNames.DEEP_REVIEW
-        );
+        assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames()).contains("skill");
         var hidden = contextCaptor.getValue().hiddenContext();
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_GROUP)).isEqualTo("platform");
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES))
@@ -116,16 +104,9 @@ class ConfigDriftViewerCopilotRunRequestAssemblerTest {
         return new ConfigDriftViewerCopilotRunRequestAssembler(
                 toolFactory,
                 new ConfigDriftViewerCopilotToolSessionContextFactory(gitLabProperties),
-                skillDirectoryResolver(),
                 new CopilotRunAuthMapper(),
                 new ConfigDriftViewerReportFactory()
         );
-    }
-
-    private CopilotNamedSkillDirectoryResolver skillDirectoryResolver() {
-        var properties = new CopilotSdkProperties();
-        properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
-        return new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties));
     }
 
     private List<ToolDefinition> registeredTools() {
@@ -172,12 +153,6 @@ class ConfigDriftViewerCopilotRunRequestAssemblerTest {
                 "sanitized prompt",
                 Map.of("runtime-configuration/scope.json", "{}"),
                 List.of()
-        );
-    }
-
-    private void assertSelectedSkill(List<String> directories, String skillName) {
-        assertThat(directories).singleElement().satisfies(directory ->
-                assertThat(Files.isRegularFile(Path.of(directory).resolve(skillName).resolve("SKILL.md"))).isTrue()
         );
     }
 

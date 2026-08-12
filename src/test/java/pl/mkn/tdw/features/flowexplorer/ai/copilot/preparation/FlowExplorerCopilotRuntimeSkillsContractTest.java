@@ -2,9 +2,6 @@ package pl.mkn.tdw.features.flowexplorer.ai.copilot.preparation;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionId;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionMode;
-import pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerResultSectionModeAssignment;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,55 +38,20 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
                 "flow-explorer-write-report",
                 "flow-explorer-follow-up-chat",
                 "flow-explorer-deep-discovery"
-        ), FlowExplorerCopilotRuntimeSkillNames.allSkillNames());
-        assertEquals(List.of(
-                "flow-explorer-follow-up-chat",
-                "flow-explorer-code-grounding",
-                "flow-explorer-operational-grounding",
-                "flow-explorer-map-persistence-section",
-                "flow-explorer-map-integrations-section"
-        ), FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames());
+        ), FlowExplorerCopilotRuntimeSkillNames.featureSkillNames());
     }
 
     @Test
-    void shouldExposeSectionSkillsForInitialSessionsWhenSectionsAreActive() {
+    void shouldKeepDeepDiscoveryAsTheOnlySupportedGoal() {
         assertEquals(
                 List.of(FlowExplorerAnalysisGoal.DEEP_DISCOVERY),
                 List.of(FlowExplorerAnalysisGoal.values())
         );
-        var fallbackSkillNames = FlowExplorerCopilotRuntimeSkillNames.initialSkillNames();
-
-        assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
-        assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
-        assertTrue(fallbackSkillNames.contains(FlowExplorerCopilotRuntimeSkillNames.WRITE_REPORT_SKILL_NAME));
-
-        var persistenceOnly = FlowExplorerCopilotRuntimeSkillNames.initialSkillNames(
-                List.of(
-                        sectionMode(FlowExplorerResultSectionId.PERSISTENCE, FlowExplorerResultSectionMode.COMPACT),
-                        sectionMode(FlowExplorerResultSectionId.INTEGRATIONS, FlowExplorerResultSectionMode.OFF)
-                )
-        );
-        assertTrue(persistenceOnly.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
-        assertFalse(persistenceOnly.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
-
-        var integrationsOnly = FlowExplorerCopilotRuntimeSkillNames.followUpSkillNames(List.of(
-                sectionMode(FlowExplorerResultSectionId.PERSISTENCE, FlowExplorerResultSectionMode.OFF),
-                sectionMode(FlowExplorerResultSectionId.INTEGRATIONS, FlowExplorerResultSectionMode.DEEP)
-        ));
-        assertFalse(integrationsOnly.contains(FlowExplorerCopilotRuntimeSkillNames.PERSISTENCE_SECTION_SKILL_NAME));
-        assertTrue(integrationsOnly.contains(FlowExplorerCopilotRuntimeSkillNames.INTEGRATIONS_SECTION_SKILL_NAME));
-    }
-
-    private static FlowExplorerResultSectionModeAssignment sectionMode(
-            FlowExplorerResultSectionId id,
-            FlowExplorerResultSectionMode mode
-    ) {
-        return new FlowExplorerResultSectionModeAssignment(id, id.title(), mode);
     }
 
     @Test
     void shouldKeepFlowExplorerSkillFilesAlignedWithRuntimeContract() throws Exception {
-        for (var skillName : FlowExplorerCopilotRuntimeSkillNames.allSkillNames()) {
+        for (var skillName : FlowExplorerCopilotRuntimeSkillNames.featureSkillNames()) {
             assertSkillContainsCoreSections(skillName);
         }
 
@@ -121,7 +83,7 @@ class FlowExplorerCopilotRuntimeSkillsContractTest {
 
     @Test
     void shouldKeepFlowExplorerSkillsFeatureScopedAndFreeFromLocalSecrets() throws Exception {
-        for (var skillName : FlowExplorerCopilotRuntimeSkillNames.allSkillNames()) {
+        for (var skillName : FlowExplorerCopilotRuntimeSkillNames.featureSkillNames()) {
             var content = skillContent(skillName);
 
             assertFalse(content.contains("incident-analysis"), () -> "Incident skill reference leaked into " + skillName);

@@ -23,7 +23,6 @@ class CopilotIncidentRunRequestFactoryTest {
                 "analysis-123",
                 List.of(),
                 List.of(),
-                List.of(),
                 null,
                 null
         );

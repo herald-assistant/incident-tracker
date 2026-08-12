@@ -68,13 +68,14 @@ Nie obejmuje:
 - Platforma moze zalezec od malych neutralnych kontraktow `shared.*`,
   `common.*`, neutralnych keys/nazw z `agenttools.*` oraz bibliotek
   SDK/technicznych.
-- Feature ma dostarczac prompt, skill resources, available tools, hidden
-  context, evidence sink i response handling jako parametry uruchomienia.
-- `SessionConfig.skillDirectories` przekazuj jako katalog-root, pod ktorym sa
-  katalogi skilli z `SKILL.md`. Jesli feature wybiera konkretne nazwy skilli,
-  runtime powinien stworzyc selected root zawierajacy tylko te podkatalogi i
-  przekazac go do SDK. Nie przekazuj bezposrednich katalogow pojedynczych
-  skilli jako listy, bo wbudowany tool `skill` moze nie zindeksowac siblingow.
+- Feature ma dostarczac prompt, guidance do uzycia skilli, available tools,
+  hidden context, evidence sink i response handling jako parametry
+  uruchomienia.
+- `CopilotSkillRuntimeLoader` materializuje przy starcie pelny platformowy
+  katalog pod `${analysis.ai.copilot.copilot-home}/skills`.
+  `SessionConfig.skillDirectories` i `ResumeSessionConfig.skillDirectories`
+  zawsze dostaja ten sam pojedynczy root. Feature nie przekazuje katalogow ani
+  list wybranych skilli; nie przywracaj selected roots ani selekcji per run.
 - Platforma nie utrzymuje obecnie niewidocznej dla uzytkownika telemetryki
   sesji. Zdarzenia SDK usage sa agregowane tylko do `AnalysisAiUsage`, ktore
   trafia do job state/UI. Nowa telemetryka moze wrocic dopiero jako jawny,

@@ -132,7 +132,6 @@ class CopilotIncidentPromptRendererTest {
                 "session-123",
                 List.of(),
                 List.of("gitlab_find_flow_context"),
-                List.of("copilot-skills/incident"),
                 null,
                 "Denied"
         );

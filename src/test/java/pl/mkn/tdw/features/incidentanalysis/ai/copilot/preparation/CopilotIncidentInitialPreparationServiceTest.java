@@ -29,21 +29,18 @@ import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncide
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigFactory;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSkillRuntimeLoader;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentToolAccessPolicyFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabMcpTools;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotNamedSkillDirectoryResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.testsupport.copilot.CopilotSessionConfigFactoryTestCreator;
 import pl.mkn.tdw.testsupport.agenttools.GitLabMcpToolsTestCreator;
@@ -95,7 +92,6 @@ class CopilotIncidentInitialPreparationServiceTest {
         properties.setModel("gpt-5.4");
         properties.setReasoningEffort("medium");
         properties.setClientName("incidenttracker-test");
-        properties.setSkillResourceRoots(List.of("copilot/skills"));
 
         var service = createService(properties);
         var request = sampleRequest();
@@ -129,10 +125,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                     Set.copyOf(prepared.session().sessionConfig().getAvailableTools())
             );
             assertEquals(9, prepared.session().sessionConfig().getTools().size());
-            assertSelectedSkillRoot(
-                    prepared.session().sessionConfig().getSkillDirectories(),
-                    CopilotIncidentRuntimeSkillNames.allSkillNames()
-            );
+            assertPlatformSkillRoot(prepared.session().sessionConfig().getSkillDirectories(), properties);
             assertEquals(PermissionHandler.APPROVE_ALL, prepared.session().sessionConfig().getOnPermissionRequest());
             assertEquals(List.of(), prepared.session().sessionConfig().getDisabledSkills());
             assertNotNull(prepared.session().sessionConfig().getHooks());
@@ -245,7 +238,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertTrue(manifestContent.contains("\"platformBuiltInToolNames\""));
             assertTrue(manifestContent.contains("\"runtimeSkills\""));
             assertTrue(manifestContent.contains("\"skillToolAvailable\" : true"));
-            assertTrue(manifestContent.contains("\"skillDirectoriesConfigured\" : true"));
+            assertFalse(manifestContent.contains("skillDirectoriesConfigured"));
             assertTrue(manifestContent.contains("\"starterSkillName\" : \"incident-analysis-orchestrator\""));
             assertTrue(manifestContent.contains("\"diagnosticSkillNames\""));
             assertTrue(manifestContent.contains("\"resultSkillNames\""));
@@ -305,7 +298,6 @@ class CopilotIncidentInitialPreparationServiceTest {
     @Test
     void shouldBuildSessionBoundToolContextForBridgeAndSessionConfig() {
         var properties = baseProperties();
-        properties.setSkillResourceRoots(List.of("copilot/skills"));
         var request = requestWithoutToolCoveredEvidence();
         var factory = mock(CopilotSdkToolFactory.class);
         var expectedTools = List.of(ToolDefinition.createSkipPermission(
@@ -503,10 +495,7 @@ class CopilotIncidentInitialPreparationServiceTest {
             assertEquals("test-token", prepared.session().clientOptions().getGithubToken());
             assertEquals(null, prepared.session().sessionConfig().getModel());
             assertEquals(null, prepared.session().sessionConfig().getReasoningEffort());
-            assertSelectedSkillRoot(
-                    prepared.session().sessionConfig().getSkillDirectories(),
-                    CopilotIncidentRuntimeSkillNames.allSkillNames()
-            );
+            assertPlatformSkillRoot(prepared.session().sessionConfig().getSkillDirectories(), properties);
         }
     }
 
@@ -567,7 +556,7 @@ class CopilotIncidentInitialPreparationServiceTest {
         return new CopilotIncidentInitialRunAssembler(
                 toolFactory,
                 new CopilotIncidentToolSessionContextFactory(new CopilotIncidentHiddenToolContextFactory()),
-                new CopilotIncidentSessionConfigRequestFactory(new CopilotNamedSkillDirectoryResolver(new CopilotSkillRuntimeLoader(properties))),
+                new CopilotIncidentSessionConfigRequestFactory(),
                 artifactService(objectMapper),
                 policyFactory(),
                 promptRenderer(),
@@ -590,22 +579,14 @@ class CopilotIncidentInitialPreparationServiceTest {
         );
     }
 
-    private void assertSelectedSkillRoot(List<String> skillDirectories, List<String> expectedSkillNames) {
-        assertEquals(1, skillDirectories.size());
-        var selectedRoot = Path.of(skillDirectories.get(0));
-        assertTrue(Files.isDirectory(selectedRoot));
-        for (var expectedSkillName : expectedSkillNames) {
-            assertTrue(
-                    Files.isRegularFile(selectedRoot.resolve(expectedSkillName).resolve("SKILL.md")),
-                    () -> "Missing selected skill in root: " + expectedSkillName
-            );
-        }
+    private void assertPlatformSkillRoot(List<String> skillDirectories, CopilotSdkProperties properties) {
+        assertEquals(List.of(properties.resolvedSkillDirectory().toString()), skillDirectories);
     }
 
     private CopilotSdkProperties baseProperties() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\Users\\mknie\\IdeaProjects\\incidenttracker");
-        properties.setSkillRuntimeDirectory(tempDirectory.resolve("skills").toString());
+        properties.setCopilotHome(tempDirectory.resolve("copilot").toString());
         return properties;
     }
 

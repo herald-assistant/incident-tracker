@@ -8,7 +8,6 @@ public record CopilotSessionConfigRequest(
         String sessionId,
         List<ToolDefinition> tools,
         List<String> availableToolNames,
-        List<String> skillDirectories,
         CopilotModelSelection modelSelection,
         String deniedToolUseMessage
 ) {
@@ -23,7 +22,6 @@ public record CopilotSessionConfigRequest(
         }
         tools = tools != null ? List.copyOf(tools) : List.of();
         availableToolNames = availableToolNames != null ? List.copyOf(availableToolNames) : List.of();
-        skillDirectories = skillDirectories != null ? List.copyOf(skillDirectories) : List.of();
         modelSelection = modelSelection != null ? modelSelection : CopilotModelSelection.DEFAULT;
         deniedToolUseMessage = hasText(deniedToolUseMessage)
                 ? deniedToolUseMessage
@@ -32,7 +30,7 @@ public record CopilotSessionConfigRequest(
 
     public List<String> effectiveAvailableToolNames() {
         var effectiveToolNames = new java.util.ArrayList<>(availableToolNames);
-        if (skillDirectoriesConfigured() && !effectiveToolNames.contains(SKILL_TOOL_NAME)) {
+        if (!effectiveToolNames.contains(SKILL_TOOL_NAME)) {
             effectiveToolNames.add(SKILL_TOOL_NAME);
         }
         return List.copyOf(effectiveToolNames);
@@ -40,10 +38,6 @@ public record CopilotSessionConfigRequest(
 
     public boolean skillToolAvailable() {
         return effectiveAvailableToolNames().contains(SKILL_TOOL_NAME);
-    }
-
-    public boolean skillDirectoriesConfigured() {
-        return !skillDirectories.isEmpty();
     }
 
     private static boolean hasText(String value) {
