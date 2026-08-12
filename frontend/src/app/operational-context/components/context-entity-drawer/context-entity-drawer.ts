@@ -2,15 +2,17 @@ import { Component, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import {
-  OperationalContextAiApiPreview,
+  OperationalContextEditorState,
+  OperationalContextReferenceOptions
+} from '../../models/operational-context-maintenance.models';
+import {
   OperationalContextDetailSectionDto,
   OperationalContextEntityDetailDto,
-  OperationalContextReadModelProfile,
   OperationalContextResolvedOwnerDto,
   OperationalContextResolvedOwnershipDto
 } from '../../models/operational-context.models';
 import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
-import { AiApiPreviewPanelComponent } from '../ai-api-preview-panel/ai-api-preview-panel';
+import { ContextEntityEditorDrawerComponent } from '../context-entity-editor-drawer/context-entity-editor-drawer';
 import { WhyPopoverComponent } from '../why-popover/why-popover';
 
 interface DrawerField {
@@ -20,17 +22,16 @@ interface DrawerField {
 
 @Component({
   selector: 'app-context-entity-drawer',
-  imports: [MatIconModule, AiApiPreviewPanelComponent, WhyPopoverComponent],
+  imports: [MatIconModule, ContextEntityEditorDrawerComponent, WhyPopoverComponent],
   templateUrl: './context-entity-drawer.html',
   styleUrl: './context-entity-drawer.scss'
 })
 export class ContextEntityDrawerComponent {
   readonly detail = input<OperationalContextEntityDetailDto | null>(null);
-  readonly aiApiPreview = input<OperationalContextAiApiPreview | null>(null);
-  readonly aiApiPreviewLoading = input(false);
-  readonly aiApiPreviewError = input('');
-  readonly aiApiPreviewProfile = input<OperationalContextReadModelProfile>('default');
-  readonly aiApiPreviewProfileChange = output<OperationalContextReadModelProfile>();
+  readonly entityPreview = input<OperationalContextEditorState | null>(null);
+  readonly entityPreviewLoading = input(false);
+  readonly entityPreviewError = input('');
+  readonly referenceOptions = input<OperationalContextReferenceOptions>({});
   readonly closeDrawer = output<void>();
   readonly writable = input(false);
   readonly editEntity = output<void>();

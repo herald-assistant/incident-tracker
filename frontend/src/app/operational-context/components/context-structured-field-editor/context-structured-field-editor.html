@@ -1,9 +1,10 @@
 <div class="structured-editor">
-  @switch (field().kind) {
+  <fieldset class="structured-editor__fieldset" [disabled]="readonly()">
+    @switch (field().kind) {
     @case ('ownership') {
       <div class="structured-grid">
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="ownership-status" [matTooltip]="tooltip('ownershipStatus')" matTooltipClass="operational-context-field-tooltip">Ownership status <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="ownership-status">Ownership status <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('ownershipStatus')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <select id="ownership-status" [value]="objectText('ownershipStatus')" (change)="updateObject('ownershipStatus', $any($event.target).value)">
             <option value="">Not specified</option>
             <option value="explicit">Explicit</option>
@@ -11,7 +12,7 @@
           </select>
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="ownership-confidence" [matTooltip]="tooltip('confidence')" matTooltipClass="operational-context-field-tooltip">Confidence <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="ownership-confidence">Confidence <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('confidence')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <select id="ownership-confidence" [value]="objectText('confidence')" (change)="updateObject('confidence', $any($event.target).value)">
             <option value="">Not specified</option>
             <option value="high">High</option>
@@ -20,7 +21,7 @@
           </select>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="ownership-team" [matTooltip]="tooltip('ownerTeamIds')" matTooltipClass="operational-context-field-tooltip">Owner teams <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="ownership-team">Owner teams <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('ownerTeamIds')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <div class="chip-list">
             @for (id of objectList('ownerTeamIds'); track id) {
               <span class="value-chip">{{ optionLabel('team', id) }} <button type="button" [attr.aria-label]="'Remove owner team ' + id" (click)="removeOwnerTeam(id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
@@ -32,15 +33,15 @@
           </select>
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="ownership-label" [matTooltip]="tooltip('ownerLabel')" matTooltipClass="operational-context-field-tooltip">Fallback owner label <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="ownership-label">Fallback owner label <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('ownerLabel')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="ownership-label" type="text" [value]="objectText('ownerLabel')" (input)="updateObject('ownerLabel', $any($event.target).value)" />
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="ownership-source" [matTooltip]="tooltip('source')" matTooltipClass="operational-context-field-tooltip">Source <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="ownership-source">Source <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('source')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="ownership-source" type="text" [value]="objectText('source')" (input)="updateObject('source', $any($event.target).value)" />
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="ownership-notes" [matTooltip]="tooltip('notes')" matTooltipClass="operational-context-field-tooltip">Notes <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="ownership-notes">Notes <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('notes')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="ownership-notes" rows="2" [value]="objectList('notes').join('\n')" (input)="updateObjectList('notes', $any($event.target).value)"></textarea>
         </div>
       </div>
@@ -49,7 +50,7 @@
     @case ('system-participants') {
       <div class="structured-grid">
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="system-external-owner" [matTooltip]="tooltip('systemExternalOwner')" matTooltipClass="operational-context-field-tooltip">External owner <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="system-external-owner">External owner <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('systemExternalOwner')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="system-external-owner" type="text" [value]="objectText('externalOwner')" (input)="updateObject('externalOwner', $any($event.target).value)" />
         </div>
       </div>
@@ -58,7 +59,7 @@
     @case ('system-runtime') {
       <div class="structured-grid">
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="runtime-configuration-directory" [matTooltip]="tooltip('runtimeConfigurationDirectory')" matTooltipClass="operational-context-field-tooltip">Configuration directory <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="runtime-configuration-directory">Configuration directory <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('runtimeConfigurationDirectory')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="runtime-configuration-directory" type="text" placeholder="crm/contact-service" [value]="objectText('configurationDirectory')" (input)="updateObject('configurationDirectory', $any($event.target).value)" />
         </div>
       </div>
@@ -71,15 +72,15 @@
             <header><strong>Evidence {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove repository evidence ' + (index + 1)" (click)="removeRepositoryEvidence(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
             <div class="structured-grid">
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'repository-evidence-source-' + index" [matTooltip]="tooltip('repositoryEvidenceSourceRef')" matTooltipClass="operational-context-field-tooltip">Source reference <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repository-evidence-source-' + index">Source reference <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('repositoryEvidenceSourceRef')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'repository-evidence-source-' + index" type="text" [value]="$any(evidence)['sourceRef'] || ''" (input)="updateRepositoryEvidence(index, 'sourceRef', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'repository-evidence-type-' + index" [matTooltip]="tooltip('repositoryEvidenceType')" matTooltipClass="operational-context-field-tooltip">Evidence type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repository-evidence-type-' + index">Evidence type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('repositoryEvidenceType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'repository-evidence-type-' + index" type="text" list="repository-evidence-type-values" [value]="$any(evidence)['evidenceType'] || ''" (input)="updateRepositoryEvidence(index, 'evidenceType', $any($event.target).value)" />
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'repository-evidence-note-' + index" [matTooltip]="tooltip('repositoryEvidenceNote')" matTooltipClass="operational-context-field-tooltip">Note <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repository-evidence-note-' + index">Note <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('repositoryEvidenceNote')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'repository-evidence-note-' + index" rows="2" [value]="$any(evidence)['note'] || ''" (input)="updateRepositoryEvidence(index, 'note', $any($event.target).value)"></textarea>
               </div>
             </div>
@@ -93,11 +94,11 @@
     @case ('repository-llm-tool-hints') {
       <div class="structured-grid">
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="repository-answer-when-mentioned" [matTooltip]="tooltip('repositoryAnswerWhenMentioned')" matTooltipClass="operational-context-field-tooltip">Answer when mentioned <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="repository-answer-when-mentioned">Answer when mentioned <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('repositoryAnswerWhenMentioned')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="repository-answer-when-mentioned" rows="3" [value]="objectList('answerWhenUserMentions').join('\n')" (input)="updateObjectList('answerWhenUserMentions', $any($event.target).value)"></textarea>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="repository-disambiguate-from" [matTooltip]="tooltip('repositoryDisambiguateFrom')" matTooltipClass="operational-context-field-tooltip">Disambiguate from <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="repository-disambiguate-from">Disambiguate from <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('repositoryDisambiguateFrom')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="repository-disambiguate-from" rows="3" [value]="objectList('disambiguateFrom').join('\n')" (input)="updateObjectList('disambiguateFrom', $any($event.target).value)"></textarea>
         </div>
       </div>
@@ -106,7 +107,7 @@
     @case ('bounded-local-language') {
       <div class="structured-grid">
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="bounded-local-language" [matTooltip]="tooltip('boundedLocalLanguage')" matTooltipClass="operational-context-field-tooltip">Local-language statements <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="bounded-local-language">Local-language statements <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedLocalLanguage')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="bounded-local-language" rows="5" [value]="boundedLocalLanguage().join('\n')" (input)="updateBoundedLocalLanguage($any($event.target).value)"></textarea>
         </div>
       </div>
@@ -116,7 +117,7 @@
       <div class="structured-grid">
         @for (group of boundedScopeGroups(); track group.key) {
           <div class="structured-control structured-control--wide">
-            <label class="structured-label" tabindex="0" [for]="'bounded-scope-' + group.key" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">{{ group.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+            <label class="structured-label" [for]="'bounded-scope-' + group.key">{{ group.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <textarea [id]="'bounded-scope-' + group.key" rows="3" [value]="objectList(group.key).join('\n')" (input)="updateObjectList(group.key, $any($event.target).value)"></textarea>
           </div>
         }
@@ -127,7 +128,7 @@
       <div class="structured-grid">
         @for (group of boundedSemanticGroups(); track group.key) {
           <div class="structured-control structured-control--wide">
-            <label class="structured-label" tabindex="0" [for]="'bounded-semantic-' + group.key" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">{{ group.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+            <label class="structured-label" [for]="'bounded-semantic-' + group.key">{{ group.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <textarea [id]="'bounded-semantic-' + group.key" rows="3" [value]="objectList(group.key).join('\n')" (input)="updateObjectList(group.key, $any($event.target).value)"></textarea>
           </div>
         }
@@ -141,15 +142,15 @@
             <header><strong>Evidence {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove bounded-context evidence ' + (index + 1)" (click)="removeBoundedEvidence(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
             <div class="structured-grid">
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'bounded-evidence-source-' + index" [matTooltip]="tooltip('boundedEvidenceSourceRef')" matTooltipClass="operational-context-field-tooltip">Source reference <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'bounded-evidence-source-' + index">Source reference <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedEvidenceSourceRef')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'bounded-evidence-source-' + index" type="text" [value]="$any(evidence)['sourceRef'] || ''" (input)="updateBoundedEvidence(index, 'sourceRef', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'bounded-evidence-type-' + index" [matTooltip]="tooltip('boundedEvidenceType')" matTooltipClass="operational-context-field-tooltip">Evidence type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'bounded-evidence-type-' + index">Evidence type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedEvidenceType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'bounded-evidence-type-' + index" type="text" list="bounded-evidence-type-values" [value]="$any(evidence)['evidenceType'] || ''" (input)="updateBoundedEvidence(index, 'evidenceType', $any($event.target).value)" />
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'bounded-evidence-note-' + index" [matTooltip]="tooltip('boundedEvidenceNote')" matTooltipClass="operational-context-field-tooltip">Note <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'bounded-evidence-note-' + index">Note <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedEvidenceNote')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'bounded-evidence-note-' + index" rows="2" [value]="$any(evidence)['note'] || ''" (input)="updateBoundedEvidence(index, 'note', $any($event.target).value)"></textarea>
               </div>
             </div>
@@ -163,19 +164,19 @@
     @case ('bounded-llm-tool-hints') {
       <div class="structured-grid">
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="bounded-answer-when-mentioned" [matTooltip]="tooltip('boundedAnswerWhenMentioned')" matTooltipClass="operational-context-field-tooltip">Answer when mentioned <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="bounded-answer-when-mentioned">Answer when mentioned <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedAnswerWhenMentioned')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="bounded-answer-when-mentioned" rows="3" [value]="objectList('answerWhenUserMentions').join('\n')" (input)="updateObjectList('answerWhenUserMentions', $any($event.target).value)"></textarea>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="bounded-disambiguate-from" [matTooltip]="tooltip('boundedDisambiguateFrom')" matTooltipClass="operational-context-field-tooltip">Disambiguate from <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="bounded-disambiguate-from">Disambiguate from <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedDisambiguateFrom')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="bounded-disambiguate-from" rows="3" [value]="objectList('disambiguateFrom').join('\n')" (input)="updateObjectList('disambiguateFrom', $any($event.target).value)"></textarea>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="bounded-search-keywords" [matTooltip]="tooltip('boundedUsefulSearchKeywords')" matTooltipClass="operational-context-field-tooltip">Useful search keywords <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="bounded-search-keywords">Useful search keywords <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedUsefulSearchKeywords')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="bounded-search-keywords" rows="3" [value]="objectList('usefulSearchKeywords').join('\n')" (input)="updateObjectList('usefulSearchKeywords', $any($event.target).value)"></textarea>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="bounded-explanation-style" [matTooltip]="tooltip('boundedExplanationStyle')" matTooltipClass="operational-context-field-tooltip">Explanation style <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="bounded-explanation-style">Explanation style <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundedExplanationStyle')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="bounded-explanation-style" rows="3" [value]="objectText('explanationStyle')" (input)="updateObject('explanationStyle', $any($event.target).value)"></textarea>
         </div>
       </div>
@@ -185,7 +186,7 @@
       <div class="reference-groups">
         @for (referenceGroup of referenceGroups(); track referenceGroup.key) {
           <section class="reference-group">
-            <label class="structured-label" tabindex="0" [for]="'reference-' + referenceGroup.key" [matTooltip]="tooltip('reference')" matTooltipClass="operational-context-field-tooltip">{{ referenceGroup.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+            <label class="structured-label" [for]="'reference-' + referenceGroup.key">{{ referenceGroup.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('reference')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <div class="chip-list">
               @for (id of selectedReferences(referenceGroup.key); track id) {
                 <span class="value-chip">{{ optionLabel(referenceGroup.type, id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove ' + referenceGroup.label + ' reference ' + id" (click)="removeReference(referenceGroup.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
@@ -204,26 +205,26 @@
       <div class="repeatable-list">
         @for (row of signalRows(); track $index; let index = $index) {
           <article class="repeatable-card">
-            <header><strong>Signal {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove match signal ' + (index + 1)" (click)="removeSignal(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
+            <header><strong>Recognition signal {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove recognition signal ' + (index + 1)" (click)="removeSignal(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
             <div class="structured-grid">
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'signal-strength-' + index" [matTooltip]="tooltip('signalStrength')" matTooltipClass="operational-context-field-tooltip">Confidence <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'signal-strength-' + index">Confidence <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('signalStrength')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'signal-strength-' + index" [value]="row.strength" (change)="updateSignal(index, 'strength', $any($event.target).value)">
                   @for (strength of signalStrengths(); track strength.key) { <option [value]="strength.key">{{ strength.label }}</option> }
                 </select>
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'signal-key-' + index" [matTooltip]="tooltip('signalKey')" matTooltipClass="operational-context-field-tooltip">Signal key <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'signal-key-' + index">Signal key <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('signalKey')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'signal-key-' + index" type="text" list="match-signal-key-values" [value]="row.key" (change)="updateSignal(index, 'key', $any($event.target).value)" />
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'signal-values-' + index" [matTooltip]="tooltip('signalValues')" matTooltipClass="operational-context-field-tooltip">Values <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'signal-values-' + index">Values <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('signalValues')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'signal-values-' + index" rows="3" [value]="row.values.join('\n')" (input)="updateSignalValues(index, $any($event.target).value)"></textarea>
               </div>
             </div>
           </article>
         }
-        <button type="button" class="add-row-button" (click)="addSignal()"><mat-icon fontSet="material-symbols-outlined">add</mat-icon> Add match signal</button>
+        <button type="button" class="add-row-button" (click)="addSignal()"><mat-icon fontSet="material-symbols-outlined">add</mat-icon> Add recognition signal</button>
         <datalist id="match-signal-key-values">
           @for (key of signalKeySuggestions(); track key) { <option [value]="key"></option> }
         </datalist>
@@ -233,12 +234,12 @@
     @case ('process-boundary') {
       <div class="structured-grid">
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="process-boundary-business-capability" [matTooltip]="tooltip('boundaryBusinessCapability')" matTooltipClass="operational-context-field-tooltip">Business capability <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="process-boundary-business-capability">Business capability <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('boundaryBusinessCapability')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="process-boundary-business-capability" type="text" [value]="processBoundaryText('businessCapability')" (input)="updateProcessBoundary('businessCapability', $any($event.target).value)" />
         </div>
         @for (group of processBoundaryGroups(); track group.key) {
           <div class="structured-control structured-control--wide">
-            <label class="structured-label" tabindex="0" [for]="'process-boundary-' + group.key" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">{{ group.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+            <label class="structured-label" [for]="'process-boundary-' + group.key">{{ group.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <textarea [id]="'process-boundary-' + group.key" rows="3" [value]="processBoundaryList(group.key).join('\n')" (input)="updateProcessBoundaryList(group.key, $any($event.target).value)"></textarea>
           </div>
         }
@@ -255,15 +256,15 @@
                 <header><strong>Trigger {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove lifecycle trigger ' + (index + 1)" (click)="removeLifecycleTrigger(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
                 <div class="structured-grid">
                   <div class="structured-control">
-                    <label class="structured-label" tabindex="0" [for]="'lifecycle-trigger-type-' + index" [matTooltip]="tooltip('lifecycleTriggerType')" matTooltipClass="operational-context-field-tooltip">Type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                    <label class="structured-label" [for]="'lifecycle-trigger-type-' + index">Type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('lifecycleTriggerType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                     <input [id]="'lifecycle-trigger-type-' + index" type="text" list="lifecycle-trigger-type-values" [value]="$any(trigger)['type'] || ''" (input)="updateLifecycleTrigger(index, 'type', $any($event.target).value)" />
                   </div>
                   <div class="structured-control">
-                    <label class="structured-label" tabindex="0" [for]="'lifecycle-trigger-name-' + index" [matTooltip]="tooltip('lifecycleTriggerName')" matTooltipClass="operational-context-field-tooltip">Name <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                    <label class="structured-label" [for]="'lifecycle-trigger-name-' + index">Name <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('lifecycleTriggerName')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                     <input [id]="'lifecycle-trigger-name-' + index" type="text" [value]="$any(trigger)['name'] || ''" (input)="updateLifecycleTrigger(index, 'name', $any($event.target).value)" />
                   </div>
                   <div class="structured-control structured-control--wide">
-                    <label class="structured-label" tabindex="0" [for]="'lifecycle-trigger-exchange-' + index" [matTooltip]="tooltip('lifecycleTriggerExchange')" matTooltipClass="operational-context-field-tooltip">Exchange / topic / channel <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                    <label class="structured-label" [for]="'lifecycle-trigger-exchange-' + index">Exchange / topic / channel <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('lifecycleTriggerExchange')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                     <input [id]="'lifecycle-trigger-exchange-' + index" type="text" [value]="$any(trigger)['exchange'] || ''" (input)="updateLifecycleTrigger(index, 'exchange', $any($event.target).value)" />
                   </div>
                 </div>
@@ -279,7 +280,7 @@
           <div class="structured-grid">
             @for (group of lifecycleListGroups(); track group.key) {
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'lifecycle-' + group.key" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">{{ group.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'lifecycle-' + group.key">{{ group.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'lifecycle-' + group.key" rows="3" [value]="lifecycleList(group.key).join('\n')" (input)="updateLifecycleList(group.key, $any($event.target).value)"></textarea>
               </div>
             }
@@ -294,15 +295,15 @@
                 <header><strong>Transition {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove lifecycle transition ' + (index + 1)" (click)="removeLifecycleTransition(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
                 <div class="structured-grid">
                   <div class="structured-control">
-                    <label class="structured-label" tabindex="0" [for]="'lifecycle-transition-from-' + index" [matTooltip]="tooltip('lifecycleTransitionFrom')" matTooltipClass="operational-context-field-tooltip">From status <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                    <label class="structured-label" [for]="'lifecycle-transition-from-' + index">From status <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('lifecycleTransitionFrom')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                     <input [id]="'lifecycle-transition-from-' + index" type="text" list="lifecycle-status-values" [value]="$any(transition)['from'] || ''" (input)="updateLifecycleTransition(index, 'from', $any($event.target).value)" />
                   </div>
                   <div class="structured-control">
-                    <label class="structured-label" tabindex="0" [for]="'lifecycle-transition-to-' + index" [matTooltip]="tooltip('lifecycleTransitionTo')" matTooltipClass="operational-context-field-tooltip">To status <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                    <label class="structured-label" [for]="'lifecycle-transition-to-' + index">To status <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('lifecycleTransitionTo')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                     <input [id]="'lifecycle-transition-to-' + index" type="text" list="lifecycle-status-values" [value]="$any(transition)['to'] || ''" (input)="updateLifecycleTransition(index, 'to', $any($event.target).value)" />
                   </div>
                   <div class="structured-control structured-control--wide">
-                    <label class="structured-label" tabindex="0" [for]="'lifecycle-transition-trigger-' + index" [matTooltip]="tooltip('lifecycleTransitionTrigger')" matTooltipClass="operational-context-field-tooltip">Transition trigger <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                    <label class="structured-label" [for]="'lifecycle-transition-trigger-' + index">Transition trigger <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('lifecycleTransitionTrigger')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                     <textarea [id]="'lifecycle-transition-trigger-' + index" rows="2" [value]="$any(transition)['trigger'] || ''" (input)="updateLifecycleTransition(index, 'trigger', $any($event.target).value)"></textarea>
                   </div>
                 </div>
@@ -318,7 +319,7 @@
           <div class="structured-grid">
             @for (group of lifecycleOutcomeGroups(); track group.key) {
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'lifecycle-' + group.key" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">{{ group.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'lifecycle-' + group.key">{{ group.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'lifecycle-' + group.key" rows="3" [value]="lifecycleList(group.key).join('\n')" (input)="updateLifecycleList(group.key, $any($event.target).value)"></textarea>
               </div>
             }
@@ -331,7 +332,7 @@
       <div class="structured-grid">
         @for (group of completionSignalGroups(); track group.key) {
           <div class="structured-control structured-control--wide">
-            <label class="structured-label" tabindex="0" [for]="'completion-signals-' + group.key" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">{{ group.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+            <label class="structured-label" [for]="'completion-signals-' + group.key">{{ group.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <textarea [id]="'completion-signals-' + group.key" rows="3" [value]="completionSignalList(group.key).join('\n')" (input)="updateCompletionSignalList(group.key, $any($event.target).value)"></textarea>
           </div>
         }
@@ -346,42 +347,42 @@
             @if (entityType() === 'process') {
               <div class="structured-grid">
                 <div class="structured-control">
-                  <label class="structured-label" tabindex="0" [for]="'process-failure-id-' + index" [matTooltip]="tooltip('processFailureId')" matTooltipClass="operational-context-field-tooltip">Failure ID <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'process-failure-id-' + index">Failure ID <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('processFailureId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <input [id]="'process-failure-id-' + index" type="text" [value]="$any(mode)['id'] || ''" (input)="updateFailureMode(index, 'id', $any($event.target).value)" />
                 </div>
                 <div class="structured-control">
-                  <label class="structured-label" tabindex="0" [for]="'process-failure-name-' + index" [matTooltip]="tooltip('processFailureName')" matTooltipClass="operational-context-field-tooltip">Name <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'process-failure-name-' + index">Name <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('processFailureName')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <input [id]="'process-failure-name-' + index" type="text" [value]="$any(mode)['name'] || ''" (input)="updateFailureMode(index, 'name', $any($event.target).value)" />
                 </div>
                 <div class="structured-control structured-control--wide">
-                  <label class="structured-label" tabindex="0" [for]="'process-failure-summary-' + index" [matTooltip]="tooltip('processFailureSummary')" matTooltipClass="operational-context-field-tooltip">Summary <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'process-failure-summary-' + index">Summary <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('processFailureSummary')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <textarea [id]="'process-failure-summary-' + index" rows="2" [value]="$any(mode)['summary'] || ''" (input)="updateFailureMode(index, 'summary', $any($event.target).value)"></textarea>
                 </div>
                 <div class="structured-control">
-                  <label class="structured-label" tabindex="0" [for]="'process-failure-step-' + index" [matTooltip]="tooltip('processFailureStep')" matTooltipClass="operational-context-field-tooltip">Affected step ID <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'process-failure-step-' + index">Affected step ID <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('processFailureStep')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <input [id]="'process-failure-step-' + index" type="text" [value]="$any(mode)['affectedStep'] || ''" (input)="updateFailureMode(index, 'affectedStep', $any($event.target).value)" />
                 </div>
                 <div class="structured-control structured-control--wide">
-                  <label class="structured-label" tabindex="0" [for]="'process-failure-signals-' + index" [matTooltip]="tooltip('processFailureSignals')" matTooltipClass="operational-context-field-tooltip">Observable signals <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'process-failure-signals-' + index">Observable signals <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('processFailureSignals')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <textarea [id]="'process-failure-signals-' + index" rows="3" [value]="$any(mode)['signals']?.join('\n') || ''" (input)="updateFailureModeList(index, 'signals', $any($event.target).value)"></textarea>
                 </div>
               </div>
             } @else {
               <div class="structured-grid">
                 <div class="structured-control">
-                  <label class="structured-label" tabindex="0" [for]="'integration-failure-name-' + index" [matTooltip]="tooltip('integrationFailureName')" matTooltipClass="operational-context-field-tooltip">Name <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'integration-failure-name-' + index">Name <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('integrationFailureName')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <input [id]="'integration-failure-name-' + index" type="text" [value]="$any(mode)['name'] || ''" (input)="updateFailureMode(index, 'name', $any($event.target).value)" />
                 </div>
                 <div class="structured-control">
-                  <label class="structured-label" tabindex="0" [for]="'integration-failure-type-' + index" [matTooltip]="tooltip('integrationFailureType')" matTooltipClass="operational-context-field-tooltip">Type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'integration-failure-type-' + index">Type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('integrationFailureType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <input [id]="'integration-failure-type-' + index" type="text" list="integration-failure-type-values" [value]="$any(mode)['type'] || ''" (input)="updateFailureMode(index, 'type', $any($event.target).value)" />
                 </div>
                 <div class="structured-control structured-control--wide">
-                  <label class="structured-label" tabindex="0" [for]="'integration-failure-symptom-' + index" [matTooltip]="tooltip('integrationFailureSymptom')" matTooltipClass="operational-context-field-tooltip">Observable symptom <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'integration-failure-symptom-' + index">Observable symptom <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('integrationFailureSymptom')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <textarea [id]="'integration-failure-symptom-' + index" rows="2" [value]="$any(mode)['symptom'] || ''" (input)="updateFailureMode(index, 'symptom', $any($event.target).value)"></textarea>
                 </div>
                 <div class="structured-control structured-control--wide">
-                  <label class="structured-label" tabindex="0" [for]="'integration-failure-impact-' + index" [matTooltip]="tooltip('integrationFailureImpact')" matTooltipClass="operational-context-field-tooltip">Impact <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'integration-failure-impact-' + index">Impact <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('integrationFailureImpact')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <textarea [id]="'integration-failure-impact-' + index" rows="2" [value]="$any(mode)['impact'] || ''" (input)="updateFailureMode(index, 'impact', $any($event.target).value)"></textarea>
                 </div>
               </div>
@@ -397,7 +398,7 @@
       <div class="structured-grid">
         @for (group of dataArtifactGroups(); track group.key) {
           <div class="structured-control structured-control--wide">
-            <label class="structured-label" tabindex="0" [for]="'data-artifacts-' + group.key" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">{{ group.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+            <label class="structured-label" [for]="'data-artifacts-' + group.key">{{ group.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip(group.tooltip)" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <textarea [id]="'data-artifacts-' + group.key" rows="3" [value]="objectList(group.key).join('\n')" (input)="updateDataArtifactList(group.key, $any($event.target).value)"></textarea>
           </div>
         }
@@ -407,22 +408,22 @@
     @case ('source-coverage') {
       <div class="structured-grid">
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="source-coverage-status" [matTooltip]="tooltip('coverageStatus')" matTooltipClass="operational-context-field-tooltip">Coverage status <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="source-coverage-status">Coverage status <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('coverageStatus')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <select id="source-coverage-status" [value]="sourceCoverageText('status')" (change)="updateSourceCoverage('status', $any($event.target).value)">
             <option value="">Not specified</option>
             @for (status of sourceCoverageStatuses(); track status) { <option [value]="status">{{ status }}</option> }
           </select>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="source-coverage-scanned" [matTooltip]="tooltip('coverageScanned')" matTooltipClass="operational-context-field-tooltip">Scanned sources <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="source-coverage-scanned">Scanned sources <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('coverageScanned')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="source-coverage-scanned" rows="3" [value]="sourceCoverageList('scannedSources').join('\n')" (input)="updateSourceCoverageList('scannedSources', $any($event.target).value)"></textarea>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="source-coverage-expected" [matTooltip]="tooltip('coverageExpected')" matTooltipClass="operational-context-field-tooltip">Expected sources <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="source-coverage-expected">Expected sources <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('coverageExpected')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="source-coverage-expected" rows="3" [value]="sourceCoverageList('expectedSources').join('\n')" (input)="updateSourceCoverageList('expectedSources', $any($event.target).value)"></textarea>
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="source-coverage-limitations" [matTooltip]="tooltip('coverageLimitations')" matTooltipClass="operational-context-field-tooltip">Limitations <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="source-coverage-limitations">Limitations <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('coverageLimitations')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="source-coverage-limitations" rows="3" [value]="sourceCoverageList('limitations').join('\n')" (input)="updateSourceCoverageList('limitations', $any($event.target).value)"></textarea>
         </div>
       </div>
@@ -435,32 +436,32 @@
             <header><strong>Gap {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove gap ' + (index + 1)" (click)="removeGap(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
             <div class="structured-grid">
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'gap-id-' + index" [matTooltip]="tooltip('gapId')" matTooltipClass="operational-context-field-tooltip">Gap ID <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'gap-id-' + index">Gap ID <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gapId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'gap-id-' + index" type="text" [value]="$any(gap)['id'] || ''" (input)="updateGap(index, 'id', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'gap-type-' + index" [matTooltip]="tooltip('gapType')" matTooltipClass="operational-context-field-tooltip">Type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'gap-type-' + index">Type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gapType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'gap-type-' + index" type="text" list="gap-type-values" [value]="$any(gap)['type'] || ''" (input)="updateGap(index, 'type', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'gap-severity-' + index" [matTooltip]="tooltip('gapSeverity')" matTooltipClass="operational-context-field-tooltip">Severity <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'gap-severity-' + index">Severity <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gapSeverity')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'gap-severity-' + index" [value]="$any(gap)['severity'] || ''" (change)="updateGap(index, 'severity', $any($event.target).value)">
                   <option value="">Infer from summary</option>
                   @for (severity of gapSeverities(); track severity) { <option [value]="severity">{{ severity }}</option> }
                 </select>
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'gap-status-' + index" [matTooltip]="tooltip('gapStatus')" matTooltipClass="operational-context-field-tooltip">Status <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'gap-status-' + index">Status <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gapStatus')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'gap-status-' + index" [value]="$any(gap)['status'] || 'open'" (change)="updateGap(index, 'status', $any($event.target).value)">
                   @for (status of gapStatuses(); track status) { <option [value]="status">{{ status }}</option> }
                 </select>
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'gap-summary-' + index" [matTooltip]="tooltip('gapSummary')" matTooltipClass="operational-context-field-tooltip">Actionable summary <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'gap-summary-' + index">Actionable summary <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gapSummary')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'gap-summary-' + index" rows="3" [value]="$any(gap)['summary'] || $any(gap)['question'] || ''" (input)="updateGap(index, 'summary', $any($event.target).value)"></textarea>
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'gap-next-sources-' + index" [matTooltip]="tooltip('gapNextSources')" matTooltipClass="operational-context-field-tooltip">Suggested next sources <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'gap-next-sources-' + index">Suggested next sources <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gapNextSources')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'gap-next-sources-' + index" rows="2" [value]="$any(gap)['suggestedNextSources']?.join('\n') || ''" (input)="updateGapList(index, 'suggestedNextSources', $any($event.target).value)"></textarea>
               </div>
             </div>
@@ -478,29 +479,29 @@
             <header><strong>Relation {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove relation ' + (index + 1)" (click)="removeRelation(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
             <div class="structured-grid">
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'relation-type-' + index" [matTooltip]="tooltip('relationType')" matTooltipClass="operational-context-field-tooltip">Relation type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'relation-type-' + index">Relation type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('relationType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'relation-type-' + index" type="text" list="relation-type-values" [value]="$any(relation)['type'] || ''" (input)="updateRelation(index, 'type', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'relation-target-type-' + index" [matTooltip]="tooltip('relationTargetType')" matTooltipClass="operational-context-field-tooltip">Target type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'relation-target-type-' + index">Target type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('relationTargetType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'relation-target-type-' + index" [value]="relationTargetType(index)" (change)="updateRelationTargetType(index, $event)">
                   <option value="">External / uncatalogued target</option>
                   @for (targetType of relationTargetTypes(); track targetType.key) { <option [value]="targetType.type">{{ targetType.label }}</option> }
                 </select>
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'relation-target-' + index" [matTooltip]="tooltip('relationTarget')" matTooltipClass="operational-context-field-tooltip">Target entity <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'relation-target-' + index">Target entity <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('relationTarget')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'relation-target-' + index" [disabled]="!relationTargetType(index)" [value]="relationTargetId(index)" (change)="updateRelationTarget(index, $event)">
                   <option value="">Choose existing target…</option>
                   @for (option of relationTargetOptions(index); track option.id) { <option [value]="option.id">{{ option.label }} · {{ option.id }}</option> }
                 </select>
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'relation-external-' + index" [matTooltip]="tooltip('relationExternalTarget')" matTooltipClass="operational-context-field-tooltip">External target label <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'relation-external-' + index">External target label <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('relationExternalTarget')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'relation-external-' + index" type="text" [disabled]="!!relationTargetType(index)" [value]="$any(relation)['externalSystem'] || ''" (input)="updateRelationExternalTarget(index, $any($event.target).value)" />
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'relation-via-' + index" [matTooltip]="tooltip('relationVia')" matTooltipClass="operational-context-field-tooltip">Via integrations <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'relation-via-' + index">Via integrations <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('relationVia')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <div class="chip-list">
                   @for (id of selectedRelationVia(index); track id) {
                     <span class="value-chip">{{ optionLabel('integration', id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove relation via integration ' + id" (click)="removeRelationVia(index, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
@@ -512,7 +513,7 @@
                 </select>
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'relation-evidence-' + index" [matTooltip]="tooltip('relationEvidence')" matTooltipClass="operational-context-field-tooltip">Evidence / reason <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'relation-evidence-' + index">Evidence / reason <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('relationEvidence')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'relation-evidence-' + index" rows="2" [value]="$any(relation)['evidence'] || ''" (input)="updateRelation(index, 'evidence', $any($event.target).value)"></textarea>
               </div>
             </div>
@@ -526,31 +527,31 @@
     @case ('repository-git') {
       <div class="structured-grid">
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="git-provider" [matTooltip]="tooltip('gitProvider')" matTooltipClass="operational-context-field-tooltip">Provider <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="git-provider">Provider <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gitProvider')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="git-provider" type="text" list="git-provider-values" [value]="objectText('provider')" (input)="updateObject('provider', $any($event.target).value)" />
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="git-group" [matTooltip]="tooltip('gitGroup')" matTooltipClass="operational-context-field-tooltip">Group / namespace <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="git-group">Group / namespace <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gitGroup')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="git-group" type="text" [value]="objectText('group')" (input)="updateObject('group', $any($event.target).value)" />
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="git-project" [matTooltip]="tooltip('gitProject')" matTooltipClass="operational-context-field-tooltip">Project <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="git-project">Project <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gitProject')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="git-project" type="text" [value]="objectText('project')" (input)="updateObject('project', $any($event.target).value)" />
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="git-project-path" [matTooltip]="tooltip('gitProjectPath')" matTooltipClass="operational-context-field-tooltip">Project path <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="git-project-path">Project path <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gitProjectPath')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="git-project-path" type="text" [value]="objectText('projectPath')" (input)="updateObject('projectPath', $any($event.target).value)" />
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="git-default-branch" [matTooltip]="tooltip('gitDefaultBranch')" matTooltipClass="operational-context-field-tooltip">Default branch <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="git-default-branch">Default branch <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gitDefaultBranch')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="git-default-branch" type="text" [value]="objectText('defaultBranch')" (input)="updateObject('defaultBranch', $any($event.target).value)" />
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="git-url" [matTooltip]="tooltip('gitUrl')" matTooltipClass="operational-context-field-tooltip">Repository URL <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="git-url">Repository URL <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gitUrl')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <input id="git-url" type="url" [value]="objectText('url')" (input)="updateObject('url', $any($event.target).value)" />
         </div>
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="git-aliases" [matTooltip]="tooltip('gitAliases')" matTooltipClass="operational-context-field-tooltip">Git aliases <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="git-aliases">Git aliases <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('gitAliases')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="git-aliases" rows="2" [value]="objectList('aliases').join('\n')" (input)="updateObjectList('aliases', $any($event.target).value)"></textarea>
         </div>
         <datalist id="git-provider-values"><option value="gitlab"></option></datalist>
@@ -560,12 +561,12 @@
     @case ('process-participants') {
       <div class="structured-grid">
         <div class="structured-control structured-control--wide">
-          <label class="structured-label" tabindex="0" for="process-actors" [matTooltip]="tooltip('processActors')" matTooltipClass="operational-context-field-tooltip">Actors <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="process-actors">Actors <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('processActors')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <textarea id="process-actors" rows="2" [value]="objectList('actors').join('\n')" (input)="updateObjectList('actors', $any($event.target).value)"></textarea>
         </div>
         @for (role of processSystemRoles(); track role.key) {
           <div class="structured-control structured-control--wide">
-            <label class="structured-label" tabindex="0" [for]="'process-role-' + role.key" [matTooltip]="tooltip('processSystemRole')" matTooltipClass="operational-context-field-tooltip">{{ role.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+            <label class="structured-label" [for]="'process-role-' + role.key">{{ role.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('processSystemRole')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
             <div class="chip-list">
               @for (id of selectedProcessSystems(role.key); track id) {
                 <span class="value-chip">{{ optionLabel('system', id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove ' + role.label + ' ' + id" (click)="removeProcessSystem(role.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
@@ -594,30 +595,30 @@
             </header>
             <div class="structured-grid">
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'step-id-' + index" [matTooltip]="tooltip('stepId')" matTooltipClass="operational-context-field-tooltip">Step ID <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'step-id-' + index">Step ID <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('stepId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'step-id-' + index" type="text" [value]="$any(step)['id'] || ''" (input)="updateProcessStep(index, 'id', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'step-name-' + index" [matTooltip]="tooltip('stepName')" matTooltipClass="operational-context-field-tooltip">Name <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'step-name-' + index">Name <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('stepName')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'step-name-' + index" type="text" [value]="$any(step)['name'] || ''" (input)="updateProcessStep(index, 'name', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'step-type-' + index" [matTooltip]="tooltip('stepType')" matTooltipClass="operational-context-field-tooltip">Type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'step-type-' + index">Type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('stepType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'step-type-' + index" type="text" list="process-step-type-values" [value]="$any(step)['type'] || ''" (input)="updateProcessStep(index, 'type', $any($event.target).value)" />
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'step-summary-' + index" [matTooltip]="tooltip('stepSummary')" matTooltipClass="operational-context-field-tooltip">Summary <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'step-summary-' + index">Summary <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('stepSummary')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'step-summary-' + index" rows="2" [value]="$any(step)['summary'] || ''" (input)="updateProcessStep(index, 'summary', $any($event.target).value)"></textarea>
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'step-terms-' + index" [matTooltip]="tooltip('stepStrongTerms')" matTooltipClass="operational-context-field-tooltip">Strong business terms <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'step-terms-' + index">Strong business terms <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('stepStrongTerms')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'step-terms-' + index" rows="2" [value]="processStepStrongTerms(index).join('\n')" (input)="updateProcessStepStrongTerms(index, $any($event.target).value)"></textarea>
               </div>
             </div>
             <div class="step-references">
               @for (referenceGroup of processStepReferenceGroups(); track referenceGroup.key) {
                 <section class="reference-group">
-                  <label class="structured-label" tabindex="0" [for]="'step-reference-' + index + '-' + referenceGroup.key" [matTooltip]="tooltip('stepReference')" matTooltipClass="operational-context-field-tooltip">{{ referenceGroup.label }} <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'step-reference-' + index + '-' + referenceGroup.key">{{ referenceGroup.label }} <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('stepReference')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <div class="chip-list">
                     @for (id of selectedProcessStepReferences(index, referenceGroup.key); track id) {
                       <span class="value-chip">{{ optionLabel(referenceGroup.type, id) }} <small>{{ id }}</small><button type="button" [attr.aria-label]="'Remove step ' + referenceGroup.label + ' reference ' + id" (click)="removeProcessStepReference(index, referenceGroup.key, id)"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button></span>
@@ -640,7 +641,7 @@
     @case ('code-search-target') {
       <div class="structured-grid">
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="code-target-type" [matTooltip]="tooltip('targetType')" matTooltipClass="operational-context-field-tooltip">Target type <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="code-target-type">Target type <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('targetType')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <select id="code-target-type" [value]="targetType()" (change)="updateTargetType($event)">
             <option value="">Choose target type…</option>
             <option value="system">System</option>
@@ -648,7 +649,7 @@
           </select>
         </div>
         <div class="structured-control">
-          <label class="structured-label" tabindex="0" for="code-target-id" [matTooltip]="tooltip('targetId')" matTooltipClass="operational-context-field-tooltip">Target entity <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+          <label class="structured-label" for="code-target-id">Target entity <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('targetId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
           <select id="code-target-id" [disabled]="!targetType()" [value]="objectText('id')" (change)="updateObject('id', $any($event.target).value)">
             <option value="">Choose existing target…</option>
             @for (option of targetOptions(); track option.id) { <option [value]="option.id">{{ option.label }} · {{ option.id }}</option> }
@@ -664,22 +665,22 @@
             <header><strong>Repository {{ index + 1 }}</strong><button type="button" class="remove-button" [attr.aria-label]="'Remove repository ' + (index + 1)" (click)="removeRepository(index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button></header>
             <div class="structured-grid">
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'repo-id-' + index" [matTooltip]="tooltip('repoId')" matTooltipClass="operational-context-field-tooltip">Repository <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repo-id-' + index">Repository <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('repoId')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'repo-id-' + index" [value]="$any(repository)['repoId'] || ''" (change)="updateRepository(index, 'repoId', $any($event.target).value)">
                   <option value="">Choose existing repository…</option>
                   @for (option of repositoryOptions(index); track option.id) { <option [value]="option.id">{{ option.label }} · {{ option.id }}</option> }
                 </select>
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'repo-role-' + index" [matTooltip]="tooltip('role')" matTooltipClass="operational-context-field-tooltip">Role <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repo-role-' + index">Role <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('role')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'repo-role-' + index" type="text" list="code-search-role-values" [value]="$any(repository)['role'] || ''" (input)="updateRepository(index, 'role', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'repo-priority-' + index" [matTooltip]="tooltip('priority')" matTooltipClass="operational-context-field-tooltip">Priority <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repo-priority-' + index">Priority <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('priority')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'repo-priority-' + index" type="number" min="1" step="1" [value]="$any(repository)['priority'] || ''" (input)="updateRepositoryNumber(index, 'priority', $event)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'repo-mode-' + index" [matTooltip]="tooltip('searchMode')" matTooltipClass="operational-context-field-tooltip">Search mode <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repo-mode-' + index">Search mode <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('searchMode')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'repo-mode-' + index" [value]="$any(repository)['searchMode'] || ''" (change)="updateRepository(index, 'searchMode', $any($event.target).value)">
                   <option value="">Choose search mode…</option>
                   <option value="whole-repository">Whole repository</option>
@@ -687,16 +688,16 @@
                 </select>
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'repo-reason-' + index" [matTooltip]="tooltip('reason')" matTooltipClass="operational-context-field-tooltip">Reason <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repo-reason-' + index">Reason <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('reason')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'repo-reason-' + index" type="text" [value]="$any(repository)['reason'] || ''" (input)="updateRepository(index, 'reason', $any($event.target).value)" />
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'repo-read-for-' + index" [matTooltip]="tooltip('readFor')" matTooltipClass="operational-context-field-tooltip">Read for <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'repo-read-for-' + index">Read for <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('readFor')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'repo-read-for-' + index" rows="2" [value]="$any(repository)['readFor']?.join('\n') || ''" (input)="updateRepositoryList(index, 'readFor', $any($event.target).value)"></textarea>
               </div>
               @if ($any(repository)['searchMode'] === 'path-prefixes') {
                 <div class="structured-control structured-control--wide">
-                  <label class="structured-label" tabindex="0" [for]="'repo-prefixes-' + index" [matTooltip]="tooltip('pathPrefixes')" matTooltipClass="operational-context-field-tooltip">Path prefixes <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                  <label class="structured-label" [for]="'repo-prefixes-' + index">Path prefixes <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('pathPrefixes')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                   <textarea [id]="'repo-prefixes-' + index" rows="2" [value]="$any(repository)['pathPrefixes']?.join('\n') || ''" (input)="updateRepositoryList(index, 'pathPrefixes', $any($event.target).value)"></textarea>
                 </div>
               }
@@ -715,29 +716,29 @@
             <header><strong>{{ row.label }}</strong>@if (row.removable) { <button type="button" class="remove-button" [attr.aria-label]="'Remove ' + row.label" (click)="removeParticipant($any(row.group), row.index)"><mat-icon fontSet="material-symbols-outlined">delete</mat-icon> Remove</button> }</header>
             <div class="structured-grid">
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'participant-system-' + row.group + '-' + row.index" [matTooltip]="tooltip('participantSystem')" matTooltipClass="operational-context-field-tooltip">System <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'participant-system-' + row.group + '-' + row.index">System <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('participantSystem')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'participant-system-' + row.group + '-' + row.index" [value]="$any(participant(row.group, row.index))['system'] || ''" (change)="updateParticipant(row.group, row.index, 'system', $any($event.target).value)">
                   <option value="">No system selected</option>
                   @for (option of referenceOptions()['system'] || []; track option.id) { <option [value]="option.id">{{ option.label }} · {{ option.id }}</option> }
                 </select>
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'participant-context-' + row.group + '-' + row.index" [matTooltip]="tooltip('participantContext')" matTooltipClass="operational-context-field-tooltip">Bounded context <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'participant-context-' + row.group + '-' + row.index">Bounded context <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('participantContext')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <select [id]="'participant-context-' + row.group + '-' + row.index" [value]="$any(participant(row.group, row.index))['boundedContext'] || ''" (change)="updateParticipant(row.group, row.index, 'boundedContext', $any($event.target).value)">
                   <option value="">No bounded context selected</option>
                   @for (option of referenceOptions()['bounded-context'] || []; track option.id) { <option [value]="option.id">{{ option.label }} · {{ option.id }}</option> }
                 </select>
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'participant-role-' + row.group + '-' + row.index" [matTooltip]="tooltip('participantRole')" matTooltipClass="operational-context-field-tooltip">Role <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'participant-role-' + row.group + '-' + row.index">Role <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('participantRole')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'participant-role-' + row.group + '-' + row.index" type="text" list="integration-role-values" [value]="$any(participant(row.group, row.index))['role'] || ''" (input)="updateParticipant(row.group, row.index, 'role', $any($event.target).value)" />
               </div>
               <div class="structured-control">
-                <label class="structured-label" tabindex="0" [for]="'participant-owner-' + row.group + '-' + row.index" [matTooltip]="tooltip('participantExternalOwner')" matTooltipClass="operational-context-field-tooltip">External owner <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'participant-owner-' + row.group + '-' + row.index">External owner <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('participantExternalOwner')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <input [id]="'participant-owner-' + row.group + '-' + row.index" type="text" [value]="$any(participant(row.group, row.index))['externalOwner'] || ''" (input)="updateParticipant(row.group, row.index, 'externalOwner', $any($event.target).value)" />
               </div>
               <div class="structured-control structured-control--wide">
-                <label class="structured-label" tabindex="0" [for]="'participant-notes-' + row.group + '-' + row.index" [matTooltip]="tooltip('participantNotes')" matTooltipClass="operational-context-field-tooltip">Notes <mat-icon fontSet="material-symbols-outlined">help</mat-icon></label>
+                <label class="structured-label" [for]="'participant-notes-' + row.group + '-' + row.index">Notes <mat-icon class="structured-label__help" fontSet="material-symbols-outlined" tabindex="0" aria-label="Field guidance" [matTooltip]="tooltip('participantNotes')" matTooltipClass="operational-context-field-tooltip">help</mat-icon></label>
                 <textarea [id]="'participant-notes-' + row.group + '-' + row.index" rows="2" [value]="$any(participant(row.group, row.index))['notes']?.join('\n') || ''" (input)="updateParticipantList(row.group, row.index, 'notes', $any($event.target).value)"></textarea>
               </div>
             </div>
@@ -751,5 +752,6 @@
         <datalist id="integration-role-values"><option value="client"></option><option value="server"></option><option value="producer"></option><option value="consumer"></option><option value="mediator"></option><option value="gateway"></option></datalist>
       </div>
     }
-  }
+    }
+  </fieldset>
 </div>

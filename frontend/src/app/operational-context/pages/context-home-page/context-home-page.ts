@@ -9,7 +9,6 @@ import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 import {
   ExplainableAggregateDto,
   OpenQuestionDto,
-  OperationalContextAiApiPreview,
   OperationalContextAiApiPreviewEndpoint,
   OperationalContextAiSearchPreview,
   OperationalContextCatalogRow,
@@ -21,6 +20,7 @@ import {
   ValidationFindingDto
 } from '../../models/operational-context.models';
 import { OperationalContextApiService } from '../../services/operational-context-api.service';
+import { OperationalContextMaintenanceApiService } from '../../services/operational-context-maintenance-api.service';
 import { AiApiPreviewPanelComponent } from '../../components/ai-api-preview-panel/ai-api-preview-panel';
 import {
   ContextCatalogColumn,
@@ -34,6 +34,7 @@ import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
 import { OperationalContextMaintenanceFacade } from '../../services/operational-context-maintenance.facade';
 import {
   isOperationalContextWritableType,
+  OperationalContextEditorState,
   OperationalContextInboundReference,
   OperationalContextReferenceOption,
   OperationalContextReferenceOptions,
@@ -512,7 +513,7 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
     ),
     column(
       'matchSignals',
-      'Match signals',
+      'Recognition signals',
       'Aliasowe sygnaly, po ktorych termin moze zostac rozpoznany w logach, kodzie lub pytaniu uzytkownika. Pomagaja szybciej powiazac surowy tekst z kanonicznym znaczeniem.',
       'aggregate'
     ),
@@ -672,6 +673,7 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
 })
 export class ContextHomePageComponent {
   private readonly api = inject(OperationalContextApiService);
+  private readonly maintenanceApi = inject(OperationalContextMaintenanceApiService);
   readonly maintenance = inject(OperationalContextMaintenanceFacade);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -687,10 +689,9 @@ export class ContextHomePageComponent {
   readonly errorMessage = signal('');
   readonly detail = signal<OperationalContextEntityDetailDto | null>(null);
   readonly detailError = signal('');
-  readonly aiApiPreview = signal<OperationalContextAiApiPreview | null>(null);
-  readonly aiApiPreviewLoading = signal(false);
-  readonly aiApiPreviewError = signal('');
-  readonly aiApiPreviewProfile = signal<OperationalContextReadModelProfile>('default');
+  readonly entityPreview = signal<OperationalContextEditorState | null>(null);
+  readonly entityPreviewLoading = signal(false);
+  readonly entityPreviewError = signal('');
   readonly searchResults = signal<OperationalContextSearchResultDto[]>([]);
   readonly searchAiApiPreview = signal<OperationalContextAiSearchPreview | null>(null);
   readonly searchAiApiPreviewLoading = signal(false);
@@ -1005,49 +1006,24 @@ export class ContextHomePageComponent {
     }
 
     this.detailError.set('');
-    this.aiApiPreview.set(null);
-    this.aiApiPreviewError.set('');
-    this.aiApiPreviewLoading.set(true);
-    this.aiApiPreviewProfile.set('default');
+    this.entityPreview.set(null);
+    this.entityPreviewError.set('');
+    this.entityPreviewLoading.set(this.canLoadEntityPreview(target));
     this.selectedEntityTarget.set(target);
     forkJoin({
       detail: this.api.getEntity(target.type, target.id),
-      aiApiPreview: this.aiApiPreviewFor(target, 'default')
+      entityPreview: this.entityPreviewFor(target)
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ detail, aiApiPreview }) => {
+        next: ({ detail, entityPreview }) => {
           this.detail.set(detail);
-          this.aiApiPreview.set(aiApiPreview);
-          this.aiApiPreviewLoading.set(false);
+          this.entityPreview.set(entityPreview);
+          this.entityPreviewLoading.set(false);
         },
         error: () => {
-          this.aiApiPreviewLoading.set(false);
+          this.entityPreviewLoading.set(false);
           this.detailError.set(`Could not load ${target.type}/${target.id}.`);
-        }
-      });
-  }
-
-  loadAiApiPreview(profile: OperationalContextReadModelProfile): void {
-    const target = this.selectedEntityTarget();
-    if (!target) {
-      return;
-    }
-
-    this.aiApiPreviewProfile.set(profile);
-    this.aiApiPreviewLoading.set(true);
-    this.aiApiPreviewError.set('');
-    this.aiApiPreviewFor(target, profile)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (preview) => {
-          this.aiApiPreview.set(preview);
-          this.aiApiPreviewLoading.set(false);
-        },
-        error: () => {
-          this.aiApiPreview.set(null);
-          this.aiApiPreviewError.set('Could not load AI API preview.');
-          this.aiApiPreviewLoading.set(false);
         }
       });
   }
@@ -1059,10 +1035,9 @@ export class ContextHomePageComponent {
   closeDrawer(): void {
     this.detail.set(null);
     this.detailError.set('');
-    this.aiApiPreview.set(null);
-    this.aiApiPreviewLoading.set(false);
-    this.aiApiPreviewError.set('');
-    this.aiApiPreviewProfile.set('default');
+    this.entityPreview.set(null);
+    this.entityPreviewLoading.set(false);
+    this.entityPreviewError.set('');
     this.selectedEntityTarget.set(null);
   }
 
@@ -1270,15 +1245,27 @@ export class ContextHomePageComponent {
     return discard;
   }
 
-  private supportsReadModels(type: string): boolean {
-    return [
-      'system',
-      'repository',
-      'code-search-scope',
-      'process',
-      'integration',
-      'bounded-context'
-    ].includes(type);
+  private entityPreviewFor(target: { type: string; id: string }): Observable<OperationalContextEditorState | null> {
+    if (!this.canLoadEntityPreview(target)) {
+      return of(null);
+    }
+
+    const type = target.type as OperationalContextWritableType;
+    return this.maintenanceApi.getEntity(type, target.id).pipe(
+      map((entity) => ({ mode: 'edit' as const, type, entity })),
+      catchError(() => {
+        this.entityPreviewError.set('Could not load editable source preview.');
+        return of(null);
+      })
+    );
+  }
+
+  private canLoadEntityPreview(target: { type: string; id: string }): boolean {
+    return Boolean(
+      target.id
+      && isOperationalContextWritableType(target.type)
+      && this.maintenance.supports(target.type)
+    );
   }
 
   private resetSearchAiApiPreview(): void {
@@ -1316,43 +1303,6 @@ export class ContextHomePageComponent {
 
   private exactMatch(left: string | null | undefined, right: string): boolean {
     return normalize(left || '') === normalize(right);
-  }
-
-  private aiApiPreviewFor(
-    target: { type: string; id: string },
-    profile: OperationalContextReadModelProfile
-  ): Observable<OperationalContextAiApiPreview> {
-    const requests = this.api.getAiApiPreviewRequests(
-      target.type,
-      target.id,
-      profile,
-      this.supportsReadModels(target.type)
-    );
-
-    return forkJoin(
-      requests.map((request) =>
-        request.request.pipe(
-          map(
-            (payload): OperationalContextAiApiPreviewEndpoint => ({
-              key: request.key,
-              label: request.label,
-              url: request.url,
-              payload,
-              error: null
-            })
-          ),
-          catchError(() =>
-            of({
-              key: request.key,
-              label: request.label,
-              url: request.url,
-              payload: null,
-              error: `Could not load ${request.label}.`
-            } satisfies OperationalContextAiApiPreviewEndpoint)
-          )
-        )
-      )
-    ).pipe(map((endpoints) => ({ profile, endpoints })));
   }
 
   private filteredRows(tab: ContextTab): Array<Record<string, unknown>> {

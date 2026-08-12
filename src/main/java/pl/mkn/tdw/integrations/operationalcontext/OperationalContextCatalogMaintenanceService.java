@@ -169,7 +169,9 @@ public class OperationalContextCatalogMaintenanceService {
             throw OperationalContextCatalogMaintenanceException.validation("Entity validation failed", errors);
         }
         if (existing != null) {
-            preserveServerOwned(type, mutableMap(existing), payload);
+            var canonicalExisting = mutableMap(existing);
+            canonicalizeAliases(type, canonicalExisting);
+            preserveServerOwned(type, canonicalExisting, payload);
         }
         return payload;
     }
@@ -573,7 +575,7 @@ public class OperationalContextCatalogMaintenanceService {
         var signals = asMap(value);
         if (signals == null) {
             errors.add(new OperationalContextCatalogFieldError(
-                    "/payload/matchSignals", "Match signals must be an object"
+                    "/payload/matchSignals", "Recognition signals must be an object"
             ));
             return;
         }
@@ -1511,8 +1513,10 @@ public class OperationalContextCatalogMaintenanceService {
         if (index < 0) {
             throw OperationalContextCatalogMaintenanceException.notFound(type, id);
         }
+        var payload = mutableMap(entities.get(index));
+        canonicalizeAliases(type, payload);
         return new OperationalContextEditableEntity(
-                type.externalName(), id, type.logicalDocument(), entities.get(index)
+                type.externalName(), id, type.logicalDocument(), payload
         );
     }
 

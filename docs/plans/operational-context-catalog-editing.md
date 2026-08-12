@@ -125,13 +125,13 @@ czterema informacjami:
 
 | Typ | Najwazniejsze prowadzone struktury |
 | --- | --- |
-| `system` | ownership, external participant, references, match signals, relations, runtime configuration directory, source coverage, gaps |
-| `repository` | Git identity, references, match signals, relations, evidence, source coverage, gaps, AI exploration guidance |
+| `system` | ownership, external participant, references, recognition signals, relations, runtime configuration directory, source coverage, gaps |
+| `repository` | Git identity, references, recognition signals, relations, evidence, source coverage, gaps, AI exploration guidance |
 | `code-search-scope` | target `system`/`bounded-context`, repository priorities, roles, search mode i path prefixes |
 | `process` | participants, steps, boundary, lifecycle, completion signals, failure modes, data/artifacts, references, signals, relations, coverage i gaps |
 | `integration` | source/targets/intermediaries/final targets, references, signals, relations, failure modes, coverage i gaps |
 | `bounded-context` | local language, scope, semantic boundary, ownership, references, signals, relations, provenance evidence, AI hints, coverage i gaps |
-| `team` | identity, lifecycle, aliases, use cases i match signals |
+| `team` | identity, lifecycle, aliases, use cases i recognition signals |
 | `glossary-term` | definition, local boundaries, aliases, signals, typed references, related terms i AI hints |
 | `handoff-rule` | applicability, exclusions, required evidence, first actions, references, affected entities, AI hints i limitations |
 

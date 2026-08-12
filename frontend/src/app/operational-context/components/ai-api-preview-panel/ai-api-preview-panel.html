@@ -35,9 +35,14 @@
     <div class="endpoints">
       @for (endpoint of endpoints(); track endpoint.key) {
         <details class="endpoint" [open]="$first">
-          <summary class="endpoint-summary">
+          <summary
+            class="endpoint-summary"
+            [class.endpoint-summary--compact]="!showTarget()"
+          >
             <span class="endpoint-title">{{ endpoint.label }}</span>
-            <span class="endpoint-target">{{ endpoint.error || targetSummary(endpoint) }}</span>
+            @if (showTarget()) {
+              <span class="endpoint-target">{{ endpoint.error || targetSummary(endpoint) }}</span>
+            }
             <span class="badges">
               @for (meta of endpointMeta(endpoint); track meta) {
                 <span>{{ meta }}</span>
@@ -74,7 +79,7 @@
             @if (endpoint.error) {
               <p class="ai-api-preview-panel__muted">{{ endpoint.error }}</p>
             } @else if (endpoint.payload; as payload) {
-              @if (targetEntries(endpoint).length) {
+              @if (showTarget() && targetEntries(endpoint).length) {
                 <details class="preview-section" open>
                   <summary>
                     <span>Target</span>

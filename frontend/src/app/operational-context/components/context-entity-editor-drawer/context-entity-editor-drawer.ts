@@ -28,6 +28,8 @@ export class ContextEntityEditorDrawerComponent {
   readonly error = input('');
   readonly fieldErrors = input<OperationalContextFieldError[]>([]);
   readonly referenceOptions = input<OperationalContextReferenceOptions>({});
+  readonly readonly = input(false);
+  readonly chrome = input(true);
   readonly saveEntity = output<OperationalContextPayload>();
   readonly cancelEditor = output<void>();
   readonly dirtyChange = output<boolean>();
@@ -44,14 +46,16 @@ export class ContextEntityEditorDrawerComponent {
       if (signature !== this.signature) {
         this.signature = signature;
         this.form = this.adapter.build(state.type, state.entity.payload);
-        if (state.mode === 'edit') this.form.controls[this.adapter.controlName('id')]?.disable();
+        this.applyDisabledState(state);
         this.form.valueChanges.subscribe(() => this.dirtyChange.emit(this.form.dirty));
       }
+      this.applyDisabledState(state);
       this.applyFieldErrors();
     });
   }
 
   submit(): void {
+    if (this.readonly()) return;
     this.structuredError.set('');
     this.validateStructuredControls();
     this.form.markAllAsTouched();
@@ -116,6 +120,7 @@ export class ContextEntityEditorDrawerComponent {
   }
 
   updateStructuredField(field: OperationalContextFormField, value: unknown): void {
+    if (this.readonly()) return;
     const control = this.form.controls[this.controlName(field)];
     const empty = value === null
       || value === undefined
@@ -289,8 +294,8 @@ export class ContextEntityEditorDrawerComponent {
         }
         for (const [key, rawValues] of Object.entries(rawBucket as Record<string, unknown>)) {
           const values = Array.isArray(rawValues) ? rawValues.map(String).filter((item) => item.trim()) : [];
-          if (!key.trim()) return 'Every match signal requires a signal key.';
-          if (!values.length) return `Match signal ${strength} / ${key} requires at least one value.`;
+          if (!key.trim()) return 'Every recognition signal requires a signal key.';
+          if (!values.length) return `Recognition signal ${strength} / ${key} requires at least one value.`;
         }
       }
     }
@@ -456,9 +461,22 @@ export class ContextEntityEditorDrawerComponent {
   }
 
   private applyFieldErrors(): void {
+    if (this.readonly()) return;
     for (const error of this.fieldErrors()) {
       const field = this.adapter.fieldForPointer(this.state().type, error.field);
       if (field) this.form.controls[this.controlName(field)]?.setErrors({ server: error.message });
+    }
+  }
+
+  private applyDisabledState(state: OperationalContextEditorState): void {
+    if (this.readonly()) {
+      this.form.disable({ emitEvent: false });
+      return;
+    }
+
+    this.form.enable({ emitEvent: false });
+    if (state.mode === 'edit') {
+      this.form.controls[this.adapter.controlName('id')]?.disable({ emitEvent: false });
     }
   }
 }

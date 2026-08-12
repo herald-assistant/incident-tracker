@@ -208,7 +208,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
     expect(component.form.controls['steps'].invalid).toBe(true);
   });
 
-  it('renders guided CRM match signals and relations instead of raw JSON', async () => {
+  it('renders guided CRM recognition signals and relations instead of raw JSON', async () => {
     await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {
@@ -233,7 +233,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
     expect(fixture.nativeElement.querySelector('textarea[formcontrolname="relations"]')).toBeNull();
   });
 
-  it('blocks empty CRM match signals, duplicate relations and self relations before save', async () => {
+  it('blocks empty CRM recognition signals, duplicate relations and self relations before save', async () => {
     await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
     fixture.componentRef.setInput('state', {

@@ -16,6 +16,7 @@ import {
   ValidationFindingDto
 } from '../../models/operational-context.models';
 import { OperationalContextApiService } from '../../services/operational-context-api.service';
+import { OperationalContextMaintenanceApiService } from '../../services/operational-context-maintenance-api.service';
 import { OperationalContextMaintenanceFacade } from '../../services/operational-context-maintenance.facade';
 import { ContextHomePageComponent } from './context-home-page';
 
@@ -108,19 +109,21 @@ describe('ContextHomePageComponent', () => {
     expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
     expect(api.getEntityRelationsReadModel).not.toHaveBeenCalled();
     expect(api.getCodeSearchReadModel).not.toHaveBeenCalled();
+    expect(api.getAiApiPreviewRequests).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Core detail');
     expect(fixture.nativeElement.textContent).not.toContain('Read model projections');
-    expect(fixture.nativeElement.textContent).toContain('AI API Preview');
-    expect(fixture.nativeElement.textContent).toContain('opctx_get_entity');
-    expect(fixture.nativeElement.textContent).toContain('include=[relations]');
-    expect(fixture.nativeElement.textContent).toContain('API links');
-    expect(fixture.nativeElement.textContent).toContain('Copy');
-    expect(fixture.nativeElement.textContent).toContain('Open raw');
-    expect(fixture.nativeElement.textContent).toContain('Close');
+    expect(fixture.nativeElement.textContent).not.toContain('AI API Preview');
+    expect(drawerActionLabels(fixture.nativeElement)).toEqual([
+      'Copy entity detail',
+      'Open raw source',
+      'Close drawer'
+    ]);
   });
 
-  it('should reload AI API preview when switching profile', async () => {
-    const { fixture, api } = await createComponent(readySummary(), [systemRow()]);
+  it('should render the source editor layout as read-only entity preview', async () => {
+    const { fixture, api, maintenance, maintenanceApi } = await createComponent(readySummary(), [systemRow()]);
+    maintenance.capabilities.set({ source: 'tdw-data/operational-context', supportedEntityTypes: ['system'] });
+    maintenance.supports.mockImplementation((type: string) => type === 'system');
     const component = fixture.componentInstance;
 
     fixture.detectChanges();
@@ -128,19 +131,21 @@ describe('ContextHomePageComponent', () => {
     component.openEntity({ type: 'system', id: 'app-core' });
     fixture.detectChanges();
 
-    const buttons = fixture.nativeElement.querySelectorAll(
-      '.ai-api-preview-panel__profile-toggle button'
-    ) as NodeListOf<HTMLButtonElement>;
-    buttons[1].click();
-    fixture.detectChanges();
+    expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
+    expect(maintenanceApi.getEntity).toHaveBeenCalledWith('system', 'app-core');
+    expect(fixture.nativeElement.textContent).toContain('Basic');
+    expect(fixture.nativeElement.textContent).toContain('Ownership and references');
+    expect(fixture.nativeElement.textContent).not.toContain('Save');
 
-    expect(api.getAiApiPreviewRequests).toHaveBeenLastCalledWith(
-      'system',
-      'app-core',
-      'expanded',
-      true
-    );
-    expect(fixture.nativeElement.textContent).toContain('expanded');
+    const summary = fixture.nativeElement.querySelector(
+      '.entity-drawer app-context-entity-editor-drawer textarea#summary'
+    ) as HTMLTextAreaElement | null;
+    const previewInput = fixture.nativeElement.querySelector(
+      '.entity-drawer app-context-entity-editor-drawer input'
+    ) as HTMLInputElement | null;
+    expect(summary?.value).toBe('Core system summary');
+    expect(summary?.disabled).toBe(true);
+    expect(previewInput?.disabled).toBe(true);
   });
 
   it('should keep search only in the signal resolver tab', async () => {
@@ -374,28 +379,10 @@ async function createComponent(
     getEntity: vi.fn(() => of(entityDetail())),
     getEntityRelationsReadModel: vi.fn(() => of(relationsReadModel())),
     getCodeSearchReadModel: vi.fn(() => of(codeSearchReadModel())),
-    getAiApiPreviewRequests: vi.fn(
-      (
-        type: string,
-        id: string,
-        profile: OperationalContextReadModelProfile,
-        includeReadModels: boolean
-      ) => {
-        const requests = [
-          aiApiPreviewRequest('entity', 'Entity detail', type, id, profile)
-        ];
-        if (includeReadModels) {
-          requests.push(
-            aiApiPreviewRequest('relations', 'Relations', type, id, profile),
-            aiApiPreviewRequest('code-search', 'Code search', type, id, profile)
-          );
-        }
-        return requests;
-      }
-    )
+    getAiApiPreviewRequests: vi.fn(() => [])
   };
   const maintenance = {
-    capabilities: signal(null),
+    capabilities: signal<{ source: string; supportedEntityTypes: string[] } | null>(null),
     capabilitiesLoading: signal(false),
     capabilitiesError: signal(''),
     writable: signal(false),
@@ -418,6 +405,9 @@ async function createComponent(
     cancelDelete: vi.fn(),
     confirmDelete: vi.fn()
   };
+  const maintenanceApi = {
+    getEntity: vi.fn(() => of(editableSystem()))
+  };
 
   await TestBed.configureTestingModule({
     imports: [ContextHomePageComponent],
@@ -426,6 +416,7 @@ async function createComponent(
       provideLocationMocks(),
       provideRouter([]),
       { provide: OperationalContextApiService, useValue: api },
+      { provide: OperationalContextMaintenanceApiService, useValue: maintenanceApi },
       { provide: OperationalContextMaintenanceFacade, useValue: maintenance }
     ]
   }).compileComponents();
@@ -433,7 +424,26 @@ async function createComponent(
   return {
     fixture: TestBed.createComponent(ContextHomePageComponent),
     api,
+    maintenanceApi,
     maintenance
+  };
+}
+
+function editableSystem() {
+  return {
+    type: 'system',
+    id: 'app-core',
+    sourceFile: 'systems.yml',
+    payload: {
+      id: 'app-core',
+      name: 'App Core',
+      summary: 'Core system summary',
+      ownership: {
+        ownershipStatus: 'explicit',
+        ownerTeamIds: ['core-team'],
+        confidence: 'high'
+      }
+    }
   };
 }
 
@@ -660,57 +670,10 @@ function profiledSearchPayload(query: string, profile: OperationalContextReadMod
   };
 }
 
-function aiApiPreviewRequest(
-  key: 'entity' | 'relations' | 'code-search',
-  label: string,
-  type: string,
-  id: string,
-  profile: OperationalContextReadModelProfile
-) {
-  return {
-    key,
-    label,
-    url: `/api/operational-context/${key}?id=${id}&profile=${profile}`,
-    request: of({
-      contract: `operational-context.${key}`,
-      contractVersion: 1,
-      profile,
-      analysisTarget: { type, id, label: 'App Core' },
-      data: { id },
-      links: [{
-        rel: 'relations',
-        href: `/api/operational-context/read-model/entities/${type}/relations?id=${id}&profile=${profile}`,
-        profile,
-        reason: 'Read compact relation graph.'
-      }],
-      availableExpansions: ['profile=expanded'],
-      suggestedNextReads: ['opctx_get_entity(type=system, id=app-core)'],
-      nextReads: [{
-        label: 'Relations',
-        rel: 'relations',
-        href: `/api/operational-context/read-model/entities/${type}/relations?id=${id}&profile=${profile}`,
-        profile,
-        tool: 'opctx_get_entity',
-        arguments: { type, id, include: ['relations'] },
-        reason: 'Inspect upstream/downstream references.'
-      }],
-      suggestedTools: ['opctx_get_entity'],
-      reasonToExpand: 'Expand only when compact evidence is not enough.',
-      omittedBecause: [],
-      truncation: {
-        truncated: profile === 'default',
-        reason: 'default compact profile',
-        returnedCounts: { items: 1 },
-        omittedCounts: { items: 2 }
-      },
-      relevanceScore: 0.9,
-      confidence: 'high',
-      limitations: [],
-      provenance: { sourceRefCount: 1 },
-      sourceRefs: [],
-      validationFindings: []
-    })
-  };
+function drawerActionLabels(root: HTMLElement): Array<string | null> {
+  return Array.from(
+    root.querySelectorAll('.entity-drawer__actions button') as NodeListOf<HTMLButtonElement>
+  ).map((button) => button.getAttribute('aria-label'));
 }
 
 function installNavigatorClipboard(clipboard: Partial<Clipboard>): void {

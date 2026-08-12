@@ -21,9 +21,9 @@
 
 .entity-drawer__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 18px;
   position: sticky;
   top: -22px;
   z-index: 2;
@@ -40,41 +40,41 @@
 }
 
 .entity-drawer__header h2 {
+  margin-top: 2px;
   font-size: 1.25rem;
   line-height: 1.25;
-}
-
-.entity-drawer__header p:not(.section-eyebrow) {
-  margin-top: 6px;
-  color: var(--text-muted);
 }
 
 .entity-drawer__actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .entity-drawer__action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 10px;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
   color: var(--text-main);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 800;
   cursor: pointer;
 }
 
 .entity-drawer__action:hover:not(:disabled) {
   border-color: rgba(12, 102, 228, 0.32);
+  background: #f7faff;
   color: var(--primary-dark);
+}
+
+.entity-drawer__action:focus-visible {
+  outline: 2px solid rgba(39, 94, 254, 0.35);
+  outline-offset: 2px;
 }
 
 .entity-drawer__action--danger {
@@ -88,12 +88,10 @@
 }
 
 .entity-drawer__action mat-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
-  line-height: 18px;
+  width: 19px;
+  height: 19px;
+  font-size: 19px;
+  line-height: 19px;
 }
 
 .entity-drawer__section {
@@ -101,6 +99,11 @@
   gap: 10px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
+}
+
+.entity-drawer__section--form-preview {
+  padding-top: 0;
+  border-top: 0;
 }
 
 .entity-drawer__section h3 {

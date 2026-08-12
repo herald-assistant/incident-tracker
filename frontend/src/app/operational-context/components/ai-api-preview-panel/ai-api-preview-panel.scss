@@ -80,6 +80,10 @@
   cursor: pointer;
 }
 
+.endpoint-summary--compact {
+  grid-template-columns: minmax(150px, 1fr) auto;
+}
+
 .endpoint-title,
 .preview-section > summary span {
   font-weight: 800;

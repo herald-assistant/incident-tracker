@@ -437,12 +437,11 @@
 
     <app-context-entity-drawer
       [detail]="detail()"
-      [aiApiPreview]="aiApiPreview()"
-      [aiApiPreviewLoading]="aiApiPreviewLoading()"
-      [aiApiPreviewError]="aiApiPreviewError()"
-      [aiApiPreviewProfile]="aiApiPreviewProfile()"
+      [entityPreview]="entityPreview()"
+      [entityPreviewLoading]="entityPreviewLoading()"
+      [entityPreviewError]="entityPreviewError()"
+      [referenceOptions]="referenceOptions()"
       [writable]="selectedEntityWritable()"
-      (aiApiPreviewProfileChange)="loadAiApiPreview($event)"
       (editEntity)="editSelectedEntity()"
       (deleteEntity)="deleteSelectedEntity()"
       (closeDrawer)="closeDrawer()"

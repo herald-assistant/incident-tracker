@@ -238,7 +238,7 @@ describe('ContextStructuredFieldEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('[id^="participant-repo-"]')).toBeNull();
   });
 
-  it('guides CRM match signals by confidence and entity-specific key while preserving extensions', async () => {
+  it('guides CRM recognition signals by confidence and entity-specific key while preserving extensions', async () => {
     const fixture = await createFixture('system', 'matchSignals', {
       exact: { serviceNames: ['crm-contact-service'] },
       strong: { routes: ['/crm/contacts'] },
@@ -523,12 +523,16 @@ describe('ContextStructuredFieldEditorComponent', () => {
     ['process', 'dataAndArtifacts', { inputArtifacts: ['Anonymized CRM request'] }],
     ['repository', 'sourceCoverage', { status: 'partial', scannedSources: ['CRM module'] }],
     ['bounded-context', 'gaps', [{ id: 'crm-gap', summary: 'Confirm CRM boundary.' }]]
-  ] as Array<[OperationalContextWritableType, string, unknown]>)('makes every nested CRM %s.%s label keyboard discoverable', async (type, path, value) => {
+  ] as Array<[OperationalContextWritableType, string, unknown]>)('keeps CRM %s.%s guidance tooltip on the help icon only', async (type, path, value) => {
     const fixture = await createFixture(type, path, value);
     const labels = Array.from(fixture.nativeElement.querySelectorAll('.structured-label')) as HTMLElement[];
+    const helpIcons = Array.from(fixture.nativeElement.querySelectorAll('.structured-label__help')) as HTMLElement[];
     expect(labels.length).toBeGreaterThan(0);
-    expect(labels.every((label) => label.getAttribute('tabindex') === '0')).toBe(true);
-    expect(labels.every((label) => label.querySelector('mat-icon')?.textContent?.includes('help'))).toBe(true);
+    expect(helpIcons.length).toBe(labels.length);
+    expect(labels.every((label) => label.getAttribute('tabindex') === null)).toBe(true);
+    expect(helpIcons.every((icon) => icon.getAttribute('tabindex') === '0')).toBe(true);
+    expect(helpIcons.every((icon) => icon.getAttribute('aria-label') === 'Field guidance')).toBe(true);
+    expect(helpIcons.every((icon) => icon.textContent?.includes('help'))).toBe(true);
   });
 
   it('edits the CRM Git identity while preserving server-owned and future fields in component state', async () => {

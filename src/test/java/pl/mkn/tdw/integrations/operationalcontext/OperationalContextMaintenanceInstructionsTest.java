@@ -103,9 +103,9 @@ class OperationalContextMaintenanceInstructionsTest {
         var guidance = read("operational-context-maintenance/operational-context-field-guidance.md");
         var integrationPrompt = read("operational-context-maintenance/integrations-yml-update-prompt.md");
 
-        assertTrue(guidance.contains("match signals use repeatable confidence/key/value rows"));
+        assertTrue(guidance.contains("recognition signals use repeatable confidence/key/value rows"));
         assertTrue(guidance.contains("relations use repeatable semantic-edge cards"));
-        assertTrue(guidance.contains("Match-signal buckets are `exact`, `strong`, `medium` or `weak`"));
+        assertTrue(guidance.contains("Recognition-signal buckets are `exact`, `strong`, `medium` or `weak`"));
         assertTrue(guidance.contains("canonical `targetType` plus `target`"));
         assertTrue(guidance.contains("Participant-level `repositories` from"));
         assertTrue(integrationPrompt.contains("preserve-only"));

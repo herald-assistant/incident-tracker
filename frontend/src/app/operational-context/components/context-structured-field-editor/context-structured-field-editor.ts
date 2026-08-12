@@ -206,7 +206,7 @@ const FIELD_TOOLTIPS: Record<string, string> = {
   source: 'Describe the durable source that confirms ownership, for example an anonymized CRM domain catalogue. It is shown as provenance.',
   notes: 'Enter one durable clarification per line. Notes are preserved for detailed AI context but do not create ownership or graph edges.',
   systemExternalOwner: 'Enter a durable organization or provider label only when this entire system boundary is operated outside the local team catalogue. opctx_get_entity exposes the label as external responsibility; it never creates local team ownership.',
-  runtimeConfigurationDirectory: 'Enter the repository-relative directory that contains this internal service runtime configuration. Config Drift Viewer uses it to select the configuration scope. Use matchSignals for service or deployment names instead of duplicating them here.',
+  runtimeConfigurationDirectory: 'Enter the repository-relative directory that contains this internal service runtime configuration. Config Drift Viewer uses it to select the configuration scope. Use Recognition signals for service or deployment names instead of duplicating them here.',
   repositoryEvidenceSourceRef: 'Enter a stable relative path or durable document label supporting this repository mapping. The value is exposed as provenance to operators and AI; the application does not read the referenced content automatically.',
   repositoryEvidenceType: 'Classify what the source proves, for example build-definition, module-cluster, repository-documentation or architecture-decision. AI uses the type to interpret provenance; it does not change confidence automatically.',
   repositoryEvidenceNote: 'Optionally summarize the anonymized fact supported by this source. The note is context for operators and AI, not copied source content or proof of a current incident.',
@@ -262,7 +262,7 @@ const FIELD_TOOLTIPS: Record<string, string> = {
   stepType: 'Classify the milestone, for example user-action, business-step, system-step or system-handoff. Runtime exposes the value as relation evidence and AI flow context.',
   stepSummary: 'Describe the observable milestone in business/system language. Runtime indexes the summary and AI uses it to explain what happens at this point.',
   stepReference: 'Select existing catalogue entities directly involved in this milestone. Runtime creates graph edges from the process step and delete impact can use those edges.',
-  stepStrongTerms: 'Enter one durable business phrase per line. The UI stores them as matchSignals.strong.terms; runtime indexes them as strong step search signals for AI and resolvers.',
+  stepStrongTerms: 'Enter one durable business phrase per line. The UI stores them as matchSignals.strong.terms; runtime indexes them as strong recognition signals for AI and resolvers.',
   stepOrder: 'The array order is the process order used by UI and AI. Move the card up or down to change the sequence; IDs remain stable.',
   boundaryBusinessCapability: 'Enter the durable CRM business capability enclosed by this process. Runtime exposes it to AI as the functional scope label; it does not create a separate catalogue entity or ownership assignment.',
   boundaryStartsWhen: 'Enter one observable condition that starts the process per line. AI uses these conditions to recognize the beginning of the functional flow; do not enter low-level method calls unless they are the only durable boundary evidence.',
@@ -340,6 +340,7 @@ export class ContextStructuredFieldEditorComponent {
   readonly entityId = input('');
   readonly value = input<unknown>(null);
   readonly referenceOptions = input<OperationalContextReferenceOptions>({});
+  readonly readonly = input(false);
   readonly valueChange = output<unknown>();
 
   tooltip(key: string): string {

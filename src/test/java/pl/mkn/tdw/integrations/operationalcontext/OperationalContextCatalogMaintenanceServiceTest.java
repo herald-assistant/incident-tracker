@@ -149,6 +149,37 @@ class OperationalContextCatalogMaintenanceServiceTest {
     }
 
     @Test
+    void shouldExposeLegacySystemMatchAsCanonicalRecognitionSignalsForEditing() {
+        try (var harness = harness("crm-legacy-match-signals")) {
+            var current = harness.service().entity("system", "crm-source-system");
+
+            assertFalse(current.payload().containsKey("match"));
+            var matchSignals = (Map<?, ?>) current.payload().get("matchSignals");
+            var strong = (Map<?, ?>) matchSignals.get("strong");
+            assertEquals(List.of("crm-source-service"), strong.get("serviceNames"));
+
+            var replacement = map(
+                    "id", "crm-source-system",
+                    "name", "CRM Source System",
+                    "systemType", "internal-service",
+                    "summary", "Anonymous CRM source service update",
+                    "matchSignals", matchSignals
+            );
+            var updated = harness.service().update(new OperationalContextCatalogMutationCommand(
+                    "system",
+                    "crm-source-system",
+                    replacement
+            ));
+
+            assertFalse(updated.entity().payload().containsKey("match"));
+            assertEquals("Anonymous CRM source service update", updated.entity().payload().get("summary"));
+            var rawSystems = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content("systems.yml");
+            assertFalse(rawSystems.contains("\n    match:\n"));
+            assertTrue(rawSystems.contains("matchSignals:"));
+        }
+    }
+
+    @Test
     void shouldPreserveAnonymousCrmRootMetadataAndUntouchedDocumentsByteForByte() {
         try (var harness = harness("crm-document-boundary")) {
             var before = harness.snapshotStore().currentStoredSnapshot();
@@ -934,6 +965,9 @@ class OperationalContextCatalogMaintenanceServiceTest {
                   - id: crm-source-system
                     name: CRM Source System
                     kind: internal-service
+                    match:
+                      serviceNames:
+                        - crm-source-service
                     xCrmExtension:
                       label: anonymous-crm-extension
                   - id: crm-target-system

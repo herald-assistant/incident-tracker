@@ -26,6 +26,7 @@ export class AiApiPreviewPanelComponent {
   readonly variant = input<'card' | 'section'>('card');
   readonly endpoints = input<OperationalContextAiApiPreviewEndpoint[]>([]);
   readonly profile = input<OperationalContextReadModelProfile>('default');
+  readonly showTarget = input(true);
   readonly loading = input(false);
   readonly error = input('');
   readonly emptyText = input('No AI API preview loaded.');

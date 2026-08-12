@@ -1,15 +1,21 @@
-<aside class="entity-editor" aria-label="Operational context editor">
-  <header class="entity-editor__header">
-    <div>
-      <p class="section-eyebrow">{{ state().mode === 'create' ? 'Add' : 'Edit' }} · {{ state().type }}</p>
-      <h2>{{ state().entity.id || 'New catalogue entry' }}</h2>
-      <small>{{ state().entity.sourceFile || 'New entry in the local catalogue copy' }}</small>
-    </div>
-    <button type="button" class="icon-button" aria-label="Close editor" (click)="cancelEditor.emit()"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button>
-  </header>
+<aside
+  class="entity-editor"
+  [class.entity-editor--panel]="!chrome()"
+  [attr.aria-label]="readonly() ? 'Operational context preview' : 'Operational context editor'"
+>
+  @if (chrome()) {
+    <header class="entity-editor__header">
+      <div>
+        <p class="section-eyebrow">{{ state().mode === 'create' ? 'Add' : 'Edit' }} · {{ state().type }}</p>
+        <h2>{{ state().entity.id || 'New catalogue entry' }}</h2>
+        <small>{{ state().entity.sourceFile || 'New entry in the local catalogue copy' }}</small>
+      </div>
+      <button type="button" class="icon-button" aria-label="Close editor" (click)="cancelEditor.emit()"><mat-icon fontSet="material-symbols-outlined">close</mat-icon></button>
+    </header>
+  }
 
-  @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
-  @if (structuredError()) { <p class="form-error" role="alert">{{ structuredError() }}</p> }
+  @if (!readonly() && error()) { <p class="form-error" role="alert">{{ error() }}</p> }
+  @if (!readonly() && structuredError()) { <p class="form-error" role="alert">{{ structuredError() }}</p> }
 
   <form [formGroup]="form" (ngSubmit)="submit()">
     @for (section of adapter.sections(state().type); track section.title) {
@@ -37,23 +43,26 @@
                   [entityId]="state().entity.id"
                   [value]="structuredValue(field)"
                   [referenceOptions]="referenceOptions()"
+                  [readonly]="readonly()"
                   (valueChange)="updateStructuredField(field, $event)"
                 ></app-context-structured-field-editor>
               } @else if (field.kind === 'textarea' || field.kind === 'list') {
-                <textarea [id]="controlName(field)" rows="3" [formControlName]="controlName(field)" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null"></textarea>
+                <textarea [id]="controlName(field)" rows="3" [formControlName]="controlName(field)" [attr.readonly]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null"></textarea>
               } @else {
-                <input [id]="controlName(field)" type="text" [formControlName]="controlName(field)" [attr.readonly]="state().mode === 'edit' && field.path === 'id' ? true : null" />
+                <input [id]="controlName(field)" type="text" [formControlName]="controlName(field)" [attr.readonly]="readonly() || (state().mode === 'edit' && field.path === 'id') ? true : null" />
               }
               @if (field.help) { <small>{{ field.help }}</small> }
-              @if (controlError(field); as message) { <small class="field-error" [id]="controlName(field) + '-error'">{{ message }}</small> }
+              @if (!readonly() && controlError(field); as message) { <small class="field-error" [id]="controlName(field) + '-error'">{{ message }}</small> }
             </div>
           }
         </div>
       </section>
     }
-    <footer class="entity-editor__footer">
-      <button type="button" class="secondary-button" [disabled]="busy()" (click)="cancelEditor.emit()">Cancel</button>
-      <button type="submit" class="primary-button" [disabled]="busy()">{{ busy() ? 'Saving…' : 'Save' }}</button>
-    </footer>
+    @if (!readonly()) {
+      <footer class="entity-editor__footer">
+        <button type="button" class="secondary-button" [disabled]="busy()" (click)="cancelEditor.emit()">Cancel</button>
+        <button type="submit" class="primary-button" [disabled]="busy()">{{ busy() ? 'Saving…' : 'Save' }}</button>
+      </footer>
+    }
   </form>
 </aside>

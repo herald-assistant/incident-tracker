@@ -107,6 +107,15 @@ describe('OperationalContextFormAdapter', () => {
     expect(adapter.fields('bounded-context').find((field) => field.path === 'gaps')?.kind).toBe('catalog-gaps');
   });
 
+  it('uses the Recognition signals label for the canonical matchSignals payload', () => {
+    for (const type of OPERATIONAL_CONTEXT_WRITABLE_TYPES) {
+      const field = adapter.fields(type).find((field) => field.path === 'matchSignals');
+      if (field) {
+        expect(field.label).toBe('Recognition signals');
+      }
+    }
+  });
+
   it('does not send server-owned CRM Git, participant repository or legacy step fields back to maintenance API', () => {
     const repository = { id: 'crm-contact-repository', name: 'CRM Contact Repository', git: { projectPath: 'crm/contact-service', inferred: true } };
     const repositoryForm = adapter.build('repository', repository);

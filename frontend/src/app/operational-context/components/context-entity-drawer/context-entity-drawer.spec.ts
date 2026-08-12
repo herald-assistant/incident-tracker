@@ -24,6 +24,7 @@ describe('ContextEntityDrawerComponent', () => {
     expect(text).toContain('Customer Consent Domain Owner');
     expect(text).toContain('Resolution path');
     expect(text).toContain('Visibility limits');
+    expect(text).not.toContain('Recognition signals');
     expect(text).not.toContain('[object Object]');
   });
 
@@ -33,12 +34,16 @@ describe('ContextEntityDrawerComponent', () => {
     fixture.componentRef.setInput('detail', { ...entityDetail(), id: 'crm-contact-domain', title: 'CRM Contact Domain' });
     fixture.componentRef.setInput('writable', true);
     fixture.detectChanges();
-    const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Edit');
-    expect(text).toContain('Delete');
-    expect(text).toContain('Copy');
-    expect(text).toContain('Open raw');
-    expect(text).toContain('Close');
+    const labels = Array.from(
+      fixture.nativeElement.querySelectorAll('.entity-drawer__actions button') as NodeListOf<HTMLButtonElement>
+    ).map((button) => button.getAttribute('aria-label'));
+    expect(labels).toEqual([
+      'Edit entity',
+      'Delete entity',
+      'Copy entity detail',
+      'Open raw source',
+      'Close drawer'
+    ]);
   });
 });
 

@@ -145,7 +145,7 @@ boundedContexts:
   accountability.
 - Use `references.terms` for glossary entries that define the local language.
 - Add relations only when they help navigation across contexts.
-- Keep aliases and match signals stable and business-readable.
+- Keep aliases and recognition signals stable and business-readable.
 - Keep repository and module boundaries in the related system-targeted
   code-search scope. Add a bounded-context-targeted scope only when it provides
   useful semantic narrowing or code-to-team attribution for this context and

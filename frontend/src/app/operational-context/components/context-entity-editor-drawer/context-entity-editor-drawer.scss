@@ -1,5 +1,6 @@
 :host { display: block; }
 .entity-editor { position: fixed; inset: 0 0 0 auto; z-index: 1200; width: min(760px, calc(100vw - 36px)); overflow: auto; padding: 20px; background: #fff; border-left: 1px solid var(--border); box-shadow: -20px 0 54px rgba(9, 30, 66, .2); }
+.entity-editor--panel { position: static; inset: auto; z-index: auto; width: auto; overflow: visible; padding: 0; border-left: 0; box-shadow: none; background: transparent; }
 .entity-editor__header { position: sticky; top: -20px; z-index: 2; display: flex; justify-content: space-between; gap: 16px; margin: -20px -20px 16px; padding: 18px 20px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.97); }
 .entity-editor__header h2, .entity-editor__header p { margin: 0; }
 .entity-editor__header small { color: var(--text-soft); }
@@ -14,6 +15,7 @@
 .editor-field__help:hover, .editor-field__help:focus-visible { background: #e8eef8; color: var(--text-main); outline: none; }
 .editor-field__help mat-icon { width: 18px; height: 18px; font-size: 18px; }
 .editor-grid input, .editor-grid textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border-strong); border-radius: 8px; padding: 9px 10px; background: #fff; color: var(--text-main); font: inherit; font-weight: 500; }
+.editor-grid input:disabled, .editor-grid textarea:disabled { border-color: var(--border); background: #f7f9fc; color: var(--text-main); opacity: 1; }
 .editor-grid textarea { resize: vertical; font-family: inherit; }
 .editor-field:has(textarea[rows="7"]) textarea { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .76rem; }
 .editor-field--wide { grid-column: 1 / -1; }

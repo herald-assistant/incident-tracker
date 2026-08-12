@@ -37,7 +37,7 @@ not raw JSON:
 - process steps use ordered milestone cards with canonical reference pickers
   and strong business terms,
 - integration participants use source/target/intermediary/final-target cards,
-- match signals use repeatable confidence/key/value rows with suggestions
+- recognition signals use repeatable confidence/key/value rows with suggestions
   appropriate for the edited entity type,
 - relations use repeatable semantic-edge cards with catalogue target pickers,
   optional integration paths and evidence,
@@ -82,7 +82,7 @@ editable fields until they become part of the documented contract.
   ownership.
 - Reference IDs and typed references must resolve to existing catalogue
   entities and must not create prohibited self-references.
-- Match-signal buckets are `exact`, `strong`, `medium` or `weak`; every signal
+- Recognition-signal buckets are `exact`, `strong`, `medium` or `weak`; every signal
   key contains a non-empty list of non-blank values. Legacy flat signal maps
   remain readable and are written as guided `strong` rows when changed.
 - Bounded-context `localLanguageSummary` is non-blank text or a list of
@@ -377,7 +377,7 @@ Each `repositories` item supports:
 | `criticality` | Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Prioritizes affected functional paths. |
 | `operationalOutcome` | Observable successful business result. | Gives AI a functional completion target. |
 | `participants` | Guided actor lines plus role-specific selectors for existing `primarySystems`, `supportingSystems`, `externalSystems` and `platformComponents`. A system should have one role in a process. | Creates typed system graph edges used by related-entity views, Flow Explorer and AI to reconstruct the functional path. Actors explain human roles but do not create ownership. |
-| `steps` | Ordered cards with a unique lowercase kebab-case `id`, required `name`, optional `type`/`summary`, canonical `references` and optional strong business terms stored as `matchSignals.strong.terms`. | The array order is the process sequence. Step identity, text and match signals are searchable; references create step graph edges and give AI an explainable flow. |
+| `steps` | Ordered cards with a unique lowercase kebab-case `id`, required `name`, optional `type`/`summary`, canonical `references` and optional strong business terms stored as `matchSignals.strong.terms`. | The array order is the process sequence. Step identity, text and recognition signals are searchable; references create step graph edges and give AI an explainable flow. |
 | `processBoundary` | Guided object with optional `businessCapability` and non-blank text lists `startsWhen`, `endsWhen`, `includes`, `excludes`, `assumptions`. Legacy non-blank string/list values remain readable as `endsWhen`. | The full known boundary is indexed and exposed by `opctx_get_entity`; it tells AI where the functional flow starts and ends and which adjacent responsibilities must not be attributed to this process. Assumptions remain explicit limitations, not evidence. |
 | `lifecycle` | Guided object with trigger cards (`type`, `name`, optional `exchange`), `entryCriteria`, `statuses`, transition cards (`from`, `to`, `trigger`), `terminalStates` and success/partial/failed/cancellation outcome lists. Trigger type and name plus transition target and trigger are required. Legacy non-blank string/list values remain readable as `statuses`. | The known lifecycle is indexed and exposed by `opctx_get_entity` so AI can reconstruct state progress and distinguish not-started, in-progress, terminal, failed and cancelled paths. It is descriptive context and never configures an executable workflow engine. |
 | `completionSignals` | Guided non-blank evidence lists `successful`, `partial`, `failed`, `cancelled`. Legacy non-blank string/list values remain readable as `successful`. | Observable evidence categories are indexed and exposed by `opctx_get_entity`; AI compares actual evidence with them but the maintained text alone never proves the current process state or root cause. |

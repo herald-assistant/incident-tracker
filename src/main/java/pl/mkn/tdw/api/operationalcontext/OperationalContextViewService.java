@@ -188,7 +188,7 @@ public class OperationalContextViewService {
                         term.term(),
                         term.category(),
                         term.definition(),
-                        valueAggregate("Match signals", GLOSSARY_TERM, term.id(), term.matchSignals(), "Signals listed on glossary term.", "signal"),
+                        valueAggregate("Recognition signals", GLOSSARY_TERM, term.id(), term.matchSignals(), "Signals listed on glossary term.", "signal"),
                         valueAggregate("Canonical references", GLOSSARY_TERM, term.id(), term.canonicalReferences(), "Canonical references listed on glossary term.", "reference")
                 ))
                 .toList();
@@ -635,7 +635,7 @@ public class OperationalContextViewService {
                         "notes", term.notes()
                 ))),
                 List.of(group("Canonical references", GLOSSARY_TERM, term.canonicalReferences(), "Glossary canonical reference.")),
-                List.of(group("Match signals", "signal", term.matchSignals(), "Glossary match signal.")),
+                List.of(group("Recognition signals", "signal", term.matchSignals(), "Glossary recognition signal.")),
                 explainability(GLOSSARY_TERM, term.id(), "Glossary term from " + sourceFile(GLOSSARY_TERM) + "."),
                 validationFor(GLOSSARY_TERM, term.id(), view.validationFindings()),
                 openQuestionsFor(GLOSSARY_TERM, term.id(), view.openQuestions()),
@@ -883,7 +883,7 @@ public class OperationalContextViewService {
     private ExplainableAggregateDto signalAggregate(String entityType, String entityId, OperationalContextMatchSignals signals) {
         var values = signals.allValues();
         return aggregate(
-                "Match signals",
+                "Recognition signals",
                 values.size(),
                 values.isEmpty() ? "warning" : "info",
                 values.isEmpty() ? "low" : "high",
@@ -898,10 +898,10 @@ public class OperationalContextViewService {
 
     private List<ExplainableBreakdownGroupDto> signalGroups(OperationalContextMatchSignals signals) {
         return nonEmptyGroups(
-                group("Exact", "signal", signals.exact().allValues(), "Exact match signal."),
-                group("Strong", "signal", signals.strong().allValues(), "Strong match signal."),
-                group("Medium", "signal", signals.medium().allValues(), "Medium match signal."),
-                group("Weak", "signal", signals.weak().allValues(), "Weak match signal.")
+                group("Exact", "signal", signals.exact().allValues(), "Exact recognition signal."),
+                group("Strong", "signal", signals.strong().allValues(), "Strong recognition signal."),
+                group("Medium", "signal", signals.medium().allValues(), "Medium recognition signal."),
+                group("Weak", "signal", signals.weak().allValues(), "Weak recognition signal.")
         );
     }
 
