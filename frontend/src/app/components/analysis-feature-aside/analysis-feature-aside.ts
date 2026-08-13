@@ -67,6 +67,10 @@ export class AnalysisFeatureAsideComponent {
     this.activePanel.update((currentPanel) => currentPanel === panel ? null : panel);
   }
 
+  protected closePanel(): void {
+    this.activePanel.set(null);
+  }
+
   protected isLoading(panel: AnalysisFeatureAsidePanel): boolean {
     switch (panel) {
       case 'progress':

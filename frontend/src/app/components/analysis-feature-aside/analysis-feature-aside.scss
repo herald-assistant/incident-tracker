@@ -14,6 +14,8 @@
 }
 
 .analysis-feature-aside {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: var(--analysis-feature-aside-rail-width) minmax(0, 1fr);
   gap: 0;
@@ -24,6 +26,18 @@
   transform: translateX(calc(100% - var(--analysis-feature-aside-rail-width)));
   transition: transform 220ms cubic-bezier(0.2, 0, 0, 1);
   will-change: transform;
+}
+
+.analysis-feature-aside__backdrop {
+  position: fixed;
+  inset: 64px 0 0;
+  z-index: 0;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  pointer-events: auto;
 }
 
 .analysis-feature-aside--open {
@@ -166,6 +180,10 @@
   :host {
     top: 0;
     width: 100vw;
+  }
+
+  .analysis-feature-aside__backdrop {
+    inset: 0;
   }
 
   .analysis-feature-aside {

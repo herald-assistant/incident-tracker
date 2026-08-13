@@ -1,3 +1,12 @@
+@if (activePanel() !== null) {
+  <button
+    class="analysis-feature-aside__backdrop"
+    type="button"
+    aria-label="Zamknij panel pracy analizy"
+    (click)="closePanel()"
+  ></button>
+}
+
 <aside
   class="analysis-feature-aside"
   [class.analysis-feature-aside--open]="activePanel() !== null"
