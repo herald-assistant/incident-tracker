@@ -229,6 +229,10 @@ Zasady granic:
   Shared/operator API dla katalogu modeli i endpointu
   `GET /api/analysis/ai/options`, mapujace platformowy katalog Copilota na
   kontrakt HTTP dla UI.
+- `src/main/java/pl/mkn/tdw/api/aiskills`
+  Shared/operator read-only API efektywnego katalogu runtime skilli dla ekranu
+  `Platform / AI Skills`; nie ujawnia sciezek storage i nie oferuje selekcji
+  ani mutacji per feature.
 - `src/main/java/pl/mkn/tdw/api/operationalcontext`
   Shared/operator API dla katalogu operational context uzywanego przez UI,
   tools, GitLab repository discovery i feature'y.
@@ -278,8 +282,8 @@ Zasady granic:
 - `src/main/java/pl/mkn/tdw/common`
   Male helpery wspolne dla calej aplikacji.
 - `frontend`
-  Zrodlowy workspace Angular dla operatora: glowny incident analysis console
-  oraz widoki pomocnicze `/evidence`, `/database` i `/operational-context`.
+  Zrodlowy workspace Angular dla operatora: feature workspaces, Tool
+  Workbench, ustawienia oraz read-only podglad `/ai-skills`.
 - `src/main/resources/static`
   Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 - `src/main/resources/copilot/skills`

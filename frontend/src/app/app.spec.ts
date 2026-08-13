@@ -334,6 +334,62 @@ describe('App', () => {
     expect(compiled.querySelectorAll('.workspace-settings-field-reset-button')).toHaveLength(11);
   });
 
+  it('should render a deep-linked AI Skill in the Platform shell', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/ai-skills/incident-analysis-orchestrator');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    http.expectOne('/api/ai/skills').flush({
+      contract: 'ai-skills.catalog',
+      version: 1,
+      mode: 'READ_ONLY',
+      source: 'COPILOT_RUNTIME',
+      skillCount: 1,
+      skills: [
+        {
+          name: 'incident-analysis-orchestrator',
+          description: 'Coordinates incident analysis.',
+          lineCount: 120
+        }
+      ]
+    });
+    http.expectOne('/api/ai/skills/incident-analysis-orchestrator').flush({
+      contract: 'ai-skills.detail',
+      version: 1,
+      mode: 'READ_ONLY',
+      source: 'COPILOT_RUNTIME',
+      name: 'incident-analysis-orchestrator',
+      description: 'Coordinates incident analysis.',
+      lineCount: 120,
+      markdown: '# Runtime guidance',
+      rawMarkdown: '---\nname: incident-analysis-orchestrator\n---\n\n# Runtime guidance'
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector(
+      'a.app-shell__nav-item[aria-label="AI Skills"]'
+    );
+
+    expect(compiled.querySelector('app-ai-skills-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
+      'CRM Workspace'
+    );
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'AI Skills'
+    );
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'AI Skills'
+    );
+    expect(compiled.querySelector('.app-shell__info-trigger')).toBeNull();
+    expect(navLink?.getAttribute('aria-current')).toBe('page');
+    expect(compiled.querySelector('.markdown-content')?.textContent).toContain('Runtime guidance');
+  });
+
   it('should send Confluence overrides in the workspace settings update', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);

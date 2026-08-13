@@ -62,6 +62,13 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   CRUD przez UI, a zapis korzysta z walidacji domenowej i atomowej podmiany
   jednego dokumentu. Wynik nie ma storage modes, security gate, rewizji,
   historii ani rollbacku Operational Context.
+- `needs/ai-skills-catalog-preview.md`
+  opisuje potrzebe wygodnego podgladu efektywnego katalogu runtime bez
+  filesystemu, edycji, uruchamiania ani przypisywania skilli per feature.
+- `plans/ai-skills-catalog-preview.md`
+  dokumentuje wykonany read-only MVP L2: immutable projekcje zwalidowanych
+  `SKILL.md`, shared/operator API, ekran `Platform / AI Skills`, deep link,
+  wyszukiwanie, filtry oraz renderowany i surowy Markdown.
 - Config Drift Viewer wraz z Runtime Configuration Tool Workbench jest
   zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
   ograniczenia sa opisane kanonicznie w

@@ -1,0 +1,204 @@
+<div class="page-shell ai-skills-page">
+  <main class="ai-skills-workspace">
+    <section class="ai-skills-status" aria-label="AI Skills catalog status">
+      <div class="ai-skills-status__item">
+        <span class="material-symbols-outlined" aria-hidden="true">deployed_code</span>
+        <div>
+          <span>Source</span>
+          <strong>Effective runtime catalog</strong>
+        </div>
+      </div>
+      <div class="ai-skills-status__item">
+        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+        <div>
+          <span>Access</span>
+          <strong>Read-only</strong>
+        </div>
+      </div>
+      <div class="ai-skills-status__item">
+        <span class="material-symbols-outlined" aria-hidden="true">auto_stories</span>
+        <div>
+          <span>Skills</span>
+          <strong>{{ catalog()?.skillCount ?? '—' }}</strong>
+        </div>
+      </div>
+      <div class="ai-skills-status__item">
+        <span class="material-symbols-outlined" aria-hidden="true">description</span>
+        <div>
+          <span>Format</span>
+          <strong>SKILL.md</strong>
+        </div>
+      </div>
+    </section>
+
+    @if (!selectedSkillName()) {
+      <section class="ai-skills-panel" aria-labelledby="aiSkillsCatalogTitle">
+        <div class="ai-skills-panel__header">
+          <div>
+            <p class="section-eyebrow">Runtime catalog</p>
+            <h2 id="aiSkillsCatalogTitle">Available AI Skills</h2>
+            <p>
+              Browse the instructions available to Copilot sessions. Workflow and responsibility
+              labels are navigation aids; feature prompts still decide how skills are used.
+            </p>
+          </div>
+        </div>
+
+        <div class="ai-skills-filter-row">
+          <label class="field-control" for="aiSkillsSearch">
+            <span class="field-label">Search</span>
+            <span class="ai-skills-search-control">
+              <span class="material-symbols-outlined" aria-hidden="true">search</span>
+              <input
+                id="aiSkillsSearch"
+                class="text-input"
+                type="search"
+                placeholder="Name or description"
+                autocomplete="off"
+                [formControl]="searchControl"
+              />
+            </span>
+          </label>
+
+          <label class="field-control" for="aiSkillsResponsibility">
+            <span class="field-label">Responsibility</span>
+            <select
+              id="aiSkillsResponsibility"
+              class="select-input"
+              [formControl]="responsibilityControl"
+            >
+              <option value="all">All responsibilities</option>
+              @for (responsibility of responsibilities(); track responsibility) {
+                <option [value]="responsibility">{{ responsibility }}</option>
+              }
+            </select>
+          </label>
+
+          <div class="ai-skills-count" aria-live="polite">{{ resultCountLabel() }}</div>
+        </div>
+
+        <div class="ai-skills-family-filters" aria-label="Filter skills by workflow">
+          @for (family of familyFilters(); track family.id) {
+            <button
+              type="button"
+              [class.ai-skills-family-filter--active]="familyFilter() === family.id"
+              [attr.aria-pressed]="familyFilter() === family.id"
+              (click)="setFamilyFilter(family.id)"
+            >
+              <span>{{ family.label }}</span>
+              <span class="ai-skills-family-filter__count">{{ family.count }}</span>
+            </button>
+          }
+        </div>
+
+        @if (catalogError()) {
+          <div class="ai-skills-state ai-skills-state--error">
+            <span class="material-symbols-outlined" aria-hidden="true">error</span>
+            <h3>Catalog unavailable</h3>
+            <p class="form-error">{{ catalogError() }}</p>
+            <button class="secondary-button" type="button" (click)="loadCatalog()">
+              <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+              <span>Try again</span>
+            </button>
+          </div>
+        } @else if (isCatalogLoading()) {
+          <div class="ai-skills-state" aria-live="polite">
+            <span class="ai-skills-spinner" aria-hidden="true"></span>
+            <p>Loading runtime catalog...</p>
+          </div>
+        } @else if (!skills().length) {
+          <div class="ai-skills-state">
+            <span class="material-symbols-outlined" aria-hidden="true">auto_stories</span>
+            <h3>No skills available</h3>
+            <p>The effective runtime catalog is empty.</p>
+          </div>
+        } @else if (!filteredSkills().length) {
+          <div class="ai-skills-state">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+            <h3>No matching skills</h3>
+            <p>Change the search text, workflow or responsibility filter.</p>
+          </div>
+        } @else {
+          <div class="ai-skills-list" aria-label="Available AI Skills">
+            @for (skill of filteredSkills(); track trackSkill($index, skill)) {
+              <a class="ai-skills-row" [routerLink]="['/ai-skills', skill.name]">
+                <span class="ai-skills-row__icon material-symbols-outlined" aria-hidden="true">
+                  auto_stories
+                </span>
+                <span class="ai-skills-row__content">
+                  <strong>{{ skill.name }}</strong>
+                  <span class="ai-skills-row__description">{{ skill.description }}</span>
+                  <span class="ai-skills-row__meta">
+                    <span>{{ familyLabel(skill.name) }}</span>
+                    <span>{{ responsibilityLabel(skill.name) }}</span>
+                    <span>{{ skill.lineCount }} lines</span>
+                  </span>
+                </span>
+                <span class="ai-skills-row__open material-symbols-outlined" aria-hidden="true">
+                  chevron_right
+                </span>
+              </a>
+            }
+          </div>
+        }
+      </section>
+    } @else {
+      <section class="ai-skills-panel ai-skills-detail" aria-labelledby="aiSkillDetailTitle">
+        <div class="ai-skills-detail__toolbar">
+          <a class="secondary-button" routerLink="/ai-skills">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <span>Catalog</span>
+          </a>
+          @if (detail()) {
+            <div class="ai-skills-detail__actions">
+              <button class="secondary-button" type="button" (click)="toggleRawView()">
+                <span class="material-symbols-outlined" aria-hidden="true">
+                  {{ rawView() ? 'article' : 'code' }}
+                </span>
+                <span>{{ rawView() ? 'Rendered' : 'Raw' }}</span>
+              </button>
+              <button class="secondary-button" type="button" (click)="copySource()">
+                <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                <span>{{ copyMessage() || 'Copy source' }}</span>
+              </button>
+            </div>
+          }
+        </div>
+
+        @if (detailError()) {
+          <div class="ai-skills-state ai-skills-state--error">
+            <span class="material-symbols-outlined" aria-hidden="true">error</span>
+            <h3>Skill unavailable</h3>
+            <p class="form-error">{{ detailError() }}</p>
+            <a class="secondary-button" routerLink="/ai-skills">Back to catalog</a>
+          </div>
+        } @else if (isDetailLoading()) {
+          <div class="ai-skills-state" aria-live="polite">
+            <span class="ai-skills-spinner" aria-hidden="true"></span>
+            <p>Loading skill...</p>
+          </div>
+        } @else if (detail(); as skill) {
+          <header class="ai-skills-detail__header">
+            <p class="section-eyebrow">AI Skill</p>
+            <h2 id="aiSkillDetailTitle">{{ skill.name }}</h2>
+            <p>{{ skill.description }}</p>
+            <div class="ai-skills-detail__meta">
+              <span>{{ familyLabel(skill.name) }}</span>
+              <span>{{ responsibilityLabel(skill.name) }}</span>
+              <span>{{ skill.lineCount }} lines</span>
+              <span>Read-only</span>
+            </div>
+          </header>
+
+          <div class="ai-skills-detail__content">
+            @if (rawView()) {
+              <pre class="ai-skills-raw"><code>{{ skill.rawMarkdown }}</code></pre>
+            } @else {
+              <app-markdown-content [content]="skill.markdown" />
+            }
+          </div>
+        }
+      </section>
+    }
+  </main>
+</div>

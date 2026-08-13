@@ -43,6 +43,15 @@ class CopilotSkillRuntimeLoaderTest {
                 "change-verification-orchestrator",
                 "config-drift-viewer-deep-review"
         )));
+        var skill = loader.availableSkills().stream()
+                .filter(candidate -> candidate.name().equals("incident-analysis-orchestrator"))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(skill.description().startsWith("Glowny starter analizy incydentu"));
+        assertTrue(skill.markdown().contains("# Skill Orkiestratora Analizy Incydentu"));
+        assertFalse(skill.markdown().contains("name: incident-analysis-orchestrator"));
+        assertTrue(skill.rawMarkdown().startsWith("---\n"));
+        assertEquals(Math.toIntExact(skill.rawMarkdown().lines().count()), skill.lineCount());
     }
 
     @Test

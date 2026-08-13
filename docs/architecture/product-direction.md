@@ -37,9 +37,10 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
   i Operational Context. Te widoki sluza do testow, debugowania i recznego
   zebrania inputu; nie sa osobnymi feature'ami produktowymi ani nie powinny
   niesc logiki incydentu.
-- `Platform` - startowy overview Team Delivery Workspace oraz customizacja:
-  parametryzacja workspace'u, personalizacja, autentykacja, konfiguracja
-  modeli i inne ustawienia platformy.
+- `Platform` - startowy overview Team Delivery Workspace, customizacja oraz
+  podglad platformowych zasobow: parametryzacja workspace'u, read-only katalog
+  `AI Skills`, personalizacja, autentykacja, konfiguracja modeli i inne
+  ustawienia platformy.
 
 Topbar jest kontekstowy: pokazuje aktualny widok, breadcrumb i ewentualny
 skompresowany `capabilityInfo` pod ikona info. Nie jest glowna nawigacja.

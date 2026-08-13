@@ -56,9 +56,9 @@ Decyzje:
   `Database Tools` i `Operational Context`.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
-- `Platform` dotyczy overview i customizacji Team Delivery Workspace:
-  workspace settings, personalizacji, autentykacji, konfiguracji modeli i
-  podobnych ustawien.
+- `Platform` dotyczy overview, customizacji i podgladu zasobow Team Delivery
+  Workspace: workspace settings, read-only katalogu `AI Skills`,
+  personalizacji, autentykacji, konfiguracji modeli i podobnych ustawien.
 - Zakres Workspace Settings obejmuje `app.ui.title`, podstawowe connection
   settings Jiry (`analysis.jira.base-url`, `analysis.jira.token`) i Confluence
   (`analysis.confluence.base-url`, `analysis.confluence.token`) oraz GitLaba
@@ -217,6 +217,13 @@ Skill przechowuje stale zasady pracy modelu. Dane konkretnego incydentu
 niesie prompt i artefakty przygotowane w runtime. Feature posiada tresc i
 workflow swoich skilli oraz wskazuje starter w prompcie; nie przekazuje
 platformie katalogow ani listy wybranych nazw.
+
+Platforma wystawia operatorowi read-only projekcje tego samego zwalidowanego
+katalogu przez `GET /api/ai/skills` i `GET /api/ai/skills/{skillName}` oraz
+ekran `Platform / AI Skills`. Lista nie jest alternatywnym source of truth:
+nie zapisuje danych, nie uruchamia skilla, nie przypisuje go per feature i nie
+ujawnia sciezki filesystemu. Workflow i responsibility widoczne w UI sa
+pomocnicza projekcja nawigacyjna, a nie runtime selection.
 
 ## 6. Granica AI pozostaje generyczna
 

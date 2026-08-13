@@ -51,6 +51,28 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'ai-skills/:skillName',
+        loadComponent: () =>
+          import('./features/ai-skills/pages/ai-skills-page/ai-skills-page').then(
+            (module) => module.AiSkillsPageComponent
+          ),
+        data: {
+          section: 'Platform',
+          title: 'AI Skills'
+        }
+      },
+      {
+        path: 'ai-skills',
+        loadComponent: () =>
+          import('./features/ai-skills/pages/ai-skills-page/ai-skills-page').then(
+            (module) => module.AiSkillsPageComponent
+          ),
+        data: {
+          section: 'Platform',
+          title: 'AI Skills'
+        }
+      },
+      {
         path: 'flow-explorer',
         loadComponent: () =>
           import('./features/flow-explorer/pages/flow-explorer-page/flow-explorer-page').then(

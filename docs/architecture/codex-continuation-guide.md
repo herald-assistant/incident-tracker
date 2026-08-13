@@ -104,7 +104,9 @@ komponentu innego feature'a tylko dlatego, ze wyglada podobnie.
 - `src/main/resources/copilot/skills`
   zrodlo skilli pakowanych do runtime. Przy starcie platforma odtwarza ich
   pelny mirror pod `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
-  `tdw-data/copilot/skills`. Tresc procedur pozostaje po polsku.
+  `tdw-data/copilot/skills`. Tresc procedur pozostaje po polsku. Read-only
+  projekcja dla operatora jest wystawiana przez `api.aiskills`; nie czytaj
+  dowolnej sciezki z requestu i nie dodawaj tutaj mutacji.
 - `src/main/resources/operational-context`
   katalog systemow, procesow, bounded contexts, repozytoriow i handoffow.
 - `src/main/resources/static`
@@ -139,6 +141,11 @@ wszystkie podkatalogi skilli z `SKILL.md`. Feature nie przekazuje katalogow ani
 podzbioru nazw skilli. Runtime przekazuje do `MessageOptions` tylko wykonany
 prompt. Zmiana delivery mode, session semantics, allowlisty albo hidden scope
 jest zmiana architektoniczna i wymaga planu, testow oraz rollbacku.
+
+Ekran `frontend/src/app/features/ai-skills` korzysta z
+`GET /api/ai/skills` oraz `GET /api/ai/skills/{skillName}`. Pomocnicze etykiety
+workflow/responsibility sa frontendowa projekcja UX z fallbackiem `Other` /
+`Guidance`; nie moga stac sie kontraktem wyboru skilli dla feature'a.
 
 ## Weryfikacja
 
