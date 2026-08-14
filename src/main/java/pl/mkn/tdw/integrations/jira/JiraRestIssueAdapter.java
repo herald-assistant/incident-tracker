@@ -25,35 +25,33 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
 
     @Override
     public JiraIssueMaterial getIssueMaterial(String issueKey) {
-        return getIssueMaterial(issueKey, true, true, null);
+        return getIssueMaterial(JiraIssueMaterialRequest.detailed(issueKey), null);
     }
 
-    private JiraIssueMaterial getIssueMaterial(
-            String issueKey,
-            boolean includeSubTasks,
-            boolean includeParent,
-            String excludedSubTaskKey
-    ) {
-        if (!StringUtils.hasText(issueKey)) {
-            throw new IllegalArgumentException("issueKey must not be blank");
-        }
+    @Override
+    public JiraIssueMaterial getIssueMaterial(JiraIssueMaterialRequest request) {
+        return getIssueMaterial(request, null);
+    }
+
+    private JiraIssueMaterial getIssueMaterial(JiraIssueMaterialRequest request, String excludedSubTaskKey) {
+        var issueKey = request.issueKey();
 
         try {
-            var issue = fetchIssue(issueKey.trim());
-            var remoteLinks = fetchRemoteLinks(issueKey.trim());
-            return toMaterial(issueKey.trim(), issue, remoteLinks, includeSubTasks, includeParent, excludedSubTaskKey);
+            var issue = fetchIssue(request);
+            var remoteLinks = request.includeRemoteLinks() ? fetchRemoteLinks(issueKey) : List.<JiraIssueLink>of();
+            return toMaterial(request, issue, remoteLinks, excludedSubTaskKey);
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() == 404) {
-                return missingIssue(issueKey.trim());
+                return missingIssue(issueKey);
             }
             throw new IllegalStateException("Jira issue material request failed for " + issueKey, exception);
         }
     }
 
-    private JsonNode fetchIssue(String issueKey) {
+    private JsonNode fetchIssue(JiraIssueMaterialRequest request) {
         return restClientFactory.create()
                 .get()
-                .uri(issueUri(issueKey))
+                .uri(issueUri(request))
                 .retrieve()
                 .body(JsonNode.class);
     }
@@ -79,24 +77,27 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
     }
 
     private JiraIssueMaterial toMaterial(
-            String issueKey,
+            JiraIssueMaterialRequest request,
             JsonNode issue,
             List<JiraIssueLink> remoteLinks,
-            boolean includeSubTasks,
-            boolean includeParent,
             String excludedSubTaskKey
     ) {
+        var issueKey = request.issueKey();
         var fields = issue != null ? issue.path("fields") : null;
         var links = new ArrayList<JiraIssueLink>();
-        links.addAll(issueLinks(fields != null ? fields.path("issuelinks") : null));
+        if (request.includeIssueLinks()) {
+            links.addAll(issueLinks(fields != null ? fields.path("issuelinks") : null));
+        }
         links.addAll(remoteLinks);
 
         var limitations = new ArrayList<String>();
-        var parentIssue = includeParent ? parentIssue(issueKey, fields, limitations) : null;
-        var subTasks = includeSubTasks
+        var parentIssue = request.includeParent() ? parentIssue(issueKey, fields, limitations) : null;
+        var subTasks = request.includeSubTasks()
                 ? subTasks(fields != null ? fields.path("subtasks") : null, limitations, excludedSubTaskKey)
                 : List.<JiraIssueMaterial>of();
-        var confluencePages = confluencePages(remoteLinks, limitations);
+        var confluencePages = request.includeConfluencePages()
+                ? confluencePages(remoteLinks, limitations)
+                : List.<JiraConfluencePage>of();
         if (issue == null || issue.isMissingNode() || issue.isNull()) {
             limitations.add("Jira returned an empty issue body.");
         }
@@ -120,7 +121,9 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                 subTasks,
                 parentIssue,
                 confluencePages,
-                comments(fields != null ? fields.path("comment").path("comments") : null),
+                request.includeComments()
+                        ? comments(fields != null ? fields.path("comment").path("comments") : null)
+                        : List.of(),
                 limitations
         );
     }
@@ -155,7 +158,15 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
             return null;
         }
         try {
-            return getIssueMaterial(parentKey, true, false, targetIssueKey);
+            return getIssueMaterial(new JiraIssueMaterialRequest(
+                    parentKey,
+                    true,
+                    true,
+                    true,
+                    true,
+                    false,
+                    true
+            ), targetIssueKey);
         } catch (RuntimeException exception) {
             limitations.add("Jira parent issue " + parentKey + " could not be fetched: " + safeMessage(exception));
             return null;
@@ -191,7 +202,15 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                 continue;
             }
             try {
-                values.add(getIssueMaterial(subTaskKey, false, false, null));
+                values.add(getIssueMaterial(new JiraIssueMaterialRequest(
+                        subTaskKey,
+                        true,
+                        true,
+                        true,
+                        false,
+                        false,
+                        true
+                ), null));
             } catch (RuntimeException exception) {
                 limitations.add("Jira subtask " + subTaskKey + " could not be fetched: " + safeMessage(exception));
             }
@@ -375,13 +394,25 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
         return trimmed.length() > maxCharacters ? trimmed.substring(0, maxCharacters) : trimmed;
     }
 
-    private URI issueUri(String issueKey) {
+    private URI issueUri(JiraIssueMaterialRequest request) {
         var fields = new LinkedHashSet<String>();
-        fields.addAll(List.of("summary", "description", "status", "issuetype", "labels", "issuelinks", "subtasks", "parent", "comment"));
+        fields.addAll(List.of("summary", "description", "status", "issuetype", "labels"));
+        if (request.includeIssueLinks()) {
+            fields.add("issuelinks");
+        }
+        if (request.includeSubTasks()) {
+            fields.add("subtasks");
+        }
+        if (request.includeParent()) {
+            fields.add("parent");
+        }
+        if (request.includeComments()) {
+            fields.add("comment");
+        }
         fields.addAll(properties.getAcceptanceCriteriaFieldIds());
 
         return URI.create(apiBaseUrl()
-                + "/issue/" + encodePathSegment(issueKey)
+                + "/issue/" + encodePathSegment(request.issueKey())
                 + "?fields=" + encodeQueryParam(String.join(",", fields)));
     }
 

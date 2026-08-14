@@ -3,6 +3,11 @@ export const AI_SKILL_FAMILIES = [
   { id: 'flow-explorer', label: 'Flow Explorer', prefix: 'flow-explorer-' },
   { id: 'change-verification', label: 'Change Verification', prefix: 'change-verification-' },
   { id: 'config-drift-viewer', label: 'Config Drift Viewer', prefix: 'config-drift-viewer-' },
+  {
+    id: 'delivery-effectiveness-assessment',
+    label: 'Delivery Effectiveness Assessment',
+    prefix: 'delivery-effectiveness-assessment-'
+  },
   { id: 'other', label: 'Other', prefix: '' }
 ] as const;
 
@@ -31,6 +36,9 @@ export function aiSkillResponsibility(skillName: string): string {
   }
   if (skillName.includes('discovery')) {
     return 'Discovery';
+  }
+  if (skillName.includes('evaluator')) {
+    return 'Assessment';
   }
   if (skillName.includes('check') || skillName.includes('review')) {
     return 'Verification';

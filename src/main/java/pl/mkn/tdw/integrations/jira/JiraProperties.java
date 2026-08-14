@@ -21,4 +21,6 @@ public class JiraProperties {
     private int maxRemoteLinks = 50;
     private int maxSubTasks = 20;
     private int maxTextCharacters = 12_000;
+    private int maxChangelogEntries = 500;
+    private int maxStatusLookups = 100;
 }

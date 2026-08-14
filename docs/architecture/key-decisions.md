@@ -862,3 +862,32 @@ jeden logiczny dokument, ktory jest podmieniany atomowo po walidacji. Backup i
 odzyskanie poprzedniego stanu sa odpowiedzialnoscia uzytkownika. Deployment
 wspoldzielony albo sieciowy wymaga osobnej decyzji obejmujacej security,
 concurrency i persistence.
+
+## 28. Delivery Effectiveness Assessment rozdziela discovery, interpretacje i scoring
+
+Operator podaje typowane kryteria `projectKey`, `fromDate` i `toDate`, a nie
+surowy JQL. Reusable adapter Jira mapuje je na ograniczone zapytanie JQL,
+pobiera issues oraz historie statusow, natomiast feature rozstrzyga semantyke
+okna czasowego. Do analizy trafia tylko issue, ktore nadal jest Done i ktorego
+ostatnie przejscie do Done miesci sie w zadanym oknie w skonfigurowanej strefie
+czasowej.
+
+Run jest zapisywany przed uruchomieniem pracy asynchronicznej, dzieki czemu od
+razu pojawia sie w `Analysis History`. Kolejne snapshoty aktualizuja ten sam
+rekord w shared `/analysis/runs`; restart UI odtwarza live job przez
+`localRunId`, ale MVP nie wznawia przerwanej pracy backendu.
+
+Delivery Unit jest deterministycznym komponentem spojnym grafu Jira issue i
+merged Merge Requestow. AI ocenia jedna jednostke na podstawie ograniczonego
+evidence packetu i zwraca tylko szesc wymiarow `0-4`, confidence, rationale
+oraz gaps. Istniejace Story Points, worklogi, komentarze i dane osobowe nie sa
+przekazywane do AI. Backend wylicza wynik na skali `0/1/2/3/5/8/13`, deduplikuje
+jednostki i agreguje sume. Braki danych, limity i lokalne awarie pozostaja
+jawne zamiast byc zastapione estymacja.
+
+Znaczenie skali `0-4` nie jest pozostawione intuicji modelu. Kazdy wymiar ma
+w runtime skillu osobne kotwice behawioralne `0/2/4`, a `1/3` sa poziomami
+posrednimi. Kazdy niezerowy wynik wymaga referencji do artifactu i
+obserwowanego faktu; parser odrzuca odpowiedz bez takiego pokrycia. Syntetyczne
+przypadki kalibracyjne stabilizuja skale bez uczenia jej na historycznych Story
+Points.

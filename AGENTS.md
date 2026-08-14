@@ -44,7 +44,9 @@ Przed wieksza zmiana zacznij od:
     wspolnego
 10. `docs/architecture/config-drift-viewer-runtime-flow.md`
     dla zmian Config Drift Viewer
-11. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
+11. `docs/architecture/delivery-effectiveness-assessment-runtime-flow.md`
+    dla zmian Delivery Effectiveness Assessment
+12. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
 
 ## Najwazniejsze niezmienniki
@@ -268,6 +270,10 @@ Zasady granic:
   Feature porownania runtime configuration pomiedzy branchami: named GitLab
   source, deterministyczny parsing/diff, sanitizowana druga opinia AI,
   ograniczony `DEEP`, job API, historia/import-export i report.
+- `src/main/java/pl/mkn/tdw/features/deliveryeffectivenessassessment`
+  Feature oceny dostarczonej zlozonosci: typed Jira JQL i status history,
+  Delivery Units issue-MR, bounded evidence, rownolegle sesje Copilota,
+  deterministyczny scoring oraz czastkowy zapis w Analysis History.
 - `src/main/java/pl/mkn/tdw/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`

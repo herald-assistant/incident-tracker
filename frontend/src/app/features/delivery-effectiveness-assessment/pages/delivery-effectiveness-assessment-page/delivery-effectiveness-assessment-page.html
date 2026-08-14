@@ -1,0 +1,379 @@
+<div class="page-shell delivery-assessment-page">
+  <main class="delivery-assessment-workspace" aria-labelledby="deliveryAssessmentTitle">
+    <section class="delivery-assessment-composer analysis-card">
+      <div class="section-heading">
+        <div>
+          <p class="section-eyebrow">Delivery portfolio</p>
+          <h2 id="deliveryAssessmentTitle">Delivery Effectiveness Assessment</h2>
+        </div>
+        @if (localRunName()) {
+          <span class="local-run-badge">
+            <span class="material-symbols-outlined" aria-hidden="true">history</span>
+            {{ localRunName() }}
+          </span>
+        }
+      </div>
+
+      <div class="assessment-form-grid">
+        <label class="field-control">
+          <span class="field-label">Projekt Jira</span>
+          <input
+            class="text-input"
+            type="text"
+            maxlength="50"
+            spellcheck="false"
+            placeholder="np. CRM"
+            [formControl]="jiraProjectControl"
+          />
+        </label>
+
+        <label class="field-control">
+          <span class="field-label">Od</span>
+          <input class="text-input" type="date" [formControl]="fromDateControl" />
+        </label>
+
+        <label class="field-control">
+          <span class="field-label">Do</span>
+          <input class="text-input" type="date" [formControl]="toDateControl" />
+        </label>
+
+        <label class="field-control">
+          <span class="field-label">Model AI</span>
+          <span class="select-loading-control">
+            <select class="select-input" [formControl]="aiModelControl">
+              @for (option of aiModelOptions(); track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            @if (aiOptionsLoading()) {
+              <span class="runtime-spinner" aria-hidden="true"></span>
+            }
+          </span>
+        </label>
+
+        @if (reasoningEffortOptions().length) {
+          <label class="field-control">
+            <span class="field-label">Reasoning effort</span>
+            <select class="select-input" [formControl]="reasoningEffortControl">
+              @for (effort of reasoningEffortOptions(); track effort) {
+                <option [value]="effort">{{ statusLabel(effort) }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        <div class="composer-action">
+          <button
+            type="button"
+            class="primary-button"
+            [class.is-loading]="submitting()"
+            [disabled]="!canStart()"
+            (click)="startJob()"
+          >
+            @if (submitting()) {
+              <span class="button-spinner" aria-hidden="true"></span>
+            } @else {
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+            }
+            <span class="button-label">Rozpocznij</span>
+          </button>
+        </div>
+      </div>
+
+      @if (githubAuthStatus()?.mode === 'GITHUB_APP' && (!githubAuthStatus()?.connected || githubAuthStatus()?.reauthRequired)) {
+        <div class="runtime-message runtime-message--warning" role="status">
+          <span>{{ githubAuthStatus()?.reauthRequired ? 'Połączenie GitHub wymaga odnowienia.' : 'Połącz GitHub przed uruchomieniem analizy.' }}</span>
+          <button type="button" class="secondary-button" (click)="connectGithub()">
+            <span class="material-symbols-outlined" aria-hidden="true">login</span>
+            Połącz
+          </button>
+        </div>
+      }
+
+      @if (aiOptionsError() || githubAuthError()) {
+        <div class="runtime-message runtime-message--warning" role="status">
+          {{ aiOptionsError() || githubAuthError() }}
+        </div>
+      }
+
+      @if (jobError()) {
+        <div class="runtime-message runtime-message--error" role="alert">{{ jobError() }}</div>
+      }
+    </section>
+
+    @if (job(); as currentJob) {
+      <section class="run-strip analysis-card" aria-live="polite">
+        <div class="run-strip__heading">
+          <div>
+            <p class="section-eyebrow">{{ currentJob.jiraProject }} · {{ currentJob.fromDate }} – {{ currentJob.toDate }}</p>
+            <h2>{{ currentJob.currentStepLabel || statusLabel(currentJob.status) }}</h2>
+          </div>
+          <span [attr.class]="statusClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <span [style.width.%]="progressPercent()"></span>
+        </div>
+        <div class="run-strip__meta">
+          <span>{{ currentJob.processedIssues }} / {{ currentJob.totalIssues || currentJob.discoveredIssues }} issue</span>
+          <span>{{ currentJob.units.length }} jednostek</span>
+          <span>Aktualizacja {{ dateTime(currentJob.updatedAt) }}</span>
+        </div>
+      </section>
+
+      @if (currentJob.aggregate; as aggregate) {
+        <section class="aggregate-band" aria-label="Podsumowanie assessmentu">
+          <div class="aggregate-primary">
+            <span class="material-symbols-outlined" aria-hidden="true">speed</span>
+            <div>
+              <strong>{{ aggregate.totalDeliveredStoryPoints }}</strong>
+              <span>Delivered Story Points</span>
+            </div>
+          </div>
+          <dl class="aggregate-metrics">
+            <div>
+              <dt>Coverage</dt>
+              <dd>{{ percent(aggregate.coverage) }}</dd>
+            </div>
+            <div>
+              <dt>Confidence</dt>
+              <dd>{{ statusLabel(aggregate.confidence) }}</dd>
+            </div>
+            <div>
+              <dt>Ocenione</dt>
+              <dd>{{ aggregate.assessedUnits }} / {{ aggregate.totalUnits }}</dd>
+            </div>
+            <div>
+              <dt>Brak podstaw</dt>
+              <dd>{{ aggregate.notScorableUnits }}</dd>
+            </div>
+            <div>
+              <dt>Błędy</dt>
+              <dd>{{ aggregate.failedUnits }}</dd>
+            </div>
+          </dl>
+          <div class="distribution" aria-label="Rozkład punktów">
+            @for (entry of distributionEntries(aggregate.distribution); track entry.points) {
+              <span><strong>{{ entry.points }}</strong><small>{{ entry.count }}</small></span>
+            }
+          </div>
+        </section>
+      }
+
+      <section class="units-section">
+        <div class="units-heading">
+          <div>
+            <p class="section-eyebrow">Delivery Units</p>
+            <h2>Jednostki dostarczenia</h2>
+          </div>
+          <span>{{ currentJob.units.length }}</span>
+        </div>
+
+        <div class="units-table" role="table" aria-label="Delivery Units">
+          <div class="units-table__header" role="row">
+            <span role="columnheader">Issue</span>
+            <span role="columnheader">Merge Requests</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader">DSP</span>
+            <span role="columnheader"></span>
+          </div>
+          @for (unit of currentJob.units; track trackUnit($index, unit)) {
+            <article class="unit-row" role="row">
+              <div class="unit-row__summary">
+                <div class="unit-row__issues" role="cell">
+                  @for (issue of unit.issues; track issue.issueKey) {
+                    <a [href]="issue.issueUrl" target="_blank" rel="noreferrer">{{ issue.issueKey }}</a>
+                  }
+                  <small>{{ unit.issues[0]?.summary || unit.unitId }}</small>
+                </div>
+                <div class="unit-row__mrs" role="cell">
+                  <strong>{{ unit.mergeRequests.length }}</strong>
+                  <small>{{ unit.mergeRequests[0]?.projectPath || 'Brak merged code evidence' }}</small>
+                </div>
+                <div role="cell">
+                  <span [attr.class]="statusClass(unit.status)">{{ statusLabel(unit.status) }}</span>
+                </div>
+                <div class="unit-row__points" role="cell">
+                  <strong>{{ unit.assessment?.deliveredStoryPoints ?? '—' }}</strong>
+                  @if (unit.assessment) {
+                    <small>{{ unit.assessment.score100 | number:'1.0-1' }}/100</small>
+                  }
+                </div>
+                <button
+                  type="button"
+                  class="icon-button"
+                  [attr.aria-label]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
+                  [matTooltip]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
+                  (click)="toggleUnit(unit.unitId)"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ isUnitExpanded(unit.unitId) ? 'expand_less' : 'expand_more' }}
+                  </span>
+                </button>
+              </div>
+
+              @if (isUnitExpanded(unit.unitId)) {
+                <div class="unit-details">
+                  @if (unit.assessment; as assessment) {
+                    <section class="dimension-panel">
+                      <header>
+                        <h3>Wymiary oceny</h3>
+                        <span>Confidence {{ percent(assessment.confidence) }}</span>
+                      </header>
+                      <div class="dimension-grid">
+                        @for (dimension of dimensions(assessment.dimensions); track dimension.label) {
+                          <div>
+                            <span>{{ dimension.label }}</span>
+                            <strong>{{ dimension.value }} / 4</strong>
+                            <span class="dimension-track"><i [style.width.%]="dimension.value * 25"></i></span>
+                          </div>
+                        }
+                      </div>
+                    </section>
+
+                    <section class="evidence-panel">
+                      <div>
+                        <h3>Evidence</h3>
+                        <ul>
+                          @for (item of assessment.evidenceSummary; track item) {
+                            <li>{{ item }}</li>
+                          } @empty {
+                            <li>Brak podsumowania evidence.</li>
+                          }
+                        </ul>
+                      </div>
+                      <div>
+                        <h3>Quality flags</h3>
+                        <ul>
+                          @for (flag of assessment.qualityFlags; track flag) {
+                            <li>{{ flag }}</li>
+                          } @empty {
+                            <li>Brak flag jakości.</li>
+                          }
+                        </ul>
+                      </div>
+                    </section>
+                  }
+
+                  <section class="source-panel">
+                    <div>
+                      <h3>Jira</h3>
+                      @for (issue of unit.issues; track issue.issueKey) {
+                        <a [href]="issue.issueUrl" target="_blank" rel="noreferrer">
+                          <strong>{{ issue.issueKey }}</strong>
+                          <span>{{ issue.summary }}</span>
+                          <small>{{ issue.issueType }} · Done {{ dateTime(issue.doneAt) }}</small>
+                        </a>
+                      }
+                    </div>
+                    <div>
+                      <h3>GitLab</h3>
+                      @for (mergeRequest of unit.mergeRequests; track mergeRequest.identity) {
+                        <a [href]="mergeRequest.webUrl" target="_blank" rel="noreferrer">
+                          <strong>{{ mergeRequest.projectPath }}!{{ mergeRequest.iid }}</strong>
+                          <span>{{ mergeRequest.title }}</span>
+                          <small>{{ mergeRequest.changedPaths.length }} changed paths</small>
+                        </a>
+                      } @empty {
+                        <p>Brak zmergowanego Merge Requestu.</p>
+                      }
+                    </div>
+                  </section>
+
+                  @if (unit.visibilityLimits.length || unit.errorMessage) {
+                    <section class="unit-limits">
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
+                      <ul>
+                        @if (unit.errorMessage) {
+                          <li>{{ unit.errorMessage }}</li>
+                        }
+                        @for (limit of unit.visibilityLimits; track limit) {
+                          <li>{{ limit }}</li>
+                        }
+                      </ul>
+                    </section>
+                  }
+
+                  @if (unit.report) {
+                    <app-analysis-report-panel [report]="unit.report"></app-analysis-report-panel>
+                  }
+                </div>
+              }
+            </article>
+          } @empty {
+            <div class="units-empty">
+              @if (workflowRunning()) {
+                <span class="runtime-spinner" aria-hidden="true"></span>
+                <span>Oczekiwanie na Delivery Units</span>
+              } @else {
+                <span>Brak Delivery Units w wybranym zakresie.</span>
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      @if (currentJob.visibilityLimits.length) {
+        <section class="visibility-band">
+          <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
+          <div>
+            <h2>Visibility limits</h2>
+            <ul>
+              @for (limit of currentJob.visibilityLimits; track limit) {
+                <li>{{ limit }}</li>
+              }
+            </ul>
+          </div>
+        </section>
+      }
+
+      @if (currentJob.aggregate.usage; as usage) {
+        <section class="usage-band">
+          <span><strong>{{ usage.totalTokens | number }}</strong> tokenów</span>
+          <span><strong>{{ usage.apiCallCount }}</strong> wywołań AI</span>
+          <span><strong>{{ usage.cost | currency:'USD':'symbol':'1.2-4' }}</strong> koszt</span>
+          <span><strong>{{ usage.apiDurationMs / 1000 | number:'1.1-1' }} s</strong> API</span>
+        </section>
+      }
+
+      @if (currentJob.report) {
+        <app-analysis-report-panel [report]="currentJob.report"></app-analysis-report-panel>
+      }
+
+      <app-analysis-feature-aside
+        ariaLabel="Panel pracy Delivery Effectiveness Assessment"
+        [progressActive]="workflowRunning()"
+        [aiActive]="currentJob.status === 'ANALYZING'"
+        [progressCount]="currentJob.steps.length"
+        [aiCount]="currentJob.aiActivityEvents.length"
+        [showChat]="false"
+        [showFeedback]="false"
+      >
+        <div progressPanel>
+          <app-analysis-steps-panel
+            [steps]="currentJob.steps"
+            [evidenceSections]="currentJob.contextSections"
+            [aiActivityEvents]="currentJob.aiActivityEvents"
+            [showAiWorkflow]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+        <div aiPanel>
+          <app-analysis-steps-panel
+            [steps]="currentJob.steps"
+            [evidenceSections]="currentJob.contextSections"
+            [aiActivityEvents]="currentJob.aiActivityEvents"
+            [showProgress]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+      </app-analysis-feature-aside>
+    } @else {
+      <section class="assessment-empty analysis-card">
+        <span class="material-symbols-outlined" aria-hidden="true">query_stats</span>
+        <h2>Brak uruchomionej analizy</h2>
+      </section>
+    }
+  </main>
+</div>

@@ -33,14 +33,15 @@ Przed wieksza zmiana przeczytaj:
 4. `architecture/key-decisions.md`
 5. `architecture/incident-analysis-runtime-flow.md`
 6. `architecture/config-drift-viewer-runtime-flow.md`
-7. `architecture/package-dependencies.md`
-8. `architecture/operational-context-model-tools-and-usage.md`
-9. `architecture/codex-continuation-guide.md`
+7. `architecture/delivery-effectiveness-assessment-runtime-flow.md`
+8. `architecture/package-dependencies.md`
+9. `architecture/operational-context-model-tools-and-usage.md`
+10. `architecture/codex-continuation-guide.md`
 
 Przy tworzeniu nowego feature'a albo zmianie L1-L3 istniejacego feature'a lub
 mechanizmu wspolnego przeczytaj dodatkowo:
 
-10. `architecture/analysis-feature-delivery-playbook.md`
+11. `architecture/analysis-feature-delivery-playbook.md`
 
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
@@ -95,6 +96,9 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `architecture/config-drift-viewer-runtime-flow.md`
   opisuje deterministic/AI flow, tryby `BASIC/DEEP`, scope, limity i granice
   bezpieczenstwa Config Drift Viewer.
+- `architecture/delivery-effectiveness-assessment-runtime-flow.md`
+  opisuje typed Jira discovery, Delivery Units, evidence/privacy, scoring,
+  rownolegle wykonanie oraz zapis runow nowego feature'a.
 - `architecture/package-dependencies.md`
   definiuje dozwolony graf zaleznosci i odpowiedzialnosc warstw.
 - `architecture/operational-context-model-tools-and-usage.md`

@@ -567,7 +567,8 @@ class GitLabRestRepositoryAdapterTest {
                             "new_path": "src/main/java/CustomerController.java",
                             "new_file": false,
                             "renamed_file": false,
-                            "deleted_file": false
+                            "deleted_file": false,
+                            "diff": "@@ -1 +1 @@\\n-old\\n+new"
                           }
                         ]
                         """, MediaType.APPLICATION_JSON));
@@ -584,6 +585,7 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("abcdef12", mergeRequest.commits().get(0).shortId());
         assertEquals(1, mergeRequest.changedFiles().size());
         assertEquals("src/main/java/CustomerController.java", mergeRequest.changedFiles().get(0).newPath());
+        assertEquals("@@ -1 +1 @@\n-old\n+new", mergeRequest.changedFiles().get(0).diff());
 
         server.verify();
     }

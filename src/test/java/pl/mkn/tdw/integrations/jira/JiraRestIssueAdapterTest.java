@@ -20,6 +20,49 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class JiraRestIssueAdapterTest {
 
     @Test
+    void shouldUseBoundedAssessmentProfileWithoutCommentsParentOrSubtasks() {
+        var properties = jiraProperties();
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = new JiraRestIssueAdapter(
+                properties,
+                new JiraRestClientFactory(properties, restClientBuilder),
+                pageUrl -> Optional.empty()
+        );
+
+        server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-123?fields=")))
+                .andExpect(requestTo(containsString("customfield_10042")))
+                .andExpect(request -> assertThat(request.getURI().getQuery())
+                        .doesNotContain("comment", "parent", "subtasks"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "key": "CRM-123",
+                          "fields": {
+                            "summary": "Customer status",
+                            "description": "Expose status.",
+                            "issuetype": { "name": "Story" },
+                            "status": { "name": "Done" },
+                            "labels": ["release"],
+                            "customfield_10042": "Status is visible.",
+                            "issuelinks": []
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://jira.example.com/rest/api/2/issue/CRM-123/remotelink"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        var material = adapter.getIssueMaterial(JiraIssueMaterialRequest.assessment("CRM-123"));
+
+        assertThat(material.comments()).isEmpty();
+        assertThat(material.parentIssue()).isNull();
+        assertThat(material.subTasks()).isEmpty();
+        assertThat(material.acceptanceCriteria()).containsExactly("Status is visible.");
+        server.verify();
+    }
+
+    @Test
     void shouldFetchJiraIssueMaterialWithRemoteLinksAndAcceptanceCriteria() {
         var properties = jiraProperties();
         var restClientBuilder = RestClient.builder();

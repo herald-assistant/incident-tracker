@@ -106,6 +106,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'delivery-effectiveness-assessment',
+        loadComponent: () =>
+          import(
+            './features/delivery-effectiveness-assessment/pages/delivery-effectiveness-assessment-page/delivery-effectiveness-assessment-page'
+          ).then((module) => module.DeliveryEffectivenessAssessmentPageComponent),
+        data: {
+          section: 'Analysis Features',
+          title: 'Delivery Effectiveness Assessment'
+        }
+      },
+      {
         path: 'evidence',
         redirectTo: 'elastic',
         pathMatch: 'full'

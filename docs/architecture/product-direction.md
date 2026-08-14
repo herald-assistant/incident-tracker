@@ -30,7 +30,7 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
 
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
   `Incident Analysis`, `Flow Explorer`, `Change Verification` i
-  `Config Drift Viewer` oraz przyszle miejsce na Data
+  `Config Drift Viewer`, `Delivery Effectiveness Assessment` oraz przyszle miejsce na Data
   Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
@@ -156,6 +156,25 @@ operatorski diff, mapping, anonimizacje oraz dokladny AI-safe input tego samego
 pipeline'u dla pojedynczego scope'u. Nie uruchamia modelu i nie jest batchowym
 jobem ani historia analizy.
 
+### Delivery Effectiveness Assessment
+
+Operator wybiera projekt Jira, zakres lokalnych dat oraz model AI. Feature
+wyszukuje issue aktualnie w kategorii `Done`, potwierdza ich ostatnie
+przejscie do tej kategorii, pobiera jawnie powiazane zmergowane MR-y i buduje
+unikalne Delivery Units. Wspolny MR laczy issue w jedna jednostke i nie jest
+liczony wielokrotnie.
+
+AI ocenia tylko ograniczony, przygotowany pakiet Jira/GitLab/Confluence, bez
+narzedzi eksploracyjnych i bez danych personalnych. Backend deterministycznie
+mapuje szesc wymiarow na skale Delivered Story Points `0/1/2/3/5/8/13`.
+Suma jest zawsze prezentowana razem z coverage, confidence, visibility limits
+i usage/cost; metryka nie mierzy czasu pracy ani wydajnosci ludzi.
+
+Run jest zapisywany w `Analysis History` juz jako `QUEUED` i aktualizowany
+wynikami czastkowymi. Feature korzysta z neutralnych Jira/GitLab ports,
+platformy Copilota i shared run UI, ale posiada wlasny request, evidence,
+policy, scoring, report i job state.
+
 ### Functional logic explorer
 
 Uzytkownik pyta o logike funkcjonalna konkretnego use case'u, procesu,
@@ -264,8 +283,8 @@ generycznym silnikiem analitycznym.
 
 ## Najwazniejszy dowod architektury
 
-Flow Explorer i Change Verification sa kolejnymi feature'ami obok Incident
-Analysis i stanowia praktyczny test, czy platforma nie jest tylko
+Flow Explorer, Change Verification i Delivery Effectiveness Assessment sa
+kolejnymi feature'ami obok Incident Analysis i stanowia praktyczny test, czy platforma nie jest tylko
 przemianowanym incident trackerem. Kazdy obecny i kolejny feature:
 
 1. ma wlasny request/result contract,

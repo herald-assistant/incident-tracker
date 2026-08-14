@@ -62,6 +62,11 @@ zatwierdzony invariant trafia do architektury.
   Flow Explorer: discovery, run, wynik i feature-owned AI behavior.
 - `src/main/java/pl/mkn/tdw/features/changeverification`
   Change Verification: zgodnosc zmiany i jego wlasny kontrakt feature'a.
+- `src/main/java/pl/mkn/tdw/features/configdriftviewer`
+  Config Drift Viewer: deterministic diff i oddzielona interpretacja DEEP.
+- `src/main/java/pl/mkn/tdw/features/deliveryeffectivenessassessment`
+  Delivery Effectiveness Assessment: Jira discovery, Delivery Units, bounded
+  evidence, Copilot scoring, partial runs i aggregate.
 
 Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
 

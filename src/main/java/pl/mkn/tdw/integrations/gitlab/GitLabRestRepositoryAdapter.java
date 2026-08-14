@@ -589,7 +589,8 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                             diff.newPath(),
                             diff.newFile(),
                             diff.renamedFile(),
-                            diff.deletedFile()
+                            diff.deletedFile(),
+                            diff.diff()
                     ))
                     .toList();
         } catch (RestClientResponseException exception) {
@@ -1152,7 +1153,8 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
             @JsonProperty("renamed_file")
             boolean renamedFile,
             @JsonProperty("deleted_file")
-            boolean deletedFile
+            boolean deletedFile,
+            String diff
     ) {
     }
 

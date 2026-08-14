@@ -19,10 +19,11 @@ describe('AiSkillsPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(api.getCatalog).toHaveBeenCalledTimes(1);
-    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(3);
+    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(4);
     expect(compiled.textContent).toContain('Effective runtime catalog');
     expect(compiled.textContent).toContain('incident-analysis-orchestrator');
     expect(compiled.textContent).toContain('Flow Explorer');
+    expect(compiled.textContent).toContain('Delivery Effectiveness Assessment');
 
     fixture.componentInstance.searchControl.setValue('follow-up');
     fixture.detectChanges();
@@ -44,6 +45,20 @@ describe('AiSkillsPageComponent', () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.textContent).toContain('flow-explorer-orchestrator');
+  });
+
+  it('should expose the Delivery Effectiveness Assessment evaluator as its own family', async () => {
+    const { fixture } = await createComponent();
+
+    fixture.componentInstance.setFamilyFilter('delivery-effectiveness-assessment');
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const rows = Array.from(compiled.querySelectorAll<HTMLElement>('.ai-skills-row'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toContain('delivery-effectiveness-assessment-evaluator');
+    expect(rows[0]?.textContent).toContain('Delivery Effectiveness Assessment');
+    expect(rows[0]?.textContent).toContain('Assessment');
   });
 
   it('should render a deep-linked skill and offer its exact raw source', async () => {
@@ -130,7 +145,7 @@ function catalog(): AiSkillCatalogResponse {
     version: 1,
     mode: 'READ_ONLY',
     source: 'COPILOT_RUNTIME',
-    skillCount: 3,
+    skillCount: 4,
     skills: [
       {
         name: 'incident-analysis-orchestrator',
@@ -146,6 +161,11 @@ function catalog(): AiSkillCatalogResponse {
         name: 'flow-explorer-follow-up-chat',
         description: 'Answers follow-up questions.',
         lineCount: 70
+      },
+      {
+        name: 'delivery-effectiveness-assessment-evaluator',
+        description: 'Assesses one delivered change.',
+        lineCount: 138
       }
     ]
   };

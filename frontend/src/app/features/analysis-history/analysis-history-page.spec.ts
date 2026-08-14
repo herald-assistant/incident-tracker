@@ -51,6 +51,18 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('config-drift-viewer')).toBe('build_circle');
   });
 
+  it('should use the Delivery Effectiveness Assessment product mapping', async () => {
+    const { fixture } = await createComponent();
+    const component = fixture.componentInstance as unknown as {
+      featureLabel: (feature: string) => string;
+      featureIcon: (feature: string) => string;
+    };
+
+    expect(component.featureLabel('delivery-effectiveness-assessment'))
+      .toBe('Delivery Effectiveness Assessment');
+    expect(component.featureIcon('delivery-effectiveness-assessment')).toBe('query_stats');
+  });
+
   it('should keep history action labels in tooltips instead of visible button text', async () => {
     const { fixture } = await createComponent();
 
@@ -215,6 +227,27 @@ describe('AnalysisHistoryPageComponent', () => {
 
     expect(navigateSpy).toHaveBeenCalledWith(['/config-drift-viewer'], {
       queryParams: { localRunId: 'config-drift-viewer-1' }
+    });
+  });
+
+  it('should route a delivery effectiveness run to its feature screen', async () => {
+    const { fixture, router } = await createComponent();
+    const run: LocalAnalysisRunListItemResponse = {
+      analysisId: 'delivery-1',
+      feature: 'delivery-effectiveness-assessment',
+      name: 'CRM | July',
+      status: 'ANALYZING',
+      createdAt: '2026-07-30T10:00:00Z',
+      updatedAt: '2026-07-30T10:01:00Z',
+      completedAt: ''
+    };
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.openRun(run);
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/delivery-effectiveness-assessment'], {
+      queryParams: { localRunId: 'delivery-1' }
     });
   });
 

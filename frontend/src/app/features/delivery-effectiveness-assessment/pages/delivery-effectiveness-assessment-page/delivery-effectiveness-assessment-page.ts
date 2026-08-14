@@ -1,0 +1,410 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { Component, DestroyRef, OnDestroy, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { ActivatedRoute } from '@angular/router';
+import { Subscription, finalize } from 'rxjs';
+
+import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
+import { AnalysisReportPanelComponent } from '../../../../components/analysis-report-panel/analysis-report-panel';
+import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import {
+  AnalysisAiModelOptionsResponse,
+  ApiErrorResponse,
+  GitHubAuthStatus,
+  LocalAnalysisRunDetailResponse
+} from '../../../../core/models/analysis.models';
+import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
+import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
+import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
+import { GithubAuthService } from '../../../../core/services/github-auth.service';
+import {
+  EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
+  defaultReasoningEffortForAiModel,
+  listedDefaultAiModel,
+  normalizeAnalysisAiModelOptions,
+  reasoningEffortsForAiModel
+} from '../../../../core/utils/analysis-ai-model-options.utils';
+import { formatDateTime, formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
+import {
+  DeliveryAssessmentDimensions,
+  DeliveryAssessmentUnit,
+  DeliveryEffectivenessAssessmentExportEnvelope,
+  DeliveryEffectivenessAssessmentJobStartRequest,
+  DeliveryEffectivenessAssessmentJobStateSnapshot
+} from '../../models/delivery-effectiveness-assessment.models';
+import { DeliveryEffectivenessAssessmentApiService } from '../../services/delivery-effectiveness-assessment-api.service';
+
+type SelectOption = { value: string; label: string };
+type DimensionRow = { label: string; value: number };
+
+@Component({
+  selector: 'app-delivery-effectiveness-assessment-page',
+  imports: [
+    ReactiveFormsModule,
+    CurrencyPipe,
+    DecimalPipe,
+    MatTooltipModule,
+    AnalysisFeatureAsideComponent,
+    AnalysisReportPanelComponent,
+    AnalysisStepsPanelComponent
+  ],
+  templateUrl: './delivery-effectiveness-assessment-page.html',
+  styleUrl: './delivery-effectiveness-assessment-page.scss'
+})
+export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
+  private readonly api = inject(DeliveryEffectivenessAssessmentApiService);
+  private readonly aiOptionsApi = inject(AiOptionsApiService);
+  private readonly pollingService = inject(AnalysisJobPollingService);
+  private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly githubAuth = inject(GithubAuthService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private pollingSubscription?: Subscription;
+
+  readonly jiraProjectControl = new FormControl('', { nonNullable: true });
+  readonly fromDateControl = new FormControl(defaultDate(-30), { nonNullable: true });
+  readonly toDateControl = new FormControl(defaultDate(0), { nonNullable: true });
+  readonly aiModelControl = new FormControl('', { nonNullable: true });
+  readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
+
+  readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
+  readonly aiOptionsLoading = signal(true);
+  readonly aiOptionsError = signal('');
+  readonly githubAuthStatus = signal<GitHubAuthStatus | null>(null);
+  readonly githubAuthError = signal('');
+  readonly job = signal<DeliveryEffectivenessAssessmentJobStateSnapshot | null>(null);
+  readonly jobError = signal('');
+  readonly submitting = signal(false);
+  readonly localRunName = signal('');
+  readonly expandedUnits = signal<ReadonlySet<string>>(new Set());
+  private readonly formRevision = signal(0);
+
+  readonly aiModelOptions = computed<SelectOption[]>(() =>
+    this.aiModelCatalog().models.map((model) => ({ value: model.id, label: model.name }))
+  );
+  readonly reasoningEffortOptions = computed(() =>
+    reasoningEffortsForAiModel(this.aiModelCatalog(), this.aiModelControl.value)
+  );
+  readonly workflowRunning = computed(() => !this.isTerminal(this.job()?.status));
+  readonly progressPercent = computed(() => {
+    const job = this.job();
+    if (!job) {
+      return 0;
+    }
+    if (this.isTerminal(job.status)) {
+      return 100;
+    }
+    const total = Math.max(job.totalIssues, job.discoveredIssues, job.units.length);
+    return total > 0 ? Math.min(99, Math.round((job.processedIssues / total) * 100)) : 4;
+  });
+  readonly canStart = computed(() => {
+    this.formRevision();
+    const project = this.jiraProjectControl.value.trim();
+    const from = this.fromDateControl.value;
+    const to = this.toDateControl.value;
+    const auth = this.githubAuthStatus();
+    return Boolean(
+      project
+        && /^[A-Za-z][A-Za-z0-9_-]{0,49}$/.test(project)
+        && from
+        && to
+        && from <= to
+        && this.aiModelControl.value
+        && !this.submitting()
+        && !(auth?.mode === 'GITHUB_APP' && (!auth.connected || auth.reauthRequired))
+    );
+  });
+
+  constructor() {
+    [
+      this.jiraProjectControl,
+      this.fromDateControl,
+      this.toDateControl,
+      this.aiModelControl,
+      this.reasoningEffortControl
+    ].forEach((control) => control.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.formRevision.update((revision) => revision + 1)));
+    this.aiModelControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.syncReasoningEffort());
+    this.loadAiOptions();
+    this.loadGithubAuthStatus();
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const localRunId = params.get('localRunId')?.trim();
+        if (localRunId) {
+          this.loadLocalRun(localRunId);
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  protected startJob(): void {
+    if (!this.canStart()) {
+      return;
+    }
+    this.stopPolling();
+    this.jobError.set('');
+    this.localRunName.set('');
+    this.expandedUnits.set(new Set());
+    this.submitting.set(true);
+    this.api
+      .startJob(this.startRequest())
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.submitting.set(false))
+      )
+      .subscribe({
+        next: (job) => {
+          this.job.set(job);
+          this.startPolling(job.jobId);
+        },
+        error: (error: HttpErrorResponse) => {
+          this.applyGithubAuthError(error);
+          this.jobError.set(this.errorMessage(error));
+        }
+      });
+  }
+
+  protected connectGithub(): void {
+    this.githubAuth.connect();
+  }
+
+  protected toggleUnit(unitId: string): void {
+    const next = new Set(this.expandedUnits());
+    if (next.has(unitId)) {
+      next.delete(unitId);
+    } else {
+      next.add(unitId);
+    }
+    this.expandedUnits.set(next);
+  }
+
+  protected isUnitExpanded(unitId: string): boolean {
+    return this.expandedUnits().has(unitId);
+  }
+
+  protected statusLabel(status: string | null | undefined): string {
+    const labels: Record<string, string> = {
+      DISCOVERING: 'Wyszukiwanie w Jira',
+      COMPLETED_WITH_WARNINGS: 'Zakończona z ostrzeżeniami',
+      COLLECTING_EVIDENCE: 'Zbieranie evidence',
+      EXCLUDED: 'Wyłączona',
+      NOT_SCORABLE: 'Brak podstaw do oceny'
+    };
+    return labels[status ?? ''] ?? formatStatus(status);
+  }
+
+  protected statusClass(status: string | null | undefined): string {
+    if (status === 'COMPLETED_WITH_WARNINGS' || status === 'EXCLUDED' || status === 'NOT_SCORABLE') {
+      return 'status-pill--queued';
+    }
+    return statusClassName(status);
+  }
+
+  protected dateTime(value: string | null | undefined): string {
+    return formatDateTime(value) || 'n/a';
+  }
+
+  protected percent(value: number | null | undefined): string {
+    const normalized = Number.isFinite(value) ? Number(value) : 0;
+    return `${Math.round(normalized * 100)}%`;
+  }
+
+  protected dimensions(dimensions: DeliveryAssessmentDimensions): DimensionRow[] {
+    return [
+      { label: 'Outcome breadth', value: dimensions.outcomeBreadth },
+      { label: 'Domain decisions', value: dimensions.domainDecisionComplexity },
+      { label: 'Application flow', value: dimensions.applicationFlowComplexity },
+      { label: 'Boundaries and data', value: dimensions.boundaryAndDataComplexity },
+      { label: 'Verification state space', value: dimensions.verificationStateSpace },
+      { label: 'Compatibility scope', value: dimensions.implementedCompatibilityScope }
+    ];
+  }
+
+  protected distributionEntries(distribution: Record<string, number>): Array<{ points: string; count: number }> {
+    return Object.entries(distribution)
+      .map(([points, count]) => ({ points, count }))
+      .sort((left, right) => Number(left.points) - Number(right.points));
+  }
+
+  protected trackUnit(_: number, unit: DeliveryAssessmentUnit): string {
+    return unit.unitId;
+  }
+
+  private startRequest(): DeliveryEffectivenessAssessmentJobStartRequest {
+    const effort = this.reasoningEffortControl.value.trim();
+    return {
+      jiraProject: this.jiraProjectControl.value.trim().toUpperCase(),
+      fromDate: this.fromDateControl.value,
+      toDate: this.toDateControl.value,
+      model: this.aiModelControl.value || undefined,
+      reasoningEffort: effort || undefined
+    };
+  }
+
+  private loadAiOptions(): void {
+    this.aiOptionsLoading.set(true);
+    this.aiOptionsApi
+      .getOptions()
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.aiOptionsLoading.set(false))
+      )
+      .subscribe({
+        next: (options) => {
+          this.aiModelCatalog.set(normalizeAnalysisAiModelOptions(options));
+          this.aiModelControl.setValue(listedDefaultAiModel(this.aiModelCatalog()), {
+            emitEvent: false
+          });
+          this.syncReasoningEffort();
+          this.formRevision.update((revision) => revision + 1);
+        },
+        error: (error: HttpErrorResponse) => this.aiOptionsError.set(this.errorMessage(error))
+      });
+  }
+
+  private loadGithubAuthStatus(): void {
+    this.githubAuth
+      .getStatus()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (status) => this.githubAuthStatus.set(status),
+        error: (error: HttpErrorResponse) => this.githubAuthError.set(this.errorMessage(error))
+      });
+  }
+
+  private syncReasoningEffort(): void {
+    const efforts = this.reasoningEffortOptions();
+    if (!efforts.includes(this.reasoningEffortControl.value)) {
+      this.reasoningEffortControl.setValue(
+        defaultReasoningEffortForAiModel(this.aiModelCatalog(), this.aiModelControl.value),
+        { emitEvent: false }
+      );
+    }
+  }
+
+  private startPolling(jobId: string): void {
+    this.stopPolling();
+    if (this.isTerminal(this.job()?.status)) {
+      return;
+    }
+    this.pollingSubscription = this.pollingService
+      .poll({
+        load: () => this.api.getJob(jobId),
+        isTerminal: (job) => this.isTerminal(job.status),
+        initialDelayMs: 500,
+        intervalMs: 1500
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (job) => this.job.set(job),
+        error: (error: HttpErrorResponse) => {
+          this.jobError.set(this.errorMessage(error));
+          this.stopPolling();
+        }
+      });
+  }
+
+  private stopPolling(): void {
+    this.pollingSubscription?.unsubscribe();
+    this.pollingSubscription = undefined;
+  }
+
+  private loadLocalRun(analysisId: string): void {
+    this.stopPolling();
+    this.submitting.set(true);
+    this.historyApi
+      .getRun(analysisId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.submitting.set(false))
+      )
+      .subscribe({
+        next: (detail) => this.applyLocalRun(detail),
+        error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))
+      });
+  }
+
+  private applyLocalRun(detail: LocalAnalysisRunDetailResponse): void {
+    if (detail.feature !== 'delivery-effectiveness-assessment') {
+      this.jobError.set(`Lokalny run ${detail.analysisId} nie jest Delivery Effectiveness Assessment.`);
+      return;
+    }
+    const job = jobFromEnvelope(detail.exportEnvelope);
+    if (!job) {
+      this.jobError.set('Lokalny run ma nieobsługiwany albo uszkodzony format.');
+      return;
+    }
+    this.applyJobToForm(job);
+    this.job.set(job);
+    this.jobError.set('');
+    this.localRunName.set(detail.name || detail.analysisId);
+    if (!this.isTerminal(job.status)) {
+      this.startPolling(job.jobId);
+    }
+  }
+
+  private applyJobToForm(job: DeliveryEffectivenessAssessmentJobStateSnapshot): void {
+    this.jiraProjectControl.setValue(job.jiraProject ?? '', { emitEvent: false });
+    this.fromDateControl.setValue(job.fromDate ?? '', { emitEvent: false });
+    this.toDateControl.setValue(job.toDate ?? '', { emitEvent: false });
+    this.aiModelControl.setValue(job.aiModel ?? '', { emitEvent: false });
+    this.reasoningEffortControl.setValue(job.reasoningEffort ?? '', { emitEvent: false });
+    this.formRevision.update((revision) => revision + 1);
+  }
+
+  private isTerminal(status: string | null | undefined): boolean {
+    return ['COMPLETED', 'COMPLETED_WITH_WARNINGS', 'FAILED'].includes(status ?? '');
+  }
+
+  private errorMessage(error: HttpErrorResponse): string {
+    const response = error.error as Partial<ApiErrorResponse> | null;
+    return response?.message || error.message || 'Nie udało się wykonać operacji.';
+  }
+
+  private applyGithubAuthError(error: HttpErrorResponse): void {
+    const response = error.error as Partial<ApiErrorResponse> | null;
+    if (!['GITHUB_COPILOT_AUTH_REQUIRED', 'GITHUB_COPILOT_REAUTH_REQUIRED'].includes(response?.code ?? '')) {
+      return;
+    }
+    this.githubAuthStatus.set({
+      mode: 'GITHUB_APP',
+      required: true,
+      connected: false,
+      reauthRequired: response?.code === 'GITHUB_COPILOT_REAUTH_REQUIRED',
+      authStartUrl: null
+    });
+  }
+}
+
+function defaultDate(dayOffset: number): string {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  return date.toISOString().slice(0, 10);
+}
+
+function jobFromEnvelope(value: unknown): DeliveryEffectivenessAssessmentJobStateSnapshot | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const envelope = value as Partial<DeliveryEffectivenessAssessmentExportEnvelope>;
+  if (
+    envelope.schema !== 'tdw.delivery-effectiveness-assessment-export'
+    || envelope.version !== 1
+    || envelope.payload?.type !== 'delivery-effectiveness-assessment'
+    || !envelope.payload.job?.jobId
+  ) {
+    return null;
+  }
+  return envelope.payload.job;
+}

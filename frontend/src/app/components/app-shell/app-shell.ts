@@ -86,6 +86,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: 'build_circle',
         reloadOnActiveClick: true
       },
+      {
+        label: 'Delivery Effectiveness Assessment',
+        route: '/delivery-effectiveness-assessment',
+        icon: 'query_stats',
+        reloadOnActiveClick: true
+      },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
     ]
   },
