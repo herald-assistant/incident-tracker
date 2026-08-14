@@ -62,15 +62,10 @@
                 </span>
               </span>
               <span class="workspace-settings-source-controls">
-                <span
-                  [class]="sourceClass(currentSettings.values.appUi.title, form.controls.appUi.controls.title.value)"
-                  [matTooltip]="defaultTooltip(currentSettings.values.appUi.title) || ''"
-                  [matTooltipDisabled]="!defaultTooltip(currentSettings.values.appUi.title)"
-                  matTooltipPosition="above"
-                  [matTooltipShowDelay]="120"
-                >
-                  {{ sourceLabel(currentSettings.values.appUi.title, form.controls.appUi.controls.title.value) }}
-                </span>
+                <app-source-state-pill
+                  [state]="sourceLabel(currentSettings.values.appUi.title, form.controls.appUi.controls.title.value)"
+                  [tooltip]="defaultTooltip(currentSettings.values.appUi.title)"
+                />
                 @if (usesCustomValue(currentSettings.values.appUi.title, form.controls.appUi.controls.title.value)) {
                   <button
                     class="secondary-button workspace-settings-field-reset-button"
@@ -127,15 +122,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.copilot.localGithubToken, form.controls.copilot.controls.localGithubToken.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.copilot.localGithubToken) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.copilot.localGithubToken)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.copilot.localGithubToken, form.controls.copilot.controls.localGithubToken.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.copilot.localGithubToken, form.controls.copilot.controls.localGithubToken.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.copilot.localGithubToken)"
+                  />
                   @if (usesCustomValue(currentSettings.values.copilot.localGithubToken, form.controls.copilot.controls.localGithubToken.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -208,15 +198,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.jira.baseUrl, form.controls.jira.controls.baseUrl.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.jira.baseUrl) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.jira.baseUrl)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.jira.baseUrl, form.controls.jira.controls.baseUrl.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.jira.baseUrl, form.controls.jira.controls.baseUrl.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.jira.baseUrl)"
+                  />
                   @if (usesCustomValue(currentSettings.values.jira.baseUrl, form.controls.jira.controls.baseUrl.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -256,15 +241,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.jira.token, form.controls.jira.controls.token.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.jira.token) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.jira.token)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.jira.token, form.controls.jira.controls.token.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.jira.token, form.controls.jira.controls.token.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.jira.token)"
+                  />
                   @if (usesCustomValue(currentSettings.values.jira.token, form.controls.jira.controls.token.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -337,15 +317,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.confluence.baseUrl, form.controls.confluence.controls.baseUrl.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.confluence.baseUrl) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.confluence.baseUrl)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.confluence.baseUrl, form.controls.confluence.controls.baseUrl.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.confluence.baseUrl, form.controls.confluence.controls.baseUrl.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.confluence.baseUrl)"
+                  />
                   @if (usesCustomValue(currentSettings.values.confluence.baseUrl, form.controls.confluence.controls.baseUrl.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -385,15 +360,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.confluence.token, form.controls.confluence.controls.token.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.confluence.token) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.confluence.token)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.confluence.token, form.controls.confluence.controls.token.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.confluence.token, form.controls.confluence.controls.token.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.confluence.token)"
+                  />
                   @if (usesCustomValue(currentSettings.values.confluence.token, form.controls.confluence.controls.token.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -466,15 +436,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.gitLab.baseUrl, form.controls.gitLab.controls.baseUrl.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.gitLab.baseUrl) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.gitLab.baseUrl)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.gitLab.baseUrl, form.controls.gitLab.controls.baseUrl.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.gitLab.baseUrl, form.controls.gitLab.controls.baseUrl.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.gitLab.baseUrl)"
+                  />
                   @if (usesCustomValue(currentSettings.values.gitLab.baseUrl, form.controls.gitLab.controls.baseUrl.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -514,15 +479,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.gitLab.group, form.controls.gitLab.controls.group.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.gitLab.group) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.gitLab.group)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.gitLab.group, form.controls.gitLab.controls.group.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.gitLab.group, form.controls.gitLab.controls.group.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.gitLab.group)"
+                  />
                   @if (usesCustomValue(currentSettings.values.gitLab.group, form.controls.gitLab.controls.group.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -562,15 +522,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.gitLab.token, form.controls.gitLab.controls.token.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.gitLab.token) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.gitLab.token)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.gitLab.token, form.controls.gitLab.controls.token.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.gitLab.token, form.controls.gitLab.controls.token.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.gitLab.token)"
+                  />
                   @if (usesCustomValue(currentSettings.values.gitLab.token, form.controls.gitLab.controls.token.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -643,15 +598,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.configDriftViewerGitLab.baseUrl, form.controls.configDriftViewerGitLab.controls.baseUrl.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.configDriftViewerGitLab.baseUrl) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.configDriftViewerGitLab.baseUrl)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.configDriftViewerGitLab.baseUrl, form.controls.configDriftViewerGitLab.controls.baseUrl.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.configDriftViewerGitLab.baseUrl, form.controls.configDriftViewerGitLab.controls.baseUrl.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.configDriftViewerGitLab.baseUrl)"
+                  />
                   @if (usesCustomValue(currentSettings.values.configDriftViewerGitLab.baseUrl, form.controls.configDriftViewerGitLab.controls.baseUrl.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -691,15 +641,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.configDriftViewerGitLab.token, form.controls.configDriftViewerGitLab.controls.token.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.configDriftViewerGitLab.token) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.configDriftViewerGitLab.token)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.configDriftViewerGitLab.token, form.controls.configDriftViewerGitLab.controls.token.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.configDriftViewerGitLab.token, form.controls.configDriftViewerGitLab.controls.token.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.configDriftViewerGitLab.token)"
+                  />
                   @if (usesCustomValue(currentSettings.values.configDriftViewerGitLab.token, form.controls.configDriftViewerGitLab.controls.token.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -772,15 +717,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.elasticsearch.baseUrl, form.controls.elasticsearch.controls.baseUrl.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.baseUrl) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.baseUrl)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.elasticsearch.baseUrl, form.controls.elasticsearch.controls.baseUrl.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.elasticsearch.baseUrl, form.controls.elasticsearch.controls.baseUrl.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.elasticsearch.baseUrl)"
+                  />
                   @if (usesCustomValue(currentSettings.values.elasticsearch.baseUrl, form.controls.elasticsearch.controls.baseUrl.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -820,15 +760,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.elasticsearch.kibanaSpaceId, form.controls.elasticsearch.controls.kibanaSpaceId.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.kibanaSpaceId) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.kibanaSpaceId)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.elasticsearch.kibanaSpaceId, form.controls.elasticsearch.controls.kibanaSpaceId.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.elasticsearch.kibanaSpaceId, form.controls.elasticsearch.controls.kibanaSpaceId.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.elasticsearch.kibanaSpaceId)"
+                  />
                   @if (usesCustomValue(currentSettings.values.elasticsearch.kibanaSpaceId, form.controls.elasticsearch.controls.kibanaSpaceId.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -868,15 +803,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.elasticsearch.indexPattern, form.controls.elasticsearch.controls.indexPattern.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.indexPattern) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.indexPattern)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.elasticsearch.indexPattern, form.controls.elasticsearch.controls.indexPattern.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.elasticsearch.indexPattern, form.controls.elasticsearch.controls.indexPattern.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.elasticsearch.indexPattern)"
+                  />
                   @if (usesCustomValue(currentSettings.values.elasticsearch.indexPattern, form.controls.elasticsearch.controls.indexPattern.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -916,15 +846,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.elasticsearch.authorizationHeader, form.controls.elasticsearch.controls.authorizationHeader.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.elasticsearch.authorizationHeader) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.elasticsearch.authorizationHeader)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.elasticsearch.authorizationHeader, form.controls.elasticsearch.controls.authorizationHeader.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.elasticsearch.authorizationHeader, form.controls.elasticsearch.controls.authorizationHeader.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.elasticsearch.authorizationHeader)"
+                  />
                   @if (usesCustomValue(currentSettings.values.elasticsearch.authorizationHeader, form.controls.elasticsearch.controls.authorizationHeader.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -997,15 +922,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.dynatrace.baseUrl, form.controls.dynatrace.controls.baseUrl.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.dynatrace.baseUrl) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.dynatrace.baseUrl)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.dynatrace.baseUrl, form.controls.dynatrace.controls.baseUrl.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.dynatrace.baseUrl, form.controls.dynatrace.controls.baseUrl.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.dynatrace.baseUrl)"
+                  />
                   @if (usesCustomValue(currentSettings.values.dynatrace.baseUrl, form.controls.dynatrace.controls.baseUrl.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"
@@ -1045,15 +965,10 @@
                   </span>
                 </span>
                 <span class="workspace-settings-source-controls">
-                  <span
-                    [class]="sourceClass(currentSettings.values.dynatrace.apiToken, form.controls.dynatrace.controls.apiToken.value)"
-                    [matTooltip]="defaultTooltip(currentSettings.values.dynatrace.apiToken) || ''"
-                    [matTooltipDisabled]="!defaultTooltip(currentSettings.values.dynatrace.apiToken)"
-                    matTooltipPosition="above"
-                    [matTooltipShowDelay]="120"
-                  >
-                    {{ sourceLabel(currentSettings.values.dynatrace.apiToken, form.controls.dynatrace.controls.apiToken.value) }}
-                  </span>
+                  <app-source-state-pill
+                    [state]="sourceLabel(currentSettings.values.dynatrace.apiToken, form.controls.dynatrace.controls.apiToken.value)"
+                    [tooltip]="defaultTooltip(currentSettings.values.dynatrace.apiToken)"
+                  />
                   @if (usesCustomValue(currentSettings.values.dynatrace.apiToken, form.controls.dynatrace.controls.apiToken.value)) {
                     <button
                       class="secondary-button workspace-settings-field-reset-button"

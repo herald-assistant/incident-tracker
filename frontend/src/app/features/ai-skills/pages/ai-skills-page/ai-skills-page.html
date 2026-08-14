@@ -9,24 +9,24 @@
         </div>
       </div>
       <div class="ai-skills-status__item">
-        <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+        <span class="material-symbols-outlined" aria-hidden="true">edit_document</span>
         <div>
           <span>Access</span>
-          <strong>Read-only</strong>
+          <strong>Editable</strong>
         </div>
       </div>
       <div class="ai-skills-status__item">
         <span class="material-symbols-outlined" aria-hidden="true">auto_stories</span>
         <div>
-          <span>Skills</span>
-          <strong>{{ catalog()?.skillCount ?? '—' }}</strong>
+          <span>Default</span>
+          <strong>{{ catalog()?.defaultSkillCount ?? '—' }}</strong>
         </div>
       </div>
       <div class="ai-skills-status__item">
-        <span class="material-symbols-outlined" aria-hidden="true">description</span>
+        <span class="material-symbols-outlined" aria-hidden="true">tune</span>
         <div>
-          <span>Format</span>
-          <strong>SKILL.md</strong>
+          <span>Custom</span>
+          <strong>{{ catalog()?.customSkillCount ?? '—' }}</strong>
         </div>
       </div>
     </section>
@@ -129,6 +129,7 @@
                   <strong>{{ skill.name }}</strong>
                   <span class="ai-skills-row__description">{{ skill.description }}</span>
                   <span class="ai-skills-row__meta">
+                    <app-source-state-pill [state]="skill.state" />
                     <span>{{ familyLabel(skill.name) }}</span>
                     <span>{{ responsibilityLabel(skill.name) }}</span>
                     <span>{{ skill.lineCount }} lines</span>
@@ -149,23 +150,63 @@
             <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
             <span>Catalog</span>
           </a>
-          @if (detail()) {
+          @if (detail(); as skill) {
             <div class="ai-skills-detail__actions">
-              <button class="secondary-button" type="button" (click)="toggleRawView()">
-                <span class="material-symbols-outlined" aria-hidden="true">
-                  {{ rawView() ? 'article' : 'code' }}
-                </span>
-                <span>{{ rawView() ? 'Rendered' : 'Raw' }}</span>
-              </button>
+              @if (isEditing()) {
+                <button class="secondary-button" type="button" (click)="toggleEditorPreview()">
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ editorPreview() ? 'edit_note' : 'preview' }}
+                  </span>
+                  <span>{{ editorPreview() ? 'Editor' : 'Preview' }}</span>
+                </button>
+              } @else {
+                <button class="secondary-button" type="button" (click)="toggleRawView()">
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ rawView() ? 'article' : 'code' }}
+                  </span>
+                  <span>{{ rawView() ? 'Rendered' : 'Raw' }}</span>
+                </button>
+              }
               <button class="secondary-button" type="button" (click)="copySource()">
                 <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
                 <span>{{ copyMessage() || 'Copy source' }}</span>
               </button>
+              @if (isEditing()) {
+                <button class="secondary-button" type="button" (click)="cancelEdit()">
+                  <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                  <span>Cancel</span>
+                </button>
+                <button
+                  class="primary-button"
+                  type="button"
+                  [disabled]="!hasUnsavedChanges() || isSaving()"
+                  (click)="saveSkill()"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">save</span>
+                  <span>{{ isSaving() ? 'Saving...' : 'Save' }}</span>
+                </button>
+              } @else {
+                @if (skill.state === 'CUSTOM' && skill.restoreAvailable) {
+                  <button
+                    class="secondary-button"
+                    type="button"
+                    [disabled]="isRestoring()"
+                    (click)="restoreDefault()"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">restore</span>
+                    <span>{{ isRestoring() ? 'Restoring...' : 'Restore default' }}</span>
+                  </button>
+                }
+                <button class="primary-button" type="button" (click)="beginEdit()">
+                  <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                  <span>Edit</span>
+                </button>
+              }
             </div>
           }
         </div>
 
-        @if (detailError()) {
+        @if (detailError() && !detail()) {
           <div class="ai-skills-state ai-skills-state--error">
             <span class="material-symbols-outlined" aria-hidden="true">error</span>
             <h3>Skill unavailable</h3>
@@ -183,15 +224,38 @@
             <h2 id="aiSkillDetailTitle">{{ skill.name }}</h2>
             <p>{{ skill.description }}</p>
             <div class="ai-skills-detail__meta">
+              <app-source-state-pill [state]="skill.state" />
               <span>{{ familyLabel(skill.name) }}</span>
               <span>{{ responsibilityLabel(skill.name) }}</span>
               <span>{{ skill.lineCount }} lines</span>
-              <span>Read-only</span>
+              @if (skill.state === 'CUSTOM' && !skill.restoreAvailable) {
+                <span>No packaged default</span>
+              }
             </div>
           </header>
 
+          @if (detailError()) {
+            <p class="form-error ai-skills-mutation-message" role="alert">{{ detailError() }}</p>
+          } @else if (mutationMessage()) {
+            <p class="form-success ai-skills-mutation-message" aria-live="polite">
+              {{ mutationMessage() }}
+            </p>
+          }
+
           <div class="ai-skills-detail__content">
-            @if (rawView()) {
+            @if (isEditing() && !editorPreview()) {
+              <label class="field-control" for="aiSkillEditor">
+                <span class="field-label">SKILL.md</span>
+                <textarea
+                  id="aiSkillEditor"
+                  class="ai-skills-editor"
+                  spellcheck="false"
+                  [formControl]="editorControl"
+                ></textarea>
+              </label>
+            } @else if (isEditing() && editorPreview()) {
+              <app-markdown-content [content]="previewMarkdown()" />
+            } @else if (rawView()) {
               <pre class="ai-skills-raw"><code>{{ skill.rawMarkdown }}</code></pre>
             } @else {
               <app-markdown-content [content]="skill.markdown" />

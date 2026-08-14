@@ -165,10 +165,11 @@ Zasady granic:
   sesji albo domyslne wartosci, bywa lepiej opisana w dokumentacji Node/CLI
   niz w klasach Javy. Nie zgaduj defaultow ani zakresow parametrow bez takiej
   weryfikacji.
-- `CopilotSkillRuntimeLoader` przy starcie materializuje caly packaged katalog
-  `src/main/resources/copilot/skills` pod
-  `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
-  `tdw-data/copilot/skills`. `SessionConfig.skillDirectories` i
+- `CopilotSkillRuntimeLoader` traktuje packaged katalog
+  `src/main/resources/copilot/skills` jako immutable seed. Przy starcie dopisuje
+  pod `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
+  `tdw-data/copilot/skills`, tylko brakujace pliki i nie nadpisuje istniejacej
+  effective tresci. `SessionConfig.skillDirectories` i
   `ResumeSessionConfig.skillDirectories` zawsze dostaja ten jeden wspolny
   root, a built-in tool `skill` jest zawsze w effective allowliscie.
 - Feature nie przekazuje katalogow ani podzbioru nazw skilli do platformy.
@@ -232,9 +233,9 @@ Zasady granic:
   `GET /api/analysis/ai/options`, mapujace platformowy katalog Copilota na
   kontrakt HTTP dla UI.
 - `src/main/java/pl/mkn/tdw/api/aiskills`
-  Shared/operator read-only API efektywnego katalogu runtime skilli dla ekranu
-  `Platform / AI Skills`; nie ujawnia sciezek storage i nie oferuje selekcji
-  ani mutacji per feature.
+  Shared/operator API efektywnego katalogu runtime skilli dla ekranu
+  `Platform / AI Skills`; oferuje walidowany zapis i restore pojedynczego
+  `SKILL.md`, nie ujawnia sciezek storage i nie oferuje selekcji per feature.
 - `src/main/java/pl/mkn/tdw/api/operationalcontext`
   Shared/operator API dla katalogu operational context uzywanego przez UI,
   tools, GitLab repository discovery i feature'y.
@@ -289,7 +290,7 @@ Zasady granic:
   Male helpery wspolne dla calej aplikacji.
 - `frontend`
   Zrodlowy workspace Angular dla operatora: feature workspaces, Tool
-  Workbench, ustawienia oraz read-only podglad `/ai-skills`.
+  Workbench, ustawienia oraz podglad i edycja effective `/ai-skills`.
 - `src/main/resources/static`
   Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
 - `src/main/resources/copilot/skills`

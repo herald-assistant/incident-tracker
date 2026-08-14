@@ -3,9 +3,10 @@
 ## Zakres
 
 Ten katalog zawiera runtime skille Copilota pakowane z aplikacja. Skille sa
-zasobem runtime, a nie dokumentacja `.github` ani kod Javy. Platforma przy
-starcie materializuje caly katalog pod `${copilot-home}/skills` i udostepnia
-ten sam root kazdej sesji. Feature wskazuje potrzebny starter i workflow w
+zasobem runtime, a nie dokumentacja `.github` ani kod Javy. Ten katalog jest
+immutable packaged seedem. Platforma przy starcie dopisuje pod
+`${copilot-home}/skills` tylko brakujace pliki, zachowuje istniejaca effective
+tresc i udostepnia ten sam root kazdej sesji. Feature wskazuje starter i workflow w
 prompcie, a GitHub Copilot laduje skille przez built-in tool `skill`.
 
 Zmiany w tym katalogu moga zmienic zachowanie AI bez zmiany publicznych HTTP

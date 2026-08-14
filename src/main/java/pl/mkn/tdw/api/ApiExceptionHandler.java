@@ -229,6 +229,7 @@ public class ApiExceptionHandler {
     private static HttpStatus toStatus(UserFacingErrorType errorType) {
         return switch (errorType) {
             case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
+            case UNPROCESSABLE_ENTITY -> HttpStatus.UNPROCESSABLE_ENTITY;
             case NOT_FOUND -> HttpStatus.NOT_FOUND;
             case CONFLICT -> HttpStatus.CONFLICT;
             case SERVICE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;

@@ -839,8 +839,11 @@ Dobry podzial:
 - zapis konkretnych sekcji reportu,
 - follow-up chat.
 
-`CopilotSkillRuntimeLoader` przy starcie materializuje wszystkie packaged
-skille w jednym katalogu `${analysis.ai.copilot.copilot-home}/skills`.
+`CopilotSkillRuntimeLoader` przy starcie dopisuje tylko brakujace packaged
+pliki do persistent effective katalogu
+`${analysis.ai.copilot.copilot-home}/skills`; istniejace pliki zachowuje.
+Operator moze walidowanie zapisac albo przywrocic pojedynczy effective
+`SKILL.md` z ekranu AI Skills.
 `SessionConfig` i `ResumeSessionConfig` zawsze dostaja ten root, a
 `CopilotSessionConfigRequest` zawsze dodaje built-in `skill` do efektywnej
 allowlisty. Feature nie przekazuje nazw ani katalogow skilli do session

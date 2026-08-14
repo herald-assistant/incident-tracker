@@ -53,3 +53,12 @@ export function aiSkillResponsibility(skillName: string): string {
   }
   return 'Guidance';
 }
+
+export function aiSkillMarkdownBody(rawMarkdown: string): string {
+  const normalized = rawMarkdown.replace(/\r\n/g, '\n');
+  if (!normalized.startsWith('---\n')) {
+    return normalized;
+  }
+  const frontmatterEnd = normalized.indexOf('\n---\n', 4);
+  return frontmatterEnd < 0 ? normalized : normalized.slice(frontmatterEnd + 5).trimStart();
+}

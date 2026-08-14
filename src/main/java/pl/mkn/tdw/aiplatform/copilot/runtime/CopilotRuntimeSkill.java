@@ -5,6 +5,8 @@ public record CopilotRuntimeSkill(
         String description,
         int lineCount,
         String markdown,
-        String rawMarkdown
+        String rawMarkdown,
+        CopilotRuntimeSkillState state,
+        boolean restoreAvailable
 ) {
 }

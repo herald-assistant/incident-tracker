@@ -6,6 +6,7 @@ import { DatabaseConsoleComponent } from './features/database-console/database-c
 import { ElasticEvidenceConsoleComponent } from './features/evidence-console/elastic-evidence-console';
 import { GitLabEvidenceConsoleComponent } from './features/evidence-console/gitlab-evidence-console';
 import { PlatformLandingPageComponent } from './features/platform-landing/platform-landing';
+import { pendingAiSkillChangesGuard } from './features/ai-skills/guards/pending-ai-skill-changes.guard';
 
 export const routes: Routes = [
   {
@@ -56,6 +57,7 @@ export const routes: Routes = [
           import('./features/ai-skills/pages/ai-skills-page/ai-skills-page').then(
             (module) => module.AiSkillsPageComponent
           ),
+        canDeactivate: [pendingAiSkillChangesGuard],
         data: {
           section: 'Platform',
           title: 'AI Skills'
@@ -67,6 +69,7 @@ export const routes: Routes = [
           import('./features/ai-skills/pages/ai-skills-page/ai-skills-page').then(
             (module) => module.AiSkillsPageComponent
           ),
+        canDeactivate: [pendingAiSkillChangesGuard],
         data: {
           section: 'Platform',
           title: 'AI Skills'

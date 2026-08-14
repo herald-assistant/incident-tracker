@@ -13,6 +13,8 @@ public final class AiSkillCatalogDtos {
             String mode,
             String source,
             int skillCount,
+            int defaultSkillCount,
+            int customSkillCount,
             List<AiSkillSummaryResponse> skills
     ) {
     }
@@ -20,7 +22,9 @@ public final class AiSkillCatalogDtos {
     public record AiSkillSummaryResponse(
             String name,
             String description,
-            int lineCount
+            int lineCount,
+            String state,
+            boolean restoreAvailable
     ) {
     }
 
@@ -33,6 +37,13 @@ public final class AiSkillCatalogDtos {
             String description,
             int lineCount,
             String markdown,
+            String rawMarkdown,
+            String state,
+            boolean restoreAvailable
+    ) {
+    }
+
+    public record AiSkillUpdateRequest(
             String rawMarkdown
     ) {
     }

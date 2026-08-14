@@ -331,7 +331,8 @@
 }
 
 .ai-skills-detail__toolbar .secondary-button,
-.ai-skills-detail__actions .secondary-button {
+.ai-skills-detail__actions .secondary-button,
+.ai-skills-detail__actions .primary-button {
   gap: 7px;
   min-height: 38px;
 }
@@ -357,6 +358,32 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-alt);
+}
+
+.ai-skills-mutation-message {
+  margin: 0;
+}
+
+.ai-skills-editor {
+  display: block;
+  width: 100%;
+  min-height: 58vh;
+  resize: vertical;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: #f4f7fb;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.ai-skills-editor:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
 }
 
 .ai-skills-raw {
@@ -423,7 +450,8 @@
 
   .ai-skills-detail__toolbar > .secondary-button,
   .ai-skills-detail__actions,
-  .ai-skills-detail__actions .secondary-button {
+  .ai-skills-detail__actions .secondary-button,
+  .ai-skills-detail__actions .primary-button {
     flex: 1 1 100%;
   }
 

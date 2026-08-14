@@ -147,8 +147,15 @@ podzbioru nazw skilli. Runtime przekazuje do `MessageOptions` tylko wykonany
 prompt. Zmiana delivery mode, session semantics, allowlisty albo hidden scope
 jest zmiana architektoniczna i wymaga planu, testow oraz rollbacku.
 
+Packaged resources sa immutable seedem tego katalogu. Startup dopisuje tylko
+brakujace pliki effective, a zapis i restore z `Platform / AI Skills` atomowo
+podmieniaja pojedynczy `SKILL.md`. Stan `DEFAULT/CUSTOM` opisuje zgodnosc z
+aktualnym packaged seedem; aktywny turn moze nadal miec poprzednio zaladowana
+tresc i nie podlega hot reloadowi.
+
 Ekran `frontend/src/app/features/ai-skills` korzysta z
-`GET /api/ai/skills` oraz `GET /api/ai/skills/{skillName}`. Pomocnicze etykiety
+`GET /api/ai/skills`, `GET/PUT /api/ai/skills/{skillName}` oraz endpointu
+`POST .../restore-default`. Pomocnicze etykiety
 workflow/responsibility sa frontendowa projekcja UX z fallbackiem `Other` /
 `Guidance`; nie moga stac sie kontraktem wyboru skilli dla feature'a.
 

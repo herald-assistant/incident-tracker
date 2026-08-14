@@ -344,28 +344,34 @@ describe('App', () => {
     flushUiConfig(http, 'CRM Workspace');
     http.expectOne('/api/ai/skills').flush({
       contract: 'ai-skills.catalog',
-      version: 1,
-      mode: 'READ_ONLY',
+      version: 2,
+      mode: 'EDITABLE',
       source: 'COPILOT_RUNTIME',
       skillCount: 1,
+      defaultSkillCount: 1,
+      customSkillCount: 0,
       skills: [
         {
           name: 'incident-analysis-orchestrator',
           description: 'Coordinates incident analysis.',
-          lineCount: 120
+          lineCount: 120,
+          state: 'DEFAULT',
+          restoreAvailable: true
         }
       ]
     });
     http.expectOne('/api/ai/skills/incident-analysis-orchestrator').flush({
       contract: 'ai-skills.detail',
-      version: 1,
-      mode: 'READ_ONLY',
+      version: 2,
+      mode: 'EDITABLE',
       source: 'COPILOT_RUNTIME',
       name: 'incident-analysis-orchestrator',
       description: 'Coordinates incident analysis.',
       lineCount: 120,
       markdown: '# Runtime guidance',
-      rawMarkdown: '---\nname: incident-analysis-orchestrator\n---\n\n# Runtime guidance'
+      rawMarkdown: '---\nname: incident-analysis-orchestrator\n---\n\n# Runtime guidance',
+      state: 'DEFAULT',
+      restoreAvailable: true
     });
     await fixture.whenStable();
     fixture.detectChanges();

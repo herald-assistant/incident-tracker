@@ -82,6 +82,51 @@ describe('AiSkillsPageComponent', () => {
     );
   });
 
+  it('should edit and save one skill as CUSTOM', async () => {
+    const { fixture, api } = await createComponent('incident-analysis-orchestrator');
+    fixture.detectChanges();
+
+    fixture.componentInstance.beginEdit();
+    fixture.componentInstance.editorControl.setValue(
+      detail('incident-analysis-orchestrator').rawMarkdown + '\n\nChanged.'
+    );
+    fixture.componentInstance.saveSkill();
+    fixture.detectChanges();
+
+    expect(api.updateSkill).toHaveBeenCalledWith('incident-analysis-orchestrator', {
+      rawMarkdown: expect.stringContaining('Changed.')
+    });
+    expect(fixture.componentInstance.detail()?.state).toBe('CUSTOM');
+    expect(fixture.nativeElement.textContent).toContain('Skill saved.');
+  });
+
+  it('should restore a custom skill after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const customDetail = { ...detail('incident-analysis-orchestrator'), state: 'CUSTOM' as const };
+    const { fixture, api } = await createComponent(
+      'incident-analysis-orchestrator',
+      of(catalog()),
+      customDetail
+    );
+    fixture.detectChanges();
+
+    fixture.componentInstance.restoreDefault();
+    fixture.detectChanges();
+
+    expect(api.restoreDefault).toHaveBeenCalledWith('incident-analysis-orchestrator');
+    expect(fixture.componentInstance.detail()?.state).toBe('DEFAULT');
+    expect(fixture.nativeElement.textContent).toContain('Default restored.');
+  });
+
+  it('should protect unsaved edits from navigation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    const { fixture } = await createComponent('incident-analysis-orchestrator');
+    fixture.componentInstance.beginEdit();
+    fixture.componentInstance.editorControl.setValue('changed');
+
+    expect(fixture.componentInstance.canDeactivate()).toBe(false);
+  });
+
   it('should show a controlled catalog error with retry', async () => {
     const error = new HttpErrorResponse({
       status: 503,
@@ -116,12 +161,22 @@ describe('AiSkillsPageComponent', () => {
 
 async function createComponent(
   skillName = '',
-  catalogResponse: Observable<AiSkillCatalogResponse> = of(catalog())
+  catalogResponse: Observable<AiSkillCatalogResponse> = of(catalog()),
+  detailResponse: AiSkillDetailResponse = detail(skillName || 'incident-analysis-orchestrator')
 ) {
   const paramMap = new BehaviorSubject(convertToParamMap(skillName ? { skillName } : {}));
   const api = {
     getCatalog: vi.fn(() => catalogResponse),
-    getSkill: vi.fn(() => of(detail(skillName || 'incident-analysis-orchestrator')))
+    getSkill: vi.fn(() => of(detailResponse)),
+    updateSkill: vi.fn((_name: string, request: { rawMarkdown: string }) =>
+      of({
+        ...detailResponse,
+        rawMarkdown: request.rawMarkdown,
+        markdown: '# Runtime guidance\n\nChanged.',
+        state: 'CUSTOM' as const
+      })
+    ),
+    restoreDefault: vi.fn(() => of({ ...detailResponse, state: 'DEFAULT' as const }))
   };
 
   await TestBed.configureTestingModule({
@@ -142,30 +197,40 @@ async function createComponent(
 function catalog(): AiSkillCatalogResponse {
   return {
     contract: 'ai-skills.catalog',
-    version: 1,
-    mode: 'READ_ONLY',
+    version: 2,
+    mode: 'EDITABLE',
     source: 'COPILOT_RUNTIME',
     skillCount: 4,
+    defaultSkillCount: 4,
+    customSkillCount: 0,
     skills: [
       {
         name: 'incident-analysis-orchestrator',
         description: 'Coordinates incident analysis.',
-        lineCount: 120
+        lineCount: 120,
+        state: 'DEFAULT',
+        restoreAvailable: true
       },
       {
         name: 'flow-explorer-orchestrator',
         description: 'Coordinates flow discovery.',
-        lineCount: 90
+        lineCount: 90,
+        state: 'DEFAULT',
+        restoreAvailable: true
       },
       {
         name: 'flow-explorer-follow-up-chat',
         description: 'Answers follow-up questions.',
-        lineCount: 70
+        lineCount: 70,
+        state: 'DEFAULT',
+        restoreAvailable: true
       },
       {
         name: 'delivery-effectiveness-assessment-evaluator',
         description: 'Assesses one delivered change.',
-        lineCount: 138
+        lineCount: 138,
+        state: 'DEFAULT',
+        restoreAvailable: true
       }
     ]
   };
@@ -174,13 +239,15 @@ function catalog(): AiSkillCatalogResponse {
 function detail(skillName: string): AiSkillDetailResponse {
   return {
     contract: 'ai-skills.detail',
-    version: 1,
-    mode: 'READ_ONLY',
+    version: 2,
+    mode: 'EDITABLE',
     source: 'COPILOT_RUNTIME',
     name: skillName,
     description: 'Coordinates incident analysis.',
     lineCount: 8,
     markdown: '# Runtime guidance\n\nUse verified evidence.',
-    rawMarkdown: `---\nname: ${skillName}\ndescription: Coordinates incident analysis.\n---\n\n# Runtime guidance`
+    rawMarkdown: `---\nname: ${skillName}\ndescription: Coordinates incident analysis.\n---\n\n# Runtime guidance`,
+    state: 'DEFAULT',
+    restoreAvailable: true
   };
 }

@@ -71,8 +71,10 @@ Nie obejmuje:
 - Feature ma dostarczac prompt, guidance do uzycia skilli, available tools,
   hidden context, evidence sink i response handling jako parametry
   uruchomienia.
-- `CopilotSkillRuntimeLoader` materializuje przy starcie pelny platformowy
-  katalog pod `${analysis.ai.copilot.copilot-home}/skills`.
+- `CopilotSkillRuntimeLoader` traktuje packaged resources jako immutable seed i
+  przy starcie dopisuje do persistent effective katalogu pod
+  `${analysis.ai.copilot.copilot-home}/skills` tylko brakujace pliki. Save i
+  restore atomowo podmieniaja pojedynczy effective `SKILL.md`.
   `SessionConfig.skillDirectories` i `ResumeSessionConfig.skillDirectories`
   zawsze dostaja ten sam pojedynczy root. Feature nie przekazuje katalogow ani
   list wybranych skilli; nie przywracaj selected roots ani selekcji per run.

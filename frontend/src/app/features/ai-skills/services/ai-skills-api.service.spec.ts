@@ -33,4 +33,22 @@ describe('AiSkillsApiService', () => {
     expect(request.request.method).toBe('GET');
     request.flush({ name: 'skill/name' });
   });
+
+  it('should overwrite one skill with the edited raw source', () => {
+    service.updateSkill('skill/name', { rawMarkdown: '# Updated' }).subscribe();
+
+    const request = http.expectOne('/api/ai/skills/skill%2Fname');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ rawMarkdown: '# Updated' });
+    request.flush({ name: 'skill/name' });
+  });
+
+  it('should restore one packaged default', () => {
+    service.restoreDefault('skill/name').subscribe();
+
+    const request = http.expectOne('/api/ai/skills/skill%2Fname/restore-default');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toBeNull();
+    request.flush({ name: 'skill/name' });
+  });
 });

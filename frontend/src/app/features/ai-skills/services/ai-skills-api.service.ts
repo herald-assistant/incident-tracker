@@ -2,7 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { AiSkillCatalogResponse, AiSkillDetailResponse } from '../models/ai-skills.models';
+import {
+  AiSkillCatalogResponse,
+  AiSkillDetailResponse,
+  AiSkillUpdateRequest
+} from '../models/ai-skills.models';
 
 @Injectable({
   providedIn: 'root'
@@ -18,6 +22,20 @@ export class AiSkillsApiService {
   getSkill(skillName: string): Observable<AiSkillDetailResponse> {
     return this.http.get<AiSkillDetailResponse>(
       `${this.baseUrl}/${encodeURIComponent(skillName)}`
+    );
+  }
+
+  updateSkill(skillName: string, request: AiSkillUpdateRequest): Observable<AiSkillDetailResponse> {
+    return this.http.put<AiSkillDetailResponse>(
+      `${this.baseUrl}/${encodeURIComponent(skillName)}`,
+      request
+    );
+  }
+
+  restoreDefault(skillName: string): Observable<AiSkillDetailResponse> {
+    return this.http.post<AiSkillDetailResponse>(
+      `${this.baseUrl}/${encodeURIComponent(skillName)}/restore-default`,
+      null
     );
   }
 }

@@ -11,29 +11,34 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import static pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeSkillState.CUSTOM;
+import static pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeSkillState.DEFAULT;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CopilotSkillRuntimeLoader {
 
+    static final int MAX_SKILL_CONTENT_BYTES = 256 * 1024;
+
     private static final ResourcePatternResolver RESOURCE_RESOLVER = new PathMatchingResourcePatternResolver();
 
     private final CopilotSdkProperties properties;
 
-    private volatile List<String> platformSkillDirectories;
-    private volatile List<String> platformSkillNames;
-    private volatile List<CopilotRuntimeSkill> platformSkills;
+    private volatile SkillCatalogState state;
 
     @PostConstruct
     void initializePlatformSkillCatalog() {
@@ -41,58 +46,85 @@ public class CopilotSkillRuntimeLoader {
     }
 
     public List<String> platformSkillDirectories() {
-        ensureInitialized();
-        return platformSkillDirectories;
+        return List.of(currentState().root().toString());
     }
 
     public List<String> availableSkillNames() {
-        ensureInitialized();
-        return platformSkillNames;
+        return currentState().effectiveSkills().stream()
+                .map(CopilotRuntimeSkill::name)
+                .toList();
     }
 
     public List<CopilotRuntimeSkill> availableSkills() {
+        return currentState().effectiveSkills();
+    }
+
+    public synchronized CopilotRuntimeSkill updateSkill(String skillName, String rawMarkdown) {
+        var current = currentState();
+        requireEffectiveSkill(current, skillName);
+        var candidate = parseMutationCandidate(skillName, rawMarkdown);
+        writeEffectiveSkill(current.root(), candidate);
+        return publishChangedSkill(current, candidate);
+    }
+
+    public synchronized CopilotRuntimeSkill restoreDefault(String skillName) {
+        var current = currentState();
+        requireEffectiveSkill(current, skillName);
+        var packaged = definitionsByName(current.packagedSkills()).get(skillName);
+        if (packaged == null) {
+            throw new CopilotSkillCatalogException(
+                    CopilotSkillCatalogException.Code.DEFAULT_UNAVAILABLE,
+                    "Packaged default is unavailable for AI skill: " + skillName
+            );
+        }
+        writeEffectiveSkill(current.root(), packaged);
+        return publishChangedSkill(current, packaged);
+    }
+
+    private SkillCatalogState currentState() {
         ensureInitialized();
-        return platformSkills;
+        return state;
     }
 
     private void ensureInitialized() {
-        if (platformSkillDirectories != null) {
+        if (state != null) {
             return;
         }
 
         synchronized (this) {
-            if (platformSkillDirectories != null) {
+            if (state != null) {
                 return;
             }
 
-            var catalog = materializePlatformSkillCatalog();
-            platformSkills = catalog.skills();
-            platformSkillNames = catalog.skills().stream().map(CopilotRuntimeSkill::name).toList();
-            platformSkillDirectories = List.of(catalog.root().toString());
+            var catalog = initializePersistentCatalog();
+            state = catalog;
             log.info(
-                    "Copilot platform skill catalog initialized directory={} resourceRoot={} skillCount={} skills={}",
+                    "Copilot platform skill catalog initialized directory={} resourceRoot={} skillCount={} defaultSkillCount={} customSkillCount={} skills={}",
                     catalog.root(),
                     properties.getSkillResourceRoot(),
-                    catalog.skills().size(),
-                    platformSkillNames
+                    catalog.effectiveSkills().size(),
+                    catalog.effectiveSkills().stream().filter(skill -> skill.state() == DEFAULT).count(),
+                    catalog.effectiveSkills().stream().filter(skill -> skill.state() == CUSTOM).count(),
+                    catalog.effectiveSkills().stream().map(CopilotRuntimeSkill::name).toList()
             );
         }
     }
 
-    private SkillCatalog materializePlatformSkillCatalog() {
+    private SkillCatalogState initializePersistentCatalog() {
         var targetRoot = properties.resolvedSkillDirectory();
         var parent = targetRoot.getParent();
-        var stagingRoot = parent.resolve(".skills-staging-" + UUID.randomUUID()).normalize();
+        var stagingRoot = parent.resolve(".skills-seed-" + UUID.randomUUID()).normalize();
 
         try {
             Files.createDirectories(parent);
             Files.createDirectory(stagingRoot);
             copyPackagedSkills(stagingRoot);
-            var skills = validateSkillCatalog(stagingRoot);
-            replaceDirectory(stagingRoot, targetRoot);
-            return new SkillCatalog(targetRoot, skills);
+            var packagedSkills = validateSkillCatalog(stagingRoot);
+            seedMissingEffectiveFiles(stagingRoot, targetRoot);
+            var effectiveDefinitions = validateSkillCatalog(targetRoot);
+            var effectiveSkills = projectEffectiveSkills(effectiveDefinitions, packagedSkills);
+            return new SkillCatalogState(targetRoot, packagedSkills, effectiveSkills);
         } catch (Exception exception) {
-            cleanupDirectory(stagingRoot);
             if (exception instanceof IllegalStateException illegalStateException) {
                 throw illegalStateException;
             }
@@ -100,6 +132,8 @@ public class CopilotSkillRuntimeLoader {
                     "Failed to initialize Copilot platform skill catalog: " + targetRoot,
                     exception
             );
+        } finally {
+            cleanupDirectory(stagingRoot);
         }
     }
 
@@ -146,9 +180,43 @@ public class CopilotSkillRuntimeLoader {
         }
     }
 
-    private List<CopilotRuntimeSkill> validateSkillCatalog(Path root) throws IOException {
+    private void seedMissingEffectiveFiles(Path seedRoot, Path targetRoot) throws IOException {
+        if (Files.exists(targetRoot) && !Files.isDirectory(targetRoot)) {
+            throw new IllegalStateException("Copilot platform skill catalog is not a directory: " + targetRoot);
+        }
+        Files.createDirectories(targetRoot);
+
+        try (var paths = Files.walk(seedRoot)) {
+            for (var seedPath : paths.sorted().toList()) {
+                var relative = seedRoot.relativize(seedPath);
+                if (relative.toString().isBlank()) {
+                    continue;
+                }
+                var targetPath = targetRoot.resolve(relative).normalize();
+                if (!targetPath.startsWith(targetRoot)) {
+                    throw new IllegalStateException("Copilot skill seed escaped effective directory: " + relative);
+                }
+                if (Files.isDirectory(seedPath)) {
+                    Files.createDirectories(targetPath);
+                    continue;
+                }
+                if (!Files.isRegularFile(seedPath) || Files.exists(targetPath)) {
+                    continue;
+                }
+                Files.createDirectories(targetPath.getParent());
+                try {
+                    Files.copy(seedPath, targetPath);
+                    log.info("Added missing packaged Copilot skill file relativePath={}", relative);
+                } catch (FileAlreadyExistsException ignored) {
+                    // Another local initializer supplied the same missing file.
+                }
+            }
+        }
+    }
+
+    private List<SkillDefinition> validateSkillCatalog(Path root) throws IOException {
         var skillNames = new LinkedHashSet<String>();
-        var skills = new ArrayList<CopilotRuntimeSkill>();
+        var skills = new ArrayList<SkillDefinition>();
         List<Path> skillDirectories;
         try (var paths = Files.list(root)) {
             skillDirectories = paths
@@ -167,106 +235,206 @@ public class CopilotSkillRuntimeLoader {
                 throw new IllegalStateException("Missing SKILL.md in Copilot skill directory: " + skillDirectory);
             }
 
-            var parsedSkill = parseSkill(skillFile);
-            var metadata = parsedSkill.metadata();
+            var parsedSkill = parseSkillFile(skillFile);
             var expectedName = skillDirectory.getFileName().toString();
-            var name = requiredString(metadata, "name", skillFile);
-            var description = requiredString(metadata, "description", skillFile);
-            if (!expectedName.equals(name)) {
+            if (!expectedName.equals(parsedSkill.name())) {
                 throw new IllegalStateException(
                         "Copilot skill frontmatter name '%s' must match directory '%s'"
-                                .formatted(name, expectedName)
+                                .formatted(parsedSkill.name(), expectedName)
                 );
             }
-            if (!skillNames.add(name)) {
-                throw new IllegalStateException("Duplicate Copilot skill name: " + name);
+            if (!skillNames.add(parsedSkill.name())) {
+                throw new IllegalStateException("Duplicate Copilot skill name: " + parsedSkill.name());
             }
-            skills.add(new CopilotRuntimeSkill(
-                    name,
-                    description,
-                    parsedSkill.lineCount(),
-                    parsedSkill.markdown(),
-                    parsedSkill.rawMarkdown()
-            ));
+            skills.add(parsedSkill);
         }
 
         return List.copyOf(skills);
     }
 
-    private ParsedSkill parseSkill(Path skillFile) throws IOException {
-        var content = Files.readString(skillFile, StandardCharsets.UTF_8).replace("\r\n", "\n");
-        if (!content.startsWith("---\n")) {
-            throw new IllegalStateException("Missing YAML frontmatter in Copilot skill: " + skillFile);
+    private SkillDefinition parseSkillFile(Path skillFile) throws IOException {
+        var content = Files.readString(skillFile, StandardCharsets.UTF_8);
+        return parseSkillContent(content, skillFile.toString());
+    }
+
+    private SkillDefinition parseMutationCandidate(String expectedName, String rawMarkdown) {
+        if (rawMarkdown == null || rawMarkdown.isBlank()) {
+            throw invalidContent("AI skill content must not be blank.", null);
         }
-        var endMarker = content.indexOf("\n---", 4);
+        var normalized = normalizeContent(rawMarkdown);
+        if (normalized.getBytes(StandardCharsets.UTF_8).length > MAX_SKILL_CONTENT_BYTES) {
+            throw invalidContent(
+                    "AI skill content exceeds the maximum size of " + MAX_SKILL_CONTENT_BYTES + " bytes.",
+                    null
+            );
+        }
+
+        final SkillDefinition candidate;
+        try {
+            candidate = parseSkillContent(normalized, "AI skill " + expectedName);
+        } catch (IllegalStateException exception) {
+            throw invalidContent("AI skill content failed validation.", exception);
+        }
+        if (!expectedName.equals(candidate.name())) {
+            throw new CopilotSkillCatalogException(
+                    CopilotSkillCatalogException.Code.NAME_MISMATCH,
+                    "AI skill frontmatter name must match path skill name: " + expectedName
+            );
+        }
+        return candidate;
+    }
+
+    private SkillDefinition parseSkillContent(String rawContent, String sourceLabel) {
+        var content = normalizeContent(rawContent);
+        if (content.getBytes(StandardCharsets.UTF_8).length > MAX_SKILL_CONTENT_BYTES) {
+            throw new IllegalStateException("Copilot skill exceeds maximum content size: " + sourceLabel);
+        }
+        if (!content.startsWith("---\n")) {
+            throw new IllegalStateException("Missing YAML frontmatter in Copilot skill: " + sourceLabel);
+        }
+        var endMarker = content.indexOf("\n---\n", 4);
         if (endMarker < 0) {
-            throw new IllegalStateException("Unclosed YAML frontmatter in Copilot skill: " + skillFile);
+            throw new IllegalStateException("Unclosed YAML frontmatter in Copilot skill: " + sourceLabel);
         }
 
         try {
             var parsed = new Yaml().load(content.substring(4, endMarker));
-            if (parsed instanceof Map<?, ?> metadata) {
-                var bodyStart = endMarker + "\n---".length();
-                if (bodyStart < content.length() && content.charAt(bodyStart) == '\n') {
-                    bodyStart++;
-                }
-                return new ParsedSkill(
-                        metadata,
-                        content.substring(bodyStart),
-                        content,
-                        Math.toIntExact(content.lines().count())
-                );
+            if (!(parsed instanceof Map<?, ?> metadata)) {
+                throw new IllegalStateException("Copilot skill frontmatter must be a YAML map: " + sourceLabel);
             }
-            throw new IllegalStateException("Copilot skill frontmatter must be a YAML map: " + skillFile);
+            var name = requiredString(metadata, "name", sourceLabel);
+            var description = requiredString(metadata, "description", sourceLabel);
+            var markdown = content.substring(endMarker + "\n---\n".length());
+            if (markdown.isBlank()) {
+                throw new IllegalStateException("Copilot skill Markdown body must not be blank: " + sourceLabel);
+            }
+            return new SkillDefinition(
+                    name,
+                    description,
+                    Math.toIntExact(content.lines().count()),
+                    markdown,
+                    content
+            );
+        } catch (IllegalStateException exception) {
+            throw exception;
         } catch (RuntimeException exception) {
-            throw new IllegalStateException("Invalid YAML frontmatter in Copilot skill: " + skillFile, exception);
+            throw new IllegalStateException("Invalid YAML frontmatter in Copilot skill: " + sourceLabel, exception);
         }
     }
 
-    private String requiredString(Map<?, ?> metadata, String key, Path skillFile) {
+    private String requiredString(Map<?, ?> metadata, String key, String sourceLabel) {
         var value = metadata.get(key);
         if (value instanceof String text && !text.isBlank()) {
             return text.trim();
         }
         throw new IllegalStateException(
                 "Copilot skill frontmatter field '%s' must be a non-blank string: %s"
-                        .formatted(key, skillFile)
+                        .formatted(key, sourceLabel)
         );
     }
 
-    private void replaceDirectory(Path stagingRoot, Path targetRoot) throws IOException {
-        var backupRoot = targetRoot.getParent().resolve(".skills-backup-" + UUID.randomUUID()).normalize();
-        var previousCatalogMoved = false;
+    private List<CopilotRuntimeSkill> projectEffectiveSkills(
+            List<SkillDefinition> effectiveDefinitions,
+            List<SkillDefinition> packagedDefinitions
+    ) {
+        var packagedByName = definitionsByName(packagedDefinitions);
+        return effectiveDefinitions.stream()
+                .map(definition -> toRuntimeSkill(definition, packagedByName.get(definition.name())))
+                .toList();
+    }
+
+    private CopilotRuntimeSkill toRuntimeSkill(SkillDefinition effective, SkillDefinition packaged) {
+        var skillState = packaged != null && packaged.rawMarkdown().equals(effective.rawMarkdown())
+                ? DEFAULT
+                : CUSTOM;
+        return new CopilotRuntimeSkill(
+                effective.name(),
+                effective.description(),
+                effective.lineCount(),
+                effective.markdown(),
+                effective.rawMarkdown(),
+                skillState,
+                packaged != null
+        );
+    }
+
+    private Map<String, SkillDefinition> definitionsByName(List<SkillDefinition> definitions) {
+        var result = new LinkedHashMap<String, SkillDefinition>();
+        definitions.forEach(definition -> result.put(definition.name(), definition));
+        return Map.copyOf(result);
+    }
+
+    private CopilotRuntimeSkill requireEffectiveSkill(SkillCatalogState current, String skillName) {
+        return current.effectiveSkills().stream()
+                .filter(skill -> skill.name().equals(skillName))
+                .findFirst()
+                .orElseThrow(() -> new CopilotSkillCatalogException(
+                        CopilotSkillCatalogException.Code.SKILL_NOT_FOUND,
+                        "AI skill not found: " + skillName
+                ));
+    }
+
+    private CopilotRuntimeSkill publishChangedSkill(SkillCatalogState current, SkillDefinition changedDefinition) {
+        var packaged = definitionsByName(current.packagedSkills()).get(changedDefinition.name());
+        var changedSkill = toRuntimeSkill(changedDefinition, packaged);
+        var effectiveSkills = current.effectiveSkills().stream()
+                .map(skill -> skill.name().equals(changedSkill.name()) ? changedSkill : skill)
+                .toList();
+        state = new SkillCatalogState(current.root(), current.packagedSkills(), effectiveSkills);
+        return changedSkill;
+    }
+
+    private void writeEffectiveSkill(Path root, SkillDefinition candidate) {
+        var skillDirectory = root.resolve(candidate.name()).normalize();
+        var target = skillDirectory.resolve("SKILL.md").normalize();
+        var temporary = skillDirectory.resolve(".SKILL.md." + UUID.randomUUID() + ".tmp").normalize();
+        if (!skillDirectory.getParent().equals(root)
+                || !target.getParent().equals(skillDirectory)
+                || !temporary.getParent().equals(skillDirectory)) {
+            throw new CopilotSkillCatalogException(
+                    CopilotSkillCatalogException.Code.STORAGE_UNAVAILABLE,
+                    "AI skill storage target is invalid."
+            );
+        }
+
         try {
-            if (Files.exists(targetRoot)) {
-                moveDirectory(targetRoot, backupRoot);
-                previousCatalogMoved = true;
-            }
-            moveDirectory(stagingRoot, targetRoot);
-            cleanupDirectory(backupRoot);
+            Files.writeString(
+                    temporary,
+                    candidate.rawMarkdown(),
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.WRITE
+            );
+            replaceFile(temporary, target);
+            log.info("Copilot runtime skill updated skillName={}", candidate.name());
         } catch (IOException exception) {
-            if (previousCatalogMoved && !Files.exists(targetRoot) && Files.exists(backupRoot)) {
-                try {
-                    moveDirectory(backupRoot, targetRoot);
-                } catch (IOException restoreException) {
-                    exception.addSuppressed(restoreException);
-                }
-            }
-            throw exception;
+            cleanupFile(temporary);
+            throw new CopilotSkillCatalogException(
+                    CopilotSkillCatalogException.Code.STORAGE_UNAVAILABLE,
+                    "AI skill could not be written.",
+                    exception
+            );
         } finally {
-            cleanupDirectory(stagingRoot);
-            if (Files.exists(targetRoot)) {
-                cleanupDirectory(backupRoot);
-            }
+            cleanupFile(temporary);
         }
     }
 
-    private void moveDirectory(Path source, Path target) throws IOException {
-        try {
-            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException exception) {
-            Files.move(source, target);
-        }
+    protected void replaceFile(Path source, Path target) throws IOException {
+        Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private CopilotSkillCatalogException invalidContent(String message, Throwable cause) {
+        return cause == null
+                ? new CopilotSkillCatalogException(CopilotSkillCatalogException.Code.INVALID_CONTENT, message)
+                : new CopilotSkillCatalogException(
+                        CopilotSkillCatalogException.Code.INVALID_CONTENT,
+                        message,
+                        cause
+                );
+    }
+
+    private String normalizeContent(String content) {
+        return content.replace("\r\n", "\n").replace('\r', '\n');
     }
 
     private void copyDirectoryContents(Path sourceRoot, Path targetRoot) throws IOException {
@@ -336,6 +504,17 @@ public class CopilotSkillRuntimeLoader {
         );
     }
 
+    private void cleanupFile(Path file) {
+        if (file == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException exception) {
+            log.warn("Failed to clean generated Copilot skill temporary file '{}'.", file, exception);
+        }
+    }
+
     private void cleanupDirectory(Path directory) {
         if (directory == null || !Files.exists(directory)) {
             return;
@@ -349,14 +528,19 @@ public class CopilotSkillRuntimeLoader {
         }
     }
 
-    private record ParsedSkill(
-            Map<?, ?> metadata,
+    private record SkillDefinition(
+            String name,
+            String description,
+            int lineCount,
             String markdown,
-            String rawMarkdown,
-            int lineCount
+            String rawMarkdown
     ) {
     }
 
-    private record SkillCatalog(Path root, List<CopilotRuntimeSkill> skills) {
+    private record SkillCatalogState(
+            Path root,
+            List<SkillDefinition> packagedSkills,
+            List<CopilotRuntimeSkill> effectiveSkills
+    ) {
     }
 }

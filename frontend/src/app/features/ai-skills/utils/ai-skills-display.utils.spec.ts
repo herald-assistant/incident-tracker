@@ -1,4 +1,8 @@
-import { aiSkillFamily, aiSkillResponsibility } from './ai-skills-display.utils';
+import {
+  aiSkillFamily,
+  aiSkillMarkdownBody,
+  aiSkillResponsibility
+} from './ai-skills-display.utils';
 
 describe('AI Skills display projection', () => {
   it('should classify known workflow prefixes and keep a safe fallback', () => {
@@ -18,5 +22,12 @@ describe('AI Skills display projection', () => {
       'Assessment'
     );
     expect(aiSkillResponsibility('future-skill')).toBe('Guidance');
+  });
+
+  it('should project editable SKILL.md source to its rendered Markdown body', () => {
+    expect(
+      aiSkillMarkdownBody('---\r\nname: example\r\ndescription: Example.\r\n---\r\n\r\n# Guidance')
+    ).toBe('# Guidance');
+    expect(aiSkillMarkdownBody('# Guidance')).toBe('# Guidance');
   });
 });

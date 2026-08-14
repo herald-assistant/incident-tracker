@@ -1,6 +1,10 @@
 # Podglad katalogu AI Skills
 
-Status: done
+Status: done (historyczny pierwszy inkrement read-only)
+
+Aktualny kontrakt ekranu, persistence oraz API jest opisany w dokumentacji
+architektury. Ponizsze ograniczenia dotyczyly pierwszego wdrozenia podgladu i
+nie sa aktualnym kontraktem `Platform / AI Skills`.
 
 ## Uzytkownik i decyzja
 

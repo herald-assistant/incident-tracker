@@ -57,7 +57,7 @@ Decyzje:
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
 - `Platform` dotyczy overview, customizacji i podgladu zasobow Team Delivery
-  Workspace: workspace settings, read-only katalogu `AI Skills`,
+  Workspace: workspace settings, effective katalogu `AI Skills`,
   personalizacji, autentykacji, konfiguracji modeli i podobnych ustawien.
 - Zakres Workspace Settings obejmuje `app.ui.title`, podstawowe connection
   settings Jiry (`analysis.jira.base-url`, `analysis.jira.token`) i Confluence
@@ -206,9 +206,11 @@ najlepszy snapshot przed AI, a tools sa tylko do uzupelniania luk.
 Skille Copilota sa pakowane z aplikacja z `src/main/resources/copilot/skills`.
 Nie traktujemy ich jako plikow `.github` repozytorium hosta.
 
-Przy starcie `CopilotSkillRuntimeLoader` waliduje i odtwarza caly katalog pod
+`src/main/resources/copilot/skills` jest immutable packaged seedem. Przy starcie
+`CopilotSkillRuntimeLoader` waliduje seed i dopisuje tylko brakujace pliki pod
 `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
-`tdw-data/copilot/skills`. Ten sam pojedynczy root trafia do kazdego
+`tdw-data/copilot/skills`; istniejace effective pliki nie sa nadpisywane ani
+usuwane. Ten sam pojedynczy root trafia do kazdego
 `SessionConfig` i `ResumeSessionConfig`, a built-in tool `skill` jest zawsze w
 effective allowliscie. Nie tworzymy selected roots ani katalogow per feature
 lub per analiza.
@@ -218,11 +220,13 @@ niesie prompt i artefakty przygotowane w runtime. Feature posiada tresc i
 workflow swoich skilli oraz wskazuje starter w prompcie; nie przekazuje
 platformie katalogow ani listy wybranych nazw.
 
-Platforma wystawia operatorowi read-only projekcje tego samego zwalidowanego
+Platforma wystawia operatorowi projekcje tego samego zwalidowanego effective
 katalogu przez `GET /api/ai/skills` i `GET /api/ai/skills/{skillName}` oraz
-ekran `Platform / AI Skills`. Lista nie jest alternatywnym source of truth:
-nie zapisuje danych, nie uruchamia skilla, nie przypisuje go per feature i nie
-ujawnia sciezki filesystemu. Workflow i responsibility widoczne w UI sa
+ekran `Platform / AI Skills`. `PUT /api/ai/skills/{skillName}` atomowo
+nadpisuje jeden effective `SKILL.md`, a `POST .../restore-default` przywraca
+packaged wersje. API nie uruchamia skilla, nie przypisuje go per feature i nie
+ujawnia sciezki filesystemu. Stan `DEFAULT/CUSTOM` jest porownaniem effective
+z aktualnym packaged seedem. Workflow i responsibility widoczne w UI sa
 pomocnicza projekcja nawigacyjna, a nie runtime selection.
 
 ## 6. Granica AI pozostaje generyczna

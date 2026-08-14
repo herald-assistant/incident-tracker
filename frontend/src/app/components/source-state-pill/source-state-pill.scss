@@ -1,0 +1,25 @@
+:host {
+  display: inline-flex;
+}
+
+.workspace-settings-source {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 4px 7px;
+  border: 1px solid rgba(94, 108, 132, 0.18);
+  border-radius: 999px;
+  background: rgba(23, 43, 77, 0.06);
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.workspace-settings-source--custom {
+  border-color: rgba(33, 110, 78, 0.24);
+  background: #f0fff6;
+  color: var(--success-text);
+}

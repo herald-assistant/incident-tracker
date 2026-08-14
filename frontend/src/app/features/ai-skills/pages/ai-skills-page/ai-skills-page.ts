@@ -1,11 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { MarkdownContentComponent } from '../../../../components/markdown-content/markdown-content';
+import { SourceStatePillComponent } from '../../../../components/source-state-pill/source-state-pill';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import {
   AiSkillCatalogResponse,
@@ -17,6 +18,7 @@ import {
   AI_SKILL_FAMILIES,
   AiSkillFamilyId,
   aiSkillFamily,
+  aiSkillMarkdownBody,
   aiSkillResponsibility
 } from '../../utils/ai-skills-display.utils';
 
@@ -28,7 +30,12 @@ type FamilyFilter = {
 
 @Component({
   selector: 'app-ai-skills-page',
-  imports: [ReactiveFormsModule, RouterLink, MarkdownContentComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    MarkdownContentComponent,
+    SourceStatePillComponent
+  ],
   templateUrl: './ai-skills-page.html',
   styleUrl: './ai-skills-page.scss'
 })
@@ -40,6 +47,7 @@ export class AiSkillsPageComponent {
 
   readonly searchControl = new FormControl('', { nonNullable: true });
   readonly responsibilityControl = new FormControl('all', { nonNullable: true });
+  readonly editorControl = new FormControl('', { nonNullable: true });
 
   readonly catalog = signal<AiSkillCatalogResponse | null>(null);
   readonly detail = signal<AiSkillDetailResponse | null>(null);
@@ -53,6 +61,12 @@ export class AiSkillsPageComponent {
   readonly detailError = signal('');
   readonly rawView = signal(false);
   readonly copyMessage = signal('');
+  readonly isEditing = signal(false);
+  readonly editorPreview = signal(false);
+  readonly draftRawMarkdown = signal('');
+  readonly isSaving = signal(false);
+  readonly isRestoring = signal(false);
+  readonly mutationMessage = signal('');
 
   readonly skills = computed(() => this.catalog()?.skills ?? []);
   readonly familyFilters = computed<FamilyFilter[]>(() => {
@@ -93,6 +107,10 @@ export class AiSkillsPageComponent {
     const totalCount = this.skills().length;
     return filteredCount === totalCount ? `${totalCount} skills` : `${filteredCount} of ${totalCount}`;
   });
+  readonly hasUnsavedChanges = computed(
+    () => this.isEditing() && this.draftRawMarkdown() !== (this.detail()?.rawMarkdown ?? '')
+  );
+  readonly previewMarkdown = computed(() => aiSkillMarkdownBody(this.draftRawMarkdown()));
 
   constructor() {
     this.searchControl.valueChanges
@@ -101,11 +119,17 @@ export class AiSkillsPageComponent {
     this.responsibilityControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.responsibilityFilter.set(value));
+    this.editorControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value) => this.draftRawMarkdown.set(value));
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const skillName = params.get('skillName') ?? '';
       this.selectedSkillName.set(skillName);
       this.rawView.set(false);
       this.copyMessage.set('');
+      this.isEditing.set(false);
+      this.editorPreview.set(false);
+      this.mutationMessage.set('');
       this.loadDetail(skillName);
     });
 
@@ -147,12 +171,105 @@ export class AiSkillsPageComponent {
     this.rawView.update((value) => !value);
   }
 
+  beginEdit(): void {
+    const skill = this.detail();
+    if (!skill) {
+      return;
+    }
+    this.editorControl.setValue(skill.rawMarkdown);
+    this.draftRawMarkdown.set(skill.rawMarkdown);
+    this.editorPreview.set(false);
+    this.mutationMessage.set('');
+    this.detailError.set('');
+    this.isEditing.set(true);
+  }
+
+  cancelEdit(): void {
+    if (this.hasUnsavedChanges() && !window.confirm('Odrzucić niezapisane zmiany w skillu?')) {
+      return;
+    }
+    this.resetEditor();
+  }
+
+  toggleEditorPreview(): void {
+    this.editorPreview.update((value) => !value);
+  }
+
+  saveSkill(): void {
+    const skill = this.detail();
+    if (!skill || this.isSaving()) {
+      return;
+    }
+    this.isSaving.set(true);
+    this.detailError.set('');
+    this.mutationMessage.set('');
+    this.skillsApi
+      .updateSkill(skill.name, { rawMarkdown: this.editorControl.value })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isSaving.set(false))
+      )
+      .subscribe({
+        next: (updated) => {
+          this.applyMutation(updated);
+          this.isEditing.set(false);
+          this.mutationMessage.set('Skill saved.');
+        },
+        error: (error) => {
+          this.detailError.set(toErrorMessage(error, 'Nie udało się zapisać skilla.'));
+        }
+      });
+  }
+
+  restoreDefault(): void {
+    const skill = this.detail();
+    if (!skill?.restoreAvailable || this.isRestoring()) {
+      return;
+    }
+    if (!window.confirm(`Przywrócić domyślną treść skilla „${skill.name}”?`)) {
+      return;
+    }
+    this.isRestoring.set(true);
+    this.detailError.set('');
+    this.mutationMessage.set('');
+    this.skillsApi
+      .restoreDefault(skill.name)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isRestoring.set(false))
+      )
+      .subscribe({
+        next: (restored) => {
+          this.applyMutation(restored);
+          this.isEditing.set(false);
+          this.mutationMessage.set('Default restored.');
+        },
+        error: (error) => {
+          this.detailError.set(toErrorMessage(error, 'Nie udało się przywrócić domyślnego skilla.'));
+        }
+      });
+  }
+
+  canDeactivate(): boolean {
+    return (
+      !this.hasUnsavedChanges() || window.confirm('Opuścić widok i odrzucić niezapisane zmiany?')
+    );
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  protectUnsavedChanges(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+    }
+  }
+
   copySource(): void {
     const skill = this.detail();
     if (!skill) {
       return;
     }
-    void copyTextToClipboard(skill.rawMarkdown).then((copied) => {
+    const source = this.isEditing() ? this.editorControl.value : skill.rawMarkdown;
+    void copyTextToClipboard(source).then((copied) => {
       this.copyMessage.set(copied ? 'Copied' : 'Copy failed');
     });
   }
@@ -186,6 +303,8 @@ export class AiSkillsPageComponent {
         next: (detail) => {
           if (generation === this.detailRequestGeneration) {
             this.detail.set(detail);
+            this.editorControl.setValue(detail.rawMarkdown, { emitEvent: false });
+            this.draftRawMarkdown.set(detail.rawMarkdown);
           }
         },
         error: (error) => {
@@ -194,6 +313,45 @@ export class AiSkillsPageComponent {
           }
         }
       });
+  }
+
+  private resetEditor(): void {
+    const rawMarkdown = this.detail()?.rawMarkdown ?? '';
+    this.editorControl.setValue(rawMarkdown, { emitEvent: false });
+    this.draftRawMarkdown.set(rawMarkdown);
+    this.editorPreview.set(false);
+    this.isEditing.set(false);
+    this.detailError.set('');
+  }
+
+  private applyMutation(updated: AiSkillDetailResponse): void {
+    this.detail.set(updated);
+    this.editorControl.setValue(updated.rawMarkdown, { emitEvent: false });
+    this.draftRawMarkdown.set(updated.rawMarkdown);
+    this.editorPreview.set(false);
+
+    this.catalog.update((catalog) => {
+      if (!catalog) {
+        return catalog;
+      }
+      const skills = catalog.skills.map((skill) =>
+        skill.name === updated.name
+          ? {
+              name: updated.name,
+              description: updated.description,
+              lineCount: updated.lineCount,
+              state: updated.state,
+              restoreAvailable: updated.restoreAvailable
+            }
+          : skill
+      );
+      return {
+        ...catalog,
+        skills,
+        defaultSkillCount: skills.filter((skill) => skill.state === 'DEFAULT').length,
+        customSkillCount: skills.filter((skill) => skill.state === 'CUSTOM').length
+      };
+    });
   }
 }
 

@@ -112,9 +112,9 @@ Na dzisiaj projekt ma:
   parametrow Copilota, Jiry, Confluence, GitLaba, Elasticsearch i Dynatrace;
   dla Jiry i Confluence zakres obejmuje tylko `base-url` oraz `token`,
 - ekran `GET /ai-skills` i deep link `GET /ai-skills/{skillName}` w sekcji
-  `Platform` do read-only przegladania tego samego zwalidowanego katalogu
-  skilli, ktory dostaja sesje Copilota; UI nie pokazuje sciezki storage i nie
-  udostepnia edit, run ani assignment per feature,
+  `Platform` do przegladania i walidowanej edycji tego samego effective
+  katalogu skilli, ktory dostaja sesje Copilota; UI nie pokazuje sciezki
+  storage i nie udostepnia run ani assignment per feature,
 - glowne job-based API: `POST /api/analysis/jobs` i
   `GET /api/analysis/jobs/{analysisId}`,
   z wyborem zrodla logow oraz opcjonalnym wyborem modelu AI i
@@ -262,12 +262,15 @@ Na dzisiaj projekt ma:
   Angularowy ekran `Platform / AI Skills`. Pokazuje status efektywnego
   katalogu runtime, wyszukiwanie i pomocnicze filtry workflow/responsibility.
   `GET /ai-skills/{skillName}` otwiera renderowany albo surowy `SKILL.md` pod
-  bezposrednim URL-em. Oba warianty sa read-only i nie ujawniaja lokalnej
-  sciezki katalogu.
+  bezposrednim URL-em, pozwala edytowac effective tresc i przywrocic packaged
+  default. Lista i szczegol pokazuja stan `DEFAULT/CUSTOM` bez ujawniania
+  lokalnej sciezki katalogu.
 - `GET /api/ai/skills`
-  Shared/operator lista zwalidowanych skilli z `name`, `description` i
-  `lineCount`. `GET /api/ai/skills/{skillName}` zwraca body Markdown bez YAML
-  frontmatter oraz dokladny `rawMarkdown`; nie istnieje endpoint mutujacy.
+  Shared/operator lista zwalidowanych skilli z metadata, stanem
+  `DEFAULT/CUSTOM` i dostepnoscia restore. `GET /api/ai/skills/{skillName}`
+  zwraca body Markdown oraz dokladny `rawMarkdown`; `PUT` atomowo nadpisuje
+  wskazany effective `SKILL.md`, a `POST .../restore-default` przywraca
+  packaged wersje.
 - `GET /api/analysis/jobs/input-options`
   Feature-owned endpoint dla UI startu analizy. Zwraca dostepne zrodla logow i
   powod blokady Elasticsearch, jezeli brakuje wymaganej konfiguracji
@@ -379,9 +382,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `GET /analysis/ai/options`. Implementacja endpointu mapuje platformowy
   katalog modeli Copilota na obecne DTO aplikacji.
 - `pl.mkn.tdw.api.aiskills`
-  Shared/operator API read-only katalogu runtime skilli. Mapuje neutralna
-  projekcje z `aiplatform.copilot.runtime` na liste i szczegol bez ujawniania
-  sciezek storage ani wprowadzania selekcji per feature.
+  Shared/operator API effective katalogu runtime skilli. Mapuje neutralna
+  projekcje z `aiplatform.copilot.runtime` na liste, szczegol, zapis i restore
+  pojedynczego pliku bez ujawniania sciezek storage ani selekcji per feature.
 - `pl.mkn.tdw.api.uiconfig`
   Shared/operator API runtime konfiguracji brandu UI dla Angulara. Nie jest
   czescia incident job flow.
@@ -427,7 +430,7 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   run assembly. Ten pakiet sklada parametry dla platformowego runtime Copilota.
 - `pl.mkn.tdw.aiplatform.copilot.runtime`
   Neutralne elementy runtime SDK: properties, model listing, client options,
-  materializacja wspolnego katalogu skilli, `SessionConfig`, `MessageOptions`
+  persistent effective katalog skilli, jego seed/save/restore, `SessionConfig`, `MessageOptions`
   i prepared session bez znajomosci incident promptu ani incident policy.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
   Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
@@ -567,7 +570,7 @@ Znaczenie grup UI:
   analysis-independent i nie eksponuja incidentowego `analysisRunId`;
   DB/GitLab scope dla AI pozostaje feature-owned hidden `ToolContext`.
 - `Platform` - overview, konfiguracja i podglad zasobow samego Team Delivery
-  Workspace: workspace settings, read-only AI Skills, personalizacja,
+  Workspace: workspace settings, editable AI Skills, personalizacja,
   autentykacja i modele AI. Pozycje bez dedykowanych widokow pozostaja
   disabled placeholders.
 
@@ -631,13 +634,13 @@ Znaczenie grup UI:
   generyczne `shared.ai.AnalysisAiActivityEvent`: turny, komunikaty,
   wywolania tooli, snapshoty context tokens/messages i usage eventy. Frontend
   merge'uje te eventy z `toolEvidenceSections` w jeden timeline analizy.
-- Wszystkie skille Copilota sa pakowane jako resources aplikacji i przy starcie
-  odtwarzane w jednym platformowym katalogu
+- Wszystkie skille Copilota sa pakowane jako immutable seed. Przy starcie
+  loader dopisuje tylko brakujace pliki do persistent effective katalogu
   `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
-  `tdw-data/copilot/skills`. Kazda nowa i wznawiana sesja dostaje ten sam root;
-  feature wskazuje potrzebny workflow w prompcie. Loader utrzymuje takze
-  immutable metadata oraz raw/body Markdown dla read-only operator API; ta
-  projekcja nie zmienia materializacji ani session config.
+  `tdw-data/copilot/skills`, bez nadpisywania istniejacej tresci. Kazda nowa i
+  wznawiana sesja dostaje ten sam root; feature wskazuje workflow w prompcie.
+  Loader utrzymuje immutable snapshot metadata i Markdown, oblicza
+  `DEFAULT/CUSTOM` oraz atomowo publikuje zapis lub restore jednego skilla.
 - Frontend Angular jest buildowany w tym samym repo i serwowany z tego samego
   JAR-a jako statyczne zasoby.
 

@@ -6,6 +6,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { finalize } from 'rxjs';
 
 import {
+  SourceStatePillComponent,
+  type SourceState
+} from '../../components/source-state-pill/source-state-pill';
+import {
   WorkspaceSettingsField,
   WorkspaceSettingsResponse,
   WorkspaceSettingsUpdateRequest
@@ -15,7 +19,7 @@ import { WorkspaceSettingsApiService } from '../../core/services/workspace-setti
 
 @Component({
   selector: 'app-workspace-settings-page',
-  imports: [ReactiveFormsModule, MatTooltipModule],
+  imports: [ReactiveFormsModule, MatTooltipModule, SourceStatePillComponent],
   templateUrl: './workspace-settings-page.html',
   styleUrl: './workspace-settings-page.scss'
 })
@@ -160,14 +164,8 @@ export class WorkspaceSettingsPageComponent {
     this.showDynatraceApiToken.update((visible) => !visible);
   }
 
-  sourceLabel(field: WorkspaceSettingsField, currentValue: string): string {
+  sourceLabel(field: WorkspaceSettingsField, currentValue: string): SourceState {
     return this.usesCustomValue(field, currentValue) ? 'CUSTOM' : 'DEFAULT';
-  }
-
-  sourceClass(field: WorkspaceSettingsField, currentValue: string): string {
-    return this.usesCustomValue(field, currentValue)
-      ? 'workspace-settings-source workspace-settings-source--custom'
-      : 'workspace-settings-source';
   }
 
   usesCustomValue(field: WorkspaceSettingsField, currentValue: string): boolean {
