@@ -278,7 +278,8 @@ class FlowExplorerEndpointInventoryServiceTest {
                 List.of(map(
                         "id", "crm-customer-profile",
                         "name", "CRM Customer Profile",
-                        "kind", "internal-application",
+                        "systemType", "internal-service",
+                        "systemSubtype", "backend",
                         "references", map("repositories", List.of("legacy-system-reference-repo"))
                 )),
                 List.of(),
@@ -347,7 +348,8 @@ class FlowExplorerEndpointInventoryServiceTest {
                 List.of(map(
                         "id", "customer-process",
                         "name", "Customer Process",
-                        "kind", "internal-application"
+                        "systemType", "internal-service",
+                        "systemSubtype", "backend"
                 )),
                 List.of(),
                 List.of(map(

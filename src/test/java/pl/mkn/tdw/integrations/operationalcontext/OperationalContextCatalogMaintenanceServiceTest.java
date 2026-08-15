@@ -30,6 +30,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                             "id", "crm-case-service",
                             "name", "CRM Case Service",
                             "systemType", "internal-service",
+                            "systemSubtype", "backend",
                             "aliases", List.of("crm-case")
                     )),
                     entity("repository", "crm-case-repository", map(
@@ -130,6 +131,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                     "id", "crm-source-system",
                     "name", "CRM Source System Updated",
                     "systemType", "internal-service",
+                    "systemSubtype", "backend",
                     "aliases", List.of()
             );
 
@@ -162,6 +164,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                     "id", "crm-source-system",
                     "name", "CRM Source System",
                     "systemType", "internal-service",
+                    "systemSubtype", "backend",
                     "summary", "Anonymous CRM source service update",
                     "matchSignals", matchSignals
             );
@@ -244,6 +247,85 @@ class OperationalContextCatalogMaintenanceServiceTest {
     }
 
     @Test
+    void shouldEnforceCanonicalAnonymousCrmSystemClassificationWithoutLegacyAliases() {
+        try (var harness = harness("crm-system-classification")) {
+            var digest = harness.digest();
+
+            var legacyKind = assertThrows(
+                    OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().update(new OperationalContextCatalogMutationCommand(
+                            "system",
+                            "crm-source-system",
+                            map(
+                                    "id", "crm-source-system",
+                                    "name", "CRM Source System",
+                                    "kind", "internal-service",
+                                    "systemSubtype", "backend"
+                            )
+                    ))
+            );
+            assertTrue(legacyKind.fieldErrors().stream().anyMatch(
+                    error -> error.pointer().equals("/payload/kind")
+                            && error.message().equals("Unknown field is not writable")
+            ));
+
+            var missingSubtype = assertThrows(
+                    OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().update(new OperationalContextCatalogMutationCommand(
+                            "system",
+                            "crm-source-system",
+                            map(
+                                    "id", "crm-source-system",
+                                    "name", "CRM Source System",
+                                    "systemType", "internal-service"
+                            )
+                    ))
+            );
+            assertTrue(missingSubtype.fieldErrors().stream().anyMatch(
+                    error -> error.pointer().equals("/payload/systemSubtype")
+                            && error.message().contains("required")
+            ));
+
+            var unsupportedSubtype = assertThrows(
+                    OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().update(new OperationalContextCatalogMutationCommand(
+                            "system",
+                            "crm-source-system",
+                            map(
+                                    "id", "crm-source-system",
+                                    "name", "CRM Source System",
+                                    "systemType", "internal-service",
+                                    "systemSubtype", "batch"
+                            )
+                    ))
+            );
+            assertTrue(unsupportedSubtype.fieldErrors().stream().anyMatch(
+                    error -> error.pointer().equals("/payload/systemSubtype")
+                            && error.message().contains("frontend, backend, worker, mixed or unknown")
+            ));
+
+            var externalWithSubtype = assertThrows(
+                    OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().update(new OperationalContextCatalogMutationCommand(
+                            "system",
+                            "crm-source-system",
+                            map(
+                                    "id", "crm-source-system",
+                                    "name", "CRM Source System",
+                                    "systemType", "external-system",
+                                    "systemSubtype", "frontend"
+                            )
+                    ))
+            );
+            assertTrue(externalWithSubtype.fieldErrors().stream().anyMatch(
+                    error -> error.pointer().equals("/payload/systemSubtype")
+                            && error.message().contains("only for internal-service")
+            ));
+            assertEquals(digest, harness.digest());
+        }
+    }
+
+    @Test
     void shouldRejectDuplicateMissingMismatchAndDanglingReferenceWithJsonPointers() {
         try (var harness = harness("crm-command-errors")) {
             var digest = harness.digest();
@@ -279,6 +361,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                                     "id", "crm-orphan-service",
                                     "name", "CRM Orphan Service",
                                     "systemType", "internal-service",
+                                    "systemSubtype", "backend",
                                     "references", map("processes", List.of("crm-missing-process"))
                             )
                     ))
@@ -357,6 +440,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                             "id", "crm-contact-routing",
                             "name", "CRM Contact Routing",
                             "systemType", "internal-service",
+                            "systemSubtype", "backend",
                             "matchSignals", map(
                                     "exact", map("serviceNames", List.of("crm-contact-routing")),
                                     "strong", map("routes", List.of("/crm/contacts"))
@@ -396,6 +480,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                                     "id", "crm-invalid-relations",
                                     "name", "CRM Invalid Relations",
                                     "systemType", "internal-service",
+                                    "systemSubtype", "backend",
                                     "relations", List.of(
                                             map("type", "supports", "targetType", "process", "target", "crm-missing-process"),
                                             map("type", "uses", "targetType", "unsupported-crm-type", "target", "crm-contact-update")
@@ -525,6 +610,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                             "id", "crm-contact-platform",
                             "name", "CRM Contact Platform",
                             "systemType", "internal-service",
+                            "systemSubtype", "backend",
                             "participants", map(
                                     "externalOwner", "CRM managed platform provider",
                                     "futureCrmParticipantHint", map("reviewed", true)
@@ -574,6 +660,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                                     "id", "crm-invalid-runtime",
                                     "name", "CRM Invalid Runtime",
                                     "systemType", "internal-service",
+                                    "systemSubtype", "backend",
                                     "participants", map("externalOwner", List.of("CRM provider")),
                                     "runtime", map("configurationDirectory", "../crm/contact-platform")
                             )
@@ -964,7 +1051,8 @@ class OperationalContextCatalogMaintenanceServiceTest {
                 systems:
                   - id: crm-source-system
                     name: CRM Source System
-                    kind: internal-service
+                    systemType: internal-service
+                    systemSubtype: backend
                     match:
                       serviceNames:
                         - crm-source-service
@@ -973,6 +1061,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                   - id: crm-target-system
                     name: CRM Target System
                     systemType: internal-service
+                    systemSubtype: backend
                 """);
         documents.put("repo-map.yml", """
                 schemaVersion: 1

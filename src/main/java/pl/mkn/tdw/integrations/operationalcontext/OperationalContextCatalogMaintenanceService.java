@@ -22,6 +22,9 @@ public class OperationalContextCatalogMaintenanceService {
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9][a-z0-9-]*");
     private static final Pattern SAFE_CONFIGURATION_DIRECTORY =
             Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,254}");
+    private static final String INTERNAL_SERVICE_SYSTEM_TYPE = "internal-service";
+    private static final Set<String> INTERNAL_SERVICE_SUBTYPES =
+            Set.of("frontend", "backend", "worker", "mixed", "unknown");
     private static final Set<String> DERIVED_FIELDS = Set.of(
             "rawSourcePreview", "resolvedOwnership", "validationFindings", "sourceReferences",
             "openQuestions", "overviewSections", "relatedEntities", "recognitionSignals", "explainabilitySections"
@@ -254,6 +257,7 @@ public class OperationalContextCatalogMaintenanceService {
         validateSourceCoverage(payload.get("sourceCoverage"), errors);
         validateGaps(payload.get("gaps"), errors);
         if (type == OperationalContextCatalogEntityType.SYSTEM) {
+            validateSystemClassification(payload, errors);
             validateSystemParticipants(payload.get("participants"), errors);
             validateSystemRuntime(payload.get("runtime"), errors);
         }
@@ -297,6 +301,38 @@ public class OperationalContextCatalogMaintenanceService {
             errors.add(new OperationalContextCatalogFieldError("/payload/category", "Category is required"));
         }
         validateOwnership(payload, errors);
+    }
+
+    private void validateSystemClassification(
+            Map<String, Object> payload,
+            List<OperationalContextCatalogFieldError> errors
+    ) {
+        var systemType = text(payload.get("systemType"));
+        var systemSubtype = text(payload.get("systemSubtype"));
+        if (!StringUtils.hasText(systemType)) {
+            errors.add(new OperationalContextCatalogFieldError(
+                    "/payload/systemType", "System type is required"
+            ));
+            return;
+        }
+        if (!INTERNAL_SERVICE_SYSTEM_TYPE.equals(systemType)) {
+            if (StringUtils.hasText(systemSubtype)) {
+                errors.add(new OperationalContextCatalogFieldError(
+                        "/payload/systemSubtype", "System subtype is supported only for internal-service"
+                ));
+            }
+            return;
+        }
+        if (!StringUtils.hasText(systemSubtype)) {
+            errors.add(new OperationalContextCatalogFieldError(
+                    "/payload/systemSubtype", "System subtype is required for internal-service"
+            ));
+        } else if (!INTERNAL_SERVICE_SUBTYPES.contains(systemSubtype)) {
+            errors.add(new OperationalContextCatalogFieldError(
+                    "/payload/systemSubtype",
+                    "System subtype must be frontend, backend, worker, mixed or unknown"
+            ));
+        }
     }
 
     private void validateSystemParticipants(Object value, List<OperationalContextCatalogFieldError> errors) {
@@ -1379,12 +1415,6 @@ public class OperationalContextCatalogMaintenanceService {
     private void canonicalizeAliases(OperationalContextCatalogEntityType type, Map<String, Object> payload) {
         if (type != OperationalContextCatalogEntityType.SYSTEM) {
             return;
-        }
-        var systemType = firstValue(payload, "systemType", "type", "kind");
-        payload.remove("type");
-        payload.remove("kind");
-        if (systemType != null) {
-            payload.put("systemType", systemType);
         }
         var legacyMatch = payload.remove("match");
         if (legacyMatch != null && !payload.containsKey("matchSignals")) {

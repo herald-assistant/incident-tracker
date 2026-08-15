@@ -75,13 +75,20 @@ Create or refine only durable systems that users, analysts or teams recognize.
 
 Minimum useful entry:
 
-- `id`, `name`, `kind`, `summary`, `purpose`,
+- `id`, `name`, `systemType`, `summary`, `purpose`,
+- for every `internal-service`, one explicit `systemSubtype`: `frontend`,
+  `backend`, `worker`, `mixed` or `unknown`,
 - aliases and use cases,
 - references to known processes, contexts, integrations, teams and terms,
 - `ownership` only when there is durable system-level accountability.
 
 Do not list repositories on a system. Repository navigation for a system goes
 through exactly one system-targeted entry in `code-search-scopes.yml`.
+
+Use `systemSubtype: frontend` only after review confirms that the durable
+system is the user-facing frontend boundary. Do not infer it from a repository
+name, `package.json`, Angular dependency or route file. A frontend is modeled
+as its own system even when it shares a monorepo with backend code.
 
 ### 3. Add bounded context and glossary language
 
@@ -179,6 +186,10 @@ should answer:
 Repository entries should not try to describe internal code organization or
 define maintainers as owners.
 
+For a registered frontend system, its selected primary repository must use
+`repositoryType: frontend`. This is an explicit catalog decision, not an
+automatic conclusion from build files.
+
 Repository references to systems, processes or bounded contexts are recognition
 signals and navigation hints owned by `repo-map.yml`. They are not the
 canonical route from a system to code or from code to ownership. When code
@@ -209,6 +220,11 @@ Each scope should define:
   context or process in specific modules,
 - reason and `readFor`,
 - limitations.
+
+For `internal-service/frontend`, the rule is stricter: exactly one repository
+must have `role: primary`, and that repository must be `repositoryType:
+frontend`. A priority-only primary candidate does not qualify the system for
+UI Explorer.
 
 This lets an agent continue analysis across repositories without guessing the
 next project. It also lets the agent restrict GitLab search to known modules

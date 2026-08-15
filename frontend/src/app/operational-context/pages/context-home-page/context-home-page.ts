@@ -131,9 +131,14 @@ const COLUMNS: Record<string, ContextCatalogColumn[]> = {
       'Kanoniczna nazwa logicznego systemu w indeksie wiedzy. To do tego bytu AI mapuje sygnaly z katalogu, repozytoriow, procesow i integracji, zeby nie mylic pojedynczego technicznego sygnalu z rzeczywistym systemem analizowanym.'
     ),
     column(
-      'kind',
-      'Kind',
+      'systemType',
+      'Type',
       'Typ systemu, na przyklad aplikacja wewnetrzna, komponent platformowy albo system zewnetrzny. Pomaga AI dobrac sposob analizy, oczekiwany ownership i to, czy problem dotyczy kodu aplikacji, platformy czy zaleznosci zewnetrznej.'
+    ),
+    column(
+      'systemSubtype',
+      'Subtype',
+      'Jawna klasyfikacja internal-service. Frontend kwalifikuje system do UI Explorer, a unknown oznacza nierozstrzygnieta klasyfikacje wymagajaca maintenance.'
     ),
     column(
       'owner',

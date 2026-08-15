@@ -156,9 +156,14 @@ class OperationalContextMaintenanceInstructionsTest {
         assertTrue(guidance.contains("repository provenance uses repeatable `sourceRef`/`evidenceType`/`note`"));
         assertTrue(guidance.contains("Service, deployment and application identities belong in `matchSignals`"));
         assertTrue(guidance.contains("Discovery phrases are searchable repository signals"));
+        assertTrue(guidance.contains("`systemType` | Required canonical field"));
+        assertTrue(guidance.contains("Legacy `type` and `kind` are not accepted"));
+        assertTrue(guidance.contains("`frontend`, `backend`, `worker`, `mixed`, `unknown`"));
         assertTrue(systemPrompt.contains("configurationDirectory: crm/contact-service"));
+        assertTrue(systemPrompt.contains("systemSubtype: backend"));
         assertTrue(systemPrompt.contains("CRM managed\nplatform provider"));
-        assertTrue(repositoryPrompt.contains("evidenceType: build-definition"));
+        assertTrue(repositoryPrompt.contains("evidenceType: reviewed-build-definition"));
+        assertTrue(repositoryPrompt.contains("repositoryType: frontend"));
         assertTrue(repositoryPrompt.contains("answerWhenUserMentions"));
         assertFalse(systemPrompt.contains("customer-portal"));
         assertFalse(repositoryPrompt.contains("customer-portal"));

@@ -46,38 +46,38 @@ fields here.
 
 ```yaml
 codeSearchScopes:
-  - id: customer-portal-code-scope
-    name: Customer Portal code scope
+  - id: crm-agent-portal-code-scope
+    name: CRM Agent Portal code scope
     scopeType: system
     lifecycleStatus: active
-    summary: Repositories and modules to inspect for the Customer Portal system.
+    summary: Repositories and modules to inspect for the strongly anonymized CRM Agent Portal system.
     target:
       type: system
-      id: customer-portal
+      id: crm-agent-portal
     useFor:
-      - Understand request intake behavior across UI and service projects.
-      - Keep broad code discovery efficient for the Customer Portal system.
+      - Understand anonymized CRM contact-screen behavior.
+      - Keep broad code discovery efficient for the CRM Agent Portal system.
     repositories:
-      - repoId: customer-portal-ui
+      - repoId: crm-agent-portal
         role: primary
         priority: 1
         searchMode: path-prefixes
         pathPrefixes:
-          - apps/customer-portal
-          - libs/customer-request-ui
-        reason: User-facing request journey starts here.
+          - apps/crm-agent-portal
+          - libs/crm-contact-ui
+        reason: Strongly anonymized CRM contact journey starts here.
         readFor:
-          - user journey and labels
-          - request submission behavior
-      - repoId: customer-request-shared
+          - CRM contact journey and labels
+          - anonymized contact submission behavior
+      - repoId: crm-contact-contracts
         role: library
         priority: 2
         searchMode: path-prefixes
         pathPrefixes:
-          - customer-request-contracts
-        reason: Imported internal library detected from primary repository pom.xml files.
+          - crm-contact-contracts
+        reason: Reviewed internal contract library imported by the primary CRM portal repository.
         readFor:
-          - shared contracts and validation types used by the primary system code
+          - shared anonymized CRM contracts and validation types used by the primary system code
     limitations:
       - Does not cover partner-owned systems beyond the cataloged handoff boundary.
 ```
@@ -85,6 +85,9 @@ codeSearchScopes:
 ## Update rules
 
 - Use one `target` per scope.
+- A system classified as `internal-service/frontend` must have exactly one
+  system-targeted scope and exactly one repository with `role: primary`.
+  That repository must declare `repositoryType: frontend` in `repo-map.yml`.
 - Maintain exactly one code-search scope per system. The scope id should be
   stable and system-oriented, for example `<system-id>-code-scope`.
 - The required system scope target must be `target.type: system` and `target.id`

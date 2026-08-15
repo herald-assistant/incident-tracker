@@ -48,6 +48,7 @@ systems:
     name: CRM Contact Core
     shortName: Contact Core
     systemType: internal-service
+    systemSubtype: backend
     lifecycleStatus: active
     operationalStatus: live
     criticality: high
@@ -107,6 +108,16 @@ deployment and application identities in `matchSignals`.
 ## Update rules
 
 - Prefer stable business and system names over incidental strings.
+- Use only canonical `systemType`; do not write legacy `type` or `kind`.
+- Every `internal-service` must declare exactly one `systemSubtype` from:
+  `frontend`, `backend`, `worker`, `mixed`, `unknown`. Omit `systemSubtype`
+  for all other system types.
+- Use `unknown` during a deterministic breaking migration when evidence does
+  not support a narrower subtype. Never infer `frontend` or `backend` from a
+  repository name, `package.json`, build file or framework alone.
+- A UI selectable by UI Explorer must be modeled as its own durable system
+  with `systemType: internal-service` and `systemSubtype: frontend`, even when
+  its repository is a monorepo shared with another deployable system.
 - Keep `ownership` only for durable system-level accountability.
 - Use `ownerTeamIds` when the team exists in `teams.yml`; use `ownerLabel` only
   when the owner is an external/domain label without a cataloged team.
@@ -131,6 +142,8 @@ deployment and application identities in `matchSignals`.
 ## Quality check
 
 - Every entry has `id`, `name`, `summary`, `purpose` and useful navigation.
+- Every `internal-service` has a supported explicit `systemSubtype`; frontend
+  classification is backed by reviewed catalog evidence.
 - Ownership is present only when there is a durable system-level owner.
 - References point to existing semantic catalog ids or are intentionally left
   empty.

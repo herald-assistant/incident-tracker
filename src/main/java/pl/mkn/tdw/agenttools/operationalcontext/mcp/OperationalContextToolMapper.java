@@ -254,7 +254,8 @@ public class OperationalContextToolMapper {
                 "codeSearchScopeIds", codeSearchScopes.stream().map(OperationalContextRepositorySearchScope::id).toList()
         );
         var overview = values(
-                "kind", system.kind(),
+                "systemType", system.systemType(),
+                "systemSubtype", system.systemSubtype(),
                 "lifecycleStatus", system.lifecycleStatus(),
                 "operationalStatus", system.operationalStatus(),
                 "criticality", system.criticality(),

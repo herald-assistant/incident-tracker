@@ -63,7 +63,8 @@ final class OperationalContextApiTestFixtures {
                         map(
                                 "id", "crm-consent-service",
                                 "name", "CRM Consent Service",
-                                "kind", "internal-application",
+                                "systemType", "internal-service",
+                                "systemSubtype", "backend",
                                 "purpose", "Owns customer consent capture decisions.",
                                 "participants", map("externalOwner", "CRM managed platform provider"),
                                 "runtime", map("configurationDirectory", "crm/consent-service"),
@@ -80,7 +81,7 @@ final class OperationalContextApiTestFixtures {
                         map(
                                 "id", "consent-registry",
                                 "name", "Consent Registry",
-                                "kind", "external-system",
+                                "systemType", "external-system",
                                 "purpose", "Receives captured customer consent records."
                         )
                 ),
@@ -247,32 +248,34 @@ final class OperationalContextApiTestFixtures {
     static OperationalContextCatalog brokenCatalog() {
         return OperationalContextDtos.catalogFromRaw(
                 List.of(map(
-                        "id", "core-team",
-                        "name", "Core Team",
+                        "id", "crm-core-team",
+                        "name", "CRM Core Team",
                         "references", map("systems", List.of(), "repositories", List.of())
                 )),
                 List.of(),
                 List.of(
                         map(
-                                "id", "app-core",
-                                "name", "App Core",
-                                "kind", "internal-application",
+                                "id", "crm-app-core",
+                                "name", "CRM App Core",
+                                "systemType", "internal-service",
+                                "systemSubtype", "backend",
                                 "references", map("repositories", List.of("missing-repo")),
-                                "matchSignals", map("exact", map("markers", List.of("shared-service")))
+                                "matchSignals", map("exact", map("markers", List.of("crm-shared-service")))
                         ),
                         map(
                                 "id", "crm-customer-profile",
                                 "name", "CRM Customer Profile",
-                                "kind", "internal-application",
-                                "matchSignals", map("exact", map("markers", List.of("shared-service")))
+                                "systemType", "internal-service",
+                                "systemSubtype", "backend",
+                                "matchSignals", map("exact", map("markers", List.of("crm-shared-service")))
                         )
                 ),
                 List.of(),
                 List.of(map(
-                        "id", "broken-repo",
-                        "name", "Broken Repo",
-                        "git", map("group", "Group", "project", "broken", "projectPath", "Group/broken"),
-                        "references", map("systems", List.of("missing-system"))
+                        "id", "crm-broken-repo",
+                        "name", "CRM Broken Repo",
+                        "git", map("group", "crm", "project", "broken", "projectPath", "crm/broken"),
+                        "references", map("systems", List.of("missing-crm-system"))
                 )),
                 List.of(),
                 List.of(),

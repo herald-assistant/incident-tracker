@@ -1,0 +1,10 @@
+version: 1
+systems:
+  - id: crm-agent-portal
+    name: CRM Agent Portal
+    systemType: internal-service
+    summary: Strongly anonymized CRM frontend awaiting explicit subtype review.
+  - id: crm-contact-provider
+    name: CRM Contact Provider
+    systemType: external-system
+    summary: Strongly anonymized external CRM provider.

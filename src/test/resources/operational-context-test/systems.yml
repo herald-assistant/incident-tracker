@@ -3,7 +3,8 @@ schemaVersion: 1
 systems:
   - id: app-core
     name: App Core
-    kind: internal-application
+    systemType: internal-service
+    systemSubtype: backend
     purpose: Executes the main application behavior.
     references:
       repositories: [app-core-repo, app-shared-lib-repo]
@@ -22,7 +23,7 @@ systems:
         markers: [APP_CORE]
   - id: partner-service
     name: Partner Service
-    kind: external-system
+    systemType: external-system
     purpose: Provides data used by the main application flow.
     references:
       processes: [main-process]

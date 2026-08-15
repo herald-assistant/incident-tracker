@@ -77,9 +77,10 @@ class OperationalContextControllerTest {
     @Test
     void shouldExposeSystemsEndpoint() throws Exception {
         when(viewService.systems()).thenReturn(List.of(new OperationalContextSystemRowDto(
-                "app-core",
-                "App Core",
-                "internal",
+                "crm-agent-portal",
+                "CRM Agent Portal",
+                "internal-service",
+                "frontend",
                 null,
                 emptyResolvedOwnership(),
                 "Runs core flow",
@@ -93,7 +94,9 @@ class OperationalContextControllerTest {
 
         mockMvc.perform(get("/api/operational-context/systems"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("app-core"))
+                .andExpect(jsonPath("$[0].id").value("crm-agent-portal"))
+                .andExpect(jsonPath("$[0].systemType").value("internal-service"))
+                .andExpect(jsonPath("$[0].systemSubtype").value("frontend"))
                 .andExpect(jsonPath("$[0].repositories.count").value(0))
                 .andExpect(jsonPath("$[0].relations.count").value(0));
     }
@@ -101,8 +104,8 @@ class OperationalContextControllerTest {
     @Test
     void shouldExposeCodeSearchScopesEndpoint() throws Exception {
         when(viewService.codeSearchScopes()).thenReturn(List.of(new OperationalContextCodeSearchScopeRowDto(
-                "app-core-scope",
-                "App Core Scope",
+                "crm-agent-portal-code-scope",
+                "CRM Agent Portal code scope",
                 "system",
                 "active",
                 emptyAggregate("Target"),
@@ -114,7 +117,7 @@ class OperationalContextControllerTest {
 
         mockMvc.perform(get("/api/operational-context/code-search-scopes"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("app-core-scope"))
+                .andExpect(jsonPath("$[0].id").value("crm-agent-portal-code-scope"))
                 .andExpect(jsonPath("$[0].repositories.count").value(0));
     }
 

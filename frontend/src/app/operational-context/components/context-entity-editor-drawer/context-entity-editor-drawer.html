@@ -23,7 +23,7 @@
         <h3>{{ section.title }}</h3>
         <div class="editor-grid">
           @for (field of section.fields; track field.path) {
-            <div class="editor-field" [class.editor-field--wide]="field.kind !== 'text'">
+            <div class="editor-field" [class.editor-field--wide]="field.kind !== 'text' && field.kind !== 'select'">
               <div class="editor-field__label-row">
                 <label [for]="controlName(field)">{{ field.label }} @if (field.required) { <strong>*</strong> }</label>
                 <button
@@ -48,6 +48,13 @@
                 ></app-context-structured-field-editor>
               } @else if (field.kind === 'textarea' || field.kind === 'list') {
                 <textarea [id]="controlName(field)" rows="3" [formControlName]="controlName(field)" [attr.readonly]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null"></textarea>
+              } @else if (field.kind === 'select') {
+                <select [id]="controlName(field)" [formControlName]="controlName(field)" [attr.disabled]="readonly() ? true : null" [attr.aria-describedby]="controlError(field) ? controlName(field) + '-error' : null">
+                  <option value="">Not applicable</option>
+                  @for (choice of field.choices || []; track choice) {
+                    <option [value]="choice">{{ choice }}</option>
+                  }
+                </select>
               } @else {
                 <input [id]="controlName(field)" type="text" [formControlName]="controlName(field)" [attr.readonly]="readonly() || (state().mode === 'edit' && field.path === 'id') ? true : null" />
               }

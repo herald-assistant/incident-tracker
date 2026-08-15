@@ -39,7 +39,8 @@ class OperationalContextViewServiceTest {
 
         var system = service.systems().get(0);
         assertEquals("crm-consent-service", system.id());
-        assertEquals("internal-application", system.kind());
+        assertEquals("internal-service", system.systemType());
+        assertEquals("backend", system.systemSubtype());
         assertEquals("team-a", system.owner().value());
         assertEquals(1, system.repositories().count());
         assertTrue(system.relations().count() >= 4);
@@ -151,7 +152,7 @@ class OperationalContextViewServiceTest {
 
         assertTrue(findings.stream().anyMatch(finding ->
                 finding.category().equals("UNKNOWN_RELATION_TARGET")
-                        && finding.detail().contains("missing-system")));
+                        && finding.detail().contains("missing-crm-system")));
     }
 
     @Test

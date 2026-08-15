@@ -80,7 +80,8 @@ class FlowExplorerRepositoryScopeServiceTest {
                 List.of(map(
                         "id", "crm-customer-profile",
                         "name", "CRM Customer Profile",
-                        "kind", "internal-application",
+                        "systemType", "internal-service",
+                        "systemSubtype", "backend",
                         "references", map("repositories", List.of("legacy-system-reference-repo"))
                 )),
                 List.of(),
@@ -116,7 +117,8 @@ class FlowExplorerRepositoryScopeServiceTest {
                 List.of(map(
                         "id", "crm-customer-profile",
                         "name", "CRM Customer Profile",
-                        "kind", "internal-application",
+                        "systemType", "internal-service",
+                        "systemSubtype", "backend",
                         "references", map("repositories", List.of("legacy-system-reference-repo"))
                 )),
                 List.of(),

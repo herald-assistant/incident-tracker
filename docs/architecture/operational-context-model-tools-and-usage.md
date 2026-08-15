@@ -151,7 +151,7 @@ Pliki katalogu:
 | Plik | Rola |
 | --- | --- |
 | `operational-context-index.md` | opis celu katalogu, zasad modelowania, quality gates i ograniczen |
-| `systems.yml` | kanoniczne systemy, aliasy, status, summary, references, ownership i open questions |
+| `systems.yml` | kanoniczne systemy, jawne `systemType`/`systemSubtype`, aliasy, status, summary, references, ownership i open questions |
 | `repo-map.yml` | mapa repozytoriow do GitLaba i relacji katalogowych |
 | `code-search-scopes.yml` | semantyczne grupy repozytoriow do wspolnego przeszukania |
 | `processes.yml` | procesy biznesowo-operacyjne, kroki, rezultaty i relacje |
@@ -168,7 +168,7 @@ Pliki katalogu:
 `system` jest glownym targetem relacji. Powinien miec:
 
 - `id`, `name`, `aliases`,
-- `systemType`, `lifecycleStatus`, `criticality`,
+- `systemType`, `systemSubtype`, `lifecycleStatus`, `criticality`,
 - `summary`,
 - `references` do procesow, integracji, bounded contextow, zespolow i pojec,
 - `ownership`, `relations`, `sourceCoverage`, `gaps` tam, gdzie sa potrzebne,
@@ -182,12 +182,23 @@ deploymentow i aplikacji pozostaja sygnalami w `matchSignals`, a nie druga
 prawda w `runtime`. Code discovery dla systemu zaczyna sie od code-search
 scope'u targetujacego ten system.
 
+`systemType` jest jedynym kanonicznym polem klasyfikacji; legacy `type` i
+`kind` nie sa parsowane ani przyjmowane przez maintenance API. Kazdy
+`systemType=internal-service` musi miec dokladnie jeden `systemSubtype` z
+vocabulary `frontend`, `backend`, `worker`, `mixed`, `unknown`. Dla pozostalych
+typow `systemSubtype` jest pomijany. `unknown` oznacza jawnie przejrzany brak
+wystarczajacych dowodow i nie kwalifikuje systemu do feature'ow zaleznych od
+subtype. Konkretnego subtype nie wolno inferowac z nazwy repozytorium,
+`package.json`, frameworka ani ukladu plikow.
+
 ### Repository
 
 Repository opisuje, czym jest repo w krajobrazie systemu i do jakich bytow
 katalogowych sie odnosi. Powinno zawierac:
 
 - GitLab identity (`projectName`, `projectPath`),
+- jawny `repositoryType`, w tym `frontend` dla repozytorium bedacego glownym
+  zrodlem UI,
 - purpose/summary,
 - status, criticality, aliases,
 - references do systemow, procesow, integracji i bounded contextow,
@@ -227,6 +238,13 @@ repozytorium. Nie sa lista klas, endpointow, plikow ani pakietow.
 Dozwolone role powinny opisywac relacje w analizie, np. `primary`, `support`,
 `shared-library`, `migration-peer`, `external-adapter`. Nie uzywamy roli jako
 substytutu dla szczegolow implementacji.
+
+Frontend kwalifikujacy sie do UI Explorer jest rejestrowany bez heurystyk:
+system ma `systemType=internal-service` i `systemSubtype=frontend`, dokladnie
+jeden code-search scope targetujacy ten system, a scope dokladnie jedno
+repozytorium z jawna rola `primary`, `repositoryType=frontend` i poprawnym
+`searchMode`. Brak lub niejednoznacznosc ktoregokolwiek elementu jest findingiem
+konfiguracji, a nie sygnalem do zgadywania repozytorium.
 
 ### Process
 
@@ -520,18 +538,22 @@ Skrypt:
 operational-context-maintenance/cleanup-operational-context.ps1
 ```
 
-ma sluzyc do czyszczenia istniejacych katalogow z usunietych pol i sekcji.
-Domyslny tryb jest dry-run; `-Apply` zapisuje zmiany. Skrypt usuwa cale bloki
-YAML dla starych struktur oraz raportuje zakres usuniec.
+ma sluzyc do czyszczenia istniejacych katalogow z usunietych pol i sekcji oraz
+do deterministycznych migracji kontraktu. Domyslny tryb jest dry-run; `-Apply`
+zapisuje zmiany. Dla tej wersji kontraktu skrypt dopisuje
+`systemSubtype: unknown` do kanonicznych wpisow `systemType: internal-service`,
+ktore nie maja subtype. Nie klasyfikuje ich jako frontend/backend na podstawie
+nazwy lub kodu. Skrypt usuwa tez cale bloki YAML dla starych struktur i
+raportuje wszystkie zmiany.
 
 Po wiekszej zmianie katalogu nalezy wykonac:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\operational-context-maintenance\cleanup-operational-context.ps1 -DryRun
+powershell -NoProfile -ExecutionPolicy Bypass -File .\operational-context-maintenance\cleanup-operational-context.ps1
 ```
 
-Komenda powinna pokazac `Removal candidates: 0`. Dodatkowy `rg` dobieraj do
-konkretnej migracji albo listy usuwanych pol z planu.
+Komenda powinna pokazac `Changes: 0` po zakonczonej migracji. Dodatkowy `rg`
+dobieraj do konkretnej migracji albo listy usuwanych pol z planu.
 
 ## Validation
 
@@ -540,7 +562,14 @@ Walidacja katalogu powinna pilnowac:
 - unknown relation targets,
 - self references,
 - duplicate references,
+- brak `systemType`, brak/nieobslugiwany `systemSubtype` dla
+  `internal-service` albo subtype zapisany dla innego typu,
+- jawny `systemSubtype=unknown` jako warning i brak kwalifikacji do feature'a
+  zaleznego od subtype,
 - code-search scope bez targetu albo repozytorium,
+- frontend bez system-targeted code-search scope albo z wieloma takimi scope'ami,
+- frontend bez jednego jawnego primary repository albo z wieloma primary,
+- primary repository frontendu bez `repositoryType=frontend`,
 - unknown code-search repository,
 - code-search repository bez `searchMode`,
 - `searchMode=path-prefixes` bez `pathPrefixes`,
@@ -581,6 +610,9 @@ jest dostepna:
 - detail drawer zachowuje `Copy`, `Open raw` i `Close` oraz dodaje `Edit` i
   `Delete`,
 - editor wysyla kanoniczny maintenance payload i zachowuje immutable ID,
+- system editor udostepnia jawne pola `systemType` oraz zamkniety select
+  `systemSubtype`; subtype jest wymagany dla `internal-service` i pomijany dla
+  pozostalych typow,
 - zlozone pola systemu i repozytorium (`participants.externalOwner`,
   `runtime.configurationDirectory`, `evidence`, `llmToolHints`) maja prowadzone
   kontrolki z tooltipami opisujacymi format oraz skutek runtime/AI; UI nie

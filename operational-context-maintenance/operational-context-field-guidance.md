@@ -271,7 +271,8 @@ accepted for compatibility, but new maintenance should use cards.
 
 | Field | What to enter and accepted values | Runtime / AI effect |
 | --- | --- | --- |
-| `systemType` | Backend free text. Current vocabulary: `internal-service`, `business-service`, `gateway`, `data-store`, `message-broker`, `platform-service`, `external-system`, `external-saas`, `identity-provider`, `middleware`. | Classifies the canonical system in UI and AI context. |
+| `systemType` | Required canonical field. Current vocabulary: `internal-service`, `business-service`, `gateway`, `data-store`, `message-broker`, `platform-service`, `external-system`, `external-saas`, `identity-provider`, `middleware`. Legacy `type` and `kind` are not accepted. | Classifies the canonical system in UI and AI context. |
+| `systemSubtype` | Required only for `internal-service`; exactly one of `frontend`, `backend`, `worker`, `mixed`, `unknown`. Omit it for other system types. Use `unknown` when reviewed evidence cannot support a narrower classification; never infer a concrete subtype from repository names or framework files. | Exposed by API and `opctx_*` tools. Subtype-specific features use it as an explicit eligibility gate; UI Explorer accepts only `frontend`. |
 | `operationalStatus` | Short durable operating state; do not store incident-specific status. | Gives AI operating context but does not change application execution. |
 | `criticality` | Backend free text. Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Used for impact prioritization in read models and AI analysis. |
 | `participants` | Guided optional `externalOwner` text. Use it only when the system boundary is operated outside the local team catalogue; omit the object for locally operated systems. | `opctx_get_entity` exposes the label as external responsibility without creating local team ownership. |
@@ -284,7 +285,7 @@ accepted for compatibility, but new maintenance should use cards.
 
 | Field | What to enter and accepted values | Runtime / AI effect |
 | --- | --- | --- |
-| `repositoryType` | Backend free text. Current vocabulary includes `service`, `monorepo`, `shared-library`. | Distinguishes application repositories and reusable code sources before exploration. |
+| `repositoryType` | Backend free text. Current vocabulary includes `service`, `frontend`, `monorepo`, `shared-library`. Use `frontend` for the reviewed primary repository of an `internal-service/frontend` system. | Distinguishes application repositories and reusable code sources before exploration; UI Explorer requires a frontend primary repository. |
 | `criticality` | Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Contextual prioritization; actual read order comes from code-search `priority`. |
 | `git` | Guided fields for `provider`, `group`, `project`, `projectPath`, `defaultBranch`, `url` and one `aliases` value per line; `project` or `projectPath` is required. `inferred` is server-owned and not editable. | Connects the catalogue ID to GitLab discovery, code tools and technical ownership resolution. `projectPath` is the canonical provider-relative lookup identity; project and aliases are fallback candidates. |
 | `evidence` | Guided cards with required `sourceRef`, required `evidenceType` and optional `note`. Use stable relative paths or durable document labels, never source contents, credentials or customer data. | Operator detail and `opctx_get_entity` expose the known fields as explainable provenance; the application does not fetch the reference automatically. |
@@ -347,6 +348,12 @@ Each `repositories` item supports:
 | `readFor` | Questions to answer, one per item. | Guides AI exploration without embedding low-level clues. |
 | `searchMode` | Strictly `whole-repository` or `path-prefixes`. | Selects the GitLab search boundary. |
 | `pathPrefixes` | Required non-empty safe relative paths for `path-prefixes`; forbidden for `whole-repository`. No leading slash, `..` or backslash. | Restricts code search to relevant modules. |
+
+For a system classified as `internal-service/frontend`, the catalog must have
+exactly one system-targeted scope and exactly one repository row with
+`role: primary`. The referenced repository must declare
+`repositoryType: frontend`; `priority: 1` without the explicit role does not
+satisfy frontend eligibility.
 
 ```json
 {

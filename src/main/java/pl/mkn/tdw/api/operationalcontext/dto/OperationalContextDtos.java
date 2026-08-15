@@ -143,7 +143,8 @@ public final class OperationalContextDtos {
     public record OperationalContextSystemRowDto(
             String id,
             String name,
-            String kind,
+            String systemType,
+            String systemSubtype,
             ExplainableValueDto<String> owner,
             OperationalContextResolvedOwnershipDto resolvedOwnership,
             String purpose,

@@ -53,9 +53,9 @@ describe('ContextHomePageComponent', () => {
     const headers = Array.from(
       fixture.nativeElement.querySelectorAll('.catalog-table__header-cell') as NodeListOf<HTMLElement>
     ).map((element) => element.textContent?.trim());
-    expect(headers.slice(0, 5)).toEqual(['System', 'Kind', 'Owner', 'Repositories', 'Relations']);
+    expect(headers.slice(0, 6)).toEqual(['System', 'Type', 'Subtype', 'Owner', 'Repositories', 'Relations']);
     const rowCells = fixture.nativeElement.querySelectorAll('.catalog-table__row [role="cell"]') as NodeListOf<HTMLElement>;
-    expect(rowCells[3].textContent).toContain('2');
+    expect(rowCells[4].textContent).toContain('2');
 
     component.localFilterControl.setValue('missing');
     fixture.detectChanges();
@@ -530,7 +530,8 @@ function systemRow(): OperationalContextSystemRowDto {
   return {
     id: 'app-core',
     name: 'App Core',
-    kind: 'internal-application',
+    systemType: 'internal-service',
+    systemSubtype: 'backend',
     owner: {
       value: 'core-team',
       label: 'Core Team',

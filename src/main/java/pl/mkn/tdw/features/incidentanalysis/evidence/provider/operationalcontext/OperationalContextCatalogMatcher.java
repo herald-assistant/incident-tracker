@@ -137,7 +137,7 @@ public class OperationalContextCatalogMatcher {
             OperationalContextSystem system,
             OperationalContextIncidentSignals signals
     ) {
-        if (!"internal-service".equals(normalize(system.kind()).replace('_', '-'))) {
+        if (!"internal-service".equals(normalize(system.systemType()).replace('_', '-'))) {
             return false;
         }
         var candidates = new LinkedHashSet<String>();

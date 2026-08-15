@@ -324,10 +324,10 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(
-                        map("id", "crm-customer-service", "kind", "internal-application"),
-                        map("id", "api-gateway", "kind", "api-gateway"),
-                        map("id", "crm-service", "kind", "internal-service"),
-                        map("id", "salesforce", "kind", "external-saas")
+                        map("id", "crm-customer-service", "systemType", "internal-service", "systemSubtype", "backend"),
+                        map("id", "crm-api-gateway", "systemType", "api-gateway"),
+                        map("id", "crm-service", "systemType", "internal-service", "systemSubtype", "backend"),
+                        map("id", "crm-external-saas", "systemType", "external-saas")
                 ),
                 List.of(),
                 List.of(map("id", "crm-service-repo")),
@@ -355,13 +355,13 @@ class OperationalContextReadModelValidatorTest {
                         .anyMatch(finding -> finding.message().contains("crm-customer-service"))
                         && findings.stream()
                         .filter(finding -> finding.code().equals("INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE"))
-                        .anyMatch(finding -> finding.message().contains("api-gateway")),
+                        .anyMatch(finding -> finding.message().contains("crm-api-gateway")),
                 () -> "Expected missing-scope warnings for internal system and api-gateway in " + findings
         );
         assertFalse(findings.stream()
                 .filter(finding -> finding.code().equals("INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE"))
                 .anyMatch(finding -> finding.message().contains("crm-service")
-                        || finding.message().contains("salesforce")));
+                        || finding.message().contains("crm-external-saas")));
     }
 
     @Test
@@ -490,6 +490,137 @@ class OperationalContextReadModelValidatorTest {
     }
 
     @Test
+    void shouldValidateCanonicalAnonymousCrmSystemClassification() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(
+                        map("id", "crm-case-api", "systemType", "internal-service"),
+                        map(
+                                "id", "crm-customer-sync",
+                                "systemType", "internal-service",
+                                "systemSubtype", "batch"
+                        ),
+                        map(
+                                "id", "crm-contact-indexer",
+                                "systemType", "internal-service",
+                                "systemSubtype", "unknown"
+                        ),
+                        map(
+                                "id", "crm-provider-gateway",
+                                "systemType", "external-system",
+                                "systemSubtype", "frontend"
+                        ),
+                        map("id", "crm-unclassified-system")
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasError(findings, "INTERNAL_SERVICE_SUBTYPE_REQUIRED");
+        assertHasError(findings, "INTERNAL_SERVICE_SUBTYPE_UNSUPPORTED");
+        assertHasWarning(findings, "INTERNAL_SERVICE_SUBTYPE_UNKNOWN");
+        assertHasError(findings, "SYSTEM_SUBTYPE_OUTSIDE_INTERNAL_SERVICE");
+        assertHasError(findings, "SYSTEM_TYPE_REQUIRED");
+    }
+
+    @Test
+    void shouldAcceptExplicitAnonymousCrmFrontendRegistration() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(map(
+                        "id", "crm-agent-portal",
+                        "systemType", "internal-service",
+                        "systemSubtype", "frontend"
+                )),
+                List.of(),
+                List.of(map(
+                        "id", "crm-agent-portal-repository",
+                        "repositoryType", "frontend"
+                )),
+                List.of(map(
+                        "id", "crm-agent-portal-code-scope",
+                        "target", map("type", "system", "id", "crm-agent-portal"),
+                        "repositories", List.of(map(
+                                "repoId", "crm-agent-portal-repository",
+                                "role", "primary",
+                                "priority", 1,
+                                "searchMode", "whole-repository"
+                        ))
+                )),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertFalse(findings.stream().anyMatch(finding -> finding.code().startsWith("FRONTEND_")));
+        assertFalse(findings.stream().anyMatch(finding -> finding.code().equals("FRONTEND_WITH_MULTIPLE_CODE_SEARCH_SCOPES")));
+        assertFalse(findings.stream().anyMatch(finding -> finding.code().equals("INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE")));
+    }
+
+    @Test
+    void shouldRejectAmbiguousAnonymousCrmFrontendRegistration() {
+        var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
+                List.of(),
+                List.of(),
+                List.of(
+                        frontendSystem("crm-agent-portal-no-primary"),
+                        frontendSystem("crm-agent-console-multiple-primary"),
+                        frontendSystem("crm-advisor-workspace-wrong-type"),
+                        frontendSystem("crm-service-desk-multiple-scopes"),
+                        frontendSystem("crm-agent-inbox-no-scope")
+                ),
+                List.of(),
+                List.of(
+                        repository("crm-agent-portal-repository", "frontend"),
+                        repository("crm-agent-console-shell", "frontend"),
+                        repository("crm-agent-console-widgets", "frontend"),
+                        repository("crm-advisor-workspace-repository", "backend"),
+                        repository("crm-service-desk-shell", "frontend"),
+                        repository("crm-service-desk-widgets", "frontend")
+                ),
+                List.of(
+                        scope("crm-agent-portal-scope", "crm-agent-portal-no-primary", List.of(
+                                scopedRepository("crm-agent-portal-repository", "supporting")
+                        )),
+                        scope("crm-agent-console-scope", "crm-agent-console-multiple-primary", List.of(
+                                scopedRepository("crm-agent-console-shell", "primary"),
+                                scopedRepository("crm-agent-console-widgets", "primary")
+                        )),
+                        scope("crm-advisor-workspace-scope", "crm-advisor-workspace-wrong-type", List.of(
+                                scopedRepository("crm-advisor-workspace-repository", "primary")
+                        )),
+                        scope("crm-service-desk-shell-scope", "crm-service-desk-multiple-scopes", List.of(
+                                scopedRepository("crm-service-desk-shell", "primary")
+                        )),
+                        scope("crm-service-desk-widgets-scope", "crm-service-desk-multiple-scopes", List.of(
+                                scopedRepository("crm-service-desk-widgets", "primary")
+                        ))
+                ),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                "index"
+        ));
+
+        assertHasError(findings, "FRONTEND_SCOPE_WITHOUT_PRIMARY_REPOSITORY");
+        assertHasError(findings, "FRONTEND_SCOPE_WITH_MULTIPLE_PRIMARY_REPOSITORIES");
+        assertHasError(findings, "FRONTEND_PRIMARY_REPOSITORY_TYPE_MISMATCH");
+        assertHasError(findings, "FRONTEND_WITHOUT_CODE_SEARCH_SCOPE");
+        assertHasError(findings, "FRONTEND_WITH_MULTIPLE_CODE_SEARCH_SCOPES");
+    }
+
+    @Test
     void shouldReportCodeSearchRepositorySearchBoundaryProblems() {
         var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
                 List.of(),
@@ -577,6 +708,35 @@ class OperationalContextReadModelValidatorTest {
                 "id", id,
                 "target", map("type", "system", "id", "crm-customer-service"),
                 "repositories", List.of(repository)
+        );
+    }
+
+    private static Map<String, Object> frontendSystem(String id) {
+        return map("id", id, "systemType", "internal-service", "systemSubtype", "frontend");
+    }
+
+    private static Map<String, Object> repository(String id, String repositoryType) {
+        return map("id", id, "repositoryType", repositoryType);
+    }
+
+    private static Map<String, Object> scope(
+            String id,
+            String systemId,
+            List<Map<String, Object>> repositories
+    ) {
+        return map(
+                "id", id,
+                "target", map("type", "system", "id", systemId),
+                "repositories", repositories
+        );
+    }
+
+    private static Map<String, Object> scopedRepository(String repositoryId, String role) {
+        return map(
+                "repoId", repositoryId,
+                "role", role,
+                "priority", 1,
+                "searchMode", "whole-repository"
         );
     }
 

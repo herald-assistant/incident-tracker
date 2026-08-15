@@ -133,6 +133,30 @@ if ($warningGroups.Count -gt 0) {
 }
 $lines.Add('- Treat `info` findings as maintenance backlog unless they block a concrete handoff or operator task.')
 
+$frontendRegistrationCategories = @(
+    "INTERNAL_SERVICE_SUBTYPE_REQUIRED",
+    "INTERNAL_SERVICE_SUBTYPE_UNSUPPORTED",
+    "INTERNAL_SERVICE_SUBTYPE_UNKNOWN",
+    "INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE",
+    "FRONTEND_WITHOUT_CODE_SEARCH_SCOPE",
+    "FRONTEND_WITH_MULTIPLE_CODE_SEARCH_SCOPES",
+    "FRONTEND_SCOPE_WITHOUT_PRIMARY_REPOSITORY",
+    "FRONTEND_SCOPE_WITH_MULTIPLE_PRIMARY_REPOSITORIES",
+    "FRONTEND_PRIMARY_REPOSITORY_TYPE_MISMATCH"
+)
+$frontendRegistrationRecords = @($records | Where-Object { $frontendRegistrationCategories -contains $_.Category })
+$lines.Add("")
+$lines.Add("## UI Explorer frontend registration readiness")
+$lines.Add("")
+if ($frontendRegistrationRecords.Count -eq 0) {
+    $lines.Add("- No frontend-registration findings were reported.")
+} else {
+    $lines.Add("- Review $($frontendRegistrationRecords.Count) finding(s) before exposing systems in UI Explorer input options.")
+    foreach ($group in @($frontendRegistrationRecords | Group-Object Category | Sort-Object Name)) {
+        $lines.Add("  - ``$($group.Name)``: $($group.Count)")
+    }
+}
+
 Add-CountTable $lines "By category" (@($records | Group-Object Category | Sort-Object @{ Expression = "Count"; Descending = $true }, Name)) "Category"
 Add-CountTable $lines "By source file" (@($records | Group-Object File | Sort-Object @{ Expression = "Count"; Descending = $true }, Name)) "Source file"
 Add-CountTable $lines "By entity type" (@($records | Group-Object EntityType | Sort-Object @{ Expression = "Count"; Descending = $true }, Name)) "Entity type"

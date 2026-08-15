@@ -7,6 +7,7 @@ import {
 
 export type OperationalContextFieldKind =
   | 'text'
+  | 'select'
   | 'textarea'
   | 'list'
   | 'system-participants'
@@ -49,6 +50,7 @@ export interface OperationalContextFormField {
   kind: OperationalContextFieldKind;
   required?: boolean;
   help?: string;
+  choices?: string[];
   guidance: OperationalContextFieldGuidance;
 }
 
@@ -61,6 +63,7 @@ interface FieldOptions {
   required?: boolean;
   help?: string;
   example?: string;
+  choices?: string[];
 }
 
 function field(
@@ -78,6 +81,7 @@ function field(
     kind,
     required: options.required,
     help: options.help,
+    choices: options.choices,
     guidance: {
       whatToEnter,
       runtimeEffect,
@@ -121,6 +125,7 @@ const TYPE_FIELDS: Record<OperationalContextWritableType, OperationalContextForm
   system: [
     { title: 'Basic', fields: [...BASE_FIELDS,
       field('systemType', 'System type', 'text', 'Classify the durable kind of system.', 'Exposed in system rows and AI tools; helps distinguish services, gateways, stores, platforms and external boundaries.', 'Free text in the backend. Current catalogue conventions include internal-service, business-service, gateway, data-store, message-broker, platform-service, external-system, external-saas, identity-provider and middleware.', { example: 'internal-service' }),
+      field('systemSubtype', 'System subtype', 'select', 'Classify an internal-service by its primary delivery shape.', 'Subtype-specific features use this explicit value for eligibility. UI Explorer accepts only frontend; unknown remains visible as a maintenance gap.', 'Required for internal-service: frontend, backend, worker, mixed or unknown. Omit it for other system types.', { choices: ['frontend', 'backend', 'worker', 'mixed', 'unknown'], example: 'frontend' }),
       field('operationalStatus', 'Operational status', 'text', 'Describe the system current operating state.', 'AI and operators use it as context when deciding whether evidence concerns a live, degraded, planned or unavailable system. It does not change application execution.', 'Optional free text; use a short, stable operational label and avoid incident-specific status.', { example: 'operational' }),
       field('criticality', 'Criticality', 'text', 'Enter the business or operational impact tier.', 'Displayed in read models and given to AI to prioritize affected systems and explain impact.', 'Free text in the backend. Current catalogue values are critical, high, medium, low and unknown.', { example: 'high' })
     ] },

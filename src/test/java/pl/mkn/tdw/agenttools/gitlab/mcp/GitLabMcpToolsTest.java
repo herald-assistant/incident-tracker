@@ -2381,7 +2381,8 @@ class GitLabMcpToolsTest {
         system.put("id", id);
         system.put("name", name);
         system.put("shortName", id);
-        system.put("kind", "internal-service");
+        system.put("systemType", "internal-service");
+        system.put("systemSubtype", "backend");
         system.put("lifecycleStatus", "active");
         system.put("aliases", List.of(id, name));
         system.put("useFor", List.of("code-search"));

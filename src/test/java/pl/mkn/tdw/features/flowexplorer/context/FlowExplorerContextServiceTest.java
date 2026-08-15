@@ -344,7 +344,8 @@ class FlowExplorerContextServiceTest {
                 List.of(map(
                         "id", "crm-customer-profile",
                         "name", "CRM Customer Profile",
-                        "kind", "internal-application"
+                        "systemType", "internal-service",
+                        "systemSubtype", "backend"
                 )),
                 List.of(),
                 List.of(map(

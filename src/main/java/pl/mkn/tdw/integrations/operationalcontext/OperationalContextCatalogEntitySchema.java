@@ -33,7 +33,7 @@ final class OperationalContextCatalogEntitySchema {
     private static Map<OperationalContextCatalogEntityType, Set<String>> editableFields() {
         var result = new EnumMap<OperationalContextCatalogEntityType, Set<String>>(OperationalContextCatalogEntityType.class);
         result.put(OperationalContextCatalogEntityType.SYSTEM, fields(
-                "systemType", "operationalStatus", "criticality", "participants", "notes", "runtime",
+                "systemType", "systemSubtype", "operationalStatus", "criticality", "participants", "notes", "runtime",
                 "sourceCoverage", "gaps", "ownership", "references", "matchSignals", "relations"
         ));
         result.put(OperationalContextCatalogEntityType.REPOSITORY, fields(
@@ -88,7 +88,7 @@ final class OperationalContextCatalogEntitySchema {
         for (var type : OperationalContextCatalogEntityType.values()) {
             result.put(type, Set.of());
         }
-        result.put(OperationalContextCatalogEntityType.SYSTEM, Set.of("kind", "type", "match"));
+        result.put(OperationalContextCatalogEntityType.SYSTEM, Set.of("match"));
         return Map.copyOf(result);
     }
 

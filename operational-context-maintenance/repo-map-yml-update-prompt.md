@@ -37,33 +37,33 @@ code-search scope instead of adding owner-like fields here.
 
 ```yaml
 repositories:
-  - id: crm-contact-service
-    name: CRM Contact Service
-    shortName: Contact Service
-    repositoryType: service
+  - id: crm-agent-portal
+    name: CRM Agent Portal
+    shortName: Agent Portal
+    repositoryType: frontend
     lifecycleStatus: active
     criticality: high
-    summary: Anonymized CRM service repository for contact preference handling.
-    purpose: Primary project to inspect after the CRM contact system or process is identified.
+    summary: Strongly anonymized CRM frontend repository for contact preference handling.
+    purpose: Primary project to inspect after the CRM Agent Portal system is selected.
     aliases:
-      - contact-service
-      - crm contacts
+      - crm-portal
+      - crm agent ui
     useFor:
-      - Inspect anonymized CRM contact behavior after the semantic target is known.
-      - Distinguish contact preference logic from CRM authentication concerns.
+      - Inspect anonymized CRM contact-screen behavior after the semantic target is known.
+      - Distinguish portal behavior from CRM backend processing.
     git:
       provider: gitlab
       group: crm
-      project: contact-service
-      projectPath: crm/contact-service
+      project: agent-portal
+      projectPath: crm/agent-portal
       defaultBranch: main
-      url: https://gitlab.example.com/crm/contact-service
+      url: https://gitlab.example.com/crm/agent-portal
       aliases:
-        - crm-contact-core
+        - crm-agent-portal
       inferred: false
     references:
       systems:
-        - crm-contact-core
+        - crm-agent-portal
       processes:
         - crm-contact-preference-update
       boundedContexts:
@@ -75,32 +75,35 @@ repositories:
     matchSignals:
       exact:
         projectPaths:
-          - crm/contact-service
+          - crm/agent-portal
       strong:
         businessTerms:
-          - CRM contact validation
+          - CRM contact screen
       weak:
         phrases:
-          - anonymized CRM contact change
+          - anonymized CRM contact form
     evidence:
-      - sourceRef: crm/contact-service/pom.xml
-        evidenceType: build-definition
-        note: Anonymized CRM service module identity.
+      - sourceRef: crm/agent-portal/package.json
+        evidenceType: reviewed-build-definition
+        note: Strongly anonymized CRM frontend module identity; framework alone does not classify the system.
     llmToolHints:
       answerWhenUserMentions:
-        - CRM contact validation
+        - CRM contact screen
       disambiguateFrom:
-        - CRM authentication account service
+        - CRM contact backend service
     relations:
       - type: supports
         targetType: system
-        target: crm-contact-core
-        evidence: Primary anonymized CRM repository for the system.
+        target: crm-agent-portal
+        evidence: Primary strongly anonymized CRM frontend repository for the system.
 ```
 
 ## Update rules
 
 - Treat `git.projectPath` as the GitLab link; keep the rest business-readable.
+- Use `repositoryType: frontend` only for a reviewed primary repository of a
+  system registered as `internal-service/frontend`. Framework files are
+  evidence to inspect, not an automatic classification rule.
 - Use `references` to connect a repository with systems, processes, bounded
   contexts, integrations and handoff rules as recognition signals.
 - Do not add team references to imply repository ownership.

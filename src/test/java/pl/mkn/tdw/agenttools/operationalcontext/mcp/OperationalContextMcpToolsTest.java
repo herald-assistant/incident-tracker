@@ -112,6 +112,8 @@ class OperationalContextMcpToolsTest {
         assertTrue(result.affordances().availableExpansions().contains("include=codeSearch"));
         assertTrue(result.affordances().suggestedNextReads().stream()
                 .anyMatch(read -> read.contains("include=[codeSearch]")));
+        assertEquals("internal-service", result.overview().get("systemType"));
+        assertEquals("backend", result.overview().get("systemSubtype"));
         assertEquals("high", result.overview().get("criticality"));
         assertTrue(result.overview().get("runtime").toString().contains("crm/notifications"));
         assertTrue(result.relations().containsKey("references"));
@@ -396,6 +398,8 @@ class OperationalContextMcpToolsTest {
         return map(
                 "id", id,
                 "name", name,
+                "systemType", "internal-service",
+                "systemSubtype", "backend",
                 "criticality", id.equals("notifications") ? "high" : "medium",
                 "summary", name + " system.",
                 "participants", id.equals("notifications")

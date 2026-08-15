@@ -252,7 +252,8 @@ class OperationalContextEvidenceProviderTest {
         return OperationalContextDtos.system(Map.of(
                 "id", id,
                 "name", id,
-                "kind", "internal-service",
+                "systemType", "internal-service",
+                "systemSubtype", "backend",
                 "aliases", List.of(runtimeName)
         ));
     }

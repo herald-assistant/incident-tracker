@@ -286,6 +286,82 @@ function Add-DeterministicOwnership {
     return @($result)
 }
 
+function Add-ExplicitInternalServiceSubtype {
+    param(
+        [string[]] $Lines,
+        [string] $FileName,
+        [System.Collections.Generic.List[object]] $Changes
+    )
+
+    if ($FileName -ne "systems.yml") {
+        return $Lines
+    }
+
+    $result = [System.Collections.Generic.List[string]]::new()
+    $entryStarts = [System.Collections.Generic.List[int]]::new()
+    for ($index = 0; $index -lt $Lines.Count; $index++) {
+        if ($Lines[$index] -match '^\s+-\s+id:\s*(.+?)\s*$') {
+            $entryStarts.Add($index)
+        }
+    }
+
+    if ($entryStarts.Count -eq 0) {
+        return $Lines
+    }
+
+    $cursor = 0
+    for ($entryIndex = 0; $entryIndex -lt $entryStarts.Count; $entryIndex++) {
+        $start = $entryStarts[$entryIndex]
+        $end = if ($entryIndex + 1 -lt $entryStarts.Count) { $entryStarts[$entryIndex + 1] } else { $Lines.Count }
+
+        while ($cursor -lt $start) {
+            $result.Add($Lines[$cursor])
+            $cursor++
+        }
+
+        $entryLines = @($Lines[$start..($end - 1)])
+        $entityId = $matches[1]
+        if ($entryLines[0] -match '^\s+-\s+id:\s*(.+?)\s*$') {
+            $entityId = $matches[1].Trim().Trim('"').Trim("'")
+        }
+        $systemTypeIndex = -1
+        $hasSubtype = $false
+        for ($local = 0; $local -lt $entryLines.Count; $local++) {
+            if ($entryLines[$local] -match '^\s+systemSubtype:\s*') {
+                $hasSubtype = $true
+            }
+            if ($entryLines[$local] -match '^(\s*)systemType:\s*internal-service\s*$') {
+                $systemTypeIndex = $local
+            }
+        }
+
+        for ($local = 0; $local -lt $entryLines.Count; $local++) {
+            $result.Add($entryLines[$local])
+            if (-not $hasSubtype -and $local -eq $systemTypeIndex) {
+                $indent = ""
+                if ($entryLines[$local] -match '^(\s*)') {
+                    $indent = $matches[1]
+                }
+                $result.Add("$($indent)systemSubtype: unknown")
+                $Changes.Add([pscustomobject]@{
+                    File = $FileName
+                    Action = "add-system-subtype"
+                    Detail = "$entityId <- unknown"
+                })
+            }
+        }
+
+        $cursor = $end
+    }
+
+    while ($cursor -lt $Lines.Count) {
+        $result.Add($Lines[$cursor])
+        $cursor++
+    }
+
+    return @($result)
+}
+
 function Remove-YamlLegacyBlocks {
     param(
         [string[]] $Lines,
@@ -428,6 +504,7 @@ foreach ($root in $resolvedRoots) {
 
         if ($file.Extension -in @(".yml", ".yaml")) {
             $updated = Add-DeterministicOwnership $updated $file.Name $fileChanges
+            $updated = Add-ExplicitInternalServiceSubtype $updated $file.Name $fileChanges
             $updated = Remove-YamlLegacyBlocks $updated $file.Name $fileChanges
         } elseif ($file.Extension -eq ".md") {
             $updated = Remove-MarkdownLegacySections $updated $file.Name $fileChanges

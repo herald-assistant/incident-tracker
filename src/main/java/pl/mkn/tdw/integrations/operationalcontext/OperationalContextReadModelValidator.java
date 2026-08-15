@@ -36,6 +36,10 @@ public class OperationalContextReadModelValidator {
     private static final String REPOSITORY = "repository";
     private static final String PROCESS = "process";
     private static final String TEAM = "team";
+    private static final String INTERNAL_SERVICE_SYSTEM_TYPE = "internal-service";
+    private static final String FRONTEND_SYSTEM_SUBTYPE = "frontend";
+    private static final Set<String> INTERNAL_SERVICE_SUBTYPES =
+            Set.of(FRONTEND_SYSTEM_SUBTYPE, "backend", "worker", "mixed", "unknown");
 
     private static final Map<String, String> SOURCE_FILES = Map.of(
             SYSTEM, "systems.yml",
@@ -92,6 +96,7 @@ public class OperationalContextReadModelValidator {
         validateProcessParticipantReferenceDuplicates(safeCatalog, findings);
         validateBidirectionalReferences(relationIndex.relations(), findings);
         validateSystemsDoNotReferenceRepositories(safeCatalog, findings);
+        validateSystemClassifications(safeCatalog.systems(), findings);
         validateCodeSearchScopes(safeCatalog, findings);
         validateOwnershipModel(safeCatalog, findings);
 
@@ -104,6 +109,7 @@ public class OperationalContextReadModelValidator {
         var findings = new ArrayList<ValidationFinding>();
 
         findings.addAll(relationIndex.validationFindings());
+        validateSystemClassifications(safeCatalog.systems(), findings);
         validateOwnershipModel(safeCatalog, findings);
 
         return sortedDistinct(findings);
@@ -621,16 +627,68 @@ public class OperationalContextReadModelValidator {
             List<ValidationFinding> findings
     ) {
         var repositoryIds = repositoryIds(catalog);
-        var scopedSystemIds = new LinkedHashSet<String>();
+        var scopesBySystemId = new LinkedHashMap<String, List<OperationalContextRepositorySearchScope>>();
         for (var scope : catalog.codeSearchScopes()) {
             validateCodeSearchScopeShape(scope, repositoryIds, findings);
             if (isSystemTarget(scope)) {
-                scopedSystemIds.add(text(scope.target().id()));
+                scopesBySystemId.computeIfAbsent(text(scope.target().id()), ignored -> new ArrayList<>()).add(scope);
             }
             var readModel = codeSearchReadModelBuilder.buildForEntity(catalog, CODE_SEARCH_SCOPE, scope.id());
             findings.addAll(readModel.validationFindings());
         }
-        validateInternalSystemsHaveCodeSearchScope(catalog.systems(), scopedSystemIds, findings);
+        validateSystemCodeSearchScopes(catalog, scopesBySystemId, findings);
+    }
+
+    private void validateSystemClassifications(
+            List<OperationalContextSystem> systems,
+            List<ValidationFinding> findings
+    ) {
+        for (var system : systems) {
+            var systemType = normalize(system.systemType());
+            var systemSubtype = normalize(system.systemSubtype());
+            if (!StringUtils.hasText(system.systemType())) {
+                findings.add(new ValidationFinding(
+                        "error",
+                        "SYSTEM_TYPE_REQUIRED",
+                        "System " + system.id() + " must declare systemType.",
+                        List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()) + ".systemType", "classification"))
+                ));
+                continue;
+            }
+            if (!INTERNAL_SERVICE_SYSTEM_TYPE.equals(systemType)) {
+                if (StringUtils.hasText(system.systemSubtype())) {
+                    findings.add(new ValidationFinding(
+                            "error",
+                            "SYSTEM_SUBTYPE_OUTSIDE_INTERNAL_SERVICE",
+                            "System " + system.id() + " declares systemSubtype but is not an internal-service.",
+                            List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()) + ".systemSubtype", "classification"))
+                    ));
+                }
+                continue;
+            }
+            if (!StringUtils.hasText(system.systemSubtype())) {
+                findings.add(new ValidationFinding(
+                        "error",
+                        "INTERNAL_SERVICE_SUBTYPE_REQUIRED",
+                        "Internal service " + system.id() + " must declare systemSubtype.",
+                        List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()) + ".systemSubtype", "classification"))
+                ));
+            } else if (!INTERNAL_SERVICE_SUBTYPES.contains(systemSubtype)) {
+                findings.add(new ValidationFinding(
+                        "error",
+                        "INTERNAL_SERVICE_SUBTYPE_UNSUPPORTED",
+                        "Internal service " + system.id() + " uses unsupported systemSubtype " + system.systemSubtype() + ".",
+                        List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()) + ".systemSubtype", "classification"))
+                ));
+            } else if ("unknown".equals(systemSubtype)) {
+                findings.add(new ValidationFinding(
+                        "warning",
+                        "INTERNAL_SERVICE_SUBTYPE_UNKNOWN",
+                        "Internal service " + system.id() + " has explicit unknown systemSubtype and is not eligible for subtype-specific features.",
+                        List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()) + ".systemSubtype", "classification"))
+                ));
+            }
+        }
     }
 
     private void validateSystemsDoNotReferenceRepositories(
@@ -657,21 +715,99 @@ public class OperationalContextReadModelValidator {
         }
     }
 
-    private void validateInternalSystemsHaveCodeSearchScope(
-            List<OperationalContextSystem> systems,
-            Set<String> scopedSystemIds,
+    private void validateSystemCodeSearchScopes(
+            OperationalContextCatalog catalog,
+            Map<String, List<OperationalContextRepositorySearchScope>> scopesBySystemId,
             List<ValidationFinding> findings
     ) {
-        for (var system : systems) {
-            if (!needsCodeSearchScope(system) || scopedSystemIds.contains(system.id())) {
-                continue;
+        var repositoriesById = new LinkedHashMap<String, OperationalContextDtos.OperationalContextRepository>();
+        for (var repository : catalog.repositories()) {
+            if (StringUtils.hasText(repository.id())) {
+                repositoriesById.putIfAbsent(repository.id(), repository);
             }
+        }
+        for (var system : catalog.systems()) {
+            var scopes = scopesBySystemId.getOrDefault(system.id(), List.of());
+            var frontend = FRONTEND_SYSTEM_SUBTYPE.equals(normalize(system.systemSubtype()));
+            if (needsCodeSearchScope(system) && scopes.isEmpty()) {
+                findings.add(new ValidationFinding(
+                        "warning",
+                        "INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE",
+                        "Internal system " + system.id()
+                                + " has no code-search scope; code discovery will not infer repositories from system references.",
+                        List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()), "code-search-scope"))
+                ));
+            }
+            if (frontend && scopes.isEmpty()) {
+                findings.add(new ValidationFinding(
+                        "error",
+                        "FRONTEND_WITHOUT_CODE_SEARCH_SCOPE",
+                        "Frontend system " + system.id() + " requires one system-targeted code-search scope.",
+                        List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()), "frontend-code-search-scope"))
+                ));
+            }
+            if (frontend && scopes.size() > 1) {
+                findings.add(new ValidationFinding(
+                        "error",
+                        "FRONTEND_WITH_MULTIPLE_CODE_SEARCH_SCOPES",
+                        "Frontend system " + system.id() + " requires exactly one system-targeted code-search scope but has " + scopes.size() + ".",
+                        scopes.stream().map(scope -> scopeRef(scope, "target", "scope-target")).toList()
+                ));
+            }
+            if (frontend && scopes.size() == 1) {
+                validateFrontendScope(system, scopes.get(0), repositoriesById, findings);
+            }
+        }
+    }
+
+    private void validateFrontendScope(
+            OperationalContextSystem system,
+            OperationalContextRepositorySearchScope scope,
+            Map<String, OperationalContextDtos.OperationalContextRepository> repositoriesById,
+            List<ValidationFinding> findings
+    ) {
+        var primaryRepositories = scope.repositories().stream()
+                .filter(repository -> "primary".equalsIgnoreCase(text(repository.role())))
+                .toList();
+        if (primaryRepositories.isEmpty()) {
             findings.add(new ValidationFinding(
-                    "warning",
-                    "INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE",
-                    "Internal system " + system.id()
-                            + " has no code-search scope; code discovery will not infer repositories from system references.",
-                    List.of(sourceRef(SYSTEM, system.id(), rootPath(SYSTEM, system.id()), "code-search-scope"))
+                    "error",
+                    "FRONTEND_SCOPE_WITHOUT_PRIMARY_REPOSITORY",
+                    "Frontend system " + system.id() + " requires one repository with role primary.",
+                    List.of(scopeRef(scope, "repositories", "frontend-primary-repository"))
+            ));
+            return;
+        }
+        if (primaryRepositories.size() > 1) {
+            findings.add(new ValidationFinding(
+                    "error",
+                    "FRONTEND_SCOPE_WITH_MULTIPLE_PRIMARY_REPOSITORIES",
+                    "Frontend system " + system.id() + " requires exactly one primary repository but has "
+                            + primaryRepositories.size() + ".",
+                    primaryRepositories.stream()
+                            .map(repository -> scopeRef(
+                                    scope,
+                                    "repositories[repoId=" + repository.repoId() + "].role",
+                                    "frontend-primary-repository"
+                            ))
+                            .toList()
+            ));
+            return;
+        }
+        var primary = primaryRepositories.get(0);
+        var repository = repositoriesById.get(primary.repoId());
+        if (repository != null && !FRONTEND_SYSTEM_SUBTYPE.equals(normalize(repository.repositoryType()))) {
+            findings.add(new ValidationFinding(
+                    "error",
+                    "FRONTEND_PRIMARY_REPOSITORY_TYPE_MISMATCH",
+                    "Primary repository " + primary.repoId() + " for frontend system " + system.id()
+                            + " must declare repositoryType frontend.",
+                    List.of(sourceRef(
+                            REPOSITORY,
+                            repository.id(),
+                            rootPath(REPOSITORY, repository.id()) + ".repositoryType",
+                            "frontend-primary-repository"
+                    ))
             ));
         }
     }
@@ -823,7 +959,7 @@ public class OperationalContextReadModelValidator {
     }
 
     private boolean needsCodeSearchScope(OperationalContextSystem system) {
-        var kind = normalize(system.kind());
+        var kind = normalize(system.systemType());
         return "internal".equals(kind) || kind.startsWith("internal-") || "api-gateway".equals(kind);
     }
 

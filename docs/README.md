@@ -70,6 +70,17 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   dokumentuje wykonany read-only MVP L2: immutable projekcje zwalidowanych
   `SKILL.md`, shared/operator API, ekran `Platform / AI Skills`, deep link,
   wyszukiwanie, filtry oraz renderowany i surowy Markdown.
+- `needs/ui-explorer.md`
+  opisuje potrzebe generowania funkcjonalnej lub technicznej dokumentacji
+  zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez
+  analityka, ktory nie musi znac repozytorium ani mechaniki AI.
+- `plans/ui-explorer.md`
+  jest draftem planu L2 dla statycznego, screen-centered MVP z katalogiem
+  ekranow wybieranych przez jawnie zarejestrowany system
+  `internal-service/frontend`, wybieralnymi sekcjami, source-grounded raportem
+  oraz neutralna capability rozpoznawania frontendu. Plan obejmuje breaking
+  migracje Operational Context bez warstwy kompatybilnosci dla zmienianych
+  kontraktow i nie stanowi jeszcze zgody na implementacje.
 - Config Drift Viewer wraz z Runtime Configuration Tool Workbench jest
   zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
   ograniczenia sa opisane kanonicznie w

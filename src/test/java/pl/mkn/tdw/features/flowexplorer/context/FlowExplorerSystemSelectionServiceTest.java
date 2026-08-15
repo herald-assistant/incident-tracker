@@ -34,7 +34,7 @@ class FlowExplorerSystemSelectionServiceTest {
 
         var catalog = systems.get(1);
         assertEquals("CRM Customer Profile", catalog.name());
-        assertEquals("internal-application", catalog.kind());
+        assertEquals("internal-service", catalog.kind());
         assertEquals("active", catalog.lifecycleStatus());
         assertEquals("healthy", catalog.operationalStatus());
         assertEquals("high", catalog.criticality());
@@ -69,7 +69,8 @@ class FlowExplorerSystemSelectionServiceTest {
                                 "id", "crm-customer-profile",
                                 "name", "CRM Customer Profile",
                                 "shortName", "CRM Customer Profile",
-                                "kind", "internal-application",
+                                "systemType", "internal-service",
+                                "systemSubtype", "backend",
                                 "lifecycleStatus", "active",
                                 "operationalStatus", "healthy",
                                 "criticality", "high",
@@ -85,12 +86,12 @@ class FlowExplorerSystemSelectionServiceTest {
                         map(
                                 "id", "api-gateway",
                                 "name", "API Gateway",
-                                "kind", "api-gateway"
+                                "systemType", "api-gateway"
                         ),
                         map(
                                 "id", "notification-gateway",
                                 "name", "Notification Gateway",
-                                "kind", "external-saas"
+                                "systemType", "external-saas"
                         )
                 ),
                 List.of(),

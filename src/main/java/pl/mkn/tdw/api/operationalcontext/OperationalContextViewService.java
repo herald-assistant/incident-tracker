@@ -308,7 +308,8 @@ public class OperationalContextViewService {
         return new OperationalContextSystemRowDto(
                 system.id(),
                 system.label(),
-                system.kind(),
+                system.systemType(),
+                system.systemSubtype(),
                 ownerValue(resolvedOwnership, SYSTEM, system.id()),
                 resolvedOwnership,
                 summaryText(system),
@@ -481,7 +482,8 @@ public class OperationalContextViewService {
         var detail = entryDetail(view, SYSTEM, system);
         var sections = new ArrayList<>(detail.overviewSections());
         sections.add(section("System runtime and responsibility", map(
-                "systemType", system.kind(),
+                "systemType", system.systemType(),
+                "systemSubtype", system.systemSubtype(),
                 "operationalStatus", system.operationalStatus(),
                 "criticality", system.criticality(),
                 "externalOwner", system.participants().externalOwner(),

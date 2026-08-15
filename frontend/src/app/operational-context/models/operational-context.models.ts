@@ -109,7 +109,8 @@ export interface OperationalContextSummaryDto {
 export interface OperationalContextSystemRowDto {
   id: string;
   name: string;
-  kind: string;
+  systemType: string;
+  systemSubtype: string;
   owner: ExplainableValueDto<string>;
   resolvedOwnership: OperationalContextResolvedOwnershipDto;
   purpose: string;

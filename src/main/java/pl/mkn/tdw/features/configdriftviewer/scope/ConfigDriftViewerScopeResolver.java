@@ -109,7 +109,7 @@ public class ConfigDriftViewerScopeResolver {
     private boolean isInternalService(OperationalContextSystem system) {
         return system != null
                 && StringUtils.hasText(system.id())
-                && INTERNAL_SERVICE_KIND.equalsIgnoreCase(system.kind());
+                && INTERNAL_SERVICE_KIND.equalsIgnoreCase(system.systemType());
     }
 
     private void addAll(LinkedHashSet<String> candidates, List<String> values) {

@@ -158,13 +158,16 @@ class ConfigDriftViewerScopeResolverTest {
 
     private static OperationalContextDtos.OperationalContextSystem system(
             String id,
-            String kind,
+            String systemType,
             Map<String, Object> additional
     ) {
         var source = new java.util.LinkedHashMap<String, Object>();
         source.put("id", id);
         source.put("name", id + " label");
-        source.put("kind", kind);
+        source.put("systemType", systemType);
+        if ("internal-service".equals(systemType)) {
+            source.put("systemSubtype", "backend");
+        }
         source.putAll(additional);
         return OperationalContextDtos.system(source);
     }

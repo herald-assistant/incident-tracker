@@ -61,7 +61,7 @@ public class FlowExplorerSystemSelectionService {
                 system.id(),
                 system.name(),
                 system.shortName(),
-                system.kind(),
+                system.systemType(),
                 system.lifecycleStatus(),
                 system.operationalStatus(),
                 system.criticality(),
@@ -74,7 +74,7 @@ public class FlowExplorerSystemSelectionService {
     }
 
     private boolean internalSystem(OperationalContextSystem system) {
-        var kind = normalize(system.kind());
+        var kind = normalize(system.systemType());
         return kind.equals("internal") || kind.startsWith("internal-") || kind.equals("api-gateway");
     }
 
