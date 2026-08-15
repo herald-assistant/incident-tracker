@@ -689,6 +689,45 @@ describe('App', () => {
     expect(compiled.querySelector('app-platform-landing-page')).not.toBeNull();
   });
 
+  it('should render the UI Explorer configuration shell on the UI Explorer route', async () => {
+    const fixture = TestBed.createComponent(App);
+    const router = TestBed.inject(Router);
+    const http = TestBed.inject(HttpTestingController);
+
+    await router.navigateByUrl('/ui-explorer');
+    fixture.detectChanges();
+    flushUiConfig(http, 'CRM Workspace');
+    http.expectOne('/api/ui-explorer/input-options').flush(uiExplorerInputOptions());
+    http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
+      uiExplorerScreenCatalog()
+    );
+    http.expectOne('/api/analysis/ai/options').flush({
+      defaultModel: 'crm-doc-model',
+      defaultReasoningEffort: 'medium',
+      defaultReasoningEfforts: ['low', 'medium'],
+      models: []
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navLink = compiled.querySelector('a.app-shell__nav-item[aria-label="UI Explorer"]');
+
+    expect(compiled.querySelector('app-ui-explorer-page')).not.toBeNull();
+    expect(compiled.querySelector('.app-shell__breadcrumb-link')?.textContent?.trim()).toBe(
+      'CRM Workspace'
+    );
+    expect(compiled.querySelector('.app-shell__breadcrumb-current')?.textContent?.trim()).toBe(
+      'UI Explorer'
+    );
+    expect(compiled.querySelector('.app-shell__title-block h1')?.textContent).toContain(
+      'UI Explorer'
+    );
+    expect(navLink).not.toBeNull();
+    expect(compiled.textContent).toContain('Screen documentation workspace');
+    expect(compiled.textContent).toContain('Load view inventory');
+  });
+
   it('should render the change verification shell on the change verification route', async () => {
     const fixture = TestBed.createComponent(App);
     const router = TestBed.inject(Router);
@@ -999,6 +1038,71 @@ function workspaceSettingsResponse(): Record<string, unknown> {
           secret: true
         }
       }
+    }
+  };
+}
+
+function uiExplorerInputOptions() {
+  return {
+    featureId: 'ui-explorer',
+    executionAvailability: {
+      status: 'AVAILABLE',
+      code: 'READY',
+      message: 'CRM UI documentation is available.',
+      missingCapabilities: []
+    },
+    systems: [
+      { systemId: 'crm-agent-portal', label: 'CRM Agent Portal', summary: 'Syntetyczny frontend CRM.' }
+    ],
+    profiles: [
+      {
+        profile: 'FUNCTIONAL_DOCUMENTATION',
+        label: 'Dokumentacja funkcjonalna',
+        description: 'Opis pracy użytkownika CRM.',
+        defaultSectionModes: [{ sectionId: 'OVERVIEW', mode: 'DEEP' }]
+      }
+    ],
+    sections: [
+      { sectionId: 'OVERVIEW', label: 'Cel widoku', description: 'Cel ekranu CRM.' }
+    ],
+    modes: [
+      { mode: 'OFF', label: 'Pomiń', description: 'Pomiń sekcję.' },
+      { mode: 'COMPACT', label: 'Skrót', description: 'Skrócony opis.' },
+      { mode: 'DEEP', label: 'Pogłęb', description: 'Pogłębiony opis.' }
+    ],
+    configurationFindings: []
+  };
+}
+
+function uiExplorerScreenCatalog() {
+  return {
+    systemId: 'crm-agent-portal',
+    systemLabel: 'CRM Agent Portal',
+    sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
+    status: 'READY',
+    screens: [
+      {
+        screenId: 'crm-contact-create',
+        label: 'Utworzenie kontaktu CRM',
+        routePattern: '/contacts/new',
+        parentRoutePattern: '/contacts',
+        status: 'READY',
+        lazyLoaded: true,
+        guards: ['crm-role-guard'],
+        routeParameters: [],
+        limitations: []
+      }
+    ],
+    diagnostics: [],
+    limitations: [],
+    boundary: {
+      repositoryFileCount: 24,
+      scannedRouteFileCount: 3,
+      inventoryTruncated: false,
+      routeCatalogTruncated: false,
+      maxInventoryFiles: 400,
+      maxRouteFiles: 80,
+      maxRouteEntries: 240
     }
   };
 }

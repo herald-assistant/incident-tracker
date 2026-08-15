@@ -230,6 +230,7 @@ Start zwraca `202 Accepted` oraz pierwszy snapshot. Request zawiera:
 - `systemId`,
 - `branch`,
 - `screenId`,
+- `sourceRevision` przekazana z odpowiedzi katalogu ekranow,
 - `profile`,
 - mape `sectionModes`,
 - opcjonalne `scenarioDescription`,
@@ -244,6 +245,8 @@ Walidacja:
 - kontrolowany limit dlugosci opisu scenariusza,
 - enumy i mapa bez nieznanych kluczy,
 - branch/ref musi istniec, a `screenId` nalezec do zbudowanego katalogu,
+- `sourceRevision` musi nadal odpowiadac rewizji branch/ref; zmiana rewizji
+  albo znikniecie ekranu wymaga odswiezenia katalogu,
 - brak model-facing repository id, grupy GitLab, tokenu albo sciezki pliku.
 
 Snapshot joba reuse'uje wspolne modele, ale pozostaje kontraktem feature'a.
@@ -251,7 +254,8 @@ Zawiera co najmniej:
 
 - identyfikator, status, timestamps i bezpieczny snapshot requestu,
 - `steps`, `contextSections`, `toolEvidence`, `activity` i `toolFeedback`,
-- `preparedPrompt` zgodnie z obecna polityka widocznosci platformy,
+- publiczne `preparedPrompt` pozostaje `null`, dopoki prompt zawiera surowa
+  tresc source evidence; wewnetrzny bundle nie jest kontraktem operatora,
 - `result`, `report`, `usage`, blad oraz source revision,
 - stan eksportowalnosci.
 
@@ -388,18 +392,16 @@ do `agenttools` ani nazw tooli zawierajacych semantyke feature'a.
 
 ## Workflow AI i skille
 
-Proponowany runtime workflow:
+Runtime workflow:
 
 1. `ui-explorer-orchestrator` - czyta request, artifacts i section modes,
-   planuje kolejnosc, pilnuje budzetu oraz readiness gate.
-2. `ui-explorer-screen-grounding` - potwierdza route/view roots, granice
-   ekranu i podstawowe source references.
-3. `ui-explorer-forms-and-rules-section` - procedura dla formularzy,
-   wyliczen, dynamicznych zachowan i poziomow precyzji.
-4. `ui-explorer-data-and-state-section` - procedura laczenia danych, API,
-   WebSocket, NgRx i efektow akcji.
-5. `ui-explorer-write-report` - tworzy jeden result contract i
-   `AnalysisReport` dopiero po readiness review.
+   prowadzi readiness ledger oraz przekazuje prace pomiedzy pozostalymi
+   skillami.
+2. `ui-explorer-source-grounding` - potwierdza granice ekranu, source
+   references i poziom pewnosci dla aktywnych sekcji, w tym formularzy,
+   state management, API, WebSocket i autoryzacji.
+3. `ui-explorer-write-report` - jako jedyny tworzy wynikowy JSON zgodny z
+   jednym `UiExplorerResultResponse`, dopiero po readiness review.
 
 Skille sa runtime resources pod `src/main/resources/copilot/skills`, napisane
 po polsku z zachowaniem identyfikatorow technicznych. Kazdy ma jedna
@@ -615,107 +617,523 @@ pozostaje otwarty wylacznie na potwierdzenie i wpisanie jednego rzeczywistego
 frontendu z primary repository i system-targeted code-search scope; danych
 produkcyjnych nie inferowano ani nie utrwalono w testach.
 
+Local development checkpoint 2026-08-15: effective katalog zawiera tymczasowy,
+silnie zanonimizowany mock CRM `crm-agent-portal` z `internal-service/frontend`,
+jednym primary repository oraz system-targeted code-search scope. Mock odblokowuje
+prace nad kontraktem i UI kolejnych krokow, ale jego fikcyjny GitLab project nie
+zastepuje powyzszej bramki rejestracji rzeczywistego frontendu w srodowisku
+odbiorowym.
+
 ### 2. Kontrakt i szkielet feature'a
 
-- [ ] Dodac lokalne `AGENTS.md` dla `features.uiexplorer` z ownership,
+- [x] Dodac lokalne `AGENTS.md` dla `features.uiexplorer` z ownership,
   dozwolonymi zaleznosciami, kontraktem sekcji i non-goals.
-- [ ] Dodac enumy profilu, sekcji i mode, request/result oraz publiczne DTO
+- [x] Dodac enumy profilu, sekcji i mode, request/result oraz publiczne DTO
   snapshotu bez zaleznosci od innych feature'ow.
-- [ ] Dodac thin input-options i job controllers ze szkieletem serwisu,
+- [x] Dodac thin input-options i job controllers ze szkieletem serwisu,
   walidacja oraz kontraktem `202`, bez udawanego wyniku AI.
-- [ ] Dodac result-to-report assembler contract i puste, jawne stany
+- [x] Dodac result-to-report assembler contract i puste, jawne stany
   niedostepnosci.
-- [ ] Dodac package dependency/architecture tests oraz testy publicznej
+- [x] Dodac package dependency/architecture tests oraz testy publicznej
   walidacji.
-- [ ] Zweryfikowac celowanymi testami backendu i `mvn -q test`.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
+- [x] Zweryfikowac celowanymi testami backendu i `mvn -q test`.
+- [x] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
   silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Checkpoint 2026-08-15: feature-owned kontrakt i szkielet API sa gotowe bez
+legacy aliasow i bez zaleznosci od sibling feature'ow. `GET
+/api/ui-explorer/input-options` filtruje effective Operational Context do
+kwalifikujacych sie frontendow, a `POST /api/ui-explorer/jobs` zwraca `202` z
+jawnym terminalnym stanem `BLOCKED`, dopoki nie istnieja screen catalog, source
+context i AI analysis; prompt, result, report i export nie sa pozorowane.
+Celowane testy kontraktu, walidacji, assemblera i granic pakietow oraz pelne
+`mvn -q test` przeszly. Runtime smoke test potwierdzil lokalny mock
+`crm-agent-portal`, trzy profile, osiem sekcji i trzy tryby. Wszystkie nowe dane
+testowe i przyklady domenowe tego kroku sa silnie zanonimizowanym CRM.
 
 ### 3. Neutralny katalog ekranow i source context
 
-- [ ] Dodac typowane, neutralne modele route/view catalog i screen source
+- [x] Dodac typowane, neutralne modele route/view catalog i screen source
   context w `integrations.gitlab`.
-- [ ] Zaimplementowac bounded discovery dla uzgodnionych wzorcow Angular/Nx z
+- [x] Zaimplementowac bounded discovery dla uzgodnionych wzorcow Angular/Nx z
   source revision, diagnostics i limitami.
-- [ ] Dodac screen context builder dla wybranego katalogowego `screenId`, bez
+- [x] Dodac screen context builder dla wybranego katalogowego `screenId`, bez
   AI i bez importu `features.uiexplorer`.
-- [ ] Pokryc fixtures dla standalone/module routes, lazy loading, guards,
+- [x] Pokryc fixtures dla standalone/module routes, lazy loading, guards,
   template variants, formularzy, NgRx, REST, WebSocket i sygnalow auth.
-- [ ] Udokumentowac jawnie nieobslugiwane wzorce jako diagnostics/limits.
-- [ ] Przeprowadzic audit istniejacych konsumentow GitLab i test regresji
+- [x] Udokumentowac jawnie nieobslugiwane wzorce jako diagnostics/limits.
+- [x] Przeprowadzic audit istniejacych konsumentow GitLab i test regresji
   niezmienionych capability.
-- [ ] Zweryfikowac celowanymi testami integracji i `mvn -q test`.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
+- [x] Zweryfikowac celowanymi testami integracji i `mvn -q test`.
+- [x] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
   silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Checkpoint 2026-08-15: `integrations.gitlab.frontend` dostarcza neutralne,
+read-only modele i serwis dla workspace signals, route/view catalog oraz
+wybranego screen source context. Capability reuse'uje `GitLabRepositoryPort`,
+nie zmienia istniejacych operacji GitLaba i nie importuje UI Explorer ani
+platformy AI. Obslugiwane fixtures CRM obejmuja standalone i module routes,
+`loadComponent`, `loadChildren`, children, redirecty, guardy, route parameters,
+template/style inline i external, Reactive Forms, custom/dynamic controls,
+NgRx store/actions/selectors/effects/reducers, generated REST client,
+`HttpClient`, WebSocket/RxJS oraz client-side role/permission checks.
+
+Dynamiczne fabryki route, spread route definitions, runtime JSON, nieosiagalne
+lazy targets, brak source revision oraz przekroczenia inventory/route/context,
+depth, file i character limits sa zwracane jako typowane diagnostics i
+`PARTIAL`/`UNSUPPORTED`; nie sa cicho uzupelniane. Celowane testy nowej
+capability, `PackageDependencyGuardTest`, regresje
+`GitLabRestRepositoryAdapterTest` i `GitLabSourceResolveServiceTest` oraz pelne
+`mvn -q test` przeszly. Wszystkie nowe fixtures i przyklady domenowe sa silnie
+zanonimizowanym CRM.
+
+### 3a. Frontend Discovery w GitLab Tool Workbench
+
+- [x] Wystawic neutralna capability przez shared/operator API jako dwie
+  read-only operacje: katalog ekranow i source context wybranego ekranu.
+- [x] Narzucic limity discovery po stronie backendu; publiczny request nie
+  pozwala operatorowi rozszerzac bounded scan.
+- [x] Dodac do istniejacego GitLab Tool Workbench grupe `Frontend Discovery`,
+  reuse'ujaca wspolny scope repository/ref.
+- [x] Pokazac katalog tras/widokow, source revision, diagnostics i limity oraz
+  umozliwic przeniesienie `screenId` do operacji screen source context.
+- [x] Pokazac manifest plikow, technical signals, coverage i surowy JSON bez
+  dodawania tej capability do MCP, `agenttools` ani allowlist AI.
+- [x] Pokryc API i UI testami kontraktu, walidacji, handoffu katalog -> context,
+  loading/error oraz bounded request.
+- [x] Zweryfikowac zmiane wspolna przez testy Angulara, build Angulara i
+  `mvn -q -Pbackend-dev clean package`.
+- [x] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
+  silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Krok 3a jest diagnostycznym preview reusable capability przed wlaczeniem jej
+do deterministycznego pipeline'u UI Explorer. Nie uruchamia AI, nie zapisuje
+historii i nie stanowi publicznego kontraktu joba UI Explorer.
+
+Checkpoint 2026-08-15: GitLab Tool Workbench ma grupe `Frontend Discovery`
+z operacjami katalogu i screen source context. Shared/operator API narzuca
+`GitLabFrontendDiscoveryLimits.defaults()` i nie przyjmuje limitow od
+operatora. UI pokazuje rewizje, katalog, diagnostics, manifest plikow,
+technical signals, coverage i bounded/truncated state oraz przenosi `screenId`
+z katalogu do contextu. Capability nie zostala dodana do MCP, `agenttools` ani
+allowlist AI. Cztery testy MockMvc i dwa testy komponentu uzywaja wylacznie
+silnie zanonimizowanego CRM. Przeszly 370 testow Angulara, produkcyjny build
+Angulara i `mvn -q -Pbackend-dev clean package`.
 
 ### 4. Deterministyczny context pipeline i katalog API
 
-- [ ] Rozwiazywac system/repository scope z Operational Context oraz
+Zakres 4A, zatwierdzony jako osobny inkrement, obejmuje feature-owned katalog
+ekranow bez source contextu i AI:
+
+- [x] Przyjmowac publicznie tylko `systemId` i `branch`, bez repository,
+  GitLab group, project path, tokenu ani limitow skanu.
+- [x] Rozwiazywac wewnetrzny GitLab scope z kwalifikujacej rejestracji
+  `internal-service/frontend`, primary repository i systemowego code-search
+  scope.
+- [x] Reuse'owac `integrations.gitlab.frontend` z defaultowymi bounded limits
+  i zachowaniem `path-prefixes` z Operational Context.
+- [x] Wystawic `GET /api/ui-explorer/screens` z business-friendly katalogiem,
+  source revision, statusem `READY/PARTIAL/BLOCKED`, diagnostics, limitations
+  i applied boundary.
+- [x] Mapowac brak kwalifikacji i nieistniejacy ref na feature-owned publiczne
+  bledy bez ujawniania wewnetrznego repository scope.
+- [x] Pokryc scope, ref, partial/truncated result, publiczne DTO i brak wycieku
+  repository danych silnie zanonimizowanymi testami CRM.
+
+- [x] Rozwiazywac system/repository scope z Operational Context oraz
   walidowac branch/ref i rewizje.
-- [ ] Wystawic katalog ekranow z business-friendly labelami, source revision
+- [x] Wystawic katalog ekranow z business-friendly labelami, source revision
   i diagnostics.
-- [ ] Zbudowac context snapshot, evidence manifest i coverage dla aktywnych
+- [x] Zbudowac context snapshot, evidence manifest i coverage dla aktywnych
   sekcji.
-- [ ] Dodac cache tylko jezeli jest bounded po repository+revision i ma jawna
-  invalidacje; brak cache nie blokuje pierwszego MVP.
-- [ ] Dodac limity rozmiaru/glebokosci/liczby plikow oraz jawne partial/blocked
+- [x] Nie dodawac cache w pierwszym MVP; przyszly cache moze powstac tylko jako
+  bounded po repository+revision z jawna invalidacja.
+- [x] Dodac limity rozmiaru/glebokosci/liczby plikow oraz jawne partial/blocked
   rezultaty.
-- [ ] Pokryc brak repo scope, nieistniejacy branch, stale `screenId`,
+- [x] Pokryc brak repo scope, nieistniejacy branch, stale `screenId`,
   niejednoznaczny route i dynamiczne definicje runtime.
-- [ ] Zweryfikowac celowanymi testami backendu i `mvn -q test`.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
+- [x] Zweryfikowac celowanymi testami backendu i `mvn -q test`.
+- [x] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
   silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Checkpoint 4A 2026-08-15: feature-owned screen catalog jest dostepny bez AI i
+MCP. Publiczny request zawiera wylacznie `systemId` i `branch`; GitLab group,
+project oraz path prefixes sa rozstrzygane z Operational Context i nie wracaja
+w odpowiedzi. Katalog zwraca tylko wybieralne ekrany oraz source revision,
+status, diagnostics, limitations i twarde limity. `input-options` nie raportuje
+juz braku `SCREEN_CATALOG`; job pozostaje jawnie `BLOCKED` na
+`SOURCE_CONTEXT` i `AI_ANALYSIS`. Source context, walidacja stale `screenId`
+i podlaczenie snapshotu do joba pozostaja zakresem 4B. Celowane testy UI
+Explorer, neutralnego GitLab frontend discovery, parsera routingu i granic
+pakietow oraz pelne `mvn -q test` przeszly. Wszystkie nowe testy, fixtures i
+przyklady tego inkrementu sa silnie zanonimizowane i dotycza wylacznie CRM.
+
+Zakres 4B, zatwierdzony jako osobny inkrement, obejmuje deterministyczny source
+context wybranego ekranu i podlaczenie go do joba bez AI:
+
+- [x] Wymagac przy starcie joba `sourceRevision` zwroconej przez katalog i
+  walidowac ja przed `screenId`.
+- [x] Zwracac feature-owned konflikt wymagajacy odswiezenia katalogu, gdy ref
+  wskazuje juz inna rewizje albo `screenId` jest nieaktualny.
+- [x] Budowac bounded snapshot route/view, template/style, formularzy, NgRx,
+  REST/WebSocket, RxJS i auth przez neutralne `integrations.gitlab.frontend`.
+- [x] Przechowywac tresc source contextu tylko wewnetrznie w jobie, a publicznie
+  wystawiac selected screen, evidence manifest, technical signals, coverage,
+  diagnostics i applied boundary bez GitLab scope i surowej tresci kodu.
+- [x] Wyliczac `READY/PARTIAL/BLOCKED` dla aktywnych sekcji i zachowywac jawne
+  visibility limits dla heurystyk, brakujacych bibliotek i twardych limitow.
+- [x] Pozostawic job terminalnie `BLOCKED` tylko na `AI_ANALYSIS`, jezeli source
+  context zostal zbudowany; nie tworzyc promptu, wyniku ani raportu.
+- [x] Nie dodawac cache, MCP, toola ani AI w tym inkremencie.
+- [x] Zweryfikowac testami celowanymi, granicami pakietow i pelnym
+  `mvn -q test`.
+- [x] Potwierdzic, ze wszystkie nowe testy, fixtures, snapshoty i przyklady 4B
+  sa silnie zanonimizowane i dotycza wylacznie CRM.
+
+Checkpoint 4B 2026-08-15: job wymaga source revision z katalogu, waliduje ja
+przed ekranem i zwraca `409` wymagajace odswiezenia wyboru przy zmianie rewizji
+albo stale `screenId`. Bounded source context jest przechowywany wewnetrznie,
+a publiczne `contextSections` zawieraja selected screen, manifest bez tresci
+kodu, technical signals, coverage aktywnych sekcji, diagnostics i hard
+boundary. Po poprawnym zbudowaniu kontekstu job ma zakonczone kroki
+`SCREEN_DISCOVERY` i `SOURCE_CONTEXT`, a pozostaje jawnie `BLOCKED` tylko na
+`AI_ANALYSIS`; prompt, result i report nie sa tworzone. Nie dodano cache, MCP
+ani AI. Przeszly testy celowane UI Explorer, neutralnego frontend discovery,
+parsera, publicznych bledow i granic pakietow oraz pelne `mvn -q test`.
 
 ### 5. Report-first workflow Copilota
 
-- [ ] Dodac polskie skille runtime zgodnie z rozdzialem workflow, bez
+- [x] 5A: Dodac polskie skille runtime zgodnie z rozdzialem workflow, bez
   duplikowania instrukcji.
-- [ ] Dodac logical artifacts, prompt builder, starter guidance i response
+- [x] 5A: Dodac logical artifacts, prompt builder, starter guidance i response
   schema dla jednego result contract.
-- [ ] Dodac feature-owned available tools, hidden context, description
+- [x] 5A: Jawnie sklasyfikowac opis uzytkownika i source code jako untrusted
+  evidence, zneutralizowac delimitery promptu oraz zakazac wykonywania
+  instrukcji znalezionych w kodzie, komentarzach i konfiguracji runtime.
+- [x] 5A: Dodac wewnetrzny krok `AI_PREPARATION` tworzacy szesc logical
+  artifacts i prompt bez uruchamiania sesji Copilota; nie publikowac promptu
+  ani surowej tresci source files w job API.
+- [x] 5A: Pokryc prompt injection, niedostepna biblioteke organizacyjna i brak
+  definicji formularza runtime silnie zanonimizowanymi fixtures CRM.
+- [x] 5B: Dodac feature-owned available tools, hidden context, description
   customizations, tool budget i coverage/readiness gate.
-- [ ] Reuse'owac istniejace genericzne GitLab search/read tools tylko do
+- [x] 5B: Reuse'owac istniejace genericzne GitLab search/read tools tylko do
   uzupelnienia luk po deterministycznym snapshotcie.
-- [ ] Dodac parser z obsluga malformed/partial response oraz deterministyczny
+- [x] 5B: Dodac parser z obsluga malformed/partial response oraz deterministyczny
   report assembler.
-- [ ] Pokryc prompt injection w kodzie/komentarzu, budget exhaustion,
+- [x] 5B: Pokryc prompt injection w kodzie/komentarzu, budget exhaustion,
   niedostepna biblioteke i brak definicji formularza runtime.
-- [ ] Zweryfikowac celowanymi testami AI boundary i `mvn -q test`.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
+- [x] 5B: Zweryfikowac celowanymi testami AI boundary i `mvn -q test`.
+- [x] 5B: Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
   silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Checkpoint 5A 2026-08-15: `features.uiexplorer.ai.preparation` przygotowuje
+deterministycznie szesc logical artifacts, feature-owned prompt oraz starter
+guidance dla trzech polskich skilli runtime. `request.json` i source files sa
+jawnie untrusted evidence, a ich tresc nie moze zmieniac instrukcji promptu.
+Job zapisuje bundle tylko wewnetrznie i ma zakonczony krok `AI_PREPARATION`,
+po czym nadal konczy sie `BLOCKED` na `AI_ANALYSIS`. Ten inkrement nie tworzy
+sesji Copilota, tools/MCP, usage, historii, parsera ani wyniku AI. Pelna bramka
+testowa kroku 5 pozostawala otwarta do runtime 5B; testy celowane 5A,
+`mvn -q -DskipTests compile` oraz pelne `mvn -q test` przeszly.
+
+Checkpoint 5B 2026-08-15: izolowany `UiExplorerCopilotAnalysisProvider`
+sklada feature-owned `CopilotRunRequest`, ale nie jest jeszcze podlaczony do
+publicznego joba. Readiness gate nie uruchamia AI dla zablokowanego contextu.
+Dla partial contextu allowlista obejmuje built-in `skill` oraz wylacznie
+`gitlab_search_repository_candidates`, `gitlab_read_repository_file` i
+`gitlab_read_repository_file_chunk`; limit to jeden search, dwa read calls i
+trzy wywolania GitLaba lacznie. Group, repository i revision sa hidden,
+path-prefix scope jest egzekwowany przez policy, a kompletny plik osadzony w
+snapshotcie nie moze zostac pobrany ponownie. Strict parser przyjmuje source
+reference tylko z deterministycznego manifestu albo przechwyconego tool
+evidence, uzupelnia brakujace aktywne sekcje jako `BLOCKED` i zwraca bezpieczny
+fallback dla malformed JSON. Sekcja z deterministycznym `PARTIAL` nie moze
+stac sie `READY` bez przechwyconego targeted fallback source evidence.
+Publiczny job nadal pozostaje `BLOCKED` na
+`AI_ANALYSIS`; jego transitiony, usage i zapis wyniku sa zakresem kroku 6.
+Testy celowane calego AI boundary, runtime skills, publicznego joba i granic
+pakietow oraz pelne `mvn -q test` przeszly. Audit fixtures potwierdzil wylacznie
+silnie zanonimizowana domene CRM.
 
 ### 6. Asynchroniczny job, historia i portability
 
-- [ ] Zaimplementowac transitiony joba, kroki, context sections, activity,
-  tool evidence, usage, failure i partial result.
-- [ ] Zapisywac zakonczone/nieudane runy w lokalnej historii feature'a.
-- [ ] Dodac wersjonowany sanitizowany export/import read-only i copy/export
-  raportu.
-- [ ] Zagwarantowac, ze source revision i visibility limits sa zachowane w
-  jobie, historii, result/report i eksporcie.
-- [ ] Pokryc restart, blad AI, blad source, import starszej/nieznanej wersji,
-  redakcje i brak hidden context w eksporcie.
-- [ ] Zweryfikowac celowanymi testami oraz `mvn -q test`.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
-  silnie zanonimizowane i dotyczyc wylacznie CRM.
+Zakres 6A, zatwierdzony jako osobny inkrement, obejmuje publiczny runtime joba
+bez historii i portability:
+
+- [x] 6A: Podlaczyc izolowany provider 5B do asynchronicznego joba; `POST`
+  zwraca natychmiast `202`, a praca odbywa sie poza watkiem HTTP.
+- [x] 6A: Zaimplementowac atomowe transitiony `RUNNING` do
+  `COMPLETED/PARTIAL/FAILED/BLOCKED`, kroki `AI_PREPARATION` i `AI_ANALYSIS`,
+  context sections, activity, tool evidence, usage, result i report.
+- [x] 6A: Kontrolowanie mapowac blad source, blad Copilota i malformed response
+  oraz zabezpieczyc job przed podwojnym wykonaniem.
+- [x] 6A: Nie publikowac prepared promptu, poniewaz zawiera surowa tresc source
+  evidence; publiczne pole pozostaje `null` do czasu osobnej sanitizacji.
+- [x] 6A: Zweryfikowac mocked providerem bez live Copilota, testami celowanymi
+  oraz `mvn -q test`.
+- [x] 6A: Wszystkie testy, fixtures, snapshoty i przyklady tego inkrementu maja
+  byc silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Checkpoint 6A 2026-08-15: `POST /api/ui-explorer/jobs` zwraca `202` ze
+snapshotem `QUEUED`, a `applicationTaskExecutor` wykonuje poza watkiem HTTP
+source context, jednokrotne przygotowanie szesciu artifacts oraz izolowany
+provider 5B. Synchronizowany feature-owned state publikuje atomowe kroki,
+context/tool evidence, activity, usage, source revision, result i report oraz
+terminalne `COMPLETED`, `PARTIAL`, `BLOCKED` albo `FAILED`. Readiness failure
+nie publikuje fallback resultu, malformed response udostepnia bezpieczny
+partial result, a nieoczekiwany blad providera nie ujawnia szczegolow w API.
+Powtorne wykonanie tego samego runnable jest ignorowane. `preparedPrompt`
+pozostaje zawsze `null` w publicznym snapshotcie; bundle z surowym source
+evidence jest wewnetrzny. `input-options` raportuje AI analysis jako
+`AVAILABLE`. Celowane 56 testow UI Explorer, `PackageDependencyGuardTest` oraz
+pelne `mvn -q test` przeszly bez live Copilota. Wszystkie nowe dane testowe sa
+silnie zanonimizowanym CRM.
+
+Zakres 6B.1, zatwierdzony jako osobny inkrement lokalnej historii:
+
+- [x] 6B.1: Zapisywac terminalne `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`
+  w neutralnym `LocalAnalysisRunStore`, bez tworzenia feature-specific History
+  API.
+- [x] 6B.1: Utrzymac feature-owned, wersjonowana koperte lokalnego runu i
+  odczyt list/detail po restarcie przez shared `/api/analysis/runs`.
+- [x] 6B.1: Przed zapisem usuwac prepared prompt, surowa tresc source evidence,
+  tool arguments, hidden GitLab scope, repository z references, tool feedback i
+  szczegoly activity; report skladac ponownie z oczyszczonego resultu.
+- [x] 6B.1: Zachowac source revision, visibility limits, wynik, report, usage,
+  steps oraz bezpieczne evidence; nie wlaczac continuation ani resume joba.
+- [x] 6B.1: Obsluzyc uszkodzony plik historii jako jawny blad odczytu, a awarie
+  zapisu odizolowac od terminalnego wyniku joba.
+- [x] 6B.1: Zweryfikowac celowanymi testami oraz `mvn -q test`.
+- [x] 6B.1: Wszystkie testy, fixtures, snapshoty i przyklady tego inkrementu sa
+  silnie zanonimizowane i dotycza wylacznie CRM.
+
+Checkpoint 6B.1 2026-08-15: UI Explorer zapisuje terminalny snapshot jako
+`tdw.ui-explorer-local-run` version `1` pod feature key `ui-explorer`.
+Sanitizer buduje oddzielny model zapisu: publiczny request/result, source
+revision, visibility limits, steps, usage i bounded evidence pozostaja
+dostepne, ale prompt, source content, tool arguments, hidden repository scope
+i activity details nie trafiaja do `run.json`. Report jest skladany ponownie z
+oczyszczonych source references. Shared Analysis History odczytuje list/detail
+po utworzeniu nowej instancji store, continuation jest wylaczone, a lokalny
+zapis nie jest durable job queue i nie wznawia runu. Blad persistence jest
+best-effort i nie nadpisuje terminalnego stanu analizy. Celowane testy UI
+Explorer/history/granic pakietow oraz pelne `mvn -q test` przeszly na silnie
+zanonimizowanych danych CRM.
+
+Zakres 6B.2, zatwierdzony jako osobny inkrement portability:
+
+- [x] 6B.2: Zdefiniowac stabilny, wersjonowany i sanitizowany kontrakt exportu
+  niezalezny od wewnetrznej koperty lokalnej historii.
+- [x] 6B.2: Dodac read-only import z jawnym odrzucaniem starszej, nowszej i
+  uszkodzonej wersji; result i report sa czescia payloadu gotowego do
+  pobrania/kopiowania przez workspace Angular.
+- [x] 6B.2: Pokryc round-trip, source revision, visibility limits, redakcje i
+  brak hidden context w portable payloadzie.
+- [x] 6B.2: Zweryfikowac celowanymi testami oraz `mvn -q test`; wszystkie dane
+  testowe i przyklady maja byc silnie zanonimizowanym CRM.
+
+Checkpoint 6B.2 2026-08-15: `GET
+/api/ui-explorer/jobs/{jobId}/export` zwraca osobny
+`tdw.ui-explorer-export` version `1` tylko dla `COMPLETED/PARTIAL` z resultem i
+reportem. Export dziala dla joba w pamieci oraz lokalnego runu po restarcie,
+ale nie ujawnia wewnetrznego `tdw.ui-explorer-local-run`. `POST
+/api/ui-explorer/imports` przyjmuje wylacznie dokladny aktualny schema,
+version, payload type i result contract; brak kompatybilnosci wstecznej,
+migracji oraz akceptacji nowszych wersji. Import jest niezaufanym inputem:
+waliduje spojny system, screen i source revision, ponownie sanitizuje evidence,
+usuwa prompt, hidden scope, repository, activity details i tool feedback,
+sklada report od nowa z resultu, nadaje nowy identyfikator i zapisuje read-only
+snapshot do Analysis History bez continuation. Portable round-trip zachowuje
+source revision, visibility limits, usage, wynik i report, a re-export dziala
+po restarcie. Przyciski copy/download i renderowanie importu sa zakresem kroku
+7. Celowane testy portability/API/granic oraz pelne `mvn -q test` przeszly na
+silnie zanonimizowanych danych CRM.
 
 ### 7. Workspace Angular dla UI Explorer
 
-- [ ] Dodac route, navigation, landing card i Analysis History mapping.
-- [ ] Dodac typowany API service, facade/state oraz osobne komponenty
-  konfiguracji, katalogu, przebiegu i wyniku.
-- [ ] Reuse'owac `AiOptionsApiService`, `AnalysisJobPollingService`, wspolny
-  aside, steps/activity/evidence i report renderer.
-- [ ] Zaimplementowac profile, section modes, opis scenariusza i
-  business-friendly screen catalog z loading/empty/error/retry.
-- [ ] Pokazac confidence, source revision, coverage i visibility limits bez
-  technicznego zargonu w glownej sciezce.
-- [ ] Dodac testy komponentow/facade/API, responsywnosci i podstawowej
-  dostepnosci klawiatura.
-- [ ] Zweryfikowac `npm --prefix frontend test -- --watch=false` oraz
-  `npm --prefix frontend run build`.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
-  silnie zanonimizowane i dotyczyc wylacznie CRM.
+Zakres 7A, zatwierdzony jako osobny inkrement fundamentu i konfiguracji, bez
+uruchamiania joba:
+
+- [x] 7A: Dodac route, navigation i landing card UI Explorer.
+- [x] 7A: Dodac feature-owned typowane modele HTTP, API service i facade/state
+  dla prawdziwych `input-options`, katalogu ekranow i wspolnego katalogu AI.
+- [x] 7A: Dodac osobne komponenty konfiguracji i business-friendly katalogu
+  ekranow z loading/empty/error/retry oraz automatyczna `sourceRevision`.
+- [x] 7A: Zaimplementowac wybor systemu, branch/ref, ekranu, profilu, trybow
+  osmiu sekcji, opisu scenariusza, modelu i reasoning effort. Zmiana systemu
+  albo refa usuwa zalezne, potencjalnie nieaktualne wybory.
+- [x] 7A: Nie uruchamiac joba, nie mockowac rezultatu i nie dodawac lokalnego
+  kontraktu zastepujacego backend; ekran konczy sie kompletna konfiguracja
+  gotowa do podlaczenia w 7B.
+- [x] 7A: Pokryc API, facade, komponenty, shell/navigation, responsywnosc i
+  podstawowa dostepnosc klawiatura testami Angulara.
+- [x] 7A: Zweryfikowac `npm --prefix frontend test -- --watch=false`,
+  `npm --prefix frontend run build` oraz celowany `FrontendPageTest`, poniewaz
+  route zmienia granice statycznego SPA.
+- [x] 7A: Wszystkie testy, fixtures, snapshoty i przyklady sa silnie
+  zanonimizowane i dotycza wylacznie CRM.
+
+Zakres 7B, zatwierdzony jako osobny inkrement lifecycle runu bez renderowania
+merytorycznego raportu i portability:
+
+- [x] 7B: Rozszerzyc feature-owned modele i API service o dokladny kontrakt
+  `POST /api/ui-explorer/jobs` oraz bezpiecznie kodowany
+  `GET /api/ui-explorer/jobs/{jobId}`.
+- [x] 7B: Zbudowac start request z aktualnego katalogu i konfiguracji,
+  wymagajac zgodnego `screenId` oraz `sourceRevision`; nie uruchamiac joba dla
+  stale albo niekompletnego wyboru.
+- [x] 7B: Dodac jeden dominujacy `Run UI Explorer`, natychmiast zapisac
+  snapshot zwrotny z `202` i zablokowac duplikat startu podczas aktywnego runu.
+- [x] 7B: Reuse'owac `AnalysisJobPollingService`, bez overlap requestow;
+  terminalne statusy to `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`, a blad
+  pollingu zachowuje ostatni snapshot i udostepnia jawny retry.
+- [x] 7B: Pokazac shared progress, AI activity, deterministic/tool evidence,
+  tool feedback i usage/cost przez istniejace neutralne modele oraz komponenty;
+  wynik merytoryczny pozostaje placeholderem do 7C.
+- [x] 7B: Pokryc start request, immediate snapshot, polling, retry, stale
+  revision, statusy terminalne i destroy lifecycle silnie zanonimizowanymi
+  testami CRM.
+- [x] 7B: Zweryfikowac pelne testy i build Angulara, architecture/import diff
+  oraz zaktualizowac plan i kanoniczny opis aktualnego runtime UI.
+
+Checkpoint 7B 2026-08-15: compact composer ma jeden dominujacy
+`Run UI Explorer`, ktory wysyla feature-owned request z katalogowym
+`screenId` i `sourceRevision`, aktywnymi trybami sekcji oraz tylko niepustymi
+preferencjami opcjonalnymi. Snapshot zwrotny z `202` jest widoczny natychmiast,
+a dalszy przebieg korzysta z neutralnego `AnalysisJobPollingService` bez
+nakladania requestow. Konfiguracja jest zablokowana podczas aktywnego runu;
+`COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED` zatrzymuja polling. Blad pollingu
+zachowuje ostatni snapshot i udostepnia retry, a blad autoryzacji moze pokazac
+bezpieczny `authStartUrl`. Shared aside i `analysis-steps-panel` prezentuja
+kroki, deterministic/tool evidence, activity, feedback i usage; feature nie
+duplikuje ich renderowania. Merytoryczny result/report, historia i
+import/export pozostaja zakresem 7C. Przeszlo 19 celowanych testow UI Explorer
+oraz pelne 390 testow Angulara w 53 plikach; produkcyjny build Angulara rowniez
+przeszedl. Wszystkie nowe testy i przyklady sa silnie zanonimizowanym CRM.
+
+Zakres 7C.1, zatwierdzony jako osobny inkrement prezentacji merytorycznego
+wyniku, bez historii i portable JSON:
+
+- [x] 7C.1: Zastapic terminalny placeholder raportem, dla ktorego
+  `snapshot.report` jest glownym zrodlem naglowka, podsumowania, aktywnych
+  sekcji, confidence, references, visibility limits i open questions.
+- [x] 7C.1: Typowac feature-owned `snapshot.result` i pokazac z niego tylko
+  biznesowo czytelne zaleznosci przekrojowe oraz change preparation summary;
+  nie renderowac raw JSON, prepared promptu ani surowej tresci source.
+- [x] 7C.1: Reuse'owac shared result header, report section content, Markdown
+  i report meta; zachowac shared aside dla przebiegu, AI i evidence.
+- [x] 7C.1: Obsluzyc `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`, w tym jawny
+  stan terminalny bez raportu oraz zachowanie poprawnych sekcji wyniku
+  czastkowego.
+- [x] 7C.1: Dodac copy calego raportu oraz download Markdown z nazwa pliku
+  oparta o zanonimizowany identyfikator widoku i source revision.
+- [x] 7C.1: Pokryc renderowanie raportu, osiem sekcji, wynik czastkowy,
+  blocked/failed, copy i download silnie zanonimizowanymi testami CRM.
+- [x] 7C.1: Zweryfikowac pelne testy i build Angulara, architecture/import diff
+  oraz zaktualizowac plan i kanoniczny opis runtime UI.
+
+Checkpoint 7C.1 2026-08-15: terminalny placeholder zostal zastapiony
+feature-owned prezentacja, dla ktorej `snapshot.report` jest glownym zrodlem
+naglowka, podsumowania, osmiu uporzadkowanych sekcji i metadanych
+wiarygodnosci. `snapshot.result` ma dokladny kontrakt TypeScript i zasila tylko
+zaleznosci przekrojowe oraz change preparation summary. Shared result header
+udostepnia teraz opcjonalna akcje download, a UI Explorer reuse'uje rowniez
+shared Markdown, report section content, report meta oraz analysis aside.
+Wynik `PARTIAL` zachowuje dostepne sekcje i jawnie pokazuje braki;
+`BLOCKED`, `FAILED` i terminalny snapshot bez reportu nie tworza wyniku
+zastepczego. Prepared prompt, raw JSON i surowa tresc source nie sa renderowane.
+Copy oraz download tworza ten sam biznesowo czytelny Markdown, z nazwa pliku
+oparta o screen id i source revision. Przeszlo 10 celowanych testow oraz pelne
+395 testow Angulara w 54 plikach; produkcyjny build Angulara rowniez przeszedl.
+Wszystkie nowe fixtures i przyklady sa silnie zanonimizowanym CRM. Route i
+granica statycznego SPA nie zmienily sie, dlatego `FrontendPageTest` nie byl
+ponawiany.
+
+Zakres 7C.2, zatwierdzony jako osobny frontendowy inkrement historii i
+portability, bez continuation i bez kompatybilnosci wstecznej:
+
+- [x] 7C.2: Dodac mapowanie `ui-explorer` w Analysis History i otwierac run
+  przez `/ui-explorer?localRunId=...`, bez pobierania pelnego JSON-a na ekranie
+  listy.
+- [x] 7C.2: Odtwarzac konfiguracje i raport z dokladnie wersjonowanej lokalnej
+  koperty `tdw.ui-explorer-local-run` v1; odrzucac obcy feature, schema,
+  version, result contract albo uszkodzony snapshot bez fallbacku.
+- [x] 7C.2: Rozroznic pochodzenie `live`, `history` i `imported`; historia oraz
+  import sa prezentowane tylko do odczytu i nie uruchamiaja pollingu,
+  continuation, follow-up chatu ani wznowienia sesji.
+- [x] 7C.2: Dodac eksport portable JSON przez kanoniczny backendowy
+  `GET /api/ui-explorer/jobs/{jobId}/export` dla wyniku live, history i import.
+- [x] 7C.2: Dodac import JSON przez `POST /api/ui-explorer/imports`, pozostawic
+  serwer jako zrodlo walidacji niezaufanej koperty i pokazac zwrocony,
+  sanitizowany snapshot tylko do odczytu.
+- [x] 7C.2: Zachowac copy oraz download Markdown z 7C.1, a obok portability
+  pokazac jawne komunikaty bledu i akcje rozpoczecia nowego runu.
+- [x] 7C.2: Pokryc live export, odtworzenie po restarcie, read-only import,
+  starsza/nowsza/obca/uszkodzona wersje oraz mapowanie Analysis History
+  silnie zanonimizowanymi testami CRM.
+- [x] 7C.2: Zweryfikowac pelne testy i build Angulara, architecture/import diff
+  oraz zaktualizowac plan i kanoniczny opis runtime UI.
+
+Checkpoint 7C.2 2026-08-15: Analysis History rozpoznaje `ui-explorer` i
+przekazuje tylko `localRunId` do feature workspace. UI Explorer pobiera detail,
+sprawdza feature, brak continuation oraz dokladna lokalna koperta
+`tdw.ui-explorer-local-run` version `1`; nie ma fallbacku dla starszego,
+nowszego, obcego ani uszkodzonego formatu. Odtworzony run pokazuje konfiguracje,
+raport i shared evidence jako read-only bez pollingu, follow-up chatu, resume
+oraz sesji AI. Importowany JSON jest niezaufanym dokumentem walidowanym przez
+`POST /api/ui-explorer/imports`; frontend pokazuje dopiero zwrocony,
+sanitizowany snapshot. Wynik live, history i imported korzysta z jednego
+`GET /api/ui-explorer/jobs/{jobId}/export`, a copy i download Markdown pozostaja
+dostepne obok portable JSON. UI pokazuje pochodzenie wyniku oraz akcje importu
+kolejnego pliku i rozpoczecia nowego runu. Przeszlo 35 celowanych testow UI
+Explorer, 16 testow Analysis History oraz pelne 409 testow Angulara w 55
+plikach; produkcyjny build Angulara rowniez przeszedl. Architecture/import diff
+nie dodal zaleznosci od sibling feature'ow, route SPA sie nie zmienil, wiec
+`FrontendPageTest` nie byl ponawiany. Wszystkie nowe testy, fixtures i przyklady
+sa silnie zanonimizowanym CRM.
+
+Checkpoint 7A 2026-08-15: `/ui-explorer` jest lazy-loaded ekranem w sekcji
+Analysis Features, dostepnym z sidebaru i landing page. Feature-owned modele,
+API service i facade pobieraja prawdziwe `input-options`, katalog ekranow oraz
+wspolny katalog modeli AI. Operator wybiera frontend, branch/ref, ekran,
+profil, tryby osmiu sekcji, opcjonalny scenariusz, model i reasoning effort;
+source revision pochodzi wylacznie z katalogu. Zmiana systemu albo refa usuwa
+screen i revision, a katalog ma osobne loading/empty/error/retry oraz jawne
+ograniczenia. 7A nie wywoluje `POST /jobs`, nie renderuje mockowanego rezultatu
+i nie dodaje kompatybilnosci wstecznej. Przeszlo 378 testow Angulara w 53
+plikach, produkcyjny build Angulara oraz 12 testow `FrontendPageTest`. Wszystkie
+nowe fixtures i przyklady sa silnie zanonimizowanym CRM.
+
+Zakres 7A.1, zatwierdzony jako korekta spojnosci UX przed 7B:
+
+- [x] 7A.1: Przebudowac konfigurator do tego samego wzorca compact analysis
+  composer co Flow Explorer: zwijany naglowek, target row, scope row, opis i
+  stopka stanu.
+- [x] 7A.1: Przeniesc business-friendly katalog widokow z osobnej prawej
+  kolumny do kontrolki targetu z dropdownem, wyszukiwaniem oraz
+  loading/empty/error/retry.
+- [x] 7A.1: Pokazywac profile, section modes, model i reasoning jako zwarte
+  kontrolki. Osiem sekcji pozostaje edytowalne w rozwijanym panelu bez stalego
+  zajmowania calej wysokosci strony.
+- [x] 7A.1: Dodac pusty obszar przyszlego wyniku zgodny z Flow Explorerem, ale
+  nie dodawac niezaimplementowanych akcji start/import ani mockowanego wyniku.
+- [x] 7A.1: Zachowac feature-owned facade, prawdziwe API, source revision,
+  reset stale wyborow, responsywnosc i obsluge klawiatury.
+- [x] 7A.1: Zaktualizowac testy DOM/interakcji na silnie zanonimizowanym CRM,
+  uruchomic pelne testy i build Angulara oraz wykonac wizualna weryfikacje
+  lokalnego widoku desktop/mobile.
+
+Checkpoint 7A.1 2026-08-15: UI Explorer korzysta ze zwartego wzorca analysis
+composer znanego z Flow Explorera: target row zawiera frontend, branch/ref,
+widok i odswiezenie katalogu, a scope row profil, tryby sekcji, model i
+reasoning. Katalog widokow oraz osiem trybow sekcji sa rozwijanymi kontrolkami,
+wiec konfiguracja nie tworzy osobnej kolumny ani stalego wielosekcyjnego
+wizarda. Pod composerem znajduje sie pusty obszar przyszlego wyniku. Nie dodano
+pozornych akcji start/import ani mockowanego raportu przed krokami 7B/7C.
+Przeszlo 378 testow Angulara w 53 plikach i produkcyjny build Angulara, a
+lokalny widok zostal sprawdzony wizualnie na desktopie oraz przy viewport
+390x844. Testy i przyklady pozostaja silnie zanonimizowanym CRM.
 
 ### 8. Pilot i hardening MVP
 

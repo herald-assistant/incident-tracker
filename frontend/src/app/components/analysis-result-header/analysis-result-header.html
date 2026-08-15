@@ -32,5 +32,18 @@
       </span>
       <span>{{ copied() ? 'Copied' : 'Copy result' }}</span>
     </button>
+
+    @if (downloadVisible()) {
+      <button
+        class="secondary-button analysis-result-header__download-button"
+        type="button"
+        [attr.aria-label]="downloadAriaLabel()"
+        title="Pobierz wynik jako Markdown"
+        (click)="downloadRequested.emit()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">download</span>
+        <span>Download Markdown</span>
+      </button>
+    }
   </div>
 </div>

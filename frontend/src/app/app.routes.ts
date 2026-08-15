@@ -87,6 +87,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'ui-explorer',
+        loadComponent: () =>
+          import('./features/ui-explorer/pages/ui-explorer-page/ui-explorer-page').then(
+            (module) => module.UiExplorerPageComponent
+          ),
+        data: {
+          section: 'Analysis Features',
+          title: 'UI Explorer'
+        }
+      },
+      {
         path: 'change-verification',
         loadComponent: () =>
           import(

@@ -54,6 +54,9 @@ Decyzje:
 - `Tool Workbench` zawiera reusable capability do testow i debugowania:
   `Elastic Logs`, `GitLab Source`, `Jira Source`, `Confluence Source`,
   `Database Tools` i `Operational Context`.
+- `GitLab Source` zawiera operatorska grupe `Frontend Discovery` dla bounded
+  katalogu Angular/Nx i screen source context. Jest to shared/operator preview
+  neutralnej integracji, bez MCP toola, AI, historii i joba UI Explorer.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
 - `Platform` dotyczy overview, customizacji i podgladu zasobow Team Delivery
@@ -194,7 +197,8 @@ nie powinien czytac DTO adapterow bezposrednio.
 
 GitLab w systemie nie jest jedna abstrakcja:
 
-- adapter i source resolve do ogolnego dostepu do GitLaba,
+- adapter i source resolve do ogolnego dostepu do GitLaba, w tym neutralne
+  bounded rozpoznawanie Angular/Nx route/view i screen source context,
 - deterministic evidence provider do deployment context/code references,
 - AI-guided tools do dociagania kodu w sesji Copilota.
 

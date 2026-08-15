@@ -100,6 +100,17 @@ class FrontendPageTest {
     }
 
     @Test
+    void shouldServeUiExplorerRoute() throws Exception {
+        mockMvc.perform(get("/ui-explorer"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+
+        mockMvc.perform(get("/ui-explorer/crm-contact-create"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
+    @Test
     void shouldServeConfigDriftViewerRoute() throws Exception {
         mockMvc.perform(get("/config-drift-viewer"))
                 .andExpect(status().isOk())

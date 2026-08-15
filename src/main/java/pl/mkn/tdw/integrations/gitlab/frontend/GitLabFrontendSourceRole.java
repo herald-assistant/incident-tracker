@@ -1,0 +1,19 @@
+package pl.mkn.tdw.integrations.gitlab.frontend;
+
+public enum GitLabFrontendSourceRole {
+    WORKSPACE_CONFIGURATION,
+    ROUTE_CONFIGURATION,
+    VIEW_COMPONENT,
+    TEMPLATE,
+    INLINE_TEMPLATE,
+    STYLE,
+    INLINE_STYLE,
+    CHILD_COMPONENT,
+    FORM_LOGIC,
+    STATE_MANAGEMENT,
+    BACKEND_CLIENT,
+    WEBSOCKET_STREAM,
+    AUTHORIZATION,
+    RELATED_SOURCE
+}
+

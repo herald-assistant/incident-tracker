@@ -1,0 +1,218 @@
+<div class="page-shell ui-explorer-page">
+  <main class="ui-explorer-workspace" aria-labelledby="uiExplorerWorkspaceTitle">
+    <input
+      #importInput
+      class="ui-explorer-file-input"
+      type="file"
+      accept="application/json,.json"
+      (change)="importResult($event)"
+    />
+
+    @if (facade.isReadOnlyResult() && facade.job(); as readOnlySnapshot) {
+      <section class="analysis-card ui-explorer-read-only" aria-labelledby="uiExplorerWorkspaceTitle">
+        <header class="ui-explorer-read-only__header">
+          <div>
+            <p class="section-eyebrow">UI Explorer · read-only</p>
+            <h2 id="uiExplorerWorkspaceTitle">{{ resultSourceLabel() }}</h2>
+            <p>Konfiguracja i raport zostały odtworzone bez wznawiania sesji AI.</p>
+          </div>
+          <div class="ui-explorer-read-only__actions">
+            <button class="secondary-button" type="button" [disabled]="facade.portabilityBusy()" (click)="triggerImport(importInput)">
+              <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+              <span>Import another</span>
+            </button>
+            <button class="secondary-button" type="button" (click)="startNewRun()">
+              <span class="material-symbols-outlined" aria-hidden="true">add</span>
+              <span>New UI Explorer run</span>
+            </button>
+          </div>
+        </header>
+
+        <dl class="ui-explorer-read-only__grid">
+          <div><dt>Application</dt><dd>{{ readOnlySnapshot.request.systemLabel }}</dd></div>
+          <div><dt>Branch / Ref</dt><dd>{{ readOnlySnapshot.request.branch }}</dd></div>
+          <div><dt>View</dt><dd>{{ readOnlySnapshot.result?.screen?.label || readOnlySnapshot.request.screenId }}</dd></div>
+          <div><dt>Source revision</dt><dd>{{ readOnlySnapshot.request.sourceRevision }}</dd></div>
+          <div><dt>Goal</dt><dd>{{ profileLabel(readOnlySnapshot.request.profile) }}</dd></div>
+          <div><dt>Model / effort</dt><dd>{{ readOnlySnapshot.request.aiModel || 'Default' }} · {{ readOnlySnapshot.request.reasoningEffort || 'Default' }}</dd></div>
+        </dl>
+
+        <div class="ui-explorer-read-only__sections">
+          <span class="field-label">Section modes</span>
+          <div>
+            @for (section of readOnlySnapshot.request.sectionModes; track section.sectionId) {
+              <span class="ui-explorer-read-only__section">{{ section.sectionId }} · {{ section.mode }}</span>
+            }
+          </div>
+        </div>
+
+        @if (readOnlySnapshot.request.scenarioDescription) {
+          <div class="ui-explorer-read-only__scenario">
+            <span class="field-label">Scenario</span>
+            <p>{{ readOnlySnapshot.request.scenarioDescription }}</p>
+          </div>
+        }
+      </section>
+    } @else {
+      <section class="analysis-card ui-explorer-composer">
+        <app-ui-explorer-configuration (importRequested)="triggerImport(importInput)" />
+      </section>
+    }
+
+    @if (facade.portabilityError()) {
+      <div class="analysis-card ui-explorer-portability-error" role="alert">
+        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+        <span>{{ facade.portabilityError() }}</span>
+      </div>
+    }
+
+    @if (facade.job(); as snapshot) {
+      <section class="analysis-card ui-explorer-run" aria-live="polite">
+        <header class="ui-explorer-run__header">
+          <div>
+            <p class="section-eyebrow">{{ resultSourceLabel() }}</p>
+            <h2>{{ screenLabel() }}</h2>
+            <p>
+              {{ snapshot.request.systemLabel }} · {{ snapshot.request.branch }} ·
+              {{ snapshot.sourceRevision?.revision || snapshot.request.sourceRevision }}
+            </p>
+          </div>
+          <div class="ui-explorer-run__header-actions">
+            @if (snapshot.exportAvailable) {
+              <button
+                class="secondary-button secondary-button--compact"
+                type="button"
+                [disabled]="facade.portabilityBusy()"
+                (click)="facade.exportCurrentResult()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                <span>{{ facade.portabilityBusy() ? 'Working…' : 'Export JSON' }}</span>
+              </button>
+            }
+            <span [class]="jobStatusClass(snapshot.status)">
+              {{ jobStatusLabel(snapshot.status) }}
+            </span>
+          </div>
+        </header>
+
+        @if (facade.jobError()) {
+          <div class="ui-explorer-run__message ui-explorer-run__message--error" role="alert">
+            <span class="material-symbols-outlined" aria-hidden="true">error</span>
+            <span>{{ facade.jobError() }}</span>
+            @if (facade.canRetryPolling()) {
+              <button class="secondary-button secondary-button--compact" type="button" (click)="facade.retryPolling()">
+                Retry status
+              </button>
+            }
+          </div>
+        }
+
+        @if (!facade.isJobTerminal()) {
+          <div class="ui-explorer-run__body">
+            <span class="ui-explorer-run__spinner" aria-hidden="true"></span>
+            <h3>{{ snapshot.currentStepLabel || 'Preparing screen analysis' }}</h3>
+            <p>Postęp, tok pracy AI, evidence i usage są aktualizowane automatycznie.</p>
+          </div>
+        } @else if (!snapshot.report) {
+          <div class="ui-explorer-run__body ui-explorer-run__body--terminal">
+            <span class="material-symbols-outlined" aria-hidden="true">
+              {{ snapshot.status === 'PARTIAL' ? 'warning' : snapshot.status === 'COMPLETED' ? 'report_off' : 'error' }}
+            </span>
+            <h3>{{ terminalTitle(snapshot.status) }}</h3>
+            <p>
+              @if (snapshot.errorMessage) {
+                {{ snapshot.errorMessage }}
+              } @else {
+                {{ snapshot.outputAvailability.message || 'Raport nie jest dostępny dla tego przebiegu.' }}
+              }
+            </p>
+          </div>
+        }
+      </section>
+
+      @if (snapshot.report && (snapshot.status === 'COMPLETED' || snapshot.status === 'PARTIAL')) {
+        <app-ui-explorer-result
+          [report]="snapshot.report"
+          [result]="snapshot.result"
+          [status]="snapshot.status"
+          [sectionModes]="snapshot.request.sectionModes"
+        ></app-ui-explorer-result>
+      }
+
+      <app-analysis-feature-aside
+        ariaLabel="Panel pracy UI Explorer"
+        [progressActive]="facade.workflowIsRunning()"
+        [aiActive]="facade.aiWorkflowIsRunning()"
+        [progressCount]="progressCount()"
+        [aiCount]="aiCount()"
+        [feedbackCount]="feedbackCount()"
+        [showChat]="false"
+      >
+        <div progressPanel>
+          <app-analysis-steps-panel
+            [steps]="snapshot.steps"
+            [evidenceSections]="snapshot.contextSections"
+            [toolEvidenceSections]="snapshot.toolEvidenceSections"
+            [aiActivityEvents]="snapshot.aiActivityEvents"
+            [toolFeedback]="snapshot.toolFeedback"
+            [result]="null"
+            [finalResultAvailable]="!!snapshot.report"
+            [showAiWorkflow]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+
+        <div aiPanel>
+          <app-analysis-steps-panel
+            [steps]="snapshot.steps"
+            [evidenceSections]="snapshot.contextSections"
+            [toolEvidenceSections]="snapshot.toolEvidenceSections"
+            [aiActivityEvents]="snapshot.aiActivityEvents"
+            [toolFeedback]="snapshot.toolFeedback"
+            [result]="null"
+            [finalResultAvailable]="!!snapshot.report"
+            [showProgress]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+
+        <div feedbackPanel>
+          <app-analysis-steps-panel
+            [steps]="snapshot.steps"
+            [evidenceSections]="snapshot.contextSections"
+            [toolEvidenceSections]="snapshot.toolEvidenceSections"
+            [aiActivityEvents]="snapshot.aiActivityEvents"
+            [toolFeedback]="snapshot.toolFeedback"
+            [result]="null"
+            [finalResultAvailable]="!!snapshot.report"
+            [showProgress]="false"
+            [showAiWorkflow]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+      </app-analysis-feature-aside>
+    } @else {
+      <section class="analysis-card ui-explorer-placeholder" aria-live="polite">
+        <span class="material-symbols-outlined" aria-hidden="true">web_asset</span>
+        @if (facade.jobError()) {
+          <h2>UI Explorer could not start</h2>
+          <p class="ui-explorer-placeholder__error" role="alert">{{ facade.jobError() }}</p>
+          @if (facade.authStartUrl()) {
+            <a class="primary-button" [href]="facade.authStartUrl()">Connect GitHub</a>
+          }
+        } @else if (facade.configurationReady()) {
+          <h2>Ready for the first UI Explorer run</h2>
+          <p>Konfiguracja widoku jest kompletna. Uruchom analizę w panelu powyżej.</p>
+        } @else {
+          <h2>Prepare the first UI Explorer run</h2>
+          <p>
+            Wybierz aplikację, widok i zakres dokumentacji. W tym miejscu pojawi się status runu,
+            a przebieg pracy będzie dostępny w tym samym panelu co w innych analizach.
+          </p>
+        }
+      </section>
+    }
+  </main>
+</div>

@@ -75,6 +75,12 @@ const NAV_GROUPS: NavGroup[] = [
         reloadOnActiveClick: true
       },
       {
+        label: 'UI Explorer',
+        route: '/ui-explorer',
+        icon: 'web_asset',
+        reloadOnActiveClick: true
+      },
+      {
         label: 'Change Verification',
         route: '/change-verification',
         icon: 'fact_check',

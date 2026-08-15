@@ -1,0 +1,473 @@
+<details class="ui-explorer-collapsible" open>
+  <summary class="section-heading ui-explorer-composer__heading ui-explorer-collapsible__summary">
+    <div>
+      <p class="section-eyebrow">UI Explorer</p>
+      <h2 id="uiExplorerWorkspaceTitle">Screen documentation workspace</h2>
+      <p class="field-hint">
+        Wybierz frontend, widok i zakres dokumentacji, a platforma przygotuje opis funkcjonalny
+        albo techniczny oparty na kodzie źródłowym.
+      </p>
+    </div>
+    <span [class]="statusPillClass()">{{ statusLabel() }}</span>
+  </summary>
+
+  <div class="ui-explorer-collapsible__body">
+    @switch (facade.inputState()) {
+      @case ('loading') {
+        <div class="ui-explorer-message" aria-live="polite">
+          <span class="ui-explorer-spinner" aria-hidden="true"></span>
+          <p>Pobieranie dostępnych frontendów i zakresów…</p>
+        </div>
+      }
+      @case ('error') {
+        <div class="ui-explorer-message ui-explorer-message--error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <p>{{ facade.inputError() }}</p>
+          <button class="secondary-button secondary-button--compact" type="button" (click)="facade.loadInputOptions()">
+            Retry
+          </button>
+        </div>
+      }
+      @case ('empty') {
+        <div class="ui-explorer-message ui-explorer-message--warning" role="status">
+          <span class="material-symbols-outlined" aria-hidden="true">web_asset_off</span>
+          <div>
+            <strong>Brak frontendów gotowych do analizy.</strong>
+            <p>Zarejestruj frontend i jego primary repository w Operational Context.</p>
+          </div>
+        </div>
+      }
+    }
+
+    @if (facade.inputState() === 'ready' && facade.inputOptions(); as options) {
+      <div class="ui-explorer-target-grid">
+        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
+          <span class="ui-explorer-field-label">
+            <span class="field-label">Application</span>
+            <span
+              class="ui-explorer-label-help"
+              tabindex="0"
+              aria-label="Application field help"
+              matTooltip="Frontend z Operational Context. Zmiana aplikacji odświeża katalog widoków i usuwa wcześniejszy wybór."
+              matTooltipPosition="right"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <button
+            class="ui-explorer-select__control"
+            type="button"
+            aria-haspopup="listbox"
+            [disabled]="facade.controlsLocked()"
+            [attr.aria-expanded]="openMenu() === 'system'"
+            (click)="toggleMenu('system', $event)"
+          >
+            <span class="ui-explorer-select__value">
+              <strong>{{ facade.selectedSystem()?.label || 'Select application' }}</strong>
+              <small>{{ facade.selectedSystem()?.summary || (options.systems.length + ' applications') }}</small>
+            </span>
+            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+          </button>
+
+          @if (openMenu() === 'system') {
+            <div class="ui-explorer-select__menu ui-explorer-select__menu--applications" role="listbox" aria-label="Application options">
+              <label class="ui-explorer-select__search">
+                <span class="field-label">Find application</span>
+                <input
+                  class="text-input"
+                  type="search"
+                  autocomplete="off"
+                  placeholder="crm, portal"
+                  [value]="systemSearch()"
+                  (input)="systemSearch.set($any($event.target).value)"
+                />
+              </label>
+              <div class="ui-explorer-select__options">
+                @for (system of filteredSystems(); track system.systemId) {
+                  <button
+                    class="ui-explorer-select-option"
+                    [class.ui-explorer-select-option--selected]="system.systemId === facade.selectedSystemId()"
+                    type="button"
+                    role="option"
+                    [attr.aria-selected]="system.systemId === facade.selectedSystemId()"
+                    (click)="selectSystem(system.systemId, $event)"
+                  >
+                    <span class="ui-explorer-select-option__body">
+                      <strong>{{ system.label }}</strong>
+                      <small>{{ system.summary }}</small>
+                    </span>
+                    @if (system.systemId === facade.selectedSystemId()) {
+                      <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                    }
+                  </button>
+                } @empty {
+                  <div class="empty-state">Brak aplikacji dla aktualnego filtra.</div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <label class="form-field ui-explorer-field">
+          <span class="ui-explorer-field-label">
+            <span class="field-label">Branch / Ref</span>
+            <span
+              class="ui-explorer-label-help"
+              tabindex="0"
+              aria-label="Branch field help"
+              matTooltip="Git ref użyty do rozpoznania widoków. Zmiana refa usuwa wybrany widok i source revision."
+              matTooltipPosition="right"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <input
+            class="text-input"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="160"
+            [disabled]="facade.controlsLocked()"
+            [value]="facade.branch()"
+            (input)="facade.changeBranch($any($event.target).value)"
+            (keydown.enter)="facade.loadScreens()"
+          />
+        </label>
+
+        <app-ui-explorer-screen-catalog />
+
+        <div class="ui-explorer-control-actions">
+          <span class="ui-explorer-field-label">
+            <span class="field-label">Inventory</span>
+            <span
+              class="ui-explorer-label-help"
+              tabindex="0"
+              aria-label="View inventory refresh help"
+              matTooltip="Pobiera katalog widoków dla wybranej aplikacji i branch/ref."
+              matTooltipPosition="right"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <button
+            class="secondary-button"
+            type="button"
+            [disabled]="facade.controlsLocked() || !facade.selectedSystemId() || !facade.branch().trim() || facade.screenState() === 'loading'"
+            (click)="facade.loadScreens()"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+            <span>{{ facade.screenState() === 'loading' ? 'Loading…' : 'Load views' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="ui-explorer-scope-grid">
+        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
+          <span class="ui-explorer-field-label">
+            <span class="field-label">Goal</span>
+            <span
+              class="ui-explorer-label-help"
+              tabindex="0"
+              aria-label="Documentation goal help"
+              matTooltip="Profil określa oczekiwany sposób wykorzystania dokumentacji i ustawia domyślne tryby sekcji."
+              matTooltipPosition="right"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <button
+            class="ui-explorer-select__control"
+            type="button"
+            aria-haspopup="listbox"
+            [disabled]="facade.controlsLocked()"
+            [attr.aria-expanded]="openMenu() === 'profile'"
+            (click)="toggleMenu('profile', $event)"
+          >
+            <span class="ui-explorer-select__value">
+              <strong>{{ selectedProfileOption()?.label || 'Select goal' }}</strong>
+              <small>{{ selectedProfileOption()?.description || 'Choose documentation goal' }}</small>
+            </span>
+            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+          </button>
+          @if (openMenu() === 'profile') {
+            <div class="ui-explorer-select__menu" role="listbox" aria-label="Documentation goal options">
+              <div class="ui-explorer-select__options">
+                @for (profile of options.profiles; track profile.profile) {
+                  <button
+                    class="ui-explorer-select-option"
+                    [class.ui-explorer-select-option--selected]="profile.profile === facade.selectedProfile()"
+                    type="button"
+                    role="option"
+                    [attr.aria-selected]="profile.profile === facade.selectedProfile()"
+                    (click)="selectProfile(profile.profile, $event)"
+                  >
+                    <span class="ui-explorer-select-option__body">
+                      <strong>{{ profile.label }}</strong>
+                      <small>{{ profile.description }}</small>
+                    </span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
+          <span class="ui-explorer-field-label">
+            <span class="field-label">Section modes</span>
+            <span
+              class="ui-explorer-label-help"
+              tabindex="0"
+              aria-label="Section modes help"
+              matTooltip="Off pomija sekcję, Compact zwraca najważniejsze fakty, a Deep pogłębia analizę źródeł."
+              matTooltipPosition="right"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <button
+            class="ui-explorer-select__control"
+            type="button"
+            aria-haspopup="dialog"
+            [disabled]="facade.controlsLocked()"
+            [attr.aria-expanded]="openMenu() === 'sections'"
+            (click)="toggleMenu('sections', $event)"
+          >
+            <span class="ui-explorer-select__value">
+              <strong>{{ sectionModesLabel() }}</strong>
+              <small>{{ sectionModesMeta() }}</small>
+            </span>
+            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+          </button>
+          @if (openMenu() === 'sections') {
+            <div class="ui-explorer-select__menu ui-explorer-select__menu--section-modes" role="group" aria-label="Section mode options">
+              <div class="ui-explorer-section-mode-menu">
+                @for (section of options.sections; track section.sectionId) {
+                  <div class="ui-explorer-section-mode-row">
+                    <span class="ui-explorer-select-option__body">
+                      <strong>{{ section.label }}</strong>
+                      <small>{{ section.description }}</small>
+                    </span>
+                    <span class="ui-explorer-mode-segment" role="radiogroup" [attr.aria-label]="section.label + ' mode'">
+                      @for (mode of options.modes; track mode.mode) {
+                        <button
+                          [class]="modeButtonClass(section.sectionId, mode.mode)"
+                          type="button"
+                          role="radio"
+                          [attr.aria-checked]="facade.sectionModes()[section.sectionId] === mode.mode"
+                          [title]="mode.description"
+                          (click)="selectSectionMode(section.sectionId, mode.mode, $event)"
+                        >
+                          {{ mode.label }}
+                        </button>
+                      }
+                    </span>
+                  </div>
+                }
+              </div>
+              @if (!facade.hasActiveSection()) {
+                <p class="ui-explorer-warning" role="alert">Pozostaw co najmniej jedną aktywną sekcję.</p>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
+          <span class="ui-explorer-field-label">
+            <span class="field-label">Model AI</span>
+            <span
+              class="ui-explorer-label-help"
+              tabindex="0"
+              aria-label="AI model help"
+              matTooltip="Model użyty do opracowania dokumentacji UI Explorera."
+              matTooltipPosition="right"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <button
+            class="ui-explorer-select__control"
+            [class.ui-explorer-select__control--loading]="facade.aiOptionsState() === 'loading'"
+            type="button"
+            aria-haspopup="listbox"
+            [disabled]="facade.controlsLocked() || facade.aiOptionsState() === 'loading' || facade.aiOptions().models.length === 0"
+            [attr.aria-expanded]="openMenu() === 'model'"
+            (click)="toggleMenu('model', $event)"
+          >
+            <span class="ui-explorer-select__value">
+              <strong>{{ selectedModelLabel() }}</strong>
+              <small>{{ facade.aiOptions().models.length ? facade.selectedModel() : 'no model choices' }}</small>
+            </span>
+            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+          </button>
+          @if (openMenu() === 'model') {
+            <div class="ui-explorer-select__menu" role="listbox" aria-label="AI model options">
+              <div class="ui-explorer-select__options">
+                @for (model of facade.aiOptions().models; track model.id) {
+                  <button
+                    class="ui-explorer-select-option"
+                    [class.ui-explorer-select-option--selected]="model.id === facade.selectedModel()"
+                    type="button"
+                    role="option"
+                    [attr.aria-selected]="model.id === facade.selectedModel()"
+                    (click)="selectModel(model.id, $event)"
+                  >
+                    <span class="ui-explorer-select-option__body">
+                      <strong>{{ model.name }}</strong>
+                      <small>{{ model.id }}</small>
+                    </span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
+          <span class="ui-explorer-field-label">
+            <span class="field-label">Reasoning effort</span>
+            <span
+              class="ui-explorer-label-help"
+              tabindex="0"
+              aria-label="Reasoning effort help"
+              matTooltip="Steruje głębokością analizy i eksploracji kodu."
+              matTooltipPosition="right"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </span>
+          </span>
+          <button
+            class="ui-explorer-select__control"
+            type="button"
+            aria-haspopup="listbox"
+            [disabled]="facade.controlsLocked() || facade.reasoningEfforts().length === 0"
+            [attr.aria-expanded]="openMenu() === 'reasoning'"
+            (click)="toggleMenu('reasoning', $event)"
+          >
+            <span class="ui-explorer-select__value">
+              <strong>{{ selectedReasoningLabel() }}</strong>
+              <small>{{ facade.reasoningEfforts().length ? (facade.reasoningEfforts().length + ' effort choices') : 'no effort choices' }}</small>
+            </span>
+            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+          </button>
+          @if (openMenu() === 'reasoning') {
+            <div class="ui-explorer-select__menu" role="listbox" aria-label="Reasoning effort options">
+              <div class="ui-explorer-select__options">
+                @for (effort of facade.reasoningEfforts(); track effort) {
+                  <button
+                    class="ui-explorer-select-option"
+                    [class.ui-explorer-select-option--selected]="effort === facade.selectedReasoningEffort()"
+                    type="button"
+                    role="option"
+                    [attr.aria-selected]="effort === facade.selectedReasoningEffort()"
+                    (click)="selectReasoning(effort, $event)"
+                  >
+                    <span class="ui-explorer-select-option__body">
+                      <strong>{{ effort }}</strong>
+                      <small>Reasoning effort</small>
+                    </span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (facade.screenState() === 'error') {
+        <div class="ui-explorer-message ui-explorer-message--error" role="alert">
+          <span class="material-symbols-outlined" aria-hidden="true">error</span>
+          <p>{{ facade.screenError() }}</p>
+        </div>
+      }
+
+      @if (facade.screenCatalog(); as catalog) {
+        @if (catalog.limitations.length || catalog.diagnostics.length) {
+          <details class="ui-explorer-limitations">
+            <summary>Ograniczenia rozpoznania ({{ catalog.limitations.length + catalog.diagnostics.length }})</summary>
+            <ul>
+              @for (limitation of catalog.limitations; track limitation) {
+                <li>{{ limitation }}</li>
+              }
+              @for (diagnostic of catalog.diagnostics; track diagnostic.code + diagnostic.sourcePath) {
+                <li>{{ diagnostic.message }}</li>
+              }
+            </ul>
+          </details>
+        }
+      }
+
+      <label class="form-field">
+        <span class="ui-explorer-field-label">
+          <span class="field-label">Doprecyzuj oczekiwany opis</span>
+          <span
+            class="ui-explorer-label-help"
+            tabindex="0"
+            aria-label="Scenario description help"
+            matTooltip="Opcjonalny scenariusz zawęża dokumentację do konkretnego celu użytkownika lub planowanej zmiany."
+            matTooltipPosition="right"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          </span>
+        </span>
+        <textarea
+          class="text-input ui-explorer-textarea"
+          rows="4"
+          maxlength="4000"
+          spellcheck="false"
+          [disabled]="facade.controlsLocked()"
+          placeholder="Np. opisz utworzenie kontaktu, reguły walidacji oraz zachowanie po zapisaniu formularza."
+          [value]="facade.scenarioDescription()"
+          (input)="facade.updateScenarioDescription($any($event.target).value)"
+        ></textarea>
+      </label>
+
+      @if (options.executionAvailability.status === 'BLOCKED') {
+        <div class="ui-explorer-message ui-explorer-message--warning" role="status">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          <p>{{ options.executionAvailability.message }}</p>
+        </div>
+      }
+
+      <div class="ui-explorer-composer__footer" aria-live="polite">
+        <div class="ui-explorer-composer__actions">
+          <button
+            class="primary-button"
+            type="button"
+            [disabled]="!facade.canStartJob()"
+            (click)="facade.startJob()"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+            <span>{{ runButtonLabel() }}</span>
+          </button>
+          <button
+            class="secondary-button"
+            type="button"
+            [disabled]="facade.isJobActive() || facade.portabilityBusy()"
+            (click)="importRequested.emit()"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+            <span>Import</span>
+          </button>
+        </div>
+
+        <span class="ui-explorer-composer__state">
+          <span class="material-symbols-outlined" aria-hidden="true">
+            {{ facade.configurationReady() ? 'check_circle' : 'info' }}
+          </span>
+          <span>
+            @if (facade.portabilityBusy()) {
+              Trwa odczyt pliku UI Explorer.
+            } @else if (facade.isJobActive()) {
+              Konfiguracja jest zablokowana do zakończenia aktywnego runu.
+            } @else if (facade.configurationReady()) {
+              Konfiguracja jest gotowa do uruchomienia analizy.
+            } @else {
+              Wybierz widok i pozostaw co najmniej jedną aktywną sekcję.
+            }
+          </span>
+        </span>
+      </div>
+    }
+  </div>
+</details>

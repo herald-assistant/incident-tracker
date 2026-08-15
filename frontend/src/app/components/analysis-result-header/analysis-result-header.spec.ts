@@ -40,4 +40,24 @@ describe('AnalysisResultHeaderComponent', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
   });
+
+  it('should expose an optional shared Markdown download action', async () => {
+    await TestBed.configureTestingModule({
+      imports: [AnalysisResultHeaderComponent]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(AnalysisResultHeaderComponent);
+    const downloadRequested = vi.fn();
+    fixture.componentInstance.downloadRequested.subscribe(downloadRequested);
+    fixture.componentRef.setInput('downloadVisible', true);
+    fixture.detectChanges();
+
+    const button = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button')
+    ).find((candidate) => candidate.textContent?.includes('Download Markdown'));
+    button?.click();
+
+    expect(button).toBeDefined();
+    expect(downloadRequested).toHaveBeenCalledTimes(1);
+  });
 });

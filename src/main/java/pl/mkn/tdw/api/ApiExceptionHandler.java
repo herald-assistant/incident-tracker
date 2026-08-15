@@ -15,6 +15,7 @@ import pl.mkn.tdw.integrations.github.auth.GitHubOAuthExchangeException;
 import pl.mkn.tdw.integrations.github.auth.GitHubOAuthStateInvalidException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchException;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchResponse;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveException;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabSourceResolveResponse;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
@@ -191,6 +192,19 @@ public class ApiExceptionHandler {
             GitLabRepositorySearchException exception
     ) {
         return ResponseEntity.status(exception.getStatus()).body(exception.getResponse());
+    }
+
+    @ExceptionHandler(GitLabFrontendDiscoveryException.class)
+    public ResponseEntity<ApiErrorResponse> handleGitLabFrontendDiscovery(
+            GitLabFrontendDiscoveryException exception
+    ) {
+        var response = new ApiErrorResponse(exception.code(), exception.getMessage(), List.of());
+        var status = switch (exception.code()) {
+            case "FRONTEND_REF_NOT_FOUND", "FRONTEND_SCREEN_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "FRONTEND_SCREEN_SOURCE_UNRESOLVED" -> HttpStatus.UNPROCESSABLE_ENTITY;
+            default -> HttpStatus.BAD_GATEWAY;
+        };
+        return ResponseEntity.status(status).body(response);
     }
 
     @ExceptionHandler(DatabaseToolApiException.class)

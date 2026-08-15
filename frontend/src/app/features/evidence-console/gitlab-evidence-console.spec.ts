@@ -4,6 +4,8 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
+  GitLabFrontendCatalogResponse,
+  GitLabFrontendScreenContextResponse,
   GitLabEndpointUseCaseContextResponse,
   GitLabJavaMethodUseCaseContextResponse,
   GitLabJavaMethodSliceResponse,
@@ -89,7 +91,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(10);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(12);
     expect(compiled.textContent).toContain('Repository Instructions');
     expect(compiled.textContent).toContain('Merge Request Search');
     expect(compiled.querySelector('.workbench-header')).toBeNull();
@@ -125,6 +127,72 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(loadButtons[0].textContent).toContain('upload_file');
     expect(compiled.querySelector('details.gitlab-json-panel--request')?.hasAttribute('open')).toBe(false);
     expect(compiled.querySelector('details.gitlab-json-panel:not(.gitlab-json-panel--request)')?.hasAttribute('open')).toBe(true);
+  });
+
+  it('should submit bounded frontend catalog and hand selected CRM screen to context', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    fixture.componentInstance.selectedToolKey.set('frontend-catalog');
+    fixture.componentInstance.scopeForm.patchValue({
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      branch: 'release/2026.08'
+    });
+    fixture.componentInstance.gitLabFrontendCatalogForm.controls.pathPrefixes.setValue(
+      'apps/crm-agent'
+    );
+
+    fixture.componentInstance.submit(new Event('submit'));
+
+    const request = httpTesting.expectOne('/api/gitlab/frontend/catalog');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      ref: 'release/2026.08',
+      pathPrefixes: ['apps/crm-agent']
+    });
+    expect(request.request.body.maxInventoryFiles).toBeUndefined();
+    request.flush(buildFrontendCatalogResponse());
+    httpTesting.verify();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Angular/Nx route catalog');
+    expect(compiled.textContent).toContain('/crm/customers/:customerId');
+    expect(compiled.textContent).toContain('crm-ui-revision-20260815');
+
+    fixture.componentInstance.useFrontendScreenForContext(
+      buildFrontendCatalogResponse().entries[0]
+    );
+
+    expect(fixture.componentInstance.selectedToolKey()).toBe('frontend-screen-context');
+    expect(fixture.componentInstance.gitLabFrontendScreenContextForm.controls.screenId.value).toBe(
+      'crm-customer-profile'
+    );
+    expect(
+      fixture.componentInstance.gitLabFrontendScreenContextForm.controls.pathPrefixes.value
+    ).toBe('apps/crm-agent');
+  });
+
+  it('should render CRM frontend source manifest, signals and coverage', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    fixture.componentInstance.selectedToolKey.set('frontend-screen-context');
+    fixture.componentInstance.gitLabFrontendScreenContextState.set({
+      status: 'success',
+      statusCode: 200,
+      message: 'OK',
+      response: buildFrontendScreenContextResponse(),
+      responseJson: '{}'
+    });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Screen source context');
+    expect(compiled.textContent).toContain('Customer profile');
+    expect(compiled.textContent).toContain('FORMS · READY');
+    expect(compiled.textContent).toContain('REACTIVE_FORM · HIGH');
+    expect(compiled.textContent).toContain('customer-profile.ts');
   });
 
   it('should load a downloaded endpoint use-case JSON file into the same card', async () => {
@@ -875,6 +943,89 @@ function buildOpenApiEndpointSliceResponse(): GitLabOpenApiEndpointSliceResponse
     returnedCharacters: 420,
     truncated: false,
     limitations: []
+  };
+}
+
+function buildFrontendCatalogResponse(): GitLabFrontendCatalogResponse {
+  return {
+    scope: {
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      ref: 'release/2026.08',
+      pathPrefixes: ['apps/crm-agent']
+    },
+    sourceRevision: {
+      ref: 'release/2026.08',
+      commitId: 'crm-ui-revision-20260815'
+    },
+    workspaceSignals: [
+      { kind: 'FRAMEWORK', value: 'Angular 20', sourcePath: 'apps/crm-agent/project.json' }
+    ],
+    entries: [
+      {
+        screenId: 'crm-customer-profile',
+        label: 'Customer profile',
+        routePattern: '/crm/customers/:customerId',
+        parentRoutePattern: '/crm/customers',
+        kind: 'SCREEN',
+        status: 'RESOLVED',
+        lazyLoaded: true,
+        guards: ['CrmAgentGuard'],
+        routeParameters: ['customerId'],
+        redirectTarget: null,
+        viewSymbol: 'CrmCustomerProfileComponent',
+        viewSourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+        routeSource: {
+          path: 'apps/crm-agent/src/app/app.routes.ts',
+          symbol: 'crmCustomerRoutes',
+          startLine: 12,
+          endLine: 22
+        },
+        limitations: []
+      }
+    ],
+    diagnostics: [],
+    repositoryFileCount: 42,
+    scannedRouteFileCount: 1,
+    inventoryTruncated: false,
+    routeCatalogTruncated: false
+  };
+}
+
+function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextResponse {
+  return {
+    scope: buildFrontendCatalogResponse().scope,
+    sourceRevision: buildFrontendCatalogResponse().sourceRevision,
+    screen: buildFrontendCatalogResponse().entries[0],
+    workspaceSignals: buildFrontendCatalogResponse().workspaceSignals,
+    sourceFiles: [
+      {
+        path: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+        roles: ['VIEW_COMPONENT', 'FORM_LOGIC'],
+        content: 'export class CrmCustomerProfileComponent {}',
+        returnedCharacters: 48,
+        truncated: false
+      }
+    ],
+    technicalSignals: [
+      {
+        kind: 'REACTIVE_FORM',
+        description: 'CRM customer profile form is declared in the component.',
+        confidence: 'HIGH',
+        source: {
+          path: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+          symbol: 'CrmCustomerProfileComponent',
+          startLine: 10,
+          endLine: 80
+        }
+      }
+    ],
+    coverage: [
+      { category: 'FORMS', status: 'READY', detail: 'Reactive form source included.' }
+    ],
+    diagnostics: [],
+    totalReturnedCharacters: 48,
+    truncated: false
   };
 }
 

@@ -63,6 +63,17 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('delivery-effectiveness-assessment')).toBe('query_stats');
   });
 
+  it('should use the UI Explorer product mapping', async () => {
+    const { fixture } = await createComponent();
+    const component = fixture.componentInstance as unknown as {
+      featureLabel: (feature: string) => string;
+      featureIcon: (feature: string) => string;
+    };
+
+    expect(component.featureLabel('ui-explorer')).toBe('UI Explorer');
+    expect(component.featureIcon('ui-explorer')).toBe('web_asset');
+  });
+
   it('should keep history action labels in tooltips instead of visible button text', async () => {
     const { fixture } = await createComponent();
 
@@ -248,6 +259,28 @@ describe('AnalysisHistoryPageComponent', () => {
 
     expect(navigateSpy).toHaveBeenCalledWith(['/delivery-effectiveness-assessment'], {
       queryParams: { localRunId: 'delivery-1' }
+    });
+  });
+
+  it('should route a UI Explorer run to its feature screen', async () => {
+    const { fixture, historyApi, router } = await createComponent();
+    const run: LocalAnalysisRunListItemResponse = {
+      analysisId: 'crm-ui-history-1',
+      feature: 'ui-explorer',
+      name: 'CRM contact creation documentation',
+      status: 'COMPLETED',
+      createdAt: '2026-08-15T10:00:00Z',
+      updatedAt: '2026-08-15T10:01:00Z',
+      completedAt: '2026-08-15T10:01:00Z'
+    };
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.openRun(run);
+    await fixture.whenStable();
+
+    expect(historyApi.getRun).not.toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/ui-explorer'], {
+      queryParams: { localRunId: 'crm-ui-history-1' }
     });
   });
 

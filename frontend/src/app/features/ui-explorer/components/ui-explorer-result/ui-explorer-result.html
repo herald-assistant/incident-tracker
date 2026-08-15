@@ -1,0 +1,139 @@
+<section class="analysis-card ui-explorer-result" aria-label="Wynik UI Explorer">
+  <app-analysis-result-header
+    [title]="report().header || 'UI Explorer result'"
+    [context]="report().subHeader"
+    [confidence]="report().meta.confidence"
+    [copied]="resultCopied()"
+    [downloadVisible]="true"
+    copyAriaLabel="Kopiuj cały raport UI Explorer"
+    copiedAriaLabel="Skopiowano raport UI Explorer"
+    downloadAriaLabel="Pobierz raport UI Explorer jako Markdown"
+    (copyRequested)="copyReport()"
+    (downloadRequested)="downloadReport()"
+  ></app-analysis-result-header>
+
+  <div class="ui-explorer-result__status-line">
+    <span [class]="statusClass()">{{ statusLabel() }}</span>
+    @if (profileLabel(); as profile) {
+      <span class="panel-chip">{{ profile }}</span>
+    }
+  </div>
+
+  @if (status() === 'PARTIAL') {
+    <div class="ui-explorer-result__notice" role="status">
+      <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+      <p>Raport jest częściowy. Zachowano potwierdzone sekcje, a braki i ograniczenia są wskazane przy wyniku.</p>
+    </div>
+  }
+
+  @if (actionError()) {
+    <p class="form-error" role="alert">{{ actionError() }}</p>
+  }
+
+  @if (hasText(report().markdownSummary)) {
+    <section class="ui-explorer-result-block" aria-label="Podsumowanie funkcjonalne">
+      <div class="ui-explorer-result-block__heading">
+        <span class="material-symbols-outlined" aria-hidden="true">subject</span>
+        <div>
+          <span class="field-label">Podsumowanie</span>
+          <h3>Co robi ten widok</h3>
+        </div>
+      </div>
+      <app-markdown-content [content]="report().markdownSummary"></app-markdown-content>
+    </section>
+  }
+
+  <div class="ui-explorer-result__sections">
+    @for (section of orderedSections(); track section.id || $index) {
+      <section class="ui-explorer-result-block" [attr.aria-label]="section.title || section.id">
+        <div class="ui-explorer-result-block__heading">
+          <span class="material-symbols-outlined" aria-hidden="true">{{ sectionIcon(section.id) }}</span>
+          <div>
+            <span class="field-label">{{ section.id }}</span>
+            <h3>{{ section.title || section.id }}</h3>
+          </div>
+          @if (sectionMode(section); as mode) {
+            <span class="panel-chip">{{ sectionModeLabel(mode) }}</span>
+          }
+          @if (hasText(section.meta.confidence)) {
+            <span class="panel-chip">{{ section.meta.confidence }}</span>
+          }
+        </div>
+        <app-analysis-report-section-content
+          [markdown]="section.markdown"
+          emptyText="Brak bezpiecznie potwierdzonych informacji dla tej sekcji."
+          [meta]="section.meta"
+          metaAlign="start"
+        ></app-analysis-report-section-content>
+      </section>
+    }
+  </div>
+
+  @if (hasItems(result()?.crossSectionDependencies)) {
+    <section class="ui-explorer-result-block" aria-label="Zależności przekrojowe">
+      <div class="ui-explorer-result-block__heading">
+        <span class="material-symbols-outlined" aria-hidden="true">hub</span>
+        <div>
+          <span class="field-label">Powiązania</span>
+          <h3>Zależności przekrojowe</h3>
+        </div>
+      </div>
+      <ul class="ui-explorer-result__dependency-list">
+        @for (dependency of result()?.crossSectionDependencies; track $index) {
+          <li>
+            <strong>{{ sectionLabel(dependency.sourceSection) }} → {{ sectionLabel(dependency.targetSection) }}</strong>
+            <span>{{ dependency.description }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  @if (hasChangePreparation()) {
+    <section class="ui-explorer-result-block" aria-label="Materiał do przygotowania zmiany">
+      <div class="ui-explorer-result-block__heading">
+        <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+        <div>
+          <span class="field-label">Zmiana</span>
+          <h3>Materiał do przygotowania zmiany</h3>
+        </div>
+      </div>
+      @if (result()?.changePreparationSummary; as summary) {
+        @if (hasText(summary.changeGoal)) {
+          <p class="ui-explorer-result__change-goal">{{ summary.changeGoal }}</p>
+        }
+        <div class="ui-explorer-result__change-grid">
+          @if (hasItems(summary.likelyImpactAreas)) {
+            <div>
+              <h4>Prawdopodobne obszary wpływu</h4>
+              <ul>
+                @for (area of summary.likelyImpactAreas; track $index) {
+                  <li>{{ area }}</li>
+                }
+              </ul>
+            </div>
+          }
+          @if (hasItems(summary.decisionsRequired)) {
+            <div>
+              <h4>Decyzje do podjęcia</h4>
+              <ul>
+                @for (decision of summary.decisionsRequired; track $index) {
+                  <li>{{ decision }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <section class="ui-explorer-result__appendix" aria-label="Ograniczenia, pytania i źródła">
+    <app-analysis-report-meta
+      [meta]="report().meta"
+      variant="appendix"
+      appendixEyebrow="Wiarygodność"
+      appendixTitle="Ograniczenia, pytania i źródła"
+    ></app-analysis-report-meta>
+  </section>
+</section>

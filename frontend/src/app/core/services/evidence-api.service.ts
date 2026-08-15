@@ -121,6 +121,100 @@ export interface GitLabOpenApiEndpointSlicePayload {
   maxCharacters?: number;
 }
 
+export interface GitLabFrontendCatalogPayload {
+  group: string;
+  projectName: string;
+  ref: string;
+  pathPrefixes: string[];
+}
+
+export interface GitLabFrontendScreenContextPayload extends GitLabFrontendCatalogPayload {
+  screenId: string;
+}
+
+export interface GitLabFrontendSourceReference {
+  path?: string | null;
+  symbol?: string | null;
+  startLine?: number | null;
+  endLine?: number | null;
+}
+
+export interface GitLabFrontendRouteEntry {
+  screenId?: string | null;
+  label?: string | null;
+  routePattern?: string | null;
+  parentRoutePattern?: string | null;
+  kind?: string | null;
+  status?: string | null;
+  lazyLoaded: boolean;
+  guards: string[];
+  routeParameters: string[];
+  redirectTarget?: string | null;
+  viewSymbol?: string | null;
+  viewSourcePath?: string | null;
+  routeSource?: GitLabFrontendSourceReference | null;
+  limitations: string[];
+}
+
+export interface GitLabFrontendWorkspaceSignal {
+  kind?: string | null;
+  value?: string | null;
+  sourcePath?: string | null;
+}
+
+export interface GitLabFrontendDiagnostic {
+  severity?: string | null;
+  code?: string | null;
+  message?: string | null;
+  sourcePath?: string | null;
+}
+
+export interface GitLabFrontendCatalogResponse {
+  scope: GitLabFrontendCatalogPayload;
+  sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
+  workspaceSignals: GitLabFrontendWorkspaceSignal[];
+  entries: GitLabFrontendRouteEntry[];
+  diagnostics: GitLabFrontendDiagnostic[];
+  repositoryFileCount: number;
+  scannedRouteFileCount: number;
+  inventoryTruncated: boolean;
+  routeCatalogTruncated: boolean;
+}
+
+export interface GitLabFrontendSourceFile {
+  path?: string | null;
+  roles: string[];
+  content?: string | null;
+  returnedCharacters: number;
+  truncated: boolean;
+}
+
+export interface GitLabFrontendTechnicalSignal {
+  kind?: string | null;
+  description?: string | null;
+  confidence?: string | null;
+  source?: GitLabFrontendSourceReference | null;
+}
+
+export interface GitLabFrontendContextCoverage {
+  category?: string | null;
+  status?: string | null;
+  detail?: string | null;
+}
+
+export interface GitLabFrontendScreenContextResponse {
+  scope: GitLabFrontendCatalogPayload;
+  sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
+  screen?: GitLabFrontendRouteEntry | null;
+  workspaceSignals: GitLabFrontendWorkspaceSignal[];
+  sourceFiles: GitLabFrontendSourceFile[];
+  technicalSignals: GitLabFrontendTechnicalSignal[];
+  coverage: GitLabFrontendContextCoverage[];
+  diagnostics: GitLabFrontendDiagnostic[];
+  totalReturnedCharacters: number;
+  truncated: boolean;
+}
+
 export interface GitLabJavaMethodSliceMethodSelector {
   methodName: string;
   lineStart?: number | null;
@@ -547,6 +641,21 @@ export class EvidenceApiService {
   ): Observable<GitLabOpenApiEndpointSliceResponse> {
     return this.http.post<GitLabOpenApiEndpointSliceResponse>(
       '/api/gitlab/repository/openapi-endpoint-slice',
+      payload
+    );
+  }
+
+  discoverGitLabFrontendCatalog(
+    payload: GitLabFrontendCatalogPayload
+  ): Observable<GitLabFrontendCatalogResponse> {
+    return this.http.post<GitLabFrontendCatalogResponse>('/api/gitlab/frontend/catalog', payload);
+  }
+
+  buildGitLabFrontendScreenContext(
+    payload: GitLabFrontendScreenContextPayload
+  ): Observable<GitLabFrontendScreenContextResponse> {
+    return this.http.post<GitLabFrontendScreenContextResponse>(
+      '/api/gitlab/frontend/screen-context',
       payload
     );
   }

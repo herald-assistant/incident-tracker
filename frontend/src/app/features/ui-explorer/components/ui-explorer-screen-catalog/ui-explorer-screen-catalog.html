@@ -1,0 +1,79 @@
+<div class="ui-explorer-screen-select" (click)="keepOpen($event)">
+  <span class="ui-explorer-screen-select__label">
+    <span class="field-label">View</span>
+    <span
+      class="ui-explorer-screen-select__help"
+      tabindex="0"
+      aria-label="View field help"
+      matTooltip="Widok rozpoznany z routingu frontendu. Wybór jest związany z pokazaną source revision."
+      matTooltipPosition="right"
+    >
+      <span class="material-symbols-outlined" aria-hidden="true">info</span>
+    </span>
+  </span>
+
+  <button
+    class="ui-explorer-screen-select__control"
+    [class.ui-explorer-screen-select__control--loading]="facade.screenState() === 'loading'"
+    type="button"
+    aria-haspopup="listbox"
+    [disabled]="facade.screenState() !== 'ready' || facade.controlsLocked()"
+    [attr.aria-expanded]="open()"
+    [attr.aria-busy]="facade.screenState() === 'loading'"
+    (click)="toggle($event)"
+  >
+    <span class="ui-explorer-screen-select__value">
+      <strong>{{ controlLabel() }}</strong>
+      <small [title]="controlMeta()">{{ controlMeta() }}</small>
+    </span>
+    @if (facade.screenState() === 'loading') {
+      <span class="ui-explorer-screen-select__loader" aria-hidden="true"></span>
+    } @else {
+      <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+    }
+  </button>
+
+  @if (open() && facade.screenCatalog(); as catalog) {
+    <div class="ui-explorer-screen-select__menu" role="listbox" aria-label="View options">
+      <label class="ui-explorer-screen-select__search">
+        <span class="field-label">Find view</span>
+        <input
+          class="text-input"
+          type="search"
+          autocomplete="off"
+          placeholder="contact, schedule, /route"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+        />
+      </label>
+
+      <div class="ui-explorer-screen-select__revision">
+        <span>{{ catalog.systemLabel }}</span>
+        <code [title]="catalog.sourceRevision.revision">{{ catalog.sourceRevision.revision }}</code>
+      </div>
+
+      <div class="ui-explorer-screen-select__options">
+        @for (screen of filteredScreens(); track screen.screenId) {
+          <button
+            class="ui-explorer-screen-option"
+            [class.ui-explorer-screen-option--selected]="screen.screenId === facade.selectedScreenId()"
+            type="button"
+            role="option"
+            [attr.aria-selected]="screen.screenId === facade.selectedScreenId()"
+            (click)="selectScreen(screen.screenId, $event)"
+          >
+            <span class="ui-explorer-screen-option__body">
+              <strong>{{ screen.label }}</strong>
+              <small>{{ screen.routePattern || 'Entry point without URL route' }}</small>
+            </span>
+            @if (screenContext(screen)) {
+              <span class="ui-explorer-screen-option__badge">{{ screenContext(screen) }}</span>
+            }
+          </button>
+        } @empty {
+          <div class="empty-state">Brak widoków dla aktualnego filtra.</div>
+        }
+      </div>
+    </div>
+  }
+</div>

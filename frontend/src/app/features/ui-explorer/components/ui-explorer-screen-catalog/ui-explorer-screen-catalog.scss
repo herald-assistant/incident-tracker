@@ -1,0 +1,225 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.ui-explorer-screen-select {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ui-explorer-screen-select__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 18px;
+}
+
+.ui-explorer-screen-select__label .field-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  margin: 0;
+  line-height: 1;
+}
+
+.ui-explorer-screen-select__help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.ui-explorer-screen-select__help .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.ui-explorer-screen-select__help:hover,
+.ui-explorer-screen-select__help:focus-visible {
+  color: var(--primary-dark);
+  outline: none;
+}
+
+.ui-explorer-screen-select__control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  height: 58px;
+  padding: 9px 11px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-explorer-screen-select__control:hover,
+.ui-explorer-screen-select__control:focus-visible {
+  border-color: rgba(12, 102, 228, 0.34);
+  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
+  outline: none;
+}
+
+.ui-explorer-screen-select__control:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.ui-explorer-screen-select__control > .material-symbols-outlined {
+  color: var(--text-muted);
+  font-size: 21px;
+}
+
+.ui-explorer-screen-select__value,
+.ui-explorer-screen-option__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ui-explorer-screen-select__value strong,
+.ui-explorer-screen-select__value small,
+.ui-explorer-screen-option__body strong,
+.ui-explorer-screen-option__body small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-explorer-screen-select__value strong,
+.ui-explorer-screen-option__body strong {
+  color: var(--text-main);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.ui-explorer-screen-select__value small,
+.ui-explorer-screen-option__body small {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.ui-explorer-screen-select__loader {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(12, 102, 228, 0.24);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: uiExplorerScreenLoader 0.9s linear infinite;
+}
+
+@keyframes uiExplorerScreenLoader {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ui-explorer-screen-select__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 70;
+  display: grid;
+  gap: 9px;
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 180px));
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.ui-explorer-screen-select__search,
+.ui-explorer-screen-select__options {
+  display: grid;
+  gap: 7px;
+}
+
+.ui-explorer-screen-select__revision {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.ui-explorer-screen-select__revision code {
+  overflow: hidden;
+  color: var(--text-main);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-explorer-screen-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-explorer-screen-option:hover,
+.ui-explorer-screen-option:focus-visible {
+  border-color: rgba(12, 102, 228, 0.34);
+  box-shadow: 0 0 0 3px rgba(12, 102, 228, 0.08);
+  outline: none;
+}
+
+.ui-explorer-screen-option--selected {
+  border-color: rgba(12, 102, 228, 0.48);
+  background: #eff6ff;
+}
+
+.ui-explorer-screen-option__badge {
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .ui-explorer-screen-select__menu {
+    right: auto;
+    left: 0;
+  }
+
+  .ui-explorer-screen-option {
+    grid-template-columns: 1fr;
+  }
+
+  .ui-explorer-screen-option__badge {
+    justify-self: start;
+  }
+}

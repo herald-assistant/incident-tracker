@@ -46,8 +46,53 @@ Warstwa posiada:
 - request/result DTO konkretnej integracji,
 - techniczne wyjatki i lokalne zachowania zewnetrznego systemu.
 
+`integrations.gitlab.frontend` jest przykladem takiej reusable capability:
+buduje bounded Angular/Nx route/view catalog i screen source context przez
+`GitLabRepositoryPort`, ale nie zna UI Explorer, API, Copilota ani kontraktu
+raportu. Statyczne heurystyki zwracaja diagnostics, source revision i jawne
+limity; nie uruchamiaja ani nie kompiluja badanego frontendu.
+
 Ten sam adapter ma byc mozliwy do wywolania przez evidence provider, tool,
 shared/operator API albo kolejny feature.
+
+`features.uiexplorer.catalog` jest feature-owned composition boundary nad
+Operational Context i `integrations.gitlab.frontend`: rozwiazuje system do
+jednego primary repository, przekazuje ukryty GitLab scope do integracji i
+mapuje wynik na publiczny katalog bez danych repository. Publiczne DTO w
+`features.uiexplorer.api` i `contract` nie importuja klas integracji.
+
+`features.uiexplorer.context` jest feature-owned pipeline nad wybranym
+katalogowym ekranem. Rozwiazuje hidden repository scope przez katalog
+frontendu, wymaga oczekiwanej source revision, wywoluje neutralny screen
+context builder i mapuje wynik na wewnetrzny snapshot, coverage aktywnych
+sekcji oraz publiczne `AnalysisEvidenceSection`. Surowa tresc source files
+pozostaje w wewnetrznym snapshotcie joba; publiczne evidence zawiera tylko
+manifest i nie importuje kontraktow integracji.
+
+`features.uiexplorer.ai.preparation` jest feature-owned granica przygotowania
+AI. Buduje logical artifacts, klasyfikuje opis uzytkownika i source files jako
+untrusted evidence, renderuje feature prompt oraz starter guidance wskazujace
+trzy runtime skills. Reuse'uje jedynie neutralny model
+`CopilotRenderedArtifact` i mapper tresci z `aiplatform`; nie uruchamia sesji,
+nie wybiera tools i nie dodaje semantyki UI Explorer do platformy.
+
+`features.uiexplorer.ai.readiness`, `response` i `copilot` posiadaja runtime
+konkretnego feature'a: readiness aktywnych sekcji, strict parser jednego
+`UiExplorerResultResponse`, hidden repository scope, default-deny allowliste,
+targeted GitLab fallback budget oraz zlozenie `CopilotRunRequest`. Provider
+reuse'uje neutralne preparation/execution z `aiplatform`, genericzne tools z
+`agenttools` i deterministyczny report assembler. `features.uiexplorer.job`
+uruchamia ten provider asynchronicznie, przechowuje atomowy snapshot krokow,
+evidence, activity, usage, result i report oraz mapuje kontrolowane stany
+terminalne. `features.uiexplorer.job.localworkspace` posiada feature codec i
+sanitizer, mapuje terminalny snapshot na neutralny `LocalAnalysisRunRecord` i
+zapisuje go przez `LocalAnalysisRunStore`. Shared History API oraz
+`localworkspace` nie importuja UI Explorer. Platforma, tools i integracje nie
+importuja tych pakietow. `features.uiexplorer.job.export` posiada odrebny
+portable contract i odczytuje feature-owned local envelope tylko jako fallback
+po restarcie. `features.uiexplorer.job.importing` waliduje i sanitizuje
+niezaufany portable payload, po czym zapisuje nowy read-only run przez port
+persistence feature'a; nie importuje shared `api.analysisruns`.
 
 Warstwa nie posiada:
 

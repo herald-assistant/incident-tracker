@@ -40,6 +40,61 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
 Config Drift Viewer i Delivery Effectiveness Assessment.
+Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
+asynchroniczny job oraz neutralna capability GitLaba do bounded rozpoznawania
+Angular/Nx route/view catalog i screen source context.
+Feature-owned `GET /api/ui-explorer/screens` rozwiazuje repository/ref scope z
+Operational Context i zwraca bounded katalog bez ujawniania danych GitLaba.
+UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
+screen source context i wystawia publiczny manifest, coverage, diagnostics oraz
+limity bez surowej tresci kodu. Wewnetrzny krok `AI_PREPARATION` przygotowuje
+szesc logical artifacts, feature prompt i guidance dla trzech polskich skilli,
+ale nie publikuje promptu. Feature ma rowniez izolowany provider Copilota:
+readiness gate, hidden GitLab scope, default-deny allowliste, limit jednego
+search i dwoch waskich read calls oraz strict parser kompletnej, partial i
+malformed odpowiedzi. Parser nie podnosi deterministycznego `PARTIAL` do
+`READY` bez przechwyconego fallback source evidence. `POST`
+`/api/ui-explorer/jobs` zwraca `202`, a job wykonuje context, jednokrotne
+przygotowanie promptu i provider poza watkiem HTTP. Atomowy snapshot publikuje
+kroki, context/tool evidence, activity, usage, result i report oraz kontrolowane
+`COMPLETED`, `PARTIAL`, `BLOCKED` albo `FAILED`. Prompt pozostaje wewnetrzny,
+poniewaz zawiera surowa tresc source evidence. Terminalne snapshoty sa
+sanitizowane i zapisywane w lokalnej historii pod feature key `ui-explorer`;
+shared `/api/analysis/runs` odczytuje je po restarcie bez mozliwosci
+kontynuacji. Osobny `tdw.ui-explorer-export/v1` zapewnia sanitizowany export
+terminalnego wyniku oraz read-only import z dokladna walidacja wersji i
+ponowna sanitizacja przed zapisem do historii. Workspace Angular pod
+`/ui-explorer` udostepnia route, sidebar i landing card oraz feature-owned
+konfiguracje z prawdziwych `input-options`, katalogu ekranow i shared katalogu
+AI. Workspace uzywa tego samego zwartego wzorca analysis composer co Flow
+Explorer: target row grupuje frontend, branch/ref, widok i odswiezenie
+katalogu, scope row grupuje profil, rozwijane tryby sekcji, model i reasoning,
+a ponizej znajduje sie opis scenariusza oraz obszar wyniku.
+Operator nadal moze edytowac wszystkie osiem trybow sekcji bez stalego
+zajmowania wysokosci strony. Source revision jest automatycznie przypisana do
+katalogu i czyszczona po zmianie scope'u. `Run UI Explorer` wysyla
+feature-owned start request, natychmiast pokazuje snapshot z `202` i korzysta
+ze wspolnego pollingu bez nakladania requestow. Podczas aktywnego runu
+konfiguracja jest zablokowana. Shared analysis aside pokazuje kroki,
+deterministic/tool evidence, aktywnosc AI, feedback i usage; blad pollingu
+zachowuje ostatni snapshot i pozwala jawnie ponowic odczyt. Terminalne statusy
+to `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`. Dla `COMPLETED` i `PARTIAL`
+workspace renderuje `report` jako glowny dokument: naglowek, podsumowanie,
+aktywne sekcje, confidence, references, visibility limits i open questions.
+Feature-owned `result` zasila tylko biznesowo czytelne zaleznosci przekrojowe
+oraz change preparation summary; UI nie pokazuje raw JSON, prepared promptu ani
+surowej tresci source. Shared result header, renderer Markdown, section content
+i report meta utrzymuja znany wzorzec prezentacji, a caly dokument mozna
+skopiowac albo pobrac jako Markdown. `BLOCKED`, `FAILED` oraz terminalny stan
+bez raportu sa jawne i nie tworza wyniku zastepczego. Analysis History rozpoznaje
+feature key `ui-explorer` i otwiera zapisany run przez `localRunId`, bez
+ladowania pelnego JSON-a na liscie. Workspace waliduje dokladnie wewnetrzna
+koperta `tdw.ui-explorer-local-run/v1`, odtwarza konfiguracje i raport jako
+read-only oraz nie uruchamia pollingu, continuation, follow-up chatu ani resume.
+Portable JSON jest importowany przez backendowa granice walidacji, a wynik live,
+history albo imported jest eksportowany przez kanoniczny endpoint feature'a.
+UI jawnie rozroznia wszystkie trzy pochodzenia, zachowuje copy/download Markdown
+i odrzuca obca, starsza, nowsza lub uszkodzona koperta bez fallbacku.
 Kolejne rodziny moga obejmowac functional logic explorer oraz
 natural-language data diagnostics. Szczegolowy kierunek produktu jest opisany
 w `product-direction.md`.
@@ -164,6 +219,12 @@ Na dzisiaj projekt ma:
 - osobny endpoint do testowego mapowania hintow komponentu na repozytoria i
   kandydatow plikow w GitLabie,
 - osobny endpoint do rozwiazywania pliku z GitLaba po symbolu klasy/interfejsu.
+- neutralna capability `integrations.gitlab.frontend` do statycznego,
+  ograniczonego rozpoznawania Angular/Nx: workspace signals, standalone i
+  module routes, lazy loading, guardy, route parameters, view roots,
+  template/style, formularze, NgRx, REST, WebSocket i auth signals; dynamiczne
+  definicje oraz osiagniete limity sa jawnymi diagnostics, a nie zgadywanym
+  wynikiem.
 
 ## Glowne entrypointy HTTP
 
@@ -218,7 +279,11 @@ Na dzisiaj projekt ma:
   helper endpointow Elastica oraz podgladu request/response JSON.
 - `GET /gitlab`
   Angularowy ekran `Tool Workbench / GitLab Source` do recznego testowania
-  helper endpointow GitLaba oraz podgladu request/response JSON. Legacy route
+  helper endpointow GitLaba oraz podgladu request/response JSON. Grupa
+  `Frontend Discovery` uruchamia bounded, read-only katalog tras/widokow
+  Angular/Nx i source context wybranego `screenId`; pokazuje source revision,
+  diagnostics, manifest plikow, technical signals i coverage bez uruchamiania
+  AI ani rejestrowania nowego MCP toola. Legacy route
   `GET /evidence`
   przekierowuje w Angularze do `/elastic`.
 - `GET /jira`
@@ -275,6 +340,39 @@ Na dzisiaj projekt ma:
   Feature-owned endpoint dla UI startu analizy. Zwraca dostepne zrodla logow i
   powod blokady Elasticsearch, jezeli brakuje wymaganej konfiguracji
   Elasticsearch/Kibana.
+- `GET /api/ui-explorer/input-options`
+  Feature-owned katalog kwalifikujacych sie systemow
+  `internal-service/frontend`, profili, sekcji i trybow oraz dostepnosci
+  screen catalog, source context i AI analysis.
+- `GET /api/ui-explorer/screens?systemId={systemId}&branch={branch}`
+  Rozwiazuje primary frontend repository oraz systemowy code-search scope z
+  Operational Context, waliduje ref i zwraca business-friendly ekrany, source
+  revision, `READY/PARTIAL/BLOCKED`, diagnostics, limitations i applied
+  boundary. Publiczny kontrakt nie ujawnia repository id/path, GitLab group ani
+  project name.
+- `POST /api/ui-explorer/jobs`
+  Przyjmuje wybrany `systemId`, `branch`, katalogowy `screenId`, obowiazkowa
+  `sourceRevision`, profil, tryby sekcji, opis scenariusza i opcjonalne
+  preferencje AI. Rewizja jest sprawdzana przed ekranem; zmieniony ref albo
+  nieaktualny ekran zwraca konflikt wymagajacy odswiezenia katalogu. Start
+  zwraca `202` ze snapshotem `QUEUED`; source context, preparation i analiza AI
+  sa wykonywane asynchronicznie.
+- `GET /api/ui-explorer/jobs/{jobId}`
+  Zwraca kroki screen discovery/source context/AI preparation/AI, publiczne
+  context sections z manifestem, sygnalami, coverage, diagnostics i hard
+  boundary, tool evidence, activity, usage, source revision, result i report.
+  Surowa tresc plikow, prompt, logical artifacts i wewnetrzny GitLab scope nie
+  sa czescia odpowiedzi.
+- `GET /api/ui-explorer/jobs/{jobId}/export`
+  Zwraca sanitizowany `tdw.ui-explorer-export/v1` dla `COMPLETED/PARTIAL` z
+  resultem i reportem. Potrafi odtworzyc portable payload z lokalnej historii
+  po restarcie, ale nie ujawnia wewnetrznej koperty `run.json`.
+- `POST /api/ui-explorer/imports`
+  Waliduje dokladnie aktualny schema/version/payload/result contract, spojny
+  screen i source revision, ponownie sanitizuje niezaufany dokument, sklada
+  report od nowa i zapisuje wynik pod nowym id w Analysis History. Import jest
+  read-only, bez sesji Copilota, continuation, resume i migracji starszych
+  wersji.
 - `POST /api/analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request jest
   multipart/form-data i niesie `source`, opcjonalne preferencje wykonania AI
@@ -334,6 +432,14 @@ Na dzisiaj projekt ma:
 - `POST /api/gitlab/repository/endpoints`
   Narzedzie pomocnicze do recznego testowania inventory endpointow REST w
   konkretnym repozytorium GitLaba.
+- `POST /api/gitlab/frontend/catalog`
+  Shared/operator API bounded katalogu tras i widokow Angular/Nx. Request
+  zawiera repository/ref scope i opcjonalne path prefixes; limity skanu sa
+  narzucone po stronie backendu i nie sa inputem operatora.
+- `POST /api/gitlab/frontend/screen-context`
+  Shared/operator API manifestu plikow, technical signals, coverage i
+  diagnostics dla `screenId` nalezacego do biezacego katalogu repository/ref.
+  Operacja jest read-only i nie jest capability MCP/AI.
 - `POST /api/elasticsearch/logs/search`
   Narzedzie pomocnicze do wyszukiwania logow z Kibana proxy po `correlationId`.
   To jest jedyny endpoint testowy Elastica. Nie ma juz wariantu `preview`.

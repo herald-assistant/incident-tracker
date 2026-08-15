@@ -13,6 +13,11 @@ import { Observable } from 'rxjs';
 import { ApiErrorResponse } from '../../core/models/analysis.models';
 import {
   EvidenceApiService,
+  GitLabFrontendCatalogPayload,
+  GitLabFrontendCatalogResponse,
+  GitLabFrontendRouteEntry,
+  GitLabFrontendScreenContextPayload,
+  GitLabFrontendScreenContextResponse,
   GitLabEndpointUseCaseContextPayload,
   GitLabEndpointUseCaseContextResponse,
   GitLabEndpointUseCaseFileCandidate,
@@ -47,6 +52,8 @@ type GitLabJsonResponseKey =
   | 'repository-search'
   | 'repository-instructions'
   | 'merge-request-search'
+  | 'frontend-catalog'
+  | 'frontend-screen-context'
   | 'endpoint-inventory'
   | 'endpoint-use-case-context'
   | 'java-method-use-case-context'
@@ -141,6 +148,22 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/repository/merge-requests/by-issue',
     summary:
       'Szuka MR-ek po Jira issue key i zwraca branche, commity oraz changed files przydatne do Change Verification.'
+  },
+  {
+    key: 'frontend-catalog',
+    label: 'Frontend Catalog',
+    category: 'Frontend Discovery',
+    endpoint: '/api/gitlab/frontend/catalog',
+    summary:
+      'Buduje ograniczony katalog tras i widoków Angular/Nx wraz z rewizją źródła i diagnostyką.'
+  },
+  {
+    key: 'frontend-screen-context',
+    label: 'Screen Source Context',
+    category: 'Frontend Discovery',
+    endpoint: '/api/gitlab/frontend/screen-context',
+    summary:
+      'Zbiera ograniczony manifest źródeł, sygnały techniczne i coverage dla wybranego screenId.'
   },
   {
     key: 'endpoint-inventory',
@@ -467,6 +490,21 @@ export class GitLabEvidenceConsoleComponent {
     preview: new FormControl(true, { nonNullable: true })
   });
 
+  readonly gitLabFrontendCatalogForm = new FormGroup({
+    group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    branch: new FormControl('HEAD', { nonNullable: true, validators: [Validators.required] }),
+    pathPrefixes: new FormControl('', { nonNullable: true })
+  });
+
+  readonly gitLabFrontendScreenContextForm = new FormGroup({
+    group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    branch: new FormControl('HEAD', { nonNullable: true, validators: [Validators.required] }),
+    pathPrefixes: new FormControl('', { nonNullable: true }),
+    screenId: new FormControl('', { nonNullable: true, validators: [Validators.required] })
+  });
+
   readonly gitLabRepositoryState = signal<ToolState>(
     this.idleState('Wpisz hinty projektu, aby przetestować mapowanie component -> repo.')
   );
@@ -496,6 +534,12 @@ export class GitLabEvidenceConsoleComponent {
   );
   readonly gitLabSourceState = signal<ToolState>(
     this.idleState('Uzupełnij dane repozytorium i symbol, aby przetestować source resolve.')
+  );
+  readonly gitLabFrontendCatalogState = signal<ToolState>(
+    this.idleState('Podaj scope frontendu, aby zbudować bounded route/view catalog.')
+  );
+  readonly gitLabFrontendScreenContextState = signal<ToolState>(
+    this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby pobrać source context.')
   );
 
   readonly gitLabEndpointResult = computed(() =>
@@ -550,6 +594,14 @@ export class GitLabEvidenceConsoleComponent {
     this.asGitLabOpenApiEndpointSliceResult(this.gitLabOpenApiEndpointSliceState().response)
   );
 
+  readonly gitLabFrontendCatalogResult = computed(() =>
+    this.asGitLabFrontendCatalogResult(this.gitLabFrontendCatalogState().response)
+  );
+
+  readonly gitLabFrontendScreenContextResult = computed(() =>
+    this.asGitLabFrontendScreenContextResult(this.gitLabFrontendScreenContextState().response)
+  );
+
   readonly selectedGitLabUseCaseTreeNodeId = signal<string | null>(null);
   readonly copiedJsonResponseKey = signal<GitLabJsonResponseKey | null>(null);
 
@@ -572,6 +624,12 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'merge-request-search':
         this.submitGitLabMergeRequestSearch();
+        return;
+      case 'frontend-catalog':
+        this.submitGitLabFrontendCatalog();
+        return;
+      case 'frontend-screen-context':
+        this.submitGitLabFrontendScreenContext();
         return;
       case 'endpoint-inventory':
         this.submitGitLabEndpointSearch();
@@ -624,6 +682,12 @@ export class GitLabEvidenceConsoleComponent {
         this.gitLabInstructionForm.patchValue({
           changedFilePaths: ''
         });
+        return;
+      case 'frontend-catalog':
+        this.gitLabFrontendCatalogForm.patchValue({ pathPrefixes: '' });
+        return;
+      case 'frontend-screen-context':
+        this.gitLabFrontendScreenContextForm.patchValue({ pathPrefixes: '', screenId: '' });
         return;
       case 'endpoint-use-case-context':
         this.gitLabEndpointUseCaseContextForm.patchValue({
@@ -1113,6 +1177,86 @@ export class GitLabEvidenceConsoleComponent {
       this.evidenceApi.readGitLabOpenApiEndpointSlice(payload),
       payload,
       '/api/gitlab/repository/openapi-endpoint-slice'
+    );
+  }
+
+  submitGitLabFrontendCatalog(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabFrontendCatalogForm)) {
+      this.gitLabFrontendCatalogState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabFrontendCatalogPayload = {
+      group: this.gitLabFrontendCatalogForm.controls.group.value.trim(),
+      projectName: this.gitLabFrontendCatalogForm.controls.projectName.value.trim(),
+      ref: this.gitLabFrontendCatalogForm.controls.branch.value.trim(),
+      pathPrefixes: this.toList(this.gitLabFrontendCatalogForm.controls.pathPrefixes.value)
+    };
+    this.runRequest(
+      this.gitLabFrontendCatalogState,
+      this.evidenceApi.discoverGitLabFrontendCatalog(payload),
+      payload,
+      '/api/gitlab/frontend/catalog'
+    );
+  }
+
+  submitGitLabFrontendScreenContext(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabFrontendScreenContextForm)) {
+      this.gitLabFrontendScreenContextState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+    if (this.gitLabFrontendScreenContextForm.invalid) {
+      this.gitLabFrontendScreenContextForm.markAllAsTouched();
+      this.gitLabFrontendScreenContextState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj screenId pochodzący z bieżącego katalogu frontendu.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabFrontendScreenContextPayload = {
+      group: this.gitLabFrontendScreenContextForm.controls.group.value.trim(),
+      projectName: this.gitLabFrontendScreenContextForm.controls.projectName.value.trim(),
+      ref: this.gitLabFrontendScreenContextForm.controls.branch.value.trim(),
+      pathPrefixes: this.toList(
+        this.gitLabFrontendScreenContextForm.controls.pathPrefixes.value
+      ),
+      screenId: this.gitLabFrontendScreenContextForm.controls.screenId.value.trim()
+    };
+    this.runRequest(
+      this.gitLabFrontendScreenContextState,
+      this.evidenceApi.buildGitLabFrontendScreenContext(payload),
+      payload,
+      '/api/gitlab/frontend/screen-context'
+    );
+  }
+
+  useFrontendScreenForContext(screen: GitLabFrontendRouteEntry): void {
+    if (!screen.screenId) {
+      return;
+    }
+    this.selectedToolKey.set('frontend-screen-context');
+    this.syncRepositoryScope(this.gitLabFrontendScreenContextForm);
+    this.gitLabFrontendScreenContextForm.patchValue({
+      pathPrefixes: this.gitLabFrontendCatalogForm.controls.pathPrefixes.value,
+      screenId: screen.screenId
+    });
+    this.gitLabFrontendScreenContextState.set(
+      this.idleState('Screen przeniesiony z katalogu. Uruchom request, aby zebrać bounded source context.')
     );
   }
 
@@ -1887,6 +2031,8 @@ export class GitLabEvidenceConsoleComponent {
   private usesRepositoryScope(toolKey: GitLabToolKey): boolean {
     return (
       toolKey === 'repository-instructions' ||
+      toolKey === 'frontend-catalog' ||
+      toolKey === 'frontend-screen-context' ||
       toolKey === 'endpoint-inventory' ||
       toolKey === 'endpoint-use-case-context' ||
       toolKey === 'java-method-use-case-context' ||
@@ -1996,6 +2142,10 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabMergeRequestState;
       case 'repository-instructions':
         return this.gitLabInstructionState;
+      case 'frontend-catalog':
+        return this.gitLabFrontendCatalogState;
+      case 'frontend-screen-context':
+        return this.gitLabFrontendScreenContextState;
       case 'endpoint-inventory':
         return this.gitLabEndpointState;
       case 'endpoint-use-case-context':
@@ -2122,6 +2272,30 @@ export class GitLabEvidenceConsoleComponent {
     const record = response as Partial<GitLabOpenApiEndpointSliceResponse>;
     return typeof record.status === 'string' && typeof record.filePath === 'string'
       ? (record as GitLabOpenApiEndpointSliceResponse)
+      : null;
+  }
+
+  private asGitLabFrontendCatalogResult(
+    response: unknown
+  ): GitLabFrontendCatalogResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+    const record = response as Partial<GitLabFrontendCatalogResponse>;
+    return Array.isArray(record.entries) && Array.isArray(record.diagnostics)
+      ? (record as GitLabFrontendCatalogResponse)
+      : null;
+  }
+
+  private asGitLabFrontendScreenContextResult(
+    response: unknown
+  ): GitLabFrontendScreenContextResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+    const record = response as Partial<GitLabFrontendScreenContextResponse>;
+    return Array.isArray(record.sourceFiles) && Array.isArray(record.coverage)
+      ? (record as GitLabFrontendScreenContextResponse)
       : null;
   }
 

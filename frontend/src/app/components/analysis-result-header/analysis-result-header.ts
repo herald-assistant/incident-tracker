@@ -14,7 +14,10 @@ export class AnalysisResultHeaderComponent {
   readonly copied = input(false);
   readonly copyAriaLabel = input('Kopiuj wynik analizy');
   readonly copiedAriaLabel = input('Skopiowano wynik analizy');
+  readonly downloadVisible = input(false);
+  readonly downloadAriaLabel = input('Pobierz wynik analizy jako Markdown');
   readonly copyRequested = output<void>();
+  readonly downloadRequested = output<void>();
 
   protected readonly hasMeaningfulValue = hasMeaningfulValue;
 }

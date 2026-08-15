@@ -28,6 +28,7 @@ describe('PlatformLandingPageComponent', () => {
     expect(featureLinks.map((link) => link.getAttribute('href'))).toEqual([
       '/incident-analysis',
       '/flow-explorer',
+      '/ui-explorer',
       '/change-verification',
       '/config-drift-viewer'
     ]);
@@ -40,6 +41,7 @@ describe('PlatformLandingPageComponent', () => {
     ).toEqual([
       'platform-landing__feature-card--incident',
       'platform-landing__feature-card--flow',
+      'platform-landing__feature-card--ui',
       'platform-landing__feature-card--change',
       'platform-landing__feature-card--config'
     ]);

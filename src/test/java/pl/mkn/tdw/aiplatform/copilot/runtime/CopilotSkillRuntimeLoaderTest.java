@@ -43,6 +43,7 @@ class CopilotSkillRuntimeLoaderTest {
         assertTrue(loader.availableSkillNames().containsAll(List.of(
                 "incident-analysis-orchestrator",
                 "flow-explorer-orchestrator",
+                "ui-explorer-orchestrator",
                 "change-verification-orchestrator",
                 "config-drift-viewer-deep-review",
                 "delivery-effectiveness-assessment-evaluator"

@@ -35,11 +35,13 @@
   line-height: 1.2;
 }
 
-.analysis-result-header__copy-button {
+.analysis-result-header__copy-button,
+.analysis-result-header__download-button {
   min-height: 36px;
 }
 
-.analysis-result-header__copy-button .material-symbols-outlined {
+.analysis-result-header__copy-button .material-symbols-outlined,
+.analysis-result-header__download-button .material-symbols-outlined {
   font-size: 18px;
 }
 

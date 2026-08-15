@@ -231,6 +231,9 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'flow-explorer') {
       return 'Flow Explorer';
     }
+    if (feature === 'ui-explorer') {
+      return 'UI Explorer';
+    }
     if (feature === 'change-verification') {
       return 'Change Verification';
     }
@@ -255,6 +258,9 @@ export class AnalysisHistoryPageComponent {
     }
     if (feature === 'flow-explorer') {
       return 'account_tree';
+    }
+    if (feature === 'ui-explorer') {
+      return 'web_asset';
     }
     if (feature === 'change-verification') {
       return 'fact_check';
@@ -345,6 +351,9 @@ function routeForFeature(feature: string): string | null {
   }
   if (feature === 'flow-explorer') {
     return '/flow-explorer';
+  }
+  if (feature === 'ui-explorer') {
+    return '/ui-explorer';
   }
   if (feature === 'change-verification') {
     return '/change-verification';
