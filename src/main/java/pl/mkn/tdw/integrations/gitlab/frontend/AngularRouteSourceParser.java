@@ -18,6 +18,11 @@ final class AngularRouteSourceParser {
     private static final Pattern THEN_SYMBOL = Pattern.compile("\\.then\\s*\\([^=]*=>\\s*[A-Za-z_$][A-Za-z0-9_$]*\\.([A-Za-z_$][A-Za-z0-9_$]*)");
 
     ParseResult parse(String sourcePath, String source) {
+        return parse(sourcePath, source, (path, content, expression) ->
+                new StaticStringResolution(null, null));
+    }
+
+    ParseResult parse(String sourcePath, String source, StaticStringResolver stringResolver) {
         var routes = new ArrayList<ParsedRoute>();
         var limitations = new LinkedHashSet<String>();
         var matcher = ROUTE_ARRAY.matcher(source);
@@ -30,7 +35,18 @@ final class AngularRouteSourceParser {
                 continue;
             }
             foundArray = true;
-            parseArray(sourcePath, source, arrayStart, arrayEnd, "", false, List.of(), routes, limitations);
+            parseArray(
+                    sourcePath,
+                    source,
+                    arrayStart,
+                    arrayEnd,
+                    "",
+                    false,
+                    List.of(),
+                    routes,
+                    limitations,
+                    stringResolver
+            );
         }
         if (!foundArray && likelyRouteSource(source)) {
             limitations.add("Route source uses a non-literal or unsupported route definition.");
@@ -47,17 +63,31 @@ final class AngularRouteSourceParser {
             boolean inheritedLazy,
             List<String> inheritedGuards,
             List<ParsedRoute> routes,
-            LinkedHashSet<String> limitations
+            LinkedHashSet<String> limitations,
+            StaticStringResolver stringResolver
     ) {
         for (var span : topLevelSpans(source, arrayStart + 1, arrayEnd, '{', '}')) {
             var properties = properties(source.substring(span.start() + 1, span.end()));
             var pathExpression = properties.value("path");
-            var path = stringLiteral(pathExpression);
+            var pathResolution = staticString(sourcePath, source, pathExpression, stringResolver);
+            var path = pathResolution.value();
             if (pathExpression != null && path == null) {
-                limitations.add("Dynamic route path was not resolved in " + sourcePath + ".");
+                limitations.add(pathResolution.limitation() != null
+                        ? pathResolution.limitation()
+                        : "Dynamic route path was not resolved in " + sourcePath + ".");
             }
             var fullPath = joinRoute(parentPath, path);
-            var redirect = stringLiteral(properties.value("redirectTo"));
+            var redirectExpression = properties.value("redirectTo");
+            var redirectResolution = staticString(
+                    sourcePath,
+                    source,
+                    redirectExpression,
+                    stringResolver
+            );
+            var redirect = redirectResolution.value();
+            if (redirectExpression != null && redirect == null && redirectResolution.limitation() != null) {
+                limitations.add(redirectResolution.limitation());
+            }
             var componentExpression = properties.value("component");
             var loadComponentExpression = properties.value("loadComponent");
             var loadChildrenExpression = properties.value("loadChildren");
@@ -103,7 +133,8 @@ final class AngularRouteSourceParser {
                                 lazy,
                                 List.copyOf(guards),
                                 routes,
-                                limitations
+                                limitations,
+                                stringResolver
                         );
                     }
                 } else {
@@ -183,6 +214,23 @@ final class AngularRouteSourceParser {
         }
         var matcher = STRING_LITERAL.matcher(expression);
         return matcher.matches() ? matcher.group(2) : null;
+    }
+
+    private StaticStringResolution staticString(
+            String sourcePath,
+            String source,
+            String expression,
+            StaticStringResolver resolver
+    ) {
+        if (expression == null) {
+            return new StaticStringResolution(null, null);
+        }
+        var literal = stringLiteral(expression);
+        if (literal != null) {
+            return new StaticStringResolution(literal, null);
+        }
+        var resolved = resolver.resolve(sourcePath, source, expression);
+        return resolved != null ? resolved : new StaticStringResolution(null, null);
     }
 
     private boolean likelyRouteSource(String source) {
@@ -335,6 +383,14 @@ final class AngularRouteSourceParser {
     }
 
     record ParseResult(List<ParsedRoute> routes, List<String> limitations) {
+    }
+
+    @FunctionalInterface
+    interface StaticStringResolver {
+        StaticStringResolution resolve(String sourcePath, String source, String expression);
+    }
+
+    record StaticStringResolution(String value, String limitation) {
     }
 
     record ParsedRoute(

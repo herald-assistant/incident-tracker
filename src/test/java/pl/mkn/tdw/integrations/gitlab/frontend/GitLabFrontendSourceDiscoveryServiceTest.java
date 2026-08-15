@@ -277,6 +277,127 @@ class GitLabFrontendSourceDiscoveryServiceTest {
                 .hasMessageContaining("maxInventoryFiles");
     }
 
+    @Test
+    void shouldResolveCrossFileCrmRouteModelsAndNxAliasesWithoutExecutingTypeScript() {
+        var service = new GitLabFrontendSourceDiscoveryService(
+                new CrmFrontendGitLabRepositoryPort(aliasedCrmRouteFiles(), true)
+        );
+
+        var catalog = service.discoverCatalog(catalogRequest(defaultLimits()));
+
+        assertThat(catalog.entries()).anySatisfy(entry -> {
+            if (!"/contacts/active/details".equals(entry.routePattern())) {
+                return;
+            }
+            assertThat(entry.kind()).isEqualTo(GitLabFrontendRouteEntryKind.SCREEN);
+            assertThat(entry.status()).isEqualTo(GitLabFrontendDiscoveryStatus.RESOLVED);
+            assertThat(entry.parentRoutePattern()).isEqualTo("/contacts");
+            assertThat(entry.lazyLoaded()).isTrue();
+            assertThat(entry.guards()).containsExactly("CrmAccessGuard", "CrmDetailsGuard");
+            assertThat(entry.viewSymbol()).isEqualTo("CrmContactDetailsComponent");
+            assertThat(entry.viewSourcePath())
+                    .isEqualTo("libs/crm-features/contact-area/crm-contact-details.component.ts");
+        });
+        assertThat(catalog.entries()).anySatisfy(entry -> {
+            if (!"/legacy-contact".equals(entry.routePattern())) {
+                return;
+            }
+            assertThat(entry.kind()).isEqualTo(GitLabFrontendRouteEntryKind.REDIRECT);
+            assertThat(entry.redirectTarget()).isEqualTo("active/details");
+        });
+        assertThat(catalog.diagnostics())
+                .noneMatch(diagnostic -> diagnostic.code().equals("LAZY_ROUTE_SOURCE_UNRESOLVED"));
+
+        var screen = catalog.entries().stream()
+                .filter(entry -> "/contacts/active/details".equals(entry.routePattern()))
+                .findFirst()
+                .orElseThrow();
+        var context = service.buildScreenContext(new GitLabFrontendScreenContextRequest(
+                scope(), screen.screenId(), defaultLimits()
+        ));
+        assertThat(context.sourceFiles())
+                .extracting(GitLabFrontendSourceFile::path)
+                .contains(
+                        "libs/crm-features/contact-area/crm-contact-area.routes.ts",
+                        "libs/crm-features/contact-area/crm-contact-details.component.ts"
+                );
+    }
+
+    private static Map<String, String> aliasedCrmRouteFiles() {
+        var files = new java.util.LinkedHashMap<String, String>();
+        files.put("package.json", "{ \"name\": \"crm-agent-portal\" }");
+        files.put("tsconfig.base.json", """
+                {
+                  // Strongly anonymized CRM aliases.
+                  "compilerOptions": {
+                    "baseUrl": ".",
+                    "paths": {
+                      "@crm/routing/*": ["libs/crm-routing/src/lib/*"],
+                      "@crm/features/*": ["libs/crm-features/*"]
+                    },
+                  },
+                }
+                """);
+        files.put("apps/crm-agent/src/app/app.routes.ts", """
+                import { Routes } from '@angular/router';
+                import { CRM_ROUTE_MODEL } from '@crm/routing/crm-route-model';
+
+                export const CRM_APP_ROUTES: Routes = [
+                  {
+                    path: CRM_ROUTE_MODEL.contacts.path,
+                    canActivate: [CrmAccessGuard],
+                    loadChildren: () => import('@crm/features/contact-area/crm-contact-area.routes')
+                      .then(module => module.CRM_CONTACT_AREA_ROUTES)
+                  },
+                  {
+                    path: 'legacy-contact',
+                    redirectTo: CRM_ROUTE_MODEL.contacts.details.path
+                  }
+                ];
+                """);
+        files.put("libs/crm-routing/src/lib/crm-stage.ts", """
+                export enum CRM_STAGE {
+                  ACTIVE = 'active'
+                }
+                """);
+        files.put("libs/crm-routing/src/lib/crm-route-model.ts", """
+                import { CRM_STAGE } from '@crm/routing/crm-stage';
+
+                export const CRM_ROUTE_MODEL: CrmRouteModel = {
+                  path: '',
+                  contacts: {
+                    path: 'contacts',
+                    details: {
+                      path: `${CRM_STAGE.ACTIVE}/details`
+                    }
+                  }
+                };
+                """);
+        files.put("libs/crm-features/contact-area/crm-contact-area.routes.ts", """
+                import { Routes } from '@angular/router';
+                import { CRM_ROUTE_MODEL } from '@crm/routing/crm-route-model';
+                import { CrmContactDetailsComponent } from './crm-contact-details.component';
+
+                export const CRM_CONTACT_AREA_ROUTES: Routes = [
+                  {
+                    path: CRM_ROUTE_MODEL.path,
+                    children: [
+                      {
+                        path: CRM_ROUTE_MODEL.contacts.details.path,
+                        component: CrmContactDetailsComponent,
+                        canActivate: [CrmDetailsGuard]
+                      }
+                    ]
+                  }
+                ];
+                """);
+        files.put("libs/crm-features/contact-area/crm-contact-details.component.ts", """
+                @Component({ template: '<p>Synthetic CRM contact details</p>' })
+                export class CrmContactDetailsComponent {}
+                """);
+        return Map.copyOf(files);
+    }
+
     private static GitLabFrontendSourceDiscoveryService service() {
         return new GitLabFrontendSourceDiscoveryService(new CrmFrontendGitLabRepositoryPort());
     }

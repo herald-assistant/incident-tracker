@@ -222,9 +222,13 @@ Na dzisiaj projekt ma:
 - neutralna capability `integrations.gitlab.frontend` do statycznego,
   ograniczonego rozpoznawania Angular/Nx: workspace signals, standalone i
   module routes, lazy loading, guardy, route parameters, view roots,
-  template/style, formularze, NgRx, REST, WebSocket i auth signals; dynamiczne
-  definicje oraz osiagniete limity sa jawnymi diagnostics, a nie zgadywanym
-  wynikiem.
+  template/style, formularze, NgRx, REST, WebSocket i auth signals. Route
+  discovery rozwiazuje rowniez importowane statyczne modele `const`, zagniezdzone
+  property chains, proste interpolacje statycznych enumow oraz importy wskazane
+  przez `baseUrl` i wildcard `compilerOptions.paths` w `tsconfig*.json`.
+  Capability nadal nie uruchamia ani nie kompiluje badanego TypeScriptu;
+  niejednoznaczne aliasy, cykle, runtime factories, dynamiczne wyrazenia oraz
+  osiagniete limity sa jawnymi diagnostics, a nie zgadywanym wynikiem.
 
 ## Glowne entrypointy HTTP
 

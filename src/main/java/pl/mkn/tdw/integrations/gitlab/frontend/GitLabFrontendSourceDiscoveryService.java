@@ -45,6 +45,10 @@ public class GitLabFrontendSourceDiscoveryService {
         var diagnostics = new ArrayList<GitLabFrontendDiagnostic>();
         var inventory = inventory(request.scope(), request.limits(), diagnostics);
         var session = new RepositorySession(request.scope(), request.limits(), diagnostics);
+        var staticRouteResolver = new TypeScriptStaticRouteResolver(
+                inventory.paths(),
+                path -> sourceContent(session.read(path))
+        );
         var revision = sourceRevision(request.scope(), inventory.paths(), session, diagnostics);
         var workspaceSignals = workspaceSignals(inventory.paths(), session, diagnostics);
         var routeCandidates = routeCandidates(inventory.paths());
@@ -91,7 +95,11 @@ public class GitLabFrontendSourceDiscoveryService {
                 continue;
             }
             scannedRouteFiles.add(current.sourcePath());
-            var parseResult = ROUTE_PARSER.parse(current.sourcePath(), content.content());
+            var parseResult = ROUTE_PARSER.parse(
+                    current.sourcePath(),
+                    content.content(),
+                    staticRouteResolver
+            );
             parseResult.limitations().forEach(message -> diagnostics.add(diagnostic(
                     GitLabFrontendDiagnosticSeverity.WARNING,
                     "ANGULAR_ROUTE_DEFINITION_PARTIAL",
@@ -109,7 +117,12 @@ public class GitLabFrontendSourceDiscoveryService {
                 var effectiveGuards = new LinkedHashSet<>(current.inheritedGuards());
                 effectiveGuards.addAll(parsed.guards());
                 var effectiveLazy = current.lazy() || parsed.lazy();
-                var viewResolution = resolveView(parsed, current.sourcePath(), imports, inventory.paths());
+                var viewResolution = resolveView(
+                        parsed,
+                        current.sourcePath(),
+                        imports,
+                        staticRouteResolver
+                );
                 var limitations = new ArrayList<String>();
                 if (viewResolution.ambiguous()) {
                     limitations.add("The view source matched more than one repository file.");
@@ -164,14 +177,27 @@ public class GitLabFrontendSourceDiscoveryService {
                 }
 
                 if (parsed.loadChildrenDeclared()) {
-                    var lazyTarget = parsed.loadChildrenImportPath() != null
-                            ? resolveImportPath(
+                    var lazyTargets = parsed.loadChildrenImportPath() != null
+                            ? staticRouteResolver.resolveImportPaths(
                                     current.sourcePath(),
-                                    parsed.loadChildrenImportPath(),
-                                    inventory.paths()
+                                    parsed.loadChildrenImportPath()
                             )
-                            : null;
-                    var lazyRouteSource = resolveLazyRouteSource(lazyTarget, inventory.paths(), session);
+                            : List.<String>of();
+                    if (lazyTargets.size() > 1) {
+                        diagnostics.add(diagnostic(
+                                GitLabFrontendDiagnosticSeverity.WARNING,
+                                "TYPESCRIPT_IMPORT_ALIAS_AMBIGUOUS",
+                                "A loadChildren import matched more than one bounded repository source.",
+                                current.sourcePath()
+                        ));
+                    }
+                    var lazyTarget = lazyTargets.size() == 1 ? lazyTargets.get(0) : null;
+                    var lazyRouteSource = resolveLazyRouteSource(
+                            lazyTarget,
+                            inventory.paths(),
+                            session,
+                            staticRouteResolver
+                    );
                     if (lazyRouteSource != null) {
                         work.addLast(new RouteWork(
                                 lazyRouteSource,
@@ -262,6 +288,10 @@ public class GitLabFrontendSourceDiscoveryService {
         var diagnostics = new ArrayList<>(catalog.diagnostics());
         var inventory = inventory(request.scope(), request.limits(), diagnostics);
         var session = new RepositorySession(request.scope(), request.limits(), diagnostics);
+        var staticRouteResolver = new TypeScriptStaticRouteResolver(
+                inventory.paths(),
+                path -> sourceContent(session.read(path))
+        );
         var files = new LinkedHashMap<String, SourceAccumulator>();
         addSourceFile(screen.routeSource().path(), GitLabFrontendSourceRole.ROUTE_CONFIGURATION, files, session);
         addSourceFile(screen.viewSourcePath(), GitLabFrontendSourceRole.VIEW_COMPONENT, files, session);
@@ -275,7 +305,8 @@ public class GitLabFrontendSourceDiscoveryService {
                     files,
                     session,
                     request.limits(),
-                    diagnostics
+                    diagnostics,
+                    staticRouteResolver
             );
         }
 
@@ -529,7 +560,7 @@ public class GitLabFrontendSourceDiscoveryService {
             AngularRouteSourceParser.ParsedRoute route,
             String routeFile,
             Map<String, String> imports,
-            List<String> inventory
+            TypeScriptStaticRouteResolver staticRouteResolver
     ) {
         var symbol = route.loadComponentSymbol() != null
                 ? route.loadComponentSymbol()
@@ -538,14 +569,15 @@ public class GitLabFrontendSourceDiscoveryService {
         if (importPath == null && symbol != null) {
             importPath = imports.get(symbol);
         }
-        var matches = resolveImportPaths(routeFile, importPath, inventory);
+        var matches = staticRouteResolver.resolveImportPaths(routeFile, importPath);
         return new ViewResolution(symbol, matches.isEmpty() ? null : matches.get(0), matches.size() > 1);
     }
 
     private String resolveLazyRouteSource(
             String lazyTarget,
             List<String> inventory,
-            RepositorySession session
+            RepositorySession session,
+            TypeScriptStaticRouteResolver staticRouteResolver
     ) {
         if (!StringUtils.hasText(lazyTarget)) {
             return null;
@@ -559,7 +591,8 @@ public class GitLabFrontendSourceDiscoveryService {
             var moduleImports = imports(module.content());
             var routing = moduleImports.entrySet().stream()
                     .filter(entry -> entry.getKey().endsWith("RoutingModule"))
-                    .flatMap(entry -> resolveImportPaths(lazyTarget, entry.getValue(), inventory).stream())
+                    .flatMap(entry -> staticRouteResolver
+                            .resolveImportPaths(lazyTarget, entry.getValue()).stream())
                     .findFirst()
                     .orElse(null);
             if (routing != null) {
@@ -593,26 +626,6 @@ public class GitLabFrontendSourceDiscoveryService {
             result.putIfAbsent(defaultMatcher.group(1), defaultMatcher.group(2));
         }
         return result;
-    }
-
-    private String resolveImportPath(String sourcePath, String importPath, List<String> inventory) {
-        var matches = resolveImportPaths(sourcePath, importPath, inventory);
-        return matches.isEmpty() ? null : matches.get(0);
-    }
-
-    private List<String> resolveImportPaths(String sourcePath, String importPath, List<String> inventory) {
-        if (!StringUtils.hasText(importPath) || !importPath.startsWith(".")) {
-            return List.of();
-        }
-        var base = normalizeRelativePath(parentPath(sourcePath), importPath);
-        var candidates = new LinkedHashSet<String>();
-        candidates.add(base);
-        candidates.add(base + ".ts");
-        candidates.add(base + ".component.ts");
-        candidates.add(base + ".routes.ts");
-        candidates.add(base + ".module.ts");
-        candidates.add(base + "/index.ts");
-        return inventory.stream().filter(candidates::contains).sorted().toList();
     }
 
     private void collectTemplateAndStyles(
@@ -698,7 +711,8 @@ public class GitLabFrontendSourceDiscoveryService {
             Map<String, SourceAccumulator> files,
             RepositorySession session,
             GitLabFrontendDiscoveryLimits limits,
-            List<GitLabFrontendDiagnostic> diagnostics
+            List<GitLabFrontendDiagnostic> diagnostics,
+            TypeScriptStaticRouteResolver staticRouteResolver
     ) {
         var queue = new ArrayDeque<SourceWork>();
         queue.add(new SourceWork(rootPath, 0));
@@ -724,7 +738,7 @@ public class GitLabFrontendSourceDiscoveryService {
                 continue;
             }
             for (var importPath : imports(source.content()).values()) {
-                for (var resolved : resolveImportPaths(current.path(), importPath, inventory)) {
+                for (var resolved : staticRouteResolver.resolveImportPaths(current.path(), importPath)) {
                     if (files.size() >= limits.maxContextFiles()) {
                         diagnostics.add(limitDiagnostic(
                                 "SOURCE_FILE_LIMIT_REACHED",
@@ -1157,6 +1171,10 @@ public class GitLabFrontendSourceDiscoveryService {
 
     private static String valueOrEmpty(String value) {
         return value != null ? value : "";
+    }
+
+    private static String sourceContent(GitLabRepositoryFileContent content) {
+        return content != null ? content.content() : null;
     }
 
     private final class RepositorySession {

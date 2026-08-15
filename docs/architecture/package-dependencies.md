@@ -50,7 +50,11 @@ Warstwa posiada:
 buduje bounded Angular/Nx route/view catalog i screen source context przez
 `GitLabRepositoryPort`, ale nie zna UI Explorer, API, Copilota ani kontraktu
 raportu. Statyczne heurystyki zwracaja diagnostics, source revision i jawne
-limity; nie uruchamiaja ani nie kompiluja badanego frontendu.
+limity; nie uruchamiaja ani nie kompiluja badanego frontendu. Lokalny resolver
+w tej samej integracji moze odczytac `tsconfig*.json`, rozwiazac ograniczone
+aliasy `baseUrl`/`paths` oraz importowane statyczne modele tras. Nie jest to
+generyczny TypeScript runtime ani powod do przenoszenia logiki parsera do
+feature'a.
 
 Ten sam adapter ma byc mozliwy do wywolania przez evidence provider, tool,
 shared/operator API albo kolejny feature.

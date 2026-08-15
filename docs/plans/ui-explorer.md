@@ -1137,6 +1137,62 @@ lokalny widok zostal sprawdzony wizualnie na desktopie oraz przy viewport
 
 ### 8. Pilot i hardening MVP
 
+Zakres 8A, zatwierdzony jako przekrojowy inkrement L2 poprzedzajacy pilot,
+usuwa wykryta na testowym frontendzie luke statycznego route discovery bez
+kopiowania jego nazw, sciezek ani danych do repozytorium:
+
+- [x] 8A: Zachowac baseline literalnych standalone/module routes, children,
+  redirectow, guardow, relative lazy imports, bounded diagnostics oraz
+  publicznych kontraktow UI Explorer i GitLab Frontend Discovery API.
+- [x] 8A: Rozszerzyc neutralny parser o bounded, statyczne rozwiazywanie
+  importowanych `const` object literals i property chains uzywanych jako
+  `path` albo `redirectTo`, bez wykonywania ani kompilowania TypeScriptu.
+- [x] 8A: Rozwiazywac `baseUrl` i wildcard `compilerOptions.paths` z
+  repozytoryjnych `tsconfig*.json` dla route model imports oraz
+  `loadChildren`/`loadComponent`, z wykrywaniem cykli, niejednoznacznosci i
+  przekroczen limitow.
+- [x] 8A: Zachowac jawne partial/unsupported diagnostics dla wyrazen,
+  aliasow i lazy targets, ktorych nie da sie bezpiecznie rozstrzygnac
+  statycznie; nie dodawac fallbacku wykonujacego kod ani zaleznosci od jednego
+  badanego frontendu.
+- [x] 8A: Pokryc analogiczny wzorzec wylacznie silnie zanonimizowanymi
+  fixtures CRM: cross-file route model, empty root path, nested property
+  chains, Nx/TypeScript path alias, lazy child routes, guards i redirect.
+- [x] 8A: Zweryfikowac wszystkich konsumentow zmienionej integracji:
+  `GitLabFrontendSourceDiscoveryService`, shared GitLab Frontend Discovery API,
+  UI Explorer screen catalog/source context oraz package dependency guard.
+- [x] 8A: Uruchomic adekwatne testy celowane i pelne `mvn -q test`, wykonac
+  architecture diff oraz zaktualizowac kanoniczny opis obslugiwanych i
+  nieobslugiwanych wzorcow.
+
+Baseline 8A: neutralny parser rozpoznaje literalne tablice `Routes`, children,
+redirecty, guardy, component/loadComponent/loadChildren i relative imports.
+Property chain w rodzaju `CRM_ROUTES.contacts.details.path` jest raportowany
+jako dynamiczny i mapowany bez wartosci path, a importy zaczynajace sie od
+aliasu TypeScript/Nx nie sa rozwiazywane do inventory. Powoduje to utrate
+route pattern i brak traversal do aliasowego lazy route source. Publiczne DTO,
+limity, statusy i kontrakty konsumentow pozostaja bez zmian. Wlascicielem delty
+jest `integrations.gitlab.frontend`; konsumenci to shared GitLab Frontend
+Discovery API/Tool Workbench oraz UI Explorer catalog i source context.
+
+Checkpoint 8A 2026-08-16: neutralna integracja rozwiazuje teraz importowane
+statyczne `const` object literals i zagniezdzone property chains dla `path` i
+`redirectTo`, empty root routes, proste laczenie stringow oraz template
+interpolation oparte o statyczne wartosci i string enums. Repozytoryjne
+`tsconfig*.json` dostarczaja bounded `baseUrl` i exact/wildcard `paths` dla
+route models, lazy targets, view roots i related source traversal. Resolver
+nie wykonuje ani nie kompiluje TypeScriptu, ma ograniczona liczbe konfiguracji
+i glebokosc, wykrywa cykle oraz odrzuca niejednoznaczne aliasy bez arbitralnego
+wyboru. Runtime factories, spreads, dynamiczne wyrazenia oraz pliki poza
+inventory/code-search scope pozostaja jawnymi diagnostics/visibility limits.
+Publiczne DTO, endpointy, source revision, statusy i limity UI Explorer oraz
+GitLab Frontend Discovery nie zostaly zmienione. Przeszly testy parsera,
+resolvera, integracji, shared API, katalogu i source context UI Explorer,
+package dependency guard oraz pelne `mvn -q test`. Architecture diff nie dodal
+importow z integracji do `features`, `api`, `agenttools` ani `aiplatform`.
+Wszystkie nowe testy i przyklady sa silnie zanonimizowanym CRM; diagnostyczne
+pliki badanego frontendu nie zostaly utrwalone w repozytorium.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.
