@@ -155,9 +155,6 @@
               [value]="branch()"
               (input)="onBranchChanged(branchInput.value)"
             />
-            @if (configError()) {
-              <span class="field-hint flow-explorer-warning">{{ configError() }}</span>
-            }
           </label>
 
           <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">

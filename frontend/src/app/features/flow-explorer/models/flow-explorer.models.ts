@@ -63,10 +63,6 @@ export interface FlowExplorerSystemOption {
   ownerTeamIds: string[];
 }
 
-export interface FlowExplorerConfig {
-  defaultBranch: string;
-}
-
 export interface FlowExplorerEndpointInventoryQuery {
   branch?: string;
   endpointPathPrefix?: string;

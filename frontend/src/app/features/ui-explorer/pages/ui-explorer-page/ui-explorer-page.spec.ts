@@ -34,6 +34,7 @@ describe('UiExplorerPageComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
+    flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     http.expectOne(
       (request) =>
@@ -83,6 +84,7 @@ describe('UiExplorerPageComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
+    flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
@@ -119,6 +121,7 @@ describe('UiExplorerPageComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
+    flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
@@ -185,6 +188,7 @@ describe('UiExplorerPageComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
+    flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
@@ -214,6 +218,7 @@ describe('UiExplorerPageComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
+    flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
@@ -251,6 +256,7 @@ describe('UiExplorerPageComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
+    flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
@@ -287,6 +293,7 @@ describe('UiExplorerPageComponent', () => {
     });
     fixture.detectChanges();
 
+    flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
@@ -316,6 +323,15 @@ describe('UiExplorerPageComponent', () => {
     http.verify();
   });
 });
+
+function flushPlatformConfig(http: HttpTestingController): void {
+  http.expectOne('/api/ui/config').flush({
+    title: 'CRM Workspace',
+    subtitle: 'Team Delivery Workspace',
+    defaultTitle: 'Team Delivery Workspace',
+    defaultBranch: 'main'
+  });
+}
 
 function crmInputOptions(): UiExplorerInputOptionsResponse {
   const sections: UiExplorerInputOptionsResponse['sections'] = [

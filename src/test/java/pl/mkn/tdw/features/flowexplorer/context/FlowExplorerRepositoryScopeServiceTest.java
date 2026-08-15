@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.flowexplorer.context;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.flowexplorer.FlowExplorerProperties;
+import pl.mkn.tdw.common.PlatformSourceCodeProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
@@ -23,15 +23,14 @@ class FlowExplorerRepositoryScopeServiceTest {
         var capturedQuery = new AtomicReference<OperationalContextQuery>();
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup("platform/backend");
-        var flowExplorerProperties = new FlowExplorerProperties();
-        flowExplorerProperties.setDefaultBranch("main");
+        var platformSourceCodeProperties = platformSourceCodeProperties("main");
         var service = new FlowExplorerRepositoryScopeService(
                 query -> {
                     capturedQuery.set(query);
                     return catalog();
                 },
                 gitLabProperties,
-                flowExplorerProperties
+                platformSourceCodeProperties
         );
 
         var scope = service.resolve("crm-customer-profile", null);
@@ -63,7 +62,7 @@ class FlowExplorerRepositoryScopeServiceTest {
         var service = new FlowExplorerRepositoryScopeService(
                 query -> catalogWithoutCodeSearchScope(),
                 gitLabProperties,
-                new FlowExplorerProperties()
+                platformSourceCodeProperties("main")
         );
 
         var scope = service.resolve("crm-customer-profile", null);
@@ -71,6 +70,12 @@ class FlowExplorerRepositoryScopeServiceTest {
         assertEquals(0, scope.repositoryRefCount());
         assertTrue(scope.repositories().isEmpty());
         assertEquals(List.of("Operational context system has no code-search scope repositories."), scope.limitations());
+    }
+
+    private static PlatformSourceCodeProperties platformSourceCodeProperties(String defaultBranch) {
+        var properties = new PlatformSourceCodeProperties();
+        properties.setDefaultBranch(defaultBranch);
+        return properties;
     }
 
     private static OperationalContextDtos.OperationalContextCatalog catalog() {

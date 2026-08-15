@@ -648,7 +648,6 @@ describe('App', () => {
     await router.navigateByUrl('/flow-explorer');
     fixture.detectChanges();
     flushUiConfig(http, 'CRM Workspace');
-    http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
     http.expectOne('/api/flow-explorer/systems').flush([]);
     http.expectOne('/api/analysis/ai/options').flush({
       defaultModel: 'gpt-5.4',
@@ -877,7 +876,8 @@ function flushUiConfig(http: HttpTestingController, title = 'Team Delivery Works
   http.expectOne('/api/ui/config').flush({
     title,
     subtitle: title === 'Team Delivery Workspace' ? null : 'Team Delivery Workspace',
-    defaultTitle: 'Team Delivery Workspace'
+    defaultTitle: 'Team Delivery Workspace',
+    defaultBranch: 'main'
   });
 }
 
@@ -1120,7 +1120,6 @@ function flowExplorerComponent(fixture: ComponentFixture<App>): FlowExplorerComp
 }
 
 function flushFlowExplorerStartup(http: HttpTestingController): void {
-  http.expectOne('/api/flow-explorer/config').flush({ defaultBranch: 'main' });
   http.expectOne('/api/flow-explorer/systems').flush([flowExplorerSystem('crm-service')]);
   http.expectOne('/api/analysis/ai/options').flush({
     defaultModel: 'gpt-5.4',

@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.common.GitLabPathUtils;
-import pl.mkn.tdw.features.flowexplorer.FlowExplorerProperties;
+import pl.mkn.tdw.common.PlatformSourceCodeProperties;
 import pl.mkn.tdw.features.flowexplorer.endpoint.FlowExplorerGitLabConfigurationException;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
@@ -41,7 +41,7 @@ public class FlowExplorerRepositoryScopeService {
 
     private final OperationalContextPort operationalContextPort;
     private final GitLabProperties gitLabProperties;
-    private final FlowExplorerProperties flowExplorerProperties;
+    private final PlatformSourceCodeProperties platformSourceCodeProperties;
 
     public FlowExplorerRepositoryScope resolve(String systemId, String branch) {
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
@@ -123,8 +123,7 @@ public class FlowExplorerRepositoryScopeService {
         if (StringUtils.hasText(requestedBranch)) {
             return requestedBranch;
         }
-        var defaultBranch = normalize(flowExplorerProperties.getDefaultBranch());
-        return StringUtils.hasText(defaultBranch) ? defaultBranch : "main";
+        return normalize(platformSourceCodeProperties.getDefaultBranch());
     }
 
     private String requiredGitLabGroup() {

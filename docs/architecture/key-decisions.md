@@ -36,6 +36,10 @@ a nie role-based organization.
 Decyzje:
 
 - `app.ui.title` parametryzuje glowny tytul UI.
+- `platform.source-code.default-branch` jest wymaganym, pojedynczym defaultem
+  branch/ref dla feature'ow pracujacych ze zrodlem kodu. Backend i Angular
+  czytaja go przez wspolna konfiguracje; feature'y nie utrzymuja lokalnego
+  property, endpointu ani stalej fallbackowej.
 - `app.ui.title` moze byc lokalnie nadpisane w Workspace Settings; override z
   `${tdw.workspace.directory}/settings.json` ma pierwszenstwo przed
   `application.properties`.

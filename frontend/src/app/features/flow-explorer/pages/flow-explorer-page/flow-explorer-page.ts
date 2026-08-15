@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute } from '@angular/router';
@@ -18,6 +18,7 @@ import {
 import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
 import { AnalysisJobPollingService } from '../../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
+import { AppUiConfigService } from '../../../../core/services/app-ui-config.service';
 import {
   FlowExplorerAnalysisGoal,
   FlowExplorerEndpointInventoryResponse,
@@ -210,6 +211,7 @@ export class FlowExplorerPageComponent implements OnInit {
   private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly uiConfig = inject(AppUiConfigService);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
@@ -226,7 +228,6 @@ export class FlowExplorerPageComponent implements OnInit {
   readonly endpointInventory = signal<FlowExplorerEndpointInventoryResponse | null>(null);
   readonly catalogError = signal('');
   readonly endpointError = signal('');
-  readonly configError = signal('');
   readonly systemSearch = signal('');
   readonly endpointSearch = signal('');
   readonly systemSelectOpen = signal(false);
@@ -496,6 +497,7 @@ export class FlowExplorerPageComponent implements OnInit {
   });
   readonly resultSections = computed(() => this.displayResult()?.sections ?? []);
   constructor() {
+    effect(() => this.applyPlatformDefaultBranch(this.uiConfig.config().defaultBranch));
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
@@ -512,7 +514,8 @@ export class FlowExplorerPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadConfig();
+    this.uiConfig.load();
+    this.applyPlatformDefaultBranch(this.uiConfig.config().defaultBranch);
     this.loadSystems();
     this.loadAiModelOptions();
   }
@@ -1245,21 +1248,11 @@ export class FlowExplorerPageComponent implements OnInit {
     return `${count} ${pluralSuffix}`;
   }
 
-  private loadConfig(): void {
-    this.flowExplorerApi
-      .getConfig()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (config) => {
-          const defaultBranch = config.defaultBranch?.trim();
-          if (defaultBranch && !this.branch()) {
-            this.branch.set(defaultBranch);
-          }
-        },
-        error: (error: HttpErrorResponse) => {
-          this.configError.set(this.errorMessage(error, 'Nie udalo sie pobrac default branch.'));
-        }
-      });
+  private applyPlatformDefaultBranch(defaultBranch: string): void {
+    const normalized = defaultBranch.trim();
+    if (normalized && !this.branch().trim()) {
+      this.branch.set(normalized);
+    }
   }
 
   private loadAiModelOptions(): void {

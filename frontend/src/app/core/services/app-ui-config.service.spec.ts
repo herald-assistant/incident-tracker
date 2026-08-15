@@ -29,13 +29,15 @@ describe('AppUiConfigService', () => {
     request.flush({
       title: 'CRM Operations Workspace',
       subtitle: 'Team Delivery Workspace',
-      defaultTitle: 'Team Delivery Workspace'
+      defaultTitle: 'Team Delivery Workspace',
+      defaultBranch: 'crm-release'
     });
 
     expect(service.config()).toEqual({
       title: 'CRM Operations Workspace',
       subtitle: 'Team Delivery Workspace',
-      defaultTitle: 'Team Delivery Workspace'
+      defaultTitle: 'Team Delivery Workspace',
+      defaultBranch: 'crm-release'
     });
   });
 
@@ -46,13 +48,15 @@ describe('AppUiConfigService', () => {
     request.flush({
       title: ' ',
       subtitle: ' ',
-      defaultTitle: 'Team Delivery Workspace'
+      defaultTitle: 'Team Delivery Workspace',
+      defaultBranch: ' '
     });
 
     expect(service.config()).toEqual({
       title: 'Team Delivery Workspace',
       subtitle: null,
-      defaultTitle: 'Team Delivery Workspace'
+      defaultTitle: 'Team Delivery Workspace',
+      defaultBranch: ''
     });
   });
 });

@@ -25,13 +25,15 @@ class UiConfigControllerTest {
         when(uiConfigService.currentConfig()).thenReturn(new UiConfigResponse(
                 "CRM Operations Workspace",
                 "Team Delivery Workspace",
-                "Team Delivery Workspace"
+                "Team Delivery Workspace",
+                "crm-release"
         ));
 
         mockMvc.perform(get("/api/ui/config"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("CRM Operations Workspace"))
                 .andExpect(jsonPath("$.subtitle").value("Team Delivery Workspace"))
-                .andExpect(jsonPath("$.defaultTitle").value("Team Delivery Workspace"));
+                .andExpect(jsonPath("$.defaultTitle").value("Team Delivery Workspace"))
+                .andExpect(jsonPath("$.defaultBranch").value("crm-release"));
     }
 }

@@ -8,7 +8,8 @@ export const DEFAULT_APP_TITLE = 'Team Delivery Workspace';
 const FALLBACK_UI_CONFIG: AppUiConfig = {
   title: DEFAULT_APP_TITLE,
   subtitle: null,
-  defaultTitle: DEFAULT_APP_TITLE
+  defaultTitle: DEFAULT_APP_TITLE,
+  defaultBranch: ''
 };
 
 @Injectable({
@@ -50,11 +51,13 @@ function normalizeUiConfig(config: Partial<AppUiConfig> | null | undefined): App
   const defaultTitle = textOrDefault(config?.defaultTitle, DEFAULT_APP_TITLE);
   const title = textOrDefault(config?.title, defaultTitle);
   const subtitle = textOrNull(config?.subtitle);
+  const defaultBranch = textOrNull(config?.defaultBranch) ?? '';
 
   return {
     title,
     subtitle: subtitle === title ? null : subtitle,
-    defaultTitle
+    defaultTitle,
+    defaultBranch
   };
 }
 

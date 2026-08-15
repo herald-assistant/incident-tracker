@@ -2,7 +2,7 @@ package pl.mkn.tdw.features.flowexplorer.endpoint;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import pl.mkn.tdw.features.flowexplorer.FlowExplorerProperties;
+import pl.mkn.tdw.common.PlatformSourceCodeProperties;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerRepositoryScopeService;
 import pl.mkn.tdw.features.flowexplorer.context.FlowExplorerSystemNotFoundException;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
@@ -204,12 +204,12 @@ class FlowExplorerEndpointInventoryServiceTest {
     ) {
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup(gitLabGroup);
-        var flowExplorerProperties = new FlowExplorerProperties();
-        flowExplorerProperties.setDefaultBranch(defaultBranch);
+        var platformSourceCodeProperties = new PlatformSourceCodeProperties();
+        platformSourceCodeProperties.setDefaultBranch(defaultBranch);
         var scopeService = new FlowExplorerRepositoryScopeService(
                 query -> catalog,
                 gitLabProperties,
-                flowExplorerProperties
+                platformSourceCodeProperties
         );
         return new FlowExplorerEndpointInventoryService(
                 scopeService,

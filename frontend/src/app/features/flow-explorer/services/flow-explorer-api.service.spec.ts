@@ -29,14 +29,6 @@ describe('FlowExplorerApiService', () => {
     request.flush([]);
   });
 
-  it('should load Flow Explorer config from the feature API', () => {
-    service.getConfig().subscribe((config) => expect(config.defaultBranch).toBe('main'));
-
-    const request = http.expectOne('/api/flow-explorer/config');
-    expect(request.request.method).toBe('GET');
-    request.flush({ defaultBranch: 'main' });
-  });
-
   it('should load endpoint inventory with trimmed optional filters', () => {
     service
       .getEndpointInventory('crm/service', {

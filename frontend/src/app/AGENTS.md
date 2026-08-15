@@ -50,12 +50,17 @@ Frontend nie jest source of truth dla:
 - dostepnych `reasoningEffort`,
 - GitHub/Copilot auth,
 - runtime tytulu UI.
+- platformowego default branch/ref dla ekranow pracujacych ze zrodlem kodu.
 
 Te dane pobieraj z backendu przez shared/operator API:
 
 - `GET /api/analysis/ai/options`,
 - `GET /api/auth/github/status`,
 - `GET /api/ui/config`.
+
+`GET /api/ui/config` dostarcza rowniez `defaultBranch` z jedynego
+`platform.source-code.default-branch`. Feature nie powinien utrzymywac dla
+niego lokalnej stalej ani feature-specific endpointu.
 
 UI nie powinno zalezec od typow Copilot SDK ani od backendowych klas Javy.
 Trzymaj kontrakty w TypeScript modelach na granicy HTTP.

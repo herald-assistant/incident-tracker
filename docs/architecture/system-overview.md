@@ -187,7 +187,8 @@ Na dzisiaj projekt ma:
   katalog modeli i dozwolone `reasoningEffort` z GitHub Copilot SDK, zeby
   frontend nie trzymal lokalnej listy modeli,
 - endpoint shared/operator API `GET /api/ui/config`, ktory zwraca runtime
-  konfiguracje brandu UI z fallbackiem `Team Delivery Workspace`,
+  konfiguracje brandu UI z fallbackiem `Team Delivery Workspace` oraz
+  wymagany wspolny `defaultBranch` z `platform.source-code.default-branch`,
 - shared/operator API `GET /api/workspace/settings` i
   `PUT /api/workspace/settings`, ktore laczy `application.properties` z
   lokalnym `settings.json`; jawny override z workspace'u ma pierwszenstwo,
@@ -401,10 +402,14 @@ Na dzisiaj projekt ma:
   Copilot SDK i zwraca `reasoningEffort` tylko dla modeli, ktore SDK opisuje
   jako wspierajace te ustawienia. Endpoint nie jest krokiem incident job flow.
 - `GET /api/ui/config`
-  Shared/operator API konfiguracji brandu UI. Gdy `app.ui.title` nie ma
-  tekstu, frontend pokazuje tylko `Team Delivery Workspace`; gdy property jest
+  Shared/operator API konfiguracji UI. Gdy `app.ui.title` nie ma tekstu,
+  frontend pokazuje tylko `Team Delivery Workspace`; gdy property jest
   ustawione, wartosc property jest tytulem, a `Team Delivery Workspace`
-  podtytulem.
+  podtytulem. Odpowiedz zawiera tez `defaultBranch` z wymaganego
+  `platform.source-code.default-branch`; Flow Explorer i UI Explorer uzywaja
+  go tylko do inicjalizacji pustego branch/ref i nie nadpisuja wyboru
+  operatora ani wartosci odtworzonej z historii. Nie istnieje feature-specific
+  config endpoint ani lokalny fallback do `main`.
 - `GET /api/workspace/settings`
   Shared/operator API odczytu efektywnych ustawien workspace'u, wartosci bazowej
   z `application.properties`, lokalnego override'u i zrodla pola.
@@ -658,6 +663,9 @@ pokazuje tylko `Team Delivery Workspace`; jezeli jest ustawione, property jest
 glownym tytulem, a `Team Delivery Workspace` podtytulem.
 Workspace Settings moze nadpisac `app.ui.title` lokalnie w `settings.json`; po
 zapisie `GET /api/ui/config` zwraca juz efektywna wartosc z workspace'u.
+Ten sam endpoint przekazuje wymagany platformowy `defaultBranch` dla ekranow
+pracujacych ze zrodlem kodu. Jego source of truth pozostaje
+`application.properties`, poza zakresem lokalnego Workspace Settings.
 
 Shell Angulara ma:
 

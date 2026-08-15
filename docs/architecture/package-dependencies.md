@@ -35,6 +35,11 @@ Incident Analysis, Flow Explorer, Change Verification i Config Drift Viewer sa
 rodzenstwem. Zaden z nich nie jest generycznym core dla
 pozostalych.
 
+Mala `common.PlatformSourceCodeProperties` posiada wymagany
+`platform.source-code.default-branch`. Feature'y oraz shared/operator UI config
+moga ja konsumowac bez importowania siebie nawzajem; nie powstaje
+feature-specific wlasciciel wspolnego defaultu.
+
 ## Docelowe warstwy backendu
 
 ### `integrations`

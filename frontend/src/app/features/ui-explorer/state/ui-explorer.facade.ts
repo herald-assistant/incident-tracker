@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription, finalize } from 'rxjs';
 
@@ -11,6 +11,7 @@ import {
 import { AiOptionsApiService } from '../../../core/services/ai-options-api.service';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
+import { AppUiConfigService } from '../../../core/services/app-ui-config.service';
 import { downloadJsonFile } from '../../../core/utils/json-file.utils';
 import {
   EMPTY_ANALYSIS_AI_MODEL_OPTIONS,
@@ -39,14 +40,13 @@ import {
   parseUiExplorerLocalRunEnvelope
 } from '../utils/ui-explorer-import-export.utils';
 
-const DEFAULT_BRANCH = 'main';
-
 @Injectable()
 export class UiExplorerFacade {
   private readonly api = inject(UiExplorerApiService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
   private readonly aiOptionsApi = inject(AiOptionsApiService);
   private readonly pollingService = inject(AnalysisJobPollingService);
+  private readonly uiConfig = inject(AppUiConfigService);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
 
@@ -69,7 +69,7 @@ export class UiExplorerFacade {
   readonly portabilityError = signal('');
 
   readonly selectedSystemId = signal('');
-  readonly branch = signal(DEFAULT_BRANCH);
+  readonly branch = signal('');
   readonly selectedScreenId = signal('');
   readonly selectedProfile = signal<UiExplorerProfile | ''>('');
   readonly sectionModes = signal<Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>>>({});
@@ -152,12 +152,26 @@ export class UiExplorerFacade {
   });
 
   constructor() {
+    effect(() => this.applyPlatformDefaultBranch(this.uiConfig.config().defaultBranch));
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
 
   initialize(): void {
+    this.uiConfig.load();
+    this.applyPlatformDefaultBranch(this.uiConfig.config().defaultBranch);
     this.loadInputOptions();
     this.loadAiOptions();
+  }
+
+  private applyPlatformDefaultBranch(defaultBranch: string): void {
+    const normalized = defaultBranch.trim();
+    if (!normalized || this.branch().trim()) {
+      return;
+    }
+    this.branch.set(normalized);
+    if (this.selectedSystemId() && this.inputOptions()) {
+      this.loadScreens();
+    }
   }
 
   loadInputOptions(): void {
@@ -170,6 +184,7 @@ export class UiExplorerFacade {
         next: (options) => {
           this.inputOptions.set(options);
           this.inputState.set(options.systems.length > 0 ? 'ready' : 'empty');
+          this.applyPlatformDefaultBranch(this.uiConfig.config().defaultBranch);
           const selectedStillExists = options.systems.some(
             (system) => system.systemId === this.selectedSystemId()
           );

@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 
 import {
   FlowExplorerChatMessageRequest,
-  FlowExplorerConfig,
   FlowExplorerEndpointInventoryQuery,
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerJobStartRequest,
@@ -18,10 +17,6 @@ import {
 export class FlowExplorerApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/api/flow-explorer';
-
-  getConfig(): Observable<FlowExplorerConfig> {
-    return this.http.get<FlowExplorerConfig>(`${this.baseUrl}/config`);
-  }
 
   getSystems(): Observable<FlowExplorerSystemOption[]> {
     return this.http.get<FlowExplorerSystemOption[]>(`${this.baseUrl}/systems`);

@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
@@ -10,6 +11,7 @@ import {
 } from '../../../../core/models/analysis.models';
 import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
+import { AppUiConfigService } from '../../../../core/services/app-ui-config.service';
 import {
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerJobStateSnapshot,
@@ -23,8 +25,19 @@ describe('FlowExplorerPageComponent', () => {
   let flowExplorerApi: FlowExplorerApiServiceMock;
   let aiOptionsApi: AiOptionsApiServiceMock;
   let historyApi: AnalysisRunHistoryApiServiceMock;
+  const appUiConfig = signal({
+    title: 'CRM Workspace',
+    subtitle: 'Team Delivery Workspace',
+    defaultTitle: 'Team Delivery Workspace',
+    defaultBranch: 'main'
+  });
+  const appUiConfigService = {
+    config: appUiConfig,
+    load: vi.fn()
+  };
 
   beforeEach(async () => {
+    appUiConfig.update((config) => ({ ...config, defaultBranch: 'main' }));
     aiOptionsApi = {
       getOptions: vi.fn(() => of(aiModelOptions()))
     };
@@ -35,7 +48,6 @@ describe('FlowExplorerPageComponent', () => {
       )
     };
     flowExplorerApi = {
-      getConfig: vi.fn(() => of({ defaultBranch: 'main' })),
       getSystems: vi.fn(() => of([systemOption('crm-service'), systemOption('crm-analytics')])),
       getEndpointInventory: vi.fn(() => of(endpointInventory())),
       startJob: vi.fn(() => of(jobSnapshot({ status: 'COLLECTING_CONTEXT' }))),
@@ -72,6 +84,7 @@ describe('FlowExplorerPageComponent', () => {
         { provide: FlowExplorerApiService, useValue: flowExplorerApi },
         { provide: AiOptionsApiService, useValue: aiOptionsApi },
         { provide: AnalysisRunHistoryApiService, useValue: historyApi },
+        { provide: AppUiConfigService, useValue: appUiConfigService },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -90,7 +103,7 @@ describe('FlowExplorerPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const branchInput = compiled.querySelector('input[type="text"]') as HTMLInputElement;
 
-    expect(flowExplorerApi.getConfig).toHaveBeenCalledTimes(1);
+    expect(appUiConfigService.load).toHaveBeenCalledTimes(1);
     expect(flowExplorerApi.getSystems).toHaveBeenCalledTimes(1);
     expect(aiOptionsApi.getOptions).toHaveBeenCalledTimes(1);
     expect(branchInput.value).toBe('main');
@@ -818,7 +831,7 @@ describe('FlowExplorerPageComponent', () => {
 
 type FlowExplorerApiServiceMock = Pick<
   FlowExplorerApiService,
-  'getConfig' | 'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
+  'getSystems' | 'getEndpointInventory' | 'startJob' | 'sendChatMessage' | 'getJob'
 >;
 type AiOptionsApiServiceMock = Pick<AiOptionsApiService, 'getOptions'>;
 type AnalysisRunHistoryApiServiceMock = Pick<AnalysisRunHistoryApiService, 'getRun' | 'sendChatMessage'>;

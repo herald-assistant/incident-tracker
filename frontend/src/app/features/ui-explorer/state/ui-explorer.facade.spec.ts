@@ -1,11 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { NEVER, Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 
 import { AiOptionsApiService } from '../../../core/services/ai-options-api.service';
 import { AnalysisJobPollingOptions, AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
+import { AppUiConfigService } from '../../../core/services/app-ui-config.service';
 import {
   UiExplorerInputOptionsResponse,
   UiExplorerJobStartRequest,
@@ -16,6 +18,16 @@ import { UiExplorerApiService } from '../services/ui-explorer-api.service';
 import { UiExplorerFacade } from './ui-explorer.facade';
 
 describe('UiExplorerFacade', () => {
+  const appUiConfig = signal({
+    title: 'CRM Workspace',
+    subtitle: 'Team Delivery Workspace',
+    defaultTitle: 'Team Delivery Workspace',
+    defaultBranch: 'main'
+  });
+  const appUiConfigService = {
+    config: appUiConfig,
+    load: vi.fn()
+  };
   const inputOptions = crmInputOptions();
   const screenCatalog = crmScreenCatalog();
   const api = {
@@ -65,15 +77,28 @@ describe('UiExplorerFacade', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    appUiConfig.update((config) => ({ ...config, defaultBranch: 'main' }));
     TestBed.configureTestingModule({
       providers: [
         UiExplorerFacade,
         { provide: UiExplorerApiService, useValue: api },
         { provide: AnalysisRunHistoryApiService, useValue: historyApi },
         { provide: AiOptionsApiService, useValue: aiOptionsApi },
-        { provide: AnalysisJobPollingService, useValue: polling }
+        { provide: AnalysisJobPollingService, useValue: polling },
+        { provide: AppUiConfigService, useValue: appUiConfigService }
       ]
     });
+  });
+
+  it('keeps a CRM branch selected before shared platform config is applied', () => {
+    appUiConfig.update((config) => ({ ...config, defaultBranch: 'crm-release' }));
+    const facade = TestBed.inject(UiExplorerFacade);
+    facade.changeBranch('crm-review');
+
+    facade.initialize();
+
+    expect(facade.branch()).toBe('crm-review');
+    expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'crm-review');
   });
 
   it('builds real defaults and automatically loads screens for the selected CRM frontend', () => {
