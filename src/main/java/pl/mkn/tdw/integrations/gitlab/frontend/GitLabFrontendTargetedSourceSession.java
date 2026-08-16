@@ -237,6 +237,10 @@ final class GitLabFrontendTargetedSourceSession {
         return sourceReadCount;
     }
 
+    boolean sourceReadBudgetExhausted() {
+        return limitReached && sourceReadCount >= limits.maxSourceReads();
+    }
+
     int aliasResolutionCount() {
         return aliasResolutionCount;
     }

@@ -16,6 +16,17 @@ import java.util.regex.Pattern;
 @Service
 public class GitLabFrontendRouteSourceTraversalService {
 
+    private static final Pattern NAMED_DEFAULT_DECLARATION = Pattern.compile(
+            "(?s)\\bexport\\s+default\\s+(?:abstract\\s+)?(?:class|function)\\s+"
+                    + "([A-Za-z_$][A-Za-z0-9_$]*)\\b"
+    );
+    private static final Pattern DEFAULT_IDENTIFIER_EXPORT = Pattern.compile(
+            "(?s)\\bexport\\s+default\\s+(?!class\\b|function\\b)([A-Za-z_$][A-Za-z0-9_$]*)\\s*;"
+    );
+    private static final Pattern LOCAL_DEFAULT_EXPORT = Pattern.compile(
+            "(?s)\\bexport\\s*\\{\\s*([A-Za-z_$][A-Za-z0-9_$]*)\\s+as\\s+default\\s*}"
+    );
+
     private final GitLabRepositoryPort repositoryPort;
     private final AngularBootstrapSourceParser moduleParser = new AngularBootstrapSourceParser();
     private final AngularRouteSourceParser routeParser = new AngularRouteSourceParser();
@@ -31,6 +42,7 @@ public class GitLabFrontendRouteSourceTraversalService {
         var staticStrings = new TypeScriptStaticRouteResolver(session::readOptional, imports::resolve);
         var collections = new ArrayList<GitLabFrontendRouteSourceTraversalResult.RouteCollection>();
         var components = new LinkedHashMap<String, GitLabFrontendRouteSourceTraversalResult.ComponentTarget>();
+        var pendingComponents = new ArrayList<PendingComponent>();
         var queue = new ArrayDeque<RouteTask>();
         var unresolvedEdges = new Counter();
         var routeNodeCount = new Counter();
@@ -117,8 +129,13 @@ public class GitLabFrontendRouteSourceTraversalService {
                 var ancestry = new LinkedHashSet<>(task.ancestry());
                 ancestry.add(task.sourcePath() + "#" + value(task.symbol()));
                 enqueueChildren(route, task, ancestry, session, imports, queue, unresolvedEdges);
-                collectComponents(route, task, session, imports, components, unresolvedEdges);
+                pendingComponents.add(new PendingComponent(route, task));
             }
+        }
+        for (var pending : pendingComponents) {
+            collectComponents(
+                    pending.route(), pending.owner(), session, imports, components, unresolvedEdges
+            );
         }
 
         var status = collections.isEmpty()
@@ -421,6 +438,12 @@ public class GitLabFrontendRouteSourceTraversalService {
                 return List.of();
             }
             var parsed = moduleParser.parse(sourcePath, source);
+            if ("default".equals(exportedSymbol)) {
+                var defaultSymbol = defaultExportSymbol(source);
+                if (defaultSymbol != null && declaresSymbol(parsed, source, defaultSymbol, false)) {
+                    return List.of(new ResolvedSymbol(sourcePath, defaultSymbol));
+                }
+            }
             if (declaresSymbol(parsed, source, exportedSymbol, true)) {
                 return List.of(new ResolvedSymbol(sourcePath, exportedSymbol));
             }
@@ -481,12 +504,29 @@ public class GitLabFrontendRouteSourceTraversalService {
         ).matcher(source).find();
     }
 
+    private String defaultExportSymbol(String source) {
+        for (var pattern : List.of(
+                NAMED_DEFAULT_DECLARATION,
+                DEFAULT_IDENTIFIER_EXPORT,
+                LOCAL_DEFAULT_EXPORT
+        )) {
+            var matcher = pattern.matcher(source);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        }
+        return null;
+    }
+
     private void unresolvedDiagnostic(
             GitLabFrontendTargetedSourceSession session,
             String sourcePath,
             String symbol,
             int matchCount
     ) {
+        if (session.sourceReadBudgetExhausted()) {
+            return;
+        }
         session.diagnostic(
                 GitLabFrontendDiagnosticSeverity.WARNING,
                 matchCount > 1
@@ -523,6 +563,12 @@ public class GitLabFrontendRouteSourceTraversalService {
     }
 
     private record ResolvedSymbol(String sourcePath, String symbol) {
+    }
+
+    private record PendingComponent(
+            AngularRouteSourceParser.ParsedRoute route,
+            RouteTask owner
+    ) {
     }
 
     private record RouteTask(

@@ -44,9 +44,14 @@ Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
 asynchroniczny job oraz neutralna capability GitLaba do graph-first
 rozpoznawania Angular/Nx route/view catalog i screen source context. Integracja
 wyszukuje produkcyjny lancuch `bootstrapApplication(...) -> provideRouter(...)`,
-przechodzi tylko po osiagalnych importach, `children` i lazy routes oraz nie
-buduje repository inventory. Ref jest rozstrzygany bezposrednio do immutable
-commit id przez GitLab, niezaleznie od metadanych dowolnego pliku.
+przechodzi tylko po osiagalnych importach, `children` i lazy routes, domyka
+topologie tras przed rozwijaniem targetow widokow oraz nie buduje repository
+inventory. Extensionless import stosuje deterministyczna kolejnosc TypeScript
+`module.ts` -> `module/index.ts`, zatrzymuje sie po pierwszym trafieniu i
+cache'uje resolution. Bezposredni `loadComponent: () => import(...)` rozwiazuje
+default export do rzeczywistego symbolu widoku. Ref jest rozstrzygany
+bezposrednio do immutable commit id przez GitLab, niezaleznie od metadanych
+dowolnego pliku.
 Feature-owned `GET /api/ui-explorer/screens` rozwiazuje repository/ref scope z
 Operational Context i zwraca bounded katalog bez ujawniania danych GitLaba.
 UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
@@ -231,6 +236,8 @@ Na dzisiaj projekt ma:
   discovery rozwiazuje rowniez importowane statyczne modele `const`, zagniezdzone
   property chains, proste interpolacje statycznych enumow oraz importy wskazane
   przez `baseUrl` i wildcard `compilerOptions.paths` w `tsconfig*.json`.
+  Targeted module resolution zachowuje file-before-index precedence, cache'uje
+  wynik i wspiera named oraz default-export lazy view targets.
   Capability nadal nie uruchamia ani nie kompiluje badanego TypeScriptu;
   niejednoznaczne aliasy, cykle, runtime factories, dynamiczne wyrazenia oraz
   osiagniete limity sa jawnymi diagnostics, a nie zgadywanym wynikiem.

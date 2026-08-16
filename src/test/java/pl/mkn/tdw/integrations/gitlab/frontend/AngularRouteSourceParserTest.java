@@ -88,7 +88,9 @@ class AngularRouteSourceParserTest {
         var result = parser.parse("apps/crm-agent/src/app/app.routes.ts", """
                 export const appRoutes: Routes = [
                   { path: 'runtime-view', loadComponent: crmRuntimeViewFactory },
-                  { path: 'runtime-area', loadChildren: crmRuntimeRoutesFactory }
+                  { path: 'runtime-area', loadChildren: crmRuntimeRoutesFactory },
+                  { path: 'computed-view', loadComponent: () => import('./computed-view.component')
+                      .then(module => module[crmRuntimeComponentName]) }
                 ];
                 """);
 
@@ -105,6 +107,31 @@ class AngularRouteSourceParserTest {
             }
             assertThat(route.loadChildrenDeclared()).isTrue();
             assertThat(route.loadChildrenImportPath()).isNull();
+        });
+        assertThat(result.routes()).anySatisfy(route -> {
+            if (!"/computed-view".equals(route.fullPath())) {
+                return;
+            }
+            assertThat(route.loadComponentImportPath()).isEqualTo("./computed-view.component");
+            assertThat(route.loadComponentSymbol()).isNull();
+        });
+    }
+
+    @Test
+    void shouldTreatDirectCrmDynamicImportAsDefaultExport() {
+        var result = parser.parse("apps/crm-agent/src/app/app.routes.ts", """
+                export const appRoutes: Routes = [
+                  {
+                    path: 'contact-summary',
+                    loadComponent: () => import('./contact-summary/crm-contact-summary.component')
+                  }
+                ];
+                """);
+
+        assertThat(result.routes()).singleElement().satisfies(route -> {
+            assertThat(route.loadComponentImportPath())
+                    .isEqualTo("./contact-summary/crm-contact-summary.component");
+            assertThat(route.loadComponentSymbol()).isEqualTo("default");
         });
     }
 }

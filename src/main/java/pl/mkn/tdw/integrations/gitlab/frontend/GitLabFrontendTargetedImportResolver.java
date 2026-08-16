@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 final class GitLabFrontendTargetedImportResolver {
@@ -21,6 +22,7 @@ final class GitLabFrontendTargetedImportResolver {
 
     private final GitLabFrontendTargetedSourceSession session;
     private final List<PathAlias> aliases;
+    private final Map<String, List<String>> resolutionCache = new LinkedHashMap<>();
 
     GitLabFrontendTargetedImportResolver(
             GitLabFrontendTargetedSourceSession session,
@@ -31,37 +33,48 @@ final class GitLabFrontendTargetedImportResolver {
     }
 
     List<String> resolve(String sourcePath, String importPath) {
-        if (!StringUtils.hasText(importPath) || !session.nextAliasResolution(sourcePath)) {
+        if (!StringUtils.hasText(importPath)) {
+            return List.of();
+        }
+        var cacheKey = GitLabFrontendTargetedSourceSession.normalize(sourcePath) + "|" + importPath;
+        var cached = resolutionCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        if (!session.nextAliasResolution(sourcePath)) {
             return List.of();
         }
         var bases = new LinkedHashSet<String>();
         if (importPath.startsWith(".")) {
             bases.add(relative(parent(sourcePath), importPath));
         } else {
+            var specificity = -1;
             for (var alias : aliases) {
                 var target = alias.resolve(importPath);
-                if (target != null) {
+                if (target == null) {
+                    continue;
+                }
+                if (alias.specificity() > specificity) {
+                    bases.clear();
+                    specificity = alias.specificity();
+                }
+                if (alias.specificity() == specificity) {
                     bases.add(target);
                 }
             }
         }
-        var matches = new LinkedHashSet<String>();
         for (var base : bases) {
             for (var candidate : candidates(base)) {
                 if (session.readOptional(candidate) != null) {
-                    matches.add(candidate);
+                    var resolved = List.of(candidate);
+                    resolutionCache.put(cacheKey, resolved);
+                    return resolved;
                 }
             }
         }
-        if (matches.size() > 1) {
-            session.diagnostic(
-                    GitLabFrontendDiagnosticSeverity.WARNING,
-                    GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_AMBIGUOUS,
-                    "A targeted TypeScript module resolved to more than one source candidate.",
-                    sourcePath
-            );
-        }
-        return List.copyOf(matches);
+        var unresolved = List.<String>of();
+        resolutionCache.put(cacheKey, unresolved);
+        return unresolved;
     }
 
     private List<PathAlias> loadAliases(String bootstrapSourcePath) {
@@ -155,9 +168,6 @@ final class GitLabFrontendTargetedImportResolver {
         }
         return List.of(
                 base + ".ts",
-                base + ".routes.ts",
-                base + ".component.ts",
-                base + ".module.ts",
                 base + "/index.ts"
         );
     }
@@ -187,6 +197,11 @@ final class GitLabFrontendTargetedImportResolver {
     }
 
     private record PathAlias(String pattern, String targetPattern) {
+
+        private int specificity() {
+            var wildcard = pattern.indexOf('*');
+            return wildcard < 0 ? Integer.MAX_VALUE : pattern.length() - 1;
+        }
 
         private String resolve(String importPath) {
             var wildcard = pattern.indexOf('*');

@@ -403,7 +403,12 @@ final class AngularRouteSourceParser {
             return member.group(1);
         }
         var destructured = THEN_DESTRUCTURED_SYMBOL.matcher(expression);
-        return destructured.find() ? destructured.group(1) : null;
+        if (destructured.find()) {
+            return destructured.group(1);
+        }
+        return !expression.contains(".then") && DYNAMIC_IMPORT.matcher(expression).find()
+                ? "default"
+                : null;
     }
 
     private String stringLiteral(String expression) {

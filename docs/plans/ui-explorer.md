@@ -1483,6 +1483,68 @@ maja rozroznialne diagnostics. Wybor ekranu buduje source context tylko dla
 jego route chain i powiazanych zaleznosci. Nie istnieje wykonanie starego
 inventory discovery ani kontrakt kompatybilnosci.
 
+#### 8C. Korekta targeted traversal po pilocie duzego monorepo
+
+Zakres 8C jest zatwierdzonym korekcyjnym inkrementem L2 po analizie wyniku
+GitLab Frontend Discovery z duzego Angular/Nx monorepo. Nie zmienia publicznych
+endpointow, DTO, `screenId`, exportu ani UI; naprawia neutralna integracje,
+ktora przedwczesnie zuzywa semantyczny budzet i nie obsluguje poprawnego
+default-export `loadComponent`.
+
+Baseline: root `bootstrapApplication -> provideRouter`, statyczne route arrays,
+named `component`, `loadComponent`, `loadChildren`, aliasy `tsconfig`,
+re-exporty, effective route chain i hard scope boundary pozostaja bez zmian.
+Katalog publikuje tylko wezly `SCREEN` zakonczone konkretnym targetem widoku.
+Obecny resolver sprawdza piec zgadywanych nazw dla kazdego extensionless
+importu, liczy nietrafione kandydaty jako source reads, rozwiazuje komponenty
+przed zakolejkowanymi lazy route collections i po wyczerpaniu budzetu emituje
+kaskade mylacych `IMPORT_TARGET_NOT_FOUND`. Bezposredni
+`loadComponent: () => import(...)` nie ma symbolu `.then(...)`, mimo ze Angular
+poprawnie uzywa default exportu. Nierozwiazany zwykly `component` jest
+klasyfikowany inaczej niz nierozwiazany `loadComponent`.
+
+Conformance delta: wlascicielem pozostaje `integrations.gitlab.frontend`.
+Resolver ma stosowac deterministyczna kolejnosc TypeScript `module.ts`, potem
+`module/index.ts`, zatrzymywac sie po pierwszym trafieniu i cache'owac wynik.
+Traversal ma najpierw domknac topologie `children/loadChildren`, a dopiero
+potem rozwiazywac view targets. Bezposredni dynamic import ma oznaczac default
+export i zachowywac rzeczywista nazwe eksportowanej klasy/funkcji/symbolu.
+Po wyczerpaniu source-read budgetu pozostaje jedna diagnostyka przyczynowa,
+bez wtornych `IMPORT_TARGET_NOT_FOUND`. Kazda deklaracja widoku bez targetu ma
+spojny kind `UNRESOLVED`. Konsumenci publiczni - shared GitLab API, Tool
+Workbench i UI Explorer - zachowuja kontrakty i automatycznie otrzymuja wiecej
+wezelow `SCREEN`.
+
+- [x] 8C.1: Zaimplementowac default-export lazy target, deterministyczne i
+  cache'owane module resolution, route-topology-first traversal, diagnostyke
+  bez kaskady po source-read limit oraz spojna klasyfikacje unresolved view.
+- [x] 8C.2: Dodac regresje wylacznie na silnie zanonimizowanym CRM dla direct
+  default `loadComponent`, duzego katalogu lazy components mieszczacego sie w
+  budzecie, lazy route zachowanego przed view traversal, TypeScript file/index
+  precedence i nierozwiazanego zwyklego componentu.
+- [x] 8C.3: Zweryfikowac pakiet `integrations.gitlab.frontend`, katalog UI
+  Explorer, shared GitLab API, `PackageDependencyGuardTest`, pelne
+  `mvn -q test` oraz architecture diff. Frontend build nie jest wymagany,
+  jezeli publiczny kontrakt backend-frontend i pliki Angulara pozostana bez
+  zmian.
+- [x] 8C.4: Zaktualizowac kanoniczny opis module resolution, default-export
+  lazy targets, route-first traversal i failure semantics. Wszystkie fixtures,
+  snapshoty i przyklady pozostaja silnie zanonimizowanym CRM.
+
+Checkpoint 8C (2026-08-16): targeted traversal rozpoznaje bezposredni
+`loadComponent: () => import(...)` jako default export i zachowuje nazwe
+rzeczywistego symbolu widoku. Extensionless import stosuje kolejnosc
+TypeScript `module.ts`, potem `module/index.ts`, zatrzymuje sie po pierwszym
+trafieniu i korzysta z cache. Traversal domyka route topology przed view
+targets, a wyczerpanie source-read budgetu nie generuje kaskady wtornych
+`IMPORT_TARGET_NOT_FOUND`. Nierozwiazane deklaracje widoku maja spojny kind
+`UNRESOLVED`. Publiczne endpointy, DTO, `screenId` i frontend pozostaly bez
+zmian; UI Explorer automatycznie otrzymuje dodatkowe wezly `SCREEN` z tego
+samego katalogu. Regresje konsumentow i `PackageDependencyGuardTest` przeszly,
+a pelne `mvn -q test` zakonczylo sie wynikiem 1206 testow, 0 failures, 0 errors
+i 0 skipped. Diff nie dodaje nowego kierunku zaleznosci. Wszystkie nowe
+fixtures i przyklady sa silnie zanonimizowanym CRM.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.

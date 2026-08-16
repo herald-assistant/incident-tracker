@@ -62,7 +62,12 @@ zwracaja typed diagnostics, semantyczne coverage i source revision
 rozstrzygnieta dla refa bez metadanych pliku; nie uruchamiaja ani nie kompiluja
 badanego frontendu. Lokalny resolver moze targeted odczytac `tsconfig*.json`,
 rozwiazac ograniczone aliasy `baseUrl`/`paths`, importy, re-exporty i statyczne
-modele tras. Nie jest to generyczny TypeScript runtime ani powod do
+modele tras. Dla extensionless module specifier zachowuje deterministyczne
+`module.ts` przed `module/index.ts`, zatrzymuje sie po pierwszym trafieniu,
+cache'uje resolution i obsluguje direct dynamic import jako default-export
+lazy target. Traversal domyka `children/loadChildren` przed targetami widokow,
+zeby koszt szerokiego katalogu komponentow nie odcinal dalszej topologii tras.
+Nie jest to generyczny TypeScript runtime ani powod do
 przenoszenia logiki parsera do feature'a.
 
 Ten sam adapter ma byc mozliwy do wywolania przez evidence provider, tool,

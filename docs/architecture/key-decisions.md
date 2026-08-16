@@ -62,6 +62,9 @@ Decyzje:
   route graph Angular/Nx i screen source context. Discovery zaczyna od jednego
   zweryfikowanego `bootstrapApplication(...) -> provideRouter(...)`, wykonuje
   tylko targeted reads po osiagalnym grafie i nie listuje calego repository.
+  Route topology ma pierwszenstwo przed view targets; extensionless importy
+  zachowuja TypeScript file-before-index precedence, a direct dynamic import
+  moze wskazywac default-export lazy component.
   Source revision pochodzi z bezposredniego rozwiazania refa do commit id, nie
   z metadanych pliku bootstrap. Jest to shared/operator preview neutralnej
   integracji, bez MCP toola, AI, historii i joba UI Explorer.

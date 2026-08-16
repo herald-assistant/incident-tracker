@@ -236,6 +236,42 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
                 .contains(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND);
     }
 
+    @Test
+    void shouldClassifyUnresolvedEagerCrmComponentAsUnresolvedView() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/main.ts", """
+                import { bootstrapApplication } from '@angular/platform-browser';
+                import { CRM_CONFIG } from './app/app.config';
+                bootstrapApplication(CrmAgentComponent, CRM_CONFIG);
+                """);
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { provideRouter } from '@angular/router';
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        files.put("apps/crm-agent/src/app/crm.routes.ts", """
+                import { CrmMissingContactComponent } from './missing-contact.component';
+                export const CRM_ROUTES = [{
+                  path: 'contacts',
+                  component: CrmMissingContactComponent
+                }];
+                """);
+        stubRepository(files);
+
+        var graph = service.discover(scope(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(graph.nodes()).singleElement().satisfies(node -> {
+            assertThat(node.kind()).isEqualTo(GitLabFrontendRouteNodeKind.UNRESOLVED);
+            assertThat(node.status()).isEqualTo(GitLabFrontendDiscoveryStatus.PARTIAL);
+            assertThat(node.screen()).isNull();
+        });
+        assertThat(graph.edges())
+                .filteredOn(edge -> edge.kind() == GitLabFrontendRouteGraphEdgeKind.COMPONENT)
+                .singleElement()
+                .extracting(GitLabFrontendRouteGraphEdge::status)
+                .isEqualTo(GitLabFrontendRouteGraphEdgeStatus.NOT_FOUND);
+    }
+
     private void stubRepository(Map<String, String> files) {
         when(repositoryPort.searchRepositoryFilesByContent(
                 anyString(), anyString(), anyString(), anyList(), anyInt()
@@ -311,8 +347,7 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
         files.put("apps/crm-agent/src/app/valuation.routes.ts", """
                 export const CRM_VALUATION_ROUTES = [{
                   path: '',
-                  loadComponent: () => import('./valuation.component')
-                    .then(module => module.CrmValuationComponent),
+                  loadComponent: () => import('./valuation.component'),
                   runGuardsAndResolvers: 'paramsChange'
                 }];
                 """);
@@ -323,7 +358,7 @@ class GitLabFrontendRouteGraphDiscoveryServiceTest {
         files.put("apps/crm-agent/src/app/contact-drawer.component.ts",
                 "export class CrmContactDrawerComponent {}");
         files.put("apps/crm-agent/src/app/valuation.component.ts",
-                "export class CrmValuationComponent {}");
+                "export default class CrmValuationComponent {}");
         return files;
     }
 

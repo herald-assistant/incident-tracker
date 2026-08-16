@@ -64,6 +64,7 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
                 .contains(
                         "CrmContactShellComponent",
                         "CrmContactCreateComponent",
+                        "CrmContactSummaryComponent",
                         "CrmValuationComponent",
                         "CrmCustomerComponent"
                 );
@@ -123,7 +124,7 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
     }
 
     @Test
-    void shouldReportAmbiguousCrmModuleInsteadOfSelectingAFileCandidate() {
+    void shouldFollowTypeScriptFilePrecedenceBeforeDirectoryIndex() {
         var files = new LinkedHashMap<String, String>();
         files.put("tsconfig.base.json", crmTsconfig());
         files.put("apps/crm-agent/src/app/app.config.ts", """
@@ -136,10 +137,99 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
 
         var result = service.traverse(scope(), root(), GitLabFrontendGraphLimits.defaults());
 
+        assertThat(result.coverage().status()).isEqualTo(GitLabFrontendCoverageStatus.READY);
+        assertThat(result.routeCollections())
+                .flatExtracting(collection -> collection.parsed().routes())
+                .extracting(AngularRouteSourceParser.ParsedRoute::fullPath)
+                .containsExactly("/contacts");
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .doesNotContain(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_AMBIGUOUS);
+        verify(repositoryPort, never()).listRepositoryFiles(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void shouldReportAmbiguousCrmSymbolReExportWithoutSelectingOneRouteCollection() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("tsconfig.base.json", crmTsconfig());
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { CRM_ROUTES } from '@crm/navigation';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        files.put("libs/crm/navigation/index.ts", """
+                export * from './contact.routes';
+                export * from './customer.routes';
+                """);
+        files.put("libs/crm/navigation/contact.routes.ts",
+                "export const CRM_ROUTES = [{ path: 'contacts' }];");
+        files.put("libs/crm/navigation/customer.routes.ts",
+                "export const CRM_ROUTES = [{ path: 'customers' }];");
+        stubFiles(files);
+
+        var result = service.traverse(scope(), root(), GitLabFrontendGraphLimits.defaults());
+
         assertThat(result.coverage().status()).isEqualTo(GitLabFrontendCoverageStatus.BLOCKED);
         assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
                 .contains(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_AMBIGUOUS);
-        verify(repositoryPort, never()).listRepositoryFiles(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void shouldResolveDirectDefaultLazyComponentToItsDeclaredCrmClass() {
+        stubFiles(crmGraph());
+
+        var result = service.traverse(scope(), root(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(result.componentTargets())
+                .anySatisfy(target -> {
+                    assertThat(target.routePath()).isEqualTo("/contacts/summary");
+                    assertThat(target.sourcePath())
+                            .isEqualTo("libs/crm/navigation/views/contact-summary.component.ts");
+                    assertThat(target.symbol()).isEqualTo("CrmContactSummaryComponent");
+                    assertThat(target.relation()).isEqualTo(GitLabFrontendRouteGraphEdgeKind.LOAD_COMPONENT);
+                });
+    }
+
+    @Test
+    void shouldKeepLargeCrmLazyComponentCatalogWithinTargetedReadBudget() {
+        var files = largeCrmComponentGraph(80);
+        stubFiles(files);
+        var limits = new GitLabFrontendGraphLimits(10, 400, 80, 120, 500, 12, 5, 40, 50_000, 500_000);
+
+        var result = service.traverse(scope(), root(), limits);
+
+        assertThat(result.coverage().limitReached()).isFalse();
+        assertThat(result.componentTargets()).hasSize(80);
+        assertThat(result.coverage().sourceReadCount()).isLessThan(100);
+    }
+
+    @Test
+    void shouldDiscoverCrmLazyRouteTopologyBeforeSpendingBudgetOnViewTargets() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        var routes = new StringBuilder("export const CRM_ROUTES = [\n");
+        for (var index = 0; index < 12; index++) {
+            routes.append("{ path: 'contact-").append(index)
+                    .append("', loadComponent: () => import('./views/contact-")
+                    .append(index).append(".component').then(m => m.CrmContactComponent) },\n");
+            files.put("apps/crm-agent/src/app/views/contact-" + index + ".component.ts",
+                    "export class CrmContactComponent {}");
+        }
+        routes.append("{ path: 'segments', loadChildren: () => import('./segments/segments.routes')")
+                .append(".then(m => m.CRM_SEGMENT_ROUTES) }\n];");
+        files.put("apps/crm-agent/src/app/crm.routes.ts", routes.toString());
+        files.put("apps/crm-agent/src/app/segments/segments.routes.ts", """
+                export const CRM_SEGMENT_ROUTES = [{ path: 'active' }];
+                """);
+        stubFiles(files);
+        var limits = new GitLabFrontendGraphLimits(10, 400, 80, 20, 500, 12, 5, 40, 50_000, 500_000);
+
+        var result = service.traverse(scope(), root(), limits);
+
+        assertThat(result.routeCollections())
+                .extracting(GitLabFrontendRouteSourceTraversalResult.RouteCollection::sourcePath)
+                .contains("apps/crm-agent/src/app/segments/segments.routes.ts");
     }
 
     @Test
@@ -153,6 +243,8 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
         assertThat(result.coverage().sourceReadCount()).isEqualTo(3);
         assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
                 .contains(GitLabFrontendGraphDiagnosticCode.SOURCE_READ_LIMIT_REACHED);
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .doesNotContain(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND);
         verify(repositoryPort, never()).listRepositoryFiles(anyString(), anyString(), anyString(), anyString());
     }
 
@@ -259,7 +351,8 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
         files.put("libs/crm/navigation/contact.children.ts", """
                 export const CRM_CONTACT_CHILDREN = [
                   { path: 'new', loadComponent: () => import('./views/contact-create.component')
-                      .then(module => module.CrmContactCreateComponent) }
+                      .then(module => module.CrmContactCreateComponent) },
+                  { path: 'summary', loadComponent: () => import('./views/contact-summary.component') }
                 ];
                 """);
         files.put("libs/crm/navigation/valuation/valuation.routes.ts", """
@@ -274,10 +367,33 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
                 "export class CrmContactShellComponent {}");
         files.put("libs/crm/navigation/views/contact-create.component.ts",
                 "export class CrmContactCreateComponent {}");
+        files.put("libs/crm/navigation/views/contact-summary.component.ts",
+                "export default class CrmContactSummaryComponent {}");
         files.put("libs/crm/navigation/valuation/valuation.component.ts",
                 "export class CrmValuationComponent {}");
         files.put("libs/crm/navigation/customer/customer.component.ts",
                 "export class CrmCustomerComponent {}");
+        return files;
+    }
+
+    private Map<String, String> largeCrmComponentGraph(int componentCount) {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        var routes = new StringBuilder("export const CRM_ROUTES = [\n");
+        for (var index = 0; index < componentCount; index++) {
+            var className = "CrmContactView" + index + "Component";
+            routes.append("{ path: 'contact-").append(index)
+                    .append("', loadComponent: () => import('./views/contact-")
+                    .append(index).append(".component').then(m => m.")
+                    .append(className).append(") },\n");
+            files.put("apps/crm-agent/src/app/views/contact-" + index + ".component.ts",
+                    "export class " + className + " {}");
+        }
+        routes.append("];\n");
+        files.put("apps/crm-agent/src/app/crm.routes.ts", routes.toString());
         return files;
     }
 

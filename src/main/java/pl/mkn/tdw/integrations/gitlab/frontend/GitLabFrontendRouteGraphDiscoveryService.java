@@ -445,7 +445,8 @@ public class GitLabFrontendRouteGraphDiscoveryService {
         if (viewTarget != null) {
             return GitLabFrontendRouteNodeKind.SCREEN;
         }
-        if (!limitations.isEmpty() && (route.loadComponentDeclared() || route.loadChildrenDeclared())) {
+        if (!limitations.isEmpty() && (route.componentSymbol() != null
+                || route.loadComponentDeclared() || route.loadChildrenDeclared())) {
             return GitLabFrontendRouteNodeKind.UNRESOLVED;
         }
         return GitLabFrontendRouteNodeKind.ROUTE;
