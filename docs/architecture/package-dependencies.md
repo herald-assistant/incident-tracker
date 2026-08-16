@@ -65,8 +65,12 @@ rozwiazac ograniczone aliasy `baseUrl`/`paths`, importy, re-exporty i statyczne
 modele tras. Dla extensionless module specifier zachowuje deterministyczne
 `module.ts` przed `module/index.ts`, zatrzymuje sie po pierwszym trafieniu,
 cache'uje resolution i obsluguje direct dynamic import jako default-export
-lazy target. Traversal domyka `children/loadChildren` przed targetami widokow,
+lazy target. Obsluguje tez local lazy factory przez named/default import oraz
+statyczne splaszczenie literalnych pol `routes` przez `reduce/flatMap`.
+Traversal domyka `children/loadChildren` przed targetami widokow,
 zeby koszt szerokiego katalogu komponentow nie odcinal dalszej topologii tras.
+Budzet pozostaje twardo ograniczony, a wyczerpanie lacznego limitu zatrzymuje
+dalsze odczyty bez kaskady wtornych diagnostics.
 Nie jest to generyczny TypeScript runtime ani powod do
 przenoszenia logiki parsera do feature'a.
 

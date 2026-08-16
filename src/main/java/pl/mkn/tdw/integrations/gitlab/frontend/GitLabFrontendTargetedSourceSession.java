@@ -25,6 +25,7 @@ final class GitLabFrontendTargetedSourceSession {
     private int aliasResolutionCount;
     private int totalCharacters;
     private boolean limitReached;
+    private boolean totalCharacterBudgetExhausted;
 
     GitLabFrontendTargetedSourceSession(
             GitLabRepositoryPort repositoryPort,
@@ -50,7 +51,8 @@ final class GitLabFrontendTargetedSourceSession {
         if (sourceCache.containsKey(path)) {
             return sourceCache.get(path);
         }
-        if (missingSources.contains(path) || limitReached && sourceReadCount >= limits.maxSourceReads()) {
+        if (missingSources.contains(path) || totalCharacterBudgetExhausted
+                || limitReached && sourceReadCount >= limits.maxSourceReads()) {
             return null;
         }
         if (sourceReadCount >= limits.maxSourceReads()) {
@@ -89,6 +91,7 @@ final class GitLabFrontendTargetedSourceSession {
             }
             if (totalCharacters + file.content().length() > limits.maxTotalCharacters()) {
                 limitReached = true;
+                totalCharacterBudgetExhausted = true;
                 missingSources.add(path);
                 diagnostic(
                         GitLabFrontendDiagnosticSeverity.WARNING,
@@ -238,7 +241,8 @@ final class GitLabFrontendTargetedSourceSession {
     }
 
     boolean sourceReadBudgetExhausted() {
-        return limitReached && sourceReadCount >= limits.maxSourceReads();
+        return totalCharacterBudgetExhausted
+                || limitReached && sourceReadCount >= limits.maxSourceReads();
     }
 
     int aliasResolutionCount() {

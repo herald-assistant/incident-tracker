@@ -189,6 +189,65 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
     }
 
     @Test
+    void shouldResolveCrmLocalLazyFactoriesDefaultImportsAndFlattenedRouteConfig() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        files.put("apps/crm-agent/src/app/crm.routes.ts", """
+                import CrmContactShellComponent from './views/contact-shell.component';
+                import { CrmContactDetailsComponent } from './views/contact-details.component';
+                import { CRM_WORKFLOW_CONFIG } from './workflow.config';
+                export const CRM_ROUTES: Routes = [
+                  { path: 'contacts', loadComponent: () => CrmContactShellComponent },
+                  { path: 'details', loadComponent: () => CrmContactDetailsComponent },
+                  {
+                    path: 'workflow',
+                    children: CRM_WORKFLOW_CONFIG.reduce<Routes>(
+                      (acc, current) => [...acc, ...current.routes], []
+                    )
+                  }
+                ];
+                """);
+        files.put("apps/crm-agent/src/app/workflow.config.ts", """
+                import { CrmContactReviewComponent } from './views/contact-review.component';
+                export const CRM_WORKFLOW_CONFIG = [
+                  {
+                    status: 'READY',
+                    routes: [{ path: 'review', component: CrmContactReviewComponent }]
+                  }
+                ];
+                """);
+        files.put("apps/crm-agent/src/app/views/contact-shell.component.ts",
+                "export default class CrmContactShellComponent {}");
+        files.put("apps/crm-agent/src/app/views/contact-details.component.ts",
+                "export class CrmContactDetailsComponent {}");
+        files.put("apps/crm-agent/src/app/views/contact-review.component.ts",
+                "export class CrmContactReviewComponent {}");
+        stubFiles(files);
+
+        var result = service.traverse(scope(), root(), GitLabFrontendGraphLimits.defaults());
+
+        assertThat(result.routeCollections())
+                .flatExtracting(collection -> collection.parsed().routes())
+                .extracting(AngularRouteSourceParser.ParsedRoute::fullPath)
+                .contains("/workflow/review");
+        assertThat(result.componentTargets())
+                .extracting(GitLabFrontendRouteSourceTraversalResult.ComponentTarget::symbol)
+                .contains(
+                        "CrmContactShellComponent",
+                        "CrmContactDetailsComponent",
+                        "CrmContactReviewComponent"
+                );
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .doesNotContain(
+                        GitLabFrontendGraphDiagnosticCode.DYNAMIC_ROUTE_EXPRESSION,
+                        GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND
+                );
+    }
+
+    @Test
     void shouldKeepLargeCrmLazyComponentCatalogWithinTargetedReadBudget() {
         var files = largeCrmComponentGraph(80);
         stubFiles(files);
@@ -294,6 +353,38 @@ class GitLabFrontendRouteSourceTraversalServiceTest {
         assertThat(result.coverage().limitReached()).isTrue();
         assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
                 .contains(GitLabFrontendGraphDiagnosticCode.FILE_CHARACTER_LIMIT_REACHED);
+    }
+
+    @Test
+    void shouldEmitOneCrmCauseWithoutImportCascadeAfterTotalCharacterBudget() {
+        var files = new LinkedHashMap<String, String>();
+        files.put("apps/crm-agent/src/app/app.config.ts", """
+                import { CRM_ROUTES } from './crm.routes';
+                export const CRM_CONFIG = { providers: [provideRouter(CRM_ROUTES)] };
+                """);
+        files.put("apps/crm-agent/src/app/crm.routes.ts", """
+                import { CrmContactComponent } from './contact.component';
+                import { CrmCustomerComponent } from './customer.component';
+                export const CRM_ROUTES = [
+                  { path: 'contacts', component: CrmContactComponent },
+                  { path: 'customers', component: CrmCustomerComponent }
+                ];
+                """);
+        files.put("apps/crm-agent/src/app/contact.component.ts",
+                "export class CrmContactComponent { contact = '" + "x".repeat(180) + "'; }");
+        files.put("apps/crm-agent/src/app/customer.component.ts",
+                "export class CrmCustomerComponent { customer = '" + "y".repeat(180) + "'; }");
+        stubFiles(files);
+        var limits = new GitLabFrontendGraphLimits(10, 400, 80, 300, 500, 12, 5, 40, 500, 650);
+
+        var result = service.traverse(scope(), root(), limits);
+
+        assertThat(result.diagnostics())
+                .filteredOn(diagnostic -> diagnostic.code()
+                        == GitLabFrontendGraphDiagnosticCode.TOTAL_CHARACTER_LIMIT_REACHED)
+                .hasSize(1);
+        assertThat(result.diagnostics()).extracting(GitLabFrontendGraphDiagnostic::code)
+                .doesNotContain(GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND);
     }
 
     @Test

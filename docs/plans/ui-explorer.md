@@ -1545,6 +1545,52 @@ a pelne `mvn -q test` zakonczylo sie wynikiem 1206 testow, 0 failures, 0 errors
 i 0 skipped. Diff nie dodaje nowego kierunku zaleznosci. Wszystkie nowe
 fixtures i przyklady sa silnie zanonimizowanym CRM.
 
+#### 8D. Korekta local lazy factories i budzetu katalogu
+
+Zakres 8D jest zatwierdzonym korekcyjnym inkrementem L2 na podstawie kolejnego
+eksportu Tool Workbench oraz testowych plikow z tego samego refu. Publiczne
+endpointy, DTO, `screenId` i UI pozostaja bez zmian.
+
+Baseline: route topology odnajduje 303 wezly i 41 plikow routingu, ale katalog
+zatrzymuje 99 wezlow jako `UNRESOLVED`. Parser nie rozpoznaje poprawnego
+Angularowego `loadComponent: () => ImportedComponent`, a parser importow nie
+obsluguje default importu. `children` zbudowane przez statyczne splaszczenie
+`CONFIG.reduce(...cur.routes...)` jest oznaczane jako dynamiczne mimo ze
+zrodlowe `routes` sa literalnymi tablicami. Domyslne 50 000 znakow na plik i
+500 000 znakow lacznie sa za male dla poprawnie ograniczonego katalogu duzego
+monorepo; po osiagnieciu limitu powstaje kaskada wtornych diagnostics.
+
+Conformance delta: `integrations.gitlab.frontend` ma statycznie rozpoznawac
+local lazy factory, named i default import oraz literalne `routes` splaszczane
+z lokalnej albo importowanej tablicy konfiguracji, bez wykonywania TypeScriptu.
+Domyslny budzet pozostaje twardo ograniczony, ale wykorzystuje zatwierdzone
+gorne granice 200 000 znakow na plik i 2 000 000 lacznie. Po wyczerpaniu
+budzetu lacznego traversal zatrzymuje kolejne odczyty i publikuje jedna
+diagnostyke przyczynowa bez wtornych `IMPORT_TARGET_NOT_FOUND`.
+
+- [x] 8D.1: Obsluzyc local lazy factories, default imports i statyczne
+  splaszczenie tablic `routes` z konfiguracji.
+- [x] 8D.2: Skalibrowac ograniczone budzety oraz zatrzymac kaskade diagnostics
+  po wyczerpaniu limitu lacznego.
+- [x] 8D.3: Dodac silnie zanonimizowane regresje CRM dla wszystkich nowych
+  wariantow i konsumentow katalogu.
+- [x] 8D.4: Zweryfikowac testy celowane, shared API, UI Explorer,
+  `PackageDependencyGuardTest`, pelne `mvn -q test` i architecture diff.
+
+Checkpoint 8D (2026-08-16): parser importow obsluguje default import, a local
+lazy factory `() => ImportedComponent` jest rozwiazywana tym samym statycznym
+grafem co zwykly `component`. `children` oparte o lokalna albo importowana
+tablice konfiguracji i statyczne `reduce/flatMap(...routes...)` rozwijaja
+literalne pola `routes`, lacznie z ich dalszymi `children`. Domyslne hard limits
+wynosza 200 000 znakow na plik i 2 000 000 lacznie. Po wyczerpaniu limitu
+lacznego kolejne odczyty sa zatrzymywane, pozostaje jedna diagnostyka
+przyczynowa i nie powstaje kaskada `IMPORT_TARGET_NOT_FOUND`. Publiczne API,
+DTO, `screenId` i frontend pozostaly bez zmian. Testy celowane i konsumenci
+shared API/UI Explorer przeszli, `PackageDependencyGuardTest` nie wykazal
+nowego kierunku zaleznosci, a pelne `mvn -q test` zakonczylo sie wynikiem 1209
+testow, 0 failures, 0 errors i 0 skipped. Wszystkie nowe fixtures sa silnie
+zanonimizowanym CRM.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.

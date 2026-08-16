@@ -49,7 +49,12 @@ topologie tras przed rozwijaniem targetow widokow oraz nie buduje repository
 inventory. Extensionless import stosuje deterministyczna kolejnosc TypeScript
 `module.ts` -> `module/index.ts`, zatrzymuje sie po pierwszym trafieniu i
 cache'uje resolution. Bezposredni `loadComponent: () => import(...)` rozwiazuje
-default export do rzeczywistego symbolu widoku. Ref jest rozstrzygany
+default export do rzeczywistego symbolu widoku. Local lazy factory
+`() => ImportedComponent` obsluguje named i default import, a literalne tablice
+`routes` splaszczane przez `reduce/flatMap` sa rozwijane statycznie bez
+wykonywania TypeScriptu. Ograniczenia katalogu pozostaja twarde: domyslnie
+200 000 znakow na plik i 2 000 000 lacznie, z jedna diagnostyka przyczynowa po
+wyczerpaniu limitu lacznego. Ref jest rozstrzygany
 bezposrednio do immutable commit id przez GitLab, niezaleznie od metadanych
 dowolnego pliku.
 Feature-owned `GET /api/ui-explorer/screens` rozwiazuje repository/ref scope z

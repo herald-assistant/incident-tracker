@@ -22,6 +22,13 @@ final class AngularRouteSourceParser {
     private static final Pattern THEN_DESTRUCTURED_SYMBOL = Pattern.compile(
             "\\.then\\s*\\(\\s*\\(?\\s*\\{\\s*([A-Za-z_$][A-Za-z0-9_$]*)"
     );
+    private static final Pattern ARROW_IDENTIFIER_TARGET = Pattern.compile(
+            "(?s)=>\\s*\\(?\\s*([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\)?\\s*$"
+    );
+    private static final Pattern FLATTENED_ROUTE_COLLECTION = Pattern.compile(
+            "(?s)^\\s*([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\.\\s*"
+                    + "(?:reduce(?:\\s*<[^>]+>)?|flatMap)\\s*\\(.*\\.routes\\b"
+    );
 
     ParseResult parse(String sourcePath, String source) {
         return parse(sourcePath, source, (path, content, expression) ->
@@ -165,6 +172,7 @@ final class AngularRouteSourceParser {
             var loadComponentExpression = properties.value("loadComponent");
             var loadChildrenExpression = properties.value("loadChildren");
             var children = properties.value("children");
+            var childrenCollectionSymbol = routeCollectionSymbol(children);
             var outletResolution = staticString(sourcePath, source, properties.value("outlet"), stringResolver);
             var outlet = StringUtils.hasText(outletResolution.value()) ? outletResolution.value() : "primary";
             var guards = new LinkedHashSet<>(inheritedGuards);
@@ -188,7 +196,7 @@ final class AngularRouteSourceParser {
                         importPath(loadChildrenExpression),
                         importedSymbol(loadChildrenExpression),
                         children != null,
-                        exactIdentifier(children),
+                        childrenCollectionSymbol,
                         outlet,
                         configuration,
                         List.copyOf(guards),
@@ -222,8 +230,26 @@ final class AngularRouteSourceParser {
                         );
                     }
                 } else {
-                    if (exactIdentifier(children) == null) {
+                    if (childrenCollectionSymbol == null) {
                         limitations.add("Dynamic children route definition was not resolved in " + sourcePath + ".");
+                    }
+                }
+            }
+
+            var nestedRoutes = properties.value("routes");
+            var routeDeclaration = pathExpression != null || redirect != null || componentExpression != null
+                    || loadComponentExpression != null || loadChildrenExpression != null;
+            if (!routeDeclaration && nestedRoutes != null) {
+                var nestedArrayStart = firstNonWhitespace(nestedRoutes, 0);
+                if (nestedArrayStart >= 0 && nestedRoutes.charAt(nestedArrayStart) == '[') {
+                    var absoluteNestedStart = source.indexOf(nestedRoutes, span.start() + 1) + nestedArrayStart;
+                    var absoluteNestedEnd = matchingDelimiter(source, absoluteNestedStart, '[', ']');
+                    if (absoluteNestedEnd >= 0) {
+                        parseArray(
+                                sourcePath, source, absoluteNestedStart, absoluteNestedEnd, parentPath,
+                                inheritedLazy, inheritedGuards, parentSourceOffset, routes, limitations,
+                                stringResolver
+                        );
                     }
                 }
             }
@@ -386,6 +412,18 @@ final class AngularRouteSourceParser {
         return IDENTIFIER.matcher(normalized).matches() ? normalized : null;
     }
 
+    private String routeCollectionSymbol(String expression) {
+        var exact = exactIdentifier(expression);
+        if (exact != null) {
+            return exact;
+        }
+        if (!StringUtils.hasText(expression)) {
+            return null;
+        }
+        var matcher = FLATTENED_ROUTE_COLLECTION.matcher(expression);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
     private String importPath(String expression) {
         if (!StringUtils.hasText(expression)) {
             return null;
@@ -406,9 +444,11 @@ final class AngularRouteSourceParser {
         if (destructured.find()) {
             return destructured.group(1);
         }
-        return !expression.contains(".then") && DYNAMIC_IMPORT.matcher(expression).find()
-                ? "default"
-                : null;
+        if (!expression.contains(".then") && DYNAMIC_IMPORT.matcher(expression).find()) {
+            return "default";
+        }
+        var localTarget = ARROW_IDENTIFIER_TARGET.matcher(expression);
+        return localTarget.find() ? localTarget.group(1) : null;
     }
 
     private String stringLiteral(String expression) {

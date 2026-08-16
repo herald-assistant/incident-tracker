@@ -369,8 +369,11 @@ public class GitLabFrontendRouteSourceTraversalService {
             LinkedHashSet<String> stack,
             int depth
     ) {
-        if (importPath == null || symbol == null || !session.withinImportDepth(depth, ownerPath)) {
+        if (symbol == null || !session.withinImportDepth(depth, ownerPath)) {
             return List.of();
+        }
+        if (importPath == null) {
+            return resolveLocalSymbol(ownerPath, symbol, session, imports, stack, depth);
         }
         var moduleTargets = imports.resolve(ownerPath, importPath);
         if (moduleTargets.size() != 1) {

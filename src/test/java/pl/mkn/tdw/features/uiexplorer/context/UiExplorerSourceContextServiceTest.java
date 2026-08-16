@@ -48,7 +48,7 @@ class UiExplorerSourceContextServiceTest {
             assertThat(file.roles()).contains("VIEW_COMPONENT", "FORM_LOGIC");
         });
         assertThat(result.boundary().maxContextFiles()).isEqualTo(40);
-        assertThat(result.boundary().maxTotalCharacters()).isEqualTo(500_000);
+        assertThat(result.boundary().maxTotalCharacters()).isEqualTo(2_000_000);
         assertThat(result.boundary().graphSourceReadCount()).isEqualTo(9);
 
         var request = ArgumentCaptor.forClass(GitLabFrontendScreenGraphContextRequest.class);

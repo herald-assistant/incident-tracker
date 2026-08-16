@@ -23,8 +23,8 @@ public record GitLabFrontendGraphLimits(
                 12,
                 5,
                 40,
-                50_000,
-                500_000
+                200_000,
+                2_000_000
         );
     }
 

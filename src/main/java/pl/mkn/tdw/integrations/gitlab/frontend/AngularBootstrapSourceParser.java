@@ -13,6 +13,10 @@ final class AngularBootstrapSourceParser {
     private static final Pattern NAMED_IMPORT = Pattern.compile(
             "(?s)\\bimport\\s*\\{([^}]*)}\\s*from\\s*(['\"])([^'\"]+)\\2"
     );
+    private static final Pattern DEFAULT_IMPORT = Pattern.compile(
+            "(?s)\\bimport\\s+(?!type\\b)([A-Za-z_$][A-Za-z0-9_$]*)"
+                    + "(?:\\s*,\\s*\\{[^}]*})?\\s+from\\s*(['\"])([^'\"]+)\\2"
+    );
     private static final Pattern CONST_DECLARATION = Pattern.compile(
             "(?s)\\b(export\\s+)?const\\s+([A-Za-z_$][A-Za-z0-9_$]*)"
                     + "\\s*(?::[^=;]+)?="
@@ -79,6 +83,11 @@ final class AngularBootstrapSourceParser {
 
     private Map<String, ImportBinding> imports(String source) {
         var imports = new LinkedHashMap<String, ImportBinding>();
+        var defaultMatcher = DEFAULT_IMPORT.matcher(source);
+        while (defaultMatcher.find()) {
+            var localName = defaultMatcher.group(1);
+            imports.put(localName, new ImportBinding("default", localName, defaultMatcher.group(3).trim()));
+        }
         var matcher = NAMED_IMPORT.matcher(source);
         while (matcher.find()) {
             var moduleSpecifier = matcher.group(3).trim();

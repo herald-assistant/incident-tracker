@@ -134,4 +134,39 @@ class AngularRouteSourceParserTest {
             assertThat(route.loadComponentSymbol()).isEqualTo("default");
         });
     }
+
+    @Test
+    void shouldRecognizeCrmLocalLazyFactoryAndFlattenedStaticRouteConfig() {
+        var result = parser.parse("apps/crm-agent/src/app/crm.routes.ts", """
+                export const CRM_ROUTES: Routes = [
+                  {
+                    path: 'contacts',
+                    loadComponent: () => CrmContactListComponent
+                  },
+                  {
+                    path: 'workflow',
+                    children: CRM_WORKFLOW_CONFIG.reduce<Routes>(
+                      (acc, current) => [...acc, ...current.routes],
+                      []
+                    )
+                  }
+                ];
+                """);
+
+        assertThat(result.routes()).anySatisfy(route -> {
+            if (!"/contacts".equals(route.fullPath())) {
+                return;
+            }
+            assertThat(route.loadComponentImportPath()).isNull();
+            assertThat(route.loadComponentSymbol()).isEqualTo("CrmContactListComponent");
+        });
+        assertThat(result.routes()).anySatisfy(route -> {
+            if (!"/workflow".equals(route.fullPath())) {
+                return;
+            }
+            assertThat(route.childrenSymbol()).isEqualTo("CRM_WORKFLOW_CONFIG");
+        });
+        assertThat(result.limitations())
+                .noneMatch(limitation -> limitation.contains("Dynamic children route definition"));
+    }
 }
