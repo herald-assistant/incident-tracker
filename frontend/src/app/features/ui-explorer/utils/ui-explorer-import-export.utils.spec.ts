@@ -11,8 +11,8 @@ describe('UI Explorer import and export contract', () => {
   });
 
   it.each([
-    ['legacy version', { version: 1 }],
-    ['newer version', { version: 4 }],
+    ['previous version', { version: 3 }],
+    ['newer version', { version: 5 }],
     ['foreign schema', { schema: 'tdw.crm-foreign-run' }]
   ])('rejects %s without a compatibility fallback', (_label, override) => {
     expect(() => parseUiExplorerLocalRunEnvelope({ ...localEnvelope(), ...override })).toThrow();
@@ -31,11 +31,11 @@ describe('UI Explorer import and export contract', () => {
 function localEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 3,
+    version: 4,
     storedAt: '2026-08-15T10:04:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v3',
+      resultContract: 'ui-explorer-result-v4',
       job: crmHistorySnapshot()
     }
   };

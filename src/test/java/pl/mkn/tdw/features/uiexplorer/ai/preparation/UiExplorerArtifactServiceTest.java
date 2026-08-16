@@ -13,7 +13,7 @@ class UiExplorerArtifactServiceTest {
     private final UiExplorerArtifactService service = new UiExplorerArtifactService(objectMapper);
 
     @Test
-    void shouldRenderSixBoundedCrmArtifactsWithExplicitTrustClassification() throws Exception {
+    void shouldRenderSevenBoundedCrmArtifactsWithBusinessWritingContract() throws Exception {
         var artifacts = service.renderArtifacts(request(), context());
 
         assertThat(artifacts).extracting(artifact -> artifact.displayName())
@@ -23,6 +23,7 @@ class UiExplorerArtifactServiceTest {
                         UiExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT,
                         UiExplorerArtifactService.EVIDENCE_MANIFEST_ARTIFACT,
                         UiExplorerArtifactService.COVERAGE_ARTIFACT,
+                        UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
                         UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT
                 );
         assertThat(artifacts).allSatisfy(artifact -> {
@@ -49,6 +50,11 @@ class UiExplorerArtifactServiceTest {
         assertThat(manifest).contains("metadata only")
                 .contains("crm-contact-preferences.component.ts")
                 .doesNotContain("loadRuntimeDefinition");
+        assertThat(content(artifacts, UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT))
+                .contains("Glowna tresc jest dokumentacja funkcjonalna")
+                .contains("Akcja | Kiedy dostepna | Co wykorzystuje | Rezultat | Co widzi uzytkownik")
+                .contains("Pole lub grupa | Znaczenie | Wymagalnosc i walidacja")
+                .contains("Nie tworz stalej liczby punktow");
         objectMapper.readTree(content(artifacts, UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT));
     }
 
@@ -61,6 +67,9 @@ class UiExplorerArtifactServiceTest {
                 .doesNotContain("changePreparationSummary")
                 .contains("OVERVIEW|NAVIGATION_AND_ACCESS|SCREEN_STRUCTURE|ACTIONS_AND_OUTCOMES|FORMS_AND_RULES|DATA_AND_SERVICES|STATE_AND_SYNCHRONIZATION|VARIANTS_AND_FAILURES")
                 .contains("CONFIRMED|INFERRED|UNKNOWN")
+                .contains("\"markdown\"")
+                .doesNotContain("\"findings\"")
+                .doesNotContain("\"summary\"")
                 .contains("\"usage\": null")
                 .doesNotContain("summary\": \"legacy");
     }

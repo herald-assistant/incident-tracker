@@ -32,7 +32,14 @@ const SECTION_TITLES: Record<string, string> = {
   'gitlab|tool-fetched-code': 'GitLab · Pliki pobrane przez AI',
   'gitlab|tool-discovery': 'GitLab · Kontekst pobrany przez AI',
   'database|tool-results': 'Baza danych · Dane pobrane przez AI',
-  'operational-context|matched-context': 'Kontekst operacyjny · Dopasowania'
+  'operational-context|matched-context': 'Kontekst operacyjny · Dopasowania',
+  'ui-explorer|selected-screen': 'UI Explorer · Wybrany ekran',
+  'ui-explorer|source-manifest': 'UI Explorer · Źródła ekranu',
+  'ui-explorer|technical-signals': 'UI Explorer · Sygnały techniczne',
+  'ui-explorer|section-coverage': 'UI Explorer · Pokrycie sekcji',
+  'ui-explorer|source-boundary': 'UI Explorer · Granice analizy',
+  'ui-explorer|source-diagnostics': 'UI Explorer · Ograniczenia źródeł',
+  'ui-explorer|ai-artifacts': 'UI Explorer · Artefakty AI'
 };
 
 const LARGE_TEXT_ATTRIBUTES = new Set([

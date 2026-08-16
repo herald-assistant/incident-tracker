@@ -22,9 +22,10 @@ public class UiExplorerArtifactService {
     public static final String CONTEXT_SNAPSHOT_ARTIFACT = "ui-explorer/context-snapshot.json";
     public static final String EVIDENCE_MANIFEST_ARTIFACT = "ui-explorer/evidence-manifest.md";
     public static final String COVERAGE_ARTIFACT = "ui-explorer/coverage.json";
+    public static final String FUNCTIONAL_WRITING_CONTRACT_ARTIFACT = "ui-explorer/functional-writing-contract.md";
     public static final String RESPONSE_CONTRACT_ARTIFACT = "ui-explorer/response-contract.json";
 
-    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v2";
+    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v3";
 
     private final ObjectMapper objectMapper;
 
@@ -74,6 +75,14 @@ public class UiExplorerArtifactService {
                         coverageArtifact(context)
                 ),
                 artifact(
+                        FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
+                        "Business-first content contract for every functional section",
+                        "functional-writing-contract",
+                        8,
+                        "text/markdown",
+                        functionalWritingContract()
+                ),
+                artifact(
                         RESPONSE_CONTRACT_ARTIFACT,
                         "Canonical UI Explorer JSON response contract",
                         "response-contract",
@@ -101,22 +110,16 @@ public class UiExplorerArtifactService {
                     "sectionId": "OVERVIEW|NAVIGATION_AND_ACCESS|SCREEN_STRUCTURE|ACTIONS_AND_OUTCOMES|FORMS_AND_RULES|DATA_AND_SERVICES|STATE_AND_SYNCHRONIZATION|VARIANTS_AND_FAILURES",
                     "mode": "COMPACT|DEEP",
                     "coverage": "READY|PARTIAL|BLOCKED",
-                    "summary": "string",
-                    "findings": [{
-                      "title": "string",
-                      "description": "string",
-                      "confidence": "CONFIRMED|INFERRED|UNKNOWN",
-                      "conditions": ["string"],
-                      "sourceReferences": [{
-                        "repository": null,
-                        "path": "string",
-                        "symbol": "string|null",
-                        "startLine": "integer|null",
-                        "endLine": "integer|null"
-                      }]
-                    }],
+                    "confidence": "CONFIRMED|INFERRED|UNKNOWN",
+                    "markdown": "business-first Markdown following functional-writing-contract.md",
                     "dependencies": ["string"],
-                    "sourceReferences": [],
+                    "sourceReferences": [{
+                      "repository": null,
+                      "path": "string",
+                      "symbol": "string|null",
+                      "startLine": "integer|null",
+                      "endLine": "integer|null"
+                    }],
                     "visibilityLimits": ["string"],
                     "openQuestions": ["string"]
                   }],
@@ -130,6 +133,43 @@ public class UiExplorerArtifactService {
                   "unresolvedQuestions": ["string"],
                   "usage": null
                 }
+                """.trim();
+    }
+
+    public String functionalWritingContract() {
+        return """
+                # UI Explorer Functional Writing Contract
+
+                Glowna tresc jest dokumentacja funkcjonalna dla analityka biznesowo-systemowego.
+                Nazwy klas, metod, plikow, Angular APIs, operatorow RxJS i tooli nie moga byc
+                osia narracji. Umieszczaj je w `sourceReferences`. W Markdown wolno zachowac
+                tylko identyfikator techniczny, ktory rozroznia funkcjonalnie istotne pole,
+                status, typ, event, endpoint albo system; zawsze wyjasnij jego znaczenie.
+
+                `functionalOverview` ma odpowiedziec: kto korzysta z widoku, po co, w jakim
+                momencie procesu, jaki jest glowny rezultat oraz co istotnego ogranicza
+                widocznosc analizy.
+
+                Kazde `sections[].markdown` ma uzywac ponizszych naglowkow i kolejnosci:
+
+                - `OVERVIEW`: **Cel biznesowy**, **Uzytkownicy i kontekst**, **Przebieg w skrocie**, **Rezultat**.
+                - `NAVIGATION_AND_ACCESS`: **Jak uzytkownik trafia na widok**, **Wymagany kontekst**, **Dostep i role**, **Co dzieje sie przy braku dostepu**.
+                - `SCREEN_STRUCTURE`: **Obszary widoku**, **Prezentowane informacje**, **Elementy interaktywne**, **Komunikaty i stany**.
+                - `ACTIONS_AND_OUTCOMES`: tabela `Akcja | Kiedy dostepna | Co wykorzystuje | Rezultat | Co widzi uzytkownik`, a nastepnie **Przejscia i skutki uboczne**.
+                - `FORMS_AND_RULES`: tabela `Pole lub grupa | Znaczenie | Wymagalnosc i walidacja | Zachowanie dynamiczne | Wyliczenie lub zaleznosc`, a nastepnie **Reguly przekrojowe** i **Edycja reczna a ponowne wyliczenie**.
+                - `DATA_AND_SERVICES`: tabela `Informacja biznesowa | Zrodlo | Odczyt lub zmiana | Kiedy odswiezana | Cel`, a nastepnie **Operacje backendowe i ich efekt funkcjonalny**.
+                - `STATE_AND_SYNCHRONIZATION`: tabela `Trigger | Zmiana stanu | Widoczny efekt | Ponowne pobranie lub przeliczenie`, a nastepnie **Wspoldzielony stan widoku**.
+                - `VARIANTS_AND_FAILURES`: tabela `Warunek lub wariant | Zachowanie widoku | Rezultat albo blokada | Informacja lub recovery dla uzytkownika`.
+
+                Nie tworz stalej liczby punktow. Dla `DEEP` uwzglednij wszystkie odrebne,
+                potwierdzone pola, akcje, warunki, walidacje, kalkulacje, warianty i skutki
+                widoczne w evidence. Dla `COMPACT` wybierz najwazniejsze, ale nie pomijaj
+                reguly zmieniajacej rezultat. Nie powtarzaj tego samego faktu w wielu sekcjach;
+                pokaz zaleznosc w `dependencies` albo `crossSectionDependencies`.
+
+                Brak evidence nie jest glowna trescia sekcji. Opisz potwierdzona czesc, a brak
+                przenies do `visibilityLimits` i jednoznacznego `openQuestions`. Nie pisz
+                raportu klasa-po-klasie i nie zaczynaj punktow od nazw symboli source.
                 """.trim();
     }
 

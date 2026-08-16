@@ -66,7 +66,9 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames()).contains("skill");
         assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())
                 .doesNotContain("gitlab_list_available_repositories", "db_describe_table");
-        assertThat(assembly.runRequest().artifactContents()).hasSize(6);
+        assertThat(assembly.runRequest().artifactContents()).hasSize(7);
+        assertThat(assembly.runRequest().artifactContents())
+                .containsKey("ui-explorer/functional-writing-contract.md");
         var hidden = contextCaptor.getValue().hiddenContext();
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_GROUP)).isEqualTo("synthetic-crm");
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH)).isEqualTo("main");

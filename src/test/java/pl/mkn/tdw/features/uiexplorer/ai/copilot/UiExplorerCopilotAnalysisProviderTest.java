@@ -83,8 +83,7 @@ class UiExplorerCopilotAnalysisProviderTest {
         assertThat(analysis.report()).isNotNull();
         assertThat(externalEvidence.get()).isEqualTo(fetchedCodeEvidence(FETCHED_VALIDATOR_PATH));
         assertThat(analysis.result().sections())
-                .flatExtracting(section -> section.findings())
-                .flatExtracting(finding -> finding.sourceReferences())
+                .flatExtracting(section -> section.sourceReferences())
                 .extracting(reference -> reference.path())
                 .containsOnly(FETCHED_VALIDATOR_PATH);
     }

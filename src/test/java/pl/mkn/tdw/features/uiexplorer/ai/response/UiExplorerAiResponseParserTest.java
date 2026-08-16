@@ -79,7 +79,7 @@ class UiExplorerAiResponseParserTest {
         ((com.fasterxml.jackson.databind.node.ObjectNode) protectedField).put("hiddenRepository", "synthetic-crm/private");
         var confirmedWithoutReference = objectMapper.readTree(completeResponse(EMBEDDED_COMPONENT_PATH));
         ((com.fasterxml.jackson.databind.node.ObjectNode) confirmedWithoutReference
-                .get("sections").get(0).get("findings").get(0)).set("sourceReferences", objectMapper.createArrayNode());
+                .get("sections").get(0)).set("sourceReferences", objectMapper.createArrayNode());
 
         assertThat(fenced.status()).isEqualTo(UiExplorerAiParseStatus.MALFORMED);
         assertThat(parser.parse(
@@ -88,5 +88,20 @@ class UiExplorerAiResponseParserTest {
         assertThat(parser.parse(
                 objectMapper.writeValueAsString(confirmedWithoutReference), request(), context(), Set.of()
         ).status()).isEqualTo(UiExplorerAiParseStatus.MALFORMED);
+    }
+
+    @Test
+    void shouldRejectRemovedFindingsContractWithoutCompatibilityFallback() throws Exception {
+        var previousContract = objectMapper.readTree(completeResponse(EMBEDDED_COMPONENT_PATH));
+        var section = (com.fasterxml.jackson.databind.node.ObjectNode) previousContract.get("sections").get(0);
+        section.put("summary", "Previous synthetic CRM summary.");
+        section.set("findings", objectMapper.createArrayNode());
+
+        var parsed = parser.parse(
+                objectMapper.writeValueAsString(previousContract), request(), context(), Set.of()
+        );
+
+        assertThat(parsed.status()).isEqualTo(UiExplorerAiParseStatus.MALFORMED);
+        assertThat(parsed.limitations()).singleElement().asString().contains("section shape");
     }
 }

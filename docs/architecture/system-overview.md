@@ -63,7 +63,8 @@ UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
 screen source context i wystawia publiczny manifest, coverage, diagnostics oraz
 limity bez surowej tresci kodu. Wewnetrzny krok `AI_PREPARATION` przygotowuje
 szesc logical artifacts, feature prompt i guidance dla trzech polskich skilli,
-ale nie publikuje promptu. Feature ma rowniez izolowany provider Copilota:
+publikuje bezpieczne metadane artifacts oraz zapisuje dokladny `preparedPrompt`
+przed wywolaniem AI. Feature ma rowniez izolowany provider Copilota:
 readiness gate, hidden GitLab scope, default-deny allowliste, limit jednego
 search i dwoch waskich read calls oraz strict parser kompletnej, partial i
 malformed odpowiedzi. Parser nie podnosi deterministycznego `PARTIAL` do
@@ -71,11 +72,13 @@ malformed odpowiedzi. Parser nie podnosi deterministycznego `PARTIAL` do
 `/api/ui-explorer/jobs` zwraca `202`, a job wykonuje context, jednokrotne
 przygotowanie promptu i provider poza watkiem HTTP. Atomowy snapshot publikuje
 kroki, context/tool evidence, activity, usage, result i report oraz kontrolowane
-`COMPLETED`, `PARTIAL`, `BLOCKED` albo `FAILED`. Prompt pozostaje wewnetrzny,
-poniewaz zawiera surowa tresc source evidence. Terminalne snapshoty sa
-sanitizowane i zapisywane w lokalnej historii pod feature key `ui-explorer`;
+`COMPLETED`, `PARTIAL`, `BLOCKED` albo `FAILED`. Kazdy krok wskazuje
+`consumesEvidence` i `producesEvidence`, a przygotowany prompt pozostaje
+dostepny rowniez po bledzie pozniejszej sesji AI. Terminalne snapshoty sa
+sanitizowane z ukrytego scope'u i szczegolow tools, zachowuja prompt i sa
+zapisywane w lokalnej historii pod feature key `ui-explorer`;
 shared `/api/analysis/runs` odczytuje je po restarcie bez mozliwosci
-kontynuacji. Osobny `tdw.ui-explorer-export/v3` zapewnia sanitizowany export
+kontynuacji. Osobny `tdw.ui-explorer-export/v4` zapewnia sanitizowany export
 terminalnego wyniku oraz read-only import z dokladna walidacja wersji i
 ponowna sanitizacja przed zapisem do historii. Workspace Angular pod
 `/ui-explorer` udostepnia route, sidebar i landing card oraz feature-owned
@@ -90,20 +93,23 @@ katalogu i czyszczona po zmianie scope'u. `Run UI Explorer` wysyla
 feature-owned start request, natychmiast pokazuje snapshot z `202` i korzysta
 ze wspolnego pollingu bez nakladania requestow. Podczas aktywnego runu
 konfiguracja jest zablokowana. Shared analysis aside pokazuje kroki,
-deterministic/tool evidence, aktywnosc AI, feedback i usage; blad pollingu
+przypisane do nich deterministic/tool evidence, dokladny prompt przygotowany
+przed AI, aktywnosc AI, feedback i usage; blad pollingu
 zachowuje ostatni snapshot i pozwala jawnie ponowic odczyt. Terminalne statusy
 to `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`. Dla `COMPLETED` i `PARTIAL`
 workspace renderuje `report` jako glowny dokument: naglowek, podsumowanie,
 aktywne sekcje, confidence, references, visibility limits i open questions.
-Feature-owned `result` zasila tylko biznesowo czytelny opis funkcjonalny i
-zaleznosci przekrojowe; UI nie pokazuje raw JSON, prepared promptu ani
-surowej tresci source. Shared result header, renderer Markdown, section content
+Feature-owned `result` zasila business-first Markdown o kanonicznej strukturze
+dla kazdej aktywnej sekcji oraz zaleznosci przekrojowe. Techniczne source refs
+sa zwijanym evidence; UI nie pokazuje raw JSON ani surowej tresci source w
+glownym raporcie, a prepared prompt jest osobnym widokiem diagnostycznym w
+aside. Shared result header, renderer Markdown, section content
 i report meta utrzymuja znany wzorzec prezentacji, a caly dokument mozna
 skopiowac albo pobrac jako Markdown. `BLOCKED`, `FAILED` oraz terminalny stan
 bez raportu sa jawne i nie tworza wyniku zastepczego. Analysis History rozpoznaje
 feature key `ui-explorer` i otwiera zapisany run przez `localRunId`, bez
 ladowania pelnego JSON-a na liscie. Workspace waliduje dokladnie wewnetrzna
-koperta `tdw.ui-explorer-local-run/v3`, odtwarza konfiguracje i raport jako
+koperta `tdw.ui-explorer-local-run/v4`, odtwarza konfiguracje i raport jako
 read-only oraz nie uruchamia pollingu, continuation, follow-up chatu ani resume.
 Portable JSON jest importowany przez backendowa granice walidacji, a wynik live,
 history albo imported jest eksportowany przez kanoniczny endpoint feature'a.
@@ -384,19 +390,19 @@ Na dzisiaj projekt ma:
 - `GET /api/ui-explorer/jobs/{jobId}`
   Zwraca kroki screen discovery/source context/AI preparation/AI, publiczne
   context sections z manifestem, sygnalami, coverage, diagnostics i hard
-  boundary, tool evidence, activity, usage, source revision, result i report.
-  Surowa tresc plikow, prompt, logical artifacts i wewnetrzny GitLab scope nie
-  sa czescia odpowiedzi.
+  boundary, bezpieczne metadane logical artifacts, dokladny `preparedPrompt`,
+  tool evidence, activity, usage, source revision, result i report. Surowe
+  pliki logical artifacts i wewnetrzny GitLab scope nie sa czescia odpowiedzi.
 - `GET /api/ui-explorer/jobs/{jobId}/export`
-  Zwraca sanitizowany `tdw.ui-explorer-export/v3` dla `COMPLETED/PARTIAL` z
+  Zwraca sanitizowany `tdw.ui-explorer-export/v4` dla `COMPLETED/PARTIAL` z
   resultem i reportem. Potrafi odtworzyc portable payload z lokalnej historii
   po restarcie, ale nie ujawnia wewnetrznej koperty `run.json`.
 - `POST /api/ui-explorer/imports`
   Waliduje dokladnie aktualny schema/version/payload/result contract, spojny
   screen i source revision, ponownie sanitizuje niezaufany dokument, sklada
-  report od nowa i zapisuje wynik pod nowym id w Analysis History. Import jest
-  read-only, bez sesji Copilota, continuation, resume i migracji starszych
-  wersji.
+  report od nowa, usuwa dostarczony `preparedPrompt` i zapisuje wynik pod nowym
+  id w Analysis History. Import jest read-only, bez sesji Copilota,
+  continuation, resume i migracji starszych wersji.
 - `POST /api/analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request jest
   multipart/form-data i niesie `source`, opcjonalne preferencje wykonania AI

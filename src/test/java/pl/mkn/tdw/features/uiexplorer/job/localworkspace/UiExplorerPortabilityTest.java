@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.SOURCE_PATH;
+import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.PREPARED_PROMPT;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.snapshot;
 
 class UiExplorerPortabilityTest {
@@ -67,10 +68,10 @@ class UiExplorerPortabilityTest {
         var document = (ObjectNode) objectMapper.valueToTree(portable);
 
         assertThat(portable.schema()).isEqualTo("tdw.ui-explorer-export");
-        assertThat(portable.version()).isEqualTo(3);
-        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v3");
+        assertThat(portable.version()).isEqualTo(4);
+        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v4");
+        assertThat(document.at("/payload/job/preparedPrompt").asText()).isEqualTo(PREPARED_PROMPT);
         assertThat(document.toString()).doesNotContain(
-                "CRM_RAW_PROMPT_SECRET",
                 "CRM_RAW_SOURCE_SECRET",
                 "CRM_HIDDEN_SCOPE_SECRET",
                 "confidential-crm-group",
@@ -130,7 +131,7 @@ class UiExplorerPortabilityTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 1, 2, 99})
+    @ValueSource(ints = {0, 1, 2, 3, 99})
     void shouldRejectEveryNonCurrentCrmExportVersion(int version) {
         var document = portableDocument();
         document.put("version", version);

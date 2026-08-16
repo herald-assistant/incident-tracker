@@ -1617,6 +1617,113 @@ inne nieznane pola, a local-run/export uzywaja wersji `3` i kontraktu
 (1210 testow, 0 failures, 0 errors, 0 skipped). Zmienione fixtures pozostaja
 silnie zanonimizowanym, syntetycznym CRM.
 
+#### 8F. Biznesowy kontrakt dokumentacji funkcjonalnej
+
+Baseline: `UiExplorerResultSection` przechowuje generyczne `findings`, a
+assembler renderuje kazda sekcje jako techniczna liste "Ustalenia" z confidence
+przy kazdym punkcie. Runtime skill opisuje osiem sekcji jednym zdaniem. W
+kontrolowanych eksportach prowadzi to do powtarzalnych zestawow 2-4 obserwacji,
+tytulow rozpoczynanych od route, guarda, komponentu albo NgRx i przenoszenia
+luk do glownej narracji zamiast samowystarczalnego opisu pracy uzytkownika.
+
+Conformance delta: sekcja wyniku staje sie business-first Markdownem o
+kanonicznej strukturze zależnej od `sectionId` i `mode`. Nazwy klas, metod,
+plikow, operatorow RxJS i linii kodu pozostaja w source references, chyba ze
+techniczny identyfikator ma bezposrednie znaczenie funkcjonalne. `DEEP` wymaga
+pelnego katalogu widocznych regul, warunkow, wariantow i skutkow, a nie stalej
+liczby punktow. Braki trafiaja do metadata, nie zastepuja opisu. Generyczny
+`UiExplorerFinding` zostaje usuniety zamiast adaptowany.
+
+Konsumenci: response contract i strict parser AI, packaged runtime skille,
+prompt/artifacts, result/report assembler, sanitizowana historia, import/export,
+Angular models/result/copy-download oraz dokumentacja. Jest to breaking zmiana:
+local-run/export przechodza na wersje `4` i `ui-explorer-result-v4`; wersja `3`
+nie jest migrowana ani odczytywana.
+
+- [x] 8F.1: Zastapic `findings` polem `markdown` w sekcji wyniku i usunac
+  `UiExplorerFinding` z kontraktu, parsera, sanitizera i fixtures.
+- [x] 8F.2: Rozbudowac canonical prompt oraz trzy skille UI Explorera o
+  business-first language policy, density/completeness gate i osobny kontrakt
+  tresci dla kazdej z osmiu sekcji.
+- [x] 8F.3: Uproscic assembler i UI do renderowania gotowej dokumentacji
+  Markdown bez technicznego naglowka "Ustalenia" i confidence przy kazdym
+  punkcie; evidence pozostaje w zwijanym meta.
+- [x] 8F.4: Podniesc bezkompatybilnie artifact, local-run, export i result
+  contract oraz pokryc odrzucenie wersji `3`.
+- [x] 8F.5: Dodac silnie zanonimizowane testy CRM wymagajace biznesowych
+  struktur overview, akcji, formularzy, danych i wariantow oraz zakazujace
+  class-first narracji w assemblerze.
+- [x] 8F.6: Zaktualizowac need, architecture i lokalne instrukcje, a nastepnie
+  wykonac testy Angulara, produkcyjny build i
+  `mvn -q -Pbackend-dev clean package`.
+
+Checkpoint 8F (2026-08-16): kontrakt `UiExplorerFinding`/`summary` zostal
+usuniety bez adaptera i migracji. Aktywna sekcja publikuje gotowy biznesowy
+Markdown, confidence i source references jako osobne metadata. Canonical
+artifact `functional-writing-contract.md` definiuje odrebna strukture tresci
+dla osmiu sekcji, a `DEEP` nie ma sztucznego limitu liczby faktow. Local run i
+export uzywaja wersji `4` oraz `ui-explorer-result-v4` i jawnie odrzucaja
+wersje `3`. Przeszly testy Angulara (409/409), produkcyjny build Angulara oraz
+`mvn -q -Pbackend-dev clean package` (1212 testow, 0 failures, 0 errors,
+0 skipped). Wszystkie nowe i zmienione fixtures sa silnie zanonimizowanym,
+syntetycznym CRM.
+
+#### 8G. Evidence per krok i inicjalny prompt w aside
+
+Baseline: `UiExplorerJobStateSnapshot` ma pola `contextSections`,
+`toolEvidenceSections` i `preparedPrompt`, a ekran korzysta ze wspolnego
+`AnalysisFeatureAsideComponent` oraz `AnalysisStepsPanelComponent`. Mimo tego
+`MutableStep` publikuje puste `consumesEvidence`/`producesEvidence`, job zawsze
+zwraca `preparedPrompt = null`, a UI nie przekazuje promptu do panelu. W efekcie
+zebrany context nie jest przypisany do krokow i aside nie pokazuje finalnego
+inputu przed wyslaniem do Copilota.
+
+Conformance delta: zachowac istniejacy publiczny shape i shared UX, ale
+uzupelnic feature-owned state. `SCREEN_DISCOVERY` publikuje dane wybranego
+widoku, `SOURCE_CONTEXT` publikuje manifest, sygnaly, coverage, boundary i
+diagnostyke, `AI_PREPARATION` publikuje bezpieczne podsumowanie przygotowanych
+artefaktow oraz dokladny `preparedPrompt`, a `AI_ANALYSIS` jawnie konsumuje
+przygotowany context. Prompt jest ustawiany po deterministycznym przygotowaniu,
+przed startem sesji AI, wiec pozostaje widoczny rowniez przy pozniejszym
+niepowodzeniu Copilota. Nie powstaje drugi komponent aside ani endpoint
+diagnostyczny.
+
+Konsumenci: UI Explorer job state i polling API, local-run/export v4, wspolny
+`AnalysisStepsPanelComponent`, strona UI Explorera oraz testy joba, API,
+persistence/import-export i Angulara. Flow Explorer pozostaje niezmienionym
+konsumentem shared panelu. Brak warstwy kompatybilnosci: nie dodajemy aliasow,
+fallbacku ani starego sposobu prezentacji; istniejace nullable pole
+`preparedPrompt` zaczyna przenosic wartosc zgodna z jego kontraktem.
+
+- [x] 8G.1: Przypisac kazdej sekcji deterministic evidence wlascicielski krok
+  przez `producesEvidence`/`consumesEvidence` i dodac bezpieczna sekcje
+  podsumowujaca artefakty przygotowane dla AI.
+- [x] 8G.2: Zapisac kanoniczny prompt w job state bezposrednio po
+  `UiExplorerPromptPreparationService.prepare`, przed uruchomieniem providera,
+  oraz zachowac go w terminalnym snapshotcie, local history i eksporcie v4.
+- [x] 8G.3: Przekazac `snapshot.preparedPrompt` do wspolnego panelu aside i
+  rozszerzyc jego neutralne mapowanie o krok `AI_PREPARATION`, bez kopiowania
+  komponentu Flow Explorera.
+- [x] 8G.4: Dodac silnie zanonimizowane testy CRM potwierdzajace evidence na
+  kazdym kroku, prompt widoczny przed AI i po kontrolowanym failure oraz brak
+  regresji Flow Explorera.
+- [x] 8G.5: Zaktualizowac need i architecture, wykonac testy Angulara,
+  produkcyjny build Angulara oraz `mvn -q -Pbackend-dev clean package`.
+
+Checkpoint 8G 2026-08-16: kroki UI Explorera publikuja jawne
+`consumesEvidence`/`producesEvidence` dla wybranego ekranu, bounded source
+contextu i przygotowanych artifacts. `AI_PREPARATION` zapisuje dokladny
+`preparedPrompt` przed providerem AI oraz bezpieczna sekcje metadanych
+`ui-explorer/ai-artifacts`; prompt pozostaje dostepny po pozniejszym bledzie
+AI, w lokalnej historii i eksporcie v4. Niezaufany import nadal usuwa
+dostarczony prompt. Wspolny aside pokazuje evidence i prompt bez osobnej
+implementacji UI Explorera, uzywa czytelnych nazw sekcji oraz pozwala otwierac
+kroki `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`. Przeszly testy Angulara
+(411/411), produkcyjny build Angulara oraz
+`mvn -q -Pbackend-dev clean package` (1213 testow, 0 failures, 0 errors,
+0 skipped). Wszystkie nowe fixtures i przyklady sa silnie zanonimizowanym,
+syntetycznym CRM.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.

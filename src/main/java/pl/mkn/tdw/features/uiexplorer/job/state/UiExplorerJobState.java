@@ -16,6 +16,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.evidence.AnalysisEvidenceReference;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -34,6 +35,15 @@ public final class UiExplorerJobState {
     private static final String OUTPUT_AVAILABLE = "UI_EXPLORER_OUTPUT_AVAILABLE";
     private static final String ANALYSIS_IN_PROGRESS = "UI_EXPLORER_ANALYSIS_IN_PROGRESS";
     private static final String ANALYSIS_BLOCKED = "UI_EXPLORER_ANALYSIS_BLOCKED";
+    private static final AnalysisEvidenceReference SELECTED_SCREEN_EVIDENCE = evidence("selected-screen");
+    private static final List<AnalysisEvidenceReference> SOURCE_CONTEXT_EVIDENCE = List.of(
+            evidence("source-manifest"),
+            evidence("technical-signals"),
+            evidence("section-coverage"),
+            evidence("source-boundary"),
+            evidence("source-diagnostics")
+    );
+    private static final AnalysisEvidenceReference AI_ARTIFACTS_EVIDENCE = evidence("ai-artifacts");
 
     private final String jobId;
     private final UiExplorerJobStartRequest request;
@@ -55,6 +65,7 @@ public final class UiExplorerJobState {
     private AnalysisReport report;
     private AnalysisAiUsage usage;
     private UiExplorerSourceRevision sourceRevision;
+    private String preparedPrompt;
 
     public UiExplorerJobState(String jobId, UiExplorerJobStartRequest request) {
         this.jobId = jobId;
@@ -132,13 +143,24 @@ public final class UiExplorerJobState {
         startStep(AI_PREPARATION_STEP, "Logical artifacts and the bounded AI prompt are being prepared.");
     }
 
-    public synchronized void markAiPreparationCompleted(int artifactCount) {
+    public synchronized void markAiPreparationCompleted(
+            String prompt,
+            AnalysisEvidenceSection artifactEvidence
+    ) {
         var now = Instant.now();
+        preparedPrompt = prompt != null && !prompt.isBlank() ? prompt : null;
+        if (artifactEvidence != null && artifactEvidence.hasItems()) {
+            var updated = new ArrayList<>(contextSections);
+            updated.removeIf(current -> current.provider().equals(artifactEvidence.provider())
+                    && current.category().equals(artifactEvidence.category()));
+            updated.add(artifactEvidence);
+            contextSections = List.copyOf(updated);
+        }
         completeStep(
                 AI_PREPARATION_STEP,
                 "COMPLETED",
                 "Logical artifacts, trust boundaries and the canonical response contract were prepared.",
-                artifactCount,
+                artifactEvidence != null ? artifactEvidence.items().size() : 0,
                 null,
                 now
         );
@@ -268,7 +290,7 @@ public final class UiExplorerJobState {
                 toolEvidenceSections,
                 aiActivityEvents,
                 List.of(),
-                null,
+                preparedPrompt,
                 result,
                 report,
                 usage,
@@ -380,6 +402,39 @@ public final class UiExplorerJobState {
         );
     }
 
+    private static AnalysisEvidenceReference evidence(String category) {
+        return new AnalysisEvidenceReference("ui-explorer", category);
+    }
+
+    private static List<AnalysisEvidenceReference> consumesEvidenceForStep(String code) {
+        if (SOURCE_CONTEXT_STEP.equals(code)) {
+            return List.of(SELECTED_SCREEN_EVIDENCE);
+        }
+        if (AI_PREPARATION_STEP.equals(code)) {
+            var references = new ArrayList<AnalysisEvidenceReference>();
+            references.add(SELECTED_SCREEN_EVIDENCE);
+            references.addAll(SOURCE_CONTEXT_EVIDENCE);
+            return List.copyOf(references);
+        }
+        if (AI_ANALYSIS_STEP.equals(code)) {
+            return List.of(AI_ARTIFACTS_EVIDENCE);
+        }
+        return List.of();
+    }
+
+    private static List<AnalysisEvidenceReference> producesEvidenceForStep(String code) {
+        if (SCREEN_DISCOVERY_STEP.equals(code)) {
+            return List.of(SELECTED_SCREEN_EVIDENCE);
+        }
+        if (SOURCE_CONTEXT_STEP.equals(code)) {
+            return SOURCE_CONTEXT_EVIDENCE;
+        }
+        if (AI_PREPARATION_STEP.equals(code)) {
+            return List.of(AI_ARTIFACTS_EVIDENCE);
+        }
+        return List.of();
+    }
+
     private static final class MutableStep {
 
         private final String code;
@@ -408,8 +463,8 @@ public final class UiExplorerJobState {
                     itemCount,
                     startedAt,
                     completedAt,
-                    List.of(),
-                    List.of(),
+                    consumesEvidenceForStep(code),
+                    producesEvidenceForStep(code),
                     usage
             );
         }

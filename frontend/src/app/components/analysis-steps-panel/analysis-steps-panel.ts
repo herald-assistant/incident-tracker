@@ -596,7 +596,7 @@ export class AnalysisStepsPanelComponent {
         headerMeta: buildHeaderMeta(step),
         meta: [...buildStepMeta(step), ...buildEvidenceFlowMeta(step)],
         message: step.message || buildFallbackStepMessage(step.status),
-        canOpen: step.status === 'COMPLETED',
+        canOpen: canOpenStep(step.status),
         detailSections,
         showResultPreview,
         showPreparedPromptView,
@@ -1107,10 +1107,14 @@ function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean 
   const normalizedStepCode = String(stepCode || '').toUpperCase();
   return normalizedStepCode === 'OPERATIONAL_CONTEXT'
     || normalizedStepCode === 'DETERMINISTIC_CONTEXT'
-    || normalizedStepCode === 'INITIAL_SOURCE_SNAPSHOT';
+    || normalizedStepCode === 'INITIAL_SOURCE_SNAPSHOT'
+    || normalizedStepCode === 'AI_PREPARATION';
 }
 
 function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'AI_PREPARATION') {
+    return 'Inicjalny prompt UI Explorera wysłany do AI';
+  }
   if (String(stepCode || '').toUpperCase() === 'INITIAL_SOURCE_SNAPSHOT') {
     return 'Initial prompt wysłany do AI';
   }
@@ -1125,6 +1129,9 @@ function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
 }
 
 function buildPreparedPromptDescription(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'AI_PREPARATION') {
+    return 'To jest dokładny prompt złożony z bounded source contextu, aktywnych sekcji i kontraktu odpowiedzi bezpośrednio przed uruchomieniem sesji AI.';
+  }
   if (String(stepCode || '').toUpperCase() === 'INITIAL_SOURCE_SNAPSHOT') {
     return 'To jest prompt złożony po pobraniu Jira, MR-ek, instrukcji repozytorium i kontekstu code search scope. Ten tekst trafia do pierwszego kroku AI.';
   }
@@ -1136,6 +1143,14 @@ function buildPreparedPromptDescription(stepCode: string | null | undefined): st
   }
 
   return 'To jest dokładny input, który zasila końcową analizę AI. Gdy sesja Copilota nie zadziała, ten prompt zostaje dostępny do ręcznego użycia poza aplikacją.';
+}
+
+function canOpenStep(status: string | null | undefined): boolean {
+  const normalizedStatus = String(status || '').toUpperCase();
+  return normalizedStatus === 'COMPLETED'
+    || normalizedStatus === 'PARTIAL'
+    || normalizedStatus === 'BLOCKED'
+    || normalizedStatus === 'FAILED';
 }
 
 function prepareStepDetailSections(

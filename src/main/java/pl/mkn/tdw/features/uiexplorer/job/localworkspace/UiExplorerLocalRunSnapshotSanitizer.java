@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.uiexplorer.job.localworkspace;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerFinding;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
@@ -31,6 +30,7 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                     "description", "confidence", "sourcePath", "sourceSymbol", "startLine", "endLine"
             ),
             "section-coverage", Set.of("sectionId", "mode", "status", "sourceCategories", "detail"),
+            "ai-artifacts", Set.of("role", "category", "mimeType", "itemCount", "characterCount"),
             "source-boundary", Set.of(
                     "visitedRouteNodeCount", "visitedRouteFileCount", "graphSourceReadCount",
                     "aliasResolutionCount", "unresolvedEdgeCount", "returnedContextFileCount",
@@ -79,7 +79,7 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 sanitizeToolEvidence(snapshot.toolEvidenceSections()),
                 snapshot.aiActivityEvents().stream().map(this::sanitize).toList(),
                 List.of(),
-                null,
+                snapshot.preparedPrompt(),
                 safeResult,
                 safeReport,
                 snapshot.usage(),
@@ -131,22 +131,12 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 section.sectionId(),
                 section.mode(),
                 section.coverage(),
-                section.summary(),
-                section.findings().stream().map(this::sanitize).toList(),
+                section.confidence(),
+                section.markdown(),
                 section.dependencies(),
                 section.sourceReferences().stream().map(this::sanitize).toList(),
                 section.visibilityLimits(),
                 section.openQuestions()
-        );
-    }
-
-    private UiExplorerFinding sanitize(UiExplorerFinding finding) {
-        return new UiExplorerFinding(
-                finding.title(),
-                finding.description(),
-                finding.confidence(),
-                finding.conditions(),
-                finding.sourceReferences().stream().map(this::sanitize).toList()
         );
     }
 

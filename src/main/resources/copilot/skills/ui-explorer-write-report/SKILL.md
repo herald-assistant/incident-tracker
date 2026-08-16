@@ -22,6 +22,7 @@ Przyjmij:
 - `ui-explorer/request.json`,
 - `ui-explorer/screen-catalog-entry.json`,
 - `ui-explorer/coverage.json`,
+- `ui-explorer/functional-writing-contract.md`,
 - `ui-explorer/response-contract.json`.
 
 ## Rola
@@ -54,6 +55,55 @@ wynik z `UNKNOWN`, `visibilityLimits` i `unresolvedQuestions`.
 Preferuj jezyk biznesowy i zachowania widoczne dla uzytkownika. Techniczne
 elementy sa evidence i nie stanowia osobnego wariantu wyniku.
 
+## Business-First Language Policy
+
+- Pisz po polsku dla analityka biznesowo-systemowego.
+- Rozpoczynaj od celu, czynnosci uzytkownika, informacji biznesowej, warunku
+  albo rezultatu. Nie rozpoczynaj od route, klasy, komponentu, guarda, serwisu,
+  store, action/effect/reducera, operatora RxJS ani pliku.
+- Nazwy techniczne trzymaj w `sourceReferences`. W Markdown pokazuj tylko
+  funkcjonalnie istotne nazwy pol, statusow, typow, eventow, endpointow i
+  systemow, zawsze wraz z wyjasnieniem ich znaczenia.
+- Nie pisz "komponent importuje" albo "template binduje". Przetlumacz to na
+  widoczne zachowanie: "uzytkownik moze", "pole pojawia sie, gdy", "zapis
+  uruchamia", "po sukcesie widok".
+- Nie dodawaj confidence do tekstu Markdown. `confidence`, coverage i evidence
+  sa osobnymi polami oraz zwijanym meta raportu.
+- Nie tworz generycznej sekcji "Ustalenia" i nie opisuj ekranu klasa-po-klasie.
+
+## Density And Completeness Gate
+
+Nie ograniczaj sekcji do stalej liczby punktow. Dla `DEEP` uwzglednij kazdy
+odrebny potwierdzony fakt wymagany przez kontrakt sekcji: pole, akcje, warunek,
+walidacje, kalkulacje, wariant, zmiane stanu, odswiezenie i skutek. Deduplikuj
+fakty, ale nie wybieraj arbitralnie trzech przykladow z bogatszego evidence.
+
+Dla `COMPACT` wybierz najwazniejsze fakty, lecz zachowaj kazda regule, ktora
+zmienia dostep, wynik, zapis albo dalszy przebieg. Brak widocznosci nie moze
+zastapic potwierdzonej czesci opisu; przenies go do `visibilityLimits` i
+`openQuestions`.
+
+## Kanoniczna Tresc Sekcji
+
+Dokladna struktura naglowkow i tabel pochodzi z
+`ui-explorer/functional-writing-contract.md` i jest obowiazkowa. W
+szczegolnosci:
+
+- overview odpowiada kto, po co, kiedy i z jakim rezultatem korzysta z widoku,
+- nawigacja opisuje sciezke uzytkownika, wymagany kontekst, dostep i fallback,
+- struktura grupuje obszary widoku wedlug ich funkcji, nie nazw komponentow,
+- akcje lacza kazda czynnosc z warunkiem dostepnosci i widocznym rezultatem,
+- formularze opisuja znaczenie pol, walidacje, dynamike, wyliczenia i zasady
+  recznej edycji,
+- dane lacza informacje biznesowe ze zrodlem, kierunkiem, odswiezeniem i celem,
+- stan laczy trigger, zmiane stanu, widoczny efekt i ponowne przeliczenie,
+- warianty lacza warunek z zachowaniem, blokada oraz recovery uzytkownika.
+
+Jezeli wybrany ekran jest tylko shellem, pustym widokiem technicznym albo
+kontenerem children routes, napisz to biznesowo i nie przypisuj mu zachowan
+podwidokow. Taki wynik moze byc krotki, bo odpowiada rzeczywistej jednostce
+analizy, a nie z powodu arbitralnego limitu tresci.
+
 ## Readiness Gate
 
 Nie finalizuj, gdy aktywna sekcja ma `needs_deeper_evidence`. Zwroc:
@@ -76,7 +126,9 @@ Po jednym targeted retry nierozstrzygniety brak staje sie
 - `sections` zawiera tylko aktywne sekcje i zachowuje ich kanoniczna kolejnosc.
 - `mode` musi odpowiadac requestowi; `OFF` jest zabronione.
 - `coverage` wynika z readiness, nie z oczekiwanej narracji.
-- `CONFIRMED` wymaga source reference.
+- `confidence=CONFIRMED` wymaga co najmniej jednego section source reference.
+- `markdown` spelnia kanoniczna strukture swojej sekcji i nie zawiera source
+  refs ani technicznego confidence.
 - `usage` pozostaje `null`; tokeny i koszt uzupelnia backend.
 - `sourceRevision` i `screenId` musza odpowiadac artifactom.
 
@@ -85,6 +137,8 @@ Po jednym targeted retry nierozstrzygniety brak staje sie
 Przed finalizacja sprawdz:
 
 - JSON jest zgodny z `ui-explorer/response-contract.json`,
+- `functionalOverview` i kazde `markdown` sa business-first oraz zgodne z
+  `functional-writing-contract.md`,
 - nie ma sekcji `OFF`, duplikatow ani nieznanych section IDs,
 - wszystkie source refs wskazuja evidence manifest,
 - backend logic, runtime forms i niedostepne biblioteki nie zostaly wymyslone,

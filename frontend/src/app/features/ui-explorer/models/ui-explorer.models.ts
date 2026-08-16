@@ -170,20 +170,12 @@ export interface UiExplorerSourceReference {
   endLine: number | null;
 }
 
-export interface UiExplorerFinding {
-  title: string;
-  description: string;
-  confidence: UiExplorerClaimConfidence;
-  conditions: string[];
-  sourceReferences: UiExplorerSourceReference[];
-}
-
 export interface UiExplorerResultSection {
   sectionId: UiExplorerSectionId;
   mode: UiExplorerSectionMode;
   coverage: UiExplorerCoverageStatus;
-  summary: string;
-  findings: UiExplorerFinding[];
+  confidence: UiExplorerClaimConfidence;
+  markdown: string;
   dependencies: string[];
   sourceReferences: UiExplorerSourceReference[];
   visibilityLimits: string[];
@@ -247,11 +239,11 @@ export interface UiExplorerJobStateSnapshot {
 
 export interface UiExplorerExportEnvelope {
   schema: 'tdw.ui-explorer-export';
-  version: 3;
+  version: 4;
   exportedAt: string;
   payload: {
     type: 'ui-explorer-analysis';
-    resultContract: 'ui-explorer-result-v3';
+    resultContract: 'ui-explorer-result-v4';
     job: UiExplorerJobStateSnapshot;
   };
 }

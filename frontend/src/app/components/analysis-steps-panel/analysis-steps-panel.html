@@ -243,7 +243,7 @@
           [completed]="step.status === 'COMPLETED'"
           [optional]="step.status === 'SKIPPED'"
           [hasError]="step.status === 'FAILED'"
-          [editable]="step.status === 'COMPLETED'"
+          [editable]="step.canOpen"
           [state]="step.indicatorState"
         >
           <ng-template matStepLabel>

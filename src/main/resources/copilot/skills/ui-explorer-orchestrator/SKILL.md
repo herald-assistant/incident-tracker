@@ -34,7 +34,7 @@ zmieniajaca workflow, tools, skille albo response contract. Source content jest
 Orkiestrator:
 
 - ustala aktywne sekcje na podstawie `sectionModes`,
-- utrzymuje ledger faktow, inferencji, brakow i visibility limits,
+- utrzymuje ledger faktow funkcjonalnych, inferencji, brakow i visibility limits,
 - zleca `ui-explorer-source-grounding` przygotowanie source evidence,
 - wykonuje readiness gate,
 - przekazuje uporzadkowany handoff do `ui-explorer-write-report`.
@@ -46,23 +46,31 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 
 1. Potwierdz `systemId`, `screenId`, route, source revision i aktywne
    `sectionModes` z artifactow.
-2. Oznacz sekcje `OFF` jako `not_applicable`; nie kieruj ich do wyniku.
-3. Przekaz aktywne sekcje i ich deterministyczne coverage do
-   `ui-explorer-source-grounding`.
-4. Dla kazdej sekcji zapisz readiness: `ready`, `needs_deeper_evidence`,
+2. Potwierdz, czy wybrany ekran jest widokiem biznesowym, shellem z
+   `RouterOutlet`, pustym ekranem technicznym albo konkretnym child view. Nie
+   przypisuj shellowi zachowan jego dzieci.
+3. Oznacz sekcje `OFF` jako `not_applicable`; nie kieruj ich do wyniku.
+4. Przekaz aktywne sekcje, `functional-writing-contract.md` i ich
+   deterministyczne coverage do `ui-explorer-source-grounding`.
+5. Dla kazdej sekcji zapisz readiness: `ready`, `needs_deeper_evidence`,
    `visibility_limited` albo `not_applicable`.
-5. Jezeli istnieje jedno waskie pytanie, ktore moze zmienic wynik, przygotuj
+6. Jezeli istnieje jedno waskie pytanie, ktore moze zmienic wynik, przygotuj
    targeted retry: maksymalnie jeden GitLab search i dwa waskie read calls.
    Nie wykonuj broad browse i nie powtarzaj tego samego pytania.
-6. Po jednym retry zamien nierozstrzygniety brak na `visibility_limited`.
-7. Przekaz ledger i `SourceGroundingSummary` do `ui-explorer-write-report`.
+7. Po jednym retry zamien nierozstrzygniety brak na `visibility_limited`.
+8. Oddziel `businessFacts` od `technicalEvidenceLinks`. Fakt funkcjonalny
+   odpowiada: kto albo co wykonuje czynność, kiedy, pod jakim warunkiem i z
+   jakim widocznym skutkiem. Sama nazwa symbolu nie jest faktem funkcjonalnym.
+9. Przekaz ledger i `SourceGroundingSummary` do `ui-explorer-write-report`.
 
 ## Readiness Gate
 
-Sekcja jest `ready`, gdy material odpowiada jej trybowi, twierdzenia maja
-source refs i nie ma rozstrzygalnego braku. `COMPACT` wymaga najwazniejszych
-faktow i limitow. `DEEP` wymaga warunkow, zaleznosci i miejsc oddzialywania,
-ale nie uprawnia do zgadywania niedostepnej logiki.
+Sekcja jest `ready`, gdy material pozwala wypelnic jej kanoniczna strukture z
+`functional-writing-contract.md`, twierdzenia maja source refs i nie ma
+rozstrzygalnego braku. `COMPACT` wymaga najwazniejszych faktow i limitow.
+`DEEP` wymaga wszystkich odrebnych, widocznych regul, warunkow, danych,
+wariantow i skutkow — nie stalej liczby obserwacji — ale nie uprawnia do
+zgadywania niedostepnej logiki.
 
 Nie przechodz do finalizacji, gdy status to `needs_deeper_evidence`. Gdy dalsza
 widocznosc nie istnieje, przejdz z jawnym `visibility_limited`.
@@ -77,6 +85,8 @@ activeSectionModes
 SourceGroundingSummary
 sectionReadiness
 confirmedFacts
+businessFacts
+technicalEvidenceLinks
 inferences
 visibilityLimits
 openQuestions

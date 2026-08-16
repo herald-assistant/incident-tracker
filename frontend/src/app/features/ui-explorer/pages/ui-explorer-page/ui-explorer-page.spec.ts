@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 
@@ -10,6 +11,7 @@ import {
   UiExplorerScreenCatalogResponse
 } from '../../models/ui-explorer.models';
 import { UiExplorerPageComponent } from './ui-explorer-page';
+import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 
 describe('UiExplorerPageComponent', () => {
   let queryParamMap: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
@@ -179,6 +181,15 @@ describe('UiExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('CRM Agent Portal · main · crm-revision-a1b2c3');
     expect(compiled.querySelector('app-analysis-feature-aside')).not.toBeNull();
     expect(compiled.querySelectorAll('app-analysis-steps-panel')).toHaveLength(3);
+    const asidePanels = fixture.debugElement.queryAll(By.directive(AnalysisStepsPanelComponent));
+    expect(asidePanels).toHaveLength(3);
+    expect(
+      asidePanels.every(
+        (panel) =>
+          panel.componentInstance.preparedPrompt() ===
+          '# Synthetic CRM canonical UI Explorer prompt'
+      )
+    ).toBe(true);
     http.verify();
   });
 
@@ -475,7 +486,7 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
     toolEvidenceSections: [],
     aiActivityEvents: [],
     toolFeedback: [],
-    preparedPrompt: null,
+    preparedPrompt: terminal ? '# Synthetic CRM canonical UI Explorer prompt' : null,
     result: reportAvailable ? crmResult() : null,
     report: reportAvailable ? crmReport() : null,
     usage: null,
@@ -572,11 +583,11 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 3,
+    version: 4,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v3',
+      resultContract: 'ui-explorer-result-v4',
       job: crmJobSnapshot('COMPLETED')
     }
   };
@@ -585,11 +596,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export',
-    version: 3,
+    version: 4,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v3',
+      resultContract: 'ui-explorer-result-v4',
       job: crmJobSnapshot('COMPLETED')
     }
   };

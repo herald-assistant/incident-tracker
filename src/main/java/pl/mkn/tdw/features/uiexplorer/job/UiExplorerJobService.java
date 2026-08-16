@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAnalysisProvider;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
+import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextService;
@@ -35,6 +36,7 @@ public class UiExplorerJobService {
     private final UiExplorerSourceContextService sourceContextService;
     private final UiExplorerSourceContextEvidenceMapper sourceContextEvidenceMapper;
     private final UiExplorerPromptPreparationService promptPreparationService;
+    private final UiExplorerPromptPreparationEvidenceMapper promptPreparationEvidenceMapper;
     private final UiExplorerAnalysisProvider analysisProvider;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
@@ -86,7 +88,10 @@ public class UiExplorerJobService {
             job.markAiPreparationStarted();
             var promptPreparation = promptPreparationService.prepare(request, sourceContext);
             promptPreparations.put(jobId, promptPreparation);
-            job.markAiPreparationCompleted(promptPreparation.artifacts().size());
+            job.markAiPreparationCompleted(
+                    promptPreparation.prompt(),
+                    promptPreparationEvidenceMapper.map(promptPreparation.artifacts())
+            );
 
             job.markAiAnalysisStarted();
             var analysis = analysisProvider.analyze(

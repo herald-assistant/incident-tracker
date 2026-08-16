@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.uiexplorer.report;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerFinding;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
@@ -13,7 +12,6 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -76,40 +74,30 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
         );
     }
 
-    private String markdown(UiExplorerResultSection section) {
-        var lines = new ArrayList<String>();
-        if (StringUtils.hasText(section.summary())) {
-            lines.add(section.summary().trim());
-        }
-        if (!section.findings().isEmpty()) {
-            lines.add("## Ustalenia");
-            section.findings().forEach(finding -> appendFinding(lines, finding));
-        }
-        if (!section.dependencies().isEmpty()) {
-            lines.add("## Zaleznosci i warunki");
-            section.dependencies().forEach(value -> lines.add("- " + value));
-        }
-        return String.join("\n\n", lines);
-    }
-
-    private void appendFinding(List<String> lines, UiExplorerFinding finding) {
-        var confidence = finding.confidence() != null ? finding.confidence().name() : "UNKNOWN";
-        var title = StringUtils.hasText(finding.title()) ? finding.title().trim() : "Ustalenie";
-        var description = valueOrEmpty(finding.description());
-        lines.add("- **" + title + "** (`" + confidence + "`) — " + description);
-        finding.conditions().forEach(value -> lines.add("  - Warunek: " + value));
-    }
-
     private List<AnalysisReportReference> references(List<UiExplorerResultSection> sections) {
         var references = new LinkedHashSet<AnalysisReportReference>();
         sections.forEach(section -> references.addAll(references(section)));
         return List.copyOf(references);
     }
 
+    private String markdown(UiExplorerResultSection section) {
+        var content = valueOrEmpty(section.markdown()).trim();
+        if (section.dependencies().isEmpty()) {
+            return content;
+        }
+        var dependencies = section.dependencies().stream()
+                .filter(StringUtils::hasText)
+                .map(value -> "- " + value.trim())
+                .toList();
+        if (dependencies.isEmpty()) {
+            return content;
+        }
+        return content + "\n\n### Powiazane warunki i zaleznosci\n\n" + String.join("\n", dependencies);
+    }
+
     private List<AnalysisReportReference> references(UiExplorerResultSection section) {
         var references = new LinkedHashSet<UiExplorerSourceReference>();
         references.addAll(section.sourceReferences());
-        section.findings().forEach(finding -> references.addAll(finding.sourceReferences()));
         return references.stream().map(this::reportReference).toList();
     }
 
@@ -144,12 +132,7 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
     }
 
     private String confidence(UiExplorerResultSection section) {
-        var confidences = section.findings().stream()
-                .map(UiExplorerFinding::confidence)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-        return confidences.size() == 1 ? confidences.get(0).name() : null;
+        return section.confidence() != null ? section.confidence().name() : null;
     }
 
     private String coverageLabel(UiExplorerResultSection section) {

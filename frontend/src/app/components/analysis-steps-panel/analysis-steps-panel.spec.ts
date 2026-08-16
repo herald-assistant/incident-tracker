@@ -228,6 +228,61 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea?.value).toContain('Change Verification canonical prompt');
   });
 
+  it('should expose UI Explorer artifacts and the exact prompt on the AI preparation step', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [buildUiExplorerPreparationStep()]);
+    fixture.componentRef.setInput('evidenceSections', [buildUiExplorerArtifactsSection()]);
+    fixture.componentRef.setInput('preparedPrompt', '# Synthetic CRM canonical UI Explorer prompt');
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const promptTextarea = compiled.querySelector(
+      '.prepared-prompt__textarea'
+    ) as HTMLTextAreaElement | null;
+
+    expect(compiled.textContent).toContain('Inicjalny prompt UI Explorera wysłany do AI');
+    expect(compiled.textContent).toContain('Artefakty AI');
+    expect(compiled.textContent).toContain('ui-explorer/synthetic-crm-context.json');
+    expect(compiled.textContent).toContain('Publikuje: UI Explorer · Artefakty AI');
+    expect(promptTextarea?.value).toBe('# Synthetic CRM canonical UI Explorer prompt');
+  });
+
+  it('should allow opening a partial step that contains collected evidence', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    const partialStep = {
+      ...buildUiExplorerPreparationStep(),
+      code: 'SOURCE_CONTEXT',
+      label: 'Build synthetic CRM context',
+      status: 'PARTIAL',
+      producesEvidence: [{ provider: 'ui-explorer', category: 'source-manifest' }]
+    };
+    fixture.componentRef.setInput('steps', [partialStep, buildCompletedAiStep()]);
+    fixture.componentRef.setInput('evidenceSections', [
+      {
+        provider: 'ui-explorer',
+        category: 'source-manifest',
+        items: [{ title: 'Synthetic CRM component', attributes: [] }]
+      }
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const headers = Array.from(compiled.querySelectorAll('.mat-step-header')) as HTMLElement[];
+    headers[0]?.click();
+    fixture.detectChanges();
+
+    expect(
+      (fixture.componentInstance as unknown as { selectedIndex(): number }).selectedIndex()
+    ).toBe(0);
+    expect(compiled.textContent).toContain('Synthetic CRM component');
+  });
+
   it('should hide the prepared prompt on the final AI step and keep the result preview visible', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildCompletedAiStep()]);
@@ -967,6 +1022,37 @@ function buildChangeVerificationSourceContextStep(): AnalysisJobStepResponse {
     itemCount: 4,
     startedAt: '2026-04-14T12:00:10Z',
     completedAt: '2026-04-14T12:00:12Z'
+  };
+}
+
+function buildUiExplorerPreparationStep(): AnalysisJobStepResponse {
+  return {
+    code: 'AI_PREPARATION',
+    label: 'Prepare bounded synthetic CRM AI artifacts',
+    phase: 'AI_PREPARATION',
+    status: 'COMPLETED',
+    message: 'Synthetic CRM artifacts and prompt were prepared.',
+    itemCount: 1,
+    startedAt: '2026-08-15T10:00:00Z',
+    completedAt: '2026-08-15T10:00:01Z',
+    consumesEvidence: [{ provider: 'ui-explorer', category: 'source-manifest' }],
+    producesEvidence: [{ provider: 'ui-explorer', category: 'ai-artifacts' }]
+  };
+}
+
+function buildUiExplorerArtifactsSection(): AnalysisEvidenceSection {
+  return {
+    provider: 'ui-explorer',
+    category: 'ai-artifacts',
+    items: [
+      {
+        title: 'ui-explorer/synthetic-crm-context.json',
+        attributes: [
+          { name: 'role', value: 'Bounded synthetic CRM context' },
+          { name: 'characterCount', value: '128' }
+        ]
+      }
+    ]
   };
 }
 

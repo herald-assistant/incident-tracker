@@ -181,9 +181,9 @@ class UiExplorerJobControllerTest {
         mockMvc.perform(get("/api/ui-explorer/jobs/crm-ui-job-123/export"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.schema").value("tdw.ui-explorer-export"))
-                .andExpect(jsonPath("$.version").value(3))
+                .andExpect(jsonPath("$.version").value(4))
                 .andExpect(jsonPath("$.payload.type").value("ui-explorer-analysis"))
-                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v3"));
+                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v4"));
     }
 
     @Test

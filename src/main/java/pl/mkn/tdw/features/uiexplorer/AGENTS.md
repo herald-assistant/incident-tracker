@@ -23,11 +23,22 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   nie zawiera wyboru profilu ani celu analizy.
 - Sekcje to osiem identyfikatorow z planu UI Explorer, a tryby to `OFF`,
   `COMPACT` i `DEEP`.
+- Kazda aktywna sekcja publikuje business-first Markdown o kanonicznej
+  strukturze dla danego `sectionId`. Nie przywracaj generycznych `findings`,
+  technicznego naglowka "Ustalenia" ani narracji klasa-po-klasie.
+- Nazwy klas, metod, plikow, framework APIs, operatorow i linii kodu sa
+  evidence w zwijanych source references. W glownej tresci zostaja tylko
+  identyfikatory majace bezposrednie znaczenie funkcjonalne, wraz z opisem
+  skutku dla uzytkownika albo procesu.
 - Publiczny input nie przyjmuje repository id/path, GitLab group, tokenu,
   nazw plikow, komponentow ani tooli.
 - Brak screen discovery, source contextu albo AI jest jawnym stanem
   niedostepnosci. Nie wolno tworzyc placeholderowego promptu, wyniku ani
   raportu udajacego wykonana analize.
+- Dokladny `preparedPrompt` staje sie publiczny dopiero po deterministycznym
+  `AI_PREPARATION`, przed wywolaniem providera AI. Kroki jawnie wskazuja
+  konsumowane i publikowane sekcje evidence; lokalny run i export zachowuja
+  prompt, a niezaufany import usuwa go przed zapisem.
 - Result jest feature-specific i dopiero deterministyczny assembler mapuje go
   na neutralny `AnalysisReport`.
 

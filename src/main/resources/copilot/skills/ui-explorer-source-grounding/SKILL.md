@@ -43,7 +43,9 @@ istotny i ma source reference.
 
 1. Zacznij od route/view, manifestu, technical signals i coverage.
 2. Czytaj source files tylko w granicach pytania aktywnej sekcji.
-3. Dla kazdego twierdzenia zapisz source path, symbol oraz linie, gdy sa znane.
+3. Dla kazdego twierdzenia zapisz osobno `businessFact` oraz source path,
+   symbol i linie, gdy sa znane. `businessFact` opisuje zachowanie bez
+   rozpoczynania od nazwy klasy, metody, guarda, reducera albo operatora.
 4. Ustaw confidence:
    - `CONFIRMED` dla jawnego zachowania widocznego w source evidence,
    - `INFERRED` dla wniosku z kilku sygnalow bez pelnej sciezki,
@@ -51,6 +53,11 @@ istotny i ma source reference.
 5. Rozdziel sygnal wywolania backendu od algorytmu backendowego. Frontend nie
    potwierdza implementacji endpointu.
 6. Zwroc summary dla kazdej aktywnej sekcji i liste najmniejszych luk.
+7. Dla trybu `DEEP` nie zatrzymuj sie po dwoch lub trzech przykladach. Zbuduj
+   pelny, deduplikowany katalog odrebnych faktow wymaganych przez strukture
+   danej sekcji w `functional-writing-contract.md`.
+8. Brak implementacji przenies do `visibilityLimits` lub `minimumNextQuestion`;
+   nie uzywaj go jako zastepczego glownego opisu sekcji.
 
 ## Formularze Dynamiczne
 
@@ -83,6 +90,8 @@ SourceGroundingSummary
     sectionId
     readiness
     confirmedFacts[]
+    businessFacts[]
+    technicalEvidenceLinks[]
     inferences[]
     unknowns[]
     sourceReferences[]

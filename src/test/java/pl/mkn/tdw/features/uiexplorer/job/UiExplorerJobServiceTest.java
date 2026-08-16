@@ -100,18 +100,42 @@ class UiExplorerJobServiceTest {
         assertThat(completed.steps()).filteredOn(step -> "AI_ANALYSIS".equals(step.code()))
                 .singleElement().extracting(step -> step.usage()).isEqualTo(usage);
         assertThat(completed.contextSections()).isNotEmpty();
+        assertThat(completed.contextSections()).extracting(section -> section.category())
+                .contains("selected-screen", "source-manifest", "ai-artifacts");
+        assertThat(completed.steps()).filteredOn(step -> "SCREEN_DISCOVERY".equals(step.code()))
+                .singleElement().satisfies(step -> assertThat(step.producesEvidence())
+                        .extracting(reference -> reference.category())
+                        .containsExactly("selected-screen"));
+        assertThat(completed.steps()).filteredOn(step -> "SOURCE_CONTEXT".equals(step.code()))
+                .singleElement().satisfies(step -> {
+                    assertThat(step.consumesEvidence()).extracting(reference -> reference.category())
+                            .containsExactly("selected-screen");
+                    assertThat(step.producesEvidence()).extracting(reference -> reference.category())
+                            .contains("source-manifest", "technical-signals", "section-coverage", "source-boundary");
+                });
+        assertThat(completed.steps()).filteredOn(step -> "AI_PREPARATION".equals(step.code()))
+                .singleElement().satisfies(step -> assertThat(step.producesEvidence())
+                        .extracting(reference -> reference.category())
+                        .containsExactly("ai-artifacts"));
+        assertThat(completed.steps()).filteredOn(step -> "AI_ANALYSIS".equals(step.code()))
+                .singleElement().satisfies(step -> assertThat(step.consumesEvidence())
+                        .extracting(reference -> reference.category())
+                        .containsExactly("ai-artifacts"));
         assertThat(completed.toolEvidenceSections()).containsExactly(fetchedCodeEvidence(FETCHED_VALIDATOR_PATH));
         assertThat(completed.aiActivityEvents()).extracting(AnalysisAiActivityEvent::eventId)
                 .containsExactly("crm-ai-event-1");
         assertThat(completed.usage()).isEqualTo(usage);
         assertThat(completed.result()).isEqualTo(result);
         assertThat(completed.report()).isEqualTo(report);
-        assertThat(completed.preparedPrompt()).isNull();
+        assertThat(completed.preparedPrompt()).contains("UI Explorer canonical prompt");
         assertThat(completed.outputAvailability().status())
                 .isEqualTo(UiExplorerOutputAvailabilityStatus.AVAILABLE);
         assertThat(completed.exportAvailable()).isTrue();
         assertThat(service.sourceContext(accepted.jobId())).isEqualTo(context());
-        assertThat(service.promptPreparation(accepted.jobId()).artifacts()).hasSize(6);
+        assertThat(service.promptPreparation(accepted.jobId()).artifacts()).hasSize(7);
+        assertThat(service.promptPreparation(accepted.jobId()).artifacts())
+                .extracting(artifact -> artifact.displayName())
+                .contains("ui-explorer/functional-writing-contract.md");
         verify(analysisProvider, times(1)).analyze(any(), any(), any(), any(), any(), any(), any());
         verify(localRunPersistence).persistTerminalSnapshot(
                 org.mockito.ArgumentMatchers.argThat(snapshot ->
@@ -178,7 +202,7 @@ class UiExplorerJobServiceTest {
         assertThat(partial.errorCode()).isEqualTo("UI_EXPLORER_AI_RESPONSE_MALFORMED");
         assertThat(partial.result()).isEqualTo(result);
         assertThat(partial.report()).isEqualTo(report);
-        assertThat(partial.preparedPrompt()).isNull();
+        assertThat(partial.preparedPrompt()).contains("UI Explorer canonical prompt");
         assertThat(partial.outputAvailability().status()).isEqualTo(UiExplorerOutputAvailabilityStatus.AVAILABLE);
     }
 
@@ -211,6 +235,7 @@ class UiExplorerJobServiceTest {
         assertThat(blocked.report()).isNull();
         assertThat(blocked.steps()).filteredOn(step -> "AI_ANALYSIS".equals(step.code()))
                 .singleElement().extracting(step -> step.status()).isEqualTo("BLOCKED");
+        assertThat(blocked.preparedPrompt()).contains("UI Explorer canonical prompt");
     }
 
     @Test
@@ -231,7 +256,7 @@ class UiExplorerJobServiceTest {
         assertThat(failed.errorMessage()).doesNotContain("sensitive");
         assertThat(failed.result()).isNull();
         assertThat(failed.report()).isNull();
-        assertThat(failed.preparedPrompt()).isNull();
+        assertThat(failed.preparedPrompt()).contains("UI Explorer canonical prompt");
     }
 
     @Test

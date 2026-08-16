@@ -39,11 +39,8 @@ public class UiExplorerAiResponseParser {
     );
     private static final Set<String> REVISION_FIELDS = Set.of("branch", "revision");
     private static final Set<String> SECTION_FIELDS = Set.of(
-            "sectionId", "mode", "coverage", "summary", "findings", "dependencies",
+            "sectionId", "mode", "coverage", "confidence", "markdown", "dependencies",
             "sourceReferences", "visibilityLimits", "openQuestions"
-    );
-    private static final Set<String> FINDING_FIELDS = Set.of(
-            "title", "description", "confidence", "conditions", "sourceReferences"
     );
     private static final Set<String> SOURCE_REFERENCE_FIELDS = Set.of(
             "repository", "path", "symbol", "startLine", "endLine"
@@ -156,8 +153,8 @@ public class UiExplorerAiResponseParser {
                         entry.getKey(),
                         entry.getValue(),
                         UiExplorerCoverageStatus.BLOCKED,
+                        UiExplorerClaimConfidence.UNKNOWN,
                         "AI response could not be safely accepted for this section.",
-                        List.of(),
                         List.of(),
                         List.of(),
                         List.of(safeLimitation),
@@ -218,8 +215,8 @@ public class UiExplorerAiResponseParser {
                         entry.getKey(),
                         entry.getValue(),
                         UiExplorerCoverageStatus.BLOCKED,
+                        UiExplorerClaimConfidence.UNKNOWN,
                         "The active section was omitted by AI and requires review.",
-                        List.of(),
                         List.of(),
                         List.of(),
                         List.of("AI response omitted this active section."),
@@ -233,19 +230,11 @@ public class UiExplorerAiResponseParser {
     }
 
     private boolean validSection(UiExplorerResultSection section, Set<String> allowedPaths) {
-        if (!validReferences(section.sourceReferences(), allowedPaths)) {
-            return false;
-        }
-        for (var finding : section.findings()) {
-            if (finding == null || finding.confidence() == null
-                    || !StringUtils.hasText(finding.title()) || !StringUtils.hasText(finding.description())
-                    || !validReferences(finding.sourceReferences(), allowedPaths)
-                    || finding.confidence() == UiExplorerClaimConfidence.CONFIRMED
-                    && finding.sourceReferences().isEmpty()) {
-                return false;
-            }
-        }
-        return true;
+        return StringUtils.hasText(section.markdown())
+                && section.confidence() != null
+                && validReferences(section.sourceReferences(), allowedPaths)
+                && (section.confidence() != UiExplorerClaimConfidence.CONFIRMED
+                || !section.sourceReferences().isEmpty());
     }
 
     private List<UiExplorerResultSection> reconcileCoverage(
@@ -278,8 +267,8 @@ public class UiExplorerAiResponseParser {
                     section.sectionId(),
                     section.mode(),
                     UiExplorerCoverageStatus.PARTIAL,
-                    section.summary(),
-                    section.findings(),
+                    section.confidence(),
+                    section.markdown(),
                     section.dependencies(),
                     section.sourceReferences(),
                     List.copyOf(sectionLimits),
@@ -346,18 +335,6 @@ public class UiExplorerAiResponseParser {
             for (var section : sections) {
                 if (!objectWithFields(section, SECTION_FIELDS)) {
                     return "AI response section shape is invalid.";
-                }
-                var findings = section.get("findings");
-                if (findings != null && !findings.isNull()) {
-                    if (!findings.isArray()) {
-                        return "AI response findings must be an array.";
-                    }
-                    for (var finding : findings) {
-                        if (!objectWithFields(finding, FINDING_FIELDS)
-                                || !referenceArrayValidShape(finding.get("sourceReferences"))) {
-                            return "AI response finding shape is invalid.";
-                        }
-                    }
                 }
                 if (!referenceArrayValidShape(section.get("sourceReferences"))) {
                     return "AI response section sourceReferences shape is invalid.";

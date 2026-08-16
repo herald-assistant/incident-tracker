@@ -328,17 +328,17 @@ describe('UiExplorerFacade', () => {
             status: 400,
             error: {
               code: 'UI_EXPLORER_IMPORT_VERSION_UNSUPPORTED',
-              message: 'UI Explorer export version 2 is not supported.'
+              message: 'UI Explorer export version 3 is not supported.'
             }
           })
       )
     );
     const facade = TestBed.inject(UiExplorerFacade);
 
-    facade.importAnalysis({ ...crmPortableEnvelope(), version: 2 }, 'crm-newer-version.json');
+    facade.importAnalysis({ ...crmPortableEnvelope(), version: 3 }, 'crm-previous-version.json');
 
     expect(facade.job()).toBeNull();
-    expect(facade.portabilityError()).toBe('UI Explorer export version 2 is not supported.');
+    expect(facade.portabilityError()).toBe('UI Explorer export version 3 is not supported.');
   });
 });
 
@@ -501,11 +501,11 @@ function crmReadableSnapshot(
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 3,
+    version: 4,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v3',
+      resultContract: 'ui-explorer-result-v4',
       job: crmReadableSnapshot('COMPLETED')
     }
   };
@@ -514,11 +514,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export' as const,
-    version: 3 as const,
+    version: 4 as const,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis' as const,
-      resultContract: 'ui-explorer-result-v3' as const,
+      resultContract: 'ui-explorer-result-v4' as const,
       job: crmReadableSnapshot('COMPLETED')
     }
   };

@@ -6,6 +6,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAnalysisProvider;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerArtifactService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
+import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextService;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
@@ -47,6 +48,7 @@ final class UiExplorerJobServiceTestCreator {
                         artifactService,
                         new CopilotArtifactContentMapper()
                 ),
+                new UiExplorerPromptPreparationEvidenceMapper(),
                 analysisProvider,
                 taskExecutor,
                 () -> AnalysisAiAuthRef.localToken(null),

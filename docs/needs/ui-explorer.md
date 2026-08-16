@@ -116,6 +116,13 @@ Raport funkcjonalny powinien uzywac jezyka biznesowego. Szczegoly techniczne
 sa dowodami dostepnymi w osobnej, zwijanej warstwie i nie moga zmuszac
 analityka do czytania nazw klas ani operatorow RxJS.
 
+Kazda aktywna sekcja ma miec stabilna strukture funkcjonalna dopasowana do jej
+znaczenia: akcje lacza czynnosc z warunkiem i rezultatem, formularze lacza pole
+z walidacja, dynamika i wyliczeniem, dane lacza informacje ze zrodlem i celem,
+a warianty lacza warunek z zachowaniem i recovery. Tryb poglebiony nie moze
+ograniczac sie do arbitralnych kilku przykladow, jezeli evidence pokazuje
+wiekszy katalog odrebnych regul albo zachowan.
+
 ## Wiarygodnosc i widocznosc
 
 Kazde istotne twierdzenie powinno miec jeden z poziomow pewnosci:
@@ -153,6 +160,13 @@ Postep powinien pokazywac, czy udalo sie:
 
 Dowody techniczne powinny byc dostepne do weryfikacji, lecz nie dominowac
 glownego raportu.
+
+Aside przebiegu powinien na kazdym zakonczonym, czastkowym albo zablokowanym
+kroku pokazywac dane zebrane lub przygotowane w tym kroku oraz ich powiazanie
+z kolejnym etapem. Po deterministycznym przygotowaniu wejscia do AI operator
+powinien moc zobaczyc i skopiowac dokladny inicjalny prompt jeszcze przed
+uruchomieniem modelu. Prompt pozostaje dostepny takze wtedy, gdy pozniejsza
+sesja AI zakonczy sie niepowodzeniem.
 
 ## Kryteria sukcesu MVP
 

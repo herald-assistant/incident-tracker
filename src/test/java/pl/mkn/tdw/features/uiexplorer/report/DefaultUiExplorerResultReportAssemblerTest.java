@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerClaimConfidence;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCrossSectionDependency;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerFinding;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerScreenIdentity;
@@ -43,8 +42,12 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 .extracting(section -> section.id())
                 .containsExactly("OVERVIEW", "FORMS_AND_RULES");
         assertThat(assembly.report().sections().get(1).markdown())
-                .contains("Dynamic contact preference validation")
-                .contains("`CONFIRMED`");
+                .contains("Pole lub grupa")
+                .contains("Kanal kontaktu")
+                .contains("Powiazane warunki i zaleznosci")
+                .doesNotContain("CONFIRMED")
+                .doesNotContain("Ustalenia")
+                .doesNotContain("CrmContactPreferencesComponent");
         assertThat(assembly.report().sections().get(1).meta().gaps())
                 .containsExactly("Section coverage: PARTIAL");
         assertThat(assembly.report().meta().references())
@@ -74,8 +77,8 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 UiExplorerSectionId.OVERVIEW,
                 UiExplorerSectionMode.COMPACT,
                 UiExplorerCoverageStatus.READY,
-                "The screen supports synthetic CRM contact preference maintenance.",
-                List.of(),
+                UiExplorerClaimConfidence.CONFIRMED,
+                "**Cel biznesowy**\n\nUtrzymanie preferencji kontaktu CRM.",
                 List.of(),
                 List.of(source),
                 List.of(),
@@ -85,16 +88,18 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 UiExplorerSectionId.FORMS_AND_RULES,
                 UiExplorerSectionMode.DEEP,
                 UiExplorerCoverageStatus.PARTIAL,
-                "The synthetic CRM form contains dynamic validation.",
-                List.of(new UiExplorerFinding(
-                        "Dynamic contact preference validation",
-                        "A contact channel becomes required after the synthetic opt-in action.",
-                        UiExplorerClaimConfidence.CONFIRMED,
-                        List.of("The CRM contact is marked as opted in."),
-                        List.of(source)
-                )),
+                UiExplorerClaimConfidence.CONFIRMED,
+                """
+                        | Pole lub grupa | Znaczenie | Wymagalnosc i walidacja | Zachowanie dynamiczne | Wyliczenie lub zaleznosc |
+                        | --- | --- | --- | --- | --- |
+                        | Kanal kontaktu | Sposob komunikacji z kontaktem CRM | Wymagany po wyrazeniu zgody | Pojawia sie po wlaczeniu zgody | Brak wyliczenia |
+
+                        **Reguly przekrojowe**
+
+                        - Zapis jest dostepny po wskazaniu kanalu kontaktu.
+                        """.trim(),
                 List.of("The form depends on the selected synthetic CRM contact."),
-                List.of(),
+                List.of(source),
                 List.of("The runtime form definition was not available."),
                 List.of("Which CRM channel definitions are returned by the backend?")
         );
@@ -102,8 +107,8 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 UiExplorerSectionId.STATE_AND_SYNCHRONIZATION,
                 UiExplorerSectionMode.OFF,
                 UiExplorerCoverageStatus.BLOCKED,
+                UiExplorerClaimConfidence.UNKNOWN,
                 "Disabled section.",
-                List.of(),
                 List.of(),
                 List.of(),
                 List.of(),

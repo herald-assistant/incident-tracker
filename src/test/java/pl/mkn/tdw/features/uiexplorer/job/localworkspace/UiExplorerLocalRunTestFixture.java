@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.uiexplorer.job.localworkspace;
 
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerClaimConfidence;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerFinding;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
@@ -36,6 +35,7 @@ final class UiExplorerLocalRunTestFixture {
     static final String JOB_ID = "crm-ui-history-job-1";
     static final String SOURCE_PATH =
             "apps/crm-agent/src/app/contact-preferences/crm-contact-preferences.component.ts";
+    static final String PREPARED_PROMPT = "# Synthetic CRM canonical UI Explorer prompt";
 
     private UiExplorerLocalRunTestFixture() {
     }
@@ -96,7 +96,7 @@ final class UiExplorerLocalRunTestFixture {
                         "Keep the CRM fixture bounded.",
                         UPDATED_AT
                 )),
-                "CRM_RAW_PROMPT_SECRET",
+                PREPARED_PROMPT,
                 result,
                 report,
                 hasOutput ? usage() : null,
@@ -125,19 +125,30 @@ final class UiExplorerLocalRunTestFixture {
                 context().screen(),
                 request().scenarioDescription(),
                 context().sourceRevision(),
-                "The strongly anonymized CRM view maintains contact preferences.",
+                "Doradca CRM utrzymuje dozwolony kanal kontaktu dla wybranego klienta.",
                 List.of(new UiExplorerResultSection(
                         UiExplorerSectionId.OVERVIEW,
                         UiExplorerSectionMode.COMPACT,
                         UiExplorerCoverageStatus.READY,
-                        "The CRM agent opens contact preferences.",
-                        List.of(new UiExplorerFinding(
-                                "CRM route is explicit",
-                                "The selected CRM route contains the contact identifier.",
-                                UiExplorerClaimConfidence.CONFIRMED,
-                                List.of("A contactId route parameter is present."),
-                                List.of(reference)
-                        )),
+                        UiExplorerClaimConfidence.CONFIRMED,
+                        """
+                                **Cel biznesowy**
+
+                                Utrzymanie dozwolonego kanalu kontaktu.
+
+                                **Uzytkownicy i kontekst**
+
+                                Doradca pracuje na jednym wybranym kontakcie CRM.
+
+                                **Przebieg w skrocie**
+
+                                1. Doradca otwiera preferencje kontaktu.
+                                2. System przypisuje zmiane do wybranego kontaktu.
+
+                                **Rezultat**
+
+                                Aktualna preferencja moze byc wykorzystana w kolejnej interakcji.
+                                """.trim(),
                         List.of(),
                         List.of(reference),
                         context().visibilityLimits(),

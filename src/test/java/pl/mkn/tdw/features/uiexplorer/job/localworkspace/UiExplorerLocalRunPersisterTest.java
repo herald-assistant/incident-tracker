@@ -28,6 +28,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.COMPLETED_AT;
+import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.PREPARED_PROMPT;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.SOURCE_PATH;
 import static pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunTestFixture.snapshot;
 
@@ -56,9 +57,9 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(record.continuation().copilotSessionId()).isNull();
         var envelope = record.exportEnvelope();
         assertThat(envelope.path("schema").asText()).isEqualTo("tdw.ui-explorer-local-run");
-        assertThat(envelope.path("version").asInt()).isEqualTo(3);
+        assertThat(envelope.path("version").asInt()).isEqualTo(4);
         assertThat(envelope.at("/payload/type").asText()).isEqualTo("ui-explorer-analysis");
-        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v3");
+        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v4");
         assertThat(envelope.at("/payload/job/sourceRevision/revision").asText())
                 .isEqualTo("crm-commit-abc123");
         assertThat(envelope.at("/payload/job/result/sections/0/sourceReferences/0/repository").isNull()).isTrue();
@@ -73,13 +74,12 @@ class UiExplorerLocalRunPersisterTest {
                 .containsOnly("filePath", "reason", "toolCallId", "toolName");
         assertThat(envelope.at("/payload/job/aiActivityEvents/0/details").isEmpty()).isTrue();
         assertThat(envelope.at("/payload/job/toolFeedback").isEmpty()).isTrue();
-        assertThat(envelope.at("/payload/job/preparedPrompt").isNull()).isTrue();
+        assertThat(envelope.at("/payload/job/preparedPrompt").asText()).isEqualTo(PREPARED_PROMPT);
         assertThat(envelope.at("/payload/job/exportAvailable").asBoolean()).isTrue();
 
         var serialized = objectMapper.writeValueAsString(record);
         assertThat(serialized)
                 .doesNotContain(
-                        "CRM_RAW_PROMPT_SECRET",
                         "CRM_RAW_SOURCE_SECRET",
                         "CRM_HIDDEN_SCOPE_SECRET",
                         "CRM_HIDDEN_ACTIVITY_SECRET",
@@ -135,7 +135,9 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(detail.feature()).isEqualTo("ui-explorer");
         assertThat(detail.continuationEnabled()).isFalse();
         assertThat(detail.exportEnvelope().at("/payload/job/result/functionalOverview").asText())
-                .contains("strongly anonymized CRM");
+                .isEqualTo("Doradca CRM utrzymuje dozwolony kanal kontaktu dla wybranego klienta.");
+        assertThat(detail.exportEnvelope().at("/payload/job/preparedPrompt").asText())
+                .isEqualTo(PREPARED_PROMPT);
 
         Files.writeString(paths.runFile(snapshot.jobId()), "{broken synthetic CRM history");
         var afterCorruption = new AnalysisRunHistoryService(
