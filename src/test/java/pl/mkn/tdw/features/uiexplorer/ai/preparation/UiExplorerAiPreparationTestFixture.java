@@ -122,8 +122,8 @@ public final class UiExplorerAiPreparationTestFixture {
                 ),
                 List.of(),
                 new UiExplorerSourceContextBoundary(
-                        24, 1, 2, 322, false, false, false,
-                        2_000, 80, 400, 40, 50_000, 500_000, 3
+                        2, 1, 9, 2, 0, 2, 322, false, false,
+                        400, 80, 300, 500, 12, 5, 40, 50_000, 500_000
                 ),
                 List.of(
                         "Static discovery does not execute TypeScript or runtime form definitions.",

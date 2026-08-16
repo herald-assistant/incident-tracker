@@ -95,17 +95,24 @@ public class UiExplorerSourceContextEvidenceMapper {
     private AnalysisEvidenceSection boundarySection(UiExplorerSourceContextSnapshot snapshot) {
         var boundary = snapshot.boundary();
         var attributes = new ArrayList<AnalysisEvidenceAttribute>();
-        attributes.add(attribute("repositoryFileCount", Integer.toString(boundary.repositoryFileCount())));
-        attributes.add(attribute("scannedRouteFileCount", Integer.toString(boundary.scannedRouteFileCount())));
+        attributes.add(attribute("visitedRouteNodeCount", Integer.toString(boundary.visitedRouteNodeCount())));
+        attributes.add(attribute("visitedRouteFileCount", Integer.toString(boundary.visitedRouteFileCount())));
+        attributes.add(attribute("graphSourceReadCount", Integer.toString(boundary.graphSourceReadCount())));
+        attributes.add(attribute("aliasResolutionCount", Integer.toString(boundary.aliasResolutionCount())));
+        attributes.add(attribute("unresolvedEdgeCount", Integer.toString(boundary.unresolvedEdgeCount())));
         attributes.add(attribute("returnedContextFileCount", Integer.toString(boundary.returnedContextFileCount())));
         attributes.add(attribute("totalReturnedCharacters", Integer.toString(boundary.totalReturnedCharacters())));
-        attributes.add(attribute("inventoryTruncated", Boolean.toString(boundary.inventoryTruncated())));
-        attributes.add(attribute("routeCatalogTruncated", Boolean.toString(boundary.routeCatalogTruncated())));
-        attributes.add(attribute("contextTruncated", Boolean.toString(boundary.contextTruncated())));
+        attributes.add(attribute("graphLimitReached", Boolean.toString(boundary.graphLimitReached())));
+        attributes.add(attribute("contextLimitReached", Boolean.toString(boundary.contextLimitReached())));
+        attributes.add(attribute("maxRouteNodes", Integer.toString(boundary.maxRouteNodes())));
+        attributes.add(attribute("maxRouteFiles", Integer.toString(boundary.maxRouteFiles())));
+        attributes.add(attribute("maxSourceReads", Integer.toString(boundary.maxSourceReads())));
+        attributes.add(attribute("maxAliasResolutions", Integer.toString(boundary.maxAliasResolutions())));
+        attributes.add(attribute("maxImportDepth", Integer.toString(boundary.maxImportDepth())));
+        attributes.add(attribute("maxComponentDepth", Integer.toString(boundary.maxComponentDepth())));
         attributes.add(attribute("maxContextFiles", Integer.toString(boundary.maxContextFiles())));
         attributes.add(attribute("maxFileCharacters", Integer.toString(boundary.maxFileCharacters())));
         attributes.add(attribute("maxTotalCharacters", Integer.toString(boundary.maxTotalCharacters())));
-        attributes.add(attribute("maxTraversalDepth", Integer.toString(boundary.maxTraversalDepth())));
         snapshot.visibilityLimits().forEach(limit -> attributes.add(attribute("visibilityLimit", limit)));
         return new AnalysisEvidenceSection(PROVIDER, "source-boundary", List.of(new AnalysisEvidenceItem(
                 "Applied deterministic source boundary",

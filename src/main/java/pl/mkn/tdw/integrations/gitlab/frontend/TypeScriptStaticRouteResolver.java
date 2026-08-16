@@ -1,8 +1,5 @@
 package pl.mkn.tdw.integrations.gitlab.frontend;
 
-import com.fasterxml.jackson.core.json.JsonReadFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
@@ -10,13 +7,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 
 final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.StaticStringResolver {
 
-    private static final int MAX_CONFIGURATION_FILES = 20;
     private static final int MAX_RESOLUTION_DEPTH = 16;
     private static final Pattern PROPERTY_CHAIN = Pattern.compile(
             "[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*)+"
@@ -24,23 +20,16 @@ final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.St
     private static final Pattern NAMED_IMPORT = Pattern.compile(
             "(?s)import\\s*\\{([^}]+)}\\s*from\\s*['\"]([^'\"]+)['\"]"
     );
-    private static final JsonMapper JSON_MAPPER = JsonMapper.builder()
-            .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
-            .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
-            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-            .build();
-
-    private final List<String> inventory;
-    private final Set<String> inventorySet;
     private final Function<String, String> sourceReader;
-    private final List<PathAlias> pathAliases;
+    private final BiFunction<String, String, List<String>> importPathResolver;
     private final Map<String, String> sourceCache = new LinkedHashMap<>();
 
-    TypeScriptStaticRouteResolver(List<String> inventory, Function<String, String> sourceReader) {
-        this.inventory = List.copyOf(inventory);
-        this.inventorySet = Set.copyOf(inventory);
+    TypeScriptStaticRouteResolver(
+            Function<String, String> sourceReader,
+            BiFunction<String, String, List<String>> importPathResolver
+    ) {
         this.sourceReader = sourceReader;
-        this.pathAliases = loadPathAliases();
+        this.importPathResolver = importPathResolver;
     }
 
     @Override
@@ -65,23 +54,8 @@ final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.St
         if (!StringUtils.hasText(importPath)) {
             return List.of();
         }
-        var bases = new LinkedHashSet<String>();
-        if (importPath.startsWith(".")) {
-            bases.add(normalizeRelativePath(parentPath(sourcePath), importPath));
-        } else {
-            for (var alias : pathAliases) {
-                var target = alias.resolve(importPath);
-                if (target != null) {
-                    bases.add(target);
-                }
-            }
-        }
-
-        var candidates = new LinkedHashSet<String>();
-        for (var base : bases) {
-            addImportCandidates(candidates, base);
-        }
-        return inventory.stream().filter(candidates::contains).distinct().sorted().toList();
+        var result = importPathResolver.apply(sourcePath, importPath);
+        return result != null ? List.copyOf(result) : List.of();
     }
 
     private ValueResolution evaluate(
@@ -145,7 +119,7 @@ final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.St
                         ? "Static route model import '" + binding.importPath()
                                 + "' could not be mapped to repository source from " + sourcePath + "."
                         : "Static route model import '" + binding.importPath()
-                                + "' is ambiguous in the bounded repository inventory.");
+                                + "' is ambiguous in the bounded targeted source graph.");
             }
             var targetPath = targets.get(0);
             var targetSource = read(targetPath);
@@ -307,50 +281,6 @@ final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.St
         return result;
     }
 
-    private List<PathAlias> loadPathAliases() {
-        var aliases = new ArrayList<PathAlias>();
-        inventory.stream()
-                .filter(path -> fileName(path).startsWith("tsconfig") && path.endsWith(".json"))
-                .sorted((left, right) -> Integer.compare(pathDepth(left), pathDepth(right)))
-                .limit(MAX_CONFIGURATION_FILES)
-                .forEach(path -> loadPathAliases(path, aliases));
-        return List.copyOf(aliases);
-    }
-
-    private void loadPathAliases(String configPath, List<PathAlias> aliases) {
-        var source = read(configPath);
-        if (source == null) {
-            return;
-        }
-        try {
-            JsonNode root = JSON_MAPPER.readTree(source);
-            var compilerOptions = root.path("compilerOptions");
-            var baseUrl = compilerOptions.path("baseUrl").isTextual()
-                    ? compilerOptions.path("baseUrl").asText()
-                    : ".";
-            var mappingBase = normalizeRelativePath(parentPath(configPath), baseUrl);
-            var paths = compilerOptions.path("paths");
-            if (!paths.isObject()) {
-                return;
-            }
-            paths.fields().forEachRemaining(entry -> {
-                if (!entry.getValue().isArray()) {
-                    return;
-                }
-                entry.getValue().forEach(target -> {
-                    if (target.isTextual()) {
-                        aliases.add(new PathAlias(
-                                entry.getKey(),
-                                normalizeRelativePath(mappingBase, target.asText())
-                        ));
-                    }
-                });
-            });
-        } catch (Exception ignored) {
-            // An unreadable JSONC config remains an explicit unresolved import at the route expression.
-        }
-    }
-
     private String read(String path) {
         if (sourceCache.containsKey(path)) {
             return sourceCache.get(path);
@@ -358,15 +288,6 @@ final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.St
         var source = sourceReader.apply(path);
         sourceCache.put(path, source);
         return source;
-    }
-
-    private void addImportCandidates(Set<String> candidates, String base) {
-        candidates.add(base);
-        candidates.add(base + ".ts");
-        candidates.add(base + ".component.ts");
-        candidates.add(base + ".routes.ts");
-        candidates.add(base + ".module.ts");
-        candidates.add(base + "/index.ts");
     }
 
     private String stripTypeAssertions(String expression) {
@@ -474,38 +395,6 @@ final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.St
         return source.length();
     }
 
-    private String normalizeRelativePath(String parent, String relative) {
-        var combined = StringUtils.hasText(parent) ? parent + "/" + relative : relative;
-        var stack = new ArrayList<String>();
-        for (var segment : combined.replace('\\', '/').split("/")) {
-            if (!StringUtils.hasText(segment) || ".".equals(segment)) {
-                continue;
-            }
-            if ("..".equals(segment)) {
-                if (!stack.isEmpty()) {
-                    stack.remove(stack.size() - 1);
-                }
-            } else {
-                stack.add(segment);
-            }
-        }
-        return String.join("/", stack);
-    }
-
-    private String parentPath(String path) {
-        var index = path.lastIndexOf('/');
-        return index >= 0 ? path.substring(0, index) : "";
-    }
-
-    private String fileName(String path) {
-        var index = path.lastIndexOf('/');
-        return index >= 0 ? path.substring(index + 1) : path;
-    }
-
-    private int pathDepth(String path) {
-        return (int) path.chars().filter(character -> character == '/').count();
-    }
-
     private String unquote(String value) {
         return value.length() >= 2
                 && ((value.startsWith("'") && value.endsWith("'"))
@@ -530,23 +419,6 @@ final class TypeScriptStaticRouteResolver implements AngularRouteSourceParser.St
     }
 
     private record ImportBinding(String exportedName, String importPath) {
-    }
-
-    private record PathAlias(String pattern, String targetPattern) {
-        private String resolve(String importPath) {
-            var wildcard = pattern.indexOf('*');
-            if (wildcard < 0) {
-                return pattern.equals(importPath) ? targetPattern : null;
-            }
-            var prefix = pattern.substring(0, wildcard);
-            var suffix = pattern.substring(wildcard + 1);
-            if (!importPath.startsWith(prefix) || !importPath.endsWith(suffix)
-                    || importPath.length() < prefix.length() + suffix.length()) {
-                return null;
-            }
-            var value = importPath.substring(prefix.length(), importPath.length() - suffix.length());
-            return targetPattern.replace("*", value);
-        }
     }
 
     private static final class ScanState {

@@ -108,13 +108,17 @@ export interface UiExplorerScreenCatalogDiagnostic {
 }
 
 export interface UiExplorerScreenCatalogBoundary {
-  repositoryFileCount: number;
-  scannedRouteFileCount: number;
-  inventoryTruncated: boolean;
-  routeCatalogTruncated: boolean;
-  maxInventoryFiles: number;
+  visitedRouteNodeCount: number;
+  visitedRouteFileCount: number;
+  sourceReadCount: number;
+  aliasResolutionCount: number;
+  unresolvedEdgeCount: number;
+  limitReached: boolean;
+  maxRouteNodes: number;
   maxRouteFiles: number;
-  maxRouteEntries: number;
+  maxSourceReads: number;
+  maxAliasResolutions: number;
+  maxImportDepth: number;
 }
 
 export interface UiExplorerScreenCatalogResponse {
@@ -267,11 +271,11 @@ export interface UiExplorerJobStateSnapshot {
 
 export interface UiExplorerExportEnvelope {
   schema: 'tdw.ui-explorer-export';
-  version: 1;
+  version: 2;
   exportedAt: string;
   payload: {
     type: 'ui-explorer-analysis';
-    resultContract: 'ui-explorer-result-v1';
+    resultContract: 'ui-explorer-result-v2';
     job: UiExplorerJobStateSnapshot;
   };
 }

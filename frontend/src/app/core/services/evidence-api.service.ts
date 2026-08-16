@@ -130,6 +130,7 @@ export interface GitLabFrontendCatalogPayload {
 
 export interface GitLabFrontendScreenContextPayload extends GitLabFrontendCatalogPayload {
   screenId: string;
+  expectedRevision?: string;
 }
 
 export interface GitLabFrontendSourceReference {
@@ -139,20 +140,46 @@ export interface GitLabFrontendSourceReference {
   endLine?: number | null;
 }
 
-export interface GitLabFrontendRouteEntry {
-  screenId?: string | null;
+export interface GitLabFrontendRouteTarget {
+  symbol?: string | null;
+  sourcePath?: string | null;
+}
+
+export interface GitLabFrontendScreenIdentity {
+  screenId: string;
+  routeNodeId: string;
+  routePattern: string;
+  outlet: string;
+  viewTarget: GitLabFrontendRouteTarget;
+}
+
+export interface GitLabFrontendRouteConfiguration {
+  kind: string;
+  key?: string | null;
+  referencedSymbols: string[];
+  staticValue?: string | null;
+  status: string;
+  source?: GitLabFrontendSourceReference | null;
+  limitations: string[];
+}
+
+export interface GitLabFrontendRouteNode {
+  nodeId: string;
+  parentNodeId?: string | null;
+  screen?: GitLabFrontendScreenIdentity | null;
   label?: string | null;
-  routePattern?: string | null;
-  parentRoutePattern?: string | null;
-  kind?: string | null;
-  status?: string | null;
-  lazyLoaded: boolean;
-  guards: string[];
+  pathSegment?: string | null;
+  routePattern: string;
+  outlet: string;
+  kind: string;
+  status: string;
+  lazyBoundary: boolean;
   routeParameters: string[];
   redirectTarget?: string | null;
-  viewSymbol?: string | null;
-  viewSourcePath?: string | null;
-  routeSource?: GitLabFrontendSourceReference | null;
+  viewTarget?: GitLabFrontendRouteTarget | null;
+  lazyTarget?: GitLabFrontendRouteTarget | null;
+  configuration: GitLabFrontendRouteConfiguration[];
+  routeSource: GitLabFrontendSourceReference;
   limitations: string[];
 }
 
@@ -162,23 +189,33 @@ export interface GitLabFrontendWorkspaceSignal {
   sourcePath?: string | null;
 }
 
-export interface GitLabFrontendDiagnostic {
+export interface GitLabFrontendGraphDiagnostic {
   severity?: string | null;
   code?: string | null;
   message?: string | null;
-  sourcePath?: string | null;
+  nodeId?: string | null;
+  edgeId?: string | null;
+  source?: GitLabFrontendSourceReference | null;
+}
+
+export interface GitLabFrontendGraphCoverage {
+  status: string;
+  visitedRouteNodeCount: number;
+  visitedRouteFileCount: number;
+  sourceReadCount: number;
+  aliasResolutionCount: number;
+  unresolvedEdgeCount: number;
+  limitReached: boolean;
+  limitations: string[];
 }
 
 export interface GitLabFrontendCatalogResponse {
   scope: GitLabFrontendCatalogPayload;
   sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
   workspaceSignals: GitLabFrontendWorkspaceSignal[];
-  entries: GitLabFrontendRouteEntry[];
-  diagnostics: GitLabFrontendDiagnostic[];
-  repositoryFileCount: number;
-  scannedRouteFileCount: number;
-  inventoryTruncated: boolean;
-  routeCatalogTruncated: boolean;
+  nodes: GitLabFrontendRouteNode[];
+  diagnostics: GitLabFrontendGraphDiagnostic[];
+  coverage: GitLabFrontendGraphCoverage;
 }
 
 export interface GitLabFrontendSourceFile {
@@ -205,14 +242,14 @@ export interface GitLabFrontendContextCoverage {
 export interface GitLabFrontendScreenContextResponse {
   scope: GitLabFrontendCatalogPayload;
   sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
-  screen?: GitLabFrontendRouteEntry | null;
-  workspaceSignals: GitLabFrontendWorkspaceSignal[];
+  screenNode?: GitLabFrontendRouteNode | null;
+  graphCoverage: GitLabFrontendGraphCoverage;
   sourceFiles: GitLabFrontendSourceFile[];
   technicalSignals: GitLabFrontendTechnicalSignal[];
   coverage: GitLabFrontendContextCoverage[];
-  diagnostics: GitLabFrontendDiagnostic[];
+  diagnostics: GitLabFrontendGraphDiagnostic[];
   totalReturnedCharacters: number;
-  truncated: boolean;
+  contextLimitReached: boolean;
 }
 
 export interface GitLabJavaMethodSliceMethodSelector {

@@ -1193,6 +1193,296 @@ importow z integracji do `features`, `api`, `agenttools` ani `aiplatform`.
 Wszystkie nowe testy i przyklady sa silnie zanonimizowanym CRM; diagnostyczne
 pliki badanego frontendu nie zostaly utrwalone w repozytorium.
 
+#### 8B. Route-root graph discovery bez repository inventory
+
+Zakres 8B zastepuje wynikowe podejscie runtime z 8A. Implementacja 8A jest
+baseline'em migracji i nie pozostaje fallbackiem. Nowy kontrakt zaklada nowszy
+standalone Angular z dokladnie jednym produkcyjnym `provideRouter(...)`
+osiagalnym z glownego `bootstrapApplication(...)`. `RouterModule.forRoot`,
+wybor pierwszego z wielu rootow oraz globalne przegladanie wszystkich plikow
+`.ts` nie sa obslugiwane. Brak albo niejednoznacznosc glownego root routera
+konczy discovery jawnym `BLOCKED`, a nie przejsciem do poprzedniego algorytmu.
+
+Potrzeba techniczna: obecny serwis najpierw sortuje cale repository inventory
+i obcina je do `maxInventoryFiles`, a dopiero pozniej szuka konfiguracji,
+aliasow oraz route sources. W duzym monorepo powoduje to zaleznosc wyniku od
+alfabetycznej pozycji pliku: root `app.routes.ts` moze byc widoczny, podczas
+gdy root `tsconfig.base.json`, importowany route model i lazy route sources sa
+poza bounded working set. Zwiekszenie limitu tylko przesuwa ten problem i nie
+jest rozwiazaniem uniwersalnym.
+
+Docelowy deterministyczny flow:
+
+1. Istniejacy GitLab content search znajduje bounded kandydatow
+   `bootstrapApplication` i `provideRouter`; kandydat jest akceptowany tylko,
+   gdy parser potwierdzi produkcyjny bootstrap chain, import z Angular Router
+   i dokladnie jeden osiagalny root router.
+2. Resolver odczytuje wymagane root/project `tsconfig*.json` oraz rozwiazuje
+   argument `provideRouter`, importy, re-exporty, statyczne route arrays,
+   property chains i aliasy TypeScript/Nx bez repository inventory.
+3. Import target jest wyliczany do bounded zestawu konkretnych sciezek i
+   odczytywany bezposrednio przez `GitLabRepositoryPort`; traversal zachowuje
+   code-search scope, wykrywanie cykli, niejednoznacznosc i limity grafu.
+4. Route graph przechodzi rekurencyjnie przez `children` i `loadChildren` oraz
+   zapisuje source ownership dla `path`, `redirectTo`, `component`,
+   `loadComponent`, `canActivate`, `canActivateChild`, `canDeactivate`,
+   `canMatch`, `resolve`, `data`, `title`, `providers`, `pathMatch`, `outlet`
+   i `runGuardsAndResolvers`. Konfiguracja rodzicow pozostaje osobnymi wezlami
+   i jest wyprowadzana jako effective route chain dla potomka.
+5. Katalog ekranow pozostaje lekki: zawiera route/view identity, hierarchy,
+   wejscia, source references, coverage i diagnostics. Nie rozwija formularzy,
+   NgRx, REST, WebSocket ani calego component graph dla kazdego ekranu.
+6. Dopiero source context wybranego `screenId` rozwija route chain root ->
+   screen, komponent wejscia i bounded powiazania istotne dla struktury,
+   akcji, formularzy, stanu, danych, uslug i uprawnien.
+7. Source revision jest rozstrzygana dla refa niezaleznie od metadanych
+   przypadkowego pliku i pozostaje wspolna dla katalogu oraz source contextu.
+
+Nowe limity sa semantyczne: liczba root candidates, route nodes, route files,
+bezposrednich reads, alias resolutions, import/component depth oraz file/total
+characters. Usuniete zostaja `maxInventoryFiles`, `repositoryFileCount`,
+`inventoryTruncated` i diagnostyki sugerujace globalne inventory. Publiczny
+operator nadal nie rozszerza limitow. Wynik pokazuje liczbe odwiedzonych
+wezlow i plikow oraz konkretna nieodwiedzona krawedz po przekroczeniu budzetu.
+
+Brak kompatybilnosci wstecznej oznacza jedna atomowa migracje neutralnych
+modeli, shared/operator API, GitLab Tool Workbench, UI Explorer catalog/source
+context i ich testow. Nie zostaja legacy DTO, dual-read, stary algorytm,
+legacy diagnostics ani tlumaczenie starego `screenId`. Jezeli delta zmieni
+serializowany kontrakt exportu UI Explorer, schema/version zostaje podniesiona,
+a starsze eksporty sa jawnie odrzucane zamiast migrowane.
+
+Conformance delta i konsumenci 8B:
+
+| Obszar | Baseline 8A | Target 8B |
+| --- | --- | --- |
+| Root discovery | route candidates z obcietego inventory | jeden zweryfikowany `bootstrapApplication` -> `provideRouter` chain |
+| Source traversal | membership w pierwszych `maxInventoryFiles` | targeted read grafu importow w hidden code-search scope |
+| Route model | plaska lista odkrytych wpisow | hierarchiczny route graph i effective route chain |
+| Limity | inventory/route/context | root/graph/read/depth/character budgets |
+| Failure semantics | partial po przypadkowym obcieciu | jawne blocked/partial na konkretnej krawedzi grafu |
+| Konsumenci | integration, shared API, Workbench, UI Explorer | atomowo zmienione bez legacy adaptera |
+
+Odrzucone alternatywy: podniesienie `maxInventoryFiles` do rozmiaru badanego
+repozytorium, utrzymanie inventory jako fallbacku, wymaganie od analityka
+podania wszystkich lazy-library path prefixes oraz budowa pelnego component
+graph dla wszystkich ekranow podczas ladowania katalogu.
+
+- [x] 8B.1: Zdefiniowac breaking modele bootstrap root, route graph, effective
+  route chain, graph coverage/diagnostics i semantyczne limity; przygotowac
+  audit publicznych DTO, `screenId`, exportu oraz wszystkich konsumentow i
+  potwierdzic compile-time dependency graph. Dowodem sa testy kontraktow oraz
+  fixtures wylacznie silnie zanonimizowanego CRM; nie wolno utrwalac nazw,
+  sciezek ani fragmentow badanego frontendu.
+- [x] 8B.2: Zaimplementowac bounded root discovery przez GitLab content search
+  oraz walidacje `bootstrapApplication` -> application config -> jednego
+  `provideRouter`, z `BLOCKED` dla zera/wielu rootow i bez legacy fallbacku.
+  Pokryc aliasy importu, komentarze, pliki testowe i niejednoznacznosc
+  silnie zanonimizowanymi fixtures CRM oraz uruchomic celowane testy integracji.
+- [x] 8B.3: Zastapic inventory resolverem targeted reads dla `tsconfig`,
+  importow, re-exportow, route const/property chains, `children`,
+  `loadChildren`, `component` i `loadComponent`; dodac cykle, depth/read/size
+  budgets i destrukturyzowane `.then(({ ROUTES }) => ROUTES)`. Wszystkie testy
+  oraz przyklady maja byc silnie zanonimizowanym CRM; rzeczywisty kod badanego
+  frontendu pozostaje wylacznie materialem diagnostycznym poza repozytorium.
+- [x] 8B.4: Zbudowac route graph z route-owned guards, resolvers, data,
+  providers i pozostala konfiguracja oraz effective route chain dla potomkow;
+  katalog ma zatrzymywac sie przed pelnym component-context traversal.
+  Zweryfikowac empty paths, nested children, lazy boundaries, redirecty,
+  parametry, auxiliary outlets i duplikaty route pattern wylacznie na silnie
+  zanonimizowanych fixtures CRM.
+- [x] 8B.5: Przebudowac source context wybranego ekranu tak, aby rozwijal tylko
+  jego route chain i bounded component/behavior dependencies, a nastepnie
+  atomowo zmigrowac shared API, Tool Workbench i UI Explorer bez legacy DTO,
+  diagnostyk i `screenId`. Testy backendu i Angulara, snapshoty oraz przyklady
+  maja pozostac silnie zanonimizowanym CRM.
+- [x] 8B.6: Rozwiazac source revision bez anchor file metadata, usunac stary
+  inventory runtime i dead code, zaktualizowac dokumentacje kanoniczna oraz
+  wykonac macierz zmiany wspolnej: celowane testy integracji/API/feature,
+  `npm --prefix frontend test -- --watch=false`,
+  `npm --prefix frontend run build` i `mvn -q -Pbackend-dev clean package`.
+  Wszystkie nowe lub zmienione fixtures, snapshoty i przyklady musza byc
+  silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Checkpoint 8B.1 2026-08-16: w `integrations.gitlab.frontend` istnieje docelowy,
+jeszcze niepodlaczony do publicznego runtime kontrakt `GitLabFrontendRouteGraph`.
+Rozdziela zweryfikowany bootstrap root, route nodes, typed graph edges,
+route-owned configuration, effective route chains, screen identity, typed
+diagnostics, coverage oraz `GitLabFrontendGraphLimits` bez
+`maxInventoryFiles`. Model dopuszcza brak root wyłącznie dla jawnego stanu
+`BLOCKED`; `READY` wymaga root, screen node wymaga zgodnego `routeNodeId`, a
+effective chain musi konczyc sie wezlem wybranego ekranu. Nie wlaczono nowego
+traversal ani dualnego publicznego API przed 8B.2-8B.5.
+
+Audit konsumentow i decyzje migracyjne 8B.1:
+
+| Konsument | Obecna zaleznosc | Decyzja breaking migration |
+| --- | --- | --- |
+| `GitLabFrontendSourceDiscoveryService` i integration request/result | inventory limits, plaskie entries, hash `kind + route + viewPath` | 8B.2-8B.4 buduja graph; 8B.5 usuwa stare modele i generator bez fallbacku |
+| shared GitLab Frontend Discovery API | zwraca integration DTO bez osobnej projekcji | 8B.5 atomowo wystawia graph catalog/context i usuwa inventory fields/diagnostics |
+| GitLab Tool Workbench | TypeScript DTO oraz chipy repository/route inventory | 8B.5 pokazuje root/graph/read coverage i konkretne unresolved edges |
+| UI Explorer screen catalog | `UiExplorerScreenCatalogBoundary` i partial status z inventory | 8B.5 mapuje screen nodes/effective chains oraz semantyczne graph coverage |
+| UI Explorer source context i AI readiness | context boundary, evidence mapper i readiness gate czytaja inventory truncation | 8B.5 przechodzi na selected route chain, graph/context budgets i edge diagnostics |
+| `screenId`, job, report i historia | request/result/import consistency oraz nazwy eksportu opieraja sie na starym ID | nowe ID wynika z route-node identity, outlet i view target; brak translacji starych ID |
+| UI Explorer export/import i sanitizer | schema/result V1 oraz allowlista inventory fields | 8B.5 podnosi wersje po zmianie semantyki screen identity/boundary i jawnie odrzuca V1 |
+| source revision | metadata anchor wybrany z inventory | 8B.6 rozstrzyga commit refa niezaleznie od pliku |
+
+Kontrakt zostal pokryty czterema silnie zanonimizowanymi testami CRM:
+poprawny inherited route chain, jawnie zablokowany brak root, odrzucenie
+niespojnego screen/node/chain oraz brak inventory limits. Przeszly
+`GitLabFrontendRouteGraphContractTest`, `PackageDependencyGuardTest` i pelne
+`mvn -q test`.
+
+Checkpoint 8B.2 2026-08-16: `GitLabFrontendBootstrapDiscoveryService` uzywa
+istniejacego `GitLabRepositoryPort.searchRepositoryFilesByContent` tylko dla
+bounded kandydatow `bootstrapApplication` i `provideRouter`, filtruje `.ts`
+przez hidden code-search `pathPrefixes` oraz odrzuca pliki spec/test/story,
+Storybook, fixtures i testing. Kandydaci sa czytani bez globalnego tree
+inventory; brak odczytu, truncation, blad search oraz przekroczenie
+`maxRootCandidates` blokuja potwierdzenie zamiast zmniejszac coverage po
+cichu.
+
+Nowy `AngularBootstrapSourceParser` nie wykonuje TypeScriptu. Maskuje komentarze
+i stringi, potwierdza named imports z `@angular/platform-browser` oraz
+`@angular/router`, obsluguje aliasy nazw importowanych, konfiguracje inline,
+lokalny `const` i pojedynczy importowany exported config. Discovery akceptuje
+tylko jeden lancuch bootstrap config -> jeden `provideRouter`; zero, wiele
+rootow albo wiele providerow zwraca typed `BLOCKED` diagnostics. Wynik jest
+niepublicznym `GitLabFrontendBootstrapDiscoveryResult` i nie przelacza jeszcze
+starego catalog runtime ani API; nie istnieje fallback z nowego resolvera do
+inventory.
+
+Szesc nowych testow, wylacznie na silnie zanonimizowanym CRM, potwierdza
+importowany config i aliasy Angulara, inline config, komentarze/string false
+positives, ignorowanie `.spec.ts`, zero/wiele rootow, candidate limit oraz
+code-search prefixes. Przeszly testy celowane
+`GitLabFrontendBootstrapDiscoveryServiceTest`,
+`GitLabFrontendRouteGraphContractTest`, `PackageDependencyGuardTest` oraz
+pelne `mvn -q test`.
+
+Checkpoint 8B.3 2026-08-16: nowa, nadal izolowana od publicznego runtime
+sciezka uzywa `GitLabFrontendTargetedSourceSession` jako jedynej bramy odczytu
+po root discovery. Sesja normalizuje i weryfikuje kazdy path wzgledem hidden
+`pathPrefixes`, cache'uje odczyty i brakujace pliki oraz egzekwuje osobne
+budzety source reads, route files, alias resolutions, import depth, file size,
+total size i route nodes. Nie wywoluje `listRepositoryFiles` i nie ma fallbacku
+do inventory.
+
+`GitLabFrontendTargetedImportResolver` pobiera tylko przewidywalne kandydaty
+`tsconfig.base.json`, `tsconfig.json`, konfiguracje przy bootstrap source oraz
+ich statyczne `extends`. Rozwiazuje relative imports, `baseUrl`, exact/wildcard
+`paths` i ograniczony zestaw kandydatow `.ts`; zero/wiele dopasowan pozostaje
+jawna krawedzia nierozwiazana zamiast arbitralnego wyboru. Module traversal
+obsluguje named imports, named/star re-exports, wykrywa cykle i respektuje
+depth/alias budgets.
+
+`GitLabFrontendRouteSourceTraversalService` zaczyna od symbolu przekazanego do
+zweryfikowanego `provideRouter`, rozwija literalne route const arrays,
+property-chain paths, zewnetrzne `children`, `loadChildren`, `component` i
+`loadComponent`. Lazy targets wspieraja `.then(module => module.ROUTES)` oraz
+`.then(({ ROUTES }) => ROUTES)`. Na tym etapie komponent jest tylko
+rozstrzygnietym targetem; jego zaleznosci pozostaja poza katalogiem tras do
+kroku 8B.5.
+
+Osiem nowych testow, wylacznie na silnie zanonimizowanym syntetycznym CRM,
+potwierdza aliasy i barrel re-exports, static property chains, children, oba
+warianty lazy `.then`, komponenty, hard scope boundary, cykl, niejednoznaczny
+modul oraz budzety read/depth/file-size/route-files. Kazdy scenariusz
+potwierdza brak `listRepositoryFiles`. Przeszly testy calego pakietu
+`integrations.gitlab.frontend`, `PackageDependencyGuardTest` oraz pelny
+`mvn -q test`.
+
+Checkpoint 8B.4 2026-08-16: `GitLabFrontendRouteGraphDiscoveryService` sklada
+zweryfikowany bootstrap root i targeted traversal w docelowy
+`GitLabFrontendRouteGraph`. Kazda deklaracja route zachowuje wewnetrzna
+tozsamosc collection + source offset tylko do bezblednego laczenia rodzicow;
+publiczne `routeNodeId` i `screenId` wynikaja z semantycznego lancucha rodzica,
+path segmentu, outletu, view/lazy targetu, redirectu i sibling occurrence.
+Dodanie komentarza lub zmiana formatowania przed deklaracja nie zmienia ID.
+
+Parser zachowuje route-owned `canActivate`, `canActivateChild`, `canDeactivate`,
+`canMatch`, `canLoad`, `resolve`, `data`, `title`, `providers`, `pathMatch`,
+`outlet` i `runGuardsAndResolvers` jako typowane
+`GitLabFrontendRouteConfiguration`. Builder nie kopiuje ich na potomkow;
+effective route chain sklada konfiguracje przez jawne segmenty od root do
+ekranu, lacznie z empty-path i lazy boundaries, oraz agreguje parametry route.
+
+Graf rozroznia route, screen, redirect i unresolved node, zachowuje auxiliary
+outlet, nie deduplikuje ekranow po samym route pattern i wystawia typed edges
+dla root routes, children, loadChildren, component oraz loadComponent. Brak
+view/lazy targetu pozostaje krawedzia `NOT_FOUND` i typed diagnostic zamiast
+znikac z katalogu. Catalog zatrzymuje sie na rozstrzygnietym component target;
+nie przeszukuje jego importow ani behavior dependencies przed 8B.5.
+
+Nowe testy, wylacznie na silnie zanonimizowanym syntetycznym CRM, pokrywaja
+route-owned guards/resolvers/data/providers, nested i empty paths, lazy
+boundary, redirect, parametry, auxiliary outlet, duplikaty route pattern,
+stabilnosc ID po formatowaniu, brak component-context traversal, blocked root
+oraz unresolved typed edge. Przeszly testy calego pakietu
+`integrations.gitlab.frontend`, `PackageDependencyGuardTest` oraz pelny
+`mvn -q test`.
+
+Checkpoint 8B.5 2026-08-16: `GitLabFrontendScreenGraphContextService` przyjmuje
+wylacznie `screenId` z aktualnego route graph oraz opcjonalna oczekiwana
+rewizje. Po wyborze rozwija effective route chain, importy konfiguracji
+segmentow (`canActivate*`, `canDeactivate`, `canMatch`, `canLoad`, resolvers i
+providers), komponent widoku, lokalne importy/re-exporty, template oraz style.
+Kazdy odczyt przechodzi przez `GitLabFrontendTargetedSourceSession`; osobne
+budzety graph i selected-screen context nie uzywaja `listRepositoryFiles` ani
+fallbacku do inventory.
+
+Shared `/api/gitlab/frontend/catalog` zwraca teraz route graph z typed nodes,
+edges, effective chains i graph coverage, a `/screen-context` zwraca selected
+screen graph context. Tool Workbench konsumuje te same breaking kontrakty i
+pokazuje route files, targeted reads oraz graph/context limit zamiast liczby
+plikow repozytorium. UI Explorer mapuje nowe semantyczne `screenId`, guards z
+calego effective chain, route parameters, graph diagnostics i dwa niezalezne
+stany limitow. Publiczny input UI Explorer nadal nie ujawnia group, project ani
+path prefixes.
+
+Import/export oraz lokalny run UI Explorer maja wersje `2` i kontrakt
+`ui-explorer-result-v2`; wersja `1` jest jawnie odrzucana bez translacji
+starych screen ID i inventory boundary. Sanitizer dopuszcza tylko nowe liczniki
+graph/context. Testy API, feature, portability i Angulara zostaly przepisane
+na silnie zanonimizowany syntetyczny CRM. Przeszly celowane testy backendu,
+test wykluczajacy repository inventory dla selected screen, pelne testy
+Angulara (409/409), produkcyjny build UI oraz
+`mvn -q -Pbackend-dev clean package`. Macierz zostanie powtorzona w 8B.6 po
+usunieciu starego runtime i docelowym rozwiazaniu source revision.
+
+Checkpoint 8B.6 2026-08-16: neutralny `GitLabRepositoryPort` udostepnia teraz
+`resolveRevision(group, projectName, ref)`, a produkcyjny adapter rozstrzyga
+branch, tag albo SHA przez GitLab `repository/commits/{ref}`. Route graph uzywa
+wylacznie tej capability i zwraca typed `SOURCE_REVISION_UNRESOLVED`, gdy ref
+nie moze zostac przypisany do immutable commit id. Ani poprawny, ani
+zablokowany katalog nie odczytuje juz metadanych pliku bootstrap w celu
+wyznaczenia rewizji.
+
+Usunieto `GitLabFrontendSourceDiscoveryService`, stary inventory test adapter,
+osiem legacy DTO/enumow katalogu i contextu oraz inventory-only konstruktor i
+alias loader z `TypeScriptStaticRouteResolver`. Produkcyjny pakiet
+`integrations.gitlab.frontend` nie ma wywolania `listRepositoryFiles`,
+`readFileMetadata`, `maxInventoryFiles`, `repositoryFileCount` ani
+`inventoryTruncated`; pozostaly jedynie testy negatywne blokujace ich powrot.
+Dokumenty kanoniczne opisuja teraz jeden `bootstrapApplication ->
+provideRouter` graph, targeted reads, ref-level revision i wersje V2 kopert UI
+Explorer.
+
+Weryfikacja 8B.6 przeszla na wylacznie silnie zanonimizowanych danych CRM:
+celowane testy GitLab Frontend, REST adaptera, shared API, UI Explorer i
+dependency guard; Angular 55 plikow/409 testow; produkcyjny build Angulara;
+`mvn -q -Pbackend-dev clean package` z 1200 testami backendu, bez failures,
+errors i skipped. Powstal aktualny JAR z wygenerowanym bundle UI.
+
+Kryterium akceptacji 8B: repozytorium wieksze niz dowolny dawny limit
+inventory daje kompletny, deterministyczny route catalog, jezeli caly statyczny
+graf jest osiagalny od jednego `provideRouter` i miesci sie w semantycznych
+budzetach. Liczba niepowiazanych plikow w repozytorium nie zmienia wyniku.
+Zero/wiele rootow, dynamiczna krawedz, plik poza scope i przekroczenie budzetu
+maja rozroznialne diagnostics. Wybor ekranu buduje source context tylko dla
+jego route chain i powiazanych zaleznosci. Nie istnieje wykonanie starego
+inventory discovery ani kontrakt kompatybilnosci.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.

@@ -6,28 +6,30 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteCatalog;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenSourceContext;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraph;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraphDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContext;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContextService;
 
 @RestController
 @RequestMapping("/api/gitlab/frontend")
 @RequiredArgsConstructor
 public class GitLabFrontendDiscoveryController {
 
-    private final GitLabFrontendSourceDiscoveryService gitLabFrontendSourceDiscoveryService;
+    private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
+    private final GitLabFrontendScreenGraphContextService screenGraphContextService;
 
     @PostMapping("/catalog")
-    public GitLabFrontendRouteCatalog discoverCatalog(
+    public GitLabFrontendRouteGraph discoverCatalog(
             @Valid @RequestBody GitLabFrontendCatalogApiRequest request
     ) {
-        return gitLabFrontendSourceDiscoveryService.discoverCatalog(request.toIntegrationRequest());
+        return routeGraphDiscoveryService.discover(request.toScope(), request.limits());
     }
 
     @PostMapping("/screen-context")
-    public GitLabFrontendScreenSourceContext buildScreenContext(
+    public GitLabFrontendScreenGraphContext buildScreenContext(
             @Valid @RequestBody GitLabFrontendScreenContextApiRequest request
     ) {
-        return gitLabFrontendSourceDiscoveryService.buildScreenContext(request.toIntegrationRequest());
+        return screenGraphContextService.build(request.toIntegrationRequest());
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 final class AngularRouteSourceParser {
@@ -15,7 +16,12 @@ final class AngularRouteSourceParser {
     private static final Pattern STRING_LITERAL = Pattern.compile("^\\s*(['\"])(.*?)\\1\\s*$", Pattern.DOTALL);
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
     private static final Pattern DYNAMIC_IMPORT = Pattern.compile("import\\s*\\(\\s*['\"]([^'\"]+)['\"]\\s*\\)");
-    private static final Pattern THEN_SYMBOL = Pattern.compile("\\.then\\s*\\([^=]*=>\\s*[A-Za-z_$][A-Za-z0-9_$]*\\.([A-Za-z_$][A-Za-z0-9_$]*)");
+    private static final Pattern THEN_MEMBER_SYMBOL = Pattern.compile(
+            "\\.then\\s*\\([^=]*=>\\s*[A-Za-z_$][A-Za-z0-9_$]*\\.([A-Za-z_$][A-Za-z0-9_$]*)"
+    );
+    private static final Pattern THEN_DESTRUCTURED_SYMBOL = Pattern.compile(
+            "\\.then\\s*\\(\\s*\\(?\\s*\\{\\s*([A-Za-z_$][A-Za-z0-9_$]*)"
+    );
 
     ParseResult parse(String sourcePath, String source) {
         return parse(sourcePath, source, (path, content, expression) ->
@@ -43,6 +49,7 @@ final class AngularRouteSourceParser {
                     "",
                     false,
                     List.of(),
+                    null,
                     routes,
                     limitations,
                     stringResolver
@@ -54,6 +61,71 @@ final class AngularRouteSourceParser {
         return new ParseResult(routes, List.copyOf(limitations));
     }
 
+    ParseResult parseCollection(
+            String sourcePath,
+            String source,
+            String collectionSymbol,
+            StaticStringResolver stringResolver
+    ) {
+        return parseCollection(sourcePath, source, collectionSymbol, "", false, List.of(), stringResolver);
+    }
+
+    ParseResult parseCollection(
+            String sourcePath,
+            String source,
+            String collectionSymbol,
+            String parentPath,
+            boolean inheritedLazy,
+            List<String> inheritedGuards,
+            StaticStringResolver stringResolver
+    ) {
+        if (!StringUtils.hasText(collectionSymbol)) {
+            return parse(sourcePath, source, stringResolver);
+        }
+        var declaration = Pattern.compile(
+                "(?s)(?:export\\s+)?const\\s+" + Pattern.quote(collectionSymbol)
+                        + "\\b\\s*(?::[^=;]+)?=\\s*"
+        ).matcher(source);
+        if (!declaration.find()) {
+            return new ParseResult(
+                    List.of(),
+                    List.of("Route collection '" + collectionSymbol + "' was not found in " + sourcePath + ".")
+            );
+        }
+        var arrayStart = firstNonWhitespace(source, declaration.end());
+        if (arrayStart < 0 || source.charAt(arrayStart) != '[') {
+            return new ParseResult(
+                    List.of(),
+                    List.of("Route collection '" + collectionSymbol + "' is not a static array in "
+                            + sourcePath + ".")
+            );
+        }
+        var arrayEnd = matchingDelimiter(source, arrayStart, '[', ']');
+        if (arrayEnd < 0) {
+            return new ParseResult(
+                    List.of(),
+                    List.of("Route collection '" + collectionSymbol + "' has no closing bracket in "
+                            + sourcePath + ".")
+            );
+        }
+        var routes = new ArrayList<ParsedRoute>();
+        var limitations = new LinkedHashSet<String>();
+        parseArray(
+                sourcePath,
+                source,
+                arrayStart,
+                arrayEnd,
+                parentPath,
+                inheritedLazy,
+                inheritedGuards,
+                null,
+                routes,
+                limitations,
+                stringResolver
+        );
+        return new ParseResult(routes, List.copyOf(limitations));
+    }
+
     private void parseArray(
             String sourcePath,
             String source,
@@ -62,6 +134,7 @@ final class AngularRouteSourceParser {
             String parentPath,
             boolean inheritedLazy,
             List<String> inheritedGuards,
+            Integer parentSourceOffset,
             List<ParsedRoute> routes,
             LinkedHashSet<String> limitations,
             StaticStringResolver stringResolver
@@ -91,10 +164,14 @@ final class AngularRouteSourceParser {
             var componentExpression = properties.value("component");
             var loadComponentExpression = properties.value("loadComponent");
             var loadChildrenExpression = properties.value("loadChildren");
+            var children = properties.value("children");
+            var outletResolution = staticString(sourcePath, source, properties.value("outlet"), stringResolver);
+            var outlet = StringUtils.hasText(outletResolution.value()) ? outletResolution.value() : "primary";
             var guards = new LinkedHashSet<>(inheritedGuards);
             guards.addAll(guards(properties));
             var lazy = inheritedLazy || loadComponentExpression != null || loadChildrenExpression != null;
             var line = lineNumber(source, span.start());
+            var configuration = configuration(properties, sourcePath, source, line, stringResolver);
 
             if (pathExpression != null || redirect != null || componentExpression != null
                     || loadComponentExpression != null || loadChildrenExpression != null) {
@@ -110,14 +187,20 @@ final class AngularRouteSourceParser {
                         loadChildrenExpression != null,
                         importPath(loadChildrenExpression),
                         importedSymbol(loadChildrenExpression),
+                        children != null,
+                        exactIdentifier(children),
+                        outlet,
+                        configuration,
                         List.copyOf(guards),
                         lazy,
                         sourcePath,
-                        line
+                        line,
+                        span.start(),
+                        parentSourceOffset,
+                        pathExpression != null
                 ));
             }
 
-            var children = properties.value("children");
             if (children != null) {
                 var childArrayStart = firstNonWhitespace(children, 0);
                 if (childArrayStart >= 0 && children.charAt(childArrayStart) == '[') {
@@ -132,13 +215,16 @@ final class AngularRouteSourceParser {
                                 fullPath,
                                 lazy,
                                 List.copyOf(guards),
+                                span.start(),
                                 routes,
                                 limitations,
                                 stringResolver
                         );
                     }
                 } else {
-                    limitations.add("Dynamic children route definition was not resolved in " + sourcePath + ".");
+                    if (exactIdentifier(children) == null) {
+                        limitations.add("Dynamic children route definition was not resolved in " + sourcePath + ".");
+                    }
                 }
             }
         }
@@ -147,6 +233,106 @@ final class AngularRouteSourceParser {
         if (containsTopLevelSpread(body)) {
             limitations.add("Spread route definitions are runtime-dependent and were not expanded in " + sourcePath + ".");
         }
+    }
+
+    private List<GitLabFrontendRouteConfiguration> configuration(
+            Properties properties,
+            String sourcePath,
+            String source,
+            int line,
+            StaticStringResolver stringResolver
+    ) {
+        var result = new ArrayList<GitLabFrontendRouteConfiguration>();
+        addConfiguration(result, properties, "canActivate", GitLabFrontendRouteConfigurationKind.CAN_ACTIVATE,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "canActivateChild",
+                GitLabFrontendRouteConfigurationKind.CAN_ACTIVATE_CHILD,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "canDeactivate",
+                GitLabFrontendRouteConfigurationKind.CAN_DEACTIVATE,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "canMatch", GitLabFrontendRouteConfigurationKind.CAN_MATCH,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "canLoad", GitLabFrontendRouteConfigurationKind.CAN_LOAD,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "resolve", GitLabFrontendRouteConfigurationKind.RESOLVE,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "data", GitLabFrontendRouteConfigurationKind.DATA,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "title", GitLabFrontendRouteConfigurationKind.TITLE,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "providers", GitLabFrontendRouteConfigurationKind.PROVIDERS,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "pathMatch", GitLabFrontendRouteConfigurationKind.PATH_MATCH,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "outlet", GitLabFrontendRouteConfigurationKind.OUTLET,
+                sourcePath, source, line, stringResolver);
+        addConfiguration(result, properties, "runGuardsAndResolvers",
+                GitLabFrontendRouteConfigurationKind.RUN_GUARDS_AND_RESOLVERS,
+                sourcePath, source, line, stringResolver);
+        return List.copyOf(result);
+    }
+
+    private void addConfiguration(
+            List<GitLabFrontendRouteConfiguration> result,
+            Properties properties,
+            String key,
+            GitLabFrontendRouteConfigurationKind kind,
+            String sourcePath,
+            String source,
+            int line,
+            StaticStringResolver stringResolver
+    ) {
+        var expression = properties.value(key);
+        if (!StringUtils.hasText(expression)) {
+            return;
+        }
+        var stringLike = kind == GitLabFrontendRouteConfigurationKind.TITLE
+                || kind == GitLabFrontendRouteConfigurationKind.PATH_MATCH
+                || kind == GitLabFrontendRouteConfigurationKind.OUTLET
+                || kind == GitLabFrontendRouteConfigurationKind.RUN_GUARDS_AND_RESOLVERS;
+        var staticResolution = stringLike
+                ? staticString(sourcePath, source, expression, stringResolver)
+                : new StaticStringResolution(null, null);
+        var staticValue = staticResolution.value();
+        if (staticValue == null && (expression.trim().startsWith("{")
+                || expression.trim().startsWith("[")
+                || expression.trim().matches("(?:true|false|null|-?\\d+(?:\\.\\d+)?)"))) {
+            staticValue = bounded(expression.trim());
+        }
+        var dynamic = expression.contains("=>") || expression.contains("import(");
+        var limitation = staticResolution.limitation();
+        result.add(new GitLabFrontendRouteConfiguration(
+                kind,
+                key,
+                referencedSymbols(expression),
+                staticValue,
+                dynamic || limitation != null
+                        ? GitLabFrontendDiscoveryStatus.PARTIAL
+                        : GitLabFrontendDiscoveryStatus.RESOLVED,
+                new GitLabFrontendSourceReference(sourcePath, null, line, line),
+                limitation != null ? List.of(limitation) : List.of()
+        ));
+    }
+
+    private List<String> referencedSymbols(String expression) {
+        var excluded = Set.of(
+                "true", "false", "null", "undefined", "return", "const", "let", "new",
+                "inject", "import", "then", "path", "data", "title"
+        );
+        var result = new LinkedHashSet<String>();
+        var matcher = IDENTIFIER.matcher(expression.replaceAll("(['\"])(?:\\\\.|(?!\\1).)*\\1", " "));
+        while (matcher.find()) {
+            var value = matcher.group();
+            if (!excluded.contains(value)) {
+                result.add(value);
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private String bounded(String value) {
+        return value.length() <= 240 ? value : value.substring(0, 240) + "...";
     }
 
     private Properties properties(String objectBody) {
@@ -192,6 +378,14 @@ final class AngularRouteSourceParser {
         return matcher.find() ? matcher.group() : null;
     }
 
+    private String exactIdentifier(String expression) {
+        if (!StringUtils.hasText(expression)) {
+            return null;
+        }
+        var normalized = expression.trim();
+        return IDENTIFIER.matcher(normalized).matches() ? normalized : null;
+    }
+
     private String importPath(String expression) {
         if (!StringUtils.hasText(expression)) {
             return null;
@@ -204,8 +398,12 @@ final class AngularRouteSourceParser {
         if (!StringUtils.hasText(expression)) {
             return null;
         }
-        var matcher = THEN_SYMBOL.matcher(expression);
-        return matcher.find() ? matcher.group(1) : null;
+        var member = THEN_MEMBER_SYMBOL.matcher(expression);
+        if (member.find()) {
+            return member.group(1);
+        }
+        var destructured = THEN_DESTRUCTURED_SYMBOL.matcher(expression);
+        return destructured.find() ? destructured.group(1) : null;
     }
 
     private String stringLiteral(String expression) {
@@ -405,10 +603,17 @@ final class AngularRouteSourceParser {
             boolean loadChildrenDeclared,
             String loadChildrenImportPath,
             String loadChildrenSymbol,
+            boolean childrenDeclared,
+            String childrenSymbol,
+            String outlet,
+            List<GitLabFrontendRouteConfiguration> configuration,
             List<String> guards,
             boolean lazy,
             String sourcePath,
-            int sourceLine
+            int sourceLine,
+            int sourceOffset,
+            Integer parentSourceOffset,
+            boolean pathDeclared
     ) {
     }
 

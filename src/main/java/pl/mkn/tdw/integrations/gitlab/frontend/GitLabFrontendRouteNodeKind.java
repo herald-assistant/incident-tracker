@@ -1,8 +1,8 @@
 package pl.mkn.tdw.integrations.gitlab.frontend;
 
-public enum GitLabFrontendRouteEntryKind {
+public enum GitLabFrontendRouteNodeKind {
+    ROUTE,
     SCREEN,
     REDIRECT,
     UNRESOLVED
 }
-

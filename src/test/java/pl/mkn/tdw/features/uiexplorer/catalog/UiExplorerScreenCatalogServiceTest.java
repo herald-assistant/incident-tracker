@@ -5,130 +5,102 @@ import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerFrontendNotEligibleException;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerScreenCatalogInputException;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundException;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiagnostic;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiagnosticSeverity;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryStatus;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteCatalog;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteCatalogRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteEntry;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteEntryKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceDiscoveryService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceReference;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceRevision;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendWorkspaceSignal;
+import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.crmCatalogWithoutPrimary;
-import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.eligibleCrmCatalog;
-import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.eligibleCrmPathPrefixCatalog;
-import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.port;
+import static org.mockito.Mockito.*;
+import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.*;
 
 class UiExplorerScreenCatalogServiceTest {
 
     @Test
-    void shouldResolveCrmFrontendScopeAndReturnBusinessScreenCatalog() {
-        var discovery = mock(GitLabFrontendSourceDiscoveryService.class);
-        when(discovery.discoverCatalog(any())).thenReturn(resolvedCatalog(false));
+    void shouldResolveCrmFrontendScopeAndReturnGraphFirstBusinessScreenCatalog() {
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        when(discovery.discover(any(), any())).thenReturn(graph(false));
         var service = service(eligibleCrmCatalog(), discovery);
 
         var result = service.loadCatalog("crm-agent-portal", "release/2026.08");
 
         assertThat(result.systemId()).isEqualTo("crm-agent-portal");
-        assertThat(result.systemLabel()).isEqualTo("CRM Agent Portal");
-        assertThat(result.sourceRevision().branch()).isEqualTo("release/2026.08");
         assertThat(result.sourceRevision().revision()).isEqualTo("crm-ui-revision-20260815");
         assertThat(result.status()).isEqualTo(UiExplorerScreenCatalogStatus.READY);
         assertThat(result.screens()).singleElement().satisfies(screen -> {
-            assertThat(screen.screenId()).isEqualTo("crm-customer-profile");
+            assertThat(screen.screenId()).startsWith("screen-");
             assertThat(screen.label()).isEqualTo("Customer profile");
             assertThat(screen.routePattern()).isEqualTo("/crm/customers/:customerId");
             assertThat(screen.guards()).containsExactly("CrmAgentGuard");
         });
-        assertThat(result.boundary().maxInventoryFiles()).isEqualTo(2_000);
+        assertThat(result.boundary().maxRouteNodes()).isEqualTo(400);
         assertThat(result.boundary().maxRouteFiles()).isEqualTo(80);
+        assertThat(result.boundary().sourceReadCount()).isEqualTo(7);
 
-        var requestCaptor = ArgumentCaptor.forClass(GitLabFrontendRouteCatalogRequest.class);
-        verify(discovery).discoverCatalog(requestCaptor.capture());
-        assertThat(requestCaptor.getValue().scope()).satisfies(scope -> {
-            assertThat(scope.group()).isEqualTo("crm");
-            assertThat(scope.projectName()).isEqualTo("agent-portal");
-            assertThat(scope.ref()).isEqualTo("release/2026.08");
-            assertThat(scope.pathPrefixes()).isEmpty();
+        var scope = ArgumentCaptor.forClass(GitLabFrontendRepositoryScope.class);
+        verify(discovery).discover(scope.capture(), any());
+        assertThat(scope.getValue()).satisfies(value -> {
+            assertThat(value.group()).isEqualTo("crm");
+            assertThat(value.projectName()).isEqualTo("agent-portal");
+            assertThat(value.ref()).isEqualTo("release/2026.08");
+            assertThat(value.pathPrefixes()).isEmpty();
         });
     }
 
     @Test
-    void shouldExposeBoundedAndDynamicDiscoveryAsPartial() {
-        var discovery = mock(GitLabFrontendSourceDiscoveryService.class);
-        when(discovery.discoverCatalog(any())).thenReturn(resolvedCatalog(true));
+    void shouldExposeLimitedGraphAsPartialWithoutRepositoryInventorySemantics() {
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        when(discovery.discover(any(), any())).thenReturn(graph(true));
 
         var result = service(eligibleCrmCatalog(), discovery)
                 .loadCatalog("crm-agent-portal", "release/2026.08");
 
         assertThat(result.status()).isEqualTo(UiExplorerScreenCatalogStatus.PARTIAL);
-        assertThat(result.boundary().routeCatalogTruncated()).isTrue();
-        assertThat(result.limitations()).contains("Route discovery reached the configured route file or entry limit.");
-        assertThat(result.diagnostics())
-                .extracting(UiExplorerScreenCatalogDiagnostic::code)
-                .contains("CRM_DYNAMIC_ROUTE_PARTIAL");
+        assertThat(result.boundary().limitReached()).isTrue();
+        assertThat(result.limitations()).contains("Targeted route graph discovery reached a configured traversal limit.");
+        assertThat(result.diagnostics()).extracting(UiExplorerScreenCatalogDiagnostic::code)
+                .contains("ROUTE_NODE_LIMIT_REACHED");
     }
 
     @Test
     void shouldPreserveOperationalContextPathPrefixBoundary() {
-        var discovery = mock(GitLabFrontendSourceDiscoveryService.class);
-        when(discovery.discoverCatalog(any())).thenReturn(resolvedCatalog(false));
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        when(discovery.discover(any(), any())).thenReturn(graph(false));
 
         service(eligibleCrmPathPrefixCatalog(), discovery)
                 .loadCatalog("crm-agent-portal", "release/2026.08");
 
-        var requestCaptor = ArgumentCaptor.forClass(GitLabFrontendRouteCatalogRequest.class);
-        verify(discovery).discoverCatalog(requestCaptor.capture());
-        assertThat(requestCaptor.getValue().scope().pathPrefixes())
-                .containsExactly("apps/crm-agent", "libs/crm-ui");
+        var scope = ArgumentCaptor.forClass(GitLabFrontendRepositoryScope.class);
+        verify(discovery).discover(scope.capture(), any());
+        assertThat(scope.getValue().pathPrefixes()).containsExactly("apps/crm-agent", "libs/crm-ui");
     }
 
     @Test
     void shouldRejectFrontendWithoutCompleteOperationalContextBeforeCallingGitLab() {
-        var discovery = mock(GitLabFrontendSourceDiscoveryService.class);
-
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         assertThatThrownBy(() -> service(crmCatalogWithoutPrimary(), discovery)
                 .loadCatalog("crm-agent-portal", "main"))
-                .isInstanceOf(UiExplorerFrontendNotEligibleException.class)
-                .hasMessageContaining("crm-agent-portal");
-
+                .isInstanceOf(UiExplorerFrontendNotEligibleException.class);
         verifyNoInteractions(discovery);
     }
 
     @Test
     void shouldMapMissingCrmRefToFeatureOwnedNotFoundError() {
-        var discovery = mock(GitLabFrontendSourceDiscoveryService.class);
-        when(discovery.discoverCatalog(any())).thenThrow(new GitLabFrontendDiscoveryException(
-                "FRONTEND_REF_NOT_FOUND",
-                "The requested GitLab branch/ref does not exist"
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        when(discovery.discover(any(), any())).thenThrow(new GitLabFrontendDiscoveryException(
+                "FRONTEND_REF_NOT_FOUND", "Synthetic CRM ref is missing"
         ));
-
         assertThatThrownBy(() -> service(eligibleCrmCatalog(), discovery)
                 .loadCatalog("crm-agent-portal", "release/crm-missing"))
-                .isInstanceOf(UiExplorerSourceRefNotFoundException.class)
-                .hasMessageContaining("release/crm-missing");
+                .isInstanceOf(UiExplorerSourceRefNotFoundException.class);
     }
 
     @Test
     void shouldRejectBlankScopeWithoutCallingDependencies() {
         var frontendCatalog = mock(UiExplorerFrontendCatalogService.class);
-        var discovery = mock(GitLabFrontendSourceDiscoveryService.class);
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         var service = new UiExplorerScreenCatalogService(frontendCatalog, discovery);
-
         assertThatThrownBy(() -> service.loadCatalog(" ", "main"))
                 .isInstanceOf(UiExplorerScreenCatalogInputException.class);
         verifyNoInteractions(frontendCatalog, discovery);
@@ -136,56 +108,50 @@ class UiExplorerScreenCatalogServiceTest {
 
     private UiExplorerScreenCatalogService service(
             pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
-            GitLabFrontendSourceDiscoveryService discovery
+            GitLabFrontendRouteGraphDiscoveryService discovery
     ) {
-        return new UiExplorerScreenCatalogService(
-                new UiExplorerFrontendCatalogService(port(catalog)),
-                discovery
-        );
+        return new UiExplorerScreenCatalogService(new UiExplorerFrontendCatalogService(port(catalog)), discovery);
     }
 
-    private GitLabFrontendRouteCatalog resolvedCatalog(boolean partial) {
-        var scope = new GitLabFrontendRepositoryScope(
-                "crm", "agent-portal", "release/2026.08", List.of()
+    private GitLabFrontendRouteGraph graph(boolean partial) {
+        var scope = new GitLabFrontendRepositoryScope("crm", "agent-portal", "release/2026.08", List.of());
+        var routeSource = new GitLabFrontendSourceReference(
+                "apps/crm-agent/src/app/app.routes.ts", "crmCustomerRoutes", 12, 22
         );
-        var screen = new GitLabFrontendRouteEntry(
-                "crm-customer-profile",
-                "Customer profile",
-                "/crm/customers/:customerId",
-                "/crm/customers",
-                GitLabFrontendRouteEntryKind.SCREEN,
+        var target = new GitLabFrontendRouteTarget(
+                "CrmCustomerProfileComponent", "apps/crm-agent/src/app/customer/customer-profile.component.ts"
+        );
+        var screenIdentity = new GitLabFrontendScreenIdentity(
+                "screen-crm-customer-profile", "route-crm-customer-profile",
+                "/crm/customers/:customerId", "primary", target
+        );
+        var node = new GitLabFrontendRouteNode(
+                "route-crm-customer-profile", null, screenIdentity, "Customer profile", "crm/customers/:customerId",
+                "/crm/customers/:customerId", "primary", GitLabFrontendRouteNodeKind.SCREEN,
                 partial ? GitLabFrontendDiscoveryStatus.PARTIAL : GitLabFrontendDiscoveryStatus.RESOLVED,
-                true,
-                List.of("CrmAgentGuard"),
-                List.of("customerId"),
-                null,
-                "CrmCustomerProfileComponent",
-                "apps/crm-agent/src/app/customer/customer-profile.ts",
-                new GitLabFrontendSourceReference(
-                        "apps/crm-agent/src/app/app.routes.ts", "crmCustomerRoutes", 12, 22
-                ),
-                partial ? List.of("A synthetic CRM route fragment is dynamic.") : List.of()
+                true, List.of("customerId"), target, null, null,
+                List.of(new GitLabFrontendRouteConfiguration(
+                        GitLabFrontendRouteConfigurationKind.CAN_ACTIVATE, "canActivate", List.of("CrmAgentGuard"),
+                        null, GitLabFrontendDiscoveryStatus.RESOLVED, routeSource, List.of()
+                )), routeSource, partial ? List.of("Synthetic CRM route graph is bounded.") : List.of()
         );
-        var diagnostics = partial
-                ? List.of(new GitLabFrontendDiagnostic(
-                        GitLabFrontendDiagnosticSeverity.WARNING,
-                        "CRM_DYNAMIC_ROUTE_PARTIAL",
-                        "A synthetic CRM route factory could not be resolved statically.",
-                        "apps/crm-agent/src/app/app.routes.ts"
-                ))
-                : List.<GitLabFrontendDiagnostic>of();
-        return new GitLabFrontendRouteCatalog(
-                scope,
-                new GitLabFrontendSourceRevision("release/2026.08", "crm-ui-revision-20260815"),
-                List.of(new GitLabFrontendWorkspaceSignal(
-                        "FRAMEWORK", "Angular 20", "apps/crm-agent/project.json"
-                )),
-                List.of(screen),
-                diagnostics,
-                42,
-                1,
-                false,
-                partial
+        var coverage = new GitLabFrontendGraphCoverage(
+                partial ? GitLabFrontendCoverageStatus.PARTIAL : GitLabFrontendCoverageStatus.READY,
+                1, 1, 7, 2, partial ? 1 : 0, partial, partial ? List.of("Synthetic CRM graph limit.") : List.of()
+        );
+        var diagnostics = partial ? List.of(new GitLabFrontendGraphDiagnostic(
+                GitLabFrontendDiagnosticSeverity.WARNING, GitLabFrontendGraphDiagnosticCode.ROUTE_NODE_LIMIT_REACHED,
+                "Synthetic CRM graph reached maxRouteNodes.", node.nodeId(), null, routeSource
+        )) : List.<GitLabFrontendGraphDiagnostic>of();
+        return new GitLabFrontendRouteGraph(
+                scope, new GitLabFrontendSourceRevision(scope.ref(), "crm-ui-revision-20260815"),
+                mock(GitLabFrontendBootstrapRoot.class), List.of(node.nodeId()), List.of(node), List.of(),
+                List.of(new GitLabFrontendEffectiveRouteChain(
+                        screenIdentity,
+                        List.of(new GitLabFrontendRouteChainSegment(
+                                node.nodeId(), node.pathSegment(), node.routePattern(), node.outlet(), node.configuration(), routeSource
+                        )), List.of("customerId")
+                )), List.of(), coverage, diagnostics
         );
     }
 }

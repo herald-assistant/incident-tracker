@@ -45,7 +45,8 @@ class UiExplorerScreenCatalogControllerTest {
                 .andExpect(jsonPath("$.status").value("READY"))
                 .andExpect(jsonPath("$.screens[0].screenId").value("crm-customer-profile"))
                 .andExpect(jsonPath("$.screens[0].routePattern").value("/crm/customers/:customerId"))
-                .andExpect(jsonPath("$.boundary.maxInventoryFiles").value(2_000))
+                .andExpect(jsonPath("$.boundary.maxRouteNodes").value(400))
+                .andExpect(jsonPath("$.boundary.sourceReadCount").value(7))
                 .andExpect(jsonPath("$.repositoryId").doesNotExist())
                 .andExpect(jsonPath("$.projectPath").doesNotExist())
                 .andExpect(jsonPath("$.gitLabGroup").doesNotExist());
@@ -91,7 +92,7 @@ class UiExplorerScreenCatalogControllerTest {
                 )),
                 List.of(),
                 List.of(),
-                new UiExplorerScreenCatalogBoundary(42, 1, false, false, 2_000, 80, 400)
+                new UiExplorerScreenCatalogBoundary(1, 1, 7, 2, 0, false, 400, 80, 300, 500, 12)
         );
     }
 }

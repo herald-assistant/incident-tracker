@@ -415,13 +415,17 @@ function crmScreenCatalog(branch: string, revision: string): UiExplorerScreenCat
     diagnostics: [],
     limitations: [],
     boundary: {
-      repositoryFileCount: 24,
-      scannedRouteFileCount: 3,
-      inventoryTruncated: false,
-      routeCatalogTruncated: false,
-      maxInventoryFiles: 400,
+      visitedRouteNodeCount: 3,
+      visitedRouteFileCount: 3,
+      sourceReadCount: 12,
+      aliasResolutionCount: 4,
+      unresolvedEdgeCount: 0,
+      limitReached: false,
+      maxRouteNodes: 400,
       maxRouteFiles: 80,
-      maxRouteEntries: 240
+      maxSourceReads: 300,
+      maxAliasResolutions: 500,
+      maxImportDepth: 12
     }
   };
 }
@@ -595,11 +599,11 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 1,
+    version: 2,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v1',
+      resultContract: 'ui-explorer-result-v2',
       job: crmJobSnapshot('COMPLETED')
     }
   };
@@ -608,11 +612,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export',
-    version: 1,
+    version: 2,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v1',
+      resultContract: 'ui-explorer-result-v2',
       job: crmJobSnapshot('COMPLETED')
     }
   };

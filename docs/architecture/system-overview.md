@@ -41,8 +41,12 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
 Config Drift Viewer i Delivery Effectiveness Assessment.
 Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
-asynchroniczny job oraz neutralna capability GitLaba do bounded rozpoznawania
-Angular/Nx route/view catalog i screen source context.
+asynchroniczny job oraz neutralna capability GitLaba do graph-first
+rozpoznawania Angular/Nx route/view catalog i screen source context. Integracja
+wyszukuje produkcyjny lancuch `bootstrapApplication(...) -> provideRouter(...)`,
+przechodzi tylko po osiagalnych importach, `children` i lazy routes oraz nie
+buduje repository inventory. Ref jest rozstrzygany bezposrednio do immutable
+commit id przez GitLab, niezaleznie od metadanych dowolnego pliku.
 Feature-owned `GET /api/ui-explorer/screens` rozwiazuje repository/ref scope z
 Operational Context i zwraca bounded katalog bez ujawniania danych GitLaba.
 UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
@@ -61,7 +65,7 @@ kroki, context/tool evidence, activity, usage, result i report oraz kontrolowane
 poniewaz zawiera surowa tresc source evidence. Terminalne snapshoty sa
 sanitizowane i zapisywane w lokalnej historii pod feature key `ui-explorer`;
 shared `/api/analysis/runs` odczytuje je po restarcie bez mozliwosci
-kontynuacji. Osobny `tdw.ui-explorer-export/v1` zapewnia sanitizowany export
+kontynuacji. Osobny `tdw.ui-explorer-export/v2` zapewnia sanitizowany export
 terminalnego wyniku oraz read-only import z dokladna walidacja wersji i
 ponowna sanitizacja przed zapisem do historii. Workspace Angular pod
 `/ui-explorer` udostepnia route, sidebar i landing card oraz feature-owned
@@ -89,7 +93,7 @@ skopiowac albo pobrac jako Markdown. `BLOCKED`, `FAILED` oraz terminalny stan
 bez raportu sa jawne i nie tworza wyniku zastepczego. Analysis History rozpoznaje
 feature key `ui-explorer` i otwiera zapisany run przez `localRunId`, bez
 ladowania pelnego JSON-a na liscie. Workspace waliduje dokladnie wewnetrzna
-koperta `tdw.ui-explorer-local-run/v1`, odtwarza konfiguracje i raport jako
+koperta `tdw.ui-explorer-local-run/v2`, odtwarza konfiguracje i raport jako
 read-only oraz nie uruchamia pollingu, continuation, follow-up chatu ani resume.
 Portable JSON jest importowany przez backendowa granice walidacji, a wynik live,
 history albo imported jest eksportowany przez kanoniczny endpoint feature'a.
@@ -285,10 +289,11 @@ Na dzisiaj projekt ma:
 - `GET /gitlab`
   Angularowy ekran `Tool Workbench / GitLab Source` do recznego testowania
   helper endpointow GitLaba oraz podgladu request/response JSON. Grupa
-  `Frontend Discovery` uruchamia bounded, read-only katalog tras/widokow
-  Angular/Nx i source context wybranego `screenId`; pokazuje source revision,
+  `Frontend Discovery` uruchamia read-only route graph Angular/Nx od jednego
+  zweryfikowanego `provideRouter(...)` i source context wybranego `screenId`;
+  pokazuje source revision, liczbe odwiedzonych route files/targeted reads,
   diagnostics, manifest plikow, technical signals i coverage bez uruchamiania
-  AI ani rejestrowania nowego MCP toola. Legacy route
+  AI ani rejestrowania nowego MCP toola. Nie listuje calego repository. Legacy route
   `GET /evidence`
   przekierowuje w Angularze do `/elastic`.
 - `GET /jira`
@@ -352,9 +357,11 @@ Na dzisiaj projekt ma:
 - `GET /api/ui-explorer/screens?systemId={systemId}&branch={branch}`
   Rozwiazuje primary frontend repository oraz systemowy code-search scope z
   Operational Context, waliduje ref i zwraca business-friendly ekrany, source
-  revision, `READY/PARTIAL/BLOCKED`, diagnostics, limitations i applied
-  boundary. Publiczny kontrakt nie ujawnia repository id/path, GitLab group ani
-  project name.
+  revision, `READY/PARTIAL/BLOCKED`, diagnostics oraz semantyczne graph
+  coverage. Publiczny kontrakt nie ujawnia repository id/path, GitLab group ani
+  project name. Katalog powstaje z jednego zweryfikowanego root routera i
+  targeted traversal; liczba niepowiazanych plikow repozytorium nie zmienia
+  wyniku.
 - `POST /api/ui-explorer/jobs`
   Przyjmuje wybrany `systemId`, `branch`, katalogowy `screenId`, obowiazkowa
   `sourceRevision`, profil, tryby sekcji, opis scenariusza i opcjonalne
@@ -369,7 +376,7 @@ Na dzisiaj projekt ma:
   Surowa tresc plikow, prompt, logical artifacts i wewnetrzny GitLab scope nie
   sa czescia odpowiedzi.
 - `GET /api/ui-explorer/jobs/{jobId}/export`
-  Zwraca sanitizowany `tdw.ui-explorer-export/v1` dla `COMPLETED/PARTIAL` z
+  Zwraca sanitizowany `tdw.ui-explorer-export/v2` dla `COMPLETED/PARTIAL` z
   resultem i reportem. Potrafi odtworzyc portable payload z lokalnej historii
   po restarcie, ale nie ujawnia wewnetrznej koperty `run.json`.
 - `POST /api/ui-explorer/imports`
@@ -442,13 +449,16 @@ Na dzisiaj projekt ma:
   Narzedzie pomocnicze do recznego testowania inventory endpointow REST w
   konkretnym repozytorium GitLaba.
 - `POST /api/gitlab/frontend/catalog`
-  Shared/operator API bounded katalogu tras i widokow Angular/Nx. Request
-  zawiera repository/ref scope i opcjonalne path prefixes; limity skanu sa
-  narzucone po stronie backendu i nie sa inputem operatora.
+  Shared/operator API graph-first katalogu tras i widokow Angular/Nx. Request
+  zawiera repository/ref scope i opcjonalne path prefixes; limity rootow,
+  wezlow, targeted reads, glebokosci i znakow sa narzucone po stronie backendu
+  i nie sa inputem operatora. Wynik zawiera route nodes, edges, effective route
+  chains, graph coverage i ref rozstrzygniety do commit id bez file metadata.
 - `POST /api/gitlab/frontend/screen-context`
-  Shared/operator API manifestu plikow, technical signals, coverage i
-  diagnostics dla `screenId` nalezacego do biezacego katalogu repository/ref.
-  Operacja jest read-only i nie jest capability MCP/AI.
+  Shared/operator API wybranego effective route chain oraz bounded manifestu
+  komponentu, template, stylow i behavior dependencies dla `screenId`
+  nalezacego do biezacego graphu repository/ref. Operacja jest read-only, nie
+  listuje repository i nie jest capability MCP/AI.
 - `POST /api/elasticsearch/logs/search`
   Narzedzie pomocnicze do wyszukiwania logow z Kibana proxy po `correlationId`.
   To jest jedyny endpoint testowy Elastica. Nie ma juz wariantu `preview`.

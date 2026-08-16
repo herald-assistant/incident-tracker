@@ -3,9 +3,8 @@ package pl.mkn.tdw.api.gitlab.frontend;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryLimits;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphLimits;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteCatalogRequest;
 
 import java.util.List;
 
@@ -19,11 +18,12 @@ public record GitLabFrontendCatalogApiRequest(
                 @Pattern(regexp = "^(?!.*\\.\\.)(?!.*//).*$") String> pathPrefixes
 ) {
 
-    GitLabFrontendRouteCatalogRequest toIntegrationRequest() {
-        return new GitLabFrontendRouteCatalogRequest(
-                new GitLabFrontendRepositoryScope(group, projectName, ref, normalizedPathPrefixes()),
-                GitLabFrontendDiscoveryLimits.defaults()
-        );
+    GitLabFrontendRepositoryScope toScope() {
+        return new GitLabFrontendRepositoryScope(group, projectName, ref, normalizedPathPrefixes());
+    }
+
+    GitLabFrontendGraphLimits limits() {
+        return GitLabFrontendGraphLimits.defaults();
     }
 
     private List<String> normalizedPathPrefixes() {

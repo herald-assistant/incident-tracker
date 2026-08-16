@@ -42,9 +42,8 @@ public class UiExplorerAiReadinessGate {
         context.sectionCoverage().forEach(coverage -> coverageBySection.put(coverage.sectionId(), coverage));
         var partial = context.status() == UiExplorerCoverageStatus.PARTIAL
                 || context.boundary() != null && (
-                context.boundary().inventoryTruncated()
-                        || context.boundary().routeCatalogTruncated()
-                        || context.boundary().contextTruncated()
+                context.boundary().graphLimitReached()
+                        || context.boundary().contextLimitReached()
         );
 
         for (var assignment : activeAssignments) {

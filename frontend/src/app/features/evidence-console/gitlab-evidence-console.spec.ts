@@ -163,12 +163,12 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('crm-ui-revision-20260815');
 
     fixture.componentInstance.useFrontendScreenForContext(
-      buildFrontendCatalogResponse().entries[0]
+      buildFrontendCatalogResponse().nodes[0]
     );
 
     expect(fixture.componentInstance.selectedToolKey()).toBe('frontend-screen-context');
     expect(fixture.componentInstance.gitLabFrontendScreenContextForm.controls.screenId.value).toBe(
-      'crm-customer-profile'
+      'screen-crm-customer-profile'
     );
     expect(
       fixture.componentInstance.gitLabFrontendScreenContextForm.controls.pathPrefixes.value
@@ -961,20 +961,35 @@ function buildFrontendCatalogResponse(): GitLabFrontendCatalogResponse {
     workspaceSignals: [
       { kind: 'FRAMEWORK', value: 'Angular 20', sourcePath: 'apps/crm-agent/project.json' }
     ],
-    entries: [
+    nodes: [
       {
-        screenId: 'crm-customer-profile',
+        nodeId: 'route-crm-customer-profile',
+        parentNodeId: null,
+        screen: {
+          screenId: 'screen-crm-customer-profile',
+          routeNodeId: 'route-crm-customer-profile',
+          routePattern: '/crm/customers/:customerId',
+          outlet: 'primary',
+          viewTarget: {
+            symbol: 'CrmCustomerProfileComponent',
+            sourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts'
+          }
+        },
         label: 'Customer profile',
+        pathSegment: 'crm/customers/:customerId',
         routePattern: '/crm/customers/:customerId',
-        parentRoutePattern: '/crm/customers',
+        outlet: 'primary',
         kind: 'SCREEN',
         status: 'RESOLVED',
-        lazyLoaded: true,
-        guards: ['CrmAgentGuard'],
+        lazyBoundary: true,
         routeParameters: ['customerId'],
         redirectTarget: null,
-        viewSymbol: 'CrmCustomerProfileComponent',
-        viewSourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+        viewTarget: {
+          symbol: 'CrmCustomerProfileComponent',
+          sourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts'
+        },
+        lazyTarget: null,
+        configuration: [],
         routeSource: {
           path: 'apps/crm-agent/src/app/app.routes.ts',
           symbol: 'crmCustomerRoutes',
@@ -985,10 +1000,16 @@ function buildFrontendCatalogResponse(): GitLabFrontendCatalogResponse {
       }
     ],
     diagnostics: [],
-    repositoryFileCount: 42,
-    scannedRouteFileCount: 1,
-    inventoryTruncated: false,
-    routeCatalogTruncated: false
+    coverage: {
+      status: 'READY',
+      visitedRouteNodeCount: 1,
+      visitedRouteFileCount: 1,
+      sourceReadCount: 7,
+      aliasResolutionCount: 2,
+      unresolvedEdgeCount: 0,
+      limitReached: false,
+      limitations: []
+    }
   };
 }
 
@@ -996,8 +1017,8 @@ function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextRespon
   return {
     scope: buildFrontendCatalogResponse().scope,
     sourceRevision: buildFrontendCatalogResponse().sourceRevision,
-    screen: buildFrontendCatalogResponse().entries[0],
-    workspaceSignals: buildFrontendCatalogResponse().workspaceSignals,
+    screenNode: buildFrontendCatalogResponse().nodes[0],
+    graphCoverage: buildFrontendCatalogResponse().coverage,
     sourceFiles: [
       {
         path: 'apps/crm-agent/src/app/customer/customer-profile.ts',
@@ -1025,7 +1046,7 @@ function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextRespon
     ],
     diagnostics: [],
     totalReturnedCharacters: 48,
-    truncated: false
+    contextLimitReached: false
   };
 }
 

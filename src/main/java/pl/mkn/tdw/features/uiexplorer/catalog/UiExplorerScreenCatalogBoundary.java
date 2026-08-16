@@ -1,12 +1,16 @@
 package pl.mkn.tdw.features.uiexplorer.catalog;
 
 public record UiExplorerScreenCatalogBoundary(
-        int repositoryFileCount,
-        int scannedRouteFileCount,
-        boolean inventoryTruncated,
-        boolean routeCatalogTruncated,
-        int maxInventoryFiles,
+        int visitedRouteNodeCount,
+        int visitedRouteFileCount,
+        int sourceReadCount,
+        int aliasResolutionCount,
+        int unresolvedEdgeCount,
+        boolean limitReached,
+        int maxRouteNodes,
         int maxRouteFiles,
-        int maxRouteEntries
+        int maxSourceReads,
+        int maxAliasResolutions,
+        int maxImportDepth
 ) {
 }

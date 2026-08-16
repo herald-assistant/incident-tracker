@@ -52,14 +52,18 @@ Warstwa posiada:
 - techniczne wyjatki i lokalne zachowania zewnetrznego systemu.
 
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
-buduje bounded Angular/Nx route/view catalog i screen source context przez
-`GitLabRepositoryPort`, ale nie zna UI Explorer, API, Copilota ani kontraktu
-raportu. Statyczne heurystyki zwracaja diagnostics, source revision i jawne
-limity; nie uruchamiaja ani nie kompiluja badanego frontendu. Lokalny resolver
-w tej samej integracji moze odczytac `tsconfig*.json`, rozwiazac ograniczone
-aliasy `baseUrl`/`paths` oraz importowane statyczne modele tras. Nie jest to
-generyczny TypeScript runtime ani powod do przenoszenia logiki parsera do
-feature'a.
+wyszukuje jeden produkcyjny lancuch Angular
+`bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez
+targeted reads z `GitLabRepositoryPort`, a screen source context rozwija
+wylacznie effective route chain wybranego ekranu i jego bounded dependencies.
+Integracja nie zna UI Explorer, API, Copilota ani kontraktu raportu. Nie
+listuje calego repository i nie ma inventory fallbacku. Statyczne heurystyki
+zwracaja typed diagnostics, semantyczne coverage i source revision
+rozstrzygnieta dla refa bez metadanych pliku; nie uruchamiaja ani nie kompiluja
+badanego frontendu. Lokalny resolver moze targeted odczytac `tsconfig*.json`,
+rozwiazac ograniczone aliasy `baseUrl`/`paths`, importy, re-exporty i statyczne
+modele tras. Nie jest to generyczny TypeScript runtime ani powod do
+przenoszenia logiki parsera do feature'a.
 
 Ten sam adapter ma byc mozliwy do wywolania przez evidence provider, tool,
 shared/operator API albo kolejny feature.

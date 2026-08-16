@@ -1096,13 +1096,17 @@ function uiExplorerScreenCatalog() {
     diagnostics: [],
     limitations: [],
     boundary: {
-      repositoryFileCount: 24,
-      scannedRouteFileCount: 3,
-      inventoryTruncated: false,
-      routeCatalogTruncated: false,
-      maxInventoryFiles: 400,
+      visitedRouteNodeCount: 3,
+      visitedRouteFileCount: 3,
+      sourceReadCount: 12,
+      aliasResolutionCount: 4,
+      unresolvedEdgeCount: 0,
+      limitReached: false,
+      maxRouteNodes: 400,
       maxRouteFiles: 80,
-      maxRouteEntries: 240
+      maxSourceReads: 300,
+      maxAliasResolutions: 500,
+      maxImportDepth: 12
     }
   };
 }

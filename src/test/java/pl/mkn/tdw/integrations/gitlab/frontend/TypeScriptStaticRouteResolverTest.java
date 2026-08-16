@@ -3,6 +3,7 @@ package pl.mkn.tdw.integrations.gitlab.frontend;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +60,12 @@ class TypeScriptStaticRouteResolverTest {
     }
 
     private static TypeScriptStaticRouteResolver resolver(Map<String, String> files) {
-        return new TypeScriptStaticRouteResolver(files.keySet().stream().sorted().toList(), files::get);
+        return new TypeScriptStaticRouteResolver(
+                files::get,
+                (sourcePath, importPath) -> "@crm/routes".equals(importPath)
+                        ? List.of("libs/crm-a/routes.ts", "libs/crm-b/routes.ts")
+                        : List.of()
+        );
     }
 
     private static String routeModel(String path) {

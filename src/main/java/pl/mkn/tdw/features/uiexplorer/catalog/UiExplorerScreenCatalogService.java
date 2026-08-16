@@ -9,16 +9,19 @@ import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundE
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiagnosticSeverity;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryLimits;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryStatus;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphLimits;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteCatalog;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteCatalogRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteEntryKind;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteConfigurationKind;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraph;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraphDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteNode;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteNodeKind;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -28,26 +31,23 @@ public class UiExplorerScreenCatalogService {
     private static final int MAX_REF_LENGTH = 255;
 
     private final UiExplorerFrontendCatalogService frontendCatalogService;
-    private final GitLabFrontendSourceDiscoveryService sourceDiscoveryService;
+    private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
 
     public UiExplorerScreenCatalog loadCatalog(String systemId, String ref) {
         var normalizedSystemId = required(systemId, "systemId", MAX_SYSTEM_ID_LENGTH);
         var normalizedRef = required(ref, "branch", MAX_REF_LENGTH);
         var frontend = frontendCatalogService.loadCatalog().findFrontend(normalizedSystemId)
                 .orElseThrow(() -> new UiExplorerFrontendNotEligibleException(normalizedSystemId));
-        var limits = GitLabFrontendDiscoveryLimits.defaults();
-        var request = new GitLabFrontendRouteCatalogRequest(
-                new GitLabFrontendRepositoryScope(
+        var limits = GitLabFrontendGraphLimits.defaults();
+        var scope = new GitLabFrontendRepositoryScope(
                         frontend.gitLabGroup(),
                         frontend.gitLabProjectName(),
                         normalizedRef,
                         frontend.pathPrefixes()
-                ),
-                limits
         );
 
         try {
-            return map(frontend, sourceDiscoveryService.discoverCatalog(request), limits);
+            return map(frontend, routeGraphDiscoveryService.discover(scope, limits), limits);
         } catch (GitLabFrontendDiscoveryException exception) {
             if ("FRONTEND_REF_NOT_FOUND".equals(exception.code())) {
                 throw new UiExplorerSourceRefNotFoundException(normalizedSystemId, normalizedRef);
@@ -58,36 +58,39 @@ public class UiExplorerScreenCatalogService {
 
     private UiExplorerScreenCatalog map(
             UiExplorerFrontendRegistration frontend,
-            GitLabFrontendRouteCatalog source,
-            GitLabFrontendDiscoveryLimits limits
+            GitLabFrontendRouteGraph source,
+            GitLabFrontendGraphLimits limits
     ) {
-        var screens = source.entries().stream()
-                .filter(entry -> entry.kind() == GitLabFrontendRouteEntryKind.SCREEN)
-                .filter(entry -> StringUtils.hasText(entry.screenId()))
-                .map(entry -> new UiExplorerScreenCatalogEntry(
-                        entry.screenId(),
-                        entry.label(),
-                        entry.routePattern(),
-                        entry.parentRoutePattern(),
-                        entry.status().name(),
-                        entry.lazyLoaded(),
-                        entry.guards(),
-                        entry.routeParameters(),
-                        entry.limitations()
+        var nodesById = new LinkedHashMap<String, GitLabFrontendRouteNode>();
+        source.nodes().forEach(node -> nodesById.put(node.nodeId(), node));
+        var screens = source.nodes().stream()
+                .filter(node -> node.kind() == GitLabFrontendRouteNodeKind.SCREEN)
+                .filter(node -> node.screen() != null)
+                .map(node -> new UiExplorerScreenCatalogEntry(
+                        node.screen().screenId(),
+                        StringUtils.hasText(node.label()) ? node.label() : node.routePattern(),
+                        node.routePattern(),
+                        parentRoutePattern(node, nodesById),
+                        node.status().name(),
+                        node.lazyBoundary(),
+                        guards(node),
+                        node.routeParameters(),
+                        node.limitations()
                 ))
                 .toList();
         var diagnostics = source.diagnostics().stream()
                 .map(diagnostic -> new UiExplorerScreenCatalogDiagnostic(
                         diagnostic.severity().name(),
-                        diagnostic.code(),
+                        diagnostic.code().name(),
                         diagnostic.message(),
-                        diagnostic.sourcePath()
+                        diagnostic.source() != null ? diagnostic.source().path() : null
                 ))
                 .toList();
         var limitations = limitations(source, screens);
-        var revision = source.sourceRevision() != null
-                ? new UiExplorerSourceRevision(source.sourceRevision().ref(), source.sourceRevision().commitId())
-                : new UiExplorerSourceRevision(source.scope().ref(), null);
+        var revision = new UiExplorerSourceRevision(
+                source.sourceRevision().ref(),
+                source.sourceRevision().commitId()
+        );
         return new UiExplorerScreenCatalog(
                 frontend.systemId(),
                 frontend.label(),
@@ -97,32 +100,34 @@ public class UiExplorerScreenCatalogService {
                 diagnostics,
                 limitations,
                 new UiExplorerScreenCatalogBoundary(
-                        source.repositoryFileCount(),
-                        source.scannedRouteFileCount(),
-                        source.inventoryTruncated(),
-                        source.routeCatalogTruncated(),
-                        limits.maxInventoryFiles(),
+                        source.coverage().visitedRouteNodeCount(),
+                        source.coverage().visitedRouteFileCount(),
+                        source.coverage().sourceReadCount(),
+                        source.coverage().aliasResolutionCount(),
+                        source.coverage().unresolvedEdgeCount(),
+                        source.coverage().limitReached(),
+                        limits.maxRouteNodes(),
                         limits.maxRouteFiles(),
-                        limits.maxRouteEntries()
+                        limits.maxSourceReads(),
+                        limits.maxAliasResolutions(),
+                        limits.maxImportDepth()
                 )
         );
     }
 
     private UiExplorerScreenCatalogStatus status(
-            GitLabFrontendRouteCatalog source,
+            GitLabFrontendRouteGraph source,
             List<UiExplorerScreenCatalogEntry> screens
     ) {
         if (screens.isEmpty()) {
             return UiExplorerScreenCatalogStatus.BLOCKED;
         }
-        var incompleteScreen = source.entries().stream()
-                .filter(entry -> entry.kind() == GitLabFrontendRouteEntryKind.SCREEN)
-                .anyMatch(entry -> entry.status() != GitLabFrontendDiscoveryStatus.RESOLVED);
+        var incompleteScreen = source.nodes().stream()
+                .filter(node -> node.kind() == GitLabFrontendRouteNodeKind.SCREEN)
+                .anyMatch(node -> node.status() != GitLabFrontendDiscoveryStatus.RESOLVED);
         var materialDiagnostic = source.diagnostics().stream()
                 .anyMatch(diagnostic -> diagnostic.severity() != GitLabFrontendDiagnosticSeverity.INFO);
-        if (source.inventoryTruncated()
-                || source.routeCatalogTruncated()
-                || source.sourceRevision() == null
+        if (source.coverage().limitReached()
                 || !StringUtils.hasText(source.sourceRevision().commitId())
                 || incompleteScreen
                 || materialDiagnostic) {
@@ -132,23 +137,40 @@ public class UiExplorerScreenCatalogService {
     }
 
     private List<String> limitations(
-            GitLabFrontendRouteCatalog source,
+            GitLabFrontendRouteGraph source,
             List<UiExplorerScreenCatalogEntry> screens
     ) {
         var limitations = new ArrayList<String>();
         if (screens.isEmpty()) {
             limitations.add("No selectable screens were resolved from the bounded route catalog.");
         }
-        if (source.inventoryTruncated()) {
-            limitations.add("Repository inventory reached the configured file limit.");
+        if (source.coverage().limitReached()) {
+            limitations.add("Targeted route graph discovery reached a configured traversal limit.");
         }
-        if (source.routeCatalogTruncated()) {
-            limitations.add("Route discovery reached the configured route file or entry limit.");
-        }
-        if (source.sourceRevision() == null || !StringUtils.hasText(source.sourceRevision().commitId())) {
+        if (!StringUtils.hasText(source.sourceRevision().commitId())) {
             limitations.add("The exact GitLab source revision could not be confirmed.");
         }
+        limitations.addAll(source.coverage().limitations());
         return List.copyOf(limitations);
+    }
+
+    private String parentRoutePattern(
+            GitLabFrontendRouteNode node,
+            Map<String, GitLabFrontendRouteNode> nodesById
+    ) {
+        var parent = node.parentNodeId() != null ? nodesById.get(node.parentNodeId()) : null;
+        return parent != null ? parent.routePattern() : "/";
+    }
+
+    private List<String> guards(GitLabFrontendRouteNode node) {
+        return node.configuration().stream()
+                .filter(configuration -> switch (configuration.kind()) {
+                    case CAN_ACTIVATE, CAN_ACTIVATE_CHILD, CAN_DEACTIVATE, CAN_MATCH, CAN_LOAD -> true;
+                    default -> false;
+                })
+                .flatMap(configuration -> configuration.referencedSymbols().stream())
+                .distinct()
+                .toList();
     }
 
     private String required(String value, String field, int maxLength) {

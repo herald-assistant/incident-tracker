@@ -32,10 +32,12 @@ public class UiExplorerLocalRunSnapshotSanitizer {
             ),
             "section-coverage", Set.of("sectionId", "mode", "status", "sourceCategories", "detail"),
             "source-boundary", Set.of(
-                    "repositoryFileCount", "scannedRouteFileCount", "returnedContextFileCount",
-                    "totalReturnedCharacters", "inventoryTruncated", "routeCatalogTruncated",
-                    "contextTruncated", "maxContextFiles", "maxFileCharacters", "maxTotalCharacters",
-                    "maxTraversalDepth", "visibilityLimit"
+                    "visitedRouteNodeCount", "visitedRouteFileCount", "graphSourceReadCount",
+                    "aliasResolutionCount", "unresolvedEdgeCount", "returnedContextFileCount",
+                    "totalReturnedCharacters", "graphLimitReached", "contextLimitReached",
+                    "maxRouteNodes", "maxRouteFiles", "maxSourceReads", "maxAliasResolutions",
+                    "maxImportDepth", "maxComponentDepth", "maxContextFiles", "maxFileCharacters",
+                    "maxTotalCharacters", "visibilityLimit"
             ),
             "source-diagnostics", Set.of("severity", "message", "sourcePath")
     );

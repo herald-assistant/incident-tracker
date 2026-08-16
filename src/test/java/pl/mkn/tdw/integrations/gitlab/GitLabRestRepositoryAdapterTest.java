@@ -490,6 +490,40 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void shouldResolveRepositoryRefToImmutableRevisionWithoutReadingAFile() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(
+                properties,
+                new GitLabRestClientFactory(properties, restClientBuilder)
+        );
+
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-agent-frontend/repository/commits/release%2Fcrm-ui?stats=false"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "id": "crm-ui-commit-20260816",
+                          "committed_date": "2026-08-16T09:30:00.000Z"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        var revision = adapter.resolveRevision(
+                "CRM/runtime",
+                "crm-agent-frontend",
+                "release/crm-ui"
+        );
+
+        assertEquals("CRM/runtime", revision.group());
+        assertEquals("crm-agent-frontend", revision.projectName());
+        assertEquals("release/crm-ui", revision.ref());
+        assertEquals("crm-ui-commit-20260816", revision.commitId());
+        assertEquals("2026-08-16T09:30:00.000Z", revision.committedAt());
+        server.verify();
+    }
+
+    @Test
     void shouldCheckBranchExistence() {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();

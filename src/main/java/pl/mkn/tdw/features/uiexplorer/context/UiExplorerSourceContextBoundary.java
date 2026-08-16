@@ -1,19 +1,23 @@
 package pl.mkn.tdw.features.uiexplorer.context;
 
 public record UiExplorerSourceContextBoundary(
-        int repositoryFileCount,
-        int scannedRouteFileCount,
+        int visitedRouteNodeCount,
+        int visitedRouteFileCount,
+        int graphSourceReadCount,
+        int aliasResolutionCount,
+        int unresolvedEdgeCount,
         int returnedContextFileCount,
         int totalReturnedCharacters,
-        boolean inventoryTruncated,
-        boolean routeCatalogTruncated,
-        boolean contextTruncated,
-        int maxInventoryFiles,
+        boolean graphLimitReached,
+        boolean contextLimitReached,
+        int maxRouteNodes,
         int maxRouteFiles,
-        int maxRouteEntries,
+        int maxSourceReads,
+        int maxAliasResolutions,
+        int maxImportDepth,
+        int maxComponentDepth,
         int maxContextFiles,
         int maxFileCharacters,
-        int maxTotalCharacters,
-        int maxTraversalDepth
+        int maxTotalCharacters
 ) {
 }

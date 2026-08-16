@@ -47,6 +47,14 @@ public interface GitLabRepositoryPort {
         return null;
     }
 
+    default GitLabRepositoryRevision resolveRevision(
+            String group,
+            String projectName,
+            String ref
+    ) {
+        return null;
+    }
+
     GitLabRepositoryFileChunk readFileChunk(
             String group,
             String projectName,

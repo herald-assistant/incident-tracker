@@ -303,6 +303,30 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     @Override
+    public GitLabRepositoryRevision resolveRevision(
+            String group,
+            String projectName,
+            String ref
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(ref)) {
+            throw new IllegalArgumentException("GitLab revision scope must contain group, projectName and ref.");
+        }
+        var revision = fetchCommitMetadata(group, projectName, ref);
+        if (revision == null || !StringUtils.hasText(revision.id())) {
+            throw new IllegalStateException(
+                    "GitLab revision could not be resolved for " + group + "/" + projectName + "@" + ref
+            );
+        }
+        return new GitLabRepositoryRevision(
+                group,
+                projectName,
+                ref,
+                revision.id(),
+                revision.committedDate()
+        );
+    }
+
+    @Override
     public GitLabRepositoryFileChunk readFileChunk(
             String group,
             String projectName,

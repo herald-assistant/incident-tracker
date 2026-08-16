@@ -60,13 +60,17 @@ describe('UiExplorerApiService', () => {
       diagnostics: [],
       limitations: [],
       boundary: {
-        repositoryFileCount: 18,
-        scannedRouteFileCount: 2,
-        inventoryTruncated: false,
-        routeCatalogTruncated: false,
-        maxInventoryFiles: 400,
+        visitedRouteNodeCount: 2,
+        visitedRouteFileCount: 2,
+        sourceReadCount: 9,
+        aliasResolutionCount: 3,
+        unresolvedEdgeCount: 0,
+        limitReached: false,
+        maxRouteNodes: 400,
         maxRouteFiles: 80,
-        maxRouteEntries: 240
+        maxSourceReads: 300,
+        maxAliasResolutions: 500,
+        maxImportDepth: 12
       }
     });
   });
@@ -99,11 +103,11 @@ describe('UiExplorerApiService', () => {
   it('uses dedicated feature endpoints for portable export and server-validated import', () => {
     const portableDocument = {
       schema: 'tdw.ui-explorer-export',
-      version: 1,
+      version: 2,
       exportedAt: '2026-08-15T10:05:00Z',
       payload: {
         type: 'ui-explorer-analysis',
-        resultContract: 'ui-explorer-result-v1',
+        resultContract: 'ui-explorer-result-v2',
         job: { jobId: 'crm/ui-job-1' }
       }
     };

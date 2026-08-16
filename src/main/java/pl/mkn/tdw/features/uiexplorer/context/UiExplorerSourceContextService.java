@@ -22,12 +22,12 @@ import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendContextCoverage;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendCoverageStatus;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiagnosticSeverity;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryLimits;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphLimits;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryStatus;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenContextRequest;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenSourceContext;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceDiscoveryService;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContext;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContextRequest;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContextService;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -55,7 +55,7 @@ public class UiExplorerSourceContextService {
     );
 
     private final UiExplorerFrontendCatalogService frontendCatalogService;
-    private final GitLabFrontendSourceDiscoveryService sourceDiscoveryService;
+    private final GitLabFrontendScreenGraphContextService screenGraphContextService;
 
     public UiExplorerSourceContextSnapshot buildContext(
             String systemId,
@@ -71,8 +71,8 @@ public class UiExplorerSourceContextService {
         var activeSections = activeSections(sectionModes);
         var frontend = frontendCatalogService.loadCatalog().findFrontend(normalizedSystemId)
                 .orElseThrow(() -> new UiExplorerFrontendNotEligibleException(normalizedSystemId));
-        var limits = GitLabFrontendDiscoveryLimits.defaults();
-        var request = new GitLabFrontendScreenContextRequest(
+        var limits = GitLabFrontendGraphLimits.defaults();
+        var request = new GitLabFrontendScreenGraphContextRequest(
                 new GitLabFrontendRepositoryScope(
                         frontend.gitLabGroup(),
                         frontend.gitLabProjectName(),
@@ -85,7 +85,7 @@ public class UiExplorerSourceContextService {
         );
 
         try {
-            var source = sourceDiscoveryService.buildScreenContext(request);
+            var source = screenGraphContextService.build(request);
             return map(frontend.systemId(), frontend.label(), source, activeSections, limits);
         } catch (GitLabFrontendDiscoveryException exception) {
             throw mapDiscoveryFailure(
@@ -118,11 +118,11 @@ public class UiExplorerSourceContextService {
     private UiExplorerSourceContextSnapshot map(
             String systemId,
             String systemLabel,
-            GitLabFrontendScreenSourceContext source,
+            GitLabFrontendScreenGraphContext source,
             List<UiExplorerSectionModeAssignment> activeSections,
-            GitLabFrontendDiscoveryLimits limits
+            GitLabFrontendGraphLimits limits
     ) {
-        var screen = source.screen();
+        var screen = source.screenNode();
         var files = source.sourceFiles().stream()
                 .map(file -> new UiExplorerSourceContextFile(
                         file.path(),
@@ -154,26 +154,31 @@ public class UiExplorerSourceContextService {
         var diagnostics = source.diagnostics().stream()
                 .map(diagnostic -> new UiExplorerSourceContextDiagnostic(
                         diagnostic.severity().name(),
-                        diagnostic.code(),
+                        diagnostic.code().name(),
                         diagnostic.message(),
-                        diagnostic.sourcePath()
+                        diagnostic.source() != null ? diagnostic.source().path() : null
                 ))
                 .toList();
+        var graphCoverage = source.graphCoverage();
         var boundary = new UiExplorerSourceContextBoundary(
-                source.repositoryFileCount(),
-                source.scannedRouteFileCount(),
+                graphCoverage.visitedRouteNodeCount(),
+                graphCoverage.visitedRouteFileCount(),
+                graphCoverage.sourceReadCount(),
+                graphCoverage.aliasResolutionCount(),
+                graphCoverage.unresolvedEdgeCount(),
                 files.size(),
                 source.totalReturnedCharacters(),
-                source.inventoryTruncated(),
-                source.routeCatalogTruncated(),
-                source.truncated(),
-                limits.maxInventoryFiles(),
+                graphCoverage.limitReached(),
+                source.contextLimitReached(),
+                limits.maxRouteNodes(),
                 limits.maxRouteFiles(),
-                limits.maxRouteEntries(),
+                limits.maxSourceReads(),
+                limits.maxAliasResolutions(),
+                limits.maxImportDepth(),
+                limits.maxComponentDepth(),
                 limits.maxContextFiles(),
                 limits.maxFileCharacters(),
-                limits.maxTotalCharacters(),
-                limits.maxTraversalDepth()
+                limits.maxTotalCharacters()
         );
         return new UiExplorerSourceContextSnapshot(
                 systemId,
@@ -186,25 +191,23 @@ public class UiExplorerSourceContextService {
                 ),
                 new UiExplorerScreenIdentity(
                         systemId,
-                        screen.screenId(),
-                        screen.label(),
+                        screen.screen().screenId(),
+                        StringUtils.hasText(screen.label()) ? screen.label() : screen.routePattern(),
                         screen.routePattern(),
-                        screen.parentRoutePattern()
+                        navigationContext(source)
                 ),
                 screen.status().name(),
-                screen.lazyLoaded(),
-                screen.guards(),
-                screen.routeParameters(),
+                screen.lazyBoundary(),
+                guards(source),
+                source.effectiveRouteChain().routeParameters(),
                 screen.limitations(),
-                screen.routeSource() != null
-                        ? new UiExplorerSourceReference(
-                                null,
-                                screen.routeSource().path(),
-                                screen.routeSource().symbol(),
-                                screen.routeSource().startLine(),
-                                screen.routeSource().endLine()
-                        )
-                        : null,
+                new UiExplorerSourceReference(
+                        null,
+                        screen.routeSource().path(),
+                        screen.routeSource().symbol(),
+                        screen.routeSource().startLine(),
+                        screen.routeSource().endLine()
+                ),
                 new UiExplorerSourceRevision(
                         source.sourceRevision().ref(),
                         source.sourceRevision().commitId()
@@ -222,7 +225,7 @@ public class UiExplorerSourceContextService {
     private UiExplorerSectionContextCoverage mapCoverage(
             UiExplorerSectionModeAssignment assignment,
             Map<String, GitLabFrontendContextCoverage> coverageByCategory,
-            GitLabFrontendScreenSourceContext source
+            GitLabFrontendScreenGraphContext source
     ) {
         var categories = SECTION_SOURCE_CATEGORIES.get(assignment.sectionId());
         var status = categories.stream()
@@ -238,8 +241,9 @@ public class UiExplorerSourceContextService {
                 .map(this::mapStatus)
                 .reduce(UiExplorerCoverageStatus.READY, this::mergeStatus);
         if (status == UiExplorerCoverageStatus.READY
-                && (source.truncated()
-                || source.screen().status() != GitLabFrontendDiscoveryStatus.RESOLVED
+                && (source.contextLimitReached()
+                || source.graphCoverage().limitReached()
+                || source.screenNode().status() != GitLabFrontendDiscoveryStatus.RESOLVED
                 || assignment.sectionId() == UiExplorerSectionId.VARIANTS_AND_FAILURES)) {
             status = UiExplorerCoverageStatus.PARTIAL;
         }
@@ -263,7 +267,7 @@ public class UiExplorerSourceContextService {
     private UiExplorerCoverageStatus overallStatus(
             List<UiExplorerSourceContextFile> files,
             List<UiExplorerSectionContextCoverage> coverage,
-            GitLabFrontendScreenSourceContext source
+            GitLabFrontendScreenGraphContext source
     ) {
         if (files.isEmpty()) {
             return UiExplorerCoverageStatus.BLOCKED;
@@ -274,25 +278,40 @@ public class UiExplorerSourceContextService {
         var materialDiagnostic = source.diagnostics().stream()
                 .anyMatch(diagnostic -> diagnostic.severity() != GitLabFrontendDiagnosticSeverity.INFO);
         if (status == UiExplorerCoverageStatus.READY
-                && (source.truncated()
-                || source.screen().status() != GitLabFrontendDiscoveryStatus.RESOLVED
+                && (source.contextLimitReached()
+                || source.graphCoverage().limitReached()
+                || source.screenNode().status() != GitLabFrontendDiscoveryStatus.RESOLVED
                 || materialDiagnostic)) {
             return UiExplorerCoverageStatus.PARTIAL;
         }
         return status;
     }
 
-    private List<String> visibilityLimits(GitLabFrontendScreenSourceContext source) {
+    private List<String> visibilityLimits(GitLabFrontendScreenGraphContext source) {
         var limits = new ArrayList<String>();
         limits.add("Static discovery does not execute TypeScript or runtime form definitions.");
         limits.add("Organizational libraries outside the resolved repository scope may remain unavailable.");
-        if (source.truncated()) {
-            limits.add("The source snapshot reached an inventory, route, file, character or traversal limit.");
+        if (source.contextLimitReached() || source.graphCoverage().limitReached()) {
+            limits.add("The targeted route/component traversal reached a configured node, read, depth, file or character limit.");
         }
-        if (source.screen().status() != GitLabFrontendDiscoveryStatus.RESOLVED) {
+        if (source.screenNode().status() != GitLabFrontendDiscoveryStatus.RESOLVED) {
             limits.add("The selected route-to-view mapping is not fully unambiguous.");
         }
         return List.copyOf(limits);
+    }
+
+    private String navigationContext(GitLabFrontendScreenGraphContext source) {
+        var segments = source.effectiveRouteChain().segments();
+        return segments.size() > 1 ? segments.get(segments.size() - 2).routePattern() : "/";
+    }
+
+    private List<String> guards(GitLabFrontendScreenGraphContext source) {
+        return source.effectiveRouteChain().segments().stream()
+                .flatMap(segment -> segment.configuration().stream())
+                .filter(configuration -> configuration.kind().name().startsWith("CAN_"))
+                .flatMap(configuration -> configuration.referencedSymbols().stream())
+                .distinct()
+                .toList();
     }
 
     private List<UiExplorerSectionModeAssignment> activeSections(

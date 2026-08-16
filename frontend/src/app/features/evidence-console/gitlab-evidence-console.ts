@@ -15,7 +15,7 @@ import {
   EvidenceApiService,
   GitLabFrontendCatalogPayload,
   GitLabFrontendCatalogResponse,
-  GitLabFrontendRouteEntry,
+  GitLabFrontendRouteNode,
   GitLabFrontendScreenContextPayload,
   GitLabFrontendScreenContextResponse,
   GitLabEndpointUseCaseContextPayload,
@@ -502,7 +502,8 @@ export class GitLabEvidenceConsoleComponent {
     projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     branch: new FormControl('HEAD', { nonNullable: true, validators: [Validators.required] }),
     pathPrefixes: new FormControl('', { nonNullable: true }),
-    screenId: new FormControl('', { nonNullable: true, validators: [Validators.required] })
+    screenId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    expectedRevision: new FormControl('', { nonNullable: true })
   });
 
   readonly gitLabRepositoryState = signal<ToolState>(
@@ -687,7 +688,11 @@ export class GitLabEvidenceConsoleComponent {
         this.gitLabFrontendCatalogForm.patchValue({ pathPrefixes: '' });
         return;
       case 'frontend-screen-context':
-        this.gitLabFrontendScreenContextForm.patchValue({ pathPrefixes: '', screenId: '' });
+        this.gitLabFrontendScreenContextForm.patchValue({
+          pathPrefixes: '',
+          screenId: '',
+          expectedRevision: ''
+        });
         return;
       case 'endpoint-use-case-context':
         this.gitLabEndpointUseCaseContextForm.patchValue({
@@ -1235,7 +1240,13 @@ export class GitLabEvidenceConsoleComponent {
       pathPrefixes: this.toList(
         this.gitLabFrontendScreenContextForm.controls.pathPrefixes.value
       ),
-      screenId: this.gitLabFrontendScreenContextForm.controls.screenId.value.trim()
+      screenId: this.gitLabFrontendScreenContextForm.controls.screenId.value.trim(),
+      ...(this.gitLabFrontendScreenContextForm.controls.expectedRevision.value.trim()
+        ? {
+            expectedRevision:
+              this.gitLabFrontendScreenContextForm.controls.expectedRevision.value.trim()
+          }
+        : {})
     };
     this.runRequest(
       this.gitLabFrontendScreenContextState,
@@ -1245,15 +1256,16 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
-  useFrontendScreenForContext(screen: GitLabFrontendRouteEntry): void {
-    if (!screen.screenId) {
+  useFrontendScreenForContext(screen: GitLabFrontendRouteNode): void {
+    if (!screen.screen?.screenId) {
       return;
     }
     this.selectedToolKey.set('frontend-screen-context');
     this.syncRepositoryScope(this.gitLabFrontendScreenContextForm);
     this.gitLabFrontendScreenContextForm.patchValue({
       pathPrefixes: this.gitLabFrontendCatalogForm.controls.pathPrefixes.value,
-      screenId: screen.screenId
+      screenId: screen.screen.screenId,
+      expectedRevision: this.gitLabFrontendCatalogResult()?.sourceRevision?.commitId || ''
     });
     this.gitLabFrontendScreenContextState.set(
       this.idleState('Screen przeniesiony z katalogu. Uruchom request, aby zebrać bounded source context.')
@@ -2282,7 +2294,7 @@ export class GitLabEvidenceConsoleComponent {
       return null;
     }
     const record = response as Partial<GitLabFrontendCatalogResponse>;
-    return Array.isArray(record.entries) && Array.isArray(record.diagnostics)
+    return Array.isArray(record.nodes) && Array.isArray(record.diagnostics)
       ? (record as GitLabFrontendCatalogResponse)
       : null;
   }

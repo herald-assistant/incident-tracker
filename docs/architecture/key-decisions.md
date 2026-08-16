@@ -59,8 +59,12 @@ Decyzje:
   `Elastic Logs`, `GitLab Source`, `Jira Source`, `Confluence Source`,
   `Database Tools` i `Operational Context`.
 - `GitLab Source` zawiera operatorska grupe `Frontend Discovery` dla bounded
-  katalogu Angular/Nx i screen source context. Jest to shared/operator preview
-  neutralnej integracji, bez MCP toola, AI, historii i joba UI Explorer.
+  route graph Angular/Nx i screen source context. Discovery zaczyna od jednego
+  zweryfikowanego `bootstrapApplication(...) -> provideRouter(...)`, wykonuje
+  tylko targeted reads po osiagalnym grafie i nie listuje calego repository.
+  Source revision pochodzi z bezposredniego rozwiazania refa do commit id, nie
+  z metadanych pliku bootstrap. Jest to shared/operator preview neutralnej
+  integracji, bez MCP toola, AI, historii i joba UI Explorer.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
 - `Platform` dotyczy overview, customizacji i podgladu zasobow Team Delivery

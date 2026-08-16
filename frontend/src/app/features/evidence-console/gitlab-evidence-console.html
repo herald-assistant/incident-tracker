@@ -756,12 +756,12 @@
                 <div class="context-results__header">
                   <div>
                     <p class="tool-status__label">Angular/Nx route catalog</p>
-                    <h3>{{ catalogResult.entries.length }} catalog entries</h3>
+                    <h3>{{ catalogResult.nodes.length }} route nodes</h3>
                   </div>
                   <div class="endpoint-results__stats">
-                    <span class="panel-chip">{{ catalogResult.scannedRouteFileCount }} route files</span>
-                    <span class="panel-chip">{{ catalogResult.repositoryFileCount }} repository files</span>
-                    @if (catalogResult.inventoryTruncated || catalogResult.routeCatalogTruncated) {
+                    <span class="panel-chip">{{ catalogResult.coverage.visitedRouteFileCount }} route files</span>
+                    <span class="panel-chip">{{ catalogResult.coverage.sourceReadCount }} targeted reads</span>
+                    @if (catalogResult.coverage.limitReached) {
                       <span class="panel-chip panel-chip--warning">bounded result</span>
                     }
                   </div>
@@ -776,16 +776,16 @@
                 </div>
 
                 <div class="endpoint-list">
-                  @for (screen of catalogResult.entries; track screen.screenId || screen.routePattern || $index) {
+                  @for (screen of catalogResult.nodes; track screen.nodeId) {
                     <details class="endpoint-card">
                       <summary class="endpoint-card__summary">
                         <div class="endpoint-card__main">
                           <span class="endpoint-card__method">{{ screen.kind || 'ENTRY' }}</span>
                           <div class="endpoint-card__copy">
-                            <h4>{{ screen.label || screen.routePattern || screen.screenId }}</h4>
+                            <h4>{{ screen.label || screen.routePattern || screen.screen?.screenId }}</h4>
                             <p>{{ screen.routePattern || 'dynamic route' }} · {{ screen.status }}</p>
                           </div>
-                          @if (screen.kind === 'SCREEN' && screen.screenId) {
+                          @if (screen.kind === 'SCREEN' && screen.screen?.screenId) {
                             <button
                               class="secondary-button secondary-button--compact endpoint-card__context-button"
                               type="button"
@@ -801,13 +801,13 @@
                       </summary>
                       <div class="endpoint-card__details">
                         <div class="endpoint-card__meta">
-                          <span>screenId {{ screen.screenId || 'n/a' }}</span>
-                          <span>{{ screen.viewSymbol || 'view unresolved' }}</span>
-                          <span>{{ screen.viewSourcePath || screen.routeSource?.path || 'source unresolved' }}</span>
-                          @if (screen.lazyLoaded) { <span>lazy loaded</span> }
+                          <span>screenId {{ screen.screen?.screenId || 'n/a' }}</span>
+                          <span>{{ screen.viewTarget?.symbol || 'view unresolved' }}</span>
+                          <span>{{ screen.viewTarget?.sourcePath || screen.routeSource.path || 'source unresolved' }}</span>
+                          @if (screen.lazyBoundary) { <span>lazy boundary</span> }
                         </div>
-                        @if (screen.guards.length > 0) {
-                          <p>Guards: {{ screen.guards.join(', ') }}</p>
+                        @if (screen.configuration.length > 0) {
+                          <p>Configuration: {{ screen.configuration.length }} resolved route properties</p>
                         }
                         @if (screen.limitations.length > 0) {
                           <ul class="context-list">
@@ -823,7 +823,7 @@
                   <details class="context-subsection context-subsection--collapsible">
                     <summary><span>Diagnostics</span><span class="panel-chip">{{ catalogResult.diagnostics.length }}</span></summary>
                     <ul class="context-list">
-                      @for (diagnostic of catalogResult.diagnostics; track diagnostic.code + ':' + diagnostic.sourcePath) {
+                      @for (diagnostic of catalogResult.diagnostics; track diagnostic.code + ':' + diagnostic.source?.path) {
                         <li>{{ diagnostic.severity }} · {{ diagnostic.code }} · {{ diagnostic.message }}</li>
                       }
                     </ul>
@@ -837,13 +837,13 @@
                 <div class="context-results__header">
                   <div>
                     <p class="tool-status__label">Screen source context</p>
-                    <h3>{{ contextResult.screen?.label || contextResult.screen?.screenId || 'Selected screen' }}</h3>
+                    <h3>{{ contextResult.screenNode?.label || contextResult.screenNode?.screen?.screenId || 'Selected screen' }}</h3>
                   </div>
                   <div class="endpoint-results__stats">
                     <span class="panel-chip">{{ contextResult.sourceFiles.length }} files</span>
                     <span class="panel-chip">{{ contextResult.technicalSignals.length }} signals</span>
                     <span class="panel-chip">{{ contextResult.totalReturnedCharacters }} chars</span>
-                    @if (contextResult.truncated) { <span class="panel-chip panel-chip--warning">bounded result</span> }
+                    @if (contextResult.contextLimitReached || contextResult.graphCoverage.limitReached) { <span class="panel-chip panel-chip--warning">bounded result</span> }
                   </div>
                 </div>
 
@@ -893,7 +893,7 @@
                   <details class="context-subsection context-subsection--collapsible">
                     <summary><span>Diagnostics</span><span class="panel-chip">{{ contextResult.diagnostics.length }}</span></summary>
                     <ul class="context-list">
-                      @for (diagnostic of contextResult.diagnostics; track diagnostic.code + ':' + diagnostic.sourcePath) {
+                      @for (diagnostic of contextResult.diagnostics; track diagnostic.code + ':' + diagnostic.source?.path) {
                         <li>{{ diagnostic.severity }} · {{ diagnostic.code }} · {{ diagnostic.message }}</li>
                       }
                     </ul>

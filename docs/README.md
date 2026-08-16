@@ -75,12 +75,13 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez
   analityka, ktory nie musi znac repozytorium ani mechaniki AI.
 - `plans/ui-explorer.md`
-  jest draftem planu L2 dla statycznego, screen-centered MVP z katalogiem
+  jest zatwierdzonym planem L2 w realizacji dla statycznego, screen-centered MVP z katalogiem
   ekranow wybieranych przez jawnie zarejestrowany system
   `internal-service/frontend`, wybieralnymi sekcjami, source-grounded raportem
   oraz neutralna capability rozpoznawania frontendu. Plan obejmuje breaking
   migracje Operational Context bez warstwy kompatybilnosci dla zmienianych
-  kontraktow i nie stanowi jeszcze zgody na implementacje.
+  kontraktow. Wykonanie kolejnych niezaznaczonych krokow nadal podlega osobnym
+  bramkom akceptacji zapisanym w planie.
 - Config Drift Viewer wraz z Runtime Configuration Tool Workbench jest
   zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
   ograniczenia sa opisane kanonicznie w
