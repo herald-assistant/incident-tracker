@@ -22,9 +22,7 @@ class UiExplorerInputOptionsServiceTest {
             assertThat(system.systemId()).isEqualTo("crm-agent-portal");
             assertThat(system.label()).isEqualTo("CRM Agent Portal");
         });
-        assertThat(response.profiles()).hasSize(3);
-        assertThat(response.profiles()).allSatisfy(profile ->
-                assertThat(profile.defaultSectionModes()).hasSize(8));
+        assertThat(response.defaultSectionModes()).hasSize(8);
         assertThat(response.sections()).hasSize(8);
         assertThat(response.modes()).hasSize(3);
         assertThat(response.configurationFindings()).isEmpty();

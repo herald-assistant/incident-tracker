@@ -1,6 +1,5 @@
 package pl.mkn.tdw.features.uiexplorer.api;
 
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionModeAssignment;
@@ -12,7 +11,7 @@ public record UiExplorerInputOptionsResponse(
         String featureId,
         UiExplorerOutputAvailability executionAvailability,
         List<SystemOption> systems,
-        List<ProfileOption> profiles,
+        List<UiExplorerSectionModeAssignment> defaultSectionModes,
         List<SectionOption> sections,
         List<ModeOption> modes,
         List<ConfigurationFinding> configurationFindings
@@ -20,7 +19,7 @@ public record UiExplorerInputOptionsResponse(
 
     public UiExplorerInputOptionsResponse {
         systems = systems != null ? List.copyOf(systems) : List.of();
-        profiles = profiles != null ? List.copyOf(profiles) : List.of();
+        defaultSectionModes = defaultSectionModes != null ? List.copyOf(defaultSectionModes) : List.of();
         sections = sections != null ? List.copyOf(sections) : List.of();
         modes = modes != null ? List.copyOf(modes) : List.of();
         configurationFindings = configurationFindings != null
@@ -33,18 +32,6 @@ public record UiExplorerInputOptionsResponse(
             String label,
             String summary
     ) {
-    }
-
-    public record ProfileOption(
-            UiExplorerProfile profile,
-            String label,
-            String description,
-            List<UiExplorerSectionModeAssignment> defaultSectionModes
-    ) {
-
-        public ProfileOption {
-            defaultSectionModes = defaultSectionModes != null ? List.copyOf(defaultSectionModes) : List.of();
-        }
     }
 
     public record SectionOption(
@@ -70,4 +57,3 @@ public record UiExplorerInputOptionsResponse(
     ) {
     }
 }
-

@@ -6,9 +6,9 @@ import {
 
 export const UI_EXPLORER_EXPORT_SCHEMA = 'tdw.ui-explorer-export';
 export const UI_EXPLORER_LOCAL_RUN_SCHEMA = 'tdw.ui-explorer-local-run';
-export const UI_EXPLORER_EXPORT_VERSION = 2;
+export const UI_EXPLORER_EXPORT_VERSION = 3;
 export const UI_EXPLORER_EXPORT_PAYLOAD_TYPE = 'ui-explorer-analysis';
-export const UI_EXPLORER_RESULT_CONTRACT = 'ui-explorer-result-v2';
+export const UI_EXPLORER_RESULT_CONTRACT = 'ui-explorer-result-v3';
 
 export function parseUiExplorerLocalRunEnvelope(payload: unknown): {
   storedAt: string;
@@ -80,7 +80,6 @@ function isUiExplorerJobSnapshot(value: unknown): value is UiExplorerJobStateSna
       typeof request['branch'] === 'string' &&
       typeof request['screenId'] === 'string' &&
       typeof request['sourceRevision'] === 'string' &&
-      typeof request['profile'] === 'string' &&
       Array.isArray(request['sectionModes']) &&
       Array.isArray(job['steps']) &&
       Array.isArray(job['contextSections']) &&

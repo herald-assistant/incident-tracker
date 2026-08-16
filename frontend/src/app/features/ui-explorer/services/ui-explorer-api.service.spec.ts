@@ -34,7 +34,7 @@ describe('UiExplorerApiService', () => {
         missingCapabilities: []
       },
       systems: [{ systemId: 'crm-agent-portal', label: 'CRM Agent Portal', summary: 'Synthetic CRM UI.' }],
-      profiles: [],
+      defaultSectionModes: [],
       sections: [],
       modes: [],
       configurationFindings: []
@@ -81,7 +81,6 @@ describe('UiExplorerApiService', () => {
       branch: 'crm-review',
       screenId: 'crm-contact-create',
       sourceRevision: 'crm-revision-a1b2c3',
-      profile: 'FUNCTIONAL_DOCUMENTATION' as const,
       sectionModes: { OVERVIEW: 'DEEP' as const },
       scenarioDescription: 'Describe the anonymized CRM contact flow.',
       model: 'crm-doc-model',
@@ -103,11 +102,11 @@ describe('UiExplorerApiService', () => {
   it('uses dedicated feature endpoints for portable export and server-validated import', () => {
     const portableDocument = {
       schema: 'tdw.ui-explorer-export',
-      version: 2,
+      version: 3,
       exportedAt: '2026-08-15T10:05:00Z',
       payload: {
         type: 'ui-explorer-analysis',
-        resultContract: 'ui-explorer-result-v2',
+        resultContract: 'ui-explorer-result-v3',
         job: { jobId: 'crm/ui-job-1' }
       }
     };

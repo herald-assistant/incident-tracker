@@ -1,15 +1,11 @@
 import { Component, HostListener, computed, inject, output, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import {
-  UiExplorerProfile,
-  UiExplorerSectionId,
-  UiExplorerSectionMode
-} from '../../models/ui-explorer.models';
+import { UiExplorerSectionId, UiExplorerSectionMode } from '../../models/ui-explorer.models';
 import { UiExplorerFacade } from '../../state/ui-explorer.facade';
 import { UiExplorerScreenCatalogComponent } from '../ui-explorer-screen-catalog/ui-explorer-screen-catalog';
 
-type OpenMenu = 'system' | 'profile' | 'sections' | 'model' | 'reasoning' | null;
+type OpenMenu = 'system' | 'sections' | 'model' | 'reasoning' | null;
 
 @Component({
   selector: 'app-ui-explorer-configuration',
@@ -35,13 +31,6 @@ export class UiExplorerConfigurationComponent {
         )
       : systems;
   });
-
-  readonly selectedProfileOption = computed(
-    () =>
-      this.facade
-        .inputOptions()
-        ?.profiles.find((option) => option.profile === this.facade.selectedProfile()) ?? null
-  );
 
   readonly sectionModeCounts = computed(() => {
     const modes = this.facade.sectionModes();
@@ -112,12 +101,6 @@ export class UiExplorerConfigurationComponent {
   selectSystem(systemId: string, event: Event): void {
     event.stopPropagation();
     this.facade.selectSystem(systemId);
-    this.openMenu.set(null);
-  }
-
-  selectProfile(profile: UiExplorerProfile, event?: Event): void {
-    event?.stopPropagation();
-    this.facade.selectProfile(profile);
     this.openMenu.set(null);
   }
 

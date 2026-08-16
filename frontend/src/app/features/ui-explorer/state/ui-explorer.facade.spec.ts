@@ -107,7 +107,6 @@ describe('UiExplorerFacade', () => {
     facade.initialize();
 
     expect(facade.selectedSystemId()).toBe('crm-agent-portal');
-    expect(facade.selectedProfile()).toBe('FUNCTIONAL_DOCUMENTATION');
     expect(facade.sectionModes()).toEqual({ OVERVIEW: 'DEEP', FORMS_AND_RULES: 'COMPACT' });
     expect(facade.selectedModel()).toBe('crm-doc-model');
     expect(facade.selectedReasoningEffort()).toBe('medium');
@@ -154,7 +153,6 @@ describe('UiExplorerFacade', () => {
       branch: 'main',
       screenId: 'crm-contact-create',
       sourceRevision: 'crm-revision-a1b2c3',
-      profile: 'FUNCTIONAL_DOCUMENTATION',
       sectionModes: { OVERVIEW: 'DEEP', FORMS_AND_RULES: 'COMPACT' },
       scenarioDescription: 'Describe the anonymized CRM contact creation flow.',
       model: 'crm-doc-model',
@@ -356,16 +354,9 @@ function crmInputOptions(): UiExplorerInputOptionsResponse {
     systems: [
       { systemId: 'crm-agent-portal', label: 'CRM Agent Portal', summary: 'Synthetic CRM operator frontend.' }
     ],
-    profiles: [
-      {
-        profile: 'FUNCTIONAL_DOCUMENTATION',
-        label: 'Dokumentacja funkcjonalna',
-        description: 'CRM business view.',
-        defaultSectionModes: [
-          { sectionId: 'OVERVIEW', mode: 'DEEP' },
-          { sectionId: 'FORMS_AND_RULES', mode: 'COMPACT' }
-        ]
-      }
+    defaultSectionModes: [
+      { sectionId: 'OVERVIEW', mode: 'DEEP' },
+      { sectionId: 'FORMS_AND_RULES', mode: 'COMPACT' }
     ],
     sections: [
       { sectionId: 'OVERVIEW', label: 'Cel widoku', description: 'CRM screen purpose.' },
@@ -427,7 +418,6 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
       branch: 'main',
       screenId: 'crm-contact-create',
       sourceRevision: 'crm-revision-a1b2c3',
-      profile: 'FUNCTIONAL_DOCUMENTATION',
       sectionModes: [
         { sectionId: 'OVERVIEW', mode: 'DEEP' },
         { sectionId: 'FORMS_AND_RULES', mode: 'COMPACT' }
@@ -480,12 +470,10 @@ function crmReadableSnapshot(
         navigationContext: 'Kontakty CRM > Nowy kontakt'
       },
       scenarioDescription: 'Describe the anonymized CRM contact creation flow.',
-      profile: 'FUNCTIONAL_DOCUMENTATION',
       sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
       functionalOverview: 'Synthetic CRM contact documentation.',
       sections: [],
       crossSectionDependencies: [],
-      changePreparationSummary: null,
       overallConfidence: 'CONFIRMED',
       visibilityLimits: [],
       unresolvedQuestions: [],
@@ -513,11 +501,11 @@ function crmReadableSnapshot(
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 2,
+    version: 3,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v2',
+      resultContract: 'ui-explorer-result-v3',
       job: crmReadableSnapshot('COMPLETED')
     }
   };
@@ -526,11 +514,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export' as const,
-    version: 2 as const,
+    version: 3 as const,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis' as const,
-      resultContract: 'ui-explorer-result-v2' as const,
+      resultContract: 'ui-explorer-result-v3' as const,
       job: crmReadableSnapshot('COMPLETED')
     }
   };

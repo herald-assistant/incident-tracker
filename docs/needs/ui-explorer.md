@@ -1,4 +1,4 @@
-# UI Explorer - dokumentacja funkcjonalna i techniczna widokow
+# UI Explorer - dokumentacja funkcjonalna widokow
 
 Status: draft
 
@@ -50,15 +50,10 @@ Glownym uzytkownikiem jest analityk biznesowo-systemowy, ktory nie musi znac
 struktury repozytorium ani sposobu pracy AI. Z wyniku moga korzystac rowniez
 tester, developer, product owner i osoba utrzymujaca system.
 
-Uzytkownik powinien moc wykorzystac UI Explorer do jednej z trzech decyzji:
-
-1. zrozumiec i udokumentowac funkcjonalnie istniejacy widok,
-2. przygotowac kompletny material wejsciowy do planowanej zmiany,
-3. uzyskac techniczny handoff wyjasniajacy realizacje zachowania i miejsca
-   prawdopodobnego oddzialywania zmiany.
-
-Te cele powinny korzystac ze wspolnej struktury wyniku. Wybor celu zmienia
-priorytety i domyslna szczegolowosc, a nie tworzy trzech niespojnych produktow.
+UI Explorer sluzy jednej decyzji: zrozumiec i udokumentowac funkcjonalnie
+istniejacy widok. Wynik ma byc samowystarczalnym materialem dla analityka
+biznesowo-systemowego. Przygotowanie zmiany i osobny techniczny handoff nie sa
+celami tego feature'a.
 
 ## Jednostka analizy
 
@@ -82,8 +77,6 @@ jednym opcjonalnym polu opisowym. Uzytkownik wybiera:
 - aplikacje lub system,
 - dostepna wersje zrodla,
 - ekran z katalogu opisanym nazwa i sciezka nawigacyjna,
-- cel: dokumentacja funkcjonalna, przygotowanie zmiany albo dokumentacja
-  techniczna,
 - oczekiwane sekcje i ich poziom: pominieta, skrocona albo poglebiona,
 - opcjonalny scenariusz, role, przypadek danych lub zakres zmiany opisany
   naturalnym jezykiem.
@@ -120,8 +113,8 @@ Wynik powinien byc jednym, czytelnym raportem z wybieralnymi sekcjami:
    statusu procesu, bledow, pustych wynikow oraz niepelnej widocznosci.
 
 Raport funkcjonalny powinien uzywac jezyka biznesowego. Szczegoly techniczne
-powinny byc dostepne jako osobna warstwa albo w profilu technicznym, bez
-zmuszania analityka do czytania nazw klas i operatorow RxJS.
+sa dowodami dostepnymi w osobnej, zwijanej warstwie i nie moga zmuszac
+analityka do czytania nazw klas ani operatorow RxJS.
 
 ## Wiarygodnosc i widocznosc
 

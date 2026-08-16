@@ -7,7 +7,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
 import pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerImportException;
 import pl.mkn.tdw.features.uiexplorer.job.importing.UiExplorerImportService;
@@ -39,7 +38,7 @@ class UiExplorerImportControllerTest {
                         .content("""
                                 {
                                   "schema": "tdw.ui-explorer-export",
-                                  "version": 1
+                                  "version": 3
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -73,7 +72,6 @@ class UiExplorerImportControllerTest {
                         "main",
                         "crm-contact-preferences",
                         "crm-commit-abc123",
-                        UiExplorerProfile.FUNCTIONAL_DOCUMENTATION,
                         List.of(),
                         "Document a strongly anonymized CRM scenario.",
                         "gpt-5.4",

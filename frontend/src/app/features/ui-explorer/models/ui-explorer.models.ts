@@ -7,11 +7,6 @@ import {
   AnalysisReport
 } from '../../../core/models/analysis.models';
 
-export type UiExplorerProfile =
-  | 'FUNCTIONAL_DOCUMENTATION'
-  | 'CHANGE_PREPARATION'
-  | 'TECHNICAL_DOCUMENTATION';
-
 export type UiExplorerSectionId =
   | 'OVERVIEW'
   | 'NAVIGATION_AND_ACCESS'
@@ -46,13 +41,6 @@ export interface UiExplorerSectionModeAssignment {
   mode: UiExplorerSectionMode;
 }
 
-export interface UiExplorerProfileOption {
-  profile: UiExplorerProfile;
-  label: string;
-  description: string;
-  defaultSectionModes: UiExplorerSectionModeAssignment[];
-}
-
 export interface UiExplorerSectionOption {
   sectionId: UiExplorerSectionId;
   label: string;
@@ -77,7 +65,7 @@ export interface UiExplorerInputOptionsResponse {
   featureId: string;
   executionAvailability: UiExplorerOutputAvailability;
   systems: UiExplorerSystemOption[];
-  profiles: UiExplorerProfileOption[];
+  defaultSectionModes: UiExplorerSectionModeAssignment[];
   sections: UiExplorerSectionOption[];
   modes: UiExplorerModeOption[];
   configurationFindings: UiExplorerConfigurationFinding[];
@@ -137,7 +125,6 @@ export interface UiExplorerConfigurationSnapshot {
   branch: string;
   screenId: string;
   sourceRevision: string;
-  profile: UiExplorerProfile | '';
   sectionModes: Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>>;
   scenarioDescription: string;
   model: string;
@@ -149,7 +136,6 @@ export interface UiExplorerJobStartRequest {
   branch: string;
   screenId: string;
   sourceRevision: string;
-  profile: UiExplorerProfile;
   sectionModes: Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>>;
   scenarioDescription?: string;
   model?: string;
@@ -162,7 +148,6 @@ export interface UiExplorerJobRequestSnapshot {
   branch: string;
   screenId: string;
   sourceRevision: string;
-  profile: UiExplorerProfile;
   sectionModes: UiExplorerSectionModeAssignment[];
   scenarioDescription: string | null;
   aiModel: string | null;
@@ -190,7 +175,6 @@ export interface UiExplorerFinding {
   description: string;
   confidence: UiExplorerClaimConfidence;
   conditions: string[];
-  impactNotes: string[];
   sourceReferences: UiExplorerSourceReference[];
 }
 
@@ -212,21 +196,13 @@ export interface UiExplorerCrossSectionDependency {
   description: string;
 }
 
-export interface UiExplorerChangePreparationSummary {
-  changeGoal: string;
-  likelyImpactAreas: string[];
-  decisionsRequired: string[];
-}
-
 export interface UiExplorerResultResponse {
   screen: UiExplorerScreenIdentity;
   scenarioDescription: string | null;
-  profile: UiExplorerProfile;
   sourceRevision: UiExplorerSourceRevision;
   functionalOverview: string;
   sections: UiExplorerResultSection[];
   crossSectionDependencies: UiExplorerCrossSectionDependency[];
-  changePreparationSummary: UiExplorerChangePreparationSummary | null;
   overallConfidence: UiExplorerClaimConfidence;
   visibilityLimits: string[];
   unresolvedQuestions: string[];
@@ -271,11 +247,11 @@ export interface UiExplorerJobStateSnapshot {
 
 export interface UiExplorerExportEnvelope {
   schema: 'tdw.ui-explorer-export';
-  version: 2;
+  version: 3;
   exportedAt: string;
   payload: {
     type: 'ui-explorer-analysis';
-    resultContract: 'ui-explorer-result-v2';
+    resultContract: 'ui-explorer-result-v3';
     job: UiExplorerJobStateSnapshot;
   };
 }

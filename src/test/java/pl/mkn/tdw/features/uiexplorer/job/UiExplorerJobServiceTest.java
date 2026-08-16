@@ -306,12 +306,10 @@ class UiExplorerJobServiceTest {
         return new UiExplorerResultResponse(
                 context().screen(),
                 request().scenarioDescription(),
-                request().profile(),
                 context().sourceRevision(),
                 "The strongly anonymized CRM view maintains contact preferences.",
                 List.of(),
                 List.of(),
-                null,
                 UiExplorerClaimConfidence.CONFIRMED,
                 context().visibilityLimits(),
                 List.of(),

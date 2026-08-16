@@ -7,7 +7,6 @@ import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSignal;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextScope;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerScreenIdentity;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
@@ -29,7 +28,6 @@ public final class UiExplorerAiPreparationTestFixture {
                 "main",
                 "crm-contact-preferences",
                 "crm-commit-abc123",
-                UiExplorerProfile.CHANGE_PREPARATION,
                 Map.of(
                         UiExplorerSectionId.OVERVIEW, UiExplorerSectionMode.COMPACT,
                         UiExplorerSectionId.FORMS_AND_RULES, UiExplorerSectionMode.DEEP,

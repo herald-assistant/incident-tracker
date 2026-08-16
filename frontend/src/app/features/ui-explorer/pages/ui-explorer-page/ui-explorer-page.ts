@@ -104,19 +104,6 @@ export class UiExplorerPageComponent implements OnInit {
     this.facade.clearResult();
   }
 
-  profileLabel(profile: string): string {
-    switch (profile) {
-      case 'FUNCTIONAL_DOCUMENTATION':
-        return 'Dokumentacja funkcjonalna';
-      case 'CHANGE_PREPARATION':
-        return 'Przygotowanie zmiany';
-      case 'TECHNICAL_DOCUMENTATION':
-        return 'Dokumentacja techniczna';
-      default:
-        return profile;
-    }
-  }
-
   jobStatusClass(status: UiExplorerJobStatus): string {
     switch (status) {
       case 'COMPLETED':

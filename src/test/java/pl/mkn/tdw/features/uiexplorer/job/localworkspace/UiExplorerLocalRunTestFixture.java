@@ -58,7 +58,6 @@ final class UiExplorerLocalRunTestFixture {
                         request().branch(),
                         request().screenId(),
                         request().sourceRevision(),
-                        request().profile(),
                         request().resolvedSectionModes(),
                         request().scenarioDescription(),
                         request().model(),
@@ -125,7 +124,6 @@ final class UiExplorerLocalRunTestFixture {
         return new UiExplorerResultResponse(
                 context().screen(),
                 request().scenarioDescription(),
-                request().profile(),
                 context().sourceRevision(),
                 "The strongly anonymized CRM view maintains contact preferences.",
                 List.of(new UiExplorerResultSection(
@@ -138,7 +136,6 @@ final class UiExplorerLocalRunTestFixture {
                                 "The selected CRM route contains the contact identifier.",
                                 UiExplorerClaimConfidence.CONFIRMED,
                                 List.of("A contactId route parameter is present."),
-                                List.of(),
                                 List.of(reference)
                         )),
                         List.of(),
@@ -147,7 +144,6 @@ final class UiExplorerLocalRunTestFixture {
                         List.of()
                 )),
                 List.of(),
-                null,
                 UiExplorerClaimConfidence.CONFIRMED,
                 context().visibilityLimits(),
                 List.of(),

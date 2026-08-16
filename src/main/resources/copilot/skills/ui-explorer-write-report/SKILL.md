@@ -10,9 +10,8 @@ Uzywaj tego skilla zawsze przed finalizacja initial UI Explorer result.
 ## Cel
 
 Zbuduj dokladnie jeden obiekt JSON zgodny z
-`ui-explorer/response-contract.json`. Wynik ma byc czytelny biznesowo albo
-technicznie zgodnie z `profile`, ale zawsze pozostaje oparty na tych samych
-source facts i jednym kontrakcie.
+`ui-explorer/response-contract.json`. Wynik jest dokumentacja funkcjonalna
+czytelna biznesowo i pozostaje oparty na source facts.
 
 ## Wejscia
 
@@ -50,14 +49,10 @@ wynik z `UNKNOWN`, `visibilityLimits` i `unresolvedQuestions`.
 - `VARIANTS_AND_FAILURES`: role/data/status variants, empty/error/loading,
   konflikty i braki widocznosci.
 
-## Profile
+## Odbiorca
 
-- `FUNCTIONAL_DOCUMENTATION`: preferuj jezyk biznesowy i zachowania widoczne
-  dla uzytkownika; techniczne elementy sa evidence.
-- `CHANGE_PREPARATION`: dodaj impact notes, prawdopodobne miejsca zmiany i
-  decyzje wymagajace uzgodnienia. Wypelnij `changePreparationSummary`.
-- `TECHNICAL_DOCUMENTATION`: pokaz route, source relationships, dane, state i
-  integracje, zachowujac funkcjonalne znaczenie.
+Preferuj jezyk biznesowy i zachowania widoczne dla uzytkownika. Techniczne
+elementy sa evidence i nie stanowia osobnego wariantu wyniku.
 
 ## Readiness Gate
 
@@ -83,9 +78,7 @@ Po jednym targeted retry nierozstrzygniety brak staje sie
 - `coverage` wynika z readiness, nie z oczekiwanej narracji.
 - `CONFIRMED` wymaga source reference.
 - `usage` pozostaje `null`; tokeny i koszt uzupelnia backend.
-- `sourceRevision`, `screenId` i profile musza odpowiadac artifactom.
-- `changePreparationSummary` jest wymagane dla `CHANGE_PREPARATION`; dla
-  pozostalych profili moze byc `null` albo puste semantycznie.
+- `sourceRevision` i `screenId` musza odpowiadac artifactom.
 
 ## Walidacja
 

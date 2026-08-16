@@ -347,7 +347,6 @@ public final class UiExplorerJobState {
                 request.branch(),
                 request.screenId(),
                 request.sourceRevision(),
-                request.profile(),
                 request.resolvedSectionModes(),
                 request.scenarioDescription(),
                 request.model(),

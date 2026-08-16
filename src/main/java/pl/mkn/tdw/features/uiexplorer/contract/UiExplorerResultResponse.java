@@ -7,12 +7,10 @@ import java.util.List;
 public record UiExplorerResultResponse(
         UiExplorerScreenIdentity screen,
         String scenarioDescription,
-        UiExplorerProfile profile,
         UiExplorerSourceRevision sourceRevision,
         String functionalOverview,
         List<UiExplorerResultSection> sections,
         List<UiExplorerCrossSectionDependency> crossSectionDependencies,
-        UiExplorerChangePreparationSummary changePreparationSummary,
         UiExplorerClaimConfidence overallConfidence,
         List<String> visibilityLimits,
         List<String> unresolvedQuestions,

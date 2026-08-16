@@ -23,7 +23,7 @@ describe('UiExplorerResultComponent', () => {
     fixture.detectChanges();
   });
 
-  it('renders all eight CRM report sections, confidence limits and feature-owned business supplements', () => {
+  it('renders all eight functional CRM report sections, dependencies and confidence limits', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelector('app-analysis-result-header')).not.toBeNull();
@@ -32,8 +32,7 @@ describe('UiExplorerResultComponent', () => {
     expect(compiled.textContent).toContain('Dynamiczna walidacja kontaktu CRM kontroluje zapis.');
     expect(compiled.textContent).toContain('Zależności przekrojowe');
     expect(compiled.textContent).toContain('Walidacja formularza kontroluje dostępność akcji zapisu.');
-    expect(compiled.textContent).toContain('Materiał do przygotowania zmiany');
-    expect(compiled.textContent).toContain('Ustalić właściciela słownika segmentów CRM.');
+    expect(compiled.textContent).not.toContain('Materiał do przygotowania zmiany');
     expect(compiled.textContent).toContain('Ograniczenia, pytania i źródła');
     expect(compiled.textContent).not.toContain('preparedPrompt');
     expect(compiled.textContent).not.toContain('raw CRM source body');
@@ -57,7 +56,7 @@ describe('UiExplorerResultComponent', () => {
       expect(markdown).toContain('# UI Explorer: Utworzenie kontaktu CRM');
       expect(markdown).toContain('## Formularze i reguły');
       expect(markdown).toContain('## Zależności przekrojowe');
-      expect(markdown).toContain('## Materiał do przygotowania zmiany');
+      expect(markdown).not.toContain('## Materiał do przygotowania zmiany');
       expect(markdown).toContain('Reguły runtime słownika CRM nie były widoczne.');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
     } finally {
@@ -185,7 +184,6 @@ function crmResult(): UiExplorerResultResponse {
       navigationContext: 'Kontakty CRM > Nowy kontakt'
     },
     scenarioDescription: 'Syntetyczny scenariusz utworzenia kontaktu CRM.',
-    profile: 'CHANGE_PREPARATION',
     sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
     functionalOverview: 'Widok umożliwia utworzenie syntetycznego kontaktu CRM.',
     sections: [],
@@ -196,11 +194,6 @@ function crmResult(): UiExplorerResultResponse {
         description: 'Walidacja formularza kontroluje dostępność akcji zapisu.'
       }
     ],
-    changePreparationSummary: {
-      changeGoal: 'Rozszerzyć syntetyczny formularz CRM.',
-      likelyImpactAreas: ['Formularz kontaktu CRM', 'Akcja zapisu CRM'],
-      decisionsRequired: ['Ustalić właściciela słownika segmentów CRM.']
-    },
     overallConfidence: 'INFERRED',
     visibilityLimits: ['Reguły runtime słownika CRM nie były widoczne.'],
     unresolvedQuestions: ['Która syntetyczna rola CRM zatwierdza kontakt?'],

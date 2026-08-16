@@ -2,7 +2,7 @@
 
 Status: in-progress
 
-Source need: [UI Explorer - dokumentacja funkcjonalna i techniczna widokow](../needs/ui-explorer.md)
+Source need: [UI Explorer - dokumentacja funkcjonalna widokow](../needs/ui-explorer.md)
 
 Klasyfikacja: L2 - nowy feature analityczny L1, breaking evolution wspolnego
 modelu Operational Context oraz nowa neutralna capability deterministycznego
@@ -19,10 +19,10 @@ implementacje. Kazdy inkrement wymaga osobnej akceptacji zgodnie z
 ## Potrzeba i wynik produktu
 
 UI Explorer ma zamieniac kod zlozonego frontendu w ustrukturyzowany raport o
-jednym ekranie i scenariuszu. Uzytkownik wybiera system, wersje, ekran, cel i
+jednym ekranie i scenariuszu. Uzytkownik wybiera system, wersje, ekran i
 glebokosc sekcji. Platforma samodzielnie buduje ograniczony kontekst, pozwala
-AI uzupelnic go przez read-only tools i zwraca raport biznesowy albo
-techniczny z dowodami, poziomami pewnosci oraz ograniczeniami widocznosci.
+AI uzupelnic go przez read-only tools i zwraca funkcjonalny raport biznesowy
+z dowodami, poziomami pewnosci oraz ograniczeniami widocznosci.
 
 Feature jest rodzenstwem Incident Analysis, Flow Explorer, Config Drift Viewer,
 Change Verification i Delivery Effectiveness Assessment. Nie zalezy od ich
@@ -38,8 +38,7 @@ pakietow, kontraktow joba, evidence pipeline ani skilli.
 - statyczna analiza kodu z wybranego branch/ref i przypisanie wyniku do
   rozpoznanej rewizji,
 - katalog ekranow budowany z routingu i glownych komponentow widoku,
-- trzy profile: `FUNCTIONAL_DOCUMENTATION`, `CHANGE_PREPARATION` oraz
-  `TECHNICAL_DOCUMENTATION`,
+- jeden cel produktu: dokumentacja funkcjonalna bez publicznego pola profilu,
 - osiem stabilnych sekcji raportu z trybami `OFF`, `COMPACT`, `DEEP`,
 - deterministyczny context snapshot przed uruchomieniem AI,
 - poglebianie przez istniejace neutralne GitLab search/read tools,
@@ -203,7 +202,7 @@ GET /api/ui-explorer/screens?systemId={systemId}&branch={branch}
 `input-options` zwraca tylko systemy posiadajace
 `systemType: internal-service`, `systemSubtype: frontend`, dokladnie jeden
 system-targeted code-search scope i jednoznaczne primary repository. Odpowiedz
-zawiera tez profile, sekcje, ich tryby oraz domyslne konfiguracje.
+zawiera tez sekcje, ich tryby oraz jedna domyslna konfiguracje funkcjonalna.
 
 Katalog ekranow zwraca co najmniej:
 
@@ -231,7 +230,6 @@ Start zwraca `202 Accepted` oraz pierwszy snapshot. Request zawiera:
 - `branch`,
 - `screenId`,
 - `sourceRevision` przekazana z odpowiedzi katalogu ekranow,
-- `profile`,
 - mape `sectionModes`,
 - opcjonalne `scenarioDescription`,
 - opcjonalne neutralne preferencje AI `model` i `reasoningEffort`.
@@ -261,17 +259,11 @@ Zawiera co najmniej:
 
 MVP nie wystawia endpointu chatu.
 
-## Profile i sekcje
+## Dokumentacja funkcjonalna i sekcje
 
-Profile ustawiaja domyslne tryby sekcji, ale wszystkie korzystaja z jednego
-result contract:
-
-- `FUNCTIONAL_DOCUMENTATION` preferuje kontekst, strukture, akcje, formularze
-  i warianty; techniczne sygnaly sa dowodami pomocniczymi,
-- `CHANGE_PREPARATION` poglebia akcje, formularze, dane/uslugi, stan oraz
-  miejsca oddzialywania i niewiadome wymagajace decyzji,
-- `TECHNICAL_DOCUMENTATION` poglebia nawigacje, dane/uslugi, stan i powiazania
-  z kodem, zachowujac funkcjonalne znaczenie.
+UI Explorer ma jeden cel produktu i jeden result contract: dokumentacje
+funkcjonalna. Domyslne tryby preferuja kontekst, strukture, akcje, formularze
+i warianty, a techniczne sygnaly pozostaja dowodami pomocniczymi.
 
 Kanoniczne sekcje i ich id:
 
@@ -293,10 +285,6 @@ Kazda aktywna sekcja ma mikro-kontrakt:
 - `CONFIRMED`, `INFERRED` albo `UNKNOWN` dla kluczowych twierdzen,
 - visibility limits i otwarte pytania,
 - coverage status `READY`, `PARTIAL` albo `BLOCKED`.
-
-`CHANGE_PREPARATION` dodaje do istniejacych sekcji impact notes, pytania do
-uzgodnienia i prawdopodobne obszary zmiany. Nie generuje odrebnego,
-nieporownywalnego raportu.
 
 ## Zasady analizy formularzy dynamicznych
 
@@ -429,11 +417,10 @@ feature izoluje jego uzycie i nie utrwala tego wzorca w nowych kontraktach.
 Publiczny result jest typowanym kontraktem feature'a, a nie dowolnym Markdown.
 Zawiera:
 
-- screen identity, scenario, profile i source revision,
+- screen identity, scenario i source revision,
 - executive/functional overview,
 - osiem sekcji z mode, coverage i typed findings,
 - cross-section dependencies,
-- change preparation summary dla odpowiedniego profilu,
 - overall confidence,
 - visibility limits i unresolved questions,
 - usage.
@@ -460,7 +447,7 @@ assemblera.
 Nowa strona korzysta ze wzorca innych analysis workspaces:
 
 - kompaktowy header i konfiguracja bez marketing hero,
-- selektory systemu, branch/ref, ekranu i profilu,
+- selektory systemu, branch/ref i ekranu,
 - advanced section modes schowane za progresywnym ujawnieniem,
 - opis scenariusza jako opcjonalne pole doprecyzowujace,
 - wspolny aside dla modelu/reasoning effort,
@@ -551,7 +538,7 @@ migrowani w jednym inkremencie; nie zostaje przejsciowy fallback bez subtype.
 | GitLab capability | fixtures standalone/module routes, lazy loading, redirects, guards, inline/external template, limits i niejednoznacznosci |
 | Context pipeline | source revision, bounded traversal, form/store/API/WS/auth signals, coverage i visibility limits |
 | AI boundary | prompt/artifacts, allowlista, hidden scope, budget, readiness, parser i malformed response |
-| Result/report | wszystkie profile/modes, confidence, limits, deterministic assembly i brak surowego bypassu |
+| Result/report | dokumentacja funkcjonalna, wszystkie modes, confidence, limits, deterministic assembly i brak surowego bypassu |
 | Job/history | transitiony, failure/partial result, persistence, sanitizacja oraz versioned import/export |
 | Architecture | package dependency guards i brak importow feature -> feature / integrations -> feature |
 | Angular API/facade | input options, screen catalog, start/poll, terminal/error state i retry |
@@ -628,7 +615,7 @@ odbiorowym.
 
 - [x] Dodac lokalne `AGENTS.md` dla `features.uiexplorer` z ownership,
   dozwolonymi zaleznosciami, kontraktem sekcji i non-goals.
-- [x] Dodac enumy profilu, sekcji i mode, request/result oraz publiczne DTO
+- [x] Dodac enumy sekcji i mode, request/result oraz publiczne DTO
   snapshotu bez zaleznosci od innych feature'ow.
 - [x] Dodac thin input-options i job controllers ze szkieletem serwisu,
   walidacja oraz kontraktem `202`, bez udawanego wyniku AI.
@@ -648,7 +635,7 @@ jawnym terminalnym stanem `BLOCKED`, dopoki nie istnieja screen catalog, source
 context i AI analysis; prompt, result, report i export nie sa pozorowane.
 Celowane testy kontraktu, walidacji, assemblera i granic pakietow oraz pelne
 `mvn -q test` przeszly. Runtime smoke test potwierdzil lokalny mock
-`crm-agent-portal`, trzy profile, osiem sekcji i trzy tryby. Wszystkie nowe dane
+`crm-agent-portal`, osiem sekcji i trzy tryby. Wszystkie nowe dane
 testowe i przyklady domenowe tego kroku sa silnie zanonimizowanym CRM.
 
 ### 3. Neutralny katalog ekranow i source context
@@ -960,7 +947,7 @@ uruchamiania joba:
   dla prawdziwych `input-options`, katalogu ekranow i wspolnego katalogu AI.
 - [x] 7A: Dodac osobne komponenty konfiguracji i business-friendly katalogu
   ekranow z loading/empty/error/retry oraz automatyczna `sourceRevision`.
-- [x] 7A: Zaimplementowac wybor systemu, branch/ref, ekranu, profilu, trybow
+- [x] 7A: Zaimplementowac wybor systemu, branch/ref, ekranu i trybow
   osmiu sekcji, opisu scenariusza, modelu i reasoning effort. Zmiana systemu
   albo refa usuwa zalezne, potencjalnie nieaktualne wybory.
 - [x] 7A: Nie uruchamiac joba, nie mockowac rezultatu i nie dodawac lokalnego
@@ -1019,7 +1006,7 @@ wyniku, bez historii i portable JSON:
   `snapshot.report` jest glownym zrodlem naglowka, podsumowania, aktywnych
   sekcji, confidence, references, visibility limits i open questions.
 - [x] 7C.1: Typowac feature-owned `snapshot.result` i pokazac z niego tylko
-  biznesowo czytelne zaleznosci przekrojowe oraz change preparation summary;
+  biznesowo czytelne zaleznosci przekrojowe;
   nie renderowac raw JSON, prepared promptu ani surowej tresci source.
 - [x] 7C.1: Reuse'owac shared result header, report section content, Markdown
   i report meta; zachowac shared aside dla przebiegu, AI i evidence.
@@ -1037,7 +1024,7 @@ Checkpoint 7C.1 2026-08-15: terminalny placeholder zostal zastapiony
 feature-owned prezentacja, dla ktorej `snapshot.report` jest glownym zrodlem
 naglowka, podsumowania, osmiu uporzadkowanych sekcji i metadanych
 wiarygodnosci. `snapshot.result` ma dokladny kontrakt TypeScript i zasila tylko
-zaleznosci przekrojowe oraz change preparation summary. Shared result header
+zaleznosci przekrojowe. Shared result header
 udostepnia teraz opcjonalna akcje download, a UI Explorer reuse'uje rowniez
 shared Markdown, report section content, report meta oraz analysis aside.
 Wynik `PARTIAL` zachowuje dostepne sekcje i jawnie pokazuje braki;
@@ -1097,7 +1084,7 @@ Checkpoint 7A 2026-08-15: `/ui-explorer` jest lazy-loaded ekranem w sekcji
 Analysis Features, dostepnym z sidebaru i landing page. Feature-owned modele,
 API service i facade pobieraja prawdziwe `input-options`, katalog ekranow oraz
 wspolny katalog modeli AI. Operator wybiera frontend, branch/ref, ekran,
-profil, tryby osmiu sekcji, opcjonalny scenariusz, model i reasoning effort;
+tryby osmiu sekcji, opcjonalny scenariusz, model i reasoning effort;
 source revision pochodzi wylacznie z katalogu. Zmiana systemu albo refa usuwa
 screen i revision, a katalog ma osobne loading/empty/error/retry oraz jawne
 ograniczenia. 7A nie wywoluje `POST /jobs`, nie renderuje mockowanego rezultatu
@@ -1113,7 +1100,7 @@ Zakres 7A.1, zatwierdzony jako korekta spojnosci UX przed 7B:
 - [x] 7A.1: Przeniesc business-friendly katalog widokow z osobnej prawej
   kolumny do kontrolki targetu z dropdownem, wyszukiwaniem oraz
   loading/empty/error/retry.
-- [x] 7A.1: Pokazywac profile, section modes, model i reasoning jako zwarte
+- [x] 7A.1: Pokazywac section modes, model i reasoning jako zwarte
   kontrolki. Osiem sekcji pozostaje edytowalne w rozwijanym panelu bez stalego
   zajmowania calej wysokosci strony.
 - [x] 7A.1: Dodac pusty obszar przyszlego wyniku zgodny z Flow Explorerem, ale
@@ -1126,7 +1113,7 @@ Zakres 7A.1, zatwierdzony jako korekta spojnosci UX przed 7B:
 
 Checkpoint 7A.1 2026-08-15: UI Explorer korzysta ze zwartego wzorca analysis
 composer znanego z Flow Explorera: target row zawiera frontend, branch/ref,
-widok i odswiezenie katalogu, a scope row profil, tryby sekcji, model i
+widok i odswiezenie katalogu, a scope row tryby sekcji, model i
 reasoning. Katalog widokow oraz osiem trybow sekcji sa rozwijanymi kontrolkami,
 wiec konfiguracja nie tworzy osobnej kolumny ani stalego wielosekcyjnego
 wizarda. Pod composerem znajduje sie pusty obszar przyszlego wyniku. Nie dodano
@@ -1591,6 +1578,45 @@ nowego kierunku zaleznosci, a pelne `mvn -q test` zakonczylo sie wynikiem 1209
 testow, 0 failures, 0 errors i 0 skipped. Wszystkie nowe fixtures sa silnie
 zanonimizowanym CRM.
 
+#### 8E. Skupienie produktu wylacznie na dokumentacji funkcjonalnej
+
+Baseline: publiczny request/result, input-options, prompt, skille, historia,
+import/export i Angular obsluguja trzy profile, a wariant przygotowania zmiany
+ma dodatkowy `changePreparationSummary`. Conformance delta usuwa caly koncept
+profilu oraz change-preparation z pionowego slice'a. Dokumentacja funkcjonalna
+staje sie jedynym znaczeniem runu. Nie powstaje alias, stale pole profilu,
+migrator ani odczyt poprzedniego exportu.
+
+Konsumenci: job request/snapshot, input-options, artifacts i parser AI,
+result/report, local history, import/export, Angular facade/configuration/
+result oraz dokumentacja kanoniczna. Export i local-run schema zostaja
+podniesione, a starsze wersje sa jawnie odrzucane.
+
+- [x] 8E.1: Usunac `UiExplorerProfile`, pole `profile` i wszystkie opcje celu z
+  backendowego requestu, snapshotu, resultu, input-options i identity parsera.
+- [x] 8E.2: Usunac `UiExplorerChangePreparationSummary`, jego parser, fallback,
+  sanitizer, assembler oraz instrukcje z promptu i runtime skilla.
+- [x] 8E.3: Usunac wybor goal/profile i material przygotowania zmiany z modeli,
+  facade, konfiguratora, wyniku, copy/download i read-only UI Angulara.
+- [x] 8E.4: Podniesc bezkompatybilnie local-run/export schema i pokryc jawne
+  odrzucanie poprzedniej wersji.
+- [x] 8E.5: Zaktualizowac potrzebe, plan, architecture i lokalne instrukcje do
+  jednego celu: dokumentacji funkcjonalnej.
+- [x] 8E.6: Zweryfikowac testy Angulara, build Angulara i
+  `mvn -q -Pbackend-dev clean package`; wszystkie zmienione fixtures pozostaja
+  silnie zanonimizowanym, syntetycznym CRM.
+
+Checkpoint 8E 2026-08-16: UI Explorer ma jeden cel produktowy — dokumentacje
+funkcjonalna — bez pola ani stalej `profile`. Usunieto warianty przygotowania
+zmiany i dokumentacji technicznej, `changePreparationSummary`, `impactNotes`
+oraz odpowiadajace im elementy promptu, skilli i UI. Input options publikuje
+bezposrednio domyslne tryby sekcji. Publiczny start jawnie odrzuca usuniete i
+inne nieznane pola, a local-run/export uzywaja wersji `3` i kontraktu
+`ui-explorer-result-v3`; wersja `2` nie jest migrowana. Przeszly testy Angulara
+(409/409), produkcyjny build Angulara oraz `mvn -q -Pbackend-dev clean package`
+(1210 testow, 0 failures, 0 errors, 0 skipped). Zmienione fixtures pozostaja
+silnie zanonimizowanym, syntetycznym CRM.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.
@@ -1623,7 +1649,7 @@ zanonimizowanym CRM.
 Przed implementacja punktu 1 uzytkownik powinien zatwierdzic co najmniej:
 
 - jednostke analizy „widok w scenariuszu”,
-- trzy profile i osiem sekcji,
+- jeden cel dokumentacji funkcjonalnej i osiem sekcji,
 - statyczny, single-repository zakres MVP,
 - brak follow-up chat i runtime browser w MVP,
 - publiczne endpointy i request shape,

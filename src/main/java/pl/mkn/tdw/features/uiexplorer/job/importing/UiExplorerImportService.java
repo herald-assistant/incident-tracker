@@ -89,8 +89,6 @@ public class UiExplorerImportService {
                 || job.result().screen() == null
                 || job.sourceRevision() == null
                 || job.result().sourceRevision() == null
-                || job.request().profile() == null
-                || job.result().profile() != job.request().profile()
                 || job.result().sections().isEmpty()
                 || job.createdAt() == null
                 || job.completedAt() == null) {

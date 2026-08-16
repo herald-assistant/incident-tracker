@@ -68,12 +68,6 @@ public class UiExplorerLocalRunPersister implements UiExplorerLocalRunPersistenc
         if (!StringUtils.hasText(screenLabel) && snapshot.request() != null) {
             screenLabel = snapshot.request().screenId();
         }
-        var profile = snapshot.request() != null && snapshot.request().profile() != null
-                ? snapshot.request().profile().name()
-                : null;
-        if (StringUtils.hasText(screenLabel) && StringUtils.hasText(profile)) {
-            return screenLabel.trim() + " / " + profile;
-        }
         if (StringUtils.hasText(screenLabel)) {
             return screenLabel.trim();
         }

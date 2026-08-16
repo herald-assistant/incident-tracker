@@ -47,7 +47,7 @@ class UiExplorerLocalRunPersisterTest {
 
         assertThat(store.entries).singleElement().satisfies(entry -> {
             assertThat(entry.feature()).isEqualTo("ui-explorer");
-            assertThat(entry.name()).isEqualTo("CRM Contact Preferences / CHANGE_PREPARATION");
+            assertThat(entry.name()).isEqualTo("CRM Contact Preferences");
             assertThat(entry.status()).isEqualTo("COMPLETED");
             assertThat(entry.completedAt()).isEqualTo(COMPLETED_AT);
         });
@@ -56,9 +56,9 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(record.continuation().copilotSessionId()).isNull();
         var envelope = record.exportEnvelope();
         assertThat(envelope.path("schema").asText()).isEqualTo("tdw.ui-explorer-local-run");
-        assertThat(envelope.path("version").asInt()).isEqualTo(2);
+        assertThat(envelope.path("version").asInt()).isEqualTo(3);
         assertThat(envelope.at("/payload/type").asText()).isEqualTo("ui-explorer-analysis");
-        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v2");
+        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v3");
         assertThat(envelope.at("/payload/job/sourceRevision/revision").asText())
                 .isEqualTo("crm-commit-abc123");
         assertThat(envelope.at("/payload/job/result/sections/0/sourceReferences/0/repository").isNull()).isTrue();

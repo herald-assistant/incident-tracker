@@ -44,7 +44,7 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 
 ## Algorytm
 
-1. Potwierdz `systemId`, `screenId`, route, profile, source revision i aktywne
+1. Potwierdz `systemId`, `screenId`, route, source revision i aktywne
    `sectionModes` z artifactow.
 2. Oznacz sekcje `OFF` jako `not_applicable`; nie kieruj ich do wyniku.
 3. Przekaz aktywne sekcje i ich deterministyczne coverage do

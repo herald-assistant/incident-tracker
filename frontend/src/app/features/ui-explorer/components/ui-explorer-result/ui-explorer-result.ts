@@ -85,19 +85,6 @@ export class UiExplorerResultComponent {
     return this.status() === 'PARTIAL' ? 'wynik częściowy' : 'wynik kompletny';
   }
 
-  protected profileLabel(): string {
-    switch (this.result()?.profile) {
-      case 'FUNCTIONAL_DOCUMENTATION':
-        return 'dokumentacja funkcjonalna';
-      case 'CHANGE_PREPARATION':
-        return 'przygotowanie zmiany';
-      case 'TECHNICAL_DOCUMENTATION':
-        return 'dokumentacja techniczna';
-      default:
-        return '';
-    }
-  }
-
   protected sectionMode(section: AnalysisReportSection): UiExplorerSectionMode | null {
     const sectionId = section.id as UiExplorerSectionId;
     return this.sectionModes().find((assignment) => assignment.sectionId === sectionId)?.mode ?? null;
@@ -124,22 +111,12 @@ export class UiExplorerResultComponent {
     return SECTION_LABELS[sectionId] ?? sectionId;
   }
 
-  protected hasText(value: string | null | undefined): boolean {
-    return typeof value === 'string' && value.trim().length > 0;
-  }
-
   protected hasItems<T>(items: readonly T[] | null | undefined): boolean {
     return Array.isArray(items) && items.length > 0;
   }
 
-  protected hasChangePreparation(): boolean {
-    const summary = this.result()?.changePreparationSummary;
-    return Boolean(
-      summary &&
-        (this.hasText(summary.changeGoal) ||
-          this.hasItems(summary.likelyImpactAreas) ||
-          this.hasItems(summary.decisionsRequired))
-    );
+  protected hasText(value: string | null | undefined): boolean {
+    return typeof value === 'string' && value.trim().length > 0;
   }
 
   private clearCopyFeedback(): void {

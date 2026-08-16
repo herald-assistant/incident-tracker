@@ -75,14 +75,14 @@ kroki, context/tool evidence, activity, usage, result i report oraz kontrolowane
 poniewaz zawiera surowa tresc source evidence. Terminalne snapshoty sa
 sanitizowane i zapisywane w lokalnej historii pod feature key `ui-explorer`;
 shared `/api/analysis/runs` odczytuje je po restarcie bez mozliwosci
-kontynuacji. Osobny `tdw.ui-explorer-export/v2` zapewnia sanitizowany export
+kontynuacji. Osobny `tdw.ui-explorer-export/v3` zapewnia sanitizowany export
 terminalnego wyniku oraz read-only import z dokladna walidacja wersji i
 ponowna sanitizacja przed zapisem do historii. Workspace Angular pod
 `/ui-explorer` udostepnia route, sidebar i landing card oraz feature-owned
 konfiguracje z prawdziwych `input-options`, katalogu ekranow i shared katalogu
 AI. Workspace uzywa tego samego zwartego wzorca analysis composer co Flow
 Explorer: target row grupuje frontend, branch/ref, widok i odswiezenie
-katalogu, scope row grupuje profil, rozwijane tryby sekcji, model i reasoning,
+katalogu, scope row grupuje rozwijane tryby sekcji, model i reasoning,
 a ponizej znajduje sie opis scenariusza oraz obszar wyniku.
 Operator nadal moze edytowac wszystkie osiem trybow sekcji bez stalego
 zajmowania wysokosci strony. Source revision jest automatycznie przypisana do
@@ -95,15 +95,15 @@ zachowuje ostatni snapshot i pozwala jawnie ponowic odczyt. Terminalne statusy
 to `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`. Dla `COMPLETED` i `PARTIAL`
 workspace renderuje `report` jako glowny dokument: naglowek, podsumowanie,
 aktywne sekcje, confidence, references, visibility limits i open questions.
-Feature-owned `result` zasila tylko biznesowo czytelne zaleznosci przekrojowe
-oraz change preparation summary; UI nie pokazuje raw JSON, prepared promptu ani
+Feature-owned `result` zasila tylko biznesowo czytelny opis funkcjonalny i
+zaleznosci przekrojowe; UI nie pokazuje raw JSON, prepared promptu ani
 surowej tresci source. Shared result header, renderer Markdown, section content
 i report meta utrzymuja znany wzorzec prezentacji, a caly dokument mozna
 skopiowac albo pobrac jako Markdown. `BLOCKED`, `FAILED` oraz terminalny stan
 bez raportu sa jawne i nie tworza wyniku zastepczego. Analysis History rozpoznaje
 feature key `ui-explorer` i otwiera zapisany run przez `localRunId`, bez
 ladowania pelnego JSON-a na liscie. Workspace waliduje dokladnie wewnetrzna
-koperta `tdw.ui-explorer-local-run/v2`, odtwarza konfiguracje i raport jako
+koperta `tdw.ui-explorer-local-run/v3`, odtwarza konfiguracje i raport jako
 read-only oraz nie uruchamia pollingu, continuation, follow-up chatu ani resume.
 Portable JSON jest importowany przez backendowa granice walidacji, a wynik live,
 history albo imported jest eksportowany przez kanoniczny endpoint feature'a.
@@ -364,7 +364,7 @@ Na dzisiaj projekt ma:
   Elasticsearch/Kibana.
 - `GET /api/ui-explorer/input-options`
   Feature-owned katalog kwalifikujacych sie systemow
-  `internal-service/frontend`, profili, sekcji i trybow oraz dostepnosci
+  `internal-service/frontend`, domyslnych trybow sekcji oraz dostepnosci
   screen catalog, source context i AI analysis.
 - `GET /api/ui-explorer/screens?systemId={systemId}&branch={branch}`
   Rozwiazuje primary frontend repository oraz systemowy code-search scope z
@@ -376,7 +376,7 @@ Na dzisiaj projekt ma:
   wyniku.
 - `POST /api/ui-explorer/jobs`
   Przyjmuje wybrany `systemId`, `branch`, katalogowy `screenId`, obowiazkowa
-  `sourceRevision`, profil, tryby sekcji, opis scenariusza i opcjonalne
+  `sourceRevision`, tryby sekcji, opis scenariusza i opcjonalne
   preferencje AI. Rewizja jest sprawdzana przed ekranem; zmieniony ref albo
   nieaktualny ekran zwraca konflikt wymagajacy odswiezenia katalogu. Start
   zwraca `202` ze snapshotem `QUEUED`; source context, preparation i analiza AI
@@ -388,7 +388,7 @@ Na dzisiaj projekt ma:
   Surowa tresc plikow, prompt, logical artifacts i wewnetrzny GitLab scope nie
   sa czescia odpowiedzi.
 - `GET /api/ui-explorer/jobs/{jobId}/export`
-  Zwraca sanitizowany `tdw.ui-explorer-export/v2` dla `COMPLETED/PARTIAL` z
+  Zwraca sanitizowany `tdw.ui-explorer-export/v3` dla `COMPLETED/PARTIAL` z
   resultem i reportem. Potrafi odtworzyc portable payload z lokalnej historii
   po restarcie, ale nie ujawnia wewnetrznej koperty `run.json`.
 - `POST /api/ui-explorer/imports`

@@ -11,7 +11,7 @@ class UiExplorerToolDescriptionCustomizerTest {
     private final UiExplorerToolDescriptionCustomizer customizer = new UiExplorerToolDescriptionCustomizer();
 
     @Test
-    void shouldAddFallbackAndTrustGuidanceOnlyForUiExplorerProfile() {
+    void shouldAddFallbackAndTrustGuidanceOnlyForUiExplorerRuntimeContext() {
         var customized = customizer.customize(
                 CopilotToolDescriptionContext.profile("ui-explorer"),
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,

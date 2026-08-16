@@ -6,7 +6,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionModeAssignment;
@@ -68,7 +67,6 @@ class UiExplorerJobControllerTest {
                 "main",
                 "crm-contact-preferences",
                 "crm-commit-abc123",
-                UiExplorerProfile.FUNCTIONAL_DOCUMENTATION,
                 Map.of(
                         UiExplorerSectionId.OVERVIEW, UiExplorerSectionMode.DEEP,
                         UiExplorerSectionId.FORMS_AND_RULES, UiExplorerSectionMode.COMPACT
@@ -89,7 +87,6 @@ class UiExplorerJobControllerTest {
                                   "branch": "main",
                                   "screenId": "crm-contact-preferences",
                                   "sourceRevision": "crm-commit-abc123",
-                                  "profile": "FUNCTIONAL_DOCUMENTATION",
                                   "sectionModes": {
                                     "OVERVIEW": "OFF"
                                   }
@@ -109,9 +106,27 @@ class UiExplorerJobControllerTest {
                                   "branch": "main",
                                   "screenId": "crm-contact-preferences",
                                   "sourceRevision": "crm-commit-abc123",
-                                  "profile": "FUNCTIONAL_DOCUMENTATION",
                                   "sectionModes": {
                                     "LEGACY_FORM_SECTION": "DEEP"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectRemovedGoalWithoutCompatibilityFallback() throws Exception {
+        mockMvc.perform(post("/api/ui-explorer/jobs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "systemId": "crm-agent-portal",
+                                  "branch": "main",
+                                  "screenId": "crm-contact-preferences",
+                                  "sourceRevision": "crm-commit-abc123",
+                                  "profile": "FUNCTIONAL_DOCUMENTATION",
+                                  "sectionModes": {
+                                    "OVERVIEW": "DEEP"
                                   }
                                 }
                                 """))
@@ -127,7 +142,6 @@ class UiExplorerJobControllerTest {
                                   "systemId": "crm-agent-portal",
                                   "branch": "main",
                                   "screenId": "crm-contact-preferences",
-                                  "profile": "FUNCTIONAL_DOCUMENTATION",
                                   "sectionModes": { "OVERVIEW": "DEEP" }
                                 }
                                 """))
@@ -167,9 +181,9 @@ class UiExplorerJobControllerTest {
         mockMvc.perform(get("/api/ui-explorer/jobs/crm-ui-job-123/export"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.schema").value("tdw.ui-explorer-export"))
-                .andExpect(jsonPath("$.version").value(2))
+                .andExpect(jsonPath("$.version").value(3))
                 .andExpect(jsonPath("$.payload.type").value("ui-explorer-analysis"))
-                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v2"));
+                .andExpect(jsonPath("$.payload.resultContract").value("ui-explorer-result-v3"));
     }
 
     @Test
@@ -192,7 +206,6 @@ class UiExplorerJobControllerTest {
                   "branch": "main",
                   "screenId": "crm-contact-preferences",
                   "sourceRevision": "crm-commit-abc123",
-                  "profile": "FUNCTIONAL_DOCUMENTATION",
                   "sectionModes": {
                     "OVERVIEW": "DEEP",
                     "FORMS_AND_RULES": "COMPACT"
@@ -220,7 +233,6 @@ class UiExplorerJobControllerTest {
                         "main",
                         "crm-contact-preferences",
                         "crm-commit-abc123",
-                        UiExplorerProfile.FUNCTIONAL_DOCUMENTATION,
                         List.of(new UiExplorerSectionModeAssignment(
                                 UiExplorerSectionId.OVERVIEW,
                                 UiExplorerSectionMode.DEEP

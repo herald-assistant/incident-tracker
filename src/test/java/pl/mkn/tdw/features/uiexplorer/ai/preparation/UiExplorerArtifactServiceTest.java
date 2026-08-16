@@ -57,7 +57,8 @@ class UiExplorerArtifactServiceTest {
         var contract = service.responseContract();
 
         assertThat(contract)
-                .contains("FUNCTIONAL_DOCUMENTATION|CHANGE_PREPARATION|TECHNICAL_DOCUMENTATION")
+                .doesNotContain("profile")
+                .doesNotContain("changePreparationSummary")
                 .contains("OVERVIEW|NAVIGATION_AND_ACCESS|SCREEN_STRUCTURE|ACTIONS_AND_OUTCOMES|FORMS_AND_RULES|DATA_AND_SERVICES|STATE_AND_SYNCHRONIZATION|VARIANTS_AND_FAILURES")
                 .contains("CONFIRMED|INFERRED|UNKNOWN")
                 .contains("\"usage\": null")

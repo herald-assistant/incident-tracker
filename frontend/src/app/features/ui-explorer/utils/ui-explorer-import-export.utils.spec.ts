@@ -12,7 +12,7 @@ describe('UI Explorer import and export contract', () => {
 
   it.each([
     ['legacy version', { version: 1 }],
-    ['newer version', { version: 3 }],
+    ['newer version', { version: 4 }],
     ['foreign schema', { schema: 'tdw.crm-foreign-run' }]
   ])('rejects %s without a compatibility fallback', (_label, override) => {
     expect(() => parseUiExplorerLocalRunEnvelope({ ...localEnvelope(), ...override })).toThrow();
@@ -31,11 +31,11 @@ describe('UI Explorer import and export contract', () => {
 function localEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 2,
+    version: 3,
     storedAt: '2026-08-15T10:04:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v2',
+      resultContract: 'ui-explorer-result-v3',
       job: crmHistorySnapshot()
     }
   };
@@ -50,7 +50,6 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
       branch: 'main',
       screenId: 'crm-contact-create',
       sourceRevision: 'crm-revision-a1b2c3',
-      profile: 'FUNCTIONAL_DOCUMENTATION',
       sectionModes: [{ sectionId: 'OVERVIEW', mode: 'DEEP' }],
       scenarioDescription: 'Describe a synthetic CRM contact flow.',
       aiModel: 'crm-doc-model',
@@ -79,12 +78,10 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
         navigationContext: 'Kontakty CRM > Nowy kontakt'
       },
       scenarioDescription: 'Describe a synthetic CRM contact flow.',
-      profile: 'FUNCTIONAL_DOCUMENTATION',
       sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
       functionalOverview: 'Synthetic CRM contact documentation.',
       sections: [],
       crossSectionDependencies: [],
-      changePreparationSummary: null,
       overallConfidence: 'CONFIRMED',
       visibilityLimits: [],
       unresolvedQuestions: [],

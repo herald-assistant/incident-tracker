@@ -33,7 +33,6 @@
           <div><dt>Branch / Ref</dt><dd>{{ readOnlySnapshot.request.branch }}</dd></div>
           <div><dt>View</dt><dd>{{ readOnlySnapshot.result?.screen?.label || readOnlySnapshot.request.screenId }}</dd></div>
           <div><dt>Source revision</dt><dd>{{ readOnlySnapshot.request.sourceRevision }}</dd></div>
-          <div><dt>Goal</dt><dd>{{ profileLabel(readOnlySnapshot.request.profile) }}</dd></div>
           <div><dt>Model / effort</dt><dd>{{ readOnlySnapshot.request.aiModel || 'Default' }} · {{ readOnlySnapshot.request.reasoningEffort || 'Default' }}</dd></div>
         </dl>
 

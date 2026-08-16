@@ -138,12 +138,10 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
         return new UiExplorerResultResponse(
                 result.screen(),
                 result.scenarioDescription(),
-                result.profile(),
                 result.sourceRevision(),
                 result.functionalOverview(),
                 result.sections(),
                 result.crossSectionDependencies(),
-                result.changePreparationSummary(),
                 result.overallConfidence(),
                 java.util.List.copyOf(limits),
                 result.unresolvedQuestions(),

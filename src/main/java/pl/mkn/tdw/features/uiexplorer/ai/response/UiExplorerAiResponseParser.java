@@ -7,11 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerChangePreparationSummary;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerClaimConfidence;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCrossSectionDependency;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
@@ -32,8 +30,8 @@ import java.util.Set;
 public class UiExplorerAiResponseParser {
 
     private static final Set<String> TOP_LEVEL_FIELDS = Set.of(
-            "screen", "scenarioDescription", "profile", "sourceRevision", "functionalOverview",
-            "sections", "crossSectionDependencies", "changePreparationSummary", "overallConfidence",
+            "screen", "scenarioDescription", "sourceRevision", "functionalOverview",
+            "sections", "crossSectionDependencies", "overallConfidence",
             "visibilityLimits", "unresolvedQuestions", "usage"
     );
     private static final Set<String> SCREEN_FIELDS = Set.of(
@@ -45,7 +43,7 @@ public class UiExplorerAiResponseParser {
             "sourceReferences", "visibilityLimits", "openQuestions"
     );
     private static final Set<String> FINDING_FIELDS = Set.of(
-            "title", "description", "confidence", "conditions", "impactNotes", "sourceReferences"
+            "title", "description", "confidence", "conditions", "sourceReferences"
     );
     private static final Set<String> SOURCE_REFERENCE_FIELDS = Set.of(
             "repository", "path", "symbol", "startLine", "endLine"
@@ -53,10 +51,6 @@ public class UiExplorerAiResponseParser {
     private static final Set<String> DEPENDENCY_FIELDS = Set.of(
             "sourceSection", "targetSection", "description"
     );
-    private static final Set<String> CHANGE_SUMMARY_FIELDS = Set.of(
-            "changeGoal", "likelyImpactAreas", "decisionsRequired"
-    );
-
     private final ObjectMapper objectMapper;
 
     public UiExplorerAiParseResult parse(
@@ -106,19 +100,6 @@ public class UiExplorerAiResponseParser {
         if (dependencies == null) {
             return malformed(request, context, "AI response contained an invalid cross-section dependency.");
         }
-        var changeSummary = parseChangeSummary(root.get("changePreparationSummary"));
-        if (changeSummary == INVALID_CHANGE_SUMMARY) {
-            return malformed(request, context, "AI response contained an invalid changePreparationSummary.");
-        }
-        if (request.profile() == UiExplorerProfile.CHANGE_PREPARATION && changeSummary == null) {
-            limitations.add("AI response omitted changePreparationSummary.");
-            changeSummary = new UiExplorerChangePreparationSummary(
-                    request.scenarioDescription(),
-                    List.of(),
-                    List.of("Change preparation summary requires analyst review.")
-            );
-        }
-
         var functionalOverview = text(root, "functionalOverview");
         if (!StringUtils.hasText(functionalOverview)) {
             limitations.add("AI response omitted functionalOverview.");
@@ -144,12 +125,10 @@ public class UiExplorerAiResponseParser {
         var result = new UiExplorerResultResponse(
                 context.screen(),
                 request.scenarioDescription(),
-                request.profile(),
                 context.sourceRevision(),
                 functionalOverview,
                 sections,
                 dependencies,
-                changeSummary,
                 overallConfidence,
                 List.copyOf(mergedLimits),
                 unresolvedQuestions,
@@ -193,17 +172,10 @@ public class UiExplorerAiResponseParser {
         var result = new UiExplorerResultResponse(
                 context != null ? context.screen() : null,
                 request != null ? request.scenarioDescription() : null,
-                request != null ? request.profile() : null,
                 context != null ? context.sourceRevision() : null,
                 "AI result is unavailable because its response contract was not safely satisfied.",
                 sections,
                 List.of(),
-                request != null && request.profile() == UiExplorerProfile.CHANGE_PREPARATION
-                        ? new UiExplorerChangePreparationSummary(
-                        request.scenarioDescription(),
-                        List.of(),
-                        List.of("Repeat AI analysis before preparing the CRM change."))
-                        : null,
                 UiExplorerClaimConfidence.UNKNOWN,
                 List.copyOf(limits),
                 List.of("A valid UI Explorer JSON response is required."),
@@ -360,20 +332,6 @@ public class UiExplorerAiResponseParser {
         return List.copyOf(result);
     }
 
-    private UiExplorerChangePreparationSummary parseChangeSummary(JsonNode node) {
-        if (node == null || node.isNull()) {
-            return null;
-        }
-        if (!node.isObject()) {
-            return INVALID_CHANGE_SUMMARY;
-        }
-        try {
-            return objectMapper.treeToValue(node, UiExplorerChangePreparationSummary.class);
-        } catch (JsonProcessingException | IllegalArgumentException exception) {
-            return INVALID_CHANGE_SUMMARY;
-        }
-    }
-
     private String validateShape(JsonNode root) {
         var unexpected = unexpectedField(root, TOP_LEVEL_FIELDS);
         if (unexpected != null) {
@@ -417,10 +375,6 @@ public class UiExplorerAiResponseParser {
                 }
             }
         }
-        var change = root.get("changePreparationSummary");
-        if (change != null && !change.isNull() && !objectWithFields(change, CHANGE_SUMMARY_FIELDS)) {
-            return "AI response changePreparationSummary shape is invalid.";
-        }
         return null;
     }
 
@@ -445,9 +399,8 @@ public class UiExplorerAiResponseParser {
                 || !equalsText(revision, "revision", context.sourceRevision().revision())) {
             return "AI response sourceRevision does not match the validated source revision.";
         }
-        if (!request.profile().name().equals(text(root, "profile"))
-                || !java.util.Objects.equals(request.scenarioDescription(), nullableText(root, "scenarioDescription"))) {
-            return "AI response profile or scenarioDescription does not match the request.";
+        if (!java.util.Objects.equals(request.scenarioDescription(), nullableText(root, "scenarioDescription"))) {
+            return "AI response scenarioDescription does not match the request.";
         }
         return null;
     }
@@ -557,6 +510,4 @@ public class UiExplorerAiResponseParser {
         }
     }
 
-    private static final UiExplorerChangePreparationSummary INVALID_CHANGE_SUMMARY =
-            new UiExplorerChangePreparationSummary(null, List.of(), List.of());
 }

@@ -24,7 +24,7 @@ public class UiExplorerArtifactService {
     public static final String COVERAGE_ARTIFACT = "ui-explorer/coverage.json";
     public static final String RESPONSE_CONTRACT_ARTIFACT = "ui-explorer/response-contract.json";
 
-    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v1";
+    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v2";
 
     private final ObjectMapper objectMapper;
 
@@ -95,7 +95,6 @@ public class UiExplorerArtifactService {
                     "navigationContext": "string|null"
                   },
                   "scenarioDescription": "string|null",
-                  "profile": "FUNCTIONAL_DOCUMENTATION|CHANGE_PREPARATION|TECHNICAL_DOCUMENTATION",
                   "sourceRevision": { "branch": "string", "revision": "string" },
                   "functionalOverview": "string",
                   "sections": [{
@@ -108,7 +107,6 @@ public class UiExplorerArtifactService {
                       "description": "string",
                       "confidence": "CONFIRMED|INFERRED|UNKNOWN",
                       "conditions": ["string"],
-                      "impactNotes": ["string"],
                       "sourceReferences": [{
                         "repository": null,
                         "path": "string",
@@ -127,11 +125,6 @@ public class UiExplorerArtifactService {
                     "targetSection": "sectionId",
                     "description": "string"
                   }],
-                  "changePreparationSummary": {
-                    "changeGoal": "string|null",
-                    "likelyImpactAreas": ["string"],
-                    "decisionsRequired": ["string"]
-                  },
                   "overallConfidence": "CONFIRMED|INFERRED|UNKNOWN",
                   "visibilityLimits": ["string"],
                   "unresolvedQuestions": ["string"],
@@ -147,7 +140,6 @@ public class UiExplorerArtifactService {
         payload.put("branch", request.branch());
         payload.put("screenId", request.screenId());
         payload.put("sourceRevision", request.sourceRevision());
-        payload.put("profile", request.profile());
         payload.put("sectionModes", request.resolvedSectionModes());
         payload.put("scenarioDescription", request.scenarioDescription());
         payload.put("model", request.model());

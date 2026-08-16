@@ -98,7 +98,6 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
         var description = valueOrEmpty(finding.description());
         lines.add("- **" + title + "** (`" + confidence + "`) — " + description);
         finding.conditions().forEach(value -> lines.add("  - Warunek: " + value));
-        finding.impactNotes().forEach(value -> lines.add("  - Wplyw zmiany: " + value));
     }
 
     private List<AnalysisReportReference> references(List<UiExplorerResultSection> sections) {

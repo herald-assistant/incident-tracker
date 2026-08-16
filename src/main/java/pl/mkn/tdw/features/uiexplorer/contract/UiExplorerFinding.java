@@ -7,14 +7,11 @@ public record UiExplorerFinding(
         String description,
         UiExplorerClaimConfidence confidence,
         List<String> conditions,
-        List<String> impactNotes,
         List<UiExplorerSourceReference> sourceReferences
 ) {
 
     public UiExplorerFinding {
         conditions = conditions != null ? List.copyOf(conditions) : List.of();
-        impactNotes = impactNotes != null ? List.copyOf(impactNotes) : List.of();
         sourceReferences = sourceReferences != null ? List.copyOf(sourceReferences) : List.of();
     }
 }
-

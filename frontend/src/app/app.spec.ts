@@ -1054,14 +1054,7 @@ function uiExplorerInputOptions() {
     systems: [
       { systemId: 'crm-agent-portal', label: 'CRM Agent Portal', summary: 'Syntetyczny frontend CRM.' }
     ],
-    profiles: [
-      {
-        profile: 'FUNCTIONAL_DOCUMENTATION',
-        label: 'Dokumentacja funkcjonalna',
-        description: 'Opis pracy użytkownika CRM.',
-        defaultSectionModes: [{ sectionId: 'OVERVIEW', mode: 'DEEP' }]
-      }
-    ],
+    defaultSectionModes: [{ sectionId: 'OVERVIEW', mode: 'DEEP' }],
     sections: [
       { sectionId: 'OVERVIEW', label: 'Cel widoku', description: 'Cel ekranu CRM.' }
     ],

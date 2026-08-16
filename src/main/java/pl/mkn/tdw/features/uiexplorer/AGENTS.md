@@ -3,7 +3,7 @@
 ## Zakres i ownership
 
 Ten katalog jest wlascicielem feature'a `ui-explorer`: publicznego requestu i
-wyniku dokumentacji widoku, kontraktu profili/sekcji, feature-owned API, joba,
+wyniku dokumentacji widoku, kontraktu sekcji, feature-owned API, joba,
 context pipeline, przygotowania AI, raportu i przyszlej persistence.
 
 ## Dozwolone zaleznosci
@@ -19,8 +19,8 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
 ## Kontrakt produktu
 
 - Jednostka analizy to jeden widok w konkretnym scenariuszu i rewizji zrodla.
-- Profile to `FUNCTIONAL_DOCUMENTATION`, `CHANGE_PREPARATION` i
-  `TECHNICAL_DOCUMENTATION`.
+- UI Explorer tworzy wylacznie dokumentacje funkcjonalna; publiczny kontrakt
+  nie zawiera wyboru profilu ani celu analizy.
 - Sekcje to osiem identyfikatorow z planu UI Explorer, a tryby to `OFF`,
   `COMPACT` i `DEEP`.
 - Publiczny input nie przyjmuje repository id/path, GitLab group, tokenu,
@@ -44,4 +44,3 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   zanonimizowane i dotycza wylacznie CRM.
 - Testy publicznego API uzywaja `MockMvc`, a granice pakietow sa chronione w
   `PackageDependencyGuardTest`.
-

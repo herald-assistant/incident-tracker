@@ -149,7 +149,6 @@ describe('UiExplorerPageComponent', () => {
       branch: 'main',
       screenId: 'crm-contact-create',
       sourceRevision: 'crm-revision-a1b2c3',
-      profile: 'FUNCTIONAL_DOCUMENTATION',
       sectionModes: {
         OVERVIEW: 'DEEP',
         NAVIGATION_AND_ACCESS: 'COMPACT',
@@ -360,29 +359,10 @@ function crmInputOptions(): UiExplorerInputOptionsResponse {
     systems: [
       { systemId: 'crm-agent-portal', label: 'CRM Agent Portal', summary: 'Syntetyczny frontend CRM.' }
     ],
-    profiles: [
-      {
-        profile: 'FUNCTIONAL_DOCUMENTATION',
-        label: 'Dokumentacja funkcjonalna',
-        description: 'Opis pracy użytkownika CRM.',
-        defaultSectionModes: sections.map((section) => ({
-          sectionId: section.sectionId,
-          mode: section.sectionId === 'OVERVIEW' ? 'DEEP' : 'COMPACT'
-        }))
-      },
-      {
-        profile: 'CHANGE_PREPARATION',
-        label: 'Przygotowanie zmiany',
-        description: 'Materiał do zmiany ekranu CRM.',
-        defaultSectionModes: sections.map((section) => ({ sectionId: section.sectionId, mode: 'COMPACT' }))
-      },
-      {
-        profile: 'TECHNICAL_DOCUMENTATION',
-        label: 'Dokumentacja techniczna',
-        description: 'Techniczny opis ekranu CRM.',
-        defaultSectionModes: sections.map((section) => ({ sectionId: section.sectionId, mode: 'DEEP' }))
-      }
-    ],
+    defaultSectionModes: sections.map((section) => ({
+      sectionId: section.sectionId,
+      mode: section.sectionId === 'OVERVIEW' ? 'DEEP' : 'COMPACT'
+    })),
     sections,
     modes: [
       { mode: 'OFF', label: 'Pomiń', description: 'Nie uwzględniaj sekcji.' },
@@ -458,7 +438,6 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
       branch: 'main',
       screenId: 'crm-contact-create',
       sourceRevision: 'crm-revision-a1b2c3',
-      profile: 'FUNCTIONAL_DOCUMENTATION',
       sectionModes: [
         { sectionId: 'OVERVIEW', mode: 'DEEP' },
         { sectionId: 'FORMS_AND_RULES', mode: 'COMPACT' }
@@ -573,7 +552,6 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
       navigationContext: 'Kontakty CRM > Nowy kontakt'
     },
     scenarioDescription: 'Describe the anonymized CRM contact creation flow.',
-    profile: 'FUNCTIONAL_DOCUMENTATION',
     sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
     functionalOverview: 'Widok umożliwia utworzenie zanonimizowanego kontaktu CRM.',
     sections: [],
@@ -584,11 +562,6 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
         description: 'Walidacja segmentu CRM kontroluje dostępność zapisu.'
       }
     ],
-    changePreparationSummary: {
-      changeGoal: 'Rozszerzyć formularz kontaktu CRM bez osłabienia walidacji.',
-      likelyImpactAreas: ['Formularz kontaktu', 'Akcja zapisu'],
-      decisionsRequired: ['Ustalić źródło słownika segmentów CRM.']
-    },
     overallConfidence: 'INFERRED',
     visibilityLimits: ['Reguły segmentu dostarczane runtime nie były widoczne.'],
     unresolvedQuestions: ['Która rola CRM zatwierdza kontakt po zapisie?'],
@@ -599,11 +572,11 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 2,
+    version: 3,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v2',
+      resultContract: 'ui-explorer-result-v3',
       job: crmJobSnapshot('COMPLETED')
     }
   };
@@ -612,11 +585,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export',
-    version: 2,
+    version: 3,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v2',
+      resultContract: 'ui-explorer-result-v3',
       job: crmJobSnapshot('COMPLETED')
     }
   };

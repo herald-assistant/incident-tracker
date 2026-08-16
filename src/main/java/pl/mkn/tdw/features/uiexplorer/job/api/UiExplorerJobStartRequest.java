@@ -1,11 +1,10 @@
 package pl.mkn.tdw.features.uiexplorer.job.api;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionModeAssignment;
@@ -29,8 +28,6 @@ public record UiExplorerJobStartRequest(
         @NotBlank(message = "sourceRevision must not be blank")
         @Size(max = 160, message = "sourceRevision must not exceed 160 characters")
         String sourceRevision,
-        @NotNull(message = "profile must be provided")
-        UiExplorerProfile profile,
         @Size(max = 8, message = "sectionModes must contain at most 8 entries")
         Map<UiExplorerSectionId, UiExplorerSectionMode> sectionModes,
         @Size(max = 4000, message = "scenarioDescription must not exceed 4000 characters")
@@ -76,6 +73,11 @@ public record UiExplorerJobStartRequest(
 
     public AnalysisAiOptions aiOptions() {
         return new AnalysisAiOptions(model, reasoningEffort);
+    }
+
+    @JsonAnySetter
+    public void rejectUnknownField(String fieldName, Object ignoredValue) {
+        throw new IllegalArgumentException("Unknown UI Explorer request field: " + fieldName);
     }
 
     private static String normalize(String value) {

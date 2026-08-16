@@ -22,7 +22,6 @@ export function buildUiExplorerReportMarkdown(
       )
     )
     .filter(Boolean);
-  const changePreparation = changePreparationMarkdown(result);
 
   return [
     `# ${normalizeMarkdown(report.header) || 'UI Explorer result'}`,
@@ -32,7 +31,6 @@ export function buildUiExplorerReportMarkdown(
     dependencies.length > 0
       ? `## Zależności przekrojowe\n\n${dependencies.join('\n')}`
       : '',
-    changePreparation,
     reportMetaMarkdown('Ograniczenia, pytania i źródła', report.meta)
   ]
     .filter(Boolean)
@@ -89,21 +87,6 @@ function referenceText(reference: AnalysisReportReference): string {
     .map(normalizeMarkdown)
     .filter(Boolean)
     .join(' | ');
-}
-
-function changePreparationMarkdown(result: UiExplorerResultResponse | null): string {
-  const summary = result?.changePreparationSummary;
-  if (!summary) {
-    return '';
-  }
-  return [
-    '## Materiał do przygotowania zmiany',
-    normalizeMarkdown(summary.changeGoal),
-    bulletGroup('Prawdopodobne obszary wpływu', summary.likelyImpactAreas),
-    bulletGroup('Decyzje do podjęcia', summary.decisionsRequired)
-  ]
-    .filter(Boolean)
-    .join('\n\n');
 }
 
 function compareSections(left: AnalysisReportSection, right: AnalysisReportSection): number {

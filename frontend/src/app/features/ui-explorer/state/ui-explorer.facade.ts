@@ -27,7 +27,6 @@ import {
   UiExplorerJobStateSnapshot,
   UiExplorerJobStatus,
   UiExplorerLoadingState,
-  UiExplorerProfile,
   UiExplorerResultSource,
   UiExplorerScreenCatalogResponse,
   UiExplorerSectionId,
@@ -71,7 +70,6 @@ export class UiExplorerFacade {
   readonly selectedSystemId = signal('');
   readonly branch = signal('');
   readonly selectedScreenId = signal('');
-  readonly selectedProfile = signal<UiExplorerProfile | ''>('');
   readonly sectionModes = signal<Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>>>({});
   readonly scenarioDescription = signal('');
   readonly selectedModel = signal('');
@@ -111,8 +109,7 @@ export class UiExplorerFacade {
         this.selectedSystemId() &&
           this.branch().trim() &&
           this.selectedScreenId() &&
-          this.sourceRevision()?.revision &&
-          this.selectedProfile()
+          this.sourceRevision()?.revision
       ) && this.hasActiveSection() && this.catalogMatchesSelection()
   );
   readonly configuration = computed<UiExplorerConfigurationSnapshot>(() => ({
@@ -120,7 +117,6 @@ export class UiExplorerFacade {
     branch: this.branch().trim(),
     screenId: this.selectedScreenId(),
     sourceRevision: this.sourceRevision()?.revision ?? '',
-    profile: this.selectedProfile(),
     sectionModes: { ...this.sectionModes() },
     scenarioDescription: this.scenarioDescription().trim(),
     model: this.selectedModel(),
@@ -193,11 +189,8 @@ export class UiExplorerFacade {
             this.clearScreenSelection();
           }
 
-          const selectedProfileStillExists = options.profiles.some(
-            (option) => option.profile === this.selectedProfile()
-          );
-          if (!selectedProfileStillExists && options.profiles[0]) {
-            this.selectProfile(options.profiles[0].profile);
+          if (Object.keys(this.sectionModes()).length === 0) {
+            this.applyDefaultSectionModes(options.defaultSectionModes);
           }
 
           if (this.selectedSystemId() && this.branch().trim()) {
@@ -292,16 +285,9 @@ export class UiExplorerFacade {
     this.selectedScreenId.set(screenId);
   }
 
-  selectProfile(profile: UiExplorerProfile): void {
-    if (this.controlsLocked()) {
-      return;
-    }
-    this.selectedProfile.set(profile);
-    const defaults = this.inputOptions()?.profiles.find(
-      (option) => option.profile === profile
-    )?.defaultSectionModes;
+  private applyDefaultSectionModes(defaults: UiExplorerInputOptionsResponse['defaultSectionModes']): void {
     const nextModes: Partial<Record<UiExplorerSectionId, UiExplorerSectionMode>> = {};
-    for (const assignment of defaults ?? []) {
+    for (const assignment of defaults) {
       nextModes[assignment.sectionId] = assignment.mode;
     }
     this.sectionModes.set(nextModes);
@@ -504,7 +490,7 @@ export class UiExplorerFacade {
 
   private buildStartRequest(): UiExplorerJobStartRequest | null {
     const configuration = this.configuration();
-    if (!configuration.profile || !this.catalogMatchesSelection()) {
+    if (!this.catalogMatchesSelection()) {
       return null;
     }
     return {
@@ -512,7 +498,6 @@ export class UiExplorerFacade {
       branch: configuration.branch,
       screenId: configuration.screenId,
       sourceRevision: configuration.sourceRevision,
-      profile: configuration.profile,
       sectionModes: { ...configuration.sectionModes },
       ...(configuration.scenarioDescription
         ? { scenarioDescription: configuration.scenarioDescription }

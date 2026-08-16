@@ -1,12 +1,10 @@
 package pl.mkn.tdw.features.uiexplorer.report;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerChangePreparationSummary;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerClaimConfidence;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCrossSectionDependency;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerFinding;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerScreenIdentity;
@@ -46,8 +44,7 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 .containsExactly("OVERVIEW", "FORMS_AND_RULES");
         assertThat(assembly.report().sections().get(1).markdown())
                 .contains("Dynamic contact preference validation")
-                .contains("`CONFIRMED`")
-                .contains("Wplyw zmiany");
+                .contains("`CONFIRMED`");
         assertThat(assembly.report().sections().get(1).meta().gaps())
                 .containsExactly("Section coverage: PARTIAL");
         assertThat(assembly.report().meta().references())
@@ -94,7 +91,6 @@ class DefaultUiExplorerResultReportAssemblerTest {
                         "A contact channel becomes required after the synthetic opt-in action.",
                         UiExplorerClaimConfidence.CONFIRMED,
                         List.of("The CRM contact is marked as opted in."),
-                        List.of("Review both visibility and validation when adding another contact channel."),
                         List.of(source)
                 )),
                 List.of("The form depends on the selected synthetic CRM contact."),
@@ -122,7 +118,6 @@ class DefaultUiExplorerResultReportAssemblerTest {
                         "CRM contact details"
                 ),
                 "Document a strongly anonymized CRM contact preference change.",
-                UiExplorerProfile.CHANGE_PREPARATION,
                 new UiExplorerSourceRevision("main", "abc123"),
                 "The screen maintains synthetic CRM contact preferences.",
                 List.of(overview, forms, disabled),
@@ -131,11 +126,6 @@ class DefaultUiExplorerResultReportAssemblerTest {
                         UiExplorerSectionId.FORMS_AND_RULES,
                         "Submit is enabled only when the synthetic CRM form is valid."
                 )),
-                new UiExplorerChangePreparationSummary(
-                        "Add another synthetic CRM contact channel.",
-                        List.of("Form visibility and validation"),
-                        List.of("Confirm the runtime CRM channel definition")
-                ),
                 UiExplorerClaimConfidence.INFERRED,
                 List.of("Backend validation rules were not inspected."),
                 List.of("Does the backend enforce the same synthetic CRM rule?"),

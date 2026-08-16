@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerProfile;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionModeAssignment;
@@ -43,14 +42,9 @@ class UiExplorerInputOptionsControllerTest {
                         "CRM Agent Portal",
                         "Strongly anonymized CRM frontend."
                 )),
-                List.of(new UiExplorerInputOptionsResponse.ProfileOption(
-                        UiExplorerProfile.FUNCTIONAL_DOCUMENTATION,
-                        "Dokumentacja funkcjonalna",
-                        "Synthetic CRM functional documentation.",
-                        List.of(new UiExplorerSectionModeAssignment(
-                                UiExplorerSectionId.OVERVIEW,
-                                UiExplorerSectionMode.DEEP
-                        ))
+                List.of(new UiExplorerSectionModeAssignment(
+                        UiExplorerSectionId.OVERVIEW,
+                        UiExplorerSectionMode.DEEP
                 )),
                 List.of(new UiExplorerInputOptionsResponse.SectionOption(
                         UiExplorerSectionId.OVERVIEW,
@@ -71,7 +65,8 @@ class UiExplorerInputOptionsControllerTest {
                 .andExpect(jsonPath("$.executionAvailability.status").value("AVAILABLE"))
                 .andExpect(jsonPath("$.systems[0].systemId").value("crm-agent-portal"))
                 .andExpect(jsonPath("$.systems[0].repositoryId").doesNotExist())
-                .andExpect(jsonPath("$.profiles[0].profile").value("FUNCTIONAL_DOCUMENTATION"))
+                .andExpect(jsonPath("$.profiles").doesNotExist())
+                .andExpect(jsonPath("$.defaultSectionModes[0].sectionId").value("OVERVIEW"))
                 .andExpect(jsonPath("$.sections[0].sectionId").value("OVERVIEW"))
                 .andExpect(jsonPath("$.modes[0].mode").value("DEEP"));
     }

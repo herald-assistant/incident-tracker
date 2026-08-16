@@ -115,12 +115,10 @@ public class UiExplorerLocalRunSnapshotSanitizer {
         return new UiExplorerResultResponse(
                 result.screen(),
                 result.scenarioDescription(),
-                result.profile(),
                 result.sourceRevision(),
                 result.functionalOverview(),
                 result.sections().stream().map(this::sanitize).toList(),
                 result.crossSectionDependencies(),
-                result.changePreparationSummary(),
                 result.overallConfidence(),
                 result.visibilityLimits(),
                 result.unresolvedQuestions(),
@@ -148,7 +146,6 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 finding.description(),
                 finding.confidence(),
                 finding.conditions(),
-                finding.impactNotes(),
                 finding.sourceReferences().stream().map(this::sanitize).toList()
         );
     }

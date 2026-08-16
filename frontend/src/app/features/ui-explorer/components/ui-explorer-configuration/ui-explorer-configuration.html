@@ -164,56 +164,6 @@
       <div class="ui-explorer-scope-grid">
         <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
           <span class="ui-explorer-field-label">
-            <span class="field-label">Goal</span>
-            <span
-              class="ui-explorer-label-help"
-              tabindex="0"
-              aria-label="Documentation goal help"
-              matTooltip="Profil określa oczekiwany sposób wykorzystania dokumentacji i ustawia domyślne tryby sekcji."
-              matTooltipPosition="right"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            </span>
-          </span>
-          <button
-            class="ui-explorer-select__control"
-            type="button"
-            aria-haspopup="listbox"
-            [disabled]="facade.controlsLocked()"
-            [attr.aria-expanded]="openMenu() === 'profile'"
-            (click)="toggleMenu('profile', $event)"
-          >
-            <span class="ui-explorer-select__value">
-              <strong>{{ selectedProfileOption()?.label || 'Select goal' }}</strong>
-              <small>{{ selectedProfileOption()?.description || 'Choose documentation goal' }}</small>
-            </span>
-            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
-          </button>
-          @if (openMenu() === 'profile') {
-            <div class="ui-explorer-select__menu" role="listbox" aria-label="Documentation goal options">
-              <div class="ui-explorer-select__options">
-                @for (profile of options.profiles; track profile.profile) {
-                  <button
-                    class="ui-explorer-select-option"
-                    [class.ui-explorer-select-option--selected]="profile.profile === facade.selectedProfile()"
-                    type="button"
-                    role="option"
-                    [attr.aria-selected]="profile.profile === facade.selectedProfile()"
-                    (click)="selectProfile(profile.profile, $event)"
-                  >
-                    <span class="ui-explorer-select-option__body">
-                      <strong>{{ profile.label }}</strong>
-                      <small>{{ profile.description }}</small>
-                    </span>
-                  </button>
-                }
-              </div>
-            </div>
-          }
-        </div>
-
-        <div class="ui-explorer-select" (click)="keepMenuOpen($event)">
-          <span class="ui-explorer-field-label">
             <span class="field-label">Section modes</span>
             <span
               class="ui-explorer-label-help"
