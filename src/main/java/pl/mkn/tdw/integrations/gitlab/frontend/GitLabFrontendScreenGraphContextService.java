@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 @Service
@@ -43,19 +44,30 @@ public class GitLabFrontendScreenGraphContextService {
         for (var segment : chain.segments()) {
             addFile(segment.source().path(), GitLabFrontendSourceRole.ROUTE_CONFIGURATION, session, files);
         }
-        traverseRouteConfiguration(chain, session, imports, files, request.limits());
         var viewPath = screenNode.viewTarget() != null ? screenNode.viewTarget().sourcePath() : null;
         if (!StringUtils.hasText(viewPath)) {
             throw failure("FRONTEND_SCREEN_SOURCE_UNRESOLVED", "Selected screen component source is unavailable.");
         }
-        traverseDependency(
-                viewPath,
-                GitLabFrontendSourceRole.VIEW_COMPONENT,
-                session,
-                imports,
-                files,
-                request.limits()
-        );
+        var subtreeNodes = selectedSubtreeNodes(graph.nodes(), screenNode.nodeId());
+        var descendantNodes = subtreeNodes.stream()
+                .filter(node -> !node.nodeId().equals(screenNode.nodeId()))
+                .toList();
+        var viewRoots = new ArrayList<DependencyTask>();
+        viewRoots.add(new DependencyTask(viewPath, 0, GitLabFrontendSourceRole.VIEW_COMPONENT));
+        descendantNodes.stream()
+                .filter(node -> node.viewTarget() != null)
+                .map(node -> node.viewTarget().sourcePath())
+                .filter(StringUtils::hasText)
+                .distinct()
+                .map(path -> new DependencyTask(path, 0, GitLabFrontendSourceRole.CHILD_COMPONENT))
+                .forEach(viewRoots::add);
+
+        // Read every routed view root before following general imports. This keeps
+        // business-facing child views ahead of shared infrastructure when the
+        // bounded context reaches a file or character limit.
+        traverseDependencies(viewRoots, session, imports, files, request.limits());
+        traverseRouteConfiguration(chain, session, imports, files, request.limits());
+        traverseRouteConfiguration(descendantNodes, session, imports, files, request.limits());
 
         var signals = signals(files, chain);
         var coverage = coverage(files, signals, session.limitReached());
@@ -97,38 +109,67 @@ public class GitLabFrontendScreenGraphContextService {
             GitLabFrontendGraphLimits limits
     ) {
         for (var segment : chain.segments()) {
-            var routeSource = session.readOptional(segment.source().path());
-            if (routeSource == null) {
-                continue;
-            }
-            var parsed = moduleParser.parse(segment.source().path(), routeSource);
-            for (var configuration : segment.configuration()) {
-                var role = configuration.kind().name().startsWith("CAN_")
-                        ? GitLabFrontendSourceRole.AUTHORIZATION
-                        : GitLabFrontendSourceRole.RELATED_SOURCE;
-                for (var symbol : configuration.referencedSymbols()) {
-                    var binding = parsed.imports().get(symbol);
-                    if (binding == null) {
-                        continue;
-                    }
-                    for (var target : imports.resolve(segment.source().path(), binding.moduleSpecifier())) {
-                        traverseDependency(target, role, session, imports, files, limits);
-                    }
-                }
-            }
+            traverseRouteConfiguration(
+                    segment.source().path(), segment.configuration(), session, imports, files, limits
+            );
         }
     }
 
-    private void traverseDependency(
-            String rootPath,
-            GitLabFrontendSourceRole rootRole,
+    private void traverseRouteConfiguration(
+            List<GitLabFrontendRouteNode> nodes,
+            GitLabFrontendTargetedSourceSession session,
+            GitLabFrontendTargetedImportResolver imports,
+            LinkedHashMap<String, GitLabFrontendSourceFile> files,
+            GitLabFrontendGraphLimits limits
+    ) {
+        for (var node : nodes) {
+            addFile(node.routeSource().path(), GitLabFrontendSourceRole.ROUTE_CONFIGURATION, session, files);
+            traverseRouteConfiguration(
+                    node.routeSource().path(), node.configuration(), session, imports, files, limits
+            );
+        }
+    }
+
+    private void traverseRouteConfiguration(
+            String sourcePath,
+            List<GitLabFrontendRouteConfiguration> configuration,
+            GitLabFrontendTargetedSourceSession session,
+            GitLabFrontendTargetedImportResolver imports,
+            LinkedHashMap<String, GitLabFrontendSourceFile> files,
+            GitLabFrontendGraphLimits limits
+    ) {
+        var routeSource = session.readOptional(sourcePath);
+        if (routeSource == null) {
+            return;
+        }
+        var parsed = moduleParser.parse(sourcePath, routeSource);
+        var roots = new ArrayList<DependencyTask>();
+        for (var item : configuration) {
+            var role = item.kind().name().startsWith("CAN_")
+                    ? GitLabFrontendSourceRole.AUTHORIZATION
+                    : GitLabFrontendSourceRole.RELATED_SOURCE;
+            for (var symbol : item.referencedSymbols()) {
+                var binding = parsed.imports().get(symbol);
+                if (binding == null) {
+                    continue;
+                }
+                for (var target : imports.resolve(sourcePath, binding.moduleSpecifier())) {
+                    roots.add(new DependencyTask(target, 0, role));
+                }
+            }
+        }
+        traverseDependencies(roots, session, imports, files, limits);
+    }
+
+    private void traverseDependencies(
+            List<DependencyTask> roots,
             GitLabFrontendTargetedSourceSession session,
             GitLabFrontendTargetedImportResolver imports,
             LinkedHashMap<String, GitLabFrontendSourceFile> files,
             GitLabFrontendGraphLimits limits
     ) {
         var queue = new ArrayDeque<DependencyTask>();
-        queue.add(new DependencyTask(rootPath, 0, rootRole));
+        queue.addAll(roots);
         var visited = new LinkedHashSet<String>();
         while (!queue.isEmpty()) {
             var task = queue.removeFirst();
@@ -161,22 +202,55 @@ public class GitLabFrontendScreenGraphContextService {
                     queue.add(new DependencyTask(target, task.depth() + 1, task.rootRole()));
                 }
             }
-            addResource(TEMPLATE_URL, path, source, GitLabFrontendSourceRole.TEMPLATE, session, files);
-            addResource(STYLE_URL, path, source, GitLabFrontendSourceRole.STYLE, session, files);
+            enqueueResources(TEMPLATE_URL, path, source, GitLabFrontendSourceRole.TEMPLATE, task.depth(), queue);
+            enqueueResources(STYLE_URL, path, source, GitLabFrontendSourceRole.STYLE, task.depth(), queue);
         }
     }
 
-    private void addResource(
+    private List<GitLabFrontendRouteNode> selectedSubtreeNodes(
+            List<GitLabFrontendRouteNode> nodes,
+            String selectedNodeId
+    ) {
+        var byId = nodes.stream().collect(java.util.stream.Collectors.toMap(
+                GitLabFrontendRouteNode::nodeId,
+                node -> node,
+                (left, right) -> left,
+                LinkedHashMap::new
+        ));
+        return nodes.stream()
+                .filter(node -> node.nodeId().equals(selectedNodeId)
+                        || hasAncestor(node, selectedNodeId, byId))
+                .toList();
+    }
+
+    private boolean hasAncestor(
+            GitLabFrontendRouteNode node,
+            String selectedNodeId,
+            Map<String, GitLabFrontendRouteNode> byId
+    ) {
+        var visited = new LinkedHashSet<String>();
+        var parentId = node.parentNodeId();
+        while (StringUtils.hasText(parentId) && visited.add(parentId)) {
+            if (selectedNodeId.equals(parentId)) {
+                return true;
+            }
+            var parent = byId.get(parentId);
+            parentId = parent != null ? parent.parentNodeId() : null;
+        }
+        return false;
+    }
+
+    private void enqueueResources(
             Pattern pattern,
             String ownerPath,
             String source,
             GitLabFrontendSourceRole role,
-            GitLabFrontendTargetedSourceSession session,
-            LinkedHashMap<String, GitLabFrontendSourceFile> files
+            int ownerDepth,
+            ArrayDeque<DependencyTask> queue
     ) {
         var matcher = pattern.matcher(source);
         while (matcher.find()) {
-            addFile(relative(ownerPath, matcher.group(1)), role, session, files);
+            queue.add(new DependencyTask(relative(ownerPath, matcher.group(1)), ownerDepth + 1, role));
         }
     }
 

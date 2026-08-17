@@ -69,7 +69,11 @@ zatwierdzony invariant trafia do architektury.
   evidence, Copilot scoring, partial runs i aggregate.
 - `src/main/java/pl/mkn/tdw/features/uiexplorer`
   UI Explorer: katalog ekranow bez ujawniania repository scope, selected-screen
-  context, AI preparation/runtime, job, report i wersjonowany import/export.
+  context obejmujacy routowane poddrzewo widoku, AI preparation/runtime z
+  obowiazkowym, goal-driven targeted fallbackiem bez feature'owego limitu
+  liczby wywolan dla brakujacych zrodel in-scope, job,
+  business-first report bez osobnego appendixu zaleznosci oraz breaking
+  import/export v5.
 
 Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
 
@@ -83,8 +87,9 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
   adaptery do zewnetrznych systemow.
 - `src/main/java/pl/mkn/tdw/integrations/gitlab/frontend`
   neutralne graph-first rozpoznanie Angular/Nx od `provideRouter(...)`,
-  targeted traversal importow oraz bounded source context jednego ekranu; bez
-  repository inventory i bez zaleznosci od UI Explorer.
+  targeted traversal importow oraz bounded source context wybranego ekranu i
+  jego routowanych potomkow; bez repository inventory i bez zaleznosci od UI
+  Explorer.
 - `src/main/java/pl/mkn/tdw/api`
   shared/operator API niezalezne od jednego feature'a.
 - `src/main/java/pl/mkn/tdw/shared`

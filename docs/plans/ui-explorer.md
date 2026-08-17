@@ -1724,6 +1724,157 @@ kroki `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED`. Przeszly testy Angulara
 0 skipped). Wszystkie nowe fixtures i przyklady sa silnie zanonimizowanym,
 syntetycznym CRM.
 
+#### 8H. Kompletne zrodla wybranego widoku i uproszczenie raportu
+
+Zakres 8H jest zatwierdzonym przez uzytkownika inkrementem L2. Dotyka
+reusable traversal frontendu w `integrations.gitlab`, feature-owned promptu,
+skilli i tool policy, breaking kontraktu wyniku oraz prezentacji Angulara.
+Source need pozostaje `../needs/ui-explorer.md`; bezposrednim dowodem sa dwa
+kontrolowane eksporty runow z 2026-08-17. Wszystkie testy, fixture'y i
+przyklady tego inkrementu sa silnie zanonimizowanym, syntetycznym CRM.
+
+Baseline: analiza `/admin` osiagnela `maxContextFiles=40` po pobraniu wielu
+ogolnych modeli i zaleznosci infrastrukturalnych, zanim zebrala istotne
+komponenty potomne, modale i serwisy. Analiza `/wallet` zebrala 35 plikow i
+nie osiagnela limitu, ale zatrzymala sie na komponencie-kontenerze, poniewaz
+context traversal nie wlaczal routowanego poddrzewa wybranego ekranu. Oba runy
+zakonczyly sie bez wywolan fallbackowych GitLab tools. Wynik przeniosl te
+unikalne braki do ogolnych `visibilityLimits`, zamiast domknac material
+zrodlowy. Dodatkowo kontrakt wymusza osobne zaleznosci sekcji, ktore assembler
+dopisuje jako `Powiazane warunki i zaleznosci`, a UI powtarza je jako
+`Zaleznosci przekrojowe`. Metadata sekcji sa wyrównane do lewej, a naglowek
+wyniku zawiera dwie zbedne akcje rozpoczecia/importu.
+
+Conformance delta: deterministic context zaczyna od wybranego widoku i jego
+routowanych potomkow, a dopiero pozniej poglebia zaleznosci konfiguracji.
+Budzet plikow i odczytow wykorzystuje istniejace twarde gorne granice, lecz
+nie moze byc jedynym mechanizmem kompletności. Materialna luka w komponencie,
+formularzu, modalu, serwisie albo child route z analizowanego repozytorium
+obliguje AI do kontrolowanego search/read przed finalizacja; ograniczenie jest
+dopuszczalne dopiero po bezskutecznym lub wyczerpanym dozwolonym fallbacku.
+Feature usuwa caly kontrakt zaleznosci przekrojowych bez aliasu i migracji.
+Local-run/export przechodza na wersje 5 i `ui-explorer-result-v5`, a wersja 4
+jest jawnie odrzucana. Metadata sekcji korzystaja z prawego wyrownania shared
+reportu, a akcje `Import another` i `New UI Explorer run` znikaja z wyniku.
+
+Konsumenci: GitLab frontend screen context API i UI Explorer, result DTO i
+strict parser, prompt/artifacts, trzy runtime skille, budget/scope policy,
+report assembler, sanitizer, local history/import-export oraz Angular models,
+result, report export i page. Inne feature'y nie konsumuja kontraktu wyniku UI
+Explorera; katalog ekranow zachowuje publiczny shape. Reusable traversal nie
+otrzymuje semantyki feature'a ani nowego kierunku zaleznosci.
+
+- [x] 8H.1: Rozszerzyc bounded deterministic context o routowane poddrzewo
+  wybranego widoku, nadac priorytet komponentom i zaleznosciom funkcjonalnym
+  przed ogolna konfiguracja oraz skalibrowac limity w istniejacych hard caps.
+- [x] 8H.2: Rozszerzyc feature-owned GitLab tool budget i completeness gate w
+  prompcie oraz skillach tak, aby materialne braki kodu z repozytorium
+  wymuszaly probe search/read przed publikacja visibility limit.
+- [x] 8H.3: Usunac `dependencies` i `crossSectionDependencies` z calego pionu
+  bez kompatybilnosci oraz podniesc local-run/export/result schema do v5.
+- [x] 8H.4: Wyrownac metadata sekcji do prawej i usunac akcje `Import another`
+  oraz `New UI Explorer run` wraz z martwa logika i stylami.
+- [x] 8H.5: Dodac silnie zanonimizowane regresje CRM dla kontenera z child
+  routes, priorytetu modalu/serwisu, wymaganego fallbacku, breaking importu i
+  uproszczonego UI; zaktualizowac architecture oraz lokalne instrukcje.
+- [x] 8H.6: Wykonac testy celowane, testy Angulara, produkcyjny build Angulara
+  i `mvn -q -Pbackend-dev clean package`, a nastepnie przeprowadzic
+  architecture diff wszystkich konsumentow.
+
+Checkpoint 8H (2026-08-17): deterministic context obejmuje routowane poddrzewo
+wybranego widoku i nadaje pierwszenstwo korzeniom komponentow przed mniej
+istotnymi zaleznosciami. UI Explorer ma stale dostepny, scope-bound fallback do
+GitLab; wynik deklarujacy mozliwa do uzupelnienia luke kodu bez udokumentowanej
+proby fallbacku jest odrzucany. Usunieto przekrojowe zaleznosci z kontraktu,
+promptu, raportu i UI, a local-run/export/result uzywaja breaking schema v5.
+Metadata sekcji sa wyrownane do prawej, a zbedne akcje wyniku zostaly usuniete.
+Regresje uzywaja wylacznie silnie zanonimizowanego, syntetycznego CRM. Kontrole:
+celowane testy traversal/provider — PASS; `npm --prefix frontend test --
+--watch=false` — 55 plikow i 411 testow PASS; `npm --prefix frontend run build`
+— PASS; `mvn -q -Pbackend-dev clean package` — PASS. Architecture diff nie
+dodal nowego kierunku zaleznosci: traversal pozostaje neutralny w integracji,
+a semantyka kompletności pozostaje w feature UI Explorer.
+
+#### 8I. Eksploracja sterowana celem bez feature'owego budzetu wywolan
+
+Zakres 8I jest zatwierdzona przez uzytkownika korekta L1 do 8H. Source need
+pozostaje `../needs/ui-explorer.md`. Baseline: trzy runtime skille deklaruja
+limit trzech search calls i dwunastu read calls, a
+`UiExplorerCopilotBudgetPolicy` twardo odrzuca kolejne wywolanie nawet wtedy,
+gdy aktywna sekcja nadal ma rozstrzygalna luke w kodzie badanego repozytorium.
+To przeczy goal-driven completeness i pozwala licznikowi wywolan zastapic cel
+analizy.
+
+Conformance delta: UI Explorer nie posiada feature'owego limitu liczby search
+ani read calls. Source grounding iteruje po konkretnych lukach do chwili, gdy
+aktywne sekcje sa gotowe albo konkretne zrodlo zostalo bezskutecznie wyszukane
+lub potwierdzone jako runtime/zewnetrzne/poza zatwierdzonym repository scope.
+Pozostaja scope/ref/path validation, read-only allowlista, zakaz broad browse,
+limit pojedynczego transferu, ochrona runtime przed cyklem i timeout sesji.
+Bounded deterministic snapshot jest materialem startowym i nie stanowi limitu
+dalszej eksploracji AI.
+
+Konsumenci: feature policy i wiring providera, prompt, trzy runtime skille,
+testy polityk/providera oraz dokumentacja architektury. Kontrakt HTTP, result
+schema v5, import/export, katalog ekranow i frontend nie zmieniaja sie.
+Wszystkie nowe testy i przyklady pozostaja silnie zanonimizowanym,
+syntetycznym CRM.
+
+- [x] 8I.1: Usunac `UiExplorerCopilotBudgetPolicy` oraz jego lifecycle z
+  providera bez pozostawienia aliasu ani nieaktywnej konfiguracji.
+- [x] 8I.2: Usunac liczby i wyczerpanie budzetu z promptu i skilli; zapisac
+  petle `needs_deeper_evidence -> targeted search/read -> readiness` az do celu
+  albo potwierdzonej granicy widocznosci.
+- [x] 8I.3: Dodac silnie zanonimizowana regresje CRM potwierdzajaca brak
+  feature'owego limitu liczby poprawnych, scope-bound wywolan.
+- [x] 8I.4: Zaktualizowac need, architecture i lokalne instrukcje, wykonac
+  testy celowane oraz pelna macierz backend-frontend adekwatna dla zmiany
+  wspolnego runtime wiring.
+
+Checkpoint 8I (2026-08-17): feature'owa polityka call-count zostala usunieta
+w calosci, a provider nie utrzymuje jej stanu. Prompt i trzy skille prowadza
+petle po konkretnych lukach do readiness albo potwierdzonej granicy
+runtime/zewnetrznego repository scope; nie zawieraja liczbowego budzetu ani
+wyczerpania budzetu jako warunku finalizacji. Regresja syntetycznego CRM
+potwierdza, ze 50 kolejnych poprawnych search i 50 read calls nie jest
+odrzucanych przez polityke feature'a. Scope/ref/path validation, read-only
+allowlista, limit pojedynczego transferu i timeout runtime pozostaly bez zmian.
+Testy celowane — PASS; `mvn -q test` — PASS. Frontend i kontrakt HTTP/result
+nie zmienily sie, dlatego zgodnie z macierza weryfikacji nie powtarzano builda
+Angulara. Architecture diff nie dodal nowego kierunku zaleznosci.
+
+#### 8J. Nawigowalny krok przygotowania promptu przy czastkowym context
+
+Zakres 8J jest zatwierdzona korekta L1 wspolnego UX przebiegu analizy. Baseline:
+`AnalysisStepsPanelComponent` uzywa liniowego Material steppera. Gdy
+`SOURCE_CONTEXT` konczy sie poprawnym statusem `PARTIAL`, Material uznaje go za
+nieukonczony i blokuje klikniecie nastepnego, zakonczonego `AI_PREPARATION`,
+przez co operator nie moze podejrzec zapisanego `preparedPrompt`.
+
+Conformance delta: stepper przebiegu jest read-only inspektorem, a nie wizardem
+wejsciowym, dlatego nie wymusza liniowej progresji. Lokalna polityka
+`canOpenStep` nadal nie pozwala otwierac krokow `PENDING`/`IN_PROGRESS`, lecz
+kazdy zakonczony `COMPLETED`/`PARTIAL`/`BLOCKED`/`FAILED` pozostaje klikalny
+niezaleznie od statusu poprzednika. Konsumentami sa wszystkie feature'y
+reuse'ujace shared panel; nie zmienia sie API ani model kroku. Regresja uzywa
+wylacznie silnie zanonimizowanego, syntetycznego CRM.
+
+- [x] 8J.1: Usunac liniowa blokade nawigacji ze shared steppera bez kopiowania
+  komponentu do UI Explorera.
+- [x] 8J.2: Dodac regresje `PARTIAL source context -> COMPLETED AI preparation`
+  potwierdzajaca klikniecie kroku i podglad dokladnego promptu.
+- [x] 8J.3: Wykonac testy Angulara, produkcyjny build i celowany test granicy
+  statycznych zasobow backendu.
+
+Checkpoint 8J (2026-08-17): shared Material stepper nie wymusza juz liniowej
+progresji, natomiast lokalne `canOpenStep` nadal blokuje kroki nierozstrzygniete.
+Regresja syntetycznego CRM rozpoczyna panel na aktywnym source context,
+aktualizuje go do `PARTIAL`, konczy `AI_PREPARATION`, klika ten krok i
+potwierdza dokladna tresc `preparedPrompt`. `npm --prefix frontend test --
+--watch=false` — 55 plikow i 412 testow PASS; `npm --prefix frontend run
+build` — PASS; `mvn -q -Dtest=FrontendPageTest test` — PASS. Zmiana reuse'uje
+shared komponent bez nowego kierunku zaleznosci i bez zmiany API.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.

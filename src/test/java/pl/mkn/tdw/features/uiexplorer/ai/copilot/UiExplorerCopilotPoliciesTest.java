@@ -70,22 +70,27 @@ class UiExplorerCopilotPoliciesTest {
     }
 
     @Test
-    void shouldEnforceOneSearchAndTwoReadsPerCrmSession() {
-        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-budget-run", context());
-        var budget = new UiExplorerCopilotBudgetPolicy();
+    void shouldKeepAllowingScopedCrmDiscoveryUntilTheSectionGoalIsReached() {
+        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-goal-driven-run", context());
+        var search = """
+                {
+                  "projectNames": [],
+                  "pathPrefixes": ["apps/crm-agent"],
+                  "branchRef": "main",
+                  "keywords": ["CrmPreferenceValidator"],
+                  "reason": "Domkniecie kolejnej luki funkcjonalnej CRM."
+                }
+                """;
+        var read = chunk(FETCHED_VALIDATOR_PATH, "main", "Domkniecie kolejnej reguly CRM.");
 
-        budget.beforeInvocation(request(context, GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES, "{}"));
-        budget.beforeInvocation(request(context, GitLabToolNames.READ_REPOSITORY_FILE_CHUNK, "{}"));
-        budget.beforeInvocation(request(context, GitLabToolNames.READ_REPOSITORY_FILE, "{}"));
-
-        assertThatThrownBy(() -> budget.beforeInvocation(request(
-                context, GitLabToolNames.READ_REPOSITORY_FILE_CHUNK, "{}"
-        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("budget");
-        budget.clearSession(context.copilotSessionId());
-        assertThatCode(() -> budget.beforeInvocation(request(
-                context, GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES, "{}"
-        ))).doesNotThrowAnyException();
+        for (var index = 0; index < 50; index++) {
+            assertThatCode(() -> scopePolicy.beforeInvocation(request(
+                    context, GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES, search
+            ))).doesNotThrowAnyException();
+            assertThatCode(() -> scopePolicy.beforeInvocation(request(
+                    context, GitLabToolNames.READ_REPOSITORY_FILE_CHUNK, read
+            ))).doesNotThrowAnyException();
+        }
     }
 
     private CopilotToolInvocationPolicyRequest request(

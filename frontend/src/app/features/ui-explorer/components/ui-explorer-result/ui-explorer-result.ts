@@ -107,14 +107,6 @@ export class UiExplorerResultComponent {
     return SECTION_ICONS[sectionId] ?? 'description';
   }
 
-  protected sectionLabel(sectionId: UiExplorerSectionId): string {
-    return SECTION_LABELS[sectionId] ?? sectionId;
-  }
-
-  protected hasItems<T>(items: readonly T[] | null | undefined): boolean {
-    return Array.isArray(items) && items.length > 0;
-  }
-
   protected hasText(value: string | null | undefined): boolean {
     return typeof value === 'string' && value.trim().length > 0;
   }
@@ -143,15 +135,4 @@ const SECTION_ICONS: Record<string, string> = {
   DATA_AND_SERVICES: 'database',
   STATE_AND_SYNCHRONIZATION: 'sync',
   VARIANTS_AND_FAILURES: 'rule'
-};
-
-const SECTION_LABELS: Record<UiExplorerSectionId, string> = {
-  OVERVIEW: 'Cel i kontekst widoku',
-  NAVIGATION_AND_ACCESS: 'Nawigacja i dostęp',
-  SCREEN_STRUCTURE: 'Struktura widoku',
-  ACTIONS_AND_OUTCOMES: 'Akcje i rezultaty',
-  FORMS_AND_RULES: 'Formularze i reguły',
-  DATA_AND_SERVICES: 'Dane i usługi',
-  STATE_AND_SYNCHRONIZATION: 'Stan i synchronizacja',
-  VARIANTS_AND_FAILURES: 'Warianty i sytuacje wyjątkowe'
 };

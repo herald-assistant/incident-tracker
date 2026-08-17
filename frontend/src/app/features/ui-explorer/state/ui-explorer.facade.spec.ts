@@ -473,7 +473,6 @@ function crmReadableSnapshot(
       sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
       functionalOverview: 'Synthetic CRM contact documentation.',
       sections: [],
-      crossSectionDependencies: [],
       overallConfidence: 'CONFIRMED',
       visibilityLimits: [],
       unresolvedQuestions: [],
@@ -501,11 +500,11 @@ function crmReadableSnapshot(
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 4,
+    version: 5,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v4',
+      resultContract: 'ui-explorer-result-v5',
       job: crmReadableSnapshot('COMPLETED')
     }
   };
@@ -514,11 +513,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export' as const,
-    version: 4 as const,
+    version: 5 as const,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis' as const,
-      resultContract: 'ui-explorer-result-v4' as const,
+      resultContract: 'ui-explorer-result-v5' as const,
       job: crmReadableSnapshot('COMPLETED')
     }
   };

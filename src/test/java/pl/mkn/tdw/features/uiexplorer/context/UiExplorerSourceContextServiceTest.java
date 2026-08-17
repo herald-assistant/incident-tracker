@@ -47,7 +47,7 @@ class UiExplorerSourceContextServiceTest {
             assertThat(file.content()).contains("CrmContactPreferencesComponent");
             assertThat(file.roles()).contains("VIEW_COMPONENT", "FORM_LOGIC");
         });
-        assertThat(result.boundary().maxContextFiles()).isEqualTo(40);
+        assertThat(result.boundary().maxContextFiles()).isEqualTo(120);
         assertThat(result.boundary().maxTotalCharacters()).isEqualTo(2_000_000);
         assertThat(result.boundary().graphSourceReadCount()).isEqualTo(9);
 

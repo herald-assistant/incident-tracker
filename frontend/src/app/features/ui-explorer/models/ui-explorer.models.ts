@@ -176,16 +176,9 @@ export interface UiExplorerResultSection {
   coverage: UiExplorerCoverageStatus;
   confidence: UiExplorerClaimConfidence;
   markdown: string;
-  dependencies: string[];
   sourceReferences: UiExplorerSourceReference[];
   visibilityLimits: string[];
   openQuestions: string[];
-}
-
-export interface UiExplorerCrossSectionDependency {
-  sourceSection: UiExplorerSectionId;
-  targetSection: UiExplorerSectionId;
-  description: string;
 }
 
 export interface UiExplorerResultResponse {
@@ -194,7 +187,6 @@ export interface UiExplorerResultResponse {
   sourceRevision: UiExplorerSourceRevision;
   functionalOverview: string;
   sections: UiExplorerResultSection[];
-  crossSectionDependencies: UiExplorerCrossSectionDependency[];
   overallConfidence: UiExplorerClaimConfidence;
   visibilityLimits: string[];
   unresolvedQuestions: string[];
@@ -239,11 +231,11 @@ export interface UiExplorerJobStateSnapshot {
 
 export interface UiExplorerExportEnvelope {
   schema: 'tdw.ui-explorer-export';
-  version: 4;
+  version: 5;
   exportedAt: string;
   payload: {
     type: 'ui-explorer-analysis';
-    resultContract: 'ui-explorer-result-v4';
+    resultContract: 'ui-explorer-result-v5';
     job: UiExplorerJobStateSnapshot;
   };
 }

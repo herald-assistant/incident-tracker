@@ -68,6 +68,8 @@ class UiExplorerArtifactServiceTest {
                 .contains("OVERVIEW|NAVIGATION_AND_ACCESS|SCREEN_STRUCTURE|ACTIONS_AND_OUTCOMES|FORMS_AND_RULES|DATA_AND_SERVICES|STATE_AND_SYNCHRONIZATION|VARIANTS_AND_FAILURES")
                 .contains("CONFIRMED|INFERRED|UNKNOWN")
                 .contains("\"markdown\"")
+                .doesNotContain("dependencies")
+                .doesNotContain("crossSectionDependencies")
                 .doesNotContain("\"findings\"")
                 .doesNotContain("\"summary\"")
                 .contains("\"usage\": null")

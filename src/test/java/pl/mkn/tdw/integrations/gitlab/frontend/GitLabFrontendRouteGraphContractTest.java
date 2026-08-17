@@ -207,6 +207,10 @@ class GitLabFrontendRouteGraphContractTest {
                 )
                 .doesNotContain("maxInventoryFiles");
         assertThat(limits.maxRouteNodes()).isEqualTo(400);
+        assertThat(limits.maxSourceReads()).isEqualTo(1_000);
+        assertThat(limits.maxAliasResolutions()).isEqualTo(1_000);
+        assertThat(limits.maxComponentDepth()).isEqualTo(8);
+        assertThat(limits.maxContextFiles()).isEqualTo(120);
         assertThatThrownBy(() -> new GitLabFrontendGraphLimits(
                 0, 400, 80, 300, 500, 12, 5, 40, 50_000, 500_000
         )).isInstanceOf(IllegalArgumentException.class)

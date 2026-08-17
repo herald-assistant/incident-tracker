@@ -47,6 +47,9 @@ class GitLabFrontendScreenGraphContextServiceTest {
                         "apps/crm-agent/src/app/preferences/crm-preferences.component.scss",
                         "apps/crm-agent/src/app/preferences/crm-preferences.service.ts",
                         "apps/crm-agent/src/app/preferences/state/crm-preferences.selectors.ts",
+                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts",
+                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.html",
+                        "apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts",
                         "apps/crm-agent/src/app/auth/crm-contact.guard.ts"
                 );
         assertThat(result.sourceFiles()).filteredOn(file -> file.path().endsWith("crm-contact.guard.ts"))
@@ -62,6 +65,42 @@ class GitLabFrontendScreenGraphContextServiceTest {
         assertThat(result.contextLimitReached()).isFalse();
         verify(repository, never()).listRepositoryFiles(anyString(), anyString(), anyString(), any());
         verify(repository, never()).searchRepositoryFilesByContent(anyString(), anyString(), anyString(), anyList(), anyInt());
+    }
+
+    @Test
+    void shouldPrioritizeRoutedSyntheticCrmChildViewBeforeGeneralImportsWhenContextIsBounded() {
+        var graphDiscovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        var repository = mock(GitLabRepositoryPort.class);
+        var graph = graph();
+        when(graphDiscovery.discover(any(), any())).thenReturn(graph);
+        var files = files();
+        when(repository.readFile(anyString(), anyString(), anyString(), anyString(), anyInt()))
+                .thenAnswer(invocation -> {
+                    var path = invocation.getArgument(3, String.class);
+                    var content = files.get(path);
+                    if (content == null) {
+                        throw new IllegalArgumentException("Synthetic CRM fixture file not found: " + path);
+                    }
+                    return new GitLabRepositoryFileContent(
+                            "synthetic-crm", "crm-agent-portal", "main", path, content, false
+                    );
+                });
+        var service = new GitLabFrontendScreenGraphContextService(graphDiscovery, repository);
+        var defaults = GitLabFrontendGraphLimits.defaults();
+        var bounded = new GitLabFrontendGraphLimits(
+                defaults.maxRootCandidates(), defaults.maxRouteNodes(), defaults.maxRouteFiles(),
+                defaults.maxSourceReads(), defaults.maxAliasResolutions(), defaults.maxImportDepth(),
+                defaults.maxComponentDepth(), 3, defaults.maxFileCharacters(), defaults.maxTotalCharacters()
+        );
+
+        var result = service.build(new GitLabFrontendScreenGraphContextRequest(
+                graph.scope(), graph.nodes().get(1).screen().screenId(), "crm-commit-20260816", bounded
+        ));
+
+        assertThat(result.sourceFiles()).extracting(GitLabFrontendSourceFile::path)
+                .contains("apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts")
+                .doesNotContain("apps/crm-agent/src/app/preferences/crm-preferences.service.ts");
+        assertThat(result.contextLimitReached()).isTrue();
     }
 
     @Test
@@ -114,6 +153,20 @@ class GitLabFrontendScreenGraphContextServiceTest {
                         null, GitLabFrontendDiscoveryStatus.RESOLVED, routeSource, List.of()
                 )), routeSource, List.of()
         );
+        var childTarget = new GitLabFrontendRouteTarget(
+                "CrmPreferenceHistoryComponent",
+                "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts"
+        );
+        var childIdentity = new GitLabFrontendScreenIdentity(
+                "screen-crm-preference-history", "route-crm-preference-history",
+                "/contacts/:contactId/preferences/history", "primary", childTarget
+        );
+        var child = new GitLabFrontendRouteNode(
+                childIdentity.routeNodeId(), screen.nodeId(), childIdentity, "Preference history", "history",
+                childIdentity.routePattern(), "primary", GitLabFrontendRouteNodeKind.SCREEN,
+                GitLabFrontendDiscoveryStatus.RESOLVED, true, List.of("contactId"), childTarget, null, null,
+                List.of(), routeSource, List.of()
+        );
         var chain = new GitLabFrontendEffectiveRouteChain(
                 identity,
                 List.of(
@@ -134,9 +187,9 @@ class GitLabFrontendScreenGraphContextServiceTest {
         );
         return new GitLabFrontendRouteGraph(
                 scope, new GitLabFrontendSourceRevision("main", "crm-commit-20260816"), bootstrap,
-                List.of(parent.nodeId()), List.of(parent, screen), List.of(), List.of(chain), List.of(),
+                List.of(parent.nodeId()), List.of(parent, screen, child), List.of(), List.of(chain), List.of(),
                 new GitLabFrontendGraphCoverage(
-                        GitLabFrontendCoverageStatus.READY, 2, 1, 6, 2, 0, false, List.of()
+                        GitLabFrontendCoverageStatus.READY, 3, 1, 6, 2, 0, false, List.of()
                 ), List.of()
         );
     }
@@ -176,6 +229,20 @@ class GitLabFrontendScreenGraphContextServiceTest {
                 <form [formGroup]="form"><input formControlName="channel"></form>
                 """);
         files.put("apps/crm-agent/src/app/preferences/crm-preferences.component.scss", ":host { display: block; }");
+        files.put("apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts", """
+                import { CrmPreferenceDiffModalComponent } from './crm-preference-diff-modal.component';
+                @Component({ templateUrl: './crm-preference-history.component.html' })
+                export class CrmPreferenceHistoryComponent {
+                  openDifference() { return this.dialog.open(CrmPreferenceDiffModalComponent); }
+                }
+                """);
+        files.put("apps/crm-agent/src/app/preferences/history/crm-preference-history.component.html", """
+                <button (click)="openDifference()">Compare preference versions</button>
+                """);
+        files.put("apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts", """
+                @Component({ template: '<p>Preference difference</p>' })
+                export class CrmPreferenceDiffModalComponent {}
+                """);
         return files;
     }
 }

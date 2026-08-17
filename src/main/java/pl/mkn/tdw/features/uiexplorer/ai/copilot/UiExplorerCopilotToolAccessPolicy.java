@@ -28,9 +28,6 @@ public record UiExplorerCopilotToolAccessPolicy(
             List<ToolDefinition> registeredTools,
             boolean fallbackRequired
     ) {
-        if (!fallbackRequired) {
-            return new UiExplorerCopilotToolAccessPolicy(List.of(), List.of(), false, false);
-        }
         var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
                 .filter(tool -> FALLBACK_TOOLS.contains(tool.name()))
                 .toList();
@@ -38,6 +35,6 @@ public record UiExplorerCopilotToolAccessPolicy(
         var available = names.contains(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES)
                 && (names.contains(GitLabToolNames.READ_REPOSITORY_FILE)
                 || names.contains(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK));
-        return new UiExplorerCopilotToolAccessPolicy(enabled, names, true, available);
+        return new UiExplorerCopilotToolAccessPolicy(enabled, names, fallbackRequired, available);
     }
 }

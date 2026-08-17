@@ -42,9 +42,7 @@ public class UiExplorerCopilotRunRequestAssembler {
             throw new IllegalArgumentException("UI Explorer AI readiness must allow execution.");
         }
         var toolContext = contextFactory.create(runReference, context);
-        var registeredTools = readiness.fallbackToolsRequired()
-                ? toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT)
-                : List.<com.github.copilot.rpc.ToolDefinition>of();
+        var registeredTools = toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT);
         var accessPolicy = UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(
                 registeredTools,
                 readiness.fallbackToolsRequired()

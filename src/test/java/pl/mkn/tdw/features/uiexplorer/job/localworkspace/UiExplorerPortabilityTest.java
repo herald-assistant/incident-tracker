@@ -68,8 +68,8 @@ class UiExplorerPortabilityTest {
         var document = (ObjectNode) objectMapper.valueToTree(portable);
 
         assertThat(portable.schema()).isEqualTo("tdw.ui-explorer-export");
-        assertThat(portable.version()).isEqualTo(4);
-        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v4");
+        assertThat(portable.version()).isEqualTo(5);
+        assertThat(portable.payload().resultContract()).isEqualTo("ui-explorer-result-v5");
         assertThat(document.at("/payload/job/preparedPrompt").asText()).isEqualTo(PREPARED_PROMPT);
         assertThat(document.toString()).doesNotContain(
                 "CRM_RAW_SOURCE_SECRET",
@@ -131,7 +131,7 @@ class UiExplorerPortabilityTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 1, 2, 3, 99})
+    @ValueSource(ints = {0, 1, 2, 3, 4, 99})
     void shouldRejectEveryNonCurrentCrmExportVersion(int version) {
         var document = portableDocument();
         document.put("version", version);

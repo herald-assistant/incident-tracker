@@ -188,6 +188,18 @@ MVP jest uzyteczny, jezeli:
 - niepowodzenie jednej sekcji nie ukrywa poprawnie zebranych wynikow
   pozostalych sekcji,
 - raport jawnie podaje wersje zrodla i ograniczenia widocznosci.
+- wybranie widoku-kontenera obejmuje jego istotne routowane podwidoki oraz ich
+  komponenty, formularze, modale, serwisy i zaleznosci funkcjonalne, zamiast
+  konczyc analize na samym `router-outlet`,
+- brak kodu nalezacego do analizowanego repozytorium nie jest akceptowalnym
+  ograniczeniem widocznosci, dopoki deterministyczny traversal albo
+  kontrolowane narzedzia read-only moga nadal rozstrzygnac konkretna luke;
+  liczba wykonanych search/read nie jest kryterium zakonczenia, a raport nie
+  moze zastapic eksploracji ogolnym zastrzezeniem o brakujacym snapshotcie,
+- ograniczenia widocznosci opisuja dopiero faktycznie niedostepny runtime,
+  zewnetrzna biblioteke, backend albo konkretne zrodlo bezskutecznie wyszukane
+  w zatwierdzonym repository scope, a nie braki wynikajace z kolejnosci lub
+  liczby pobranych plikow.
 
 ## Non-goals MVP
 
@@ -212,7 +224,8 @@ MVP nie ma:
 - Customowe biblioteki moga ukrywac semantyke za generycznym API; nazwy i
   uzycie sa wtedy tylko sygnalem.
 - Cross-domainowy ekran moze wymagac szerokiej eksploracji, dlatego potrzebne
-  sa limity i jawne pokrycie zamiast pozornej kompletnosci.
+  sa kontrolowany repository scope, waskie odczyty i jawne pokrycie zamiast
+  arbitralnego limitu liczby wywolan albo pozornej kompletnosci.
 - Dlug technologiczny i dynamiczne wywolania moga uniemozliwic jednoznaczne
   powiazanie akcji z usluga.
 - Dokumentacja generowana bez przypisania do wersji kodu szybko stalaby sie

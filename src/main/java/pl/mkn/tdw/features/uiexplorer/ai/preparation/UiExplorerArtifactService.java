@@ -25,7 +25,7 @@ public class UiExplorerArtifactService {
     public static final String FUNCTIONAL_WRITING_CONTRACT_ARTIFACT = "ui-explorer/functional-writing-contract.md";
     public static final String RESPONSE_CONTRACT_ARTIFACT = "ui-explorer/response-contract.json";
 
-    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v3";
+    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v4";
 
     private final ObjectMapper objectMapper;
 
@@ -112,7 +112,6 @@ public class UiExplorerArtifactService {
                     "coverage": "READY|PARTIAL|BLOCKED",
                     "confidence": "CONFIRMED|INFERRED|UNKNOWN",
                     "markdown": "business-first Markdown following functional-writing-contract.md",
-                    "dependencies": ["string"],
                     "sourceReferences": [{
                       "repository": null,
                       "path": "string",
@@ -122,11 +121,6 @@ public class UiExplorerArtifactService {
                     }],
                     "visibilityLimits": ["string"],
                     "openQuestions": ["string"]
-                  }],
-                  "crossSectionDependencies": [{
-                    "sourceSection": "sectionId",
-                    "targetSection": "sectionId",
-                    "description": "string"
                   }],
                   "overallConfidence": "CONFIRMED|INFERRED|UNKNOWN",
                   "visibilityLimits": ["string"],
@@ -164,12 +158,17 @@ public class UiExplorerArtifactService {
                 Nie tworz stalej liczby punktow. Dla `DEEP` uwzglednij wszystkie odrebne,
                 potwierdzone pola, akcje, warunki, walidacje, kalkulacje, warianty i skutki
                 widoczne w evidence. Dla `COMPACT` wybierz najwazniejsze, ale nie pomijaj
-                reguly zmieniajacej rezultat. Nie powtarzaj tego samego faktu w wielu sekcjach;
-                pokaz zaleznosc w `dependencies` albo `crossSectionDependencies`.
+                reguly zmieniajacej rezultat. Nie powtarzaj tego samego faktu w wielu sekcjach.
+                Relacje opisz tylko tam, gdzie wyjasniaja warunek, akcje albo rezultat w
+                kanonicznej strukturze sekcji; nie tworz osobnego katalogu zaleznosci.
 
                 Brak evidence nie jest glowna trescia sekcji. Opisz potwierdzona czesc, a brak
                 przenies do `visibilityLimits` i jednoznacznego `openQuestions`. Nie pisz
-                raportu klasa-po-klasie i nie zaczynaj punktow od nazw symboli source.
+                raportu klasa-po-klasie i nie zaczynaj punktow od nazw symboli source. Brak
+                snapshotu pliku, child route, komponentu, modala albo serwisu nalezacego do
+                badanego repozytorium nie jest dopuszczalnym `visibilityLimit`, dopoki nie
+                wykonano dozwolonego targeted search/read i nie wykazano, ze pliku nie da sie
+                odnalezc w zatwierdzonym scope.
                 """.trim();
     }
 

@@ -55,7 +55,10 @@ Warstwa posiada:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez
 targeted reads z `GitLabRepositoryPort`, a screen source context rozwija
-wylacznie effective route chain wybranego ekranu i jego bounded dependencies.
+effective route chain wybranego ekranu, routowane poddrzewo widokow oraz ich
+bounded dependencies. Korzenie widokow maja pierwszenstwo przed ogolnymi
+importami konfiguracji, aby limit nie odcinal child view, modala albo serwisu
+funkcjonalnego po pobraniu infrastruktury wspolnej.
 Integracja nie zna UI Explorer, API, Copilota ani kontraktu raportu. Nie
 listuje calego repository i nie ma inventory fallbacku. Statyczne heurystyki
 zwracaja typed diagnostics, semantyczne coverage i source revision
@@ -101,7 +104,9 @@ nie wybiera tools i nie dodaje semantyki UI Explorer do platformy.
 `features.uiexplorer.ai.readiness`, `response` i `copilot` posiadaja runtime
 konkretnego feature'a: readiness aktywnych sekcji, strict parser jednego
 `UiExplorerResultResponse`, hidden repository scope, default-deny allowliste,
-targeted GitLab fallback budget oraz zlozenie `CopilotRunRequest`. Provider
+goal-driven targeted GitLab fallback bez feature'owego limitu call count oraz
+zlozenie `CopilotRunRequest`. Scope/ref/path validation, limity pojedynczego
+transferu i platformowy timeout pozostaja technicznymi zabezpieczeniami. Provider
 reuse'uje neutralne preparation/execution z `aiplatform`, genericzne tools z
 `agenttools` i deterministyczny report assembler. `features.uiexplorer.job`
 uruchamia ten provider asynchronicznie, przechowuje atomowy snapshot krokow,

@@ -118,7 +118,6 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 result.sourceRevision(),
                 result.functionalOverview(),
                 result.sections().stream().map(this::sanitize).toList(),
-                result.crossSectionDependencies(),
                 result.overallConfidence(),
                 result.visibilityLimits(),
                 result.unresolvedQuestions(),
@@ -133,7 +132,6 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 section.coverage(),
                 section.confidence(),
                 section.markdown(),
-                section.dependencies(),
                 section.sourceReferences().stream().map(this::sanitize).toList(),
                 section.visibilityLimits(),
                 section.openQuestions()

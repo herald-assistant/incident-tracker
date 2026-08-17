@@ -60,31 +60,11 @@
           [markdown]="section.markdown"
           emptyText="Brak bezpiecznie potwierdzonych informacji dla tej sekcji."
           [meta]="section.meta"
-          metaAlign="start"
+          metaAlign="end"
         ></app-analysis-report-section-content>
       </section>
     }
   </div>
-
-  @if (hasItems(result()?.crossSectionDependencies)) {
-    <section class="ui-explorer-result-block" aria-label="Zależności przekrojowe">
-      <div class="ui-explorer-result-block__heading">
-        <span class="material-symbols-outlined" aria-hidden="true">hub</span>
-        <div>
-          <span class="field-label">Powiązania</span>
-          <h3>Zależności przekrojowe</h3>
-        </div>
-      </div>
-      <ul class="ui-explorer-result__dependency-list">
-        @for (dependency of result()?.crossSectionDependencies; track $index) {
-          <li>
-            <strong>{{ sectionLabel(dependency.sourceSection) }} → {{ sectionLabel(dependency.targetSection) }}</strong>
-            <span>{{ dependency.description }}</span>
-          </li>
-        }
-      </ul>
-    </section>
-  }
 
   <section class="ui-explorer-result__appendix" aria-label="Ograniczenia, pytania i źródła">
     <app-analysis-report-meta

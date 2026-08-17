@@ -36,7 +36,6 @@ public final class UiExplorerAiRuntimeTestFixture {
                       "coverage": "READY",
                       "confidence": "CONFIRMED",
                       "markdown": "**Cel biznesowy**\\n\\nUtrzymanie dozwolonego kanalu kontaktu.\\n\\n**Uzytkownicy i kontekst**\\n\\nDoradca pracuje na jednym wybranym kontakcie CRM.\\n\\n**Przebieg w skrocie**\\n\\n1. Doradca otwiera preferencje kontaktu.\\n2. System wiaze formularz z identyfikatorem kontaktu.\\n\\n**Rezultat**\\n\\nPreferencje dotycza jednoznacznie wybranego kontaktu.",
-                      "dependencies": [],
                       "sourceReferences": [{
                           "repository": null,
                           "path": "%1$s",
@@ -53,7 +52,6 @@ public final class UiExplorerAiRuntimeTestFixture {
                       "coverage": "READY",
                       "confidence": "CONFIRMED",
                       "markdown": "| Pole lub grupa | Znaczenie | Wymagalnosc i walidacja | Zachowanie dynamiczne | Wyliczenie lub zaleznosc |\\n| --- | --- | --- | --- | --- |\\n| Kod preferencji | Dozwolony kanal kontaktu | Wymagany; pusty kod blokuje zapis | Brak potwierdzonej dynamiki | Brak wyliczenia |\\n\\n**Reguly przekrojowe**\\n\\n- Zapis wymaga wskazania kodu preferencji.\\n\\n**Edycja reczna a ponowne wyliczenie**\\n\\n- Pole jest wybierane recznie i nie ma potwierdzonego automatycznego przeliczenia.",
-                      "dependencies": ["Wybrany kontakt wyznacza zakres zapisywanej preferencji."],
                       "sourceReferences": [{
                           "repository": null,
                           "path": "%1$s",
@@ -65,11 +63,6 @@ public final class UiExplorerAiRuntimeTestFixture {
                       "openQuestions": []
                     }
                   ],
-                  "crossSectionDependencies": [{
-                    "sourceSection": "OVERVIEW",
-                    "targetSection": "FORMS_AND_RULES",
-                    "description": "The selected CRM contact scopes the preference form."
-                  }],
                   "overallConfidence": "CONFIRMED",
                   "visibilityLimits": [],
                   "unresolvedQuestions": [],

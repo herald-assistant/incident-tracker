@@ -250,6 +250,72 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea?.value).toBe('# Synthetic CRM canonical UI Explorer prompt');
   });
 
+  it('should open completed UI Explorer prompt preparation after a partial CRM source context', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    const sourceContext = {
+      code: 'SOURCE_CONTEXT',
+      label: 'Build bounded synthetic CRM screen source context',
+      phase: 'CONTEXT',
+      status: 'IN_PROGRESS',
+      message: 'Synthetic CRM source context is being prepared.',
+      itemCount: 0,
+      startedAt: '2026-08-17T10:00:00Z',
+      completedAt: '',
+      consumesEvidence: [],
+      producesEvidence: [{ provider: 'ui-explorer', category: 'source-manifest' }]
+    } satisfies AnalysisJobStepResponse;
+    const pendingPreparation = {
+      ...buildUiExplorerPreparationStep(),
+      status: 'PENDING',
+      startedAt: '',
+      completedAt: ''
+    } satisfies AnalysisJobStepResponse;
+
+    fixture.componentRef.setInput('steps', [sourceContext, pendingPreparation]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    fixture.componentRef.setInput('steps', [
+      {
+        ...sourceContext,
+        status: 'PARTIAL',
+        message: 'Synthetic CRM source context is partial but usable.',
+        itemCount: 12,
+        completedAt: '2026-08-17T10:00:05Z'
+      },
+      buildUiExplorerPreparationStep()
+    ]);
+    fixture.componentRef.setInput('evidenceSections', [buildUiExplorerArtifactsSection()]);
+    fixture.componentRef.setInput(
+      'preparedPrompt',
+      '# Synthetic CRM goal-driven UI Explorer prompt'
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const headers = Array.from(compiled.querySelectorAll('.mat-step-header')) as HTMLElement[];
+
+    expect(
+      (fixture.componentInstance as unknown as { selectedIndex(): number }).selectedIndex()
+    ).toBe(0);
+
+    headers[1]?.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const promptTextarea = compiled.querySelector(
+      '.prepared-prompt__textarea'
+    ) as HTMLTextAreaElement | null;
+    expect(
+      (fixture.componentInstance as unknown as { selectedIndex(): number }).selectedIndex()
+    ).toBe(1);
+    expect(promptTextarea?.value).toBe('# Synthetic CRM goal-driven UI Explorer prompt');
+  });
+
   it('should allow opening a partial step that contains collected evidence', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     const partialStep = {

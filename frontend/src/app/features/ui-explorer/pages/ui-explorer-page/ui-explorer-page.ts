@@ -94,16 +94,6 @@ export class UiExplorerPageComponent implements OnInit {
     }
   }
 
-  startNewRun(): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { localRunId: null },
-      queryParamsHandling: 'merge',
-      replaceUrl: true
-    });
-    this.facade.clearResult();
-  }
-
   jobStatusClass(status: UiExplorerJobStatus): string {
     switch (status) {
       case 'COMPLETED':

@@ -10,7 +10,6 @@ public record UiExplorerResultResponse(
         UiExplorerSourceRevision sourceRevision,
         String functionalOverview,
         List<UiExplorerResultSection> sections,
-        List<UiExplorerCrossSectionDependency> crossSectionDependencies,
         UiExplorerClaimConfidence overallConfidence,
         List<String> visibilityLimits,
         List<String> unresolvedQuestions,
@@ -19,9 +18,6 @@ public record UiExplorerResultResponse(
 
     public UiExplorerResultResponse {
         sections = sections != null ? List.copyOf(sections) : List.of();
-        crossSectionDependencies = crossSectionDependencies != null
-                ? List.copyOf(crossSectionDependencies)
-                : List.of();
         visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
         unresolvedQuestions = unresolvedQuestions != null ? List.copyOf(unresolvedQuestions) : List.of();
     }

@@ -9,7 +9,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerClaimConfidence;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCrossSectionDependency;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
@@ -31,7 +30,7 @@ public class UiExplorerAiResponseParser {
 
     private static final Set<String> TOP_LEVEL_FIELDS = Set.of(
             "screen", "scenarioDescription", "sourceRevision", "functionalOverview",
-            "sections", "crossSectionDependencies", "overallConfidence",
+            "sections", "overallConfidence",
             "visibilityLimits", "unresolvedQuestions", "usage"
     );
     private static final Set<String> SCREEN_FIELDS = Set.of(
@@ -39,14 +38,11 @@ public class UiExplorerAiResponseParser {
     );
     private static final Set<String> REVISION_FIELDS = Set.of("branch", "revision");
     private static final Set<String> SECTION_FIELDS = Set.of(
-            "sectionId", "mode", "coverage", "confidence", "markdown", "dependencies",
+            "sectionId", "mode", "coverage", "confidence", "markdown",
             "sourceReferences", "visibilityLimits", "openQuestions"
     );
     private static final Set<String> SOURCE_REFERENCE_FIELDS = Set.of(
             "repository", "path", "symbol", "startLine", "endLine"
-    );
-    private static final Set<String> DEPENDENCY_FIELDS = Set.of(
-            "sourceSection", "targetSection", "description"
     );
     private final ObjectMapper objectMapper;
 
@@ -93,10 +89,6 @@ public class UiExplorerAiResponseParser {
                 additionalSourcePaths != null && !additionalSourcePaths.isEmpty(),
                 limitations
         );
-        var dependencies = parseDependencies(root.get("crossSectionDependencies"), sections);
-        if (dependencies == null) {
-            return malformed(request, context, "AI response contained an invalid cross-section dependency.");
-        }
         var functionalOverview = text(root, "functionalOverview");
         if (!StringUtils.hasText(functionalOverview)) {
             limitations.add("AI response omitted functionalOverview.");
@@ -125,7 +117,6 @@ public class UiExplorerAiResponseParser {
                 context.sourceRevision(),
                 functionalOverview,
                 sections,
-                dependencies,
                 overallConfidence,
                 List.copyOf(mergedLimits),
                 unresolvedQuestions,
@@ -156,7 +147,6 @@ public class UiExplorerAiResponseParser {
                         UiExplorerClaimConfidence.UNKNOWN,
                         "AI response could not be safely accepted for this section.",
                         List.of(),
-                        List.of(),
                         List.of(safeLimitation),
                         List.of("Repeat the analysis after correcting the AI response contract.")
                 ))
@@ -172,7 +162,6 @@ public class UiExplorerAiResponseParser {
                 context != null ? context.sourceRevision() : null,
                 "AI result is unavailable because its response contract was not safely satisfied.",
                 sections,
-                List.of(),
                 UiExplorerClaimConfidence.UNKNOWN,
                 List.copyOf(limits),
                 List.of("A valid UI Explorer JSON response is required."),
@@ -217,7 +206,6 @@ public class UiExplorerAiResponseParser {
                         UiExplorerCoverageStatus.BLOCKED,
                         UiExplorerClaimConfidence.UNKNOWN,
                         "The active section was omitted by AI and requires review.",
-                        List.of(),
                         List.of(),
                         List.of("AI response omitted this active section."),
                         List.of("What evidence is required to complete this section?")
@@ -269,7 +257,6 @@ public class UiExplorerAiResponseParser {
                     UiExplorerCoverageStatus.PARTIAL,
                     section.confidence(),
                     section.markdown(),
-                    section.dependencies(),
                     section.sourceReferences(),
                     List.copyOf(sectionLimits),
                     section.openQuestions()
@@ -292,35 +279,6 @@ public class UiExplorerAiResponseParser {
         return true;
     }
 
-    private List<UiExplorerCrossSectionDependency> parseDependencies(
-            JsonNode node,
-            List<UiExplorerResultSection> sections
-    ) {
-        if (node == null || node.isNull()) {
-            return List.of();
-        }
-        if (!node.isArray()) {
-            return null;
-        }
-        var active = sections.stream().map(UiExplorerResultSection::sectionId).collect(java.util.stream.Collectors.toSet());
-        var result = new ArrayList<UiExplorerCrossSectionDependency>();
-        for (var item : node) {
-            try {
-                var dependency = objectMapper.treeToValue(item, UiExplorerCrossSectionDependency.class);
-                if (dependency == null || !active.contains(dependency.sourceSection())
-                        || !active.contains(dependency.targetSection())
-                        || dependency.sourceSection() == dependency.targetSection()
-                        || !StringUtils.hasText(dependency.description())) {
-                    return null;
-                }
-                result.add(dependency);
-            } catch (JsonProcessingException | IllegalArgumentException exception) {
-                return null;
-            }
-        }
-        return List.copyOf(result);
-    }
-
     private String validateShape(JsonNode root) {
         var unexpected = unexpectedField(root, TOP_LEVEL_FIELDS);
         if (unexpected != null) {
@@ -338,17 +296,6 @@ public class UiExplorerAiResponseParser {
                 }
                 if (!referenceArrayValidShape(section.get("sourceReferences"))) {
                     return "AI response section sourceReferences shape is invalid.";
-                }
-            }
-        }
-        var dependencies = root.get("crossSectionDependencies");
-        if (dependencies != null && !dependencies.isNull()) {
-            if (!dependencies.isArray()) {
-                return "AI response crossSectionDependencies must be an array.";
-            }
-            for (var dependency : dependencies) {
-                if (!objectWithFields(dependency, DEPENDENCY_FIELDS)) {
-                    return "AI response cross-section dependency shape is invalid.";
                 }
             }
         }

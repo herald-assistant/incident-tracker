@@ -8,14 +8,12 @@ public record UiExplorerResultSection(
         UiExplorerCoverageStatus coverage,
         UiExplorerClaimConfidence confidence,
         String markdown,
-        List<String> dependencies,
         List<UiExplorerSourceReference> sourceReferences,
         List<String> visibilityLimits,
         List<String> openQuestions
 ) {
 
     public UiExplorerResultSection {
-        dependencies = dependencies != null ? List.copyOf(dependencies) : List.of();
         sourceReferences = sourceReferences != null ? List.copyOf(sourceReferences) : List.of();
         visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
         openQuestions = openQuestions != null ? List.copyOf(openQuestions) : List.of();

@@ -112,6 +112,41 @@ class UiExplorerCopilotAnalysisProviderTest {
         verifyNoInteractions(toolFactory, runPreparation, executionGateway);
     }
 
+    @Test
+    void shouldRejectSyntheticCrmResultThatReportsMissingInScopeSnapshotWithoutFallbackAttempt() throws Exception {
+        var objectMapper = new ObjectMapper();
+        var toolFactory = mock(CopilotSdkToolFactory.class);
+        when(toolFactory.createToolDefinitions(any(), any())).thenReturn(registeredTools());
+        var runPreparation = mock(CopilotRunPreparationService.class);
+        when(runPreparation.prepare(any())).thenReturn(new CopilotPreparedSession(
+                "crm-provider-gap-run", null, null, null, "prepared CRM prompt", Map.of()
+        ));
+        var executionGateway = mock(CopilotSdkExecutionGateway.class);
+        var responseNode = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(
+                completeResponse(pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.EMBEDDED_COMPONENT_PATH)
+        );
+        responseNode.putArray("visibilityLimits").add("Brak snapshotu komponentu potomnego CRM.");
+        var response = objectMapper.writeValueAsString(responseNode);
+        when(executionGateway.execute(any())).thenReturn(new CopilotExecutionResult(
+                response, null, "crm-copilot-gap-session"
+        ));
+        var provider = provider(objectMapper, toolFactory, runPreparation, executionGateway);
+
+        var analysis = provider.analyze(
+                "crm-provider-gap-run",
+                request(),
+                context(),
+                promptPreparation(objectMapper),
+                AnalysisAiAuthRef.localToken(null),
+                AnalysisAiToolEvidenceListener.NO_OP,
+                AnalysisAiActivityListener.NO_OP
+        );
+
+        assertThat(analysis.status()).isEqualTo(UiExplorerAiAnalysisStatus.MALFORMED);
+        assertThat(analysis.limitations())
+                .contains("AI reported a missing in-scope UI source without attempting the required scoped GitLab fallback.");
+    }
+
     private UiExplorerCopilotAnalysisProvider provider(
             ObjectMapper objectMapper,
             CopilotSdkToolFactory toolFactory,
@@ -129,8 +164,7 @@ class UiExplorerCopilotAnalysisProviderTest {
                 runPreparation,
                 executionGateway,
                 new UiExplorerAiResponseParser(objectMapper),
-                new DefaultUiExplorerResultReportAssembler(),
-                new UiExplorerCopilotBudgetPolicy()
+                new DefaultUiExplorerResultReportAssembler()
         );
     }
 

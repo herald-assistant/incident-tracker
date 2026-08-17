@@ -99,10 +99,10 @@ szczegolnosci:
 - stan laczy trigger, zmiane stanu, widoczny efekt i ponowne przeliczenie,
 - warianty lacza warunek z zachowaniem, blokada oraz recovery uzytkownika.
 
-Jezeli wybrany ekran jest tylko shellem, pustym widokiem technicznym albo
-kontenerem children routes, napisz to biznesowo i nie przypisuj mu zachowan
-podwidokow. Taki wynik moze byc krotki, bo odpowiada rzeczywistej jednostce
-analizy, a nie z powodu arbitralnego limitu tresci.
+Jezeli wybrany ekran jest pustym shellem technicznym bez routowanych potomkow,
+napisz to biznesowo. Jezeli jest kontenerem children routes, raport obejmuje
+funkcjonalne zachowania jego routowanego poddrzewa dostarczone przez snapshot
+lub targeted fallback; nie koncz opisu na samym `RouterOutlet`.
 
 ## Readiness Gate
 
@@ -117,8 +117,12 @@ minimumNextQuestion: <jedno waskie pytanie>
 reason: <dlaczego wynik bylby zgadywaniem>
 ```
 
-Po jednym targeted retry nierozstrzygniety brak staje sie
-`visibility_limited`.
+Po bezskutecznym wyszukaniu konkretnego zrodla albo potwierdzeniu scope'u
+runtime/zewnetrznego nierozstrzygniety brak staje sie `visibility_limited`.
+Nie finalizuj z informacja o brakujacym snapshotcie child route, komponentu,
+modala lub serwisu z repozytorium, jezeli luka pozostaje rozstrzygalna przez
+kolejne targeted search/read. Liczba wykonanych wywolan nie jest powodem do
+finalizacji niegotowej sekcji.
 
 ## Output Contract
 

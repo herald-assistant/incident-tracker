@@ -102,11 +102,11 @@ describe('UiExplorerApiService', () => {
   it('uses dedicated feature endpoints for portable export and server-validated import', () => {
     const portableDocument = {
       schema: 'tdw.ui-explorer-export',
-      version: 4,
+      version: 5,
       exportedAt: '2026-08-15T10:05:00Z',
       payload: {
         type: 'ui-explorer-analysis',
-        resultContract: 'ui-explorer-result-v4',
+        resultContract: 'ui-explorer-result-v5',
         job: { jobId: 'crm/ui-job-1' }
       }
     };

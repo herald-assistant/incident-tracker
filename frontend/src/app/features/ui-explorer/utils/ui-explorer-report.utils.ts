@@ -15,22 +15,12 @@ export function buildUiExplorerReportMarkdown(
     .sort(compareSections)
     .map(reportSectionMarkdown)
     .filter(Boolean);
-  const dependencies = (result?.crossSectionDependencies ?? [])
-    .map((dependency) =>
-      normalizeMarkdown(
-        `- ${sectionLabel(dependency.sourceSection)} → ${sectionLabel(dependency.targetSection)}: ${dependency.description}`
-      )
-    )
-    .filter(Boolean);
 
   return [
     `# ${normalizeMarkdown(report.header) || 'UI Explorer result'}`,
     normalizeMarkdown(report.subHeader) ? `_${normalizeMarkdown(report.subHeader)}_` : '',
     normalizeMarkdown(report.markdownSummary),
     ...sections,
-    dependencies.length > 0
-      ? `## Zależności przekrojowe\n\n${dependencies.join('\n')}`
-      : '',
     reportMetaMarkdown('Ograniczenia, pytania i źródła', report.meta)
   ]
     .filter(Boolean)
@@ -101,18 +91,3 @@ function normalizeMarkdown(value: string | null | undefined): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
-
-function sectionLabel(sectionId: string): string {
-  return SECTION_LABELS[sectionId] ?? sectionId;
-}
-
-const SECTION_LABELS: Record<string, string> = {
-  OVERVIEW: 'Cel i kontekst widoku',
-  NAVIGATION_AND_ACCESS: 'Nawigacja i dostęp',
-  SCREEN_STRUCTURE: 'Struktura widoku',
-  ACTIONS_AND_OUTCOMES: 'Akcje i rezultaty',
-  FORMS_AND_RULES: 'Formularze i reguły',
-  DATA_AND_SERVICES: 'Dane i usługi',
-  STATE_AND_SYNCHRONIZATION: 'Stan i synchronizacja',
-  VARIANTS_AND_FAILURES: 'Warianty i sytuacje wyjątkowe'
-};

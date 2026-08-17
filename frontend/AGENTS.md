@@ -48,6 +48,10 @@ Glowny shell ma trzy grupy nawigacji:
   produktowy, ale jego powtarzalne fragmenty UI/UX powinny uzywac poznanych
   juz wzorcow, zeby uzytkownik nie uczyl sie nowego interfejsu dla tej samej
   czynnosci.
+- Shared panel krokow jest read-only inspektorem, nie liniowym wizardem.
+  Terminalne kroki `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED` musza byc
+  klikalne niezaleznie od statusu poprzednika; `PENDING` i `IN_PROGRESS` nie
+  udostepniaja jeszcze szczegolow.
 - Nie dodawaj marketingowych hero do narzedzi codziennej pracy.
 - Root route `/` moze opisywac platforme jako workspace overview, ale ma byc
   spokojny, action-oriented i bez dekoracyjnego marketingu. Pisz go dla osob

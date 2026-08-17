@@ -60,7 +60,7 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
                 section.sectionId().name(),
                 section.sectionId().label(),
                 section.sectionId().ordinal(),
-                markdown(section),
+                valueOrEmpty(section.markdown()).trim(),
                 new AnalysisReportMeta(
                         references(section),
                         section.visibilityLimits(),
@@ -78,21 +78,6 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
         var references = new LinkedHashSet<AnalysisReportReference>();
         sections.forEach(section -> references.addAll(references(section)));
         return List.copyOf(references);
-    }
-
-    private String markdown(UiExplorerResultSection section) {
-        var content = valueOrEmpty(section.markdown()).trim();
-        if (section.dependencies().isEmpty()) {
-            return content;
-        }
-        var dependencies = section.dependencies().stream()
-                .filter(StringUtils::hasText)
-                .map(value -> "- " + value.trim())
-                .toList();
-        if (dependencies.isEmpty()) {
-            return content;
-        }
-        return content + "\n\n### Powiazane warunki i zaleznosci\n\n" + String.join("\n", dependencies);
     }
 
     private List<AnalysisReportReference> references(UiExplorerResultSection section) {

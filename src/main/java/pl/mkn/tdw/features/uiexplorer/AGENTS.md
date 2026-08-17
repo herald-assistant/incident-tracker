@@ -30,6 +30,14 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   evidence w zwijanych source references. W glownej tresci zostaja tylko
   identyfikatory majace bezposrednie znaczenie funkcjonalne, wraz z opisem
   skutku dla uzytkownika albo procesu.
+- Wybrany widok-kontener obejmuje routowane poddrzewo child views. Brak pliku,
+  komponentu, modala albo serwisu z zatwierdzonego repository scope nie moze
+  zostac limitation, dopoki kolejne scoped GitLab search/read moga rozstrzygnac
+  luke. UI Explorer nie posiada feature'owego limitu call count; eksploracje
+  konczy readiness albo potwierdzona granica runtime/zewnetrznego scope.
+- Result nie posiada `dependencies`, `crossSectionDependencies` ani osobnego
+  appendixu zaleznosci. Relacje funkcjonalne mieszkaja w tresci wlasciwej
+  sekcji tylko wtedy, gdy wyjasniaja warunek, akcje albo rezultat.
 - Publiczny input nie przyjmuje repository id/path, GitLab group, tokenu,
   nazw plikow, komponentow ani tooli.
 - Brak screen discovery, source contextu albo AI jest jawnym stanem

@@ -471,15 +471,6 @@ export class UiExplorerFacade {
     this.portabilityError.set(message);
   }
 
-  clearResult(): void {
-    this.stopPolling();
-    this.job.set(null);
-    this.resultSource.set(null);
-    this.jobError.set('');
-    this.portabilityError.set('');
-    this.authStartUrl.set('');
-  }
-
   retryPolling(): void {
     const jobId = this.job()?.jobId;
     if (!jobId || this.isJobTerminal() || this.pollingActive()) {

@@ -47,17 +47,24 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 1. Potwierdz `systemId`, `screenId`, route, source revision i aktywne
    `sectionModes` z artifactow.
 2. Potwierdz, czy wybrany ekran jest widokiem biznesowym, shellem z
-   `RouterOutlet`, pustym ekranem technicznym albo konkretnym child view. Nie
-   przypisuj shellowi zachowan jego dzieci.
+   `RouterOutlet`, pustym ekranem technicznym albo kontenerem routowanych
+   podwidokow. Dla kontenera analizuj funkcjonalnie jego poddrzewo child routes
+   dostarczone w source snapshotcie; sam `RouterOutlet` nie konczy scope'u.
 3. Oznacz sekcje `OFF` jako `not_applicable`; nie kieruj ich do wyniku.
 4. Przekaz aktywne sekcje, `functional-writing-contract.md` i ich
    deterministyczne coverage do `ui-explorer-source-grounding`.
 5. Dla kazdej sekcji zapisz readiness: `ready`, `needs_deeper_evidence`,
    `visibility_limited` albo `not_applicable`.
-6. Jezeli istnieje jedno waskie pytanie, ktore moze zmienic wynik, przygotuj
-   targeted retry: maksymalnie jeden GitLab search i dwa waskie read calls.
-   Nie wykonuj broad browse i nie powtarzaj tego samego pytania.
-7. Po jednym retry zamien nierozstrzygniety brak na `visibility_limited`.
+6. Dla kazdego materialnego braku implementacji child route, komponentu,
+   template, formularza, modala, serwisu, store/effect albo klienta z badanego
+   repozytorium przygotuj targeted retry. Powtarzaj waskie search/read dla
+   kolejnych konkretnych luk, dopoki wszystkie aktywne sekcje nie osiagna
+   `ready` albo zrodlo nie zostanie potwierdzone jako niedostepne. Liczba
+   dotychczasowych wywolan nie jest kryterium zakonczenia. Nie wykonuj broad
+   browse.
+7. Dopiero po bezskutecznym wyszukaniu konkretnego zrodla albo potwierdzeniu,
+   ze implementacja jest runtime, zewnetrzna lub lezy poza zatwierdzonym scope,
+   oznacz brak jako `visibility_limited`.
 8. Oddziel `businessFacts` od `technicalEvidenceLinks`. Fakt funkcjonalny
    odpowiada: kto albo co wykonuje czynność, kiedy, pod jakim warunkiem i z
    jakim widocznym skutkiem. Sama nazwa symbolu nie jest faktem funkcjonalnym.
@@ -73,7 +80,8 @@ wariantow i skutkow — nie stalej liczby obserwacji — ale nie uprawnia do
 zgadywania niedostepnej logiki.
 
 Nie przechodz do finalizacji, gdy status to `needs_deeper_evidence`. Gdy dalsza
-widocznosc nie istnieje, przejdz z jawnym `visibility_limited`.
+widocznosc nie istnieje, przejdz z jawnym `visibility_limited`. Sam rozmiar
+snapshotu ani liczba wykonanych search/read nie dowodza braku widocznosci.
 
 ## Output Contract
 
@@ -90,7 +98,6 @@ technicalEvidenceLinks
 inferences
 visibilityLimits
 openQuestions
-crossSectionDependencyCandidates
 ```
 
 To nie jest finalny wynik JSON.
@@ -107,8 +114,10 @@ Sprawdz, czy:
 
 ## Fallbacki
 
-Gdy `ui-explorer-source-grounding` nie moze potwierdzic zachowania, zachowaj
-`UNKNOWN` i limitation. Nie tworz alternatywnego formatu odpowiedzi.
+Gdy `ui-explorer-source-grounding` nie moze potwierdzic zachowania runtime albo
+spoza zatwierdzonego scope, zachowaj `UNKNOWN` i limitation. Braku pliku z
+badanego repozytorium nie wolno zamienic w limitation bez udokumentowanej proby
+targeted search/read. Nie tworz alternatywnego formatu odpowiedzi.
 
 ## Artefakty Handoffu
 

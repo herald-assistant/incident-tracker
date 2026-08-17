@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 
 import { AnalysisReport } from '../../../../core/models/analysis.models';
+import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
 import { UiExplorerResultResponse } from '../../models/ui-explorer.models';
 import { UiExplorerResultComponent } from './ui-explorer-result';
 
@@ -23,15 +25,20 @@ describe('UiExplorerResultComponent', () => {
     fixture.detectChanges();
   });
 
-  it('renders all eight functional CRM report sections, dependencies and confidence limits', () => {
+  it('renders all eight functional CRM report sections with right-aligned metadata and no dependency appendix', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelector('app-analysis-result-header')).not.toBeNull();
     expect(compiled.querySelectorAll('.ui-explorer-result__sections > section')).toHaveLength(8);
     expect(compiled.textContent).toContain('Raport jest częściowy');
     expect(compiled.textContent).toContain('Dynamiczna walidacja kontaktu CRM kontroluje zapis.');
-    expect(compiled.textContent).toContain('Zależności przekrojowe');
-    expect(compiled.textContent).toContain('Walidacja formularza kontroluje dostępność akcji zapisu.');
+    expect(compiled.textContent).not.toContain('Zależności przekrojowe');
+    expect(compiled.textContent).not.toContain('Powiązane warunki i zależności');
+    expect(fixture.debugElement.queryAll(By.directive(AnalysisReportSectionContentComponent)))
+      .toHaveLength(8);
+    expect(fixture.debugElement.queryAll(By.directive(AnalysisReportSectionContentComponent))
+      .every((element) => (element.componentInstance as AnalysisReportSectionContentComponent).metaAlign() === 'end'))
+      .toBe(true);
     expect(compiled.textContent).not.toContain('Materiał do przygotowania zmiany');
     expect(compiled.textContent).toContain('Ograniczenia, pytania i źródła');
     expect(compiled.textContent).not.toContain('preparedPrompt');
@@ -55,7 +62,7 @@ describe('UiExplorerResultComponent', () => {
       const markdown = String(writeText.mock.calls[0]?.[0]);
       expect(markdown).toContain('# UI Explorer: Utworzenie kontaktu CRM');
       expect(markdown).toContain('## Formularze i reguły');
-      expect(markdown).toContain('## Zależności przekrojowe');
+      expect(markdown).not.toContain('## Zależności przekrojowe');
       expect(markdown).not.toContain('## Materiał do przygotowania zmiany');
       expect(markdown).toContain('Reguły runtime słownika CRM nie były widoczne.');
       expect((fixture.nativeElement as HTMLElement).textContent).toContain('Copied');
@@ -187,13 +194,6 @@ function crmResult(): UiExplorerResultResponse {
     sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
     functionalOverview: 'Widok umożliwia utworzenie syntetycznego kontaktu CRM.',
     sections: [],
-    crossSectionDependencies: [
-      {
-        sourceSection: 'FORMS_AND_RULES',
-        targetSection: 'ACTIONS_AND_OUTCOMES',
-        description: 'Walidacja formularza kontroluje dostępność akcji zapisu.'
-      }
-    ],
     overallConfidence: 'INFERRED',
     visibilityLimits: ['Reguły runtime słownika CRM nie były widoczne.'],
     unresolvedQuestions: ['Która syntetyczna rola CRM zatwierdza kontakt?'],

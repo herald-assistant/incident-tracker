@@ -57,9 +57,9 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(record.continuation().copilotSessionId()).isNull();
         var envelope = record.exportEnvelope();
         assertThat(envelope.path("schema").asText()).isEqualTo("tdw.ui-explorer-local-run");
-        assertThat(envelope.path("version").asInt()).isEqualTo(4);
+        assertThat(envelope.path("version").asInt()).isEqualTo(5);
         assertThat(envelope.at("/payload/type").asText()).isEqualTo("ui-explorer-analysis");
-        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v4");
+        assertThat(envelope.at("/payload/resultContract").asText()).isEqualTo("ui-explorer-result-v5");
         assertThat(envelope.at("/payload/job/sourceRevision/revision").asText())
                 .isEqualTo("crm-commit-abc123");
         assertThat(envelope.at("/payload/job/result/sections/0/sourceReferences/0/repository").isNull()).isTrue();

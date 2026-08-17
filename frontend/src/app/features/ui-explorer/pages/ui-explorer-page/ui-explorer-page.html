@@ -16,16 +16,6 @@
             <h2 id="uiExplorerWorkspaceTitle">{{ resultSourceLabel() }}</h2>
             <p>Konfiguracja i raport zostały odtworzone bez wznawiania sesji AI.</p>
           </div>
-          <div class="ui-explorer-read-only__actions">
-            <button class="secondary-button" type="button" [disabled]="facade.portabilityBusy()" (click)="triggerImport(importInput)">
-              <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-              <span>Import another</span>
-            </button>
-            <button class="secondary-button" type="button" (click)="startNewRun()">
-              <span class="material-symbols-outlined" aria-hidden="true">add</span>
-              <span>New UI Explorer run</span>
-            </button>
-          </div>
         </header>
 
         <dl class="ui-explorer-read-only__grid">

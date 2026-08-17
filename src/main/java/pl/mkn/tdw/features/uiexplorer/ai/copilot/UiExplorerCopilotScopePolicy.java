@@ -28,8 +28,8 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             GitLabToolNames.READ_REPOSITORY_FILE,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
     );
-    private static final int MAX_READ_CHARACTERS = 8_000;
-    private static final int MAX_CHUNK_LINES = 300;
+    private static final int MAX_READ_CHARACTERS = 20_000;
+    private static final int MAX_CHUNK_LINES = 600;
 
     private final ObjectMapper objectMapper;
 
@@ -133,7 +133,7 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             var endLine = integer(arguments, "endLine");
             if (startLine == null || endLine == null || startLine < 1
                     || endLine < startLine || endLine - startLine + 1 > MAX_CHUNK_LINES) {
-                reject(request, "Chunk line range must contain at most 300 positive, ordered lines.", true);
+                reject(request, "Chunk line range must contain at most 600 positive, ordered lines.", true);
             }
         }
     }

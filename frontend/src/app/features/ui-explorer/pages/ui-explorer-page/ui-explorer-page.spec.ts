@@ -256,6 +256,8 @@ describe('UiExplorerPageComponent', () => {
     expect(compiled.textContent).toContain('Konfiguracja i raport zostały odtworzone bez wznawiania sesji AI.');
     expect(compiled.querySelector('app-ui-explorer-configuration')).toBeNull();
     expect(compiled.querySelector('app-ui-explorer-result')).not.toBeNull();
+    expect(compiled.textContent).not.toContain('Import another');
+    expect(compiled.textContent).not.toContain('New UI Explorer run');
     expect(fixture.componentInstance.facade.isReadOnlyResult()).toBe(true);
     http.expectNone('/api/ui-explorer/jobs/crm-ui-history-1');
     http.verify();
@@ -566,13 +568,6 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
     sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
     functionalOverview: 'Widok umożliwia utworzenie zanonimizowanego kontaktu CRM.',
     sections: [],
-    crossSectionDependencies: [
-      {
-        sourceSection: 'FORMS_AND_RULES',
-        targetSection: 'ACTIONS_AND_OUTCOMES',
-        description: 'Walidacja segmentu CRM kontroluje dostępność zapisu.'
-      }
-    ],
     overallConfidence: 'INFERRED',
     visibilityLimits: ['Reguły segmentu dostarczane runtime nie były widoczne.'],
     unresolvedQuestions: ['Która rola CRM zatwierdza kontakt po zapisie?'],
@@ -583,11 +578,11 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
 function crmLocalEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 4,
+    version: 5,
     storedAt: '2026-08-15T10:02:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v4',
+      resultContract: 'ui-explorer-result-v5',
       job: crmJobSnapshot('COMPLETED')
     }
   };
@@ -596,11 +591,11 @@ function crmLocalEnvelope() {
 function crmPortableEnvelope() {
   return {
     schema: 'tdw.ui-explorer-export',
-    version: 4,
+    version: 5,
     exportedAt: '2026-08-15T10:03:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v4',
+      resultContract: 'ui-explorer-result-v5',
       job: crmJobSnapshot('COMPLETED')
     }
   };

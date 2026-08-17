@@ -149,12 +149,10 @@ final class UiExplorerLocalRunTestFixture {
 
                                 Aktualna preferencja moze byc wykorzystana w kolejnej interakcji.
                                 """.trim(),
-                        List.of(),
                         List.of(reference),
                         context().visibilityLimits(),
                         List.of()
                 )),
-                List.of(),
                 UiExplorerClaimConfidence.CONFIRMED,
                 context().visibilityLimits(),
                 List.of(),

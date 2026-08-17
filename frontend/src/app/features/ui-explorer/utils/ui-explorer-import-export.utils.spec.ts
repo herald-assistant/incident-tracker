@@ -11,8 +11,8 @@ describe('UI Explorer import and export contract', () => {
   });
 
   it.each([
-    ['previous version', { version: 3 }],
-    ['newer version', { version: 5 }],
+    ['previous version', { version: 4 }],
+    ['newer version', { version: 6 }],
     ['foreign schema', { schema: 'tdw.crm-foreign-run' }]
   ])('rejects %s without a compatibility fallback', (_label, override) => {
     expect(() => parseUiExplorerLocalRunEnvelope({ ...localEnvelope(), ...override })).toThrow();
@@ -31,11 +31,11 @@ describe('UI Explorer import and export contract', () => {
 function localEnvelope() {
   return {
     schema: 'tdw.ui-explorer-local-run',
-    version: 4,
+    version: 5,
     storedAt: '2026-08-15T10:04:00Z',
     payload: {
       type: 'ui-explorer-analysis',
-      resultContract: 'ui-explorer-result-v4',
+      resultContract: 'ui-explorer-result-v5',
       job: crmHistorySnapshot()
     }
   };
@@ -81,7 +81,6 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
       sourceRevision: { branch: 'main', revision: 'crm-revision-a1b2c3' },
       functionalOverview: 'Synthetic CRM contact documentation.',
       sections: [],
-      crossSectionDependencies: [],
       overallConfidence: 'CONFIRMED',
       visibilityLimits: [],
       unresolvedQuestions: [],

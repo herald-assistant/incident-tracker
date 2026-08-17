@@ -3,7 +3,6 @@ package pl.mkn.tdw.features.uiexplorer.report;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerClaimConfidence;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
-import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCrossSectionDependency;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerScreenIdentity;
@@ -44,7 +43,7 @@ class DefaultUiExplorerResultReportAssemblerTest {
         assertThat(assembly.report().sections().get(1).markdown())
                 .contains("Pole lub grupa")
                 .contains("Kanal kontaktu")
-                .contains("Powiazane warunki i zaleznosci")
+                .doesNotContain("Powiazane warunki i zaleznosci")
                 .doesNotContain("CONFIRMED")
                 .doesNotContain("Ustalenia")
                 .doesNotContain("CrmContactPreferencesComponent");
@@ -79,7 +78,6 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 UiExplorerCoverageStatus.READY,
                 UiExplorerClaimConfidence.CONFIRMED,
                 "**Cel biznesowy**\n\nUtrzymanie preferencji kontaktu CRM.",
-                List.of(),
                 List.of(source),
                 List.of(),
                 List.of()
@@ -98,7 +96,6 @@ class DefaultUiExplorerResultReportAssemblerTest {
 
                         - Zapis jest dostepny po wskazaniu kanalu kontaktu.
                         """.trim(),
-                List.of("The form depends on the selected synthetic CRM contact."),
                 List.of(source),
                 List.of("The runtime form definition was not available."),
                 List.of("Which CRM channel definitions are returned by the backend?")
@@ -109,7 +106,6 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 UiExplorerCoverageStatus.BLOCKED,
                 UiExplorerClaimConfidence.UNKNOWN,
                 "Disabled section.",
-                List.of(),
                 List.of(),
                 List.of(),
                 List.of()
@@ -126,11 +122,6 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 new UiExplorerSourceRevision("main", "abc123"),
                 "The screen maintains synthetic CRM contact preferences.",
                 List.of(overview, forms, disabled),
-                List.of(new UiExplorerCrossSectionDependency(
-                        UiExplorerSectionId.ACTIONS_AND_OUTCOMES,
-                        UiExplorerSectionId.FORMS_AND_RULES,
-                        "Submit is enabled only when the synthetic CRM form is valid."
-                )),
                 UiExplorerClaimConfidence.INFERRED,
                 List.of("Backend validation rules were not inspected."),
                 List.of("Does the backend enforce the same synthetic CRM rule?"),

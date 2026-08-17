@@ -25,7 +25,6 @@
 }
 
 .ui-explorer-read-only__header,
-.ui-explorer-read-only__actions,
 .ui-explorer-run__header-actions {
   display: flex;
   align-items: flex-start;
@@ -259,7 +258,6 @@
 
   .ui-explorer-run__header,
   .ui-explorer-read-only__header,
-  .ui-explorer-read-only__actions,
   .ui-explorer-run__header-actions,
   .ui-explorer-run__message {
     align-items: flex-start;

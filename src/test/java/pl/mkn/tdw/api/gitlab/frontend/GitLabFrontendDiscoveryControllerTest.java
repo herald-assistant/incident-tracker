@@ -56,7 +56,7 @@ class GitLabFrontendDiscoveryControllerTest {
                         && scope.projectName().equals("crm-agent-portal")
                         && scope.ref().equals("release/2026.08")
                         && scope.pathPrefixes().equals(List.of("apps/crm-agent"))
-        ), argThat(limits -> limits.maxRouteNodes() == 400 && limits.maxContextFiles() == 40));
+        ), argThat(limits -> limits.maxRouteNodes() == 400 && limits.maxContextFiles() == 120));
     }
 
     @Test
@@ -85,7 +85,7 @@ class GitLabFrontendDiscoveryControllerTest {
         verify(screenGraphContextService).build(argThat(request ->
                 request.screenId().equals("screen-crm-customer-profile")
                         && request.expectedRevision().equals("crm-ui-revision-20260815")
-                        && request.limits().maxContextFiles() == 40
+                        && request.limits().maxContextFiles() == 120
         ));
     }
 

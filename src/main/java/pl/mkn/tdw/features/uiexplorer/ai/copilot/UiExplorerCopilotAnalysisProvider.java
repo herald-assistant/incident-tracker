@@ -24,6 +24,7 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +36,6 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
     private final CopilotSdkExecutionGateway executionGateway;
     private final UiExplorerAiResponseParser responseParser;
     private final UiExplorerResultReportAssembler reportAssembler;
-    private final UiExplorerCopilotBudgetPolicy budgetPolicy;
 
     @Override
     public UiExplorerAiAnalysis analyze(
@@ -76,8 +76,12 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
                 authRef
         );
         var fetchedSourcePaths = new LinkedHashSet<String>();
+        var gitLabFallbackAttempted = new AtomicBoolean();
         var preparedSession = runPreparationService.prepare(assembly.runRequest())
                 .withEvidenceSink(section -> {
+                    if (section != null && "gitlab".equals(section.provider())) {
+                        gitLabFallbackAttempted.set(true);
+                    }
                     collectFetchedSourcePaths(section, fetchedSourcePaths);
                     if (toolEvidenceListener != null && toolEvidenceListener != AnalysisAiToolEvidenceListener.NO_OP) {
                         toolEvidenceListener.onToolEvidenceUpdated(section);
@@ -88,29 +92,34 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
         }
 
         var missingFallback = readiness.fallbackToolsRequired() && !assembly.toolAccessPolicy().fallbackAvailable();
-        try {
-            var execution = executionGateway.execute(preparedSession);
-            var parsed = responseParser.parse(execution.content(), request, context, Set.copyOf(fetchedSourcePaths));
-            var result = withUsageAndLimit(
-                    parsed.result(),
-                    execution.usage(),
-                    missingFallback ? "Scoped GitLab fallback tools were unavailable for this run." : null
+        var execution = executionGateway.execute(preparedSession);
+        var parsed = responseParser.parse(execution.content(), request, context, Set.copyOf(fetchedSourcePaths));
+        if (assembly.toolAccessPolicy().fallbackAvailable()
+                && !gitLabFallbackAttempted.get()
+                && reportsPreventableRepositoryGap(parsed.result())) {
+            parsed = responseParser.malformed(
+                    request,
+                    context,
+                    "AI reported a missing in-scope UI source without attempting the required scoped GitLab fallback."
             );
-            var report = reportAssembler.assemble(reportId(runReference), result).report();
-            return new UiExplorerAiAnalysis(
-                    missingFallback && parsed.status() == UiExplorerAiParseStatus.COMPLETED
-                            ? UiExplorerAiAnalysisStatus.PARTIAL
-                            : status(parsed.status()),
-                    result,
-                    execution.usage(),
-                    preparation.prompt(),
-                    execution.sessionId(),
-                    report,
-                    mergeLimitations(parsed.limitations(), missingFallback)
-            );
-        } finally {
-            budgetPolicy.clearSession(assembly.toolSessionContext().copilotSessionId());
         }
+        var result = withUsageAndLimit(
+                parsed.result(),
+                execution.usage(),
+                missingFallback ? "Scoped GitLab fallback tools were unavailable for this run." : null
+        );
+        var report = reportAssembler.assemble(reportId(runReference), result).report();
+        return new UiExplorerAiAnalysis(
+                missingFallback && parsed.status() == UiExplorerAiParseStatus.COMPLETED
+                        ? UiExplorerAiAnalysisStatus.PARTIAL
+                        : status(parsed.status()),
+                result,
+                execution.usage(),
+                preparation.prompt(),
+                execution.sessionId(),
+                report,
+                mergeLimitations(parsed.limitations(), missingFallback)
+        );
     }
 
     private void collectFetchedSourcePaths(AnalysisEvidenceSection section, Set<String> target) {
@@ -141,7 +150,6 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
                 result.sourceRevision(),
                 result.functionalOverview(),
                 result.sections(),
-                result.crossSectionDependencies(),
                 result.overallConfidence(),
                 java.util.List.copyOf(limits),
                 result.unresolvedQuestions(),
@@ -174,5 +182,30 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
         return StringUtils.hasText(value)
                 ? value.trim().replace('\\', '/').replaceAll("^/+", "").replaceAll("/+$", "")
                 : null;
+    }
+
+    private boolean reportsPreventableRepositoryGap(UiExplorerResultResponse result) {
+        if (result == null) {
+            return false;
+        }
+        var limits = new LinkedHashSet<String>(result.visibilityLimits());
+        result.sections().forEach(section -> limits.addAll(section.visibilityLimits()));
+        return limits.stream()
+                .filter(StringUtils::hasText)
+                .map(this::searchableText)
+                .anyMatch(limit -> limit.contains("snapshot")
+                        || limit.contains("child route")
+                        || limit.contains("child view")
+                        || limit.contains("podwidok")
+                        || limit.contains("komponent potom")
+                        || limit.contains("brak kodu")
+                        || limit.contains("missing code")
+                        || limit.contains("brakujac") && limit.contains("modal"));
+    }
+
+    private String searchableText(String value) {
+        return java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(java.util.Locale.ROOT);
     }
 }
