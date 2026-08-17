@@ -105,12 +105,81 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('15.51 jednostek mnożnika SDK');
     expect(fixture.nativeElement.textContent).not.toContain('$15.51 koszt');
   });
+
+  it('should import a server-validated assessment and render it from the new history run', async () => {
+    const completed = snapshot('COMPLETED_WITH_WARNINGS', 8, [completedUnit()]);
+    const imported = { ...completed, jobId: 'delivery-assessment-import-1' };
+    const { fixture, api } = await createComponent({ completed, importResult: imported });
+    const portable = envelope(completed);
+    const fileContent = JSON.stringify(portable);
+    const file = new File([fileContent], 'crm-assessment.json', { type: 'application/json' });
+    Object.defineProperty(file, 'text', {
+      configurable: true,
+      value: () => Promise.resolve(fileContent)
+    });
+    const input = fixture.nativeElement.querySelector('.run-file-input') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [file]
+    });
+
+    input.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(api.importRun).toHaveBeenCalledWith(portable);
+      expect(fixture.nativeElement.textContent).toContain('Import: crm-assessment.json');
+    });
+
+    expect(fixture.componentInstance.job()?.jobId).toBe('delivery-assessment-import-1');
+    expect(fixture.nativeElement.textContent).toContain('CRM-1');
+  });
+
+  it('should export a terminal assessment through Analysis History', async () => {
+    const completed = snapshot('COMPLETED', 8, [completedUnit()]);
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn(() => 'blob:delivery-assessment-export');
+    const revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+
+    try {
+      const { fixture, history } = await createComponent({
+        localRun: completed,
+        localRunId: 'job-1'
+      });
+      const exportButton = fixture.nativeElement.querySelector(
+        'button[aria-label="Eksportuj run"]'
+      ) as HTMLButtonElement;
+
+      expect(exportButton.disabled).toBe(false);
+      exportButton.click();
+      await vi.waitFor(() => {
+        fixture.detectChanges();
+        expect(history.exportRun).toHaveBeenCalledWith('job-1');
+        expect(createObjectURL).toHaveBeenCalledTimes(1);
+      });
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      clickSpy.mockRestore();
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        value: originalCreateObjectURL
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        value: originalRevokeObjectURL
+      });
+    }
+  });
 });
 
 async function createComponent(options: {
   queued?: DeliveryEffectivenessAssessmentJobStateSnapshot;
   completed?: DeliveryEffectivenessAssessmentJobStateSnapshot;
   localRun?: DeliveryEffectivenessAssessmentJobStateSnapshot;
+  importResult?: DeliveryEffectivenessAssessmentJobStateSnapshot;
   localRunId?: string;
   localFeature?: string;
 }) {
@@ -122,6 +191,9 @@ async function createComponent(options: {
     ),
     getJob: vi.fn<(jobId: string) => Observable<DeliveryEffectivenessAssessmentJobStateSnapshot>>(
       () => of(completed).pipe(delay(0))
+    ),
+    importRun: vi.fn<(document: unknown) => Observable<DeliveryEffectivenessAssessmentJobStateSnapshot>>(
+      () => of(options.importResult ?? completed).pipe(delay(0))
     )
   };
   const aiOptions = {
@@ -159,7 +231,10 @@ async function createComponent(options: {
       completedAt: '',
       exportEnvelope: envelope(options.localRun ?? queued),
       continuationEnabled: false
-    }))
+    })),
+    exportRun: vi.fn<(analysisId: string) => Observable<unknown>>(() =>
+      of(envelope(options.localRun ?? completed)).pipe(delay(0))
+    )
   };
   const polling = {
     poll: vi.fn(<T>(pollingOptions: AnalysisJobPollingOptions<T>) => pollingOptions.load())

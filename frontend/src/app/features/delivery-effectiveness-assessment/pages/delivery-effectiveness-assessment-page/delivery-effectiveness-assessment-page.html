@@ -6,12 +6,43 @@
           <p class="section-eyebrow">Delivery portfolio</p>
           <h2 id="deliveryAssessmentTitle">Delivery Effectiveness Assessment</h2>
         </div>
-        @if (localRunName()) {
-          <span class="local-run-badge">
-            <span class="material-symbols-outlined" aria-hidden="true">history</span>
-            {{ localRunName() }}
-          </span>
-        }
+        <div class="section-heading__actions">
+          @if (localRunName()) {
+            <span class="local-run-badge">
+              <span class="material-symbols-outlined" aria-hidden="true">history</span>
+              <span class="local-run-badge__name">{{ localRunName() }}</span>
+            </span>
+          }
+          <input
+            #runImportInput
+            class="run-file-input"
+            type="file"
+            accept=".json,application/json"
+            (change)="importRun($event)"
+          />
+          <button
+            type="button"
+            class="icon-button"
+            aria-label="Importuj run"
+            matTooltip="Importuj run"
+            [disabled]="!canImport()"
+            (click)="triggerImport(runImportInput)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+          </button>
+          @if (hasTerminalRun()) {
+            <button
+              type="button"
+              class="icon-button"
+              aria-label="Eksportuj run"
+              matTooltip="Eksportuj run"
+              [disabled]="!canExport()"
+              (click)="exportRun()"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">download</span>
+            </button>
+          }
+        </div>
       </div>
 
       <div class="assessment-form-grid">

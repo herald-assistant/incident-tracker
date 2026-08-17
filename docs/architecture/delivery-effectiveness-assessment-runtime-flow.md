@@ -12,6 +12,8 @@ Publiczne wejscia:
 - UI: `GET /delivery-effectiveness-assessment`,
 - start: `POST /api/delivery-effectiveness-assessment/jobs`,
 - polling: `GET /api/delivery-effectiveness-assessment/jobs/{jobId}`,
+- import: `POST /api/delivery-effectiveness-assessment/imports`,
+- export: wspolny `GET /api/analysis/runs/{analysisId}/export`,
 - modele AI: wspolny `GET /api/analysis/ai/options`,
 - historia: wspolne `/api/analysis/runs/**` z feature id
   `delivery-effectiveness-assessment`.
@@ -50,6 +52,15 @@ Local run przechowuje sanitizowany export envelope V1 i nie ma continuation.
 Otwarcie historii odtwarza formularz oraz ostatni snapshot. Dla stanu
 nieterminalnego UI probuje polling live joba; restart backendu nie wznawia
 pracy, ale zapis pozostaje czytelny.
+
+UI pozwala wyeksportowac terminalny run przez wspolny endpoint Analysis
+History. Import przyjmuje tylko terminalny envelope o dokladnym schemacie,
+wersji, payload type i result contract V1 oraz sprawdza spojnosci podstawowych
+danych i agregatu. Backend nadaje zaimportowanemu snapshotowi nowy `jobId`,
+zapisuje go od razu jako osobny local run i zwraca wynik tylko do odczytu.
+Import nie rejestruje live joba, nie uruchamia pollingu, Jira, GitLab ani AI i
+nie dodaje continuation. Gdy local workspace jest wylaczony albo zapis sie nie
+powiedzie, import jest odrzucany zamiast zwracac wynik niewidoczny w historii.
 
 Przed kazdym wywolaniem modelu feature zapisuje na Delivery Unit dokladny
 `preparedPrompt` i `promptPreparedAt`, a dopiero potem uruchamia sesje. Krok

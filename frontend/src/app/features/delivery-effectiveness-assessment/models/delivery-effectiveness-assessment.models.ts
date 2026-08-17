@@ -114,7 +114,7 @@ export interface DeliveryEffectivenessAssessmentExportEnvelope {
   exportedAt: string;
   payload: {
     type: 'delivery-effectiveness-assessment';
-    resultContract: string;
+    resultContract: 'delivery-effectiveness-assessment-v1';
     job: DeliveryEffectivenessAssessmentJobStateSnapshot;
   };
 }

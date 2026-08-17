@@ -10,17 +10,25 @@ import {
 @Injectable({ providedIn: 'root' })
 export class DeliveryEffectivenessAssessmentApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/delivery-effectiveness-assessment/jobs';
+  private readonly featureUrl = '/api/delivery-effectiveness-assessment';
+  private readonly jobsUrl = `${this.featureUrl}/jobs`;
 
   startJob(
     request: DeliveryEffectivenessAssessmentJobStartRequest
   ): Observable<DeliveryEffectivenessAssessmentJobStateSnapshot> {
-    return this.http.post<DeliveryEffectivenessAssessmentJobStateSnapshot>(this.baseUrl, request);
+    return this.http.post<DeliveryEffectivenessAssessmentJobStateSnapshot>(this.jobsUrl, request);
   }
 
   getJob(jobId: string): Observable<DeliveryEffectivenessAssessmentJobStateSnapshot> {
     return this.http.get<DeliveryEffectivenessAssessmentJobStateSnapshot>(
-      `${this.baseUrl}/${encodeURIComponent(jobId)}`
+      `${this.jobsUrl}/${encodeURIComponent(jobId)}`
+    );
+  }
+
+  importRun(document: unknown): Observable<DeliveryEffectivenessAssessmentJobStateSnapshot> {
+    return this.http.post<DeliveryEffectivenessAssessmentJobStateSnapshot>(
+      `${this.featureUrl}/imports`,
+      document
     );
   }
 }

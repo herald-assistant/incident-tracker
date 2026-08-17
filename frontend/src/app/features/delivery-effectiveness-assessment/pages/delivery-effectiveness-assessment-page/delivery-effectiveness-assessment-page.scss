@@ -38,6 +38,19 @@
   letter-spacing: 0;
 }
 
+.section-heading__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  padding-right: 48px;
+}
+
+.run-file-input {
+  display: none;
+}
+
 .section-eyebrow {
   margin: 0 0 5px;
   color: var(--text-muted);
@@ -86,6 +99,17 @@
 
 .local-run-badge .material-symbols-outlined {
   font-size: 18px;
+}
+
+.local-run-badge {
+  min-width: 0;
+  max-width: min(460px, 42vw);
+}
+
+.local-run-badge__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .runtime-message {
@@ -314,6 +338,16 @@
   outline: none;
 }
 
+.icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icon-button:disabled:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
 .unit-details {
   display: grid;
   gap: 18px;
@@ -474,6 +508,21 @@
 }
 
 @media (max-width: 820px) {
+  .section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .section-heading__actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    padding-right: 0;
+  }
+
+  .local-run-badge {
+    max-width: calc(100% - 84px);
+  }
+
   .assessment-form-grid,
   .dimension-grid,
   .evidence-panel,

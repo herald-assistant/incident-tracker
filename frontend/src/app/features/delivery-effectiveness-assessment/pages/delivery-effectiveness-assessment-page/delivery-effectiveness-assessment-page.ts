@@ -31,6 +31,12 @@ import {
 import { estimateAnalysisAiCost } from '../../../../core/utils/analysis-ai-usage-cost.utils';
 import { formatDateTime, formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import {
+  downloadJsonFile,
+  formatFileTimestamp,
+  readJsonFile,
+  sanitizeFileNamePart
+} from '../../../../core/utils/json-file.utils';
+import {
   DeliveryAssessmentDimensions,
   DeliveryAssessmentUnit,
   DeliveryEffectivenessAssessmentExportEnvelope,
@@ -80,6 +86,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
   readonly job = signal<DeliveryEffectivenessAssessmentJobStateSnapshot | null>(null);
   readonly jobError = signal('');
   readonly submitting = signal(false);
+  readonly portabilityBusy = signal(false);
   readonly localRunName = signal('');
   readonly expandedUnits = signal<ReadonlySet<string>>(new Set());
   private readonly formRevision = signal(0);
@@ -90,7 +97,20 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
   readonly reasoningEffortOptions = computed(() =>
     reasoningEffortsForAiModel(this.aiModelCatalog(), this.aiModelControl.value)
   );
-  readonly workflowRunning = computed(() => !this.isTerminal(this.job()?.status));
+  readonly workflowRunning = computed(() => {
+    const job = this.job();
+    return Boolean(job && !this.isTerminal(job.status));
+  });
+  readonly canImport = computed(() =>
+    !this.submitting() && !this.portabilityBusy() && !this.workflowRunning()
+  );
+  readonly hasTerminalRun = computed(() => this.isTerminal(this.job()?.status));
+  readonly canExport = computed(() => {
+    const job = this.job();
+    return Boolean(
+      job && this.isTerminal(job.status) && !this.submitting() && !this.portabilityBusy()
+    );
+  });
   readonly preparedPrompts = computed<AnalysisPreparedPrompt[]>(() =>
     (this.job()?.units ?? [])
       .filter((unit) => Boolean(unit.preparedPrompt))
@@ -129,6 +149,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
         && from <= to
         && this.aiModelControl.value
         && !this.submitting()
+        && !this.portabilityBusy()
         && !(auth?.mode === 'GITHUB_APP' && (!auth.connected || auth.reauthRequired))
     );
   });
@@ -191,6 +212,77 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
 
   protected connectGithub(): void {
     this.githubAuth.connect();
+  }
+
+  protected triggerImport(input: HTMLInputElement): void {
+    if (!this.canImport()) {
+      return;
+    }
+    input.value = '';
+    input.click();
+  }
+
+  protected async importRun(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !this.canImport()) {
+      input.value = '';
+      return;
+    }
+
+    this.jobError.set('');
+    this.portabilityBusy.set(true);
+    try {
+      const document = await readJsonFile(
+        file,
+        'Plik nie zawiera poprawnego eksportu Delivery Effectiveness Assessment.'
+      );
+      this.api
+        .importRun(document)
+        .pipe(
+          takeUntilDestroyed(this.destroyRef),
+          finalize(() => {
+            this.portabilityBusy.set(false);
+            input.value = '';
+          })
+        )
+        .subscribe({
+          next: (job) => {
+            this.stopPolling();
+            this.applyJobToForm(job);
+            this.job.set(job);
+            this.expandedUnits.set(new Set());
+            this.localRunName.set(`Import: ${file.name}`);
+          },
+          error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))
+        });
+    } catch (error) {
+      this.portabilityBusy.set(false);
+      input.value = '';
+      this.jobError.set(
+        error instanceof Error ? error.message : 'Nie udało się odczytać pliku importu.'
+      );
+    }
+  }
+
+  protected exportRun(): void {
+    const job = this.job();
+    if (!job || !this.canExport()) {
+      return;
+    }
+
+    this.jobError.set('');
+    this.portabilityBusy.set(true);
+    this.historyApi
+      .exportRun(job.jobId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.portabilityBusy.set(false))
+      )
+      .subscribe({
+        next: (document) => downloadJsonFile(this.exportFileName(job, document), document),
+        error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))
+      });
   }
 
   protected toggleUnit(unitId: string): void {
@@ -399,6 +491,24 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       authStartUrl: null
     });
   }
+
+  private exportFileName(
+    job: DeliveryEffectivenessAssessmentJobStateSnapshot,
+    document: unknown
+  ): string {
+    const envelope = document as Partial<DeliveryEffectivenessAssessmentExportEnvelope> | null;
+    const exportedAt = envelope?.exportedAt
+      || job.completedAt
+      || job.updatedAt
+      || new Date().toISOString();
+    return [
+      'delivery-effectiveness-assessment',
+      sanitizeFileNamePart(job.jiraProject),
+      job.fromDate,
+      job.toDate,
+      formatFileTimestamp(exportedAt)
+    ].join('-') + '.json';
+  }
 }
 
 function defaultDate(dayOffset: number): string {
@@ -417,6 +527,7 @@ function jobFromEnvelope(value: unknown): DeliveryEffectivenessAssessmentJobStat
     envelope.schema !== 'tdw.delivery-effectiveness-assessment-export'
     || envelope.version !== 1
     || envelope.payload?.type !== 'delivery-effectiveness-assessment'
+    || envelope.payload.resultContract !== 'delivery-effectiveness-assessment-v1'
     || !envelope.payload.job?.jobId
   ) {
     return null;
