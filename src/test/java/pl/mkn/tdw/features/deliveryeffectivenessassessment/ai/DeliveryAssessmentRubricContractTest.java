@@ -61,7 +61,10 @@ class DeliveryAssessmentRubricContractTest {
                 .contains("\"dimensions\"")
                 .contains("\"evidenceSummary\"")
                 .contains("\"qualityFlags\"")
-                .contains("\"visibilityLimits\"");
+                .contains("\"visibilityLimits\"")
+                .contains("----- BEGIN ARTIFACT: delivery-effectiveness/issues.md -----")
+                .contains("# Jira delivery scope")
+                .contains("----- END ARTIFACT: delivery-effectiveness/issues.md -----");
         assertThat(preparation.artifacts()).containsKey("delivery-effectiveness/issues.md");
     }
 }

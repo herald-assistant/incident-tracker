@@ -27,6 +27,8 @@ import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -143,6 +145,7 @@ public class DeliveryEffectivenessAssessmentJobService {
         job.markUnitCollecting(unit.unitId());
         persistSnapshot(job, false);
         var packet = evidencePacketBuilder.build(unit);
+        job.markUnitVisibilityLimits(unit.unitId(), packet.visibilityLimits());
         if (!packet.scorable()) {
             job.markUnitNotScorable(unit.unitId(), "No merged code evidence with changed files was available.");
             persistSnapshot(job, false);
@@ -168,9 +171,14 @@ public class DeliveryEffectivenessAssessmentJobService {
         );
         var classification = analysis.response().classification();
         if ("INSUFFICIENT_EVIDENCE".equals(classification)) {
-            job.markUnitNotScorable(unit.unitId(), String.join("; ", analysis.response().visibilityLimits()));
+            var limitations = analysis.response().visibilityLimits().isEmpty()
+                    ? List.of("AI could not establish a grounded assessment from the available evidence.")
+                    : analysis.response().visibilityLimits();
+            job.markUnitNotScorable(unit.unitId(), limitations, analysis.usage(), analysis.report());
         } else if ("EXCLUDED".equals(classification)) {
-            job.markUnitExcluded(unit.unitId(), "AI classified the observable delivery as semantically excluded.");
+            var limitations = new ArrayList<>(analysis.response().visibilityLimits());
+            limitations.add("AI classified the observable delivery as semantically excluded.");
+            job.markUnitExcluded(unit.unitId(), limitations, analysis.usage(), analysis.report());
         } else {
             job.markUnitCompleted(
                     unit.unitId(),

@@ -106,6 +106,8 @@ class DeliveryAssessmentSourceDiscoveryServiceTest {
         assertThat(result.issues()).singleElement().satisfies(source ->
                 assertThat(source.issue().doneAt()).isEqualTo(Instant.parse("2026-07-03T10:00:00Z"))
         );
+        assertThat(result.issues().get(0).limitations())
+                .contains("CRM-2: GitLab returned no merge request candidates for the configured group and issue-key search.");
     }
 
     @Test

@@ -101,6 +101,11 @@ Kazda jednostka dostaje ograniczony pakiet inline artifacts:
 - ograniczone diffy,
 - visibility limits wynikajace z truncation i partial source failures.
 
+Feature renderuje te logiczne pliki bezposrednio w finalnym prompcie miedzy
+jawnymi markerami artifact. `CopilotRunRequest.artifactContents` zachowuje ich
+projekcje diagnostyczna, ale runtime nie uzywa SDK attachments jako kanalu
+evidence.
+
 Limity liczby issue, MR-ow, dokumentow, plikow i znakow diffu sa properties
 feature'a. Brak MR-a albo changed files daje `NOT_SCORABLE`. Zmiany skladajace
 sie wylacznie z generated/build/dist/lock/minified/binary artifacts sa
@@ -146,6 +151,9 @@ to etykieta nawigacyjna, a nie runtime selection skilla.
 Backend liczy `score100` wagami `10/25/25/15/15/10` i mapuje wynik na
 `0/1/2/3/5/8/13`. `INSUFFICIENT_EVIDENCE` przechodzi do `NOT_SCORABLE`, a
 niepoprawna odpowiedz AI konczy tylko jednostke jako `FAILED`.
+Kazdy terminalny wynik uruchomionej sesji AI zachowuje jej `usage`, ostatni
+report oraz visibility limits, rowniez dla `INSUFFICIENT_EVIDENCE` i
+`EXCLUDED`.
 
 ## Rownoleglosc i wynik
 
@@ -159,6 +167,9 @@ aggregate, visibility limits i report. Aggregate zawiera total DSP,
 distribution, coverage, confidence, liczniki `EXCLUDED`/`NOT_SCORABLE`/`FAILED`
 oraz zsumowane usage/cost. Parent job konczy sie `COMPLETED`,
 `COMPLETED_WITH_WARNINGS` albo `FAILED`.
+Top-level visibility limits sa suma ograniczen discovery i jednostek. Gdy
+zadna jednostka nie zostala oceniona, report publikuje jawny gap i warning
+zamiast prezentowac samo zerowe DSP jako pelny wynik.
 
 ## Ownership
 

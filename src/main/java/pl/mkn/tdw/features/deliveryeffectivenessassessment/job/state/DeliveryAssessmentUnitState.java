@@ -12,6 +12,7 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 
 final class DeliveryAssessmentUnitState {
 
@@ -63,25 +64,42 @@ final class DeliveryAssessmentUnitState {
         completedAt = Instant.now();
     }
 
+    void addVisibilityLimits(List<String> limitations) {
+        if (terminal() || limitations == null) {
+            return;
+        }
+        limitations.stream()
+                .filter(limit -> limit != null && !limit.isBlank())
+                .forEach(visibilityLimits::add);
+    }
+
     void excluded(String limitation) {
+        excluded(textList(limitation), null, null);
+    }
+
+    void excluded(List<String> limitations, AnalysisAiUsage usage, AnalysisReport report) {
         if (terminal()) {
             return;
         }
+        addVisibilityLimits(limitations);
         status = "EXCLUDED";
-        if (limitation != null && !limitation.isBlank()) {
-            visibilityLimits.add(limitation);
-        }
+        this.usage = usage;
+        this.report = report;
         completedAt = Instant.now();
     }
 
     void notScorable(String limitation) {
+        notScorable(textList(limitation), null, null);
+    }
+
+    void notScorable(List<String> limitations, AnalysisAiUsage usage, AnalysisReport report) {
         if (terminal()) {
             return;
         }
+        addVisibilityLimits(limitations);
         status = "NOT_SCORABLE";
-        if (limitation != null && !limitation.isBlank()) {
-            visibilityLimits.add(limitation);
-        }
+        this.usage = usage;
+        this.report = report;
         completedAt = Instant.now();
     }
 
@@ -112,6 +130,10 @@ final class DeliveryAssessmentUnitState {
 
     AnalysisAiUsage usage() {
         return usage;
+    }
+
+    private List<String> textList(String value) {
+        return value != null && !value.isBlank() ? List.of(value) : List.of();
     }
 
     DeliveryAssessmentUnitResponse snapshot() {

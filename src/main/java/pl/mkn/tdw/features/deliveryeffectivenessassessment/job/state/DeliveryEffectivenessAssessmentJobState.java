@@ -109,6 +109,11 @@ public class DeliveryEffectivenessAssessmentJobState {
         touch();
     }
 
+    public synchronized void markUnitVisibilityLimits(String unitId, List<String> limitations) {
+        unit(unitId).addVisibilityLimits(limitations);
+        touch();
+    }
+
     public synchronized void markUnitCompleted(
             String unitId,
             DeliveryAssessmentScore score,
@@ -124,8 +129,28 @@ public class DeliveryEffectivenessAssessmentJobState {
         touch();
     }
 
+    public synchronized void markUnitExcluded(
+            String unitId,
+            List<String> limitations,
+            AnalysisAiUsage usage,
+            AnalysisReport report
+    ) {
+        unit(unitId).excluded(limitations, usage, report);
+        touch();
+    }
+
     public synchronized void markUnitNotScorable(String unitId, String limitation) {
         unit(unitId).notScorable(limitation);
+        touch();
+    }
+
+    public synchronized void markUnitNotScorable(
+            String unitId,
+            List<String> limitations,
+            AnalysisAiUsage usage,
+            AnalysisReport report
+    ) {
+        unit(unitId).notScorable(limitations, usage, report);
         touch();
     }
 
@@ -184,6 +209,7 @@ public class DeliveryEffectivenessAssessmentJobState {
     public synchronized DeliveryEffectivenessAssessmentJobStateSnapshot snapshot() {
         var unitSnapshots = units.values().stream().map(DeliveryAssessmentUnitState::snapshot).toList();
         var aggregate = aggregate(unitSnapshots);
+        var effectiveVisibilityLimits = aggregateVisibilityLimits(unitSnapshots);
         return new DeliveryEffectivenessAssessmentJobStateSnapshot(
                 jobId,
                 request.jiraProject(),
@@ -208,9 +234,15 @@ public class DeliveryEffectivenessAssessmentJobState {
                 List.copyOf(aiActivityEvents),
                 unitSnapshots,
                 aggregate,
-                List.copyOf(new LinkedHashSet<>(visibilityLimits)),
-                report(unitSnapshots, aggregate)
+                effectiveVisibilityLimits,
+                report(unitSnapshots, aggregate, effectiveVisibilityLimits)
         );
+    }
+
+    private List<String> aggregateVisibilityLimits(List<DeliveryAssessmentUnitResponse> snapshots) {
+        var result = new LinkedHashSet<>(visibilityLimits);
+        snapshots.forEach(unit -> result.addAll(unit.visibilityLimits()));
+        return List.copyOf(result);
     }
 
     private DeliveryAssessmentAggregateResponse aggregate(List<DeliveryAssessmentUnitResponse> snapshots) {
@@ -314,13 +346,20 @@ public class DeliveryEffectivenessAssessmentJobState {
 
     private AnalysisReport report(
             List<DeliveryAssessmentUnitResponse> snapshots,
-            DeliveryAssessmentAggregateResponse aggregate
+            DeliveryAssessmentAggregateResponse aggregate,
+            List<String> effectiveVisibilityLimits
     ) {
         var lines = new StringBuilder();
         lines.append("- Total Delivered Story Points: **").append(aggregate.totalDeliveredStoryPoints()).append("**\n")
                 .append("- Assessed: ").append(aggregate.assessedUnits()).append(" / ").append(aggregate.totalUnits()).append("\n")
                 .append("- Coverage: ").append(Math.round(aggregate.coverage() * 100)).append("%\n")
-                .append("- Confidence: ").append(aggregate.confidence()).append("\n");
+                .append("- Confidence: ").append(aggregate.confidence()).append("\n")
+                .append("- Excluded: ").append(aggregate.excludedUnits()).append("\n")
+                .append("- Not scorable: ").append(aggregate.notScorableUnits()).append("\n")
+                .append("- Failed: ").append(aggregate.failedUnits()).append("\n");
+        if (aggregate.totalUnits() > 0 && aggregate.assessedUnits() == 0) {
+            lines.append("- Result: no Delivery Unit could be assessed; inspect visibility limits below.\n");
+        }
         snapshots.stream().sorted(Comparator.comparing(DeliveryAssessmentUnitResponse::unitId)).forEach(unit -> {
             lines.append("\n### ").append(unit.unitId()).append("\n\n")
                     .append("- Status: ").append(unit.status()).append("\n");
@@ -328,7 +367,25 @@ public class DeliveryEffectivenessAssessmentJobState {
                 lines.append("- DSP: ").append(unit.assessment().deliveredStoryPoints()).append("\n")
                         .append("- Confidence: ").append(unit.assessment().confidence()).append("\n");
             }
+            if (!unit.visibilityLimits().isEmpty()) {
+                lines.append("- Visibility limits:\n");
+                unit.visibilityLimits().forEach(limit -> lines.append("  - ").append(limit).append("\n"));
+            }
         });
+        var warnings = new ArrayList<String>();
+        if (aggregate.notScorableUnits() > 0) {
+            warnings.add(aggregate.notScorableUnits() == 1
+                    ? "1 Delivery Unit was not scorable."
+                    : aggregate.notScorableUnits() + " Delivery Units were not scorable.");
+        }
+        if (aggregate.failedUnits() > 0) {
+            warnings.add(aggregate.failedUnits() == 1
+                    ? "1 Delivery Unit failed assessment."
+                    : aggregate.failedUnits() + " Delivery Units failed assessment.");
+        }
+        var gaps = aggregate.totalUnits() > 0 && aggregate.assessedUnits() == 0
+                ? List.of("No assessable Delivery Unit result was produced.")
+                : List.<String>of();
         return new AnalysisReport(
                 "delivery-effectiveness-" + jobId,
                 "Delivery Effectiveness Assessment",
@@ -339,11 +396,11 @@ public class DeliveryEffectivenessAssessmentJobState {
                 )),
                 new AnalysisReportMeta(
                         List.of(),
-                        List.copyOf(new LinkedHashSet<>(visibilityLimits)),
+                        effectiveVisibilityLimits,
                         List.of(),
-                        List.of(),
+                        gaps,
                         aggregate.confidence(),
-                        List.of()
+                        warnings
                 )
         );
     }

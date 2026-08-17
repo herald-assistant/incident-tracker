@@ -6,6 +6,9 @@ import pl.mkn.tdw.features.deliveryeffectivenessassessment.ai.DeliveryAssessment
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.deliveryunit.DeliveryUnit;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryEffectivenessAssessmentJobStartRequest;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.source.DeliveryAssessmentSourceResult;
+import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -60,6 +63,43 @@ class DeliveryEffectivenessAssessmentJobStateTest {
         assertThat(snapshot.status()).isEqualTo("COMPLETED_WITH_WARNINGS");
     }
 
+    @Test
+    void shouldRetainAiDiagnosticsAndAggregateVisibilityForNotScorableUnit() {
+        var state = state();
+        var deliveryUnit = unit("CRM-1", mergeRequest(1, "src/A.java", "+A"));
+        var usage = usage();
+        var report = report();
+        ready(state, deliveryUnit);
+
+        state.markUnitVisibilityLimits(deliveryUnit.unitId(), List.of("Diff content was truncated."));
+        state.markUnitNotScorable(
+                deliveryUnit.unitId(),
+                List.of("Acceptance criteria were incomplete."),
+                usage,
+                report
+        );
+        state.finalizeJob();
+
+        var snapshot = state.snapshot();
+        assertThat(snapshot.units()).singleElement().satisfies(unit -> {
+            assertThat(unit.status()).isEqualTo("NOT_SCORABLE");
+            assertThat(unit.usage()).isEqualTo(usage);
+            assertThat(unit.report()).isEqualTo(report);
+            assertThat(unit.visibilityLimits()).containsExactly(
+                    "Diff content was truncated.",
+                    "Acceptance criteria were incomplete."
+            );
+        });
+        assertThat(snapshot.aggregate().usage()).isEqualTo(usage);
+        assertThat(snapshot.visibilityLimits()).containsExactly(
+                "Diff content was truncated.",
+                "Acceptance criteria were incomplete."
+        );
+        assertThat(snapshot.report().meta().visibilityLimits()).isEqualTo(snapshot.visibilityLimits());
+        assertThat(snapshot.report().meta().gaps()).containsExactly("No assessable Delivery Unit result was produced.");
+        assertThat(snapshot.report().meta().warnings()).containsExactly("1 Delivery Unit was not scorable.");
+    }
+
     private DeliveryEffectivenessAssessmentJobState state() {
         return new DeliveryEffectivenessAssessmentJobState(
                 "job-1",
@@ -87,6 +127,16 @@ class DeliveryEffectivenessAssessmentJobStateTest {
                 List.of("evidence"),
                 List.of(),
                 List.of()
+        );
+    }
+
+    private AnalysisAiUsage usage() {
+        return new AnalysisAiUsage(100, 20, 30, 0, 120, 1.0, 500, 4, "gpt-5", null, null, null);
+    }
+
+    private AnalysisReport report() {
+        return new AnalysisReport(
+                "report-1", "Assessment", "DU-CRM-1", "Insufficient evidence", List.of(), AnalysisReportMeta.empty()
         );
     }
 }

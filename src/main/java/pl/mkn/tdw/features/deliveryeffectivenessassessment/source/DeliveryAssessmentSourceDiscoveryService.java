@@ -99,10 +99,20 @@ public class DeliveryAssessmentSourceDiscoveryService {
                 properties.getMaxMergeRequestsPerIssue()
         );
         limitations.addAll(result.limitations());
-        return result.mergeRequests().stream()
+        if (result.mergeRequests().isEmpty()) {
+            limitations.add(issueKey
+                    + ": GitLab returned no merge request candidates for the configured group and issue-key search.");
+            return List.of();
+        }
+        var merged = result.mergeRequests().stream()
                 .filter(mergeRequest -> "merged".equalsIgnoreCase(mergeRequest.state())
                         && StringUtils.hasText(mergeRequest.mergedAt()))
                 .toList();
+        if (merged.isEmpty()) {
+            limitations.add(issueKey
+                    + ": GitLab returned merge request candidates, but none had state merged with mergedAt.");
+        }
+        return merged;
     }
 
     private Instant finalDoneAt(pl.mkn.tdw.integrations.jira.JiraIssueStatusHistory history) {
