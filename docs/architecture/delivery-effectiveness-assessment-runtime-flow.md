@@ -51,6 +51,13 @@ Otwarcie historii odtwarza formularz oraz ostatni snapshot. Dla stanu
 nieterminalnego UI probuje polling live joba; restart backendu nie wznawia
 pracy, ale zapis pozostaje czytelny.
 
+Przed kazdym wywolaniem modelu feature zapisuje na Delivery Unit dokladny
+`preparedPrompt` i `promptPreparedAt`, a dopiero potem uruchamia sesje. Krok
+`AI_INPUT_PREPARATION` w bocznym przebiegu analizy pokazuje wszystkie
+przygotowane wiadomosci z mozliwoscia rozwiniecia i skopiowania. Prompt zawiera
+pelna effective tresc skilla oraz dane konkretnej jednostki, wiec snapshot jest
+jednoczesnie audytowalnym zapisem rzeczywistego inputu AI.
+
 ## Jira discovery
 
 Neutralny `integrations.jira.JiraIssueSearchPort` mapuje typowany request na
@@ -117,17 +124,19 @@ osob lub zespolow.
 
 ## AI i scoring
 
-Ocenialna Delivery Unit uruchamia najwyzej jedna nowa sesje Copilota.
-Feature przekazuje prompt, skill
-`delivery-effectiveness-assessment-evaluator`, inline artifacts, model/effort,
-initial report oraz tylko dwa report tools:
-
-- `report_get_current`,
-- `report_upsert_section` dla sekcji `ASSESSMENT`.
+Ocenialna Delivery Unit uruchamia jedna nowa sesje Copilota i wysyla jedna
+inicjalna wiadomosc. Feature sklada w niej instrukcje, effective tresc skilla
+`delivery-effectiveness-assessment-evaluator`, inline artifacts, kod MR oraz
+kontrakt odpowiedzi. Sesja ma pusta allowliste tools, w tym wylaczony built-in
+`skill`, nie dostaje katalogow skilli i nie posiada initial reportu. Model nie
+wykonuje pobrania skilla, report tools ani innych krokow agentowych; pierwsza
+odpowiedz ma byc finalnym JSON-em.
 
 Jira, GitLab, Confluence, filesystem, shell i terminal nie sa dostepne w
 sesji. AI zwraca classification, confidence, evidence/quality/visibility oraz
-szesc wymiarow 0-4 dla `DELIVERY`. Nie zwraca DSP ani `score100`.
+szesc wymiarow 0-4 dla `DELIVERY`. Nie zwraca DSP ani `score100`. Raport
+jednostki jest skladany deterministycznie z tego samego sparsowanego JSON-a,
+bez kolejnego wywolania modelu albo toola.
 
 Skala jest zakotwiczona behawioralnie osobno dla kazdego wymiaru. Skill
 definiuje obserwowalne kotwice `0`, `2` i `4`; `1` i `3` sa poziomami
@@ -167,6 +176,12 @@ aggregate, visibility limits i report. Aggregate zawiera total DSP,
 distribution, coverage, confidence, liczniki `EXCLUDED`/`NOT_SCORABLE`/`FAILED`
 oraz zsumowane usage/cost. Parent job konczy sie `COMPLETED`,
 `COMPLETED_WITH_WARNINGS` albo `FAILED`.
+
+Tokeny, duration, liczba wywolan i SDK `cost` sa sumowane dokladnie raz z usage
+kazdej jednostki. Pole SDK `cost` oznacza sume mnoznikow rozliczeniowych modelu,
+nie kwote USD. UI pokazuje je jako jednostki mnoznika, a osobno prezentuje
+szacowany koszt tokenow wyliczony z input/output/cache i cennika modelu.
+
 Top-level visibility limits sa suma ograniczen discovery i jednostek. Gdy
 zadna jednostka nie zostala oceniona, report publikuje jawny gap i warning
 zamiast prezentowac samo zerowe DSP jako pelny wynik.

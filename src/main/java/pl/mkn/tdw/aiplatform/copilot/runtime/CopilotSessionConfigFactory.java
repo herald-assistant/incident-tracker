@@ -54,7 +54,7 @@ public class CopilotSessionConfigFactory {
                 .setStreaming(false)
                 .setTools(request.tools())
                 .setAvailableTools(availableToolNames)
-                .setSkillDirectories(platformSkillDirectories())
+                .setSkillDirectories(effectiveSkillDirectories(request))
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
@@ -80,7 +80,7 @@ public class CopilotSessionConfigFactory {
                 .setStreaming(false)
                 .setTools(request.tools())
                 .setAvailableTools(availableToolNames)
-                .setSkillDirectories(platformSkillDirectories())
+                .setSkillDirectories(effectiveSkillDirectories(request))
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
                 .setOnPermissionRequest(permissionHandler())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
@@ -112,6 +112,10 @@ public class CopilotSessionConfigFactory {
 
     private List<String> platformSkillDirectories() {
         return skillRuntimeLoader.platformSkillDirectories();
+    }
+
+    private List<String> effectiveSkillDirectories(CopilotSessionConfigRequest request) {
+        return request.skillsEnabled() ? platformSkillDirectories() : List.of();
     }
 
     private PermissionHandler permissionHandler() {

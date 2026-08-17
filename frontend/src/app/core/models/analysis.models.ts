@@ -81,6 +81,13 @@ export interface AnalysisAiUsage {
   contextMessages: number | null;
 }
 
+export interface AnalysisPreparedPrompt {
+  key: string;
+  title: string;
+  preparedAt: string | null;
+  prompt: string;
+}
+
 export interface AnalysisAiActivityEvent {
   eventId: string;
   parentEventId: string;

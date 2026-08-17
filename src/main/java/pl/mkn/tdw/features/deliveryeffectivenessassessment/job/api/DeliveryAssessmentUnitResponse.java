@@ -17,6 +17,8 @@ public record DeliveryAssessmentUnitResponse(
         String errorMessage,
         Instant startedAt,
         Instant completedAt,
+        String preparedPrompt,
+        Instant promptPreparedAt,
         AnalysisAiUsage usage,
         AnalysisReport report
 ) {

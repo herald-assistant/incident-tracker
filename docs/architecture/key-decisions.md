@@ -230,9 +230,11 @@ Nie traktujemy ich jako plikow `.github` repozytorium hosta.
 `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
 `tdw-data/copilot/skills`; istniejace effective pliki nie sa nadpisywane ani
 usuwane. Ten sam pojedynczy root trafia do kazdego
-`SessionConfig` i `ResumeSessionConfig`, a built-in tool `skill` jest zawsze w
-effective allowliscie. Nie tworzymy selected roots ani katalogow per feature
-lub per analiza.
+`SessionConfig` i `ResumeSessionConfig`, a built-in tool `skill` jest domyslnie
+w effective allowliscie. Jawna sesja one-shot moze wylaczyc skills wraz z
+katalogami, gdy feature osadza effective tresc skilla w jedynym prompcie i
+konfiguruje pusta allowliste tools. Nie tworzymy selected roots ani katalogow
+per feature lub per analiza.
 
 Skill przechowuje stale zasady pracy modelu. Dane konkretnego incydentu
 niesie prompt i artefakty przygotowane w runtime. Feature posiada tresc i
@@ -914,3 +916,11 @@ posrednimi. Kazdy niezerowy wynik wymaga referencji do artifactu i
 obserwowanego faktu; parser odrzuca odpowiedz bez takiego pokrycia. Syntetyczne
 przypadki kalibracyjne stabilizuja skale bez uczenia jej na historycznych Story
 Points.
+
+Assessment uzywa sesji one-shot bez tools. Effective tresc skilla, instrukcja,
+Jira evidence, kod MR i kontrakt odpowiedzi sa splaszczone do jednej wiadomosci,
+a built-in `skill` jest dla tej sesji wylaczony. Dokladny prompt jest zapisywany
+na jednostce przed wyslaniem i pokazywany w kroku `AI_INPUT_PREPARATION`.
+Raport jednostki powstaje deterministycznie z finalnego JSON-a. SDK `cost` jest
+agregowany jako mnoznik rozliczeniowy i nie jest prezentowany jako USD; koszt
+tokenow w UI pozostaje osobnym oszacowaniem.

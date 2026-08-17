@@ -119,6 +119,6 @@ Kolejnosc wartosci to: `outcomeBreadth`, `domainDecisionComplexity`,
 
 ## Wynik
 
-Zapisz czytelna sekcje `ASSESSMENT` raportu. Dla kazdego wymiaru pokaz wynik,
-kotwice uzyte do wyboru oraz referencje do evidence. Na koncu zwroc JSON zgodny
-z kontraktem podanym w prompcie.
+Zwroc bezposrednio JSON zgodny z kontraktem podanym w prompcie. Nie wywoluj
+tooli i nie wysylaj odpowiedzi posrednich. Dla kazdego niezerowego wymiaru
+umiesc wymagane uzasadnienie i referencje do evidence w `evidenceSummary`.

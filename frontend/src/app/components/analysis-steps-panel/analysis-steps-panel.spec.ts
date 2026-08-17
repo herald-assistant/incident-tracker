@@ -250,6 +250,50 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea?.value).toBe('# Synthetic CRM canonical UI Explorer prompt');
   });
 
+  it('should expose every one-shot Delivery Assessment prompt on its dedicated running step', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [{
+      code: 'AI_INPUT_PREPARATION',
+      label: 'AI request preparation',
+      phase: 'AI',
+      status: 'IN_PROGRESS',
+      message: '2 one-shot prompts prepared before model execution.',
+      itemCount: 2,
+      startedAt: '2026-08-17T10:00:00Z',
+      completedAt: '',
+      consumesEvidence: [],
+      producesEvidence: []
+    } satisfies AnalysisJobStepResponse]);
+    fixture.componentRef.setInput('preparedPrompts', [
+      {
+        key: 'DU-CRM-1',
+        title: 'CRM-1 · DU-CRM-1',
+        preparedAt: '2026-08-17T10:00:01Z',
+        prompt: 'rubric + Jira CRM-1 + MR code'
+      },
+      {
+        key: 'DU-CRM-2',
+        title: 'CRM-2 · DU-CRM-2',
+        preparedAt: '2026-08-17T10:00:02Z',
+        prompt: 'rubric + Jira CRM-2 + MR code'
+      }
+    ]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const prompts = Array.from(compiled.querySelectorAll('.prepared-prompts__item'));
+
+    expect(compiled.textContent).toContain('One-shot prompts wysłane do AI');
+    expect(compiled.textContent).toContain('CRM-1 · DU-CRM-1');
+    expect(compiled.textContent).toContain('CRM-2 · DU-CRM-2');
+    expect(prompts).toHaveLength(2);
+    expect((prompts[0]?.querySelector('textarea') as HTMLTextAreaElement).value)
+      .toBe('rubric + Jira CRM-1 + MR code');
+  });
+
   it('should open completed UI Explorer prompt preparation after a partial CRM source context', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     const sourceContext = {

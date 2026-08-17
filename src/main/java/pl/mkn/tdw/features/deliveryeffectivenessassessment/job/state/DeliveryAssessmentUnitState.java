@@ -24,6 +24,8 @@ final class DeliveryAssessmentUnitState {
     private String errorMessage;
     private Instant startedAt;
     private Instant completedAt;
+    private String preparedPrompt;
+    private Instant promptPreparedAt;
     private AnalysisAiUsage usage;
     private AnalysisReport report;
 
@@ -50,6 +52,14 @@ final class DeliveryAssessmentUnitState {
         }
         status = "ANALYZING";
         startedAt = startedAt != null ? startedAt : Instant.now();
+    }
+
+    void preparedPrompt(String prompt) {
+        if (terminal() || prompt == null || prompt.isBlank()) {
+            return;
+        }
+        preparedPrompt = prompt;
+        promptPreparedAt = Instant.now();
     }
 
     void completed(DeliveryAssessmentScore score, AnalysisAiUsage usage, AnalysisReport report) {
@@ -179,6 +189,8 @@ final class DeliveryAssessmentUnitState {
                 errorMessage,
                 startedAt,
                 completedAt,
+                preparedPrompt,
+                promptPreparedAt,
                 usage,
                 report
         );

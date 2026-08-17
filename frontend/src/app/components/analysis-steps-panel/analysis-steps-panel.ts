@@ -14,6 +14,7 @@ import {
   AnalysisEvidenceReference,
   AnalysisEvidenceSection,
   AnalysisJobStepResponse,
+  AnalysisPreparedPrompt,
   AnalysisResultResponse
 } from '../../core/models/analysis.models';
 import {
@@ -324,6 +325,7 @@ interface StepView {
   showResultPreview: boolean;
   showPreparedPromptView: boolean;
   preparedPrompt: string;
+  preparedPrompts: AnalysisPreparedPrompt[];
   promptPanelTitle: string;
   promptPanelDescription: string;
   showUsage: boolean;
@@ -534,6 +536,7 @@ export class AnalysisStepsPanelComponent {
   readonly aiActivityEvents = input<AnalysisAiActivityEvent[]>([]);
   readonly toolFeedback = input<AnalysisAiToolFeedback[]>([]);
   readonly preparedPrompt = input<string>('');
+  readonly preparedPrompts = input<AnalysisPreparedPrompt[]>([]);
   readonly result = input<AnalysisResultResponse | null>(null);
   readonly finalResultAvailable = input(false);
   readonly showProgress = input(true);
@@ -580,7 +583,8 @@ export class AnalysisStepsPanelComponent {
         this.preparedPrompt(),
         this.result()?.prompt ?? ''
       );
-      const showPreparedPromptView = Boolean(stepPreparedPrompt);
+      const stepPreparedPrompts = resolvePreparedPrompts(step.code, this.preparedPrompts());
+      const showPreparedPromptView = Boolean(stepPreparedPrompt) || stepPreparedPrompts.length > 0;
       const key = buildStepKey(step, index);
       const usageEstimate = estimateAnalysisAiCost(step.usage ?? null);
       const usageStats = buildUsageStats(step.usage ?? null, usageEstimate);
@@ -596,11 +600,12 @@ export class AnalysisStepsPanelComponent {
         headerMeta: buildHeaderMeta(step),
         meta: [...buildStepMeta(step), ...buildEvidenceFlowMeta(step)],
         message: step.message || buildFallbackStepMessage(step.status),
-        canOpen: canOpenStep(step.status),
+        canOpen: canOpenStep(step.status) || showPreparedPromptView,
         detailSections,
         showResultPreview,
         showPreparedPromptView,
         preparedPrompt: stepPreparedPrompt,
+        preparedPrompts: stepPreparedPrompts,
         promptPanelTitle: buildPreparedPromptTitle(step.code),
         promptPanelDescription: buildPreparedPromptDescription(step.code),
         showUsage: usageStats.length > 0,
@@ -738,23 +743,39 @@ export class AnalysisStepsPanelComponent {
   }
 
   protected async copyPreparedPrompt(step: StepView): Promise<void> {
-    if (!step.preparedPrompt) {
+    await this.copyPreparedPromptValue(step.key, step.preparedPrompt);
+  }
+
+  protected async copyPreparedPromptItem(step: StepView, prompt: AnalysisPreparedPrompt): Promise<void> {
+    await this.copyPreparedPromptValue(`${step.key}:${prompt.key}`, prompt.prompt);
+  }
+
+  protected preparedPromptCopyKey(step: StepView, prompt: AnalysisPreparedPrompt): string {
+    return `${step.key}:${prompt.key}`;
+  }
+
+  protected preparedPromptDateTime(value: string): string {
+    return formatDateTime(value) || value;
+  }
+
+  private async copyPreparedPromptValue(copyKey: string, prompt: string): Promise<void> {
+    if (!prompt) {
       return;
     }
 
-    const copied = await copyTextToClipboard(step.preparedPrompt);
+    const copied = await copyTextToClipboard(prompt);
     if (!copied) {
       return;
     }
 
-    this.copiedPromptStepKey.set(step.key);
+    this.copiedPromptStepKey.set(copyKey);
 
     if (this.promptCopyFeedbackHandle !== null) {
       window.clearTimeout(this.promptCopyFeedbackHandle);
     }
 
     this.promptCopyFeedbackHandle = window.setTimeout(() => {
-      if (this.copiedPromptStepKey() === step.key) {
+      if (this.copiedPromptStepKey() === copyKey) {
         this.copiedPromptStepKey.set(null);
       }
       this.promptCopyFeedbackHandle = null;
@@ -1111,7 +1132,20 @@ function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean 
     || normalizedStepCode === 'AI_PREPARATION';
 }
 
+function resolvePreparedPrompts(
+  stepCode: string | null | undefined,
+  preparedPrompts: AnalysisPreparedPrompt[]
+): AnalysisPreparedPrompt[] {
+  if (String(stepCode || '').toUpperCase() !== 'AI_INPUT_PREPARATION') {
+    return [];
+  }
+  return preparedPrompts.filter((preparedPrompt) => Boolean(preparedPrompt.prompt));
+}
+
 function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'AI_INPUT_PREPARATION') {
+    return 'One-shot prompts wysłane do AI';
+  }
   if (String(stepCode || '').toUpperCase() === 'AI_PREPARATION') {
     return 'Inicjalny prompt UI Explorera wysłany do AI';
   }
@@ -1129,6 +1163,9 @@ function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
 }
 
 function buildPreparedPromptDescription(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'AI_INPUT_PREPARATION') {
+    return 'Każda pozycja zawiera dokładną inicjalną wiadomość zapisaną przed wysłaniem: instrukcję, effective skill, Jira evidence i kod Merge Requestu.';
+  }
   if (String(stepCode || '').toUpperCase() === 'AI_PREPARATION') {
     return 'To jest dokładny prompt złożony z bounded source contextu, aktywnych sekcji i kontraktu odpowiedzi bezpośrednio przed uruchomieniem sesji AI.';
   }

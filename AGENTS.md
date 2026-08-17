@@ -170,8 +170,10 @@ Zasady granic:
   pod `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
   `tdw-data/copilot/skills`, tylko brakujace pliki i nie nadpisuje istniejacej
   effective tresci. `SessionConfig.skillDirectories` i
-  `ResumeSessionConfig.skillDirectories` zawsze dostaja ten jeden wspolny
-  root, a built-in tool `skill` jest zawsze w effective allowliscie.
+  `ResumeSessionConfig.skillDirectories` domyslnie dostaja ten jeden wspolny
+  root. Built-in tool `skill` jest domyslnie w effective allowliscie; jawna
+  sesja one-shot moze wylaczyc skills wraz z katalogami tylko wtedy, gdy feature
+  osadza effective tresc skilla w prompcie i nie dopuszcza zadnych tool calls.
 - Feature nie przekazuje katalogow ani podzbioru nazw skilli do platformy.
   Feature posiada tresc i workflow swoich skilli oraz wskazuje w prompcie,
   ktory starter albo skill follow-up warto zaladowac. Nie przywracaj selected

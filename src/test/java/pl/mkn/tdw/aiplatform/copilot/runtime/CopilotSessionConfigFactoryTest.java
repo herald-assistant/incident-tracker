@@ -104,6 +104,39 @@ class CopilotSessionConfigFactoryTest {
     }
 
     @Test
+    void shouldAllowOneShotSessionToDisableTheBuiltInSkillTool() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+        var request = new CopilotSessionConfigRequest(
+                sessionId(),
+                List.of(),
+                List.of(),
+                CopilotModelSelection.DEFAULT,
+                "No tools are available for this one-shot session.",
+                false
+        );
+
+        var sessionConfig = factory.sessionConfig(request);
+        var resumeSessionConfig = factory.resumeSessionConfig(request);
+        var deniedSkillDecision = sessionConfig.getHooks().getOnPreToolUse()
+                .handle(new PreToolUseHookInput().setToolName("skill"), null)
+                .join();
+        var resumeDeniedSkillDecision = resumeSessionConfig.getHooks().getOnPreToolUse()
+                .handle(new PreToolUseHookInput().setToolName("skill"), null)
+                .join();
+
+        assertEquals(List.of(), request.effectiveAvailableToolNames());
+        assertFalse(request.skillToolAvailable());
+        assertEquals(List.of(), sessionConfig.getAvailableTools());
+        assertEquals(List.of(), sessionConfig.getSkillDirectories());
+        assertEquals(List.of(), resumeSessionConfig.getAvailableTools());
+        assertEquals(List.of(), resumeSessionConfig.getSkillDirectories());
+        assertEquals("deny", deniedSkillDecision.permissionDecision());
+        assertEquals("deny", resumeDeniedSkillDecision.permissionDecision());
+    }
+
+    @Test
     void shouldRejectBlankCopilotHome() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");

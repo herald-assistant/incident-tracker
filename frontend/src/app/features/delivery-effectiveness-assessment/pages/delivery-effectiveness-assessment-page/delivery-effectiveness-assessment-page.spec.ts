@@ -82,6 +82,29 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
     expect(history.getRun).toHaveBeenCalledWith('job-1');
     expect(fixture.nativeElement.textContent).toContain('nie jest Delivery Effectiveness Assessment');
   });
+
+  it('should present the token estimate instead of formatting the SDK multiplier as USD', async () => {
+    const completed = snapshot('COMPLETED', 8, [completedUnit()]);
+    completed.aggregate.usage = {
+      inputTokens: 1_045_393,
+      outputTokens: 72_414,
+      cacheReadTokens: 837_120,
+      cacheWriteTokens: 0,
+      totalTokens: 1_117_807,
+      cost: 15.51,
+      apiDurationMs: 622_916,
+      apiCallCount: 47,
+      model: 'gpt-5.4-mini',
+      contextTokenLimit: null,
+      contextCurrentTokens: null,
+      contextMessages: null
+    };
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    expect(fixture.nativeElement.textContent).toContain('szacowany koszt tokenów');
+    expect(fixture.nativeElement.textContent).toContain('15.51 jednostek mnożnika SDK');
+    expect(fixture.nativeElement.textContent).not.toContain('$15.51 koszt');
+  });
 });
 
 async function createComponent(options: {
@@ -263,6 +286,8 @@ function completedUnit(): DeliveryEffectivenessAssessmentJobStateSnapshot['units
     errorMessage: null,
     startedAt: '2026-07-01T10:00:00Z',
     completedAt: '2026-07-01T10:01:00Z',
+    preparedPrompt: 'one-shot prompt with effective skill, Jira and MR code',
+    promptPreparedAt: '2026-07-01T10:00:01Z',
     usage: null,
     report: null
   };

@@ -66,6 +66,44 @@
   flex: 0 0 auto;
 }
 
+.prepared-prompts__list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.prepared-prompts__item {
+  border-bottom: 1px solid var(--border);
+}
+
+.prepared-prompts__item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.prepared-prompts__item summary small,
+.prepared-prompts__item-toolbar {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+}
+
+.prepared-prompts__item-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 10px;
+}
+
+.prepared-prompts__item .prepared-prompt__textarea {
+  height: min(70vh, 720px);
+  margin-bottom: 12px;
+}
+
 .prepared-prompt__textarea {
   width: 100%;
   height: 100vh;

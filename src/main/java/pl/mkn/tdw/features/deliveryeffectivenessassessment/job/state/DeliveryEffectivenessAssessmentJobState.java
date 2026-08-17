@@ -47,6 +47,7 @@ public class DeliveryEffectivenessAssessmentJobState {
     private Instant discoveryStartedAt;
     private Instant discoveryCompletedAt;
     private Instant analysisStartedAt;
+    private Instant promptPreparationCompletedAt;
 
     public DeliveryEffectivenessAssessmentJobState(
             String jobId,
@@ -95,6 +96,7 @@ public class DeliveryEffectivenessAssessmentJobState {
         currentStepLabel = deliveryUnits.isEmpty() ? "Completed with no assessable units" : "Delivery Unit assessment";
         if (deliveryUnits.isEmpty()) {
             completedAt = discoveryCompletedAt;
+            promptPreparationCompletedAt = discoveryCompletedAt;
         }
         touch();
     }
@@ -106,6 +108,12 @@ public class DeliveryEffectivenessAssessmentJobState {
 
     public synchronized void markUnitAnalyzing(String unitId) {
         unit(unitId).analyzing();
+        completePromptPreparationIfReady();
+        touch();
+    }
+
+    public synchronized void markUnitPreparedPrompt(String unitId, String prompt) {
+        unit(unitId).preparedPrompt(prompt);
         touch();
     }
 
@@ -121,11 +129,13 @@ public class DeliveryEffectivenessAssessmentJobState {
             AnalysisReport report
     ) {
         unit(unitId).completed(score, usage, report);
+        completePromptPreparationIfReady();
         touch();
     }
 
     public synchronized void markUnitExcluded(String unitId, String limitation) {
         unit(unitId).excluded(limitation);
+        completePromptPreparationIfReady();
         touch();
     }
 
@@ -136,11 +146,13 @@ public class DeliveryEffectivenessAssessmentJobState {
             AnalysisReport report
     ) {
         unit(unitId).excluded(limitations, usage, report);
+        completePromptPreparationIfReady();
         touch();
     }
 
     public synchronized void markUnitNotScorable(String unitId, String limitation) {
         unit(unitId).notScorable(limitation);
+        completePromptPreparationIfReady();
         touch();
     }
 
@@ -151,11 +163,13 @@ public class DeliveryEffectivenessAssessmentJobState {
             AnalysisReport report
     ) {
         unit(unitId).notScorable(limitations, usage, report);
+        completePromptPreparationIfReady();
         touch();
     }
 
     public synchronized void markUnitFailed(String unitId, String code, String message) {
         unit(unitId).failed(code, message);
+        completePromptPreparationIfReady();
         touch();
     }
 
@@ -307,11 +321,28 @@ public class DeliveryEffectivenessAssessmentJobState {
                 : discoveryStartedAt != null ? "RUNNING" : "PENDING";
         var assessmentStatus = completedAt != null ? ("FAILED".equals(status) ? "FAILED" : "COMPLETED")
                 : analysisStartedAt != null ? "RUNNING" : "PENDING";
+        var preparedPrompts = snapshots.stream()
+                .filter(unit -> unit.preparedPrompt() != null && !unit.preparedPrompt().isBlank())
+                .toList();
+        var promptPreparationStatus = "FAILED".equals(status) ? "FAILED"
+                : promptPreparationCompletedAt != null ? "COMPLETED"
+                : analysisStartedAt != null ? "RUNNING" : "PENDING";
+        var promptPreparationStartedAt = preparedPrompts.stream()
+                .map(DeliveryAssessmentUnitResponse::promptPreparedAt)
+                .filter(java.util.Objects::nonNull)
+                .min(Instant::compareTo)
+                .orElse(analysisStartedAt);
         return List.of(
                 new AnalysisJobStepResponse(
                         "JIRA_DISCOVERY", "Jira discovery", "CONTEXT", discoveryStatus,
                         processedIssues + " of " + discoveredIssues + " Jira issues processed.",
                         processedIssues, discoveryStartedAt, discoveryCompletedAt, List.of(), List.of()
+                ),
+                new AnalysisJobStepResponse(
+                        "AI_INPUT_PREPARATION", "AI request preparation", "AI", promptPreparationStatus,
+                        preparedPrompts.size() + " one-shot prompts prepared before model execution.",
+                        preparedPrompts.size(), promptPreparationStartedAt, promptPreparationCompletedAt,
+                        List.of(), List.of()
                 ),
                 new AnalysisJobStepResponse(
                         "UNIT_ASSESSMENT", "Delivery Unit assessment", "AI", assessmentStatus,
@@ -422,6 +453,18 @@ public class DeliveryEffectivenessAssessmentJobState {
             case "COMPLETED", "EXCLUDED", "NOT_SCORABLE", "FAILED" -> true;
             default -> false;
         };
+    }
+
+    private void completePromptPreparationIfReady() {
+        if (promptPreparationCompletedAt != null || units.isEmpty()) {
+            return;
+        }
+        var stillPreparing = units.values().stream().anyMatch(unit ->
+                "PENDING".equals(unit.status()) || "COLLECTING_EVIDENCE".equals(unit.status())
+        );
+        if (!stillPreparing) {
+            promptPreparationCompletedAt = Instant.now();
+        }
     }
 
     private String confidenceLabel(double confidence) {

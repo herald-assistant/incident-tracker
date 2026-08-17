@@ -9,12 +9,23 @@ public record CopilotSessionConfigRequest(
         List<ToolDefinition> tools,
         List<String> availableToolNames,
         CopilotModelSelection modelSelection,
-        String deniedToolUseMessage
+        String deniedToolUseMessage,
+        boolean skillsEnabled
 ) {
 
     public static final String SKILL_TOOL_NAME = "skill";
     public static final String DEFAULT_DENIED_TOOL_USE_MESSAGE =
             "Use only the explicitly enabled tools for this session.";
+
+    public CopilotSessionConfigRequest(
+            String sessionId,
+            List<ToolDefinition> tools,
+            List<String> availableToolNames,
+            CopilotModelSelection modelSelection,
+            String deniedToolUseMessage
+    ) {
+        this(sessionId, tools, availableToolNames, modelSelection, deniedToolUseMessage, true);
+    }
 
     public CopilotSessionConfigRequest {
         if (!hasText(sessionId)) {
@@ -29,8 +40,10 @@ public record CopilotSessionConfigRequest(
     }
 
     public List<String> effectiveAvailableToolNames() {
-        var effectiveToolNames = new java.util.ArrayList<>(availableToolNames);
-        if (!effectiveToolNames.contains(SKILL_TOOL_NAME)) {
+        var effectiveToolNames = new java.util.ArrayList<>(availableToolNames.stream()
+                .filter(toolName -> skillsEnabled || !SKILL_TOOL_NAME.equals(toolName))
+                .toList());
+        if (skillsEnabled && !effectiveToolNames.contains(SKILL_TOOL_NAME)) {
             effectiveToolNames.add(SKILL_TOOL_NAME);
         }
         return List.copyOf(effectiveToolNames);

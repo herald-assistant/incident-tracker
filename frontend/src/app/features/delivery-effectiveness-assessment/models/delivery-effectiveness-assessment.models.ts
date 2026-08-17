@@ -61,6 +61,8 @@ export interface DeliveryAssessmentUnit {
   errorMessage: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  preparedPrompt: string | null;
+  promptPreparedAt: string | null;
   usage: AnalysisAiUsage | null;
   report: AnalysisReport | null;
 }

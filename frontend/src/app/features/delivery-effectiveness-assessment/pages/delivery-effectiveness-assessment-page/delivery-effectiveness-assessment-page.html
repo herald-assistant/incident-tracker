@@ -330,7 +330,14 @@
         <section class="usage-band">
           <span><strong>{{ usage.totalTokens | number }}</strong> tokenów</span>
           <span><strong>{{ usage.apiCallCount }}</strong> wywołań AI</span>
-          <span><strong>{{ usage.cost | currency:'USD':'symbol':'1.2-4' }}</strong> koszt</span>
+          @if (usageCostEstimate(); as estimate) {
+            <span><strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong> szacowany koszt tokenów</span>
+          }
+          <span
+            [matTooltip]="'Wartość cost ze zdarzeń Copilot SDK jest sumą mnożników rozliczeniowych modelu, a nie kwotą USD.'"
+          >
+            <strong>{{ usage.cost | number:'1.0-2' }}</strong> jednostek mnożnika SDK
+          </span>
           <span><strong>{{ usage.apiDurationMs / 1000 | number:'1.1-1' }} s</strong> API</span>
         </section>
       }
@@ -353,6 +360,7 @@
             [steps]="currentJob.steps"
             [evidenceSections]="currentJob.contextSections"
             [aiActivityEvents]="currentJob.aiActivityEvents"
+            [preparedPrompts]="preparedPrompts()"
             [showAiWorkflow]="false"
             [showToolFeedback]="false"
             [staticPanels]="true"
@@ -363,6 +371,7 @@
             [steps]="currentJob.steps"
             [evidenceSections]="currentJob.contextSections"
             [aiActivityEvents]="currentJob.aiActivityEvents"
+            [preparedPrompts]="preparedPrompts()"
             [showProgress]="false"
             [showToolFeedback]="false"
             [staticPanels]="true"

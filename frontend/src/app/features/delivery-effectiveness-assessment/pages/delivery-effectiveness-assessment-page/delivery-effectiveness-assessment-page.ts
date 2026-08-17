@@ -12,6 +12,7 @@ import { AnalysisReportPanelComponent } from '../../../../components/analysis-re
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import {
   AnalysisAiModelOptionsResponse,
+  AnalysisPreparedPrompt,
   ApiErrorResponse,
   GitHubAuthStatus,
   LocalAnalysisRunDetailResponse
@@ -27,6 +28,7 @@ import {
   normalizeAnalysisAiModelOptions,
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
+import { estimateAnalysisAiCost } from '../../../../core/utils/analysis-ai-usage-cost.utils';
 import { formatDateTime, formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import {
   DeliveryAssessmentDimensions,
@@ -89,6 +91,19 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     reasoningEffortsForAiModel(this.aiModelCatalog(), this.aiModelControl.value)
   );
   readonly workflowRunning = computed(() => !this.isTerminal(this.job()?.status));
+  readonly preparedPrompts = computed<AnalysisPreparedPrompt[]>(() =>
+    (this.job()?.units ?? [])
+      .filter((unit) => Boolean(unit.preparedPrompt))
+      .map((unit) => ({
+        key: unit.unitId,
+        title: `${unit.issues.map((issue) => issue.issueKey).join(', ') || unit.unitId} · ${unit.unitId}`,
+        preparedAt: unit.promptPreparedAt,
+        prompt: unit.preparedPrompt!
+      }))
+  );
+  readonly usageCostEstimate = computed(() =>
+    estimateAnalysisAiCost(this.job()?.aggregate?.usage ?? null)
+  );
   readonly progressPercent = computed(() => {
     const job = this.job();
     if (!job) {

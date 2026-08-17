@@ -76,8 +76,11 @@ Nie obejmuje:
   `${analysis.ai.copilot.copilot-home}/skills` tylko brakujace pliki. Save i
   restore atomowo podmieniaja pojedynczy effective `SKILL.md`.
   `SessionConfig.skillDirectories` i `ResumeSessionConfig.skillDirectories`
-  zawsze dostaja ten sam pojedynczy root. Feature nie przekazuje katalogow ani
-  list wybranych skilli; nie przywracaj selected roots ani selekcji per run.
+  domyslnie dostaja ten sam pojedynczy root. Feature nie przekazuje katalogow
+  ani list wybranych skilli; nie przywracaj selected roots ani selekcji per
+  run. `skill` pozostaje domyslnie dostepny, ale feature moze jawnie wylaczyc
+  skills wraz z katalogami dla sesji one-shot, jesli osadza effective tresc
+  skilla w jedynym prompcie i konfiguruje pusta allowliste tools.
 - Platforma nie utrzymuje obecnie niewidocznej dla uzytkownika telemetryki
   sesji. Zdarzenia SDK usage sa agregowane tylko do `AnalysisAiUsage`, ktore
   trafia do job state/UI. Nowa telemetryka moze wrocic dopiero jako jawny,

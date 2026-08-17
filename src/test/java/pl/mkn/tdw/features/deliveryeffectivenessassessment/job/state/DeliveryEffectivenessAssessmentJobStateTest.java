@@ -71,6 +71,7 @@ class DeliveryEffectivenessAssessmentJobStateTest {
         var report = report();
         ready(state, deliveryUnit);
 
+        state.markUnitPreparedPrompt(deliveryUnit.unitId(), "one-shot prompt");
         state.markUnitVisibilityLimits(deliveryUnit.unitId(), List.of("Diff content was truncated."));
         state.markUnitNotScorable(
                 deliveryUnit.unitId(),
@@ -85,6 +86,8 @@ class DeliveryEffectivenessAssessmentJobStateTest {
             assertThat(unit.status()).isEqualTo("NOT_SCORABLE");
             assertThat(unit.usage()).isEqualTo(usage);
             assertThat(unit.report()).isEqualTo(report);
+            assertThat(unit.preparedPrompt()).isEqualTo("one-shot prompt");
+            assertThat(unit.promptPreparedAt()).isNotNull();
             assertThat(unit.visibilityLimits()).containsExactly(
                     "Diff content was truncated.",
                     "Acceptance criteria were incomplete."
@@ -98,6 +101,31 @@ class DeliveryEffectivenessAssessmentJobStateTest {
         assertThat(snapshot.report().meta().visibilityLimits()).isEqualTo(snapshot.visibilityLimits());
         assertThat(snapshot.report().meta().gaps()).containsExactly("No assessable Delivery Unit result was produced.");
         assertThat(snapshot.report().meta().warnings()).containsExactly("1 Delivery Unit was not scorable.");
+        assertThat(snapshot.steps()).anySatisfy(step -> {
+            assertThat(step.code()).isEqualTo("AI_INPUT_PREPARATION");
+            assertThat(step.itemCount()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void shouldSumEachUnitUsageExactlyOnce() {
+        var state = state();
+        var first = unit("CRM-1", mergeRequest(1, "src/A.java", "+A"));
+        var second = unit("CRM-2", mergeRequest(2, "src/B.java", "+B"));
+        ready(state, first, second);
+        var firstUsage = new AnalysisAiUsage(
+                100, 20, 30, 0, 120, 0.33, 500, 1, "gpt-5.4-mini", null, null, null
+        );
+        var secondUsage = new AnalysisAiUsage(
+                200, 40, 80, 0, 240, 1.0, 700, 2, "gpt-5.4-mini", null, null, null
+        );
+
+        state.markUnitCompleted(first.unitId(), score(3, 0.7), firstUsage, null);
+        state.markUnitCompleted(second.unitId(), score(5, 0.8), secondUsage, null);
+
+        assertThat(state.snapshot().aggregate().usage()).isEqualTo(new AnalysisAiUsage(
+                300, 60, 110, 0, 360, 1.33, 1200, 3, "gpt-5.4-mini", null, null, null
+        ));
     }
 
     private DeliveryEffectivenessAssessmentJobState state() {

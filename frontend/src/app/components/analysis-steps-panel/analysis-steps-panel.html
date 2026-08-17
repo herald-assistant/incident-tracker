@@ -387,23 +387,56 @@
                     </p>
                   </div>
 
-                  <button
-                    class="secondary-button prepared-prompt__copy-button"
-                    type="button"
-                    (click)="copyPreparedPrompt(step)"
-                  >
-                    {{ copiedPromptKey() === step.key ? 'Skopiowano' : 'Kopiuj prompt' }}
-                  </button>
+                  @if (step.preparedPrompts.length === 0) {
+                    <button
+                      class="secondary-button prepared-prompt__copy-button"
+                      type="button"
+                      (click)="copyPreparedPrompt(step)"
+                    >
+                      {{ copiedPromptKey() === step.key ? 'Skopiowano' : 'Kopiuj prompt' }}
+                    </button>
+                  }
                 </div>
 
-                <textarea
-                  class="prepared-prompt__textarea"
-                  readonly
-                  spellcheck="false"
-                  wrap="off"
-                  [value]="step.preparedPrompt"
-                  aria-label="Prompt przygotowany do wysłania do AI"
-                ></textarea>
+                @if (step.preparedPrompts.length > 0) {
+                  <div class="prepared-prompts__list">
+                    @for (prompt of step.preparedPrompts; track prompt.key) {
+                      <details class="prepared-prompts__item">
+                        <summary>
+                          <span>{{ prompt.title }}</span>
+                          <small>{{ prompt.prompt.length }} znaków</small>
+                        </summary>
+                        <div class="prepared-prompts__item-toolbar">
+                          <span>{{ prompt.preparedAt ? preparedPromptDateTime(prompt.preparedAt) : 'Przygotowano przed wysłaniem' }}</span>
+                          <button
+                            class="secondary-button prepared-prompt__copy-button"
+                            type="button"
+                            (click)="copyPreparedPromptItem(step, prompt)"
+                          >
+                            {{ copiedPromptKey() === preparedPromptCopyKey(step, prompt) ? 'Skopiowano' : 'Kopiuj prompt' }}
+                          </button>
+                        </div>
+                        <textarea
+                          class="prepared-prompt__textarea"
+                          readonly
+                          spellcheck="false"
+                          wrap="off"
+                          [value]="prompt.prompt"
+                          [attr.aria-label]="'Prompt przygotowany dla ' + prompt.title"
+                        ></textarea>
+                      </details>
+                    }
+                  </div>
+                } @else {
+                  <textarea
+                    class="prepared-prompt__textarea"
+                    readonly
+                    spellcheck="false"
+                    wrap="off"
+                    [value]="step.preparedPrompt"
+                    aria-label="Prompt przygotowany do wysłania do AI"
+                  ></textarea>
+                }
               </section>
             }
 

@@ -9,6 +9,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAccessTokenResolver;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.DeliveryEffectivenessAssessmentProperties;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.ai.DeliveryAssessmentScoringService;
+import pl.mkn.tdw.features.deliveryeffectivenessassessment.ai.DeliveryPromptPreparationService;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.ai.DeliveryUnitAssessmentProvider;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.deliveryunit.DeliveryUnit;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.deliveryunit.DeliveryUnitBuilder;
@@ -44,6 +45,7 @@ public class DeliveryEffectivenessAssessmentJobService {
     private final DeliveryAssessmentSourceDiscoveryService sourceDiscoveryService;
     private final DeliveryUnitBuilder deliveryUnitBuilder;
     private final DeliveryEvidencePacketBuilder evidencePacketBuilder;
+    private final DeliveryPromptPreparationService promptPreparationService;
     private final DeliveryUnitAssessmentProvider assessmentProvider;
     private final DeliveryAssessmentScoringService scoringService;
     private final DeliveryAssessmentLocalRunPersistence localRunPersistence;
@@ -157,6 +159,9 @@ public class DeliveryEffectivenessAssessmentJobService {
             return;
         }
 
+        var preparation = promptPreparationService.prepare(packet);
+        job.markUnitPreparedPrompt(unit.unitId(), preparation.prompt());
+        persistSnapshot(job, false);
         job.markUnitAnalyzing(unit.unitId());
         persistSnapshot(job, false);
         var analysis = assessmentProvider.analyze(
@@ -164,6 +169,7 @@ public class DeliveryEffectivenessAssessmentJobService {
                 request.aiOptions(),
                 authRef,
                 packet,
+                preparation,
                 event -> {
                     job.markAiActivity(unit.unitId(), event);
                     persistSnapshot(job, false);

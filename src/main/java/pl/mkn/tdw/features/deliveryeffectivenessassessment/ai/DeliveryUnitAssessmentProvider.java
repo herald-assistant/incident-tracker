@@ -12,6 +12,7 @@ public interface DeliveryUnitAssessmentProvider {
             AnalysisAiOptions options,
             AnalysisAiAuthRef authRef,
             DeliveryEvidencePacket packet,
+            DeliveryPromptPreparation preparation,
             AnalysisAiActivityListener activityListener
     );
 }
