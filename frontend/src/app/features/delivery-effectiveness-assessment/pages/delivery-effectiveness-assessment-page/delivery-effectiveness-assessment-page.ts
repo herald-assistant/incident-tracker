@@ -39,6 +39,7 @@ import {
   sanitizeFileNamePart
 } from '../../../../core/utils/json-file.utils';
 import {
+  DeliveryAssessmentAggregate,
   DeliveryAssessmentDimensions,
   DeliveryAssessmentUnit,
   DeliveryEffectivenessAssessmentExportEnvelope,
@@ -323,6 +324,57 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     return `${Math.round(normalized * 100)}%`;
   }
 
+  protected overallResultTooltip(job: DeliveryEffectivenessAssessmentJobStateSnapshot): string {
+    return `Zbiorczy obraz obserwowalnej złożoności dostarczonej w projekcie ${job.jiraProject} `
+      + `od ${job.fromDate} do ${job.toDate}. Powstaje z ${job.aggregate.totalUnits} Delivery Units `
+      + 'utworzonych z issue Jira i powiązanych, scalonych Merge Requests; nie jest oceną produktywności zespołu.';
+  }
+
+  protected deliveredStoryPointsTooltip(aggregate: DeliveryAssessmentAggregate): string {
+    return `Suma DSP z ${aggregate.assessedUnits} ocenionych Delivery Units wynosi ${aggregate.totalDeliveredStoryPoints}. `
+      + 'DSP każdej jednostki backend wylicza z ważonej oceny sześciu wymiarów AI i mapuje na skalę '
+      + '0, 1, 2, 3, 5, 8 lub 13. Jednostki bez oceny i błędne nie dodają punktów.';
+  }
+
+  protected confidenceTooltip(job: DeliveryEffectivenessAssessmentJobStateSnapshot): string {
+    const values = job.units
+      .map((unit) => unit.assessment?.confidence)
+      .filter((value): value is number => Number.isFinite(value));
+    if (!values.length) {
+      return 'Pewność ocen AI; nie opisuje kompletności analizy. Brak ocen daje poziom LOW. Gdy oceny istnieją, '
+        + 'backend liczy ich nieważoną średnią: HIGH od 0,80, MEDIUM od 0,60, LOW poniżej 0,60.';
+    }
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const formattedAverage = average.toLocaleString('pl-PL', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return `Pewność ocen AI; nie opisuje kompletności analizy. Nieważona średnia confidence z ${values.length} `
+      + `ocenionych jednostek wynosi ${formattedAverage}, dlatego poziom to ${job.aggregate.confidence}. `
+      + 'Progi: HIGH od 0,80, MEDIUM od 0,60, LOW poniżej 0,60.';
+  }
+
+  protected assessedUnitsTooltip(aggregate: DeliveryAssessmentAggregate): string {
+    return `Delivery Units ze statusem COMPLETED, dla których AI zwróciło prawidłową ocenę, a backend `
+      + `wyliczył DSP: ${aggregate.assessedUnits} z ${aggregate.totalUnits} wszystkich jednostek.`;
+  }
+
+  protected notAssessedUnitsTooltip(aggregate: DeliveryAssessmentAggregate): string {
+    const total = aggregate.excludedUnits + aggregate.notScorableUnits;
+    return `Suma jednostek EXCLUDED (${aggregate.excludedUnits}) i NOT_SCORABLE (${aggregate.notScorableUnits}) `
+      + `wynosi ${total}. EXCLUDED nie reprezentuje dostarczenia, a NOT_SCORABLE nie ma wystarczającego `
+      + 'evidence. Żadne z nich nie zwiększa DSP.';
+  }
+
+  protected failedUnitsTooltip(aggregate: DeliveryAssessmentAggregate): string {
+    return `Delivery Units ze statusem FAILED: ${aggregate.failedUnits}. To przypadki niezakończone z powodu `
+      + 'błędu przygotowania evidence, wywołania AI, walidacji lub parsowania odpowiedzi; nie zwiększają DSP.';
+  }
+
+  protected tokenCount(value: number): string {
+    return value.toLocaleString('pl-PL');
+  }
+
   protected dimensions(dimensions: DeliveryAssessmentDimensions): DimensionRow[] {
     return [
       { label: 'Outcome breadth', value: dimensions.outcomeBreadth },
@@ -343,7 +395,12 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     if (!usage) {
       return 'AI nie zostało wywołane dla tej jednostki.';
     }
-    return `${usage.totalTokens.toLocaleString('pl-PL')} tokenów · ${usage.apiCallCount} wywołań AI`;
+    return [
+      `Input: ${usage.inputTokens.toLocaleString('pl-PL')} tokenów`,
+      `Cache: ${usage.cacheReadTokens.toLocaleString('pl-PL')} tokenów`,
+      `Output: ${usage.outputTokens.toLocaleString('pl-PL')} tokenów`,
+      this.aiCallsLabel(usage.apiCallCount)
+    ].join(' · ');
   }
 
   protected unitWarnings(unit: DeliveryAssessmentUnit): string[] {
@@ -364,6 +421,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
   protected unitHasDetails(unit: DeliveryAssessmentUnit): boolean {
     return Boolean(
       unit.assessment
+      || unit.mergeRequests.length
       || unit.visibilityLimits.length
       || this.unitWarnings(unit).length
     );
@@ -378,6 +436,19 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
 
   protected trackUnit(_: number, unit: DeliveryAssessmentUnit): string {
     return unit.unitId;
+  }
+
+  private aiCallsLabel(count: number): string {
+    const absolute = Math.abs(count);
+    const lastTwoDigits = absolute % 100;
+    const lastDigit = absolute % 10;
+    if (absolute === 1) {
+      return '1 wywołanie AI';
+    }
+    if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+      return `${count.toLocaleString('pl-PL')} wywołania AI`;
+    }
+    return `${count.toLocaleString('pl-PL')} wywołań AI`;
   }
 
   private startRequest(): DeliveryEffectivenessAssessmentJobStartRequest {

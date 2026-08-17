@@ -1,4 +1,6 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { MatTooltip } from '@angular/material/tooltip';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { Observable, delay, of } from 'rxjs';
 
@@ -108,6 +110,67 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('47');
     expect(fixture.nativeElement.querySelector('.unit-row__cost').textContent).not.toContain('—');
     expect(fixture.nativeElement.textContent).not.toContain('jednostek mnożnika SDK');
+    const overallCostMetrics = Array.from(
+      fixture.nativeElement.querySelectorAll('.cost-summary dl > div') as NodeListOf<HTMLElement>
+    ).map((metric) => ({
+      label: metric.querySelector('dt')?.textContent.trim(),
+      value: metric.querySelector('dd')?.textContent.trim()
+    }));
+    expect(overallCostMetrics).toEqual([
+      { label: 'Input', value: '1 045 393' },
+      { label: 'Cache', value: '837 120' },
+      { label: 'Output', value: '72 414' },
+      { label: 'Wywołania AI', value: '47' }
+    ]);
+    expect(fixture.componentInstance['unitCostTooltip'](unit)).toBe(
+      'Input: 1 045 393 tokenów · Cache: 837 120 tokenów · Output: 72 414 tokenów · 47 wywołań AI'
+    );
+  });
+
+  it('should use singular AI call label in the unit cost tooltip', async () => {
+    const unit = completedUnit();
+    unit.usage = {
+      inputTokens: 16_000,
+      outputTokens: 890,
+      cacheReadTokens: 12_000,
+      cacheWriteTokens: 0,
+      totalTokens: 16_890,
+      cost: 0.03,
+      apiDurationMs: 5_000,
+      apiCallCount: 1,
+      model: 'gpt-5.4-mini',
+      contextTokenLimit: null,
+      contextCurrentTokens: null,
+      contextMessages: null
+    };
+    const { fixture } = await createComponent({
+      localRun: snapshot('COMPLETED', 8, [unit]),
+      localRunId: 'job-1'
+    });
+
+    expect(fixture.componentInstance['unitCostTooltip'](unit)).toBe(
+      'Input: 16 000 tokenów · Cache: 12 000 tokenów · Output: 890 tokenów · 1 wywołanie AI'
+    );
+  });
+
+  it('should explain every overall result metric and its calculation', async () => {
+    const completed = snapshot('COMPLETED', 8, [completedUnit()]);
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    const tooltips = fixture.debugElement
+      .queryAll(By.css('.overall-result__help'))
+      .map((element) => element.injector.get(MatTooltip).message);
+
+    expect(tooltips).toHaveLength(6);
+    expect(tooltips[0]).toContain('projekcie CRM od 2026-07-01 do 2026-07-31');
+    expect(tooltips[0]).toContain('issue Jira i powiązanych, scalonych Merge Requests');
+    expect(tooltips[1]).toContain('Suma DSP z 1 ocenionych Delivery Units wynosi 8');
+    expect(tooltips[1]).toContain('0, 1, 2, 3, 5, 8 lub 13');
+    expect(tooltips[2]).toContain('średnia confidence z 1 ocenionych jednostek wynosi 0,85');
+    expect(tooltips[2]).toContain('HIGH od 0,80, MEDIUM od 0,60, LOW poniżej 0,60');
+    expect(tooltips[3]).toContain('1 z 1 wszystkich jednostek');
+    expect(tooltips[4]).toContain('EXCLUDED (0) i NOT_SCORABLE (0) wynosi 0');
+    expect(tooltips[5]).toContain('Delivery Units ze statusem FAILED: 0');
   });
 
   it('should render one expandable issue table with row warnings and no duplicate report bands', async () => {
@@ -139,7 +202,41 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
     expect(details.textContent).toContain('Visibility limits');
     expect(details.textContent).toContain('Warnings');
     expect(details.textContent).toContain('Assessment completed with a parser warning.');
-    expect(details.textContent).not.toContain('GitLab');
+    expect(details.textContent).toContain('Merge Requests');
+    const mergeRequestLink = details.querySelector('.unit-merge-request-link') as HTMLAnchorElement;
+    expect(mergeRequestLink.href).toBe('https://gitlab.example.com/mr/7');
+    expect(mergeRequestLink.target).toBe('_blank');
+    expect(details.firstElementChild?.classList.contains('unit-merge-requests')).toBe(true);
+  });
+
+  it('should expose every merge request as a link above assessment dimensions', async () => {
+    const unit = completedUnit();
+    unit.mergeRequests.push({
+      identity: 'id:8',
+      projectPath: 'crm/customer-web',
+      iid: 8,
+      title: 'Display customer status',
+      webUrl: 'https://gitlab.example.com/mr/8',
+      mergedAt: '2026-07-01T09:30:00Z',
+      changedPaths: ['src/customer-status.ts']
+    });
+    const completed = snapshot('COMPLETED', 8, [unit]);
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    const expand = fixture.nativeElement.querySelector(
+      '.unit-row button[aria-label="Rozwiń szczegóły"]'
+    ) as HTMLButtonElement;
+    expand.click();
+    fixture.detectChanges();
+
+    const details = fixture.nativeElement.querySelector('.unit-details') as HTMLElement;
+    const links = Array.from(details.querySelectorAll('.unit-merge-request-link')) as HTMLAnchorElement[];
+    expect(links.map((link) => link.href)).toEqual([
+      'https://gitlab.example.com/mr/7',
+      'https://gitlab.example.com/mr/8'
+    ]);
+    expect(details.querySelector('.unit-merge-requests')?.nextElementSibling?.classList.contains('dimension-panel'))
+      .toBe(true);
   });
 
   it('should import a server-validated assessment and render it from the new history run', async () => {

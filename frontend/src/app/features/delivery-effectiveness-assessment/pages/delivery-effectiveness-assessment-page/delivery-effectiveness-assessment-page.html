@@ -221,6 +221,51 @@
 
               @if (isUnitExpanded(unit.unitId)) {
                 <div class="unit-details">
+                  @if (unit.mergeRequests.length) {
+                    <section class="unit-merge-requests" aria-label="Merge Requests jednostki">
+                      <header>
+                        <h3>Merge Requests</h3>
+                        <span>{{ unit.mergeRequests.length }}</span>
+                      </header>
+                      <ul>
+                        @for (mergeRequest of unit.mergeRequests; track mergeRequest.identity) {
+                          <li>
+                            @if (mergeRequest.webUrl) {
+                              <a
+                                class="unit-merge-request-link"
+                                [href]="mergeRequest.webUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                [attr.aria-label]="'Otwórz Merge Request ' + mergeRequest.projectPath + '!' + mergeRequest.iid"
+                              >
+                                <span class="material-symbols-outlined" aria-hidden="true">merge_type</span>
+                                <span class="unit-merge-request-link__copy">
+                                  <strong>{{ mergeRequest.title || 'Merge Request' }}</strong>
+                                  <small>
+                                    {{ mergeRequest.projectPath }}{{ mergeRequest.iid !== null ? '!' + mergeRequest.iid : '' }}
+                                  </small>
+                                </span>
+                                <span class="material-symbols-outlined unit-merge-request-link__external" aria-hidden="true">
+                                  open_in_new
+                                </span>
+                              </a>
+                            } @else {
+                              <div class="unit-merge-request-link unit-merge-request-link--unavailable">
+                                <span class="material-symbols-outlined" aria-hidden="true">merge_type</span>
+                                <span class="unit-merge-request-link__copy">
+                                  <strong>{{ mergeRequest.title || 'Merge Request' }}</strong>
+                                  <small>
+                                    {{ mergeRequest.projectPath }}{{ mergeRequest.iid !== null ? '!' + mergeRequest.iid : '' }}
+                                  </small>
+                                </span>
+                              </div>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    </section>
+                  }
+
                   @if (unit.assessment; as assessment) {
                     <section class="dimension-panel">
                       <header>
@@ -300,31 +345,87 @@
         @if (currentJob.aggregate; as aggregate) {
           <section class="overall-result" aria-label="Wynik całościowy">
             <div class="overall-result__primary">
-              <p class="section-eyebrow">Wynik całościowy</p>
+              <p class="section-eyebrow overall-result__label">
+                <span>Wynik całościowy</span>
+                <button
+                  type="button"
+                  class="overall-result__help"
+                  aria-label="Wyjaśnienie wyniku całościowego"
+                  [matTooltip]="overallResultTooltip(currentJob)"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                </button>
+              </p>
               <div>
                 <strong>{{ aggregate.totalDeliveredStoryPoints }}</strong>
-                <span>Delivered Story Points</span>
+                <span class="overall-result__label">
+                  <span>Delivered Story Points</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie Delivered Story Points"
+                    [matTooltip]="deliveredStoryPointsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </span>
               </div>
             </div>
             <dl class="overall-result__metrics">
               <div>
-                <dt>Coverage</dt>
-                <dd>{{ percent(aggregate.coverage) }}</dd>
-              </div>
-              <div>
-                <dt>Confidence</dt>
+                <dt class="overall-result__label">
+                  <span>Confidence</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie Confidence"
+                    [matTooltip]="confidenceTooltip(currentJob)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
                 <dd>{{ statusLabel(aggregate.confidence) }}</dd>
               </div>
               <div>
-                <dt>Ocenione</dt>
+                <dt class="overall-result__label">
+                  <span>Ocenione</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie liczby ocenionych jednostek"
+                    [matTooltip]="assessedUnitsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
                 <dd>{{ aggregate.assessedUnits }} / {{ aggregate.totalUnits }}</dd>
               </div>
               <div>
-                <dt>Brak oceny</dt>
+                <dt class="overall-result__label">
+                  <span>Brak oceny</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie liczby jednostek bez oceny"
+                    [matTooltip]="notAssessedUnitsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
                 <dd>{{ aggregate.excludedUnits + aggregate.notScorableUnits }}</dd>
               </div>
               <div>
-                <dt>Błędy</dt>
+                <dt class="overall-result__label">
+                  <span>Błędy</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie liczby błędów"
+                    [matTooltip]="failedUnitsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
                 <dd>{{ aggregate.failedUnits }}</dd>
               </div>
             </dl>
@@ -343,8 +444,16 @@
               </div>
               <dl>
                 <div>
-                  <dt>Tokeny</dt>
-                  <dd>{{ usage.totalTokens | number }}</dd>
+                  <dt>Input</dt>
+                  <dd>{{ tokenCount(usage.inputTokens) }}</dd>
+                </div>
+                <div>
+                  <dt>Cache</dt>
+                  <dd>{{ tokenCount(usage.cacheReadTokens) }}</dd>
+                </div>
+                <div>
+                  <dt>Output</dt>
+                  <dd>{{ tokenCount(usage.outputTokens) }}</dd>
                 </div>
                 <div>
                   <dt>Wywołania AI</dt>
