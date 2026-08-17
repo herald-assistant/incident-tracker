@@ -70,7 +70,7 @@ class DeliveryAssessmentImportServiceTest {
                         Instant.parse("2026-08-17T10:00:00Z")
                 )
         );
-        document.put("version", 2);
+        document.put("version", 1);
 
         assertThatThrownBy(() -> service.importReadOnly(document))
                 .isInstanceOf(DeliveryAssessmentImportException.class)
@@ -165,9 +165,7 @@ class DeliveryAssessmentImportServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                aggregate,
-                List.of(),
-                null
+                aggregate
         );
     }
 

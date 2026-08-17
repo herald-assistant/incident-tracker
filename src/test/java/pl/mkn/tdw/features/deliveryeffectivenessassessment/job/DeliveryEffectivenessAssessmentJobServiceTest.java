@@ -23,8 +23,6 @@ import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRefResolver;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
-import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -106,11 +104,8 @@ class DeliveryEffectivenessAssessmentJobServiceTest {
     }
 
     @Test
-    void shouldPreserveUsageAndReportWhenAiReturnsInsufficientEvidence() {
+    void shouldPreserveUsageWhenAiReturnsInsufficientEvidence() {
         var usage = new AnalysisAiUsage(100, 20, 30, 0, 120, 1.0, 500, 4, "gpt-5", null, null, null);
-        var report = new AnalysisReport(
-                "report-1", "Assessment", "DU-CRM-1", "Insufficient evidence", List.of(), AnalysisReportMeta.empty()
-        );
         when(source.discover(any(), any())).thenReturn(new DeliveryAssessmentSourceResult(
                 "effective-jql",
                 1,
@@ -124,8 +119,7 @@ class DeliveryEffectivenessAssessmentJobServiceTest {
                 ),
                 usage,
                 "prompt",
-                "session-1",
-                report
+                "session-1"
         ));
         DeliveryAssessmentUnitExecutor directUnitExecutor = task -> {
             task.run();
@@ -155,7 +149,6 @@ class DeliveryEffectivenessAssessmentJobServiceTest {
         assertThat(snapshot.units()).singleElement().satisfies(unit -> {
             assertThat(unit.status()).isEqualTo("NOT_SCORABLE");
             assertThat(unit.usage()).isEqualTo(usage);
-            assertThat(unit.report()).isEqualTo(report);
             assertThat(unit.visibilityLimits()).contains("Diff was incomplete.");
             assertThat(unit.preparedPrompt()).isEqualTo("one-shot prompt with skill and evidence");
             assertThat(unit.promptPreparedAt()).isNotNull();
@@ -165,7 +158,6 @@ class DeliveryEffectivenessAssessmentJobServiceTest {
             assertThat(step.itemCount()).isEqualTo(1);
         });
         assertThat(snapshot.aggregate().usage()).isEqualTo(usage);
-        assertThat(snapshot.visibilityLimits()).contains("Diff was incomplete.");
     }
 
     private DeliveryEffectivenessAssessmentJobStartRequest request() {

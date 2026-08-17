@@ -68,8 +68,7 @@ class DeliveryEffectivenessAssessmentJobControllerTest {
                 now, now, null, 0, 0, 0, null, List.of(), List.of(), List.of(), List.of(),
                 new DeliveryAssessmentAggregateResponse(
                         0, Map.of(), 0, 0, 0, 0, 0, 0, "LOW", null
-                ),
-                List.of(), null
+                )
         );
     }
 }

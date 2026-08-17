@@ -153,9 +153,7 @@ public class DeliveryAssessmentImportService {
                 source.contextSections(),
                 source.aiActivityEvents(),
                 source.units(),
-                source.aggregate(),
-                source.visibilityLimits(),
-                source.report()
+                source.aggregate()
         );
     }
 

@@ -8,7 +8,6 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription, finalize } from 'rxjs';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
-import { AnalysisReportPanelComponent } from '../../../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
 import {
   AnalysisAiModelOptionsResponse,
@@ -28,8 +27,11 @@ import {
   normalizeAnalysisAiModelOptions,
   reasoningEffortsForAiModel
 } from '../../../../core/utils/analysis-ai-model-options.utils';
-import { estimateAnalysisAiCost } from '../../../../core/utils/analysis-ai-usage-cost.utils';
-import { formatDateTime, formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
+import {
+  AnalysisAiCostEstimate,
+  estimateAnalysisAiCost
+} from '../../../../core/utils/analysis-ai-usage-cost.utils';
+import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import {
   downloadJsonFile,
   formatFileTimestamp,
@@ -56,7 +58,6 @@ type DimensionRow = { label: string; value: number };
     DecimalPipe,
     MatTooltipModule,
     AnalysisFeatureAsideComponent,
-    AnalysisReportPanelComponent,
     AnalysisStepsPanelComponent
   ],
   templateUrl: './delivery-effectiveness-assessment-page.html',
@@ -317,10 +318,6 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     return statusClassName(status);
   }
 
-  protected dateTime(value: string | null | undefined): string {
-    return formatDateTime(value) || 'n/a';
-  }
-
   protected percent(value: number | null | undefined): string {
     const normalized = Number.isFinite(value) ? Number(value) : 0;
     return `${Math.round(normalized * 100)}%`;
@@ -337,10 +334,46 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     ];
   }
 
-  protected distributionEntries(distribution: Record<string, number>): Array<{ points: string; count: number }> {
-    return Object.entries(distribution)
-      .map(([points, count]) => ({ points, count }))
-      .sort((left, right) => Number(left.points) - Number(right.points));
+  protected unitCostEstimate(unit: DeliveryAssessmentUnit): AnalysisAiCostEstimate | null {
+    return estimateAnalysisAiCost(unit.usage);
+  }
+
+  protected unitCostTooltip(unit: DeliveryAssessmentUnit): string {
+    const usage = unit.usage;
+    if (!usage) {
+      return 'AI nie zostało wywołane dla tej jednostki.';
+    }
+    return `${usage.totalTokens.toLocaleString('pl-PL')} tokenów · ${usage.apiCallCount} wywołań AI`;
+  }
+
+  protected unitWarnings(unit: DeliveryAssessmentUnit): string[] {
+    return Array.from(new Set(
+      [unit.errorMessage]
+        .filter((warning): warning is string => Boolean(warning?.trim()))
+    ));
+  }
+
+  protected unitHasAttention(unit: DeliveryAssessmentUnit): boolean {
+    return Boolean(
+      unit.visibilityLimits.length
+      || unit.assessment?.qualityFlags.length
+      || this.unitWarnings(unit).length
+    );
+  }
+
+  protected unitHasDetails(unit: DeliveryAssessmentUnit): boolean {
+    return Boolean(
+      unit.assessment
+      || unit.visibilityLimits.length
+      || this.unitWarnings(unit).length
+    );
+  }
+
+  protected unitAttentionLabel(unit: DeliveryAssessmentUnit): string {
+    const total = unit.visibilityLimits.length
+      + (unit.assessment?.qualityFlags.length ?? 0)
+      + this.unitWarnings(unit).length;
+    return `${total} ${total === 1 ? 'informacja wymaga' : 'informacje wymagają'} uwagi`;
   }
 
   protected trackUnit(_: number, unit: DeliveryAssessmentUnit): string {
@@ -525,9 +558,9 @@ function jobFromEnvelope(value: unknown): DeliveryEffectivenessAssessmentJobStat
   const envelope = value as Partial<DeliveryEffectivenessAssessmentExportEnvelope>;
   if (
     envelope.schema !== 'tdw.delivery-effectiveness-assessment-export'
-    || envelope.version !== 1
+    || envelope.version !== 2
     || envelope.payload?.type !== 'delivery-effectiveness-assessment'
-    || envelope.payload.resultContract !== 'delivery-effectiveness-assessment-v1'
+    || envelope.payload.resultContract !== 'delivery-effectiveness-assessment-v2'
     || !envelope.payload.job?.jobId
   ) {
     return null;

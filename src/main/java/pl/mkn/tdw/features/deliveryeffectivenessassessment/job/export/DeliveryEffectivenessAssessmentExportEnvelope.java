@@ -12,9 +12,9 @@ public record DeliveryEffectivenessAssessmentExportEnvelope(
 ) {
 
     public static final String SCHEMA = "tdw.delivery-effectiveness-assessment-export";
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
     public static final String PAYLOAD_TYPE = "delivery-effectiveness-assessment";
-    public static final String RESULT_CONTRACT = "delivery-effectiveness-assessment-v1";
+    public static final String RESULT_CONTRACT = "delivery-effectiveness-assessment-v2";
 
     public static DeliveryEffectivenessAssessmentExportEnvelope from(
             DeliveryEffectivenessAssessmentJobStateSnapshot snapshot,

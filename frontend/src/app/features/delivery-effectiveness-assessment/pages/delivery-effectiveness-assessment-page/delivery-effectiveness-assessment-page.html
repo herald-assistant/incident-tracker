@@ -133,71 +133,26 @@
     </section>
 
     @if (job(); as currentJob) {
-      <section class="run-strip analysis-card" aria-live="polite">
-        <div class="run-strip__heading">
-          <div>
-            <p class="section-eyebrow">{{ currentJob.jiraProject }} · {{ currentJob.fromDate }} – {{ currentJob.toDate }}</p>
-            <h2>{{ currentJob.currentStepLabel || statusLabel(currentJob.status) }}</h2>
-          </div>
-          <span [attr.class]="statusClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
-        </div>
-        <div class="progress-track" aria-hidden="true">
-          <span [style.width.%]="progressPercent()"></span>
-        </div>
-        <div class="run-strip__meta">
-          <span>{{ currentJob.processedIssues }} / {{ currentJob.totalIssues || currentJob.discoveredIssues }} issue</span>
-          <span>{{ currentJob.units.length }} jednostek</span>
-          <span>Aktualizacja {{ dateTime(currentJob.updatedAt) }}</span>
-        </div>
-      </section>
-
-      @if (currentJob.aggregate; as aggregate) {
-        <section class="aggregate-band" aria-label="Podsumowanie assessmentu">
-          <div class="aggregate-primary">
-            <span class="material-symbols-outlined" aria-hidden="true">speed</span>
-            <div>
-              <strong>{{ aggregate.totalDeliveredStoryPoints }}</strong>
-              <span>Delivered Story Points</span>
-            </div>
-          </div>
-          <dl class="aggregate-metrics">
-            <div>
-              <dt>Coverage</dt>
-              <dd>{{ percent(aggregate.coverage) }}</dd>
-            </div>
-            <div>
-              <dt>Confidence</dt>
-              <dd>{{ statusLabel(aggregate.confidence) }}</dd>
-            </div>
-            <div>
-              <dt>Ocenione</dt>
-              <dd>{{ aggregate.assessedUnits }} / {{ aggregate.totalUnits }}</dd>
-            </div>
-            <div>
-              <dt>Brak podstaw</dt>
-              <dd>{{ aggregate.notScorableUnits }}</dd>
-            </div>
-            <div>
-              <dt>Błędy</dt>
-              <dd>{{ aggregate.failedUnits }}</dd>
-            </div>
-          </dl>
-          <div class="distribution" aria-label="Rozkład punktów">
-            @for (entry of distributionEntries(aggregate.distribution); track entry.points) {
-              <span><strong>{{ entry.points }}</strong><small>{{ entry.count }}</small></span>
-            }
-          </div>
-        </section>
-      }
-
-      <section class="units-section">
+      <section class="units-section analysis-card" aria-live="polite">
         <div class="units-heading">
           <div>
-            <p class="section-eyebrow">Delivery Units</p>
+            <p class="section-eyebrow">{{ currentJob.jiraProject }} · {{ currentJob.fromDate }} – {{ currentJob.toDate }}</p>
             <h2>Jednostki dostarczenia</h2>
           </div>
-          <span>{{ currentJob.units.length }}</span>
+          <div class="units-heading__status">
+            <span [attr.class]="statusClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
+            <span class="units-count">{{ currentJob.units.length }}</span>
+          </div>
         </div>
+
+        @if (workflowRunning()) {
+          <div class="units-progress">
+            <div class="progress-track" aria-hidden="true">
+              <span [style.width.%]="progressPercent()"></span>
+            </div>
+            <span>{{ currentJob.processedIssues }} / {{ currentJob.totalIssues || currentJob.discoveredIssues }} issue</span>
+          </div>
+        }
 
         <div class="units-table" role="table" aria-label="Delivery Units">
           <div class="units-table__header" role="row">
@@ -205,6 +160,7 @@
             <span role="columnheader">Merge Requests</span>
             <span role="columnheader">Status</span>
             <span role="columnheader">DSP</span>
+            <span role="columnheader">Koszt AI</span>
             <span role="columnheader"></span>
           </div>
           @for (unit of currentJob.units; track trackUnit($index, unit)) {
@@ -220,8 +176,18 @@
                   <strong>{{ unit.mergeRequests.length }}</strong>
                   <small>{{ unit.mergeRequests[0]?.projectPath || 'Brak merged code evidence' }}</small>
                 </div>
-                <div role="cell">
+                <div class="unit-row__status" role="cell">
                   <span [attr.class]="statusClass(unit.status)">{{ statusLabel(unit.status) }}</span>
+                  @if (unitHasAttention(unit)) {
+                    <span
+                      class="unit-warning-icon"
+                      role="img"
+                      [attr.aria-label]="unitAttentionLabel(unit)"
+                      [matTooltip]="unitAttentionLabel(unit)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                    </span>
+                  }
                 </div>
                 <div class="unit-row__points" role="cell">
                   <strong>{{ unit.assessment?.deliveredStoryPoints ?? '—' }}</strong>
@@ -229,17 +195,28 @@
                     <small>{{ unit.assessment.score100 | number:'1.0-1' }}/100</small>
                   }
                 </div>
-                <button
-                  type="button"
-                  class="icon-button"
-                  [attr.aria-label]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
-                  [matTooltip]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
-                  (click)="toggleUnit(unit.unitId)"
-                >
-                  <span class="material-symbols-outlined" aria-hidden="true">
-                    {{ isUnitExpanded(unit.unitId) ? 'expand_less' : 'expand_more' }}
-                  </span>
-                </button>
+                <div class="unit-row__cost" role="cell" [matTooltip]="unitCostTooltip(unit)">
+                  @if (unitCostEstimate(unit); as estimate) {
+                    <strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong>
+                  } @else {
+                    <strong>—</strong>
+                  }
+                </div>
+                @if (unitHasDetails(unit)) {
+                  <button
+                    type="button"
+                    class="icon-button"
+                    [attr.aria-label]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
+                    [matTooltip]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
+                    (click)="toggleUnit(unit.unitId)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ isUnitExpanded(unit.unitId) ? 'expand_less' : 'expand_more' }}
+                    </span>
+                  </button>
+                } @else {
+                  <span class="unit-row__empty-action" aria-hidden="true"></span>
+                }
               </div>
 
               @if (isUnitExpanded(unit.unitId)) {
@@ -261,72 +238,50 @@
                       </div>
                     </section>
 
-                    <section class="evidence-panel">
-                      <div>
+                  }
+
+                  <div class="unit-insights">
+                    @if (unit.assessment?.evidenceSummary?.length) {
+                      <section class="unit-insight">
                         <h3>Evidence</h3>
                         <ul>
-                          @for (item of assessment.evidenceSummary; track item) {
+                          @for (item of unit.assessment?.evidenceSummary; track item) {
                             <li>{{ item }}</li>
-                          } @empty {
-                            <li>Brak podsumowania evidence.</li>
                           }
                         </ul>
-                      </div>
-                      <div>
+                      </section>
+                    }
+                    @if (unit.assessment?.qualityFlags?.length) {
+                      <section class="unit-insight">
                         <h3>Quality flags</h3>
                         <ul>
-                          @for (flag of assessment.qualityFlags; track flag) {
+                          @for (flag of unit.assessment?.qualityFlags; track flag) {
                             <li>{{ flag }}</li>
-                          } @empty {
-                            <li>Brak flag jakości.</li>
                           }
                         </ul>
-                      </div>
-                    </section>
-                  }
-
-                  <section class="source-panel">
-                    <div>
-                      <h3>Jira</h3>
-                      @for (issue of unit.issues; track issue.issueKey) {
-                        <a [href]="issue.issueUrl" target="_blank" rel="noreferrer">
-                          <strong>{{ issue.issueKey }}</strong>
-                          <span>{{ issue.summary }}</span>
-                          <small>{{ issue.issueType }} · Done {{ dateTime(issue.doneAt) }}</small>
-                        </a>
-                      }
-                    </div>
-                    <div>
-                      <h3>GitLab</h3>
-                      @for (mergeRequest of unit.mergeRequests; track mergeRequest.identity) {
-                        <a [href]="mergeRequest.webUrl" target="_blank" rel="noreferrer">
-                          <strong>{{ mergeRequest.projectPath }}!{{ mergeRequest.iid }}</strong>
-                          <span>{{ mergeRequest.title }}</span>
-                          <small>{{ mergeRequest.changedPaths.length }} changed paths</small>
-                        </a>
-                      } @empty {
-                        <p>Brak zmergowanego Merge Requestu.</p>
-                      }
-                    </div>
-                  </section>
-
-                  @if (unit.visibilityLimits.length || unit.errorMessage) {
-                    <section class="unit-limits">
-                      <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
-                      <ul>
-                        @if (unit.errorMessage) {
-                          <li>{{ unit.errorMessage }}</li>
-                        }
-                        @for (limit of unit.visibilityLimits; track limit) {
-                          <li>{{ limit }}</li>
-                        }
-                      </ul>
-                    </section>
-                  }
-
-                  @if (unit.report) {
-                    <app-analysis-report-panel [report]="unit.report"></app-analysis-report-panel>
-                  }
+                      </section>
+                    }
+                    @if (unit.visibilityLimits.length) {
+                      <section class="unit-insight unit-insight--attention">
+                        <h3>Visibility limits</h3>
+                        <ul>
+                          @for (limit of unit.visibilityLimits; track limit) {
+                            <li>{{ limit }}</li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                    @if (unitWarnings(unit).length) {
+                      <section class="unit-insight unit-insight--attention">
+                        <h3>Warnings</h3>
+                        <ul>
+                          @for (warning of unitWarnings(unit); track warning) {
+                            <li>{{ warning }}</li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                  </div>
                 </div>
               }
             </article>
@@ -341,41 +296,65 @@
             </div>
           }
         </div>
-      </section>
 
-      @if (currentJob.visibilityLimits.length) {
-        <section class="visibility-band">
-          <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
-          <div>
-            <h2>Visibility limits</h2>
-            <ul>
-              @for (limit of currentJob.visibilityLimits; track limit) {
-                <li>{{ limit }}</li>
-              }
-            </ul>
-          </div>
-        </section>
-      }
+        @if (currentJob.aggregate; as aggregate) {
+          <section class="overall-result" aria-label="Wynik całościowy">
+            <div class="overall-result__primary">
+              <p class="section-eyebrow">Wynik całościowy</p>
+              <div>
+                <strong>{{ aggregate.totalDeliveredStoryPoints }}</strong>
+                <span>Delivered Story Points</span>
+              </div>
+            </div>
+            <dl class="overall-result__metrics">
+              <div>
+                <dt>Coverage</dt>
+                <dd>{{ percent(aggregate.coverage) }}</dd>
+              </div>
+              <div>
+                <dt>Confidence</dt>
+                <dd>{{ statusLabel(aggregate.confidence) }}</dd>
+              </div>
+              <div>
+                <dt>Ocenione</dt>
+                <dd>{{ aggregate.assessedUnits }} / {{ aggregate.totalUnits }}</dd>
+              </div>
+              <div>
+                <dt>Brak oceny</dt>
+                <dd>{{ aggregate.excludedUnits + aggregate.notScorableUnits }}</dd>
+              </div>
+              <div>
+                <dt>Błędy</dt>
+                <dd>{{ aggregate.failedUnits }}</dd>
+              </div>
+            </dl>
+          </section>
 
-      @if (currentJob.aggregate.usage; as usage) {
-        <section class="usage-band">
-          <span><strong>{{ usage.totalTokens | number }}</strong> tokenów</span>
-          <span><strong>{{ usage.apiCallCount }}</strong> wywołań AI</span>
-          @if (usageCostEstimate(); as estimate) {
-            <span><strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong> szacowany koszt tokenów</span>
+          @if (aggregate.usage; as usage) {
+            <footer class="cost-summary" aria-label="Całościowy koszt AI">
+              <div class="cost-summary__primary">
+                <p class="section-eyebrow">Koszt AI całości</p>
+                @if (usageCostEstimate(); as estimate) {
+                  <strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong>
+                  <span>szacowany koszt tokenów</span>
+                } @else {
+                  <strong>n/a</strong>
+                }
+              </div>
+              <dl>
+                <div>
+                  <dt>Tokeny</dt>
+                  <dd>{{ usage.totalTokens | number }}</dd>
+                </div>
+                <div>
+                  <dt>Wywołania AI</dt>
+                  <dd>{{ usage.apiCallCount }}</dd>
+                </div>
+              </dl>
+            </footer>
           }
-          <span
-            [matTooltip]="'Wartość cost ze zdarzeń Copilot SDK jest sumą mnożników rozliczeniowych modelu, a nie kwotą USD.'"
-          >
-            <strong>{{ usage.cost | number:'1.0-2' }}</strong> jednostek mnożnika SDK
-          </span>
-          <span><strong>{{ usage.apiDurationMs / 1000 | number:'1.1-1' }} s</strong> API</span>
-        </section>
-      }
-
-      @if (currentJob.report) {
-        <app-analysis-report-panel [report]="currentJob.report"></app-analysis-report-panel>
-      }
+        }
+      </section>
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy Delivery Effectiveness Assessment"

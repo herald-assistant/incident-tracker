@@ -12,7 +12,7 @@ zakresu dat.
 - Jira search, issue material, GitLab i Confluence sa reusable capability w
   `integrations.*`.
 - Feature posiada request, job state, source orchestration, Delivery Units,
-  evidence packet, prompt, skill, scoring, report i local run mapping.
+  evidence packet, prompt, skill, scoring, wynik i local run mapping.
 - AI nie dostaje Story Points, komentarzy, worklogow, autorow, assignee ani
   reviewerow.
 - Model zwraca wymiary `0-4` wedlug feature-local kotwic behawioralnych;

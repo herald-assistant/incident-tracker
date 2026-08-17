@@ -21,7 +21,6 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
     private final DeliveryAiResponseParser responseParser;
-    private final DeliveryAssessmentReportFactory reportFactory;
 
     @Override
     public DeliveryUnitAiAnalysis analyze(
@@ -43,8 +42,7 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
                 response,
                 result.usage(),
                 preparation.prompt(),
-                result.sessionId(),
-                reportFactory.assessmentReport(packet, response)
+                result.sessionId()
         );
     }
 }

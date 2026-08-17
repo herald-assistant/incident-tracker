@@ -10,18 +10,13 @@ import pl.mkn.tdw.features.deliveryeffectivenessassessment.source.DeliveryAssess
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
-import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
-import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -41,7 +36,6 @@ public class DeliveryEffectivenessAssessmentJobState {
     private int processedIssues;
     private int totalIssues;
     private String effectiveJql;
-    private final List<String> visibilityLimits = new ArrayList<>();
     private final List<AnalysisAiActivityEvent> aiActivityEvents = new ArrayList<>();
     private final LinkedHashMap<String, DeliveryAssessmentUnitState> units = new LinkedHashMap<>();
     private Instant discoveryStartedAt;
@@ -86,9 +80,12 @@ public class DeliveryEffectivenessAssessmentJobState {
         totalIssues = source.jiraTotal();
         discoveredIssues = source.issues().size();
         processedIssues = source.issues().size();
-        visibilityLimits.addAll(source.limitations());
         units.clear();
-        deliveryUnits.forEach(unit -> units.put(unit.unitId(), new DeliveryAssessmentUnitState(unit)));
+        deliveryUnits.forEach(unit -> {
+            var unitState = new DeliveryAssessmentUnitState(unit);
+            unitState.addVisibilityLimits(source.limitations());
+            units.put(unit.unitId(), unitState);
+        });
         discoveryCompletedAt = Instant.now();
         analysisStartedAt = discoveryCompletedAt;
         status = deliveryUnits.isEmpty() ? "COMPLETED_WITH_WARNINGS" : "ANALYZING";
@@ -125,10 +122,9 @@ public class DeliveryEffectivenessAssessmentJobState {
     public synchronized void markUnitCompleted(
             String unitId,
             DeliveryAssessmentScore score,
-            AnalysisAiUsage usage,
-            AnalysisReport report
+            AnalysisAiUsage usage
     ) {
-        unit(unitId).completed(score, usage, report);
+        unit(unitId).completed(score, usage);
         completePromptPreparationIfReady();
         touch();
     }
@@ -142,10 +138,9 @@ public class DeliveryEffectivenessAssessmentJobState {
     public synchronized void markUnitExcluded(
             String unitId,
             List<String> limitations,
-            AnalysisAiUsage usage,
-            AnalysisReport report
+            AnalysisAiUsage usage
     ) {
-        unit(unitId).excluded(limitations, usage, report);
+        unit(unitId).excluded(limitations, usage);
         completePromptPreparationIfReady();
         touch();
     }
@@ -159,10 +154,9 @@ public class DeliveryEffectivenessAssessmentJobState {
     public synchronized void markUnitNotScorable(
             String unitId,
             List<String> limitations,
-            AnalysisAiUsage usage,
-            AnalysisReport report
+            AnalysisAiUsage usage
     ) {
-        unit(unitId).notScorable(limitations, usage, report);
+        unit(unitId).notScorable(limitations, usage);
         completePromptPreparationIfReady();
         touch();
     }
@@ -223,7 +217,6 @@ public class DeliveryEffectivenessAssessmentJobState {
     public synchronized DeliveryEffectivenessAssessmentJobStateSnapshot snapshot() {
         var unitSnapshots = units.values().stream().map(DeliveryAssessmentUnitState::snapshot).toList();
         var aggregate = aggregate(unitSnapshots);
-        var effectiveVisibilityLimits = aggregateVisibilityLimits(unitSnapshots);
         return new DeliveryEffectivenessAssessmentJobStateSnapshot(
                 jobId,
                 request.jiraProject(),
@@ -247,16 +240,8 @@ public class DeliveryEffectivenessAssessmentJobState {
                 contextSections(unitSnapshots),
                 List.copyOf(aiActivityEvents),
                 unitSnapshots,
-                aggregate,
-                effectiveVisibilityLimits,
-                report(unitSnapshots, aggregate, effectiveVisibilityLimits)
+                aggregate
         );
-    }
-
-    private List<String> aggregateVisibilityLimits(List<DeliveryAssessmentUnitResponse> snapshots) {
-        var result = new LinkedHashSet<>(visibilityLimits);
-        snapshots.forEach(unit -> result.addAll(unit.visibilityLimits()));
-        return List.copyOf(result);
     }
 
     private DeliveryAssessmentAggregateResponse aggregate(List<DeliveryAssessmentUnitResponse> snapshots) {
@@ -372,67 +357,6 @@ public class DeliveryEffectivenessAssessmentJobState {
         return List.of(
                 new AnalysisEvidenceSection("jira", "delivery-scope", scopeItems),
                 new AnalysisEvidenceSection("delivery", "delivery-units", unitItems)
-        );
-    }
-
-    private AnalysisReport report(
-            List<DeliveryAssessmentUnitResponse> snapshots,
-            DeliveryAssessmentAggregateResponse aggregate,
-            List<String> effectiveVisibilityLimits
-    ) {
-        var lines = new StringBuilder();
-        lines.append("- Total Delivered Story Points: **").append(aggregate.totalDeliveredStoryPoints()).append("**\n")
-                .append("- Assessed: ").append(aggregate.assessedUnits()).append(" / ").append(aggregate.totalUnits()).append("\n")
-                .append("- Coverage: ").append(Math.round(aggregate.coverage() * 100)).append("%\n")
-                .append("- Confidence: ").append(aggregate.confidence()).append("\n")
-                .append("- Excluded: ").append(aggregate.excludedUnits()).append("\n")
-                .append("- Not scorable: ").append(aggregate.notScorableUnits()).append("\n")
-                .append("- Failed: ").append(aggregate.failedUnits()).append("\n");
-        if (aggregate.totalUnits() > 0 && aggregate.assessedUnits() == 0) {
-            lines.append("- Result: no Delivery Unit could be assessed; inspect visibility limits below.\n");
-        }
-        snapshots.stream().sorted(Comparator.comparing(DeliveryAssessmentUnitResponse::unitId)).forEach(unit -> {
-            lines.append("\n### ").append(unit.unitId()).append("\n\n")
-                    .append("- Status: ").append(unit.status()).append("\n");
-            if (unit.assessment() != null) {
-                lines.append("- DSP: ").append(unit.assessment().deliveredStoryPoints()).append("\n")
-                        .append("- Confidence: ").append(unit.assessment().confidence()).append("\n");
-            }
-            if (!unit.visibilityLimits().isEmpty()) {
-                lines.append("- Visibility limits:\n");
-                unit.visibilityLimits().forEach(limit -> lines.append("  - ").append(limit).append("\n"));
-            }
-        });
-        var warnings = new ArrayList<String>();
-        if (aggregate.notScorableUnits() > 0) {
-            warnings.add(aggregate.notScorableUnits() == 1
-                    ? "1 Delivery Unit was not scorable."
-                    : aggregate.notScorableUnits() + " Delivery Units were not scorable.");
-        }
-        if (aggregate.failedUnits() > 0) {
-            warnings.add(aggregate.failedUnits() == 1
-                    ? "1 Delivery Unit failed assessment."
-                    : aggregate.failedUnits() + " Delivery Units failed assessment.");
-        }
-        var gaps = aggregate.totalUnits() > 0 && aggregate.assessedUnits() == 0
-                ? List.of("No assessable Delivery Unit result was produced.")
-                : List.<String>of();
-        return new AnalysisReport(
-                "delivery-effectiveness-" + jobId,
-                "Delivery Effectiveness Assessment",
-                request.jiraProject() + " | " + request.fromDate() + " - " + request.toDate(),
-                "Observable delivered complexity with explicit coverage and visibility limits.",
-                List.of(new AnalysisReportSection(
-                        "ASSESSMENT_SUMMARY", "Assessment summary", 10, lines.toString(), AnalysisReportMeta.empty()
-                )),
-                new AnalysisReportMeta(
-                        List.of(),
-                        effectiveVisibilityLimits,
-                        List.of(),
-                        gaps,
-                        aggregate.confidence(),
-                        warnings
-                )
         );
     }
 

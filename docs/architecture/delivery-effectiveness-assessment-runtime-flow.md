@@ -48,14 +48,14 @@ zmiana discovery, jednostki, AI activity, usage albo statusu zapisuje kolejny
 snapshot tego samego runu. Zapisy sa serializowane na stanie joba, aby
 rownolegle konczace sie jednostki nie cofnely `run.json`.
 
-Local run przechowuje sanitizowany export envelope V1 i nie ma continuation.
+Local run przechowuje sanitizowany export envelope V2 i nie ma continuation.
 Otwarcie historii odtwarza formularz oraz ostatni snapshot. Dla stanu
 nieterminalnego UI probuje polling live joba; restart backendu nie wznawia
 pracy, ale zapis pozostaje czytelny.
 
 UI pozwala wyeksportowac terminalny run przez wspolny endpoint Analysis
 History. Import przyjmuje tylko terminalny envelope o dokladnym schemacie,
-wersji, payload type i result contract V1 oraz sprawdza spojnosci podstawowych
+wersji, payload type i result contract V2 oraz sprawdza spojnosci podstawowych
 danych i agregatu. Backend nadaje zaimportowanemu snapshotowi nowy `jobId`,
 zapisuje go od razu jako osobny local run i zwraca wynik tylko do odczytu.
 Import nie rejestruje live joba, nie uruchamia pollingu, Jira, GitLab ani AI i
@@ -145,9 +145,10 @@ odpowiedz ma byc finalnym JSON-em.
 
 Jira, GitLab, Confluence, filesystem, shell i terminal nie sa dostepne w
 sesji. AI zwraca classification, confidence, evidence/quality/visibility oraz
-szesc wymiarow 0-4 dla `DELIVERY`. Nie zwraca DSP ani `score100`. Raport
-jednostki jest skladany deterministycznie z tego samego sparsowanego JSON-a,
-bez kolejnego wywolania modelu albo toola.
+szesc wymiarow 0-4 dla `DELIVERY`. Nie zwraca DSP ani `score100`. Zwalidowany
+JSON jest mapowany bezposrednio na wynik jednostki; feature nie tworzy
+rownoleglego `AnalysisReport` ani nie wykonuje kolejnego wywolania modelu lub
+toola.
 
 Skala jest zakotwiczona behawioralnie osobno dla kazdego wymiaru. Skill
 definiuje obserwowalne kotwice `0`, `2` i `4`; `1` i `3` sa poziomami
@@ -171,9 +172,8 @@ to etykieta nawigacyjna, a nie runtime selection skilla.
 Backend liczy `score100` wagami `10/25/25/15/15/10` i mapuje wynik na
 `0/1/2/3/5/8/13`. `INSUFFICIENT_EVIDENCE` przechodzi do `NOT_SCORABLE`, a
 niepoprawna odpowiedz AI konczy tylko jednostke jako `FAILED`.
-Kazdy terminalny wynik uruchomionej sesji AI zachowuje jej `usage`, ostatni
-report oraz visibility limits, rowniez dla `INSUFFICIENT_EVIDENCE` i
-`EXCLUDED`.
+Kazdy terminalny wynik uruchomionej sesji AI zachowuje jej `usage` i visibility
+limits, rowniez dla `INSUFFICIENT_EVIDENCE` i `EXCLUDED`.
 
 ## Rownoleglosc i wynik
 
@@ -182,31 +182,35 @@ konfigurowalnym parallelism, kolejka i timeoutem. Status jednostki jest
 monotoniczny; spozniony wynik po timeoutcie nie moze nadpisac `FAILED`.
 Awaria jednej jednostki nie zatrzymuje pozostalych.
 
-Snapshot publikuje postep Jira, kroki, context, activity, czastkowe jednostki,
-aggregate, visibility limits i report. Aggregate zawiera total DSP,
-distribution, coverage, confidence, liczniki `EXCLUDED`/`NOT_SCORABLE`/`FAILED`
-oraz zsumowane usage/cost. Parent job konczy sie `COMPLETED`,
+Snapshot publikuje postep Jira, kroki, context, activity, czastkowe jednostki i
+aggregate. Visibility limits pozostaja przy jednostkach, ktorych widocznosci
+dotycza. Aggregate zawiera total DSP, distribution, coverage, confidence,
+liczniki `EXCLUDED`/`NOT_SCORABLE`/`FAILED` oraz zsumowane usage/cost. Parent job konczy sie `COMPLETED`,
 `COMPLETED_WITH_WARNINGS` albo `FAILED`.
 
 Tokeny, duration, liczba wywolan i SDK `cost` sa sumowane dokladnie raz z usage
 kazdej jednostki. Pole SDK `cost` oznacza sume mnoznikow rozliczeniowych modelu,
-nie kwote USD. UI pokazuje je jako jednostki mnoznika, a osobno prezentuje
-szacowany koszt tokenow wyliczony z input/output/cache i cennika modelu.
+nie kwote USD. UI pokazuje szacowany koszt tokenow wyliczony z
+input/output/cache i cennika modelu osobno dla jednostki oraz zbiorczo na dole.
 
-Top-level visibility limits sa suma ograniczen discovery i jednostek. Gdy
-zadna jednostka nie zostala oceniona, report publikuje jawny gap i warning
-zamiast prezentowac samo zerowe DSP jako pelny wynik.
+Glowny wynik UI jest jedna rozwijalna tabela Delivery Units. Wiersz pokazuje
+issue, MR-y, status, DSP i koszt AI; ikona ostrzezenia przy statusie sygnalizuje
+quality flags, visibility limits albo blad jednostki. Rozwiniecie pokazuje
+tylko dostepne Evidence, Quality flags, Visibility limits i Warnings. Pod tabela
+znajduje sie prosty wynik zbiorczy bez ponownego wyliczania konkretnych issue,
+a na samym dole koszt calej analizy. Nie ma osobnego visibility band,
+assessment summary, report meta ani drugiej listy jednostek.
 
 ## Ownership
 
 - `features.deliveryeffectivenessassessment` posiada request, discovery
   orchestration, Delivery Units, evidence, AI policy, scoring, job state,
-  runs mapping, result/report i API.
+  runs mapping, result i API.
 - `integrations.jira` posiada typed search/JQL, paging, material profile i
   status history REST.
 - `integrations.gitlab` posiada MR discovery, metadata, changed files i diff.
 - `aiplatform.copilot` pozostaje neutralnym runtime.
 - `localworkspace.analysisruns`, `shared.ai` i frontendowe komponenty
-  przebiegu/reportu pozostaja wspolne.
+  przebiegu pozostaja wspolne.
 
 Feature nie importuje sibling feature'ow.

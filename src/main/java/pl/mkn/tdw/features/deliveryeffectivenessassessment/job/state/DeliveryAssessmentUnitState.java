@@ -7,7 +7,6 @@ import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAsses
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAssessmentResponse;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAssessmentUnitResponse;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -27,7 +26,6 @@ final class DeliveryAssessmentUnitState {
     private String preparedPrompt;
     private Instant promptPreparedAt;
     private AnalysisAiUsage usage;
-    private AnalysisReport report;
 
     DeliveryAssessmentUnitState(DeliveryUnit unit) {
         this.unit = unit;
@@ -62,14 +60,13 @@ final class DeliveryAssessmentUnitState {
         promptPreparedAt = Instant.now();
     }
 
-    void completed(DeliveryAssessmentScore score, AnalysisAiUsage usage, AnalysisReport report) {
+    void completed(DeliveryAssessmentScore score, AnalysisAiUsage usage) {
         if (terminal()) {
             return;
         }
         status = "COMPLETED";
         this.score = score;
         this.usage = usage;
-        this.report = report;
         visibilityLimits.addAll(score.visibilityLimits());
         completedAt = Instant.now();
     }
@@ -84,32 +81,30 @@ final class DeliveryAssessmentUnitState {
     }
 
     void excluded(String limitation) {
-        excluded(textList(limitation), null, null);
+        excluded(textList(limitation), null);
     }
 
-    void excluded(List<String> limitations, AnalysisAiUsage usage, AnalysisReport report) {
+    void excluded(List<String> limitations, AnalysisAiUsage usage) {
         if (terminal()) {
             return;
         }
         addVisibilityLimits(limitations);
         status = "EXCLUDED";
         this.usage = usage;
-        this.report = report;
         completedAt = Instant.now();
     }
 
     void notScorable(String limitation) {
-        notScorable(textList(limitation), null, null);
+        notScorable(textList(limitation), null);
     }
 
-    void notScorable(List<String> limitations, AnalysisAiUsage usage, AnalysisReport report) {
+    void notScorable(List<String> limitations, AnalysisAiUsage usage) {
         if (terminal()) {
             return;
         }
         addVisibilityLimits(limitations);
         status = "NOT_SCORABLE";
         this.usage = usage;
-        this.report = report;
         completedAt = Instant.now();
     }
 
@@ -191,8 +186,7 @@ final class DeliveryAssessmentUnitState {
                 completedAt,
                 preparedPrompt,
                 promptPreparedAt,
-                usage,
-                report
+                usage
         );
     }
 }

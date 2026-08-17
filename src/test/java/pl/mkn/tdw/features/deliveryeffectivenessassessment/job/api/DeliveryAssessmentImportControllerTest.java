@@ -39,7 +39,7 @@ class DeliveryAssessmentImportControllerTest {
                         .content("""
                                 {
                                   "schema": "tdw.delivery-effectiveness-assessment-export",
-                                  "version": 1
+                                  "version": 2
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -58,7 +58,7 @@ class DeliveryAssessmentImportControllerTest {
 
         mockMvc.perform(post("/api/delivery-effectiveness-assessment/imports")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"schema\":\"tdw.delivery-effectiveness-assessment-export\",\"version\":2}"))
+                        .content("{\"schema\":\"tdw.delivery-effectiveness-assessment-export\",\"version\":1}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("DELIVERY_ASSESSMENT_IMPORT_INVALID"))
                 .andExpect(jsonPath("$.message").value(
@@ -102,9 +102,7 @@ class DeliveryAssessmentImportControllerTest {
                         0,
                         "LOW",
                         null
-                ),
-                List.of(),
-                null
+                )
         );
     }
 }

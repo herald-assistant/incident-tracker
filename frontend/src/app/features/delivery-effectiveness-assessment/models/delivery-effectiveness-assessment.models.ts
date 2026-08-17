@@ -2,8 +2,7 @@ import {
   AnalysisAiActivityEvent,
   AnalysisAiUsage,
   AnalysisEvidenceSection,
-  AnalysisJobStepResponse,
-  AnalysisReport
+  AnalysisJobStepResponse
 } from '../../../core/models/analysis.models';
 
 export interface DeliveryEffectivenessAssessmentJobStartRequest {
@@ -64,7 +63,6 @@ export interface DeliveryAssessmentUnit {
   preparedPrompt: string | null;
   promptPreparedAt: string | null;
   usage: AnalysisAiUsage | null;
-  report: AnalysisReport | null;
 }
 
 export interface DeliveryAssessmentAggregate {
@@ -104,17 +102,15 @@ export interface DeliveryEffectivenessAssessmentJobStateSnapshot {
   aiActivityEvents: AnalysisAiActivityEvent[];
   units: DeliveryAssessmentUnit[];
   aggregate: DeliveryAssessmentAggregate;
-  visibilityLimits: string[];
-  report: AnalysisReport | null;
 }
 
 export interface DeliveryEffectivenessAssessmentExportEnvelope {
   schema: 'tdw.delivery-effectiveness-assessment-export';
-  version: 1;
+  version: 2;
   exportedAt: string;
   payload: {
     type: 'delivery-effectiveness-assessment';
-    resultContract: 'delivery-effectiveness-assessment-v1';
+    resultContract: 'delivery-effectiveness-assessment-v2';
     job: DeliveryEffectivenessAssessmentJobStateSnapshot;
   };
 }

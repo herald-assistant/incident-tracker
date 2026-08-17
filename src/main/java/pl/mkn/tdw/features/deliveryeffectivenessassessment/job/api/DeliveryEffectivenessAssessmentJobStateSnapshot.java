@@ -2,7 +2,6 @@ package pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api;
 
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisJobStepResponse;
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -32,9 +31,7 @@ public record DeliveryEffectivenessAssessmentJobStateSnapshot(
         List<AnalysisEvidenceSection> contextSections,
         List<AnalysisAiActivityEvent> aiActivityEvents,
         List<DeliveryAssessmentUnitResponse> units,
-        DeliveryAssessmentAggregateResponse aggregate,
-        List<String> visibilityLimits,
-        AnalysisReport report
+        DeliveryAssessmentAggregateResponse aggregate
 ) {
 
     public DeliveryEffectivenessAssessmentJobStateSnapshot {
@@ -42,6 +39,5 @@ public record DeliveryEffectivenessAssessmentJobStateSnapshot(
         contextSections = contextSections != null ? List.copyOf(contextSections) : List.of();
         aiActivityEvents = aiActivityEvents != null ? List.copyOf(aiActivityEvents) : List.of();
         units = units != null ? List.copyOf(units) : List.of();
-        visibilityLimits = visibilityLimits != null ? List.copyOf(visibilityLimits) : List.of();
     }
 }

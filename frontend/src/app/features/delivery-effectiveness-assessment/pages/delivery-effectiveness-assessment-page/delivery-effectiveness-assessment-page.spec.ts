@@ -84,8 +84,8 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
   });
 
   it('should present the token estimate instead of formatting the SDK multiplier as USD', async () => {
-    const completed = snapshot('COMPLETED', 8, [completedUnit()]);
-    completed.aggregate.usage = {
+    const unit = completedUnit();
+    const usage = {
       inputTokens: 1_045_393,
       outputTokens: 72_414,
       cacheReadTokens: 837_120,
@@ -99,11 +99,47 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
       contextCurrentTokens: null,
       contextMessages: null
     };
+    unit.usage = usage;
+    const completed = snapshot('COMPLETED', 8, [unit]);
+    completed.aggregate.usage = usage;
     const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
 
     expect(fixture.nativeElement.textContent).toContain('szacowany koszt tokenów');
-    expect(fixture.nativeElement.textContent).toContain('15.51 jednostek mnożnika SDK');
-    expect(fixture.nativeElement.textContent).not.toContain('$15.51 koszt');
+    expect(fixture.nativeElement.textContent).toContain('47');
+    expect(fixture.nativeElement.querySelector('.unit-row__cost').textContent).not.toContain('—');
+    expect(fixture.nativeElement.textContent).not.toContain('jednostek mnożnika SDK');
+  });
+
+  it('should render one expandable issue table with row warnings and no duplicate report bands', async () => {
+    const unit = completedUnit();
+    unit.assessment!.qualityFlags = ['Only a bounded diff was available.'];
+    unit.visibilityLimits = ['Diff content was truncated.'];
+    unit.errorMessage = 'Assessment completed with a parser warning.';
+    const completed = snapshot('COMPLETED_WITH_WARNINGS', 8, [unit]);
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    expect(fixture.nativeElement.querySelectorAll('.units-section')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('.units-heading__status').textContent)
+      .toContain('Zakończona z ostrzeżeniami');
+    expect(fixture.nativeElement.querySelector('.unit-warning-icon')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.run-strip')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.aggregate-band')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.visibility-band')).toBeNull();
+    expect(fixture.nativeElement.querySelector('app-analysis-report-panel')).toBeNull();
+
+    const expand = fixture.nativeElement.querySelector(
+      '.unit-row button[aria-label="Rozwiń szczegóły"]'
+    ) as HTMLButtonElement;
+    expand.click();
+    fixture.detectChanges();
+
+    const details = fixture.nativeElement.querySelector('.unit-details') as HTMLElement;
+    expect(details.textContent).toContain('Evidence');
+    expect(details.textContent).toContain('Quality flags');
+    expect(details.textContent).toContain('Visibility limits');
+    expect(details.textContent).toContain('Warnings');
+    expect(details.textContent).toContain('Assessment completed with a parser warning.');
+    expect(details.textContent).not.toContain('GitLab');
   });
 
   it('should import a server-validated assessment and render it from the new history run', async () => {
@@ -265,11 +301,11 @@ async function createComponent(options: {
 function envelope(job: DeliveryEffectivenessAssessmentJobStateSnapshot): DeliveryEffectivenessAssessmentExportEnvelope {
   return {
     schema: 'tdw.delivery-effectiveness-assessment-export',
-    version: 1,
+    version: 2,
     exportedAt: '2026-07-01T10:00:00Z',
     payload: {
       type: 'delivery-effectiveness-assessment',
-      resultContract: 'delivery-effectiveness-assessment-v1',
+      resultContract: 'delivery-effectiveness-assessment-v2',
       job
     }
   };
@@ -315,9 +351,7 @@ function snapshot(
       coverage: units.length ? 1 : 0,
       confidence: units.length ? 'HIGH' : 'LOW',
       usage: null
-    },
-    visibilityLimits: [],
-    report: null
+    }
   };
 }
 
@@ -363,7 +397,6 @@ function completedUnit(): DeliveryEffectivenessAssessmentJobStateSnapshot['units
     completedAt: '2026-07-01T10:01:00Z',
     preparedPrompt: 'one-shot prompt with effective skill, Jira and MR code',
     promptPreparedAt: '2026-07-01T10:00:01Z',
-    usage: null,
-    report: null
+    usage: null
   };
 }

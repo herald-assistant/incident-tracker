@@ -180,17 +180,16 @@ public class DeliveryEffectivenessAssessmentJobService {
             var limitations = analysis.response().visibilityLimits().isEmpty()
                     ? List.of("AI could not establish a grounded assessment from the available evidence.")
                     : analysis.response().visibilityLimits();
-            job.markUnitNotScorable(unit.unitId(), limitations, analysis.usage(), analysis.report());
+            job.markUnitNotScorable(unit.unitId(), limitations, analysis.usage());
         } else if ("EXCLUDED".equals(classification)) {
             var limitations = new ArrayList<>(analysis.response().visibilityLimits());
             limitations.add("AI classified the observable delivery as semantically excluded.");
-            job.markUnitExcluded(unit.unitId(), limitations, analysis.usage(), analysis.report());
+            job.markUnitExcluded(unit.unitId(), limitations, analysis.usage());
         } else {
             job.markUnitCompleted(
                     unit.unitId(),
                     scoringService.score(analysis.response()),
-                    analysis.usage(),
-                    analysis.report()
+                    analysis.usage()
             );
         }
         persistSnapshot(job, false);

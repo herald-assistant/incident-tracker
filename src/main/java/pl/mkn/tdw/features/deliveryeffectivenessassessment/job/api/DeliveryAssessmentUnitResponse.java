@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api;
 
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,8 +18,7 @@ public record DeliveryAssessmentUnitResponse(
         Instant completedAt,
         String preparedPrompt,
         Instant promptPreparedAt,
-        AnalysisAiUsage usage,
-        AnalysisReport report
+        AnalysisAiUsage usage
 ) {
 
     public DeliveryAssessmentUnitResponse {
