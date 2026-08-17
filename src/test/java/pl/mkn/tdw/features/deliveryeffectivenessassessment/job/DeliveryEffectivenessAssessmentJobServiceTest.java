@@ -66,7 +66,7 @@ class DeliveryEffectivenessAssessmentJobServiceTest {
         service = new DeliveryEffectivenessAssessmentJobService(
                 source,
                 new DeliveryUnitBuilder(),
-                new DeliveryEvidencePacketBuilder(properties),
+                new DeliveryEvidencePacketBuilder(),
                 promptPreparationService,
                 assessmentProvider,
                 new DeliveryAssessmentScoringService(),
@@ -129,7 +129,7 @@ class DeliveryEffectivenessAssessmentJobServiceTest {
         var directService = new DeliveryEffectivenessAssessmentJobService(
                 source,
                 new DeliveryUnitBuilder(),
-                new DeliveryEvidencePacketBuilder(new DeliveryEffectivenessAssessmentProperties()),
+                new DeliveryEvidencePacketBuilder(),
                 promptPreparationService,
                 assessmentProvider,
                 new DeliveryAssessmentScoringService(),

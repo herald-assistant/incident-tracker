@@ -275,8 +275,9 @@ Zasady granic:
   ograniczony `DEEP`, job API, historia/import-export i report.
 - `src/main/java/pl/mkn/tdw/features/deliveryeffectivenessassessment`
   Feature oceny dostarczonej zlozonosci: typed Jira JQL i status history,
-  Delivery Units issue-MR, bounded evidence, rownolegle sesje Copilota,
-  deterministyczny scoring oraz czastkowy zapis w Analysis History.
+  Delivery Units issue-MR, pelne inline evidence zwrocone przez integracje,
+  rownolegle sesje Copilota, deterministyczny scoring oraz czastkowy zapis w
+  Analysis History.
 - `src/main/java/pl/mkn/tdw/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`

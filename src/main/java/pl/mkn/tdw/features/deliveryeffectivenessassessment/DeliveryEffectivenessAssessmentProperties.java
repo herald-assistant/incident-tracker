@@ -20,13 +20,5 @@ public class DeliveryEffectivenessAssessmentProperties {
     private int jiraPageSize = 50;
     private int maxParallelAnalyses = 4;
     private int maxMergeRequestsPerIssue = 20;
-    private int maxIssuesPerUnit = 10;
-    private int maxMergeRequestsPerUnit = 20;
-    private int maxChangedFilesPerMergeRequest = 300;
-    private int maxJiraDescriptionCharacters = 6_000;
-    private int maxMergeRequestDescriptionCharacters = 3_000;
-    private int maxDiffCharactersPerUnit = 50_000;
-    private int maxDocumentsPerUnit = 2;
-    private int maxDocumentCharactersPerUnit = 8_000;
     private Duration itemTimeout = Duration.ofMinutes(5);
 }

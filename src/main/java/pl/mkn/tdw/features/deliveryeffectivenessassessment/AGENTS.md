@@ -13,6 +13,8 @@ zakresu dat.
   `integrations.*`.
 - Feature posiada request, job state, source orchestration, Delivery Units,
   evidence packet, prompt, skill, scoring, wynik i local run mapping.
+- Evidence packet przekazuje do AI pelna tresc zwrocona przez integracje bez
+  lokalnego przycinania opisow, dokumentow, MR-ow, plikow ani diffow.
 - AI nie dostaje Story Points, komentarzy, worklogow, autorow, assignee ani
   reviewerow.
 - Model zwraca wymiary `0-4` wedlug feature-local kotwic behawioralnych;

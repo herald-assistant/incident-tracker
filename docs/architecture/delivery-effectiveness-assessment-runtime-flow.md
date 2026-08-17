@@ -112,22 +112,26 @@ wspolny MR laczy issue w jedna Delivery Unit i jest liczony raz.
 
 ## Evidence i prywatnosc
 
-Kazda jednostka dostaje ograniczony pakiet inline artifacts:
+Kazda jednostka dostaje pelny pakiet inline artifacts z danych zwroconych przez
+integracje:
 
 - Jira intent: summary, opis, acceptance criteria i jawne dokumenty,
 - merged MR metadata i changed paths,
-- ograniczone diffy,
-- visibility limits wynikajace z truncation i partial source failures.
+- wszystkie changed paths i pelna tresc dostepnych diffow,
+- visibility limits wynikajace wylacznie z partial source failures albo
+  ograniczen zgloszonych przez integracje.
 
 Feature renderuje te logiczne pliki bezposrednio w finalnym prompcie miedzy
 jawnymi markerami artifact. `CopilotRunRequest.artifactContents` zachowuje ich
 projekcje diagnostyczna, ale runtime nie uzywa SDK attachments jako kanalu
 evidence.
 
-Limity liczby issue, MR-ow, dokumentow, plikow i znakow diffu sa properties
-feature'a. Brak MR-a albo changed files daje `NOT_SCORABLE`. Zmiany skladajace
-sie wylacznie z generated/build/dist/lock/minified/binary artifacts sa
-`EXCLUDED` bez uruchamiania AI.
+Builder pakietu nie przycina liczby issue, MR-ow, dokumentow ani plikow oraz nie
+skraca opisow i diffow. Jezeli integracja zrodlowa zwrocila dane niepelne, jej
+ograniczenie pozostaje jawne zamiast byc maskowane. Brak MR-a albo changed files
+daje `NOT_SCORABLE`. Zmiany skladajace sie wylacznie z
+generated/build/dist/lock/minified/binary artifacts sa `EXCLUDED` bez
+uruchamiania AI.
 
 Artifacts i prompt nie zawieraja istniejacych Story Points, worklogow,
 assignee, autorow, reviewerow ani komentarzy. Wynik nie moze sluzyc do rankingu

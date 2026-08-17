@@ -1,7 +1,6 @@
 package pl.mkn.tdw.features.deliveryeffectivenessassessment.evidence;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.deliveryeffectivenessassessment.DeliveryEffectivenessAssessmentProperties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.features.deliveryeffectivenessassessment.DeliveryAssessmentTestFixtures.mergeRequest;
@@ -11,7 +10,7 @@ class DeliveryEvidencePacketBuilderTest {
 
     @Test
     void shouldBuildScorablePacketWithoutPersonalDataOrStoryPoints() {
-        var builder = new DeliveryEvidencePacketBuilder(new DeliveryEffectivenessAssessmentProperties());
+        var builder = new DeliveryEvidencePacketBuilder();
 
         var packet = builder.build(unit(
                 "CRM-123",
@@ -28,7 +27,7 @@ class DeliveryEvidencePacketBuilderTest {
 
     @Test
     void shouldExcludeMechanicalOnlyChangesBeforeAi() {
-        var builder = new DeliveryEvidencePacketBuilder(new DeliveryEffectivenessAssessmentProperties());
+        var builder = new DeliveryEvidencePacketBuilder();
 
         var packet = builder.build(unit(
                 "CRM-123",
@@ -40,17 +39,18 @@ class DeliveryEvidencePacketBuilderTest {
     }
 
     @Test
-    void shouldExposeDiffTruncationAsVisibilityLimit() {
-        var properties = new DeliveryEffectivenessAssessmentProperties();
-        properties.setMaxDiffCharactersPerUnit(48);
-        var builder = new DeliveryEvidencePacketBuilder(properties);
+    void shouldPreserveCompleteDiffWithoutLocalCharacterBudget() {
+        var builder = new DeliveryEvidencePacketBuilder();
+        var completeDiff = "x".repeat(75_000);
 
         var packet = builder.build(unit(
                 "CRM-123",
-                mergeRequest(7, "src/main/java/CustomerStatus.java", "x".repeat(200))
+                mergeRequest(7, "src/main/java/CustomerStatus.java", completeDiff)
         ));
 
+        assertThat(packet.artifacts().get("delivery-effectiveness/diffs.md"))
+                .contains(completeDiff);
         assertThat(packet.visibilityLimits())
-                .anyMatch(limit -> limit.contains("Diff content was truncated"));
+                .noneMatch(limit -> limit.contains("truncated"));
     }
 }
