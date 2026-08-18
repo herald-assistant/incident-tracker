@@ -225,6 +225,21 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
     expect(status.querySelector('.unit-warning-icon')).toBeNull();
   });
 
+  it('should not render attention icons for waiting units', async () => {
+    const unit = completedUnit();
+    unit.status = 'PENDING';
+    unit.assessment = null;
+    unit.visibilityLimits = ['Pending evidence is not final.'];
+    unit.errorMessage = 'Waiting for worker.';
+    const active = snapshot('ANALYZING', 0, [unit]);
+    const { fixture } = await createComponent({ localRun: active, localRunId: 'job-1' });
+
+    const status = fixture.nativeElement.querySelector('.unit-row__status') as HTMLElement;
+    expect(status.textContent).toContain('Oczekuje');
+    expect(status.querySelector('.unit-attention-icon')).toBeNull();
+    expect(status.querySelector('.unit-warning-icon')).toBeNull();
+  });
+
   it('should expose every merge request as a link above assessment dimensions', async () => {
     const unit = completedUnit();
     unit.mergeRequests.push({

@@ -503,6 +503,9 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
   }
 
   protected unitHasAttention(unit: DeliveryAssessmentUnit): boolean {
+    if (unit.status === 'PENDING' || unit.status === 'QUEUED') {
+      return false;
+    }
     return Boolean(
       unit.visibilityLimits.length
       || unit.assessment?.qualityFlags.length

@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -129,8 +128,7 @@ public class DeliveryEffectivenessAssessmentJobService {
             AnalysisAiAuthRef authRef,
             DeliveryUnit unit
     ) {
-        return unitExecutor.runAsync(() -> assessUnit(job, request, authRef, unit))
-                .orTimeout(Math.max(1, properties.getItemTimeout().toMillis()), TimeUnit.MILLISECONDS)
+        return unitExecutor.runAsync(() -> assessUnit(job, request, authRef, unit), properties.getItemTimeout())
                 .exceptionally(failure -> {
                     job.markUnitFailed(unit.unitId(), "DELIVERY_UNIT_EXECUTION_FAILED", safeMessage(failure));
                     persistSnapshot(job, false);

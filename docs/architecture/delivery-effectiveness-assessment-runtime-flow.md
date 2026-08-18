@@ -209,8 +209,11 @@ zeby niezalezne joby i wolne integracje zewnetrzne nie zalaly runtime'u
 nieograniczona liczba requestow.
 
 Jednostki sa wykonywane przez dedykowany, ograniczony executor z
-konfigurowalnym parallelism, kolejka i timeoutem. Status jednostki jest
-monotoniczny; spozniony wynik po timeoutcie nie moze nadpisac `FAILED`.
+konfigurowalnym parallelism, kolejka i timeoutem. Timeout jednostki zaczyna
+sie dopiero, gdy worker faktycznie rozpocznie jej wykonanie; czas oczekiwania w
+kolejce nie jest traktowany jako czas pracy konkretnej Delivery Unit. Status
+jednostki jest monotoniczny; spozniony wynik po timeoutcie nie moze nadpisac
+`FAILED`.
 Awaria jednej jednostki nie zatrzymuje pozostalych.
 
 Snapshot publikuje postep Jira, kroki, context, activity, czastkowe jednostki i
