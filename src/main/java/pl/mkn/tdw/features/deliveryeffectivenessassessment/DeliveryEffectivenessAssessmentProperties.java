@@ -20,6 +20,7 @@ public class DeliveryEffectivenessAssessmentProperties {
     private int jiraPageSize = 50;
     private String jiraDoneStatusId = "Done";
     private String jiraTeamFieldId = "";
+    private int maxParallelSourceRequests = 4;
     private int maxParallelAnalyses = 4;
     private int maxMergeRequestsPerIssue = 20;
     private Duration itemTimeout = Duration.ofMinutes(5);

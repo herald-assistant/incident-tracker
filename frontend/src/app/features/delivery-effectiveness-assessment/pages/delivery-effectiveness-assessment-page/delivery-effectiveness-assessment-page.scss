@@ -264,16 +264,23 @@
   gap: 7px;
 }
 
-.unit-warning-icon {
+.unit-attention-icon {
   display: grid;
   flex: 0 0 22px;
   place-items: center;
   width: 22px;
   height: 22px;
+}
+
+.unit-warning-icon {
   color: var(--warning-text);
 }
 
-.unit-warning-icon .material-symbols-outlined {
+.unit-attention-icon--info {
+  color: var(--primary);
+}
+
+.unit-attention-icon .material-symbols-outlined {
   font-size: 19px;
 }
 

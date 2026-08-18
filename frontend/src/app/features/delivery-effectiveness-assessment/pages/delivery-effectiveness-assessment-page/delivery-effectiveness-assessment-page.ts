@@ -371,7 +371,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       COMPLETED_WITH_WARNINGS: 'Zakończona z ostrzeżeniami',
       COLLECTING_EVIDENCE: 'Zbieranie evidence',
       EXCLUDED: 'Wyłączona',
-      NOT_SCORABLE: 'Brak podstaw do oceny'
+      NOT_SCORABLE: 'Pominięto'
     };
     return labels[status ?? ''] ?? formatStatus(status);
   }
@@ -524,6 +524,16 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       + (unit.assessment?.qualityFlags.length ?? 0)
       + this.unitWarnings(unit).length;
     return `${total} ${total === 1 ? 'informacja wymaga' : 'informacje wymagają'} uwagi`;
+  }
+
+  protected unitAttentionIcon(unit: DeliveryAssessmentUnit): string {
+    return unit.status === 'NOT_SCORABLE' ? 'info' : 'warning';
+  }
+
+  protected unitAttentionClass(unit: DeliveryAssessmentUnit): string {
+    return unit.status === 'NOT_SCORABLE'
+      ? 'unit-attention-icon unit-attention-icon--info'
+      : 'unit-attention-icon unit-warning-icon';
   }
 
   protected trackUnit(_: number, unit: DeliveryAssessmentUnit): string {

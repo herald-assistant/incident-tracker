@@ -220,12 +220,12 @@
                   <span [attr.class]="statusClass(unit.status)">{{ statusLabel(unit.status) }}</span>
                   @if (unitHasAttention(unit)) {
                     <span
-                      class="unit-warning-icon"
+                      [class]="unitAttentionClass(unit)"
                       role="img"
                       [attr.aria-label]="unitAttentionLabel(unit)"
                       [matTooltip]="unitAttentionLabel(unit)"
                     >
-                      <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                      <span class="material-symbols-outlined" aria-hidden="true">{{ unitAttentionIcon(unit) }}</span>
                     </span>
                   }
                 </div>

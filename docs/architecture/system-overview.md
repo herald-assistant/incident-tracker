@@ -312,8 +312,10 @@ Na dzisiaj projekt ma:
   wynikami jednostek.
 - `POST /api/delivery-effectiveness-assessment/jobs`
   Tworzy job dopiero po synchronicznym zapisie snapshotu `QUEUED` w
-  `Analysis History`. `GET` z `/{jobId}` zwraca Jira progress, effective JQL,
-  steps/activity, Delivery Units, aggregate, usage, visibility limits i report.
+  `Analysis History`. Discovery kandydatow issue, materialu i MR-ek dziala
+  przez ograniczony fan-out, a `GET` z `/{jobId}` zwraca Jira progress,
+  effective JQL, steps/activity, Delivery Units, aggregate, usage, visibility
+  limits i report.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.

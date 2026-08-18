@@ -209,6 +209,22 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
     expect(details.firstElementChild?.classList.contains('unit-merge-requests')).toBe(true);
   });
 
+  it('should render not scorable units as skipped with an info icon', async () => {
+    const unit = completedUnit();
+    unit.status = 'NOT_SCORABLE';
+    unit.mergeRequests = [];
+    unit.assessment = null;
+    unit.visibilityLimits = ['CRM-1: GitLab returned no merge request candidates.'];
+    const completed = snapshot('COMPLETED_WITH_WARNINGS', 0, [unit]);
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    const status = fixture.nativeElement.querySelector('.unit-row__status') as HTMLElement;
+    expect(status.textContent).toContain('Pominięto');
+    expect(status.querySelector('.unit-attention-icon--info .material-symbols-outlined')?.textContent?.trim())
+      .toBe('info');
+    expect(status.querySelector('.unit-warning-icon')).toBeNull();
+  });
+
   it('should expose every merge request as a link above assessment dimensions', async () => {
     const unit = completedUnit();
     unit.mergeRequests.push({

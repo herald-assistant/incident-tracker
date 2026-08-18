@@ -23,10 +23,18 @@ import pl.mkn.tdw.integrations.jira.JiraIssueStatusTransition;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,7 +58,7 @@ class DeliveryAssessmentSourceDiscoveryServiceTest {
         properties = new DeliveryEffectivenessAssessmentProperties();
         properties.setTimeZone("Europe/Warsaw");
         service = new DeliveryAssessmentSourceDiscoveryService(
-                searchPort, issuePort, historyPort, gitLabPort, gitLabProperties, properties
+                searchPort, issuePort, historyPort, gitLabPort, gitLabProperties, properties, directSourceExecutor()
         );
     }
 
@@ -173,10 +181,86 @@ class DeliveryAssessmentSourceDiscoveryServiceTest {
         verify(gitLabPort, never()).findMergeRequestsByIssueKey(any(), any(), anyInt());
     }
 
+    @Test
+    void shouldFetchMergeRequestsForIssuesInParallelAndKeepJiraOrder() throws Exception {
+        var pool = Executors.newFixedThreadPool(2);
+        var gitLabProperties = new GitLabProperties();
+        gitLabProperties.setGroup("crm/runtime");
+        service = new DeliveryAssessmentSourceDiscoveryService(
+                searchPort,
+                issuePort,
+                historyPort,
+                gitLabPort,
+                gitLabProperties,
+                properties,
+                new DeliveryAssessmentSourceExecutor() {
+                    @Override
+                    public <T> CompletableFuture<T> supplyAsync(Supplier<T> task) {
+                        return CompletableFuture.supplyAsync(task, pool);
+                    }
+                }
+        );
+        when(searchPort.searchIssues(any())).thenReturn(new JiraIssueSearchResult(
+                "effective-jql", 2, false,
+                List.of(
+                        new JiraIssueSearchItem("CRM-10", "Done", "done", null),
+                        new JiraIssueSearchItem("CRM-11", "Done", "done", null)
+                ),
+                List.of()
+        ));
+        when(historyPort.getStatusHistory(anyString())).thenReturn(history(
+                transition("2026-07-04T10:00:00Z", "done")
+        ));
+        when(issuePort.getIssueMaterial(any(JiraIssueMaterialRequest.class))).thenAnswer(invocation -> {
+            var materialRequest = invocation.getArgument(0, JiraIssueMaterialRequest.class);
+            return material(materialRequest.issueKey());
+        });
+        var activeCalls = new AtomicInteger();
+        var maxActiveCalls = new AtomicInteger();
+        var bothCallsEntered = new CountDownLatch(2);
+        when(gitLabPort.findMergeRequestsByIssueKey(eq("crm/runtime"), anyString(), eq(20)))
+                .thenAnswer(invocation -> {
+                    var current = activeCalls.incrementAndGet();
+                    maxActiveCalls.updateAndGet(previous -> Math.max(previous, current));
+                    bothCallsEntered.countDown();
+                    assertThat(bothCallsEntered.await(2, TimeUnit.SECONDS)).isTrue();
+                    activeCalls.decrementAndGet();
+                    var issueKey = invocation.getArgument(1, String.class);
+                    return new GitLabMergeRequestSearchResult(
+                            issueKey,
+                            "crm/runtime",
+                            List.of(mergeRequest(Math.abs(100 + issueKey.hashCode()),
+                                    "src/" + issueKey + ".java", "+change")),
+                            List.of()
+                    );
+                });
+
+        try {
+            var result = service.discover(request("2026-07-04", "2026-07-04"),
+                    DeliveryAssessmentSourceListener.NO_OP);
+
+            assertThat(maxActiveCalls).hasValue(2);
+            assertThat(result.issues())
+                    .extracting(source -> source.issue().issueKey())
+                    .containsExactly("CRM-10", "CRM-11");
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
     private DeliveryEffectivenessAssessmentJobStartRequest request(String from, String to) {
         return new DeliveryEffectivenessAssessmentJobStartRequest(
                 "CRM", LocalDate.parse(from), LocalDate.parse(to), "gpt-5", "medium"
         );
+    }
+
+    private DeliveryAssessmentSourceExecutor directSourceExecutor() {
+        return new DeliveryAssessmentSourceExecutor() {
+            @Override
+            public <T> CompletableFuture<T> supplyAsync(Supplier<T> task) {
+                return CompletableFuture.completedFuture(task.get());
+            }
+        };
     }
 
     private JiraIssueStatusHistory history(JiraIssueStatusTransition... transitions) {

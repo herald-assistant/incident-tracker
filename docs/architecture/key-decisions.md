@@ -896,6 +896,9 @@ pobiera issues oraz historie statusow, natomiast feature rozstrzyga semantyke
 okna czasowego. Do analizy trafia tylko issue, ktore nadal jest Done i ktorego
 ostatnie przejscie do Done miesci sie w zadanym oknie w skonfigurowanej strefie
 czasowej.
+Pobieranie per-issue materialu Jiry i powiazanych MR-ek GitLaba jest
+rownoleglone tylko przez feature-owned, ograniczony executor source discovery;
+kolejnosc wyniku pozostaje deterministyczna wedlug Jira search.
 
 Run jest zapisywany przed uruchomieniem pracy asynchronicznej, dzieki czemu od
 razu pojawia sie w `Analysis History`. Kolejne snapshoty aktualizuja ten sam

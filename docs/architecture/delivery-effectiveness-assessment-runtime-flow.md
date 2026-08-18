@@ -109,6 +109,15 @@ opcjonalnym polem zespolu z
 metadana raportu i filtra, nie evidence dla AI. Stary profil detailed
 pozostaje kontraktem Change Verification.
 
+Przetwarzanie kandydatow issue po wyszukaniu JQL jest wykonywane przez
+dedykowany, ograniczony executor source discovery. Limit
+`delivery-effectiveness-assessment.max-parallel-source-requests` kontroluje
+rownolegle pobieranie status history, materialu issue i powiazanych MR-ek, aby
+nie zamienic oszczednosci czasu w niekontrolowany fan-out do Jiry albo GitLaba.
+Wynik jest skladany z powrotem w kolejnosci zwroconej przez Jira search, a
+progress discovery raportuje monotoniczny licznik faktycznie zakonczonych
+kandydatow.
+
 ## GitLab i Delivery Units
 
 Dla zakwalifikowanego issue feature wywoluje
@@ -193,6 +202,11 @@ Kazdy terminalny wynik uruchomionej sesji AI zachowuje jej `usage` i visibility
 limits, rowniez dla `INSUFFICIENT_EVIDENCE` i `EXCLUDED`.
 
 ## Rownoleglosc i wynik
+
+Source discovery ma osobny executor dla kandydatow issue, a AI assessment ma
+osobny executor dla Delivery Units. Oba fan-outy sa ograniczone properties,
+zeby niezalezne joby i wolne integracje zewnetrzne nie zalaly runtime'u
+nieograniczona liczba requestow.
 
 Jednostki sa wykonywane przez dedykowany, ograniczony executor z
 konfigurowalnym parallelism, kolejka i timeoutem. Status jednostki jest
