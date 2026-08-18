@@ -16,11 +16,36 @@ Klikany launcher dla Windows:
 wszystkie argumenty i uruchamia PowerShell z `ExecutionPolicy Bypass` tylko dla
 tego procesu. Przy bledzie zostawia okno otwarte, zeby komunikat byl czytelny.
 
+W interaktywnym terminalu launcher pokazuje pod bannerem TDW panel procesu
+serwera zamiast stalego strumienia logow. Panel zawiera status startu, PID,
+czas dzialania, adres aplikacji i sciezke logu. Dostepne skroty:
+
+- `S` - zatrzymaj serwer i pozostaw panel otwarty,
+- `R` - zatrzymaj biezacy proces i uruchom serwer ponownie,
+- `O` - otworz adres dzialajacego serwera w domyslnej przegladarce,
+- `L` - pokaz albo ukryj koncowke logow,
+- `Q` - zabij proces serwera i zamknij launcher.
+
+Zatrzymanie i restart koncza proces JVM w sposob wymuszony. Nie nalezy ich
+wykonywac w trakcie zapisu waznego wyniku analizy. Logi z biezacego
+uruchomienia trafiaja do `tdw-data/logs/tdw-server.log` oraz
+`tdw-data/logs/tdw-server-error.log`.
+
 Wlasciwy skrypt PowerShell mozna tez uruchomic bezposrednio:
 
 ```powershell
 .\run-tdw.ps1
 ```
+
+Dotychczasowy tryb z logami wypisywanymi bezposrednio w terminalu pozostaje
+dostepny przez:
+
+```powershell
+.\run-tdw.ps1 -NoMenu
+```
+
+Skrypt automatycznie uzywa tego trybu takze wtedy, gdy wejscie albo wyjscie nie
+jest interaktywnym terminalem, na przyklad przy przekierowaniu logow w CI.
 
 Skrypt szuka JAR-a w swoim katalogu. Dla wygody developerskiej, gdy jest
 uruchamiany z katalogu repozytorium, sprawdza tez `target/`. Jezeli znajdzie
@@ -78,6 +103,9 @@ Kolejne pliki i katalogi powstaja dopiero wtedy, gdy sa potrzebne:
 tdw-data/
   index.json
   tokens.json
+  logs/
+    tdw-server.log
+    tdw-server-error.log
   copilot/
   operational-context/
     systems.yml
@@ -97,6 +125,10 @@ chat.
 
 `tokens.json` przechowuje lokalne access tokeny zapisane z UI. Nie jest czescia
 exportu i nie powinien byc udostepniany innym osobom.
+
+`logs/` przechowuje standardowe wyjscie i bledy ostatniego uruchomienia przez
+interaktywny launcher. Kolejny start albo restart zastepuje te pliki nowymi
+logami.
 
 `copilot/` przechowuje lokalny stan GitHub Copilot SDK/CLI, w tym material
 potrzebny do kontynuacji tej samej sesji.
