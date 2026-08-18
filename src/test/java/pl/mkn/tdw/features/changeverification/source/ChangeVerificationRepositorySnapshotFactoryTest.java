@@ -98,7 +98,7 @@ class ChangeVerificationRepositorySnapshotFactoryTest {
                 "https://gitlab.example.com/" + projectPath + "/-/merge_requests/" + iid,
                 sourceBranch,
                 "main",
-                "Jan Nowak",
+                "gitlab-author-501",
                 null,
                 null,
                 null,

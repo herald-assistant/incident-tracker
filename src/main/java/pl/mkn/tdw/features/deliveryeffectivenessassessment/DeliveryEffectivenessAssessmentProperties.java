@@ -18,6 +18,8 @@ public class DeliveryEffectivenessAssessmentProperties {
     private int maxRangeDays = 92;
     private int maxIssuesPerJob = 200;
     private int jiraPageSize = 50;
+    private String jiraDoneStatusId = "Done";
+    private String jiraTeamFieldId = "";
     private int maxParallelAnalyses = 4;
     private int maxMergeRequestsPerIssue = 20;
     private Duration itemTimeout = Duration.ofMinutes(5);

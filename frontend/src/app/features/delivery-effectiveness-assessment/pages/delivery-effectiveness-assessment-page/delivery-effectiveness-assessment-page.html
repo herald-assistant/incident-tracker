@@ -141,7 +141,7 @@
           </div>
           <div class="units-heading__status">
             <span [attr.class]="statusClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
-            <span class="units-count">{{ currentJob.units.length }}</span>
+            <span class="units-count">{{ filteredResultLabel(currentJob) }}</span>
           </div>
         </div>
 
@@ -154,6 +154,46 @@
           </div>
         }
 
+        @if (teamFilterOptions().length || authorFilterOptions().length) {
+          <div class="unit-filters" aria-label="Filtry Delivery Units">
+            <label class="field-control">
+              <span class="field-label">Team</span>
+              <select class="select-input" [formControl]="teamFilterControl">
+                <option value="">Wszystkie teamy</option>
+                @for (option of teamFilterOptions(); track option.value) {
+                  <option [value]="option.value">{{ filterOptionLabel(option) }}</option>
+                }
+              </select>
+            </label>
+            <label class="field-control">
+              <span class="field-label">Autor MR</span>
+              <select class="select-input" [formControl]="authorFilterControl">
+                <option value="">Wszyscy autorzy</option>
+                @for (option of authorFilterOptions(); track option.value) {
+                  <option [value]="option.value">{{ filterOptionLabel(option) }}</option>
+                }
+              </select>
+            </label>
+            @if (filtersActive()) {
+              <button
+                type="button"
+                class="icon-button"
+                aria-label="Wyczyść filtry"
+                matTooltip="Wyczyść filtry"
+                (click)="clearFilters()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+              </button>
+            }
+            @if (multiAuthorIssueKeys().length) {
+              <span class="multi-author-indicator" [matTooltip]="multiAuthorTooltip()">
+                <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                <span>{{ multiAuthorIssueKeys().length }}</span>
+              </span>
+            }
+          </div>
+        }
+
         <div class="units-table" role="table" aria-label="Delivery Units">
           <div class="units-table__header" role="row">
             <span role="columnheader">Issue</span>
@@ -163,7 +203,7 @@
             <span role="columnheader">Koszt AI</span>
             <span role="columnheader"></span>
           </div>
-          @for (unit of currentJob.units; track trackUnit($index, unit)) {
+          @for (unit of visibleUnits(); track trackUnit($index, unit)) {
             <article class="unit-row" role="row">
               <div class="unit-row__summary">
                 <div class="unit-row__issues" role="cell">
@@ -335,6 +375,8 @@
               @if (workflowRunning()) {
                 <span class="runtime-spinner" aria-hidden="true"></span>
                 <span>Oczekiwanie na Delivery Units</span>
+              } @else if (filtersActive()) {
+                <span>Brak Delivery Units dla wybranego filtra.</span>
               } @else {
                 <span>Brak Delivery Units w wybranym zakresie.</span>
               }
@@ -342,7 +384,7 @@
           }
         </div>
 
-        @if (currentJob.aggregate; as aggregate) {
+        @if (visibleAggregate(); as aggregate) {
           <section class="overall-result" aria-label="Wynik całościowy">
             <div class="overall-result__primary">
               <p class="section-eyebrow overall-result__label">
@@ -351,7 +393,7 @@
                   type="button"
                   class="overall-result__help"
                   aria-label="Wyjaśnienie wyniku całościowego"
-                  [matTooltip]="overallResultTooltip(currentJob)"
+                  [matTooltip]="overallResultTooltip(currentJob, aggregate)"
                 >
                   <span class="material-symbols-outlined" aria-hidden="true">info</span>
                 </button>
@@ -379,7 +421,7 @@
                     type="button"
                     class="overall-result__help"
                     aria-label="Wyjaśnienie Confidence"
-                    [matTooltip]="confidenceTooltip(currentJob)"
+                    [matTooltip]="confidenceTooltip(visibleUnits(), aggregate)"
                   >
                     <span class="material-symbols-outlined" aria-hidden="true">info</span>
                   </button>

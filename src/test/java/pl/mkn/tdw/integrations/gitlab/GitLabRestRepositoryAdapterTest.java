@@ -566,7 +566,7 @@ class GitLabRestRepositoryAdapterTest {
                             "web_url": "https://gitlab.example.com/CRM/runtime/customer-api/-/merge_requests/7",
                             "source_branch": "feature/CRM-123-customer-status",
                             "target_branch": "release/2026.08",
-                            "author": { "name": "Jan Nowak" },
+                            "author": { "id": 501, "name": "gitlab-author-501" },
                             "created_at": "2026-07-20T10:00:00.000Z",
                             "updated_at": "2026-07-21T10:00:00.000Z",
                             "merged_at": "2026-07-21T11:00:00.000Z",
@@ -585,7 +585,7 @@ class GitLabRestRepositoryAdapterTest {
                             "id": "abcdef123456",
                             "short_id": "abcdef12",
                             "title": "CRM-123 add status",
-                            "author_name": "Jan Nowak",
+                            "author_name": "gitlab-author-501",
                             "created_at": "2026-07-20T10:00:00.000Z"
                           }
                         ]
@@ -615,6 +615,8 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("CRM/runtime/customer-api", mergeRequest.projectPath());
         assertEquals("CRM-123 customer status", mergeRequest.title());
         assertEquals("feature/CRM-123-customer-status", mergeRequest.sourceBranch());
+        assertEquals(501L, mergeRequest.authorId());
+        assertEquals("gitlab-author-501", mergeRequest.authorName());
         assertEquals(1, mergeRequest.commits().size());
         assertEquals("abcdef12", mergeRequest.commits().get(0).shortId());
         assertEquals(1, mergeRequest.changedFiles().size());
@@ -645,7 +647,7 @@ class GitLabRestRepositoryAdapterTest {
                             "web_url": "https://gitlab.example.com/CRM/runtime/customer-api/-/merge_requests/8",
                             "source_branch": "feature/CRM-456-large-change",
                             "target_branch": "release/2026.08",
-                            "author": { "name": "Jan Nowak" },
+                            "author": { "name": "gitlab-author-501" },
                             "changes_count": "101",
                             "references": { "full": "CRM/runtime/customer-api!8" }
                           }

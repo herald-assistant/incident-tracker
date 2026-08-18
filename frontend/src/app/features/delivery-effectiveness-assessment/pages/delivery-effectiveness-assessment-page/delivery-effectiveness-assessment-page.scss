@@ -148,6 +148,33 @@
   text-align: right;
 }
 
+.unit-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.1fr) auto auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.multi-author-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 42px;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--warning-border, var(--border-strong));
+  border-radius: 6px;
+  background: var(--warning-soft);
+  color: var(--warning-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.multi-author-indicator .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .progress-track,
 .dimension-track {
   display: block;
@@ -630,6 +657,7 @@
   }
 
   .assessment-form-grid,
+  .unit-filters,
   .dimension-grid,
   .unit-insights,
   .unit-merge-requests ul {

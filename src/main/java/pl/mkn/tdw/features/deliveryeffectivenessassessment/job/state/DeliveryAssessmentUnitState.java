@@ -5,6 +5,7 @@ import pl.mkn.tdw.features.deliveryeffectivenessassessment.deliveryunit.Delivery
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAssessmentIssueResponse;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAssessmentMergeRequestResponse;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAssessmentResponse;
+import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAssessmentTeamResponse;
 import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryAssessmentUnitResponse;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 
@@ -148,7 +149,14 @@ final class DeliveryAssessmentUnitState {
                         issue.material().issueUrl(),
                         issue.material().summary(),
                         issue.material().issueType(),
-                        issue.doneAt()
+                        issue.doneAt(),
+                        issue.team() != null
+                                ? new DeliveryAssessmentTeamResponse(
+                                issue.team().id(),
+                                issue.team().name(),
+                                issue.team().fieldId()
+                        )
+                                : null
                 ))
                 .toList();
         var mergeRequests = unit.mergeRequests().stream()
@@ -159,6 +167,8 @@ final class DeliveryAssessmentUnitState {
                         mergeRequest.title(),
                         mergeRequest.webUrl(),
                         mergeRequest.mergedAt(),
+                        mergeRequest.authorId(),
+                        mergeRequest.authorName(),
                         mergeRequest.changedFiles().stream()
                                 .map(file -> file.newPath() != null && !file.newPath().isBlank()
                                         ? file.newPath()

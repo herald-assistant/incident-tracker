@@ -293,7 +293,7 @@ class ChangeVerificationJobServiceTest {
                             "https://confluence.example.com/customer-profile"
                     )),
                     List.of(new JiraIssueComment(
-                            "Anna Kowalska",
+                            "jira-comment-author-1",
                             "2026-07-24T10:00:00.000Z",
                             "Remember migrated customers."
                     )),
@@ -419,7 +419,7 @@ class ChangeVerificationJobServiceTest {
                             "https://gitlab.example.com/CRM/runtime/customer-api/-/merge_requests/7",
                             "feature/CRM-123-customer-status",
                             "release/2026.08",
-                            "Jan Nowak",
+                            "gitlab-author-501",
                             "2026-07-20T10:00:00.000Z",
                             "2026-07-21T10:00:00.000Z",
                             "2026-07-21T11:00:00.000Z",
@@ -428,7 +428,7 @@ class ChangeVerificationJobServiceTest {
                                     "abcdef123456",
                                     "abcdef12",
                                     "CRM-123 add status",
-                                    "Jan Nowak",
+                                    "gitlab-author-501",
                                     "2026-07-20T10:00:00.000Z"
                             )),
                             List.of(new GitLabMergeRequestChangedFile(

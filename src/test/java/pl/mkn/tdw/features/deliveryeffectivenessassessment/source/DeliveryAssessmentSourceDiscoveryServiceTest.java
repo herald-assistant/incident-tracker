@@ -8,6 +8,8 @@ import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryEffec
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestSearchResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.jira.JiraIssueCustomField;
+import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterialRequest;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
 import pl.mkn.tdw.integrations.jira.JiraIssueSearchItem;
@@ -38,13 +40,14 @@ class DeliveryAssessmentSourceDiscoveryServiceTest {
     private final JiraIssuePort issuePort = mock(JiraIssuePort.class);
     private final JiraIssueStatusHistoryPort historyPort = mock(JiraIssueStatusHistoryPort.class);
     private final GitLabRepositoryPort gitLabPort = mock(GitLabRepositoryPort.class);
+    private DeliveryEffectivenessAssessmentProperties properties;
     private DeliveryAssessmentSourceDiscoveryService service;
 
     @BeforeEach
     void setUp() {
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup("crm/runtime");
-        var properties = new DeliveryEffectivenessAssessmentProperties();
+        properties = new DeliveryEffectivenessAssessmentProperties();
         properties.setTimeZone("Europe/Warsaw");
         service = new DeliveryAssessmentSourceDiscoveryService(
                 searchPort, issuePort, historyPort, gitLabPort, gitLabProperties, properties
@@ -77,12 +80,53 @@ class DeliveryAssessmentSourceDiscoveryServiceTest {
         var searchRequest = ArgumentCaptor.forClass(JiraIssueSearchRequest.class);
         verify(searchPort).searchIssues(searchRequest.capture());
         assertThat(searchRequest.getValue().projectKey()).isEqualTo("CRM");
+        assertThat(searchRequest.getValue().doneStatusId()).isEqualTo("Done");
         assertThat(searchRequest.getValue().toDateExclusive()).isEqualTo(LocalDate.parse("2026-07-03"));
         var materialRequest = ArgumentCaptor.forClass(JiraIssueMaterialRequest.class);
         verify(issuePort).getIssueMaterial(materialRequest.capture());
         assertThat(materialRequest.getValue().includeComments()).isFalse();
         assertThat(materialRequest.getValue().includeSubTasks()).isFalse();
         assertThat(materialRequest.getValue().includeParent()).isFalse();
+        assertThat(materialRequest.getValue().customFieldIds()).isEmpty();
+    }
+
+    @Test
+    void shouldFetchConfiguredTeamFieldAndExposeItOnDiscoveredIssue() {
+        properties.setJiraDoneStatusId("10637");
+        properties.setJiraTeamFieldId("customfield_10000");
+        when(searchPort.searchIssues(any())).thenReturn(new JiraIssueSearchResult(
+                "effective-jql", 1, false,
+                List.of(new JiraIssueSearchItem("CRM-4", "Done", "done", null)),
+                List.of()
+        ));
+        when(historyPort.getStatusHistory("CRM-4")).thenReturn(history(
+                transition("2026-07-04T10:00:00Z", "done")
+        ));
+        when(issuePort.getIssueMaterial(any(JiraIssueMaterialRequest.class))).thenReturn(withCustomFields(
+                material("CRM-4"),
+                new JiraIssueCustomField("customfield_10000", "1900", "Team A", "Team A")
+        ));
+        when(gitLabPort.findMergeRequestsByIssueKey("crm/runtime", "CRM-4", 20))
+                .thenReturn(new GitLabMergeRequestSearchResult("CRM-4", "crm/runtime", List.of(), List.of()));
+
+        var result = service.discover(request("2026-07-04", "2026-07-04"),
+                DeliveryAssessmentSourceListener.NO_OP);
+
+        assertThat(result.issues()).singleElement().satisfies(source ->
+                assertThat(source.issue().team()).satisfies(team -> {
+                    assertThat(team.id()).isEqualTo("1900");
+                    assertThat(team.name()).isEqualTo("Team A");
+                    assertThat(team.fieldId()).isEqualTo("customfield_10000");
+                })
+        );
+        var searchRequest = ArgumentCaptor.forClass(JiraIssueSearchRequest.class);
+        verify(searchPort).searchIssues(searchRequest.capture());
+        assertThat(searchRequest.getValue().doneStatusId()).isEqualTo("10637");
+        var materialRequest = ArgumentCaptor.forClass(JiraIssueMaterialRequest.class);
+        verify(issuePort).getIssueMaterial(materialRequest.capture());
+        assertThat(materialRequest.getValue().customFieldIds()).containsExactly("customfield_10000");
+        assertThat(result.issues().get(0).limitations())
+                .noneMatch(limit -> limit.contains("Jira team field customfield_10000 was not available"));
     }
 
     @Test
@@ -142,6 +186,26 @@ class DeliveryAssessmentSourceDiscoveryServiceTest {
     private JiraIssueStatusTransition transition(String timestamp, String category) {
         return new JiraIssueStatusTransition(
                 Instant.parse(timestamp), "1", "Previous", "2", "Next", category
+        );
+    }
+
+    private JiraIssueMaterial withCustomFields(JiraIssueMaterial material, JiraIssueCustomField... customFields) {
+        return new JiraIssueMaterial(
+                material.issueKey(),
+                material.issueUrl(),
+                material.summary(),
+                material.description(),
+                material.issueType(),
+                material.status(),
+                material.labels(),
+                material.acceptanceCriteria(),
+                material.links(),
+                material.subTasks(),
+                material.parentIssue(),
+                material.confluencePages(),
+                material.comments(),
+                material.limitations(),
+                List.of(customFields)
         );
     }
 }

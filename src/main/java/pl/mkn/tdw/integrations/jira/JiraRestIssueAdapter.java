@@ -124,7 +124,8 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                 request.includeComments()
                         ? comments(fields != null ? fields.path("comment").path("comments") : null)
                         : List.of(),
-                limitations
+                limitations,
+                customFields(fields, request.customFieldIds())
         );
     }
 
@@ -143,7 +144,8 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                 null,
                 List.of(),
                 List.of(),
-                List.of("Jira issue was not found or is not visible for configured credentials.")
+                List.of("Jira issue was not found or is not visible for configured credentials."),
+                List.of()
         );
     }
 
@@ -343,6 +345,55 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
         return List.copyOf(values);
     }
 
+    private List<JiraIssueCustomField> customFields(JsonNode fields, List<String> fieldIds) {
+        if (fields == null || fields.isMissingNode() || fields.isNull() || fieldIds == null || fieldIds.isEmpty()) {
+            return List.of();
+        }
+        var values = new ArrayList<JiraIssueCustomField>();
+        for (var fieldId : fieldIds) {
+            if (!StringUtils.hasText(fieldId)) {
+                continue;
+            }
+            var field = fields.path(fieldId.trim());
+            if (field.isMissingNode() || field.isNull()) {
+                continue;
+            }
+            values.add(customField(fieldId.trim(), field));
+        }
+        return List.copyOf(values);
+    }
+
+    private JiraIssueCustomField customField(String fieldId, JsonNode field) {
+        if (field.isObject()) {
+            var id = text(field, "id", "");
+            var name = firstText(field, "name", "value", "displayName");
+            var value = StringUtils.hasText(name) ? name : richText(field);
+            return new JiraIssueCustomField(fieldId, id, name, value);
+        }
+        if (field.isArray()) {
+            var values = new ArrayList<String>();
+            for (var item : field) {
+                var label = customFieldLabel(item);
+                if (StringUtils.hasText(label)) {
+                    values.add(label);
+                }
+            }
+            return new JiraIssueCustomField(fieldId, "", "", String.join(", ", values));
+        }
+        var value = richText(field);
+        return new JiraIssueCustomField(fieldId, "", "", value);
+    }
+
+    private String customFieldLabel(JsonNode item) {
+        if (item == null || item.isMissingNode() || item.isNull()) {
+            return "";
+        }
+        if (item.isObject()) {
+            return firstText(item, "name", "value", "displayName");
+        }
+        return richText(item);
+    }
+
     private String richText(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return "";
@@ -385,6 +436,16 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
         return value.isTextual() && StringUtils.hasText(value.asText()) ? value.asText().trim() : fallback;
     }
 
+    private String firstText(JsonNode node, String... fieldNames) {
+        for (var fieldName : fieldNames) {
+            var value = text(node, fieldName, "");
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return "";
+    }
+
     private String limitText(String value) {
         if (!StringUtils.hasText(value)) {
             return "";
@@ -410,6 +471,7 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
             fields.add("comment");
         }
         fields.addAll(properties.getAcceptanceCriteriaFieldIds());
+        fields.addAll(request.customFieldIds());
 
         return URI.create(apiBaseUrl()
                 + "/issue/" + encodePathSegment(request.issueKey())

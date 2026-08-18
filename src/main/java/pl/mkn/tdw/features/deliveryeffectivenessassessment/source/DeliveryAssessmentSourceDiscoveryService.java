@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.deliveryeffectivenessassessment.job.api.DeliveryEffec
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
+import pl.mkn.tdw.integrations.jira.JiraIssueCustomField;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterialRequest;
 import pl.mkn.tdw.integrations.jira.JiraIssuePort;
 import pl.mkn.tdw.integrations.jira.JiraIssueSearchPort;
@@ -42,6 +43,7 @@ public class DeliveryAssessmentSourceDiscoveryService {
         validateRange(request);
         var search = jiraIssueSearchPort.searchIssues(new JiraIssueSearchRequest(
                 request.jiraProject(),
+                properties.getJiraDoneStatusId(),
                 request.fromDate(),
                 request.toDate().plusDays(1),
                 properties.getJiraPageSize(),
@@ -67,11 +69,15 @@ public class DeliveryAssessmentSourceDiscoveryService {
                             + ": final Done transition could not be confirmed in the selected range.");
                     continue;
                 }
-                var material = jiraIssuePort.getIssueMaterial(JiraIssueMaterialRequest.assessment(candidate.issueKey()));
+                var material = jiraIssuePort.getIssueMaterial(JiraIssueMaterialRequest.assessment(
+                        candidate.issueKey(),
+                        teamFieldIds()
+                ));
                 issueLimitations.addAll(material.limitations());
+                var team = team(material.customFields(), issueLimitations);
                 var mergeRequests = mergedMergeRequests(candidate.issueKey(), issueLimitations);
                 issues.add(new DeliveryAssessmentIssueSource(
-                        new DeliveryAssessmentIssue(candidate.issueKey(), doneAt, material, issueLimitations),
+                        new DeliveryAssessmentIssue(candidate.issueKey(), doneAt, material, team, issueLimitations),
                         mergeRequests,
                         issueLimitations
                 ));
@@ -113,6 +119,30 @@ public class DeliveryAssessmentSourceDiscoveryService {
                     + ": GitLab returned merge request candidates, but none had state merged with mergedAt.");
         }
         return merged;
+    }
+
+    private List<String> teamFieldIds() {
+        return StringUtils.hasText(properties.getJiraTeamFieldId())
+                ? List.of(properties.getJiraTeamFieldId().trim())
+                : List.of();
+    }
+
+    private DeliveryAssessmentTeam team(List<JiraIssueCustomField> customFields, List<String> limitations) {
+        if (!StringUtils.hasText(properties.getJiraTeamFieldId())) {
+            return null;
+        }
+        var fieldId = properties.getJiraTeamFieldId().trim();
+        var field = customFields.stream()
+                .filter(customField -> fieldId.equals(customField.fieldId()))
+                .findFirst()
+                .orElse(null);
+        if (field == null || (!StringUtils.hasText(field.id()) && !StringUtils.hasText(field.name())
+                && !StringUtils.hasText(field.value()))) {
+            limitations.add("Jira team field " + fieldId + " was not available on the issue.");
+            return null;
+        }
+        var name = StringUtils.hasText(field.name()) ? field.name() : field.value();
+        return new DeliveryAssessmentTeam(field.id(), name, field.fieldId());
     }
 
     private Instant finalDoneAt(pl.mkn.tdw.integrations.jira.JiraIssueStatusHistory history) {

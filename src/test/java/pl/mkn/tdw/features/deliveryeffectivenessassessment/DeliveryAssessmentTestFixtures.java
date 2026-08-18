@@ -34,7 +34,7 @@ public final class DeliveryAssessmentTestFixtures {
                         "11", "Functional design", "https://confluence.example.com/11",
                         "Customer status follows the eligibility decision.", "2", List.of()
                 )),
-                List.of(new JiraIssueComment("Sensitive Person", "2026-07-10", "private comment")),
+                List.of(new JiraIssueComment("jira-comment-author-1", "2026-07-10", "internal comment payload")),
                 List.of()
         );
     }
@@ -59,7 +59,8 @@ public final class DeliveryAssessmentTestFixtures {
                 "https://gitlab.example.com/crm/customer-api/-/merge_requests/" + id,
                 "feature/CRM-123",
                 "main",
-                "Sensitive Author",
+                "mr-author-101",
+                101L,
                 "2026-07-08T10:00:00Z",
                 "2026-07-10T10:00:00Z",
                 "2026-07-10T09:00:00Z",

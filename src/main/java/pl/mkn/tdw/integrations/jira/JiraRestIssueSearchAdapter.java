@@ -26,7 +26,7 @@ public class JiraRestIssueSearchAdapter implements JiraIssueSearchPort, JiraIssu
 
     private static final List<String> SEARCH_FIELDS = List.of(
             "status",
-            "statuscategorychangedate"
+            "resolutiondate"
     );
     private static final DateTimeFormatter JIRA_OFFSET_MILLIS =
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -175,7 +175,7 @@ public class JiraRestIssueSearchAdapter implements JiraIssueSearchPort, JiraIssu
                 text(issue, "key"),
                 text(status, "name"),
                 firstText(status.path("statusCategory"), "key", "name"),
-                parseInstant(text(fields, "statuscategorychangedate"))
+                parseInstant(text(fields, "resolutiondate"))
         );
     }
 
@@ -214,10 +214,18 @@ public class JiraRestIssueSearchAdapter implements JiraIssueSearchPort, JiraIssu
 
     private String jql(JiraIssueSearchRequest request) {
         return "project = \"" + request.projectKey() + "\""
-                + " AND statusCategory = Done"
-                + " AND statusCategoryChangedDate >= \"" + request.fromDate() + "\""
-                + " AND statusCategoryChangedDate < \"" + request.toDateExclusive() + "\""
+                + " AND status = " + statusJqlValue(request.doneStatusId())
+                + " AND resolved >= \"" + request.fromDate() + "\""
+                + " AND resolved < \"" + request.toDateExclusive() + "\""
                 + " ORDER BY key ASC";
+    }
+
+    private String statusJqlValue(String value) {
+        var trimmed = value != null ? value.trim() : "Done";
+        if (trimmed.matches("\\d+")) {
+            return trimmed;
+        }
+        return "\"" + trimmed.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     private URI searchUri() {

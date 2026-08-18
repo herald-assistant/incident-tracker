@@ -20,6 +20,9 @@ Publiczne wejscia:
 
 Request startu zawiera tylko `jiraProject`, `fromDate`, `toDate`, `model` i
 opcjonalny `reasoningEffort`. UI nie przyjmuje JQL.
+Filtry raportu po zespole Jira i autorze MR sa lokalnym zawezeniem
+widocznego wyniku po wykonaniu analizy; nie zmieniaja requestu startu,
+JQL ani promptu AI.
 
 ## Interpretacja i non-goals
 
@@ -76,11 +79,16 @@ kontrolowany JQL:
 
 ```text
 project = "<PROJECT>"
-AND statusCategory = Done
-AND statusCategoryChangedDate >= "<fromDate>"
-AND statusCategoryChangedDate < "<toDate + 1 day>"
+AND status = <configured done status id/name>
+AND resolved >= "<fromDate>"
+AND resolved < "<toDate + 1 day>"
 ORDER BY key ASC
 ```
+
+Wartosc statusu pochodzi z
+`delivery-effectiveness-assessment.jira-done-status-id`. Numeryczny status id
+jest wstawiany do JQL bez cudzyslowu, a nazwa statusu jest escapowana i
+cytowana; domyslna wartosc pozostaje `Done`.
 
 Adapter wykonuje paginowany `POST /rest/api/2/search`, zwraca effective JQL,
 total, truncation i limitations. JQL jest prefiltracja. Dla kazdego kandydata
@@ -95,16 +103,20 @@ feature dodatkowo:
 
 Material issue jest pobierany istniejacym `JiraIssuePort`, ale profilem
 assessment: bez komentarzy, parent i subtasks, z opisem, acceptance criteria,
-issue links, remote links i jawnie powiazanymi stronami Confluence. Stary
-profil detailed pozostaje kontraktem Change Verification.
+issue links, remote links, jawnie powiazanymi stronami Confluence oraz
+opcjonalnym polem zespolu z
+`delivery-effectiveness-assessment.jira-team-field-id`. Pole zespolu jest
+metadana raportu i filtra, nie evidence dla AI. Stary profil detailed
+pozostaje kontraktem Change Verification.
 
 ## GitLab i Delivery Units
 
 Dla zakwalifikowanego issue feature wywoluje
 `GitLabRepositoryPort.findMergeRequestsByIssueKey` w grupie z konfiguracji.
 Do dalszego flow przechodza tylko MR-y ze stanem `merged` i jawnym `mergedAt`.
-Adapter GitLab publikuje metadata, changed paths i diff; dane autorow i
-commitow nie sa renderowane do evidence assessmentu.
+Adapter GitLab publikuje metadata, `author.id`, `author.name`, changed paths i
+diff. Dane autorow sa metadana raportu i filtra osoby; commit authors ani dane
+autorow MR nie sa renderowane do evidence assessmentu.
 
 `DeliveryUnitBuilder` buduje spojne komponenty grafu `issue <-> MR`.
 To samo id MR-a, URL albo para `projectPath!iid` jest jedna tozsamoscia, wiec
@@ -134,8 +146,9 @@ generated/build/dist/lock/minified/binary artifacts sa `EXCLUDED` bez
 uruchamiania AI.
 
 Artifacts i prompt nie zawieraja istniejacych Story Points, worklogow,
-assignee, autorow, reviewerow ani komentarzy. Wynik nie moze sluzyc do rankingu
-osob lub zespolow.
+assignee, autorow, reviewerow, komentarzy ani pola zespolu. Wynik nie moze
+sluzyc do rankingu osob lub zespolow. Team Jira i autor MR pozostaja tylko
+deterministycznymi metadanymi UI do filtrowania obserwowalnej zlozonosci.
 
 ## AI i scoring
 
@@ -188,8 +201,10 @@ Awaria jednej jednostki nie zatrzymuje pozostalych.
 
 Snapshot publikuje postep Jira, kroki, context, activity, czastkowe jednostki i
 aggregate. Visibility limits pozostaja przy jednostkach, ktorych widocznosci
-dotycza. Aggregate zawiera total DSP, distribution, coverage, confidence,
-liczniki `EXCLUDED`/`NOT_SCORABLE`/`FAILED` oraz zsumowane usage/cost. Parent job konczy sie `COMPLETED`,
+dotycza. Aggregate backendowy zawiera total DSP, distribution, coverage,
+confidence, liczniki `EXCLUDED`/`NOT_SCORABLE`/`FAILED` oraz zsumowane
+usage/cost dla calego runu. UI moze deterministycznie przeliczyc ten sam ksztalt
+agregatu dla widocznych jednostek po filtrze. Parent job konczy sie `COMPLETED`,
 `COMPLETED_WITH_WARNINGS` albo `FAILED`.
 
 Tokeny, duration, liczba wywolan i SDK `cost` sa sumowane dokladnie raz z usage
@@ -200,10 +215,15 @@ input/output/cache i cennika modelu osobno dla jednostki oraz zbiorczo na dole.
 Glowny wynik UI jest jedna rozwijalna tabela Delivery Units. Wiersz pokazuje
 issue, MR-y, status, DSP i koszt AI; ikona ostrzezenia przy statusie sygnalizuje
 quality flags, visibility limits albo blad jednostki. Rozwiniecie pokazuje
-tylko dostepne Evidence, Quality flags, Visibility limits i Warnings. Pod tabela
-znajduje sie prosty wynik zbiorczy bez ponownego wyliczania konkretnych issue,
-a na samym dole koszt calej analizy. Nie ma osobnego visibility band,
-assessment summary, report meta ani drugiej listy jednostek.
+MR-y jako linki oraz tylko dostepne Evidence, Quality flags, Visibility limits
+i Warnings. Nad tabela sa filtry po zespole Jira i autorze MR. Po wybraniu
+filtra UI pokazuje te sama tabele, wynik zbiorczy i koszt w ksztalcie
+odfiltrowanym do widocznych Delivery Units. Gdy widoczne issue ma MR-y wiecej
+niz jednego autora, UI pokazuje ostrzezenie informacyjne, bo DSP dotyczy calej
+jednostki i nie jest dzielone pomiedzy osoby. Pod tabela znajduje sie prosty
+wynik zbiorczy bez ponownego wyliczania konkretnych issue, a na samym dole koszt
+widocznego zakresu albo calej analizy bez filtra. Nie ma osobnego visibility
+band, assessment summary, report meta ani drugiej listy jednostek.
 
 ## Ownership
 

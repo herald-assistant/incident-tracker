@@ -7,6 +7,17 @@ public record DeliveryAssessmentIssueResponse(
         String issueUrl,
         String summary,
         String issueType,
-        Instant doneAt
+        Instant doneAt,
+        DeliveryAssessmentTeamResponse team
 ) {
+
+    public DeliveryAssessmentIssueResponse(
+            String issueKey,
+            String issueUrl,
+            String summary,
+            String issueType,
+            Instant doneAt
+    ) {
+        this(issueKey, issueUrl, summary, issueType, doneAt, null);
+    }
 }

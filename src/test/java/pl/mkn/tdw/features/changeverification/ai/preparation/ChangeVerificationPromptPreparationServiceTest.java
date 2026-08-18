@@ -96,7 +96,7 @@ class ChangeVerificationPromptPreparationServiceTest {
                                 "https://gitlab.example.com/mr/2",
                                 "feature/CRM-123-status",
                                 "main",
-                                "Jan Nowak",
+                                "gitlab-author-501",
                                 null,
                                 null,
                                 null,

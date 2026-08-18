@@ -28,6 +28,13 @@ export interface DeliveryAssessmentIssue {
   summary: string;
   issueType: string;
   doneAt: string;
+  team: DeliveryAssessmentTeam | null;
+}
+
+export interface DeliveryAssessmentTeam {
+  id: string | null;
+  name: string;
+  fieldId: string;
 }
 
 export interface DeliveryAssessmentMergeRequest {
@@ -37,6 +44,8 @@ export interface DeliveryAssessmentMergeRequest {
   title: string;
   webUrl: string;
   mergedAt: string;
+  authorId: number | null;
+  authorName: string;
   changedPaths: string[];
 }
 

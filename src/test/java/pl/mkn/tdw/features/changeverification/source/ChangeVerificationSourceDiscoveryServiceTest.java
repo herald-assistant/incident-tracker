@@ -254,7 +254,7 @@ class ChangeVerificationSourceDiscoveryServiceTest {
                 "https://gitlab.example.com/mr/" + id,
                 "feature/" + issueKey,
                 "main",
-                "Anna",
+                "gitlab-author-100",
                 "2026-07-26T00:00:00Z",
                 "2026-07-26T00:00:00Z",
                 null,

@@ -16,7 +16,8 @@ public record JiraIssueMaterial(
         JiraIssueMaterial parentIssue,
         List<JiraConfluencePage> confluencePages,
         List<JiraIssueComment> comments,
-        List<String> limitations
+        List<String> limitations,
+        List<JiraIssueCustomField> customFields
 ) {
 
     public JiraIssueMaterial {
@@ -27,6 +28,42 @@ public record JiraIssueMaterial(
         confluencePages = confluencePages != null ? List.copyOf(confluencePages) : List.of();
         comments = comments != null ? List.copyOf(comments) : List.of();
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
+        customFields = customFields != null ? List.copyOf(customFields) : List.of();
+    }
+
+    public JiraIssueMaterial(
+            String issueKey,
+            String issueUrl,
+            String summary,
+            String description,
+            String issueType,
+            String status,
+            List<String> labels,
+            List<String> acceptanceCriteria,
+            List<JiraIssueLink> links,
+            List<JiraIssueMaterial> subTasks,
+            JiraIssueMaterial parentIssue,
+            List<JiraConfluencePage> confluencePages,
+            List<JiraIssueComment> comments,
+            List<String> limitations
+    ) {
+        this(
+                issueKey,
+                issueUrl,
+                summary,
+                description,
+                issueType,
+                status,
+                labels,
+                acceptanceCriteria,
+                links,
+                subTasks,
+                parentIssue,
+                confluencePages,
+                comments,
+                limitations,
+                List.of()
+        );
     }
 
     public JiraIssueMaterial(
@@ -58,7 +95,8 @@ public record JiraIssueMaterial(
                 null,
                 confluencePages,
                 comments,
-                limitations
+                limitations,
+                List.of()
         );
     }
 
@@ -89,7 +127,8 @@ public record JiraIssueMaterial(
                 null,
                 List.of(),
                 comments,
-                limitations
+                limitations,
+                List.of()
         );
     }
 }

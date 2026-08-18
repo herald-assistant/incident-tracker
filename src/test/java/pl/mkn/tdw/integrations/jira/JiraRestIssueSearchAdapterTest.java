@@ -25,9 +25,9 @@ class JiraRestIssueSearchAdapterTest {
     @Test
     void shouldMapTypedCriteriaToJqlAndPageSearchResults() {
         var fixture = fixture();
-        var jql = "project = \"CRM\" AND statusCategory = Done"
-                + " AND statusCategoryChangedDate >= \"2026-07-01\""
-                + " AND statusCategoryChangedDate < \"2026-08-01\" ORDER BY key ASC";
+        var jql = "project = \"CRM\" AND status = \"Done\""
+                + " AND resolved >= \"2026-07-01\""
+                + " AND resolved < \"2026-08-01\" ORDER BY key ASC";
         fixture.server.expect(requestTo("https://jira.example.com/rest/api/2/search"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer jira-token"))
@@ -36,8 +36,8 @@ class JiraRestIssueSearchAdapterTest {
                         {
                           "total": 3,
                           "issues": [
-                            {"key":"CRM-1","fields":{"status":{"name":"Done","statusCategory":{"key":"done"}},"statuscategorychangedate":"2026-07-10T10:00:00Z"}},
-                            {"key":"CRM-2","fields":{"status":{"name":"Closed","statusCategory":{"key":"done"}},"statuscategorychangedate":"2026-07-11T10:00:00Z"}}
+                            {"key":"CRM-1","fields":{"status":{"name":"Done","statusCategory":{"key":"done"}},"resolutiondate":"2026-07-10T10:00:00Z"}},
+                            {"key":"CRM-2","fields":{"status":{"name":"Done","statusCategory":{"key":"done"}},"resolutiondate":"2026-07-11T10:00:00Z"}}
                           ]
                         }
                         """, MediaType.APPLICATION_JSON));
@@ -47,7 +47,7 @@ class JiraRestIssueSearchAdapterTest {
                         {
                           "total": 3,
                           "issues": [
-                            {"key":"CRM-3","fields":{"status":{"name":"Done","statusCategory":{"key":"done"}},"statuscategorychangedate":"2026-07-12T10:00:00Z"}}
+                            {"key":"CRM-3","fields":{"status":{"name":"Done","statusCategory":{"key":"done"}},"resolutiondate":"2026-07-12T10:00:00Z"}}
                           ]
                         }
                         """, MediaType.APPLICATION_JSON));
@@ -61,8 +61,27 @@ class JiraRestIssueSearchAdapterTest {
         assertThat(result.truncated()).isFalse();
         assertThat(result.issues()).extracting(JiraIssueSearchItem::issueKey)
                 .containsExactly("CRM-1", "CRM-2", "CRM-3");
-        assertThat(result.issues().get(0).statusCategoryChangedAt())
+        assertThat(result.issues().get(0).resolvedAt())
                 .isEqualTo(Instant.parse("2026-07-10T10:00:00Z"));
+        fixture.server.verify();
+    }
+
+    @Test
+    void shouldUseConfiguredDoneStatusIdInJql() {
+        var fixture = fixture();
+        var jql = "project = \"CRM\" AND status = 10637"
+                + " AND resolved >= \"2026-07-01\""
+                + " AND resolved < \"2026-08-01\" ORDER BY key ASC";
+        fixture.server.expect(requestTo("https://jira.example.com/rest/api/2/search"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(request -> assertSearchBody(request, jql, 0, 10))
+                .andRespond(withSuccess("{\"total\":0,\"issues\":[]}", MediaType.APPLICATION_JSON));
+
+        var result = fixture.adapter.searchIssues(new JiraIssueSearchRequest(
+                "crm", "10637", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-08-01"), 10, 10
+        ));
+
+        assertThat(result.effectiveJql()).isEqualTo(jql);
         fixture.server.verify();
     }
 
@@ -139,7 +158,7 @@ class JiraRestIssueSearchAdapterTest {
         assertThat(json.path("startAt").asInt()).isEqualTo(startAt);
         assertThat(json.path("maxResults").asInt()).isEqualTo(maxResults);
         assertThat(json.path("fields")).extracting(node -> node.asText())
-                .containsExactly("status", "statuscategorychangedate");
+                .containsExactly("status", "resolutiondate");
     }
 
     private record Fixture(JiraRestIssueSearchAdapter adapter, MockRestServiceServer server) {

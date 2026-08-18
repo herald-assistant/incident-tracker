@@ -218,6 +218,8 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
       title: 'Display customer status',
       webUrl: 'https://gitlab.example.com/mr/8',
       mergedAt: '2026-07-01T09:30:00Z',
+      authorId: 101,
+      authorName: 'mr-author-101',
       changedPaths: ['src/customer-status.ts']
     });
     const completed = snapshot('COMPLETED', 8, [unit]);
@@ -237,6 +239,78 @@ describe('DeliveryEffectivenessAssessmentPageComponent', () => {
     ]);
     expect(details.querySelector('.unit-merge-requests')?.nextElementSibling?.classList.contains('dimension-panel'))
       .toBe(true);
+  });
+
+  it('should filter the visible units and aggregate by Jira team and MR author', async () => {
+    const first = completedUnit();
+    const second = completedUnit();
+    second.unitId = 'DU-CRM-2';
+    second.issues[0] = {
+      ...second.issues[0],
+      issueKey: 'CRM-2',
+      issueUrl: 'https://jira.example.com/browse/CRM-2',
+      summary: 'Customer onboarding',
+      team: { id: '1901', name: 'Team B', fieldId: 'customfield_10000' }
+    };
+    second.mergeRequests[0] = {
+      ...second.mergeRequests[0],
+      identity: 'id:9',
+      iid: 9,
+      title: 'Customer onboarding',
+      webUrl: 'https://gitlab.example.com/mr/9',
+      authorId: 202,
+      authorName: 'mr-author-202'
+    };
+    second.assessment = {
+      ...second.assessment!,
+      deliveredStoryPoints: 3,
+      score100: 35,
+      confidence: 0.71
+    };
+    const completed = snapshot('COMPLETED', 11, [first, second]);
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    const selects = fixture.nativeElement.querySelectorAll('.unit-filters select') as NodeListOf<HTMLSelectElement>;
+    selects[0].value = optionValue(selects[0], 'Team A');
+    selects[0].dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.units-count').textContent).toContain('1 / 2');
+    expect(fixture.nativeElement.querySelector('.overall-result__primary strong').textContent).toContain('8');
+    expect(fixture.nativeElement.querySelector('.units-table').textContent).toContain('CRM-1');
+    expect(fixture.nativeElement.querySelector('.units-table').textContent).not.toContain('CRM-2');
+
+    const clearButton = fixture.nativeElement.querySelector(
+      'button[aria-label="Wyczyść filtry"]'
+    ) as HTMLButtonElement;
+    clearButton.click();
+    fixture.detectChanges();
+    const refreshedSelects = fixture.nativeElement.querySelectorAll('.unit-filters select') as NodeListOf<HTMLSelectElement>;
+    refreshedSelects[1].value = optionValue(refreshedSelects[1], 'mr-author-202');
+    refreshedSelects[1].dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.units-count').textContent).toContain('1 / 2');
+    expect(fixture.nativeElement.querySelector('.overall-result__primary strong').textContent).toContain('3');
+    expect(fixture.nativeElement.querySelector('.units-table').textContent).toContain('CRM-2');
+    expect(fixture.nativeElement.querySelector('.units-table').textContent).not.toContain('CRM-1');
+  });
+
+  it('should warn when a visible issue has merge requests from multiple authors', async () => {
+    const unit = completedUnit();
+    unit.mergeRequests.push({
+      ...unit.mergeRequests[0],
+      identity: 'id:9',
+      iid: 9,
+      authorId: 202,
+      authorName: 'mr-author-202'
+    });
+    const completed = snapshot('COMPLETED', 8, [unit]);
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    const indicator = fixture.nativeElement.querySelector('.multi-author-indicator') as HTMLElement;
+    expect(indicator.textContent).toContain('1');
+    expect(fixture.componentInstance['multiAuthorTooltip']()).toContain('CRM-1');
   });
 
   it('should import a server-validated assessment and render it from the new history run', async () => {
@@ -461,7 +535,8 @@ function completedUnit(): DeliveryEffectivenessAssessmentJobStateSnapshot['units
       issueUrl: 'https://jira.example.com/browse/CRM-1',
       summary: 'Customer status',
       issueType: 'Story',
-      doneAt: '2026-07-01T09:00:00Z'
+      doneAt: '2026-07-01T09:00:00Z',
+      team: { id: '1900', name: 'Team A', fieldId: 'customfield_10000' }
     }],
     mergeRequests: [{
       identity: 'id:7',
@@ -470,6 +545,8 @@ function completedUnit(): DeliveryEffectivenessAssessmentJobStateSnapshot['units
       title: 'Customer status',
       webUrl: 'https://gitlab.example.com/mr/7',
       mergedAt: '2026-07-01T09:00:00Z',
+      authorId: 101,
+      authorName: 'mr-author-101',
       changedPaths: ['src/CustomerStatus.java']
     }],
     assessment: {
@@ -496,4 +573,12 @@ function completedUnit(): DeliveryEffectivenessAssessmentJobStateSnapshot['units
     promptPreparedAt: '2026-07-01T10:00:01Z',
     usage: null
   };
+}
+
+function optionValue(select: HTMLSelectElement, labelPart: string): string {
+  const option = Array.from(select.options).find((candidate) =>
+    candidate.textContent?.includes(labelPart)
+  );
+  expect(option).toBeDefined();
+  return option!.value;
 }

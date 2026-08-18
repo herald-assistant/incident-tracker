@@ -50,6 +50,7 @@ import { DeliveryEffectivenessAssessmentApiService } from '../../services/delive
 
 type SelectOption = { value: string; label: string };
 type DimensionRow = { label: string; value: number };
+type FilterOption = { value: string; label: string; issueCount: number; deliveredStoryPoints: number };
 
 @Component({
   selector: 'app-delivery-effectiveness-assessment-page',
@@ -79,6 +80,8 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
   readonly toDateControl = new FormControl(defaultDate(0), { nonNullable: true });
   readonly aiModelControl = new FormControl('', { nonNullable: true });
   readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
+  readonly teamFilterControl = new FormControl('', { nonNullable: true });
+  readonly authorFilterControl = new FormControl('', { nonNullable: true });
 
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly aiOptionsLoading = signal(true);
@@ -92,6 +95,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
   readonly localRunName = signal('');
   readonly expandedUnits = signal<ReadonlySet<string>>(new Set());
   private readonly formRevision = signal(0);
+  private readonly filterRevision = signal(0);
 
   readonly aiModelOptions = computed<SelectOption[]>(() =>
     this.aiModelCatalog().models.map((model) => ({ value: model.id, label: model.name }))
@@ -124,7 +128,54 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       }))
   );
   readonly usageCostEstimate = computed(() =>
-    estimateAnalysisAiCost(this.job()?.aggregate?.usage ?? null)
+    estimateAnalysisAiCost(this.visibleAggregate()?.usage ?? null)
+  );
+  readonly filtersActive = computed(() => {
+    this.filterRevision();
+    return Boolean(this.teamFilterControl.value || this.authorFilterControl.value);
+  });
+  readonly visibleUnits = computed<DeliveryAssessmentUnit[]>(() => {
+    this.filterRevision();
+    const units = this.job()?.units ?? [];
+    const team = this.teamFilterControl.value;
+    const author = this.authorFilterControl.value;
+    return units.filter((unit) =>
+      (!team || this.unitTeamKeys(unit).includes(team))
+      && (!author || this.unitAuthorKeys(unit).includes(author))
+    );
+  });
+  readonly visibleAggregate = computed<DeliveryAssessmentAggregate | null>(() => {
+    const job = this.job();
+    if (!job) {
+      return null;
+    }
+    return this.filtersActive() ? aggregateForUnits(this.visibleUnits()) : job.aggregate;
+  });
+  readonly teamFilterOptions = computed<FilterOption[]>(() =>
+    filterOptions(
+      this.job()?.units ?? [],
+      (unit) => unit.issues
+        .map((issue) => issue.team)
+        .filter((team): team is NonNullable<typeof team> => Boolean(team?.name))
+        .map((team) => ({ value: teamKey(team), label: team.name }))
+    )
+  );
+  readonly authorFilterOptions = computed<FilterOption[]>(() =>
+    filterOptions(
+      this.job()?.units ?? [],
+      (unit) => unit.mergeRequests
+        .filter((mergeRequest) => mergeRequest.authorId !== null)
+        .map((mergeRequest) => ({
+          value: authorKey(mergeRequest.authorId),
+          label: mergeRequest.authorName || `Author ${mergeRequest.authorId}`
+        }))
+    )
+  );
+  readonly multiAuthorIssueKeys = computed<string[]>(() =>
+    Array.from(new Set(this.visibleUnits().flatMap((unit) => {
+      const authors = this.unitAuthorKeys(unit);
+      return authors.length > 1 ? unit.issues.map((issue) => issue.issueKey) : [];
+    }))).sort()
   );
   readonly progressPercent = computed(() => {
     const job = this.job();
@@ -162,10 +213,15 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       this.fromDateControl,
       this.toDateControl,
       this.aiModelControl,
-      this.reasoningEffortControl
+      this.reasoningEffortControl,
+      this.teamFilterControl,
+      this.authorFilterControl
     ].forEach((control) => control.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.formRevision.update((revision) => revision + 1)));
+      .subscribe(() => {
+        this.formRevision.update((revision) => revision + 1);
+        this.filterRevision.update((revision) => revision + 1);
+      }));
     this.aiModelControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.syncReasoningEffort());
@@ -193,6 +249,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     this.jobError.set('');
     this.localRunName.set('');
     this.expandedUnits.set(new Set());
+    this.clearFilters();
     this.submitting.set(true);
     this.api
       .startJob(this.startRequest())
@@ -254,6 +311,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
             this.applyJobToForm(job);
             this.job.set(job);
             this.expandedUnits.set(new Set());
+            this.clearFilters();
             this.localRunName.set(`Import: ${file.name}`);
           },
           error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))
@@ -301,6 +359,12 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     return this.expandedUnits().has(unitId);
   }
 
+  protected clearFilters(): void {
+    this.teamFilterControl.setValue('', { emitEvent: false });
+    this.authorFilterControl.setValue('', { emitEvent: false });
+    this.filterRevision.update((revision) => revision + 1);
+  }
+
   protected statusLabel(status: string | null | undefined): string {
     const labels: Record<string, string> = {
       DISCOVERING: 'Wyszukiwanie w Jira',
@@ -324,9 +388,34 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     return `${Math.round(normalized * 100)}%`;
   }
 
-  protected overallResultTooltip(job: DeliveryEffectivenessAssessmentJobStateSnapshot): string {
-    return `Zbiorczy obraz obserwowalnej złożoności dostarczonej w projekcie ${job.jiraProject} `
+  protected filterOptionLabel(option: FilterOption): string {
+    return `${option.label} · ${option.issueCount} issue · ${option.deliveredStoryPoints} DSP`;
+  }
+
+  protected filteredResultLabel(job: DeliveryEffectivenessAssessmentJobStateSnapshot): string {
+    const visible = this.visibleUnits().length;
+    const total = job.units.length;
+    return this.filtersActive() ? `${visible} / ${total}` : `${total}`;
+  }
+
+  protected multiAuthorTooltip(): string {
+    const keys = this.multiAuthorIssueKeys();
+    if (!keys.length) {
+      return 'W widocznym zakresie każde issue ma najwyżej jednego autora MR według GitLab author id.';
+    }
+    return `W widocznym zakresie ${keys.length} issue ma MR-ki więcej niż jednego autora: ${keys.join(', ')}.`;
+  }
+
+  protected overallResultTooltip(
+    job: DeliveryEffectivenessAssessmentJobStateSnapshot,
+    aggregate: DeliveryAssessmentAggregate
+  ): string {
+    const prefix = this.filtersActive()
+      ? 'Odfiltrowany obraz'
+      : 'Zbiorczy obraz';
+    return `${prefix} obserwowalnej złożoności dostarczonej w projekcie ${job.jiraProject} `
       + `od ${job.fromDate} do ${job.toDate}. Powstaje z ${job.aggregate.totalUnits} Delivery Units `
+      + (this.filtersActive() ? `i pokazuje ${aggregate.totalUnits} jednostek po filtrze; ` : '')
       + 'utworzonych z issue Jira i powiązanych, scalonych Merge Requests; nie jest oceną produktywności zespołu.';
   }
 
@@ -336,8 +425,11 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       + '0, 1, 2, 3, 5, 8 lub 13. Jednostki bez oceny i błędne nie dodają punktów.';
   }
 
-  protected confidenceTooltip(job: DeliveryEffectivenessAssessmentJobStateSnapshot): string {
-    const values = job.units
+  protected confidenceTooltip(
+    units: DeliveryAssessmentUnit[],
+    aggregate: DeliveryAssessmentAggregate
+  ): string {
+    const values = units
       .map((unit) => unit.assessment?.confidence)
       .filter((value): value is number => Number.isFinite(value));
     if (!values.length) {
@@ -350,7 +442,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       maximumFractionDigits: 2
     });
     return `Pewność ocen AI; nie opisuje kompletności analizy. Nieważona średnia confidence z ${values.length} `
-      + `ocenionych jednostek wynosi ${formattedAverage}, dlatego poziom to ${job.aggregate.confidence}. `
+      + `ocenionych jednostek wynosi ${formattedAverage}, dlatego poziom to ${aggregate.confidence}. `
       + 'Progi: HIGH od 0,80, MEDIUM od 0,60, LOW poniżej 0,60.';
   }
 
@@ -558,6 +650,7 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
     this.applyJobToForm(job);
     this.job.set(job);
     this.jobError.set('');
+    this.clearFilters();
     this.localRunName.set(detail.name || detail.analysisId);
     if (!this.isTerminal(job.status)) {
       this.startPolling(job.jobId);
@@ -594,6 +687,23 @@ export class DeliveryEffectivenessAssessmentPageComponent implements OnDestroy {
       reauthRequired: response?.code === 'GITHUB_COPILOT_REAUTH_REQUIRED',
       authStartUrl: null
     });
+  }
+
+  private unitTeamKeys(unit: DeliveryAssessmentUnit): string[] {
+    return Array.from(new Set(
+      unit.issues
+        .map((issue) => issue.team)
+        .filter((team): team is NonNullable<typeof team> => Boolean(team?.name))
+        .map(teamKey)
+    ));
+  }
+
+  private unitAuthorKeys(unit: DeliveryAssessmentUnit): string[] {
+    return Array.from(new Set(
+      unit.mergeRequests
+        .filter((mergeRequest) => mergeRequest.authorId !== null)
+        .map((mergeRequest) => authorKey(mergeRequest.authorId))
+    ));
   }
 
   private exportFileName(
@@ -637,4 +747,137 @@ function jobFromEnvelope(value: unknown): DeliveryEffectivenessAssessmentJobStat
     return null;
   }
   return envelope.payload.job;
+}
+
+function aggregateForUnits(units: DeliveryAssessmentUnit[]): DeliveryAssessmentAggregate {
+  const distribution: Record<string, number> = {};
+  const confidenceValues: number[] = [];
+  let totalDeliveredStoryPoints = 0;
+  for (const unit of units) {
+    if (!unit.assessment) {
+      continue;
+    }
+    const dsp = unit.assessment.deliveredStoryPoints;
+    totalDeliveredStoryPoints += dsp;
+    distribution[String(dsp)] = (distribution[String(dsp)] ?? 0) + 1;
+    if (Number.isFinite(unit.assessment.confidence)) {
+      confidenceValues.push(unit.assessment.confidence);
+    }
+  }
+  const assessedUnits = countUnits(units, 'COMPLETED');
+  const excludedUnits = countUnits(units, 'EXCLUDED');
+  const notScorableUnits = countUnits(units, 'NOT_SCORABLE');
+  const failedUnits = countUnits(units, 'FAILED');
+  const coverage = units.length ? Math.round((assessedUnits / units.length) * 1000) / 1000 : 0;
+  const averageConfidence = confidenceValues.length
+    ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length
+    : 0;
+  return {
+    totalDeliveredStoryPoints,
+    distribution,
+    totalUnits: units.length,
+    assessedUnits,
+    excludedUnits,
+    notScorableUnits,
+    failedUnits,
+    coverage,
+    confidence: confidenceLabel(averageConfidence),
+    usage: aggregateUsage(units)
+  };
+}
+
+function aggregateUsage(units: DeliveryAssessmentUnit[]): DeliveryAssessmentAggregate['usage'] {
+  const usages = units.map((unit) => unit.usage).filter((usage): usage is NonNullable<typeof usage> => Boolean(usage));
+  if (!usages.length) {
+    return null;
+  }
+  return {
+    inputTokens: sum(usages, (usage) => usage.inputTokens),
+    outputTokens: sum(usages, (usage) => usage.outputTokens),
+    cacheReadTokens: sum(usages, (usage) => usage.cacheReadTokens),
+    cacheWriteTokens: sum(usages, (usage) => usage.cacheWriteTokens),
+    totalTokens: sum(usages, (usage) => usage.totalTokens),
+    cost: usages.reduce((total, usage) => total + usage.cost, 0),
+    apiDurationMs: sum(usages, (usage) => usage.apiDurationMs),
+    apiCallCount: sum(usages, (usage) => usage.apiCallCount),
+    model: usages.find((usage) => usage.model)?.model ?? '',
+    contextTokenLimit: maxDefined(usages.map((usage) => usage.contextTokenLimit)),
+    contextCurrentTokens: maxDefined(usages.map((usage) => usage.contextCurrentTokens)),
+    contextMessages: maxDefined(usages.map((usage) => usage.contextMessages))
+  };
+}
+
+function filterOptions(
+  units: DeliveryAssessmentUnit[],
+  values: (unit: DeliveryAssessmentUnit) => { value: string; label: string }[]
+): FilterOption[] {
+  const byValue = new Map<string, {
+    label: string;
+    issueKeys: Set<string>;
+    deliveredStoryPoints: number;
+  }>();
+  for (const unit of units) {
+    const unitValues = uniqueBy(values(unit), (value) => value.value);
+    for (const value of unitValues) {
+      const current = byValue.get(value.value) ?? {
+        label: value.label,
+        issueKeys: new Set<string>(),
+        deliveredStoryPoints: 0
+      };
+      unit.issues.forEach((issue) => current.issueKeys.add(issue.issueKey));
+      current.deliveredStoryPoints += unit.assessment?.deliveredStoryPoints ?? 0;
+      byValue.set(value.value, current);
+    }
+  }
+  return Array.from(byValue.entries())
+    .map(([value, option]) => ({
+      value,
+      label: option.label,
+      issueCount: option.issueKeys.size,
+      deliveredStoryPoints: option.deliveredStoryPoints
+    }))
+    .sort((first, second) => first.label.localeCompare(second.label, 'pl'));
+}
+
+function uniqueBy<T>(values: T[], key: (value: T) => string): T[] {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const valueKey = key(value);
+    if (seen.has(valueKey)) {
+      return false;
+    }
+    seen.add(valueKey);
+    return true;
+  });
+}
+
+function countUnits(units: DeliveryAssessmentUnit[], status: string): number {
+  return units.filter((unit) => unit.status === status).length;
+}
+
+function confidenceLabel(value: number): string {
+  if (value >= 0.8) {
+    return 'HIGH';
+  }
+  if (value >= 0.6) {
+    return 'MEDIUM';
+  }
+  return 'LOW';
+}
+
+function sum<T>(values: T[], mapper: (value: T) => number): number {
+  return values.reduce((total, value) => total + mapper(value), 0);
+}
+
+function maxDefined(values: Array<number | null>): number | null {
+  const present = values.filter((value): value is number => value !== null && Number.isFinite(value));
+  return present.length ? Math.max(...present) : null;
+}
+
+function teamKey(team: { id: string | null; name: string; fieldId: string }): string {
+  return team.id ? `id:${team.id}` : `name:${team.fieldId}:${team.name}`;
+}
+
+function authorKey(authorId: number | null): string {
+  return `id:${authorId}`;
 }

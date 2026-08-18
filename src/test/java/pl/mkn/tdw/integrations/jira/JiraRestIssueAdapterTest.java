@@ -63,6 +63,53 @@ class JiraRestIssueAdapterTest {
     }
 
     @Test
+    void shouldFetchRequestedCustomFieldsForAssessmentMetadata() {
+        var properties = jiraProperties();
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = new JiraRestIssueAdapter(
+                properties,
+                new JiraRestClientFactory(properties, restClientBuilder),
+                pageUrl -> Optional.empty()
+        );
+
+        server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-123?fields=")))
+                .andExpect(requestTo(containsString("customfield_10000")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {
+                          "key": "CRM-123",
+                          "fields": {
+                            "summary": "Customer status",
+                            "description": "Expose status.",
+                            "issuetype": { "name": "Story" },
+                            "status": { "name": "Done" },
+                            "labels": [],
+                            "customfield_10042": "Status is visible.",
+                            "customfield_10000": { "id": "1900", "name": "Team A" },
+                            "issuelinks": []
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://jira.example.com/rest/api/2/issue/CRM-123/remotelink"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        var material = adapter.getIssueMaterial(JiraIssueMaterialRequest.assessment(
+                "CRM-123",
+                List.of("customfield_10000")
+        ));
+
+        assertThat(material.customFields()).singleElement().satisfies(field -> {
+            assertThat(field.fieldId()).isEqualTo("customfield_10000");
+            assertThat(field.id()).isEqualTo("1900");
+            assertThat(field.name()).isEqualTo("Team A");
+            assertThat(field.value()).isEqualTo("Team A");
+        });
+        server.verify();
+    }
+
+    @Test
     void shouldFetchJiraIssueMaterialWithRemoteLinksAndAcceptanceCriteria() {
         var properties = jiraProperties();
         var restClientBuilder = RestClient.builder();
@@ -118,7 +165,7 @@ class JiraRestIssueAdapterTest {
                             "comment": {
                               "comments": [
                                 {
-                                  "author": { "displayName": "Anna Kowalska" },
+                                  "author": { "displayName": "jira-comment-author-1" },
                                   "created": "2026-07-24T10:00:00.000+0000",
                                   "body": "Remember migrated customers."
                                 }
@@ -183,7 +230,7 @@ class JiraRestIssueAdapterTest {
                 });
         assertThat(material.comments()).singleElement()
                 .extracting(JiraIssueComment::author)
-                .isEqualTo("Anna Kowalska");
+                .isEqualTo("jira-comment-author-1");
 
         server.verify();
     }

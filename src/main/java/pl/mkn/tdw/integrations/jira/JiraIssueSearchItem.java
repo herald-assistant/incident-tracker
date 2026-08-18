@@ -6,6 +6,6 @@ public record JiraIssueSearchItem(
         String issueKey,
         String status,
         String statusCategory,
-        Instant statusCategoryChangedAt
+        Instant resolvedAt
 ) {
 }

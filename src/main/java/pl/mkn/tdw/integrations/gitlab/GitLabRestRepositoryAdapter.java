@@ -526,6 +526,7 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                 result.sourceBranch(),
                 result.targetBranch(),
                 result.author() != null ? result.author().name() : "",
+                result.author() != null ? result.author().id() : null,
                 result.createdAt(),
                 result.updatedAt(),
                 result.mergedAt(),
@@ -1151,6 +1152,7 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
     }
 
     private record GitLabUserResponse(
+            Long id,
             String name
     ) {
     }
