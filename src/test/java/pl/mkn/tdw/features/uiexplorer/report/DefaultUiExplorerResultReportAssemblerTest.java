@@ -35,8 +35,8 @@ class DefaultUiExplorerResultReportAssemblerTest {
         var assembly = assembler.assemble("crm-ui-report-123", result());
 
         assertThat(assembly.status()).isEqualTo(UiExplorerReportAssemblyStatus.AVAILABLE);
-        assertThat(assembly.report().header()).isEqualTo("UI Explorer: CRM Contact Preferences");
-        assertThat(assembly.report().subHeader()).isEqualTo("main @ abc123");
+        assertThat(assembly.report().header()).isEqualTo("/crm/contacts/:contactId/preferences");
+        assertThat(assembly.report().subHeader()).isEqualTo("CrmContactPreferencesComponent");
         assertThat(assembly.report().sections())
                 .extracting(section -> section.id())
                 .containsExactly("OVERVIEW", "FORMS_AND_RULES");
@@ -114,7 +114,7 @@ class DefaultUiExplorerResultReportAssemblerTest {
                 new UiExplorerScreenIdentity(
                         "crm-agent-portal",
                         "crm-contact-preferences",
-                        "CRM Contact Preferences",
+                        "CrmContactPreferencesComponent",
                         "/crm/contacts/:contactId/preferences",
                         "CRM contact details"
                 ),

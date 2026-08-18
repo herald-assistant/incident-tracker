@@ -89,7 +89,7 @@ class UiExplorerPortabilityTest {
         assertThat(imported.toolFeedback()).isEmpty();
         assertThat(imported.sourceRevision()).isEqualTo(source.sourceRevision());
         assertThat(imported.result().visibilityLimits()).isEqualTo(source.result().visibilityLimits());
-        assertThat(imported.report().header()).isEqualTo("UI Explorer: CRM Contact Preferences");
+        assertThat(imported.report().header()).isEqualTo("/contacts/:contactId/preferences");
         assertThat(imported.report().meta().references()).allSatisfy(reference ->
                 assertThat(reference.target()).doesNotContain("confidential", "internal-crm-ui-project"));
 

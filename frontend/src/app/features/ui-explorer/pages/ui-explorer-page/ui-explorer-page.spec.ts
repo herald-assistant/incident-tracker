@@ -68,7 +68,10 @@ describe('UiExplorerPageComponent', () => {
     );
     screenControl?.click();
     fixture.detectChanges();
-    expect(compiled.textContent).toContain('Utworzenie kontaktu CRM');
+    expect(compiled.querySelector('.ui-explorer-screen-option strong')?.textContent?.trim())
+      .toBe('/contacts/new');
+    expect(compiled.querySelector('.ui-explorer-screen-option small')?.textContent?.trim())
+      .toBe('CrmContactCreateComponent');
     expect(compiled.textContent).toContain('crm-revision-a1b2c3');
 
     const screenOption = compiled.querySelector<HTMLButtonElement>('.ui-explorer-screen-option');
@@ -174,7 +177,12 @@ describe('UiExplorerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('UI Explorer: Utworzenie kontaktu CRM');
+    expect(compiled.querySelector('app-analysis-result-header h3')?.textContent?.trim())
+      .toBe('/contacts/new');
+    expect(compiled.querySelector(
+      'app-analysis-result-header .analysis-result-header > div:first-child > p:last-child'
+    )?.textContent?.trim())
+      .toBe('CrmContactCreateComponent');
     expect(compiled.textContent).toContain('Co robi ten widok');
     expect(compiled.textContent).toContain('Formularz kontaktu CRM zachowuje reguły segmentu.');
     expect(compiled.querySelector('app-ui-explorer-result')).not.toBeNull();
@@ -395,7 +403,7 @@ function crmScreenCatalog(branch: string, revision: string): UiExplorerScreenCat
     screens: [
       {
         screenId: 'crm-contact-create',
-        label: 'Utworzenie kontaktu CRM',
+        label: 'CrmContactCreateComponent',
         routePattern: '/contacts/new',
         parentRoutePattern: '/contacts',
         status: 'READY',
@@ -510,8 +518,8 @@ function crmJobSnapshot(status: UiExplorerJobStateSnapshot['status']): UiExplore
 function crmReport(): NonNullable<UiExplorerJobStateSnapshot['report']> {
   return {
     reportId: 'crm-ui-report-1',
-    header: 'UI Explorer: Utworzenie kontaktu CRM',
-    subHeader: 'main @ crm-revision-a1b2c3',
+    header: '/contacts/new',
+    subHeader: 'CrmContactCreateComponent',
     markdownSummary: 'Widok umożliwia utworzenie zanonimizowanego kontaktu CRM.',
     sections: [
       {
@@ -560,7 +568,7 @@ function crmResult(): NonNullable<UiExplorerJobStateSnapshot['result']> {
     screen: {
       systemId: 'crm-agent-portal',
       screenId: 'crm-contact-create',
-      label: 'Utworzenie kontaktu CRM',
+      label: 'CrmContactCreateComponent',
       routePattern: '/contacts/new',
       navigationContext: 'Kontakty CRM > Nowy kontakt'
     },

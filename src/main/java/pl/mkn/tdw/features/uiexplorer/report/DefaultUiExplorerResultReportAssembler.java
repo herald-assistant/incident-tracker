@@ -46,8 +46,8 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
         );
         var report = new AnalysisReport(
                 reportId.trim(),
-                "UI Explorer: " + screenLabel(result),
-                sourceLabel(result),
+                screenPath(result),
+                componentLabel(result),
                 valueOrEmpty(result.functionalOverview()),
                 sections,
                 meta
@@ -124,9 +124,9 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
         return section.coverage() != null ? section.coverage().name() : "UNKNOWN";
     }
 
-    private String screenLabel(UiExplorerResultResponse result) {
-        if (result.screen() != null && StringUtils.hasText(result.screen().label())) {
-            return result.screen().label().trim();
+    private String screenPath(UiExplorerResultResponse result) {
+        if (result.screen() != null && StringUtils.hasText(result.screen().routePattern())) {
+            return result.screen().routePattern().trim();
         }
         if (result.screen() != null && StringUtils.hasText(result.screen().screenId())) {
             return result.screen().screenId().trim();
@@ -134,13 +134,14 @@ public class DefaultUiExplorerResultReportAssembler implements UiExplorerResultR
         return "screen";
     }
 
-    private String sourceLabel(UiExplorerResultResponse result) {
-        if (result.sourceRevision() == null) {
-            return "Source revision unavailable";
+    private String componentLabel(UiExplorerResultResponse result) {
+        if (result.screen() != null && StringUtils.hasText(result.screen().label())) {
+            return result.screen().label().trim();
         }
-        var branch = valueOrEmpty(result.sourceRevision().branch());
-        var revision = valueOrEmpty(result.sourceRevision().revision());
-        return StringUtils.hasText(revision) ? branch + " @ " + revision : branch;
+        if (result.screen() != null && StringUtils.hasText(result.screen().screenId())) {
+            return result.screen().screenId().trim();
+        }
+        return "Component unavailable";
     }
 
     private static String valueOrEmpty(String value) {

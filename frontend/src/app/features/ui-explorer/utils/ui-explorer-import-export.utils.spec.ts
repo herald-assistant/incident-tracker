@@ -73,7 +73,7 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
       screen: {
         systemId: 'crm-agent-portal',
         screenId: 'crm-contact-create',
-        label: 'Utworzenie kontaktu CRM',
+        label: 'CrmContactCreateComponent',
         routePattern: '/contacts/new',
         navigationContext: 'Kontakty CRM > Nowy kontakt'
       },
@@ -88,8 +88,8 @@ function crmHistorySnapshot(): UiExplorerJobStateSnapshot {
     },
     report: {
       reportId: 'crm-ui-report-1',
-      header: 'UI Explorer: Utworzenie kontaktu CRM',
-      subHeader: 'main @ crm-revision-a1b2c3',
+      header: '/contacts/new',
+      subHeader: 'CrmContactCreateComponent',
       markdownSummary: 'Synthetic CRM contact documentation.',
       sections: [],
       meta: {

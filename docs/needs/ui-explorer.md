@@ -161,6 +161,12 @@ Postep powinien pokazywac, czy udalo sie:
 Dowody techniczne powinny byc dostepne do weryfikacji, lecz nie dominowac
 glownego raportu.
 
+Identyfikacja widoku powinna byc zrozumiala bez znajomosci Angulara: w wyborze
+widoku oraz naglowku raportu glowna nazwa jest sciezka routingu, a techniczna
+nazwa komponentu pozostaje informacja pomocnicza. Branch i commit nadal
+przypisuja analize do wersji zrodla, ale nie zastepuja nazwy widoku w naglowku
+raportu.
+
 Aside przebiegu powinien na kazdym zakonczonym, czastkowym albo zablokowanym
 kroku pokazywac dane zebrane lub przygotowane w tym kroku oraz ich powiazanie
 z kolejnym etapem. Po deterministycznym przygotowaniu wejscia do AI operator

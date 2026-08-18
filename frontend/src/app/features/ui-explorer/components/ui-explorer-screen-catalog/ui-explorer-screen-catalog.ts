@@ -32,7 +32,7 @@ export class UiExplorerScreenCatalogComponent {
   readonly controlLabel = computed(() => {
     const selected = this.facade.selectedScreen();
     if (selected) {
-      return selected.label;
+      return selected.routePattern || 'Entry point without URL route';
     }
     switch (this.facade.screenState()) {
       case 'loading':
@@ -49,7 +49,7 @@ export class UiExplorerScreenCatalogComponent {
   readonly controlMeta = computed(() => {
     const selected = this.facade.selectedScreen();
     if (selected) {
-      return selected.routePattern || 'Entry point without URL route';
+      return selected.label;
     }
     const catalog = this.facade.screenCatalog();
     if (catalog) {

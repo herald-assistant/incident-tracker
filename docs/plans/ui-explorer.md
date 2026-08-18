@@ -1875,6 +1875,46 @@ potwierdza dokladna tresc `preparedPrompt`. `npm --prefix frontend test --
 build` — PASS; `mvn -q -Dtest=FrontendPageTest test` — PASS. Zmiana reuse'uje
 shared komponent bez nowego kierunku zaleznosci i bez zmiany API.
 
+#### 8K. Business-first identyfikacja widoku
+
+Zakres 8K jest zatwierdzona przez uzytkownika korekta L1 prezentacji katalogu
+i raportu. Baseline: selektor `View` pokazuje nazwe komponentu jako glowna
+etykiete, a route jako detal. Kanoniczny assembler raportu powtarza komponent
+w `h3`, natomiast pod nim eksponuje `branch @ commit`. Taka hierarchia wymaga
+od analityka rozumienia technicznego nazewnictwa Angulara, zanim rozpozna
+badany ekran.
+
+Conformance delta: `routePattern` staje sie glowna identyfikacja w kontrolce,
+opcjach selektora i naglowku raportu. Nazwa komponentu jest informacja
+pomocnicza w `small` oraz podtytulem raportu. Rewizja pozostaje w typed result,
+job state i eksporcie, ale nie zajmuje miejsca przeznaczonego na identyfikacje
+widoku. Zmiana powstaje w kanonicznym assemblerze, wiec obejmuje live, historie
+i import bez frontendowego adaptera ani alternatywnego renderera.
+
+Konsumenci: screen catalog Angulara, report assembler, live/history/import,
+copy/download Markdown oraz testy prezentacji i portability. Publiczny shape
+DTO nie zmienia sie. Wszystkie nowe i zmienione fixture'y sa silnie
+zanonimizowanym, syntetycznym CRM.
+
+- [x] 8K.1: Zamienic hierarchie `routePattern` i komponentu w wybranej wartosci
+  oraz opcjach selektora `View`.
+- [x] 8K.2: Ustawic path jako header raportu, a komponent jako subheader zamiast
+  `branch @ commit`, bez osobnego mapowania w Angularze.
+- [x] 8K.3: Dodac silnie zanonimizowane regresje CRM dla selektora, renderera,
+  Markdown oraz kanonicznego assemblera.
+- [x] 8K.4: Wykonac testy Angulara, produkcyjny build i adekwatne testy
+  backendowej granicy raportu oraz statycznych zasobow.
+
+Checkpoint 8K (2026-08-18): selektor `View` pokazuje `routePattern` w
+`strong`, a nazwe komponentu w `small`; ten sam porzadek obowiazuje w
+kanonicznym naglowku raportu, copy/download Markdown, historii i imporcie.
+`branch @ commit` nie jest juz podtytulem raportu, ale typed source revision
+pozostaje bez zmian w job state i eksporcie. Regresje uzywaja wylacznie silnie
+zanonimizowanego, syntetycznego CRM. Celowane testy assemblera i portability —
+PASS; `npm --prefix frontend test -- --watch=false` — 56 plikow i 425 testow
+PASS; `npm --prefix frontend run build` — PASS;
+`mvn -q -Pbackend-dev clean package` — PASS.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.

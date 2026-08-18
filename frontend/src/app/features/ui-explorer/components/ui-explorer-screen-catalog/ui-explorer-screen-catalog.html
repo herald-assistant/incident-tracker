@@ -63,8 +63,8 @@
             (click)="selectScreen(screen.screenId, $event)"
           >
             <span class="ui-explorer-screen-option__body">
-              <strong>{{ screen.label }}</strong>
-              <small>{{ screen.routePattern || 'Entry point without URL route' }}</small>
+              <strong>{{ screen.routePattern || 'Entry point without URL route' }}</strong>
+              <small>{{ screen.label }}</small>
             </span>
             @if (screenContext(screen)) {
               <span class="ui-explorer-screen-option__badge">{{ screenContext(screen) }}</span>

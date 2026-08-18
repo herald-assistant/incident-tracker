@@ -29,6 +29,13 @@ describe('UiExplorerResultComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
 
     expect(compiled.querySelector('app-analysis-result-header')).not.toBeNull();
+    expect(compiled.querySelector('app-analysis-result-header h3')?.textContent?.trim())
+      .toBe('/contacts/new');
+    expect(compiled.querySelector(
+      'app-analysis-result-header .analysis-result-header > div:first-child > p:last-child'
+    )?.textContent?.trim())
+      .toBe('CrmContactCreateComponent');
+    expect(compiled.textContent).not.toContain('main @ crm-revision-a1b2c3');
     expect(compiled.querySelectorAll('.ui-explorer-result__sections > section')).toHaveLength(8);
     expect(compiled.textContent).toContain('Raport jest częściowy');
     expect(compiled.textContent).toContain('Dynamiczna walidacja kontaktu CRM kontroluje zapis.');
@@ -60,7 +67,8 @@ describe('UiExplorerResultComponent', () => {
 
       expect(writeText).toHaveBeenCalledTimes(1);
       const markdown = String(writeText.mock.calls[0]?.[0]);
-      expect(markdown).toContain('# UI Explorer: Utworzenie kontaktu CRM');
+      expect(markdown).toContain('# /contacts/new');
+      expect(markdown).toContain('_CrmContactCreateComponent_');
       expect(markdown).toContain('## Formularze i reguły');
       expect(markdown).not.toContain('## Zależności przekrojowe');
       expect(markdown).not.toContain('## Materiał do przygotowania zmiany');
@@ -141,8 +149,8 @@ const CRM_SECTION_LABELS: Record<(typeof CRM_SECTION_IDS)[number], string> = {
 function crmReport(): AnalysisReport {
   return {
     reportId: 'crm-ui-report-7c1',
-    header: 'UI Explorer: Utworzenie kontaktu CRM',
-    subHeader: 'main @ crm-revision-a1b2c3',
+    header: '/contacts/new',
+    subHeader: 'CrmContactCreateComponent',
     markdownSummary: 'Widok umożliwia utworzenie syntetycznego kontaktu CRM.',
     sections: CRM_SECTION_IDS.map((sectionId, index) => ({
       id: sectionId,
@@ -186,7 +194,7 @@ function crmResult(): UiExplorerResultResponse {
     screen: {
       systemId: 'crm-agent-portal',
       screenId: 'crm-contact-create',
-      label: 'Utworzenie kontaktu CRM',
+      label: 'CrmContactCreateComponent',
       routePattern: '/contacts/new',
       navigationContext: 'Kontakty CRM > Nowy kontakt'
     },

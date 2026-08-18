@@ -52,6 +52,9 @@ Glowny shell ma trzy grupy nawigacji:
   Terminalne kroki `COMPLETED`, `PARTIAL`, `BLOCKED` i `FAILED` musza byc
   klikalne niezaleznie od statusu poprzednika; `PENDING` i `IN_PROGRESS` nie
   udostepniaja jeszcze szczegolow.
+- UI Explorer identyfikuje widok przede wszystkim przez jego `routePattern`.
+  Nazwa komponentu jest pomocniczym detalem w selektorze i naglowku raportu;
+  branch i commit pozostaja danymi rewizji, a nie nazwa widoku.
 - Nie dodawaj marketingowych hero do narzedzi codziennej pracy.
 - Root route `/` moze opisywac platforme jako workspace overview, ale ma byc
   spokojny, action-oriented i bez dekoracyjnego marketingu. Pisz go dla osob

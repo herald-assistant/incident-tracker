@@ -118,7 +118,10 @@ sa zwijanym evidence; UI nie pokazuje raw JSON ani surowej tresci source w
 glownym raporcie, a prepared prompt jest osobnym widokiem diagnostycznym w
 aside. Shared result header, renderer Markdown, section content
 i report meta utrzymuja znany wzorzec prezentacji, a caly dokument mozna
-skopiowac albo pobrac jako Markdown. `BLOCKED`, `FAILED` oraz terminalny stan
+skopiowac albo pobrac jako Markdown. Katalog i naglowek raportu identyfikuja
+widok przede wszystkim przez `routePattern`, a nazwe komponentu pokazuja jako
+metadata pomocnicze; branch i immutable commit pozostaja w danych rewizji,
+lecz nie sa podtytulem raportu. `BLOCKED`, `FAILED` oraz terminalny stan
 bez raportu sa jawne i nie tworza wyniku zastepczego. Analysis History rozpoznaje
 feature key `ui-explorer` i otwiera zapisany run przez `localRunId`, bez
 ladowania pelnego JSON-a na liscie. Workspace waliduje dokladnie wewnetrzna
