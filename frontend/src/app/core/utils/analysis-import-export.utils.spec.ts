@@ -29,7 +29,7 @@ describe('analysis import/export utils', () => {
     );
   });
 
-  it('should reject legacy incident tracker export envelopes', () => {
+  it('should reject legacy analysis export envelopes', () => {
     expect(() =>
       parseImportedAnalysis({
         schema: 'incident-tracker.analysis-export',

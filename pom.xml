@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>pl.mkn.tdw</groupId>
-    <artifactId>incident-tracker</artifactId>
+    <artifactId>team-delivery-workspace</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Incident Tracker</name>
-    <description>Aplikacja Incident Tracker do analizy incydentow z correlationId z uzyciem Copilot SDK i MCP</description>
+    <name>TeamDeliveryWorkspace</name>
+    <description>Team Delivery Workspace do AI-augmented system analysis z uzyciem Copilot SDK i MCP</description>
 
     <properties>
         <java.version>17</java.version>

@@ -5,10 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 
 @SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
-public class IncidentTrackerApplication {
+public class TeamDeliveryWorkspaceApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(IncidentTrackerApplication.class, args);
+        SpringApplication.run(TeamDeliveryWorkspaceApplication.class, args);
     }
 
 }
