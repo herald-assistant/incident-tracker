@@ -189,11 +189,11 @@
 }
 
 .platform-landing__feature-card--ui {
-  --feature-accent: #136f63;
-  --feature-ink: #0d5c52;
-  --feature-soft: #edf9f6;
-  --feature-border: rgba(19, 111, 99, 0.24);
-  --feature-shadow: rgba(19, 111, 99, 0.14);
+  --feature-accent: var(--primary);
+  --feature-ink: var(--primary-dark);
+  --feature-soft: #eef5ff;
+  --feature-border: rgba(12, 102, 228, 0.24);
+  --feature-shadow: rgba(12, 102, 228, 0.14);
 }
 
 .platform-landing__feature-card--change {

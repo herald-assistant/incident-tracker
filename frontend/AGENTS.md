@@ -32,6 +32,9 @@ Glowny shell ma trzy grupy nawigacji:
 - Gdy backend ustawia `app.ui.title`, pokazuj property jako tytul i
   `Team Delivery Workspace` jako podtytul.
 - Glowny brand uzywa `assets/brand/main-logo.png`.
+- Karty feature'ow w Workspace Overview korzystaja wylacznie z
+  granatowo-niebieskiej palety `main-logo.png`; nie nadajemy feature'om
+  osobnych zielonych, czerwonych ani fioletowych akcentow brandingowych.
 
 ## Styl i UX
 
