@@ -93,8 +93,8 @@ const NAV_GROUPS: NavGroup[] = [
         reloadOnActiveClick: true
       },
       {
-        label: 'Delivery Effectiveness Assessment',
-        route: '/delivery-effectiveness-assessment',
+        label: 'Delivery Complexity Assessment',
+        route: '/delivery-complexity-assessment',
         icon: 'query_stats',
         reloadOnActiveClick: true
       },

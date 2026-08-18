@@ -46,7 +46,7 @@ class CopilotSkillRuntimeLoaderTest {
                 "ui-explorer-orchestrator",
                 "change-verification-orchestrator",
                 "config-drift-viewer-deep-review",
-                "delivery-effectiveness-assessment-evaluator"
+                "delivery-complexity-assessment-evaluator"
         )));
         var skill = skill(loader, "incident-analysis-orchestrator");
         assertTrue(skill.description().startsWith("Glowny starter analizy incydentu"));

@@ -39,7 +39,7 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
    naprawy, weryfikacji albo przekazania dalej.
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
-Config Drift Viewer i Delivery Effectiveness Assessment.
+Config Drift Viewer i Delivery Complexity Assessment.
 Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
 asynchroniczny job oraz neutralna capability GitLaba do graph-first
 rozpoznawania Angular/Nx route/view catalog i screen source context. Integracja
@@ -168,7 +168,7 @@ Na dzisiaj projekt ma:
   oddzielna interpretacje AI; podczas aktualnego rollout readiness nowy wybor
   `DEEP` w glownym formularzu jest tymczasowo disabled i oznaczony `SOON`,
   natomiast zapisane/importowane wyniki `DEEP` nadal sa renderowane,
-- ekran `GET /delivery-effectiveness-assessment` do uruchamiania oceny
+- ekran `GET /delivery-complexity-assessment` do uruchamiania oceny
   dostarczonej zlozonosci dla projektu Jira i zakresu dat; widok pokazuje
   postep, czastkowe Delivery Units, DSP, coverage, confidence, visibility
   limits i usage/cost oraz odtwarza aktywny lub terminalny local run,
@@ -309,11 +309,11 @@ Na dzisiaj projekt ma:
   i sa obecne tylko dla `DEEP`.
 - `POST /api/config-drift-viewer/v1/imports`
   Waliduje kompletny kontrakt V1 calego batcha i zwraca snapshot read-only.
-- `GET /delivery-effectiveness-assessment`
-  Angularowy workspace `Analysis Features / Delivery Effectiveness Assessment`
+- `GET /delivery-complexity-assessment`
+  Angularowy workspace `Analysis Features / Delivery Complexity Assessment`
   z projektem Jira, zakresem dat, modelem/effort, pollingiem i czastkowymi
   wynikami jednostek.
-- `POST /api/delivery-effectiveness-assessment/jobs`
+- `POST /api/delivery-complexity-assessment/jobs`
   Tworzy job dopiero po synchronicznym zapisie snapshotu `QUEUED` w
   `Analysis History`. Discovery kandydatow issue, materialu i MR-ek dziala
   przez ograniczony fan-out, a `GET` z `/{jobId}` zwraca Jira progress,
@@ -727,7 +727,7 @@ Znaczenie grup UI:
 - `Analysis Features` - pionowe feature'y produktowe. `Incident Analysis` jest
   pierwszym dostepnym feature'em; Flow Explorer i Change Verification sa
   kolejnymi dostepnymi feature'ami, podobnie jak Config Drift Viewer i
-  Delivery Effectiveness Assessment, a Data Diagnostics pozostaje placeholderem
+  Delivery Complexity Assessment, a Data Diagnostics pozostaje placeholderem
   dla przyszlego feature'a.
 - `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
   GitLab, Jira, Confluence, Database i Operational Context sa

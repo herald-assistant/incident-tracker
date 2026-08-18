@@ -888,7 +888,7 @@ odzyskanie poprzedniego stanu sa odpowiedzialnoscia uzytkownika. Deployment
 wspoldzielony albo sieciowy wymaga osobnej decyzji obejmujacej security,
 concurrency i persistence.
 
-## 28. Delivery Effectiveness Assessment rozdziela discovery, interpretacje i scoring
+## 28. Delivery Complexity Assessment rozdziela discovery, interpretacje i scoring
 
 Operator podaje typowane kryteria `projectKey`, `fromDate` i `toDate`, a nie
 surowy JQL. Reusable adapter Jira mapuje je na ograniczone zapytanie JQL,

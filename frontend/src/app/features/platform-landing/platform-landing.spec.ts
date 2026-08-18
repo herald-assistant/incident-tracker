@@ -31,7 +31,7 @@ describe('PlatformLandingPageComponent', () => {
       '/ui-explorer',
       '/change-verification',
       '/config-drift-viewer',
-      '/delivery-effectiveness-assessment'
+      '/delivery-complexity-assessment'
     ]);
     expect(
       featureLinks.map((link) =>
@@ -47,7 +47,7 @@ describe('PlatformLandingPageComponent', () => {
       'platform-landing__feature-card--config',
       'platform-landing__feature-card--delivery'
     ]);
-    expect(featureGrid?.textContent).toContain('Delivery Effectiveness Assessment');
+    expect(featureGrid?.textContent).toContain('Delivery Complexity Assessment');
     expect(featureGrid?.textContent).not.toContain('Data Diagnostics');
     expect(
       featureLinks[2]?.querySelector('.platform-landing__feature-icon')?.textContent?.trim()

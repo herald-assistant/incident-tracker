@@ -44,8 +44,8 @@ Przed wieksza zmiana zacznij od:
     wspolnego
 10. `docs/architecture/config-drift-viewer-runtime-flow.md`
     dla zmian Config Drift Viewer
-11. `docs/architecture/delivery-effectiveness-assessment-runtime-flow.md`
-    dla zmian Delivery Effectiveness Assessment
+11. `docs/architecture/delivery-complexity-assessment-runtime-flow.md`
+    dla zmian Delivery Complexity Assessment
 12. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
 
@@ -273,7 +273,7 @@ Zasady granic:
   Feature porownania runtime configuration pomiedzy branchami: named GitLab
   source, deterministyczny parsing/diff, sanitizowana druga opinia AI,
   ograniczony `DEEP`, job API, historia/import-export i report.
-- `src/main/java/pl/mkn/tdw/features/deliveryeffectivenessassessment`
+- `src/main/java/pl/mkn/tdw/features/deliverycomplexityassessment`
   Feature oceny dostarczonej zlozonosci: typed Jira JQL i status history,
   Delivery Units issue-MR, pelne inline evidence zwrocone przez integracje,
   rownolegle sesje Copilota, deterministyczny scoring oraz czastkowy zapis w

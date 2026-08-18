@@ -51,16 +51,16 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('config-drift-viewer')).toBe('build_circle');
   });
 
-  it('should use the Delivery Effectiveness Assessment product mapping', async () => {
+  it('should use the Delivery Complexity Assessment product mapping', async () => {
     const { fixture } = await createComponent();
     const component = fixture.componentInstance as unknown as {
       featureLabel: (feature: string) => string;
       featureIcon: (feature: string) => string;
     };
 
-    expect(component.featureLabel('delivery-effectiveness-assessment'))
-      .toBe('Delivery Effectiveness Assessment');
-    expect(component.featureIcon('delivery-effectiveness-assessment')).toBe('query_stats');
+    expect(component.featureLabel('delivery-complexity-assessment'))
+      .toBe('Delivery Complexity Assessment');
+    expect(component.featureIcon('delivery-complexity-assessment')).toBe('query_stats');
   });
 
   it('should use the UI Explorer product mapping', async () => {
@@ -241,11 +241,11 @@ describe('AnalysisHistoryPageComponent', () => {
     });
   });
 
-  it('should route a delivery effectiveness run to its feature screen', async () => {
+  it('should route a delivery complexity run to its feature screen', async () => {
     const { fixture, router } = await createComponent();
     const run: LocalAnalysisRunListItemResponse = {
       analysisId: 'delivery-1',
-      feature: 'delivery-effectiveness-assessment',
+      feature: 'delivery-complexity-assessment',
       name: 'CRM | July',
       status: 'ANALYZING',
       createdAt: '2026-07-30T10:00:00Z',
@@ -257,7 +257,7 @@ describe('AnalysisHistoryPageComponent', () => {
     fixture.componentInstance.openRun(run);
     await fixture.whenStable();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/delivery-effectiveness-assessment'], {
+    expect(navigateSpy).toHaveBeenCalledWith(['/delivery-complexity-assessment'], {
       queryParams: { localRunId: 'delivery-1' }
     });
   });

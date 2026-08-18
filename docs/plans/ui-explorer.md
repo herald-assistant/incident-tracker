@@ -25,7 +25,7 @@ AI uzupelnic go przez read-only tools i zwraca funkcjonalny raport biznesowy
 z dowodami, poziomami pewnosci oraz ograniczeniami widocznosci.
 
 Feature jest rodzenstwem Incident Analysis, Flow Explorer, Config Drift Viewer,
-Change Verification i Delivery Effectiveness Assessment. Nie zalezy od ich
+Change Verification i Delivery Complexity Assessment. Nie zalezy od ich
 pakietow, kontraktow joba, evidence pipeline ani skilli.
 
 ## Zakres MVP
@@ -500,7 +500,7 @@ podstawowym przebiegu. Techniczne evidence jest dostepne w warstwie szczegolow.
 ### Integracja GitLab
 
 Aktualni konsumenci obejmuja Incident Analysis, Flow Explorer, Change
-Verification, Config Drift Viewer, Delivery Effectiveness Assessment,
+Verification, Config Drift Viewer, Delivery Complexity Assessment,
 Operational Context oraz Tool Workbench. Nowa capability jest addytywna i nie
 zmienia semantyki istniejacego odczytu plikow, wyszukiwania, branch resolution
 ani Java context builders. Testy regresji maja potwierdzic brak nowych importow

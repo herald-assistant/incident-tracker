@@ -120,14 +120,14 @@ export const routes: Routes = [
         }
       },
       {
-        path: 'delivery-effectiveness-assessment',
+        path: 'delivery-complexity-assessment',
         loadComponent: () =>
           import(
-            './features/delivery-effectiveness-assessment/pages/delivery-effectiveness-assessment-page/delivery-effectiveness-assessment-page'
-          ).then((module) => module.DeliveryEffectivenessAssessmentPageComponent),
+            './features/delivery-complexity-assessment/pages/delivery-complexity-assessment-page/delivery-complexity-assessment-page'
+          ).then((module) => module.DeliveryComplexityAssessmentPageComponent),
         data: {
           section: 'Analysis Features',
-          title: 'Delivery Effectiveness Assessment'
+          title: 'Delivery Complexity Assessment'
         }
       },
       {

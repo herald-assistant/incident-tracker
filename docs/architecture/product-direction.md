@@ -30,7 +30,7 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
 
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
   `Incident Analysis`, `Flow Explorer`, `Change Verification` i
-  `Config Drift Viewer`, `Delivery Effectiveness Assessment` oraz przyszle miejsce na Data
+  `Config Drift Viewer`, `Delivery Complexity Assessment` oraz przyszle miejsce na Data
   Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
@@ -156,7 +156,7 @@ operatorski diff, mapping, anonimizacje oraz dokladny AI-safe input tego samego
 pipeline'u dla pojedynczego scope'u. Nie uruchamia modelu i nie jest batchowym
 jobem ani historia analizy.
 
-### Delivery Effectiveness Assessment
+### Delivery Complexity Assessment
 
 Operator wybiera projekt Jira, zakres lokalnych dat oraz model AI. Feature
 wyszukuje issue aktualnie w kategorii `Done`, potwierdza ich ostatnie
@@ -283,7 +283,7 @@ generycznym silnikiem analitycznym.
 
 ## Najwazniejszy dowod architektury
 
-Flow Explorer, Change Verification i Delivery Effectiveness Assessment sa
+Flow Explorer, Change Verification i Delivery Complexity Assessment sa
 kolejnymi feature'ami obok Incident Analysis i stanowia praktyczny test, czy platforma nie jest tylko
 przemianowanym incident trackerem. Kazdy obecny i kolejny feature:
 

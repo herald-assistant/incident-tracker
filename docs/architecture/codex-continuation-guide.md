@@ -64,8 +64,8 @@ zatwierdzony invariant trafia do architektury.
   Change Verification: zgodnosc zmiany i jego wlasny kontrakt feature'a.
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer`
   Config Drift Viewer: deterministic diff i oddzielona interpretacja DEEP.
-- `src/main/java/pl/mkn/tdw/features/deliveryeffectivenessassessment`
-  Delivery Effectiveness Assessment: Jira discovery, Delivery Units, bounded
+- `src/main/java/pl/mkn/tdw/features/deliverycomplexityassessment`
+  Delivery Complexity Assessment: Jira discovery, Delivery Units, bounded
   evidence, Copilot scoring, partial runs i aggregate.
 - `src/main/java/pl/mkn/tdw/features/uiexplorer`
   UI Explorer: katalog ekranow bez ujawniania repository scope, selected-screen

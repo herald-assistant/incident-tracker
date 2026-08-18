@@ -8,8 +8,8 @@ describe('AI Skills display projection', () => {
   it('should classify known workflow prefixes and keep a safe fallback', () => {
     expect(aiSkillFamily('incident-code-grounding').label).toBe('Incident Analysis');
     expect(aiSkillFamily('flow-explorer-orchestrator').label).toBe('Flow Explorer');
-    expect(aiSkillFamily('delivery-effectiveness-assessment-evaluator').label).toBe(
-      'Delivery Effectiveness Assessment'
+    expect(aiSkillFamily('delivery-complexity-assessment-evaluator').label).toBe(
+      'Delivery Complexity Assessment'
     );
     expect(aiSkillFamily('future-skill').label).toBe('Other');
   });
@@ -18,7 +18,7 @@ describe('AI Skills display projection', () => {
     expect(aiSkillResponsibility('flow-explorer-orchestrator')).toBe('Orchestration');
     expect(aiSkillResponsibility('incident-operational-grounding')).toBe('Grounding');
     expect(aiSkillResponsibility('change-verification-write-report')).toBe('Result composition');
-    expect(aiSkillResponsibility('delivery-effectiveness-assessment-evaluator')).toBe(
+    expect(aiSkillResponsibility('delivery-complexity-assessment-evaluator')).toBe(
       'Assessment'
     );
     expect(aiSkillResponsibility('future-skill')).toBe('Guidance');

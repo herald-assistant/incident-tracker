@@ -33,7 +33,7 @@ Przed wieksza zmiana przeczytaj:
 4. `architecture/key-decisions.md`
 5. `architecture/incident-analysis-runtime-flow.md`
 6. `architecture/config-drift-viewer-runtime-flow.md`
-7. `architecture/delivery-effectiveness-assessment-runtime-flow.md`
+7. `architecture/delivery-complexity-assessment-runtime-flow.md`
 8. `architecture/package-dependencies.md`
 9. `architecture/operational-context-model-tools-and-usage.md`
 10. `architecture/codex-continuation-guide.md`
@@ -108,7 +108,7 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `architecture/config-drift-viewer-runtime-flow.md`
   opisuje deterministic/AI flow, tryby `BASIC/DEEP`, scope, limity i granice
   bezpieczenstwa Config Drift Viewer.
-- `architecture/delivery-effectiveness-assessment-runtime-flow.md`
+- `architecture/delivery-complexity-assessment-runtime-flow.md`
   opisuje typed Jira discovery, Delivery Units, evidence/privacy, scoring,
   rownolegle wykonanie oraz zapis runow nowego feature'a.
 - `architecture/package-dependencies.md`

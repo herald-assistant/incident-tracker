@@ -240,8 +240,8 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'config-drift-viewer') {
       return 'Config Drift Viewer';
     }
-    if (feature === 'delivery-effectiveness-assessment') {
-      return 'Delivery Effectiveness Assessment';
+    if (feature === 'delivery-complexity-assessment') {
+      return 'Delivery Complexity Assessment';
     }
     return feature
       ? feature
@@ -268,7 +268,7 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'config-drift-viewer') {
       return 'build_circle';
     }
-    if (feature === 'delivery-effectiveness-assessment') {
+    if (feature === 'delivery-complexity-assessment') {
       return 'query_stats';
     }
     return 'analytics';
@@ -361,8 +361,8 @@ function routeForFeature(feature: string): string | null {
   if (feature === 'config-drift-viewer') {
     return '/config-drift-viewer';
   }
-  if (feature === 'delivery-effectiveness-assessment') {
-    return '/delivery-effectiveness-assessment';
+  if (feature === 'delivery-complexity-assessment') {
+    return '/delivery-complexity-assessment';
   }
   return null;
 }

@@ -4,9 +4,9 @@ export const AI_SKILL_FAMILIES = [
   { id: 'change-verification', label: 'Change Verification', prefix: 'change-verification-' },
   { id: 'config-drift-viewer', label: 'Config Drift Viewer', prefix: 'config-drift-viewer-' },
   {
-    id: 'delivery-effectiveness-assessment',
-    label: 'Delivery Effectiveness Assessment',
-    prefix: 'delivery-effectiveness-assessment-'
+    id: 'delivery-complexity-assessment',
+    label: 'Delivery Complexity Assessment',
+    prefix: 'delivery-complexity-assessment-'
   },
   { id: 'other', label: 'Other', prefix: '' }
 ] as const;

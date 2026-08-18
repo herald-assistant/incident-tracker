@@ -1,0 +1,23 @@
+package pl.mkn.tdw.features.deliverycomplexityassessment.job.api;
+
+import java.time.Instant;
+
+public record DeliveryAssessmentIssueResponse(
+        String issueKey,
+        String issueUrl,
+        String summary,
+        String issueType,
+        Instant doneAt,
+        DeliveryAssessmentTeamResponse team
+) {
+
+    public DeliveryAssessmentIssueResponse(
+            String issueKey,
+            String issueUrl,
+            String summary,
+            String issueType,
+            Instant doneAt
+    ) {
+        this(issueKey, issueUrl, summary, issueType, doneAt, null);
+    }
+}
