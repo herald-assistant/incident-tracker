@@ -260,7 +260,7 @@ export class AnalysisHistoryPageComponent {
       return 'account_tree';
     }
     if (feature === 'ui-explorer') {
-      return 'web_asset';
+      return 'screen_search_desktop';
     }
     if (feature === 'change-verification') {
       return 'fact_check';

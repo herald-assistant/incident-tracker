@@ -30,7 +30,8 @@ describe('PlatformLandingPageComponent', () => {
       '/flow-explorer',
       '/ui-explorer',
       '/change-verification',
-      '/config-drift-viewer'
+      '/config-drift-viewer',
+      '/delivery-effectiveness-assessment'
     ]);
     expect(
       featureLinks.map((link) =>
@@ -43,9 +44,14 @@ describe('PlatformLandingPageComponent', () => {
       'platform-landing__feature-card--flow',
       'platform-landing__feature-card--ui',
       'platform-landing__feature-card--change',
-      'platform-landing__feature-card--config'
+      'platform-landing__feature-card--config',
+      'platform-landing__feature-card--delivery'
     ]);
+    expect(featureGrid?.textContent).toContain('Delivery Effectiveness Assessment');
     expect(featureGrid?.textContent).not.toContain('Data Diagnostics');
+    expect(
+      featureLinks[2]?.querySelector('.platform-landing__feature-icon')?.textContent?.trim()
+    ).toBe('screen_search_desktop');
     expect(plannedFeature?.textContent).toContain('W planie');
     expect(plannedFeature?.textContent).toContain('Data Diagnostics');
     expect(plannedFeature?.querySelector('a')).toBeNull();

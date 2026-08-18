@@ -35,6 +35,8 @@ Glowny shell ma trzy grupy nawigacji:
 - Karty feature'ow w Workspace Overview korzystaja wylacznie z
   granatowo-niebieskiej palety `main-logo.png`; nie nadajemy feature'om
   osobnych zielonych, czerwonych ani fioletowych akcentow brandingowych.
+- Siatka feature'ow w Workspace Overview pokazuje maksymalnie trzy karty w
+  wierszu, schodzac responsywnie do dwoch i jednej kolumny.
 
 ## Styl i UX
 

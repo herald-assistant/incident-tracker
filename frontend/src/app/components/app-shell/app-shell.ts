@@ -77,7 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
       {
         label: 'UI Explorer',
         route: '/ui-explorer',
-        icon: 'web_asset',
+        icon: 'screen_search_desktop',
         reloadOnActiveClick: true
       },
       {

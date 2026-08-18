@@ -723,6 +723,8 @@ describe('App', () => {
       'UI Explorer'
     );
     expect(navLink).not.toBeNull();
+    expect(navLink?.querySelector('.material-symbols-outlined')?.textContent?.trim())
+      .toBe('screen_search_desktop');
     expect(compiled.textContent).toContain('Screen documentation workspace');
     expect(compiled.textContent).toContain('Load view inventory');
   });

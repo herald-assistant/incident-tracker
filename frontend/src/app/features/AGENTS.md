@@ -30,6 +30,12 @@ powinien tylko mapowac swoje dane, teksty i akcje do wspolnego wzorca. Celem
 jest to, zeby operator po poznaniu jednego feature'a rozpoznawal te same
 elementy pracy w kolejnych feature'ach.
 
+Workspace Overview (`features/platform-landing`) pokazuje wszystkie dedykowane
+feature'y jako jedna rodzine produktowa. Karty feature'ow musza korzystac z
+granatowo-niebieskiej kolorystyki logo `assets/brand/main-logo.png`; nie
+wprowadzaj osobnych zielonych, czerwonych, fioletowych ani innych
+semantycznych akcentow tylko po to, zeby rozroznic feature.
+
 ## Incident Analysis
 
 Incident Analysis ma byc codziennym workspace'em, nie landing page.

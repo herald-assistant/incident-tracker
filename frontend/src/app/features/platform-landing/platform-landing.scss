@@ -151,7 +151,7 @@
 
 .platform-landing__feature-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -166,7 +166,6 @@
   grid-template-columns: 36px minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
-  min-height: 184px;
   padding: 14px;
   border: 1px solid var(--feature-border);
   border-radius: var(--radius-xl);
@@ -210,6 +209,14 @@
   --feature-soft: #f3f8ff;
   --feature-border: rgba(27, 114, 220, 0.24);
   --feature-shadow: rgba(27, 114, 220, 0.14);
+}
+
+.platform-landing__feature-card--delivery {
+  --feature-accent: #0a5bc7;
+  --feature-ink: #0747a6;
+  --feature-soft: #eef5ff;
+  --feature-border: rgba(10, 91, 199, 0.24);
+  --feature-shadow: rgba(10, 91, 199, 0.14);
 }
 
 a.platform-landing__feature-card:hover,

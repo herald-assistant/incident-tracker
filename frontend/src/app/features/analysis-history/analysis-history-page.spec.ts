@@ -71,7 +71,7 @@ describe('AnalysisHistoryPageComponent', () => {
     };
 
     expect(component.featureLabel('ui-explorer')).toBe('UI Explorer');
-    expect(component.featureIcon('ui-explorer')).toBe('web_asset');
+    expect(component.featureIcon('ui-explorer')).toBe('screen_search_desktop');
   });
 
   it('should keep history action labels in tooltips instead of visible button text', async () => {
