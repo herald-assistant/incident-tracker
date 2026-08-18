@@ -1,0 +1,24 @@
+${AnsiColor.BRIGHT_CYAN}┌────────────────────────────────────────────────────────────────────────────────────┐
+${AnsiColor.BRIGHT_CYAN}│                                                                                    ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│                                    ${AnsiColor.BRIGHT_CYAN}           ██████████████████████████           ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│                                    ${AnsiColor.BRIGHT_CYAN}      █████████████████████████████████         ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}                                 ${AnsiColor.BRIGHT_CYAN}    ███████                     ███████        ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}                                 ${AnsiColor.BRIGHT_CYAN}   ██████     ${AnsiColor.BRIGHT_BLUE}█████     █████      ${AnsiColor.BRIGHT_CYAN}█████       ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}████████╗██████╗ ██╗    ██╗      ${AnsiColor.BRIGHT_CYAN}  █████     ${AnsiColor.BRIGHT_BLUE}████████   ████████       ${AnsiColor.BRIGHT_CYAN}███      ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}╚══██╔══╝██╔══██╗██║    ██║      ${AnsiColor.BRIGHT_CYAN} ████      ${AnsiColor.BRIGHT_BLUE}█████████   █████████      ${AnsiColor.BRIGHT_CYAN}████     ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}   ██║   ██║  ██║██║    ██║      ${AnsiColor.BRIGHT_CYAN} ████      ${AnsiColor.BRIGHT_BLUE}█████████   █████████      ${AnsiColor.BRIGHT_CYAN}████     ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}   ██║   ██║  ██║██║ █╗ ██║      ${AnsiColor.BRIGHT_CYAN} ████       ${AnsiColor.BRIGHT_BLUE}███████     ███████       ${AnsiColor.BRIGHT_CYAN}████     ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}   ██║   ██║  ██║██║███╗██║      ${AnsiColor.BRIGHT_CYAN} ████                                 ${AnsiColor.BRIGHT_CYAN}████     ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}   ██║   ██████╔╝╚███╔███╔╝      ${AnsiColor.BRIGHT_CYAN} █████      ${AnsiColor.BRIGHT_WHITE}██               ██     ${AnsiColor.BRIGHT_CYAN} ████      ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}   ╚═╝   ╚═════╝  ╚══╝╚══╝       ${AnsiColor.BRIGHT_CYAN}   █████      ${AnsiColor.BRIGHT_WHITE}███████████████${AnsiColor.BRIGHT_CYAN}       ████       ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_BLUE}                                 ${AnsiColor.BRIGHT_CYAN}    █████                          █████       ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_CYAN}                                      █████████████████████████████████         ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│    ${AnsiColor.BRIGHT_CYAN}                                        █████████████████████████████           ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│                                                                                    ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│${AnsiColor.BRIGHT_WHITE}    T E A M   D E L I V E R Y   W O R K S P A C E                                   ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│${AnsiColor.BRIGHT_BLUE}    AI-AUGMENTED SYSTEM ANALYSIS PLATFORM                                           ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│                                                                                    ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│${AnsiColor.BRIGHT_WHITE}    SIGNALS  ${AnsiColor.BLUE}━━▶  ${AnsiColor.BRIGHT_WHITE}CONTEXT  ${AnsiColor.BLUE}━━▶  ${AnsiColor.BRIGHT_WHITE}TOOLS  ${AnsiColor.BLUE}━━▶  ${AnsiColor.BRIGHT_WHITE}INTELLIGENCE                            ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}│${AnsiColor.BLUE}    Version: ${tdw.application.version:${application.version:dev}}                                                         ${AnsiColor.BRIGHT_CYAN}│
+${AnsiColor.BRIGHT_CYAN}└────────────────────────────────────────────────────────────────────────────────────┘
+${AnsiColor.DEFAULT}
