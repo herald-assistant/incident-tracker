@@ -3,6 +3,7 @@ package pl.mkn.tdw.testsupport.copilot;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactService;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactItemIdGenerator;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentDigestService;
@@ -119,7 +120,8 @@ public final class CopilotTestFixtures {
                 properties,
                 toolEvidenceSessionStore,
                 new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
-                new CopilotReportSessionStore()
+                new CopilotReportSessionStore(),
+                new CopilotClientShutdown(properties)
         );
     }
 }

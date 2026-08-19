@@ -20,6 +20,7 @@ public class CopilotSdkSessionCleanup implements CopilotSessionCleanup {
     private final CopilotSessionConfigFactory sessionConfigFactory;
     private final CopilotSdkProperties properties;
     private final CopilotSessionStateDirectoryCleaner sessionStateDirectoryCleaner;
+    private final CopilotClientShutdown clientShutdown;
 
     @Override
     public void deleteSession(String sessionId, CopilotRunAuth auth) {
@@ -45,11 +46,11 @@ public class CopilotSdkSessionCleanup implements CopilotSessionCleanup {
     private void deleteSessionThroughSdk(String sessionId, CopilotRunAuth auth) {
         var timeoutMs = deleteTimeout().toMillis();
         try (var client = new CopilotClient(sessionConfigFactory.clientOptions(auth))) {
-            client.start().orTimeout(timeoutMs, TimeUnit.MILLISECONDS).join();
             try {
+                client.start().orTimeout(timeoutMs, TimeUnit.MILLISECONDS).join();
                 client.deleteSession(sessionId).orTimeout(timeoutMs, TimeUnit.MILLISECONDS).join();
             } finally {
-                client.stop().orTimeout(timeoutMs, TimeUnit.MILLISECONDS).join();
+                clientShutdown.stop(client, "session-cleanup:" + sessionId);
             }
         }
     }

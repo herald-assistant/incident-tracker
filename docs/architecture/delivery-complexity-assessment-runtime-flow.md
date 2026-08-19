@@ -216,6 +216,12 @@ jednostki jest monotoniczny; spozniony wynik po timeoutcie nie moze nadpisac
 `FAILED`.
 Awaria jednej jednostki nie zatrzymuje pozostalych.
 
+Kazda rownolegla jednostka korzysta ze wspolnego lifecycle klienta Copilot.
+Na Windows platforma uruchamia bezposrednio bezwzgledny `copilot.exe`, bez
+posredniego `cmd.exe`, a po wyniku terminalnym albo bledzie startu wykonuje
+ograniczony czasowo `stop()` z fallbackiem `forceStop()`. Zapobiega to
+pozostawianiu osobnego procesu CLI po zakonczonej Delivery Unit.
+
 Snapshot publikuje postep Jira, kroki, context, activity, czastkowe jednostki i
 aggregate. Visibility limits pozostaja przy jednostkach, ktorych widocznosci
 dotycza. Aggregate backendowy zawiera total DSP, distribution, coverage,

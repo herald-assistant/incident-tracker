@@ -16,13 +16,18 @@ class CopilotSdkLiveModelLister implements CopilotSdkModelLister {
 
     private final CopilotSessionConfigFactory sessionConfigFactory;
     private final CopilotSdkProperties properties;
+    private final CopilotClientShutdown clientShutdown;
 
     @Override
     public List<ModelInfo> listModels(CopilotRunAuth auth) {
         var timeout = timeout();
         try (var client = new CopilotClient(sessionConfigFactory.clientOptions(auth))) {
-            client.start().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            return client.listModels().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            try {
+                client.start().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+                return client.listModels().get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            } finally {
+                clientShutdown.stop(client, "model-options");
+            }
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while listing Copilot models.", exception);

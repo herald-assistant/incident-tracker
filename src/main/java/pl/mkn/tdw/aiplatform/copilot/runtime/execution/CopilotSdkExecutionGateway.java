@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
@@ -35,6 +36,7 @@ public class CopilotSdkExecutionGateway {
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
     private final CopilotToolBudgetRegistry toolBudgetRegistry;
     private final CopilotReportSessionStore reportSessionStore;
+    private final CopilotClientShutdown clientShutdown;
 
     public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
         var overallStart = System.nanoTime();
@@ -43,14 +45,14 @@ public class CopilotSdkExecutionGateway {
 
         try {
             try (var client = new CopilotClient(preparedSession.clientOptions())) {
-                client.onLifecycle(event -> logSession(event, runReference));
-                logClientState("before-start", client.getState(), runReference);
-                var clientStart = System.nanoTime();
-                client.start().join();
-                logClientState("after-start", client.getState(), runReference);
-                logDuration("client-start", runReference, nanosToMillis(clientStart));
-
                 try {
+                    client.onLifecycle(event -> logSession(event, runReference));
+                    logClientState("before-start", client.getState(), runReference);
+                    var clientStart = System.nanoTime();
+                    client.start().join();
+                    logClientState("after-start", client.getState(), runReference);
+                    logDuration("client-start", runReference, nanosToMillis(clientStart));
+
                     var openSessionStart = System.nanoTime();
                     var sessionOperation = sessionOperation(preparedSession);
 
@@ -114,7 +116,7 @@ public class CopilotSdkExecutionGateway {
                     logClientState("before-stop", client.getState(), runReference);
 
                     var clientStop = System.nanoTime();
-                    client.stop().join();
+                    clientShutdown.stop(client, runReference);
 
                     logClientState("after-stop", client.getState(), runReference);
                     logDuration("client-stop", runReference, nanosToMillis(clientStop));

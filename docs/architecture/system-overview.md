@@ -785,6 +785,11 @@ Znaczenie grup UI:
   provider'a opcji Copilota przez backendowy shared/operator endpoint opcji AI.
   Frontend nie jest source of truth dla mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
+- Lifecycle procesu Copilot CLI jest wspolna odpowiedzialnoscia
+  `aiplatform.copilot`. Na Windows runtime rozwiazuje CLI do bezwzglednego
+  pliku `.exe`, aby SDK kontrolowalo rzeczywisty proces zamiast shell wrappera,
+  a kazdy klient konczy ograniczonym czasowo `stop()` z fallbackiem
+  `forceStop()`, rowniez po bledzie startu.
 - Elasticsearch tools dla Copilota sa wystawiane tylko wtedy, gdy efektywna
   konfiguracja Elasticsearch/Kibana jest kompletna. Brak tej konfiguracji
   blokuje tools `elastic_*` w initial analysis i follow-up chat niezaleznie od

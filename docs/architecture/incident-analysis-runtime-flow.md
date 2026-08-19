@@ -827,6 +827,7 @@ analysis.ai.copilot.working-directory=${user.dir}
 analysis.ai.copilot.copilot-home=${tdw.workspace.directory:tdw-data}/copilot
 analysis.ai.copilot.permission-mode=approve-all
 analysis.ai.copilot.send-and-wait-timeout=5m
+analysis.ai.copilot.client-stop-timeout=20s
 analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-root=copilot/skills

@@ -747,6 +747,16 @@ incident-specific prompt, coverage, policy i GitLab/DB capture evidence, a
 klasa trafia do platformy tylko wtedy, gdy nie wymaga semantyki jednego
 feature'a i ma stabilny kontrakt reusable.
 
+Platforma posiada tez lifecycle procesu CLI. Na Windows
+`analysis.ai.copilot.cli-path` jest rozwiazywany do istniejacego, bezwzglednego
+pliku `.exe`; shell wrappers `.cmd`, `.bat` i `.ps1` nie sa dopuszczane. Dzieki
+temu SDK przechowuje uchwyt do rzeczywistego procesu CLI zamiast do
+krotkozyjacego `cmd.exe`. Kazdy klient utworzony przez aplikacje ma ograniczony
+czasowo `stop()`, fallback `forceStop()` i cleanup wykonywany takze po bledzie
+`start()`. Nie wolno stosowac globalnego zabijania procesow po nazwie, bo ten
+sam host moze uruchamiac niezalezne procesy Copilota nalezace do IDE lub
+operatora.
+
 ## 23. Shared/operator API jest osobna kategoria
 
 Nie kazdy endpoint backendu dla frontendu jest czescia dedykowanego feature'a.

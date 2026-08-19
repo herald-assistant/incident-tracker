@@ -12,6 +12,12 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+}
+catch {}
+
 $scriptDirectory = $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($scriptDirectory)) {
     $scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -70,7 +76,7 @@ function Get-TdwBanner {
     $bannerText = $null
     $sourceBannerPath = Join-Path $scriptDirectory "src\main\resources\banner.txt"
     if (Test-Path -LiteralPath $sourceBannerPath -PathType Leaf) {
-        $bannerText = Get-Content -LiteralPath $sourceBannerPath -Raw
+        $bannerText = Get-Content -LiteralPath $sourceBannerPath -Raw -Encoding UTF8
     }
     else {
         try {
@@ -79,7 +85,7 @@ function Get-TdwBanner {
             try {
                 $entry = $archive.GetEntry("BOOT-INF/classes/banner.txt")
                 if ($null -ne $entry) {
-                    $reader = New-Object System.IO.StreamReader($entry.Open())
+                    $reader = New-Object System.IO.StreamReader($entry.Open(), [System.Text.Encoding]::UTF8)
                     try {
                         $bannerText = $reader.ReadToEnd()
                     }
@@ -101,8 +107,9 @@ function Get-TdwBanner {
         return "TEAM DELIVERY WORKSPACE"
     }
 
-    $renderableBanner = $bannerText.Replace(
-        '${tdw.application.version:${application.version:dev}}',
+    $renderableBanner = [regex]::Replace(
+        $bannerText,
+        '\$\{tdw\.application\.version:\$\{application\.version:[^}]*\}\}',
         (Get-TdwVersion -Jar $Jar)
     )
     return $renderableBanner.TrimEnd()
@@ -195,27 +202,18 @@ function Get-LogTail {
         return @()
     }
 
-    return @(Get-Content -LiteralPath $Path -Tail $LineCount -ErrorAction SilentlyContinue)
+    return @(Get-Content -LiteralPath $Path -Tail $LineCount -Encoding UTF8 -ErrorAction SilentlyContinue)
 }
 
 function Start-TdwServer {
     try {
-        $commandLine = ($javaArguments | ForEach-Object {
-            if ($_ -match '[\s"]') {
-                '"' + ($_ -replace '(\\*)"', '$1$1\"' -replace '(\\+)$', '$1$1') + '"'
-            }
-            else {
-                $_
-            }
-        }) -join ' '
-
         $processParameters = @{
-            FilePath = $JavaPath
-            ArgumentList = $commandLine
-            NoNewWindow = $true
-            PassThru = $true
+            FilePath               = $JavaPath
+            ArgumentList           = $javaArguments
+            NoNewWindow            = $true
+            PassThru               = $true
             RedirectStandardOutput = $standardOutputLogPath
-            RedirectStandardError = $standardErrorLogPath
+            RedirectStandardError  = $standardErrorLogPath
         }
         $script:serverProcess = Start-Process @processParameters
         $script:serverState = "STARTING"
@@ -308,17 +306,20 @@ function Update-TdwServerState {
 
         if ($script:serverState -eq "STARTING") {
             $recentOutput = Get-LogTail -Path $standardOutputLogPath -LineCount 100
+            $joinedOutput = ($recentOutput -join "`n")
+
             $startingLine = $recentOutput | Where-Object { $_ -match 'with PID\s+([0-9]+)' } | Select-Object -Last 1
             if ($null -ne $startingLine -and $startingLine -match 'with PID\s+([0-9]+)') {
                 $script:serverApplicationPid = [int]$Matches[1]
             }
-            if ($recentOutput -match 'Started\s+\S+\s+in\s+.+\s+seconds') {
+
+            if ($joinedOutput -match 'Started\s+\S+\s+in\s') {
                 $script:serverState = "RUNNING"
             }
 
             $tomcatLine = $recentOutput | Where-Object { $_ -match 'Tomcat started on port\s+([0-9]+)' } | Select-Object -Last 1
             if ($null -ne $tomcatLine -and $tomcatLine -match 'Tomcat started on port\s+([0-9]+)') {
-                $script:serverUrl = $script:serverUrl -replace ':([0-9]+)/', ":$($Matches[1])/"
+                $script:serverUrl = $script:serverUrl -replace '(localhost):[0-9]+', "`$1:$($Matches[1])"
             }
         }
     }
@@ -446,6 +447,7 @@ Write-Host "TDW JAR: $jarFullPath"
 Write-Host "TDW workspace: $workspaceFullPath"
 
 $javaArguments = @(
+    "-Dfile.encoding=UTF-8",
     "-jar",
     $jarFullPath,
     "--tdw.workspace.directory=$workspaceFullPath"
@@ -516,7 +518,7 @@ try {
             }
         }
         else {
-            Start-Sleep -Milliseconds 100
+            Start-Sleep -Milliseconds 200
         }
     }
 }

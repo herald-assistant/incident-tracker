@@ -24,19 +24,20 @@ public class CopilotSessionConfigFactory {
     private final CopilotSdkProperties properties;
     private final CopilotAccessTokenResolver accessTokenResolver;
     private final CopilotSkillRuntimeLoader skillRuntimeLoader;
+    private final CopilotCliExecutableResolver cliExecutableResolver;
 
     public CopilotClientOptions clientOptions(CopilotRunAuth auth) {
         var accessToken = accessTokenResolver.resolve(auth);
         var clientOptions = new CopilotClientOptions()
                 .setUseLoggedInUser(false)
                 .setGitHubToken(accessToken.value())
-                .setCwd(properties.getWorkingDirectory());
+                .setCwd(properties.getWorkingDirectory())
+                .setCliPath(cliExecutableResolver.resolve(
+                        properties.getCliPath(),
+                        properties.getWorkingDirectory()
+                ));
 
         clientOptions.setCopilotHome(properties.resolvedCopilotHome().toString());
-
-        if (properties.getCliPath() != null && !properties.getCliPath().isBlank()) {
-            clientOptions.setCliPath(properties.getCliPath());
-        }
 
         return clientOptions;
     }

@@ -17,6 +17,7 @@ import com.github.copilot.rpc.SessionConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
@@ -518,6 +519,33 @@ class CopilotSdkExecutionGatewayTest {
         verify(preparedRequest, never()).close();
     }
 
+    @Test
+    void shouldStopClientWhenClientStartFails() {
+        var properties = new CopilotSdkProperties();
+        var gateway = executionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
+        var preparedRequest = new CopilotPreparedSession(
+                "start-failure",
+                new CopilotClientOptions(),
+                new SessionConfig(),
+                new MessageOptions().setPrompt("Diagnose incident"),
+                "Diagnose incident",
+                Map.of()
+        );
+
+        try (MockedConstruction<CopilotClient> mockedClients = mockConstruction(CopilotClient.class, (client, context) -> {
+            when(client.getState()).thenReturn(ConnectionState.ERROR);
+            when(client.start()).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("start failed")));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+        })) {
+            assertThrows(CopilotSdkInvocationException.class, () -> gateway.execute(preparedRequest));
+
+            verify(mockedClients.constructed().get(0)).stop();
+        }
+    }
+
     private CopilotSdkExecutionGateway executionGateway(
             CopilotSdkProperties properties,
             CopilotToolEvidenceSessionStore toolEvidenceSessionStore
@@ -534,7 +562,8 @@ class CopilotSdkExecutionGatewayTest {
                 properties,
                 toolEvidenceSessionStore,
                 new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
-                reportStore
+                reportStore,
+                new CopilotClientShutdown(properties)
         );
     }
 
