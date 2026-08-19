@@ -38,7 +38,7 @@ class DeliveryAssessmentCopilotProviderTest {
         when(requestAssembler.assemble(anyString(), any(), any(), any())).thenReturn(request);
         when(runPreparationService.prepare(request)).thenReturn(session);
         when(executionGateway.execute(session)).thenReturn(new CopilotExecutionResult(rawResponse, null, "session-1"));
-        when(responseParser.parse(rawResponse)).thenAnswer(invocation -> {
+        when(responseParser.parse(rawResponse, Map.of())).thenAnswer(invocation -> {
             assertThat(captured.get()).isEqualTo(rawResponse);
             throw new IllegalArgumentException("AI response did not contain JSON assessment.");
         });

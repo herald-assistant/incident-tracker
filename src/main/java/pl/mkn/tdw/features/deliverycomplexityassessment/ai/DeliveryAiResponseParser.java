@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Component
@@ -21,7 +22,7 @@ public class DeliveryAiResponseParser {
 
     private final ObjectMapper objectMapper;
 
-    public DeliveryAiResponse parse(String content) {
+    public DeliveryAiResponse parse(String content, Map<String, String> artifacts) {
         var json = extractJson(content);
         if (!StringUtils.hasText(json)) {
             throw new IllegalArgumentException("AI response did not contain JSON assessment.");
@@ -39,7 +40,7 @@ public class DeliveryAiResponseParser {
             var dimensions = "DELIVERY".equals(classification) ? dimensions(root.path("dimensions")) : null;
             var evidenceSummary = textList(root.path("evidenceSummary"));
             if (dimensions != null) {
-                validateEvidenceCoverage(dimensions, evidenceSummary);
+                validateEvidenceCoverage(dimensions, evidenceSummary, artifacts);
             }
             return new DeliveryAiResponse(
                     classification,
@@ -70,25 +71,40 @@ public class DeliveryAiResponseParser {
 
     private void validateEvidenceCoverage(
             DeliveryAssessmentDimensions dimensions,
-            List<String> evidenceSummary
+            List<String> evidenceSummary,
+            Map<String, String> artifacts
     ) {
-        requireDimensionEvidence("outcomeBreadth", dimensions.outcomeBreadth(), evidenceSummary);
-        requireDimensionEvidence("domainDecisionComplexity", dimensions.domainDecisionComplexity(), evidenceSummary);
-        requireDimensionEvidence("applicationFlowComplexity", dimensions.applicationFlowComplexity(), evidenceSummary);
-        requireDimensionEvidence("boundaryAndDataComplexity", dimensions.boundaryAndDataComplexity(), evidenceSummary);
-        requireDimensionEvidence("verificationStateSpace", dimensions.verificationStateSpace(), evidenceSummary);
+        requireDimensionEvidence("outcomeBreadth", dimensions.outcomeBreadth(), evidenceSummary, artifacts);
+        requireDimensionEvidence(
+                "domainDecisionComplexity", dimensions.domainDecisionComplexity(), evidenceSummary, artifacts
+        );
+        requireDimensionEvidence(
+                "applicationFlowComplexity", dimensions.applicationFlowComplexity(), evidenceSummary, artifacts
+        );
+        requireDimensionEvidence(
+                "boundaryAndDataComplexity", dimensions.boundaryAndDataComplexity(), evidenceSummary, artifacts
+        );
+        requireDimensionEvidence(
+                "verificationStateSpace", dimensions.verificationStateSpace(), evidenceSummary, artifacts
+        );
         requireDimensionEvidence(
                 "implementedCompatibilityScope",
                 dimensions.implementedCompatibilityScope(),
-                evidenceSummary
+                evidenceSummary,
+                artifacts
         );
     }
 
-    private void requireDimensionEvidence(String dimension, int score, List<String> evidenceSummary) {
+    private void requireDimensionEvidence(
+            String dimension,
+            int score,
+            List<String> evidenceSummary,
+            Map<String, String> artifacts
+    ) {
         if (score == 0) {
             return;
         }
-        var covered = evidenceSummary.stream().anyMatch(item -> isDimensionEvidence(item, dimension));
+        var covered = evidenceSummary.stream().anyMatch(item -> isDimensionEvidence(item, dimension, artifacts));
         if (!covered) {
             throw new IllegalArgumentException(
                     "AI response does not contain evidence for non-zero dimension " + dimension + "."
@@ -96,15 +112,73 @@ public class DeliveryAiResponseParser {
         }
     }
 
-    private boolean isDimensionEvidence(String item, String dimension) {
+    private boolean isDimensionEvidence(
+            String item,
+            String dimension,
+            Map<String, String> artifacts
+    ) {
         if (!StringUtils.hasText(item)) {
             return false;
         }
         var parts = item.split("\\|", 3);
         return parts.length == 3
                 && dimension.equals(parts[0].trim())
-                && parts[1].trim().startsWith("delivery-complexity/")
+                && groundedReference(parts[1], artifacts)
                 && StringUtils.hasText(parts[2]);
+    }
+
+    private boolean groundedReference(String value, Map<String, String> artifacts) {
+        if (!StringUtils.hasText(value) || artifacts == null || artifacts.isEmpty()) {
+            return false;
+        }
+        var reference = value.trim();
+        var sectionSeparator = reference.indexOf('#');
+        var artifactName = sectionSeparator >= 0
+                ? reference.substring(0, sectionSeparator).trim()
+                : reference;
+        if (artifacts.containsKey(artifactName)) {
+            return groundedArtifactSection(artifacts.get(artifactName), reference, sectionSeparator);
+        }
+        var artifactAliases = artifacts.entrySet().stream()
+                .filter(entry -> artifactName.equals(shortArtifactName(entry.getKey())))
+                .toList();
+        if (artifactAliases.size() == 1) {
+            return groundedArtifactSection(artifactAliases.get(0).getValue(), reference, sectionSeparator);
+        }
+        return artifacts.values().stream()
+                .filter(StringUtils::hasText)
+                .anyMatch(content -> containsReference(content, reference, sectionSeparator));
+    }
+
+    private String shortArtifactName(String artifactName) {
+        var separator = artifactName.lastIndexOf('/');
+        return separator >= 0 ? artifactName.substring(separator + 1) : artifactName;
+    }
+
+    private boolean groundedArtifactSection(String content, String reference, int sectionSeparator) {
+        if (sectionSeparator < 0) {
+            return true;
+        }
+        if (!StringUtils.hasText(content) || sectionSeparator >= reference.length() - 1) {
+            return false;
+        }
+        var section = reference.substring(sectionSeparator + 1).trim();
+        return StringUtils.hasText(section) && content.contains(section);
+    }
+
+    private boolean containsReference(String content, String reference, int sectionSeparator) {
+        if (content.contains(reference)) {
+            return true;
+        }
+        if (sectionSeparator <= 0 || sectionSeparator >= reference.length() - 1) {
+            return false;
+        }
+        var artifactPart = reference.substring(0, sectionSeparator).trim();
+        var sectionPart = reference.substring(sectionSeparator + 1).trim();
+        return StringUtils.hasText(artifactPart)
+                && StringUtils.hasText(sectionPart)
+                && content.contains(artifactPart)
+                && content.contains(sectionPart);
     }
 
     private int requiredDimension(JsonNode node, String name) {

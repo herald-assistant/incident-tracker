@@ -61,6 +61,9 @@ public class DeliveryPromptPreparationService {
 
                 Dla `DELIVERY` wszystkie wymiary sa wymagane i maja wartosci calkowite 0-4. Dla kazdego
                 niezerowego wymiaru dodaj osobny wpis `evidenceSummary` zgodny z formatem ze skilla.
+                Referencja ma wskazywac logiczny artifact `delivery-complexity/...#...` albo dokladny
+                identyfikator issue, MR, sciezke pliku, klase lub metode widoczna w inline artifacts.
+                Nie wymyslaj referencji, ktorej nie ma w danych zrodlowych.
                 Wynik 0 musi oznaczac obserwowalny brak istotnej zmiany, nigdy brak danych. Jezeli evidence
                 nie pozwala odroznic kotwic dla materialnego wymiaru, zwroc `INSUFFICIENT_EVIDENCE` bez
                 syntetycznych wymiarow. Nie zwracaj Delivered Story Points ani score100; backend wylicza je

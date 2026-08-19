@@ -185,7 +185,12 @@ biezacej Delivery Unit i nie wykorzystuja historycznych Story Points.
 
 Dla kazdego niezerowego wymiaru AI zwraca `evidenceSummary` w formacie
 `dimension | artifact#section | observed fact`. Parser wymaga kompletnego
-pokrycia niezerowych wymiarow i logicznej sciezki `delivery-complexity/`.
+pokrycia niezerowych wymiarow oraz referencji ugruntowanej w inline artifacts.
+Akceptowana jest logiczna sciezka `delivery-complexity/...` albo dokladny
+identyfikator issue, MR, pliku, klasy lub metody obecny w tresci artifactow.
+Parser toleruje tez jednoznaczna skrocona nazwe logicznego artifactu, np.
+`diffs.md#...`, ale wymaga wtedy, aby wskazana sekcja wystepowala w tresci tego
+artifactu.
 Brak takiego evidence uniewaznia odpowiedz zamiast pozwalac na scoring
 niezakotwiczonej liczby.
 

@@ -25,7 +25,9 @@ Oceniaj wylacznie evidence przekazane dla biezacej Delivery Unit.
     wymiaru. Nie wyprowadzaj go z rozmiaru diffu.
 11. Dla kazdego niezerowego wymiaru dodaj wpis do `evidenceSummary` w formacie
     `<dimension> | <artifact#sekcja> | <obserwowany fakt>`. Uzyj logicznej
-    nazwy artifactu i mozliwie dokladnego naglowka issue, MR albo pliku.
+    nazwy artifactu `delivery-complexity/...#...` albo dokladnego identyfikatora
+    issue, MR, sciezki pliku, klasy lub metody widocznej w inline artifacts.
+    Nie wymyslaj referencji, ktorej nie ma w danych zrodlowych.
 
 ## Sposob wyboru poziomu
 
