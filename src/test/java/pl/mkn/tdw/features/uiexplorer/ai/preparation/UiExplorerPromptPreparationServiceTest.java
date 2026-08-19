@@ -19,13 +19,11 @@ class UiExplorerPromptPreparationServiceTest {
 
         var preparation = service.prepare(request(), context());
 
-        assertThat(preparation.artifacts()).hasSize(9);
+        assertThat(preparation.artifacts()).hasSize(7);
         assertThat(preparation.artifactContents()).containsOnlyKeys(
                 UiExplorerArtifactService.REQUEST_ARTIFACT,
                 UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT,
-                UiExplorerArtifactService.USE_CASE_MANIFEST_ARTIFACT,
-                UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT,
-                UiExplorerArtifactService.RESEARCH_FRONTIER_ARTIFACT,
+                UiExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT,
                 UiExplorerArtifactService.EVIDENCE_MANIFEST_ARTIFACT,
                 UiExplorerArtifactService.COVERAGE_ARTIFACT,
                 UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,

@@ -40,29 +40,13 @@ public class UiExplorerCopilotToolSessionContextFactory {
                 "pathPrefixes", scope.pathPrefixes()
         ));
         hidden.put(
-                UiExplorerCopilotToolContextKeys.DELIVERED_SLICE_IDS,
-                context.sourceSlices().stream().map(slice -> slice.sliceId()).toList()
+                UiExplorerCopilotToolContextKeys.EMBEDDED_SOURCE_PATHS,
+                context.sourceFiles().stream().map(file -> file.path()).toList()
         );
         hidden.put(
-                UiExplorerCopilotToolContextKeys.UNRESOLVED_FRONTIER_IDS,
-                context.unresolvedFrontier().stream().map(frontier -> frontier.frontierId()).toList()
+                UiExplorerCopilotToolContextKeys.TRUNCATED_SOURCE_PATHS,
+                context.sourceFiles().stream().filter(file -> file.truncated()).map(file -> file.path()).toList()
         );
-        var frontendToolContext = new LinkedHashMap<String, Object>();
-        frontendToolContext.put("projectName", scope.projectName());
-        frontendToolContext.put("pathPrefixes", scope.pathPrefixes());
-        frontendToolContext.put("screenId", context.screen().screenId());
-        frontendToolContext.put("expectedRevision", context.sourceRevision().revision());
-        frontendToolContext.put("deliveredSliceIds", context.sourceSlices().stream().map(slice -> slice.sliceId()).toList());
-        frontendToolContext.put("frontiers", context.unresolvedFrontier().stream().map(frontier -> {
-            var item = new LinkedHashMap<String, Object>();
-            item.put("frontierId", frontier.frontierId());
-            item.put("ownerPath", frontier.ownerPath());
-            item.put("symbol", frontier.symbol());
-            item.put("affectedCategories", frontier.affectedCategories());
-            item.put("candidates", frontier.candidates());
-            return item;
-        }).toList());
-        hidden.put(AgentToolContextKeys.GITLAB_FRONTEND_CONTEXT, frontendToolContext);
         return new CopilotToolSessionContext(runId, SESSION_PREFIX + runId, hidden);
     }
 }

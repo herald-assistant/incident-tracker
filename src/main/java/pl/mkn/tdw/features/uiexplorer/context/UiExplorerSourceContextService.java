@@ -123,43 +123,15 @@ public class UiExplorerSourceContextService {
             GitLabFrontendGraphLimits limits
     ) {
         var screen = source.screenNode();
-        var manifest = source.sourceManifest().stream()
-                .map(file -> new UiExplorerSourceManifestEntry(
-                        file.path(), file.roles().stream().map(Enum::name).toList(),
-                        file.sourceCharacters(), file.contentSha256(), file.sliceCount()
+        var files = source.sourceFiles().stream()
+                .map(file -> new UiExplorerSourceContextFile(
+                        file.path(),
+                        file.roles().stream().map(Enum::name).toList(),
+                        file.content(),
+                        file.returnedCharacters(),
+                        file.truncated()
                 ))
                 .toList();
-        var slices = source.sourceSlices().stream()
-                .map(slice -> new UiExplorerSourceSlice(
-                        slice.sliceId(), slice.path(), slice.roles().stream().map(Enum::name).toList(),
-                        slice.kind().name(), slice.symbol(), slice.startLine(), slice.endLine(),
-                        slice.content(), slice.returnedCharacters(), slice.contentSha256()
-                ))
-                .toList();
-        var relations = source.relations().stream()
-                .map(relation -> new UiExplorerUseCaseRelation(
-                        relation.from(), relation.to(), relation.kind().name(), relation.symbol(),
-                        relation.confidence().name(), relation.source() != null
-                        ? new UiExplorerSourceReference(
-                                null, relation.source().path(), relation.source().symbol(),
-                                relation.source().startLine(), relation.source().endLine()
-                        )
-                        : null
-                ))
-                .toList();
-        var unresolvedFrontier = source.unresolvedFrontier().stream()
-                .map(frontier -> new UiExplorerUnresolvedFrontier(
-                        frontier.frontierId(), frontier.ownerPath(), frontier.symbol(),
-                        frontier.reason(), frontier.affectedCategories(), frontier.candidates()
-                ))
-                .toList();
-        var sourceMetrics = source.metrics();
-        var metrics = new UiExplorerContextMetrics(
-                sourceMetrics.sourceFileCount(), sourceMetrics.sourceCharactersRead(),
-                sourceMetrics.returnedSliceCount(), sourceMetrics.returnedCharacters(),
-                sourceMetrics.omittedCharacters(), sourceMetrics.omittedFileCount(),
-                sourceMetrics.relationCount(), sourceMetrics.unresolvedFrontierCount()
-        );
         var signals = source.technicalSignals().stream()
                 .map(signal -> new UiExplorerSourceContextSignal(
                         signal.kind().name(),
@@ -194,8 +166,8 @@ public class UiExplorerSourceContextService {
                 graphCoverage.sourceReadCount(),
                 graphCoverage.aliasResolutionCount(),
                 graphCoverage.unresolvedEdgeCount(),
-                manifest.size(),
-                metrics.returnedCharacters(),
+                files.size(),
+                source.totalReturnedCharacters(),
                 graphCoverage.limitReached(),
                 source.contextLimitReached(),
                 limits.maxRouteNodes(),
@@ -240,12 +212,8 @@ public class UiExplorerSourceContextService {
                         source.sourceRevision().ref(),
                         source.sourceRevision().commitId()
                 ),
-                overallStatus(slices, sectionCoverage, source),
-                manifest,
-                slices,
-                relations,
-                unresolvedFrontier,
-                metrics,
+                overallStatus(files, sectionCoverage, source),
+                files,
                 signals,
                 sectionCoverage,
                 diagnostics,
@@ -276,9 +244,6 @@ public class UiExplorerSourceContextService {
                 && (source.contextLimitReached()
                 || source.graphCoverage().limitReached()
                 || source.screenNode().status() != GitLabFrontendDiscoveryStatus.RESOLVED
-                || source.unresolvedFrontier().stream().anyMatch(frontier ->
-                        frontier.affectedCategories().isEmpty()
-                                || frontier.affectedCategories().stream().anyMatch(categories::contains))
                 || assignment.sectionId() == UiExplorerSectionId.VARIANTS_AND_FAILURES)) {
             status = UiExplorerCoverageStatus.PARTIAL;
         }
@@ -300,11 +265,11 @@ public class UiExplorerSourceContextService {
     }
 
     private UiExplorerCoverageStatus overallStatus(
-            List<UiExplorerSourceSlice> slices,
+            List<UiExplorerSourceContextFile> files,
             List<UiExplorerSectionContextCoverage> coverage,
             GitLabFrontendScreenGraphContext source
     ) {
-        if (slices.isEmpty()) {
+        if (files.isEmpty()) {
             return UiExplorerCoverageStatus.BLOCKED;
         }
         var status = coverage.stream()
@@ -326,6 +291,9 @@ public class UiExplorerSourceContextService {
         var limits = new ArrayList<String>();
         limits.add("Static discovery does not execute TypeScript or runtime form definitions.");
         limits.add("Organizational libraries outside the resolved repository scope may remain unavailable.");
+        if (source.contextLimitReached() || source.graphCoverage().limitReached()) {
+            limits.add("The targeted route/component traversal reached a configured node, read, depth, file or character limit.");
+        }
         if (source.screenNode().status() != GitLabFrontendDiscoveryStatus.RESOLVED) {
             limits.add("The selected route-to-view mapping is not fully unambiguous.");
         }

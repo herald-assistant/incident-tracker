@@ -48,45 +48,25 @@ class UiExplorerCopilotPoliciesTest {
     }
 
     @Test
-    void shouldAllowFocusedReadsWithinScopeAndRejectMissingReason() {
+    void shouldAllowFocusedNewFileReadButRejectRedundantEmbeddedFileAndMissingReason() {
         var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-read-run", context());
         var validChunk = chunk(FETCHED_VALIDATOR_PATH, "main", "Weryfikacja walidatora CRM.");
 
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context, GitLabToolNames.READ_REPOSITORY_FILE_CHUNK, validChunk
         ))).doesNotThrowAnyException();
-        assertThatCode(() -> scopePolicy.beforeInvocation(request(
+        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                 chunk(EMBEDDED_COMPONENT_PATH, "main", "Ponowny odczyt CRM.")
-        ))).doesNotThrowAnyException();
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
+                .hasMessageContaining("already complete");
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                 chunk(FETCHED_VALIDATOR_PATH, "main", "")
         ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
                 .hasMessageContaining("reason");
-    }
-
-    @Test
-    void shouldAllowOnlyCurrentSyntheticCrmResearchFrontier() {
-        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-frontier-run", context());
-        var valid = """
-                {
-                  "frontierId": "frontend-runtime-form-frontier",
-                  "reason": "Domkniecie runtime definition syntetycznego CRM."
-                }
-                """;
-
-        assertThatCode(() -> scopePolicy.beforeInvocation(request(
-                context, GitLabToolNames.EXPAND_FRONTEND_USE_CASE_CONTEXT, valid
-        ))).doesNotThrowAnyException();
-        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
-                context,
-                GitLabToolNames.EXPAND_FRONTEND_USE_CASE_CONTEXT,
-                valid.replace("frontend-runtime-form-frontier", "frontend-outside-scope")
-        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("frontierId");
     }
 
     @Test

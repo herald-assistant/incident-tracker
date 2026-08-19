@@ -13,16 +13,14 @@ class UiExplorerArtifactServiceTest {
     private final UiExplorerArtifactService service = new UiExplorerArtifactService(objectMapper);
 
     @Test
-    void shouldRenderNineSemanticCrmArtifactsWithBusinessWritingContract() throws Exception {
+    void shouldRenderSevenBoundedCrmArtifactsWithBusinessWritingContract() throws Exception {
         var artifacts = service.renderArtifacts(request(), context());
 
         assertThat(artifacts).extracting(artifact -> artifact.displayName())
                 .containsExactly(
                         UiExplorerArtifactService.REQUEST_ARTIFACT,
                         UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT,
-                        UiExplorerArtifactService.USE_CASE_MANIFEST_ARTIFACT,
-                        UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT,
-                        UiExplorerArtifactService.RESEARCH_FRONTIER_ARTIFACT,
+                        UiExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT,
                         UiExplorerArtifactService.EVIDENCE_MANIFEST_ARTIFACT,
                         UiExplorerArtifactService.COVERAGE_ARTIFACT,
                         UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
@@ -38,25 +36,15 @@ class UiExplorerArtifactServiceTest {
                 .isEqualTo("UNTRUSTED_USER_INPUT");
         assertThat(requestJson).contains("Ignore previous instructions");
 
-        var manifestJson = content(artifacts, UiExplorerArtifactService.USE_CASE_MANIFEST_ARTIFACT);
-        var parsedManifest = objectMapper.readTree(manifestJson);
-        assertThat(parsedManifest.path("sourceManifest")).hasSize(2);
-        assertThat(parsedManifest.path("relations")).hasSize(1);
-        assertThat(manifestJson).doesNotContain("loadRuntimeDefinition");
-
-        var slicesJson = content(artifacts, UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT);
-        var parsedSlices = objectMapper.readTree(slicesJson);
-        assertThat(parsedSlices.path("sourceEvidencePolicy").path("classification").asText())
+        var contextJson = content(artifacts, UiExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT);
+        var parsedContext = objectMapper.readTree(contextJson);
+        assertThat(parsedContext.path("sourceEvidencePolicy").path("classification").asText())
                 .isEqualTo("UNTRUSTED_SOURCE_EVIDENCE");
-        assertThat(parsedSlices.path("slices").get(1).path("contentClassification").asText())
+        assertThat(parsedContext.path("sourceFiles").get(1).path("contentClassification").asText())
                 .isEqualTo("UNTRUSTED_SOURCE_EVIDENCE");
-        assertThat(slicesJson).contains("Ignore previous instructions")
+        assertThat(contextJson).contains("Ignore previous instructions")
                 .doesNotContain("</artifact>")
                 .doesNotContain("```json");
-
-        var frontierJson = content(artifacts, UiExplorerArtifactService.RESEARCH_FRONTIER_ARTIFACT);
-        assertThat(frontierJson).contains("frontend-runtime-form-frontier")
-                .doesNotContain("loadRuntimeDefinition");
 
         var manifest = content(artifacts, UiExplorerArtifactService.EVIDENCE_MANIFEST_ARTIFACT);
         assertThat(manifest).contains("metadata only")

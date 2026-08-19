@@ -14,15 +14,6 @@ import pl.mkn.tdw.integrations.gitlab.TestGitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendContextMetrics;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenContextDelta;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContextService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceManifestEntry;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceRevision;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceRole;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceSlice;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceSliceKind;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseConfidence;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextResult;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
@@ -78,93 +69,6 @@ class GitLabMcpToolsTest {
             new TestGitLabRepositoryPort(),
             gitLabProperties(DEFAULT_GROUP)
     );
-
-    @Test
-    void shouldExpandOnlySessionBoundFrontendResearchFrontierAndReturnSemanticDelta() {
-        var repositoryPort = mock(GitLabRepositoryPort.class);
-        var frontendContextService = mock(GitLabFrontendScreenGraphContextService.class);
-        var scope = new GitLabFrontendRepositoryScope(
-                "CRM",
-                "frontend",
-                "release-candidate",
-                List.of("apps/crm-agent", "libs/crm")
-        );
-        var sourcePath = "libs/crm/preferences/src/lib/crm-preferences.service.ts";
-        var slice = new GitLabFrontendSourceSlice(
-                "slice-new",
-                sourcePath,
-                List.of(GitLabFrontendSourceRole.BACKEND_CLIENT),
-                GitLabFrontendSourceSliceKind.BACKEND_OPERATION,
-                "loadPreferences",
-                18,
-                22,
-                "loadPreferences() { return this.http.get('/api/crm/preferences'); }",
-                70,
-                "sha-new"
-        );
-        var delta = new GitLabFrontendScreenContextDelta(
-                scope,
-                new GitLabFrontendSourceRevision("release-candidate", "commit-123"),
-                "frontier-crm-preferences",
-                List.of(new GitLabFrontendSourceManifestEntry(
-                        sourcePath,
-                        List.of(GitLabFrontendSourceRole.BACKEND_CLIENT),
-                        240,
-                        "file-sha",
-                        1
-                )),
-                List.of(slice),
-                List.of(),
-                List.of(),
-                List.of(),
-                new GitLabFrontendContextMetrics(1, 240, 1, 70, 170, 0, 0, 0),
-                false
-        );
-        when(frontendContextService.expand(any())).thenReturn(delta);
-        var tools = GitLabMcpToolsTestCreator.create(
-                repositoryPort,
-                ignored -> OperationalContextCatalog.empty(),
-                mock(GitLabRepositoryEndpointService.class),
-                mock(GitLabEndpointUseCaseContextService.class),
-                mock(GitLabJavaMethodUseCaseContextService.class),
-                mock(GitLabJavaMethodSliceService.class),
-                mock(GitLabOpenApiEndpointSliceService.class),
-                frontendContextService,
-                gitLabProperties("CRM")
-        );
-        var hiddenContext = new LinkedHashMap<String, Object>();
-        hiddenContext.put(AgentToolContextKeys.GITLAB_GROUP, "CRM");
-        hiddenContext.put(AgentToolContextKeys.GITLAB_BRANCH, "release-candidate");
-        hiddenContext.put(AgentToolContextKeys.GITLAB_FRONTEND_CONTEXT, Map.of(
-                "projectName", "frontend",
-                "pathPrefixes", List.of("apps/crm-agent", "libs/crm"),
-                "expectedRevision", "commit-123",
-                "deliveredSliceIds", List.of("slice-old"),
-                "frontiers", List.of(Map.of(
-                        "frontierId", "frontier-crm-preferences",
-                        "ownerPath", "apps/crm-agent/src/app/preferences.component.ts",
-                        "symbol", "CrmPreferencesService",
-                        "candidates", List.of(sourcePath)
-                ))
-        ));
-
-        var response = tools.expandFrontendUseCaseContext(
-                "frontier-crm-preferences",
-                "Potwierdzam pobranie preferencji klienta CRM.",
-                new ToolContext(hiddenContext)
-        );
-
-        assertEquals("frontier-crm-preferences", response.frontierId());
-        assertEquals("commit-123", response.sourceRevision());
-        assertEquals(List.of(slice), response.sourceSlices());
-        verify(frontendContextService).expand(argThat(request ->
-                request.scope().equals(scope)
-                        && request.expectedRevision().equals("commit-123")
-                        && request.frontierId().equals("frontier-crm-preferences")
-                        && request.deliveredSliceIds().equals(List.of("slice-old"))
-                        && request.candidatePaths().equals(List.of(sourcePath))
-        ));
-    }
 
     @Test
     void shouldListAvailableRepositoriesFromOperationalContextUsingSessionGroup() {

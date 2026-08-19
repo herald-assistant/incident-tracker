@@ -42,16 +42,11 @@ class UiExplorerSourceContextServiceTest {
         assertThat(result.sourceRevision().revision()).isEqualTo("crm-ui-revision-20260815");
         assertThat(result.status()).isEqualTo(UiExplorerCoverageStatus.READY);
         assertThat(result.guards()).containsExactly("CrmAuthGuard");
-        assertThat(result.sourceManifest()).singleElement().satisfies(file -> {
+        assertThat(result.sourceFiles()).singleElement().satisfies(file -> {
             assertThat(file.path()).endsWith("crm-contact-preferences.component.ts");
+            assertThat(file.content()).contains("CrmContactPreferencesComponent");
             assertThat(file.roles()).contains("VIEW_COMPONENT", "FORM_LOGIC");
         });
-        assertThat(result.sourceSlices()).singleElement().satisfies(slice -> {
-            assertThat(slice.path()).endsWith("crm-contact-preferences.component.ts");
-            assertThat(slice.content()).contains("CrmContactPreferencesComponent");
-            assertThat(slice.kind()).isEqualTo("FORM_RULE");
-        });
-        assertThat(result.metrics().returnedSliceCount()).isEqualTo(1);
         assertThat(result.boundary().maxContextFiles()).isEqualTo(120);
         assertThat(result.boundary().maxTotalCharacters()).isEqualTo(2_000_000);
         assertThat(result.boundary().graphSourceReadCount()).isEqualTo(9);
@@ -75,7 +70,7 @@ class UiExplorerSourceContextServiceTest {
 
         assertThat(result.status()).isEqualTo(UiExplorerCoverageStatus.PARTIAL);
         assertThat(result.boundary().contextLimitReached()).isTrue();
-        assertThat(result.visibilityLimits()).noneMatch(limit -> limit.contains("maxContextFiles"));
+        assertThat(result.visibilityLimits()).anyMatch(limit -> limit.contains("reached"));
     }
 
     @Test
@@ -169,27 +164,10 @@ class UiExplorerSourceContextServiceTest {
                 screenNode, new GitLabFrontendEffectiveRouteChain(
                         screenIdentity, List.of(parentSegment, screenSegment), List.of("contactId")
                 ), graphCoverage,
-                List.of(new GitLabFrontendSourceManifestEntry(
+                List.of(new GitLabFrontendSourceFile(
                         viewPath, List.of(GitLabFrontendSourceRole.VIEW_COMPONENT, GitLabFrontendSourceRole.FORM_LOGIC),
-                        81, "crm-view-sha256", 1
+                        "export class CrmContactPreferencesComponent { readonly syntheticCrmForm = true; }", 81, false
                 )),
-                List.of(new GitLabFrontendSourceSlice(
-                        "frontend-crm-form", viewPath,
-                        List.of(GitLabFrontendSourceRole.VIEW_COMPONENT, GitLabFrontendSourceRole.FORM_LOGIC),
-                        GitLabFrontendSourceSliceKind.FORM_RULE, "syntheticCrmForm", 1, 1,
-                        "export class CrmContactPreferencesComponent { readonly syntheticCrmForm = true; }",
-                        81, "crm-view-slice-sha256"
-                )),
-                List.of(new GitLabFrontendUseCaseRelation(
-                        "screen-crm-contact-preferences", viewPath,
-                        GitLabFrontendUseCaseRelationKind.ROUTE_TO_VIEW, "CrmContactPreferencesComponent",
-                        GitLabFrontendSignalConfidence.HIGH, routeSource
-                )),
-                partial ? List.of(new GitLabFrontendUnresolvedFrontier(
-                        "frontend-crm-frontier", viewPath, "CrmRuntimePreferenceDefinition",
-                        "Synthetic CRM runtime definition requires targeted research.",
-                        List.of("FORMS"), List.of()
-                )) : List.of(),
                 List.of(new GitLabFrontendTechnicalSignal(
                         GitLabFrontendTechnicalSignalKind.REACTIVE_FORM,
                         "A strongly anonymized CRM reactive form is present.", GitLabFrontendSignalConfidence.HIGH,
@@ -199,9 +177,7 @@ class UiExplorerSourceContextServiceTest {
                         new GitLabFrontendContextCoverage("ROUTING", GitLabFrontendCoverageStatus.READY, "Synthetic CRM route resolved."),
                         new GitLabFrontendContextCoverage("VIEW", GitLabFrontendCoverageStatus.READY, "Synthetic CRM view resolved."),
                         new GitLabFrontendContextCoverage("FORMS", GitLabFrontendCoverageStatus.READY, "Synthetic CRM form resolved.")
-                ), diagnostics,
-                new GitLabFrontendContextMetrics(1, 81, 1, 81, 0, 0, 1, partial ? 1 : 0),
-                partial
+                ), diagnostics, 81, partial
         );
     }
 }

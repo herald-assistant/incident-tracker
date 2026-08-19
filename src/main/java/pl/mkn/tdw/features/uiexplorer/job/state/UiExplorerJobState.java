@@ -128,7 +128,7 @@ public final class UiExplorerJobState {
                 context.status() == UiExplorerCoverageStatus.BLOCKED
                         ? "Deterministic source context is insufficient for the selected active sections."
                         : "Deterministic screen context, source manifest and active-section coverage were built.",
-                context.sourceSlices().size(),
+                context.sourceFiles().size(),
                 null,
                 now
         );

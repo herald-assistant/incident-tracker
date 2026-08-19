@@ -840,10 +840,9 @@
                     <h3>{{ contextResult.screenNode?.label || contextResult.screenNode?.screen?.screenId || 'Selected screen' }}</h3>
                   </div>
                   <div class="endpoint-results__stats">
-                    <span class="panel-chip">{{ contextResult.sourceManifest.length }} source files</span>
-                    <span class="panel-chip">{{ contextResult.sourceSlices.length }} semantic slices</span>
+                    <span class="panel-chip">{{ contextResult.sourceFiles.length }} files</span>
                     <span class="panel-chip">{{ contextResult.technicalSignals.length }} signals</span>
-                    <span class="panel-chip">{{ contextResult.metrics.returnedCharacters }} / {{ contextResult.metrics.sourceCharactersRead }} chars</span>
+                    <span class="panel-chip">{{ contextResult.totalReturnedCharacters }} chars</span>
                     @if (contextResult.contextLimitReached || contextResult.graphCoverage.limitReached) { <span class="panel-chip panel-chip--warning">bounded result</span> }
                   </div>
                 </div>
@@ -868,15 +867,16 @@
                 }
 
                 <div class="endpoint-list">
-                  @for (file of contextResult.sourceSlices; track file.sliceId || $index) {
+                  @for (file of contextResult.sourceFiles; track file.path || $index) {
                     <details class="endpoint-card">
                       <summary class="endpoint-card__summary">
                         <div class="endpoint-card__main">
-                          <span class="endpoint-card__method">{{ file.kind || 'SOURCE' }}</span>
+                          <span class="endpoint-card__method">SOURCE</span>
                           <div class="endpoint-card__copy">
                             <h4>{{ file.path || 'unknown source' }}</h4>
-                            <p>{{ file.roles.join(', ') }} · L{{ file.startLine }}-L{{ file.endLine }} · {{ file.returnedCharacters }} chars</p>
+                            <p>{{ file.roles.join(', ') }} · {{ file.returnedCharacters }} chars</p>
                           </div>
+                          @if (file.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
                           <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
                         </div>
                       </summary>
@@ -888,17 +888,6 @@
                     </details>
                   }
                 </div>
-
-                @if (contextResult.unresolvedFrontier.length > 0) {
-                  <details class="context-subsection context-subsection--collapsible">
-                    <summary><span>Unresolved frontier</span><span class="panel-chip panel-chip--warning">{{ contextResult.unresolvedFrontier.length }}</span></summary>
-                    <ul class="context-list">
-                      @for (frontier of contextResult.unresolvedFrontier; track frontier.frontierId || $index) {
-                        <li>{{ frontier.ownerPath }} · {{ frontier.symbol }} · {{ frontier.reason }}</li>
-                      }
-                    </ul>
-                  </details>
-                }
 
                 @if (contextResult.diagnostics.length > 0) {
                   <details class="context-subsection context-subsection--collapsible">

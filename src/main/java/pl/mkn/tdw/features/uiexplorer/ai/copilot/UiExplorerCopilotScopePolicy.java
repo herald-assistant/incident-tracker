@@ -26,8 +26,7 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
     private static final Set<String> ALLOWED_GITLAB_TOOLS = Set.of(
             GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
             GitLabToolNames.READ_REPOSITORY_FILE,
-            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
-            GitLabToolNames.EXPAND_FRONTEND_USE_CASE_CONTEXT
+            GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
     );
     private static final int MAX_READ_CHARACTERS = 20_000;
     private static final int MAX_CHUNK_LINES = 600;
@@ -51,27 +50,11 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             reject(request, "Resolved UI Explorer repository scope is unavailable.", false);
         }
         validateReason(request, arguments);
-        if (GitLabToolNames.EXPAND_FRONTEND_USE_CASE_CONTEXT.equals(request.toolName())) {
-            validateFrontendExpansion(request, arguments);
-            return;
-        }
         validateBranchAndApplication(request, arguments, repository);
         if (GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(request.toolName())) {
             validateSearch(request, arguments, repository);
         } else {
             validateRead(request, arguments, repository);
-        }
-    }
-
-    private void validateFrontendExpansion(
-            CopilotToolInvocationPolicyRequest request,
-            JsonNode arguments
-    ) {
-        var frontierId = text(arguments, "frontierId");
-        var allowed = stringList(request.sessionContext().hiddenContext()
-                .get(UiExplorerCopilotToolContextKeys.UNRESOLVED_FRONTIER_IDS));
-        if (!StringUtils.hasText(frontierId) || !allowed.contains(frontierId)) {
-            reject(request, "frontierId is outside the current UI Explorer research frontier.", true);
         }
     }
 
@@ -133,6 +116,13 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
         var filePath = normalizePath(text(arguments, "filePath"));
         if (!StringUtils.hasText(filePath) || !withinPrefixes(filePath, repository.pathPrefixes())) {
             reject(request, "filePath is outside the validated UI Explorer code-search boundary.", true);
+        }
+        var embeddedPaths = stringList(request.sessionContext().hiddenContext()
+                .get(UiExplorerCopilotToolContextKeys.EMBEDDED_SOURCE_PATHS));
+        var truncatedPaths = stringList(request.sessionContext().hiddenContext()
+                .get(UiExplorerCopilotToolContextKeys.TRUNCATED_SOURCE_PATHS));
+        if (embeddedPaths.contains(filePath) && !truncatedPaths.contains(filePath)) {
+            reject(request, "The requested file is already complete in the deterministic source snapshot.", false);
         }
         var maxCharacters = integer(arguments, "maxCharacters");
         if (maxCharacters != null && (maxCharacters < 1 || maxCharacters > MAX_READ_CHARACTERS)) {

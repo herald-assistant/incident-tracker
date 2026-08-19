@@ -2306,11 +2306,7 @@ export class GitLabEvidenceConsoleComponent {
       return null;
     }
     const record = response as Partial<GitLabFrontendScreenContextResponse>;
-    return Array.isArray(record.sourceManifest)
-      && Array.isArray(record.sourceSlices)
-      && Array.isArray(record.coverage)
-      && record.metrics !== null
-      && typeof record.metrics === 'object'
+    return Array.isArray(record.sourceFiles) && Array.isArray(record.coverage)
       ? (record as GitLabFrontendScreenContextResponse)
       : null;
   }

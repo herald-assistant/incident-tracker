@@ -58,7 +58,6 @@ class CopilotSdkToolFactoryTest {
                 Set.of(
                         "gitlab_build_endpoint_use_case_context",
                         "gitlab_build_java_method_use_case_context",
-                        "gitlab_expand_frontend_use_case_context",
                         "gitlab_find_class_references",
                         "gitlab_find_flow_context",
                         "gitlab_list_available_repositories",
@@ -246,11 +245,6 @@ class CopilotSdkToolFactoryTest {
                 toolsByName.get("gitlab_find_flow_context"),
                 Set.of("projectNames", "branchRef", "applicationNames", "keywords", "operationNames", "maxFilesPerRole", "reason"),
                 Set.of("group", "branch", "correlationId", "toolContext")
-        );
-        assertSchemaProperties(
-                toolsByName.get("gitlab_expand_frontend_use_case_context"),
-                Set.of("frontierId", "reason"),
-                Set.of("group", "projectName", "branchRef", "pathPrefixes", "expectedRevision", "deliveredSliceIds", "toolContext")
         );
     }
 

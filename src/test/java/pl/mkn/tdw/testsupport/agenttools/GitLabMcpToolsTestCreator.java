@@ -9,12 +9,10 @@ import pl.mkn.tdw.integrations.gitlab.openapi.GitLabOpenApiEndpointSliceService;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseContextService;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContextService;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextPort;
 
 import static pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator.endpointService;
-import static org.mockito.Mockito.mock;
 
 public final class GitLabMcpToolsTestCreator {
 
@@ -84,30 +82,6 @@ public final class GitLabMcpToolsTestCreator {
             GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService,
             GitLabProperties gitLabProperties
     ) {
-        return create(
-                gitLabRepositoryPort,
-                operationalContextPort,
-                gitLabRepositoryEndpointService,
-                gitLabEndpointUseCaseContextService,
-                gitLabJavaMethodUseCaseContextService,
-                gitLabJavaMethodSliceService,
-                gitLabOpenApiEndpointSliceService,
-                mock(GitLabFrontendScreenGraphContextService.class),
-                gitLabProperties
-        );
-    }
-
-    public static GitLabMcpTools create(
-            GitLabRepositoryPort gitLabRepositoryPort,
-            OperationalContextPort operationalContextPort,
-            GitLabRepositoryEndpointService gitLabRepositoryEndpointService,
-            GitLabEndpointUseCaseContextService gitLabEndpointUseCaseContextService,
-            GitLabJavaMethodUseCaseContextService gitLabJavaMethodUseCaseContextService,
-            GitLabJavaMethodSliceService gitLabJavaMethodSliceService,
-            GitLabOpenApiEndpointSliceService gitLabOpenApiEndpointSliceService,
-            GitLabFrontendScreenGraphContextService gitLabFrontendScreenGraphContextService,
-            GitLabProperties gitLabProperties
-    ) {
         return new GitLabMcpTools(
                 gitLabRepositoryPort,
                 operationalContextPort,
@@ -116,7 +90,6 @@ public final class GitLabMcpToolsTestCreator {
                 gitLabJavaMethodUseCaseContextService,
                 gitLabJavaMethodSliceService,
                 gitLabOpenApiEndpointSliceService,
-                gitLabFrontendScreenGraphContextService,
                 gitLabProperties
         );
     }

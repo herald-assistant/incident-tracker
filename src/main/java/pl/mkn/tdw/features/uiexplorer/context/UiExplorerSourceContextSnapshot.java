@@ -20,11 +20,7 @@ public record UiExplorerSourceContextSnapshot(
         UiExplorerSourceReference routeSource,
         UiExplorerSourceRevision sourceRevision,
         UiExplorerCoverageStatus status,
-        List<UiExplorerSourceManifestEntry> sourceManifest,
-        List<UiExplorerSourceSlice> sourceSlices,
-        List<UiExplorerUseCaseRelation> relations,
-        List<UiExplorerUnresolvedFrontier> unresolvedFrontier,
-        UiExplorerContextMetrics metrics,
+        List<UiExplorerSourceContextFile> sourceFiles,
         List<UiExplorerSourceContextSignal> technicalSignals,
         List<UiExplorerSectionContextCoverage> sectionCoverage,
         List<UiExplorerSourceContextDiagnostic> diagnostics,
@@ -36,10 +32,7 @@ public record UiExplorerSourceContextSnapshot(
         guards = guards != null ? List.copyOf(guards) : List.of();
         routeParameters = routeParameters != null ? List.copyOf(routeParameters) : List.of();
         screenLimitations = screenLimitations != null ? List.copyOf(screenLimitations) : List.of();
-        sourceManifest = sourceManifest != null ? List.copyOf(sourceManifest) : List.of();
-        sourceSlices = sourceSlices != null ? List.copyOf(sourceSlices) : List.of();
-        relations = relations != null ? List.copyOf(relations) : List.of();
-        unresolvedFrontier = unresolvedFrontier != null ? List.copyOf(unresolvedFrontier) : List.of();
+        sourceFiles = sourceFiles != null ? List.copyOf(sourceFiles) : List.of();
         technicalSignals = technicalSignals != null ? List.copyOf(technicalSignals) : List.of();
         sectionCoverage = sectionCoverage != null ? List.copyOf(sectionCoverage) : List.of();
         diagnostics = diagnostics != null ? List.copyOf(diagnostics) : List.of();

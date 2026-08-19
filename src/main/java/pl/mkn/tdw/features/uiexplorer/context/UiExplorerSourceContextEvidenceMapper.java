@@ -46,14 +46,13 @@ public class UiExplorerSourceContextEvidenceMapper {
     }
 
     private AnalysisEvidenceSection manifestSection(UiExplorerSourceContextSnapshot snapshot) {
-        var items = snapshot.sourceManifest().stream()
+        var items = snapshot.sourceFiles().stream()
                 .map(file -> new AnalysisEvidenceItem(
                         file.path(),
                         List.of(
                                 attribute("roles", String.join(", ", file.roles())),
-                                attribute("sourceCharacters", Integer.toString(file.sourceCharacters())),
-                                attribute("semanticSlices", Integer.toString(file.sliceCount())),
-                                attribute("contentSha256", file.contentSha256())
+                                attribute("returnedCharacters", Integer.toString(file.returnedCharacters())),
+                                attribute("truncated", Boolean.toString(file.truncated()))
                         )
                 ))
                 .toList();

@@ -14,7 +14,6 @@ public final class AgentToolContextKeys {
     public static final String GITLAB_BRANCH = "gitLabBranch";
     public static final String GITLAB_GROUP = "gitLabGroup";
     public static final String GITLAB_ALLOWED_APPLICATION_NAMES = "gitLabAllowedApplicationNames";
-    public static final String GITLAB_FRONTEND_CONTEXT = "gitLabFrontendContext";
     public static final String REPORT_ID = "reportId";
     public static final String REPORT_FEATURE = "reportFeature";
     public static final String ALLOWED_REPORT_SECTION_IDS = "allowedReportSectionIds";

@@ -9,14 +9,11 @@ public record GitLabFrontendScreenGraphContext(
         GitLabFrontendRouteNode screenNode,
         GitLabFrontendEffectiveRouteChain effectiveRouteChain,
         GitLabFrontendGraphCoverage graphCoverage,
-        List<GitLabFrontendSourceManifestEntry> sourceManifest,
-        List<GitLabFrontendSourceSlice> sourceSlices,
-        List<GitLabFrontendUseCaseRelation> relations,
-        List<GitLabFrontendUnresolvedFrontier> unresolvedFrontier,
+        List<GitLabFrontendSourceFile> sourceFiles,
         List<GitLabFrontendTechnicalSignal> technicalSignals,
         List<GitLabFrontendContextCoverage> coverage,
         List<GitLabFrontendGraphDiagnostic> diagnostics,
-        GitLabFrontendContextMetrics metrics,
+        int totalReturnedCharacters,
         boolean contextLimitReached
 ) {
     public GitLabFrontendScreenGraphContext {
@@ -25,10 +22,7 @@ public record GitLabFrontendScreenGraphContext(
         screenNode = Objects.requireNonNull(screenNode, "screenNode must not be null");
         effectiveRouteChain = Objects.requireNonNull(effectiveRouteChain, "effectiveRouteChain must not be null");
         graphCoverage = Objects.requireNonNull(graphCoverage, "graphCoverage must not be null");
-        sourceManifest = sourceManifest != null ? List.copyOf(sourceManifest) : List.of();
-        sourceSlices = sourceSlices != null ? List.copyOf(sourceSlices) : List.of();
-        relations = relations != null ? List.copyOf(relations) : List.of();
-        unresolvedFrontier = unresolvedFrontier != null ? List.copyOf(unresolvedFrontier) : List.of();
+        sourceFiles = sourceFiles != null ? List.copyOf(sourceFiles) : List.of();
         technicalSignals = technicalSignals != null ? List.copyOf(technicalSignals) : List.of();
         coverage = coverage != null ? List.copyOf(coverage) : List.of();
         diagnostics = diagnostics != null ? List.copyOf(diagnostics) : List.of();

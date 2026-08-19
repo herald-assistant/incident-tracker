@@ -36,7 +36,6 @@ class GitLabMcpToolsContextTest {
         assertTrue(toolNames.contains("gitlab_list_repository_endpoints"));
         assertTrue(toolNames.contains("gitlab_build_endpoint_use_case_context"));
         assertTrue(toolNames.contains("gitlab_build_java_method_use_case_context"));
-        assertTrue(toolNames.contains("gitlab_expand_frontend_use_case_context"));
         assertTrue(toolNames.contains("gitlab_find_class_references"));
         assertTrue(toolNames.contains("gitlab_read_repository_file"));
         assertTrue(toolNames.contains("gitlab_read_repository_files_by_path"));
@@ -46,22 +45,6 @@ class GitLabMcpToolsContextTest {
         assertTrue(toolNames.contains("gitlab_read_repository_file_chunks"));
         assertTrue(toolNames.contains("gitlab_read_java_method_slice"));
         assertTrue(toolNames.contains("gitlab_read_openapi_endpoint_slice"));
-    }
-
-    @Test
-    void shouldExposeFrontendExpansionWithOnlyFrontierAndReason() throws Exception {
-        var callbacksByName = Arrays.stream(toolCallbackProviders)
-                .flatMap(provider -> Arrays.stream(provider.getToolCallbacks()))
-                .collect(Collectors.toMap(tool -> tool.getToolDefinition().name(), tool -> tool));
-        var callback = callbacksByName.get("gitlab_expand_frontend_use_case_context");
-
-        assertSchemaPropertiesContain(callback, "frontierId");
-        assertSchemaPropertiesContain(callback, "reason");
-        assertSchemaPropertiesDoNotContain(callback, "projectName");
-        assertSchemaPropertiesDoNotContain(callback, "branchRef");
-        assertSchemaPropertiesDoNotContain(callback, "pathPrefixes");
-        assertSchemaPropertiesDoNotContain(callback, "screenId");
-        assertSchemaPropertiesDoNotContain(callback, "toolContext");
     }
 
     @Test
