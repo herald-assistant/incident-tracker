@@ -25,6 +25,12 @@ public class GitLabAngularRouteBranchSliceService {
     private static final Pattern IMPORT = Pattern.compile(
             "(?ms)^\\s*import\\s+(?!\\()(?:(?:type\\s+)?(.+?)\\s+from\\s+)?['\"]([^'\"]+)['\"]\\s*;?"
     );
+    private static final Pattern TOP_LEVEL_VARIABLE = Pattern.compile(
+            "(?m)(?:^|\\n)\\s*(?:export\\s+)?(?:const|let|var)\\s+([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?::[^=;]+)?="
+    );
+    private static final Pattern TOP_LEVEL_FUNCTION = Pattern.compile(
+            "(?m)(?:^|\\n)\\s*(?:export\\s+)?(?:async\\s+)?function\\s+([A-Za-z_$][A-Za-z0-9_$]*)[^\\{]*\\{"
+    );
     private static final Pattern IDENTIFIER = Pattern.compile("\\b[A-Za-z_$][A-Za-z0-9_$]*\\b");
 
     private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
@@ -87,20 +93,39 @@ public class GitLabAngularRouteBranchSliceService {
 
         var childRoutes = graph.nodes().stream()
                 .filter(node -> selected.nodeId().equals(node.parentNodeId()))
-                .sorted(Comparator.comparing(GitLabFrontendRouteNode::routePattern))
-                .map(this::childReference)
+                .sorted(Comparator.comparing(GitLabFrontendRouteNode::routePattern)
+                        .thenComparing(GitLabFrontendRouteNode::nodeId))
+                .map(node -> childReference(selected, node, graph.nodes()))
                 .toList();
         var sourceCharacters = files.stream().mapToInt(GitLabAngularRouteBranchSliceFile::sourceCharacters).sum();
         var returnedCharacters = files.stream().mapToInt(GitLabAngularRouteBranchSliceFile::returnedCharacters).sum();
         var omittedImports = files.stream().mapToInt(GitLabAngularRouteBranchSliceFile::omittedImportCount).sum();
         var omittedRoutes = files.stream().mapToInt(GitLabAngularRouteBranchSliceFile::omittedSiblingRouteCount).sum();
+        var unresolvedSymbols = files.stream().flatMap(file -> file.unresolvedSymbols().stream()).distinct().toList();
         var truncated = files.stream().anyMatch(GitLabAngularRouteBranchSliceFile::truncated)
                 || files.size() < nodesByPath.size();
+        var diagnostics = new ArrayList<>(graph.diagnostics());
+        files.stream().filter(file -> !file.unresolvedSymbols().isEmpty()).forEach(file -> diagnostics.add(
+                new GitLabFrontendGraphDiagnostic(
+                        GitLabFrontendDiagnosticSeverity.WARNING,
+                        GitLabFrontendGraphDiagnosticCode.SYMBOL_DEPENDENCY_UNRESOLVED,
+                        "Route slice could not resolve referenced symbols: "
+                                + String.join(", ", file.unresolvedSymbols()) + ".",
+                        null,
+                        null,
+                        new GitLabFrontendSourceReference(file.path(), null, null, null)
+                )
+        ));
+        if (!unresolvedSymbols.isEmpty()) {
+            limitations.add("Route branch contains unresolved symbol dependencies: "
+                    + String.join(", ", unresolvedSymbols) + ".");
+        }
+        var partial = truncated || !unresolvedSymbols.isEmpty();
         return new GitLabAngularRouteBranchSliceResponse(
-                graph.scope(), graph.sourceRevision(), truncated ? "PARTIAL" : "OK", selected, chain,
+                graph.scope(), graph.sourceRevision(), partial ? "PARTIAL" : "OK", selected, chain,
                 files, childRoutes, sourceCharacters, returnedCharacters,
                 Math.max(0, sourceCharacters - returnedCharacters), omittedImports, omittedRoutes,
-                truncated, List.copyOf(limitations), graph.diagnostics()
+                truncated, List.copyOf(limitations), List.copyOf(diagnostics)
         );
     }
 
@@ -177,14 +202,24 @@ public class GitLabAngularRouteBranchSliceService {
                 .filter(StringUtils::hasText)
                 .collect(java.util.stream.Collectors.joining(" "));
         var imports = imports(source);
-        var usedIdentifiers = identifiers(semanticText);
+        var localDeclarations = localDeclarations(source);
+        var retainedDeclarations = reachableLocalDeclarations(localDeclarations, semanticText);
+        var declarationText = retainedDeclarations.stream()
+                .map(LocalDeclaration::content)
+                .collect(java.util.stream.Collectors.joining("\n"));
+        var usedIdentifiers = identifiers(semanticText + "\n" + declarationText);
         var retainedImports = imports.stream().filter(candidate -> candidate.identifiers().stream()
                 .anyMatch(usedIdentifiers::contains)).toList();
+        var unresolvedSymbols = unresolvedSymbols(nodes, fragments, imports, localDeclarations);
         var omittedImports = Math.max(0, imports.size() - retainedImports.size());
         var builder = new StringBuilder();
         retainedImports.forEach(candidate -> builder.append(candidate.statement().strip()).append('\n'));
         if (omittedImports > 0) {
             builder.append("// ... ").append(omittedImports).append(" unrelated imports omitted ...\n");
+        }
+        if (!retainedDeclarations.isEmpty()) {
+            builder.append("// Local declarations required by the retained route branch\n");
+            retainedDeclarations.forEach(declaration -> builder.append(declaration.content().strip()).append('\n'));
         }
         builder.append("// Route branch slice from ").append(path).append("\n");
         for (var fragment : fragments) {
@@ -200,8 +235,184 @@ public class GitLabAngularRouteBranchSliceService {
                 path, rendered, source.length(), rendered.length(),
                 nodes.stream().map(GitLabFrontendRouteNode::nodeId).toList(),
                 retainedImports.stream().map(ImportStatement::statement).toList(),
+                retainedDeclarations.stream().map(LocalDeclaration::name).toList(),
+                unresolvedSymbols,
                 omittedImports, omittedRoutes[0], truncated
         );
+    }
+
+    private List<LocalDeclaration> reachableLocalDeclarations(
+            List<LocalDeclaration> declarations,
+            String semanticText
+    ) {
+        var byName = declarations.stream().collect(java.util.stream.Collectors.toMap(
+                LocalDeclaration::name,
+                declaration -> declaration,
+                (left, right) -> left,
+                LinkedHashMap::new
+        ));
+        var required = new LinkedHashSet<>(identifiers(semanticText));
+        var retained = new LinkedHashSet<LocalDeclaration>();
+        var changed = true;
+        while (changed) {
+            changed = false;
+            for (var name : List.copyOf(required)) {
+                var declaration = byName.get(name);
+                if (declaration != null && retained.add(declaration)) {
+                    required.addAll(identifiers(declaration.content()));
+                    changed = true;
+                }
+            }
+        }
+        return retained.stream().sorted(Comparator.comparingInt(LocalDeclaration::start)).toList();
+    }
+
+    private List<String> unresolvedSymbols(
+            List<GitLabFrontendRouteNode> nodes,
+            List<String> fragments,
+            List<ImportStatement> imports,
+            List<LocalDeclaration> declarations
+    ) {
+        var imported = imports.stream().flatMap(candidate -> candidate.identifiers().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        var local = declarations.stream().map(LocalDeclaration::name).collect(java.util.stream.Collectors.toSet());
+        var rendered = String.join("\n", fragments);
+        return nodes.stream()
+                .flatMap(node -> node.configuration().stream())
+                .flatMap(configuration -> configuration.referencedSymbols().stream())
+                .filter(StringUtils::hasText)
+                .filter(symbol -> !imported.contains(symbol) && !local.contains(symbol))
+                .filter(symbol -> requiresLexicalBinding(rendered, symbol))
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private boolean requiresLexicalBinding(String source, String symbol) {
+        var matcher = Pattern.compile("(?<![.$\\w])" + Pattern.quote(symbol) + "\\b").matcher(source);
+        while (matcher.find()) {
+            var tail = source.substring(matcher.end());
+            if (!tail.matches("(?s)^\\s*:.*")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<LocalDeclaration> localDeclarations(String source) {
+        var mask = mask(source);
+        var result = new ArrayList<LocalDeclaration>();
+        var variables = TOP_LEVEL_VARIABLE.matcher(mask);
+        while (variables.find()) {
+            if (!topLevel(mask, variables.start())) {
+                continue;
+            }
+            var end = statementEnd(mask, variables.end());
+            if (end > variables.start()) {
+                var start = declarationStart(source, variables.start());
+                result.add(new LocalDeclaration(variables.group(1), start, end, source.substring(start, end)));
+            }
+        }
+        var functions = TOP_LEVEL_FUNCTION.matcher(mask);
+        while (functions.find()) {
+            if (!topLevel(mask, functions.start())) {
+                continue;
+            }
+            var open = mask.lastIndexOf('{', functions.end() - 1);
+            var close = matching(mask, open, '{', '}');
+            if (close > open) {
+                var start = declarationStart(source, functions.start());
+                result.add(new LocalDeclaration(
+                        functions.group(1), start, close + 1, source.substring(start, close + 1)
+                ));
+            }
+        }
+        return result.stream().sorted(Comparator.comparingInt(LocalDeclaration::start)).toList();
+    }
+
+    private int declarationStart(String source, int candidate) {
+        var start = candidate;
+        while (start < source.length() && Character.isWhitespace(source.charAt(start))) {
+            start++;
+        }
+        return start;
+    }
+
+    private int statementEnd(String source, int start) {
+        var round = 0;
+        var square = 0;
+        var curly = 0;
+        for (var index = start; index < source.length(); index++) {
+            var character = source.charAt(index);
+            if (character == '(') round++;
+            else if (character == ')') round = Math.max(0, round - 1);
+            else if (character == '[') square++;
+            else if (character == ']') square = Math.max(0, square - 1);
+            else if (character == '{') curly++;
+            else if (character == '}') curly = Math.max(0, curly - 1);
+            else if (character == ';' && round == 0 && square == 0 && curly == 0) return index + 1;
+        }
+        return -1;
+    }
+
+    private boolean topLevel(String source, int offset) {
+        var depth = 0;
+        for (var index = 0; index < Math.min(offset, source.length()); index++) {
+            if (source.charAt(index) == '{') depth++;
+            else if (source.charAt(index) == '}') depth = Math.max(0, depth - 1);
+        }
+        return depth == 0;
+    }
+
+    private int matching(String source, int open, char opening, char closing) {
+        if (open < 0 || open >= source.length() || source.charAt(open) != opening) return -1;
+        var depth = 0;
+        for (var index = open; index < source.length(); index++) {
+            if (source.charAt(index) == opening) depth++;
+            else if (source.charAt(index) == closing && --depth == 0) return index;
+        }
+        return -1;
+    }
+
+    private String mask(String source) {
+        var masked = new StringBuilder(source);
+        var state = MaskState.CODE;
+        for (var index = 0; index < source.length(); index++) {
+            var current = source.charAt(index);
+            var next = index + 1 < source.length() ? source.charAt(index + 1) : '\0';
+            if (state == MaskState.CODE) {
+                if (current == '/' && next == '/') {
+                    masked.setCharAt(index, ' ');
+                    state = MaskState.LINE_COMMENT;
+                } else if (current == '/' && next == '*') {
+                    masked.setCharAt(index, ' ');
+                    state = MaskState.BLOCK_COMMENT;
+                } else if (current == '\'') {
+                    masked.setCharAt(index, ' ');
+                    state = MaskState.SINGLE;
+                } else if (current == '\"') {
+                    masked.setCharAt(index, ' ');
+                    state = MaskState.DOUBLE;
+                } else if (current == '`') {
+                    masked.setCharAt(index, ' ');
+                    state = MaskState.TEMPLATE;
+                }
+            } else {
+                if (current != '\n' && current != '\r') masked.setCharAt(index, ' ');
+                if (state == MaskState.LINE_COMMENT && (current == '\n' || current == '\r')) state = MaskState.CODE;
+                else if (state == MaskState.BLOCK_COMMENT && current == '*' && next == '/') {
+                    if (index + 1 < masked.length()) masked.setCharAt(index + 1, ' ');
+                    index++;
+                    state = MaskState.CODE;
+                } else if ((state == MaskState.SINGLE && current == '\'')
+                        || (state == MaskState.DOUBLE && current == '\"')
+                        || (state == MaskState.TEMPLATE && current == '`')) {
+                    var escaped = index > 0 && source.charAt(index - 1) == '\\';
+                    if (!escaped) state = MaskState.CODE;
+                }
+            }
+        }
+        return masked.toString();
     }
 
     private String renderRoute(
@@ -260,12 +471,22 @@ public class GitLabAngularRouteBranchSliceService {
         }
     }
 
-    private GitLabAngularRouteChildReference childReference(GitLabFrontendRouteNode node) {
+    private GitLabAngularRouteChildReference childReference(
+            GitLabFrontendRouteNode parent,
+            GitLabFrontendRouteNode node,
+            List<GitLabFrontendRouteNode> nodes
+    ) {
         var referenceId = node.screen() != null ? node.screen().screenId() : node.nodeId();
+        var structural = node.screen() == null
+                && node.viewTarget() == null
+                && node.lazyTarget() == null
+                && !StringUtils.hasText(node.redirectTarget());
         return new GitLabAngularRouteChildReference(
                 "angular-route:" + referenceId, node.nodeId(),
                 node.screen() != null ? node.screen().screenId() : null,
-                node.routePattern(), node.label(), node.viewTarget(), node.lazyTarget()
+                node.routePattern(), node.label(), node.kind(), node.status(), node.viewTarget(), node.lazyTarget(),
+                node.redirectTarget(), structural, node.routePattern().equals(parent.routePattern()),
+                nodes.stream().anyMatch(candidate -> node.nodeId().equals(candidate.parentNodeId()))
         );
     }
 
@@ -283,4 +504,9 @@ public class GitLabAngularRouteBranchSliceService {
 
     private record ImportStatement(String statement, Set<String> identifiers) {
     }
+
+    private record LocalDeclaration(String name, int start, int end, String content) {
+    }
+
+    private enum MaskState {CODE, LINE_COMMENT, BLOCK_COMMENT, SINGLE, DOUBLE, TEMPLATE}
 }

@@ -112,7 +112,7 @@ final class GitLabFrontendTargetedSourceSession {
 
     String readRequired(String path) {
         var source = readOptional(path);
-        if (source == null) {
+        if (source == null && !sourceReadBlockedByLimit()) {
             diagnostic(
                     GitLabFrontendDiagnosticSeverity.WARNING,
                     GitLabFrontendGraphDiagnosticCode.SOURCE_READ_FAILED,
@@ -121,6 +121,10 @@ final class GitLabFrontendTargetedSourceSession {
             );
         }
         return source;
+    }
+
+    private boolean sourceReadBlockedByLimit() {
+        return totalCharacterBudgetExhausted;
     }
 
     boolean markRouteFile(String path) {
@@ -200,7 +204,9 @@ final class GitLabFrontendTargetedSourceSession {
             limitReached = true;
         }
         var normalized = normalize(path);
-        var key = code + "|" + normalized + "|" + message;
+        var key = isLimit(code)
+                ? code + "|" + message
+                : code + "|" + normalized + "|" + message;
         if (!diagnosticKeys.add(key)) {
             return;
         }

@@ -1969,6 +1969,13 @@ rozmiaru promptu po kazdym kroku.
   shared/operator API i istniejacej grupie `Frontend Discovery` w GitLab Tool
   Workbench. Preview ma pokazywac dokladny request, response, pominiete
   elementy, source references i roznice rozmiaru bez uruchamiania AI.
+- [x] 8L.4a: Utwardzic capability po tescie na duzym froncie: route slice ma
+  domykac uzywane lokalne deklaracje i jawnie raportowac nierozwiazane symbole,
+  child frontier ma rozrozniac kontenery i dzieci tego samego path, a
+  diagnostyczny screen context ma priorytetowo pobierac template wybranego
+  komponentu, nie klasyfikowac nazw `*Client*` jako REST bez sygnalu wywolania
+  backendu oraz agregowac powtarzalne diagnostics limitow. Wszystkie regresje
+  maja uzywac wylacznie silnie zanonimizowanego, syntetycznego CRM.
 - [ ] 8L.5: Rozszerzyc symbol reachability o template bindings, formularze,
   RxJS, NgRx i operacje backendowe bez keywordowego dolaczania nieosiagalnych
   metod.
@@ -2010,6 +2017,19 @@ Weryfikacja: celowane testy integracji/API/route-graph — PASS;
 `npm --prefix frontend run build` — PASS;
 `mvn -q -Pbackend-dev clean package` — PASS. Produkcyjny bundle Angulara
 zostal odswiezony w `src/main/resources/static`.
+
+Checkpoint 8L.4a (2026-08-19): route branch slice domyka tranzytywnie uzywane
+top-level `const`/`let`/`var` i funkcje wraz z wymaganymi importami. Brakujacy
+symbol nie jest juz cicho usuwany: plik zwraca `unresolvedSymbols`, odpowiedz
+ma status `PARTIAL` oraz diagnostic `SYMBOL_DEPENDENCY_UNRESOLVED`. Child
+frontier rozroznia `kind`, `status`, redirect, strukturalny route, dziecko tego
+samego path i obecnosc dalszych dzieci. Screen context pobiera template/style
+komponentu bezposrednio po jego TypeScript, agreguje diagnostics tego samego
+limitu oraz rozpoznaje REST po konkretnym kliencie zamiast po samym tokenie
+`Client`; bezposredni `HttpClient` pozostaje osobnym sygnalem. Prompt, skille i
+MCP pozostaja bez zmian. Regresje sa silnie zanonimizowanym syntetycznym CRM:
+14 celowanych testow backendu — PASS; 56 plikow i 430 testow Angulara — PASS;
+produkcyjny build Angulara — PASS; `mvn -q -Pbackend-dev clean package` — PASS.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 

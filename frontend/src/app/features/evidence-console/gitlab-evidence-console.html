@@ -1078,7 +1078,11 @@
                           <span class="endpoint-card__method">ROUTE</span>
                           <div class="endpoint-card__copy">
                             <h4>{{ file.path }}</h4>
-                            <p>{{ file.returnedCharacters }} / {{ file.sourceCharacters }} chars · {{ file.includedRouteNodeIds.length }} retained nodes</p>
+                            <p>
+                              {{ file.returnedCharacters }} / {{ file.sourceCharacters }} chars ·
+                              {{ file.includedRouteNodeIds.length }} retained nodes ·
+                              {{ file.includedLocalDeclarations.length }} local declarations
+                            </p>
                           </div>
                           <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
                         </div>
@@ -1094,7 +1098,15 @@
                     <summary><span>Child route frontier</span><span class="panel-chip">{{ routeSlice.childRoutes.length }}</span></summary>
                     <ul class="context-list">
                       @for (child of routeSlice.childRoutes; track child.sliceRef) {
-                        <li>{{ child.routePattern }} · {{ child.viewTarget?.symbol || child.lazyTarget?.symbol || child.nodeId }} · {{ child.sliceRef }}</li>
+                        <li>
+                          {{ child.routePattern }} ·
+                          {{ child.viewTarget?.symbol || child.lazyTarget?.symbol || child.redirectTarget || child.nodeId }} ·
+                          {{ child.kind }}
+                          @if (child.structural) { · structural }
+                          @if (child.samePathAsParent) { · same path }
+                          @if (child.hasChildren) { · has children }
+                          · {{ child.sliceRef }}
+                        </li>
                       }
                     </ul>
                   </details>
@@ -1103,6 +1115,16 @@
                   <ul class="context-list">
                     @for (limitation of routeSlice.limitations; track limitation) { <li>{{ limitation }}</li> }
                   </ul>
+                }
+                @if (routeSlice.diagnostics.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible">
+                    <summary><span>Diagnostics</span><span class="panel-chip">{{ routeSlice.diagnostics.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (diagnostic of routeSlice.diagnostics; track diagnostic.code + ':' + diagnostic.source?.path) {
+                        <li>{{ diagnostic.severity }} · {{ diagnostic.code }} · {{ diagnostic.message }}</li>
+                      }
+                    </ul>
+                  </details>
                 }
               </section>
             }

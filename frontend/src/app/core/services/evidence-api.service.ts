@@ -291,6 +291,8 @@ export interface GitLabAngularRouteBranchSliceFile {
   returnedCharacters: number;
   includedRouteNodeIds: string[];
   includedImports: string[];
+  includedLocalDeclarations: string[];
+  unresolvedSymbols: string[];
   omittedImportCount: number;
   omittedSiblingRouteCount: number;
   truncated: boolean;
@@ -302,8 +304,14 @@ export interface GitLabAngularRouteChildReference {
   screenId?: string | null;
   routePattern: string;
   label?: string | null;
+  kind: string;
+  status: string;
   viewTarget?: GitLabFrontendRouteTarget | null;
   lazyTarget?: GitLabFrontendRouteTarget | null;
+  redirectTarget?: string | null;
+  structural: boolean;
+  samePathAsParent: boolean;
+  hasChildren: boolean;
 }
 
 export interface GitLabAngularRouteBranchSliceResponse {

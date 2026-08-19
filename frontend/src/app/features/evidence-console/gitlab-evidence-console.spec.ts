@@ -1155,6 +1155,8 @@ function buildAngularRouteBranchSliceResponse(): GitLabAngularRouteBranchSliceRe
         includedImports: [
           "import { CrmCustomerProfileComponent } from './customer/customer-profile';"
         ],
+        includedLocalDeclarations: [],
+        unresolvedSymbols: [],
         omittedImportCount: 4,
         omittedSiblingRouteCount: 3,
         truncated: false
@@ -1167,10 +1169,16 @@ function buildAngularRouteBranchSliceResponse(): GitLabAngularRouteBranchSliceRe
         screenId: 'screen-crm-customer-history',
         routePattern: '/crm/customers/:customerId/history',
         label: 'Customer history',
+        kind: 'SCREEN',
+        status: 'RESOLVED',
         viewTarget: {
           symbol: 'CrmCustomerHistoryComponent',
           sourcePath: 'apps/crm-agent/src/app/customer/customer-history.ts'
-        }
+        },
+        redirectTarget: null,
+        structural: false,
+        samePathAsParent: false,
+        hasChildren: false
       }
     ],
     sourceCharacters: 8000,

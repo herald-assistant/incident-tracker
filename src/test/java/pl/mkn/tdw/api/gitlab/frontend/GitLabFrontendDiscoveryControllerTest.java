@@ -104,7 +104,7 @@ class GitLabFrontendDiscoveryControllerTest {
                         "OK", node, chain(node),
                         List.of(new GitLabAngularRouteBranchSliceFile(
                                 node.routeSource().path(), "{ path: 'customers/:customerId' }",
-                                8_000, 39, List.of(node.nodeId()), List.of(), 6, 4, false
+                                8_000, 39, List.of(node.nodeId()), List.of(), List.of(), List.of(), 6, 4, false
                         )),
                         List.of(), 8_000, 39, 7_961, 6, 4, false, List.of(), List.of()
                 )

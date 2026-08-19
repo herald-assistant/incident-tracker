@@ -20,6 +20,10 @@ public class GitLabFrontendScreenGraphContextService {
 
     private static final Pattern TEMPLATE_URL = Pattern.compile("templateUrl\\s*:\\s*['\"]([^'\"]+)['\"]");
     private static final Pattern STYLE_URL = Pattern.compile("(?:styleUrl|styleUrls)\\s*:\\s*(?:\\[\\s*)?['\"]([^'\"]+)['\"]");
+    private static final Pattern GENERATED_REST_CLIENT = Pattern.compile(
+            "(?m)from\\s+['\"][^'\"]*(?:data-access-swagger|swagger|openapi)[^'\"]*/(?:api/)?services?[^'\"]*['\"]"
+                    + "|\\b(?:inject\\s*\\(\\s*)?(?!HttpClient\\b)[A-Z][A-Za-z0-9_$]*(?:Api|ApiService|Client|ControllerService)\\s*(?:\\)|[;,])"
+    );
 
     private final GitLabFrontendRouteGraphDiscoveryService graphDiscoveryService;
     private final GitLabRepositoryPort repositoryPort;
@@ -192,6 +196,12 @@ public class GitLabFrontendScreenGraphContextService {
                 continue;
             }
             var parsed = moduleParser.parse(path, source);
+            var resources = new ArrayList<DependencyTask>();
+            collectResources(TEMPLATE_URL, path, source, GitLabFrontendSourceRole.TEMPLATE, task.depth(), resources);
+            collectResources(STYLE_URL, path, source, GitLabFrontendSourceRole.STYLE, task.depth(), resources);
+            for (var index = resources.size() - 1; index >= 0; index--) {
+                queue.addFirst(resources.get(index));
+            }
             for (var binding : parsed.imports().values()) {
                 for (var target : imports.resolve(path, binding.moduleSpecifier())) {
                     queue.add(new DependencyTask(target, task.depth() + 1, task.rootRole()));
@@ -202,8 +212,6 @@ public class GitLabFrontendScreenGraphContextService {
                     queue.add(new DependencyTask(target, task.depth() + 1, task.rootRole()));
                 }
             }
-            enqueueResources(TEMPLATE_URL, path, source, GitLabFrontendSourceRole.TEMPLATE, task.depth(), queue);
-            enqueueResources(STYLE_URL, path, source, GitLabFrontendSourceRole.STYLE, task.depth(), queue);
         }
     }
 
@@ -240,17 +248,17 @@ public class GitLabFrontendScreenGraphContextService {
         return false;
     }
 
-    private void enqueueResources(
+    private void collectResources(
             Pattern pattern,
             String ownerPath,
             String source,
             GitLabFrontendSourceRole role,
             int ownerDepth,
-            ArrayDeque<DependencyTask> queue
+            List<DependencyTask> resources
     ) {
         var matcher = pattern.matcher(source);
         while (matcher.find()) {
-            queue.add(new DependencyTask(relative(ownerPath, matcher.group(1)), ownerDepth + 1, role));
+            resources.add(new DependencyTask(relative(ownerPath, matcher.group(1)), ownerDepth + 1, role));
         }
     }
 
@@ -293,7 +301,9 @@ public class GitLabFrontendScreenGraphContextService {
         if (lower.endsWith(".scss") || lower.endsWith(".css")) return GitLabFrontendSourceRole.STYLE;
         if (lower.contains("guard") || text.contains("canActivate") || text.contains("Keycloak")) return GitLabFrontendSourceRole.AUTHORIZATION;
         if (lower.contains("effect") || lower.contains("reducer") || lower.contains("selector") || text.contains("@ngrx/")) return GitLabFrontendSourceRole.STATE_MANAGEMENT;
-        if (lower.contains("client") || lower.contains("service") || text.contains("HttpClient")) return GitLabFrontendSourceRole.BACKEND_CLIENT;
+        if (text.contains("HttpClient") || GENERATED_REST_CLIENT.matcher(text).find()) {
+            return GitLabFrontendSourceRole.BACKEND_CLIENT;
+        }
         if (text.contains("WebSocket") || text.contains("webSocket(")) return GitLabFrontendSourceRole.WEBSOCKET_STREAM;
         if (text.contains("FormGroup") || text.contains("FormControl") || text.contains("ControlValueAccessor")) return GitLabFrontendSourceRole.FORM_LOGIC;
         if (lower.contains("component")) return GitLabFrontendSourceRole.CHILD_COMPONENT;
@@ -310,19 +320,24 @@ public class GitLabFrontendScreenGraphContextService {
             signal(result, file, "ControlValueAccessor|NG_VALUE_ACCESSOR", GitLabFrontendTechnicalSignalKind.CUSTOM_FORM_CONTROL, "Custom form control contract is present.");
             signal(result, file, "@ngrx/store|Store<|store\\.", GitLabFrontendTechnicalSignalKind.NGRX_STORE, "NgRx store usage is present.");
             signal(result, file, "HttpClient", GitLabFrontendTechnicalSignalKind.HTTP_CLIENT, "Angular HTTP client usage is present.");
-            signal(result, file, "Client|ApiService", GitLabFrontendTechnicalSignalKind.REST_CLIENT, "Generated or custom backend client usage is present.");
+            signal(result, file, GENERATED_REST_CLIENT, GitLabFrontendTechnicalSignalKind.REST_CLIENT,
+                    "Generated or custom backend client usage is present.");
             signal(result, file, "WebSocket|webSocket\\(", GitLabFrontendTechnicalSignalKind.WEBSOCKET, "WebSocket usage is present.");
         }
-        var guardConfiguration = chain.segments().stream()
+        var guards = chain.segments().stream()
                 .flatMap(segment -> segment.configuration().stream())
                 .filter(configuration -> configuration.kind().name().startsWith("CAN_"))
-                .findFirst();
-        guardConfiguration.ifPresent(configuration -> result.add(new GitLabFrontendTechnicalSignal(
-                GitLabFrontendTechnicalSignalKind.AUTH_GUARD,
-                "Route chain contains access guards: " + String.join(", ", configuration.referencedSymbols()) + ".",
-                GitLabFrontendSignalConfidence.HIGH,
-                configuration.source()
-        )));
+                .toList();
+        if (!guards.isEmpty()) {
+            var guardNames = guards.stream().flatMap(configuration -> configuration.referencedSymbols().stream())
+                    .distinct().toList();
+            result.add(new GitLabFrontendTechnicalSignal(
+                    GitLabFrontendTechnicalSignalKind.AUTH_GUARD,
+                    "Route chain contains access guards: " + String.join(", ", guardNames) + ".",
+                    GitLabFrontendSignalConfidence.HIGH,
+                    guards.get(0).source()
+            ));
+        }
         return List.copyOf(result);
     }
 
@@ -334,6 +349,21 @@ public class GitLabFrontendScreenGraphContextService {
             String description
     ) {
         if (Pattern.compile(expression).matcher(file.content()).find()) {
+            target.add(new GitLabFrontendTechnicalSignal(
+                    kind, description, GitLabFrontendSignalConfidence.HIGH,
+                    new GitLabFrontendSourceReference(file.path(), null, null, null)
+            ));
+        }
+    }
+
+    private void signal(
+            List<GitLabFrontendTechnicalSignal> target,
+            GitLabFrontendSourceFile file,
+            Pattern pattern,
+            GitLabFrontendTechnicalSignalKind kind,
+            String description
+    ) {
+        if (pattern.matcher(file.content()).find()) {
             target.add(new GitLabFrontendTechnicalSignal(
                     kind, description, GitLabFrontendSignalConfidence.HIGH,
                     new GitLabFrontendSourceReference(file.path(), null, null, null)

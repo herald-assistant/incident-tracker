@@ -52,6 +52,11 @@ class GitLabFrontendScreenGraphContextServiceTest {
                         "apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts",
                         "apps/crm-agent/src/app/auth/crm-contact.guard.ts"
                 );
+        var sourcePaths = result.sourceFiles().stream().map(GitLabFrontendSourceFile::path).toList();
+        assertThat(sourcePaths.indexOf("apps/crm-agent/src/app/preferences/crm-preferences.component.html"))
+                .isLessThan(sourcePaths.indexOf(
+                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts"
+                ));
         assertThat(result.sourceFiles()).filteredOn(file -> file.path().endsWith("crm-contact.guard.ts"))
                 .singleElement().satisfies(file -> assertThat(file.roles())
                         .contains(GitLabFrontendSourceRole.AUTHORIZATION));
@@ -62,13 +67,21 @@ class GitLabFrontendScreenGraphContextServiceTest {
                         GitLabFrontendTechnicalSignalKind.HTTP_CLIENT,
                         GitLabFrontendTechnicalSignalKind.AUTH_GUARD
                 );
+        assertThat(result.technicalSignals())
+                .filteredOn(signal -> signal.kind() == GitLabFrontendTechnicalSignalKind.REST_CLIENT)
+                .extracting(signal -> signal.source().path())
+                .containsExactly("apps/crm-agent/src/app/preferences/crm-preferences.service.ts")
+                .doesNotContain(
+                        "apps/crm-agent/src/app/preferences/crm-preferences.component.ts",
+                        "apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts"
+                );
         assertThat(result.contextLimitReached()).isFalse();
         verify(repository, never()).listRepositoryFiles(anyString(), anyString(), anyString(), any());
         verify(repository, never()).searchRepositoryFilesByContent(anyString(), anyString(), anyString(), anyList(), anyInt());
     }
 
     @Test
-    void shouldPrioritizeRoutedSyntheticCrmChildViewBeforeGeneralImportsWhenContextIsBounded() {
+    void shouldPrioritizeSelectedSyntheticCrmTemplateBeforeChildViewsWhenContextIsBounded() {
         var graphDiscovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         var repository = mock(GitLabRepositoryPort.class);
         var graph = graph();
@@ -90,7 +103,7 @@ class GitLabFrontendScreenGraphContextServiceTest {
         var bounded = new GitLabFrontendGraphLimits(
                 defaults.maxRootCandidates(), defaults.maxRouteNodes(), defaults.maxRouteFiles(),
                 defaults.maxSourceReads(), defaults.maxAliasResolutions(), defaults.maxImportDepth(),
-                defaults.maxComponentDepth(), 3, defaults.maxFileCharacters(), defaults.maxTotalCharacters()
+                defaults.maxComponentDepth(), 4, defaults.maxFileCharacters(), defaults.maxTotalCharacters()
         );
 
         var result = service.build(new GitLabFrontendScreenGraphContextRequest(
@@ -98,9 +111,33 @@ class GitLabFrontendScreenGraphContextServiceTest {
         ));
 
         assertThat(result.sourceFiles()).extracting(GitLabFrontendSourceFile::path)
-                .contains("apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts")
-                .doesNotContain("apps/crm-agent/src/app/preferences/crm-preferences.service.ts");
+                .contains(
+                        "apps/crm-agent/src/app/preferences/crm-preferences.component.html",
+                        "apps/crm-agent/src/app/preferences/crm-preferences.component.scss"
+                )
+                .doesNotContain("apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts");
         assertThat(result.contextLimitReached()).isTrue();
+    }
+
+    @Test
+    void shouldAggregateRepeatedSyntheticCrmLimitDiagnostics() {
+        var repository = mock(GitLabRepositoryPort.class);
+        var defaults = GitLabFrontendGraphLimits.defaults();
+        var limits = new GitLabFrontendGraphLimits(
+                defaults.maxRootCandidates(), defaults.maxRouteNodes(), defaults.maxRouteFiles(),
+                defaults.maxSourceReads(), defaults.maxAliasResolutions(), defaults.maxImportDepth(),
+                defaults.maxComponentDepth(), 1, defaults.maxFileCharacters(), defaults.maxTotalCharacters()
+        );
+        var session = new GitLabFrontendTargetedSourceSession(repository, graph().scope(), limits);
+
+        assertThat(session.markContextFile("apps/crm-agent/src/app/customer/customer-shell.component.ts")).isTrue();
+        assertThat(session.markContextFile("apps/crm-agent/src/app/customer/customer-list.component.ts")).isFalse();
+        assertThat(session.markContextFile("apps/crm-agent/src/app/customer/customer-history.component.ts")).isFalse();
+
+        assertThat(session.diagnostics())
+                .filteredOn(diagnostic -> diagnostic.code()
+                        == GitLabFrontendGraphDiagnosticCode.CONTEXT_FILE_LIMIT_REACHED)
+                .singleElement();
     }
 
     @Test
@@ -218,6 +255,7 @@ class GitLabFrontendScreenGraphContextServiceTest {
         files.put("apps/crm-agent/src/app/preferences/crm-preferences.service.ts", """
                 export class CrmPreferencesService {
                   private readonly http = inject(HttpClient);
+                  private readonly customerApi = inject(CrmCustomerApiClient);
                   load() { return this.http.get('/api/synthetic-crm/preferences'); }
                 }
                 """);
@@ -242,6 +280,7 @@ class GitLabFrontendScreenGraphContextServiceTest {
         files.put("apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts", """
                 @Component({ template: '<p>Preference difference</p>' })
                 export class CrmPreferenceDiffModalComponent {}
+                export class CrmClientOnlyShellComponent {}
                 """);
         return files;
     }

@@ -6,7 +6,13 @@ public record GitLabAngularRouteChildReference(
         String screenId,
         String routePattern,
         String label,
+        GitLabFrontendRouteNodeKind kind,
+        GitLabFrontendDiscoveryStatus status,
         GitLabFrontendRouteTarget viewTarget,
-        GitLabFrontendRouteTarget lazyTarget
+        GitLabFrontendRouteTarget lazyTarget,
+        String redirectTarget,
+        boolean structural,
+        boolean samePathAsParent,
+        boolean hasChildren
 ) {
 }
