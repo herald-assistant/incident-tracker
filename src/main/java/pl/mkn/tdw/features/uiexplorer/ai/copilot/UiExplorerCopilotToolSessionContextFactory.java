@@ -25,6 +25,10 @@ public class UiExplorerCopilotToolSessionContextFactory {
         var hidden = new LinkedHashMap<String, Object>();
         hidden.put(UiExplorerCopilotToolContextKeys.FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
         hidden.put(UiExplorerCopilotToolContextKeys.RUN_KIND, UiExplorerCopilotToolContextKeys.RUN_KIND_INITIAL);
+        hidden.put(
+                AgentToolContextKeys.TOOL_BUDGET_POLICY,
+                AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN
+        );
         hidden.put(UiExplorerCopilotToolContextKeys.SYSTEM_ID, context.systemId());
         hidden.put(UiExplorerCopilotToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(AgentToolContextKeys.GITLAB_GROUP, scope.gitLabGroup());

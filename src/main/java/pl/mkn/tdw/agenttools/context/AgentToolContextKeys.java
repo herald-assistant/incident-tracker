@@ -7,6 +7,8 @@ public final class AgentToolContextKeys {
     public static final String ACTUAL_COPILOT_SESSION_ID = "actualCopilotSessionId";
     public static final String TOOL_CALL_ID = "toolCallId";
     public static final String TOOL_NAME = "toolName";
+    public static final String TOOL_BUDGET_POLICY = "toolBudgetPolicy";
+    public static final String TOOL_BUDGET_POLICY_GOAL_DRIVEN = "GOAL_DRIVEN";
     public static final String CORRELATION_ID = "correlationId";
     public static final String ENVIRONMENT = "environment";
     public static final String GITLAB_BRANCH = "gitLabBranch";

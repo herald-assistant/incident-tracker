@@ -74,6 +74,8 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH)).isEqualTo("main");
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES))
                 .isEqualTo(List.of("crm-agent-portal"));
+        assertThat(hidden.get(AgentToolContextKeys.TOOL_BUDGET_POLICY))
+                .isEqualTo(AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
         assertThat(hidden.get(UiExplorerCopilotToolContextKeys.ALLOWED_REPOSITORY).toString())
                 .contains("crm-agent-portal", "apps/crm-agent", "main");
         assertThat(preparation.prompt()).doesNotContain("synthetic-crm");

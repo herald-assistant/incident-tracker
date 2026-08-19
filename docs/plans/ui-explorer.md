@@ -1915,18 +1915,63 @@ PASS; `npm --prefix frontend test -- --watch=false` — 56 plikow i 425 testow
 PASS; `npm --prefix frontend run build` — PASS;
 `mvn -q -Pbackend-dev clean package` — PASS.
 
-- [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
-  prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
-  runtime oraz cross-domain widok z NgRx/REST/WebSocket.
-- [ ] Wykonac review raportow z analitykiem wedlug success criteria potrzeby,
-  bez strojenia pod jedna aplikacje.
-- [ ] Skalibrowac limity i domyslne section modes na podstawie usage,
-  coverage i czasu runu.
-- [ ] Potwierdzic brak sekretow, nieograniczonego traversal i instrukcji z
-  niezaufanego kodu traktowanych jak prompt.
-- [ ] Wykonac pelna macierz backend-frontend w kolejnosci wskazanej wyzej.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
-  silnie zanonimizowane i dotyczyc wylacznie CRM.
+#### 8L. Precyzyjne route i TypeScript symbol slices
+
+Status kroku: do ponownego zatwierdzenia. Source need pozostaje
+`../needs/ui-explorer.md`. Pilot artefaktow v5 zostal wycofany: dla tego samego
+widoku `/wallet` zwiekszyl inicjalny prompt z 745 938 do 1 239 678 znakow
+(+66,2%) i przekroczyl limit modelu wynikiem 318 391 tokenow. Pelny
+`screen-use-case-manifest.json`, szczegolowy `screen-research-frontier.json`
+oraz setki powtarzalnych diagnostics nie sa akceptowanym kierunkiem.
+
+Baseline po wycofaniu: UI Explorer ponownie uzywa kontraktu artefaktow v4 i
+`context-snapshot.json`. Goal-driven research nie jest zatrzymywany przez
+platformowy call/character budget, ale pojedynczy request nadal musi miescic
+sie w fizycznym limicie kontekstu modelu.
+
+Proponowana conformance delta nie ogranicza researchu liczba plikow. Zamiast
+tego buduje kodowe wycinki na podstawie osiagalnosci od wybranego widoku:
+
+- route branch slice zachowuje przodkow, wybrana trase, istotne dzieci,
+  guardy, resolvery, data/providers oraz tylko uzywane deklaracje i importy;
+  rodzenstwo jest zastepowane pojedynczym markerem z liczba pominietych tras,
+- TypeScript symbol slice zachowuje wskazana metode albo pole, lokalne helpery,
+  uzywane pola oraz importy; pozostale elementy klasy sa zastapione jednym
+  markerem z liczba pominietych elementow,
+- service/facade/guard/validator/effect/reducer/selector sa analizowane przez
+  ten sam neutralny mechanizm symbol slice zamiast przez odczyt calego pliku,
+- relacje i frontier powstaja dopiero z zachowanych fragmentow; pelny graf
+  pozostaje po stronie backendu i nie jest osadzany w inicjalnym prompcie,
+- niejednoznaczna zaleznosc pozostaje recoverable przez stabilna referencje i
+  targeted tool call; nie jest zgadywana ani usuwana jako szum.
+
+Konsumenci: `integrations.gitlab.frontend`, GitLab tools i Tool Workbench, UI
+Explorer source context, prompt/artifacts, runtime skille, readiness oraz
+silnie zanonimizowane testy CRM. Zmiana internal artifact contract nie zachowuje
+kompatybilnosci wstecznej, ale musi zostac dostarczona inkrementalnie z pomiarem
+rozmiaru promptu po kazdym kroku.
+
+- [ ] 8L.1: Dodac silnie zanonimizowane fixture'y CRM i baseline rozmiaru
+  promptu dla prostego widoku, glebokiej sciezki oraz kontenera z wieloma
+  dziecmi; test nie moze akceptowac wzrostu initial context bez uzasadnionej
+  nowej informacji funkcjonalnej.
+- [ ] 8L.2: Dodac neutralny Angular route branch slice z dokladnymi markerami
+  pominietych sibling routes/imports oraz source references; nie wlaczac go
+  jeszcze do promptu produkcyjnego.
+- [ ] 8L.3: Dodac neutralny TypeScript symbol slice wzorowany na
+  `read_java_method_slice`: osiagalne lokalne helpery, pola, importy i
+  downstream symbol references dla komponentow, serwisow, fasad i guardow.
+- [ ] 8L.4: Rozszerzyc symbol reachability o template bindings, formularze,
+  RxJS, NgRx i operacje backendowe bez keywordowego dolaczania nieosiagalnych
+  metod.
+- [ ] 8L.5: Zastapic v4 snapshot minimalnym seedem route/component/template i
+  iteracyjnymi symbol slices; nie wysylac pelnego manifestu ani pelnego
+  frontiera. Dodac preflight tokenow i rozmiary artefaktow widoczne w aside.
+- [ ] 8L.6: Wystawic te same neutralne capability w Tool Workbench, zachowujac
+  hidden repository/ref scope w sesji AI i jawny scope operatora w API.
+- [ ] 8L.7: Wykonac silnie zanonimizowana macierz CRM dla routingu, formularzy,
+  REST/WebSocket, NgRx, autoryzacji, dynamicznych granic runtime i braku
+  utraty istotnych zachowan; wykonac adekwatne testy frontend/backend i build.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 

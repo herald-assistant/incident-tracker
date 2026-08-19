@@ -7,6 +7,8 @@ import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
+import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 
 @Slf4j
 @Component
@@ -17,6 +19,9 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
 
     @Override
     public void beforeInvocation(CopilotToolInvocationPolicyRequest request) {
+        if (goalDriven(request.sessionContext())) {
+            return;
+        }
         var decision = beforeInvocation(request.sessionId(), request.toolName(), request.rawArguments());
         if (decision.denied()) {
             throw new CopilotToolInvocationRejectedException(
@@ -28,7 +33,16 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
 
     @Override
     public void afterInvocation(CopilotToolInvocationPolicyResult result) {
+        if (goalDriven(result.sessionContext())) {
+            return;
+        }
         afterInvocation(result.sessionId(), result.toolName(), result.rawResult());
+    }
+
+    private boolean goalDriven(CopilotToolSessionContext context) {
+        return context != null && AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN.equals(
+                context.hiddenContext().get(AgentToolContextKeys.TOOL_BUDGET_POLICY)
+        );
     }
 
     public CopilotToolBudgetDecision beforeInvocation(
