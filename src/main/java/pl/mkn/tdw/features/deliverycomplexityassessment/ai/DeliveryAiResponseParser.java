@@ -1,12 +1,15 @@
 package pl.mkn.tdw.features.deliverycomplexityassessment.ai;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -28,26 +31,93 @@ public class DeliveryAiResponseParser {
         }
         try {
             var root = objectMapper.readTree(json);
-            var classification = normalized(text(root, "classification"));
-            if (!CLASSIFICATIONS.contains(classification)) {
-                throw new IllegalArgumentException("AI response classification is unsupported.");
-            }
-            var confidence = root.path("confidence").asDouble(-1);
-            if (confidence < 0 || confidence > 1) {
-                throw new IllegalArgumentException("AI response confidence must be between 0 and 1.");
-            }
-            var dimensions = "DELIVERY".equals(classification) ? dimensions(root.path("dimensions")) : null;
-            return new DeliveryAiResponse(
-                    classification,
-                    dimensions,
-                    confidence,
+            return validatedResponse(
+                    text(root, "classification"),
+                    root.path("dimensions"),
+                    root.path("confidence").asDouble(-1),
                     optionalTextList(root.path("evidenceSummary")),
                     optionalTextList(root.path("qualityFlags")),
                     optionalTextList(root.path("visibilityLimits"))
             );
         } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("AI response JSON could not be parsed.", exception);
+            return recoverEssentialResponse(json, exception);
         }
+    }
+
+    private DeliveryAiResponse recoverEssentialResponse(String json, JsonProcessingException originalFailure) {
+        String classification = null;
+        JsonNode dimensionValues = null;
+        Double confidence = null;
+        try (JsonParser parser = objectMapper.getFactory().createParser(json)) {
+            while (parser.nextToken() != null && !essentialFieldsComplete(classification, dimensionValues, confidence)) {
+                if (parser.currentToken() != JsonToken.FIELD_NAME) {
+                    continue;
+                }
+                var fieldName = parser.currentName();
+                var valueToken = parser.nextToken();
+                if ("classification".equals(fieldName) && valueToken == JsonToken.VALUE_STRING) {
+                    classification = parser.getValueAsString();
+                } else if ("dimensions".equals(fieldName) && valueToken == JsonToken.START_OBJECT) {
+                    dimensionValues = objectMapper.readTree(parser);
+                } else if ("confidence".equals(fieldName) && valueToken != null && valueToken.isScalarValue()) {
+                    confidence = parser.getValueAsDouble(-1);
+                } else {
+                    parser.skipChildren();
+                }
+            }
+        } catch (IOException recoveryFailure) {
+            if (!essentialFieldsComplete(classification, dimensionValues, confidence)) {
+                throw unparsableResponse(originalFailure);
+            }
+        }
+        if (!essentialFieldsComplete(classification, dimensionValues, confidence)) {
+            throw unparsableResponse(originalFailure);
+        }
+        return validatedResponse(
+                classification,
+                dimensionValues,
+                confidence,
+                List.of(),
+                List.of(),
+                List.of()
+        );
+    }
+
+    private boolean essentialFieldsComplete(String classification, JsonNode dimensions, Double confidence) {
+        if (!StringUtils.hasText(classification) || confidence == null) {
+            return false;
+        }
+        return !"DELIVERY".equals(normalized(classification)) || dimensions != null;
+    }
+
+    private DeliveryAiResponse validatedResponse(
+            String classificationValue,
+            JsonNode dimensionValues,
+            double confidence,
+            List<String> evidenceSummary,
+            List<String> qualityFlags,
+            List<String> visibilityLimits
+    ) {
+        var classification = normalized(classificationValue);
+        if (!CLASSIFICATIONS.contains(classification)) {
+            throw new IllegalArgumentException("AI response classification is unsupported.");
+        }
+        if (confidence < 0 || confidence > 1) {
+            throw new IllegalArgumentException("AI response confidence must be between 0 and 1.");
+        }
+        var dimensions = "DELIVERY".equals(classification) ? dimensions(dimensionValues) : null;
+        return new DeliveryAiResponse(
+                classification,
+                dimensions,
+                confidence,
+                evidenceSummary,
+                qualityFlags,
+                visibilityLimits
+        );
+    }
+
+    private IllegalArgumentException unparsableResponse(JsonProcessingException failure) {
+        return new IllegalArgumentException("AI response JSON could not be parsed.", failure);
     }
 
     private DeliveryAssessmentDimensions dimensions(JsonNode node) {

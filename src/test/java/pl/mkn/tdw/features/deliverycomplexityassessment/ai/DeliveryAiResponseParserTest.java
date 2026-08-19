@@ -129,4 +129,35 @@ class DeliveryAiResponseParserTest {
         assertThat(response.qualityFlags()).containsExactly("usable flag");
         assertThat(response.visibilityLimits()).containsExactly("single readable limit");
     }
+
+    @Test
+    void shouldRecoverScoringFieldsWhenOptionalDescriptionsBreakJsonSyntax() {
+        var response = parser.parse("""
+                {"classification":"DELIVERY","dimensions":{
+                  "outcomeBreadth":3,"domainDecisionComplexity":2,"applicationFlowComplexity":2,
+                  "boundaryAndDataComplexity":3,"verificationStateSpace":3,"implementedCompatibilityScope":0
+                },"confidence":0.88,
+                  "evidenceSummary":[
+                    "outcomeBreadth | issues.md#CLP-36597 | sekcja „POLITYKI W DECYZJI – OPIS KOMPLETNY" z pelnymi opisami"
+                  ],"qualityFlags":[],"visibilityLimits":[]}
+                """);
+
+        assertThat(response.classification()).isEqualTo("DELIVERY");
+        assertThat(response.dimensions().outcomeBreadth()).isEqualTo(3);
+        assertThat(response.dimensions().boundaryAndDataComplexity()).isEqualTo(3);
+        assertThat(response.dimensions().verificationStateSpace()).isEqualTo(3);
+        assertThat(response.confidence()).isEqualTo(0.88);
+        assertThat(response.evidenceSummary()).isEmpty();
+    }
+
+    @Test
+    void shouldRejectMalformedJsonBeforeRequiredScoringFieldsAreComplete() {
+        assertThatThrownBy(() -> parser.parse("""
+                {"classification":"DELIVERY","dimensions":{
+                  "outcomeBreadth":3,"domainDecisionComplexity":not-a-number
+                },"confidence":0.88}
+                """))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI response JSON could not be parsed.");
+    }
 }
