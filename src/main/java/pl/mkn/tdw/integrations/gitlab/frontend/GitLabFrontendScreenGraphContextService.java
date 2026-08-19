@@ -20,9 +20,13 @@ public class GitLabFrontendScreenGraphContextService {
 
     private static final Pattern TEMPLATE_URL = Pattern.compile("templateUrl\\s*:\\s*['\"]([^'\"]+)['\"]");
     private static final Pattern STYLE_URL = Pattern.compile("(?:styleUrl|styleUrls)\\s*:\\s*(?:\\[\\s*)?['\"]([^'\"]+)['\"]");
+    private static final Pattern IMPORT_OR_RE_EXPORT = Pattern.compile(
+            "(?ms)^\\s*import\\b.*?;\\s*$|^\\s*export\\s+(?:\\*|\\{).*?\\bfrom\\b.*?;\\s*$"
+    );
 
     private final GitLabFrontendRouteGraphDiscoveryService graphDiscoveryService;
     private final GitLabRepositoryPort repositoryPort;
+    private final GitLabFrontendSemanticContextBuilder semanticContextBuilder;
     private final AngularBootstrapSourceParser moduleParser = new AngularBootstrapSourceParser();
 
     public GitLabFrontendScreenGraphContext build(GitLabFrontendScreenGraphContextRequest request) {
@@ -53,13 +57,18 @@ public class GitLabFrontendScreenGraphContextService {
                 .filter(node -> !node.nodeId().equals(screenNode.nodeId()))
                 .toList();
         var viewRoots = new ArrayList<DependencyTask>();
-        viewRoots.add(new DependencyTask(viewPath, 0, GitLabFrontendSourceRole.VIEW_COMPONENT));
+        viewRoots.add(new DependencyTask(
+                viewPath, 0, GitLabFrontendSourceRole.VIEW_COMPONENT,
+                screenNode.viewTarget() != null ? screenNode.viewTarget().symbol() : null
+        ));
         descendantNodes.stream()
                 .filter(node -> node.viewTarget() != null)
-                .map(node -> node.viewTarget().sourcePath())
-                .filter(StringUtils::hasText)
+                .map(node -> new DependencyTask(
+                        node.viewTarget().sourcePath(), 0,
+                        GitLabFrontendSourceRole.CHILD_COMPONENT, node.viewTarget().symbol()
+                ))
+                .filter(task -> StringUtils.hasText(task.path()))
                 .distinct()
-                .map(path -> new DependencyTask(path, 0, GitLabFrontendSourceRole.CHILD_COMPONENT))
                 .forEach(viewRoots::add);
 
         // Read every routed view root before following general imports. This keeps
@@ -70,22 +79,134 @@ public class GitLabFrontendScreenGraphContextService {
         traverseRouteConfiguration(descendantNodes, session, imports, files, request.limits());
 
         var signals = signals(files, chain);
-        var coverage = coverage(files, signals, session.limitReached());
+        var semanticContext = semanticContextBuilder.build(files, imports, screenNode, descendantNodes);
+        var coverage = coverage(semanticContext, signals, session.limitReached());
         var diagnostics = new ArrayList<>(graph.diagnostics());
         diagnostics.addAll(session.diagnostics());
-        var totalCharacters = files.values().stream().mapToInt(GitLabFrontendSourceFile::returnedCharacters).sum();
         return new GitLabFrontendScreenGraphContext(
                 request.scope(),
                 graph.sourceRevision(),
                 screenNode,
                 chain,
                 graph.coverage(),
-                List.copyOf(files.values()),
+                semanticContext.sourceManifest(),
+                semanticContext.sourceSlices(),
+                semanticContext.relations(),
+                semanticContext.unresolvedFrontier(),
                 signals,
                 coverage,
                 diagnostics,
-                totalCharacters,
+                semanticContext.metrics(),
                 session.limitReached()
+        );
+    }
+
+    public GitLabFrontendScreenContextDelta expand(GitLabFrontendScreenContextExpansionRequest request) {
+        if (request == null || request.scope() == null || !StringUtils.hasText(request.frontierId())) {
+            throw failure("FRONTEND_CONTEXT_EXPANSION_INVALID", "A repository scope and frontierId are required.");
+        }
+        var graph = graphDiscoveryService.discover(request.scope(), request.limits());
+        verifyRevision(request.expectedRevision(), graph.sourceRevision());
+        var roots = expansionRoots(request);
+        if (roots.isEmpty()) {
+            return emptyDelta(request, graph.sourceRevision(), List.of(new GitLabFrontendGraphDiagnostic(
+                    GitLabFrontendDiagnosticSeverity.WARNING,
+                    GitLabFrontendGraphDiagnosticCode.IMPORT_TARGET_NOT_FOUND,
+                    "No repository source candidate could be resolved for the requested frontend frontier.",
+                    null,
+                    request.ownerPath(),
+                    null
+            )));
+        }
+
+        var session = new GitLabFrontendTargetedSourceSession(repositoryPort, request.scope(), request.limits());
+        var bootstrapPath = graph.bootstrapRoot() != null && graph.bootstrapRoot().bootstrapSource() != null
+                ? graph.bootstrapRoot().bootstrapSource().path()
+                : roots.get(0);
+        var imports = new GitLabFrontendTargetedImportResolver(session, bootstrapPath);
+        var files = new LinkedHashMap<String, GitLabFrontendSourceFile>();
+        traverseDependencies(
+                roots.stream().map(path -> new DependencyTask(
+                        path, 0, GitLabFrontendSourceRole.RELATED_SOURCE, request.symbol()
+                )).toList(),
+                session,
+                imports,
+                files,
+                request.limits()
+        );
+        var semantic = semanticContextBuilder.build(files, imports, null, List.of());
+        var delivered = new LinkedHashSet<>(request.deliveredSliceIds());
+        var deltaSlices = semantic.sourceSlices().stream()
+                .filter(slice -> !delivered.contains(slice.sliceId()))
+                .toList();
+        var deltaPaths = deltaSlices.stream().map(GitLabFrontendSourceSlice::path)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        var manifest = semantic.sourceManifest().stream().filter(file -> deltaPaths.contains(file.path())).toList();
+        var relations = new ArrayList<GitLabFrontendUseCaseRelation>();
+        for (var root : roots) {
+            if (deltaPaths.contains(root)) {
+                relations.add(new GitLabFrontendUseCaseRelation(
+                        request.ownerPath(), root, GitLabFrontendUseCaseRelationKind.FRONTIER_EXPANSION,
+                        request.symbol(), GitLabFrontendSignalConfidence.MEDIUM,
+                        new GitLabFrontendSourceReference(request.ownerPath(), request.symbol(), null, null)
+                ));
+            }
+        }
+        semantic.relations().stream()
+                .filter(relation -> deltaPaths.contains(relation.from()) || deltaPaths.contains(relation.to()))
+                .forEach(relations::add);
+        var sourceCharacters = manifest.stream().mapToInt(GitLabFrontendSourceManifestEntry::sourceCharacters).sum();
+        var returnedCharacters = deltaSlices.stream().mapToInt(GitLabFrontendSourceSlice::returnedCharacters).sum();
+        var metrics = new GitLabFrontendContextMetrics(
+                manifest.size(), sourceCharacters, deltaSlices.size(), returnedCharacters,
+                Math.max(0, sourceCharacters - returnedCharacters),
+                (int) manifest.stream().filter(file -> file.sliceCount() == 0).count(),
+                relations.size(), semantic.unresolvedFrontier().size()
+        );
+        return new GitLabFrontendScreenContextDelta(
+                request.scope(), graph.sourceRevision(), request.frontierId(), manifest, deltaSlices,
+                relations, semantic.unresolvedFrontier(), session.diagnostics(), metrics, session.limitReached()
+        );
+    }
+
+    private List<String> expansionRoots(GitLabFrontendScreenContextExpansionRequest request) {
+        var roots = request.candidatePaths().stream()
+                .map(GitLabFrontendTargetedSourceSession::normalize)
+                .filter(path -> path.endsWith(".ts") || path.endsWith(".html"))
+                .filter(path -> withinScope(path, request.scope().pathPrefixes()))
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (roots.isEmpty() && StringUtils.hasText(request.symbol())) {
+            repositoryPort.searchRepositoryFilesByContent(
+                            request.scope().group(), request.scope().projectName(), request.scope().ref(),
+                            List.of(request.symbol()), 10
+                    ).stream()
+                    .map(candidate -> GitLabFrontendTargetedSourceSession.normalize(candidate.filePath()))
+                    .filter(path -> path.endsWith(".ts") || path.endsWith(".html"))
+                    .filter(path -> withinScope(path, request.scope().pathPrefixes()))
+                    .forEach(roots::add);
+        }
+        return List.copyOf(roots);
+    }
+
+    private boolean withinScope(String path, List<String> prefixes) {
+        return prefixes == null || prefixes.isEmpty() || prefixes.stream()
+                .map(GitLabFrontendTargetedSourceSession::normalize)
+                .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
+    }
+
+    private GitLabFrontendScreenContextDelta emptyDelta(
+            GitLabFrontendScreenContextExpansionRequest request,
+            GitLabFrontendSourceRevision revision,
+            List<GitLabFrontendGraphDiagnostic> diagnostics
+    ) {
+        return new GitLabFrontendScreenContextDelta(
+                request.scope(), revision, request.frontierId(), List.of(), List.of(), List.of(),
+                List.of(new GitLabFrontendUnresolvedFrontier(
+                        request.frontierId(), request.ownerPath(), request.symbol(),
+                        "Targeted expansion could not resolve a repository source candidate.",
+                        List.of(), request.candidatePaths()
+                )),
+                diagnostics, new GitLabFrontendContextMetrics(0, 0, 0, 0, 0, 0, 0, 1), false
         );
     }
 
@@ -154,7 +275,7 @@ public class GitLabFrontendScreenGraphContextService {
                     continue;
                 }
                 for (var target : imports.resolve(sourcePath, binding.moduleSpecifier())) {
-                    roots.add(new DependencyTask(target, 0, role));
+                    roots.add(new DependencyTask(target, 0, role, binding.exportedName()));
                 }
             }
         }
@@ -174,7 +295,8 @@ public class GitLabFrontendScreenGraphContextService {
         while (!queue.isEmpty()) {
             var task = queue.removeFirst();
             var path = GitLabFrontendTargetedSourceSession.normalize(task.path());
-            if (!visited.add(path)) {
+            var visitKey = path + "|" + (StringUtils.hasText(task.symbol()) ? task.symbol() : "*");
+            if (!visited.add(visitKey)) {
                 continue;
             }
             if (task.depth() > limits.maxComponentDepth()) {
@@ -193,13 +315,27 @@ public class GitLabFrontendScreenGraphContextService {
             }
             var parsed = moduleParser.parse(path, source);
             for (var binding : parsed.imports().values()) {
+                if (!usedOutsideImportStatements(source, binding.localName())) {
+                    continue;
+                }
                 for (var target : imports.resolve(path, binding.moduleSpecifier())) {
-                    queue.add(new DependencyTask(target, task.depth() + 1, task.rootRole()));
+                    queue.add(new DependencyTask(
+                            target, task.depth() + 1, task.rootRole(), binding.exportedName()
+                    ));
                 }
             }
             for (var reExport : parsed.reExports()) {
+                if (StringUtils.hasText(task.symbol()) && !reExport.star()
+                        && !task.symbol().equals(reExport.exportedName())) {
+                    continue;
+                }
                 for (var target : imports.resolve(path, reExport.moduleSpecifier())) {
-                    queue.add(new DependencyTask(target, task.depth() + 1, task.rootRole()));
+                    queue.add(new DependencyTask(
+                            target,
+                            task.depth() + 1,
+                            task.rootRole(),
+                            reExport.star() ? task.symbol() : reExport.sourceName()
+                    ));
                 }
             }
             enqueueResources(TEMPLATE_URL, path, source, GitLabFrontendSourceRole.TEMPLATE, task.depth(), queue);
@@ -250,8 +386,18 @@ public class GitLabFrontendScreenGraphContextService {
     ) {
         var matcher = pattern.matcher(source);
         while (matcher.find()) {
-            queue.add(new DependencyTask(relative(ownerPath, matcher.group(1)), ownerDepth + 1, role));
+            queue.add(new DependencyTask(relative(ownerPath, matcher.group(1)), ownerDepth + 1, role, null));
         }
+    }
+
+    private boolean usedOutsideImportStatements(String source, String symbol) {
+        if (!StringUtils.hasText(source) || !StringUtils.hasText(symbol)) {
+            return false;
+        }
+        var body = IMPORT_OR_RE_EXPORT.matcher(source).replaceAll("\n");
+        return Pattern.compile("(?<![A-Za-z0-9_$])" + Pattern.quote(symbol) + "(?![A-Za-z0-9_$])")
+                .matcher(body)
+                .find();
     }
 
     private String addFile(
@@ -342,27 +488,53 @@ public class GitLabFrontendScreenGraphContextService {
     }
 
     private List<GitLabFrontendContextCoverage> coverage(
-            LinkedHashMap<String, GitLabFrontendSourceFile> files,
+            GitLabFrontendSemanticContext semanticContext,
             List<GitLabFrontendTechnicalSignal> signals,
             boolean limited
     ) {
-        var roles = files.values().stream().flatMap(file -> file.roles().stream()).collect(java.util.stream.Collectors.toSet());
+        var roles = semanticContext.sourceManifest().stream()
+                .flatMap(file -> file.roles().stream())
+                .collect(java.util.stream.Collectors.toSet());
+        var sliceKinds = semanticContext.sourceSlices().stream()
+                .map(GitLabFrontendSourceSlice::kind)
+                .collect(java.util.stream.Collectors.toSet());
         return List.of(
-                category("ROUTING", roles.contains(GitLabFrontendSourceRole.ROUTE_CONFIGURATION), limited),
-                category("VIEW", roles.contains(GitLabFrontendSourceRole.VIEW_COMPONENT), limited),
-                category("TEMPLATE", roles.contains(GitLabFrontendSourceRole.TEMPLATE), limited),
-                category("FORMS", signals.stream().anyMatch(signal -> signal.kind() == GitLabFrontendTechnicalSignalKind.REACTIVE_FORM || signal.kind() == GitLabFrontendTechnicalSignalKind.CUSTOM_FORM_CONTROL), limited),
-                category("STATE", roles.contains(GitLabFrontendSourceRole.STATE_MANAGEMENT), limited),
-                category("BACKEND_SERVICES", roles.contains(GitLabFrontendSourceRole.BACKEND_CLIENT) || roles.contains(GitLabFrontendSourceRole.WEBSOCKET_STREAM), limited),
-                category("AUTHORIZATION", signals.stream().anyMatch(signal -> signal.kind() == GitLabFrontendTechnicalSignalKind.AUTH_GUARD), limited)
+                category("ROUTING", sliceKinds.contains(GitLabFrontendSourceSliceKind.ROUTE_CONFIGURATION), limited, semanticContext),
+                category("VIEW", roles.contains(GitLabFrontendSourceRole.VIEW_COMPONENT)
+                        && (sliceKinds.contains(GitLabFrontendSourceSliceKind.COMPONENT_CONTRACT)
+                        || sliceKinds.contains(GitLabFrontendSourceSliceKind.COMPONENT_BEHAVIOR)
+                        || sliceKinds.contains(GitLabFrontendSourceSliceKind.FORM_RULE)), limited, semanticContext),
+                category("TEMPLATE", sliceKinds.contains(GitLabFrontendSourceSliceKind.TEMPLATE_INTERACTION), limited, semanticContext),
+                category("FORMS", sliceKinds.contains(GitLabFrontendSourceSliceKind.FORM_RULE)
+                        || signals.stream().anyMatch(signal -> signal.kind() == GitLabFrontendTechnicalSignalKind.CUSTOM_FORM_CONTROL), limited, semanticContext),
+                category("STATE", sliceKinds.contains(GitLabFrontendSourceSliceKind.STATE_FLOW), limited, semanticContext),
+                category("BACKEND_SERVICES", sliceKinds.contains(GitLabFrontendSourceSliceKind.BACKEND_OPERATION), limited, semanticContext),
+                category("AUTHORIZATION", sliceKinds.contains(GitLabFrontendSourceSliceKind.AUTHORIZATION_RULE)
+                        || signals.stream().anyMatch(signal -> signal.kind() == GitLabFrontendTechnicalSignalKind.AUTH_GUARD), limited, semanticContext)
         );
     }
 
-    private GitLabFrontendContextCoverage category(String name, boolean present, boolean limited) {
+    private GitLabFrontendContextCoverage category(
+            String name,
+            boolean present,
+            boolean limited,
+            GitLabFrontendSemanticContext semanticContext
+    ) {
+        var unresolved = semanticContext.unresolvedFrontier().stream()
+                .anyMatch(frontier -> frontier.affectedCategories().isEmpty()
+                        || frontier.affectedCategories().contains(name));
         return new GitLabFrontendContextCoverage(
                 name,
-                present ? limited ? GitLabFrontendCoverageStatus.PARTIAL : GitLabFrontendCoverageStatus.READY : GitLabFrontendCoverageStatus.PARTIAL,
-                present ? "Selected route/component graph contains this source category." : "No static signal for this category was found in the bounded selected-screen graph."
+                present && !limited && !unresolved
+                        ? GitLabFrontendCoverageStatus.READY
+                        : GitLabFrontendCoverageStatus.PARTIAL,
+                present
+                        ? unresolved
+                        ? "Semantic source slices confirm this category, but its research frontier is not closed."
+                        : limited
+                        ? "Semantic source slices confirm this category, but deterministic traversal reached a transfer boundary."
+                        : "Semantic source slices confirm this selected-screen category."
+                        : "No semantic slice for this category was found in the selected-screen graph."
         );
     }
 
@@ -376,6 +548,11 @@ public class GitLabFrontendScreenGraphContextService {
         return new GitLabFrontendDiscoveryException(code, message);
     }
 
-    private record DependencyTask(String path, int depth, GitLabFrontendSourceRole rootRole) {
+    private record DependencyTask(
+            String path,
+            int depth,
+            GitLabFrontendSourceRole rootRole,
+            String symbol
+    ) {
     }
 }

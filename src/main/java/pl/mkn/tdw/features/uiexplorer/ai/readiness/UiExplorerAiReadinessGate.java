@@ -34,7 +34,7 @@ public class UiExplorerAiReadinessGate {
         if (context.sourceScope() == null || context.sourceRevision() == null) {
             return blocked(activeSections, "Resolved source scope and revision are required for AI execution.");
         }
-        if (context.status() == UiExplorerCoverageStatus.BLOCKED || context.sourceFiles().isEmpty()) {
+        if (context.status() == UiExplorerCoverageStatus.BLOCKED || context.sourceSlices().isEmpty()) {
             return blocked(activeSections, "Deterministic screen source context is blocked.");
         }
 

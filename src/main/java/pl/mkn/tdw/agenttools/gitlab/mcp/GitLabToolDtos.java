@@ -13,6 +13,13 @@ import pl.mkn.tdw.integrations.gitlab.usecase.GitLabEndpointUseCaseUnresolvedRef
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextLimits;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseContextResult;
 import pl.mkn.tdw.integrations.gitlab.usecase.GitLabJavaMethodUseCaseEntryMethod;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendContextMetrics;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphDiagnostic;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenContextDelta;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceManifestEntry;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendSourceSlice;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendUnresolvedFrontier;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendUseCaseRelation;
 
 import java.util.List;
 import java.util.Map;
@@ -88,6 +95,30 @@ public final class GitLabToolDtos {
             String role,
             List<GitLabFlowContextCandidate> candidates
     ) {
+    }
+
+    public record GitLabExpandFrontendUseCaseContextToolResponse(
+            String frontierId,
+            String sourceRevision,
+            List<GitLabFrontendSourceManifestEntry> sourceManifest,
+            List<GitLabFrontendSourceSlice> sourceSlices,
+            List<GitLabFrontendUseCaseRelation> relations,
+            List<GitLabFrontendUnresolvedFrontier> unresolvedFrontier,
+            List<GitLabFrontendGraphDiagnostic> diagnostics,
+            GitLabFrontendContextMetrics metrics,
+            boolean contextLimitReached
+    ) {
+        public static GitLabExpandFrontendUseCaseContextToolResponse from(
+                GitLabFrontendScreenContextDelta delta
+        ) {
+            return new GitLabExpandFrontendUseCaseContextToolResponse(
+                    delta.frontierId(),
+                    delta.sourceRevision() != null ? delta.sourceRevision().commitId() : null,
+                    delta.sourceManifest(), delta.sourceSlices(), delta.relations(),
+                    delta.unresolvedFrontier(), delta.diagnostics(), delta.metrics(),
+                    delta.contextLimitReached()
+            );
+        }
     }
 
     public record GitLabFileContentResult(

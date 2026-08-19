@@ -11,6 +11,7 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildEndpointUseCaseContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabBuildJavaMethodUseCaseContextToolResponse;
+import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabExpandFrontendUseCaseContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindClassReferencesToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFindFlowContextToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabFlowContextGroup;
@@ -30,6 +31,7 @@ import java.util.List;
 
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.BUILD_JAVA_METHOD_USE_CASE_CONTEXT;
+import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.EXPAND_FRONTEND_USE_CASE_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.FIND_CLASS_REFERENCES;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
@@ -74,6 +76,7 @@ public class GitLabToolEvidenceMapper {
                  LIST_REPOSITORY_ENDPOINTS,
                  BUILD_ENDPOINT_USE_CASE_CONTEXT,
                  BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
+                 EXPAND_FRONTEND_USE_CASE_CONTEXT,
                  SEARCH_REPOSITORY_CANDIDATES,
                  FIND_CLASS_REFERENCES,
                  FIND_FLOW_CONTEXT -> true;
@@ -119,6 +122,12 @@ public class GitLabToolEvidenceMapper {
                     sessionEvidence
             );
             case BUILD_JAVA_METHOD_USE_CASE_CONTEXT -> captureGitLabJavaMethodUseCaseContext(
+                    toolCallId,
+                    rawArguments,
+                    rawResult,
+                    sessionEvidence
+            );
+            case EXPAND_FRONTEND_USE_CASE_CONTEXT -> captureGitLabFrontendUseCaseContextDelta(
                     toolCallId,
                     rawArguments,
                     rawResult,
@@ -601,6 +610,48 @@ public class GitLabToolEvidenceMapper {
         }
     }
 
+    private AnalysisEvidenceSection captureGitLabFrontendUseCaseContextDelta(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            GitLabToolEvidenceSink sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, GitLabExpandFrontendUseCaseContextToolResponse.class);
+            var attributes = buildGitLabDiscoveryAttributes(
+                    toolCallId,
+                    EXPAND_FRONTEND_USE_CASE_CONTEXT,
+                    rawArguments
+            );
+            addAttribute(attributes, "frontierId", response.frontierId());
+            addAttribute(attributes, "sourceRevision", response.sourceRevision());
+            addAttribute(attributes, "newSliceCount", Integer.toString(safeList(response.sourceSlices()).size()));
+            addAttribute(attributes, "relationCount", Integer.toString(safeList(response.relations()).size()));
+            addAttribute(attributes, "unresolvedFrontierCount", Integer.toString(safeList(response.unresolvedFrontier()).size()));
+            addAttribute(attributes, "contextLimitReached", Boolean.toString(response.contextLimitReached()));
+            addJsonAttribute(attributes, "sourceManifest", response.sourceManifest());
+            addJsonAttribute(attributes, "sourceSlices", response.sourceSlices());
+            addJsonAttribute(attributes, "relations", response.relations());
+            addJsonAttribute(attributes, "unresolvedFrontier", response.unresolvedFrontier());
+            addJsonAttribute(attributes, "diagnostics", response.diagnostics());
+            addJsonAttribute(attributes, "metrics", response.metrics());
+            return sessionEvidence.appendItem(
+                    GITLAB_PROVIDER,
+                    GITLAB_DISCOVERY_CATEGORY,
+                    discoveryKey(toolCallId, EXPAND_FRONTEND_USE_CASE_CONTEXT),
+                    GITLAB_DISCOVERY_ORDER_NAMESPACE,
+                    GITLAB_DISCOVERY_FALLBACK_KEY,
+                    new AnalysisEvidenceItem(
+                            gitLabDiscoveryTitle(EXPAND_FRONTEND_USE_CASE_CONTEXT),
+                            List.copyOf(attributes)
+                    )
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab frontend use-case context delta. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
     private AnalysisEvidenceSection captureGitLabClassReferences(
             String toolCallId,
             String rawArguments,
@@ -818,6 +869,7 @@ public class GitLabToolEvidenceMapper {
             case LIST_REPOSITORY_ENDPOINTS -> "GitLab repository endpoints";
             case BUILD_ENDPOINT_USE_CASE_CONTEXT -> "GitLab endpoint use case context";
             case BUILD_JAVA_METHOD_USE_CASE_CONTEXT -> "GitLab Java method use case context";
+            case EXPAND_FRONTEND_USE_CASE_CONTEXT -> "GitLab frontend use case context delta";
             case SEARCH_REPOSITORY_CANDIDATES -> "GitLab search candidates";
             case READ_REPOSITORY_FILE_OUTLINE -> "GitLab file outline";
             case FIND_CLASS_REFERENCES -> "GitLab class references";

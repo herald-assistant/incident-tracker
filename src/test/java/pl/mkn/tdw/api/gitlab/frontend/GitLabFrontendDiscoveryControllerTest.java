@@ -77,7 +77,9 @@ class GitLabFrontendDiscoveryControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.screenNode.screen.screenId").value("screen-crm-customer-profile"))
-                .andExpect(jsonPath("$.sourceFiles[0].roles[0]").value("VIEW_COMPONENT"))
+                .andExpect(jsonPath("$.sourceManifest[0].roles[0]").value("VIEW_COMPONENT"))
+                .andExpect(jsonPath("$.sourceSlices[0].kind").value("COMPONENT_CONTRACT"))
+                .andExpect(jsonPath("$.metrics.returnedSliceCount").value(1))
                 .andExpect(jsonPath("$.technicalSignals[0].kind").value("REACTIVE_FORM"))
                 .andExpect(jsonPath("$.graphCoverage.visitedRouteNodeCount").value(1))
                 .andExpect(jsonPath("$.contextLimitReached").value(false));
@@ -141,10 +143,21 @@ class GitLabFrontendDiscoveryControllerTest {
         return new GitLabFrontendScreenGraphContext(
                 scope(), new GitLabFrontendSourceRevision(scope().ref(), "crm-ui-revision-20260815"),
                 node, chain(node), coverage(),
-                List.of(new GitLabFrontendSourceFile(
+                List.of(new GitLabFrontendSourceManifestEntry(
                         viewPath, List.of(GitLabFrontendSourceRole.VIEW_COMPONENT),
-                        "export class CrmCustomerProfileComponent {}", 44, false
+                        44, "crm-profile-sha256", 1
                 )),
+                List.of(new GitLabFrontendSourceSlice(
+                        "frontend-crm-profile", viewPath, List.of(GitLabFrontendSourceRole.VIEW_COMPONENT),
+                        GitLabFrontendSourceSliceKind.COMPONENT_CONTRACT, "CrmCustomerProfileComponent",
+                        1, 1, "export class CrmCustomerProfileComponent {}", 44, "crm-profile-slice-sha256"
+                )),
+                List.of(new GitLabFrontendUseCaseRelation(
+                        "screen-crm-customer-profile", viewPath, GitLabFrontendUseCaseRelationKind.ROUTE_TO_VIEW,
+                        "CrmCustomerProfileComponent", GitLabFrontendSignalConfidence.HIGH,
+                        node.routeSource()
+                )),
+                List.of(),
                 List.of(new GitLabFrontendTechnicalSignal(
                         GitLabFrontendTechnicalSignalKind.REACTIVE_FORM,
                         "Synthetic CRM customer form is declared.", GitLabFrontendSignalConfidence.HIGH,
@@ -152,7 +165,9 @@ class GitLabFrontendDiscoveryControllerTest {
                 )),
                 List.of(new GitLabFrontendContextCoverage(
                         "FORMS", GitLabFrontendCoverageStatus.READY, "Synthetic reactive form source included."
-                )), List.of(), 44, false
+                )), List.of(),
+                new GitLabFrontendContextMetrics(1, 44, 1, 44, 0, 0, 1, 0),
+                false
         );
     }
 
