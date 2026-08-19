@@ -191,6 +191,15 @@ lub nieugruntowana referencje w polach opisowych. Twardo waliduje tylko dane
 niezbedne do obliczen: klasyfikacje, komplet wymiarow `DELIVERY` w zakresie
 `0-4` oraz `confidence` w zakresie `0-1`. Niepoprawne opcjonalne kolekcje
 opisowe sa pomijane, a surowa odpowiedz pozostaje dostepna do diagnostyki.
+Ogrodzenie kodu Markdown z etykieta `json` jest traktowane jako format
+transportowy i usuwane przez wybranie obiektu pomiedzy pierwsza `{` i ostatnia
+`}`.
+Niestandardowe separatory Unicode oraz whitespace poza stringami sa przed
+parsowaniem normalizowane do legalnego whitespace JSON; surowa odpowiedz nie
+jest przy tym modyfikowana.
+Jezeli blad skladni JSON wystapi dopiero po kompletnych polach scoringowych,
+parser odzyskuje je przez strumieniowy parser Jacksona i pomija uszkodzony
+ogon opisowy. Nie odzyskuje ani nie zgaduje niekompletnych pol scoringowych.
 
 Ten sam zwalidowany skill jest widoczny w read-only ekranie `Platform / AI
 Skills`. Frontendowa projekcja grupuje

@@ -168,7 +168,63 @@ public class DeliveryAiResponseParser {
         var trimmed = content.trim();
         var start = trimmed.indexOf('{');
         var end = trimmed.lastIndexOf('}');
-        return start >= 0 && end > start ? trimmed.substring(start, end + 1) : null;
+        return start >= 0 && end > start
+                ? normalizeTransportWhitespace(trimmed.substring(start, end + 1))
+                : null;
+    }
+
+    private String normalizeTransportWhitespace(String json) {
+        var normalized = new StringBuilder(json.length());
+        var insideString = false;
+        var escaped = false;
+        for (var index = 0; index < json.length(); index++) {
+            var character = json.charAt(index);
+            if (insideString) {
+                if (escaped) {
+                    normalized.append(character);
+                    escaped = false;
+                } else if (character == '\\') {
+                    normalized.append(character);
+                    escaped = true;
+                } else if (character == '"') {
+                    normalized.append(character);
+                    insideString = false;
+                } else if (isLineSeparator(character)) {
+                    normalized.append("\\n");
+                    if (character == '\r'
+                            && index + 1 < json.length()
+                            && json.charAt(index + 1) == '\n') {
+                        index++;
+                    }
+                } else if (character == '\t') {
+                    normalized.append("\\t");
+                } else {
+                    normalized.append(character);
+                }
+            } else if (character == '"') {
+                normalized.append(character);
+                insideString = true;
+            } else if (isTransportWhitespace(character)) {
+                normalized.append(' ');
+            } else {
+                normalized.append(character);
+            }
+        }
+        return normalized.toString();
+    }
+
+    private boolean isLineSeparator(char character) {
+        return character == '\r'
+                || character == '\n'
+                || character == '\u2028'
+                || character == '\u2029';
+    }
+
+    private boolean isTransportWhitespace(char character) {
+        return Character.isWhitespace(character)
+                || Character.isSpaceChar(character)
+                || character == '\uFEFF'
+                || character == '\u200B';
     }
 
     private String text(JsonNode node, String fieldName) {

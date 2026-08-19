@@ -44,6 +44,44 @@ class DeliveryAiResponseParserTest {
     }
 
     @Test
+    void shouldParseMarkdownFencedJsonWithUnicodeLineSeparators() {
+        var content = """
+                ```json
+                {
+                  "classification":"DELIVERY",
+                  "dimensions":{
+                    "outcomeBreadth":2,
+                    "domainDecisionComplexity":2,
+                    "applicationFlowComplexity":1,
+                    "boundaryAndDataComplexity":1,
+                    "verificationStateSpace":2,
+                    "implementedCompatibilityScope":0
+                  },
+                  "confidence":0.82,
+                  "evidenceSummary":["outcomeBreadth | issues.md#DCA-1 | visible result"],
+                  "qualityFlags":["feature flag not verified"],
+                  "visibilityLimits":["runtime evidence unavailable"]
+                }
+                ```
+                """.replace("\n", "\u2028");
+
+        var response = parser.parse(content);
+
+        assertThat(response.classification()).isEqualTo("DELIVERY");
+        assertThat(response.dimensions().outcomeBreadth()).isEqualTo(2);
+        assertThat(response.dimensions().applicationFlowComplexity()).isEqualTo(1);
+        assertThat(response.confidence()).isEqualTo(0.82);
+        assertThat(response.evidenceSummary()).containsExactly(
+                "outcomeBreadth | issues.md#DCA-1 | visible result"
+        );
+        assertThat(response.qualityFlags()).containsExactly("feature flag not verified");
+        assertThat(response.visibilityLimits()).containsExactly("runtime evidence unavailable");
+        var score = new DeliveryAssessmentScoringService().score(response);
+        assertThat(score.score100()).isEqualTo(35.0);
+        assertThat(score.deliveredStoryPoints()).isEqualTo(3);
+    }
+
+    @Test
     void shouldRejectOutOfRangeDimension() {
         assertThatThrownBy(() -> parser.parse("""
                 {"classification":"DELIVERY","dimensions":{
@@ -148,6 +186,9 @@ class DeliveryAiResponseParserTest {
         assertThat(response.dimensions().verificationStateSpace()).isEqualTo(3);
         assertThat(response.confidence()).isEqualTo(0.88);
         assertThat(response.evidenceSummary()).isEmpty();
+        var score = new DeliveryAssessmentScoringService().score(response);
+        assertThat(score.score100()).isEqualTo(55.0);
+        assertThat(score.deliveredStoryPoints()).isEqualTo(5);
     }
 
     @Test
