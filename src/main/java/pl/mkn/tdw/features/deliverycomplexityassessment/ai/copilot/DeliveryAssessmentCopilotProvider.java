@@ -44,7 +44,7 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
                 ? rawResponseListener
                 : DeliveryRawAiResponseListener.NO_OP;
         effectiveRawResponseListener.onRawAiResponse(rawResponse);
-        var response = responseParser.parse(rawResponse, preparation.artifacts());
+        var response = responseParser.parse(rawResponse);
         return new DeliveryUnitAiAnalysis(
                 response,
                 result.usage(),

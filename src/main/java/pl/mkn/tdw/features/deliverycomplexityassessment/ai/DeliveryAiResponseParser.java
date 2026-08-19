@@ -10,7 +10,6 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 @Component
@@ -22,7 +21,7 @@ public class DeliveryAiResponseParser {
 
     private final ObjectMapper objectMapper;
 
-    public DeliveryAiResponse parse(String content, Map<String, String> artifacts) {
+    public DeliveryAiResponse parse(String content) {
         var json = extractJson(content);
         if (!StringUtils.hasText(json)) {
             throw new IllegalArgumentException("AI response did not contain JSON assessment.");
@@ -38,17 +37,13 @@ public class DeliveryAiResponseParser {
                 throw new IllegalArgumentException("AI response confidence must be between 0 and 1.");
             }
             var dimensions = "DELIVERY".equals(classification) ? dimensions(root.path("dimensions")) : null;
-            var evidenceSummary = textList(root.path("evidenceSummary"));
-            if (dimensions != null) {
-                validateEvidenceCoverage(dimensions, evidenceSummary, artifacts);
-            }
             return new DeliveryAiResponse(
                     classification,
                     dimensions,
                     confidence,
-                    evidenceSummary,
-                    textList(root.path("qualityFlags")),
-                    textList(root.path("visibilityLimits"))
+                    optionalTextList(root.path("evidenceSummary")),
+                    optionalTextList(root.path("qualityFlags")),
+                    optionalTextList(root.path("visibilityLimits"))
             );
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("AI response JSON could not be parsed.", exception);
@@ -69,118 +64,6 @@ public class DeliveryAiResponseParser {
         );
     }
 
-    private void validateEvidenceCoverage(
-            DeliveryAssessmentDimensions dimensions,
-            List<String> evidenceSummary,
-            Map<String, String> artifacts
-    ) {
-        requireDimensionEvidence("outcomeBreadth", dimensions.outcomeBreadth(), evidenceSummary, artifacts);
-        requireDimensionEvidence(
-                "domainDecisionComplexity", dimensions.domainDecisionComplexity(), evidenceSummary, artifacts
-        );
-        requireDimensionEvidence(
-                "applicationFlowComplexity", dimensions.applicationFlowComplexity(), evidenceSummary, artifacts
-        );
-        requireDimensionEvidence(
-                "boundaryAndDataComplexity", dimensions.boundaryAndDataComplexity(), evidenceSummary, artifacts
-        );
-        requireDimensionEvidence(
-                "verificationStateSpace", dimensions.verificationStateSpace(), evidenceSummary, artifacts
-        );
-        requireDimensionEvidence(
-                "implementedCompatibilityScope",
-                dimensions.implementedCompatibilityScope(),
-                evidenceSummary,
-                artifacts
-        );
-    }
-
-    private void requireDimensionEvidence(
-            String dimension,
-            int score,
-            List<String> evidenceSummary,
-            Map<String, String> artifacts
-    ) {
-        if (score == 0) {
-            return;
-        }
-        var covered = evidenceSummary.stream().anyMatch(item -> isDimensionEvidence(item, dimension, artifacts));
-        if (!covered) {
-            throw new IllegalArgumentException(
-                    "AI response does not contain evidence for non-zero dimension " + dimension + "."
-            );
-        }
-    }
-
-    private boolean isDimensionEvidence(
-            String item,
-            String dimension,
-            Map<String, String> artifacts
-    ) {
-        if (!StringUtils.hasText(item)) {
-            return false;
-        }
-        var parts = item.split("\\|", 3);
-        return parts.length == 3
-                && dimension.equals(parts[0].trim())
-                && groundedReference(parts[1], artifacts)
-                && StringUtils.hasText(parts[2]);
-    }
-
-    private boolean groundedReference(String value, Map<String, String> artifacts) {
-        if (!StringUtils.hasText(value) || artifacts == null || artifacts.isEmpty()) {
-            return false;
-        }
-        var reference = value.trim();
-        var sectionSeparator = reference.indexOf('#');
-        var artifactName = sectionSeparator >= 0
-                ? reference.substring(0, sectionSeparator).trim()
-                : reference;
-        if (artifacts.containsKey(artifactName)) {
-            return groundedArtifactSection(artifacts.get(artifactName), reference, sectionSeparator);
-        }
-        var artifactAliases = artifacts.entrySet().stream()
-                .filter(entry -> artifactName.equals(shortArtifactName(entry.getKey())))
-                .toList();
-        if (artifactAliases.size() == 1) {
-            return groundedArtifactSection(artifactAliases.get(0).getValue(), reference, sectionSeparator);
-        }
-        return artifacts.values().stream()
-                .filter(StringUtils::hasText)
-                .anyMatch(content -> containsReference(content, reference, sectionSeparator));
-    }
-
-    private String shortArtifactName(String artifactName) {
-        var separator = artifactName.lastIndexOf('/');
-        return separator >= 0 ? artifactName.substring(separator + 1) : artifactName;
-    }
-
-    private boolean groundedArtifactSection(String content, String reference, int sectionSeparator) {
-        if (sectionSeparator < 0) {
-            return true;
-        }
-        if (!StringUtils.hasText(content) || sectionSeparator >= reference.length() - 1) {
-            return false;
-        }
-        var section = reference.substring(sectionSeparator + 1).trim();
-        return StringUtils.hasText(section) && content.contains(section);
-    }
-
-    private boolean containsReference(String content, String reference, int sectionSeparator) {
-        if (content.contains(reference)) {
-            return true;
-        }
-        if (sectionSeparator <= 0 || sectionSeparator >= reference.length() - 1) {
-            return false;
-        }
-        var artifactPart = reference.substring(0, sectionSeparator).trim();
-        var sectionPart = reference.substring(sectionSeparator + 1).trim();
-        return StringUtils.hasText(artifactPart)
-                && StringUtils.hasText(sectionPart)
-                && content.contains(artifactPart)
-                && content.contains(sectionPart);
-    }
-
     private int requiredDimension(JsonNode node, String name) {
         var value = node.get(name);
         if (value == null || !value.canConvertToInt()) {
@@ -189,19 +72,21 @@ public class DeliveryAiResponseParser {
         return value.asInt();
     }
 
-    private List<String> textList(JsonNode node) {
-        if (node == null || node.isNull()) {
+    private List<String> optionalTextList(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
             return List.of();
         }
+        if (node.isTextual()) {
+            return StringUtils.hasText(node.asText()) ? List.of(node.asText()) : List.of();
+        }
         if (!node.isArray()) {
-            throw new IllegalArgumentException("AI response collection field has invalid type.");
+            return List.of();
         }
         var values = new ArrayList<String>();
         for (var item : node) {
-            if (!item.isTextual()) {
-                throw new IllegalArgumentException("AI response collection contains a non-text value.");
+            if (item.isTextual() && StringUtils.hasText(item.asText())) {
+                values.add(item.asText());
             }
-            values.add(item.asText());
         }
         return List.copyOf(values);
     }

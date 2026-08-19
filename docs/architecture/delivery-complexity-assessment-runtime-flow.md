@@ -184,15 +184,13 @@ przypadki kalibracyjne stabilizuja znaczenie skali, ale nie zastepuja evidence
 biezacej Delivery Unit i nie wykorzystuja historycznych Story Points.
 
 Dla kazdego niezerowego wymiaru AI zwraca `evidenceSummary` w formacie
-`dimension | artifact#section | observed fact`. Parser wymaga kompletnego
-pokrycia niezerowych wymiarow oraz referencji ugruntowanej w inline artifacts.
-Akceptowana jest logiczna sciezka `delivery-complexity/...` albo dokladny
-identyfikator issue, MR, pliku, klasy lub metody obecny w tresci artifactow.
-Parser toleruje tez jednoznaczna skrocona nazwe logicznego artifactu, np.
-`diffs.md#...`, ale wymaga wtedy, aby wskazana sekcja wystepowala w tresci tego
-artifactu.
-Brak takiego evidence uniewaznia odpowiedz zamiast pozwalac na scoring
-niezakotwiczonej liczby.
+`dimension | artifact#section | observed fact`. Jest to kontrakt jakosciowy
+promptu i material wyjasniajacy wynik, ale nie wejscie do deterministycznego
+scoringu. Parser nie odrzuca poprawnej oceny przez wariant formatowania, brak
+lub nieugruntowana referencje w polach opisowych. Twardo waliduje tylko dane
+niezbedne do obliczen: klasyfikacje, komplet wymiarow `DELIVERY` w zakresie
+`0-4` oraz `confidence` w zakresie `0-1`. Niepoprawne opcjonalne kolekcje
+opisowe sa pomijane, a surowa odpowiedz pozostaje dostepna do diagnostyki.
 
 Ten sam zwalidowany skill jest widoczny w read-only ekranie `Platform / AI
 Skills`. Frontendowa projekcja grupuje
