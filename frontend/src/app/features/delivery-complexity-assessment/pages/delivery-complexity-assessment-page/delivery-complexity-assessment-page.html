@@ -130,6 +130,68 @@
       @if (jobError()) {
         <div class="runtime-message runtime-message--error" role="alert">{{ jobError() }}</div>
       }
+
+      <details class="assessment-algorithm">
+        <summary class="assessment-algorithm__heading">
+          <span class="material-symbols-outlined" aria-hidden="true">calculate</span>
+          <h3>Jak liczony jest wynik</h3>
+          <span class="material-symbols-outlined assessment-algorithm__toggle" aria-hidden="true">expand_more</span>
+        </summary>
+
+        <div class="assessment-algorithm__body">
+          <div class="assessment-algorithm__intro">
+            <p>
+              Każda oceniona Delivery Unit otrzymuje wartości od 0 do 4 w sześciu wymiarach.
+              Backend przelicza je na wynik od 0 do 100 według stałych wag:
+            </p>
+          </div>
+
+          <dl class="assessment-algorithm__weights" aria-label="Wagi wymiarów oceny">
+            <div>
+              <dt>Zakres rezultatu</dt>
+              <dd>10%</dd>
+            </div>
+            <div>
+              <dt>Decyzje domenowe</dt>
+              <dd>25%</dd>
+            </div>
+            <div>
+              <dt>Przepływ aplikacji</dt>
+              <dd>25%</dd>
+            </div>
+            <div>
+              <dt>Granice i dane</dt>
+              <dd>15%</dd>
+            </div>
+            <div>
+              <dt>Stany weryfikacji</dt>
+              <dd>15%</dd>
+            </div>
+            <div>
+              <dt>Kompatybilność</dt>
+              <dd>10%</dd>
+            </div>
+          </dl>
+
+          <div class="assessment-algorithm__conversion">
+            <h4>Przeliczenie wyniku na Delivered Story Points</h4>
+            <dl class="assessment-algorithm__buckets" aria-label="Progi Delivered Story Points">
+              <div><dt>0</dt><dd>0 DSP</dd></div>
+              <div><dt>&gt; 0–14</dt><dd>1 DSP</dd></div>
+              <div><dt>&gt; 14–27</dt><dd>2 DSP</dd></div>
+              <div><dt>&gt; 27–42</dt><dd>3 DSP</dd></div>
+              <div><dt>&gt; 42–58</dt><dd>5 DSP</dd></div>
+              <div><dt>&gt; 58–75</dt><dd>8 DSP</dd></div>
+              <div><dt>&gt; 75</dt><dd>13 DSP</dd></div>
+            </dl>
+          </div>
+
+          <p class="assessment-algorithm__note">
+            Wynik całego raportu jest sumą DSP ocenionych jednostek. Jednostki pominięte i zakończone
+            błędem nie dodają punktów. Confidence jest prezentowane osobno i nie zmienia wyniku DSP.
+          </p>
+        </div>
+      </details>
     </section>
 
     @if (job(); as currentJob) {

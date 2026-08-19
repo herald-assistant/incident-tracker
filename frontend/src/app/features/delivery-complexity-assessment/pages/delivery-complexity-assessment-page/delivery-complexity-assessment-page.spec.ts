@@ -22,6 +22,27 @@ import { DeliveryComplexityAssessmentApiService } from '../../services/delivery-
 import { DeliveryComplexityAssessmentPageComponent } from './delivery-complexity-assessment-page';
 
 describe('DeliveryComplexityAssessmentPageComponent', () => {
+  it('should explain the deterministic scoring algorithm at the bottom of the composer', async () => {
+    const { fixture } = await createComponent({});
+    const composer = fixture.nativeElement.querySelector('.delivery-assessment-composer') as HTMLElement;
+    const algorithm = composer.querySelector('.assessment-algorithm') as HTMLDetailsElement;
+
+    expect(algorithm).not.toBeNull();
+    expect(composer.lastElementChild).toBe(algorithm);
+    expect(algorithm.open).toBe(false);
+    (algorithm.querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(algorithm.open).toBe(true);
+    expect(algorithm.textContent).toContain('Jak liczony jest wynik');
+    expect(algorithm.textContent).toContain('Decyzje domenowe');
+    expect(algorithm.textContent).toContain('25%');
+    expect(algorithm.textContent).toContain('> 75');
+    expect(algorithm.textContent).toContain('13 DSP');
+    expect(algorithm.textContent).toContain('Confidence jest prezentowane osobno i nie zmienia wyniku DSP');
+    expect(algorithm.querySelectorAll('.assessment-algorithm__weights > div')).toHaveLength(6);
+    expect(algorithm.querySelectorAll('.assessment-algorithm__buckets > div')).toHaveLength(7);
+  });
+
   it('should start, poll and keep the partial unit result visible in the aggregate', async () => {
     const queued = snapshot('QUEUED', 0, []);
     const completed = snapshot('COMPLETED', 8, [completedUnit()]);
