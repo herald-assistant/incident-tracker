@@ -106,9 +106,13 @@ public class CopilotSessionConfigFactory {
     }
 
     private String selectedReasoningEffort(CopilotModelSelection modelSelection) {
-        return modelSelection != null && StringUtils.hasText(modelSelection.reasoningEffort())
-                ? modelSelection.reasoningEffort()
-                : properties.getReasoningEffort();
+        if (modelSelection != null && StringUtils.hasText(modelSelection.reasoningEffort())) {
+            return modelSelection.reasoningEffort();
+        }
+        if (modelSelection != null && StringUtils.hasText(modelSelection.model())) {
+            return null;
+        }
+        return properties.getReasoningEffort();
     }
 
     private List<String> platformSkillDirectories() {

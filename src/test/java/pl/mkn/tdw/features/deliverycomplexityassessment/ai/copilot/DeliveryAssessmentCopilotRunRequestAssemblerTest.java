@@ -33,4 +33,19 @@ class DeliveryAssessmentCopilotRunRequestAssemblerTest {
         assertThat(request.initialReport()).isNull();
         assertThat(request.artifactContents()).containsEntry("delivery-complexity/issues.md", "CRM-1");
     }
+
+    @Test
+    void shouldKeepReasoningEffortEmptyForExplicitModel() {
+        var assembler = new DeliveryAssessmentCopilotRunRequestAssembler(new CopilotRunAuthMapper());
+
+        var request = assembler.assemble(
+                "job-1:DU-CRM-1",
+                new AnalysisAiOptions("gpt-basic", null),
+                AnalysisAiAuthRef.localToken("test"),
+                new DeliveryPromptPreparation("prompt", Map.of())
+        );
+
+        assertThat(request.sessionConfigRequest().modelSelection().model()).isEqualTo("gpt-basic");
+        assertThat(request.sessionConfigRequest().modelSelection().reasoningEffort()).isNull();
+    }
 }

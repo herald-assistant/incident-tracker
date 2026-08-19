@@ -148,6 +148,10 @@ Konsekwencje:
   publiczne API analizy.
 - wybor modelu i `reasoningEffort` dotyczy tylko konfiguracji sesji AI, nie
   zmienia deterministycznie zbieranego evidence ani ukrytych scope'ow tools.
+- globalny `analysis.ai.copilot.reasoning-effort` jest fallbackiem tylko wtedy,
+  gdy request nie wybiera konkretnego modelu. Jawny model bez
+  `reasoningEffort` nie dziedziczy globalnej wartosci, aby model bez wsparcia
+  reasoning nie otrzymal niezgodnej opcji SDK.
 - frontend nie hardcoduje mozliwosci modeli; backend pozostaje source of truth
   i moze uzyc fallbacku do skonfigurowanych domyslow, gdy SDK chwilowo nie
   zwroci katalogu.

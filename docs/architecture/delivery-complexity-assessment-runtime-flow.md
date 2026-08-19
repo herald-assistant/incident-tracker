@@ -20,6 +20,9 @@ Publiczne wejscia:
 
 Request startu zawiera tylko `jiraProject`, `fromDate`, `toDate`, `model` i
 opcjonalny `reasoningEffort`. UI nie przyjmuje JQL.
+Po wyborze modelu bez wsparcia reasoning UI czysci i wylacza pole effort, a
+backend nie uzupelnia go globalnym defaultem. Do Copilot SDK trafia wtedy
+jawny model bez `reasoningEffort`.
 Filtry raportu po zespole Jira i autorze MR sa lokalnym zawezeniem
 widocznego wyniku po wykonaniu analizy; nie zmieniaja requestu startu,
 JQL ani promptu AI.

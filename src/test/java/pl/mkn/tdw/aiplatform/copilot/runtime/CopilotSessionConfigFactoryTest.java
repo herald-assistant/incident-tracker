@@ -167,6 +167,30 @@ class CopilotSessionConfigFactoryTest {
     }
 
     @Test
+    void shouldNotApplyConfiguredReasoningEffortToExplicitModelWithoutOverride() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.setModel("gpt-5.4");
+        properties.setReasoningEffort("medium");
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+        var request = new CopilotSessionConfigRequest(
+                sessionId(),
+                List.of(),
+                List.of(),
+                new CopilotModelSelection("gpt-basic", null),
+                null
+        );
+
+        var sessionConfig = factory.sessionConfig(request);
+        var resumeSessionConfig = factory.resumeSessionConfig(request);
+
+        assertEquals("gpt-basic", sessionConfig.getModel());
+        assertNull(sessionConfig.getReasoningEffort());
+        assertEquals("gpt-basic", resumeSessionConfig.getModel());
+        assertNull(resumeSessionConfig.getReasoningEffort());
+    }
+
+    @Test
     void shouldUseGithubTokenWhenProvided() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
