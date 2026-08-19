@@ -749,7 +749,8 @@ feature'a i ma stabilny kontrakt reusable.
 
 Platforma posiada tez lifecycle procesu CLI. Na Windows
 `analysis.ai.copilot.cli-path` jest rozwiazywany do istniejacego, bezwzglednego
-pliku `.exe`; shell wrappers `.cmd`, `.bat` i `.ps1` nie sa dopuszczane. Dzieki
+pliku `.exe` z working directory, `PATH` albo lokalnej instalacji WinGet; shell
+wrappers `.cmd`, `.bat` i `.ps1` nie sa dopuszczane. Dzieki
 temu SDK przechowuje uchwyt do rzeczywistego procesu CLI zamiast do
 krotkozyjacego `cmd.exe`. Kazdy klient utworzony przez aplikacje ma ograniczony
 czasowo `stop()`, fallback `forceStop()` i cleanup wykonywany takze po bledzie

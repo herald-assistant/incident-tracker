@@ -787,7 +787,8 @@ Znaczenie grup UI:
 - Runtime AI providerem jest GitHub Copilot SDK.
 - Lifecycle procesu Copilot CLI jest wspolna odpowiedzialnoscia
   `aiplatform.copilot`. Na Windows runtime rozwiazuje CLI do bezwzglednego
-  pliku `.exe`, aby SDK kontrolowalo rzeczywisty proces zamiast shell wrappera,
+  pliku `.exe` z working directory, `PATH` albo lokalnej instalacji WinGet, aby
+  SDK kontrolowalo rzeczywisty proces zamiast shell wrappera,
   a kazdy klient konczy ograniczonym czasowo `stop()` z fallbackiem
   `forceStop()`, rowniez po bledzie startu.
 - Elasticsearch tools dla Copilota sa wystawiane tylko wtedy, gdy efektywna

@@ -5,9 +5,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -26,7 +28,8 @@ public class CopilotCliExecutableResolver {
                 configuredCliPath,
                 workingDirectory,
                 System.getProperty("os.name", ""),
-                System.getenv("PATH")
+                System.getenv("PATH"),
+                System.getenv("LOCALAPPDATA")
         );
     }
 
@@ -35,6 +38,16 @@ public class CopilotCliExecutableResolver {
             String workingDirectory,
             String operatingSystem,
             String pathEnvironment
+    ) {
+        return resolve(configuredCliPath, workingDirectory, operatingSystem, pathEnvironment, null);
+    }
+
+    String resolve(
+            String configuredCliPath,
+            String workingDirectory,
+            String operatingSystem,
+            String pathEnvironment,
+            String localAppData
     ) {
         var command = StringUtils.hasText(configuredCliPath)
                 ? withoutWrappingQuotes(configuredCliPath.trim())
@@ -60,10 +73,15 @@ public class CopilotCliExecutableResolver {
             }
         }
 
+        var winGetExecutable = resolveWinGetExecutable(localAppData, executableName);
+        if (winGetExecutable != null) {
+            return resolvedPath(winGetExecutable);
+        }
+
         throw new IllegalStateException(
                 "On Windows analysis.ai.copilot.cli-path must resolve to an absolute .exe file. "
                         + "Command '" + command + "' was not found as " + executableName
-                        + " in the working directory or PATH."
+                        + " in the working directory, PATH or the local WinGet installation."
         );
     }
 
@@ -107,6 +125,40 @@ public class CopilotCliExecutableResolver {
             }
         }
         return directories;
+    }
+
+    private Path resolveWinGetExecutable(String localAppData, String executableName) {
+        if (!StringUtils.hasText(localAppData)) {
+            return null;
+        }
+
+        try {
+            var winGetRoot = Path.of(localAppData.trim(), "Microsoft", "WinGet");
+            var linkedExecutable = winGetRoot.resolve("Links").resolve(executableName);
+            if (Files.isRegularFile(linkedExecutable)) {
+                return linkedExecutable.toAbsolutePath().normalize();
+            }
+
+            var packagesRoot = winGetRoot.resolve("Packages");
+            if (!Files.isDirectory(packagesRoot)) {
+                return null;
+            }
+
+            try (var packages = Files.list(packagesRoot)) {
+                return packages
+                        .filter(Files::isDirectory)
+                        .filter(path -> path.getFileName().toString().startsWith("GitHub.Copilot_"))
+                        .map(path -> path.resolve(executableName))
+                        .filter(Files::isRegularFile)
+                        .sorted(Comparator.comparing(Path::toString).reversed())
+                        .map(path -> path.toAbsolutePath().normalize())
+                        .findFirst()
+                        .orElse(null);
+            }
+        } catch (IOException | InvalidPathException | SecurityException exception) {
+            log.debug("Unable to inspect the local WinGet installation for Copilot CLI: {}", exception.getMessage());
+            return null;
+        }
     }
 
     private boolean isWindows(String operatingSystem) {

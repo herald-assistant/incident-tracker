@@ -67,6 +67,18 @@ class CopilotCliExecutableResolverTest {
     }
 
     @Test
+    void shouldResolveWindowsCommandFromWinGetPackage(@TempDir Path localAppData) throws IOException {
+        var packageDirectory = Files.createDirectories(
+                localAppData.resolve("Microsoft/WinGet/Packages/GitHub.Copilot_TestSource")
+        );
+        var executable = Files.createFile(packageDirectory.resolve("copilot.exe"));
+
+        var resolved = resolver.resolve("copilot", null, "Windows 11", null, localAppData.toString());
+
+        assertEquals(executable.toAbsolutePath().normalize().toString(), resolved);
+    }
+
+    @Test
     void shouldAcceptQuotedAbsoluteWindowsExecutable(@TempDir Path directory) throws IOException {
         var executable = Files.createFile(directory.resolve("copilot.exe"));
 
