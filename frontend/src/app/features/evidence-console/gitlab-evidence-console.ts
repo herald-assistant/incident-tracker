@@ -13,11 +13,17 @@ import { Observable } from 'rxjs';
 import { ApiErrorResponse } from '../../core/models/analysis.models';
 import {
   EvidenceApiService,
+  GitLabAngularRouteBranchSlicePayload,
+  GitLabAngularRouteBranchSliceResponse,
   GitLabFrontendCatalogPayload,
   GitLabFrontendCatalogResponse,
   GitLabFrontendRouteNode,
   GitLabFrontendScreenContextPayload,
   GitLabFrontendScreenContextResponse,
+  GitLabTypeScriptSymbolKind,
+  GitLabTypeScriptSymbolSelector,
+  GitLabTypeScriptSymbolSlicePayload,
+  GitLabTypeScriptSymbolSliceResponse,
   GitLabEndpointUseCaseContextPayload,
   GitLabEndpointUseCaseContextResponse,
   GitLabEndpointUseCaseFileCandidate,
@@ -54,6 +60,8 @@ type GitLabJsonResponseKey =
   | 'merge-request-search'
   | 'frontend-catalog'
   | 'frontend-screen-context'
+  | 'frontend-route-branch-slice'
+  | 'frontend-typescript-symbol-slice'
   | 'endpoint-inventory'
   | 'endpoint-use-case-context'
   | 'java-method-use-case-context'
@@ -164,6 +172,22 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/frontend/screen-context',
     summary:
       'Zbiera ograniczony manifest źródeł, sygnały techniczne i coverage dla wybranego screenId.'
+  },
+  {
+    key: 'frontend-route-branch-slice',
+    label: 'Angular Route Branch Slice',
+    category: 'Frontend Discovery',
+    endpoint: '/api/gitlab/frontend/route-branch-slice',
+    summary:
+      'Zwraca tylko efektywną gałąź wybranego ekranu, użyte importy i jawne markery pominiętych sibling routes.'
+  },
+  {
+    key: 'frontend-typescript-symbol-slice',
+    label: 'TypeScript Symbol Slice',
+    category: 'Frontend Discovery',
+    endpoint: '/api/gitlab/frontend/typescript-symbol-slice',
+    summary:
+      'Wycina wskazane symbole TypeScript wraz z osiągalnymi helperami, polami, importami i frontierem dalszych wywołań.'
   },
   {
     key: 'endpoint-inventory',
@@ -506,6 +530,37 @@ export class GitLabEvidenceConsoleComponent {
     expectedRevision: new FormControl('', { nonNullable: true })
   });
 
+  readonly gitLabAngularRouteBranchSliceForm = new FormGroup({
+    group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    branch: new FormControl('HEAD', { nonNullable: true, validators: [Validators.required] }),
+    pathPrefixes: new FormControl('', { nonNullable: true }),
+    screenId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    expectedRevision: new FormControl('', { nonNullable: true }),
+    includeDescendantRoutes: new FormControl(false, { nonNullable: true }),
+    maxCharacters: new FormControl('24000', {
+      nonNullable: true,
+      validators: [Validators.min(1000), Validators.max(80000)]
+    })
+  });
+
+  readonly gitLabTypeScriptSymbolSliceForm = new FormGroup({
+    group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    branch: new FormControl('HEAD', { nonNullable: true, validators: [Validators.required] }),
+    pathPrefixes: new FormControl('', { nonNullable: true }),
+    filePath: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    declaringTypeName: new FormControl('', { nonNullable: true }),
+    symbolSelectors: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    includeLocalHelpers: new FormControl(true, { nonNullable: true }),
+    includeRelevantFields: new FormControl(true, { nonNullable: true }),
+    includeRelevantImports: new FormControl(true, { nonNullable: true }),
+    maxCharacters: new FormControl('12000', {
+      nonNullable: true,
+      validators: [Validators.min(1000), Validators.max(40000)]
+    })
+  });
+
   readonly gitLabRepositoryState = signal<ToolState>(
     this.idleState('Wpisz hinty projektu, aby przetestować mapowanie component -> repo.')
   );
@@ -541,6 +596,12 @@ export class GitLabEvidenceConsoleComponent {
   );
   readonly gitLabFrontendScreenContextState = signal<ToolState>(
     this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby pobrać source context.')
+  );
+  readonly gitLabAngularRouteBranchSliceState = signal<ToolState>(
+    this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby wyciąć jego gałąź routingu.')
+  );
+  readonly gitLabTypeScriptSymbolSliceState = signal<ToolState>(
+    this.idleState('Podaj plik TypeScript i symbole, aby pobrać osiągalny slice kodu frontendu.')
   );
 
   readonly gitLabEndpointResult = computed(() =>
@@ -603,6 +664,14 @@ export class GitLabEvidenceConsoleComponent {
     this.asGitLabFrontendScreenContextResult(this.gitLabFrontendScreenContextState().response)
   );
 
+  readonly gitLabAngularRouteBranchSliceResult = computed(() =>
+    this.asGitLabAngularRouteBranchSliceResult(this.gitLabAngularRouteBranchSliceState().response)
+  );
+
+  readonly gitLabTypeScriptSymbolSliceResult = computed(() =>
+    this.asGitLabTypeScriptSymbolSliceResult(this.gitLabTypeScriptSymbolSliceState().response)
+  );
+
   readonly selectedGitLabUseCaseTreeNodeId = signal<string | null>(null);
   readonly copiedJsonResponseKey = signal<GitLabJsonResponseKey | null>(null);
 
@@ -631,6 +700,12 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'frontend-screen-context':
         this.submitGitLabFrontendScreenContext();
+        return;
+      case 'frontend-route-branch-slice':
+        this.submitGitLabAngularRouteBranchSlice();
+        return;
+      case 'frontend-typescript-symbol-slice':
+        this.submitGitLabTypeScriptSymbolSlice();
         return;
       case 'endpoint-inventory':
         this.submitGitLabEndpointSearch();
@@ -692,6 +767,27 @@ export class GitLabEvidenceConsoleComponent {
           pathPrefixes: '',
           screenId: '',
           expectedRevision: ''
+        });
+        return;
+      case 'frontend-route-branch-slice':
+        this.gitLabAngularRouteBranchSliceForm.patchValue({
+          pathPrefixes: '',
+          screenId: '',
+          expectedRevision: '',
+          includeDescendantRoutes: false,
+          maxCharacters: '24000'
+        });
+        return;
+      case 'frontend-typescript-symbol-slice':
+        this.gitLabTypeScriptSymbolSliceForm.patchValue({
+          pathPrefixes: '',
+          filePath: '',
+          declaringTypeName: '',
+          symbolSelectors: '',
+          includeLocalHelpers: true,
+          includeRelevantFields: true,
+          includeRelevantImports: true,
+          maxCharacters: '12000'
         });
         return;
       case 'endpoint-use-case-context':
@@ -1256,6 +1352,103 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
+  submitGitLabAngularRouteBranchSlice(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabAngularRouteBranchSliceForm)) {
+      this.gitLabAngularRouteBranchSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+    if (this.gitLabAngularRouteBranchSliceForm.invalid) {
+      this.gitLabAngularRouteBranchSliceForm.markAllAsTouched();
+      this.gitLabAngularRouteBranchSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj screenId i maxCharacters w zakresie 1000-80000.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabAngularRouteBranchSlicePayload = {
+      group: this.gitLabAngularRouteBranchSliceForm.controls.group.value.trim(),
+      projectName: this.gitLabAngularRouteBranchSliceForm.controls.projectName.value.trim(),
+      ref: this.gitLabAngularRouteBranchSliceForm.controls.branch.value.trim(),
+      pathPrefixes: this.toList(this.gitLabAngularRouteBranchSliceForm.controls.pathPrefixes.value),
+      screenId: this.gitLabAngularRouteBranchSliceForm.controls.screenId.value.trim(),
+      expectedRevision: this.optionalValue(
+        this.gitLabAngularRouteBranchSliceForm.controls.expectedRevision.value
+      ),
+      includeDescendantRoutes:
+        this.gitLabAngularRouteBranchSliceForm.controls.includeDescendantRoutes.value,
+      maxCharacters: this.optionalNumber(
+        this.gitLabAngularRouteBranchSliceForm.controls.maxCharacters.value
+      )
+    };
+    this.runRequest(
+      this.gitLabAngularRouteBranchSliceState,
+      this.evidenceApi.readGitLabAngularRouteBranchSlice(payload),
+      payload,
+      '/api/gitlab/frontend/route-branch-slice'
+    );
+  }
+
+  submitGitLabTypeScriptSymbolSlice(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabTypeScriptSymbolSliceForm)) {
+      this.gitLabTypeScriptSymbolSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+    const symbolSelectors = this.parseTypeScriptSymbolSelectors(
+      this.gitLabTypeScriptSymbolSliceForm.controls.symbolSelectors.value
+    );
+    if (this.gitLabTypeScriptSymbolSliceForm.invalid || symbolSelectors.length === 0) {
+      this.gitLabTypeScriptSymbolSliceForm.markAllAsTouched();
+      this.gitLabTypeScriptSymbolSliceState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj filePath oraz co najmniej jeden selector, np. METHOD:save@120.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabTypeScriptSymbolSlicePayload = {
+      group: this.gitLabTypeScriptSymbolSliceForm.controls.group.value.trim(),
+      projectName: this.gitLabTypeScriptSymbolSliceForm.controls.projectName.value.trim(),
+      ref: this.gitLabTypeScriptSymbolSliceForm.controls.branch.value.trim(),
+      pathPrefixes: this.toList(this.gitLabTypeScriptSymbolSliceForm.controls.pathPrefixes.value),
+      filePath: this.gitLabTypeScriptSymbolSliceForm.controls.filePath.value.trim(),
+      declaringTypeName: this.optionalValue(
+        this.gitLabTypeScriptSymbolSliceForm.controls.declaringTypeName.value
+      ),
+      symbolSelectors,
+      includeLocalHelpers: this.gitLabTypeScriptSymbolSliceForm.controls.includeLocalHelpers.value,
+      includeRelevantFields:
+        this.gitLabTypeScriptSymbolSliceForm.controls.includeRelevantFields.value,
+      includeRelevantImports:
+        this.gitLabTypeScriptSymbolSliceForm.controls.includeRelevantImports.value,
+      maxCharacters: this.optionalNumber(
+        this.gitLabTypeScriptSymbolSliceForm.controls.maxCharacters.value
+      )
+    };
+    this.runRequest(
+      this.gitLabTypeScriptSymbolSliceState,
+      this.evidenceApi.readGitLabTypeScriptSymbolSlice(payload),
+      payload,
+      '/api/gitlab/frontend/typescript-symbol-slice'
+    );
+  }
+
   useFrontendScreenForContext(screen: GitLabFrontendRouteNode): void {
     if (!screen.screen?.screenId) {
       return;
@@ -1269,6 +1462,40 @@ export class GitLabEvidenceConsoleComponent {
     });
     this.gitLabFrontendScreenContextState.set(
       this.idleState('Screen przeniesiony z katalogu. Uruchom request, aby zebrać bounded source context.')
+    );
+  }
+
+  useFrontendScreenForRouteSlice(screen: GitLabFrontendRouteNode): void {
+    if (!screen.screen?.screenId) {
+      return;
+    }
+    this.selectedToolKey.set('frontend-route-branch-slice');
+    this.syncRepositoryScope(this.gitLabAngularRouteBranchSliceForm);
+    this.gitLabAngularRouteBranchSliceForm.patchValue({
+      pathPrefixes: this.gitLabFrontendCatalogForm.controls.pathPrefixes.value,
+      screenId: screen.screen.screenId,
+      expectedRevision: this.gitLabFrontendCatalogResult()?.sourceRevision?.commitId || ''
+    });
+    this.gitLabAngularRouteBranchSliceState.set(
+      this.idleState('Screen przeniesiony z katalogu. Uruchom request, aby wyciąć jego route branch.')
+    );
+  }
+
+  useFrontendSourceForTypeScriptSlice(filePath: string | null | undefined): void {
+    const normalizedPath = this.normalizePath(filePath);
+    if (!normalizedPath) {
+      return;
+    }
+    this.selectedToolKey.set('frontend-typescript-symbol-slice');
+    this.syncRepositoryScope(this.gitLabTypeScriptSymbolSliceForm);
+    this.gitLabTypeScriptSymbolSliceForm.patchValue({
+      pathPrefixes: this.gitLabFrontendScreenContextForm.controls.pathPrefixes.value,
+      filePath: normalizedPath,
+      declaringTypeName: '',
+      symbolSelectors: ''
+    });
+    this.gitLabTypeScriptSymbolSliceState.set(
+      this.idleState('Plik przeniesiony z screen contextu. Wskaż symbole i uruchom TypeScript slice.')
     );
   }
 
@@ -2045,6 +2272,8 @@ export class GitLabEvidenceConsoleComponent {
       toolKey === 'repository-instructions' ||
       toolKey === 'frontend-catalog' ||
       toolKey === 'frontend-screen-context' ||
+      toolKey === 'frontend-route-branch-slice' ||
+      toolKey === 'frontend-typescript-symbol-slice' ||
       toolKey === 'endpoint-inventory' ||
       toolKey === 'endpoint-use-case-context' ||
       toolKey === 'java-method-use-case-context' ||
@@ -2110,6 +2339,44 @@ export class GitLabEvidenceConsoleComponent {
     };
   }
 
+  private parseTypeScriptSymbolSelectors(raw: string): GitLabTypeScriptSymbolSelector[] {
+    const result = new Map<string, GitLabTypeScriptSymbolSelector>();
+    const supportedKinds = new Set<GitLabTypeScriptSymbolKind>([
+      'AUTO',
+      'METHOD',
+      'PROPERTY',
+      'GETTER',
+      'SETTER',
+      'CONSTRUCTOR',
+      'FUNCTION'
+    ]);
+    for (const value of this.toList(raw)) {
+      const token = value.trim();
+      const lineMatch = token.match(/@L?(\d+)$/i);
+      const lineStart = lineMatch ? Number(lineMatch[1]) : undefined;
+      const withoutLine = lineMatch ? token.slice(0, lineMatch.index).trim() : token;
+      const separator = withoutLine.indexOf(':');
+      const possibleKind = separator > 0
+        ? withoutLine.slice(0, separator).trim().toUpperCase() as GitLabTypeScriptSymbolKind
+        : 'AUTO';
+      const kind = supportedKinds.has(possibleKind) ? possibleKind : 'AUTO';
+      const name = (separator > 0 && supportedKinds.has(possibleKind)
+        ? withoutLine.slice(separator + 1)
+        : withoutLine
+      ).trim();
+      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
+        continue;
+      }
+      const selector: GitLabTypeScriptSymbolSelector = {
+        name,
+        kind,
+        lineStart: Number.isFinite(lineStart) ? lineStart : undefined
+      };
+      result.set(`${kind}:${name}:${lineStart || ''}`, selector);
+    }
+    return [...result.values()];
+  }
+
   private optionalValue(raw: string): string | undefined {
     const value = String(raw || "").trim();
     return value.length > 0 ? value : undefined;
@@ -2158,6 +2425,10 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabFrontendCatalogState;
       case 'frontend-screen-context':
         return this.gitLabFrontendScreenContextState;
+      case 'frontend-route-branch-slice':
+        return this.gitLabAngularRouteBranchSliceState;
+      case 'frontend-typescript-symbol-slice':
+        return this.gitLabTypeScriptSymbolSliceState;
       case 'endpoint-inventory':
         return this.gitLabEndpointState;
       case 'endpoint-use-case-context':
@@ -2308,6 +2579,30 @@ export class GitLabEvidenceConsoleComponent {
     const record = response as Partial<GitLabFrontendScreenContextResponse>;
     return Array.isArray(record.sourceFiles) && Array.isArray(record.coverage)
       ? (record as GitLabFrontendScreenContextResponse)
+      : null;
+  }
+
+  private asGitLabAngularRouteBranchSliceResult(
+    response: unknown
+  ): GitLabAngularRouteBranchSliceResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+    const record = response as Partial<GitLabAngularRouteBranchSliceResponse>;
+    return typeof record.status === 'string' && Array.isArray(record.files)
+      ? (record as GitLabAngularRouteBranchSliceResponse)
+      : null;
+  }
+
+  private asGitLabTypeScriptSymbolSliceResult(
+    response: unknown
+  ): GitLabTypeScriptSymbolSliceResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+    const record = response as Partial<GitLabTypeScriptSymbolSliceResponse>;
+    return typeof record.status === 'string' && Array.isArray(record.includedSymbols)
+      ? (record as GitLabTypeScriptSymbolSliceResponse)
       : null;
   }
 

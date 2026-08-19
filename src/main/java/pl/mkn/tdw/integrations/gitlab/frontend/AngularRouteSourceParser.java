@@ -179,6 +179,7 @@ final class AngularRouteSourceParser {
             guards.addAll(guards(properties));
             var lazy = inheritedLazy || loadComponentExpression != null || loadChildrenExpression != null;
             var line = lineNumber(source, span.start());
+            var endLine = lineNumber(source, span.end());
             var configuration = configuration(properties, sourcePath, source, line, stringResolver);
 
             if (pathExpression != null || redirect != null || componentExpression != null
@@ -203,7 +204,9 @@ final class AngularRouteSourceParser {
                         lazy,
                         sourcePath,
                         line,
+                        endLine,
                         span.start(),
+                        span.end(),
                         parentSourceOffset,
                         pathExpression != null
                 ));
@@ -656,7 +659,9 @@ final class AngularRouteSourceParser {
             boolean lazy,
             String sourcePath,
             int sourceLine,
+            int sourceEndLine,
             int sourceOffset,
+            int sourceEndOffset,
             Integer parentSourceOffset,
             boolean pathDeclared
     ) {

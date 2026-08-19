@@ -79,7 +79,7 @@ public class GitLabFrontendRouteGraphDiscoveryService {
                     draft.route().sourcePath(),
                     draft.collectionSymbol(),
                     draft.route().sourceLine(),
-                    draft.route().sourceLine()
+                    draft.route().sourceEndLine()
             );
             var node = new GitLabFrontendRouteNode(
                     nodeId,

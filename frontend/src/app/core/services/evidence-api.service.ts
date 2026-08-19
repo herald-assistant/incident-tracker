@@ -133,6 +133,38 @@ export interface GitLabFrontendScreenContextPayload extends GitLabFrontendCatalo
   expectedRevision?: string;
 }
 
+export interface GitLabAngularRouteBranchSlicePayload extends GitLabFrontendCatalogPayload {
+  screenId: string;
+  expectedRevision?: string;
+  includeDescendantRoutes?: boolean;
+  maxCharacters?: number;
+}
+
+export type GitLabTypeScriptSymbolKind =
+  | 'AUTO'
+  | 'METHOD'
+  | 'PROPERTY'
+  | 'GETTER'
+  | 'SETTER'
+  | 'CONSTRUCTOR'
+  | 'FUNCTION';
+
+export interface GitLabTypeScriptSymbolSelector {
+  name: string;
+  kind?: GitLabTypeScriptSymbolKind;
+  lineStart?: number;
+}
+
+export interface GitLabTypeScriptSymbolSlicePayload extends GitLabFrontendCatalogPayload {
+  filePath: string;
+  declaringTypeName?: string;
+  symbolSelectors: GitLabTypeScriptSymbolSelector[];
+  includeLocalHelpers?: boolean;
+  includeRelevantFields?: boolean;
+  includeRelevantImports?: boolean;
+  maxCharacters?: number;
+}
+
 export interface GitLabFrontendSourceReference {
   path?: string | null;
   symbol?: string | null;
@@ -250,6 +282,87 @@ export interface GitLabFrontendScreenContextResponse {
   diagnostics: GitLabFrontendGraphDiagnostic[];
   totalReturnedCharacters: number;
   contextLimitReached: boolean;
+}
+
+export interface GitLabAngularRouteBranchSliceFile {
+  path: string;
+  content: string;
+  sourceCharacters: number;
+  returnedCharacters: number;
+  includedRouteNodeIds: string[];
+  includedImports: string[];
+  omittedImportCount: number;
+  omittedSiblingRouteCount: number;
+  truncated: boolean;
+}
+
+export interface GitLabAngularRouteChildReference {
+  sliceRef: string;
+  nodeId: string;
+  screenId?: string | null;
+  routePattern: string;
+  label?: string | null;
+  viewTarget?: GitLabFrontendRouteTarget | null;
+  lazyTarget?: GitLabFrontendRouteTarget | null;
+}
+
+export interface GitLabAngularRouteBranchSliceResponse {
+  scope: GitLabFrontendCatalogPayload;
+  sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
+  status: string;
+  screenNode?: GitLabFrontendRouteNode | null;
+  files: GitLabAngularRouteBranchSliceFile[];
+  childRoutes: GitLabAngularRouteChildReference[];
+  sourceCharacters: number;
+  returnedCharacters: number;
+  savedCharacters: number;
+  omittedImportCount: number;
+  omittedSiblingRouteCount: number;
+  truncated: boolean;
+  limitations: string[];
+  diagnostics: GitLabFrontendGraphDiagnostic[];
+}
+
+export interface GitLabTypeScriptSymbolCandidate {
+  declaringTypeName?: string | null;
+  symbolName: string;
+  kind: GitLabTypeScriptSymbolKind;
+  signature?: string | null;
+  lineStart: number;
+  lineEnd: number;
+}
+
+export interface GitLabTypeScriptDownstreamReference {
+  sourceSymbol: string;
+  ownerSymbol: string;
+  memberSymbol: string;
+  targetSymbol?: string | null;
+  moduleSpecifier?: string | null;
+  targetSourcePath?: string | null;
+}
+
+export interface GitLabTypeScriptSymbolSliceResponse {
+  scope: GitLabFrontendCatalogPayload;
+  filePath: string;
+  status: string;
+  declaringTypeName?: string | null;
+  lineStart: number;
+  lineEnd: number;
+  totalLines: number;
+  sourceCharacters: number;
+  content: string;
+  returnedCharacters: number;
+  savedCharacters: number;
+  truncated: boolean;
+  includedImports: string[];
+  includedFields: string[];
+  includedSymbols: GitLabTypeScriptSymbolCandidate[];
+  omittedImportCount: number;
+  omittedFieldCount: number;
+  omittedSymbolCount: number;
+  downstreamReferences: GitLabTypeScriptDownstreamReference[];
+  candidates: GitLabTypeScriptSymbolCandidate[];
+  limitations: string[];
 }
 
 export interface GitLabJavaMethodSliceMethodSelector {
@@ -693,6 +806,24 @@ export class EvidenceApiService {
   ): Observable<GitLabFrontendScreenContextResponse> {
     return this.http.post<GitLabFrontendScreenContextResponse>(
       '/api/gitlab/frontend/screen-context',
+      payload
+    );
+  }
+
+  readGitLabAngularRouteBranchSlice(
+    payload: GitLabAngularRouteBranchSlicePayload
+  ): Observable<GitLabAngularRouteBranchSliceResponse> {
+    return this.http.post<GitLabAngularRouteBranchSliceResponse>(
+      '/api/gitlab/frontend/route-branch-slice',
+      payload
+    );
+  }
+
+  readGitLabTypeScriptSymbolSlice(
+    payload: GitLabTypeScriptSymbolSlicePayload
+  ): Observable<GitLabTypeScriptSymbolSliceResponse> {
+    return this.http.post<GitLabTypeScriptSymbolSliceResponse>(
+      '/api/gitlab/frontend/typescript-symbol-slice',
       payload
     );
   }

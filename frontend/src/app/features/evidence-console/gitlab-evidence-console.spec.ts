@@ -4,6 +4,7 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
+  GitLabAngularRouteBranchSliceResponse,
   GitLabFrontendCatalogResponse,
   GitLabFrontendScreenContextResponse,
   GitLabEndpointUseCaseContextResponse,
@@ -11,7 +12,8 @@ import {
   GitLabJavaMethodSliceResponse,
   GitLabOpenApiEndpointSliceResponse,
   GitLabRepositoryEndpointsResponse,
-  GitLabRepositoryFilesByPathResponse
+  GitLabRepositoryFilesByPathResponse,
+  GitLabTypeScriptSymbolSliceResponse
 } from '../../core/services/evidence-api.service';
 import { GitLabEvidenceConsoleComponent } from './gitlab-evidence-console';
 
@@ -91,7 +93,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(12);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(14);
     expect(compiled.textContent).toContain('Repository Instructions');
     expect(compiled.textContent).toContain('Merge Request Search');
     expect(compiled.querySelector('.workbench-header')).toBeNull();
@@ -193,6 +195,87 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('FORMS · READY');
     expect(compiled.textContent).toContain('REACTIVE_FORM · HIGH');
     expect(compiled.textContent).toContain('customer-profile.ts');
+  });
+
+  it('should submit and render a reduced synthetic CRM Angular route branch slice', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    fixture.componentInstance.selectedToolKey.set('frontend-route-branch-slice');
+    fixture.componentInstance.scopeForm.patchValue({
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      branch: 'release/2026.08'
+    });
+    fixture.componentInstance.gitLabAngularRouteBranchSliceForm.patchValue({
+      pathPrefixes: 'apps/crm-agent',
+      screenId: 'screen-crm-customer-profile',
+      expectedRevision: 'crm-ui-revision-20260815',
+      includeDescendantRoutes: false,
+      maxCharacters: '24000'
+    });
+
+    fixture.componentInstance.submit(new Event('submit'));
+
+    const request = httpTesting.expectOne('/api/gitlab/frontend/route-branch-slice');
+    expect(request.request.body).toEqual({
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      ref: 'release/2026.08',
+      pathPrefixes: ['apps/crm-agent'],
+      screenId: 'screen-crm-customer-profile',
+      expectedRevision: 'crm-ui-revision-20260815',
+      includeDescendantRoutes: false,
+      maxCharacters: 24000
+    });
+    request.flush(buildAngularRouteBranchSliceResponse());
+    httpTesting.verify();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Angular route branch slice');
+    expect(compiled.textContent).toContain('7200 saved');
+    expect(compiled.textContent).toContain('3 routes omitted');
+    expect(compiled.textContent).toContain('Child route frontier');
+    expect(compiled.querySelector<HTMLTextAreaElement>('.source-output')?.value)
+      .toContain('sibling route entry omitted');
+  });
+
+  it('should submit and render a reachable synthetic CRM TypeScript symbol slice', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    fixture.componentInstance.selectedToolKey.set('frontend-typescript-symbol-slice');
+    fixture.componentInstance.scopeForm.patchValue({
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      branch: 'release/2026.08'
+    });
+    fixture.componentInstance.gitLabTypeScriptSymbolSliceForm.patchValue({
+      pathPrefixes: 'apps/crm-agent',
+      filePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+      declaringTypeName: 'CrmCustomerProfileComponent',
+      symbolSelectors: 'METHOD:saveCustomer@80\nPROPERTY:customerEffect',
+      maxCharacters: '12000'
+    });
+
+    fixture.componentInstance.submit(new Event('submit'));
+
+    const request = httpTesting.expectOne('/api/gitlab/frontend/typescript-symbol-slice');
+    expect(request.request.body.symbolSelectors).toEqual([
+      { name: 'saveCustomer', kind: 'METHOD', lineStart: 80 },
+      { name: 'customerEffect', kind: 'PROPERTY', lineStart: undefined }
+    ]);
+    expect(request.request.body.maxCharacters).toBe(12000);
+    request.flush(buildTypeScriptSymbolSliceResponse());
+    httpTesting.verify();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('TypeScript symbol slice');
+    expect(compiled.textContent).toContain('16200 saved');
+    expect(compiled.textContent).toContain('Retained symbols');
+    expect(compiled.textContent).toContain('Downstream frontier');
+    expect(compiled.querySelector<HTMLTextAreaElement>('.source-output')?.value)
+      .toContain('saveCustomer');
   });
 
   it('should load a downloaded endpoint use-case JSON file into the same card', async () => {
@@ -1047,6 +1130,116 @@ function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextRespon
     diagnostics: [],
     totalReturnedCharacters: 48,
     contextLimitReached: false
+  };
+}
+
+function buildAngularRouteBranchSliceResponse(): GitLabAngularRouteBranchSliceResponse {
+  return {
+    scope: buildFrontendCatalogResponse().scope,
+    sourceRevision: buildFrontendCatalogResponse().sourceRevision,
+    status: 'OK',
+    screenNode: buildFrontendCatalogResponse().nodes[0],
+    files: [
+      {
+        path: 'apps/crm-agent/src/app/app.routes.ts',
+        content: [
+          "import { CrmCustomerProfileComponent } from './customer/customer-profile';",
+          '// ... 4 unrelated imports omitted ...',
+          "{ path: 'crm/customers/:customerId', component: CrmCustomerProfileComponent,",
+          '  children: [{ /* ... 1 sibling route entry omitted ... */ }]',
+          '}'
+        ].join('\n'),
+        sourceCharacters: 8000,
+        returnedCharacters: 800,
+        includedRouteNodeIds: ['route-crm-customer-profile'],
+        includedImports: [
+          "import { CrmCustomerProfileComponent } from './customer/customer-profile';"
+        ],
+        omittedImportCount: 4,
+        omittedSiblingRouteCount: 3,
+        truncated: false
+      }
+    ],
+    childRoutes: [
+      {
+        sliceRef: 'angular-route:screen-crm-customer-history',
+        nodeId: 'route-crm-customer-history',
+        screenId: 'screen-crm-customer-history',
+        routePattern: '/crm/customers/:customerId/history',
+        label: 'Customer history',
+        viewTarget: {
+          symbol: 'CrmCustomerHistoryComponent',
+          sourcePath: 'apps/crm-agent/src/app/customer/customer-history.ts'
+        }
+      }
+    ],
+    sourceCharacters: 8000,
+    returnedCharacters: 800,
+    savedCharacters: 7200,
+    omittedImportCount: 4,
+    omittedSiblingRouteCount: 3,
+    truncated: false,
+    limitations: [],
+    diagnostics: []
+  };
+}
+
+function buildTypeScriptSymbolSliceResponse(): GitLabTypeScriptSymbolSliceResponse {
+  return {
+    scope: buildFrontendCatalogResponse().scope,
+    filePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+    status: 'OK',
+    declaringTypeName: 'CrmCustomerProfileComponent',
+    lineStart: 80,
+    lineEnd: 112,
+    totalLines: 320,
+    sourceCharacters: 18000,
+    content: [
+      "import { CrmCustomerApi } from './crm-customer.api';",
+      '// ... 8 unrelated imports omitted ...',
+      'export class CrmCustomerProfileComponent {',
+      '  saveCustomer(): void {',
+      '    this.customerApi.updateCustomer(this.customerForm.getRawValue());',
+      '  }',
+      '}'
+    ].join('\n'),
+    returnedCharacters: 1800,
+    savedCharacters: 16200,
+    truncated: false,
+    includedImports: ["import { CrmCustomerApi } from './crm-customer.api';"],
+    includedFields: ['customerApi', 'customerForm'],
+    includedSymbols: [
+      {
+        declaringTypeName: 'CrmCustomerProfileComponent',
+        symbolName: 'saveCustomer',
+        kind: 'METHOD',
+        signature: 'saveCustomer(): void',
+        lineStart: 80,
+        lineEnd: 88
+      },
+      {
+        declaringTypeName: 'CrmCustomerProfileComponent',
+        symbolName: 'customerEffect',
+        kind: 'PROPERTY',
+        signature: 'readonly customerEffect = effect(...)',
+        lineStart: 104,
+        lineEnd: 112
+      }
+    ],
+    omittedImportCount: 8,
+    omittedFieldCount: 11,
+    omittedSymbolCount: 22,
+    downstreamReferences: [
+      {
+        sourceSymbol: 'saveCustomer',
+        ownerSymbol: 'customerApi',
+        memberSymbol: 'updateCustomer',
+        targetSymbol: 'CrmCustomerApi',
+        moduleSpecifier: './crm-customer.api'
+      }
+    ],
+    candidates: [],
+    limitations: []
   };
 }
 

@@ -652,6 +652,143 @@
               }
             }
 
+            @case ('frontend-route-branch-slice') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Screen ID</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="screen-crm-customer-profile"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.screenId"
+                  />
+                </label>
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Path prefixes</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="3"
+                    placeholder="apps/crm-agent"
+                    spellcheck="false"
+                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.pathPrefixes"
+                  ></textarea>
+                </label>
+                <label class="form-field">
+                  <span class="field-label">Expected revision</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="optional commit id"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.expectedRevision"
+                  />
+                </label>
+                <label class="form-field">
+                  <span class="field-label">Max chars</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1000"
+                    max="80000"
+                    [formControl]="gitLabAngularRouteBranchSliceForm.controls.maxCharacters"
+                  />
+                </label>
+              </div>
+              <label class="toggle-row">
+                <input
+                  type="checkbox"
+                  [formControl]="gitLabAngularRouteBranchSliceForm.controls.includeDescendantRoutes"
+                />
+                <span>Include descendant route objects instead of returning them only as frontier references</span>
+              </label>
+              @if (
+                controlInvalid(gitLabAngularRouteBranchSliceForm.controls.screenId) ||
+                controlInvalid(gitLabAngularRouteBranchSliceForm.controls.maxCharacters)
+              ) {
+                <p class="form-error">Pole `screenId` jest wymagane, a max chars musi mieścić się w zakresie 1000-80000.</p>
+              }
+            }
+
+            @case ('frontend-typescript-symbol-slice') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">File path</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="apps/crm-agent/src/app/customer/customer-profile.component.ts"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.filePath"
+                  />
+                </label>
+                <label class="form-field">
+                  <span class="field-label">Declaring type</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="CrmCustomerProfileComponent"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.declaringTypeName"
+                  />
+                </label>
+                <label class="form-field">
+                  <span class="field-label">Max chars</span>
+                  <input
+                    class="text-input"
+                    type="number"
+                    min="1000"
+                    max="40000"
+                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.maxCharacters"
+                  />
+                </label>
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Symbol selectors</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="5"
+                    placeholder="METHOD:saveCustomer@120&#10;PROPERTY:customerEffect&#10;refreshSummary"
+                    spellcheck="false"
+                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.symbolSelectors"
+                  ></textarea>
+                  <span class="field-hint">Jeden selector w linii: opcjonalne KIND:name&#64;line. Bez kind używane jest AUTO.</span>
+                </label>
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Path prefixes</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="3"
+                    placeholder="apps/crm-agent"
+                    spellcheck="false"
+                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.pathPrefixes"
+                  ></textarea>
+                </label>
+              </div>
+              <label class="toggle-row">
+                <input type="checkbox" [formControl]="gitLabTypeScriptSymbolSliceForm.controls.includeLocalHelpers" />
+                <span>Include reachable local helpers</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [formControl]="gitLabTypeScriptSymbolSliceForm.controls.includeRelevantFields" />
+                <span>Include referenced fields and constructor dependencies</span>
+              </label>
+              <label class="toggle-row">
+                <input type="checkbox" [formControl]="gitLabTypeScriptSymbolSliceForm.controls.includeRelevantImports" />
+                <span>Include only imports used by the retained slice</span>
+              </label>
+              @if (
+                controlInvalid(gitLabTypeScriptSymbolSliceForm.controls.filePath) ||
+                controlInvalid(gitLabTypeScriptSymbolSliceForm.controls.symbolSelectors) ||
+                controlInvalid(gitLabTypeScriptSymbolSliceForm.controls.maxCharacters)
+              ) {
+                <p class="form-error">File path i symbol selectors są wymagane, a max chars musi mieścić się w zakresie 1000-40000.</p>
+              }
+            }
+
             @case ('source-resolve') {
               <div class="form-grid">
                 <label class="form-field">
@@ -793,6 +930,13 @@
                             >
                               Użyj do contextu
                             </button>
+                            <button
+                              class="secondary-button secondary-button--compact endpoint-card__context-button"
+                              type="button"
+                              (click)="$event.stopPropagation(); useFrontendScreenForRouteSlice(screen)"
+                            >
+                              Route slice
+                            </button>
                           }
                           <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
                             expand_more
@@ -876,6 +1020,15 @@
                             <h4>{{ file.path || 'unknown source' }}</h4>
                             <p>{{ file.roles.join(', ') }} · {{ file.returnedCharacters }} chars</p>
                           </div>
+                          @if (file.path?.endsWith('.ts') || file.path?.endsWith('.tsx')) {
+                            <button
+                              class="secondary-button secondary-button--compact endpoint-card__context-button"
+                              type="button"
+                              (click)="$event.stopPropagation(); useFrontendSourceForTypeScriptSlice(file.path)"
+                            >
+                              Symbol slice
+                            </button>
+                          }
                           @if (file.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
                           <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
                         </div>
@@ -898,6 +1051,115 @@
                       }
                     </ul>
                   </details>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'frontend-route-branch-slice' && gitLabAngularRouteBranchSliceResult(); as routeSlice) {
+              <section class="context-results frontend-discovery-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">Angular route branch slice</p>
+                    <h3>{{ routeSlice.screenNode?.routePattern || routeSlice.screenNode?.screen?.screenId || 'Selected route' }}</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    <span class="panel-chip">{{ routeSlice.returnedCharacters }} / {{ routeSlice.sourceCharacters }} chars</span>
+                    <span class="panel-chip">{{ routeSlice.savedCharacters }} saved</span>
+                    <span class="panel-chip">{{ routeSlice.omittedSiblingRouteCount }} routes omitted</span>
+                    <span class="panel-chip">{{ routeSlice.omittedImportCount }} imports omitted</span>
+                    @if (routeSlice.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
+                  </div>
+                </div>
+                <div class="endpoint-list">
+                  @for (file of routeSlice.files; track file.path) {
+                    <details class="endpoint-card" open>
+                      <summary class="endpoint-card__summary">
+                        <div class="endpoint-card__main">
+                          <span class="endpoint-card__method">ROUTE</span>
+                          <div class="endpoint-card__copy">
+                            <h4>{{ file.path }}</h4>
+                            <p>{{ file.returnedCharacters }} / {{ file.sourceCharacters }} chars · {{ file.includedRouteNodeIds.length }} retained nodes</p>
+                          </div>
+                          <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
+                        </div>
+                      </summary>
+                      <div class="endpoint-card__details">
+                        <textarea class="json-output source-output" readonly spellcheck="false" [value]="file.content"></textarea>
+                      </div>
+                    </details>
+                  }
+                </div>
+                @if (routeSlice.childRoutes.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Child route frontier</span><span class="panel-chip">{{ routeSlice.childRoutes.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (child of routeSlice.childRoutes; track child.sliceRef) {
+                        <li>{{ child.routePattern }} · {{ child.viewTarget?.symbol || child.lazyTarget?.symbol || child.nodeId }} · {{ child.sliceRef }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+                @if (routeSlice.limitations.length > 0) {
+                  <ul class="context-list">
+                    @for (limitation of routeSlice.limitations; track limitation) { <li>{{ limitation }}</li> }
+                  </ul>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'frontend-typescript-symbol-slice' && gitLabTypeScriptSymbolSliceResult(); as symbolSlice) {
+              <section class="context-results frontend-discovery-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">TypeScript symbol slice</p>
+                    <h3>{{ symbolSlice.declaringTypeName || symbolSlice.filePath }}</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    <span class="panel-chip">{{ symbolSlice.returnedCharacters }} / {{ symbolSlice.sourceCharacters }} chars</span>
+                    <span class="panel-chip">{{ symbolSlice.savedCharacters }} saved</span>
+                    <span class="panel-chip">{{ symbolSlice.omittedSymbolCount }} symbols omitted</span>
+                    <span class="panel-chip">{{ symbolSlice.omittedFieldCount }} fields omitted</span>
+                    <span class="panel-chip">{{ symbolSlice.omittedImportCount }} imports omitted</span>
+                    @if (symbolSlice.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
+                  </div>
+                </div>
+                @if (symbolSlice.content) {
+                  <textarea class="json-output source-output" readonly spellcheck="false" [value]="symbolSlice.content"></textarea>
+                }
+                @if (symbolSlice.includedSymbols.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Retained symbols</span><span class="panel-chip">{{ symbolSlice.includedSymbols.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (symbol of symbolSlice.includedSymbols; track symbol.kind + ':' + symbol.symbolName + ':' + symbol.lineStart) {
+                        <li>{{ symbol.kind }} · {{ symbol.symbolName }} · lines {{ symbol.lineStart }}-{{ symbol.lineEnd }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+                @if (symbolSlice.downstreamReferences.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Downstream frontier</span><span class="panel-chip">{{ symbolSlice.downstreamReferences.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (reference of symbolSlice.downstreamReferences; track reference.sourceSymbol + ':' + reference.ownerSymbol + ':' + reference.memberSymbol) {
+                        <li>{{ reference.sourceSymbol }} → {{ reference.ownerSymbol }}.{{ reference.memberSymbol }}() · {{ reference.targetSymbol || 'target unresolved' }} · {{ reference.moduleSpecifier || 'local/unknown module' }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+                @if (symbolSlice.candidates.length > 0 && symbolSlice.status !== 'OK') {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Available candidates</span><span class="panel-chip">{{ symbolSlice.candidates.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (candidate of symbolSlice.candidates; track candidate.kind + ':' + candidate.symbolName + ':' + candidate.lineStart) {
+                        <li>{{ candidate.kind }}:{{ candidate.symbolName }} · {{ candidate.declaringTypeName || 'top-level' }} · lines {{ candidate.lineStart }}-{{ candidate.lineEnd }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+                @if (symbolSlice.limitations.length > 0) {
+                  <ul class="context-list">
+                    @for (limitation of symbolSlice.limitations; track limitation) { <li>{{ limitation }}</li> }
+                  </ul>
                 }
               </section>
             }

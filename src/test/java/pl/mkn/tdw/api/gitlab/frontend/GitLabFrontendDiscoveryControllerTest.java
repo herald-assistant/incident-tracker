@@ -29,6 +29,12 @@ class GitLabFrontendDiscoveryControllerTest {
     @MockitoBean
     private GitLabFrontendScreenGraphContextService screenGraphContextService;
 
+    @MockitoBean
+    private GitLabAngularRouteBranchSliceService routeBranchSliceService;
+
+    @MockitoBean
+    private GitLabTypeScriptSymbolSliceService typeScriptSymbolSliceService;
+
     @Test
     void shouldExposeTargetedRouteGraphForSyntheticCrmRepository() throws Exception {
         when(routeGraphDiscoveryService.discover(any(), any())).thenReturn(graph());
@@ -90,6 +96,92 @@ class GitLabFrontendDiscoveryControllerTest {
     }
 
     @Test
+    void shouldExposeSyntheticCrmAngularRouteBranchSlice() throws Exception {
+        var node = screenNode();
+        when(routeBranchSliceService.readBranchSlice(any())).thenReturn(
+                new GitLabAngularRouteBranchSliceResponse(
+                        scope(), new GitLabFrontendSourceRevision(scope().ref(), "crm-ui-revision-20260815"),
+                        "OK", node, chain(node),
+                        List.of(new GitLabAngularRouteBranchSliceFile(
+                                node.routeSource().path(), "{ path: 'customers/:customerId' }",
+                                8_000, 39, List.of(node.nodeId()), List.of(), 6, 4, false
+                        )),
+                        List.of(), 8_000, 39, 7_961, 6, 4, false, List.of(), List.of()
+                )
+        );
+
+        mockMvc.perform(post("/api/gitlab/frontend/route-branch-slice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "synthetic-crm",
+                                  "projectName": "crm-agent-portal",
+                                  "ref": "release/2026.08",
+                                  "pathPrefixes": ["apps/crm-agent"],
+                                  "screenId": "screen-crm-customer-profile",
+                                  "expectedRevision": "crm-ui-revision-20260815",
+                                  "includeDescendantRoutes": false,
+                                  "maxCharacters": 24000
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.savedCharacters").value(7961))
+                .andExpect(jsonPath("$.files[0].omittedSiblingRouteCount").value(4));
+
+        verify(routeBranchSliceService).readBranchSlice(argThat(request ->
+                request.screenId().equals("screen-crm-customer-profile")
+                        && request.expectedRevision().equals("crm-ui-revision-20260815")
+                        && request.maxCharacters() == 24_000
+                        && !Boolean.TRUE.equals(request.includeDescendantRoutes())
+        ));
+    }
+
+    @Test
+    void shouldExposeSyntheticCrmTypeScriptSymbolSlice() throws Exception {
+        when(typeScriptSymbolSliceService.readSymbolSlice(any())).thenReturn(
+                new GitLabTypeScriptSymbolSliceResponse(
+                        scope(), "apps/crm-agent/src/app/customer/crm-customer-editor.component.ts",
+                        "OK", "CrmCustomerEditorComponent", 80, 112, 300, 18_000,
+                        "saveCustomer(): void {}", 24, 17_976, false, List.of(), List.of("customerApi"),
+                        List.of(new GitLabTypeScriptSymbolCandidate(
+                                "CrmCustomerEditorComponent", "saveCustomer", GitLabTypeScriptSymbolKind.METHOD,
+                                "saveCustomer(): void", 80, 112
+                        )),
+                        9, 12, 17, List.of(), List.of(), List.of()
+                )
+        );
+
+        mockMvc.perform(post("/api/gitlab/frontend/typescript-symbol-slice")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "synthetic-crm",
+                                  "projectName": "crm-agent-portal",
+                                  "ref": "release/2026.08",
+                                  "pathPrefixes": ["apps/crm-agent"],
+                                  "filePath": "apps/crm-agent/src/app/customer/crm-customer-editor.component.ts",
+                                  "declaringTypeName": "CrmCustomerEditorComponent",
+                                  "symbolSelectors": [{"name": "saveCustomer", "kind": "METHOD", "lineStart": 80}],
+                                  "includeLocalHelpers": true,
+                                  "includeRelevantFields": true,
+                                  "includeRelevantImports": true,
+                                  "maxCharacters": 12000
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.includedSymbols[0].symbolName").value("saveCustomer"))
+                .andExpect(jsonPath("$.savedCharacters").value(17976));
+
+        verify(typeScriptSymbolSliceService).readSymbolSlice(argThat(request ->
+                request.filePath().endsWith("crm-customer-editor.component.ts")
+                        && request.symbolSelectors().get(0).kind() == GitLabTypeScriptSymbolKind.METHOD
+                        && request.maxCharacters() == 12_000
+        ));
+    }
+
+    @Test
     void shouldRejectUnsafeScopeBeforeCallingGraphServices() throws Exception {
         mockMvc.perform(post("/api/gitlab/frontend/catalog")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -103,7 +195,10 @@ class GitLabFrontendDiscoveryControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
-        verifyNoInteractions(routeGraphDiscoveryService, screenGraphContextService);
+        verifyNoInteractions(
+                routeGraphDiscoveryService, screenGraphContextService,
+                routeBranchSliceService, typeScriptSymbolSliceService
+        );
     }
 
     @Test

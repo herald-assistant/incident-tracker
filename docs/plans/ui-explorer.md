@@ -1917,7 +1917,10 @@ PASS; `npm --prefix frontend run build` — PASS;
 
 #### 8L. Precyzyjne route i TypeScript symbol slices
 
-Status kroku: do ponownego zatwierdzenia. Source need pozostaje
+Status kroku: in-progress. Uzytkownik zatwierdzil 2026-08-19 pierwszy zakres
+wykonawczy: neutralne route/TypeScript slices oraz ich reczny preview w GitLab
+Tool Workbench. Zmiana initial promptu i ekspozycja MCP pozostaja osobnymi,
+niezatwierdzonymi jeszcze bramkami. Source need pozostaje
 `../needs/ui-explorer.md`. Pilot artefaktow v5 zostal wycofany: dla tego samego
 widoku `/wallet` zwiekszyl inicjalny prompt z 745 938 do 1 239 678 znakow
 (+66,2%) i przekroczyl limit modelu wynikiem 318 391 tokenow. Pelny
@@ -1954,24 +1957,59 @@ rozmiaru promptu po kazdym kroku.
 - [ ] 8L.1: Dodac silnie zanonimizowane fixture'y CRM i baseline rozmiaru
   promptu dla prostego widoku, glebokiej sciezki oraz kontenera z wieloma
   dziecmi; test nie moze akceptowac wzrostu initial context bez uzasadnionej
-  nowej informacji funkcjonalnej.
-- [ ] 8L.2: Dodac neutralny Angular route branch slice z dokladnymi markerami
+  nowej informacji funkcjonalnej. W pierwszym zakresie Workbench baseline
+  obejmuje rowniez liczbe znakow pelnego pliku i odpowiadajacego mu slice'a.
+- [x] 8L.2: Dodac neutralny Angular route branch slice z dokladnymi markerami
   pominietych sibling routes/imports oraz source references; nie wlaczac go
   jeszcze do promptu produkcyjnego.
-- [ ] 8L.3: Dodac neutralny TypeScript symbol slice wzorowany na
+- [x] 8L.3: Dodac neutralny TypeScript symbol slice wzorowany na
   `read_java_method_slice`: osiagalne lokalne helpery, pola, importy i
   downstream symbol references dla komponentow, serwisow, fasad i guardow.
-- [ ] 8L.4: Rozszerzyc symbol reachability o template bindings, formularze,
+- [x] 8L.4: Wystawic oba neutralne capability przez jawny operatorski scope w
+  shared/operator API i istniejacej grupie `Frontend Discovery` w GitLab Tool
+  Workbench. Preview ma pokazywac dokladny request, response, pominiete
+  elementy, source references i roznice rozmiaru bez uruchamiania AI.
+- [ ] 8L.5: Rozszerzyc symbol reachability o template bindings, formularze,
   RxJS, NgRx i operacje backendowe bez keywordowego dolaczania nieosiagalnych
   metod.
-- [ ] 8L.5: Zastapic v4 snapshot minimalnym seedem route/component/template i
+- [ ] 8L.6: Zastapic v4 snapshot minimalnym seedem route/component/template i
   iteracyjnymi symbol slices; nie wysylac pelnego manifestu ani pelnego
   frontiera. Dodac preflight tokenow i rozmiary artefaktow widoczne w aside.
-- [ ] 8L.6: Wystawic te same neutralne capability w Tool Workbench, zachowujac
-  hidden repository/ref scope w sesji AI i jawny scope operatora w API.
-- [ ] 8L.7: Wykonac silnie zanonimizowana macierz CRM dla routingu, formularzy,
+- [ ] 8L.7: Wystawic te same neutralne capability jako MCP tools dla Copilota;
+  model-facing input ma uzywac bezpiecznej referencji slice i `reason`, a
+  repository/ref/path scope ma pochodzic z hidden session context.
+- [ ] 8L.8: Wykonac silnie zanonimizowana macierz CRM dla routingu, formularzy,
   REST/WebSocket, NgRx, autoryzacji, dynamicznych granic runtime i braku
   utraty istotnych zachowan; wykonac adekwatne testy frontend/backend i build.
+
+Checkpoint 8L.2-8L.4 (2026-08-19): neutralna integracja GitLaba udostepnia
+`POST /api/gitlab/frontend/route-branch-slice` oraz
+`POST /api/gitlab/frontend/typescript-symbol-slice`. Route slice zaczyna od
+istniejacego graph discovery, zachowuje effective chain wybranego `screenId`,
+uzyte importy i opcjonalne potomki, a pozostale route objects zastepuje
+markerami z dokladnym licznikiem. Domyslnie potomkowie sa zwracani jako
+`childRoutes` ze stabilnym `sliceRef`, a nie osadzani w kodzie. TypeScript
+slice obsluguje metody, properties, getters/setters, konstruktory, funkcje i
+top-level `const`; domyka bezposrednie lokalne helpery, uzyte pola/constructor
+dependencies, importy oraz downstream service calls. Pozostale importy, pola
+i symbole sa raportowane przez dokladne omission markers i liczniki.
+
+Oba capability sa dostepne recznie w grupie `Frontend Discovery` ekranu
+GitLab Source Tool Workbench. Operator widzi pelny request/response, kod
+slice'a, `sourceCharacters`, `returnedCharacters`, `savedCharacters`, liczniki
+pominietych elementow, candidates, limitations i frontier. Katalog pozwala
+przeniesc ekran bezposrednio do route slice, a screen context przeniesc plik
+TypeScript do symbol slice. Produkcyjny prompt UI Explorera, runtime skille i
+allowlista MCP nie zostaly zmienione. Wszystkie nowe testy i przyklady sa
+silnie zanonimizowanym, syntetycznym CRM. Pierwsza czesc baseline 8L.1 mierzy
+pelny plik wzgledem slice'a i wymaga realnego spadku liczby znakow; pomiar
+trzech initial promptow pozostaje otwarty przed 8L.6.
+
+Weryfikacja: celowane testy integracji/API/route-graph — PASS;
+`npm --prefix frontend test -- --watch=false` — 56 plikow i 430 testow PASS;
+`npm --prefix frontend run build` — PASS;
+`mvn -q -Pbackend-dev clean package` — PASS. Produkcyjny bundle Angulara
+zostal odswiezony w `src/main/resources/static`.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
