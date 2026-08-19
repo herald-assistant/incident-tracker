@@ -21,6 +21,9 @@ zakresu dat.
   kazdy niezerowy wymiar wymaga referencji do artifactu, a backend wylicza
   Delivered Story Points.
 - Kazda istotna zmiana live state zapisuje ten sam local run snapshot.
+- Surowa odpowiedz AI jest zapisywana przy Delivery Unit przed parsowaniem,
+  pozostaje dostepna rowniez po bledzie kontraktu i jest prezentowana w UI
+  jako domyslnie zwiniety material diagnostyczny.
 
 ## Weryfikacja
 

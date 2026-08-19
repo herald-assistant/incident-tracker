@@ -26,6 +26,7 @@ final class DeliveryAssessmentUnitState {
     private Instant completedAt;
     private String preparedPrompt;
     private Instant promptPreparedAt;
+    private String rawAiResponse;
     private AnalysisAiUsage usage;
 
     DeliveryAssessmentUnitState(DeliveryUnit unit) {
@@ -59,6 +60,13 @@ final class DeliveryAssessmentUnitState {
         }
         preparedPrompt = prompt;
         promptPreparedAt = Instant.now();
+    }
+
+    void rawAiResponse(String response) {
+        if (terminal()) {
+            return;
+        }
+        rawAiResponse = response;
     }
 
     void completed(DeliveryAssessmentScore score, AnalysisAiUsage usage) {
@@ -196,6 +204,7 @@ final class DeliveryAssessmentUnitState {
                 completedAt,
                 preparedPrompt,
                 promptPreparedAt,
+                rawAiResponse,
                 usage
         );
     }

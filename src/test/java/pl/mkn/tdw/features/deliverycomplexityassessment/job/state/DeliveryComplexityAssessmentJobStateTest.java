@@ -67,6 +67,7 @@ class DeliveryComplexityAssessmentJobStateTest {
         ready(state, deliveryUnit);
 
         state.markUnitPreparedPrompt(deliveryUnit.unitId(), "one-shot prompt");
+        state.markUnitRawAiResponse(deliveryUnit.unitId(), "{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
         state.markUnitVisibilityLimits(deliveryUnit.unitId(), List.of("Diff content was truncated."));
         state.markUnitNotScorable(
                 deliveryUnit.unitId(),
@@ -81,6 +82,7 @@ class DeliveryComplexityAssessmentJobStateTest {
             assertThat(unit.usage()).isEqualTo(usage);
             assertThat(unit.preparedPrompt()).isEqualTo("one-shot prompt");
             assertThat(unit.promptPreparedAt()).isNotNull();
+            assertThat(unit.rawAiResponse()).isEqualTo("{\"classification\":\"INSUFFICIENT_EVIDENCE\"}");
             assertThat(unit.visibilityLimits()).containsExactly(
                     "Diff content was truncated.",
                     "Acceptance criteria were incomplete."

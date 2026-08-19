@@ -114,6 +114,11 @@ public class DeliveryComplexityAssessmentJobState {
         touch();
     }
 
+    public synchronized void markUnitRawAiResponse(String unitId, String rawAiResponse) {
+        unit(unitId).rawAiResponse(rawAiResponse);
+        touch();
+    }
+
     public synchronized void markUnitVisibilityLimits(String unitId, List<String> limitations) {
         unit(unitId).addVisibilityLimits(limitations);
         touch();

@@ -6,16 +6,21 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryComplexityAssessmentJobStartRequest;
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.state.DeliveryComplexityAssessmentJobState;
+import pl.mkn.tdw.features.deliverycomplexityassessment.source.DeliveryAssessmentSourceResult;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static pl.mkn.tdw.features.deliverycomplexityassessment.DeliveryAssessmentTestFixtures.mergeRequest;
+import static pl.mkn.tdw.features.deliverycomplexityassessment.DeliveryAssessmentTestFixtures.unit;
 
 class DeliveryAssessmentLocalRunPersisterTest {
 
@@ -50,5 +55,41 @@ class DeliveryAssessmentLocalRunPersisterTest {
         assertThat(recordCaptor.getValue().exportEnvelope().path("payload").path("job").path("status").asText())
                 .isEqualTo("QUEUED");
         assertThat(recordCaptor.getValue().continuation().enabled()).isFalse();
+    }
+
+    @Test
+    void shouldPersistRawAiResponseInV3Envelope() {
+        var store = mock(LocalAnalysisRunStore.class);
+        var persister = new DeliveryAssessmentLocalRunPersister(
+                new ObjectMapper().registerModule(new JavaTimeModule()),
+                store,
+                new LocalWorkspaceProperties()
+        );
+        var state = new DeliveryComplexityAssessmentJobState(
+                "job-1",
+                new DeliveryComplexityAssessmentJobStartRequest(
+                        "CRM", LocalDate.parse("2026-07-01"), LocalDate.parse("2026-07-31"),
+                        "gpt-5", "medium"
+                )
+        );
+        var deliveryUnit = unit("CRM-1", mergeRequest(1, "src/A.java", "+A"));
+        state.markDiscoveryStarted();
+        state.markUnitsReady(
+                new DeliveryAssessmentSourceResult("jql", 1, false, List.of(), List.of()),
+                List.of(deliveryUnit)
+        );
+        state.markUnitAnalyzing(deliveryUnit.unitId());
+        state.markUnitRawAiResponse(deliveryUnit.unitId(), "not valid JSON");
+
+        persister.persistRunSnapshot(state.snapshot());
+
+        var recordCaptor = ArgumentCaptor.forClass(LocalAnalysisRunRecord.class);
+        verify(store).save(any(), recordCaptor.capture());
+        var envelope = recordCaptor.getValue().exportEnvelope();
+        assertThat(envelope.path("version").asInt()).isEqualTo(3);
+        assertThat(envelope.path("payload").path("resultContract").asText())
+                .isEqualTo("delivery-complexity-assessment-v3");
+        assertThat(envelope.path("payload").path("job").path("units").path(0).path("rawAiResponse").asText())
+                .isEqualTo("not valid JSON");
     }
 }

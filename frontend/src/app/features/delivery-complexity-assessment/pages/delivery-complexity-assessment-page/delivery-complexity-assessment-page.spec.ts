@@ -209,6 +209,30 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     expect(details.firstElementChild?.classList.contains('unit-merge-requests')).toBe(true);
   });
 
+  it('should keep the raw AI response collapsed inside unit insights', async () => {
+    const unit = completedUnit();
+    unit.status = 'FAILED';
+    unit.assessment = null;
+    unit.errorCode = 'DELIVERY_UNIT_EXECUTION_FAILED';
+    unit.errorMessage = 'AI response did not contain JSON assessment.';
+    unit.rawAiResponse = '{"classification":"DELIVERY","confidence":0.85}';
+    const completed = snapshot('COMPLETED_WITH_WARNINGS', 0, [unit]);
+    const { fixture } = await createComponent({ localRun: completed, localRunId: 'job-1' });
+
+    const expand = fixture.nativeElement.querySelector(
+      '.unit-row button[aria-label="Rozwiń szczegóły"]'
+    ) as HTMLButtonElement;
+    expand.click();
+    fixture.detectChanges();
+
+    const rawResponse = fixture.nativeElement.querySelector('.unit-raw-response') as HTMLDetailsElement;
+    expect(rawResponse).not.toBeNull();
+    expect(rawResponse.open).toBe(false);
+    expect(rawResponse.querySelector('summary')?.textContent).toContain('Raw AI response');
+    expect(rawResponse.querySelector('pre')?.textContent)
+      .toBe('{"classification":"DELIVERY","confidence":0.85}');
+  });
+
   it('should render not scorable units as skipped with an info icon', async () => {
     const unit = completedUnit();
     unit.status = 'NOT_SCORABLE';
@@ -503,11 +527,11 @@ async function createComponent(options: {
 function envelope(job: DeliveryComplexityAssessmentJobStateSnapshot): DeliveryComplexityAssessmentExportEnvelope {
   return {
     schema: 'tdw.delivery-complexity-assessment-export',
-    version: 2,
+    version: 3,
     exportedAt: '2026-07-01T10:00:00Z',
     payload: {
       type: 'delivery-complexity-assessment',
-      resultContract: 'delivery-complexity-assessment-v2',
+      resultContract: 'delivery-complexity-assessment-v3',
       job
     }
   };
@@ -602,6 +626,7 @@ function completedUnit(): DeliveryComplexityAssessmentJobStateSnapshot['units'][
     completedAt: '2026-07-01T10:01:00Z',
     preparedPrompt: 'one-shot prompt with effective skill, Jira and MR code',
     promptPreparedAt: '2026-07-01T10:00:01Z',
+    rawAiResponse: null,
     usage: null
   };
 }

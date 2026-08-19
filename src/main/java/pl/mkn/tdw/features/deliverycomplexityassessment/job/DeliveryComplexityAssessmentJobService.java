@@ -171,6 +171,10 @@ public class DeliveryComplexityAssessmentJobService {
                 event -> {
                     job.markAiActivity(unit.unitId(), event);
                     persistSnapshot(job, false);
+                },
+                rawResponse -> {
+                    job.markUnitRawAiResponse(unit.unitId(), rawResponse);
+                    persistSnapshot(job, false);
                 }
         );
         var classification = analysis.response().classification();

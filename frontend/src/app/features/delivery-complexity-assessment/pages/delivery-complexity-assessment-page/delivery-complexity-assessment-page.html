@@ -366,6 +366,15 @@
                         </ul>
                       </section>
                     }
+                    @if (unit.rawAiResponse !== null) {
+                      <details class="unit-raw-response">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
+                          <span>Raw AI response</span>
+                        </summary>
+                        <pre>{{ unit.rawAiResponse || '(empty response)' }}</pre>
+                      </details>
+                    }
                   </div>
                 </div>
               }

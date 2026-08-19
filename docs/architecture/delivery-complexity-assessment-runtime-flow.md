@@ -51,14 +51,14 @@ zmiana discovery, jednostki, AI activity, usage albo statusu zapisuje kolejny
 snapshot tego samego runu. Zapisy sa serializowane na stanie joba, aby
 rownolegle konczace sie jednostki nie cofnely `run.json`.
 
-Local run przechowuje sanitizowany export envelope V2 i nie ma continuation.
+Local run przechowuje sanitizowany export envelope V3 i nie ma continuation.
 Otwarcie historii odtwarza formularz oraz ostatni snapshot. Dla stanu
 nieterminalnego UI probuje polling live joba; restart backendu nie wznawia
 pracy, ale zapis pozostaje czytelny.
 
 UI pozwala wyeksportowac terminalny run przez wspolny endpoint Analysis
 History. Import przyjmuje tylko terminalny envelope o dokladnym schemacie,
-wersji, payload type i result contract V2 oraz sprawdza spojnosci podstawowych
+wersji, payload type i result contract V3 oraz sprawdza spojnosci podstawowych
 danych i agregatu. Backend nadaje zaimportowanemu snapshotowi nowy `jobId`,
 zapisuje go od razu jako osobny local run i zwraca wynik tylko do odczytu.
 Import nie rejestruje live joba, nie uruchamia pollingu, Jira, GitLab ani AI i
@@ -200,6 +200,10 @@ Backend liczy `score100` wagami `10/25/25/15/15/10` i mapuje wynik na
 niepoprawna odpowiedz AI konczy tylko jednostke jako `FAILED`.
 Kazdy terminalny wynik uruchomionej sesji AI zachowuje jej `usage` i visibility
 limits, rowniez dla `INSUFFICIENT_EVIDENCE` i `EXCLUDED`.
+Surowa odpowiedz modelu jest przypisywana do Delivery Unit i zapisywana w
+Analysis History przed uruchomieniem parsera odpowiedzi. Dlatego pozostaje
+dostepna w API i eksporcie rowniez wtedy, gdy niepoprawny JSON albo niezgodny
+kontrakt konczy jednostke statusem `FAILED`.
 
 ## Rownoleglosc i wynik
 
@@ -239,7 +243,10 @@ Glowny wynik UI jest jedna rozwijalna tabela Delivery Units. Wiersz pokazuje
 issue, MR-y, status, DSP i koszt AI; ikona ostrzezenia przy statusie sygnalizuje
 quality flags, visibility limits albo blad jednostki. Rozwiniecie pokazuje
 MR-y jako linki oraz tylko dostepne Evidence, Quality flags, Visibility limits
-i Warnings. Nad tabela sa filtry po zespole Jira i autorze MR. Po wybraniu
+i Warnings. Na koncu `Unit insights` znajduje sie domyslnie zwiniety panel
+`Raw AI response` z dokladna trescia zwrocona przez model, przeznaczony do
+diagnostyki bez przeszukiwania logow. Nad tabela sa filtry po zespole Jira i
+autorze MR. Po wybraniu
 filtra UI pokazuje te sama tabele, wynik zbiorczy i koszt w ksztalcie
 odfiltrowanym do widocznych Delivery Units. Gdy widoczne issue ma MR-y wiecej
 niz jednego autora, UI pokazuje ostrzezenie informacyjne, bo DSP dotyczy calej

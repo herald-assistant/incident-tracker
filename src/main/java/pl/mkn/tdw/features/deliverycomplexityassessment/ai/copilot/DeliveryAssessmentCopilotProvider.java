@@ -6,6 +6,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAiResponseParser;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryPromptPreparation;
+import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryRawAiResponseListener;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryUnitAiAnalysis;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryUnitAssessmentProvider;
 import pl.mkn.tdw.features.deliverycomplexityassessment.evidence.DeliveryEvidencePacket;
@@ -29,7 +30,8 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
             AnalysisAiAuthRef authRef,
             DeliveryEvidencePacket packet,
             DeliveryPromptPreparation preparation,
-            AnalysisAiActivityListener activityListener
+            AnalysisAiActivityListener activityListener,
+            DeliveryRawAiResponseListener rawResponseListener
     ) {
         var request = runRequestAssembler.assemble(runReference, options, authRef, preparation);
         var session = runPreparationService.prepare(request);
@@ -37,7 +39,12 @@ public class DeliveryAssessmentCopilotProvider implements DeliveryUnitAssessment
             session = session.withActivitySink(activityListener::onAiActivity);
         }
         var result = executionGateway.execute(session);
-        var response = responseParser.parse(result.content());
+        var rawResponse = result.content() != null ? result.content() : "";
+        var effectiveRawResponseListener = rawResponseListener != null
+                ? rawResponseListener
+                : DeliveryRawAiResponseListener.NO_OP;
+        effectiveRawResponseListener.onRawAiResponse(rawResponse);
+        var response = responseParser.parse(rawResponse);
         return new DeliveryUnitAiAnalysis(
                 response,
                 result.usage(),

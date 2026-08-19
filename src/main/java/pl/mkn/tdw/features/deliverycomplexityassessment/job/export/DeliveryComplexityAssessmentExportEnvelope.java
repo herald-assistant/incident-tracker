@@ -12,9 +12,9 @@ public record DeliveryComplexityAssessmentExportEnvelope(
 ) {
 
     public static final String SCHEMA = "tdw.delivery-complexity-assessment-export";
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
     public static final String PAYLOAD_TYPE = "delivery-complexity-assessment";
-    public static final String RESULT_CONTRACT = "delivery-complexity-assessment-v2";
+    public static final String RESULT_CONTRACT = "delivery-complexity-assessment-v3";
 
     public static DeliveryComplexityAssessmentExportEnvelope from(
             DeliveryComplexityAssessmentJobStateSnapshot snapshot,

@@ -13,6 +13,7 @@ public interface DeliveryUnitAssessmentProvider {
             AnalysisAiAuthRef authRef,
             DeliveryEvidencePacket packet,
             DeliveryPromptPreparation preparation,
-            AnalysisAiActivityListener activityListener
+            AnalysisAiActivityListener activityListener,
+            DeliveryRawAiResponseListener rawResponseListener
     );
 }

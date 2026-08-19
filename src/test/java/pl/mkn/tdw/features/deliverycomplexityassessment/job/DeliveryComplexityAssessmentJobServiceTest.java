@@ -10,6 +10,7 @@ import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAssessmentSco
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryAiResponse;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryPromptPreparation;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryPromptPreparationService;
+import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryRawAiResponseListener;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryUnitAssessmentProvider;
 import pl.mkn.tdw.features.deliverycomplexityassessment.ai.DeliveryUnitAiAnalysis;
 import pl.mkn.tdw.features.deliverycomplexityassessment.deliveryunit.DeliveryUnitBuilder;
@@ -113,7 +114,7 @@ class DeliveryComplexityAssessmentJobServiceTest {
                 List.of(source("CRM-1", mergeRequest(1, "src/A.java", "+A"))),
                 List.of()
         ));
-        when(assessmentProvider.analyze(anyString(), any(), any(), any(), any(), any())).thenReturn(new DeliveryUnitAiAnalysis(
+        when(assessmentProvider.analyze(anyString(), any(), any(), any(), any(), any(), any())).thenReturn(new DeliveryUnitAiAnalysis(
                 new DeliveryAiResponse(
                         "INSUFFICIENT_EVIDENCE", null, 0.2, List.of(), List.of(), List.of("Diff was incomplete.")
                 ),
@@ -158,6 +159,57 @@ class DeliveryComplexityAssessmentJobServiceTest {
             assertThat(step.itemCount()).isEqualTo(1);
         });
         assertThat(snapshot.aggregate().usage()).isEqualTo(usage);
+    }
+
+    @Test
+    void shouldPersistRawResponseWhenAiResultCannotBeParsed() {
+        var rawResponse = "The result is not valid JSON.";
+        when(source.discover(any(), any())).thenReturn(new DeliveryAssessmentSourceResult(
+                "effective-jql",
+                1,
+                false,
+                List.of(source("CRM-1", mergeRequest(1, "src/A.java", "+A"))),
+                List.of()
+        ));
+        when(assessmentProvider.analyze(anyString(), any(), any(), any(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    DeliveryRawAiResponseListener listener = invocation.getArgument(6);
+                    listener.onRawAiResponse(rawResponse);
+                    throw new IllegalArgumentException("AI response did not contain JSON assessment.");
+                });
+        DeliveryAssessmentUnitExecutor directUnitExecutor = task -> {
+            try {
+                task.run();
+                return CompletableFuture.completedFuture(null);
+            } catch (RuntimeException exception) {
+                return CompletableFuture.failedFuture(exception);
+            }
+        };
+        var directService = new DeliveryComplexityAssessmentJobService(
+                source,
+                new DeliveryUnitBuilder(),
+                new DeliveryEvidencePacketBuilder(),
+                promptPreparationService,
+                assessmentProvider,
+                new DeliveryAssessmentScoringService(),
+                persistence,
+                directUnitExecutor,
+                Runnable::run,
+                authRefResolver,
+                new CopilotRunAuthMapper(),
+                accessTokenResolver,
+                new LocalWorkspaceProperties(),
+                new DeliveryComplexityAssessmentProperties()
+        );
+
+        var snapshot = directService.startJob(request());
+
+        assertThat(snapshot.status()).isEqualTo("COMPLETED_WITH_WARNINGS");
+        assertThat(snapshot.units()).singleElement().satisfies(unit -> {
+            assertThat(unit.status()).isEqualTo("FAILED");
+            assertThat(unit.errorMessage()).isEqualTo("AI response did not contain JSON assessment.");
+            assertThat(unit.rawAiResponse()).isEqualTo(rawResponse);
+        });
     }
 
     private DeliveryComplexityAssessmentJobStartRequest request() {

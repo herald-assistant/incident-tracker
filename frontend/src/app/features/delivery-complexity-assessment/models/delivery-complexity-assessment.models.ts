@@ -71,6 +71,7 @@ export interface DeliveryAssessmentUnit {
   completedAt: string | null;
   preparedPrompt: string | null;
   promptPreparedAt: string | null;
+  rawAiResponse: string | null;
   usage: AnalysisAiUsage | null;
 }
 
@@ -115,11 +116,11 @@ export interface DeliveryComplexityAssessmentJobStateSnapshot {
 
 export interface DeliveryComplexityAssessmentExportEnvelope {
   schema: 'tdw.delivery-complexity-assessment-export';
-  version: 2;
+  version: 3;
   exportedAt: string;
   payload: {
     type: 'delivery-complexity-assessment';
-    resultContract: 'delivery-complexity-assessment-v2';
+    resultContract: 'delivery-complexity-assessment-v3';
     job: DeliveryComplexityAssessmentJobStateSnapshot;
   };
 }

@@ -39,7 +39,7 @@ class DeliveryAssessmentImportControllerTest {
                         .content("""
                                 {
                                   "schema": "tdw.delivery-complexity-assessment-export",
-                                  "version": 2
+                                  "version": 3
                                 }
                                 """))
                 .andExpect(status().isOk())

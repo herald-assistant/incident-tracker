@@ -519,6 +519,7 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
       || unit.mergeRequests.length
       || unit.visibilityLimits.length
       || this.unitWarnings(unit).length
+      || unit.rawAiResponse !== null
     );
   }
 
@@ -752,9 +753,9 @@ function jobFromEnvelope(value: unknown): DeliveryComplexityAssessmentJobStateSn
   const envelope = value as Partial<DeliveryComplexityAssessmentExportEnvelope>;
   if (
     envelope.schema !== 'tdw.delivery-complexity-assessment-export'
-    || envelope.version !== 2
+    || envelope.version !== 3
     || envelope.payload?.type !== 'delivery-complexity-assessment'
-    || envelope.payload.resultContract !== 'delivery-complexity-assessment-v2'
+    || envelope.payload.resultContract !== 'delivery-complexity-assessment-v3'
     || !envelope.payload.job?.jobId
   ) {
     return null;

@@ -18,6 +18,7 @@ public record DeliveryAssessmentUnitResponse(
         Instant completedAt,
         String preparedPrompt,
         Instant promptPreparedAt,
+        String rawAiResponse,
         AnalysisAiUsage usage
 ) {
 
