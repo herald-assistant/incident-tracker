@@ -82,16 +82,14 @@
           </span>
         </label>
 
-        @if (reasoningEffortOptions().length) {
-          <label class="field-control">
-            <span class="field-label">Reasoning effort</span>
-            <select class="select-input" [formControl]="reasoningEffortControl">
-              @for (effort of reasoningEffortOptions(); track effort) {
-                <option [value]="effort">{{ statusLabel(effort) }}</option>
-              }
-            </select>
-          </label>
-        }
+        <label class="field-control">
+          <span class="field-label">Reasoning effort</span>
+          <select class="select-input" [formControl]="reasoningEffortControl">
+            @for (effort of reasoningEffortOptions(); track effort) {
+              <option [value]="effort">{{ statusLabel(effort) }}</option>
+            }
+          </select>
+        </label>
 
         <div class="composer-action">
           <button

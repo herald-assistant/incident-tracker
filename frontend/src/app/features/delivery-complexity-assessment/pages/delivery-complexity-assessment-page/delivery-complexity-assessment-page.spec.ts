@@ -71,6 +71,54 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Zakończona');
   });
 
+  it('should clear and disable reasoning effort for a model that does not support it', async () => {
+    const { fixture, api } = await createComponent({
+      aiOptions: modelOptionsWithNonReasoningModel()
+    });
+
+    expect(fixture.componentInstance.reasoningEffortControl.value).toBe('medium');
+    expect(fixture.componentInstance.reasoningEffortControl.enabled).toBe(true);
+
+    fixture.componentInstance.aiModelControl.setValue('gpt-basic');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.reasoningEffortOptions()).toEqual([]);
+    expect(fixture.componentInstance.reasoningEffortControl.value).toBe('');
+    expect(fixture.componentInstance.reasoningEffortControl.disabled).toBe(true);
+    const reasoningSelect = Array.from(
+      fixture.nativeElement.querySelectorAll('.field-control') as NodeListOf<HTMLElement>
+    ).find((field) => field.querySelector('.field-label')?.textContent?.includes('Reasoning effort'))
+      ?.querySelector('select') as HTMLSelectElement;
+    expect(reasoningSelect.disabled).toBe(true);
+    expect(reasoningSelect.value).toBe('');
+
+    fixture.componentInstance.aiModelControl.setValue('gpt-5');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.reasoningEffortOptions()).toEqual(['low', 'medium', 'high']);
+    expect(fixture.componentInstance.reasoningEffortControl.value).toBe('medium');
+    expect(fixture.componentInstance.reasoningEffortControl.enabled).toBe(true);
+
+    fixture.componentInstance.aiModelControl.setValue('gpt-basic');
+    fixture.detectChanges();
+
+    fixture.componentInstance.jiraProjectControl.setValue('crm');
+    fixture.componentInstance.fromDateControl.setValue('2026-07-01');
+    fixture.componentInstance.toDateControl.setValue('2026-07-31');
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('.primary-button') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => {
+      expect(api.startJob).toHaveBeenCalledWith({
+        jiraProject: 'CRM',
+        fromDate: '2026-07-01',
+        toDate: '2026-07-31',
+        model: 'gpt-basic',
+        reasoningEffort: undefined
+      });
+    });
+  });
+
   it('should restore an active local run and continue live polling', async () => {
     const active = snapshot('ANALYZING', 3, [completedUnit()]);
     const completed = snapshot('COMPLETED_WITH_WARNINGS', 3, [completedUnit()]);
@@ -465,6 +513,7 @@ async function createComponent(options: {
   importResult?: DeliveryComplexityAssessmentJobStateSnapshot;
   localRunId?: string;
   localFeature?: string;
+  aiOptions?: AnalysisAiModelOptionsResponse;
 }) {
   const queued = options.queued ?? snapshot('QUEUED', 0, []);
   const completed = options.completed ?? snapshot('COMPLETED', 0, []);
@@ -480,7 +529,7 @@ async function createComponent(options: {
     )
   };
   const aiOptions = {
-    getOptions: vi.fn<() => Observable<AnalysisAiModelOptionsResponse>>(() => of({
+    getOptions: vi.fn<() => Observable<AnalysisAiModelOptionsResponse>>(() => of(options.aiOptions ?? {
       defaultModel: 'gpt-5',
       defaultReasoningEffort: 'medium',
       defaultReasoningEfforts: ['low', 'medium', 'high'],
@@ -543,6 +592,30 @@ async function createComponent(options: {
   await fixture.whenStable();
   fixture.detectChanges();
   return { fixture, api, history };
+}
+
+function modelOptionsWithNonReasoningModel(): AnalysisAiModelOptionsResponse {
+  return {
+    defaultModel: 'gpt-5',
+    defaultReasoningEffort: 'medium',
+    defaultReasoningEfforts: ['low', 'medium', 'high'],
+    models: [
+      {
+        id: 'gpt-5',
+        name: 'GPT-5',
+        supportsReasoningEffort: true,
+        reasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium'
+      },
+      {
+        id: 'gpt-basic',
+        name: 'GPT Basic',
+        supportsReasoningEffort: false,
+        reasoningEfforts: [],
+        defaultReasoningEffort: ''
+      }
+    ]
+  };
 }
 
 function envelope(job: DeliveryComplexityAssessmentJobStateSnapshot): DeliveryComplexityAssessmentExportEnvelope {

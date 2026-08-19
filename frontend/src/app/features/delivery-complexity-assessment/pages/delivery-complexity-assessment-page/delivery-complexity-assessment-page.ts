@@ -94,6 +94,7 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   readonly portabilityBusy = signal(false);
   readonly localRunName = signal('');
   readonly expandedUnits = signal<ReadonlySet<string>>(new Set());
+  private readonly selectedAiModel = signal('');
   private readonly formRevision = signal(0);
   private readonly filterRevision = signal(0);
 
@@ -101,7 +102,7 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
     this.aiModelCatalog().models.map((model) => ({ value: model.id, label: model.name }))
   );
   readonly reasoningEffortOptions = computed(() =>
-    reasoningEffortsForAiModel(this.aiModelCatalog(), this.aiModelControl.value)
+    reasoningEffortsForAiModel(this.aiModelCatalog(), this.selectedAiModel())
   );
   readonly workflowRunning = computed(() => {
     const job = this.job();
@@ -224,7 +225,10 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
       }));
     this.aiModelControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.syncReasoningEffort());
+      .subscribe((model) => {
+        this.selectedAiModel.set(model.trim());
+        this.syncReasoningEffort();
+      });
     this.loadAiOptions();
     this.loadGithubAuthStatus();
     this.route.queryParamMap
@@ -558,7 +562,9 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
   }
 
   private startRequest(): DeliveryComplexityAssessmentJobStartRequest {
-    const effort = this.reasoningEffortControl.value.trim();
+    const effort = this.reasoningEffortControl.enabled
+      ? this.reasoningEffortControl.value.trim()
+      : '';
     return {
       jiraProject: this.jiraProjectControl.value.trim().toUpperCase(),
       fromDate: this.fromDateControl.value,
@@ -579,9 +585,11 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
       .subscribe({
         next: (options) => {
           this.aiModelCatalog.set(normalizeAnalysisAiModelOptions(options));
-          this.aiModelControl.setValue(listedDefaultAiModel(this.aiModelCatalog()), {
+          const defaultModel = listedDefaultAiModel(this.aiModelCatalog());
+          this.aiModelControl.setValue(defaultModel, {
             emitEvent: false
           });
+          this.selectedAiModel.set(defaultModel);
           this.syncReasoningEffort();
           this.formRevision.update((revision) => revision + 1);
         },
@@ -601,12 +609,20 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
 
   private syncReasoningEffort(): void {
     const efforts = this.reasoningEffortOptions();
-    if (!efforts.includes(this.reasoningEffortControl.value)) {
-      this.reasoningEffortControl.setValue(
-        defaultReasoningEffortForAiModel(this.aiModelCatalog(), this.aiModelControl.value),
-        { emitEvent: false }
-      );
+    const currentEffort = this.reasoningEffortControl.value.trim();
+    if (!efforts.length) {
+      this.reasoningEffortControl.setValue('', { emitEvent: false });
+      this.reasoningEffortControl.disable({ emitEvent: false });
+      return;
     }
+    this.reasoningEffortControl.enable({ emitEvent: false });
+    if (currentEffort && efforts.includes(currentEffort)) {
+      return;
+    }
+    this.reasoningEffortControl.setValue(
+      defaultReasoningEffortForAiModel(this.aiModelCatalog(), this.selectedAiModel()),
+      { emitEvent: false }
+    );
   }
 
   private startPolling(jobId: string): void {
@@ -676,7 +692,9 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
     this.fromDateControl.setValue(job.fromDate ?? '', { emitEvent: false });
     this.toDateControl.setValue(job.toDate ?? '', { emitEvent: false });
     this.aiModelControl.setValue(job.aiModel ?? '', { emitEvent: false });
+    this.selectedAiModel.set(job.aiModel ?? '');
     this.reasoningEffortControl.setValue(job.reasoningEffort ?? '', { emitEvent: false });
+    this.syncReasoningEffort();
     this.formRevision.update((revision) => revision + 1);
   }
 
