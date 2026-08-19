@@ -20,7 +20,9 @@ Zacznij od:
 
 - `ui-explorer/request.json`,
 - `ui-explorer/screen-catalog-entry.json`,
-- `ui-explorer/context-snapshot.json`,
+- `ui-explorer/screen-use-case-manifest.json`,
+- `ui-explorer/screen-evidence-slices.json`,
+- `ui-explorer/screen-research-frontier.json`,
 - `ui-explorer/evidence-manifest.md`,
 - `ui-explorer/coverage.json`,
 - `ui-explorer/response-contract.json`.
@@ -46,29 +48,39 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 
 1. Potwierdz `systemId`, `screenId`, route, source revision i aktywne
    `sectionModes` z artifactow.
-2. Potwierdz, czy wybrany ekran jest widokiem biznesowym, shellem z
+2. Odczytaj content-free use-case graph i semantic slices. Nie traktuj
+   samego importu ani obecnosci pliku jako dowodu zachowania; korzystaj z
+   relacji route, template, handler, form, state i backend operation.
+3. Potwierdz, czy wybrany ekran jest widokiem biznesowym, shellem z
    `RouterOutlet`, pustym ekranem technicznym albo kontenerem routowanych
    podwidokow. Dla kontenera analizuj funkcjonalnie jego poddrzewo child routes
    dostarczone w source snapshotcie; sam `RouterOutlet` nie konczy scope'u.
-3. Oznacz sekcje `OFF` jako `not_applicable`; nie kieruj ich do wyniku.
-4. Przekaz aktywne sekcje, `functional-writing-contract.md` i ich
+4. Oznacz sekcje `OFF` jako `not_applicable`; nie kieruj ich do wyniku.
+5. Przekaz aktywne sekcje, `functional-writing-contract.md` i ich
    deterministyczne coverage do `ui-explorer-source-grounding`.
-5. Dla kazdej sekcji zapisz readiness: `ready`, `needs_deeper_evidence`,
+6. Dla kazdej sekcji zapisz readiness: `ready`, `needs_deeper_evidence`,
    `visibility_limited` albo `not_applicable`.
-6. Dla kazdego materialnego braku implementacji child route, komponentu,
+7. Dla kazdego materialnego wpisu `unresolvedFrontier` potrzebnego aktywnej
+   sekcji oraz materialnego braku implementacji child route, komponentu,
    template, formularza, modala, serwisu, store/effect albo klienta z badanego
-   repozytorium przygotuj targeted retry. Powtarzaj waskie search/read dla
-   kolejnych konkretnych luk, dopoki wszystkie aktywne sekcje nie osiagna
+   repozytorium przygotuj targeted retry. Dla znanego `frontierId` najpierw
+   wywolaj `gitlab_expand_frontend_use_case_context`, podajac tylko ten ID i
+   krotki `reason`; tool korzysta z hidden repository/revision scope i zwraca
+   deduplikowana delte. Dopiero gdy frontier expansion nie rozstrzyga zrodla,
+   uzyj waskiego search/chunk. Powtarzaj dla kolejnych konkretnych luk, dopoki
+   wszystkie aktywne sekcje nie osiagna
    `ready` albo zrodlo nie zostanie potwierdzone jako niedostepne. Liczba
    dotychczasowych wywolan nie jest kryterium zakonczenia. Nie wykonuj broad
-   browse.
-7. Dopiero po bezskutecznym wyszukaniu konkretnego zrodla albo potwierdzeniu,
+   browse ani ponownie nie buduj calego snapshotu.
+8. Po kazdym poglebieniu dopisz tylko nowa delte. Nie wprowadzaj ponownie
+   slice o tym samym `sliceId` albo `contentSha256` do ledgera.
+9. Dopiero po bezskutecznym wyszukaniu konkretnego zrodla albo potwierdzeniu,
    ze implementacja jest runtime, zewnetrzna lub lezy poza zatwierdzonym scope,
    oznacz brak jako `visibility_limited`.
-8. Oddziel `businessFacts` od `technicalEvidenceLinks`. Fakt funkcjonalny
+10. Oddziel `businessFacts` od `technicalEvidenceLinks`. Fakt funkcjonalny
    odpowiada: kto albo co wykonuje czynność, kiedy, pod jakim warunkiem i z
    jakim widocznym skutkiem. Sama nazwa symbolu nie jest faktem funkcjonalnym.
-9. Przekaz ledger i `SourceGroundingSummary` do `ui-explorer-write-report`.
+11. Przekaz ledger i `SourceGroundingSummary` do `ui-explorer-write-report`.
 
 ## Readiness Gate
 

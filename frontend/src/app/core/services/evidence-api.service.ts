@@ -218,12 +218,54 @@ export interface GitLabFrontendCatalogResponse {
   coverage: GitLabFrontendGraphCoverage;
 }
 
-export interface GitLabFrontendSourceFile {
+export interface GitLabFrontendSourceManifestEntry {
   path?: string | null;
   roles: string[];
+  sourceCharacters: number;
+  contentSha256?: string | null;
+  sliceCount: number;
+}
+
+export interface GitLabFrontendSourceSlice {
+  sliceId?: string | null;
+  path?: string | null;
+  roles: string[];
+  kind?: string | null;
+  symbol?: string | null;
+  startLine: number;
+  endLine: number;
   content?: string | null;
   returnedCharacters: number;
-  truncated: boolean;
+  contentSha256?: string | null;
+}
+
+export interface GitLabFrontendUseCaseRelation {
+  from?: string | null;
+  to?: string | null;
+  kind?: string | null;
+  symbol?: string | null;
+  confidence?: string | null;
+  source?: GitLabFrontendSourceReference | null;
+}
+
+export interface GitLabFrontendUnresolvedFrontier {
+  frontierId?: string | null;
+  ownerPath?: string | null;
+  symbol?: string | null;
+  reason?: string | null;
+  affectedCategories: string[];
+  candidates: string[];
+}
+
+export interface GitLabFrontendContextMetrics {
+  sourceFileCount: number;
+  sourceCharactersRead: number;
+  returnedSliceCount: number;
+  returnedCharacters: number;
+  omittedCharacters: number;
+  omittedFileCount: number;
+  relationCount: number;
+  unresolvedFrontierCount: number;
 }
 
 export interface GitLabFrontendTechnicalSignal {
@@ -244,11 +286,14 @@ export interface GitLabFrontendScreenContextResponse {
   sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
   screenNode?: GitLabFrontendRouteNode | null;
   graphCoverage: GitLabFrontendGraphCoverage;
-  sourceFiles: GitLabFrontendSourceFile[];
+  sourceManifest: GitLabFrontendSourceManifestEntry[];
+  sourceSlices: GitLabFrontendSourceSlice[];
+  relations: GitLabFrontendUseCaseRelation[];
+  unresolvedFrontier: GitLabFrontendUnresolvedFrontier[];
   technicalSignals: GitLabFrontendTechnicalSignal[];
   coverage: GitLabFrontendContextCoverage[];
   diagnostics: GitLabFrontendGraphDiagnostic[];
-  totalReturnedCharacters: number;
+  metrics: GitLabFrontendContextMetrics;
   contextLimitReached: boolean;
 }
 

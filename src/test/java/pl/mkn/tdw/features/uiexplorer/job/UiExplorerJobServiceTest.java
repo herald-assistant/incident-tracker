@@ -132,7 +132,7 @@ class UiExplorerJobServiceTest {
                 .isEqualTo(UiExplorerOutputAvailabilityStatus.AVAILABLE);
         assertThat(completed.exportAvailable()).isTrue();
         assertThat(service.sourceContext(accepted.jobId())).isEqualTo(context());
-        assertThat(service.promptPreparation(accepted.jobId()).artifacts()).hasSize(7);
+        assertThat(service.promptPreparation(accepted.jobId()).artifacts()).hasSize(9);
         assertThat(service.promptPreparation(accepted.jobId()).artifacts())
                 .extracting(artifact -> artifact.displayName())
                 .contains("ui-explorer/functional-writing-contract.md");

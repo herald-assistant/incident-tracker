@@ -1915,6 +1915,81 @@ PASS; `npm --prefix frontend test -- --watch=false` — 56 plikow i 425 testow
 PASS; `npm --prefix frontend run build` — PASS;
 `mvn -q -Pbackend-dev clean package` — PASS.
 
+#### 8L. Semantyczny frontend use-case context zamiast pelnych plikow
+
+Zakres 8L jest zatwierdzonym przez uzytkownika inkrementem L2. Source need
+pozostaje `../needs/ui-explorer.md`. Wszystkie testy, fixture'y, snapshoty,
+artefakty i przyklady tego inkrementu musza byc silnie zanonimizowanym,
+syntetycznym CRM.
+
+Baseline: selected-screen context nadaje priorytet routowanym widokom, ale dla
+kazdego korzenia rekurencyjnie pobiera pelna tresc wszystkich rozwiazanych
+importow i re-exportow. Domyslna granica dopuszcza 120 pelnych plikow,
+200 000 znakow na plik oraz 2 000 000 znakow lacznie. Cala tresc jest
+serializowana do `ui-explorer/context-snapshot.json` i osadzana w inicjalnym
+prompcie. Coverage rozpoznaje obecnosc kategorii, np. dowolnego sygnalu
+formularza albo store, lecz nie potwierdza domkniecia relacji od elementu
+template przez handler do walidacji, stanu albo operacji backendowej. Fallback
+AI posiada tylko genericzne search/full-file/chunk reads, wiec skille nie maja
+semantycznego odpowiednika endpoint/java-method use-case context z Flow
+Explorera. W duzych drzewach komponentow kontekst modelu jest zuzywany przez
+nieuzywane importy, cale modele, style i infrastrukture, zanim research domknie
+aktywne sekcje.
+
+Conformance delta: reusable capability w `integrations.gitlab.frontend`
+buduje selected-screen use-case graph na poziomie route, template binding,
+event handlera, pola/metody komponentu, formularza, child input/output,
+service/client call oraz NgRx touchpointu. Do AI trafia content-free manifest,
+minimalne source slices i jawny unresolved frontier, a nie pelne pliki.
+Traversal moze czytac repozytorium w zatwierdzonym scope tak dlugo, jak wymaga
+tego cel, ale material przekazywany modelowi jest deduplikowany po stabilnym
+`sliceId` i ograniczony do osiagalnego zachowania. Limity pojedynczego transferu,
+scope/ref/path validation, read-only charakter i timeout pozostaja ochronami
+runtime; liczba plikow, znakow albo tool calls nie jest kryterium kompletnosci.
+Coverage wynika z domkniecia wymaganych relacji albo potwierdzonej granicy
+runtime/zewnetrznego scope. Pelny `context-snapshot.json` i legacy fallback do
+niego zostaja usuniete bez kompatybilnosci wstecznej.
+
+Docelowy neutralny kontrakt rozdziela `graph`, `slices`, `facts`,
+`unresolvedFrontier`, coverage i jawne metryki redukcji kontekstu. Semantyka
+aktywnych sekcji, prompt, readiness i business-first ledger pozostaja w
+`features.uiexplorer`; integracja nie importuje feature'a ani Copilota. Nowe
+GitLab tools, gdy zostana wystawione, maja neutralne nazwy, hidden repository/
+revision/screen scope oraz tylko operator-facing `reason` jako model-facing
+input. Shared/operator wariant do Tool Workbench moze przyjmowac jawny ekran,
+ale nie staje sie wzorcem schematu MCP.
+
+Konsumenci: `integrations.gitlab.frontend`, shared/operator frontend context
+API i Tool Workbench, UI Explorer source context/evidence, prompt/artifacts,
+trzy runtime skille, readiness, hidden tool context i allowlista, testy
+package dependencies oraz dokumentacja architektury. Publiczny result schema
+nie wymaga zmiany, ale internal artifact contract zmienia wersje bez aliasu.
+
+Macierz testow 8L:
+
+| Warstwa | Wymagane pokrycie |
+|---|---|
+| Parser/graf | route i child route, inline/external template, event -> handler, input/output, lokalny helper, aliasy, barrel i cykle |
+| Formularze | pola, validators, show/hide, enable/disable, kalkulacja, reczna korekta i runtime JSON boundary |
+| Dane/stan | service/client call, REST, WebSocket, dispatch/selector/effect/reducer oraz odswiezenie |
+| Kompresja | brak nieuzywanych importow i pelnych styles/models, stabilne slice IDs, deduplikacja i delta metryki |
+| AI boundary | manifest + slices bez pelnych plikow, frontier-driven readiness, brak reread tego samego slice i pelny plik tylko jako wyjatek |
+| Security | jeden repo/ref/path scope, prompt injection jako dane, brak wykonania kodu i brak sekretow |
+| Architecture | brak importow integrations/agenttools/aiplatform -> feature i komplet callback provider/policy dla nowych tools |
+
+- [x] 8L.1: Dodac neutralny kontrakt i parser/index semantycznego frontend
+  use-case graph wraz z jawnymi metrykami source-read versus returned-to-AI.
+- [x] 8L.2: Zastapic pelnoplikowy artifact content-free manifestem, semantic
+  slices i unresolved frontier bez legacy fallbacku.
+- [x] 8L.3: Przebudowac coverage, prompt i runtime skille na petle
+  `graph -> material gap -> delta -> readiness`, bez kryterium call count.
+- [x] 8L.4: Wystawic neutralne build/expand tools z hidden scope i operatorowy
+  podglad w Tool Workbench, reuse'ujac ten sam service capability.
+- [ ] 8L.5: Po pilocie duzego widoku ocenic izolowane research units/sesje;
+  writer ma konsumowac typed summaries i source refs zamiast calego kodu.
+- [x] 8L.6: Dodac silnie zanonimizowane regresje CRM i wykonac macierz testow
+  adekwatna do faktycznie zmienionych konsumentow.
+
 - [ ] Przygotowac zestaw co najmniej pieciu kontrolowanych fixture screens:
   prosty widok, lazy route z guardem, zlozony formularz, dynamiczny formularz
   runtime oraz cross-domain widok z NgRx/REST/WebSocket.
@@ -1924,9 +1999,26 @@ PASS; `npm --prefix frontend run build` — PASS;
   coverage i czasu runu.
 - [ ] Potwierdzic brak sekretow, nieograniczonego traversal i instrukcji z
   niezaufanego kodu traktowanych jak prompt.
-- [ ] Wykonac pelna macierz backend-frontend w kolejnosci wskazanej wyzej.
-- [ ] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
+- [x] Wykonac pelna macierz backend-frontend w kolejnosci wskazanej wyzej.
+- [x] Wszystkie testy, fixtures, snapshoty i przyklady tego kroku maja byc
   silnie zanonimizowane i dotyczyc wylacznie CRM.
+
+Checkpoint 8L (2026-08-19): selected-screen source context nie przekazuje juz
+pelnych plikow ani `ui-explorer/context-snapshot.json`. Wspolny service buduje
+content-free manifest, minimalne semantic slices, relacje, unresolved frontier
+i metryki redukcji; operator widzi ten sam kontrakt w GitLab Source Tool
+Workbench. Sesja UI Explorera moze iteracyjnie domykac konkretny frontier przez
+`gitlab_expand_frontend_use_case_context`; repozytorium, ref, path scope,
+oczekiwana rewizja i lista dostarczonych slice IDs pozostaja hidden. Delta jest
+deduplikowana, a tryb `goal-driven` nie zatrzymuje researchu po liczbie tool
+calls ani liczbie zwroconych znakow. Limity pojedynczego transferu, walidacja
+scope/revision oraz read-only pozostaja ochronami wykonania. Regresje parsera,
+kompresji, artefaktow, promptu, policy, MCP schema/evidence i budzetu uzywaja
+wylacznie silnie zanonimizowanego, syntetycznego CRM. `npm --prefix frontend
+test -- --watch=false` - 56 plikow i 428 testow PASS; `npm --prefix frontend
+run build` - PASS; `mvn -q -Pbackend-dev clean package` - 1262 testy PASS.
+Ocena izolowanych research units po pilocie duzego widoku pozostaje osobnym
+punktem 8L.5.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 

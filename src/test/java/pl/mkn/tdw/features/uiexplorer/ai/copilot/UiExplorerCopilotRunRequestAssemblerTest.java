@@ -61,12 +61,13 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(assembly.toolAccessPolicy().availableToolNames()).containsExactlyInAnyOrder(
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 GitLabToolNames.READ_REPOSITORY_FILE,
-                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
+                GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
+                GitLabToolNames.EXPAND_FRONTEND_USE_CASE_CONTEXT
         );
         assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames()).contains("skill");
         assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())
                 .doesNotContain("gitlab_list_available_repositories", "db_describe_table");
-        assertThat(assembly.runRequest().artifactContents()).hasSize(7);
+        assertThat(assembly.runRequest().artifactContents()).hasSize(9);
         assertThat(assembly.runRequest().artifactContents())
                 .containsKey("ui-explorer/functional-writing-contract.md");
         var hidden = contextCaptor.getValue().hiddenContext();
@@ -74,6 +75,10 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH)).isEqualTo("main");
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES))
                 .isEqualTo(List.of("crm-agent-portal"));
+        assertThat(hidden.get(AgentToolContextKeys.TOOL_BUDGET_POLICY))
+                .isEqualTo(AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
+        assertThat(hidden.get(AgentToolContextKeys.GITLAB_FRONTEND_CONTEXT).toString())
+                .contains("frontend-runtime-form-frontier", "frontend-component-slice");
         assertThat(hidden.get(UiExplorerCopilotToolContextKeys.ALLOWED_REPOSITORY).toString())
                 .contains("crm-agent-portal", "apps/crm-agent", "main");
         assertThat(preparation.prompt()).doesNotContain("synthetic-crm");
@@ -84,6 +89,7 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK),
+                tool(GitLabToolNames.EXPAND_FRONTEND_USE_CASE_CONTEXT),
                 tool(GitLabToolNames.LIST_AVAILABLE_REPOSITORIES),
                 tool("db_describe_table")
         );

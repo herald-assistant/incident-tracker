@@ -72,7 +72,7 @@ public class UiExplorerAiResponseParser {
         }
 
         var allowedPaths = new LinkedHashSet<String>();
-        context.sourceFiles().stream().map(file -> normalizePath(file.path())).forEach(allowedPaths::add);
+        context.sourceManifest().stream().map(file -> normalizePath(file.path())).forEach(allowedPaths::add);
         if (additionalSourcePaths != null) {
             additionalSourcePaths.stream().map(UiExplorerAiResponseParser::normalizePath)
                     .filter(StringUtils::hasText).forEach(allowedPaths::add);

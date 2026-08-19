@@ -2,9 +2,16 @@ package pl.mkn.tdw.aiplatform.copilot.tools.policy.budget;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotToolBudgetPolicyTest {
@@ -125,6 +132,59 @@ class CopilotToolBudgetPolicyTest {
         assertEquals(0, snapshot.totalCalls());
         assertEquals(0, snapshot.deniedToolCalls());
         assertEquals(0, snapshot.softLimitExceededCount());
+    }
+
+    @Test
+    void shouldBypassCallAndCharacterBudgetsForGoalDrivenUiExplorerSession() {
+        var properties = properties(BudgetMode.HARD);
+        properties.setMaxTotalCalls(0);
+        properties.setMaxGitlabReturnedCharacters(0);
+        var registry = new CopilotToolBudgetRegistry(properties);
+        registry.registerSession("ui-explorer-session");
+        var guard = new CopilotToolBudgetPolicy(registry);
+        var context = new CopilotToolSessionContext(
+                "ui-explorer-run",
+                "ui-explorer-session",
+                Map.of(
+                        AgentToolContextKeys.TOOL_BUDGET_POLICY,
+                        AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN
+                )
+        );
+        var request = new CopilotToolInvocationPolicyRequest(
+                context,
+                context.copilotSessionId(),
+                "tool-call-1",
+                "gitlab_expand_frontend_use_case_context",
+                "{\"frontierId\":\"crm-preferences\"}"
+        );
+        var result = new CopilotToolInvocationPolicyResult(
+                context,
+                context.copilotSessionId(),
+                "tool-call-1",
+                "gitlab_expand_frontend_use_case_context",
+                "{\"frontierId\":\"crm-preferences\"}",
+                "1234567890"
+        );
+
+        assertDoesNotThrow(() -> guard.beforeInvocation(request));
+        assertDoesNotThrow(() -> guard.afterInvocation(result));
+        assertEquals(0, registry.state(context.copilotSessionId()).orElseThrow().snapshot().totalCalls());
+
+        var boundedContext = new CopilotToolSessionContext(
+                "bounded-run",
+                "ui-explorer-session",
+                Map.of()
+        );
+        assertThrows(
+                RuntimeException.class,
+                () -> guard.beforeInvocation(new CopilotToolInvocationPolicyRequest(
+                        boundedContext,
+                        boundedContext.copilotSessionId(),
+                        "tool-call-2",
+                        "gitlab_find_flow_context",
+                        "{}"
+                ))
+        );
     }
 
     private CopilotToolBudgetPolicy guard(CopilotToolBudgetProperties properties) {

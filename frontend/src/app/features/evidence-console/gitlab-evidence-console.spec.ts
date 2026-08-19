@@ -1019,15 +1019,39 @@ function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextRespon
     sourceRevision: buildFrontendCatalogResponse().sourceRevision,
     screenNode: buildFrontendCatalogResponse().nodes[0],
     graphCoverage: buildFrontendCatalogResponse().coverage,
-    sourceFiles: [
+    sourceManifest: [
       {
         path: 'apps/crm-agent/src/app/customer/customer-profile.ts',
         roles: ['VIEW_COMPONENT', 'FORM_LOGIC'],
-        content: 'export class CrmCustomerProfileComponent {}',
-        returnedCharacters: 48,
-        truncated: false
+        sourceCharacters: 48,
+        contentSha256: 'crm-profile-sha256',
+        sliceCount: 1
       }
     ],
+    sourceSlices: [
+      {
+        sliceId: 'frontend-crm-profile',
+        path: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+        roles: ['VIEW_COMPONENT', 'FORM_LOGIC'],
+        kind: 'COMPONENT_CONTRACT',
+        symbol: 'CrmCustomerProfileComponent',
+        startLine: 10,
+        endLine: 10,
+        content: 'export class CrmCustomerProfileComponent {}',
+        returnedCharacters: 48,
+        contentSha256: 'crm-profile-slice-sha256'
+      }
+    ],
+    relations: [
+      {
+        from: 'screen-crm-customer-profile',
+        to: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+        kind: 'ROUTE_TO_VIEW',
+        symbol: 'CrmCustomerProfileComponent',
+        confidence: 'HIGH'
+      }
+    ],
+    unresolvedFrontier: [],
     technicalSignals: [
       {
         kind: 'REACTIVE_FORM',
@@ -1045,7 +1069,16 @@ function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextRespon
       { category: 'FORMS', status: 'READY', detail: 'Reactive form source included.' }
     ],
     diagnostics: [],
-    totalReturnedCharacters: 48,
+    metrics: {
+      sourceFileCount: 1,
+      sourceCharactersRead: 48,
+      returnedSliceCount: 1,
+      returnedCharacters: 48,
+      omittedCharacters: 0,
+      omittedFileCount: 0,
+      relationCount: 1,
+      unresolvedFrontierCount: 0
+    },
     contextLimitReached: false
   };
 }

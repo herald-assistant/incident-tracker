@@ -25,6 +25,10 @@ public class UiExplorerCopilotToolSessionContextFactory {
         var hidden = new LinkedHashMap<String, Object>();
         hidden.put(UiExplorerCopilotToolContextKeys.FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
         hidden.put(UiExplorerCopilotToolContextKeys.RUN_KIND, UiExplorerCopilotToolContextKeys.RUN_KIND_INITIAL);
+        hidden.put(
+                AgentToolContextKeys.TOOL_BUDGET_POLICY,
+                AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN
+        );
         hidden.put(UiExplorerCopilotToolContextKeys.SYSTEM_ID, context.systemId());
         hidden.put(UiExplorerCopilotToolContextKeys.SOURCE_REVISION, context.sourceRevision().revision());
         hidden.put(AgentToolContextKeys.GITLAB_GROUP, scope.gitLabGroup());
@@ -36,13 +40,29 @@ public class UiExplorerCopilotToolSessionContextFactory {
                 "pathPrefixes", scope.pathPrefixes()
         ));
         hidden.put(
-                UiExplorerCopilotToolContextKeys.EMBEDDED_SOURCE_PATHS,
-                context.sourceFiles().stream().map(file -> file.path()).toList()
+                UiExplorerCopilotToolContextKeys.DELIVERED_SLICE_IDS,
+                context.sourceSlices().stream().map(slice -> slice.sliceId()).toList()
         );
         hidden.put(
-                UiExplorerCopilotToolContextKeys.TRUNCATED_SOURCE_PATHS,
-                context.sourceFiles().stream().filter(file -> file.truncated()).map(file -> file.path()).toList()
+                UiExplorerCopilotToolContextKeys.UNRESOLVED_FRONTIER_IDS,
+                context.unresolvedFrontier().stream().map(frontier -> frontier.frontierId()).toList()
         );
+        var frontendToolContext = new LinkedHashMap<String, Object>();
+        frontendToolContext.put("projectName", scope.projectName());
+        frontendToolContext.put("pathPrefixes", scope.pathPrefixes());
+        frontendToolContext.put("screenId", context.screen().screenId());
+        frontendToolContext.put("expectedRevision", context.sourceRevision().revision());
+        frontendToolContext.put("deliveredSliceIds", context.sourceSlices().stream().map(slice -> slice.sliceId()).toList());
+        frontendToolContext.put("frontiers", context.unresolvedFrontier().stream().map(frontier -> {
+            var item = new LinkedHashMap<String, Object>();
+            item.put("frontierId", frontier.frontierId());
+            item.put("ownerPath", frontier.ownerPath());
+            item.put("symbol", frontier.symbol());
+            item.put("affectedCategories", frontier.affectedCategories());
+            item.put("candidates", frontier.candidates());
+            return item;
+        }).toList());
+        hidden.put(AgentToolContextKeys.GITLAB_FRONTEND_CONTEXT, frontendToolContext);
         return new CopilotToolSessionContext(runId, SESSION_PREFIX + runId, hidden);
     }
 }
