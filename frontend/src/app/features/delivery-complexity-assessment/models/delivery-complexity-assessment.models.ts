@@ -20,6 +20,7 @@ export interface DeliveryAssessmentDimensions {
   boundaryAndDataComplexity: number;
   verificationStateSpace: number;
   implementedCompatibilityScope: number;
+  parameterizationComplexity: number;
 }
 
 export interface DeliveryAssessmentIssue {
@@ -116,11 +117,11 @@ export interface DeliveryComplexityAssessmentJobStateSnapshot {
 
 export interface DeliveryComplexityAssessmentExportEnvelope {
   schema: 'tdw.delivery-complexity-assessment-export';
-  version: 3;
+  version: 1;
   exportedAt: string;
   payload: {
     type: 'delivery-complexity-assessment';
-    resultContract: 'delivery-complexity-assessment-v3';
+    resultContract: 'delivery-complexity-assessment-v1';
     job: DeliveryComplexityAssessmentJobStateSnapshot;
   };
 }

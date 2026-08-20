@@ -25,7 +25,8 @@ class DeliveryAssessmentRubricContractTest {
             "applicationFlowComplexity",
             "boundaryAndDataComplexity",
             "verificationStateSpace",
-            "implementedCompatibilityScope"
+            "implementedCompatibilityScope",
+            "parameterizationComplexity"
     );
 
     @Test
@@ -33,16 +34,21 @@ class DeliveryAssessmentRubricContractTest {
         var skill = new ClassPathResource(
                 "copilot/skills/delivery-complexity-assessment-evaluator/SKILL.md"
         ).getContentAsString(StandardCharsets.UTF_8);
+        var normalizedSkill = skill.replaceAll("\\s+", " ");
 
         DIMENSIONS.forEach(dimension -> assertThat(skill).contains("### `" + dimension + "`"));
-        assertThat(StringUtils.countOccurrencesOf(skill, "- `0`:")).isGreaterThanOrEqualTo(6);
-        assertThat(StringUtils.countOccurrencesOf(skill, "- `2`:")).isGreaterThanOrEqualTo(6);
-        assertThat(StringUtils.countOccurrencesOf(skill, "- `4`:")).isGreaterThanOrEqualTo(6);
-        assertThat(skill)
+        assertThat(StringUtils.countOccurrencesOf(skill, "- `0`:")).isGreaterThanOrEqualTo(7);
+        assertThat(StringUtils.countOccurrencesOf(skill, "- `2`:")).isGreaterThanOrEqualTo(7);
+        assertThat(StringUtils.countOccurrencesOf(skill, "- `4`:")).isGreaterThanOrEqualTo(7);
+        assertThat(normalizedSkill)
                 .contains("Brak danych")
                 .contains("nie jest dowodem na `0`")
                 .contains("## Przypadki kalibracyjne")
                 .contains("nie szablony do dopasowania")
+                .contains("Parametryzacje oceniaj osobno w `parameterizationComplexity`")
+                .contains("faktycznie dodana lub zmieniona mozliwosc sterowania zachowaniem")
+                .contains("przeladowaniem w runtime")
+                .contains("datami obowiazywania")
                 .doesNotContain("historyczne Story Points");
     }
 
@@ -81,6 +87,7 @@ class DeliveryAssessmentRubricContractTest {
                 .contains("delivery-complexity/issues.md#ISSUE-KEY")
                 .contains("INSUFFICIENT_EVIDENCE")
                 .contains("\"dimensions\"")
+                .contains("\"parameterizationComplexity\"")
                 .contains("\"evidenceSummary\"")
                 .contains("\"qualityFlags\"")
                 .contains("\"visibilityLimits\"")

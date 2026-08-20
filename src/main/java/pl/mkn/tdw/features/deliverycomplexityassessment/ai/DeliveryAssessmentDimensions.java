@@ -6,7 +6,8 @@ public record DeliveryAssessmentDimensions(
         int applicationFlowComplexity,
         int boundaryAndDataComplexity,
         int verificationStateSpace,
-        int implementedCompatibilityScope
+        int implementedCompatibilityScope,
+        int parameterizationComplexity
 ) {
 
     public DeliveryAssessmentDimensions {
@@ -16,6 +17,7 @@ public record DeliveryAssessmentDimensions(
         validate("boundaryAndDataComplexity", boundaryAndDataComplexity);
         validate("verificationStateSpace", verificationStateSpace);
         validate("implementedCompatibilityScope", implementedCompatibilityScope);
+        validate("parameterizationComplexity", parameterizationComplexity);
     }
 
     private static void validate(String name, int value) {

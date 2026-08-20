@@ -130,7 +130,8 @@ public class DeliveryAiResponseParser {
                 requiredDimension(node, "applicationFlowComplexity"),
                 requiredDimension(node, "boundaryAndDataComplexity"),
                 requiredDimension(node, "verificationStateSpace"),
-                requiredDimension(node, "implementedCompatibilityScope")
+                requiredDimension(node, "implementedCompatibilityScope"),
+                requiredDimension(node, "parameterizationComplexity")
         );
     }
 

@@ -11,11 +11,12 @@ public class DeliveryAssessmentScoringService {
         }
         var dimensions = response.dimensions();
         var score100 = 10.0 * dimensions.outcomeBreadth() / 4.0
-                + 25.0 * dimensions.domainDecisionComplexity() / 4.0
-                + 25.0 * dimensions.applicationFlowComplexity() / 4.0
+                + 20.0 * dimensions.domainDecisionComplexity() / 4.0
+                + 20.0 * dimensions.applicationFlowComplexity() / 4.0
                 + 15.0 * dimensions.boundaryAndDataComplexity() / 4.0
-                + 15.0 * dimensions.verificationStateSpace() / 4.0
-                + 10.0 * dimensions.implementedCompatibilityScope() / 4.0;
+                + 10.0 * dimensions.verificationStateSpace() / 4.0
+                + 10.0 * dimensions.implementedCompatibilityScope() / 4.0
+                + 15.0 * dimensions.parameterizationComplexity() / 4.0;
         return new DeliveryAssessmentScore(
                 bucket(score100),
                 Math.round(score100 * 100.0) / 100.0,

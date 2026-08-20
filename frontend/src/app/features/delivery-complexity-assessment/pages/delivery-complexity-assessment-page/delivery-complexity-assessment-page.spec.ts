@@ -35,11 +35,12 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     expect(algorithm.open).toBe(true);
     expect(algorithm.textContent).toContain('Jak liczony jest wynik');
     expect(algorithm.textContent).toContain('Decyzje domenowe');
-    expect(algorithm.textContent).toContain('25%');
+    expect(algorithm.textContent).toContain('Parametryzacja');
+    expect(algorithm.textContent).toContain('20%');
     expect(algorithm.textContent).toContain('> 75');
     expect(algorithm.textContent).toContain('13 DSP');
     expect(algorithm.textContent).toContain('Confidence jest prezentowane osobno i nie zmienia wyniku DSP');
-    expect(algorithm.querySelectorAll('.assessment-algorithm__weights > div')).toHaveLength(6);
+    expect(algorithm.querySelectorAll('.assessment-algorithm__weights > div')).toHaveLength(7);
     expect(algorithm.querySelectorAll('.assessment-algorithm__buckets > div')).toHaveLength(7);
   });
 
@@ -363,6 +364,7 @@ describe('DeliveryComplexityAssessmentPageComponent', () => {
     ]);
     expect(details.querySelector('.unit-merge-requests')?.nextElementSibling?.classList.contains('dimension-panel'))
       .toBe(true);
+    expect(details.querySelector('.dimension-panel')?.textContent).toContain('Parameterization');
   });
 
   it('should filter the visible units and aggregate by Jira team and MR author', async () => {
@@ -621,11 +623,11 @@ function modelOptionsWithNonReasoningModel(): AnalysisAiModelOptionsResponse {
 function envelope(job: DeliveryComplexityAssessmentJobStateSnapshot): DeliveryComplexityAssessmentExportEnvelope {
   return {
     schema: 'tdw.delivery-complexity-assessment-export',
-    version: 3,
+    version: 1,
     exportedAt: '2026-07-01T10:00:00Z',
     payload: {
       type: 'delivery-complexity-assessment',
-      resultContract: 'delivery-complexity-assessment-v3',
+      resultContract: 'delivery-complexity-assessment-v1',
       job
     }
   };
@@ -707,7 +709,8 @@ function completedUnit(): DeliveryComplexityAssessmentJobStateSnapshot['units'][
         applicationFlowComplexity: 3,
         boundaryAndDataComplexity: 2,
         verificationStateSpace: 3,
-        implementedCompatibilityScope: 2
+        implementedCompatibilityScope: 2,
+        parameterizationComplexity: 3
       },
       confidence: 0.85,
       evidenceSummary: ['API and validation changed'],

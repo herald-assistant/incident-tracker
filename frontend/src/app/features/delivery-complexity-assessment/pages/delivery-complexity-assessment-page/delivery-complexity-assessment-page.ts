@@ -478,7 +478,8 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
       { label: 'Application flow', value: dimensions.applicationFlowComplexity },
       { label: 'Boundaries and data', value: dimensions.boundaryAndDataComplexity },
       { label: 'Verification state space', value: dimensions.verificationStateSpace },
-      { label: 'Compatibility scope', value: dimensions.implementedCompatibilityScope }
+      { label: 'Compatibility scope', value: dimensions.implementedCompatibilityScope },
+      { label: 'Parameterization', value: dimensions.parameterizationComplexity }
     ];
   }
 
@@ -771,9 +772,9 @@ function jobFromEnvelope(value: unknown): DeliveryComplexityAssessmentJobStateSn
   const envelope = value as Partial<DeliveryComplexityAssessmentExportEnvelope>;
   if (
     envelope.schema !== 'tdw.delivery-complexity-assessment-export'
-    || envelope.version !== 3
+    || envelope.version !== 1
     || envelope.payload?.type !== 'delivery-complexity-assessment'
-    || envelope.payload.resultContract !== 'delivery-complexity-assessment-v3'
+    || envelope.payload.resultContract !== 'delivery-complexity-assessment-v1'
     || !envelope.payload.job?.jobId
   ) {
     return null;

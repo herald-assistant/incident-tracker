@@ -12,7 +12,7 @@ class DeliveryAssessmentScoringServiceTest {
 
     @Test
     void shouldApplyWeightedScoreAndTopBucketDeterministically() {
-        var score = service.score(response(new DeliveryAssessmentDimensions(4, 4, 4, 4, 4, 4)));
+        var score = service.score(response(new DeliveryAssessmentDimensions(4, 4, 4, 4, 4, 4, 4)));
 
         assertThat(score.score100()).isEqualTo(100);
         assertThat(score.deliveredStoryPoints()).isEqualTo(13);
@@ -20,14 +20,22 @@ class DeliveryAssessmentScoringServiceTest {
 
     @Test
     void shouldRespectBucketBoundaries() {
-        assertThat(service.score(response(new DeliveryAssessmentDimensions(0, 0, 0, 0, 0, 0)))
+        assertThat(service.score(response(new DeliveryAssessmentDimensions(0, 0, 0, 0, 0, 0, 0)))
                 .deliveredStoryPoints()).isZero();
-        assertThat(service.score(response(new DeliveryAssessmentDimensions(4, 0, 0, 0, 0, 0)))
+        assertThat(service.score(response(new DeliveryAssessmentDimensions(4, 0, 0, 0, 0, 0, 0)))
                 .deliveredStoryPoints()).isEqualTo(1);
-        assertThat(service.score(response(new DeliveryAssessmentDimensions(0, 4, 0, 0, 0, 0)))
+        assertThat(service.score(response(new DeliveryAssessmentDimensions(0, 4, 0, 0, 0, 0, 0)))
                 .deliveredStoryPoints()).isEqualTo(2);
-        assertThat(service.score(response(new DeliveryAssessmentDimensions(4, 4, 4, 0, 0, 0)))
-                .deliveredStoryPoints()).isEqualTo(8);
+        assertThat(service.score(response(new DeliveryAssessmentDimensions(4, 4, 4, 0, 0, 0, 0)))
+                .deliveredStoryPoints()).isEqualTo(5);
+    }
+
+    @Test
+    void shouldAddParameterizationAsAnIndependentFifteenPercentDimension() {
+        var score = service.score(response(new DeliveryAssessmentDimensions(0, 0, 0, 0, 0, 0, 4)));
+
+        assertThat(score.score100()).isEqualTo(15);
+        assertThat(score.deliveredStoryPoints()).isEqualTo(2);
     }
 
     private DeliveryAiResponse response(DeliveryAssessmentDimensions dimensions) {

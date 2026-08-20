@@ -54,14 +54,14 @@ zmiana discovery, jednostki, AI activity, usage albo statusu zapisuje kolejny
 snapshot tego samego runu. Zapisy sa serializowane na stanie joba, aby
 rownolegle konczace sie jednostki nie cofnely `run.json`.
 
-Local run przechowuje sanitizowany export envelope V3 i nie ma continuation.
+Local run przechowuje sanitizowany export envelope V1 i nie ma continuation.
 Otwarcie historii odtwarza formularz oraz ostatni snapshot. Dla stanu
 nieterminalnego UI probuje polling live joba; restart backendu nie wznawia
 pracy, ale zapis pozostaje czytelny.
 
 UI pozwala wyeksportowac terminalny run przez wspolny endpoint Analysis
 History. Import przyjmuje tylko terminalny envelope o dokladnym schemacie,
-wersji, payload type i result contract V3 oraz sprawdza spojnosci podstawowych
+wersji, payload type i result contract V1 oraz sprawdza spojnosci podstawowych
 danych i agregatu. Backend nadaje zaimportowanemu snapshotowi nowy `jobId`,
 zapisuje go od razu jako osobny local run i zwraca wynik tylko do odczytu.
 Import nie rejestruje live joba, nie uruchamia pollingu, Jira, GitLab ani AI i
@@ -174,7 +174,7 @@ odpowiedz ma byc finalnym JSON-em.
 
 Jira, GitLab, Confluence, filesystem, shell i terminal nie sa dostepne w
 sesji. AI zwraca classification, confidence, evidence/quality/visibility oraz
-szesc wymiarow 0-4 dla `DELIVERY`. Nie zwraca DSP ani `score100`. Zwalidowany
+siedem wymiarow 0-4 dla `DELIVERY`. Nie zwraca DSP ani `score100`. Zwalidowany
 JSON jest mapowany bezposrednio na wynik jednostki; feature nie tworzy
 rownoleglego `AnalysisReport` ani nie wykonuje kolejnego wywolania modelu lub
 toola.
@@ -185,6 +185,13 @@ posrednimi wymagajacymi porownania z obiema sasiednimi kotwicami. Wynik `0`
 oznacza obserwowalny brak istotnej zmiany, a nie brak danych. Syntetyczne
 przypadki kalibracyjne stabilizuja znaczenie skali, ale nie zastepuja evidence
 biezacej Delivery Unit i nie wykorzystuja historycznych Story Points.
+
+`parameterizationComplexity` jest osobnym wymiarem wyniku. Ocenia faktycznie
+dodana lub zmieniona mozliwosc sterowania zachowaniem przez properties,
+konfiguracje bazodanowa, tabele decyzyjna, DMN albo silnik regul. Poziom rosnie
+od pojedynczego parametru z bezposrednim skutkiem do wersjonowanych,
+dynamicznie przeladowywanych regul z zaleznosciami, priorytetami, konfliktami,
+datami obowiazywania, rollbackiem albo audytem.
 
 Dla kazdego niezerowego wymiaru AI zwraca `evidenceSummary` w formacie
 `dimension | artifact#section | observed fact`. Jest to kontrakt jakosciowy
@@ -210,7 +217,7 @@ Skills`. Frontendowa projekcja grupuje
 `Delivery Complexity Assessment` i odpowiedzialnosc `Assessment`; pozostaje
 to etykieta nawigacyjna, a nie runtime selection skilla.
 
-Backend liczy `score100` wagami `10/25/25/15/15/10` i mapuje wynik na
+Backend liczy `score100` wagami `10/20/20/15/10/10/15` i mapuje wynik na
 `0/1/2/3/5/8/13`. `INSUFFICIENT_EVIDENCE` przechodzi do `NOT_SCORABLE`, a
 niepoprawna odpowiedz AI konczy tylko jednostke jako `FAILED`.
 Kazdy terminalny wynik uruchomionej sesji AI zachowuje jej `usage` i visibility

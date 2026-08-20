@@ -49,7 +49,8 @@ public class DeliveryPromptPreparationService {
                     "applicationFlowComplexity": 0,
                     "boundaryAndDataComplexity": 0,
                     "verificationStateSpace": 0,
-                    "implementedCompatibilityScope": 0
+                    "implementedCompatibilityScope": 0,
+                    "parameterizationComplexity": 0
                   },
                   "confidence": 0.0,
                   "evidenceSummary": [

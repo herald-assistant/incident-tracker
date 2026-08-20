@@ -138,7 +138,7 @@ class DeliveryComplexityAssessmentJobStateTest {
         return new DeliveryAssessmentScore(
                 points,
                 50,
-                new DeliveryAssessmentDimensions(2, 2, 2, 2, 2, 2),
+                new DeliveryAssessmentDimensions(2, 2, 2, 2, 2, 2, 2),
                 confidence,
                 List.of("evidence"),
                 List.of(),

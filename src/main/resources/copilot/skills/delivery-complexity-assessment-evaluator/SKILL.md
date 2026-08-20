@@ -28,6 +28,9 @@ Oceniaj wylacznie evidence przekazane dla biezacej Delivery Unit.
     nazwy artifactu `delivery-complexity/...#...` albo dokladnego identyfikatora
     issue, MR, sciezki pliku, klasy lub metody widocznej w inline artifacts.
     Nie wymyslaj referencji, ktorej nie ma w danych zrodlowych.
+12. Parametryzacje oceniaj osobno w `parameterizationComplexity`. Przyznawaj
+    punkty za faktycznie dodana lub zmieniona mozliwosc sterowania zachowaniem;
+    nie oceniaj niezmienionego mechanizmu obecnego tylko w otaczajacym kodzie.
 
 ## Sposob wyboru poziomu
 
@@ -103,21 +106,42 @@ Faktycznie zaimplementowana kompatybilnosc, a nie hipotetyczne ryzyko.
 - `4`: okres wspolistnienia wersji obejmujacy migracje, dual read/write,
   backfill, rollback albo koordynacje kompatybilnosci wielu systemow.
 
+### `parameterizationComplexity`
+
+Zakres i zlozonosc faktycznie dodanego lub zmienionego sterowania zachowaniem
+przez konfiguracje, dane albo reguly bez kolejnej zmiany kodu.
+
+- `0`: brak dodanej lub zmienionej parametryzacji zachowania.
+- `2`: kilka powiazanych parametrow z jawnymi wartosciami domyslnymi,
+  walidacja lub fallbackiem albo prosta tabela decyzyjna czy konfiguracja
+  bazodanowa sterujaca zachowaniem w okreslonym zakresie.
+- `4`: wersjonowana lub dynamiczna parametryzacja z zaleznosciami,
+  priorytetami, konfliktami, datami obowiazywania, przeladowaniem w runtime,
+  rollbackiem albo audytem zmian regul.
+
 ## Przypadki kalibracyjne
 
 To punkty odniesienia dla znaczenia skali, nie szablony do dopasowania przez
 podobienstwo. Zawsze oceniaj fakty z biezacego evidence.
 
 1. Lokalna walidacja jednego pola z jedna regula i komunikatem bledu, bez
-   zmiany kontraktu: `1/2/1/0/2/0`.
+   zmiany kontraktu: `1/2/1/0/2/0/0`.
 2. Asynchroniczny job z jawna maszyna stanow, retry i idempotencja, ale bez
-   migracji danych: `2/2/4/2/4/0`.
+   migracji danych: `2/2/4/2/4/0/0`.
 3. Etapowa zmiana wielosystemowa z nowym kontraktem, dual read/write,
-   backfillem i rollbackiem: `3/3/4/4/4/4`.
+   backfillem i rollbackiem: `3/3/4/4/4/4/0`.
+4. Jedna property z `application.yaml`, odczytywana przy starcie, z wartoscia
+   domyslna i jednym bezposrednim skutkiem: `1/0/0/0/1/0/1`.
+5. Parametr biznesowy w bazie, odczytywany w runtime z walidacja, cache i
+   fallbackiem, sterujacy jedna istotna regula: `1/2/2/2/2/0/3`.
+6. Wersjonowany zestaw regul z datami obowiazywania, priorytetami i
+   rozstrzyganiem konfliktow, dynamicznym przeladowaniem oraz rollbackiem:
+   `2/4/3/3/4/3/4`.
 
 Kolejnosc wartosci to: `outcomeBreadth`, `domainDecisionComplexity`,
 `applicationFlowComplexity`, `boundaryAndDataComplexity`,
-`verificationStateSpace`, `implementedCompatibilityScope`.
+`verificationStateSpace`, `implementedCompatibilityScope`,
+`parameterizationComplexity`.
 
 ## Wynik
 

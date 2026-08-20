@@ -58,7 +58,7 @@ class DeliveryAssessmentLocalRunPersisterTest {
     }
 
     @Test
-    void shouldPersistRawAiResponseInV3Envelope() {
+    void shouldPersistRawAiResponseInV1Envelope() {
         var store = mock(LocalAnalysisRunStore.class);
         var persister = new DeliveryAssessmentLocalRunPersister(
                 new ObjectMapper().registerModule(new JavaTimeModule()),
@@ -86,9 +86,9 @@ class DeliveryAssessmentLocalRunPersisterTest {
         var recordCaptor = ArgumentCaptor.forClass(LocalAnalysisRunRecord.class);
         verify(store).save(any(), recordCaptor.capture());
         var envelope = recordCaptor.getValue().exportEnvelope();
-        assertThat(envelope.path("version").asInt()).isEqualTo(3);
+        assertThat(envelope.path("version").asInt()).isEqualTo(1);
         assertThat(envelope.path("payload").path("resultContract").asText())
-                .isEqualTo("delivery-complexity-assessment-v3");
+                .isEqualTo("delivery-complexity-assessment-v1");
         assertThat(envelope.path("payload").path("job").path("units").path(0).path("rawAiResponse").asText())
                 .isEqualTo("not valid JSON");
     }

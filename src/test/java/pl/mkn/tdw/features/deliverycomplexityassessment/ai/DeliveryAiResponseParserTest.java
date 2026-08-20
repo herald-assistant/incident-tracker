@@ -22,7 +22,8 @@ class DeliveryAiResponseParserTest {
                     "applicationFlowComplexity":4,
                     "boundaryAndDataComplexity":1,
                     "verificationStateSpace":2,
-                    "implementedCompatibilityScope":1
+                    "implementedCompatibilityScope":1,
+                    "parameterizationComplexity":3
                   },
                   "confidence":0.75,
                   "evidenceSummary":[
@@ -31,7 +32,8 @@ class DeliveryAiResponseParserTest {
                     "applicationFlowComplexity | delivery-complexity/diffs.md#service!1 | error flow added",
                     "boundaryAndDataComplexity | delivery-complexity/diffs.md#service!1 | request mapping changed",
                     "verificationStateSpace | delivery-complexity/issues.md#DCA-1 | success and error variants",
-                    "implementedCompatibilityScope | delivery-complexity/diffs.md#service!1 | fallback retained"
+                    "implementedCompatibilityScope | delivery-complexity/diffs.md#service!1 | fallback retained",
+                    "parameterizationComplexity | delivery-complexity/diffs.md#service!1 | runtime parameters added"
                   ],
                   "qualityFlags":[],
                   "visibilityLimits":[]
@@ -40,6 +42,7 @@ class DeliveryAiResponseParserTest {
 
         assertThat(response.classification()).isEqualTo("DELIVERY");
         assertThat(response.dimensions().applicationFlowComplexity()).isEqualTo(4);
+        assertThat(response.dimensions().parameterizationComplexity()).isEqualTo(3);
         assertThat(response.confidence()).isEqualTo(0.75);
     }
 
@@ -55,7 +58,8 @@ class DeliveryAiResponseParserTest {
                     "applicationFlowComplexity":1,
                     "boundaryAndDataComplexity":1,
                     "verificationStateSpace":2,
-                    "implementedCompatibilityScope":0
+                    "implementedCompatibilityScope":0,
+                    "parameterizationComplexity":0
                   },
                   "confidence":0.82,
                   "evidenceSummary":["outcomeBreadth | issues.md#DCA-1 | visible result"],
@@ -77,7 +81,7 @@ class DeliveryAiResponseParserTest {
         assertThat(response.qualityFlags()).containsExactly("feature flag not verified");
         assertThat(response.visibilityLimits()).containsExactly("runtime evidence unavailable");
         var score = new DeliveryAssessmentScoringService().score(response);
-        assertThat(score.score100()).isEqualTo(35.0);
+        assertThat(score.score100()).isEqualTo(28.75);
         assertThat(score.deliveredStoryPoints()).isEqualTo(3);
     }
 
@@ -86,11 +90,24 @@ class DeliveryAiResponseParserTest {
         assertThatThrownBy(() -> parser.parse("""
                 {"classification":"DELIVERY","dimensions":{
                   "outcomeBreadth":5,"domainDecisionComplexity":0,"applicationFlowComplexity":0,
-                  "boundaryAndDataComplexity":0,"verificationStateSpace":0,"implementedCompatibilityScope":0
+                  "boundaryAndDataComplexity":0,"verificationStateSpace":0,"implementedCompatibilityScope":0,
+                  "parameterizationComplexity":0
                 },"confidence":0.5,"evidenceSummary":[],"qualityFlags":[],"visibilityLimits":[]}
                 """))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("between 0 and 4");
+    }
+
+    @Test
+    void shouldRejectDeliveryResponseWithoutParameterizationDimension() {
+        assertThatThrownBy(() -> parser.parse("""
+                {"classification":"DELIVERY","dimensions":{
+                  "outcomeBreadth":1,"domainDecisionComplexity":0,"applicationFlowComplexity":0,
+                  "boundaryAndDataComplexity":0,"verificationStateSpace":0,"implementedCompatibilityScope":0
+                },"confidence":0.5,"evidenceSummary":[],"qualityFlags":[],"visibilityLimits":[]}
+                """))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI response dimension parameterizationComplexity is missing.");
     }
 
     @Test
@@ -109,7 +126,8 @@ class DeliveryAiResponseParserTest {
         var response = parser.parse("""
                 {"classification":"DELIVERY","dimensions":{
                   "outcomeBreadth":1,"domainDecisionComplexity":0,"applicationFlowComplexity":0,
-                  "boundaryAndDataComplexity":0,"verificationStateSpace":0,"implementedCompatibilityScope":0
+                  "boundaryAndDataComplexity":0,"verificationStateSpace":0,"implementedCompatibilityScope":0,
+                  "parameterizationComplexity":0
                 },"confidence":0.5,"evidenceSummary":["API changed"],
                   "qualityFlags":[],"visibilityLimits":[]}
                 """);
@@ -123,7 +141,8 @@ class DeliveryAiResponseParserTest {
         var response = parser.parse("""
                 {"classification":"DELIVERY","dimensions":{
                   "outcomeBreadth":2,"domainDecisionComplexity":2,"applicationFlowComplexity":2,
-                  "boundaryAndDataComplexity":0,"verificationStateSpace":2,"implementedCompatibilityScope":0
+                  "boundaryAndDataComplexity":0,"verificationStateSpace":2,"implementedCompatibilityScope":0,
+                  "parameterizationComplexity":0
                 },"confidence":0.93,"evidenceSummary":[
                   "outcomeBreadth | delivery-complexity/issues.md#CLP-37416 | visible regression",
                   "domainDecisionComplexity | delivery-complexity/issues.md#CLP-37416 | call ordering rule",
@@ -142,7 +161,8 @@ class DeliveryAiResponseParserTest {
         var response = parser.parse("""
                 {"classification":"DELIVERY","dimensions":{
                   "outcomeBreadth":2,"domainDecisionComplexity":2,"applicationFlowComplexity":2,
-                  "boundaryAndDataComplexity":2,"verificationStateSpace":3,"implementedCompatibilityScope":0
+                  "boundaryAndDataComplexity":2,"verificationStateSpace":3,"implementedCompatibilityScope":0,
+                  "parameterizationComplexity":2
                 },"confidence":0.93}
                 """);
 
@@ -156,7 +176,8 @@ class DeliveryAiResponseParserTest {
         var response = parser.parse("""
                 {"classification":"DELIVERY","dimensions":{
                   "outcomeBreadth":1,"domainDecisionComplexity":0,"applicationFlowComplexity":0,
-                  "boundaryAndDataComplexity":0,"verificationStateSpace":0,"implementedCompatibilityScope":0
+                  "boundaryAndDataComplexity":0,"verificationStateSpace":0,"implementedCompatibilityScope":0,
+                  "parameterizationComplexity":0
                 },"confidence":0.5,
                   "evidenceSummary":{"unexpected":"object"},
                   "qualityFlags":["usable flag",42,null],
@@ -173,7 +194,8 @@ class DeliveryAiResponseParserTest {
         var response = parser.parse("""
                 {"classification":"DELIVERY","dimensions":{
                   "outcomeBreadth":3,"domainDecisionComplexity":2,"applicationFlowComplexity":2,
-                  "boundaryAndDataComplexity":3,"verificationStateSpace":3,"implementedCompatibilityScope":0
+                  "boundaryAndDataComplexity":3,"verificationStateSpace":3,"implementedCompatibilityScope":0,
+                  "parameterizationComplexity":0
                 },"confidence":0.88,
                   "evidenceSummary":[
                     "outcomeBreadth | issues.md#CLP-36597 | sekcja „POLITYKI W DECYZJI – OPIS KOMPLETNY" z pelnymi opisami"
@@ -187,7 +209,7 @@ class DeliveryAiResponseParserTest {
         assertThat(response.confidence()).isEqualTo(0.88);
         assertThat(response.evidenceSummary()).isEmpty();
         var score = new DeliveryAssessmentScoringService().score(response);
-        assertThat(score.score100()).isEqualTo(55.0);
+        assertThat(score.score100()).isEqualTo(46.25);
         assertThat(score.deliveredStoryPoints()).isEqualTo(5);
     }
 
