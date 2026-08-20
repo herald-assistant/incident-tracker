@@ -652,6 +652,46 @@
               }
             }
 
+            @case ('frontend-screen-reachability') {
+              <div class="form-grid">
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Screen ID</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="screen-crm-customer-profile"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabFrontendScreenReachabilityForm.controls.screenId"
+                  />
+                </label>
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Path prefixes</span>
+                  <textarea
+                    class="text-input text-input--textarea"
+                    rows="3"
+                    placeholder="apps/crm-agent"
+                    spellcheck="false"
+                    [formControl]="gitLabFrontendScreenReachabilityForm.controls.pathPrefixes"
+                  ></textarea>
+                </label>
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Expected revision</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="optional commit id"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabFrontendScreenReachabilityForm.controls.expectedRevision"
+                  />
+                </label>
+              </div>
+              @if (controlInvalid(gitLabFrontendScreenReachabilityForm.controls.screenId)) {
+                <p class="form-error">Pole `screenId` jest wymagane.</p>
+              }
+            }
+
             @case ('frontend-route-branch-slice') {
               <div class="form-grid">
                 <label class="form-field form-field--wide">
@@ -952,6 +992,13 @@
                             >
                               Route slice
                             </button>
+                            <button
+                              class="secondary-button secondary-button--compact endpoint-card__context-button"
+                              type="button"
+                              (click)="$event.stopPropagation(); useFrontendScreenForReachability(screen)"
+                            >
+                              Screen BFS
+                            </button>
                           }
                           <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">
                             expand_more
@@ -1062,6 +1109,106 @@
                     <summary><span>Diagnostics</span><span class="panel-chip">{{ contextResult.diagnostics.length }}</span></summary>
                     <ul class="context-list">
                       @for (diagnostic of contextResult.diagnostics; track diagnostic.code + ':' + diagnostic.source?.path) {
+                        <li>{{ diagnostic.severity }} · {{ diagnostic.code }} · {{ diagnostic.message }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+              </section>
+            }
+
+            @if (selectedToolKey() === 'frontend-screen-reachability' && gitLabFrontendScreenReachabilityResult(); as graph) {
+              <section class="context-results frontend-discovery-results">
+                <div class="context-results__header">
+                  <div>
+                    <p class="tool-status__label">Screen reachability graph</p>
+                    <h3>{{ graph.screenNode.routePattern || graph.screenNode.screen?.screenId || 'Selected screen' }}</h3>
+                  </div>
+                  <div class="endpoint-results__stats">
+                    <span class="panel-chip">{{ graph.componentLevels.length }} BFS levels</span>
+                    <span class="panel-chip">{{ graph.dependencies.length }} dependencies</span>
+                    <span class="panel-chip">{{ graph.sliceCharacters }} slice chars</span>
+                    <span class="panel-chip">{{ graph.outlineCharacters }} outline chars</span>
+                    @if (graph.contextLimitReached) { <span class="panel-chip panel-chip--warning">bounded source context</span> }
+                  </div>
+                </div>
+
+                <details class="context-subsection context-subsection--collapsible" open>
+                  <summary><span>Human-readable BFS outline</span><span class="panel-chip">{{ graph.outlineCharacters }} chars</span></summary>
+                  <textarea class="json-output source-output" readonly spellcheck="false" [value]="graph.readableOutline"></textarea>
+                </details>
+
+                @for (level of graph.componentLevels; track level.depth) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Component depth {{ level.depth }}</span><span class="panel-chip">{{ level.components.length }}</span></summary>
+                    <div class="endpoint-list">
+                      @for (component of level.components; track component.componentId) {
+                        <details class="endpoint-card">
+                          <summary class="endpoint-card__summary">
+                            <div class="endpoint-card__main">
+                              <span class="endpoint-card__method">COMPONENT</span>
+                              <div class="endpoint-card__copy">
+                                <h4>{{ component.symbol || component.selector || component.componentId }}</h4>
+                                <p>{{ component.sourcePath || 'source unresolved' }} · {{ component.discoveryKind }}</p>
+                              </div>
+                              <span class="panel-chip">{{ component.dependencyIds.length }} dependencies</span>
+                              @if (component.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
+                              <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
+                            </div>
+                          </summary>
+                          <div class="endpoint-card__details">
+                            <textarea class="json-output source-output" readonly spellcheck="false" [value]="component.sliceContent"></textarea>
+                          </div>
+                        </details>
+                      }
+                    </div>
+                  </details>
+                }
+
+                @if (graph.dependencies.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Canonical dependencies</span><span class="panel-chip">{{ graph.dependencies.length }}</span></summary>
+                    <div class="endpoint-list">
+                      @for (dependency of graph.dependencies; track dependency.dependencyId) {
+                        <details class="endpoint-card">
+                          <summary class="endpoint-card__summary">
+                            <div class="endpoint-card__main">
+                              <span class="endpoint-card__method">{{ dependency.kind }}</span>
+                              <div class="endpoint-card__copy">
+                                <h4>{{ dependency.symbol || dependency.moduleSpecifier || dependency.dependencyId }}</h4>
+                                <p>{{ dependency.methods.join(', ') || 'referenced without resolved member' }} · used by {{ dependency.usedBy.length }} node(s)</p>
+                              </div>
+                              @if (dependency.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
+                              <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
+                            </div>
+                          </summary>
+                          <div class="endpoint-card__details">
+                            <p>{{ dependency.sourcePath || dependency.moduleSpecifier || 'source unresolved' }}</p>
+                            <textarea class="json-output source-output" readonly spellcheck="false" [value]="dependency.sliceContent"></textarea>
+                          </div>
+                        </details>
+                      }
+                    </div>
+                  </details>
+                }
+
+                @if (graph.unlinkedComponents.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible">
+                    <summary><span>Delivered but unlinked components</span><span class="panel-chip panel-chip--warning">{{ graph.unlinkedComponents.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (component of graph.unlinkedComponents; track component.componentId) {
+                        <li>{{ component.symbol || component.selector }} · {{ component.sourcePath || 'source unresolved' }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+
+                @if (graph.limitations.length > 0 || graph.diagnostics.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible">
+                    <summary><span>Boundaries and diagnostics</span><span class="panel-chip">{{ graph.limitations.length + graph.diagnostics.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (limitation of graph.limitations; track limitation) { <li>{{ limitation }}</li> }
+                      @for (diagnostic of graph.diagnostics; track diagnostic.code + ':' + diagnostic.source?.path) {
                         <li>{{ diagnostic.severity }} · {{ diagnostic.code }} · {{ diagnostic.message }}</li>
                       }
                     </ul>

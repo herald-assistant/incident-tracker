@@ -30,6 +30,9 @@ class GitLabFrontendDiscoveryControllerTest {
     private GitLabFrontendScreenGraphContextService screenGraphContextService;
 
     @MockitoBean
+    private GitLabFrontendScreenReachabilityService screenReachabilityService;
+
+    @MockitoBean
     private GitLabAngularRouteBranchSliceService routeBranchSliceService;
 
     @MockitoBean
@@ -92,6 +95,48 @@ class GitLabFrontendDiscoveryControllerTest {
                 request.screenId().equals("screen-crm-customer-profile")
                         && request.expectedRevision().equals("crm-ui-revision-20260815")
                         && request.limits().maxContextFiles() == 120
+        ));
+    }
+
+    @Test
+    void shouldExposeHumanReadableSyntheticCrmScreenReachabilityGraph() throws Exception {
+        var node = screenNode();
+        var component = new GitLabFrontendReachabilityComponent(
+                "component:CrmCustomerProfileComponent", 0, 0, true, "ROUTE_VIEW",
+                "CrmCustomerProfileComponent", "crm-customer-profile", node.viewTarget().sourcePath(),
+                null, "OK", List.of(), List.of(), List.of(), List.of(), List.of(),
+                "export class CrmCustomerProfileComponent {}", 44, 44, false, List.of()
+        );
+        when(screenReachabilityService.build(any())).thenReturn(new GitLabFrontendScreenReachabilityGraph(
+                scope(), new GitLabFrontendSourceRevision(scope().ref(), "crm-ui-revision-20260815"),
+                "OK", node, chain(node), List.of(new GitLabFrontendReachabilityComponentLevel(0, List.of(component))),
+                List.of(), List.of(), List.of(), List.of(), List.of(), 1, 44, 44, 118,
+                false, List.of(), "## Effective route chain\n/crm/customers/:customerId"
+        ));
+
+        mockMvc.perform(post("/api/gitlab/frontend/screen-reachability")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "group": "synthetic-crm",
+                                  "projectName": "crm-agent-portal",
+                                  "ref": "release/2026.08",
+                                  "pathPrefixes": ["apps/crm-agent"],
+                                  "screenId": "screen-crm-customer-profile",
+                                  "expectedRevision": "crm-ui-revision-20260815"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OK"))
+                .andExpect(jsonPath("$.componentLevels[0].depth").value(0))
+                .andExpect(jsonPath("$.componentLevels[0].components[0].symbol")
+                        .value("CrmCustomerProfileComponent"))
+                .andExpect(jsonPath("$.readableOutline").value(org.hamcrest.Matchers.containsString(
+                        "Effective route chain")));
+
+        verify(screenReachabilityService).build(argThat(request ->
+                request.screenId().equals("screen-crm-customer-profile")
+                        && request.expectedRevision().equals("crm-ui-revision-20260815")
         ));
     }
 
@@ -205,7 +250,7 @@ class GitLabFrontendDiscoveryControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         verifyNoInteractions(
-                routeGraphDiscoveryService, screenGraphContextService,
+                routeGraphDiscoveryService, screenGraphContextService, screenReachabilityService,
                 routeBranchSliceService, typeScriptSymbolSliceService
         );
     }

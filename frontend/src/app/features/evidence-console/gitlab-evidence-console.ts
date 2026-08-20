@@ -20,6 +20,8 @@ import {
   GitLabFrontendRouteNode,
   GitLabFrontendScreenContextPayload,
   GitLabFrontendScreenContextResponse,
+  GitLabFrontendScreenReachabilityPayload,
+  GitLabFrontendScreenReachabilityResponse,
   GitLabTypeScriptSymbolKind,
   GitLabTypeScriptSymbolSelector,
   GitLabTypeScriptSymbolSlicePayload,
@@ -60,6 +62,7 @@ type GitLabJsonResponseKey =
   | 'merge-request-search'
   | 'frontend-catalog'
   | 'frontend-screen-context'
+  | 'frontend-screen-reachability'
   | 'frontend-route-branch-slice'
   | 'frontend-typescript-symbol-slice'
   | 'endpoint-inventory'
@@ -172,6 +175,14 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/frontend/screen-context',
     summary:
       'Zbiera ograniczony manifest źródeł, sygnały techniczne i coverage dla wybranego screenId.'
+  },
+  {
+    key: 'frontend-screen-reachability',
+    label: 'Screen Reachability Graph',
+    category: 'Frontend Discovery',
+    endpoint: '/api/gitlab/frontend/screen-reachability',
+    summary:
+      'Buduje czytelny route chain, BFS komponentów i kanoniczny rejestr faktycznie użytych zależności.'
   },
   {
     key: 'frontend-route-branch-slice',
@@ -530,6 +541,15 @@ export class GitLabEvidenceConsoleComponent {
     expectedRevision: new FormControl('', { nonNullable: true })
   });
 
+  readonly gitLabFrontendScreenReachabilityForm = new FormGroup({
+    group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    branch: new FormControl('HEAD', { nonNullable: true, validators: [Validators.required] }),
+    pathPrefixes: new FormControl('', { nonNullable: true }),
+    screenId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    expectedRevision: new FormControl('', { nonNullable: true })
+  });
+
   readonly gitLabAngularRouteBranchSliceForm = new FormGroup({
     group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -599,6 +619,9 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabFrontendScreenContextState = signal<ToolState>(
     this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby pobrać source context.')
   );
+  readonly gitLabFrontendScreenReachabilityState = signal<ToolState>(
+    this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby zbudować jego czytelny BFS.')
+  );
   readonly gitLabAngularRouteBranchSliceState = signal<ToolState>(
     this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby wyciąć jego gałąź routingu.')
   );
@@ -666,6 +689,12 @@ export class GitLabEvidenceConsoleComponent {
     this.asGitLabFrontendScreenContextResult(this.gitLabFrontendScreenContextState().response)
   );
 
+  readonly gitLabFrontendScreenReachabilityResult = computed(() =>
+    this.asGitLabFrontendScreenReachabilityResult(
+      this.gitLabFrontendScreenReachabilityState().response
+    )
+  );
+
   readonly gitLabAngularRouteBranchSliceResult = computed(() =>
     this.asGitLabAngularRouteBranchSliceResult(this.gitLabAngularRouteBranchSliceState().response)
   );
@@ -702,6 +731,9 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'frontend-screen-context':
         this.submitGitLabFrontendScreenContext();
+        return;
+      case 'frontend-screen-reachability':
+        this.submitGitLabFrontendScreenReachability();
         return;
       case 'frontend-route-branch-slice':
         this.submitGitLabAngularRouteBranchSlice();
@@ -766,6 +798,13 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'frontend-screen-context':
         this.gitLabFrontendScreenContextForm.patchValue({
+          pathPrefixes: '',
+          screenId: '',
+          expectedRevision: ''
+        });
+        return;
+      case 'frontend-screen-reachability':
+        this.gitLabFrontendScreenReachabilityForm.patchValue({
           pathPrefixes: '',
           screenId: '',
           expectedRevision: ''
@@ -1354,6 +1393,48 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
+  submitGitLabFrontendScreenReachability(event?: Event): void {
+    event?.preventDefault();
+    if (!this.syncRepositoryScope(this.gitLabFrontendScreenReachabilityForm)) {
+      this.gitLabFrontendScreenReachabilityState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
+        })
+      );
+      return;
+    }
+    if (this.gitLabFrontendScreenReachabilityForm.invalid) {
+      this.gitLabFrontendScreenReachabilityForm.markAllAsTouched();
+      this.gitLabFrontendScreenReachabilityState.set(
+        this.errorStateFromPayload({
+          code: 'VALIDATION_ERROR',
+          message: 'Podaj screenId pochodzący z bieżącego katalogu frontendu.'
+        })
+      );
+      return;
+    }
+
+    const payload: GitLabFrontendScreenReachabilityPayload = {
+      group: this.gitLabFrontendScreenReachabilityForm.controls.group.value.trim(),
+      projectName: this.gitLabFrontendScreenReachabilityForm.controls.projectName.value.trim(),
+      ref: this.gitLabFrontendScreenReachabilityForm.controls.branch.value.trim(),
+      pathPrefixes: this.toList(
+        this.gitLabFrontendScreenReachabilityForm.controls.pathPrefixes.value
+      ),
+      screenId: this.gitLabFrontendScreenReachabilityForm.controls.screenId.value.trim(),
+      expectedRevision: this.optionalValue(
+        this.gitLabFrontendScreenReachabilityForm.controls.expectedRevision.value
+      )
+    };
+    this.runRequest(
+      this.gitLabFrontendScreenReachabilityState,
+      this.evidenceApi.buildGitLabFrontendScreenReachability(payload),
+      payload,
+      '/api/gitlab/frontend/screen-reachability'
+    );
+  }
+
   submitGitLabAngularRouteBranchSlice(event?: Event): void {
     event?.preventDefault();
     if (!this.syncRepositoryScope(this.gitLabAngularRouteBranchSliceForm)) {
@@ -1473,6 +1554,22 @@ export class GitLabEvidenceConsoleComponent {
     });
     this.gitLabFrontendScreenContextState.set(
       this.idleState('Screen przeniesiony z katalogu. Uruchom request, aby zebrać bounded source context.')
+    );
+  }
+
+  useFrontendScreenForReachability(screen: GitLabFrontendRouteNode): void {
+    if (!screen.screen?.screenId) {
+      return;
+    }
+    this.selectedToolKey.set('frontend-screen-reachability');
+    this.syncRepositoryScope(this.gitLabFrontendScreenReachabilityForm);
+    this.gitLabFrontendScreenReachabilityForm.patchValue({
+      pathPrefixes: this.gitLabFrontendCatalogForm.controls.pathPrefixes.value,
+      screenId: screen.screen.screenId,
+      expectedRevision: this.gitLabFrontendCatalogResult()?.sourceRevision?.commitId || ''
+    });
+    this.gitLabFrontendScreenReachabilityState.set(
+      this.idleState('Screen przeniesiony z katalogu. Uruchom request, aby zbudować czytelny BFS.')
     );
   }
 
@@ -2285,6 +2382,7 @@ export class GitLabEvidenceConsoleComponent {
       toolKey === 'repository-instructions' ||
       toolKey === 'frontend-catalog' ||
       toolKey === 'frontend-screen-context' ||
+      toolKey === 'frontend-screen-reachability' ||
       toolKey === 'frontend-route-branch-slice' ||
       toolKey === 'frontend-typescript-symbol-slice' ||
       toolKey === 'endpoint-inventory' ||
@@ -2438,6 +2536,8 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabFrontendCatalogState;
       case 'frontend-screen-context':
         return this.gitLabFrontendScreenContextState;
+      case 'frontend-screen-reachability':
+        return this.gitLabFrontendScreenReachabilityState;
       case 'frontend-route-branch-slice':
         return this.gitLabAngularRouteBranchSliceState;
       case 'frontend-typescript-symbol-slice':
@@ -2592,6 +2692,18 @@ export class GitLabEvidenceConsoleComponent {
     const record = response as Partial<GitLabFrontendScreenContextResponse>;
     return Array.isArray(record.sourceFiles) && Array.isArray(record.coverage)
       ? (record as GitLabFrontendScreenContextResponse)
+      : null;
+  }
+
+  private asGitLabFrontendScreenReachabilityResult(
+    response: unknown
+  ): GitLabFrontendScreenReachabilityResponse | null {
+    if (!response || typeof response !== 'object' || Array.isArray(response)) {
+      return null;
+    }
+    const record = response as Partial<GitLabFrontendScreenReachabilityResponse>;
+    return typeof record.readableOutline === 'string' && Array.isArray(record.componentLevels)
+      ? (record as GitLabFrontendScreenReachabilityResponse)
       : null;
   }
 

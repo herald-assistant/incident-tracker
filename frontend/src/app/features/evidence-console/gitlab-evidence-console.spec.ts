@@ -7,6 +7,7 @@ import {
   GitLabAngularRouteBranchSliceResponse,
   GitLabFrontendCatalogResponse,
   GitLabFrontendScreenContextResponse,
+  GitLabFrontendScreenReachabilityResponse,
   GitLabEndpointUseCaseContextResponse,
   GitLabJavaMethodUseCaseContextResponse,
   GitLabJavaMethodSliceResponse,
@@ -93,7 +94,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(14);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(15);
     expect(compiled.textContent).toContain('Repository Instructions');
     expect(compiled.textContent).toContain('Merge Request Search');
     expect(compiled.querySelector('.workbench-header')).toBeNull();
@@ -195,6 +196,44 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('FORMS · READY');
     expect(compiled.textContent).toContain('REACTIVE_FORM · HIGH');
     expect(compiled.textContent).toContain('customer-profile.ts');
+  });
+
+  it('should submit and render a human-readable synthetic CRM screen BFS', () => {
+    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
+    const httpTesting = TestBed.inject(HttpTestingController);
+    fixture.componentInstance.selectedToolKey.set('frontend-screen-reachability');
+    fixture.componentInstance.scopeForm.patchValue({
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      branch: 'release/2026.08'
+    });
+    fixture.componentInstance.gitLabFrontendScreenReachabilityForm.patchValue({
+      pathPrefixes: 'apps/crm-agent',
+      screenId: 'screen-crm-customer-profile',
+      expectedRevision: 'crm-ui-revision-20260815'
+    });
+
+    fixture.componentInstance.submit(new Event('submit'));
+
+    const request = httpTesting.expectOne('/api/gitlab/frontend/screen-reachability');
+    expect(request.request.body).toEqual({
+      group: 'CRM/apps',
+      projectName: 'crm-agent-portal',
+      ref: 'release/2026.08',
+      pathPrefixes: ['apps/crm-agent'],
+      screenId: 'screen-crm-customer-profile',
+      expectedRevision: 'crm-ui-revision-20260815'
+    });
+    request.flush(buildFrontendScreenReachabilityResponse());
+    httpTesting.verify();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Screen reachability graph');
+    expect(compiled.textContent).toContain('Human-readable BFS outline');
+    expect(compiled.textContent).toContain('Component depth 0');
+    expect(compiled.textContent).toContain('Canonical dependencies');
+    expect(compiled.textContent).toContain('CrmCustomerFacade');
   });
 
   it('should submit and render a reduced synthetic CRM Angular route branch slice', () => {
@@ -1137,6 +1176,103 @@ function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextRespon
     diagnostics: [],
     totalReturnedCharacters: 48,
     contextLimitReached: false
+  };
+}
+
+function buildFrontendScreenReachabilityResponse(): GitLabFrontendScreenReachabilityResponse {
+  const screenNode = buildFrontendCatalogResponse().nodes[0];
+  return {
+    scope: buildFrontendCatalogResponse().scope,
+    sourceRevision: buildFrontendCatalogResponse().sourceRevision,
+    status: 'OK',
+    screenNode,
+    effectiveRouteChain: {
+      screen: screenNode.screen!,
+      segments: [
+        {
+          nodeId: screenNode.nodeId,
+          pathSegment: screenNode.pathSegment,
+          routePattern: screenNode.routePattern,
+          outlet: screenNode.outlet,
+          configuration: screenNode.configuration,
+          source: screenNode.routeSource
+        }
+      ],
+      routeParameters: screenNode.routeParameters
+    },
+    componentLevels: [
+      {
+        depth: 0,
+        components: [
+          {
+            componentId: 'component:CrmCustomerProfileComponent',
+            breadthFirstOrder: 0,
+            depth: 0,
+            connectedToSelectedScreen: true,
+            discoveryKind: 'ROUTE_VIEW',
+            symbol: 'CrmCustomerProfileComponent',
+            selector: 'crm-customer-profile',
+            sourcePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
+            templatePath: 'apps/crm-agent/src/app/customer/customer-profile.html',
+            status: 'OK',
+            templateBindings: [],
+            entrySymbols: [],
+            includedSymbols: [],
+            dependencyIds: ['dependency:CrmCustomerFacade'],
+            childComponentIds: [],
+            sliceContent: 'export class CrmCustomerProfileComponent {}',
+            sourceCharacters: 1200,
+            returnedCharacters: 48,
+            truncated: false,
+            limitations: []
+          }
+        ]
+      }
+    ],
+    unlinkedComponents: [],
+    dependencies: [
+      {
+        dependencyId: 'dependency:CrmCustomerFacade',
+        discoveryOrder: 0,
+        kind: 'FACADE',
+        symbol: 'CrmCustomerFacade',
+        sourcePath: 'apps/crm-agent/src/app/customer/customer.facade.ts',
+        moduleSpecifier: './customer.facade',
+        status: 'OK',
+        methods: ['saveCustomer'],
+        usedBy: ['component:CrmCustomerProfileComponent'],
+        downstreamDependencyIds: [],
+        sliceContent: 'saveCustomer(): void {}',
+        sourceCharacters: 900,
+        returnedCharacters: 24,
+        truncated: false,
+        limitations: []
+      }
+    ],
+    edges: [
+      {
+        fromId: 'component:CrmCustomerProfileComponent',
+        toId: 'dependency:CrmCustomerFacade',
+        kind: 'USES_DEPENDENCY',
+        label: 'saveCustomer'
+      }
+    ],
+    technicalSignals: [],
+    diagnostics: [],
+    sourceFileCount: 3,
+    sourceCharacters: 2100,
+    sliceCharacters: 72,
+    outlineCharacters: 240,
+    contextLimitReached: false,
+    limitations: [],
+    readableOutline: [
+      '## Effective route chain',
+      '/crm/customers/:customerId',
+      '### Depth 0',
+      'CrmCustomerProfileComponent',
+      '## Canonical dependencies',
+      'CrmCustomerFacade.saveCustomer'
+    ].join('\n')
   };
 }
 

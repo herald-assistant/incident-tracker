@@ -133,6 +133,8 @@ export interface GitLabFrontendScreenContextPayload extends GitLabFrontendCatalo
   expectedRevision?: string;
 }
 
+export type GitLabFrontendScreenReachabilityPayload = GitLabFrontendScreenContextPayload;
+
 export interface GitLabAngularRouteBranchSlicePayload extends GitLabFrontendCatalogPayload {
   screenId: string;
   expectedRevision?: string;
@@ -284,6 +286,98 @@ export interface GitLabFrontendScreenContextResponse {
   diagnostics: GitLabFrontendGraphDiagnostic[];
   totalReturnedCharacters: number;
   contextLimitReached: boolean;
+}
+
+export interface GitLabFrontendRouteChainSegment {
+  nodeId: string;
+  pathSegment?: string | null;
+  routePattern: string;
+  outlet: string;
+  configuration: GitLabFrontendRouteConfiguration[];
+  source: GitLabFrontendSourceReference;
+}
+
+export interface GitLabFrontendEffectiveRouteChain {
+  screen: GitLabFrontendScreenIdentity;
+  segments: GitLabFrontendRouteChainSegment[];
+  routeParameters: string[];
+}
+
+export interface GitLabFrontendReachabilityComponent {
+  componentId: string;
+  breadthFirstOrder: number;
+  depth: number;
+  connectedToSelectedScreen: boolean;
+  discoveryKind: string;
+  symbol?: string | null;
+  selector?: string | null;
+  sourcePath?: string | null;
+  templatePath?: string | null;
+  status: string;
+  templateBindings: GitLabTypeScriptTemplateBinding[];
+  entrySymbols: GitLabTypeScriptSymbolCandidate[];
+  includedSymbols: GitLabTypeScriptSymbolCandidate[];
+  dependencyIds: string[];
+  childComponentIds: string[];
+  sliceContent: string;
+  sourceCharacters: number;
+  returnedCharacters: number;
+  truncated: boolean;
+  limitations: string[];
+}
+
+export interface GitLabFrontendReachabilityComponentLevel {
+  depth: number;
+  components: GitLabFrontendReachabilityComponent[];
+}
+
+export interface GitLabFrontendReachabilityDependency {
+  dependencyId: string;
+  discoveryOrder: number;
+  kind: string;
+  symbol?: string | null;
+  sourcePath?: string | null;
+  moduleSpecifier?: string | null;
+  status: string;
+  methods: string[];
+  usedBy: string[];
+  downstreamDependencyIds: string[];
+  sliceContent: string;
+  sourceCharacters: number;
+  returnedCharacters: number;
+  truncated: boolean;
+  limitations: string[];
+}
+
+export interface GitLabFrontendReachabilityEdge {
+  fromId: string;
+  toId: string;
+  kind: string;
+  label?: string | null;
+  sourcePath?: string | null;
+  sourceSymbol?: string | null;
+  memberSymbol?: string | null;
+}
+
+export interface GitLabFrontendScreenReachabilityResponse {
+  scope: GitLabFrontendCatalogPayload;
+  sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
+  status: string;
+  screenNode: GitLabFrontendRouteNode;
+  effectiveRouteChain: GitLabFrontendEffectiveRouteChain;
+  componentLevels: GitLabFrontendReachabilityComponentLevel[];
+  unlinkedComponents: GitLabFrontendReachabilityComponent[];
+  dependencies: GitLabFrontendReachabilityDependency[];
+  edges: GitLabFrontendReachabilityEdge[];
+  technicalSignals: GitLabFrontendTechnicalSignal[];
+  diagnostics: GitLabFrontendGraphDiagnostic[];
+  sourceFileCount: number;
+  sourceCharacters: number;
+  sliceCharacters: number;
+  outlineCharacters: number;
+  contextLimitReached: boolean;
+  limitations: string[];
+  readableOutline: string;
 }
 
 export interface GitLabAngularRouteBranchSliceFile {
@@ -829,6 +923,15 @@ export class EvidenceApiService {
   ): Observable<GitLabFrontendScreenContextResponse> {
     return this.http.post<GitLabFrontendScreenContextResponse>(
       '/api/gitlab/frontend/screen-context',
+      payload
+    );
+  }
+
+  buildGitLabFrontendScreenReachability(
+    payload: GitLabFrontendScreenReachabilityPayload
+  ): Observable<GitLabFrontendScreenReachabilityResponse> {
+    return this.http.post<GitLabFrontendScreenReachabilityResponse>(
+      '/api/gitlab/frontend/screen-reachability',
       payload
     );
   }

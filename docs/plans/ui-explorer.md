@@ -1979,9 +1979,18 @@ rozmiaru promptu po kazdym kroku.
 - [x] 8L.5: Rozszerzyc symbol reachability o template bindings, formularze,
   RxJS, NgRx i operacje backendowe bez keywordowego dolaczania nieosiagalnych
   metod.
-- [ ] 8L.6: Zastapic v4 snapshot minimalnym seedem route/component/template i
-  iteracyjnymi symbol slices; nie wysylac pelnego manifestu ani pelnego
-  frontiera. Dodac preflight tokenow i rozmiary artefaktow widoczne w aside.
+- [x] 8L.6a: Dodac neutralny `FrontendScreenReachabilityGraph` oraz czytelny
+  renderer BFS do shared/operator API i GitLab Tool Workbench. Wynik ma zaczac
+  od effective route chain, nastepnie pokazywac glowny komponent i kolejne
+  poziomy dzieci, a faktycznie uzywane serwisy, fasady, state i operacje
+  backendowe zapisywac raz w kanonicznym rejestrze z referencjami `usedBy`.
+  Sam import nie jest krawedzia. Nie zmieniac jeszcze promptu, skilli ani MCP i
+  nie uznawac redukcji tokenow za wazniejsza od kompletnosci grafu.
+- [ ] 8L.6b: Po recznej akceptacji grafu BFS zastapic v4 snapshot jego
+  czytelnym pakietem route/component/dependency oraz iteracyjnymi symbol
+  slices. Pelny frontier ma pozostac jawny i ekspandowalny; dodac preflight
+  rozmiarow artefaktow widoczny w aside bez arbitralnego obcinania osiagalnej
+  informacji.
 - [ ] 8L.7: Wystawic te same neutralne capability jako MCP tools dla Copilota;
   model-facing input ma uzywac bezpiecznej referencji slice i `reason`, a
   repository/ref/path scope ma pochodzic z hidden session context.
@@ -2053,6 +2062,22 @@ bez zmian do kolejnych, osobno zatwierdzanych krokow 8L.6-8L.7. Regresje sa
 silnie zanonimizowanym syntetycznym CRM: 14 celowanych testow backendu — PASS;
 56 plikow i 430 testow Angulara — PASS; produkcyjny build Angulara — PASS;
 pelny `mvn -q -Pbackend-dev clean package` — 1268 testow, 0 bledow — PASS.
+
+Checkpoint 8L.6a (2026-08-20): neutralna integracja GitLab buduje dla
+wybranego ekranu effective route chain, nastepnie deterministyczny BFS
+komponentow oraz kanoniczny rejestr faktycznie uzytych fasad, serwisow, state i
+klientow backendowych. Zaleznosci sa deduplikowane i maja `usedBy`; sam import
+nie tworzy krawedzi. Komponenty dostarczone bez potwierdzonej relacji pozostaja
+jawne jako `unlinked`, a status wyniku jest wtedy `PARTIAL`. Operator moze
+uruchomic `Screen Reachability Graph` z GitLab Tool Workbench i porownac
+czytelny `readableOutline` z typowanymi poziomami, krawedziami i symbol slices.
+Renderer uzywa krotkich referencji `C1`/`D1`, natomiast stabilne identyfikatory
+pozostaja w JSON. Produkcyjny prompt UI Explorera, runtime skille i MCP nie
+zostaly zmienione; 8L.6b pozostaje bramka po recznej akceptacji rezultatow.
+Weryfikacja: celowane testy integracji/API/guardow — PASS; 56 plikow i 431
+testow Angulara — PASS; produkcyjny build Angulara — PASS; pelny
+`mvn -q -Pbackend-dev clean package` — 1272 testy, 0 bledow — PASS. Wszystkie
+nowe regresje i przyklady sa silnie zanonimizowanym, syntetycznym CRM.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
