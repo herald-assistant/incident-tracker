@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public class GitLabTypeScriptSymbolSliceService {
 
     public static final int DEFAULT_OUTPUT_CHARACTERS = 12_000;
-    public static final int MAX_OUTPUT_CHARACTERS = 40_000;
+    public static final int MAX_OUTPUT_CHARACTERS = 200_000;
 
     private static final int MAX_SOURCE_CHARACTERS = 200_000;
     private static final int MAX_CANDIDATES = 60;
@@ -93,6 +93,20 @@ public class GitLabTypeScriptSymbolSliceService {
                 .toList();
         var selected = new LinkedHashSet<>(select(request, source, parsed.members(), limitations));
         selected.addAll(templateEntrySymbols(request, parsed, template, limitations));
+        var unresolvedRequestedSelector = limitations.stream()
+                .anyMatch(limitation -> limitation.startsWith("No symbol matched selector "));
+        var unresolvedTemplateReference = limitations.stream()
+                .anyMatch(limitation -> limitation.startsWith("Template references without a matching member"));
+        if (selected.isEmpty() && templateRequested && template.complete() && !unresolvedTemplateReference
+                && request.symbolSelectors().isEmpty()) {
+            var declaringType = StringUtils.hasText(request.declaringTypeName())
+                    ? request.declaringTypeName()
+                    : parsed.classes().size() == 1 ? parsed.classes().get(0).name() : null;
+            return response(request, "STATIC_PRESENTATIONAL", source, declaringType,
+                    List.of(), List.of(), List.of(), List.of(), List.of(),
+                    candidates.stream().limit(MAX_CANDIDATES).toList(),
+                    parsed.imports().size(), 0, 0, false, "", template, List.copyOf(limitations));
+        }
         if (selected.isEmpty()) {
             limitations.add("No TypeScript symbol matched requested selectors.");
             return response(request, "NOT_FOUND", source, null, List.of(), List.of(), List.of(),
@@ -157,7 +171,8 @@ public class GitLabTypeScriptSymbolSliceService {
         }
         var unresolvedTemplateBindings = limitations.stream()
                 .anyMatch(limitation -> limitation.startsWith("Template references without a matching member"));
-        var partial = truncated || template.requested() && (!template.complete() || unresolvedTemplateBindings);
+        var partial = truncated || unresolvedRequestedSelector
+                || template.requested() && (!template.complete() || unresolvedTemplateBindings);
         return response(
                 request, partial ? "PARTIAL" : "OK", source, declaringType, includedImports, responseFields,
                 entrySymbols, includedSymbols, downstream, candidates.stream().limit(MAX_CANDIDATES).toList(),
@@ -293,9 +308,6 @@ public class GitLabTypeScriptSymbolSliceService {
     }
 
     private String relative(String sourcePath, String target) {
-        if (!target.startsWith(".")) {
-            return GitLabFrontendTargetedSourceSession.normalize(target);
-        }
         var normalized = GitLabFrontendTargetedSourceSession.normalize(sourcePath);
         var separator = normalized.lastIndexOf('/');
         var parent = separator >= 0 ? normalized.substring(0, separator) : "";

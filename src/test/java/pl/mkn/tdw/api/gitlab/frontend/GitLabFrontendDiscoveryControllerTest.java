@@ -110,7 +110,7 @@ class GitLabFrontendDiscoveryControllerTest {
         when(screenReachabilityService.build(any())).thenReturn(new GitLabFrontendScreenReachabilityGraph(
                 scope(), new GitLabFrontendSourceRevision(scope().ref(), "crm-ui-revision-20260815"),
                 "OK", node, chain(node), List.of(new GitLabFrontendReachabilityComponentLevel(0, List.of(component))),
-                List.of(), List.of(), List.of(), List.of(), List.of(), 1, 44, 44, 118,
+                List.of(), List.of(), List.of(), List.of(), 1, 44, 44, 118,
                 false, List.of(), "## Effective route chain\n/crm/customers/:customerId"
         ));
 

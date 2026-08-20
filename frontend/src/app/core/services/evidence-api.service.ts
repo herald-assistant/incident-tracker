@@ -335,6 +335,7 @@ export interface GitLabFrontendReachabilityDependency {
   dependencyId: string;
   discoveryOrder: number;
   kind: string;
+  category: 'FUNCTIONAL' | 'SUPPORTING_CODE' | 'REACTIVE' | 'FRAMEWORK' | 'DATA_MODEL';
   symbol?: string | null;
   sourcePath?: string | null;
   moduleSpecifier?: string | null;
@@ -366,7 +367,6 @@ export interface GitLabFrontendScreenReachabilityResponse {
   screenNode: GitLabFrontendRouteNode;
   effectiveRouteChain: GitLabFrontendEffectiveRouteChain;
   componentLevels: GitLabFrontendReachabilityComponentLevel[];
-  unlinkedComponents: GitLabFrontendReachabilityComponent[];
   dependencies: GitLabFrontendReachabilityDependency[];
   edges: GitLabFrontendReachabilityEdge[];
   technicalSignals: GitLabFrontendTechnicalSignal[];

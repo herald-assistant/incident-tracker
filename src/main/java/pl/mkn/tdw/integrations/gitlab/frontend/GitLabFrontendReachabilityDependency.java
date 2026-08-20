@@ -6,6 +6,7 @@ public record GitLabFrontendReachabilityDependency(
         String dependencyId,
         int discoveryOrder,
         GitLabFrontendReachabilityDependencyKind kind,
+        GitLabFrontendReachabilityDependencyCategory category,
         String symbol,
         String sourcePath,
         String moduleSpecifier,

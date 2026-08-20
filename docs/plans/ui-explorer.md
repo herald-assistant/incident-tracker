@@ -2063,21 +2063,39 @@ silnie zanonimizowanym syntetycznym CRM: 14 celowanych testow backendu — PASS;
 56 plikow i 430 testow Angulara — PASS; produkcyjny build Angulara — PASS;
 pelny `mvn -q -Pbackend-dev clean package` — 1268 testow, 0 bledow — PASS.
 
-Checkpoint 8L.6a (2026-08-20): neutralna integracja GitLab buduje dla
-wybranego ekranu effective route chain, nastepnie deterministyczny BFS
-komponentow oraz kanoniczny rejestr faktycznie uzytych fasad, serwisow, state i
-klientow backendowych. Zaleznosci sa deduplikowane i maja `usedBy`; sam import
-nie tworzy krawedzi. Komponenty dostarczone bez potwierdzonej relacji pozostaja
-jawne jako `unlinked`, a status wyniku jest wtedy `PARTIAL`. Operator moze
-uruchomic `Screen Reachability Graph` z GitLab Tool Workbench i porownac
-czytelny `readableOutline` z typowanymi poziomami, krawedziami i symbol slices.
-Renderer uzywa krotkich referencji `C1`/`D1`, natomiast stabilne identyfikatory
-pozostaja w JSON. Produkcyjny prompt UI Explorera, runtime skille i MCP nie
-zostaly zmienione; 8L.6b pozostaje bramka po recznej akceptacji rezultatow.
-Weryfikacja: celowane testy integracji/API/guardow — PASS; 56 plikow i 431
-testow Angulara — PASS; produkcyjny build Angulara — PASS; pelny
-`mvn -q -Pbackend-dev clean package` — 1272 testy, 0 bledow — PASS. Wszystkie
-nowe regresje i przyklady sa silnie zanonimizowanym, syntetycznym CRM.
+Checkpoint 8L.6a (2026-08-21): po recznym tescie na duzym froncie reachability
+nie buduje juz najpierw ogolnego snapshotu do `maxContextFiles=120`. Zaczyna od
+lekkiego route/view seed i dociaga kod bez limitu liczby plikow wylacznie po
+potwierdzonych importach, re-exportach, selectorach template oraz downstream
+symbol references. BFS jest iteracyjny: komponent znaleziony dopiero w symbol
+slice staje sie kolejnym wezlem i moze odkryc wlasne dzieci. Kontrakt nie
+zwraca juz nieosiagalnych `unlinkedComponents`.
+
+Selektory obsluguja elementy z atrybutami, klasy, listy selectorow oraz
+`:not(...)`; `templateUrl` bez prefiksu `./` jest rozwiazywany wzgledem pliku
+komponentu. Template parser odroznia custom pipes i lokale `let-*` od pol
+komponentu, a statyczny komponent prezentacyjny otrzymuje kompletny status
+`STATIC_PRESENTATIONAL`. Slice z czesciowo nierozwiazanym zestawem metod ma
+status `PARTIAL`, a maksymalny output pojedynczego relewantnego slice'a jest
+rownany z limitem parsera zrodla zamiast konczyc sie przy 40 000 znakow.
+
+Resolution importu preferuje faktyczny binding z pliku wlasciciela, obsluguje
+root tsconfig rowniez przy `pathPrefixes`, przechodzi przez barrel re-exports i
+moze wykonac celowane wyszukanie deklaracji dla organizacyjnego serwisu albo
+komponentu. Jawny import Angulara nie moze juz zostac polaczony z przypadkowa
+lokalna deklaracja o tej samej nazwie. Kanoniczny rejestr dzieli zaleznosci na
+`FUNCTIONAL`, `SUPPORTING_CODE`, `REACTIVE`, `FRAMEWORK` i `DATA_MODEL`;
+czytelny outline oraz domyslnie otwarta sekcja Workbencha pokazuja pierwsze
+dwie kategorie, a techniczny szum pozostaje w zwartej, zwinietej sekcji.
+Effective route chain wyjasnia path segment, outlet i source kazdego poziomu.
+
+Produkcyjny prompt UI Explorera, runtime skille i MCP nie zostaly zmienione;
+8L.6b pozostaje bramka po ponownym recznym tescie rezultatu. Weryfikacja:
+celowane testy integracji i API — PASS; `npm --prefix frontend test --
+--watch=false` — 56 plikow i 431 testow PASS; produkcyjny build Angulara —
+PASS; `mvn -q -Pbackend-dev clean package` — 1275 testow, 0 bledow — PASS.
+Wszystkie nowe regresje i przyklady sa silnie zanonimizowanym, syntetycznym
+CRM.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 

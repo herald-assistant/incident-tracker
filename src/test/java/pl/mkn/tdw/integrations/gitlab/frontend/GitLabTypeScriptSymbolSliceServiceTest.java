@@ -250,6 +250,39 @@ class GitLabTypeScriptSymbolSliceServiceTest {
     }
 
     @Test
+    void shouldReportPartialSyntheticCrmSliceWhenOneRequestedMethodIsMissing() {
+        var source = """
+                export class CrmContactHistoryFacade {
+                  refreshHistory(): void {}
+                  downloadHistory(): void {}
+                }
+                """;
+        var scope = new GitLabFrontendRepositoryScope("synthetic-crm", "crm-agent-portal", "main", List.of());
+        var filePath = "libs/crm-contact/history/crm-contact-history.facade.ts";
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), filePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), filePath, source, false
+                ));
+
+        var response = new GitLabTypeScriptSymbolSliceService(repositoryPort).readSymbolSlice(
+                new GitLabTypeScriptSymbolSliceRequest(
+                        scope, filePath, "CrmContactHistoryFacade", null, false,
+                        List.of(
+                                new GitLabTypeScriptSymbolSelector("refreshHistory", null, null),
+                                new GitLabTypeScriptSymbolSelector("missingBusinessAction", null, null)
+                        ),
+                        true, true, true, null
+                )
+        );
+
+        assertThat(response.status()).isEqualTo("PARTIAL");
+        assertThat(response.content()).contains("refreshHistory");
+        assertThat(response.limitations()).contains(
+                "No symbol matched selector AUTO:missingBusinessAction."
+        );
+    }
+
+    @Test
     void shouldUseSyntheticCrmInlineTemplateAsAReachabilityRoot() {
         var source = """
                 @Component({
@@ -287,5 +320,48 @@ class GitLabTypeScriptSymbolSliceServiceTest {
         assertThat(response.includedSymbols()).extracting(GitLabTypeScriptSymbolCandidate::symbolName)
                 .containsExactly("refreshContact", "loadContact");
         assertThat(response.content()).doesNotContain("unrelatedContactExport");
+    }
+
+    @Test
+    void shouldTreatStaticSyntheticCrmPresentationAndTemplateLocalsAsComplete() {
+        var source = """
+                @Component({
+                  selector: 'crm-contact-status',
+                  templateUrl: 'crm-contact-status.component.html'
+                })
+                export class CrmContactStatusComponent {}
+                """;
+        var template = """
+                <ng-template let-data>
+                  <span>{{ data.label | crmDisplayValue }}</span>
+                </ng-template>
+                """;
+        var scope = new GitLabFrontendRepositoryScope(
+                "synthetic-crm", "crm-agent-portal", "main", List.of("apps/crm-agent")
+        );
+        var filePath = "apps/crm-agent/src/app/contact/crm-contact-status.component.ts";
+        var templatePath = "apps/crm-agent/src/app/contact/crm-contact-status.component.html";
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), filePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), filePath, source, false
+                ));
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), templatePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), templatePath, template, false
+                ));
+
+        var response = new GitLabTypeScriptSymbolSliceService(repositoryPort).readSymbolSlice(
+                new GitLabTypeScriptSymbolSliceRequest(
+                        scope, filePath, "CrmContactStatusComponent", null, true, List.of(),
+                        true, true, true, GitLabTypeScriptSymbolSliceService.MAX_OUTPUT_CHARACTERS
+                )
+        );
+
+        assertThat(response.status()).isEqualTo("STATIC_PRESENTATIONAL");
+        assertThat(response.templatePath()).isEqualTo(templatePath);
+        assertThat(response.templateBindings().stream()
+                .flatMap(binding -> binding.referencedSymbols().stream()).toList())
+                .doesNotContain("data", "crmDisplayValue");
+        assertThat(response.limitations()).isEmpty();
     }
 }

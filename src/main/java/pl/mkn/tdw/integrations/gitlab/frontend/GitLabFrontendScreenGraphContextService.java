@@ -34,6 +34,17 @@ public class GitLabFrontendScreenGraphContextService {
     private final AngularBootstrapSourceParser moduleParser = new AngularBootstrapSourceParser();
 
     public GitLabFrontendScreenGraphContext build(GitLabFrontendScreenGraphContextRequest request) {
+        return build(request, true);
+    }
+
+    GitLabFrontendScreenGraphContext buildReachabilitySeed(GitLabFrontendScreenGraphContextRequest request) {
+        return build(request, false);
+    }
+
+    private GitLabFrontendScreenGraphContext build(
+            GitLabFrontendScreenGraphContextRequest request,
+            boolean includeTransitiveContext
+    ) {
         var graph = graphDiscoveryService.discover(request.scope(), request.limits());
         var screenNode = graph.nodes().stream()
                 .filter(node -> node.screen() != null)
@@ -56,26 +67,37 @@ public class GitLabFrontendScreenGraphContextService {
         if (!StringUtils.hasText(viewPath)) {
             throw failure("FRONTEND_SCREEN_SOURCE_UNRESOLVED", "Selected screen component source is unavailable.");
         }
-        var subtreeNodes = selectedSubtreeNodes(graph.nodes(), screenNode.nodeId());
-        var descendantNodes = subtreeNodes.stream()
-                .filter(node -> !node.nodeId().equals(screenNode.nodeId()))
-                .toList();
-        var viewRoots = new ArrayList<DependencyTask>();
-        viewRoots.add(new DependencyTask(viewPath, 0, GitLabFrontendSourceRole.VIEW_COMPONENT));
-        descendantNodes.stream()
-                .filter(node -> node.viewTarget() != null)
-                .map(node -> node.viewTarget().sourcePath())
-                .filter(StringUtils::hasText)
-                .distinct()
-                .map(path -> new DependencyTask(path, 0, GitLabFrontendSourceRole.CHILD_COMPONENT))
-                .forEach(viewRoots::add);
+        if (includeTransitiveContext) {
+            var subtreeNodes = selectedSubtreeNodes(graph.nodes(), screenNode.nodeId());
+            var descendantNodes = subtreeNodes.stream()
+                    .filter(node -> !node.nodeId().equals(screenNode.nodeId()))
+                    .toList();
+            var viewRoots = new ArrayList<DependencyTask>();
+            viewRoots.add(new DependencyTask(viewPath, 0, GitLabFrontendSourceRole.VIEW_COMPONENT));
+            descendantNodes.stream()
+                    .filter(node -> node.viewTarget() != null)
+                    .map(node -> node.viewTarget().sourcePath())
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .map(path -> new DependencyTask(path, 0, GitLabFrontendSourceRole.CHILD_COMPONENT))
+                    .forEach(viewRoots::add);
 
-        // Read every routed view root before following general imports. This keeps
-        // business-facing child views ahead of shared infrastructure when the
-        // bounded context reaches a file or character limit.
-        traverseDependencies(viewRoots, session, imports, files, request.limits());
-        traverseRouteConfiguration(chain, session, imports, files, request.limits());
-        traverseRouteConfiguration(descendantNodes, session, imports, files, request.limits());
+            // Read every routed view root before following general imports. This keeps
+            // business-facing child views ahead of shared infrastructure when the
+            // bounded context reaches a file or character limit.
+            traverseDependencies(viewRoots, session, imports, files, request.limits());
+            traverseRouteConfiguration(chain, session, imports, files, request.limits());
+            traverseRouteConfiguration(descendantNodes, session, imports, files, request.limits());
+        } else {
+            var source = addFile(viewPath, GitLabFrontendSourceRole.VIEW_COMPONENT, session, files);
+            if (source != null) {
+                var resources = new ArrayList<DependencyTask>();
+                collectResources(TEMPLATE_URL, viewPath, source, GitLabFrontendSourceRole.TEMPLATE, 0, resources);
+                for (var resource : resources) {
+                    addFile(resource.path(), resource.rootRole(), session, files);
+                }
+            }
+        }
 
         var signals = signals(files, chain);
         var coverage = coverage(files, signals, session.limitReached());

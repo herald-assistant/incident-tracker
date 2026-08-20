@@ -15,6 +15,7 @@ final class GitLabFrontendTargetedSourceSession {
     private final GitLabRepositoryPort repositoryPort;
     private final GitLabFrontendRepositoryScope scope;
     private final GitLabFrontendGraphLimits limits;
+    private final boolean enforceTraversalBudget;
     private final Map<String, String> sourceCache = new LinkedHashMap<>();
     private final Set<String> missingSources = new LinkedHashSet<>();
     private final Set<String> routeFiles = new LinkedHashSet<>();
@@ -32,9 +33,19 @@ final class GitLabFrontendTargetedSourceSession {
             GitLabFrontendRepositoryScope scope,
             GitLabFrontendGraphLimits limits
     ) {
+        this(repositoryPort, scope, limits, true);
+    }
+
+    GitLabFrontendTargetedSourceSession(
+            GitLabRepositoryPort repositoryPort,
+            GitLabFrontendRepositoryScope scope,
+            GitLabFrontendGraphLimits limits,
+            boolean enforceTraversalBudget
+    ) {
         this.repositoryPort = repositoryPort;
         this.scope = scope;
         this.limits = limits;
+        this.enforceTraversalBudget = enforceTraversalBudget;
     }
 
     String readOptional(String rawPath) {
@@ -51,11 +62,11 @@ final class GitLabFrontendTargetedSourceSession {
         if (sourceCache.containsKey(path)) {
             return sourceCache.get(path);
         }
-        if (missingSources.contains(path) || totalCharacterBudgetExhausted
-                || limitReached && sourceReadCount >= limits.maxSourceReads()) {
+        if (missingSources.contains(path) || enforceTraversalBudget && (totalCharacterBudgetExhausted
+                || limitReached && sourceReadCount >= limits.maxSourceReads())) {
             return null;
         }
-        if (sourceReadCount >= limits.maxSourceReads()) {
+        if (enforceTraversalBudget && sourceReadCount >= limits.maxSourceReads()) {
             limitReached = true;
             diagnostic(
                     GitLabFrontendDiagnosticSeverity.WARNING,
@@ -89,7 +100,7 @@ final class GitLabFrontendTargetedSourceSession {
                 );
                 return null;
             }
-            if (totalCharacters + file.content().length() > limits.maxTotalCharacters()) {
+            if (enforceTraversalBudget && totalCharacters + file.content().length() > limits.maxTotalCharacters()) {
                 limitReached = true;
                 totalCharacterBudgetExhausted = true;
                 missingSources.add(path);
@@ -166,7 +177,7 @@ final class GitLabFrontendTargetedSourceSession {
     }
 
     boolean nextAliasResolution(String sourcePath) {
-        if (aliasResolutionCount >= limits.maxAliasResolutions()) {
+        if (enforceTraversalBudget && aliasResolutionCount >= limits.maxAliasResolutions()) {
             limitReached = true;
             diagnostic(
                     GitLabFrontendDiagnosticSeverity.WARNING,
@@ -270,6 +281,9 @@ final class GitLabFrontendTargetedSourceSession {
     private boolean inScope(String path) {
         if (!StringUtils.hasText(path) || path.contains("..") || path.contains("//")) {
             return false;
+        }
+        if (path.matches("(?:^|.*/)tsconfig(?:\\.[A-Za-z0-9_-]+)?\\.json$")) {
+            return true;
         }
         return scope.pathPrefixes().isEmpty()
                 || scope.pathPrefixes().stream()

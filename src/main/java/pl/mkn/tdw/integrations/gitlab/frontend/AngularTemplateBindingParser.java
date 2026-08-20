@@ -23,6 +23,9 @@ final class AngularTemplateBindingParser {
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
     private static final Pattern LOCAL = Pattern.compile("\\b(?:let|as)\\s+([A-Za-z_$][A-Za-z0-9_$]*)");
     private static final Pattern TEMPLATE_REFERENCE = Pattern.compile("#([A-Za-z_$][A-Za-z0-9_$]*)");
+    private static final Pattern TEMPLATE_LET_ATTRIBUTE = Pattern.compile(
+            "\\blet-([A-Za-z_$][A-Za-z0-9_$]*)"
+    );
     private static final Pattern FOR_LOCAL = Pattern.compile(
             "@for\\s*\\(\\s*([A-Za-z_$][A-Za-z0-9_$]*)\\s+of\\b"
     );
@@ -136,6 +139,7 @@ final class AngularTemplateBindingParser {
         var result = new LinkedHashSet<String>();
         collect(LOCAL, template, result);
         collect(TEMPLATE_REFERENCE, template, result);
+        collect(TEMPLATE_LET_ATTRIBUTE, template, result);
         collect(FOR_LOCAL, template, result);
         return result;
     }
@@ -155,12 +159,23 @@ final class AngularTemplateBindingParser {
             var previous = previousNonWhitespace(masked, matcher.start() - 1);
             var next = nextNonWhitespace(masked, matcher.end());
             if (previous == '.' || next == ':' || RESERVED.contains(normalized)
-                    || locals.contains(symbol)) {
+                    || locals.contains(symbol) || isPipeName(masked, matcher.start())) {
                 continue;
             }
             result.add(symbol);
         }
         return List.copyOf(result);
+    }
+
+    private boolean isPipeName(String expression, int symbolStart) {
+        for (var cursor = symbolStart - 1; cursor >= 0; cursor--) {
+            var current = expression.charAt(cursor);
+            if (Character.isWhitespace(current)) {
+                continue;
+            }
+            return current == '|' && (cursor == 0 || expression.charAt(cursor - 1) != '|');
+        }
+        return false;
     }
 
     private String maskStrings(String value) {

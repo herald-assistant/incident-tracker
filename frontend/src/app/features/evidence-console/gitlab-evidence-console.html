@@ -1126,10 +1126,10 @@
                   </div>
                   <div class="endpoint-results__stats">
                     <span class="panel-chip">{{ graph.componentLevels.length }} BFS levels</span>
-                    <span class="panel-chip">{{ graph.dependencies.length }} dependencies</span>
+                    <span class="panel-chip">{{ gitLabFrontendRelevantDependencies().length }} relevant dependencies</span>
                     <span class="panel-chip">{{ graph.sliceCharacters }} slice chars</span>
                     <span class="panel-chip">{{ graph.outlineCharacters }} outline chars</span>
-                    @if (graph.contextLimitReached) { <span class="panel-chip panel-chip--warning">bounded source context</span> }
+                    @if (graph.contextLimitReached) { <span class="panel-chip panel-chip--warning">reachability boundary</span> }
                   </div>
                 </div>
 
@@ -1165,11 +1165,11 @@
                   </details>
                 }
 
-                @if (graph.dependencies.length > 0) {
+                @if (gitLabFrontendRelevantDependencies().length > 0) {
                   <details class="context-subsection context-subsection--collapsible" open>
-                    <summary><span>Canonical dependencies</span><span class="panel-chip">{{ graph.dependencies.length }}</span></summary>
+                    <summary><span>Functional and supporting dependencies</span><span class="panel-chip">{{ gitLabFrontendRelevantDependencies().length }}</span></summary>
                     <div class="endpoint-list">
-                      @for (dependency of graph.dependencies; track dependency.dependencyId) {
+                      @for (dependency of gitLabFrontendRelevantDependencies(); track dependency.dependencyId) {
                         <details class="endpoint-card">
                           <summary class="endpoint-card__summary">
                             <div class="endpoint-card__main">
@@ -1178,6 +1178,7 @@
                                 <h4>{{ dependency.symbol || dependency.moduleSpecifier || dependency.dependencyId }}</h4>
                                 <p>{{ dependency.methods.join(', ') || 'referenced without resolved member' }} · used by {{ dependency.usedBy.length }} node(s)</p>
                               </div>
+                              <span class="panel-chip">{{ dependency.category }}</span>
                               @if (dependency.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
                               <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
                             </div>
@@ -1192,12 +1193,12 @@
                   </details>
                 }
 
-                @if (graph.unlinkedComponents.length > 0) {
+                @if (gitLabFrontendTechnicalDependencies().length > 0) {
                   <details class="context-subsection context-subsection--collapsible">
-                    <summary><span>Delivered but unlinked components</span><span class="panel-chip panel-chip--warning">{{ graph.unlinkedComponents.length }}</span></summary>
+                    <summary><span>Framework, reactive and data references</span><span class="panel-chip">{{ gitLabFrontendTechnicalDependencies().length }}</span></summary>
                     <ul class="context-list">
-                      @for (component of graph.unlinkedComponents; track component.componentId) {
-                        <li>{{ component.symbol || component.selector }} · {{ component.sourcePath || 'source unresolved' }}</li>
+                      @for (dependency of gitLabFrontendTechnicalDependencies(); track dependency.dependencyId) {
+                        <li>{{ dependency.category }} · {{ dependency.symbol || dependency.moduleSpecifier }} · {{ dependency.moduleSpecifier || dependency.sourcePath || 'built-in' }}</li>
                       }
                     </ul>
                   </details>

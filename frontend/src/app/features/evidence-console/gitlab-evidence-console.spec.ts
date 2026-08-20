@@ -232,7 +232,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('Screen reachability graph');
     expect(compiled.textContent).toContain('Human-readable BFS outline');
     expect(compiled.textContent).toContain('Component depth 0');
-    expect(compiled.textContent).toContain('Canonical dependencies');
+    expect(compiled.textContent).toContain('Functional and supporting dependencies');
     expect(compiled.textContent).toContain('CrmCustomerFacade');
   });
 
@@ -1229,12 +1229,12 @@ function buildFrontendScreenReachabilityResponse(): GitLabFrontendScreenReachabi
         ]
       }
     ],
-    unlinkedComponents: [],
     dependencies: [
       {
         dependencyId: 'dependency:CrmCustomerFacade',
         discoveryOrder: 0,
         kind: 'FACADE',
+        category: 'FUNCTIONAL',
         symbol: 'CrmCustomerFacade',
         sourcePath: 'apps/crm-agent/src/app/customer/customer.facade.ts',
         moduleSpecifier: './customer.facade',
@@ -1270,7 +1270,7 @@ function buildFrontendScreenReachabilityResponse(): GitLabFrontendScreenReachabi
       '/crm/customers/:customerId',
       '### Depth 0',
       'CrmCustomerProfileComponent',
-      '## Canonical dependencies',
+      '## Functional and supporting dependencies',
       'CrmCustomerFacade.saveCustomer'
     ].join('\n')
   };

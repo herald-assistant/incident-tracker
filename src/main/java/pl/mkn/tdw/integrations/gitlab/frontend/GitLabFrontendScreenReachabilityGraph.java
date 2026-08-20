@@ -10,7 +10,6 @@ public record GitLabFrontendScreenReachabilityGraph(
         GitLabFrontendRouteNode screenNode,
         GitLabFrontendEffectiveRouteChain effectiveRouteChain,
         List<GitLabFrontendReachabilityComponentLevel> componentLevels,
-        List<GitLabFrontendReachabilityComponent> unlinkedComponents,
         List<GitLabFrontendReachabilityDependency> dependencies,
         List<GitLabFrontendReachabilityEdge> edges,
         List<GitLabFrontendTechnicalSignal> technicalSignals,
@@ -29,7 +28,6 @@ public record GitLabFrontendScreenReachabilityGraph(
         screenNode = Objects.requireNonNull(screenNode, "screenNode must not be null");
         effectiveRouteChain = Objects.requireNonNull(effectiveRouteChain, "effectiveRouteChain must not be null");
         componentLevels = componentLevels != null ? List.copyOf(componentLevels) : List.of();
-        unlinkedComponents = unlinkedComponents != null ? List.copyOf(unlinkedComponents) : List.of();
         dependencies = dependencies != null ? List.copyOf(dependencies) : List.of();
         edges = edges != null ? List.copyOf(edges) : List.of();
         technicalSignals = technicalSignals != null ? List.copyOf(technicalSignals) : List.of();

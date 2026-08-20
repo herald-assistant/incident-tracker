@@ -20,6 +20,7 @@ import {
   GitLabFrontendRouteNode,
   GitLabFrontendScreenContextPayload,
   GitLabFrontendScreenContextResponse,
+  GitLabFrontendReachabilityDependency,
   GitLabFrontendScreenReachabilityPayload,
   GitLabFrontendScreenReachabilityResponse,
   GitLabTypeScriptSymbolKind,
@@ -692,6 +693,18 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabFrontendScreenReachabilityResult = computed(() =>
     this.asGitLabFrontendScreenReachabilityResult(
       this.gitLabFrontendScreenReachabilityState().response
+    )
+  );
+
+  readonly gitLabFrontendRelevantDependencies = computed<GitLabFrontendReachabilityDependency[]>(() =>
+    (this.gitLabFrontendScreenReachabilityResult()?.dependencies ?? []).filter(
+      dependency => dependency.category === 'FUNCTIONAL' || dependency.category === 'SUPPORTING_CODE'
+    )
+  );
+
+  readonly gitLabFrontendTechnicalDependencies = computed<GitLabFrontendReachabilityDependency[]>(() =>
+    (this.gitLabFrontendScreenReachabilityResult()?.dependencies ?? []).filter(
+      dependency => dependency.category !== 'FUNCTIONAL' && dependency.category !== 'SUPPORTING_CODE'
     )
   );
 
