@@ -256,7 +256,10 @@ class GitLabFrontendScreenGraphContextServiceTest {
                 export class CrmPreferencesService {
                   private readonly http = inject(HttpClient);
                   private readonly customerApi = inject(CrmCustomerApiClient);
-                  load() { return this.http.get('/api/synthetic-crm/preferences'); }
+                  load() {
+                    this.customerApi.loadPreferences();
+                    return this.http.get('/api/synthetic-crm/preferences');
+                  }
                 }
                 """);
         files.put("apps/crm-agent/src/app/preferences/state/crm-preferences.selectors.ts", """
@@ -278,6 +281,8 @@ class GitLabFrontendScreenGraphContextServiceTest {
                 <button (click)="openDifference()">Compare preference versions</button>
                 """);
         files.put("apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts", """
+                import { CrmAuditControllerService } from '@synthetic-crm/data-access-swagger/src/lib/api/services/crm-audit-controller.service';
+                type CrmAuditRequest = CrmAuditControllerService.PublishAuditUsingPOSTParams;
                 @Component({ template: '<p>Preference difference</p>' })
                 export class CrmPreferenceDiffModalComponent {}
                 export class CrmClientOnlyShellComponent {}

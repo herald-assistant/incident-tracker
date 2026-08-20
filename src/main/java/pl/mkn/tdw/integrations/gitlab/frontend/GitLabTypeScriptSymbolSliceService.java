@@ -23,7 +23,6 @@ public class GitLabTypeScriptSymbolSliceService {
     public static final int MAX_OUTPUT_CHARACTERS = 40_000;
 
     private static final int MAX_SOURCE_CHARACTERS = 200_000;
-    private static final int MAX_INCLUDED_HELPERS = 12;
     private static final int MAX_CANDIDATES = 60;
     private static final Pattern IMPORT = Pattern.compile(
             "(?ms)^\\s*import\\s+(?!\\()(?:(?:type\\s+)?(.+?)\\s+from\\s+)?['\"]([^'\"]+)['\"]\\s*;?"
@@ -35,13 +34,29 @@ public class GitLabTypeScriptSymbolSliceService {
     private static final Pattern THIS_MEMBER_CALL = Pattern.compile(
             "\\bthis\\.([A-Za-z_$][A-Za-z0-9_$]*)\\.([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\("
     );
+    private static final Pattern THIS_MEMBER_ACCESS = Pattern.compile(
+            "\\bthis\\.([A-Za-z_$][A-Za-z0-9_$]*)\\.([A-Za-z_$][A-Za-z0-9_$]*)\\b(?!\\s*\\()"
+    );
+    private static final Pattern QUALIFIED_CALL = Pattern.compile(
+            "(?<![.\\w])([A-Za-z_$][A-Za-z0-9_$]*)\\.([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\("
+    );
+    private static final Pattern DIRECT_CALL = Pattern.compile(
+            "(?<![.\\w])([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\("
+    );
+    private static final Pattern TEMPLATE_URL = Pattern.compile("templateUrl\\s*:\\s*['\"]([^'\"]+)['\"]");
+    private static final Pattern INLINE_TEMPLATE_START = Pattern.compile("template\\s*:\\s*([`'\"])");
+    private static final Set<String> ANGULAR_LIFECYCLE = Set.of(
+            "ngOnChanges", "ngOnInit", "ngDoCheck", "ngAfterContentInit", "ngAfterContentChecked",
+            "ngAfterViewInit", "ngAfterViewChecked", "ngOnDestroy"
+    );
 
     private final GitLabRepositoryPort repositoryPort;
 
     public GitLabTypeScriptSymbolSliceResponse readSymbolSlice(GitLabTypeScriptSymbolSliceRequest request) {
         var limitations = new LinkedHashSet<String>();
-        if (request.symbolSelectors().isEmpty()) {
-            limitations.add("At least one TypeScript symbol selector is required.");
+        var templateRequested = Boolean.TRUE.equals(request.includeTemplateBindings());
+        if (request.symbolSelectors().isEmpty() && !templateRequested) {
+            limitations.add("At least one TypeScript symbol selector or template-driven discovery is required.");
             return empty(request, "INVALID_REQUEST", 0, 0, List.copyOf(limitations));
         }
         if (!inScope(request.scope(), request.filePath())) {
@@ -71,29 +86,32 @@ public class GitLabTypeScriptSymbolSliceService {
         }
 
         var parsed = parse(source, limitations);
+        var template = templateContext(request, source, limitations);
         var candidates = parsed.members().stream()
                 .map(member -> candidate(source, member))
                 .sorted(Comparator.comparingInt(GitLabTypeScriptSymbolCandidate::lineStart))
                 .toList();
-        var selected = select(request, source, parsed.members(), limitations);
+        var selected = new LinkedHashSet<>(select(request, source, parsed.members(), limitations));
+        selected.addAll(templateEntrySymbols(request, parsed, template, limitations));
         if (selected.isEmpty()) {
             limitations.add("No TypeScript symbol matched requested selectors.");
             return response(request, "NOT_FOUND", source, null, List.of(), List.of(), List.of(),
-                    List.of(), candidates.stream().limit(MAX_CANDIDATES).toList(), 0, 0, 0, false,
-                    "", List.copyOf(limitations));
+                    List.of(), List.of(), candidates.stream().limit(MAX_CANDIDATES).toList(), 0, 0, 0, false,
+                    "", template, List.copyOf(limitations));
         }
 
-        var declaringTypes = selected.stream().map(Member::declaringType).collect(
+        var entrySymbols = selected.stream().sorted(Comparator.comparingInt(Member::start)).toList();
+        var declaringTypes = entrySymbols.stream().map(Member::declaringType).collect(
                 java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         if (declaringTypes.size() > 1) {
             limitations.add("Selected symbols belong to more than one declaring type. Narrow declaringTypeName.");
             return response(request, "MULTIPLE_DECLARING_TYPES", source, null, List.of(), List.of(), List.of(),
-                    List.of(), candidates.stream().limit(MAX_CANDIDATES).toList(), 0, 0, 0, false,
-                    "", List.copyOf(limitations));
+                    List.of(), List.of(), candidates.stream().limit(MAX_CANDIDATES).toList(), 0, 0, 0, false,
+                    "", template, List.copyOf(limitations));
         }
 
         var declaringType = declaringTypes.iterator().next();
-        var includedSymbols = includeHelpers(source, parsed.members(), selected,
+        var includedSymbols = includeHelpers(source, parsed.members(), entrySymbols,
                 Boolean.TRUE.equals(request.includeLocalHelpers()));
         var fields = parsed.members().stream()
                 .filter(member -> java.util.Objects.equals(declaringType, member.declaringType()))
@@ -115,10 +133,11 @@ public class GitLabTypeScriptSymbolSliceService {
         var includedImports = Boolean.TRUE.equals(request.includeRelevantImports())
                 ? imports.stream().filter(candidate -> candidate.identifiers().stream().anyMatch(usedIdentifiers::contains)).toList()
                 : List.<ImportStatement>of();
-        var downstream = downstreamReferences(request, source, includedSymbols, includedFields, imports);
+        var downstream = downstreamReferences(source, retainedMembers, imports);
         var classInfo = parsed.classes().stream().filter(candidate -> candidate.name().equals(declaringType)).findFirst().orElse(null);
         var retainedFieldMembers = new LinkedHashSet<>(includedFields);
         includedSymbols.stream().filter(member -> member.kind() == MemberKind.FIELD).forEach(retainedFieldMembers::add);
+        var responseFields = retainedFieldMembers.stream().sorted(Comparator.comparingInt(Member::start)).toList();
         var omittedFields = Math.max(0, fields.size() - retainedFieldMembers.size());
         var symbolPool = parsed.members().stream()
                 .filter(member -> java.util.Objects.equals(declaringType, member.declaringType()))
@@ -136,10 +155,13 @@ public class GitLabTypeScriptSymbolSliceService {
                     + "\n// ... TypeScript symbol slice truncated ...";
             limitations.add("TypeScript symbol slice reached maxCharacters=" + maxCharacters + ".");
         }
+        var unresolvedTemplateBindings = limitations.stream()
+                .anyMatch(limitation -> limitation.startsWith("Template references without a matching member"));
+        var partial = truncated || template.requested() && (!template.complete() || unresolvedTemplateBindings);
         return response(
-                request, truncated ? "PARTIAL" : "OK", source, declaringType, includedImports, includedFields,
-                includedSymbols, downstream, candidates.stream().limit(MAX_CANDIDATES).toList(), omittedImports,
-                omittedFields, omittedSymbols, truncated, rendered, List.copyOf(limitations)
+                request, partial ? "PARTIAL" : "OK", source, declaringType, includedImports, responseFields,
+                entrySymbols, includedSymbols, downstream, candidates.stream().limit(MAX_CANDIDATES).toList(),
+                omittedImports, omittedFields, omittedSymbols, truncated, rendered, template, List.copyOf(limitations)
         );
     }
 
@@ -163,6 +185,121 @@ public class GitLabTypeScriptSymbolSliceService {
         members.addAll(topLevelFunctions(source, mask, classes));
         members.addAll(topLevelProperties(source, mask, classes));
         return new ParsedSource(List.copyOf(imports), List.copyOf(classes), List.copyOf(members));
+    }
+
+    private TemplateContext templateContext(
+            GitLabTypeScriptSymbolSliceRequest request,
+            String source,
+            Set<String> limitations
+    ) {
+        if (!Boolean.TRUE.equals(request.includeTemplateBindings())) {
+            return TemplateContext.notRequested();
+        }
+        var inline = inlineTemplate(source);
+        if (inline != null && !StringUtils.hasText(request.templatePath())) {
+            return new TemplateContext(
+                    true, true, null, inline,
+                    new AngularTemplateBindingParser().parse(inline)
+            );
+        }
+        var path = request.templatePath();
+        if (!StringUtils.hasText(path)) {
+            var matcher = TEMPLATE_URL.matcher(source);
+            if (matcher.find()) {
+                path = relative(request.filePath(), matcher.group(1));
+            }
+        }
+        if (!StringUtils.hasText(path)) {
+            limitations.add("Template-driven discovery was requested, but no templatePath or static template was found.");
+            return new TemplateContext(true, false, null, "", List.of());
+        }
+        if (!inScope(request.scope(), path)) {
+            limitations.add("Angular template is outside the configured code-search scope.");
+            return new TemplateContext(true, false, path, "", List.of());
+        }
+        try {
+            var file = repositoryPort.readFile(
+                    request.scope().group(), request.scope().projectName(), request.scope().ref(),
+                    path, MAX_SOURCE_CHARACTERS
+            );
+            if (file == null || file.content() == null) {
+                limitations.add("Angular template could not be read.");
+                return new TemplateContext(true, false, path, "", List.of());
+            }
+            if (file.truncated()) {
+                limitations.add("Angular template exceeded the parser input limit.");
+                return new TemplateContext(true, false, path, file.content(), List.of());
+            }
+            return new TemplateContext(
+                    true, true, path, file.content(),
+                    new AngularTemplateBindingParser().parse(file.content())
+            );
+        } catch (RuntimeException exception) {
+            limitations.add("Angular template could not be read: " + safeMessage(exception));
+            return new TemplateContext(true, false, path, "", List.of());
+        }
+    }
+
+    private List<Member> templateEntrySymbols(
+            GitLabTypeScriptSymbolSliceRequest request,
+            ParsedSource parsed,
+            TemplateContext template,
+            Set<String> limitations
+    ) {
+        if (!template.requested() || !template.complete()) {
+            return List.of();
+        }
+        var declaringType = request.declaringTypeName();
+        if (!StringUtils.hasText(declaringType)) {
+            if (parsed.classes().size() == 1) {
+                declaringType = parsed.classes().get(0).name();
+            } else {
+                limitations.add("Template bindings require declaringTypeName when a source contains multiple classes.");
+                return List.of();
+            }
+        }
+        var referenced = template.bindings().stream()
+                .flatMap(binding -> binding.referencedSymbols().stream())
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        var selectedType = declaringType;
+        var result = parsed.members().stream()
+                .filter(member -> selectedType.equals(member.declaringType()))
+                .filter(member -> referenced.contains(member.name())
+                        || member.kind() != MemberKind.FIELD && ANGULAR_LIFECYCLE.contains(member.name()))
+                .sorted(Comparator.comparingInt(Member::start))
+                .toList();
+        var matched = result.stream().map(Member::name).collect(java.util.stream.Collectors.toSet());
+        var unmatched = referenced.stream().filter(symbol -> !matched.contains(symbol)).sorted().toList();
+        if (!unmatched.isEmpty()) {
+            limitations.add("Template references without a matching member in " + declaringType + ": "
+                    + String.join(", ", unmatched) + ".");
+        }
+        return result;
+    }
+
+    private String inlineTemplate(String source) {
+        var matcher = INLINE_TEMPLATE_START.matcher(source);
+        if (!matcher.find()) {
+            return null;
+        }
+        var quote = matcher.group(1).charAt(0);
+        var start = matcher.end();
+        for (var index = start; index < source.length(); index++) {
+            if (source.charAt(index) == quote && source.charAt(index - 1) != '\\') {
+                return source.substring(start, index);
+            }
+        }
+        return null;
+    }
+
+    private String relative(String sourcePath, String target) {
+        if (!target.startsWith(".")) {
+            return GitLabFrontendTargetedSourceSession.normalize(target);
+        }
+        var normalized = GitLabFrontendTargetedSourceSession.normalize(sourcePath);
+        var separator = normalized.lastIndexOf('/');
+        var parent = separator >= 0 ? normalized.substring(0, separator) : "";
+        return GitLabFrontendTargetedSourceSession.normalize(parent + "/" + target);
     }
 
     private List<Member> classMembers(String source, String mask, ClassInfo owner) {
@@ -217,7 +354,7 @@ public class GitLabTypeScriptSymbolSliceService {
     }
 
     private ClassifiedMember classifyMember(String header) {
-        var normalized = header.replaceAll("(?m)^\\s*@[^\\n]+", "").strip();
+        var normalized = stripMemberDecorators(header);
         if (normalized.matches("(?s).*\\bconstructor\\s*\\(.*")) {
             return new ClassifiedMember("constructor", MemberKind.CONSTRUCTOR);
         }
@@ -236,11 +373,31 @@ public class GitLabTypeScriptSymbolSliceService {
         if (lastMethod != null && (assignment < 0 || lastMethodStart < assignment)) {
             return new ClassifiedMember(lastMethod, MemberKind.METHOD);
         }
-        var field = Pattern.compile("([A-Za-z_$][A-Za-z0-9_$]*)\\s*(?:[?!])?\\s*(?::[^=]+)?(?:=|$)")
-                .matcher(normalized);
-        String fieldName = null;
-        while (field.find()) fieldName = field.group(1);
-        return fieldName != null ? new ClassifiedMember(fieldName, MemberKind.FIELD) : null;
+        var field = Pattern.compile(
+                "(?s)^(?:(?:public|private|protected|readonly|static|declare|abstract|override)\\s+)*"
+                        + "([A-Za-z_$][A-Za-z0-9_$]*)\\s*[?!]?\\s*(?::.*?\\s*)?(?:=|$)"
+        ).matcher(normalized);
+        return field.find() ? new ClassifiedMember(field.group(1), MemberKind.FIELD) : null;
+    }
+
+    private String stripMemberDecorators(String header) {
+        var normalized = header.strip();
+        while (normalized.startsWith("@")) {
+            var cursor = 1;
+            while (cursor < normalized.length()) {
+                var current = normalized.charAt(cursor);
+                if (!Character.isJavaIdentifierPart(current) && current != '.' && current != '$') break;
+                cursor++;
+            }
+            while (cursor < normalized.length() && Character.isWhitespace(normalized.charAt(cursor))) cursor++;
+            if (cursor < normalized.length() && normalized.charAt(cursor) == '(') {
+                var close = matching(normalized, cursor, '(', ')');
+                if (close < 0) return normalized;
+                cursor = close + 1;
+            }
+            normalized = normalized.substring(Math.min(cursor, normalized.length())).strip();
+        }
+        return normalized;
     }
 
     private List<Member> topLevelFunctions(String source, String mask, List<ClassInfo> classes) {
@@ -320,71 +477,160 @@ public class GitLabTypeScriptSymbolSliceService {
         var included = new LinkedHashSet<>(selected);
         if (!enabled) return List.copyOf(included);
         var cursor = 0;
-        while (cursor < included.size() && included.size() < selected.size() + MAX_INCLUDED_HELPERS) {
+        while (cursor < included.size()) {
             var current = new ArrayList<>(included).get(cursor++);
             var content = source.substring(current.start(), current.end());
-            var calls = new LinkedHashSet<String>();
-            var matcher = Pattern.compile("(?<![.\\w])(?:this\\.)?([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\(").matcher(content);
-            while (matcher.find()) calls.add(matcher.group(1));
+            var references = new LinkedHashSet<String>();
+            var calls = Pattern.compile("(?<![.\\w])(?:this\\.)?([A-Za-z_$][A-Za-z0-9_$]*)\\s*\\(")
+                    .matcher(content);
+            while (calls.find()) references.add(calls.group(1));
+            var members = Pattern.compile("\\bthis\\.([A-Za-z_$][A-Za-z0-9_$]*)\\b").matcher(content);
+            while (members.find()) references.add(members.group(1));
             all.stream()
-                    .filter(candidate -> java.util.Objects.equals(current.declaringType(), candidate.declaringType()))
+                    .filter(candidate -> java.util.Objects.equals(current.declaringType(), candidate.declaringType())
+                            || candidate.declaringType() == null && candidate.kind() == MemberKind.FUNCTION)
                     .filter(candidate -> candidate.kind() != MemberKind.FIELD && candidate.kind() != MemberKind.CONSTRUCTOR)
-                    .filter(candidate -> calls.contains(candidate.name()))
+                    .filter(candidate -> references.contains(candidate.name()))
                     .forEach(included::add);
         }
         return included.stream().sorted(Comparator.comparingInt(Member::start)).toList();
     }
 
     private List<Member> relevantFields(String source, List<Member> fields, List<Member> symbols) {
-        var semantic = symbols.stream().map(member -> source.substring(member.start(), member.end()))
-                .collect(java.util.stream.Collectors.joining("\n"));
-        var identifiers = identifiers(semantic);
-        var directFields = fields.stream()
-                .filter(member -> member.kind() == MemberKind.FIELD && identifiers.contains(member.name()))
-                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+        var required = symbols.stream()
+                .map(member -> source.substring(member.start(), member.end()))
+                .map(this::identifiers)
+                .flatMap(Set::stream)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        var directFields = new LinkedHashSet<Member>();
+        var changed = true;
+        while (changed) {
+            changed = false;
+            for (var field : fields) {
+                if (field.kind() == MemberKind.FIELD && required.contains(field.name()) && directFields.add(field)) {
+                    required.addAll(identifiers(source.substring(field.start(), field.end())));
+                    changed = true;
+                }
+            }
+        }
         var constructor = fields.stream().filter(member -> member.kind() == MemberKind.CONSTRUCTOR).findFirst().orElse(null);
         if (constructor != null) {
             var constructorSource = source.substring(constructor.start(), constructor.end());
             var parameterProperty = Pattern.compile("(?:private|protected|public)\\s+(?:readonly\\s+)?([A-Za-z_$][A-Za-z0-9_$]*)")
                     .matcher(constructorSource);
             while (parameterProperty.find()) {
-                if (identifiers.contains(parameterProperty.group(1))) {
+                if (required.contains(parameterProperty.group(1))) {
                     directFields.add(constructor);
                     break;
                 }
             }
         }
-        return directFields.stream().distinct().sorted(Comparator.comparingInt(Member::start)).toList();
+        return directFields.stream().sorted(Comparator.comparingInt(Member::start)).toList();
     }
 
     private List<GitLabTypeScriptDownstreamReference> downstreamReferences(
-            GitLabTypeScriptSymbolSliceRequest request,
             String source,
-            List<Member> symbols,
-            List<Member> fields,
+            List<Member> retainedMembers,
             List<ImportStatement> imports
     ) {
-        var fieldTypes = fieldTypes(source, fields);
+        var fieldTypes = fieldTypes(source, retainedMembers);
         var importByIdentifier = new LinkedHashMap<String, ImportStatement>();
         imports.forEach(candidate -> candidate.identifiers().forEach(identifier -> importByIdentifier.put(identifier, candidate)));
         var result = new LinkedHashMap<String, GitLabTypeScriptDownstreamReference>();
-        for (var symbol : symbols) {
+        for (var symbol : retainedMembers) {
             var content = source.substring(symbol.start(), symbol.end());
-            var matcher = THIS_MEMBER_CALL.matcher(content);
-            while (matcher.find()) {
-                var owner = matcher.group(1);
-                var member = matcher.group(2);
-                var target = fieldTypes.get(owner);
-                var imported = target != null ? importByIdentifier.get(target) : null;
+            var memberCalls = THIS_MEMBER_CALL.matcher(content);
+            while (memberCalls.find()) addMemberReference(
+                    result, symbol, memberCalls.group(1), memberCalls.group(2), true,
+                    fieldTypes, importByIdentifier
+            );
+            var memberAccesses = THIS_MEMBER_ACCESS.matcher(content);
+            while (memberAccesses.find()) addMemberReference(
+                    result, symbol, memberAccesses.group(1), memberAccesses.group(2), false,
+                    fieldTypes, importByIdentifier
+            );
+            var qualifiedCalls = QUALIFIED_CALL.matcher(content);
+            while (qualifiedCalls.find()) {
+                var owner = qualifiedCalls.group(1);
+                var imported = importByIdentifier.get(owner);
+                if (imported == null) continue;
+                var member = qualifiedCalls.group(2);
+                var kind = classifyReference(owner, imported.moduleSpecifier(), member, true, true);
                 var reference = new GitLabTypeScriptDownstreamReference(
-                        symbol.name(), owner, member, target,
-                        imported != null ? imported.moduleSpecifier() : null,
-                        null
+                        kind, symbol.name(), owner, member, owner, imported.moduleSpecifier(), null
                 );
-                result.put(symbol.name() + "|" + owner + "|" + member, reference);
+                result.put(referenceKey(reference), reference);
+            }
+            var directCalls = DIRECT_CALL.matcher(content);
+            while (directCalls.find()) {
+                var owner = directCalls.group(1);
+                var imported = importByIdentifier.get(owner);
+                if (imported == null) continue;
+                var kind = classifyReference(owner, imported.moduleSpecifier(), owner, true, false);
+                var reference = new GitLabTypeScriptDownstreamReference(
+                        kind, symbol.name(), owner, owner, owner, imported.moduleSpecifier(), null
+                );
+                result.put(referenceKey(reference), reference);
             }
         }
         return List.copyOf(result.values());
+    }
+
+    private void addMemberReference(
+            Map<String, GitLabTypeScriptDownstreamReference> result,
+            Member symbol,
+            String owner,
+            String member,
+            boolean call,
+            Map<String, String> fieldTypes,
+            Map<String, ImportStatement> importByIdentifier
+    ) {
+        var target = fieldTypes.get(owner);
+        var imported = target != null ? importByIdentifier.get(target) : null;
+        var module = imported != null ? imported.moduleSpecifier() : null;
+        var kind = classifyReference(target, module, member, call, false);
+        var reference = new GitLabTypeScriptDownstreamReference(
+                kind, symbol.name(), owner, member, target, module, null
+        );
+        result.put(referenceKey(reference), reference);
+    }
+
+    private String referenceKey(GitLabTypeScriptDownstreamReference reference) {
+        return reference.kind() + "|" + reference.sourceSymbol() + "|" + reference.ownerSymbol()
+                + "|" + reference.memberSymbol();
+    }
+
+    private GitLabTypeScriptDownstreamReferenceKind classifyReference(
+            String target,
+            String module,
+            String member,
+            boolean call,
+            boolean qualified
+    ) {
+        var type = value(target);
+        var source = value(module).toLowerCase(Locale.ROOT);
+        if (call && (source.contains("data-access-swagger") || source.contains("openapi")
+                || type.matches(".*(?:Api|ApiService|Client|ControllerService)$"))) {
+            return GitLabTypeScriptDownstreamReferenceKind.BACKEND_OPERATION;
+        }
+        if ("dispatch".equals(member) && ("Store".equals(type) || source.contains("@ngrx/store"))) {
+            return GitLabTypeScriptDownstreamReferenceKind.NGRX_DISPATCH;
+        }
+        if (("select".equals(member) || "selectSignal".equals(member))
+                && ("Store".equals(type) || source.contains("@ngrx/store"))) {
+            return GitLabTypeScriptDownstreamReferenceKind.NGRX_SELECT;
+        }
+        if (qualified && (type.endsWith("Actions") || source.contains(".actions") || source.contains("/actions"))) {
+            return GitLabTypeScriptDownstreamReferenceKind.NGRX_ACTION;
+        }
+        if (source.equals("rxjs") || source.startsWith("rxjs/") || "Observable".equals(type)
+                || "pipe".equals(member)) {
+            return GitLabTypeScriptDownstreamReferenceKind.RXJS_PIPELINE;
+        }
+        if (!call) return GitLabTypeScriptDownstreamReferenceKind.PROPERTY_ACCESS;
+        return qualified || target != null && target.equals(member)
+                ? GitLabTypeScriptDownstreamReferenceKind.IMPORTED_FUNCTION
+                : GitLabTypeScriptDownstreamReferenceKind.METHOD_CALL;
     }
 
     private Map<String, String> fieldTypes(String source, List<Member> fields) {
@@ -414,10 +660,13 @@ public class GitLabTypeScriptSymbolSliceService {
         imports.forEach(candidate -> builder.append(candidate.statement().strip()).append('\n'));
         if (omittedImports > 0) builder.append("// ... ").append(omittedImports).append(" unrelated imports omitted ...\n");
         if (owner != null) {
+            members.stream().filter(member -> member.declaringType() == null)
+                    .forEach(member -> builder.append(source, member.start(), member.end()).append('\n'));
             builder.append(source, owner.start(), owner.openBrace() + 1).append('\n');
             if (omittedFields > 0) builder.append("  // ... ").append(omittedFields).append(" unrelated fields omitted ...\n");
             if (omittedSymbols > 0) builder.append("  // ... ").append(omittedSymbols).append(" unrelated symbols omitted ...\n");
-            members.forEach(member -> builder.append(source, member.start(), member.end()).append('\n'));
+            members.stream().filter(member -> java.util.Objects.equals(owner.name(), member.declaringType()))
+                    .forEach(member -> builder.append(source, member.start(), member.end()).append('\n'));
             builder.append('}');
         } else {
             if (omittedSymbols > 0) builder.append("// ... ").append(omittedSymbols).append(" unrelated symbols omitted ...\n");
@@ -452,6 +701,7 @@ public class GitLabTypeScriptSymbolSliceService {
             String declaringType,
             List<ImportStatement> imports,
             List<Member> fields,
+            List<Member> entrySymbols,
             List<Member> symbols,
             List<GitLabTypeScriptDownstreamReference> downstream,
             List<GitLabTypeScriptSymbolCandidate> candidates,
@@ -460,6 +710,7 @@ public class GitLabTypeScriptSymbolSliceService {
             int omittedSymbols,
             boolean truncated,
             String content,
+            TemplateContext template,
             List<String> limitations
     ) {
         var retained = new ArrayList<Member>();
@@ -467,11 +718,17 @@ public class GitLabTypeScriptSymbolSliceService {
         retained.addAll(symbols);
         var lineStart = retained.stream().mapToInt(member -> lineNumber(source, member.start())).min().orElse(0);
         var lineEnd = retained.stream().mapToInt(member -> lineNumber(source, Math.max(member.start(), member.end() - 1))).max().orElse(0);
+        var includedFieldNames = new LinkedHashSet<String>();
+        fields.stream().filter(field -> field.kind() == MemberKind.FIELD).map(Member::name)
+                .forEach(includedFieldNames::add);
+        includedFieldNames.addAll(fieldTypes(source, fields).keySet());
         return new GitLabTypeScriptSymbolSliceResponse(
                 request.scope(), request.filePath(), status, declaringType, lineStart, lineEnd, lineCount(source),
-                source.length(), content, content.length(), Math.max(0, source.length() - content.length()), truncated,
+                source.length(), template.path(), template.content().length(), template.bindings(),
+                content, content.length(), Math.max(0, source.length() - content.length()), truncated,
                 imports.stream().map(ImportStatement::statement).toList(),
-                fields.stream().filter(field -> field.kind() == MemberKind.FIELD).map(Member::name).toList(),
+                List.copyOf(includedFieldNames),
+                entrySymbols.stream().map(member -> candidate(source, member)).toList(),
                 symbols.stream().map(member -> candidate(source, member)).toList(),
                 omittedImports, omittedFields, omittedSymbols, downstream, candidates, limitations
         );
@@ -486,8 +743,8 @@ public class GitLabTypeScriptSymbolSliceService {
     ) {
         return new GitLabTypeScriptSymbolSliceResponse(
                 request.scope(), request.filePath(), status, request.declaringTypeName(), 0, 0, totalLines,
-                sourceCharacters, "", 0, sourceCharacters, false, List.of(), List.of(), List.of(), 0, 0, 0,
-                List.of(), List.of(), limitations
+                sourceCharacters, request.templatePath(), 0, List.of(), "", 0, sourceCharacters, false,
+                List.of(), List.of(), List.of(), List.of(), 0, 0, 0, List.of(), List.of(), limitations
         );
     }
 
@@ -618,5 +875,22 @@ public class GitLabTypeScriptSymbolSliceService {
     }
 
     private record ParsedSource(List<ImportStatement> imports, List<ClassInfo> classes, List<Member> members) {
+    }
+
+    private record TemplateContext(
+            boolean requested,
+            boolean complete,
+            String path,
+            String content,
+            List<GitLabTypeScriptTemplateBinding> bindings
+    ) {
+        private TemplateContext {
+            content = content != null ? content : "";
+            bindings = bindings != null ? List.copyOf(bindings) : List.of();
+        }
+
+        private static TemplateContext notRequested() {
+            return new TemplateContext(false, true, null, "", List.of());
+        }
     }
 }

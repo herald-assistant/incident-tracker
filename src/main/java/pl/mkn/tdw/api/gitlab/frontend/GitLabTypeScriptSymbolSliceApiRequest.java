@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
@@ -24,7 +23,10 @@ public record GitLabTypeScriptSymbolSliceApiRequest(
         @Size(max = 700)
         @Pattern(regexp = "^(?!/)(?!.*\\.\\.)(?!.*//).+\\.tsx?$") String filePath,
         @Size(max = 300) String declaringTypeName,
-        @NotEmpty @Size(max = 30) List<@Valid GitLabTypeScriptSymbolSelectorApiRequest> symbolSelectors,
+        @Size(max = 700)
+        @Pattern(regexp = "^(?!/)(?!.*\\.\\.)(?!.*//).+\\.html?$") String templatePath,
+        Boolean includeTemplateBindings,
+        @Size(max = 30) List<@Valid GitLabTypeScriptSymbolSelectorApiRequest> symbolSelectors,
         Boolean includeLocalHelpers,
         Boolean includeRelevantFields,
         Boolean includeRelevantImports,
@@ -38,7 +40,11 @@ public record GitLabTypeScriptSymbolSliceApiRequest(
                 ),
                 filePath,
                 declaringTypeName,
-                symbolSelectors.stream().map(GitLabTypeScriptSymbolSelectorApiRequest::toIntegrationSelector).toList(),
+                templatePath,
+                includeTemplateBindings,
+                symbolSelectors != null
+                        ? symbolSelectors.stream().map(GitLabTypeScriptSymbolSelectorApiRequest::toIntegrationSelector).toList()
+                        : List.of(),
                 includeLocalHelpers,
                 includeRelevantFields,
                 includeRelevantImports,

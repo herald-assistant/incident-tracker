@@ -1976,7 +1976,7 @@ rozmiaru promptu po kazdym kroku.
   komponentu, nie klasyfikowac nazw `*Client*` jako REST bez sygnalu wywolania
   backendu oraz agregowac powtarzalne diagnostics limitow. Wszystkie regresje
   maja uzywac wylacznie silnie zanonimizowanego, syntetycznego CRM.
-- [ ] 8L.5: Rozszerzyc symbol reachability o template bindings, formularze,
+- [x] 8L.5: Rozszerzyc symbol reachability o template bindings, formularze,
   RxJS, NgRx i operacje backendowe bez keywordowego dolaczania nieosiagalnych
   metod.
 - [ ] 8L.6: Zastapic v4 snapshot minimalnym seedem route/component/template i
@@ -2030,6 +2030,29 @@ limitu oraz rozpoznaje REST po konkretnym kliencie zamiast po samym tokenie
 MCP pozostaja bez zmian. Regresje sa silnie zanonimizowanym syntetycznym CRM:
 14 celowanych testow backendu — PASS; 56 plikow i 430 testow Angulara — PASS;
 produkcyjny build Angulara — PASS; `mvn -q -Pbackend-dev clean package` — PASS.
+
+Checkpoint 8L.5 (2026-08-19): TypeScript symbol slice moze rozpoczac
+reachability bez recznego wskazywania symboli, od zewnetrznego `templateUrl`,
+jawnego `templatePath` albo inline template. Deterministyczny parser zachowuje
+referencje z eventow, property/two-way/structural bindings, interpolacji,
+Angular control flow oraz nazw kontrolek formularza. Entry roots obejmuja
+symbole faktycznie uzyte przez template i lifecycle hooks analizowanego
+komponentu. Dalej slice domyka wszystkie osiagalne lokalne i top-level helpery
+bez arbitralnego limitu ich liczby, tranzytywnie uzyte pola, inicjalizatory i
+constructor dependencies oraz tylko wymagane importy.
+
+Downstream frontier rozroznia teraz wywolania metod, odczyty properties,
+operacje backendowe, NgRx `dispatch`/`select`/actions, operatory RxJS i
+importowane funkcje. Sygnal REST w diagnostycznym screen context wymaga
+rzeczywistego wywolania metody klienta; sam import typu z wygenerowanego
+Swagger/OpenAPI nie wystarcza. Operatorskie API i GitLab Tool Workbench
+przyjmuja `templatePath`/`includeTemplateBindings` i pokazuja template
+bindings, entry symbols, retained symbols, omission counters oraz skategoryzowany
+downstream frontier. Produkcyjny prompt UI Explorera, skille i MCP pozostaja
+bez zmian do kolejnych, osobno zatwierdzanych krokow 8L.6-8L.7. Regresje sa
+silnie zanonimizowanym syntetycznym CRM: 14 celowanych testow backendu — PASS;
+56 plikow i 430 testow Angulara — PASS; produkcyjny build Angulara — PASS;
+pelny `mvn -q -Pbackend-dev clean package` — 1268 testow, 0 bledow — PASS.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 

@@ -158,6 +158,8 @@ export interface GitLabTypeScriptSymbolSelector {
 export interface GitLabTypeScriptSymbolSlicePayload extends GitLabFrontendCatalogPayload {
   filePath: string;
   declaringTypeName?: string;
+  templatePath?: string;
+  includeTemplateBindings?: boolean;
   symbolSelectors: GitLabTypeScriptSymbolSelector[];
   includeLocalHelpers?: boolean;
   includeRelevantFields?: boolean;
@@ -341,12 +343,21 @@ export interface GitLabTypeScriptSymbolCandidate {
 }
 
 export interface GitLabTypeScriptDownstreamReference {
+  kind: string;
   sourceSymbol: string;
   ownerSymbol: string;
   memberSymbol: string;
   targetSymbol?: string | null;
   moduleSpecifier?: string | null;
   targetSourcePath?: string | null;
+}
+
+export interface GitLabTypeScriptTemplateBinding {
+  kind: string;
+  target: string;
+  expression: string;
+  referencedSymbols: string[];
+  lineStart: number;
 }
 
 export interface GitLabTypeScriptSymbolSliceResponse {
@@ -358,12 +369,16 @@ export interface GitLabTypeScriptSymbolSliceResponse {
   lineEnd: number;
   totalLines: number;
   sourceCharacters: number;
+  templatePath?: string | null;
+  templateCharacters: number;
+  templateBindings: GitLabTypeScriptTemplateBinding[];
   content: string;
   returnedCharacters: number;
   savedCharacters: number;
   truncated: boolean;
   includedImports: string[];
   includedFields: string[];
+  entrySymbols: GitLabTypeScriptSymbolCandidate[];
   includedSymbols: GitLabTypeScriptSymbolCandidate[];
   omittedImportCount: number;
   omittedFieldCount: number;

@@ -143,7 +143,12 @@ class GitLabFrontendDiscoveryControllerTest {
                 new GitLabTypeScriptSymbolSliceResponse(
                         scope(), "apps/crm-agent/src/app/customer/crm-customer-editor.component.ts",
                         "OK", "CrmCustomerEditorComponent", 80, 112, 300, 18_000,
-                        "saveCustomer(): void {}", 24, 17_976, false, List.of(), List.of("customerApi"),
+                        null, 0, List.of(), "saveCustomer(): void {}", 24, 17_976, false,
+                        List.of(), List.of("customerApi"),
+                        List.of(new GitLabTypeScriptSymbolCandidate(
+                                "CrmCustomerEditorComponent", "saveCustomer", GitLabTypeScriptSymbolKind.METHOD,
+                                "saveCustomer(): void", 80, 112
+                        )),
                         List.of(new GitLabTypeScriptSymbolCandidate(
                                 "CrmCustomerEditorComponent", "saveCustomer", GitLabTypeScriptSymbolKind.METHOD,
                                 "saveCustomer(): void", 80, 112
@@ -162,7 +167,9 @@ class GitLabFrontendDiscoveryControllerTest {
                                   "pathPrefixes": ["apps/crm-agent"],
                                   "filePath": "apps/crm-agent/src/app/customer/crm-customer-editor.component.ts",
                                   "declaringTypeName": "CrmCustomerEditorComponent",
-                                  "symbolSelectors": [{"name": "saveCustomer", "kind": "METHOD", "lineStart": 80}],
+                                  "templatePath": "apps/crm-agent/src/app/customer/crm-customer-editor.component.html",
+                                  "includeTemplateBindings": true,
+                                  "symbolSelectors": [],
                                   "includeLocalHelpers": true,
                                   "includeRelevantFields": true,
                                   "includeRelevantImports": true,
@@ -176,7 +183,9 @@ class GitLabFrontendDiscoveryControllerTest {
 
         verify(typeScriptSymbolSliceService).readSymbolSlice(argThat(request ->
                 request.filePath().endsWith("crm-customer-editor.component.ts")
-                        && request.symbolSelectors().get(0).kind() == GitLabTypeScriptSymbolKind.METHOD
+                        && request.templatePath().endsWith("crm-customer-editor.component.html")
+                        && Boolean.TRUE.equals(request.includeTemplateBindings())
+                        && request.symbolSelectors().isEmpty()
                         && request.maxCharacters() == 12_000
         ));
     }

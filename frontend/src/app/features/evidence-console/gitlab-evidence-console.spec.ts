@@ -253,6 +253,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
       pathPrefixes: 'apps/crm-agent',
       filePath: 'apps/crm-agent/src/app/customer/customer-profile.ts',
       declaringTypeName: 'CrmCustomerProfileComponent',
+      templatePath: 'apps/crm-agent/src/app/customer/customer-profile.component.html',
       symbolSelectors: 'METHOD:saveCustomer@80\nPROPERTY:customerEffect',
       maxCharacters: '12000'
     });
@@ -264,6 +265,9 @@ describe('GitLabEvidenceConsoleComponent', () => {
       { name: 'saveCustomer', kind: 'METHOD', lineStart: 80 },
       { name: 'customerEffect', kind: 'PROPERTY', lineStart: undefined }
     ]);
+    expect(request.request.body.includeTemplateBindings).toBe(true);
+    expect(request.request.body.templatePath)
+      .toBe('apps/crm-agent/src/app/customer/customer-profile.component.html');
     expect(request.request.body.maxCharacters).toBe(12000);
     request.flush(buildTypeScriptSymbolSliceResponse());
     httpTesting.verify();
@@ -273,7 +277,10 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('TypeScript symbol slice');
     expect(compiled.textContent).toContain('16200 saved');
     expect(compiled.textContent).toContain('Retained symbols');
+    expect(compiled.textContent).toContain('Template bindings');
+    expect(compiled.textContent).toContain('Entry symbols');
     expect(compiled.textContent).toContain('Downstream frontier');
+    expect(compiled.textContent).toContain('BACKEND_OPERATION');
     expect(compiled.querySelector<HTMLTextAreaElement>('.source-output')?.value)
       .toContain('saveCustomer');
   });
@@ -1202,6 +1209,17 @@ function buildTypeScriptSymbolSliceResponse(): GitLabTypeScriptSymbolSliceRespon
     lineEnd: 112,
     totalLines: 320,
     sourceCharacters: 18000,
+    templatePath: 'apps/crm-agent/src/app/customer/customer-profile.component.html',
+    templateCharacters: 420,
+    templateBindings: [
+      {
+        kind: 'EVENT',
+        target: 'click',
+        expression: 'saveCustomer()',
+        referencedSymbols: ['saveCustomer'],
+        lineStart: 12
+      }
+    ],
     content: [
       "import { CrmCustomerApi } from './crm-customer.api';",
       '// ... 8 unrelated imports omitted ...',
@@ -1216,6 +1234,16 @@ function buildTypeScriptSymbolSliceResponse(): GitLabTypeScriptSymbolSliceRespon
     truncated: false,
     includedImports: ["import { CrmCustomerApi } from './crm-customer.api';"],
     includedFields: ['customerApi', 'customerForm'],
+    entrySymbols: [
+      {
+        declaringTypeName: 'CrmCustomerProfileComponent',
+        symbolName: 'saveCustomer',
+        kind: 'METHOD',
+        signature: 'saveCustomer(): void',
+        lineStart: 80,
+        lineEnd: 88
+      }
+    ],
     includedSymbols: [
       {
         declaringTypeName: 'CrmCustomerProfileComponent',
@@ -1239,6 +1267,7 @@ function buildTypeScriptSymbolSliceResponse(): GitLabTypeScriptSymbolSliceRespon
     omittedSymbolCount: 22,
     downstreamReferences: [
       {
+        kind: 'BACKEND_OPERATION',
         sourceSymbol: 'saveCustomer',
         ownerSymbol: 'customerApi',
         memberSymbol: 'updateCustomer',

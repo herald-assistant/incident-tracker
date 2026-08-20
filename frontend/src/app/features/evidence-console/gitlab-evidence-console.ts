@@ -551,7 +551,9 @@ export class GitLabEvidenceConsoleComponent {
     pathPrefixes: new FormControl('', { nonNullable: true }),
     filePath: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     declaringTypeName: new FormControl('', { nonNullable: true }),
-    symbolSelectors: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    templatePath: new FormControl('', { nonNullable: true }),
+    symbolSelectors: new FormControl('', { nonNullable: true }),
+    includeTemplateBindings: new FormControl(true, { nonNullable: true }),
     includeLocalHelpers: new FormControl(true, { nonNullable: true }),
     includeRelevantFields: new FormControl(true, { nonNullable: true }),
     includeRelevantImports: new FormControl(true, { nonNullable: true }),
@@ -1411,12 +1413,16 @@ export class GitLabEvidenceConsoleComponent {
     const symbolSelectors = this.parseTypeScriptSymbolSelectors(
       this.gitLabTypeScriptSymbolSliceForm.controls.symbolSelectors.value
     );
-    if (this.gitLabTypeScriptSymbolSliceForm.invalid || symbolSelectors.length === 0) {
+    if (
+      this.gitLabTypeScriptSymbolSliceForm.invalid ||
+      (symbolSelectors.length === 0 &&
+        !this.gitLabTypeScriptSymbolSliceForm.controls.includeTemplateBindings.value)
+    ) {
       this.gitLabTypeScriptSymbolSliceForm.markAllAsTouched();
       this.gitLabTypeScriptSymbolSliceState.set(
         this.errorStateFromPayload({
           code: 'VALIDATION_ERROR',
-          message: 'Podaj filePath oraz co najmniej jeden selector, np. METHOD:save@120.'
+          message: 'Podaj filePath oraz selectory albo włącz odkrywanie symboli z template.'
         })
       );
       return;
@@ -1431,6 +1437,11 @@ export class GitLabEvidenceConsoleComponent {
       declaringTypeName: this.optionalValue(
         this.gitLabTypeScriptSymbolSliceForm.controls.declaringTypeName.value
       ),
+      templatePath: this.optionalValue(
+        this.gitLabTypeScriptSymbolSliceForm.controls.templatePath.value
+      ),
+      includeTemplateBindings:
+        this.gitLabTypeScriptSymbolSliceForm.controls.includeTemplateBindings.value,
       symbolSelectors,
       includeLocalHelpers: this.gitLabTypeScriptSymbolSliceForm.controls.includeLocalHelpers.value,
       includeRelevantFields:
@@ -1492,10 +1503,12 @@ export class GitLabEvidenceConsoleComponent {
       pathPrefixes: this.gitLabFrontendScreenContextForm.controls.pathPrefixes.value,
       filePath: normalizedPath,
       declaringTypeName: '',
+      templatePath: '',
+      includeTemplateBindings: true,
       symbolSelectors: ''
     });
     this.gitLabTypeScriptSymbolSliceState.set(
-      this.idleState('Plik przeniesiony z screen contextu. Wskaż symbole i uruchom TypeScript slice.')
+      this.idleState('Plik przeniesiony z screen contextu. Uruchom odkrywanie z template albo wskaż symbole ręcznie.')
     );
   }
 

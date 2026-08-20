@@ -9,6 +9,8 @@ public record GitLabTypeScriptSymbolSliceRequest(
         GitLabFrontendRepositoryScope scope,
         String filePath,
         String declaringTypeName,
+        String templatePath,
+        Boolean includeTemplateBindings,
         List<GitLabTypeScriptSymbolSelector> symbolSelectors,
         Boolean includeLocalHelpers,
         Boolean includeRelevantFields,
@@ -26,6 +28,13 @@ public record GitLabTypeScriptSymbolSliceRequest(
             throw new IllegalArgumentException("filePath must point to a repository TypeScript source");
         }
         declaringTypeName = StringUtils.hasText(declaringTypeName) ? declaringTypeName.trim() : null;
+        templatePath = StringUtils.hasText(templatePath)
+                ? GitLabFrontendTargetedSourceSession.normalize(templatePath)
+                : null;
+        if (templatePath != null && ((!templatePath.endsWith(".html") && !templatePath.endsWith(".htm"))
+                || templatePath.contains("..") || templatePath.startsWith("/"))) {
+            throw new IllegalArgumentException("templatePath must point to a repository HTML source");
+        }
         symbolSelectors = symbolSelectors != null ? List.copyOf(symbolSelectors) : List.of();
     }
 }

@@ -736,6 +736,18 @@
                     [formControl]="gitLabTypeScriptSymbolSliceForm.controls.declaringTypeName"
                   />
                 </label>
+                <label class="form-field form-field--wide">
+                  <span class="field-label">Template path (optional)</span>
+                  <input
+                    class="text-input"
+                    type="text"
+                    placeholder="apps/crm-agent/src/app/customer/customer-profile.component.html"
+                    autocomplete="off"
+                    spellcheck="false"
+                    [formControl]="gitLabTypeScriptSymbolSliceForm.controls.templatePath"
+                  />
+                  <span class="field-hint">Pozostaw puste, aby odczytać statyczne templateUrl albo inline template z komponentu.</span>
+                </label>
                 <label class="form-field">
                   <span class="field-label">Max chars</span>
                   <input
@@ -755,7 +767,7 @@
                     spellcheck="false"
                     [formControl]="gitLabTypeScriptSymbolSliceForm.controls.symbolSelectors"
                   ></textarea>
-                  <span class="field-hint">Jeden selector w linii: opcjonalne KIND:name&#64;line. Bez kind używane jest AUTO.</span>
+                  <span class="field-hint">Opcjonalne przy odkrywaniu z template. Jeden selector w linii: KIND:name&#64;line; bez kind używane jest AUTO.</span>
                 </label>
                 <label class="form-field form-field--wide">
                   <span class="field-label">Path prefixes</span>
@@ -768,6 +780,10 @@
                   ></textarea>
                 </label>
               </div>
+              <label class="toggle-row">
+                <input type="checkbox" [formControl]="gitLabTypeScriptSymbolSliceForm.controls.includeTemplateBindings" />
+                <span>Discover entry symbols from Angular template and lifecycle hooks</span>
+              </label>
               <label class="toggle-row">
                 <input type="checkbox" [formControl]="gitLabTypeScriptSymbolSliceForm.controls.includeLocalHelpers" />
                 <span>Include reachable local helpers</span>
@@ -782,10 +798,9 @@
               </label>
               @if (
                 controlInvalid(gitLabTypeScriptSymbolSliceForm.controls.filePath) ||
-                controlInvalid(gitLabTypeScriptSymbolSliceForm.controls.symbolSelectors) ||
                 controlInvalid(gitLabTypeScriptSymbolSliceForm.controls.maxCharacters)
               ) {
-                <p class="form-error">File path i symbol selectors są wymagane, a max chars musi mieścić się w zakresie 1000-40000.</p>
+                <p class="form-error">File path jest wymagany, a max chars musi mieścić się w zakresie 1000-40000.</p>
               }
             }
 
@@ -1148,6 +1163,26 @@
                 @if (symbolSlice.content) {
                   <textarea class="json-output source-output" readonly spellcheck="false" [value]="symbolSlice.content"></textarea>
                 }
+                @if (symbolSlice.templateBindings.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Template bindings</span><span class="panel-chip">{{ symbolSlice.templateBindings.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (binding of symbolSlice.templateBindings; track binding.kind + ':' + binding.target + ':' + binding.lineStart + ':' + binding.expression) {
+                        <li>{{ binding.kind }} · {{ binding.target }} · line {{ binding.lineStart }} · {{ binding.expression }} · symbols: {{ binding.referencedSymbols.join(', ') || 'none' }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+                @if (symbolSlice.entrySymbols.length > 0) {
+                  <details class="context-subsection context-subsection--collapsible" open>
+                    <summary><span>Entry symbols</span><span class="panel-chip">{{ symbolSlice.entrySymbols.length }}</span></summary>
+                    <ul class="context-list">
+                      @for (symbol of symbolSlice.entrySymbols; track symbol.kind + ':' + symbol.symbolName + ':' + symbol.lineStart) {
+                        <li>{{ symbol.kind }} · {{ symbol.symbolName }} · lines {{ symbol.lineStart }}-{{ symbol.lineEnd }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
                 @if (symbolSlice.includedSymbols.length > 0) {
                   <details class="context-subsection context-subsection--collapsible" open>
                     <summary><span>Retained symbols</span><span class="panel-chip">{{ symbolSlice.includedSymbols.length }}</span></summary>
@@ -1163,7 +1198,7 @@
                     <summary><span>Downstream frontier</span><span class="panel-chip">{{ symbolSlice.downstreamReferences.length }}</span></summary>
                     <ul class="context-list">
                       @for (reference of symbolSlice.downstreamReferences; track reference.sourceSymbol + ':' + reference.ownerSymbol + ':' + reference.memberSymbol) {
-                        <li>{{ reference.sourceSymbol }} → {{ reference.ownerSymbol }}.{{ reference.memberSymbol }}() · {{ reference.targetSymbol || 'target unresolved' }} · {{ reference.moduleSpecifier || 'local/unknown module' }}</li>
+                        <li>{{ reference.kind }} · {{ reference.sourceSymbol }} → {{ reference.ownerSymbol }}.{{ reference.memberSymbol }} · {{ reference.targetSymbol || 'target unresolved' }} · {{ reference.moduleSpecifier || 'local/unknown module' }}</li>
                       }
                     </ul>
                   </details>
