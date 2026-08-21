@@ -2097,6 +2097,28 @@ PASS; `mvn -q -Pbackend-dev clean package` — 1275 testow, 0 bledow — PASS.
 Wszystkie nowe regresje i przyklady sa silnie zanonimizowanym, syntetycznym
 CRM.
 
+Utwardzenie checkpointu 8L.6a po kolejnym tescie Workbencha (2026-08-21):
+TypeScript slice zachowuje identyfikatory zakonczone `$`, rozpoznaje wszystkie
+lokalne aliasy kontekstu `@for` oraz constructor parameter properties uzywane
+przez template. Brakujacy lokalnie symbol komponentu dziedziczacego nie jest
+oznaczany jako zgubiony: staje sie jawna referencja `INHERITED_MEMBER`, a graf
+iteracyjnie pobiera i slicuje odpowiedni `INHERITED_TYPE`, rowniez przez
+kolejne klasy bazowe. Nierozwiazana klasa bazowa nadal pozostawia graf
+`PARTIAL`, zamiast pozornie kompletnego wyniku.
+
+Rozwiazywanie aliasow Nx obsluguje deep import zawierajacy `/src/`, nawet gdy
+kanoniczny target wildcarda konczy sie `/src/index.ts`; dzieki temu generowane
+serwisy Swagger/OpenAPI moga zostac powiazane z plikiem i konkretna metoda.
+Model/DTO z biblioteki Swaggera ani bezposrednio wywolana funkcja o nazwie
+konczacej sie `Client` nie sa klasyfikowane jako backend client. Generyczne
+prymitywy NgRx pozostaja techniczne, a nie funkcjonalne. `PENDING` jest wylacznie
+stanem wewnetrznym budowy i nie wychodzi w odpowiedzi operatorskiej; nieslicowany
+model otrzymuje `REFERENCE_ONLY`. Readable outline rozroznia prawdziwa statyczna
+prezentacje od komponentu bez lokalnych entry points, ktory deleguje zachowanie
+do klasy bazowej. Produkcyjny prompt, skille i MCP nadal nie zostaly zmienione.
+Silnie zanonimizowane regresje CRM oraz operatorskie API — PASS; pelny
+`mvn -q test` — 1279 testow, 0 bledow, 0 pominietych — PASS.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

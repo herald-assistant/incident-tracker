@@ -50,8 +50,8 @@ final class GitLabFrontendTargetedImportResolver {
         } else {
             var specificity = -1;
             for (var alias : aliases) {
-                var target = alias.resolve(importPath);
-                if (target == null) {
+                var targets = alias.resolve(importPath);
+                if (targets.isEmpty()) {
                     continue;
                 }
                 if (alias.specificity() > specificity) {
@@ -59,7 +59,7 @@ final class GitLabFrontendTargetedImportResolver {
                     specificity = alias.specificity();
                 }
                 if (alias.specificity() == specificity) {
-                    bases.add(target);
+                    bases.addAll(targets);
                 }
             }
         }
@@ -203,19 +203,28 @@ final class GitLabFrontendTargetedImportResolver {
             return wildcard < 0 ? Integer.MAX_VALUE : pattern.length() - 1;
         }
 
-        private String resolve(String importPath) {
+        private List<String> resolve(String importPath) {
             var wildcard = pattern.indexOf('*');
             if (wildcard < 0) {
-                return pattern.equals(importPath) ? targetPattern : null;
+                return pattern.equals(importPath) ? List.of(targetPattern) : List.of();
             }
             var prefix = pattern.substring(0, wildcard);
             var suffix = pattern.substring(wildcard + 1);
             if (!importPath.startsWith(prefix) || !importPath.endsWith(suffix)
                     || importPath.length() < prefix.length() + suffix.length()) {
-                return null;
+                return List.of();
             }
             var value = importPath.substring(prefix.length(), importPath.length() - suffix.length());
-            return targetPattern.replace("*", value);
+            var result = new LinkedHashSet<String>();
+            result.add(targetPattern.replace("*", value));
+            var targetWildcard = targetPattern.indexOf('*');
+            if (targetWildcard >= 0 && value.contains("/src/")) {
+                var targetSuffix = targetPattern.substring(targetWildcard + 1);
+                if (targetSuffix.startsWith("/src/")) {
+                    result.add(targetPattern.substring(0, targetWildcard) + value);
+                }
+            }
+            return List.copyOf(result);
         }
     }
 }

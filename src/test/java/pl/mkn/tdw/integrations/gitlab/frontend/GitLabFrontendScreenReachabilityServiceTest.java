@@ -28,6 +28,10 @@ class GitLabFrontendScreenReachabilityServiceTest {
             "apps/synthetic-crm/src/app/customer/customer.facade.ts";
     private static final String RULES_PATH =
             "apps/synthetic-crm/src/app/customer/customer-rules.service.ts";
+    private static final String DIALOG_DATA_PATH =
+            "apps/synthetic-crm/src/app/customer/customer-dialog-data.ts";
+    private static final String PAGE_BASE_PATH =
+            "apps/synthetic-crm/src/app/customer/customer-page-base.ts";
     private static final String API_PATH =
             "libs/synthetic-crm/data-access/src/lib/api/services/customer-controller.service.ts";
 
@@ -74,6 +78,20 @@ class GitLabFrontendScreenReachabilityServiceTest {
         assertThat(result.dependencies()).extracting(GitLabFrontendReachabilityDependency::symbol)
                 .contains("CrmCustomerRulesService", "CrmCustomerControllerService")
                 .doesNotContain("CrmUnusedService");
+        assertThat(result.dependencies()).noneMatch(dependency -> "PENDING".equals(dependency.status()));
+        assertThat(result.dependencies().stream()
+                .filter(dependency -> "CrmCustomerDialogData".equals(dependency.symbol()))
+                .findFirst().orElseThrow().status()).isEqualTo("REFERENCE_ONLY");
+        assertThat(result.dependencies().stream()
+                .filter(dependency -> "CrmCustomerPageBase".equals(dependency.symbol()))
+                .findFirst().orElseThrow())
+                .satisfies(dependency -> {
+                    assertThat(dependency.kind()).isEqualTo(
+                            GitLabFrontendReachabilityDependencyKind.INHERITED_TYPE
+                    );
+                    assertThat(dependency.methods()).containsExactly("accessLevel");
+                    assertThat(dependency.status()).isEqualTo("OK");
+                });
         assertThat(result.dependencies().stream()
                 .filter(dependency -> "CrmCustomerControllerService".equals(dependency.symbol()))
                 .findFirst().orElseThrow())
@@ -182,6 +200,8 @@ class GitLabFrontendScreenReachabilityServiceTest {
                         import { CrmCustomerFormComponent } from './customer-form.component';
                         import { CrmCustomerNoteDialogComponent } from './customer-note-dialog.component';
                         import { CrmCustomerAbsorbableItemsComponent } from './customer-absorbable-items.component';
+                        import { CrmCustomerDialogData } from './customer-dialog-data';
+                        import { CrmCustomerPageBase } from './customer-page-base';
                         @Component({
                           selector: 'crm-customer-page',
                           templateUrl: 'customer-page.component.html'
@@ -238,6 +258,12 @@ class GitLabFrontendScreenReachabilityServiceTest {
                 source(RULES_PATH, GitLabFrontendSourceRole.FORM_LOGIC, """
                         export class CrmCustomerRulesService { validate(): boolean { return true; } }
                         """),
+                source(DIALOG_DATA_PATH, GitLabFrontendSourceRole.RELATED_SOURCE, """
+                        export interface CrmCustomerDialogData { customerId: string; }
+                        """),
+                source(PAGE_BASE_PATH, GitLabFrontendSourceRole.RELATED_SOURCE, """
+                        export abstract class CrmCustomerPageBase { accessLevel = 'synthetic'; }
+                        """),
                 source(API_PATH, GitLabFrontendSourceRole.BACKEND_CLIENT, """
                         export class CrmCustomerControllerService {
                           updateCustomer(): void {}
@@ -272,6 +298,16 @@ class GitLabFrontendScreenReachabilityServiceTest {
                             GitLabTypeScriptDownstreamReferenceKind.IMPORTED_FUNCTION,
                             "customerSignal", "signal", null,
                             "signal", "@angular/core", null
+                    ),
+                    new GitLabTypeScriptDownstreamReference(
+                            GitLabTypeScriptDownstreamReferenceKind.PROPERTY_ACCESS,
+                            "openNote", "dialogData", "customerId",
+                            "CrmCustomerDialogData", "./customer-dialog-data", null
+                    ),
+                    new GitLabTypeScriptDownstreamReference(
+                            GitLabTypeScriptDownstreamReferenceKind.INHERITED_MEMBER,
+                            "CrmCustomerPageComponent", "CrmCustomerPageBase", "accessLevel",
+                            "CrmCustomerPageBase", "./customer-page-base", null
                     )
             );
             case CHILD_PATH -> List.of(

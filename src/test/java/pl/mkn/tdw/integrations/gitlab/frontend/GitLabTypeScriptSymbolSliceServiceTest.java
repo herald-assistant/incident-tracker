@@ -364,4 +364,152 @@ class GitLabTypeScriptSymbolSliceServiceTest {
                 .doesNotContain("data", "crmDisplayValue");
         assertThat(response.limitations()).isEmpty();
     }
+
+    @Test
+    void shouldKeepConstructorPropertiesDollarMembersAndAllSyntheticCrmForLocals() {
+        var source = """
+                import { Component } from '@angular/core';
+                import { CrmPendingStateService } from './crm-pending-state.service';
+                import { CrmCustomerFacade } from './crm-customer.facade';
+
+                @Component({
+                  selector: 'crm-customer-list',
+                  templateUrl: './crm-customer-list.component.html'
+                })
+                export class CrmCustomerListComponent {
+                  constructor(
+                    public readonly pendingStateService: CrmPendingStateService,
+                    private readonly customerFacade: CrmCustomerFacade
+                  ) {}
+
+                  ngOnInit(): void {
+                    this.customerFacade.getCustomers$().subscribe();
+                  }
+                }
+                """;
+        var template = """
+                @for (customer of pendingStateService.customers$ | async;
+                  track customer.id;
+                  let index = $index, first = $first) {
+                  <span [class.first]="first">{{ customer.displayName }}</span>
+                }
+                """;
+        var scope = new GitLabFrontendRepositoryScope(
+                "synthetic-crm", "crm-agent-portal", "main", List.of("apps/crm-agent")
+        );
+        var filePath = "apps/crm-agent/src/app/customer/crm-customer-list.component.ts";
+        var templatePath = "apps/crm-agent/src/app/customer/crm-customer-list.component.html";
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), filePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), filePath, source, false
+                ));
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), templatePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), templatePath, template, false
+                ));
+
+        var response = new GitLabTypeScriptSymbolSliceService(repositoryPort).readSymbolSlice(
+                new GitLabTypeScriptSymbolSliceRequest(
+                        scope, filePath, "CrmCustomerListComponent", null, true, List.of(),
+                        true, true, true, GitLabTypeScriptSymbolSliceService.MAX_OUTPUT_CHARACTERS
+                )
+        );
+
+        assertThat(response.status()).isEqualTo("OK");
+        assertThat(response.includedFields()).contains("pendingStateService", "customerFacade");
+        assertThat(response.templateBindings().stream()
+                .flatMap(binding -> binding.referencedSymbols().stream()).toList())
+                .contains("pendingStateService")
+                .doesNotContain("customer", "index", "first");
+        assertThat(response.downstreamReferences())
+                .filteredOn(reference -> "CrmCustomerFacade".equals(reference.targetSymbol()))
+                .extracting(GitLabTypeScriptDownstreamReference::memberSymbol)
+                .contains("getCustomers$")
+                .doesNotContain("getCustomers");
+        assertThat(response.limitations()).isEmpty();
+    }
+
+    @Test
+    void shouldDelegateSyntheticCrmTemplateMembersToTheImportedBaseClass() {
+        var source = """
+                import { Component } from '@angular/core';
+                import { CrmButtonBaseComponent } from './crm-button-base.component';
+
+                @Component({
+                  selector: 'crm-primary-button',
+                  template: `<button [disabled]="disabled" (click)="activate()">{{ label }}</button>`
+                })
+                export class CrmPrimaryButtonComponent extends CrmButtonBaseComponent {}
+                """;
+        var scope = new GitLabFrontendRepositoryScope("synthetic-crm", "crm-agent-portal", "main", List.of());
+        var filePath = "libs/synthetic-crm/ui/crm-primary-button.component.ts";
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), filePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), filePath, source, false
+                ));
+
+        var response = new GitLabTypeScriptSymbolSliceService(repositoryPort).readSymbolSlice(
+                new GitLabTypeScriptSymbolSliceRequest(
+                        scope, filePath, "CrmPrimaryButtonComponent", null, true, List.of(),
+                        true, true, true, GitLabTypeScriptSymbolSliceService.MAX_OUTPUT_CHARACTERS
+                )
+        );
+
+        assertThat(response.status()).isEqualTo("OK");
+        assertThat(response.content()).contains(
+                "CrmButtonBaseComponent", "class CrmPrimaryButtonComponent extends CrmButtonBaseComponent"
+        );
+        assertThat(response.downstreamReferences())
+                .allSatisfy(reference -> {
+                    assertThat(reference.kind()).isEqualTo(
+                            GitLabTypeScriptDownstreamReferenceKind.INHERITED_MEMBER
+                    );
+                    assertThat(reference.targetSymbol()).isEqualTo("CrmButtonBaseComponent");
+                    assertThat(reference.moduleSpecifier()).isEqualTo("./crm-button-base.component");
+                })
+                .extracting(GitLabTypeScriptDownstreamReference::memberSymbol)
+                .containsExactly("activate", "disabled", "label");
+        assertThat(response.limitations()).isEmpty();
+    }
+
+    @Test
+    void shouldNotTreatSyntheticCrmSwaggerModelsOrNamedUtilitiesAsBackendClients() {
+        var source = """
+                import { CrmCustomerDto } from '@synthetic-crm/data-access-swagger/src/lib/api/models/crm-customer-dto';
+                import { isPreferredCrmClient } from './crm-customer.utils';
+
+                export class CrmCustomerMapper {
+                  mapCustomers(customers: CrmCustomerDto[]): string[] {
+                    customers.map(customer => customer.displayName);
+                    isPreferredCrmClient(customers[0]);
+                    return [];
+                  }
+                }
+                """;
+        var scope = new GitLabFrontendRepositoryScope("synthetic-crm", "crm-agent-portal", "main", List.of());
+        var filePath = "libs/synthetic-crm/customer/crm-customer.mapper.ts";
+        when(repositoryPort.readFile(scope.group(), scope.projectName(), scope.ref(), filePath, 200_000))
+                .thenReturn(new GitLabRepositoryFileContent(
+                        scope.group(), scope.projectName(), scope.ref(), filePath, source, false
+                ));
+
+        var response = new GitLabTypeScriptSymbolSliceService(repositoryPort).readSymbolSlice(
+                new GitLabTypeScriptSymbolSliceRequest(
+                        scope, filePath, "CrmCustomerMapper", null, false,
+                        List.of(new GitLabTypeScriptSymbolSelector("mapCustomers", null, null)),
+                        true, true, true, null
+                )
+        );
+
+        assertThat(response.status()).isEqualTo("OK");
+        assertThat(response.downstreamReferences())
+                .noneMatch(reference -> reference.kind()
+                        == GitLabTypeScriptDownstreamReferenceKind.BACKEND_OPERATION)
+                .anySatisfy(reference -> {
+                    assertThat(reference.targetSymbol()).isEqualTo("isPreferredCrmClient");
+                    assertThat(reference.kind()).isEqualTo(
+                            GitLabTypeScriptDownstreamReferenceKind.IMPORTED_FUNCTION
+                    );
+                });
+    }
 }

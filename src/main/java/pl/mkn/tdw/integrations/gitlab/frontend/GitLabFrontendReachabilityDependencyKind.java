@@ -7,6 +7,7 @@ public enum GitLabFrontendReachabilityDependencyKind {
     NGRX,
     RXJS,
     WEBSOCKET,
+    INHERITED_TYPE,
     IMPORTED_FUNCTION,
     EXTERNAL,
     UNKNOWN

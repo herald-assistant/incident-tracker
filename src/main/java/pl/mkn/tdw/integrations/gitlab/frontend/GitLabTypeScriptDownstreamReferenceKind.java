@@ -8,5 +8,6 @@ public enum GitLabTypeScriptDownstreamReferenceKind {
     NGRX_SELECT,
     NGRX_ACTION,
     RXJS_PIPELINE,
-    IMPORTED_FUNCTION
+    IMPORTED_FUNCTION,
+    INHERITED_MEMBER
 }

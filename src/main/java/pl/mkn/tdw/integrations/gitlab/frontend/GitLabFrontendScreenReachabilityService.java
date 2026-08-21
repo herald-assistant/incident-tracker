@@ -584,7 +584,9 @@ public class GitLabFrontendScreenReachabilityService {
         }
         var entrySymbols = component.entrySymbols().stream()
                 .map(GitLabTypeScriptSymbolCandidate::symbolName).distinct().toList();
-        result.append("- UI entry points: ").append(compactNames(entrySymbols, 12)).append("\n");
+        result.append("- UI entry points: ").append(compactNames(
+                entrySymbols, 12, "STATIC_PRESENTATIONAL".equals(component.status())
+        )).append("\n");
         var relevantDependencyIds = component.dependencyIds().stream()
                 .filter(id -> dependencyReferences.containsKey(id))
                 .toList();
@@ -601,9 +603,9 @@ public class GitLabFrontendScreenReachabilityService {
         result.append("- children: ").append(joinOrNone(children)).append("\n");
     }
 
-    private String compactNames(List<String> names, int maximum) {
+    private String compactNames(List<String> names, int maximum, boolean staticPresentation) {
         if (names == null || names.isEmpty()) {
-            return "none (static presentation only)";
+            return staticPresentation ? "none (static presentation only)" : "none declared locally";
         }
         var shown = names.stream().limit(maximum).toList();
         return String.join(", ", shown) + (names.size() > maximum
@@ -641,6 +643,9 @@ public class GitLabFrontendScreenReachabilityService {
     ) {
         var module = value(reference.moduleSpecifier()).toLowerCase(Locale.ROOT);
         var type = value(symbol);
+        if (reference.kind() == GitLabTypeScriptDownstreamReferenceKind.INHERITED_MEMBER) {
+            return GitLabFrontendReachabilityDependencyKind.INHERITED_TYPE;
+        }
         if (reference.kind() == GitLabTypeScriptDownstreamReferenceKind.BACKEND_OPERATION) {
             return GitLabFrontendReachabilityDependencyKind.BACKEND_CLIENT;
         }
@@ -660,14 +665,14 @@ public class GitLabFrontendScreenReachabilityService {
         if (type.endsWith("Facade")) {
             return GitLabFrontendReachabilityDependencyKind.FACADE;
         }
+        if (reference.kind() == GitLabTypeScriptDownstreamReferenceKind.IMPORTED_FUNCTION) {
+            return GitLabFrontendReachabilityDependencyKind.IMPORTED_FUNCTION;
+        }
         if (type.matches(".*(?:Api|ApiService|Client|ControllerService)$")) {
             return GitLabFrontendReachabilityDependencyKind.BACKEND_CLIENT;
         }
         if (type.endsWith("Service")) {
             return GitLabFrontendReachabilityDependencyKind.SERVICE;
-        }
-        if (reference.kind() == GitLabTypeScriptDownstreamReferenceKind.IMPORTED_FUNCTION) {
-            return GitLabFrontendReachabilityDependencyKind.IMPORTED_FUNCTION;
         }
         if (!StringUtils.hasText(reference.targetSourcePath()) && !StringUtils.hasText(type)) {
             return GitLabFrontendReachabilityDependencyKind.EXTERNAL;
@@ -694,6 +699,13 @@ public class GitLabFrontendScreenReachabilityService {
         if (kind == GitLabFrontendReachabilityDependencyKind.RXJS
                 || module.equals("rxjs") || module.startsWith("rxjs/")) {
             return GitLabFrontendReachabilityDependencyCategory.REACTIVE;
+        }
+        if (kind == GitLabFrontendReachabilityDependencyKind.INHERITED_TYPE) {
+            return GitLabFrontendReachabilityDependencyCategory.SUPPORTING_CODE;
+        }
+        if (kind == GitLabFrontendReachabilityDependencyKind.NGRX
+                && (module.equals("@ngrx/store") || module.equals("@ngrx/effects"))) {
+            return GitLabFrontendReachabilityDependencyCategory.FRAMEWORK;
         }
         if (kind == GitLabFrontendReachabilityDependencyKind.FACADE
                 || kind == GitLabFrontendReachabilityDependencyKind.SERVICE
@@ -996,14 +1008,16 @@ public class GitLabFrontendScreenReachabilityService {
         }
 
         private boolean partial() {
-            return StringUtils.hasText(sourcePath) && !methods.isEmpty()
+            return (category == GitLabFrontendReachabilityDependencyCategory.FUNCTIONAL
+                    || category == GitLabFrontendReachabilityDependencyCategory.SUPPORTING_CODE)
+                    && !methods.isEmpty()
                     && !"OK".equals(status) && !"STATIC_PRESENTATIONAL".equals(status);
         }
 
         private GitLabFrontendReachabilityDependency toResponse() {
             return new GitLabFrontendReachabilityDependency(
                     id, order, kind, category, symbol, sourcePath, moduleSpecifier,
-                    "PENDING".equals(status) && methods.isEmpty() ? "REFERENCE_ONLY" : status,
+                    "PENDING".equals(status) ? "REFERENCE_ONLY" : status,
                     List.copyOf(methods), List.copyOf(usedBy), List.copyOf(downstreamDependencyIds),
                     content, sourceCharacters, returnedCharacters, truncated, limitations
             );

@@ -29,6 +29,10 @@ final class AngularTemplateBindingParser {
     private static final Pattern FOR_LOCAL = Pattern.compile(
             "@for\\s*\\(\\s*([A-Za-z_$][A-Za-z0-9_$]*)\\s+of\\b"
     );
+    private static final Pattern FOR_CONTEXT_LOCAL = Pattern.compile(
+            "(?:\\blet\\s+|,\\s*)([A-Za-z_$][A-Za-z0-9_$]*)\\s*=\\s*"
+                    + "\\$(?:index|count|first|last|even|odd)\\b"
+    );
     private static final Set<String> RESERVED = Set.of(
             "true", "false", "null", "undefined", "this", "new", "typeof", "instanceof",
             "let", "as", "of", "track", "else", "if", "for", "switch", "case", "return",
@@ -141,6 +145,7 @@ final class AngularTemplateBindingParser {
         collect(TEMPLATE_REFERENCE, template, result);
         collect(TEMPLATE_LET_ATTRIBUTE, template, result);
         collect(FOR_LOCAL, template, result);
+        collect(FOR_CONTEXT_LOCAL, template, result);
         return result;
     }
 
