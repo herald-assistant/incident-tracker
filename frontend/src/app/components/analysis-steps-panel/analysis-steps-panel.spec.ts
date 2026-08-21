@@ -294,19 +294,19 @@ describe('AnalysisStepsPanelComponent', () => {
       .toBe('rubric + Jira CRM-1 + MR code');
   });
 
-  it('should open completed UI Explorer prompt preparation after a partial CRM source context', async () => {
+  it('should open completed UI Explorer prompt preparation after partial CRM screen reachability', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     const sourceContext = {
-      code: 'SOURCE_CONTEXT',
-      label: 'Build bounded synthetic CRM screen source context',
+      code: 'SCREEN_REACHABILITY',
+      label: 'Map synthetic CRM screen components and dependencies',
       phase: 'CONTEXT',
       status: 'IN_PROGRESS',
-      message: 'Synthetic CRM source context is being prepared.',
+      message: 'Synthetic CRM screen reachability is being prepared.',
       itemCount: 0,
       startedAt: '2026-08-17T10:00:00Z',
       completedAt: '',
       consumesEvidence: [],
-      producesEvidence: [{ provider: 'ui-explorer', category: 'source-manifest' }]
+      producesEvidence: [{ provider: 'ui-explorer', category: 'component-reachability' }]
     } satisfies AnalysisJobStepResponse;
     const pendingPreparation = {
       ...buildUiExplorerPreparationStep(),
@@ -364,16 +364,16 @@ describe('AnalysisStepsPanelComponent', () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     const partialStep = {
       ...buildUiExplorerPreparationStep(),
-      code: 'SOURCE_CONTEXT',
-      label: 'Build synthetic CRM context',
+      code: 'SCREEN_REACHABILITY',
+      label: 'Map synthetic CRM screen reachability',
       status: 'PARTIAL',
-      producesEvidence: [{ provider: 'ui-explorer', category: 'source-manifest' }]
+      producesEvidence: [{ provider: 'ui-explorer', category: 'component-reachability' }]
     };
     fixture.componentRef.setInput('steps', [partialStep, buildCompletedAiStep()]);
     fixture.componentRef.setInput('evidenceSections', [
       {
         provider: 'ui-explorer',
-        category: 'source-manifest',
+        category: 'component-reachability',
         items: [{ title: 'Synthetic CRM component', attributes: [] }]
       }
     ]);
@@ -1145,7 +1145,7 @@ function buildUiExplorerPreparationStep(): AnalysisJobStepResponse {
     itemCount: 1,
     startedAt: '2026-08-15T10:00:00Z',
     completedAt: '2026-08-15T10:00:01Z',
-    consumesEvidence: [{ provider: 'ui-explorer', category: 'source-manifest' }],
+    consumesEvidence: [{ provider: 'ui-explorer', category: 'component-reachability' }],
     producesEvidence: [{ provider: 'ui-explorer', category: 'ai-artifacts' }]
   };
 }

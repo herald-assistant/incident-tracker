@@ -12,7 +12,7 @@ import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation
 import pl.mkn.tdw.features.uiexplorer.ai.readiness.UiExplorerAiReadinessGate;
 import pl.mkn.tdw.features.uiexplorer.ai.response.UiExplorerAiParseStatus;
 import pl.mkn.tdw.features.uiexplorer.ai.response.UiExplorerAiResponseParser;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 import pl.mkn.tdw.features.uiexplorer.report.UiExplorerResultReportAssembler;
@@ -41,7 +41,7 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
     public UiExplorerAiAnalysis analyze(
             String runReference,
             UiExplorerJobStartRequest request,
-            UiExplorerSourceContextSnapshot context,
+            UiExplorerScreenReachabilityContext context,
             UiExplorerPromptPreparation preparation,
             AnalysisAiAuthRef authRef,
             AnalysisAiToolEvidenceListener toolEvidenceListener,

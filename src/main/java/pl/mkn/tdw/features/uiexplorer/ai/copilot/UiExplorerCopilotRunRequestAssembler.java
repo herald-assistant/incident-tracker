@@ -11,7 +11,7 @@ import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
 import pl.mkn.tdw.features.uiexplorer.ai.readiness.UiExplorerAiReadiness;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
@@ -33,7 +33,7 @@ public class UiExplorerCopilotRunRequestAssembler {
     public UiExplorerCopilotRunAssembly assemble(
             String runReference,
             UiExplorerJobStartRequest request,
-            UiExplorerSourceContextSnapshot context,
+            UiExplorerScreenReachabilityContext context,
             UiExplorerPromptPreparation preparation,
             UiExplorerAiReadiness readiness,
             AnalysisAiAuthRef authRef

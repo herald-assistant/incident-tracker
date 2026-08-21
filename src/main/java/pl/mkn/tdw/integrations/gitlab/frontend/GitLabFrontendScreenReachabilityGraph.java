@@ -12,7 +12,6 @@ public record GitLabFrontendScreenReachabilityGraph(
         List<GitLabFrontendReachabilityComponentLevel> componentLevels,
         List<GitLabFrontendReachabilityDependency> dependencies,
         List<GitLabFrontendReachabilityEdge> edges,
-        List<GitLabFrontendTechnicalSignal> technicalSignals,
         List<GitLabFrontendGraphDiagnostic> diagnostics,
         int sourceFileCount,
         int sourceCharacters,
@@ -30,7 +29,6 @@ public record GitLabFrontendScreenReachabilityGraph(
         componentLevels = componentLevels != null ? List.copyOf(componentLevels) : List.of();
         dependencies = dependencies != null ? List.copyOf(dependencies) : List.of();
         edges = edges != null ? List.copyOf(edges) : List.of();
-        technicalSignals = technicalSignals != null ? List.copyOf(technicalSignals) : List.of();
         diagnostics = diagnostics != null ? List.copyOf(diagnostics) : List.of();
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
         readableOutline = readableOutline != null ? readableOutline : "";

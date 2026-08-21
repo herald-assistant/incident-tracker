@@ -18,12 +18,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.*;
 
-class UiExplorerSourceContextServiceTest {
+class UiExplorerScreenReachabilityContextServiceTest {
 
     @Test
-    void shouldBuildFeatureOwnedCrmSnapshotFromSelectedScreenGraph() {
-        var discovery = mock(GitLabFrontendScreenGraphContextService.class);
-        when(discovery.build(any())).thenReturn(sourceContext(false));
+    void shouldBuildFeatureOwnedCrmReachabilityContextFromSelectedScreenGraph() {
+        var discovery = mock(GitLabFrontendScreenReachabilityService.class);
+        when(discovery.build(any())).thenReturn(reachabilityGraph(false));
         var service = service(eligibleCrmPathPrefixCatalog(), discovery);
 
         var result = service.buildContext(
@@ -42,16 +42,14 @@ class UiExplorerSourceContextServiceTest {
         assertThat(result.sourceRevision().revision()).isEqualTo("crm-ui-revision-20260815");
         assertThat(result.status()).isEqualTo(UiExplorerCoverageStatus.READY);
         assertThat(result.guards()).containsExactly("CrmAuthGuard");
-        assertThat(result.sourceFiles()).singleElement().satisfies(file -> {
-            assertThat(file.path()).endsWith("crm-contact-preferences.component.ts");
-            assertThat(file.content()).contains("CrmContactPreferencesComponent");
-            assertThat(file.roles()).contains("VIEW_COMPONENT", "FORM_LOGIC");
+        assertThat(result.components()).singleElement().satisfies(component -> {
+            assertThat(component.sourcePath()).endsWith("crm-contact-preferences.component.ts");
+            assertThat(component.sliceContent()).contains("CrmContactPreferencesComponent");
         });
-        assertThat(result.boundary().maxContextFiles()).isEqualTo(120);
-        assertThat(result.boundary().maxTotalCharacters()).isEqualTo(2_000_000);
-        assertThat(result.boundary().graphSourceReadCount()).isEqualTo(9);
+        assertThat(result.boundary().componentCount()).isEqualTo(1);
+        assertThat(result.boundary().sliceCharacters()).isEqualTo(81);
 
-        var request = ArgumentCaptor.forClass(GitLabFrontendScreenGraphContextRequest.class);
+        var request = ArgumentCaptor.forClass(GitLabFrontendScreenSelectionRequest.class);
         verify(discovery).build(request.capture());
         assertThat(request.getValue().screenId()).isEqualTo("screen-crm-contact-preferences");
         assertThat(request.getValue().expectedRevision()).isEqualTo("crm-ui-revision-20260815");
@@ -60,8 +58,8 @@ class UiExplorerSourceContextServiceTest {
 
     @Test
     void shouldDowngradeCoverageWhenSelectedCrmGraphReachesLimit() {
-        var discovery = mock(GitLabFrontendScreenGraphContextService.class);
-        when(discovery.build(any())).thenReturn(sourceContext(true));
+        var discovery = mock(GitLabFrontendScreenReachabilityService.class);
+        when(discovery.build(any())).thenReturn(reachabilityGraph(true));
 
         var result = service(eligibleCrmPathPrefixCatalog(), discovery).buildContext(
                 "crm-agent-portal", "release/2026.08", "screen-crm-contact-preferences",
@@ -70,12 +68,13 @@ class UiExplorerSourceContextServiceTest {
 
         assertThat(result.status()).isEqualTo(UiExplorerCoverageStatus.PARTIAL);
         assertThat(result.boundary().contextLimitReached()).isTrue();
-        assertThat(result.visibilityLimits()).anyMatch(limit -> limit.contains("reached"));
+        assertThat(result.visibilityLimits()).isEmpty();
+        assertThat(result.researchGaps()).anyMatch(limit -> limit.contains("reached"));
     }
 
     @Test
     void shouldMapRevisionChangeToFeatureConflict() {
-        var discovery = mock(GitLabFrontendScreenGraphContextService.class);
+        var discovery = mock(GitLabFrontendScreenReachabilityService.class);
         when(discovery.build(any())).thenThrow(new GitLabFrontendDiscoveryException(
                 "FRONTEND_SOURCE_REVISION_CHANGED", "Synthetic CRM revision changed"
         ));
@@ -86,7 +85,7 @@ class UiExplorerSourceContextServiceTest {
 
     @Test
     void shouldMapMissingCrmScreenAndRefToFeatureOwnedErrors() {
-        var discovery = mock(GitLabFrontendScreenGraphContextService.class);
+        var discovery = mock(GitLabFrontendScreenReachabilityService.class);
         when(discovery.build(any()))
                 .thenThrow(new GitLabFrontendDiscoveryException("FRONTEND_SCREEN_NOT_FOUND", "Synthetic CRM screen is stale"))
                 .thenThrow(new GitLabFrontendDiscoveryException("FRONTEND_REF_NOT_FOUND", "Synthetic CRM ref is missing"));
@@ -101,25 +100,27 @@ class UiExplorerSourceContextServiceTest {
 
     @Test
     void shouldRejectIncompleteCrmRegistrationBeforeCallingDiscovery() {
-        var discovery = mock(GitLabFrontendScreenGraphContextService.class);
+        var discovery = mock(GitLabFrontendScreenReachabilityService.class);
         assertThatThrownBy(() -> service(crmCatalogWithoutPrimary(), discovery).buildContext(
                 "crm-agent-portal", "main", "screen-crm", "crm-ui-revision", activeOverview()
         )).isInstanceOf(UiExplorerFrontendNotEligibleException.class);
         verifyNoInteractions(discovery);
     }
 
-    private static UiExplorerSourceContextService service(
+    private static UiExplorerScreenReachabilityContextService service(
             pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
-            GitLabFrontendScreenGraphContextService discovery
+            GitLabFrontendScreenReachabilityService discovery
     ) {
-        return new UiExplorerSourceContextService(new UiExplorerFrontendCatalogService(port(catalog)), discovery);
+        return new UiExplorerScreenReachabilityContextService(
+                new UiExplorerFrontendCatalogService(port(catalog)), discovery
+        );
     }
 
     private static List<UiExplorerSectionModeAssignment> activeOverview() {
         return List.of(new UiExplorerSectionModeAssignment(UiExplorerSectionId.OVERVIEW, UiExplorerSectionMode.DEEP));
     }
 
-    private static GitLabFrontendScreenGraphContext sourceContext(boolean partial) {
+    private static GitLabFrontendScreenReachabilityGraph reachabilityGraph(boolean partial) {
         var scope = new GitLabFrontendRepositoryScope(
                 "crm", "agent-portal", "release/2026.08", List.of("apps/crm-agent", "libs/crm-ui")
         );
@@ -151,33 +152,29 @@ class UiExplorerSourceContextServiceTest {
                 true, List.of("contactId"), target, null, null, List.of(), routeSource,
                 partial ? List.of("Synthetic CRM view source is ambiguous.") : List.of()
         );
-        var graphCoverage = new GitLabFrontendGraphCoverage(
-                partial ? GitLabFrontendCoverageStatus.PARTIAL : GitLabFrontendCoverageStatus.READY,
-                2, 1, 9, 2, partial ? 1 : 0, partial, List.of()
-        );
         var diagnostics = partial ? List.of(new GitLabFrontendGraphDiagnostic(
                 GitLabFrontendDiagnosticSeverity.WARNING, GitLabFrontendGraphDiagnosticCode.CONTEXT_FILE_LIMIT_REACHED,
-                "Synthetic CRM selected-screen context reached maxContextFiles.", screenNode.nodeId(), null, routeSource
+                "Synthetic CRM reachability research reached a configured source boundary.",
+                screenNode.nodeId(), null, routeSource
         )) : List.<GitLabFrontendGraphDiagnostic>of();
-        return new GitLabFrontendScreenGraphContext(
+        var component = new GitLabFrontendReachabilityComponent(
+                "component-crm-contact-preferences", 0, 0, true, "SELECTED_SCREEN",
+                "CrmContactPreferencesComponent", "crm-contact-preferences", viewPath, null,
+                partial ? "PARTIAL" : "OK", List.of(), List.of(), List.of(), List.of(), List.of(),
+                "export class CrmContactPreferencesComponent { readonly syntheticCrmForm = true; }",
+                81, 81, false,
+                partial ? List.of("Synthetic CRM reachability research reached a configured source boundary.") : List.of()
+        );
+        return new GitLabFrontendScreenReachabilityGraph(
                 scope, new GitLabFrontendSourceRevision(scope.ref(), "crm-ui-revision-20260815"),
-                screenNode, new GitLabFrontendEffectiveRouteChain(
+                partial ? "PARTIAL" : "OK", screenNode, new GitLabFrontendEffectiveRouteChain(
                         screenIdentity, List.of(parentSegment, screenSegment), List.of("contactId")
-                ), graphCoverage,
-                List.of(new GitLabFrontendSourceFile(
-                        viewPath, List.of(GitLabFrontendSourceRole.VIEW_COMPONENT, GitLabFrontendSourceRole.FORM_LOGIC),
-                        "export class CrmContactPreferencesComponent { readonly syntheticCrmForm = true; }", 81, false
-                )),
-                List.of(new GitLabFrontendTechnicalSignal(
-                        GitLabFrontendTechnicalSignalKind.REACTIVE_FORM,
-                        "A strongly anonymized CRM reactive form is present.", GitLabFrontendSignalConfidence.HIGH,
-                        new GitLabFrontendSourceReference(viewPath, "FormBuilder", 7, 7)
-                )),
-                List.of(
-                        new GitLabFrontendContextCoverage("ROUTING", GitLabFrontendCoverageStatus.READY, "Synthetic CRM route resolved."),
-                        new GitLabFrontendContextCoverage("VIEW", GitLabFrontendCoverageStatus.READY, "Synthetic CRM view resolved."),
-                        new GitLabFrontendContextCoverage("FORMS", GitLabFrontendCoverageStatus.READY, "Synthetic CRM form resolved.")
-                ), diagnostics, 81, partial
+                ),
+                List.of(new GitLabFrontendReachabilityComponentLevel(0, List.of(component))),
+                List.of(), List.of(), diagnostics,
+                1, 81, 81, 32, partial,
+                partial ? List.of("Synthetic CRM reachability research reached a configured source boundary.") : List.of(),
+                "# Synthetic CRM screen reachability"
         );
     }
 }

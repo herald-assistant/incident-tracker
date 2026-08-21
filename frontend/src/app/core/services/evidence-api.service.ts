@@ -128,12 +128,10 @@ export interface GitLabFrontendCatalogPayload {
   pathPrefixes: string[];
 }
 
-export interface GitLabFrontendScreenContextPayload extends GitLabFrontendCatalogPayload {
+export interface GitLabFrontendScreenReachabilityPayload extends GitLabFrontendCatalogPayload {
   screenId: string;
   expectedRevision?: string;
 }
-
-export type GitLabFrontendScreenReachabilityPayload = GitLabFrontendScreenContextPayload;
 
 export interface GitLabAngularRouteBranchSlicePayload extends GitLabFrontendCatalogPayload {
   screenId: string;
@@ -254,40 +252,6 @@ export interface GitLabFrontendCatalogResponse {
   coverage: GitLabFrontendGraphCoverage;
 }
 
-export interface GitLabFrontendSourceFile {
-  path?: string | null;
-  roles: string[];
-  content?: string | null;
-  returnedCharacters: number;
-  truncated: boolean;
-}
-
-export interface GitLabFrontendTechnicalSignal {
-  kind?: string | null;
-  description?: string | null;
-  confidence?: string | null;
-  source?: GitLabFrontendSourceReference | null;
-}
-
-export interface GitLabFrontendContextCoverage {
-  category?: string | null;
-  status?: string | null;
-  detail?: string | null;
-}
-
-export interface GitLabFrontendScreenContextResponse {
-  scope: GitLabFrontendCatalogPayload;
-  sourceRevision?: { ref?: string | null; commitId?: string | null } | null;
-  screenNode?: GitLabFrontendRouteNode | null;
-  graphCoverage: GitLabFrontendGraphCoverage;
-  sourceFiles: GitLabFrontendSourceFile[];
-  technicalSignals: GitLabFrontendTechnicalSignal[];
-  coverage: GitLabFrontendContextCoverage[];
-  diagnostics: GitLabFrontendGraphDiagnostic[];
-  totalReturnedCharacters: number;
-  contextLimitReached: boolean;
-}
-
 export interface GitLabFrontendRouteChainSegment {
   nodeId: string;
   pathSegment?: string | null;
@@ -369,7 +333,6 @@ export interface GitLabFrontendScreenReachabilityResponse {
   componentLevels: GitLabFrontendReachabilityComponentLevel[];
   dependencies: GitLabFrontendReachabilityDependency[];
   edges: GitLabFrontendReachabilityEdge[];
-  technicalSignals: GitLabFrontendTechnicalSignal[];
   diagnostics: GitLabFrontendGraphDiagnostic[];
   sourceFileCount: number;
   sourceCharacters: number;
@@ -916,15 +879,6 @@ export class EvidenceApiService {
     payload: GitLabFrontendCatalogPayload
   ): Observable<GitLabFrontendCatalogResponse> {
     return this.http.post<GitLabFrontendCatalogResponse>('/api/gitlab/frontend/catalog', payload);
-  }
-
-  buildGitLabFrontendScreenContext(
-    payload: GitLabFrontendScreenContextPayload
-  ): Observable<GitLabFrontendScreenContextResponse> {
-    return this.http.post<GitLabFrontendScreenContextResponse>(
-      '/api/gitlab/frontend/screen-context',
-      payload
-    );
   }
 
   buildGitLabFrontendScreenReachability(

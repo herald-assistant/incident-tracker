@@ -54,12 +54,12 @@ public class GitLabFrontendScreenReachabilityService {
             "toSignal", "takeUntilDestroyed"
     );
 
-    private final GitLabFrontendScreenGraphContextService screenGraphContextService;
+    private final GitLabFrontendScreenSelectionService screenSelectionService;
     private final GitLabTypeScriptSymbolSliceService typeScriptSymbolSliceService;
     private final GitLabRepositoryPort repositoryPort;
 
-    public GitLabFrontendScreenReachabilityGraph build(GitLabFrontendScreenGraphContextRequest request) {
-        var context = screenGraphContextService.buildReachabilitySeed(request);
+    public GitLabFrontendScreenReachabilityGraph build(GitLabFrontendScreenSelectionRequest request) {
+        var context = screenSelectionService.select(request);
         var bootstrapPath = context.effectiveRouteChain().segments().isEmpty()
                 ? context.screenNode().viewTarget().sourcePath()
                 : context.effectiveRouteChain().segments().get(0).source().path();
@@ -138,7 +138,7 @@ public class GitLabFrontendScreenReachabilityService {
                 + dependencies.values().stream().mapToInt(dependency -> dependency.returnedCharacters).sum();
         return new GitLabFrontendScreenReachabilityGraph(
                 context.scope(), context.sourceRevision(), status, context.screenNode(), context.effectiveRouteChain(),
-                levels, dependencyResponses, edges, context.technicalSignals(),
+                levels, dependencyResponses, edges,
                 reachabilityDiagnostics(context), sourceIndex.sourceFileCount(), sourceIndex.sourceCharacters(),
                 sliceCharacters, outline.length(), sourceIndex.limitReached() || context.graphCoverage().limitReached(),
                 limitations, outline
@@ -146,7 +146,7 @@ public class GitLabFrontendScreenReachabilityService {
     }
 
     private List<ComponentDescriptor> componentDescriptors(
-            GitLabFrontendScreenGraphContext context,
+            GitLabFrontendScreenReachabilitySeed context,
             SourceIndex sourceIndex
     ) {
         var result = new ArrayList<ComponentDescriptor>();
@@ -276,7 +276,7 @@ public class GitLabFrontendScreenReachabilityService {
     }
 
     private ComponentDescriptor rootDescriptor(
-            GitLabFrontendScreenGraphContext context,
+            GitLabFrontendScreenReachabilitySeed context,
             List<ComponentDescriptor> descriptors
     ) {
         var target = context.screenNode().viewTarget();
@@ -442,7 +442,7 @@ public class GitLabFrontendScreenReachabilityService {
     }
 
     private List<String> limitations(
-            GitLabFrontendScreenGraphContext context,
+            GitLabFrontendScreenReachabilitySeed context,
             ComponentDescriptor root,
             Map<String, MutableComponent> components,
             Map<String, MutableDependency> dependencies,
@@ -468,7 +468,7 @@ public class GitLabFrontendScreenReachabilityService {
     }
 
     private List<GitLabFrontendGraphDiagnostic> reachabilityDiagnostics(
-            GitLabFrontendScreenGraphContext context
+            GitLabFrontendScreenReachabilitySeed context
     ) {
         return context.diagnostics().stream()
                 .filter(diagnostic -> diagnostic.code()
@@ -478,7 +478,7 @@ public class GitLabFrontendScreenReachabilityService {
 
     private String readableOutline(
             String status,
-            GitLabFrontendScreenGraphContext context,
+            GitLabFrontendScreenReachabilitySeed context,
             List<GitLabFrontendReachabilityComponentLevel> levels,
             List<GitLabFrontendReachabilityDependency> dependencies,
             List<GitLabFrontendReachabilityEdge> edges,

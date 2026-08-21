@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,7 +16,7 @@ public class UiExplorerCopilotToolSessionContextFactory {
 
     private static final String SESSION_PREFIX = "ui-explorer-";
 
-    public CopilotToolSessionContext create(String runReference, UiExplorerSourceContextSnapshot context) {
+    public CopilotToolSessionContext create(String runReference, UiExplorerScreenReachabilityContext context) {
         if (context == null || context.sourceScope() == null || context.sourceRevision() == null) {
             throw new IllegalArgumentException("Resolved UI Explorer source scope is required.");
         }
@@ -39,14 +39,6 @@ public class UiExplorerCopilotToolSessionContextFactory {
                 "branchRef", scope.ref(),
                 "pathPrefixes", scope.pathPrefixes()
         ));
-        hidden.put(
-                UiExplorerCopilotToolContextKeys.EMBEDDED_SOURCE_PATHS,
-                context.sourceFiles().stream().map(file -> file.path()).toList()
-        );
-        hidden.put(
-                UiExplorerCopilotToolContextKeys.TRUNCATED_SOURCE_PATHS,
-                context.sourceFiles().stream().filter(file -> file.truncated()).map(file -> file.path()).toList()
-        );
         return new CopilotToolSessionContext(runId, SESSION_PREFIX + runId, hidden);
     }
 }

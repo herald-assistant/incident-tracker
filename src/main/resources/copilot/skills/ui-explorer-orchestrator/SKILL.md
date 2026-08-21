@@ -20,8 +20,8 @@ Zacznij od:
 
 - `ui-explorer/request.json`,
 - `ui-explorer/screen-catalog-entry.json`,
-- `ui-explorer/context-snapshot.json`,
-- `ui-explorer/evidence-manifest.md`,
+- `ui-explorer/screen-reachability-outline.md`,
+- `ui-explorer/screen-source-slices.md`,
 - `ui-explorer/coverage.json`,
 - `ui-explorer/response-contract.json`.
 
@@ -49,7 +49,7 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 2. Potwierdz, czy wybrany ekran jest widokiem biznesowym, shellem z
    `RouterOutlet`, pustym ekranem technicznym albo kontenerem routowanych
    podwidokow. Dla kontenera analizuj funkcjonalnie jego poddrzewo child routes
-   dostarczone w source snapshotcie; sam `RouterOutlet` nie konczy scope'u.
+   dostarczone w grafie BFS; sam `RouterOutlet` nie konczy scope'u.
 3. Oznacz sekcje `OFF` jako `not_applicable`; nie kieruj ich do wyniku.
 4. Przekaz aktywne sekcje, `functional-writing-contract.md` i ich
    deterministyczne coverage do `ui-explorer-source-grounding`.
@@ -81,7 +81,9 @@ zgadywania niedostepnej logiki.
 
 Nie przechodz do finalizacji, gdy status to `needs_deeper_evidence`. Gdy dalsza
 widocznosc nie istnieje, przejdz z jawnym `visibility_limited`. Sam rozmiar
-snapshotu ani liczba wykonanych search/read nie dowodza braku widocznosci.
+grafu lub slice'ow ani liczba wykonanych search/read nie dowodza braku
+widocznosci. `researchGaps` sa kolejka pracy, a nie gotowymi
+`visibilityLimits`.
 
 ## Output Contract
 

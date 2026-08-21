@@ -34,7 +34,7 @@ class UiExplorerInputOptionsControllerTest {
                 new UiExplorerOutputAvailability(
                         UiExplorerOutputAvailabilityStatus.AVAILABLE,
                         "UI_EXPLORER_ANALYSIS_AVAILABLE",
-                        "Screen catalog, bounded source context and AI analysis are available.",
+                        "Screen catalog, deterministic screen reachability and AI analysis are available.",
                         List.of()
                 ),
                 List.of(new UiExplorerInputOptionsResponse.SystemOption(

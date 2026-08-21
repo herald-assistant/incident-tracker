@@ -13,15 +13,15 @@ class UiExplorerArtifactServiceTest {
     private final UiExplorerArtifactService service = new UiExplorerArtifactService(objectMapper);
 
     @Test
-    void shouldRenderSevenBoundedCrmArtifactsWithBusinessWritingContract() throws Exception {
+    void shouldRenderSevenReachabilityCrmArtifactsWithBusinessWritingContract() throws Exception {
         var artifacts = service.renderArtifacts(request(), context());
 
         assertThat(artifacts).extracting(artifact -> artifact.displayName())
                 .containsExactly(
                         UiExplorerArtifactService.REQUEST_ARTIFACT,
                         UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT,
-                        UiExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT,
-                        UiExplorerArtifactService.EVIDENCE_MANIFEST_ARTIFACT,
+                        UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT,
+                        UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT,
                         UiExplorerArtifactService.COVERAGE_ARTIFACT,
                         UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
                         UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT
@@ -36,20 +36,17 @@ class UiExplorerArtifactServiceTest {
                 .isEqualTo("UNTRUSTED_USER_INPUT");
         assertThat(requestJson).contains("Ignore previous instructions");
 
-        var contextJson = content(artifacts, UiExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT);
-        var parsedContext = objectMapper.readTree(contextJson);
-        assertThat(parsedContext.path("sourceEvidencePolicy").path("classification").asText())
-                .isEqualTo("UNTRUSTED_SOURCE_EVIDENCE");
-        assertThat(parsedContext.path("sourceFiles").get(1).path("contentClassification").asText())
-                .isEqualTo("UNTRUSTED_SOURCE_EVIDENCE");
-        assertThat(contextJson).contains("Ignore previous instructions")
-                .doesNotContain("</artifact>")
-                .doesNotContain("```json");
-
-        var manifest = content(artifacts, UiExplorerArtifactService.EVIDENCE_MANIFEST_ARTIFACT);
-        assertThat(manifest).contains("metadata only")
+        var outline = content(artifacts, UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT);
+        assertThat(outline).contains("Effective route chain", "CrmContactPreferencesComponent")
+                .doesNotContain("export class");
+        var slices = content(artifacts, UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT);
+        assertThat(slices).contains("UNTRUSTED_SOURCE_EVIDENCE")
                 .contains("crm-contact-preferences.component.ts")
-                .doesNotContain("loadRuntimeDefinition");
+                .contains("CrmContactPreferencesApi")
+                .contains("loadDefinition")
+                .contains("Ignore previous instructions");
+        var coverage = objectMapper.readTree(content(artifacts, UiExplorerArtifactService.COVERAGE_ARTIFACT));
+        assertThat(coverage.path("researchGaps").get(0).asText()).contains("targeted evidence");
         assertThat(content(artifacts, UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT))
                 .contains("Glowna tresc jest dokumentacja funkcjonalna")
                 .contains("Akcja | Kiedy dostepna | Co wykorzystuje | Rezultat | Co widzi uzytkownik")

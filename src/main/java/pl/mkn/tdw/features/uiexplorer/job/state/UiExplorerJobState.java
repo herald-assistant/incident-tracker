@@ -2,7 +2,7 @@ package pl.mkn.tdw.features.uiexplorer.job.state;
 
 import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiAnalysis;
 import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiAnalysisStatus;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
@@ -28,7 +28,7 @@ import java.util.Map;
 public final class UiExplorerJobState {
 
     public static final String SCREEN_DISCOVERY_STEP = "SCREEN_DISCOVERY";
-    public static final String SOURCE_CONTEXT_STEP = "SOURCE_CONTEXT";
+    public static final String SCREEN_REACHABILITY_STEP = "SCREEN_REACHABILITY";
     public static final String AI_PREPARATION_STEP = "AI_PREPARATION";
     public static final String AI_ANALYSIS_STEP = "AI_ANALYSIS";
 
@@ -36,12 +36,13 @@ public final class UiExplorerJobState {
     private static final String ANALYSIS_IN_PROGRESS = "UI_EXPLORER_ANALYSIS_IN_PROGRESS";
     private static final String ANALYSIS_BLOCKED = "UI_EXPLORER_ANALYSIS_BLOCKED";
     private static final AnalysisEvidenceReference SELECTED_SCREEN_EVIDENCE = evidence("selected-screen");
-    private static final List<AnalysisEvidenceReference> SOURCE_CONTEXT_EVIDENCE = List.of(
-            evidence("source-manifest"),
-            evidence("technical-signals"),
+    private static final List<AnalysisEvidenceReference> SCREEN_REACHABILITY_EVIDENCE = List.of(
+            evidence("route-chain"),
+            evidence("component-reachability"),
+            evidence("dependency-reachability"),
             evidence("section-coverage"),
-            evidence("source-boundary"),
-            evidence("source-diagnostics")
+            evidence("reachability-boundary"),
+            evidence("reachability-diagnostics")
     );
     private static final AnalysisEvidenceReference AI_ARTIFACTS_EVIDENCE = evidence("ai-artifacts");
 
@@ -76,8 +77,8 @@ public final class UiExplorerJobState {
         requestSnapshot = requestSnapshot(request.systemId());
         steps.put(SCREEN_DISCOVERY_STEP, new MutableStep(
                 SCREEN_DISCOVERY_STEP, "Identify the selected screen", "CONTEXT"));
-        steps.put(SOURCE_CONTEXT_STEP, new MutableStep(
-                SOURCE_CONTEXT_STEP, "Build bounded screen source context", "CONTEXT"));
+        steps.put(SCREEN_REACHABILITY_STEP, new MutableStep(
+                SCREEN_REACHABILITY_STEP, "Map screen components and functional dependencies", "CONTEXT"));
         steps.put(AI_PREPARATION_STEP, new MutableStep(
                 AI_PREPARATION_STEP, "Prepare bounded AI artifacts and prompt", "AI_PREPARATION"));
         steps.put(AI_ANALYSIS_STEP, new MutableStep(
@@ -94,15 +95,15 @@ public final class UiExplorerJobState {
         return true;
     }
 
-    public synchronized void markSourceContextStarted() {
+    public synchronized void markScreenReachabilityStarted() {
         status = UiExplorerJobStatus.BUILDING_CONTEXT;
-        currentStepCode = SOURCE_CONTEXT_STEP;
-        currentStepLabel = steps.get(SOURCE_CONTEXT_STEP).label;
-        startStep(SOURCE_CONTEXT_STEP, "Bounded source context is being built for the selected screen.");
+        currentStepCode = SCREEN_REACHABILITY_STEP;
+        currentStepLabel = steps.get(SCREEN_REACHABILITY_STEP).label;
+        startStep(SCREEN_REACHABILITY_STEP, "Reachable screen components and dependencies are being mapped in breadth-first order.");
     }
 
-    public synchronized void markSourceContextCompleted(
-            UiExplorerSourceContextSnapshot context,
+    public synchronized void markScreenReachabilityCompleted(
+            UiExplorerScreenReachabilityContext context,
             List<AnalysisEvidenceSection> evidenceSections
     ) {
         var now = Instant.now();
@@ -123,12 +124,12 @@ public final class UiExplorerJobState {
             case BLOCKED -> "BLOCKED";
         };
         completeStep(
-                SOURCE_CONTEXT_STEP,
+                SCREEN_REACHABILITY_STEP,
                 contextStatus,
                 context.status() == UiExplorerCoverageStatus.BLOCKED
-                        ? "Deterministic source context is insufficient for the selected active sections."
-                        : "Deterministic screen context, source manifest and active-section coverage were built.",
-                context.sourceFiles().size(),
+                        ? "Deterministic screen reachability is insufficient for the selected active sections."
+                        : "Effective route chain, component BFS and deduplicated functional dependencies were built.",
+                context.boundary().componentCount() + context.boundary().dependencyCount(),
                 null,
                 now
         );
@@ -407,13 +408,13 @@ public final class UiExplorerJobState {
     }
 
     private static List<AnalysisEvidenceReference> consumesEvidenceForStep(String code) {
-        if (SOURCE_CONTEXT_STEP.equals(code)) {
+        if (SCREEN_REACHABILITY_STEP.equals(code)) {
             return List.of(SELECTED_SCREEN_EVIDENCE);
         }
         if (AI_PREPARATION_STEP.equals(code)) {
             var references = new ArrayList<AnalysisEvidenceReference>();
             references.add(SELECTED_SCREEN_EVIDENCE);
-            references.addAll(SOURCE_CONTEXT_EVIDENCE);
+            references.addAll(SCREEN_REACHABILITY_EVIDENCE);
             return List.copyOf(references);
         }
         if (AI_ANALYSIS_STEP.equals(code)) {
@@ -426,8 +427,8 @@ public final class UiExplorerJobState {
         if (SCREEN_DISCOVERY_STEP.equals(code)) {
             return List.of(SELECTED_SCREEN_EVIDENCE);
         }
-        if (SOURCE_CONTEXT_STEP.equals(code)) {
-            return SOURCE_CONTEXT_EVIDENCE;
+        if (SCREEN_REACHABILITY_STEP.equals(code)) {
+            return SCREEN_REACHABILITY_EVIDENCE;
         }
         if (AI_PREPARATION_STEP.equals(code)) {
             return List.of(AI_ARTIFACTS_EVIDENCE);

@@ -40,7 +40,8 @@ pakietow, kontraktow joba, evidence pipeline ani skilli.
 - katalog ekranow budowany z routingu i glownych komponentow widoku,
 - jeden cel produktu: dokumentacja funkcjonalna bez publicznego pola profilu,
 - osiem stabilnych sekcji raportu z trybami `OFF`, `COMPACT`, `DEEP`,
-- deterministyczny context snapshot przed uruchomieniem AI,
+- deterministyczny pakiet route chain, component BFS i symbol slices przed
+  uruchomieniem AI,
 - poglebianie przez istniejace neutralne GitLab search/read tools,
 - jawna ocena gotowosci i pokrycia sekcji przed zapisem raportu,
 - asynchroniczny job, historia lokalna, import/export wersjonowanego JSON oraz
@@ -84,16 +85,16 @@ Aktualna luka:
 - API, UI i maintenance Operational Context nie potrafia jawnie odroznic
   frontendu od innych `internal-service`,
 - brak katalogu tras i ekranow frontendu,
-- brak ograniczonego context snapshotu laczacego route, template, komponent,
-  formularze, store i klientow API,
+- brak deterministycznego grafu laczacego route, template, komponenty,
+  formularze, store i faktycznie uzywane operacje klientow API,
 - wyspecjalizowane GitLab flow/context capability sa obecnie nastawione na
   kod Java i endpointy backendowe,
 - brak kontraktu, skilli, policy, joba, historii i UI dla dokumentacji widoku,
 - Operational Context celowo nie przechowuje zmiennego inwentarza tras,
   komponentow ani endpointow konkretnej rewizji.
 
-Katalog ekranow i screen context pozostaja snapshotem wyprowadzonym z kodu.
-Nie sa nowymi bytami katalogowymi Operational Context.
+Katalog ekranow i wynik screen reachability pozostaja danymi wyprowadzonymi z
+konkretnej rewizji kodu. Nie sa nowymi bytami katalogowymi Operational Context.
 
 ## Rejestracja frontendu w Operational Context
 
@@ -731,7 +732,7 @@ ekranow bez source contextu i AI:
   walidowac branch/ref i rewizje.
 - [x] Wystawic katalog ekranow z business-friendly labelami, source revision
   i diagnostics.
-- [x] Zbudowac context snapshot, evidence manifest i coverage dla aktywnych
+- [x] Zbudowac deterministyczny pakiet researchu i coverage dla aktywnych
   sekcji.
 - [x] Nie dodawac cache w pierwszym MVP; przyszly cache moze powstac tylko jako
   bounded po repository+revision z jawna invalidacja.
@@ -1409,23 +1410,14 @@ oraz unresolved typed edge. Przeszly testy calego pakietu
 `integrations.gitlab.frontend`, `PackageDependencyGuardTest` oraz pelny
 `mvn -q test`.
 
-Checkpoint 8B.5 2026-08-16: `GitLabFrontendScreenGraphContextService` przyjmuje
-wylacznie `screenId` z aktualnego route graph oraz opcjonalna oczekiwana
-rewizje. Po wyborze rozwija effective route chain, importy konfiguracji
-segmentow (`canActivate*`, `canDeactivate`, `canMatch`, `canLoad`, resolvers i
-providers), komponent widoku, lokalne importy/re-exporty, template oraz style.
-Kazdy odczyt przechodzi przez `GitLabFrontendTargetedSourceSession`; osobne
-budzety graph i selected-screen context nie uzywaja `listRepositoryFiles` ani
-fallbacku do inventory.
-
-Shared `/api/gitlab/frontend/catalog` zwraca teraz route graph z typed nodes,
-edges, effective chains i graph coverage, a `/screen-context` zwraca selected
-screen graph context. Tool Workbench konsumuje te same breaking kontrakty i
-pokazuje route files, targeted reads oraz graph/context limit zamiast liczby
-plikow repozytorium. UI Explorer mapuje nowe semantyczne `screenId`, guards z
-calego effective chain, route parameters, graph diagnostics i dwa niezalezne
-stany limitow. Publiczny input UI Explorer nadal nie ujawnia group, project ani
-path prefixes.
+Checkpoint 8B.5 2026-08-16: graph-first discovery zaczelo przyjmowac wylacznie
+`screenId` z aktualnego route graph oraz opcjonalna oczekiwana rewizje. Ten
+checkpoint byl etapem posrednim i zostal w calosci zastapiony w 8L.6b:
+aktualny runtime zachowuje tylko minimalny selected-screen seed, a route chain,
+komponenty i behavior dependencies rozwija przez iteracyjny screen
+reachability oraz symbol slices. Nadal nie uzywa `listRepositoryFiles` ani
+fallbacku do inventory. Publiczny input UI Explorer nie ujawnia group, project
+ani path prefixes.
 
 Import/export oraz lokalny run UI Explorer maja wersje `2` i kontrakt
 `ui-explorer-result-v2`; wersja `1` jest jawnie odrzucana bez translacji
@@ -1986,11 +1978,17 @@ rozmiaru promptu po kazdym kroku.
   backendowe zapisywac raz w kanonicznym rejestrze z referencjami `usedBy`.
   Sam import nie jest krawedzia. Nie zmieniac jeszcze promptu, skilli ani MCP i
   nie uznawac redukcji tokenow za wazniejsza od kompletnosci grafu.
-- [ ] 8L.6b: Po recznej akceptacji grafu BFS zastapic v4 snapshot jego
+- [x] 8L.6b: Po recznej akceptacji grafu BFS zastapic v4 snapshot jego
   czytelnym pakietem route/component/dependency oraz iteracyjnymi symbol
   slices. Pelny frontier ma pozostac jawny i ekspandowalny; dodac preflight
   rozmiarow artefaktow widoczny w aside bez arbitralnego obcinania osiagalnej
-  informacji.
+  informacji. Usunac bez kompatybilnosci wstecznej publiczne
+  `Screen Source Context` z shared/operator API i Tool Workbench oraz jego
+  pelny traversal plikow. Minimalny resolver selected screen/route/view
+  pozostaje wylacznie wewnetrznym seedem `Screen Reachability`; produkcyjny UI
+  Explorer ma konsumowac graf BFS, a nie stary context snapshot. Research gaps
+  sluza do dalszego deterministycznego dociagania kodu i nie moga automatycznie
+  stawac sie biznesowymi `visibilityLimits` rezultatu.
 - [ ] 8L.7: Wystawic te same neutralne capability jako MCP tools dla Copilota;
   model-facing input ma uzywac bezpiecznej referencji slice i `reason`, a
   repository/ref/path scope ma pochodzic z hidden session context.
@@ -2096,6 +2094,30 @@ celowane testy integracji i API — PASS; `npm --prefix frontend test --
 PASS; `mvn -q -Pbackend-dev clean package` — 1275 testow, 0 bledow — PASS.
 Wszystkie nowe regresje i przyklady sa silnie zanonimizowanym, syntetycznym
 CRM.
+
+Checkpoint 8L.6b (2026-08-21): produkcyjny UI Explorer nie buduje juz ani nie
+przekazuje do AI pelnego `Screen Source Context`. Publiczny endpoint
+`/api/gitlab/frontend/screen-context`, jego request/response, pozycja w Tool
+Workbench i pelny traversal importow zostaly usuniete bez warstwy
+kompatybilnosci. Pozostal jedynie prywatny, minimalny resolver wybranego
+route/view, ktory jest seedem neutralnego `Screen Reachability`.
+
+Pakiet artefaktow v5 zaczyna sie od effective route chain, nastepnie pokazuje
+komponenty w kolejnosci BFS i deduplikowany rejestr faktycznie uzytych
+serwisow, fasad, state oraz operacji backendowych. Prompt, readiness i trzy
+runtime skille pracuja na reachability outline oraz symbol slices. Jawne
+`researchGaps` sa kolejka dalszego targeted research przez tools, a nie
+automatycznym biznesowym `visibilityLimits`. Preflight w aside pokazuje
+inicjalny prompt oraz liczbe znakow kazdego artefaktu przed uruchomieniem AI.
+Policy pozwala ponownie pobrac plik wlasciciela slice'a, gdy konkretny brak
+wymaga szerszego kontekstu; nie ma feature'owego limitu liczby wywolan.
+
+Celowane testy integracji, API, preparation, policies, readiness, parsera,
+joba i sanitizera — 35 testow PASS. `npm --prefix frontend test --
+--watch=false` — 56 plikow i 430 testow PASS; produkcyjny build Angulara —
+PASS; `mvn -q -Pbackend-dev clean package` — 1276 testow, 0 bledow i 0
+pominietych — PASS. Produkcyjny bundle zostal odswiezony. Fixtures i przyklady
+pozostaja silnie zanonimizowanym, syntetycznym CRM.
 
 Utwardzenie checkpointu 8L.6a po kolejnym tescie Workbencha (2026-08-21):
 TypeScript slice zachowuje identyfikatory zakonczone `$`, rozpoznaje wszystkie

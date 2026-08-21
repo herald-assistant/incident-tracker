@@ -12,10 +12,10 @@ class UiExplorerPromptPreparationEvidenceMapperTest {
     @Test
     void shouldExposeStronglyAnonymizedCrmArtifactMetadataWithoutDuplicatingContent() {
         var section = new UiExplorerPromptPreparationEvidenceMapper().map(List.of(new CopilotRenderedArtifact(
-                "ui-explorer/synthetic-crm-context.json",
-                "Bounded synthetic CRM context",
+                "ui-explorer/synthetic-crm-source-slices.md",
+                "Synthetic CRM component and dependency slices",
                 "ui-explorer",
-                "context-snapshot",
+                "screen-source-slices",
                 3,
                 "application/json",
                 "{\"syntheticCrmContact\":true}"
@@ -24,7 +24,7 @@ class UiExplorerPromptPreparationEvidenceMapperTest {
         assertThat(section.provider()).isEqualTo("ui-explorer");
         assertThat(section.category()).isEqualTo("ai-artifacts");
         assertThat(section.items()).singleElement().satisfies(item -> {
-            assertThat(item.title()).isEqualTo("ui-explorer/synthetic-crm-context.json");
+            assertThat(item.title()).isEqualTo("ui-explorer/synthetic-crm-source-slices.md");
             assertThat(item.attributes()).extracting(attribute -> attribute.name())
                     .containsExactly("role", "category", "mimeType", "itemCount", "characterCount");
             assertThat(item.attributes()).extracting(attribute -> attribute.value())

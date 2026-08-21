@@ -9,9 +9,9 @@ import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAnalysisProvider;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextEvidenceMapper;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextService;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContextService;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerJobNotFoundException;
@@ -31,10 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class UiExplorerJobService {
 
     private final Map<String, UiExplorerJobState> jobs = new ConcurrentHashMap<>();
-    private final Map<String, UiExplorerSourceContextSnapshot> sourceContexts = new ConcurrentHashMap<>();
+    private final Map<String, UiExplorerScreenReachabilityContext> reachabilityContexts = new ConcurrentHashMap<>();
     private final Map<String, UiExplorerPromptPreparation> promptPreparations = new ConcurrentHashMap<>();
-    private final UiExplorerSourceContextService sourceContextService;
-    private final UiExplorerSourceContextEvidenceMapper sourceContextEvidenceMapper;
+    private final UiExplorerScreenReachabilityContextService reachabilityContextService;
+    private final UiExplorerScreenReachabilityEvidenceMapper reachabilityEvidenceMapper;
     private final UiExplorerPromptPreparationService promptPreparationService;
     private final UiExplorerPromptPreparationEvidenceMapper promptPreparationEvidenceMapper;
     private final UiExplorerAnalysisProvider analysisProvider;
@@ -74,19 +74,22 @@ public class UiExplorerJobService {
             return;
         }
         try {
-            job.markSourceContextStarted();
-            var sourceContext = sourceContextService.buildContext(
+            job.markScreenReachabilityStarted();
+            var reachabilityContext = reachabilityContextService.buildContext(
                     request.systemId(),
                     request.branch(),
                     request.screenId(),
                     request.sourceRevision(),
                     request.resolvedSectionModes()
             );
-            sourceContexts.put(jobId, sourceContext);
-            job.markSourceContextCompleted(sourceContext, sourceContextEvidenceMapper.map(sourceContext));
+            reachabilityContexts.put(jobId, reachabilityContext);
+            job.markScreenReachabilityCompleted(
+                    reachabilityContext,
+                    reachabilityEvidenceMapper.map(reachabilityContext)
+            );
 
             job.markAiPreparationStarted();
-            var promptPreparation = promptPreparationService.prepare(request, sourceContext);
+            var promptPreparation = promptPreparationService.prepare(request, reachabilityContext);
             promptPreparations.put(jobId, promptPreparation);
             job.markAiPreparationCompleted(
                     promptPreparation.prompt(),
@@ -97,7 +100,7 @@ public class UiExplorerJobService {
             var analysis = analysisProvider.analyze(
                     jobId,
                     request,
-                    sourceContext,
+                    reachabilityContext,
                     promptPreparation,
                     authRef,
                     job::markAiToolEvidenceUpdated,
@@ -124,13 +127,13 @@ public class UiExplorerJobService {
         return jobOrThrow(jobId).snapshot();
     }
 
-    UiExplorerSourceContextSnapshot sourceContext(String jobId) {
+    UiExplorerScreenReachabilityContext reachabilityContext(String jobId) {
         var normalized = normalize(jobId);
-        var sourceContext = sourceContexts.get(normalized);
-        if (sourceContext == null) {
+        var reachabilityContext = reachabilityContexts.get(normalized);
+        if (reachabilityContext == null) {
             throw new UiExplorerJobNotFoundException(normalized);
         }
-        return sourceContext;
+        return reachabilityContext;
     }
 
     UiExplorerPromptPreparation promptPreparation(String jobId) {

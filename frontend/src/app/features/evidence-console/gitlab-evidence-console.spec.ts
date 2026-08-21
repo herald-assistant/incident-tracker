@@ -6,7 +6,6 @@ import { provideRouter } from '@angular/router';
 import {
   GitLabAngularRouteBranchSliceResponse,
   GitLabFrontendCatalogResponse,
-  GitLabFrontendScreenContextResponse,
   GitLabFrontendScreenReachabilityResponse,
   GitLabEndpointUseCaseContextResponse,
   GitLabJavaMethodUseCaseContextResponse,
@@ -94,7 +93,7 @@ describe('GitLabEvidenceConsoleComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(15);
+    expect(compiled.querySelectorAll('.gitlab-tool-button')).toHaveLength(14);
     expect(compiled.textContent).toContain('Repository Instructions');
     expect(compiled.textContent).toContain('Merge Request Search');
     expect(compiled.querySelector('.workbench-header')).toBeNull();
@@ -165,37 +164,17 @@ describe('GitLabEvidenceConsoleComponent', () => {
     expect(compiled.textContent).toContain('/crm/customers/:customerId');
     expect(compiled.textContent).toContain('crm-ui-revision-20260815');
 
-    fixture.componentInstance.useFrontendScreenForContext(
+    fixture.componentInstance.useFrontendScreenForReachability(
       buildFrontendCatalogResponse().nodes[0]
     );
 
-    expect(fixture.componentInstance.selectedToolKey()).toBe('frontend-screen-context');
-    expect(fixture.componentInstance.gitLabFrontendScreenContextForm.controls.screenId.value).toBe(
+    expect(fixture.componentInstance.selectedToolKey()).toBe('frontend-screen-reachability');
+    expect(fixture.componentInstance.gitLabFrontendScreenReachabilityForm.controls.screenId.value).toBe(
       'screen-crm-customer-profile'
     );
     expect(
-      fixture.componentInstance.gitLabFrontendScreenContextForm.controls.pathPrefixes.value
+      fixture.componentInstance.gitLabFrontendScreenReachabilityForm.controls.pathPrefixes.value
     ).toBe('apps/crm-agent');
-  });
-
-  it('should render CRM frontend source manifest, signals and coverage', () => {
-    const fixture = TestBed.createComponent(GitLabEvidenceConsoleComponent);
-    fixture.componentInstance.selectedToolKey.set('frontend-screen-context');
-    fixture.componentInstance.gitLabFrontendScreenContextState.set({
-      status: 'success',
-      statusCode: 200,
-      message: 'OK',
-      response: buildFrontendScreenContextResponse(),
-      responseJson: '{}'
-    });
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Screen source context');
-    expect(compiled.textContent).toContain('Customer profile');
-    expect(compiled.textContent).toContain('FORMS · READY');
-    expect(compiled.textContent).toContain('REACTIVE_FORM · HIGH');
-    expect(compiled.textContent).toContain('customer-profile.ts');
   });
 
   it('should submit and render a human-readable synthetic CRM screen BFS', () => {
@@ -1142,43 +1121,6 @@ function buildFrontendCatalogResponse(): GitLabFrontendCatalogResponse {
   };
 }
 
-function buildFrontendScreenContextResponse(): GitLabFrontendScreenContextResponse {
-  return {
-    scope: buildFrontendCatalogResponse().scope,
-    sourceRevision: buildFrontendCatalogResponse().sourceRevision,
-    screenNode: buildFrontendCatalogResponse().nodes[0],
-    graphCoverage: buildFrontendCatalogResponse().coverage,
-    sourceFiles: [
-      {
-        path: 'apps/crm-agent/src/app/customer/customer-profile.ts',
-        roles: ['VIEW_COMPONENT', 'FORM_LOGIC'],
-        content: 'export class CrmCustomerProfileComponent {}',
-        returnedCharacters: 48,
-        truncated: false
-      }
-    ],
-    technicalSignals: [
-      {
-        kind: 'REACTIVE_FORM',
-        description: 'CRM customer profile form is declared in the component.',
-        confidence: 'HIGH',
-        source: {
-          path: 'apps/crm-agent/src/app/customer/customer-profile.ts',
-          symbol: 'CrmCustomerProfileComponent',
-          startLine: 10,
-          endLine: 80
-        }
-      }
-    ],
-    coverage: [
-      { category: 'FORMS', status: 'READY', detail: 'Reactive form source included.' }
-    ],
-    diagnostics: [],
-    totalReturnedCharacters: 48,
-    contextLimitReached: false
-  };
-}
-
 function buildFrontendScreenReachabilityResponse(): GitLabFrontendScreenReachabilityResponse {
   const screenNode = buildFrontendCatalogResponse().nodes[0];
   return {
@@ -1257,7 +1199,6 @@ function buildFrontendScreenReachabilityResponse(): GitLabFrontendScreenReachabi
         label: 'saveCustomer'
       }
     ],
-    technicalSignals: [],
     diagnostics: [],
     sourceFileCount: 3,
     sourceCharacters: 2100,

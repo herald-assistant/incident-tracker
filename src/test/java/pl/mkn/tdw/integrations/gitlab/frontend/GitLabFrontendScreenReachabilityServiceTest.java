@@ -37,10 +37,10 @@ class GitLabFrontendScreenReachabilityServiceTest {
 
     @Test
     void shouldRenderUniversalSyntheticCrmBreadthFirstGraphWithoutDuplicatingDependencies() {
-        var contextService = mock(GitLabFrontendScreenGraphContextService.class);
+        var contextService = mock(GitLabFrontendScreenSelectionService.class);
         var symbolSliceService = mock(GitLabTypeScriptSymbolSliceService.class);
         var repositoryPort = mock(GitLabRepositoryPort.class);
-        when(contextService.buildReachabilitySeed(any())).thenReturn(context());
+        when(contextService.select(any())).thenReturn(context());
         when(symbolSliceService.readSymbolSlice(any())).thenAnswer(invocation -> {
             var request = invocation.getArgument(0, GitLabTypeScriptSymbolSliceRequest.class);
             return slice(request);
@@ -120,20 +120,19 @@ class GitLabFrontendScreenReachabilityServiceTest {
 
     @Test
     void shouldLoadConfirmedSyntheticCrmChildBeyondTheSeedWithoutInheritingItsFileLimit() {
-        var contextService = mock(GitLabFrontendScreenGraphContextService.class);
+        var contextService = mock(GitLabFrontendScreenSelectionService.class);
         var symbolSliceService = mock(GitLabTypeScriptSymbolSliceService.class);
         var repositoryPort = mock(GitLabRepositoryPort.class);
         var fullContext = context();
         var seedFiles = fullContext.sourceFiles().stream()
                 .filter(file -> file.path().equals(ROOT_PATH) || file.path().endsWith("customer-page.component.html"))
                 .toList();
-        var limitedSeed = new GitLabFrontendScreenGraphContext(
+        var limitedSeed = new GitLabFrontendScreenReachabilitySeed(
                 fullContext.scope(), fullContext.sourceRevision(), fullContext.screenNode(),
                 fullContext.effectiveRouteChain(), fullContext.graphCoverage(), seedFiles,
-                fullContext.technicalSignals(), fullContext.coverage(), fullContext.diagnostics(),
-                seedFiles.stream().mapToInt(GitLabFrontendSourceFile::returnedCharacters).sum(), true
+                fullContext.diagnostics()
         );
-        when(contextService.buildReachabilitySeed(any())).thenReturn(limitedSeed);
+        when(contextService.select(any())).thenReturn(limitedSeed);
         when(repositoryPort.readFile(
                 eq(scope().group()), eq(scope().projectName()), eq(scope().ref()), eq(CHILD_PATH), eq(200_000)
         )).thenReturn(new GitLabRepositoryFileContent(
@@ -158,14 +157,14 @@ class GitLabFrontendScreenReachabilityServiceTest {
                 .noneMatch(limitation -> limitation.contains("context boundary"));
     }
 
-    private GitLabFrontendScreenGraphContextRequest request() {
-        return new GitLabFrontendScreenGraphContextRequest(
+    private GitLabFrontendScreenSelectionRequest request() {
+        return new GitLabFrontendScreenSelectionRequest(
                 scope(), "screen-synthetic-crm-customer", "synthetic-crm-revision-20260820",
                 GitLabFrontendGraphLimits.defaults()
         );
     }
 
-    private GitLabFrontendScreenGraphContext context() {
+    private GitLabFrontendScreenReachabilitySeed context() {
         var routeSource = new GitLabFrontendSourceReference(
                 "apps/synthetic-crm/src/app/app.routes.ts", "syntheticCrmRoutes", 10, 20
         );
@@ -271,13 +270,13 @@ class GitLabFrontendScreenReachabilityServiceTest {
                         """)
         );
         var totalCharacters = files.stream().mapToInt(GitLabFrontendSourceFile::returnedCharacters).sum();
-        return new GitLabFrontendScreenGraphContext(
+        return new GitLabFrontendScreenReachabilitySeed(
                 scope(), new GitLabFrontendSourceRevision(scope().ref(), "synthetic-crm-revision-20260820"),
                 node, chain,
                 new GitLabFrontendGraphCoverage(
                         GitLabFrontendCoverageStatus.READY, 1, 1, 20, 8, 0, false, List.of()
                 ),
-                files, List.of(), List.of(), List.of(), totalCharacters, false
+                files, List.of()
         );
     }
 

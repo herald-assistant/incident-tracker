@@ -623,35 +623,6 @@
               </div>
             }
 
-            @case ('frontend-screen-context') {
-              <div class="form-grid form-grid--stacked">
-                <label class="form-field">
-                  <span class="field-label">Screen ID</span>
-                  <input
-                    class="text-input"
-                    type="text"
-                    placeholder="crm-customer-profile"
-                    autocomplete="off"
-                    spellcheck="false"
-                    [formControl]="gitLabFrontendScreenContextForm.controls.screenId"
-                  />
-                </label>
-                <label class="form-field">
-                  <span class="field-label">Path prefixes</span>
-                  <textarea
-                    class="text-input text-input--textarea"
-                    rows="4"
-                    placeholder="apps/crm-agent"
-                    spellcheck="false"
-                    [formControl]="gitLabFrontendScreenContextForm.controls.pathPrefixes"
-                  ></textarea>
-                </label>
-              </div>
-              @if (controlInvalid(gitLabFrontendScreenContextForm.controls.screenId)) {
-                <p class="form-error">Pole `screenId` jest wymagane.</p>
-              }
-            }
-
             @case ('frontend-screen-reachability') {
               <div class="form-grid">
                 <label class="form-field form-field--wide">
@@ -981,13 +952,6 @@
                             <button
                               class="secondary-button secondary-button--compact endpoint-card__context-button"
                               type="button"
-                              (click)="$event.stopPropagation(); useFrontendScreenForContext(screen)"
-                            >
-                              Użyj do contextu
-                            </button>
-                            <button
-                              class="secondary-button secondary-button--compact endpoint-card__context-button"
-                              type="button"
                               (click)="$event.stopPropagation(); useFrontendScreenForRouteSlice(screen)"
                             >
                               Route slice
@@ -1030,85 +994,6 @@
                     <summary><span>Diagnostics</span><span class="panel-chip">{{ catalogResult.diagnostics.length }}</span></summary>
                     <ul class="context-list">
                       @for (diagnostic of catalogResult.diagnostics; track diagnostic.code + ':' + diagnostic.source?.path) {
-                        <li>{{ diagnostic.severity }} · {{ diagnostic.code }} · {{ diagnostic.message }}</li>
-                      }
-                    </ul>
-                  </details>
-                }
-              </section>
-            }
-
-            @if (selectedToolKey() === 'frontend-screen-context' && gitLabFrontendScreenContextResult(); as contextResult) {
-              <section class="context-results frontend-discovery-results">
-                <div class="context-results__header">
-                  <div>
-                    <p class="tool-status__label">Screen source context</p>
-                    <h3>{{ contextResult.screenNode?.label || contextResult.screenNode?.screen?.screenId || 'Selected screen' }}</h3>
-                  </div>
-                  <div class="endpoint-results__stats">
-                    <span class="panel-chip">{{ contextResult.sourceFiles.length }} files</span>
-                    <span class="panel-chip">{{ contextResult.technicalSignals.length }} signals</span>
-                    <span class="panel-chip">{{ contextResult.totalReturnedCharacters }} chars</span>
-                    @if (contextResult.contextLimitReached || contextResult.graphCoverage.limitReached) { <span class="panel-chip panel-chip--warning">bounded result</span> }
-                  </div>
-                </div>
-
-                <div class="context-chip-list">
-                  @for (coverage of contextResult.coverage; track coverage.category) {
-                    <span class="panel-chip" [title]="coverage.detail || ''">
-                      {{ coverage.category }} · {{ coverage.status }}
-                    </span>
-                  }
-                </div>
-
-                @if (contextResult.technicalSignals.length > 0) {
-                  <details class="context-subsection context-subsection--collapsible" open>
-                    <summary><span>Technical signals</span><span class="panel-chip">{{ contextResult.technicalSignals.length }}</span></summary>
-                    <ul class="context-list">
-                      @for (signal of contextResult.technicalSignals; track signal.kind + ':' + signal.source?.path) {
-                        <li>{{ signal.kind }} · {{ signal.confidence }} · {{ signal.description }}</li>
-                      }
-                    </ul>
-                  </details>
-                }
-
-                <div class="endpoint-list">
-                  @for (file of contextResult.sourceFiles; track file.path || $index) {
-                    <details class="endpoint-card">
-                      <summary class="endpoint-card__summary">
-                        <div class="endpoint-card__main">
-                          <span class="endpoint-card__method">SOURCE</span>
-                          <div class="endpoint-card__copy">
-                            <h4>{{ file.path || 'unknown source' }}</h4>
-                            <p>{{ file.roles.join(', ') }} · {{ file.returnedCharacters }} chars</p>
-                          </div>
-                          @if (file.path?.endsWith('.ts') || file.path?.endsWith('.tsx')) {
-                            <button
-                              class="secondary-button secondary-button--compact endpoint-card__context-button"
-                              type="button"
-                              (click)="$event.stopPropagation(); useFrontendSourceForTypeScriptSlice(file.path)"
-                            >
-                              Symbol slice
-                            </button>
-                          }
-                          @if (file.truncated) { <span class="panel-chip panel-chip--warning">truncated</span> }
-                          <span class="material-symbols-outlined endpoint-card__expand-icon" aria-hidden="true">expand_more</span>
-                        </div>
-                      </summary>
-                      @if (file.content) {
-                        <div class="endpoint-card__details">
-                          <textarea class="json-output source-output" readonly spellcheck="false" [value]="file.content"></textarea>
-                        </div>
-                      }
-                    </details>
-                  }
-                </div>
-
-                @if (contextResult.diagnostics.length > 0) {
-                  <details class="context-subsection context-subsection--collapsible">
-                    <summary><span>Diagnostics</span><span class="panel-chip">{{ contextResult.diagnostics.length }}</span></summary>
-                    <ul class="context-list">
-                      @for (diagnostic of contextResult.diagnostics; track diagnostic.code + ':' + diagnostic.source?.path) {
                         <li>{{ diagnostic.severity }} · {{ diagnostic.code }} · {{ diagnostic.message }}</li>
                       }
                     </ul>

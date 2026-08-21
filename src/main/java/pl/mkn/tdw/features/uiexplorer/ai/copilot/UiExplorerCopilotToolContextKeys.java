@@ -9,8 +9,6 @@ public final class UiExplorerCopilotToolContextKeys {
     public static final String SYSTEM_ID = "uiExplorerSystemId";
     public static final String SOURCE_REVISION = "uiExplorerSourceRevision";
     public static final String ALLOWED_REPOSITORY = "uiExplorerAllowedRepository";
-    public static final String EMBEDDED_SOURCE_PATHS = "uiExplorerEmbeddedSourcePaths";
-    public static final String TRUNCATED_SOURCE_PATHS = "uiExplorerTruncatedSourcePaths";
 
     private UiExplorerCopilotToolContextKeys() {
     }

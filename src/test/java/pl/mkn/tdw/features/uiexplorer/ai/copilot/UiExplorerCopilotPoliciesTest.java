@@ -48,19 +48,18 @@ class UiExplorerCopilotPoliciesTest {
     }
 
     @Test
-    void shouldAllowFocusedNewFileReadButRejectRedundantEmbeddedFileAndMissingReason() {
+    void shouldAllowFocusedReadIncludingSliceOwnerButRejectMissingReason() {
         var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-read-run", context());
         var validChunk = chunk(FETCHED_VALIDATOR_PATH, "main", "Weryfikacja walidatora CRM.");
 
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context, GitLabToolNames.READ_REPOSITORY_FILE_CHUNK, validChunk
         ))).doesNotThrowAnyException();
-        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+        assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,
                 chunk(EMBEDDED_COMPONENT_PATH, "main", "Ponowny odczyt CRM.")
-        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
-                .hasMessageContaining("already complete");
+        ))).doesNotThrowAnyException();
         assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
                 context,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK,

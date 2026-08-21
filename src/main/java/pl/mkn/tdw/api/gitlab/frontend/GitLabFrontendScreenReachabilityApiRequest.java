@@ -5,11 +5,11 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphLimits;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRepositoryScope;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContextRequest;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenSelectionRequest;
 
 import java.util.List;
 
-public record GitLabFrontendScreenContextApiRequest(
+public record GitLabFrontendScreenReachabilityApiRequest(
         @NotBlank @Size(max = 240) String group,
         @NotBlank @Size(max = 240) String projectName,
         @NotBlank @Size(max = 255) String ref,
@@ -21,8 +21,8 @@ public record GitLabFrontendScreenContextApiRequest(
         @Size(max = 160) String expectedRevision
 ) {
 
-    GitLabFrontendScreenGraphContextRequest toIntegrationRequest() {
-        return new GitLabFrontendScreenGraphContextRequest(
+    GitLabFrontendScreenSelectionRequest toIntegrationRequest() {
+        return new GitLabFrontendScreenSelectionRequest(
                 new GitLabFrontendRepositoryScope(group, projectName, ref, normalizedPathPrefixes()),
                 screenId,
                 expectedRevision,

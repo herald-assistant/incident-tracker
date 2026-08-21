@@ -38,7 +38,7 @@ public class UiExplorerInputOptionsService {
                 new UiExplorerOutputAvailability(
                         UiExplorerOutputAvailabilityStatus.AVAILABLE,
                         "UI_EXPLORER_ANALYSIS_AVAILABLE",
-                        "Frontend selection, screen catalog, bounded source context and AI analysis are available.",
+                        "Frontend selection, screen catalog, deterministic screen reachability and AI analysis are available.",
                         List.of()
                 ),
                 catalog.frontends().stream()

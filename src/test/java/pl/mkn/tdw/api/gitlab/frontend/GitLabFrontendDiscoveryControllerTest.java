@@ -27,9 +27,6 @@ class GitLabFrontendDiscoveryControllerTest {
     private GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
 
     @MockitoBean
-    private GitLabFrontendScreenGraphContextService screenGraphContextService;
-
-    @MockitoBean
     private GitLabFrontendScreenReachabilityService screenReachabilityService;
 
     @MockitoBean
@@ -69,36 +66,6 @@ class GitLabFrontendDiscoveryControllerTest {
     }
 
     @Test
-    void shouldExposeSelectedScreenGraphContext() throws Exception {
-        when(screenGraphContextService.build(any())).thenReturn(screenContext());
-
-        mockMvc.perform(post("/api/gitlab/frontend/screen-context")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "group": "synthetic-crm",
-                                  "projectName": "crm-agent-portal",
-                                  "ref": "release/2026.08",
-                                  "pathPrefixes": ["apps/crm-agent"],
-                                  "screenId": "screen-crm-customer-profile",
-                                  "expectedRevision": "crm-ui-revision-20260815"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.screenNode.screen.screenId").value("screen-crm-customer-profile"))
-                .andExpect(jsonPath("$.sourceFiles[0].roles[0]").value("VIEW_COMPONENT"))
-                .andExpect(jsonPath("$.technicalSignals[0].kind").value("REACTIVE_FORM"))
-                .andExpect(jsonPath("$.graphCoverage.visitedRouteNodeCount").value(1))
-                .andExpect(jsonPath("$.contextLimitReached").value(false));
-
-        verify(screenGraphContextService).build(argThat(request ->
-                request.screenId().equals("screen-crm-customer-profile")
-                        && request.expectedRevision().equals("crm-ui-revision-20260815")
-                        && request.limits().maxContextFiles() == 120
-        ));
-    }
-
-    @Test
     void shouldExposeHumanReadableSyntheticCrmScreenReachabilityGraph() throws Exception {
         var node = screenNode();
         var component = new GitLabFrontendReachabilityComponent(
@@ -110,7 +77,7 @@ class GitLabFrontendDiscoveryControllerTest {
         when(screenReachabilityService.build(any())).thenReturn(new GitLabFrontendScreenReachabilityGraph(
                 scope(), new GitLabFrontendSourceRevision(scope().ref(), "crm-ui-revision-20260815"),
                 "OK", node, chain(node), List.of(new GitLabFrontendReachabilityComponentLevel(0, List.of(component))),
-                List.of(), List.of(), List.of(), List.of(), 1, 44, 44, 118,
+                List.of(), List.of(), List.of(), 1, 44, 44, 118,
                 false, List.of(), "## Effective route chain\n/crm/customers/:customerId"
         ));
 
@@ -250,29 +217,9 @@ class GitLabFrontendDiscoveryControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         verifyNoInteractions(
-                routeGraphDiscoveryService, screenGraphContextService, screenReachabilityService,
+                routeGraphDiscoveryService, screenReachabilityService,
                 routeBranchSliceService, typeScriptSymbolSliceService
         );
-    }
-
-    @Test
-    void shouldMapStaleSyntheticCrmScreenToNotFound() throws Exception {
-        when(screenGraphContextService.build(any())).thenThrow(new GitLabFrontendDiscoveryException(
-                "FRONTEND_SCREEN_NOT_FOUND", "Synthetic CRM screen is stale"
-        ));
-        mockMvc.perform(post("/api/gitlab/frontend/screen-context")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "group": "synthetic-crm",
-                                  "projectName": "crm-agent-portal",
-                                  "ref": "release/2026.08",
-                                  "pathPrefixes": [],
-                                  "screenId": "screen-crm-stale"
-                                }
-                                """))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("FRONTEND_SCREEN_NOT_FOUND"));
     }
 
     private GitLabFrontendRouteGraph graph() {
@@ -281,27 +228,6 @@ class GitLabFrontendDiscoveryControllerTest {
                 scope(), new GitLabFrontendSourceRevision(scope().ref(), "crm-ui-revision-20260815"),
                 mock(GitLabFrontendBootstrapRoot.class), List.of(node.nodeId()), List.of(node), List.of(),
                 List.of(chain(node)), List.of(), coverage(), List.of()
-        );
-    }
-
-    private GitLabFrontendScreenGraphContext screenContext() {
-        var node = screenNode();
-        var viewPath = node.viewTarget().sourcePath();
-        return new GitLabFrontendScreenGraphContext(
-                scope(), new GitLabFrontendSourceRevision(scope().ref(), "crm-ui-revision-20260815"),
-                node, chain(node), coverage(),
-                List.of(new GitLabFrontendSourceFile(
-                        viewPath, List.of(GitLabFrontendSourceRole.VIEW_COMPONENT),
-                        "export class CrmCustomerProfileComponent {}", 44, false
-                )),
-                List.of(new GitLabFrontendTechnicalSignal(
-                        GitLabFrontendTechnicalSignalKind.REACTIVE_FORM,
-                        "Synthetic CRM customer form is declared.", GitLabFrontendSignalConfidence.HIGH,
-                        new GitLabFrontendSourceReference(viewPath, "CrmCustomerProfileComponent", 10, 40)
-                )),
-                List.of(new GitLabFrontendContextCoverage(
-                        "FORMS", GitLabFrontendCoverageStatus.READY, "Synthetic reactive form source included."
-                )), List.of(), 44, false
         );
     }
 

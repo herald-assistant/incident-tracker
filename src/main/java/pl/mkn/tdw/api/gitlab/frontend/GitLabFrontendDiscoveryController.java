@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraph;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendRouteGraphDiscoveryService;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContext;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenGraphContextService;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityService;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabAngularRouteBranchSliceResponse;
@@ -23,7 +21,6 @@ import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSliceServic
 public class GitLabFrontendDiscoveryController {
 
     private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
-    private final GitLabFrontendScreenGraphContextService screenGraphContextService;
     private final GitLabFrontendScreenReachabilityService screenReachabilityService;
     private final GitLabAngularRouteBranchSliceService routeBranchSliceService;
     private final GitLabTypeScriptSymbolSliceService typeScriptSymbolSliceService;
@@ -35,16 +32,9 @@ public class GitLabFrontendDiscoveryController {
         return routeGraphDiscoveryService.discover(request.toScope(), request.limits());
     }
 
-    @PostMapping("/screen-context")
-    public GitLabFrontendScreenGraphContext buildScreenContext(
-            @Valid @RequestBody GitLabFrontendScreenContextApiRequest request
-    ) {
-        return screenGraphContextService.build(request.toIntegrationRequest());
-    }
-
     @PostMapping("/screen-reachability")
     public GitLabFrontendScreenReachabilityGraph buildScreenReachability(
-            @Valid @RequestBody GitLabFrontendScreenContextApiRequest request
+            @Valid @RequestBody GitLabFrontendScreenReachabilityApiRequest request
     ) {
         return screenReachabilityService.build(request.toIntegrationRequest());
     }

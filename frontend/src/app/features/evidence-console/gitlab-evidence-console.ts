@@ -18,8 +18,6 @@ import {
   GitLabFrontendCatalogPayload,
   GitLabFrontendCatalogResponse,
   GitLabFrontendRouteNode,
-  GitLabFrontendScreenContextPayload,
-  GitLabFrontendScreenContextResponse,
   GitLabFrontendReachabilityDependency,
   GitLabFrontendScreenReachabilityPayload,
   GitLabFrontendScreenReachabilityResponse,
@@ -62,7 +60,6 @@ type GitLabJsonResponseKey =
   | 'repository-instructions'
   | 'merge-request-search'
   | 'frontend-catalog'
-  | 'frontend-screen-context'
   | 'frontend-screen-reachability'
   | 'frontend-route-branch-slice'
   | 'frontend-typescript-symbol-slice'
@@ -168,14 +165,6 @@ const GITLAB_TOOLS: GitLabToolDefinition[] = [
     endpoint: '/api/gitlab/frontend/catalog',
     summary:
       'Buduje ograniczony katalog tras i widoków Angular/Nx wraz z rewizją źródła i diagnostyką.'
-  },
-  {
-    key: 'frontend-screen-context',
-    label: 'Screen Source Context',
-    category: 'Frontend Discovery',
-    endpoint: '/api/gitlab/frontend/screen-context',
-    summary:
-      'Zbiera ograniczony manifest źródeł, sygnały techniczne i coverage dla wybranego screenId.'
   },
   {
     key: 'frontend-screen-reachability',
@@ -533,15 +522,6 @@ export class GitLabEvidenceConsoleComponent {
     pathPrefixes: new FormControl('', { nonNullable: true })
   });
 
-  readonly gitLabFrontendScreenContextForm = new FormGroup({
-    group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    branch: new FormControl('HEAD', { nonNullable: true, validators: [Validators.required] }),
-    pathPrefixes: new FormControl('', { nonNullable: true }),
-    screenId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
-    expectedRevision: new FormControl('', { nonNullable: true })
-  });
-
   readonly gitLabFrontendScreenReachabilityForm = new FormGroup({
     group: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     projectName: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -617,9 +597,6 @@ export class GitLabEvidenceConsoleComponent {
   readonly gitLabFrontendCatalogState = signal<ToolState>(
     this.idleState('Podaj scope frontendu, aby zbudować bounded route/view catalog.')
   );
-  readonly gitLabFrontendScreenContextState = signal<ToolState>(
-    this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby pobrać source context.')
-  );
   readonly gitLabFrontendScreenReachabilityState = signal<ToolState>(
     this.idleState('Wybierz ekran z katalogu albo podaj screenId, aby zbudować jego czytelny BFS.')
   );
@@ -686,10 +663,6 @@ export class GitLabEvidenceConsoleComponent {
     this.asGitLabFrontendCatalogResult(this.gitLabFrontendCatalogState().response)
   );
 
-  readonly gitLabFrontendScreenContextResult = computed(() =>
-    this.asGitLabFrontendScreenContextResult(this.gitLabFrontendScreenContextState().response)
-  );
-
   readonly gitLabFrontendScreenReachabilityResult = computed(() =>
     this.asGitLabFrontendScreenReachabilityResult(
       this.gitLabFrontendScreenReachabilityState().response
@@ -741,9 +714,6 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'frontend-catalog':
         this.submitGitLabFrontendCatalog();
-        return;
-      case 'frontend-screen-context':
-        this.submitGitLabFrontendScreenContext();
         return;
       case 'frontend-screen-reachability':
         this.submitGitLabFrontendScreenReachability();
@@ -808,13 +778,6 @@ export class GitLabEvidenceConsoleComponent {
         return;
       case 'frontend-catalog':
         this.gitLabFrontendCatalogForm.patchValue({ pathPrefixes: '' });
-        return;
-      case 'frontend-screen-context':
-        this.gitLabFrontendScreenContextForm.patchValue({
-          pathPrefixes: '',
-          screenId: '',
-          expectedRevision: ''
-        });
         return;
       case 'frontend-screen-reachability':
         this.gitLabFrontendScreenReachabilityForm.patchValue({
@@ -1361,51 +1324,6 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
-  submitGitLabFrontendScreenContext(event?: Event): void {
-    event?.preventDefault();
-    if (!this.syncRepositoryScope(this.gitLabFrontendScreenContextForm)) {
-      this.gitLabFrontendScreenContextState.set(
-        this.errorStateFromPayload({
-          code: 'VALIDATION_ERROR',
-          message: 'Uzupełnij group, projectName i branch we wspólnym scope GitLaba.'
-        })
-      );
-      return;
-    }
-    if (this.gitLabFrontendScreenContextForm.invalid) {
-      this.gitLabFrontendScreenContextForm.markAllAsTouched();
-      this.gitLabFrontendScreenContextState.set(
-        this.errorStateFromPayload({
-          code: 'VALIDATION_ERROR',
-          message: 'Podaj screenId pochodzący z bieżącego katalogu frontendu.'
-        })
-      );
-      return;
-    }
-
-    const payload: GitLabFrontendScreenContextPayload = {
-      group: this.gitLabFrontendScreenContextForm.controls.group.value.trim(),
-      projectName: this.gitLabFrontendScreenContextForm.controls.projectName.value.trim(),
-      ref: this.gitLabFrontendScreenContextForm.controls.branch.value.trim(),
-      pathPrefixes: this.toList(
-        this.gitLabFrontendScreenContextForm.controls.pathPrefixes.value
-      ),
-      screenId: this.gitLabFrontendScreenContextForm.controls.screenId.value.trim(),
-      ...(this.gitLabFrontendScreenContextForm.controls.expectedRevision.value.trim()
-        ? {
-            expectedRevision:
-              this.gitLabFrontendScreenContextForm.controls.expectedRevision.value.trim()
-          }
-        : {})
-    };
-    this.runRequest(
-      this.gitLabFrontendScreenContextState,
-      this.evidenceApi.buildGitLabFrontendScreenContext(payload),
-      payload,
-      '/api/gitlab/frontend/screen-context'
-    );
-  }
-
   submitGitLabFrontendScreenReachability(event?: Event): void {
     event?.preventDefault();
     if (!this.syncRepositoryScope(this.gitLabFrontendScreenReachabilityForm)) {
@@ -1554,22 +1472,6 @@ export class GitLabEvidenceConsoleComponent {
     );
   }
 
-  useFrontendScreenForContext(screen: GitLabFrontendRouteNode): void {
-    if (!screen.screen?.screenId) {
-      return;
-    }
-    this.selectedToolKey.set('frontend-screen-context');
-    this.syncRepositoryScope(this.gitLabFrontendScreenContextForm);
-    this.gitLabFrontendScreenContextForm.patchValue({
-      pathPrefixes: this.gitLabFrontendCatalogForm.controls.pathPrefixes.value,
-      screenId: screen.screen.screenId,
-      expectedRevision: this.gitLabFrontendCatalogResult()?.sourceRevision?.commitId || ''
-    });
-    this.gitLabFrontendScreenContextState.set(
-      this.idleState('Screen przeniesiony z katalogu. Uruchom request, aby zebrać bounded source context.')
-    );
-  }
-
   useFrontendScreenForReachability(screen: GitLabFrontendRouteNode): void {
     if (!screen.screen?.screenId) {
       return;
@@ -1610,7 +1512,7 @@ export class GitLabEvidenceConsoleComponent {
     this.selectedToolKey.set('frontend-typescript-symbol-slice');
     this.syncRepositoryScope(this.gitLabTypeScriptSymbolSliceForm);
     this.gitLabTypeScriptSymbolSliceForm.patchValue({
-      pathPrefixes: this.gitLabFrontendScreenContextForm.controls.pathPrefixes.value,
+      pathPrefixes: this.gitLabFrontendScreenReachabilityForm.controls.pathPrefixes.value,
       filePath: normalizedPath,
       declaringTypeName: '',
       templatePath: '',
@@ -1618,7 +1520,7 @@ export class GitLabEvidenceConsoleComponent {
       symbolSelectors: ''
     });
     this.gitLabTypeScriptSymbolSliceState.set(
-      this.idleState('Plik przeniesiony z screen contextu. Uruchom odkrywanie z template albo wskaż symbole ręcznie.')
+      this.idleState('Plik przeniesiony z grafu osiągalności. Uruchom odkrywanie z template albo wskaż symbole ręcznie.')
     );
   }
 
@@ -2394,7 +2296,6 @@ export class GitLabEvidenceConsoleComponent {
     return (
       toolKey === 'repository-instructions' ||
       toolKey === 'frontend-catalog' ||
-      toolKey === 'frontend-screen-context' ||
       toolKey === 'frontend-screen-reachability' ||
       toolKey === 'frontend-route-branch-slice' ||
       toolKey === 'frontend-typescript-symbol-slice' ||
@@ -2547,8 +2448,6 @@ export class GitLabEvidenceConsoleComponent {
         return this.gitLabInstructionState;
       case 'frontend-catalog':
         return this.gitLabFrontendCatalogState;
-      case 'frontend-screen-context':
-        return this.gitLabFrontendScreenContextState;
       case 'frontend-screen-reachability':
         return this.gitLabFrontendScreenReachabilityState;
       case 'frontend-route-branch-slice':
@@ -2693,18 +2592,6 @@ export class GitLabEvidenceConsoleComponent {
     const record = response as Partial<GitLabFrontendCatalogResponse>;
     return Array.isArray(record.nodes) && Array.isArray(record.diagnostics)
       ? (record as GitLabFrontendCatalogResponse)
-      : null;
-  }
-
-  private asGitLabFrontendScreenContextResult(
-    response: unknown
-  ): GitLabFrontendScreenContextResponse | null {
-    if (!response || typeof response !== 'object' || Array.isArray(response)) {
-      return null;
-    }
-    const record = response as Partial<GitLabFrontendScreenContextResponse>;
-    return Array.isArray(record.sourceFiles) && Array.isArray(record.coverage)
-      ? (record as GitLabFrontendScreenContextResponse)
       : null;
   }
 

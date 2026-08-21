@@ -39,7 +39,7 @@ class UiExplorerJobServiceTest {
 
     @Test
     void shouldReturnQueuedImmediatelyAndPublishCompletedCrmAnalysisAfterWorkerRunsOnce() {
-        var sourceContextService = UiExplorerJobServiceTestCreator.sourceContextService(context());
+        var reachabilityContextService = UiExplorerJobServiceTestCreator.reachabilityContextService(context());
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);
         var usage = usage();
         var result = result(usage);
@@ -62,7 +62,7 @@ class UiExplorerJobServiceTest {
         var executor = new CapturingTaskExecutor();
         var localRunPersistence = mock(UiExplorerLocalRunPersistence.class);
         var service = UiExplorerJobServiceTestCreator.create(
-                sourceContextService,
+                reachabilityContextService,
                 analysisProvider,
                 executor,
                 localRunPersistence
@@ -79,7 +79,7 @@ class UiExplorerJobServiceTest {
         assertThat(accepted.steps()).extracting(step -> step.code() + ":" + step.status())
                 .containsExactly(
                         "SCREEN_DISCOVERY:PENDING",
-                        "SOURCE_CONTEXT:PENDING",
+                        "SCREEN_REACHABILITY:PENDING",
                         "AI_PREPARATION:PENDING",
                         "AI_ANALYSIS:PENDING"
                 );
@@ -93,7 +93,7 @@ class UiExplorerJobServiceTest {
         assertThat(completed.steps()).extracting(step -> step.code() + ":" + step.status())
                 .containsExactly(
                         "SCREEN_DISCOVERY:COMPLETED",
-                        "SOURCE_CONTEXT:PARTIAL",
+                        "SCREEN_REACHABILITY:PARTIAL",
                         "AI_PREPARATION:COMPLETED",
                         "AI_ANALYSIS:COMPLETED"
                 );
@@ -101,17 +101,18 @@ class UiExplorerJobServiceTest {
                 .singleElement().extracting(step -> step.usage()).isEqualTo(usage);
         assertThat(completed.contextSections()).isNotEmpty();
         assertThat(completed.contextSections()).extracting(section -> section.category())
-                .contains("selected-screen", "source-manifest", "ai-artifacts");
+                .contains("selected-screen", "component-reachability", "dependency-reachability", "ai-artifacts");
         assertThat(completed.steps()).filteredOn(step -> "SCREEN_DISCOVERY".equals(step.code()))
                 .singleElement().satisfies(step -> assertThat(step.producesEvidence())
                         .extracting(reference -> reference.category())
                         .containsExactly("selected-screen"));
-        assertThat(completed.steps()).filteredOn(step -> "SOURCE_CONTEXT".equals(step.code()))
+        assertThat(completed.steps()).filteredOn(step -> "SCREEN_REACHABILITY".equals(step.code()))
                 .singleElement().satisfies(step -> {
                     assertThat(step.consumesEvidence()).extracting(reference -> reference.category())
                             .containsExactly("selected-screen");
                     assertThat(step.producesEvidence()).extracting(reference -> reference.category())
-                            .contains("source-manifest", "technical-signals", "section-coverage", "source-boundary");
+                            .contains("route-chain", "component-reachability", "dependency-reachability",
+                                    "section-coverage", "reachability-boundary");
                 });
         assertThat(completed.steps()).filteredOn(step -> "AI_PREPARATION".equals(step.code()))
                 .singleElement().satisfies(step -> assertThat(step.producesEvidence())
@@ -131,7 +132,7 @@ class UiExplorerJobServiceTest {
         assertThat(completed.outputAvailability().status())
                 .isEqualTo(UiExplorerOutputAvailabilityStatus.AVAILABLE);
         assertThat(completed.exportAvailable()).isTrue();
-        assertThat(service.sourceContext(accepted.jobId())).isEqualTo(context());
+        assertThat(service.reachabilityContext(accepted.jobId())).isEqualTo(context());
         assertThat(service.promptPreparation(accepted.jobId()).artifacts()).hasSize(7);
         assertThat(service.promptPreparation(accepted.jobId()).artifacts())
                 .extracting(artifact -> artifact.displayName())
@@ -147,14 +148,16 @@ class UiExplorerJobServiceTest {
 
     @Test
     void shouldConvertCrmSourceSelectionFailureIntoBlockedAsyncJob() {
-        var sourceContextService = mock(pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextService.class);
-        when(sourceContextService.buildContext(
+        var reachabilityContextService = mock(
+                pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContextService.class
+        );
+        when(reachabilityContextService.buildContext(
                 eq("crm-agent-portal"), eq("main"), eq("crm-contact-preferences"),
                 eq("crm-commit-abc123"), anyList()
         )).thenThrow(new UiExplorerFrontendNotEligibleException("crm-agent-portal"));
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);
         var executor = new CapturingTaskExecutor();
-        var service = UiExplorerJobServiceTestCreator.create(sourceContextService, analysisProvider, executor);
+        var service = UiExplorerJobServiceTestCreator.create(reachabilityContextService, analysisProvider, executor);
 
         var accepted = service.startJob(request());
         executor.runCaptured();
@@ -166,7 +169,7 @@ class UiExplorerJobServiceTest {
         assertThat(blocked.steps()).extracting(step -> step.code() + ":" + step.status())
                 .containsExactly(
                         "SCREEN_DISCOVERY:BLOCKED",
-                        "SOURCE_CONTEXT:BLOCKED",
+                        "SCREEN_REACHABILITY:BLOCKED",
                         "AI_PREPARATION:SKIPPED",
                         "AI_ANALYSIS:SKIPPED"
                 );
@@ -177,7 +180,7 @@ class UiExplorerJobServiceTest {
 
     @Test
     void shouldPublishSafePartialCrmResultForMalformedAiResponse() {
-        var sourceContextService = UiExplorerJobServiceTestCreator.sourceContextService(context());
+        var reachabilityContextService = UiExplorerJobServiceTestCreator.reachabilityContextService(context());
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);
         var result = result(null);
         var report = UiExplorerJobServiceTestCreator.report("crm-malformed-report", result);
@@ -192,7 +195,7 @@ class UiExplorerJobServiceTest {
                         List.of("Synthetic CRM response was malformed.")
                 ));
         var executor = new CapturingTaskExecutor();
-        var service = UiExplorerJobServiceTestCreator.create(sourceContextService, analysisProvider, executor);
+        var service = UiExplorerJobServiceTestCreator.create(reachabilityContextService, analysisProvider, executor);
 
         var accepted = service.startJob(request());
         executor.runCaptured();
@@ -208,7 +211,7 @@ class UiExplorerJobServiceTest {
 
     @Test
     void shouldPublishControlledBlockedStateWhenCrmAiReadinessFails() {
-        var sourceContextService = UiExplorerJobServiceTestCreator.sourceContextService(context());
+        var reachabilityContextService = UiExplorerJobServiceTestCreator.reachabilityContextService(context());
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);
         var fallback = result(null);
         when(analysisProvider.analyze(any(), any(), any(), any(), any(), any(), any()))
@@ -222,7 +225,7 @@ class UiExplorerJobServiceTest {
                         List.of("Synthetic CRM source coverage is insufficient for AI execution.")
                 ));
         var executor = new CapturingTaskExecutor();
-        var service = UiExplorerJobServiceTestCreator.create(sourceContextService, analysisProvider, executor);
+        var service = UiExplorerJobServiceTestCreator.create(reachabilityContextService, analysisProvider, executor);
 
         var accepted = service.startJob(request());
         executor.runCaptured();
@@ -240,12 +243,12 @@ class UiExplorerJobServiceTest {
 
     @Test
     void shouldHideUnexpectedCopilotFailureAndMarkCrmJobFailed() {
-        var sourceContextService = UiExplorerJobServiceTestCreator.sourceContextService(context());
+        var reachabilityContextService = UiExplorerJobServiceTestCreator.reachabilityContextService(context());
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);
         when(analysisProvider.analyze(any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new IllegalStateException("sensitive synthetic CRM provider detail"));
         var executor = new CapturingTaskExecutor();
-        var service = UiExplorerJobServiceTestCreator.create(sourceContextService, analysisProvider, executor);
+        var service = UiExplorerJobServiceTestCreator.create(reachabilityContextService, analysisProvider, executor);
 
         var accepted = service.startJob(request());
         executor.runCaptured();
@@ -265,7 +268,7 @@ class UiExplorerJobServiceTest {
             throw new IllegalStateException("synthetic CRM executor unavailable");
         };
         var service = UiExplorerJobServiceTestCreator.create(
-                UiExplorerJobServiceTestCreator.sourceContextService(context()),
+                UiExplorerJobServiceTestCreator.reachabilityContextService(context()),
                 mock(UiExplorerAnalysisProvider.class),
                 rejectingExecutor
         );
@@ -297,7 +300,7 @@ class UiExplorerJobServiceTest {
                 .when(localRunPersistence).persistTerminalSnapshot(any());
         var executor = new CapturingTaskExecutor();
         var service = UiExplorerJobServiceTestCreator.create(
-                UiExplorerJobServiceTestCreator.sourceContextService(context()),
+                UiExplorerJobServiceTestCreator.reachabilityContextService(context()),
                 analysisProvider,
                 executor,
                 localRunPersistence
@@ -313,7 +316,7 @@ class UiExplorerJobServiceTest {
     @Test
     void shouldRejectUnknownCrmJobAndInternalArtifacts() {
         var service = UiExplorerJobServiceTestCreator.create(
-                mock(pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextService.class),
+                mock(pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContextService.class),
                 mock(UiExplorerAnalysisProvider.class),
                 new CapturingTaskExecutor()
         );
@@ -321,7 +324,7 @@ class UiExplorerJobServiceTest {
         assertThatThrownBy(() -> service.getJob("crm-missing-job"))
                 .isInstanceOf(UiExplorerJobNotFoundException.class)
                 .hasMessageContaining("crm-missing-job");
-        assertThatThrownBy(() -> service.sourceContext("crm-missing-job"))
+        assertThatThrownBy(() -> service.reachabilityContext("crm-missing-job"))
                 .isInstanceOf(UiExplorerJobNotFoundException.class);
         assertThatThrownBy(() -> service.promptPreparation("crm-missing-job"))
                 .isInstanceOf(UiExplorerJobNotFoundException.class);

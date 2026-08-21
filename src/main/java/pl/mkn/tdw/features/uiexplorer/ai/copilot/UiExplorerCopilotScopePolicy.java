@@ -117,13 +117,6 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
         if (!StringUtils.hasText(filePath) || !withinPrefixes(filePath, repository.pathPrefixes())) {
             reject(request, "filePath is outside the validated UI Explorer code-search boundary.", true);
         }
-        var embeddedPaths = stringList(request.sessionContext().hiddenContext()
-                .get(UiExplorerCopilotToolContextKeys.EMBEDDED_SOURCE_PATHS));
-        var truncatedPaths = stringList(request.sessionContext().hiddenContext()
-                .get(UiExplorerCopilotToolContextKeys.TRUNCATED_SOURCE_PATHS));
-        if (embeddedPaths.contains(filePath) && !truncatedPaths.contains(filePath)) {
-            reject(request, "The requested file is already complete in the deterministic source snapshot.", false);
-        }
         var maxCharacters = integer(arguments, "maxCharacters");
         if (maxCharacters != null && (maxCharacters < 1 || maxCharacters > MAX_READ_CHARACTERS)) {
             reject(request, "maxCharacters exceeds the UI Explorer targeted-read limit.", true);

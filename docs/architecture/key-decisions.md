@@ -59,7 +59,8 @@ Decyzje:
   `Elastic Logs`, `GitLab Source`, `Jira Source`, `Confluence Source`,
   `Database Tools` i `Operational Context`.
 - `GitLab Source` zawiera operatorska grupe `Frontend Discovery` dla bounded
-  route graph Angular/Nx i screen source context. Discovery zaczyna od jednego
+  route graph Angular/Nx, wybranego route branch, symbol slices i screen
+  reachability. Discovery zaczyna od jednego
   zweryfikowanego `bootstrapApplication(...) -> provideRouter(...)`, wykonuje
   tylko targeted reads po osiagalnym grafie i nie listuje calego repository.
   Route topology ma pierwszenstwo przed view targets; extensionless importy
@@ -70,7 +71,11 @@ Decyzje:
   200 000 znakow na plik i 2 000 000 lacznie; wyczerpanie limitu lacznego nie
   moze generowac kaskady wtornych bledow importu.
   Source revision pochodzi z bezposredniego rozwiazania refa do commit id, nie
-  z metadanych pliku bootstrap. Jest to shared/operator preview neutralnej
+  z metadanych pliku bootstrap. Screen reachability zaczyna od minimalnego,
+  wewnetrznego seed wybranego route/view, a nastepnie iteracyjnie rozwija BFS
+  komponentow oraz kanoniczny rejestr faktycznie uzytych zaleznosci. Publiczny
+  `Screen Source Context`, jego pelny traversal plikow i endpoint
+  `/screen-context` nie istnieja. Jest to shared/operator preview neutralnej
   integracji, bez MCP toola, AI, historii i joba UI Explorer.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.

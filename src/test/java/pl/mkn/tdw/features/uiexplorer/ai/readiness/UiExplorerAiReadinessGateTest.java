@@ -17,7 +17,9 @@ class UiExplorerAiReadinessGateTest {
         assertThat(readiness.status()).isEqualTo(UiExplorerAiReadinessStatus.PARTIAL);
         assertThat(readiness.fallbackToolsRequired()).isTrue();
         assertThat(readiness.activeSections()).hasSize(2);
-        assertThat(readiness.limitations()).allMatch(value -> value.contains("CRM") || value.contains("runtime"));
+        assertThat(readiness.limitations()).allSatisfy(value ->
+                assertThat(value).containsIgnoringCase("runtime")
+        );
     }
 
     @Test

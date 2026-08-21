@@ -490,11 +490,19 @@ Na dzisiaj projekt ma:
   wezlow, targeted reads, glebokosci i znakow sa narzucone po stronie backendu
   i nie sa inputem operatora. Wynik zawiera route nodes, edges, effective route
   chains, graph coverage i ref rozstrzygniety do commit id bez file metadata.
-- `POST /api/gitlab/frontend/screen-context`
-  Shared/operator API wybranego effective route chain oraz bounded manifestu
-  komponentu, template, stylow i behavior dependencies dla `screenId`
-  nalezacego do biezacego graphu repository/ref. Operacja jest read-only, nie
-  listuje repository i nie jest capability MCP/AI.
+- `POST /api/gitlab/frontend/screen-reachability`
+  Shared/operator API deterministycznego researchu wybranego `screenId`.
+  Zaczyna od effective route chain i minimalnego selected screen seed, a dalej
+  buduje iteracyjny BFS komponentow oraz deduplikowany rejestr faktycznie
+  uzywanych serwisow, fasad, state i operacji backendowych. Zwraca czytelny
+  outline, symbol slices, source references, research gaps i preflight liczby
+  znakow; nie buduje pelnego snapshotu plikow ani repository inventory.
+- `POST /api/gitlab/frontend/route-branch-slice`
+  Zwraca tylko effective route branch wybranego ekranu wraz z wymaganymi
+  importami i jawnymi markerami pominietych sibling routes.
+- `POST /api/gitlab/frontend/typescript-symbol-slice`
+  Zwraca osiagalne symbole, lokalne helpery, relewantne pola/importy, template
+  bindings i downstream references dla wskazanego pliku TypeScript.
 - `POST /api/elasticsearch/logs/search`
   Narzedzie pomocnicze do wyszukiwania logow z Kibana proxy po `correlationId`.
   To jest jedyny endpoint testowy Elastica. Nie ma juz wariantu `preview`.

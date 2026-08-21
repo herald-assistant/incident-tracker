@@ -223,7 +223,7 @@ class UiExplorerJobControllerTest {
                 UiExplorerOutputAvailabilityStatus.BLOCKED,
                 "UI_EXPLORER_ANALYSIS_IN_PROGRESS",
                 "UI Explorer analysis is still in progress.",
-                List.of("SCREEN_DISCOVERY", "SOURCE_CONTEXT", "AI_PREPARATION", "AI_ANALYSIS")
+                List.of("SCREEN_DISCOVERY", "SCREEN_REACHABILITY", "AI_PREPARATION", "AI_ANALYSIS")
         );
         return new UiExplorerJobStateSnapshot(
                 jobId,

@@ -2,7 +2,7 @@ package pl.mkn.tdw.features.uiexplorer.ai.readiness;
 
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSectionContextCoverage;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
@@ -17,11 +17,11 @@ public class UiExplorerAiReadinessGate {
 
     public UiExplorerAiReadiness evaluate(
             UiExplorerJobStartRequest request,
-            UiExplorerSourceContextSnapshot context
+            UiExplorerScreenReachabilityContext context
     ) {
         var limitations = new ArrayList<String>();
         if (request == null || context == null) {
-            return blocked(List.of(), "UI Explorer request and source context are required.");
+            return blocked(List.of(), "UI Explorer request and screen reachability are required.");
         }
 
         var activeAssignments = request.resolvedSectionModes().stream()
@@ -34,17 +34,14 @@ public class UiExplorerAiReadinessGate {
         if (context.sourceScope() == null || context.sourceRevision() == null) {
             return blocked(activeSections, "Resolved source scope and revision are required for AI execution.");
         }
-        if (context.status() == UiExplorerCoverageStatus.BLOCKED || context.sourceFiles().isEmpty()) {
-            return blocked(activeSections, "Deterministic screen source context is blocked.");
+        if (context.status() == UiExplorerCoverageStatus.BLOCKED || context.components().isEmpty()) {
+            return blocked(activeSections, "Deterministic screen reachability is blocked.");
         }
 
         var coverageBySection = new LinkedHashMap<UiExplorerSectionId, UiExplorerSectionContextCoverage>();
         context.sectionCoverage().forEach(coverage -> coverageBySection.put(coverage.sectionId(), coverage));
         var partial = context.status() == UiExplorerCoverageStatus.PARTIAL
-                || context.boundary() != null && (
-                context.boundary().graphLimitReached()
-                        || context.boundary().contextLimitReached()
-        );
+                || context.boundary() != null && context.boundary().contextLimitReached();
 
         for (var assignment : activeAssignments) {
             var coverage = coverageBySection.get(assignment.sectionId());
@@ -71,7 +68,7 @@ public class UiExplorerAiReadinessGate {
             partial |= coverage.status() == UiExplorerCoverageStatus.PARTIAL;
         }
 
-        limitations.addAll(context.visibilityLimits());
+        limitations.addAll(context.researchGaps());
         return new UiExplorerAiReadiness(
                 partial ? UiExplorerAiReadinessStatus.PARTIAL : UiExplorerAiReadinessStatus.READY,
                 activeSections,

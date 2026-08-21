@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerClaimConfidence;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
@@ -49,7 +49,7 @@ public class UiExplorerAiResponseParser {
     public UiExplorerAiParseResult parse(
             String assistantContent,
             UiExplorerJobStartRequest request,
-            UiExplorerSourceContextSnapshot context,
+            UiExplorerScreenReachabilityContext context,
             Set<String> additionalSourcePaths
     ) {
         if (!StringUtils.hasText(assistantContent)) {
@@ -72,7 +72,7 @@ public class UiExplorerAiResponseParser {
         }
 
         var allowedPaths = new LinkedHashSet<String>();
-        context.sourceFiles().stream().map(file -> normalizePath(file.path())).forEach(allowedPaths::add);
+        context.sourcePaths().stream().map(UiExplorerAiResponseParser::normalizePath).forEach(allowedPaths::add);
         if (additionalSourcePaths != null) {
             additionalSourcePaths.stream().map(UiExplorerAiResponseParser::normalizePath)
                     .filter(StringUtils::hasText).forEach(allowedPaths::add);
@@ -133,7 +133,7 @@ public class UiExplorerAiResponseParser {
 
     public UiExplorerAiParseResult malformed(
             UiExplorerJobStartRequest request,
-            UiExplorerSourceContextSnapshot context,
+            UiExplorerScreenReachabilityContext context,
             String limitation
     ) {
         var safeLimitation = StringUtils.hasText(limitation)
@@ -227,7 +227,7 @@ public class UiExplorerAiResponseParser {
 
     private List<UiExplorerResultSection> reconcileCoverage(
             List<UiExplorerResultSection> sections,
-            UiExplorerSourceContextSnapshot context,
+            UiExplorerScreenReachabilityContext context,
             boolean fallbackEvidenceCaptured,
             List<String> limitations
     ) {
@@ -305,7 +305,7 @@ public class UiExplorerAiResponseParser {
     private String validateIdentity(
             JsonNode root,
             UiExplorerJobStartRequest request,
-            UiExplorerSourceContextSnapshot context
+            UiExplorerScreenReachabilityContext context
     ) {
         if (request == null || context == null || context.screen() == null || context.sourceRevision() == null) {
             return "Expected UI Explorer request context is unavailable.";

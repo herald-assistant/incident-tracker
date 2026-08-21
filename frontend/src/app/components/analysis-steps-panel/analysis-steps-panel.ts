@@ -1167,7 +1167,7 @@ function buildPreparedPromptDescription(stepCode: string | null | undefined): st
     return 'Każda pozycja zawiera dokładną inicjalną wiadomość zapisaną przed wysłaniem: instrukcję, effective skill, Jira evidence i kod Merge Requestu.';
   }
   if (String(stepCode || '').toUpperCase() === 'AI_PREPARATION') {
-    return 'To jest dokładny prompt złożony z bounded source contextu, aktywnych sekcji i kontraktu odpowiedzi bezpośrednio przed uruchomieniem sesji AI.';
+    return 'To jest dokładny prompt złożony z route chain, grafu BFS komponentów, osiągalnych slice’ów, aktywnych sekcji i kontraktu odpowiedzi bezpośrednio przed uruchomieniem sesji AI.';
   }
   if (String(stepCode || '').toUpperCase() === 'INITIAL_SOURCE_SNAPSHOT') {
     return 'To jest prompt złożony po pobraniu Jira, MR-ek, instrukcji repozytorium i kontekstu code search scope. Ten tekst trafia do pierwszego kroku AI.';

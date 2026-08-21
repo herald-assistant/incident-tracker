@@ -74,10 +74,10 @@ final class UiExplorerLocalRunTestFixture {
                 List.of(),
                 List.of(new AnalysisEvidenceSection(
                         "ui-explorer",
-                        "source-manifest",
+                        "component-reachability",
                         List.of(new AnalysisEvidenceItem(
                                 "Synthetic CRM component",
-                                List.of(new AnalysisEvidenceAttribute("filePath", SOURCE_PATH))
+                                List.of(new AnalysisEvidenceAttribute("sourcePath", SOURCE_PATH))
                         ))
                 )),
                 List.of(rawToolEvidence()),

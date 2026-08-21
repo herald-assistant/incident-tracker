@@ -4,8 +4,9 @@
 
 Ten pakiet jest neutralna, read-only capability statycznego rozpoznawania
 frontendow Angular/Nx w jednym repozytorium i jednej rewizji GitLaba. Posiada
-modele workspace, route/view catalog, screen source context, manifest,
-diagnostics i limity.
+modele workspace, route/view catalog, minimalny selected-screen seed,
+route/symbol slices, iteracyjny screen reachability graph, diagnostics i
+preflight rozmiaru.
 
 ## Granice
 
@@ -15,9 +16,10 @@ diagnostics i limity.
   GitLab REST, tree pagination ani cache.
 - Scope zawiera jeden group, project, ref i jawne path prefixes. Nie wykonuj
   multi-repository traversal.
-- Parser jest heurystyczny i bounded. Dynamiczne definicje, spread operators,
-  runtime JSON oraz nierozstrzygniete symbole zwracaj jako diagnostics i
-  ograniczenia, bez zgadywania.
+- Parser jest heurystyczny. Dynamiczne definicje, spread operators, runtime
+  JSON oraz nierozstrzygniete symbole zwracaj jako jawny, ekspandowalny
+  research frontier i diagnostics, bez zgadywania. Nie przywracaj ogolnego
+  traversalu importow ani pelnego snapshotu plikow wybranego ekranu.
 - `screenId` jest generowany deterministycznie z route/view identity. Nie jest
   sciezka pliku przekazywana przez operatora.
 - Capability nie uruchamia kodu frontendu ani przegladarki i niczego nie
@@ -28,4 +30,3 @@ diagnostics i limity.
 - Wszystkie fixtures i przyklady domenowe sa silnie zanonimizowanym CRM.
 - Pokrywaj standalone i module routes, lazy loading, guardy, template variants,
   formularze, NgRx, REST, WebSocket, auth oraz jawne limity/diagnostics.
-

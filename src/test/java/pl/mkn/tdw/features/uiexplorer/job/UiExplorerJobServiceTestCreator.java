@@ -7,9 +7,9 @@ import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAnalysisProvider;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerArtifactService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationEvidenceMapper;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextEvidenceMapper;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextService;
-import pl.mkn.tdw.features.uiexplorer.context.UiExplorerSourceContextSnapshot;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContextService;
+import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunPersistence;
 import pl.mkn.tdw.features.uiexplorer.report.DefaultUiExplorerResultReportAssembler;
@@ -27,23 +27,23 @@ final class UiExplorerJobServiceTestCreator {
     }
 
     static UiExplorerJobService create(
-            UiExplorerSourceContextService sourceContextService,
+            UiExplorerScreenReachabilityContextService reachabilityContextService,
             UiExplorerAnalysisProvider analysisProvider,
             TaskExecutor taskExecutor
     ) {
-        return create(sourceContextService, analysisProvider, taskExecutor, UiExplorerLocalRunPersistence.NO_OP);
+        return create(reachabilityContextService, analysisProvider, taskExecutor, UiExplorerLocalRunPersistence.NO_OP);
     }
 
     static UiExplorerJobService create(
-            UiExplorerSourceContextService sourceContextService,
+            UiExplorerScreenReachabilityContextService reachabilityContextService,
             UiExplorerAnalysisProvider analysisProvider,
             TaskExecutor taskExecutor,
             UiExplorerLocalRunPersistence localRunPersistence
     ) {
         var artifactService = new UiExplorerArtifactService(new ObjectMapper());
         return new UiExplorerJobService(
-                sourceContextService,
-                new UiExplorerSourceContextEvidenceMapper(),
+                reachabilityContextService,
+                new UiExplorerScreenReachabilityEvidenceMapper(),
                 new UiExplorerPromptPreparationService(
                         artifactService,
                         new CopilotArtifactContentMapper()
@@ -56,16 +56,18 @@ final class UiExplorerJobServiceTestCreator {
         );
     }
 
-    static UiExplorerSourceContextService sourceContextService(UiExplorerSourceContextSnapshot context) {
-        var sourceContextService = mock(UiExplorerSourceContextService.class);
-        when(sourceContextService.buildContext(
+    static UiExplorerScreenReachabilityContextService reachabilityContextService(
+            UiExplorerScreenReachabilityContext context
+    ) {
+        var reachabilityContextService = mock(UiExplorerScreenReachabilityContextService.class);
+        when(reachabilityContextService.buildContext(
                 eq("crm-agent-portal"),
                 eq("main"),
                 eq("crm-contact-preferences"),
                 eq("crm-commit-abc123"),
                 anyList()
         )).thenReturn(context);
-        return sourceContextService;
+        return reachabilityContextService;
     }
 
     static AnalysisReport report(String reportId, UiExplorerResultResponse result) {

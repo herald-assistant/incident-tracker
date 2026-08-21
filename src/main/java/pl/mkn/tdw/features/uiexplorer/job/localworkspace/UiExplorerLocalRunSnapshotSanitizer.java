@@ -22,24 +22,27 @@ public class UiExplorerLocalRunSnapshotSanitizer {
 
     private static final Map<String, Set<String>> SAFE_CONTEXT_EVIDENCE_ATTRIBUTES = Map.of(
             "selected-screen", Set.of(
-                    "screenId", "routePattern", "navigationContext", "discoveryStatus", "lazyLoaded",
-                    "guards", "routeParameters", "branch", "sourceRevision", "contextStatus"
+                    "screenId", "component", "navigationContext", "discoveryStatus", "lazyLoaded",
+                    "guards", "routeParameters", "branch", "sourceRevision", "reachabilityStatus"
             ),
-            "source-manifest", Set.of("roles", "returnedCharacters", "truncated"),
-            "technical-signals", Set.of(
-                    "description", "confidence", "sourcePath", "sourceSymbol", "startLine", "endLine"
+            "route-chain", Set.of("pathSegment", "outlet", "sourcePath", "sourceSymbol"),
+            "component-reachability", Set.of(
+                    "breadthFirstOrder", "depth", "discoveryKind", "selector", "sourcePath",
+                    "templatePath", "status", "entrySymbols", "dependencyCount", "childCount",
+                    "sliceCharacters"
+            ),
+            "dependency-reachability", Set.of(
+                    "discoveryOrder", "kind", "category", "sourcePath", "moduleSpecifier", "status",
+                    "methods", "usedBy", "downstreamCount", "sliceCharacters"
             ),
             "section-coverage", Set.of("sectionId", "mode", "status", "sourceCategories", "detail"),
             "ai-artifacts", Set.of("role", "category", "mimeType", "itemCount", "characterCount"),
-            "source-boundary", Set.of(
-                    "visitedRouteNodeCount", "visitedRouteFileCount", "graphSourceReadCount",
-                    "aliasResolutionCount", "unresolvedEdgeCount", "returnedContextFileCount",
-                    "totalReturnedCharacters", "graphLimitReached", "contextLimitReached",
-                    "maxRouteNodes", "maxRouteFiles", "maxSourceReads", "maxAliasResolutions",
-                    "maxImportDepth", "maxComponentDepth", "maxContextFiles", "maxFileCharacters",
-                    "maxTotalCharacters", "visibilityLimit"
+            "reachability-boundary", Set.of(
+                    "routeSegmentCount", "componentCount", "dependencyCount", "edgeCount",
+                    "sourceFileCount", "sourceCharacters", "sliceCharacters", "outlineCharacters",
+                    "contextLimitReached", "researchGap"
             ),
-            "source-diagnostics", Set.of("severity", "message", "sourcePath")
+            "reachability-diagnostics", Set.of("severity", "message", "sourcePath")
     );
 
     private static final Set<String> SAFE_TOOL_EVIDENCE_ATTRIBUTES = Set.of(

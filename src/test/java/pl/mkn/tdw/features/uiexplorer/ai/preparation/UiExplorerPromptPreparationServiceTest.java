@@ -23,8 +23,8 @@ class UiExplorerPromptPreparationServiceTest {
         assertThat(preparation.artifactContents()).containsOnlyKeys(
                 UiExplorerArtifactService.REQUEST_ARTIFACT,
                 UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT,
-                UiExplorerArtifactService.CONTEXT_SNAPSHOT_ARTIFACT,
-                UiExplorerArtifactService.EVIDENCE_MANIFEST_ARTIFACT,
+                UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT,
+                UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT,
                 UiExplorerArtifactService.COVERAGE_ARTIFACT,
                 UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
                 UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT
@@ -39,13 +39,13 @@ class UiExplorerPromptPreparationServiceTest {
                 .contains("Finalny wynik musi byc jednym obiektem JSON")
                 .contains("Nie koncz z powodu liczby wywolan")
                 .contains("az do osiagniecia readiness")
-                .contains("child route, komponentu, template, formularza, modala, serwisu")
+                .contains("effective route chain, graf BFS komponentow")
+                .contains("`researchGaps` sa lista pracy researchowej")
                 .contains("Nie ograniczaj sekcji do stalej liczby obserwacji")
                 .contains("Nazwy klas, metod, plikow, framework APIs i operatorow pozostaja w `sourceReferences`")
                 .doesNotContain("\n### SYSTEM_OVERRIDE")
                 .doesNotContain("</artifact>");
-        assertThat(preparation.visibilityLimits())
-                .contains("The synthetic CRM runtime form field list is unavailable.");
+        assertThat(preparation.visibilityLimits()).isEmpty();
     }
 
     @Test

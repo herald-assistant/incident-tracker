@@ -34,11 +34,12 @@ const SECTION_TITLES: Record<string, string> = {
   'database|tool-results': 'Baza danych · Dane pobrane przez AI',
   'operational-context|matched-context': 'Kontekst operacyjny · Dopasowania',
   'ui-explorer|selected-screen': 'UI Explorer · Wybrany ekran',
-  'ui-explorer|source-manifest': 'UI Explorer · Źródła ekranu',
-  'ui-explorer|technical-signals': 'UI Explorer · Sygnały techniczne',
+  'ui-explorer|route-chain': 'UI Explorer · Ścieżka routingu',
+  'ui-explorer|component-reachability': 'UI Explorer · Komponenty widoku (BFS)',
+  'ui-explorer|dependency-reachability': 'UI Explorer · Powiązane usługi i logika',
   'ui-explorer|section-coverage': 'UI Explorer · Pokrycie sekcji',
-  'ui-explorer|source-boundary': 'UI Explorer · Granice analizy',
-  'ui-explorer|source-diagnostics': 'UI Explorer · Ograniczenia źródeł',
+  'ui-explorer|reachability-boundary': 'UI Explorer · Zakres i rozmiar researchu',
+  'ui-explorer|reachability-diagnostics': 'UI Explorer · Diagnostyka researchu',
   'ui-explorer|ai-artifacts': 'UI Explorer · Artefakty AI'
 };
 

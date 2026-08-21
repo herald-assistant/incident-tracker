@@ -40,7 +40,7 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   sekcji tylko wtedy, gdy wyjasniaja warunek, akcje albo rezultat.
 - Publiczny input nie przyjmuje repository id/path, GitLab group, tokenu,
   nazw plikow, komponentow ani tooli.
-- Brak screen discovery, source contextu albo AI jest jawnym stanem
+- Brak screen discovery, screen reachability albo AI jest jawnym stanem
   niedostepnosci. Nie wolno tworzyc placeholderowego promptu, wyniku ani
   raportu udajacego wykonana analize.
 - Dokladny `preparedPrompt` staje sie publiczny dopiero po deterministycznym

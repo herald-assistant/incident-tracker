@@ -87,9 +87,9 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
   adaptery do zewnetrznych systemow.
 - `src/main/java/pl/mkn/tdw/integrations/gitlab/frontend`
   neutralne graph-first rozpoznanie Angular/Nx od `provideRouter(...)`,
-  targeted traversal importow oraz bounded source context wybranego ekranu i
-  jego routowanych potomkow; bez repository inventory i bez zaleznosci od UI
-  Explorer.
+  minimalny resolver selected screen, iteracyjny BFS komponentow oraz
+  route/symbol slices z deduplikowanymi funkcjonalnymi zaleznosciami; bez
+  repository inventory, pelnego snapshotu plikow i zaleznosci od UI Explorer.
 - `src/main/java/pl/mkn/tdw/api`
   shared/operator API niezalezne od jednego feature'a.
 - `src/main/java/pl/mkn/tdw/shared`

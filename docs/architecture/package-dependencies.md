@@ -54,11 +54,13 @@ Warstwa posiada:
 `integrations.gitlab.frontend` jest przykladem takiej reusable capability:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez
-targeted reads z `GitLabRepositoryPort`, a screen source context rozwija
-effective route chain wybranego ekranu, routowane poddrzewo widokow oraz ich
-bounded dependencies. Korzenie widokow maja pierwszenstwo przed ogolnymi
-importami konfiguracji, aby limit nie odcinal child view, modala albo serwisu
-funkcjonalnego po pobraniu infrastruktury wspolnej.
+targeted reads z `GitLabRepositoryPort`, a screen reachability rozwija
+effective route chain wybranego ekranu, BFS osiagalnych komponentow oraz
+kanoniczny rejestr faktycznie uzytych zaleznosci. Minimalny resolver
+selected route/view pozostaje prywatnym seedem reachability; integracja nie
+udostepnia pelnego screen source context ani traversal wszystkich importow.
+Symbol slices zachowuja tylko osiagalne deklaracje i potrzebne importy, a
+nieosiagniety frontier jest jawnym zadaniem dalszego targeted research.
 Integracja nie zna UI Explorer, API, Copilota ani kontraktu raportu. Nie
 listuje calego repository i nie ma inventory fallbacku. Statyczne heurystyki
 zwracaja typed diagnostics, semantyczne coverage i source revision
@@ -89,15 +91,20 @@ mapuje wynik na publiczny katalog bez danych repository. Publiczne DTO w
 `features.uiexplorer.context` jest feature-owned pipeline nad wybranym
 katalogowym ekranem. Rozwiazuje hidden repository scope przez katalog
 frontendu, wymaga oczekiwanej source revision, wywoluje neutralny screen
-context builder i mapuje wynik na wewnetrzny snapshot, coverage aktywnych
-sekcji oraz publiczne `AnalysisEvidenceSection`. Surowa tresc source files
-pozostaje w wewnetrznym snapshotcie joba; publiczne evidence zawiera tylko
-manifest i nie importuje kontraktow integracji.
+reachability builder i mapuje wynik BFS na wewnetrzny kontekst, coverage
+aktywnych sekcji oraz publiczne `AnalysisEvidenceSection`. Route chain,
+component slices i deduplikowane dependency slices zasilaja logical artifacts;
+research gaps steruja dalszym targeted research i nie sa automatycznie
+mapowane na biznesowe `visibilityLimits`. Publiczne evidence nie ujawnia
+hidden repository scope i nie importuje kontraktow integracji.
 
 `features.uiexplorer.ai.preparation` jest feature-owned granica przygotowania
-AI. Buduje logical artifacts, klasyfikuje opis uzytkownika i source files jako
-untrusted evidence, renderuje feature prompt oraz starter guidance wskazujace
-trzy runtime skills. Reuse'uje jedynie neutralny model
+AI. Buduje logical artifacts v5 z requestem, katalogowym ekranem, czytelnym
+outline reachability, uporzadkowanymi BFS source slices, coverage i kontraktami
+wyniku. Klasyfikuje opis uzytkownika i source slices jako untrusted evidence,
+renderuje feature prompt oraz starter guidance wskazujace trzy runtime skills.
+Preflight widoczny w UI pokazuje dokladna tresc promptu i rozmiary artefaktow.
+Reuse'uje jedynie neutralny model
 `CopilotRenderedArtifact` i mapper tresci z `aiplatform`; nie uruchamia sesji,
 nie wybiera tools i nie dodaje semantyki UI Explorer do platformy.
 

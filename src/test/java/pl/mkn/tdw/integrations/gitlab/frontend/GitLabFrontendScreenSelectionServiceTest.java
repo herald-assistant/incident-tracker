@@ -12,10 +12,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-class GitLabFrontendScreenGraphContextServiceTest {
+class GitLabFrontendScreenSelectionServiceTest {
 
     @Test
-    void shouldReadOnlySelectedSyntheticCrmRouteAndComponentDependenciesWithoutRepositoryInventory() {
+    void shouldReadOnlySyntheticCrmRouteSelectedComponentAndTemplateAsMinimalReachabilitySeed() {
         var graphDiscovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         var repository = mock(GitLabRepositoryPort.class);
         var graph = graph();
@@ -32,91 +32,21 @@ class GitLabFrontendScreenGraphContextServiceTest {
                             "synthetic-crm", "crm-agent-portal", "main", path, content, false
                     );
                 });
-        var service = new GitLabFrontendScreenGraphContextService(graphDiscovery, repository);
+        var service = new GitLabFrontendScreenSelectionService(graphDiscovery, repository);
 
-        var result = service.build(new GitLabFrontendScreenGraphContextRequest(
+        var result = service.select(new GitLabFrontendScreenSelectionRequest(
                 graph.scope(), graph.nodes().get(1).screen().screenId(), "crm-commit-20260816",
                 GitLabFrontendGraphLimits.defaults()
         ));
 
         assertThat(result.sourceFiles()).extracting(GitLabFrontendSourceFile::path)
-                .contains(
+                .containsExactly(
                         "apps/crm-agent/src/app/app.routes.ts",
                         "apps/crm-agent/src/app/preferences/crm-preferences.component.ts",
-                        "apps/crm-agent/src/app/preferences/crm-preferences.component.html",
-                        "apps/crm-agent/src/app/preferences/crm-preferences.component.scss",
-                        "apps/crm-agent/src/app/preferences/crm-preferences.service.ts",
-                        "apps/crm-agent/src/app/preferences/state/crm-preferences.selectors.ts",
-                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts",
-                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.html",
-                        "apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts",
-                        "apps/crm-agent/src/app/auth/crm-contact.guard.ts"
+                        "apps/crm-agent/src/app/preferences/crm-preferences.component.html"
                 );
-        var sourcePaths = result.sourceFiles().stream().map(GitLabFrontendSourceFile::path).toList();
-        assertThat(sourcePaths.indexOf("apps/crm-agent/src/app/preferences/crm-preferences.component.html"))
-                .isLessThan(sourcePaths.indexOf(
-                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts"
-                ));
-        assertThat(result.sourceFiles()).filteredOn(file -> file.path().endsWith("crm-contact.guard.ts"))
-                .singleElement().satisfies(file -> assertThat(file.roles())
-                        .contains(GitLabFrontendSourceRole.AUTHORIZATION));
-        assertThat(result.technicalSignals()).extracting(GitLabFrontendTechnicalSignal::kind)
-                .contains(
-                        GitLabFrontendTechnicalSignalKind.REACTIVE_FORM,
-                        GitLabFrontendTechnicalSignalKind.NGRX_STORE,
-                        GitLabFrontendTechnicalSignalKind.HTTP_CLIENT,
-                        GitLabFrontendTechnicalSignalKind.AUTH_GUARD
-                );
-        assertThat(result.technicalSignals())
-                .filteredOn(signal -> signal.kind() == GitLabFrontendTechnicalSignalKind.REST_CLIENT)
-                .extracting(signal -> signal.source().path())
-                .containsExactly("apps/crm-agent/src/app/preferences/crm-preferences.service.ts")
-                .doesNotContain(
-                        "apps/crm-agent/src/app/preferences/crm-preferences.component.ts",
-                        "apps/crm-agent/src/app/preferences/history/crm-preference-diff-modal.component.ts"
-                );
-        assertThat(result.contextLimitReached()).isFalse();
         verify(repository, never()).listRepositoryFiles(anyString(), anyString(), anyString(), any());
         verify(repository, never()).searchRepositoryFilesByContent(anyString(), anyString(), anyString(), anyList(), anyInt());
-    }
-
-    @Test
-    void shouldPrioritizeSelectedSyntheticCrmTemplateBeforeChildViewsWhenContextIsBounded() {
-        var graphDiscovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
-        var repository = mock(GitLabRepositoryPort.class);
-        var graph = graph();
-        when(graphDiscovery.discover(any(), any())).thenReturn(graph);
-        var files = files();
-        when(repository.readFile(anyString(), anyString(), anyString(), anyString(), anyInt()))
-                .thenAnswer(invocation -> {
-                    var path = invocation.getArgument(3, String.class);
-                    var content = files.get(path);
-                    if (content == null) {
-                        throw new IllegalArgumentException("Synthetic CRM fixture file not found: " + path);
-                    }
-                    return new GitLabRepositoryFileContent(
-                            "synthetic-crm", "crm-agent-portal", "main", path, content, false
-                    );
-                });
-        var service = new GitLabFrontendScreenGraphContextService(graphDiscovery, repository);
-        var defaults = GitLabFrontendGraphLimits.defaults();
-        var bounded = new GitLabFrontendGraphLimits(
-                defaults.maxRootCandidates(), defaults.maxRouteNodes(), defaults.maxRouteFiles(),
-                defaults.maxSourceReads(), defaults.maxAliasResolutions(), defaults.maxImportDepth(),
-                defaults.maxComponentDepth(), 4, defaults.maxFileCharacters(), defaults.maxTotalCharacters()
-        );
-
-        var result = service.build(new GitLabFrontendScreenGraphContextRequest(
-                graph.scope(), graph.nodes().get(1).screen().screenId(), "crm-commit-20260816", bounded
-        ));
-
-        assertThat(result.sourceFiles()).extracting(GitLabFrontendSourceFile::path)
-                .contains(
-                        "apps/crm-agent/src/app/preferences/crm-preferences.component.html",
-                        "apps/crm-agent/src/app/preferences/crm-preferences.component.scss"
-                )
-                .doesNotContain("apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts");
-        assertThat(result.contextLimitReached()).isTrue();
     }
 
     @Test
@@ -145,9 +75,9 @@ class GitLabFrontendScreenGraphContextServiceTest {
         var graphDiscovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         var repository = mock(GitLabRepositoryPort.class);
         when(graphDiscovery.discover(any(), any())).thenReturn(graph());
-        var service = new GitLabFrontendScreenGraphContextService(graphDiscovery, repository);
+        var service = new GitLabFrontendScreenSelectionService(graphDiscovery, repository);
 
-        assertThatThrownBy(() -> service.build(new GitLabFrontendScreenGraphContextRequest(
+        assertThatThrownBy(() -> service.select(new GitLabFrontendScreenSelectionRequest(
                 graph().scope(), graph().nodes().get(1).screen().screenId(), "crm-stale-commit",
                 GitLabFrontendGraphLimits.defaults()
         )))
