@@ -7,6 +7,8 @@ import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendTypeScriptSliceTarget;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
+import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
+import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportSectionIds;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolKind;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptSymbolSelector;
 
@@ -19,7 +21,11 @@ public class UiExplorerCopilotToolSessionContextFactory {
 
     private static final String SESSION_PREFIX = "ui-explorer-";
 
-    public CopilotToolSessionContext create(String runReference, UiExplorerScreenReachabilityContext context) {
+    public CopilotToolSessionContext create(
+            String runReference,
+            UiExplorerJobStartRequest request,
+            UiExplorerScreenReachabilityContext context
+    ) {
         if (context == null || context.sourceScope() == null || context.sourceRevision() == null) {
             throw new IllegalArgumentException("Resolved UI Explorer source scope is required.");
         }
@@ -28,6 +34,9 @@ public class UiExplorerCopilotToolSessionContextFactory {
         var hidden = new LinkedHashMap<String, Object>();
         hidden.put(UiExplorerCopilotToolContextKeys.FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
         hidden.put(UiExplorerCopilotToolContextKeys.RUN_KIND, UiExplorerCopilotToolContextKeys.RUN_KIND_INITIAL);
+        hidden.put(AgentToolContextKeys.REPORT_ID, "ui-explorer-report-" + runId);
+        hidden.put(AgentToolContextKeys.REPORT_FEATURE, UiExplorerCopilotToolContextKeys.FEATURE_VALUE);
+        hidden.put(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS, UiExplorerReportSectionIds.activeSectionIds(request));
         hidden.put(
                 AgentToolContextKeys.TOOL_BUDGET_POLICY,
                 AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN

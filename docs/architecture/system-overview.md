@@ -78,7 +78,7 @@ Wewnetrzny krok `AI_PREPARATION` przygotowuje siedem logical artifacts, feature
 prompt i guidance dla trzech polskich skilli. Prompt osadza kazdy artifact
 dokladnie raz i uklada je w kolejnosci request/sekcje, ekran/rewizja, effective
 route i BFS z zaleznosciami, source slices, coverage/research queue, kontrakt
-pisania funkcjonalnego oraz kontrakt odpowiedzi. Artifact source slices v7
+pisania funkcjonalnego oraz kontrakt raportu. Artifact source slices v9
 grupuje komponenty, ich pelne osiagalne template'y i zaleznosci wedlug sciezki
 pliku w pierwszym porzadku
 reachability, renderuje wspolne importy i identyczne body raz oraz zachowuje
@@ -87,18 +87,23 @@ Coverage dodaje zwiezly `completenessSignals` do wykrywania pominiec w
 sekcjach `DEEP`, bez tworzenia osobnej tresci raportu;
 publikuje bezpieczne metadane artifacts oraz zapisuje dokladny `preparedPrompt`
 przed wywolaniem AI. Feature ma rowniez izolowany provider Copilota:
-readiness gate, hidden GitLab scope, default-deny allowliste, goal-driven
-targeted research bez feature'owego limitu liczby wywolan oraz strict parser
-kompletnej, partial i malformed odpowiedzi. Materialny brak child route, komponentu, template,
+readiness gate, hidden GitLab i report scope, default-deny allowliste,
+goal-driven targeted research bez feature'owego limitu liczby wywolan oraz
+cztery platformowe report tools. Przed sesja powstaje scaffold
+`AnalysisReport` ograniczony do aktywnych sekcji. Materialny brak child route, komponentu, template,
 formularza, modala, serwisu, state logic albo klienta z zatwierdzonego
 repository scope wymaga proby deterministycznego route albo symbol slice, a
 generycznego search/read tylko wtedy, gdy nie istnieje jeszcze
 bezpieczny `sliceRef`; wynik
 z takim brakiem bez zarejestrowanej proby jest odrzucany. Kolejne konkretne
 luki sa pobierane do osiagniecia readiness albo potwierdzenia granicy
-runtime/zewnetrznego scope; licznik wywolan nie finalizuje analizy. Parser nie podnosi
-deterministycznego `PARTIAL` do `READY` bez przechwyconego fallback source
-evidence. `POST`
+runtime/zewnetrznego scope; licznik wywolan nie finalizuje analizy. Skill
+piszacy wynik aktualizuje header, aktywne sekcje i meta, a na koncu odczytuje
+zapisany raport. Finalna odpowiedz tekstowa Copilota nie jest parsowana.
+Backend waliduje raport i jego source references wobec kontekstu oraz captured
+tool evidence, zachowuje poprawne sekcje przy lokalnym braku i projektuje go na
+publiczny `UiExplorerResultResponse`. Brak calego raportu konczy run bledem.
+`POST`
 `/api/ui-explorer/jobs` zwraca `202`, a job wykonuje context, jednokrotne
 przygotowanie promptu i provider poza watkiem HTTP. Atomowy snapshot publikuje
 kroki, context/tool evidence, activity, usage, result i report oraz kontrolowane

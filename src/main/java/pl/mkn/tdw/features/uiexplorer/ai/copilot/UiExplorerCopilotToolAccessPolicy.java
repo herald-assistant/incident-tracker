@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.uiexplorer.ai.copilot;
 
 import com.github.copilot.rpc.ToolDefinition;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 
 import java.util.List;
 import java.util.Set;
@@ -31,7 +32,8 @@ public record UiExplorerCopilotToolAccessPolicy(
             boolean fallbackRequired
     ) {
         var enabled = (registeredTools != null ? registeredTools : List.<ToolDefinition>of()).stream()
-                .filter(tool -> FALLBACK_TOOLS.contains(tool.name()))
+                .filter(tool -> FALLBACK_TOOLS.contains(tool.name())
+                        || CopilotReportToolNames.isReportTool(tool.name()))
                 .toList();
         var names = enabled.stream().map(ToolDefinition::name).toList();
         var available = names.contains(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE)
@@ -40,5 +42,9 @@ public record UiExplorerCopilotToolAccessPolicy(
                 && (names.contains(GitLabToolNames.READ_REPOSITORY_FILE)
                 || names.contains(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK));
         return new UiExplorerCopilotToolAccessPolicy(enabled, names, fallbackRequired, available);
+    }
+
+    public boolean reportToolsAvailable() {
+        return availableToolNames.containsAll(CopilotReportToolNames.allToolNames());
     }
 }

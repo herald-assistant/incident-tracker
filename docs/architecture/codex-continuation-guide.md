@@ -72,7 +72,8 @@ zatwierdzony invariant trafia do architektury.
   reachability z effective route chain, iteracyjnym BFS komponentow i
   deduplikowanymi zaleznosciami, AI preparation/runtime z obowiazkowym,
   goal-driven targeted researchem bez feature'owego limitu liczby wywolan dla
-  brakujacych zrodel in-scope, job,
+  brakujacych zrodel in-scope, report-first wynikiem zapisywanym przez
+  platformowe report tools bez parsowania finalnej odpowiedzi, job,
   business-first report bez osobnego appendixu zaleznosci oraz breaking
   import/export v5.
 

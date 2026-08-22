@@ -14,6 +14,7 @@ import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation
 import pl.mkn.tdw.features.uiexplorer.ai.readiness.UiExplorerAiReadiness;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
+import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.util.List;
@@ -30,6 +31,7 @@ public class UiExplorerCopilotRunRequestAssembler {
     private final CopilotSdkToolFactory toolFactory;
     private final UiExplorerCopilotToolSessionContextFactory contextFactory;
     private final CopilotRunAuthMapper runAuthMapper;
+    private final UiExplorerReportFactory reportFactory;
 
     public UiExplorerCopilotRunAssembly assemble(
             String runReference,
@@ -42,7 +44,7 @@ public class UiExplorerCopilotRunRequestAssembler {
         if (readiness == null || !readiness.executable()) {
             throw new IllegalArgumentException("UI Explorer AI readiness must allow execution.");
         }
-        var toolContext = contextFactory.create(runReference, context);
+        var toolContext = contextFactory.create(runReference, request, context);
         var registeredTools = toolFactory.createToolDefinitions(toolContext, DESCRIPTION_CONTEXT);
         var accessPolicy = UiExplorerCopilotToolAccessPolicy.fromRegisteredTools(
                 registeredTools,
@@ -64,7 +66,7 @@ public class UiExplorerCopilotRunRequestAssembler {
                 sessionConfig,
                 preparation.artifactContents(),
                 null
-        );
+        ).withInitialReport(reportFactory.createInitialReport(request, context, toolContext));
         return new UiExplorerCopilotRunAssembly(runRequest, toolContext, accessPolicy, readiness);
     }
 }

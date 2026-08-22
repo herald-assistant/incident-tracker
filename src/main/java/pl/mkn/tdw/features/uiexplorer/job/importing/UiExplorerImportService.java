@@ -86,13 +86,14 @@ public class UiExplorerImportService {
                 || (job.status() != UiExplorerJobStatus.COMPLETED && job.status() != UiExplorerJobStatus.PARTIAL)
                 || job.request() == null
                 || job.result() == null
+                || job.report() == null
                 || job.result().screen() == null
                 || job.sourceRevision() == null
                 || job.result().sourceRevision() == null
                 || job.result().sections().isEmpty()
                 || job.createdAt() == null
                 || job.completedAt() == null) {
-            throw invalid("Only a completed UI Explorer result can be imported.");
+            throw invalid("Only a completed UI Explorer result and report can be imported.");
         }
         if (!StringUtils.hasText(job.request().systemId())
                 || !StringUtils.hasText(job.request().screenId())

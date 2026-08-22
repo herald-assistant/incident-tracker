@@ -75,8 +75,8 @@ class UiExplorerInitialPromptMatrixTest {
                     "## 4. Initial reachable source evidence and on-demand frontier",
                     "## 5. Coverage and targeted research queue",
                     "## 6. Functional documentation writing contract",
-                    "## 7. Final response contract",
-                    "## Final output rules"
+                    "## 7. AnalysisReport tools contract",
+                    "## Final report rules"
             );
             scenario.expectedSourceMarkers().forEach(marker -> {
                 assertThat(prompt).contains(marker);

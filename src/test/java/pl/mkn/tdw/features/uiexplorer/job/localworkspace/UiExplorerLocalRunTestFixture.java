@@ -12,10 +12,13 @@ import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStatus;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerOutputAvailability;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerOutputAvailabilityStatus;
-import pl.mkn.tdw.features.uiexplorer.report.DefaultUiExplorerResultReportAssembler;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.AnalysisAiToolFeedback;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -43,9 +46,7 @@ final class UiExplorerLocalRunTestFixture {
     static UiExplorerJobStateSnapshot snapshot(UiExplorerJobStatus status) {
         var hasOutput = status == UiExplorerJobStatus.COMPLETED || status == UiExplorerJobStatus.PARTIAL;
         var result = hasOutput ? result() : null;
-        var report = hasOutput
-                ? new DefaultUiExplorerResultReportAssembler().assemble("crm-ui-history-report-1", result).report()
-                : null;
+        var report = hasOutput ? report(result) : null;
         var terminal = status == UiExplorerJobStatus.COMPLETED
                 || status == UiExplorerJobStatus.PARTIAL
                 || status == UiExplorerJobStatus.BLOCKED
@@ -157,6 +158,43 @@ final class UiExplorerLocalRunTestFixture {
                 context().visibilityLimits(),
                 List.of(),
                 usage()
+        );
+    }
+
+    static AnalysisReport report(UiExplorerResultResponse result) {
+        var sections = result.sections().stream().map(section -> new AnalysisReportSection(
+                section.sectionId().name(),
+                section.sectionId().label(),
+                section.sectionId().ordinal(),
+                section.markdown(),
+                new AnalysisReportMeta(
+                        section.sourceReferences().stream().map(reference -> new AnalysisReportReference(
+                                "source",
+                                reference.symbol(),
+                                reference.path() + "#L" + reference.startLine() + "-L" + reference.endLine(),
+                                "Synthetic CRM UI source"
+                        )).toList(),
+                        section.visibilityLimits(),
+                        section.openQuestions(),
+                        List.of(),
+                        "high",
+                        List.of()
+                )
+        )).toList();
+        return new AnalysisReport(
+                "crm-ui-history-report-1",
+                result.screen().routePattern(),
+                result.screen().label(),
+                result.functionalOverview(),
+                sections,
+                new AnalysisReportMeta(
+                        sections.stream().flatMap(section -> section.meta().references().stream()).toList(),
+                        result.visibilityLimits(),
+                        result.unresolvedQuestions(),
+                        List.of(),
+                        "high",
+                        List.of()
+                )
         );
     }
 

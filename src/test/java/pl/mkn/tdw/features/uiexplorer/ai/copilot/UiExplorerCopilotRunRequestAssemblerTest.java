@@ -13,9 +13,11 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreferenc
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerArtifactService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
 import pl.mkn.tdw.features.uiexplorer.ai.readiness.UiExplorerAiReadinessGate;
+import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportFactory;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
 import java.util.List;
@@ -48,7 +50,8 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         var assembler = new UiExplorerCopilotRunRequestAssembler(
                 toolFactory,
                 new UiExplorerCopilotToolSessionContextFactory(),
-                new CopilotRunAuthMapper()
+                new CopilotRunAuthMapper(),
+                new UiExplorerReportFactory()
         );
 
         var assembly = assembler.assemble(
@@ -60,13 +63,16 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 AnalysisAiAuthRef.localToken(null)
         );
 
-        assertThat(assembly.toolAccessPolicy().availableToolNames()).containsExactlyInAnyOrder(
+        assertThat(assembly.toolAccessPolicy().availableToolNames()).contains(
                 GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
                 GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 GitLabToolNames.READ_REPOSITORY_FILE,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
         );
+        assertThat(assembly.toolAccessPolicy().availableToolNames())
+                .containsAll(CopilotReportToolNames.allToolNames());
+        assertThat(assembly.toolAccessPolicy().reportToolsAvailable()).isTrue();
         assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames()).contains("skill");
         assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())
                 .doesNotContain("gitlab_list_available_repositories", "db_describe_table");
@@ -75,13 +81,20 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(assembly.runRequest().artifactContents()).hasSize(7);
         assertThat(assembly.runRequest().artifactContents())
                 .containsKey("ui-explorer/functional-writing-contract.md");
+        assertThat(assembly.runRequest().initialReport()).isNotNull();
+        assertThat(assembly.runRequest().initialReport().reportId())
+                .isEqualTo("ui-explorer-report-crm-ui-run-1");
+        assertThat(assembly.runRequest().initialReport().header())
+                .isEqualTo("/contacts/:contactId/preferences");
+        assertThat(assembly.runRequest().initialReport().sections())
+                .extracting(section -> section.id())
+                .containsExactly("OVERVIEW", "FORMS_AND_RULES");
         var durableInstructions = assembly.runRequest().sessionConfigRequest().durableSystemInstructions();
         assertThat(durableInstructions)
-                .contains("`screen.screenId` jest wymagane")
-                .contains("top-level `screenId` jest zabronione")
-                .contains("`sourceRevision` musi byc obiektem")
+                .contains("Zrodlem prawdy initial result jest `AnalysisReport`")
+                .contains("`report_get_current`")
                 .contains(preparation.artifactContents().get(UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT))
-                .contains(preparation.artifactContents().get(UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT))
+                .contains(preparation.artifactContents().get(UiExplorerArtifactService.REPORT_CONTRACT_ARTIFACT))
                 .doesNotContain(preparation.artifactContents().get(UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT));
         assertThat(durableInstructions.length())
                 .as("durable contract must not duplicate the source research context")
@@ -93,6 +106,10 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 .isEqualTo(List.of("crm-agent-portal"));
         assertThat(hidden.get(AgentToolContextKeys.TOOL_BUDGET_POLICY))
                 .isEqualTo(AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
+        assertThat(hidden.get(AgentToolContextKeys.REPORT_ID)).isEqualTo("ui-explorer-report-crm-ui-run-1");
+        assertThat(hidden.get(AgentToolContextKeys.REPORT_FEATURE)).isEqualTo("ui-explorer");
+        assertThat(hidden.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS))
+                .isEqualTo(List.of("OVERVIEW", "FORMS_AND_RULES"));
         assertThat(hidden.get(GitLabFrontendToolContextKeys.PROJECT_NAME)).isEqualTo("crm-agent-portal");
         assertThat(hidden.get(GitLabFrontendToolContextKeys.PATH_PREFIXES))
                 .isEqualTo(List.of("apps/crm-agent"));
@@ -107,7 +124,7 @@ class UiExplorerCopilotRunRequestAssemblerTest {
     }
 
     private List<ToolDefinition> registeredTools() {
-        return List.of(
+        var tools = new java.util.ArrayList<ToolDefinition>(List.of(
                 tool(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE),
                 tool(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE),
                 tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES),
@@ -115,7 +132,9 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 tool(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK),
                 tool(GitLabToolNames.LIST_AVAILABLE_REPOSITORIES),
                 tool("db_describe_table")
-        );
+        ));
+        CopilotReportToolNames.allToolNames().forEach(name -> tools.add(tool(name)));
+        return List.copyOf(tools);
     }
 
     private ToolDefinition tool(String name) {

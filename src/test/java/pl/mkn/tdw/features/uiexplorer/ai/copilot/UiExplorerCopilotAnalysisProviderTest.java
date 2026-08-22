@@ -1,6 +1,5 @@
 package pl.mkn.tdw.features.uiexplorer.ai.copilot;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
@@ -11,13 +10,14 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotExecutionResult;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
+import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiAnalysisStatus;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerArtifactService;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparationService;
 import pl.mkn.tdw.features.uiexplorer.ai.readiness.UiExplorerAiReadinessGate;
-import pl.mkn.tdw.features.uiexplorer.ai.response.UiExplorerAiResponseParser;
-import pl.mkn.tdw.features.uiexplorer.report.DefaultUiExplorerResultReportAssembler;
+import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportFactory;
+import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.FETCHED_VALIDATOR_PATH;
-import static pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.completeResponse;
+import static pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.completeReport;
 import static pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.fetchedCodeEvidence;
 import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.context;
 import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request;
@@ -43,7 +43,7 @@ class UiExplorerCopilotAnalysisProviderTest {
 
     @Test
     void shouldExecuteIsolatedCrmRuntimeAndAcceptOnlyCapturedToolSource() {
-        var objectMapper = new ObjectMapper();
+        var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
         var toolFactory = mock(CopilotSdkToolFactory.class);
         when(toolFactory.createToolDefinitions(any(), any())).thenReturn(registeredTools());
         var runPreparation = mock(CopilotRunPreparationService.class);
@@ -57,9 +57,10 @@ class UiExplorerCopilotAnalysisProviderTest {
             var session = invocation.getArgument(0, CopilotPreparedSession.class);
             session.evidenceSink().accept(fetchedCodeEvidence(FETCHED_VALIDATOR_PATH));
             return new CopilotExecutionResult(
-                    completeResponse(FETCHED_VALIDATOR_PATH),
+                    "Raport UI Explorera zostal zapisany i zweryfikowany.",
                     usage,
-                    "crm-copilot-session"
+                    "crm-copilot-session",
+                    completeReport("ui-explorer-report-crm-provider-run", FETCHED_VALIDATOR_PATH)
             );
         });
         var externalEvidence = new AtomicReference<pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection>();
@@ -90,7 +91,7 @@ class UiExplorerCopilotAnalysisProviderTest {
 
     @Test
     void shouldReturnBlockedFallbackWithoutStartingCopilotWhenReadinessFails() {
-        var objectMapper = new ObjectMapper();
+        var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
         var toolFactory = mock(CopilotSdkToolFactory.class);
         var runPreparation = mock(CopilotRunPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
@@ -107,14 +108,14 @@ class UiExplorerCopilotAnalysisProviderTest {
         );
 
         assertThat(analysis.status()).isEqualTo(UiExplorerAiAnalysisStatus.BLOCKED);
-        assertThat(analysis.result().usage()).isNull();
+        assertThat(analysis.result()).isNull();
         assertThat(analysis.preparedPrompt()).isNull();
         verifyNoInteractions(toolFactory, runPreparation, executionGateway);
     }
 
     @Test
     void shouldRejectSyntheticCrmResultThatReportsMissingInScopeSnapshotWithoutFallbackAttempt() throws Exception {
-        var objectMapper = new ObjectMapper();
+        var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
         var toolFactory = mock(CopilotSdkToolFactory.class);
         when(toolFactory.createToolDefinitions(any(), any())).thenReturn(registeredTools());
         var runPreparation = mock(CopilotRunPreparationService.class);
@@ -122,13 +123,27 @@ class UiExplorerCopilotAnalysisProviderTest {
                 "crm-provider-gap-run", null, null, null, "prepared CRM prompt", Map.of()
         ));
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
-        var responseNode = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.readTree(
-                completeResponse(pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.EMBEDDED_COMPONENT_PATH)
+        var baseReport = completeReport(
+                "ui-explorer-report-crm-provider-gap-run",
+                pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiRuntimeTestFixture.EMBEDDED_COMPONENT_PATH
         );
-        responseNode.putArray("visibilityLimits").add("Brak snapshotu komponentu potomnego CRM.");
-        var response = objectMapper.writeValueAsString(responseNode);
+        var reportWithGap = new pl.mkn.tdw.shared.ai.report.AnalysisReport(
+                baseReport.reportId(),
+                baseReport.header(),
+                baseReport.subHeader(),
+                baseReport.markdownSummary(),
+                baseReport.sections(),
+                new pl.mkn.tdw.shared.ai.report.AnalysisReportMeta(
+                        baseReport.meta().references(),
+                        List.of("Brak snapshotu komponentu potomnego CRM."),
+                        List.of(),
+                        List.of(),
+                        "medium",
+                        List.of()
+                )
+        );
         when(executionGateway.execute(any())).thenReturn(new CopilotExecutionResult(
-                response, null, "crm-copilot-gap-session"
+                "Raport zapisany.", null, "crm-copilot-gap-session", reportWithGap
         ));
         var provider = provider(objectMapper, toolFactory, runPreparation, executionGateway);
 
@@ -142,13 +157,13 @@ class UiExplorerCopilotAnalysisProviderTest {
                 AnalysisAiActivityListener.NO_OP
         );
 
-        assertThat(analysis.status()).isEqualTo(UiExplorerAiAnalysisStatus.MALFORMED);
+        assertThat(analysis.status()).isEqualTo(UiExplorerAiAnalysisStatus.PARTIAL);
         assertThat(analysis.limitations())
                 .contains("AI reported a missing in-scope UI source without attempting the required scoped GitLab fallback.");
     }
 
     private UiExplorerCopilotAnalysisProvider provider(
-            ObjectMapper objectMapper,
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper,
             CopilotSdkToolFactory toolFactory,
             CopilotRunPreparationService runPreparation,
             CopilotSdkExecutionGateway executionGateway
@@ -156,19 +171,19 @@ class UiExplorerCopilotAnalysisProviderTest {
         var assembler = new UiExplorerCopilotRunRequestAssembler(
                 toolFactory,
                 new UiExplorerCopilotToolSessionContextFactory(),
-                new CopilotRunAuthMapper()
+                new CopilotRunAuthMapper(),
+                new UiExplorerReportFactory()
         );
         return new UiExplorerCopilotAnalysisProvider(
                 new UiExplorerAiReadinessGate(),
                 assembler,
                 runPreparation,
                 executionGateway,
-                new UiExplorerAiResponseParser(objectMapper),
-                new DefaultUiExplorerResultReportAssembler()
+                new UiExplorerReportMapper()
         );
     }
 
-    private UiExplorerPromptPreparation promptPreparation(ObjectMapper objectMapper) {
+    private UiExplorerPromptPreparation promptPreparation(com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
         return new UiExplorerPromptPreparationService(
                 new UiExplorerArtifactService(objectMapper),
                 new CopilotArtifactContentMapper()
@@ -176,13 +191,15 @@ class UiExplorerCopilotAnalysisProviderTest {
     }
 
     private List<ToolDefinition> registeredTools() {
-        return List.of(
+        var tools = new java.util.ArrayList<ToolDefinition>(List.of(
                 tool(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE),
                 tool(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE),
                 tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK)
-        );
+        ));
+        CopilotReportToolNames.allToolNames().forEach(name -> tools.add(tool(name)));
+        return List.copyOf(tools);
     }
 
     private ToolDefinition tool(String name) {

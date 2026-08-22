@@ -10,15 +10,14 @@ import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAiAnalysisStatus;
 import pl.mkn.tdw.features.uiexplorer.ai.UiExplorerAnalysisProvider;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
 import pl.mkn.tdw.features.uiexplorer.ai.readiness.UiExplorerAiReadinessGate;
-import pl.mkn.tdw.features.uiexplorer.ai.response.UiExplorerAiParseStatus;
-import pl.mkn.tdw.features.uiexplorer.ai.response.UiExplorerAiResponseParser;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
-import pl.mkn.tdw.features.uiexplorer.report.UiExplorerResultReportAssembler;
+import pl.mkn.tdw.features.uiexplorer.report.UiExplorerReportMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
-import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.evidence.AnalysisAiToolEvidenceListener;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
@@ -34,8 +33,7 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
     private final UiExplorerCopilotRunRequestAssembler runRequestAssembler;
     private final CopilotRunPreparationService runPreparationService;
     private final CopilotSdkExecutionGateway executionGateway;
-    private final UiExplorerAiResponseParser responseParser;
-    private final UiExplorerResultReportAssembler reportAssembler;
+    private final UiExplorerReportMapper reportMapper;
 
     @Override
     public UiExplorerAiAnalysis analyze(
@@ -49,20 +47,13 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
     ) {
         var readiness = readinessGate.evaluate(request, context);
         if (!readiness.executable()) {
-            var fallback = responseParser.malformed(
-                    request,
-                    context,
-                    readiness.limitations().isEmpty()
-                            ? "UI Explorer AI readiness is blocked."
-                            : readiness.limitations().get(0)
-            );
             return new UiExplorerAiAnalysis(
                     UiExplorerAiAnalysisStatus.BLOCKED,
-                    fallback.result(),
                     null,
                     null,
                     null,
-                    reportAssembler.assemble(reportId(runReference), fallback.result()).report(),
+                    null,
+                    null,
                     readiness.limitations()
             );
         }
@@ -75,6 +66,17 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
                 readiness,
                 authRef
         );
+        if (!assembly.toolAccessPolicy().reportToolsAvailable()) {
+            return new UiExplorerAiAnalysis(
+                    UiExplorerAiAnalysisStatus.BLOCKED,
+                    null,
+                    null,
+                    preparation.prompt(),
+                    null,
+                    null,
+                    java.util.List.of("UI Explorer report tools are unavailable for this run.")
+            );
+        }
         var fetchedSourcePaths = new LinkedHashSet<String>();
         var gitLabFallbackAttempted = new AtomicBoolean();
         var preparedSession = runPreparationService.prepare(assembly.runRequest())
@@ -93,32 +95,52 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
 
         var missingFallback = readiness.fallbackToolsRequired() && !assembly.toolAccessPolicy().fallbackAvailable();
         var execution = executionGateway.execute(preparedSession);
-        var parsed = responseParser.parse(execution.content(), request, context, Set.copyOf(fetchedSourcePaths));
-        if (assembly.toolAccessPolicy().fallbackAvailable()
-                && !gitLabFallbackAttempted.get()
-                && reportsPreventableRepositoryGap(parsed.result())) {
-            parsed = responseParser.malformed(
-                    request,
-                    context,
-                    "AI reported a missing in-scope UI source without attempting the required scoped GitLab fallback."
+        var mapping = reportMapper.map(
+                execution.report(),
+                request,
+                context,
+                Set.copyOf(fetchedSourcePaths),
+                execution.usage()
+        );
+        if (mapping.result() == null || mapping.report() == null) {
+            return new UiExplorerAiAnalysis(
+                    UiExplorerAiAnalysisStatus.FAILED,
+                    null,
+                    execution.usage(),
+                    preparation.prompt(),
+                    execution.sessionId(),
+                    null,
+                    mapping.limitations()
             );
         }
-        var result = withUsageAndLimit(
-                parsed.result(),
-                execution.usage(),
-                missingFallback ? "Scoped GitLab fallback tools were unavailable for this run." : null
-        );
-        var report = reportAssembler.assemble(reportId(runReference), result).report();
+        var preventableRepositoryGap = assembly.toolAccessPolicy().fallbackAvailable()
+                && !gitLabFallbackAttempted.get()
+                && reportsPreventableRepositoryGap(mapping.result());
+        var limitations = new LinkedHashSet<>(mapping.limitations());
+        var result = mapping.result();
+        var report = mapping.report();
+        if (preventableRepositoryGap) {
+            var limitation = "AI reported a missing in-scope UI source without attempting the required scoped GitLab fallback.";
+            limitations.add(limitation);
+            result = withLimit(result, limitation);
+            report = withLimit(report, limitation);
+        }
+        if (missingFallback) {
+            var limitation = "Scoped GitLab fallback tools were unavailable for this run.";
+            limitations.add(limitation);
+            result = withLimit(result, limitation);
+            report = withLimit(report, limitation);
+        }
         return new UiExplorerAiAnalysis(
-                missingFallback && parsed.status() == UiExplorerAiParseStatus.COMPLETED
-                        ? UiExplorerAiAnalysisStatus.PARTIAL
-                        : status(parsed.status()),
+                mapping.complete() && !missingFallback && !preventableRepositoryGap
+                        ? UiExplorerAiAnalysisStatus.COMPLETED
+                        : UiExplorerAiAnalysisStatus.PARTIAL,
                 result,
                 execution.usage(),
                 preparation.prompt(),
                 execution.sessionId(),
                 report,
-                mergeLimitations(parsed.limitations(), missingFallback)
+                java.util.List.copyOf(limitations)
         );
     }
 
@@ -135,15 +157,9 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
                 .forEach(target::add);
     }
 
-    private UiExplorerResultResponse withUsageAndLimit(
-            UiExplorerResultResponse result,
-            AnalysisAiUsage usage,
-            String limitation
-    ) {
+    private UiExplorerResultResponse withLimit(UiExplorerResultResponse result, String limitation) {
         var limits = new LinkedHashSet<>(result.visibilityLimits());
-        if (StringUtils.hasText(limitation)) {
-            limits.add(limitation);
-        }
+        limits.add(limitation);
         return new UiExplorerResultResponse(
                 result.screen(),
                 result.scenarioDescription(),
@@ -153,29 +169,24 @@ public class UiExplorerCopilotAnalysisProvider implements UiExplorerAnalysisProv
                 result.overallConfidence(),
                 java.util.List.copyOf(limits),
                 result.unresolvedQuestions(),
-                usage
+                result.usage()
         );
     }
 
-    private java.util.List<String> mergeLimitations(java.util.List<String> limitations, boolean missingFallback) {
-        var merged = new LinkedHashSet<>(limitations);
-        if (missingFallback) {
-            merged.add("Scoped GitLab fallback tools were unavailable for this run.");
-        }
-        return java.util.List.copyOf(merged);
-    }
-
-    private UiExplorerAiAnalysisStatus status(UiExplorerAiParseStatus status) {
-        return switch (status) {
-            case COMPLETED -> UiExplorerAiAnalysisStatus.COMPLETED;
-            case PARTIAL -> UiExplorerAiAnalysisStatus.PARTIAL;
-            case MALFORMED -> UiExplorerAiAnalysisStatus.MALFORMED;
-        };
-    }
-
-    private String reportId(String runReference) {
-        var value = StringUtils.hasText(runReference) ? runReference.trim() : "unassigned";
-        return "ui-explorer-report-" + value;
+    private AnalysisReport withLimit(AnalysisReport report, String limitation) {
+        var limits = new LinkedHashSet<>(report.meta().visibilityLimits());
+        limits.add(limitation);
+        var meta = new AnalysisReportMeta(
+                report.meta().references(),
+                java.util.List.copyOf(limits),
+                report.meta().openQuestions(),
+                report.meta().gaps(),
+                report.meta().confidence(),
+                report.meta().warnings()
+        );
+        return new AnalysisReport(
+                report.reportId(), report.header(), report.subHeader(), report.markdownSummary(), report.sections(), meta
+        );
     }
 
     private String normalizePath(String value) {

@@ -24,7 +24,7 @@ class UiExplorerArtifactServiceTest {
                         UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT,
                         UiExplorerArtifactService.COVERAGE_ARTIFACT,
                         UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
-                        UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT
+                        UiExplorerArtifactService.REPORT_CONTRACT_ARTIFACT
                 );
         assertThat(artifacts).allSatisfy(artifact -> {
             assertThat(artifact.provider()).isEqualTo("ui-explorer");
@@ -66,25 +66,26 @@ class UiExplorerArtifactServiceTest {
                 .contains("Pole lub grupa | Znaczenie | Wymagalnosc i walidacja")
                 .contains("Nie tworz stalej liczby punktow")
                 .contains("completenessSignals");
-        objectMapper.readTree(content(artifacts, UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT));
+        assertThat(content(artifacts, UiExplorerArtifactService.REPORT_CONTRACT_ARTIFACT))
+                .contains("Zrodlem prawdy initial result jest `AnalysisReport`")
+                .contains("report_update_header", "report_upsert_section", "report_update_meta", "report_get_current")
+                .contains("Nie zwracaj JSON");
     }
 
     @Test
-    void shouldKeepCanonicalResponseContractAlignedWithUiExplorerEnums() {
-        var contract = service.responseContract();
+    void shouldKeepCanonicalReportContractAlignedWithUiExplorerSectionsAndTools() {
+        var contract = service.reportContract();
 
         assertThat(contract)
                 .doesNotContain("profile")
                 .doesNotContain("changePreparationSummary")
-                .contains("OVERVIEW|NAVIGATION_AND_ACCESS|SCREEN_STRUCTURE|ACTIONS_AND_OUTCOMES|FORMS_AND_RULES|DATA_AND_SERVICES|STATE_AND_SYNCHRONIZATION|VARIANTS_AND_FAILURES")
-                .contains("CONFIRMED|INFERRED|UNKNOWN")
-                .contains("\"markdown\"")
+                .contains("OVERVIEW", "NAVIGATION_AND_ACCESS", "SCREEN_STRUCTURE", "ACTIONS_AND_OUTCOMES")
+                .contains("FORMS_AND_RULES", "DATA_AND_SERVICES", "STATE_AND_SYNCHRONIZATION", "VARIANTS_AND_FAILURES")
+                .contains("report_update_header", "report_upsert_section", "report_update_meta", "report_get_current")
+                .contains("high", "medium", "low")
                 .doesNotContain("dependencies")
                 .doesNotContain("crossSectionDependencies")
-                .doesNotContain("\"findings\"")
-                .doesNotContain("\"summary\"")
-                .contains("\"usage\": null")
-                .doesNotContain("summary\": \"legacy");
+                .doesNotContain("fallback JSON");
     }
 
     private String content(

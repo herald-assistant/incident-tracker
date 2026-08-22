@@ -4,5 +4,5 @@ public enum UiExplorerAiAnalysisStatus {
     COMPLETED,
     PARTIAL,
     BLOCKED,
-    MALFORMED
+    FAILED
 }

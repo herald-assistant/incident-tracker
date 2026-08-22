@@ -423,14 +423,18 @@ publiczny kontrakt:
   process/bounded context/team oraz visibility limits.
 - Flow Explorer mapuje `OVERVIEW` i aktywne sekcje raportu na
   `FlowExplorerAiResponse`, zachowujac feature-specific widok dla UI.
+- UI Explorer mapuje aktywne sekcje raportu na
+  `UiExplorerResultResponse`, waliduje source references wobec deterministic
+  context i captured tool evidence oraz zachowuje poprawne sekcje, gdy
+  pojedyncza sekcja jest niekompletna.
 
-JSON-only response contract pozostaje tylko fallbackiem diagnostycznym, gdy
-raport nie zostal zapisany albo jest niekompletny. Legacy labeled response
-parser pozostaje usuniety. Finalna proza z `sendAndWait` moze byc przydatna w
-diagnostyce, ale nie jest zrodlem prawdy initial result.
+UI Explorer nie posiada JSON fallbacku ani parsera finalnej odpowiedzi. Brak
+zapisanego raportu jest bledem runu, a finalna proza z `sendAndWait` jest tylko
+statusem wykonania. Inne feature'y moga utrzymywac wlasny fallback
+diagnostyczny, ale nie jest on mechanizmem platformowego report runtime.
 
-`AnalysisReport` jest neutralny i nie zna semantyki incydentu ani Flow
-Explorera. Feature decyduje o dozwolonych sekcjach, required sections,
+`AnalysisReport` jest neutralny i nie zna semantyki incydentu, Flow Explorera
+ani UI Explorera. Feature decyduje o dozwolonych sekcjach, required sections,
 promptach, skillach i mapowaniu raportu na publiczny response. W MVP nie
 wersjonujemy raportu; job state, local workspace i export trzymaja ostatni
 snapshot raportu obok feature-specific `result`.

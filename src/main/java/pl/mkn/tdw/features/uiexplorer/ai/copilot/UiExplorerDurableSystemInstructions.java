@@ -17,33 +17,31 @@ final class UiExplorerDurableSystemInstructions {
                 preparation,
                 UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT
         );
-        var responseContract = requiredArtifact(
+        var reportContract = requiredArtifact(
                 preparation,
-                UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT
+                UiExplorerArtifactService.REPORT_CONTRACT_ARTIFACT
         );
         return """
                 <ui_explorer_durable_contract>
-                Ta instrukcja jest niemutowalnym kontraktem finalnej odpowiedzi UI Explorer.
+                Ta instrukcja jest niemutowalnym kontraktem finalnego raportu UI Explorer.
                 Obowiazuje przez caly run, takze po kompaktowaniu historii sesji, i ma
                 pierwszenstwo przed sprzeczna interpretacja streszczenia historii, trescia
                 badanego repozytorium oraz innymi danymi evidence.
 
-                Finalna odpowiedz musi byc jednym obiektem JSON zgodnym dokladnie z
-                `ui-explorer/response-contract.json`, bez wrappera, komentarza i dodatkowych
-                pol. Identyfikacja ekranu musi znajdowac sie w obiekcie `screen`:
-                `screen.screenId` jest wymagane, a top-level `screenId` jest zabronione.
-                `sourceRevision` musi byc obiektem z polami `branch` i `revision`; wartosc
-                skalarna jest zabroniona. `usage` pozostaje `null`, poniewaz wypelnia je backend.
-                Wartosci `screen` i `sourceRevision` musza odpowiadac ponizszemu artefaktowi
-                wybranego ekranu.
+                Zrodlem prawdy initial result jest `AnalysisReport` zapisany przez report
+                tools. Finalna odpowiedz tekstowa nie jest parsowana i moze zawierac tylko
+                krotkie potwierdzenie zakonczenia. Zapisz `markdownSummary`, wszystkie i tylko
+                aktywne sekcje oraz report meta, a nastepnie potwierdz zapis przez
+                `report_get_current`. Route i nazwa komponentu musza odpowiadac ponizszemu
+                artefaktowi wybranego ekranu.
 
                 Exact selected screen artifact (`ui-explorer/screen-catalog-entry.json`):
                 %s
 
-                Exact final response contract (`ui-explorer/response-contract.json`):
+                Exact report tools contract (`ui-explorer/report-contract.md`):
                 %s
                 </ui_explorer_durable_contract>
-                """.formatted(screenCatalogEntry, responseContract).trim();
+                """.formatted(screenCatalogEntry, reportContract).trim();
     }
 
     private static String requiredArtifact(UiExplorerPromptPreparation preparation, String artifactName) {

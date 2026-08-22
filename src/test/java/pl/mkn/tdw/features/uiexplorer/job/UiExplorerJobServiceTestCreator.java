@@ -12,9 +12,13 @@ import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContex
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityEvidenceMapper;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.job.localworkspace.UiExplorerLocalRunPersistence;
-import pl.mkn.tdw.features.uiexplorer.report.DefaultUiExplorerResultReportAssembler;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -71,6 +75,39 @@ final class UiExplorerJobServiceTestCreator {
     }
 
     static AnalysisReport report(String reportId, UiExplorerResultResponse result) {
-        return new DefaultUiExplorerResultReportAssembler().assemble(reportId, result).report();
+        var sections = result.sections().stream().map(section -> new AnalysisReportSection(
+                section.sectionId().name(),
+                section.sectionId().label(),
+                section.sectionId().ordinal(),
+                section.markdown(),
+                new AnalysisReportMeta(
+                        section.sourceReferences().stream().map(reference -> new AnalysisReportReference(
+                                "source",
+                                reference.symbol(),
+                                reference.path() + "#L" + reference.startLine() + "-L" + reference.endLine(),
+                                "Synthetic CRM UI source"
+                        )).toList(),
+                        section.visibilityLimits(),
+                        section.openQuestions(),
+                        List.of(),
+                        "high",
+                        List.of()
+                )
+        )).toList();
+        return new AnalysisReport(
+                reportId,
+                result.screen().routePattern(),
+                result.screen().label(),
+                result.functionalOverview(),
+                sections,
+                new AnalysisReportMeta(
+                        sections.stream().flatMap(section -> section.meta().references().stream()).toList(),
+                        result.visibilityLimits(),
+                        result.unresolvedQuestions(),
+                        List.of(),
+                        "high",
+                        List.of()
+                )
+        );
     }
 }

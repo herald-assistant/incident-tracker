@@ -2625,6 +2625,58 @@ panel FE. Testy Angular: 433/433 PASS; produkcyjny build Angular PASS;
 `mvn -q -Pbackend-dev clean package`: 1314 testow, 0 failures, 0 errors,
 0 skipped; `git diff --check` — PASS.
 
+### 8T. Report-first initial result przez platformowe report tools
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-23 przebudowe
+UI Explorera tak, aby finalny raport byl zapisywany w trakcie sesji przez
+platformowe report tools tak jak w Flow Explorerze, a nie mapowany z koncowej
+odpowiedzi asystenta. Source need pozostaje `../needs/ui-explorer.md`.
+
+Baseline: UI Explorer rejestruje sesje bez `initialReport`, nie udostepnia
+`report_*` w allowliscie i wymaga jednego finalnego JSON
+`UiExplorerResultResponse`. Strict parser waliduje cala koncowa odpowiedz, a
+nastepnie assembler tworzy z niej `AnalysisReport`. Blad kontraktu po dlugim
+researchu moze przez to odrzucic wszystkie poprawne sekcje, a raport nie jest
+trwalym stanem sesji podczas kompaktowania ani runtime resume.
+
+Conformance delta: feature tworzy pusty, scoped `AnalysisReport` przed
+otwarciem sesji, przekazuje hidden `reportId`, feature key i dokladna allowliste
+aktywnych sekcji, a polityka tools dopuszcza cztery platformowe report tools.
+Skill `ui-explorer-write-report` zapisuje header/summary, kazda aktywna sekcje
+i globalne meta, po czym odczytuje raport do walidacji. Finalna odpowiedz
+asystenta jest tylko statusem i nigdy nie jest parsowana jako wynik.
+
+Backend waliduje zapisany raport wobec requestu, source revision oraz sciezek
+z deterministic i captured tool evidence, zachowuje poprawnie zapisane sekcje
+przy lokalnym braku i deterministycznie projektuje report-first state na
+feature-owned `UiExplorerResultResponse` potrzebny przez obecne API/UI.
+Stary final-response parser, JSON response artifact i result-to-report
+assembler sa usuwane bez fallbacku i warstwy kompatybilnosci runtime. Publiczny
+request/result/job/export shape pozostaje bez zmian; zmienia sie source of
+truth i wewnetrzny artifacts format. Wszystkie nowe testy, fixtures, nazwy i
+przyklady sa silnie zanonimizowanym, syntetycznym CRM.
+
+- [x] 8T.1: Dodac initial report factory, hidden report scope i allowliste
+  `report_*` wraz z CRM-only testami rejestracji oraz ograniczenia section ids.
+- [x] 8T.2: Zastapic final-response parser report-first mapperem walidujacym
+  kompletne i czastkowe raporty oraz source references z dozwolonego evidence.
+- [x] 8T.3: Usunac result-to-report runtime, przebudowac sanitizer tak, aby
+  zachowywal i oczyszczal zapisany raport zamiast odtwarzac go z resultu.
+- [x] 8T.4: Zastapic JSON response artifact kontraktem report tools oraz
+  zaktualizowac durable instructions i trzy polskie runtime skille.
+- [x] 8T.5: Wykonac celowane testy UI Explorera, package guard, pelny backend i
+  `git diff --check`, a nastepnie zaktualizowac dokumentacje stanu runtime.
+
+Rezultat: UI Explorer rejestruje initial `AnalysisReport`, udostepnia scoped
+platformowe report tools i publikuje wylacznie zwalidowana projekcje zapisanego
+raportu. Finalna odpowiedz tekstowa nie jest parsowana, nie istnieje JSON
+fallback ani result-to-report assembler. Brak pojedynczej sekcji zachowuje
+pozostale sekcje jako bezpieczny `PARTIAL`, a brak raportu konczy run bledem.
+Trzy polskie skille prowadza model przez zapis header/sekcji/meta i koncowy
+`report_get_current`. Silnie zanonimizowane testy CRM: 98 UI Explorer tests
+PASS; `PackageDependencyGuardTest` PASS; pelny `mvn -q test`: 1319 testow,
+0 failures, 0 errors, 0 skipped; `git diff --check` — PASS.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

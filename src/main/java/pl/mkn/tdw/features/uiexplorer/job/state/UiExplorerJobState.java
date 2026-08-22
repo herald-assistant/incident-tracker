@@ -160,7 +160,7 @@ public final class UiExplorerJobState {
         completeStep(
                 AI_PREPARATION_STEP,
                 "COMPLETED",
-                "Logical artifacts, trust boundaries and the canonical response contract were prepared.",
+                "Logical artifacts, trust boundaries and the canonical report tools contract were prepared.",
                 artifactEvidence != null ? artifactEvidence.items().size() : 0,
                 null,
                 now
@@ -205,6 +205,14 @@ public final class UiExplorerJobState {
 
     public synchronized void markAiAnalysisCompleted(UiExplorerAiAnalysis analysis) {
         var now = Instant.now();
+        if (analysis.status() == UiExplorerAiAnalysisStatus.FAILED) {
+            status = UiExplorerJobStatus.FAILED;
+            errorCode = "UI_EXPLORER_REPORT_UNAVAILABLE";
+            errorMessage = "AI session did not save a publishable AnalysisReport through report tools.";
+            completeStep(AI_ANALYSIS_STEP, "FAILED", errorMessage, 0, analysis.usage(), now);
+            completeTerminal(now);
+            return;
+        }
         if (analysis.status() != UiExplorerAiAnalysisStatus.BLOCKED
                 && (analysis.result() == null || analysis.report() == null)) {
             status = UiExplorerJobStatus.FAILED;
@@ -230,17 +238,7 @@ public final class UiExplorerJobState {
                     analysis,
                     now
             );
-            case MALFORMED -> {
-                errorCode = "UI_EXPLORER_AI_RESPONSE_MALFORMED";
-                errorMessage = "AI returned an incomplete response; a safe partial result is available.";
-                completeWithOutput(
-                        UiExplorerJobStatus.PARTIAL,
-                        "PARTIAL",
-                        errorMessage,
-                        analysis,
-                        now
-                );
-            }
+            case FAILED -> throw new IllegalStateException("FAILED UI Explorer analysis must be handled before output mapping.");
             case BLOCKED -> {
                 status = UiExplorerJobStatus.BLOCKED;
                 errorCode = "UI_EXPLORER_AI_READINESS_BLOCKED";

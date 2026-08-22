@@ -19,7 +19,11 @@ class UiExplorerCopilotPoliciesTest {
 
     @Test
     void shouldAllowOneTargetedCrmSearchAndRejectScopeExpansion() {
-        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-scope-run", context());
+        var context = new UiExplorerCopilotToolSessionContextFactory().create(
+                "crm-scope-run",
+                pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request(),
+                context()
+        );
         var valid = """
                 {
                   "projectNames": [],
@@ -49,7 +53,11 @@ class UiExplorerCopilotPoliciesTest {
 
     @Test
     void shouldAllowOnlyPreparedFrontendSliceReferences() {
-        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-slice-run", context());
+        var context = new UiExplorerCopilotToolSessionContextFactory().create(
+                "crm-slice-run",
+                pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request(),
+                context()
+        );
 
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
                 context,
@@ -89,7 +97,11 @@ class UiExplorerCopilotPoliciesTest {
 
     @Test
     void shouldAllowFocusedReadIncludingSliceOwnerButRejectMissingReason() {
-        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-read-run", context());
+        var context = new UiExplorerCopilotToolSessionContextFactory().create(
+                "crm-read-run",
+                pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request(),
+                context()
+        );
         var validChunk = chunk(FETCHED_VALIDATOR_PATH, "main", "Weryfikacja walidatora CRM.");
 
         assertThatCode(() -> scopePolicy.beforeInvocation(request(
@@ -110,7 +122,11 @@ class UiExplorerCopilotPoliciesTest {
 
     @Test
     void shouldKeepAllowingScopedCrmDiscoveryUntilTheSectionGoalIsReached() {
-        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-goal-driven-run", context());
+        var context = new UiExplorerCopilotToolSessionContextFactory().create(
+                "crm-goal-driven-run",
+                pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request(),
+                context()
+        );
         var search = """
                 {
                   "projectNames": [],

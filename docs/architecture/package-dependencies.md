@@ -100,7 +100,7 @@ mapowane na biznesowe `visibilityLimits`. Publiczne evidence nie ujawnia
 hidden repository scope i nie importuje kontraktow integracji.
 
 `features.uiexplorer.ai.preparation` jest feature-owned granica przygotowania
-AI. Buduje logical artifacts v8 z requestem, katalogowym ekranem, czytelnym
+AI. Buduje logical artifacts v9 z requestem, katalogowym ekranem, czytelnym
 outline reachability, warstwowym source materialem w porzadku BFS/discovery,
 coverage i kontraktami wyniku. Grupowanie deduplikuje tylko identyczne importy
 i body w obrebie jednego pliku; wszystkie odmienne body, slice refs, symbole,
@@ -113,22 +113,25 @@ Reuse'uje jedynie neutralny model
 `CopilotRenderedArtifact` i mapper tresci z `aiplatform`; nie uruchamia sesji,
 nie wybiera tools i nie dodaje semantyki UI Explorer do platformy.
 
-`features.uiexplorer.ai.readiness`, `response` i `copilot` posiadaja runtime
-konkretnego feature'a: readiness aktywnych sekcji, strict parser jednego
-`UiExplorerResultResponse`, hidden repository scope, default-deny allowliste,
-goal-driven targeted GitLab fallback bez feature'owego limitu call count oraz
-zlozenie `CopilotRunRequest`. Preferowane frontendowe tools przyjmuja tylko
+`features.uiexplorer.ai.readiness`, `report` i `copilot` posiadaja runtime
+konkretnego feature'a: readiness aktywnych sekcji, initial `AnalysisReport`,
+hidden repository/report scope, default-deny allowliste, goal-driven targeted
+GitLab fallback bez feature'owego limitu call count oraz zlozenie
+`CopilotRunRequest`. Preferowane frontendowe tools przyjmuja tylko
 bezpieczny `sliceRef` i `reason`; repository/ref/path, source revision i
 rejestr dozwolonych targetow pozostaja w hidden context. Generyczny
 search/read jest fallbackiem tylko dla luki bez gotowej referencji.
 Assembler buduje dodatkowo krotkie durable system instructions z kanonicznego
-response contract oraz wybranego ekranu/source revision. Neutralny runtime
+report contract oraz wybranego ekranu/source revision. Neutralny runtime
 mapuje je na SDK, ale nie importuje ani nie interpretuje kontraktow UI
 Explorera. Duze source artifacts nie sa w tym kanale duplikowane.
 Scope/ref/path validation, limity pojedynczego transferu i platformowy timeout
 pozostaja technicznymi zabezpieczeniami. Provider reuse'uje neutralne
-preparation/execution z `aiplatform`, tools z `agenttools` i deterministyczny
-report assembler. `features.uiexplorer.job`
+preparation/execution z `aiplatform`, frontend tools z `agenttools` i
+platformowe report tools. Zapisany raport jest walidowany wobec deterministic
+oraz captured tool evidence i deterministycznie projektowany na
+`UiExplorerResultResponse`; finalna odpowiedz tekstowa nie jest kontraktem
+wyniku. `features.uiexplorer.job`
 uruchamia ten provider asynchronicznie, przechowuje atomowy snapshot krokow,
 evidence, activity, usage, result i report oraz mapuje kontrolowane stany
 terminalne. `features.uiexplorer.job.localworkspace` posiada feature codec i

@@ -1,16 +1,17 @@
-package pl.mkn.tdw.features.uiexplorer.ai.response;
+package pl.mkn.tdw.features.uiexplorer.report;
 
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 
 import java.util.List;
 
-public record UiExplorerAiParseResult(
-        UiExplorerAiParseStatus status,
+public record UiExplorerReportMapping(
         UiExplorerResultResponse result,
+        AnalysisReport report,
+        boolean complete,
         List<String> limitations
 ) {
-
-    public UiExplorerAiParseResult {
+    public UiExplorerReportMapping {
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
     }
 }

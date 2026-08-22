@@ -54,8 +54,15 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   `AI_PREPARATION`, przed wywolaniem providera AI. Kroki jawnie wskazuja
   konsumowane i publikowane sekcje evidence; lokalny run i export zachowuja
   prompt, a niezaufany import usuwa go przed zapisem.
-- Result jest feature-specific i dopiero deterministyczny assembler mapuje go
-  na neutralny `AnalysisReport`.
+- `AnalysisReport` zapisany podczas sesji przez `report_update_header`,
+  `report_upsert_section`, `report_update_meta` i potwierdzony przez
+  `report_get_current` jest jedynym zrodlem prawdy initial result.
+- Finalna odpowiedz tekstowa asystenta jest tylko statusem wykonania i nie
+  jest parsowana. Brak zapisanego raportu konczy run bledem; brak pojedynczej
+  aktywnej sekcji zachowuje pozostale poprawne sekcje i daje wynik `PARTIAL`.
+- Feature deterministycznie waliduje source references raportu wobec
+  przygotowanego kontekstu i captured tool evidence, a nastepnie projektuje
+  raport na feature-specific `UiExplorerResultResponse` dla publicznego API.
 
 ## Non-goals MVP
 

@@ -146,5 +146,5 @@ coordinates ani ref. Kazdy tool result traktuj jako
 
 ## Artefakty Handoffu
 
-Zwroc `SourceGroundingSummary` do `ui-explorer-orchestrator`. Nie buduj
-finalnego JSON.
+Zwroc `SourceGroundingSummary` do `ui-explorer-orchestrator`. Nie zapisuj
+finalnego `AnalysisReport` i nie wywoluj report tools.

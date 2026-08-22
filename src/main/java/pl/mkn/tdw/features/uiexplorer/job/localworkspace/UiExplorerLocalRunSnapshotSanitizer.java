@@ -1,13 +1,15 @@
 package pl.mkn.tdw.features.uiexplorer.job.localworkspace;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultResponse;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerResultSection;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStateSnapshot;
-import pl.mkn.tdw.features.uiexplorer.report.UiExplorerResultReportAssembler;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
+import pl.mkn.tdw.shared.ai.report.AnalysisReport;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
+import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -18,7 +20,6 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
-@RequiredArgsConstructor
 public class UiExplorerLocalRunSnapshotSanitizer {
 
     private static final Map<String, Set<String>> SAFE_CONTEXT_EVIDENCE_ATTRIBUTES = Map.of(
@@ -83,16 +84,19 @@ public class UiExplorerLocalRunSnapshotSanitizer {
             "sessionId"
     );
 
-    private final UiExplorerResultReportAssembler reportAssembler;
-
     public UiExplorerJobStateSnapshot sanitize(UiExplorerJobStateSnapshot snapshot) {
         if (snapshot == null) {
             return null;
         }
         var safeResult = sanitize(snapshot.result());
-        var safeReport = safeResult != null
-                ? reportAssembler.assemble("ui-explorer-report-" + snapshot.jobId(), safeResult).report()
-                : null;
+        var safeContextSections = sanitizeContextEvidence(snapshot.contextSections());
+        var safeToolEvidenceSections = sanitizeToolEvidence(snapshot.toolEvidenceSections());
+        var safeReport = sanitize(
+                snapshot.report(),
+                safeResult,
+                snapshot.jobId(),
+                allowedSourcePaths(safeResult, safeContextSections, safeToolEvidenceSections)
+        );
         return new UiExplorerJobStateSnapshot(
                 snapshot.jobId(),
                 snapshot.request(),
@@ -105,8 +109,8 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 snapshot.updatedAt(),
                 snapshot.completedAt(),
                 snapshot.steps(),
-                sanitizeContextEvidence(snapshot.contextSections()),
-                sanitizeToolEvidence(snapshot.toolEvidenceSections()),
+                safeContextSections,
+                safeToolEvidenceSections,
                 snapshot.aiActivityEvents().stream().map(this::sanitize).toList(),
                 List.of(),
                 snapshot.preparedPrompt(),
@@ -117,6 +121,103 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 snapshot.outputAvailability(),
                 safeResult != null && safeReport != null
         );
+    }
+
+    private AnalysisReport sanitize(
+            AnalysisReport report,
+            UiExplorerResultResponse result,
+            String jobId,
+            Set<String> allowedPaths
+    ) {
+        if (report == null) {
+            return null;
+        }
+        return new AnalysisReport(
+                "ui-explorer-report-" + jobId,
+                result != null && result.screen() != null ? result.screen().routePattern() : report.header(),
+                result != null && result.screen() != null ? result.screen().label() : report.subHeader(),
+                report.markdownSummary(),
+                report.sections().stream().map(section -> sanitize(section, allowedPaths)).toList(),
+                sanitize(report.meta(), allowedPaths)
+        );
+    }
+
+    private Set<String> allowedSourcePaths(
+            UiExplorerResultResponse result,
+            List<AnalysisEvidenceSection> contextSections,
+            List<AnalysisEvidenceSection> toolEvidenceSections
+    ) {
+        var paths = new java.util.LinkedHashSet<String>();
+        if (result != null) {
+            result.sections().stream()
+                    .flatMap(section -> section.sourceReferences().stream())
+                    .map(UiExplorerSourceReference::path)
+                    .map(this::normalizePath)
+                    .filter(java.util.Objects::nonNull)
+                    .forEach(paths::add);
+        }
+        java.util.stream.Stream.concat(contextSections.stream(), toolEvidenceSections.stream())
+                .flatMap(section -> section.items().stream())
+                .flatMap(item -> item.attributes().stream())
+                .filter(attribute -> "sourcePath".equals(attribute.name())
+                        || "templatePath".equals(attribute.name())
+                        || "filePath".equals(attribute.name()))
+                .map(AnalysisEvidenceAttribute::value)
+                .map(this::normalizePath)
+                .filter(java.util.Objects::nonNull)
+                .forEach(paths::add);
+        return Set.copyOf(paths);
+    }
+
+    private AnalysisReportSection sanitize(AnalysisReportSection section, Set<String> allowedPaths) {
+        return new AnalysisReportSection(
+                section.id(),
+                section.title(),
+                section.order(),
+                section.markdown(),
+                sanitize(section.meta(), allowedPaths)
+        );
+    }
+
+    private AnalysisReportMeta sanitize(AnalysisReportMeta meta, Set<String> allowedPaths) {
+        var source = meta != null ? meta : AnalysisReportMeta.empty();
+        return new AnalysisReportMeta(
+                source.references().stream()
+                        .filter(reference -> allowedReference(reference, allowedPaths))
+                        .map(this::sanitize)
+                        .toList(),
+                source.visibilityLimits(),
+                source.openQuestions(),
+                source.gaps(),
+                source.confidence(),
+                source.warnings()
+        );
+    }
+
+    private AnalysisReportReference sanitize(AnalysisReportReference reference) {
+        return new AnalysisReportReference(
+                reference.type(),
+                reference.label(),
+                reference.target(),
+                reference.description()
+        );
+    }
+
+    private boolean allowedReference(AnalysisReportReference reference, Set<String> allowedPaths) {
+        if (reference == null || reference.target() == null) {
+            return false;
+        }
+        var target = reference.target().replace('\\', '/');
+        var lineMarker = target.indexOf("#L");
+        var path = normalizePath(lineMarker >= 0 ? target.substring(0, lineMarker) : target);
+        return allowedPaths.contains(path);
+    }
+
+    private String normalizePath(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim().replace('\\', '/').replaceAll("^/+", "").replaceAll("/+$", "");
     }
 
     private List<AnalysisEvidenceSection> sanitizeContextEvidence(List<AnalysisEvidenceSection> sections) {

@@ -179,34 +179,32 @@ class UiExplorerJobServiceTest {
     }
 
     @Test
-    void shouldPublishSafePartialCrmResultForMalformedAiResponse() {
+    void shouldFailWhenCrmAiSessionDoesNotSaveReportThroughTools() {
         var reachabilityContextService = UiExplorerJobServiceTestCreator.reachabilityContextService(context());
         var analysisProvider = mock(UiExplorerAnalysisProvider.class);
-        var result = result(null);
-        var report = UiExplorerJobServiceTestCreator.report("crm-malformed-report", result);
         when(analysisProvider.analyze(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new UiExplorerAiAnalysis(
-                        UiExplorerAiAnalysisStatus.MALFORMED,
-                        result,
+                        UiExplorerAiAnalysisStatus.FAILED,
+                        null,
                         null,
                         "raw synthetic CRM prompt",
-                        "crm-malformed-session",
-                        report,
-                        List.of("Synthetic CRM response was malformed.")
+                        "crm-report-failed-session",
+                        null,
+                        List.of("Synthetic CRM report was not saved.")
                 ));
         var executor = new CapturingTaskExecutor();
         var service = UiExplorerJobServiceTestCreator.create(reachabilityContextService, analysisProvider, executor);
 
         var accepted = service.startJob(request());
         executor.runCaptured();
-        var partial = service.getJob(accepted.jobId());
+        var failed = service.getJob(accepted.jobId());
 
-        assertThat(partial.status()).isEqualTo(UiExplorerJobStatus.PARTIAL);
-        assertThat(partial.errorCode()).isEqualTo("UI_EXPLORER_AI_RESPONSE_MALFORMED");
-        assertThat(partial.result()).isEqualTo(result);
-        assertThat(partial.report()).isEqualTo(report);
-        assertThat(partial.preparedPrompt()).contains("UI Explorer canonical prompt");
-        assertThat(partial.outputAvailability().status()).isEqualTo(UiExplorerOutputAvailabilityStatus.AVAILABLE);
+        assertThat(failed.status()).isEqualTo(UiExplorerJobStatus.FAILED);
+        assertThat(failed.errorCode()).isEqualTo("UI_EXPLORER_REPORT_UNAVAILABLE");
+        assertThat(failed.errorMessage()).contains("report tools");
+        assertThat(failed.result()).isNull();
+        assertThat(failed.report()).isNull();
+        assertThat(failed.outputAvailability().status()).isEqualTo(UiExplorerOutputAvailabilityStatus.BLOCKED);
     }
 
     @Test

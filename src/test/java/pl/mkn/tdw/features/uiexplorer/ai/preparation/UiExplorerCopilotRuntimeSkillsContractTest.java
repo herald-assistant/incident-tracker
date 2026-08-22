@@ -52,13 +52,14 @@ class UiExplorerCopilotRuntimeSkillsContractTest {
                 .contains("SourceGroundingSummary")
                 .doesNotContain("Finalnym artefaktem jest jeden JSON");
         assertThat(writer)
-                .contains("jedynym wlascicielem finalnego JSON")
+                .contains("Zrodlem prawdy jest `AnalysisReport` zapisany przez report tools")
                 .contains("FORMS_AND_RULES")
                 .contains("completenessSignals")
-                .contains("usage` pozostaje `null`")
-                .contains("`screen.screenId`")
-                .contains("Top-level `screenId`")
-                .contains("skalarne `sourceRevision`");
+                .contains("report_update_header")
+                .contains("report_upsert_section")
+                .contains("report_update_meta")
+                .contains("report_get_current")
+                .contains("Nie zwracaj JSON");
     }
 
     @Test

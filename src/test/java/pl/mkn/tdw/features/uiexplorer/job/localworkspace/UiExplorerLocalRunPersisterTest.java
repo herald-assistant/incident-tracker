@@ -10,7 +10,6 @@ import pl.mkn.tdw.api.analysisruns.AnalysisRunHistoryService;
 import pl.mkn.tdw.api.analysisruns.LocalAnalysisRunCorruptedException;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionCleanup;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStatus;
-import pl.mkn.tdw.features.uiexplorer.report.DefaultUiExplorerResultReportAssembler;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.localworkspace.analysisruns.FileSystemLocalAnalysisRunStore;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
@@ -171,7 +170,7 @@ class UiExplorerLocalRunPersisterTest {
         return new UiExplorerLocalRunPersister(
                 objectMapper,
                 store,
-                new UiExplorerLocalRunSnapshotSanitizer(new DefaultUiExplorerResultReportAssembler())
+                new UiExplorerLocalRunSnapshotSanitizer()
         );
     }
 

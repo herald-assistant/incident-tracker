@@ -21,7 +21,6 @@ import pl.mkn.tdw.features.uiexplorer.job.error.UiExplorerJobNotFoundException;
 import pl.mkn.tdw.features.uiexplorer.job.export.UiExplorerExportEnvelope;
 import pl.mkn.tdw.features.uiexplorer.job.export.UiExplorerExportService;
 import pl.mkn.tdw.features.uiexplorer.job.importing.UiExplorerImportService;
-import pl.mkn.tdw.features.uiexplorer.report.DefaultUiExplorerResultReportAssembler;
 import pl.mkn.tdw.localworkspace.LocalWorkspaceProperties;
 import pl.mkn.tdw.localworkspace.analysisruns.FileSystemLocalAnalysisRunStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
@@ -50,7 +49,7 @@ class UiExplorerPortabilityTest {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .build();
     private final UiExplorerLocalRunSnapshotSanitizer sanitizer =
-            new UiExplorerLocalRunSnapshotSanitizer(new DefaultUiExplorerResultReportAssembler());
+            new UiExplorerLocalRunSnapshotSanitizer();
 
     @Test
     void shouldRoundTripSanitizedCrmExportThroughHistoryAndRestart(@TempDir Path workspace) throws Exception {
@@ -186,11 +185,21 @@ class UiExplorerPortabilityTest {
         ((ObjectNode) failed.at("/payload/job")).put("status", "FAILED");
         assertThatThrownBy(() -> importService(true).importReadOnly(failed))
                 .isInstanceOf(UiExplorerImportException.class)
-                .hasMessage("Only a completed UI Explorer result can be imported.");
+                .hasMessage("Only a completed UI Explorer result and report can be imported.");
 
         assertThatThrownBy(() -> importService(false).importReadOnly(portableDocument()))
                 .isInstanceOf(UiExplorerImportPersistenceException.class)
                 .hasMessage("UI Explorer import cannot be saved in local Analysis History.");
+    }
+
+    @Test
+    void shouldRejectCrmImportWithoutToolBuiltReport() {
+        var missingReport = portableDocument();
+        ((ObjectNode) missingReport.at("/payload/job")).putNull("report");
+
+        assertThatThrownBy(() -> importService(true).importReadOnly(missingReport))
+                .isInstanceOf(UiExplorerImportException.class)
+                .hasMessage("Only a completed UI Explorer result and report can be imported.");
     }
 
     @Test
