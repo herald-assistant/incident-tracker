@@ -35,6 +35,13 @@ context pipeline, przygotowania AI, raportu i przyszlej persistence.
   zostac limitation, dopoki kolejne scoped GitLab search/read moga rozstrzygnac
   luke. UI Explorer nie posiada feature'owego limitu call count; eksploracje
   konczy readiness albo potwierdzona granica runtime/zewnetrznego scope.
+- Targeted research preferuje `gitlab_read_frontend_route_branch_slice`,
+  `gitlab_read_frontend_typescript_symbol_slice` z dokladnym `sliceRef` z
+  artefaktow. Pelny Screen Reachability jest przygotowany przed AI i nie jest
+  MCP toolem UI Explorera, zeby nie duplikowac initial context. Generyczny
+  GitLab search/read jest dozwolony tylko dla
+  materialnej luki, ktora nie ma jeszcze bezpiecznej referencji. Repository,
+  ref, path, source revision i dozwolone targety pozostaja hidden contextem.
 - Result nie posiada `dependencies`, `crossSectionDependencies` ani osobnego
   appendixu zaleznosci. Relacje funkcjonalne mieszkaja w tresci wlasciwej
   sekcji tylko wtedy, gdy wyjasniaja warunek, akcje albo rezultat.

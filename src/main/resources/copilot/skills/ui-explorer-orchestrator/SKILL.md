@@ -57,11 +57,15 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
    `visibility_limited` albo `not_applicable`.
 6. Dla kazdego materialnego braku implementacji child route, komponentu,
    template, formularza, modala, serwisu, store/effect albo klienta z badanego
-   repozytorium przygotuj targeted retry. Powtarzaj waskie search/read dla
-   kolejnych konkretnych luk, dopoki wszystkie aktywne sekcje nie osiagna
-   `ready` albo zrodlo nie zostanie potwierdzone jako niedostepne. Liczba
-   dotychczasowych wywolan nie jest kryterium zakonczenia. Nie wykonuj broad
-   browse.
+   repozytorium przygotuj targeted retry. Jezeli reachability artifact podaje
+   `sliceRef`, uzyj najpierw narrow route albo TypeScript symbol toola z tym
+   refem i `reason`; scope jest hidden. Nie pobieraj ponownie pelnego Screen
+   Reachability osadzonego juz w initial artifacts. Dopiero brak
+   bezpiecznego refa uzasadnia generyczne GitLab search/read. Powtarzaj waskie
+   wywolania dla kolejnych konkretnych luk, dopoki wszystkie aktywne sekcje nie
+   osiagna `ready` albo zrodlo nie zostanie potwierdzone jako niedostepne.
+   Liczba dotychczasowych wywolan nie jest kryterium zakonczenia. Nie wykonuj
+   broad browse.
 7. Dopiero po bezskutecznym wyszukaniu konkretnego zrodla albo potwierdzeniu,
    ze implementacja jest runtime, zewnetrzna lub lezy poza zatwierdzonym scope,
    oznacz brak jako `visibility_limited`.

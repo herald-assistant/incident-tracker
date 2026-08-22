@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
@@ -59,6 +60,8 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         );
 
         assertThat(assembly.toolAccessPolicy().availableToolNames()).containsExactlyInAnyOrder(
+                GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+                GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
                 GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
                 GitLabToolNames.READ_REPOSITORY_FILE,
                 GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
@@ -76,13 +79,23 @@ class UiExplorerCopilotRunRequestAssemblerTest {
                 .isEqualTo(List.of("crm-agent-portal"));
         assertThat(hidden.get(AgentToolContextKeys.TOOL_BUDGET_POLICY))
                 .isEqualTo(AgentToolContextKeys.TOOL_BUDGET_POLICY_GOAL_DRIVEN);
-        assertThat(hidden.get(UiExplorerCopilotToolContextKeys.ALLOWED_REPOSITORY).toString())
-                .contains("crm-agent-portal", "apps/crm-agent", "main");
+        assertThat(hidden.get(GitLabFrontendToolContextKeys.PROJECT_NAME)).isEqualTo("crm-agent-portal");
+        assertThat(hidden.get(GitLabFrontendToolContextKeys.PATH_PREFIXES))
+                .isEqualTo(List.of("apps/crm-agent"));
+        assertThat(hidden.get(GitLabFrontendToolContextKeys.SOURCE_REVISION))
+                .isEqualTo("crm-commit-abc123");
+        assertThat(hidden.get(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF))
+                .isEqualTo("crm-contact-preferences");
+        var sliceTargets = (Map<?, ?>) hidden.get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
+        org.junit.jupiter.api.Assertions.assertTrue(sliceTargets.containsKey("component-crm-contact-preferences"));
+        org.junit.jupiter.api.Assertions.assertTrue(sliceTargets.containsKey("dependency-crm-preferences-api"));
         assertThat(preparation.prompt()).doesNotContain("synthetic-crm");
     }
 
     private List<ToolDefinition> registeredTools() {
         return List.of(
+                tool(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE),
+                tool(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE),
                 tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK),

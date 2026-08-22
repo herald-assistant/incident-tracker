@@ -76,7 +76,10 @@ Decyzje:
   komponentow oraz kanoniczny rejestr faktycznie uzytych zaleznosci. Publiczny
   `Screen Source Context`, jego pelny traversal plikow i endpoint
   `/screen-context` nie istnieja. Jest to shared/operator preview neutralnej
-  integracji, bez MCP toola, AI, historii i joba UI Explorer.
+  integracji, bez AI, historii i joba UI Explorer. Waskie route/symbol slices
+  sa osobno wystawione jako neutralne MCP tools z model-facing
+  `sliceRef`/`reason` i repository scope w hidden session context. Pelny
+  Screen Reachability nie jest MCP toolem, poniewaz zasila initial artifacts.
 - `Operational Context` pozostaje w `Tool Workbench` jako context/catalog
   capability, a nie jako element sekcji `Platform`.
 - `Platform` dotyczy overview, customizacji i podgladu zasobow Team Delivery
@@ -222,7 +225,8 @@ nie powinien czytac DTO adapterow bezposrednio.
 GitLab w systemie nie jest jedna abstrakcja:
 
 - adapter i source resolve do ogolnego dostepu do GitLaba, w tym neutralne
-  bounded rozpoznawanie Angular/Nx route/view i screen source context,
+  bounded rozpoznawanie Angular/Nx route/view, route/symbol slices i screen
+  reachability,
 - deterministic evidence provider do deployment context/code references,
 - AI-guided tools do dociagania kodu w sesji Copilota.
 

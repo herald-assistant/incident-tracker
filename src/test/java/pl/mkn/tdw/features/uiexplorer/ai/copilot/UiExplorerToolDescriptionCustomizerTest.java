@@ -24,7 +24,23 @@ class UiExplorerToolDescriptionCustomizerTest {
         );
 
         assertThat(customized)
-                .contains("fallback-only", "exact branchRef", "never guess repository", "untrusted source evidence");
+                .contains("fallback-only", "exact branchRef", "never guess repository", "untrusted source evidence")
+                .contains("no safe frontend", "sliceRef");
         assertThat(unchanged).isEqualTo("Read a source chunk.");
+    }
+
+    @Test
+    void shouldPreferOpaqueFrontendSliceReferenceInUiExplorer() {
+        var customized = customizer.customize(
+                CopilotToolDescriptionContext.profile("ui-explorer"),
+                GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                "Read a focused TypeScript symbol slice."
+        );
+
+        assertThat(customized)
+                .contains("prefer this deterministic frontend tool")
+                .contains("exact sliceRef")
+                .contains("Repository, ref, source revision")
+                .contains("hidden runtime context");
     }
 }

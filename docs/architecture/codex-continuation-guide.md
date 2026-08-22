@@ -69,9 +69,10 @@ zatwierdzony invariant trafia do architektury.
   evidence, Copilot scoring, partial runs i aggregate.
 - `src/main/java/pl/mkn/tdw/features/uiexplorer`
   UI Explorer: katalog ekranow bez ujawniania repository scope, selected-screen
-  context obejmujacy routowane poddrzewo widoku, AI preparation/runtime z
-  obowiazkowym, goal-driven targeted fallbackiem bez feature'owego limitu
-  liczby wywolan dla brakujacych zrodel in-scope, job,
+  reachability z effective route chain, iteracyjnym BFS komponentow i
+  deduplikowanymi zaleznosciami, AI preparation/runtime z obowiazkowym,
+  goal-driven targeted researchem bez feature'owego limitu liczby wywolan dla
+  brakujacych zrodel in-scope, job,
   business-first report bez osobnego appendixu zaleznosci oraz breaking
   import/export v5.
 
@@ -82,7 +83,10 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
 - `src/main/java/pl/mkn/tdw/aiplatform`
   neutralny runtime AI, sesje, tools invocation, policies, budgets i usage.
 - `src/main/java/pl/mkn/tdw/agenttools`
-  neutralne capability tools oraz MCP exposure nad integracjami.
+  neutralne capability tools oraz MCP exposure nad integracjami, w tym
+  frontendowe route/symbol slice tools oparte o bezpieczne `sliceRef` i hidden
+  repository scope. Screen Reachability pozostaje initial preparation, nie
+  duzym MCP result.
 - `src/main/java/pl/mkn/tdw/integrations`
   adaptery do zewnetrznych systemow.
 - `src/main/java/pl/mkn/tdw/integrations/gitlab/frontend`

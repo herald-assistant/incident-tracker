@@ -18,6 +18,8 @@ public final class GitLabToolNames {
     public static final String READ_OPENAPI_ENDPOINT_SLICE = PREFIX + "read_openapi_endpoint_slice";
     public static final String FIND_CLASS_REFERENCES = PREFIX + "find_class_references";
     public static final String FIND_FLOW_CONTEXT = PREFIX + "find_flow_context";
+    public static final String READ_FRONTEND_ROUTE_BRANCH_SLICE = PREFIX + "read_frontend_route_branch_slice";
+    public static final String READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE = PREFIX + "read_frontend_typescript_symbol_slice";
 
     private GitLabToolNames() {
     }

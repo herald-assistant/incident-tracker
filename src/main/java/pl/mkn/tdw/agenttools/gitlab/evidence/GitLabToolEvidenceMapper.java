@@ -22,6 +22,8 @@ import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileO
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFileToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabReadRepositoryFilesByPathToolResponse;
 import pl.mkn.tdw.agenttools.gitlab.mcp.GitLabToolDtos.GitLabSearchRepositoryCandidatesToolResponse;
+import pl.mkn.tdw.agenttools.gitlab.frontend.mcp.GitLabFrontendToolDtos.RouteBranchSliceToolResponse;
+import pl.mkn.tdw.agenttools.gitlab.frontend.mcp.GitLabFrontendToolDtos.TypeScriptSymbolSliceToolResponse;
 import pl.mkn.tdw.common.JsonPayloadReader;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
 
@@ -35,6 +37,8 @@ import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.FIND_FLOW_CONTEXT;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_AVAILABLE_REPOSITORIES;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.LIST_REPOSITORY_ENDPOINTS;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_JAVA_METHOD_SLICE;
+import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE;
+import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNK;
 import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE_CHUNKS;
@@ -76,7 +80,9 @@ public class GitLabToolEvidenceMapper {
                  BUILD_JAVA_METHOD_USE_CASE_CONTEXT,
                  SEARCH_REPOSITORY_CANDIDATES,
                  FIND_CLASS_REFERENCES,
-                 FIND_FLOW_CONTEXT -> true;
+                 FIND_FLOW_CONTEXT,
+                 READ_FRONTEND_ROUTE_BRANCH_SLICE,
+                 READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE -> true;
             default -> false;
         };
     }
@@ -132,8 +138,122 @@ public class GitLabToolEvidenceMapper {
                     sessionEvidence
             );
             case FIND_FLOW_CONTEXT -> captureGitLabFlowContext(toolCallId, rawArguments, rawResult, sessionEvidence);
+            case READ_FRONTEND_ROUTE_BRANCH_SLICE -> captureFrontendRouteBranchSlice(
+                    toolCallId, rawArguments, rawResult, sessionEvidence
+            );
+            case READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE -> captureFrontendTypeScriptSymbolSlice(
+                    toolCallId, rawArguments, rawResult, sessionEvidence
+            );
             default -> null;
         };
+    }
+
+    private AnalysisEvidenceSection captureFrontendRouteBranchSlice(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            GitLabToolEvidenceSink sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, RouteBranchSliceToolResponse.class);
+            AnalysisEvidenceSection updated = null;
+            for (var file : safeList(response.files())) {
+                updated = captureFrontendCode(
+                        toolCallId,
+                        READ_FRONTEND_ROUTE_BRANCH_SLICE,
+                        rawArguments,
+                        file.path(),
+                        file.content(),
+                        null,
+                        sessionEvidence
+                );
+            }
+            return updated != null
+                    ? updated
+                    : captureFrontendDiscovery(toolCallId, READ_FRONTEND_ROUTE_BRANCH_SLICE, rawArguments, sessionEvidence);
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab frontend route slice result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
+    private AnalysisEvidenceSection captureFrontendTypeScriptSymbolSlice(
+            String toolCallId,
+            String rawArguments,
+            String rawResult,
+            GitLabToolEvidenceSink sessionEvidence
+    ) {
+        try {
+            var response = objectMapper.readValue(rawResult, TypeScriptSymbolSliceToolResponse.class);
+            if (!StringUtils.hasText(response.filePath())) {
+                return captureFrontendDiscovery(
+                        toolCallId, READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE, rawArguments, sessionEvidence
+                );
+            }
+            return captureFrontendCode(
+                    toolCallId,
+                    READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                    rawArguments,
+                    response.filePath(),
+                    response.content(),
+                    response.lineStart(),
+                    sessionEvidence
+            );
+        } catch (JsonProcessingException exception) {
+            log.warn("Failed to parse GitLab frontend TypeScript slice result. reason={}", exception.getMessage(), exception);
+            return null;
+        }
+    }
+
+    private AnalysisEvidenceSection captureFrontendCode(
+            String toolCallId,
+            String toolName,
+            String rawArguments,
+            String filePath,
+            String content,
+            Integer startLine,
+            GitLabToolEvidenceSink sessionEvidence
+    ) {
+        if (!StringUtils.hasText(filePath)) {
+            return null;
+        }
+        return sessionEvidence.upsertItem(
+                GITLAB_PROVIDER,
+                GITLAB_FETCHED_CODE_CATEGORY,
+                gitLabFileKey(null, null, null, filePath),
+                GITLAB_FILE_ORDER_NAMESPACE,
+                GITLAB_FILE_FALLBACK_KEY,
+                buildGitLabFileItem(
+                        null,
+                        filePath,
+                        toolReason(rawArguments),
+                        toolCallId,
+                        toolName,
+                        rawArguments,
+                        content,
+                        startLine
+                ),
+                this::keepExistingGitLabFileItem
+        );
+    }
+
+    private AnalysisEvidenceSection captureFrontendDiscovery(
+            String toolCallId,
+            String toolName,
+            String rawArguments,
+            GitLabToolEvidenceSink sessionEvidence
+    ) {
+        return sessionEvidence.appendItem(
+                GITLAB_PROVIDER,
+                GITLAB_DISCOVERY_CATEGORY,
+                discoveryKey(toolCallId, toolName),
+                GITLAB_DISCOVERY_ORDER_NAMESPACE,
+                GITLAB_DISCOVERY_FALLBACK_KEY,
+                new AnalysisEvidenceItem(
+                        gitLabDiscoveryTitle(toolName),
+                        List.copyOf(buildGitLabDiscoveryAttributes(toolCallId, toolName, rawArguments))
+                )
+        );
     }
 
     private AnalysisEvidenceSection captureGitLabFile(
@@ -822,6 +942,8 @@ public class GitLabToolEvidenceMapper {
             case READ_REPOSITORY_FILE_OUTLINE -> "GitLab file outline";
             case FIND_CLASS_REFERENCES -> "GitLab class references";
             case FIND_FLOW_CONTEXT -> "GitLab flow context";
+            case READ_FRONTEND_ROUTE_BRANCH_SLICE -> "GitLab frontend route branch slice";
+            case READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE -> "GitLab frontend TypeScript symbol slice";
             default -> "GitLab tool result";
         };
     }

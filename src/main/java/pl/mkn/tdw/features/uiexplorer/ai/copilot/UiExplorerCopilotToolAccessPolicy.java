@@ -14,6 +14,8 @@ public record UiExplorerCopilotToolAccessPolicy(
 ) {
 
     private static final Set<String> FALLBACK_TOOLS = Set.of(
+            GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+            GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
             GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
             GitLabToolNames.READ_REPOSITORY_FILE,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
@@ -32,7 +34,9 @@ public record UiExplorerCopilotToolAccessPolicy(
                 .filter(tool -> FALLBACK_TOOLS.contains(tool.name()))
                 .toList();
         var names = enabled.stream().map(ToolDefinition::name).toList();
-        var available = names.contains(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES)
+        var available = names.contains(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE)
+                && names.contains(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE)
+                && names.contains(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES)
                 && (names.contains(GitLabToolNames.READ_REPOSITORY_FILE)
                 || names.contains(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK));
         return new UiExplorerCopilotToolAccessPolicy(enabled, names, fallbackRequired, available);

@@ -177,6 +177,8 @@ class UiExplorerCopilotAnalysisProviderTest {
 
     private List<ToolDefinition> registeredTools() {
         return List.of(
+                tool(GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE),
+                tool(GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE),
                 tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE),
                 tool(GitLabToolNames.READ_REPOSITORY_FILE_CHUNK)

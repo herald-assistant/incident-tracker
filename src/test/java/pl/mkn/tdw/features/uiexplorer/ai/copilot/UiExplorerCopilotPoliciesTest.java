@@ -48,6 +48,46 @@ class UiExplorerCopilotPoliciesTest {
     }
 
     @Test
+    void shouldAllowOnlyPreparedFrontendSliceReferences() {
+        var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-slice-run", context());
+
+        assertThatCode(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+                slice("crm-contact-preferences", "Potwierdzenie route chain CRM.")
+        ))).doesNotThrowAnyException();
+        assertThatCode(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                slice("component-crm-contact-preferences", "Potwierdzenie formularza CRM.")
+        ))).doesNotThrowAnyException();
+        assertThatCode(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                slice("dependency-crm-preferences-api", "Potwierdzenie operacji CRM.")
+        ))).doesNotThrowAnyException();
+
+        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+                slice("other-screen", "Proba wyjscia poza ekran CRM.")
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
+                .hasMessageContaining("selected screen reference");
+        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
+                slice("component-invented", "Proba wyjscia poza graf CRM.")
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
+                .hasMessageContaining("allowed TypeScript target");
+        assertThatThrownBy(() -> scopePolicy.beforeInvocation(request(
+                context,
+                GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+                "{\"sliceRef\":\"crm-contact-preferences\",\"reason\":\"CRM\",\"projectName\":\"other\"}"
+        ))).isInstanceOf(CopilotToolInvocationRejectedException.class)
+                .hasMessageContaining("only sliceRef and reason");
+    }
+
+    @Test
     void shouldAllowFocusedReadIncludingSliceOwnerButRejectMissingReason() {
         var context = new UiExplorerCopilotToolSessionContextFactory().create("crm-read-run", context());
         var validChunk = chunk(FETCHED_VALIDATOR_PATH, "main", "Weryfikacja walidatora CRM.");
@@ -118,5 +158,14 @@ class UiExplorerCopilotPoliciesTest {
                   "reason": "%s"
                 }
                 """.formatted(branch, path, reason);
+    }
+
+    private String slice(String sliceRef, String reason) {
+        return """
+                {
+                  "sliceRef": "%s",
+                  "reason": "%s"
+                }
+                """.formatted(sliceRef, reason);
     }
 }

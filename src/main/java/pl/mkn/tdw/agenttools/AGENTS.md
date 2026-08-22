@@ -65,6 +65,13 @@ Nie obejmuje:
   kanoniczny target repozytoriow i `codeSearchScopes`. Nie dodawaj model-facing
   pol ani odpowiedzi dla osobnego targetu runtime; runtime/deployment names
   moga byc tylko sygnalami dopasowania albo opisem.
+- Frontendowe route branch i TypeScript symbol slice tools mieszkaja w
+  `gitlab.frontend.mcp` i deleguja do `integrations.gitlab.frontend`. Ich
+  model-facing schema ma zawierac tylko
+  bezpieczny `sliceRef` i `reason`; group, project, ref, path prefixes, source
+  revision oraz rejestr dozwolonych targetow pochodza z hidden session
+  context. Nie przywracaj tych danych jako pol toola. Nie wystawiaj pelnego
+  Screen Reachability jako MCP result, gdy zasila juz initial prompt.
 
 ## Weryfikacja
 

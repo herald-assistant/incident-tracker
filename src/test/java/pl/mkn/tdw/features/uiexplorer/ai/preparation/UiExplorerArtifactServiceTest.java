@@ -38,9 +38,12 @@ class UiExplorerArtifactServiceTest {
 
         var outline = content(artifacts, UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT);
         assertThat(outline).contains("Effective route chain", "CrmContactPreferencesComponent")
+                .contains("selected screen slice ref: `crm-contact-preferences`")
                 .doesNotContain("export class");
         var slices = content(artifacts, UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT);
         assertThat(slices).contains("UNTRUSTED_SOURCE_EVIDENCE")
+                .contains("slice ref: `component-crm-contact-preferences`")
+                .contains("slice ref: `dependency-crm-preferences-api`")
                 .contains("crm-contact-preferences.component.ts")
                 .contains("CrmContactPreferencesApi")
                 .contains("loadDefinition")

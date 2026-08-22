@@ -42,7 +42,7 @@ Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
 Config Drift Viewer i Delivery Complexity Assessment.
 Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
 asynchroniczny job oraz neutralna capability GitLaba do graph-first
-rozpoznawania Angular/Nx route/view catalog i screen source context. Integracja
+rozpoznawania Angular/Nx route/view catalog i screen reachability. Integracja
 wyszukuje produkcyjny lancuch `bootstrapApplication(...) -> provideRouter(...)`,
 przechodzi tylko po osiagalnych importach, `children` i lazy routes, domyka
 topologie tras przed rozwijaniem targetow widokow oraz nie buduje repository
@@ -60,20 +60,23 @@ dowolnego pliku.
 Feature-owned `GET /api/ui-explorer/screens` rozwiazuje repository/ref scope z
 Operational Context i zwraca bounded katalog bez ujawniania danych GitLaba.
 UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
-screen source context i wystawia publiczny manifest, coverage, diagnostics oraz
-limity bez surowej tresci kodu. Selected-screen context traktuje wybrany widok
-i wszystkie jego routowane widoki potomne jako priorytetowe korzenie, zanim
-zacznie poglebiac ogolne importy konfiguracji. Domyslny bounded context ma do
-120 plikow, glebokosc komponentow 8, do 1000 targeted reads i 2 000 000 znakow.
+screen reachability graph i wystawia publiczny manifest, coverage, diagnostics
+oraz limity bez repository scope. Graf zaczyna od effective route chain,
+rozwija iteracyjny BFS osiagalnych komponentow i deduplikuje faktycznie uzyte
+serwisy, state, guardy, walidatory i backend clients. Nie buduje pelnego
+snapshotu plikow ani inventory; frontier pozostaje jawna kolejka dalszego
+targeted research.
 Wewnetrzny krok `AI_PREPARATION` przygotowuje siedem logical artifacts, feature
 prompt i guidance dla trzech polskich skilli,
 publikuje bezpieczne metadane artifacts oraz zapisuje dokladny `preparedPrompt`
 przed wywolaniem AI. Feature ma rowniez izolowany provider Copilota:
 readiness gate, hidden GitLab scope, default-deny allowliste, goal-driven
-targeted search/read bez feature'owego limitu liczby wywolan oraz strict parser
+targeted research bez feature'owego limitu liczby wywolan oraz strict parser
 kompletnej, partial i malformed odpowiedzi. Materialny brak child route, komponentu, template,
 formularza, modala, serwisu, state logic albo klienta z zatwierdzonego
-repository scope wymaga proby targeted search/read przed finalizacja; wynik
+repository scope wymaga proby deterministycznego route albo symbol slice, a
+generycznego search/read tylko wtedy, gdy nie istnieje jeszcze
+bezpieczny `sliceRef`; wynik
 z takim brakiem bez zarejestrowanej proby jest odrzucany. Kolejne konkretne
 luki sa pobierane do osiagniecia readiness albo potwierdzenia granicy
 runtime/zewnetrznego scope; licznik wywolan nie finalizuje analizy. Parser nie podnosi
@@ -688,6 +691,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Deterministic mapowanie logs i deployment context na code evidence z GitLaba.
 - `pl.mkn.tdw.agenttools.gitlab.mcp`
   MCP tools GitLaba delegujace do `integrations.gitlab`.
+- `pl.mkn.tdw.agenttools.gitlab.frontend.mcp`
+  Neutralne frontendowe MCP tools dla route branch slice i TypeScript symbol
+  slice. Model-facing input zawiera tylko `sliceRef` i `reason`;
+  repository/ref/path/source revision i target symbolu sa ukrytym scope'em
+  sesji. Pelny Screen Reachability zasila initial artifacts i nie jest toolem.
 - `pl.mkn.tdw.integrations.gitlab.source`
   Osobny use case rozwiazywania pliku po symbolu.
 - `pl.mkn.tdw.api`
@@ -767,6 +775,10 @@ Znaczenie grup UI:
 - GitLab deterministic provider i GitLab MCP tools sa wydzielone do osobnych
   pakietow; MCP tools mieszkaja w `agenttools.gitlab.mcp` i reuse'uja ten sam
   adapter GitLaba.
+- Frontendowe GitLab MCP tools mieszkaja w
+  `agenttools.gitlab.frontend.mcp`, deleguja do neutralnego graph-first
+  discovery i nie ujawniaja modelowi repository coordinates. Nie zwracaja
+  ponownie pelnego Screen Reachability obecnego juz w initial promptcie.
 - GitLab MCP tools potrafia nie tylko szukac kandydatow repo i flow contextu,
   ale tez znajdowac referencje/importy dla ugruntowanej klasy, zeby lepiej
   naprowadzac DB diagnostics.

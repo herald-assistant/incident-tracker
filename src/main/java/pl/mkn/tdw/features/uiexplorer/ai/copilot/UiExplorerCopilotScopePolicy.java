@@ -8,7 +8,9 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
+import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicy;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
@@ -24,9 +26,15 @@ import java.util.Set;
 public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy {
 
     private static final Set<String> ALLOWED_GITLAB_TOOLS = Set.of(
+            GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+            GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE,
             GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
             GitLabToolNames.READ_REPOSITORY_FILE,
             GitLabToolNames.READ_REPOSITORY_FILE_CHUNK
+    );
+    private static final Set<String> FRONTEND_SLICE_TOOLS = Set.of(
+            GitLabToolNames.READ_FRONTEND_ROUTE_BRANCH_SLICE,
+            GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE
     );
     private static final int MAX_READ_CHARACTERS = 20_000;
     private static final int MAX_CHUNK_LINES = 600;
@@ -50,11 +58,47 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
             reject(request, "Resolved UI Explorer repository scope is unavailable.", false);
         }
         validateReason(request, arguments);
+        if (FRONTEND_SLICE_TOOLS.contains(request.toolName())) {
+            validateFrontendSlice(request, arguments);
+            return;
+        }
         validateBranchAndApplication(request, arguments, repository);
         if (GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(request.toolName())) {
             validateSearch(request, arguments, repository);
         } else {
             validateRead(request, arguments, repository);
+        }
+    }
+
+    private void validateFrontendSlice(
+            CopilotToolInvocationPolicyRequest request,
+            JsonNode arguments
+    ) {
+        var unexpected = new java.util.ArrayList<String>();
+        arguments.fieldNames().forEachRemaining(field -> {
+            if (!"sliceRef".equals(field) && !"reason".equals(field)) {
+                unexpected.add(field);
+            }
+        });
+        if (!unexpected.isEmpty()) {
+            reject(request, "Frontend slice tools accept only sliceRef and reason.", true);
+        }
+        var sliceRef = text(arguments, "sliceRef");
+        if (!StringUtils.hasText(sliceRef)) {
+            reject(request, "A safe sliceRef is required.", true);
+        }
+        if (GitLabToolNames.READ_FRONTEND_TYPESCRIPT_SYMBOL_SLICE.equals(request.toolName())) {
+            var targets = request.sessionContext().hiddenContext()
+                    .get(GitLabFrontendToolContextKeys.TYPESCRIPT_SLICE_TARGETS);
+            if (!(targets instanceof Map<?, ?> values) || !values.containsKey(sliceRef)) {
+                reject(request, "sliceRef is not an allowed TypeScript target for this UI Explorer session.", true);
+            }
+            return;
+        }
+        var selectedScreenRef = stringValue(request.sessionContext().hiddenContext()
+                .get(GitLabFrontendToolContextKeys.SCREEN_SLICE_REF));
+        if (!sliceRef.equals(selectedScreenRef)) {
+            reject(request, "sliceRef is not the selected screen reference for this UI Explorer session.", true);
         }
     }
 
@@ -132,16 +176,17 @@ public class UiExplorerCopilotScopePolicy implements CopilotToolInvocationPolicy
     }
 
     private RepositoryScope repository(CopilotToolInvocationPolicyRequest request) {
-        var value = request.sessionContext().hiddenContext().get(UiExplorerCopilotToolContextKeys.ALLOWED_REPOSITORY);
-        if (!(value instanceof Map<?, ?> scope)) {
-            return null;
-        }
-        var projectName = stringValue(scope.get("projectName"));
-        var branchRef = stringValue(scope.get("branchRef"));
+        var hidden = request.sessionContext().hiddenContext();
+        var projectName = stringValue(hidden.get(GitLabFrontendToolContextKeys.PROJECT_NAME));
+        var branchRef = stringValue(hidden.get(AgentToolContextKeys.GITLAB_BRANCH));
         if (!StringUtils.hasText(projectName) || !StringUtils.hasText(branchRef)) {
             return null;
         }
-        return new RepositoryScope(projectName, branchRef, normalizedPaths(stringList(scope.get("pathPrefixes"))));
+        return new RepositoryScope(
+                projectName,
+                branchRef,
+                normalizedPaths(stringList(hidden.get(GitLabFrontendToolContextKeys.PATH_PREFIXES)))
+        );
     }
 
     private boolean withinPrefixes(String path, List<String> prefixes) {

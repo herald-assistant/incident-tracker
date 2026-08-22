@@ -112,10 +112,14 @@ nie wybiera tools i nie dodaje semantyki UI Explorer do platformy.
 konkretnego feature'a: readiness aktywnych sekcji, strict parser jednego
 `UiExplorerResultResponse`, hidden repository scope, default-deny allowliste,
 goal-driven targeted GitLab fallback bez feature'owego limitu call count oraz
-zlozenie `CopilotRunRequest`. Scope/ref/path validation, limity pojedynczego
-transferu i platformowy timeout pozostaja technicznymi zabezpieczeniami. Provider
-reuse'uje neutralne preparation/execution z `aiplatform`, genericzne tools z
-`agenttools` i deterministyczny report assembler. `features.uiexplorer.job`
+zlozenie `CopilotRunRequest`. Preferowane frontendowe tools przyjmuja tylko
+bezpieczny `sliceRef` i `reason`; repository/ref/path, source revision i
+rejestr dozwolonych targetow pozostaja w hidden context. Generyczny
+search/read jest fallbackiem tylko dla luki bez gotowej referencji.
+Scope/ref/path validation, limity pojedynczego transferu i platformowy timeout
+pozostaja technicznymi zabezpieczeniami. Provider reuse'uje neutralne
+preparation/execution z `aiplatform`, tools z `agenttools` i deterministyczny
+report assembler. `features.uiexplorer.job`
 uruchamia ten provider asynchronicznie, przechowuje atomowy snapshot krokow,
 evidence, activity, usage, result i report oraz mapuje kontrolowane stany
 terminalne. `features.uiexplorer.job.localworkspace` posiada feature codec i
@@ -145,6 +149,13 @@ Warstwa posiada:
 - mapowanie session-bound hidden context do scope'u integracji,
 - delegacje do `integrations`,
 - neutralne input/output DTO potrzebne wielu runtime'om agenta.
+
+`agenttools.gitlab.frontend.mcp` deleguje do
+`integrations.gitlab.frontend` i wystawia route branch slice oraz TypeScript
+symbol slice. Model nie wybiera repository, refa, path ani
+symbolu: przekazuje tylko przygotowany `sliceRef` i `reason`, a wrapper
+rozstrzyga target z session-bound hidden context. Screen Reachability pozostaje
+deterministycznym inputem initial promptu i nie jest dublowany przez MCP.
 
 MCP jest tylko sposobem ekspozycji capability. Tool nie moze zakladac, ze
 wywoluje go Incident Analysis albo Copilot SDK.

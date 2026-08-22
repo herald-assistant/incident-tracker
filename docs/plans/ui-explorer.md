@@ -1989,9 +1989,11 @@ rozmiaru promptu po kazdym kroku.
   Explorer ma konsumowac graf BFS, a nie stary context snapshot. Research gaps
   sluza do dalszego deterministycznego dociagania kodu i nie moga automatycznie
   stawac sie biznesowymi `visibilityLimits` rezultatu.
-- [ ] 8L.7: Wystawic te same neutralne capability jako MCP tools dla Copilota;
-  model-facing input ma uzywac bezpiecznej referencji slice i `reason`, a
-  repository/ref/path scope ma pochodzic z hidden session context.
+- [x] 8L.7: Wystawic waskie route branch i TypeScript symbol slice jako MCP
+  tools dla Copilota; model-facing input ma uzywac bezpiecznej referencji
+  slice i `reason`, a repository/ref/path scope ma pochodzic z hidden session
+  context. Pelny Screen Reachability pozostaje etapem initial preparation i
+  Tool Workbench, nie MCP toolem, aby nie dublowac duzego initial context.
 - [ ] 8L.8: Wykonac silnie zanonimizowana macierz CRM dla routingu, formularzy,
   REST/WebSocket, NgRx, autoryzacji, dynamicznych granic runtime i braku
   utraty istotnych zachowan; wykonac adekwatne testy frontend/backend i build.
@@ -2118,6 +2120,51 @@ joba i sanitizera — 35 testow PASS. `npm --prefix frontend test --
 PASS; `mvn -q -Pbackend-dev clean package` — 1276 testow, 0 bledow i 0
 pominietych — PASS. Produkcyjny bundle zostal odswiezony. Fixtures i przyklady
 pozostaja silnie zanonimizowanym, syntetycznym CRM.
+
+Baseline i conformance delta 8L.7 (2026-08-21): neutralne route branch slice,
+TypeScript symbol slice i screen reachability sa dostepne przez shared/operator
+API oraz Tool Workbench, ale sesja Copilota UI Explorera dopuszcza tylko
+generyczne GitLab search/read. Ich model-facing schema nadal wymaga
+`branchRef`, `projectName`, `pathPrefixes` i opcjonalnych application names,
+co jest zastanym driftem i zmusza model do przenoszenia technicznego scope'u z
+artefaktu.
+
+Delta dodaje osobny, neutralny zestaw MCP w `agenttools.gitlab.frontend` nad
+route branch i TypeScript symbol slice. Kazdy nowy tool przyjmuje wylacznie stabilny
+`sliceRef` oraz krotki `reason`; group, project, ref, path prefixes, oczekiwana
+source revision, wybrany screen oraz rejestr dozwolonych component/dependency
+slice refs pochodza z hidden session context. UI Explorer wlacza te tools w
+allowliscie i default-deny scope policy oraz preferuje je przed generycznym
+search/read. Generyczny fallback zostaje dostepny tylko dla konkretnego braku,
+ktory nie ma jeszcze bezpiecznego slice ref. Publiczne API UI Explorera,
+result/report, job state, persistence i frontend pozostaja bez zmian. Tool
+results sa mapowane na user-visible GitLab evidence, aby nowe source paths
+mogly byc legalnymi referencjami finalnego raportu. Wszystkie nowe testy i
+przyklady sa silnie zanonimizowanym, syntetycznym CRM. Pelny Screen
+Reachability nie jest wystawiony przez MCP: jego outline i source slices sa
+juz initial artifacts, wiec ponowne wywolanie duplikowaloby kontekst.
+
+Checkpoint 8L.7 (2026-08-21): `agenttools.gitlab.frontend.mcp` wystawia
+`gitlab_read_frontend_route_branch_slice`,
+`gitlab_read_frontend_typescript_symbol_slice` nad istniejacymi neutralnymi
+serwisami `integrations.gitlab.frontend`. Model-facing schema kazdego toola
+zawiera dokladnie `sliceRef` i `reason`. Group, project, ref, path prefixes,
+immutable source revision, wybrany screen oraz dozwolone targety TypeScript sa
+session-bound hidden contextem; wymyslona albo pochodzaca z innej sesji
+referencja jest odrzucana przed wywolaniem GitLaba.
+
+Artefakty v5 publikuja bezpieczne referencje wybranego ekranu, komponentow BFS
+i zaleznosci. Pelny graf powstaje raz przed AI i nie jest ponownie wystawiony
+jako MCP result. UI Explorer preferuje dwa waskie deterministyczne tools; generyczne
+GitLab search/read pozostaja fallbackiem tylko dla materialnej luki bez
+gotowego `sliceRef`. Wyniki nowych tools trafiaja do user-visible GitLab code
+evidence, wiec dociagniete pliki moga ugruntowac `sourceReferences` raportu.
+Publiczne API, job/result/report, persistence i frontend nie zmienily
+kontraktu. Testy kontraktu, hidden scope, rejestracji Spring AI, policy,
+preparation i evidence uzywaja wylacznie silnie zanonimizowanego,
+syntetycznego CRM. Celowane testy nowych tools, Spring AI registration,
+policy, providera, preparation i evidence — PASS; `PackageDependencyGuardTest`
+— PASS; pelny `mvn -q test` — 1283 testow, 0 bledow, 0 pominietych — PASS.
 
 Utwardzenie checkpointu 8L.6a po kolejnym tescie Workbencha (2026-08-21):
 TypeScript slice zachowuje identyfikatory zakonczone `$`, rozpoznaje wszystkie

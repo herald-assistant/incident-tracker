@@ -45,6 +45,33 @@ class GitLabMcpToolsContextTest {
         assertTrue(toolNames.contains("gitlab_read_repository_file_chunks"));
         assertTrue(toolNames.contains("gitlab_read_java_method_slice"));
         assertTrue(toolNames.contains("gitlab_read_openapi_endpoint_slice"));
+        assertTrue(toolNames.contains("gitlab_read_frontend_route_branch_slice"));
+        assertTrue(toolNames.contains("gitlab_read_frontend_typescript_symbol_slice"));
+        assertFalse(toolNames.contains("gitlab_build_frontend_screen_reachability"));
+    }
+
+    @Test
+    void shouldExposeOnlySafeSliceReferenceAndReasonForFrontendTools() throws Exception {
+        var callbacksByName = Arrays.stream(toolCallbackProviders)
+                .flatMap(provider -> Arrays.stream(provider.getToolCallbacks()))
+                .collect(Collectors.toMap(tool -> tool.getToolDefinition().name(), tool -> tool));
+
+        for (var toolName : java.util.List.of(
+                "gitlab_read_frontend_route_branch_slice",
+                "gitlab_read_frontend_typescript_symbol_slice"
+        )) {
+            var properties = schemaProperties(callbacksByName.get(toolName));
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    java.util.Set.of("sliceRef", "reason"),
+                    properties.keySet(),
+                    toolName
+            );
+            assertFalse(properties.containsKey("group"));
+            assertFalse(properties.containsKey("projectName"));
+            assertFalse(properties.containsKey("ref"));
+            assertFalse(properties.containsKey("filePath"));
+            assertFalse(properties.containsKey("toolContext"));
+        }
     }
 
     @Test
