@@ -2523,7 +2523,7 @@ request/result/report/export.
 
 #### 8R. Efektywny `long_context` przed pierwszym turnem UI Explorera
 
-Status kroku: in progress. Uzytkownik zatwierdzil 2026-08-22 poprawke po
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-22 poprawke po
 potwierdzeniu, ze sesja UI Explorera nadal zostala skompaktowana przed limitem
 272 000 tokenow. Source need pozostaje `../needs/ui-explorer.md`.
 
@@ -2573,10 +2573,22 @@ fixture'y sa silnie zanonimizowanym, syntetycznym CRM.
 - [x] 8R.4: Zweryfikowac efektywny tier typed RPC przed pierwszym
   `sendAndWait` oraz przerwac run bez wyslania promptu, gdy gwarancja nie jest
   spelniona.
-- [ ] 8R.5: Zaktualizowac kanoniczna dokumentacje oraz wykonac CRM-only testy
+- [x] 8R.5: Zaktualizowac kanoniczna dokumentacje oraz wykonac CRM-only testy
   policy, create/resume, gateway ordering/failure, assemblera, wszystkich
   konsumentow, `PackageDependencyGuardTest`, pelne `mvn -q test` i
   `git diff --check`.
+
+Rezultat: UI Explorer przekazuje `LONG_CONTEXT_REQUIRED`; platforma ustawia
+`long_context` w create i resume, a nastepnie przez ograniczony czasowo typed
+RPC potwierdza efektywny tier przed pierwszym `sendAndWait`. Tier `default`,
+brak odpowiedzi RPC albo niewspierany model koncza run przed wyslaniem promptu
+i publikuja `FAILED`. Usunieto runtime usage threshold oraz bledne wywolanie
+`setModel`, ktore przekazywalo `long_context` jako `reasoningSummary`.
+Pozostali konsumenci zachowuja `AUTO`. Celowane testy policy, typed readera,
+gateway ordering/failure, preparation, session config, assemblera i package
+guard przeszly; pelne `mvn -q test`: 1310 testow, 0 failures, 0 errors,
+0 skipped. `git diff --check` — PASS. Frontend nie byl uruchamiany, poniewaz
+zmiana nie dotyka Angulara ani publicznego kontraktu backend-frontend.
 
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 

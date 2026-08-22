@@ -1,6 +1,6 @@
 # Platformowa polityka Copilot context tier
 
-Status: in progress
+Status: completed
 
 Source need: brak osobnego dokumentu; korekta zatwierdzona przez uzytkownika
 2026-08-22 po obserwacji kompaktowania UI Explorera przed 272 000 tokenow.
@@ -101,5 +101,21 @@ exporty, skills, tools i hidden scope nie dostaja nowych pol.
 - [x] Krok 4: Usunac niepoprawny runtime switch oraz jego property/testy bez
   warstwy kompatybilnosci.
 - [x] Krok 5: Dodac typed odczyt efektywnego tieru i fail-before-send.
-- [ ] Krok 6: Zakonczyc consumer audit, dokumentacje, celowane CRM-only testy,
+- [x] Krok 6: Zakonczyc consumer audit, dokumentacje, celowane CRM-only testy,
   `PackageDependencyGuardTest`, pelne `mvn -q test` i `git diff --check`.
+
+## Wynik wdrozenia
+
+UI Explorer wymaga `long_context` od poczatku sesji. Platforma ustawia tier w
+obu configach SDK i potwierdza go przez `session.model.getCurrent` przed
+wyslaniem promptu, z timeoutem
+`analysis.ai.copilot.context-tier.verification-timeout`. Nieudana weryfikacja
+jest fail-before-send, a nie cichym powrotem do kompaktowanego tieru `default`.
+Pozostali konsumenci korzystaja z `AUTO`. Runtime
+`setModel(..., "long_context", ...)` i runtime usage threshold zostaly usuniete
+bez warstwy kompatybilnosci.
+
+Weryfikacja 2026-08-22: celowane CRM-only testy policy, typed readera,
+create/resume, gateway ordering/failure, preparation/session config, UI
+Explorer assemblera i `PackageDependencyGuardTest` — PASS; `mvn -q test` —
+1310 testow, 0 failures, 0 errors, 0 skipped; `git diff --check` — PASS.
