@@ -1,5 +1,6 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
+import com.github.copilot.SystemMessageMode;
 import com.github.copilot.rpc.PermissionHandler;
 import com.github.copilot.rpc.PermissionRequest;
 import com.github.copilot.rpc.PermissionRequestResultKind;
@@ -65,6 +66,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(List.of("incident-code-grounding"), sessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", sessionConfig.getModel());
         assertEquals("medium", sessionConfig.getReasoningEffort());
+        assertNull(sessionConfig.getSystemMessage());
         assertNull(sessionConfig.getInfiniteSessions());
         assertEquals(PermissionHandler.APPROVE_ALL, sessionConfig.getOnPermissionRequest());
         assertNotNull(sessionConfig.getHooks());
@@ -80,6 +82,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(List.of("incident-code-grounding"), resumeSessionConfig.getDisabledSkills());
         assertEquals("gpt-5.4", resumeSessionConfig.getModel());
         assertEquals("medium", resumeSessionConfig.getReasoningEffort());
+        assertNull(resumeSessionConfig.getSystemMessage());
         assertNull(resumeSessionConfig.getInfiniteSessions());
         assertEquals(PermissionHandler.APPROVE_ALL, resumeSessionConfig.getOnPermissionRequest());
         assertNotNull(resumeSessionConfig.getHooks());
@@ -101,6 +104,29 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("deny", deniedToolDecision.permissionDecision());
         assertEquals("allow", skillToolDecision.permissionDecision());
         assertEquals("deny", resumeDeniedToolDecision.permissionDecision());
+    }
+
+    @Test
+    void shouldAppendDurableCrmInstructionsToNewAndResumedSession() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+        var instructions = "Synthetic CRM response contract that must survive session compaction.";
+        var request = new CopilotSessionConfigRequest(
+                sessionId(),
+                List.of(),
+                List.of(),
+                CopilotModelSelection.DEFAULT,
+                null
+        ).withDurableSystemInstructions(instructions);
+
+        var sessionConfig = factory.sessionConfig(request);
+        var resumeSessionConfig = factory.resumeSessionConfig(request);
+
+        assertEquals(SystemMessageMode.APPEND, sessionConfig.getSystemMessage().getMode());
+        assertEquals(instructions, sessionConfig.getSystemMessage().getContent());
+        assertEquals(SystemMessageMode.APPEND, resumeSessionConfig.getSystemMessage().getMode());
+        assertEquals(instructions, resumeSessionConfig.getSystemMessage().getContent());
     }
 
     @Test

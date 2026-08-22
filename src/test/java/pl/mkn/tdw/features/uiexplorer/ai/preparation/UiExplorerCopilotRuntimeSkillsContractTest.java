@@ -55,7 +55,10 @@ class UiExplorerCopilotRuntimeSkillsContractTest {
                 .contains("jedynym wlascicielem finalnego JSON")
                 .contains("FORMS_AND_RULES")
                 .contains("completenessSignals")
-                .contains("usage` pozostaje `null`");
+                .contains("usage` pozostaje `null`")
+                .contains("`screen.screenId`")
+                .contains("Top-level `screenId`")
+                .contains("skalarne `sourceRevision`");
     }
 
     @Test

@@ -178,8 +178,9 @@ ustawia samodzielnie `contextTier`.
 Neutralna polityka `aiplatform.copilot.runtime.context` korzysta z dynamicznego
 katalogu `models.list` i ma dwa konfigurowalne progi:
 
-- przed create/resume konserwatywnie estymuje prompt, definicje tools i
-  rezerwe; od 70% zwyklego okna ustawia `long_context`,
+- przed create/resume konserwatywnie estymuje prompt, opcjonalne durable
+  system instructions, definicje tools i rezerwe; od 70% zwyklego okna
+  ustawia `long_context`,
 - dla sesji pozostawionej na domyslnym tierze reaguje na rzeczywiste
   `session.usage_info` i od 70% wykonuje najwyzej jedna asynchroniczna probe
   `default -> long_context`.
@@ -336,6 +337,13 @@ W Copilocie sa trzy jawne poziomy:
   `runReference`, ale runtime nie traktuje `correlationId` jako wlasnego pola.
 
 Follow-up chat nie implementuje ani nie reuse'uje `InitialAnalysisPreparation`.
+
+Feature moze opcjonalnie przekazac przez parametry sesji krotkie durable system
+instructions, gdy krytyczny kontrakt musi pozostac dostepny po kompaktowaniu
+conversation history. Feature pozostaje wlascicielem tresci. Neutralny runtime
+mapuje ja bez zmian na `SystemMessageMode.APPEND` zarowno dla create, jak i
+resume, zachowujac guardrails SDK. Nie jest to drugi kanal na source evidence:
+duze artifacts i kod nadal sa osadzane raz w zwyklym prompcie.
 
 `InitialAnalysisProvider` nie ma produkcyjnych shortcutow dodanych tylko dla
 testow, takich jak `analyze(request)`, oddzielne `preparePrompt(...)` albo

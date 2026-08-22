@@ -2460,6 +2460,67 @@ pelne `mvn -q test`: 1306 testow, 0 failures, 0 errors, 0 skipped. `git diff
 --check` — PASS. Frontend nie byl uruchamiany, bo zmiana nie dotyka kodu
 Angulara ani publicznego kontraktu request/result/report/export.
 
+#### 8Q. Trwaly kontrakt odpowiedzi odporny na kompaktowanie sesji
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-22 potraktowanie
+utraty dokladnego response contract po kompaktowaniu jako pierwszego problemu
+do naprawy. Source need pozostaje `../needs/ui-explorer.md`.
+
+Baseline: initial prompt zawiera poprawny `ui-explorer/response-contract.json`,
+ale jest zwykla wiadomoscia konwersacji. W eksporcie zlozonego widoku CRM SDK
+skompaktowal sesje z okolo 250 tys. do 46 tys. tokenow. Po kompaktowaniu model
+zaladowal `ui-explorer-write-report`, ktory nie powtarzal dokladnego envelope i
+zawieral dwuznaczne odwolanie do `screenId`. Finalna odpowiedz umiescila
+`screenId` na top-level oraz zamienila obiekt `sourceRevision` na tekst. Strict
+parser poprawnie odrzucil caly wynik, mimo zakonczonego researchu.
+
+Conformance delta: feature pozostaje wlascicielem tresci kontraktu i sklada
+krotkie durable system instructions z kanonicznego response artifactu.
+Neutralna platforma otrzymuje opcjonalna tresc w
+`CopilotSessionConfigRequest` i mapuje ja na SDK `systemMessage` w trybie
+`APPEND` dla create oraz resume. Oficjalny Copilot SDK opisuje system message
+jako SDK-managed system prompt, podczas gdy infinite-session compaction
+kompaktuje conversation history; dlatego kontrakt nie zalezy od summary
+kompaktowania. Platforma nie zna semantyki UI Explorera, a pozostali konsumenci
+nie dostaja instrukcji, dopoki jawnie ich nie przekaza.
+
+Publiczne API, result/export, prompt widoczny w aside, tool policy, hidden
+scope, liczba wywolan i strict parser pozostaja bez zmian. Nie dodajemy
+normalizacji legacy envelope ani automatycznego retry w tym kroku. Dodane
+system instructions sa rowniez uwzgledniane w estymacji initial context tier.
+
+Konsumenci platformowego kontraktu: Incident Analysis, Flow Explorer, Change
+Verification, Config Drift Viewer, Delivery Complexity Assessment, UI Explorer
+oraz testowe factory. Tylko UI Explorer ustawia nowa opcjonalna wartosc.
+Wszystkie nowe testy i fixtures sa silnie zanonimizowanym, syntetycznym CRM.
+
+- [x] 8Q.1: Rozszerzyc neutralny session-config o opcjonalne durable system
+  instructions i mapowanie `APPEND` dla nowej oraz wznawianej sesji, bez
+  feature-specific semantyki w `aiplatform`.
+- [x] 8Q.2: Zbudowac UI Explorer durable contract z tego samego kanonicznego
+  response artifactu, zabronic top-level `screenId` i scalar
+  `sourceRevision`, a w skillu uzyc sciezek `screen.screenId` oraz
+  `sourceRevision.branch/revision`.
+- [x] 8Q.3: Dodac CRM-only regresje platformy, assemblera i skillow
+  potwierdzajace zgodnosc system message z exact response contract oraz brak
+  zmiany konfiguracji pozostalych konsumentow.
+- [x] 8Q.4: Zaktualizowac kanoniczna dokumentacje runtime i wykonac celowane
+  testy wszystkich dotknietych konsumentow, `PackageDependencyGuardTest`,
+  pelne `mvn -q test` oraz `git diff --check`.
+
+Rezultat: UI Explorer sklada krotki system contract z exact
+`screen-catalog-entry.json` i `response-contract.json`, jawnie wymaga
+`screen.screenId` oraz obiektowego `sourceRevision` i nie duplikuje duzych
+source slices. Neutralny runtime mapuje opcjonalna tresc na
+`SystemMessageMode.APPEND` dla create i resume, a context-tier estimator liczy
+ja razem z promptem. Pozostale feature'y zachowuja `null` system message.
+Strict response parser nie zostal poluzowany i nie dodano legacy normalizacji
+ani automatycznego retry. Celowane testy platformy, assemblera, promptu,
+skilli, parsera i package guard przeszly; pelne `mvn -q test`: 1308 testow,
+0 failures, 0 errors, 0 skipped. `git diff --check` — PASS. Frontend nie byl
+uruchamiany, poniewaz zmiana nie dotyka Angulara ani publicznego kontraktu
+request/result/report/export.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

@@ -1,5 +1,6 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
+import com.github.copilot.SystemMessageMode;
 import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.PermissionHandler;
 import com.github.copilot.rpc.PermissionRequestResult;
@@ -8,6 +9,7 @@ import com.github.copilot.rpc.PreToolUseHookOutput;
 import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import com.github.copilot.rpc.SessionHooks;
+import com.github.copilot.rpc.SystemMessageConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -69,6 +71,9 @@ public class CopilotSessionConfigFactory {
         if (StringUtils.hasText(reasoningEffort)) {
             sessionConfig.setReasoningEffort(reasoningEffort);
         }
+        if (StringUtils.hasText(request.durableSystemInstructions())) {
+            sessionConfig.setSystemMessage(systemMessage(request.durableSystemInstructions()));
+        }
 
         return sessionConfig;
     }
@@ -95,8 +100,17 @@ public class CopilotSessionConfigFactory {
         if (StringUtils.hasText(reasoningEffort)) {
             resumeSessionConfig.setReasoningEffort(reasoningEffort);
         }
+        if (StringUtils.hasText(request.durableSystemInstructions())) {
+            resumeSessionConfig.setSystemMessage(systemMessage(request.durableSystemInstructions()));
+        }
 
         return resumeSessionConfig;
+    }
+
+    private SystemMessageConfig systemMessage(String instructions) {
+        return new SystemMessageConfig()
+                .setMode(SystemMessageMode.APPEND)
+                .setContent(instructions);
     }
 
     private String selectedModel(CopilotModelSelection modelSelection) {

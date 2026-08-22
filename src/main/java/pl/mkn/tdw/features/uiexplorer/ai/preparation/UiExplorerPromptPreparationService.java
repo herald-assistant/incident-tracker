@@ -83,6 +83,7 @@ public class UiExplorerPromptPreparationService {
 
                 ## Final output rules
                 - Finalny wynik musi byc jednym obiektem JSON zgodnym z `ui-explorer/response-contract.json`.
+                - Identyfikacja ekranu znajduje sie w `screen.screenId`; top-level `screenId` jest zabronione. `sourceRevision` jest obiektem z polami `branch` i `revision`; wartosc skalarna jest zabroniona.
                 - `functionalOverview` i kazde `sections[].markdown` musza spelniac `ui-explorer/functional-writing-contract.md`.
                 - Glowna narracja opisuje prace uzytkownika, reguly, warunki i skutki. Nazwy klas, metod, plikow, framework APIs i operatorow pozostaja w `sourceReferences`, chyba ze identyfikator ma bezposrednie znaczenie funkcjonalne.
                 - Nie ograniczaj sekcji do stalej liczby obserwacji. Dla `DEEP` uwzglednij wszystkie odrebne potwierdzone fakty wymagane przez kontrakt sekcji.

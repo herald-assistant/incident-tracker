@@ -10,7 +10,8 @@ public record CopilotSessionConfigRequest(
         List<String> availableToolNames,
         CopilotModelSelection modelSelection,
         String deniedToolUseMessage,
-        boolean skillsEnabled
+        boolean skillsEnabled,
+        String durableSystemInstructions
 ) {
 
     public static final String SKILL_TOOL_NAME = "skill";
@@ -24,7 +25,26 @@ public record CopilotSessionConfigRequest(
             CopilotModelSelection modelSelection,
             String deniedToolUseMessage
     ) {
-        this(sessionId, tools, availableToolNames, modelSelection, deniedToolUseMessage, true);
+        this(sessionId, tools, availableToolNames, modelSelection, deniedToolUseMessage, true, null);
+    }
+
+    public CopilotSessionConfigRequest(
+            String sessionId,
+            List<ToolDefinition> tools,
+            List<String> availableToolNames,
+            CopilotModelSelection modelSelection,
+            String deniedToolUseMessage,
+            boolean skillsEnabled
+    ) {
+        this(
+                sessionId,
+                tools,
+                availableToolNames,
+                modelSelection,
+                deniedToolUseMessage,
+                skillsEnabled,
+                null
+        );
     }
 
     public CopilotSessionConfigRequest {
@@ -51,6 +71,18 @@ public record CopilotSessionConfigRequest(
 
     public boolean skillToolAvailable() {
         return effectiveAvailableToolNames().contains(SKILL_TOOL_NAME);
+    }
+
+    public CopilotSessionConfigRequest withDurableSystemInstructions(String instructions) {
+        return new CopilotSessionConfigRequest(
+                sessionId,
+                tools,
+                availableToolNames,
+                modelSelection,
+                deniedToolUseMessage,
+                skillsEnabled,
+                instructions
+        );
     }
 
     private static boolean hasText(String value) {

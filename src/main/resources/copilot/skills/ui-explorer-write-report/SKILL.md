@@ -12,6 +12,8 @@ Uzywaj tego skilla zawsze przed finalizacja initial UI Explorer result.
 Zbuduj dokladnie jeden obiekt JSON zgodny z
 `ui-explorer/response-contract.json`. Wynik jest dokumentacja funkcjonalna
 czytelna biznesowo i pozostaje oparty na source facts.
+Niemutowalny kontrakt przekazany w system message pozostaje nadrzedny takze
+po kompaktowaniu historii sesji.
 
 ## Wejscia
 
@@ -140,7 +142,9 @@ finalizacji niegotowej sekcji.
 - `markdown` spelnia kanoniczna strukture swojej sekcji i nie zawiera source
   refs ani technicznego confidence.
 - `usage` pozostaje `null`; tokeny i koszt uzupelnia backend.
-- `sourceRevision` i `screenId` musza odpowiadac artifactom.
+- `screen.screenId`, `sourceRevision.branch` i `sourceRevision.revision` musza
+  odpowiadac artifactom. Top-level `screenId` oraz skalarne `sourceRevision` sa
+  zabronione.
 
 ## Walidacja
 

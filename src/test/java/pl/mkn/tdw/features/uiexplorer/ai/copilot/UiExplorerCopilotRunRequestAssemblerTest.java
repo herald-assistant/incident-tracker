@@ -72,6 +72,17 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(assembly.runRequest().artifactContents()).hasSize(7);
         assertThat(assembly.runRequest().artifactContents())
                 .containsKey("ui-explorer/functional-writing-contract.md");
+        var durableInstructions = assembly.runRequest().sessionConfigRequest().durableSystemInstructions();
+        assertThat(durableInstructions)
+                .contains("`screen.screenId` jest wymagane")
+                .contains("top-level `screenId` jest zabronione")
+                .contains("`sourceRevision` musi byc obiektem")
+                .contains(preparation.artifactContents().get(UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT))
+                .contains(preparation.artifactContents().get(UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT))
+                .doesNotContain(preparation.artifactContents().get(UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT));
+        assertThat(durableInstructions.length())
+                .as("durable contract must not duplicate the source research context")
+                .isLessThan(10_000);
         var hidden = contextCaptor.getValue().hiddenContext();
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_GROUP)).isEqualTo("synthetic-crm");
         assertThat(hidden.get(AgentToolContextKeys.GITLAB_BRANCH)).isEqualTo("main");

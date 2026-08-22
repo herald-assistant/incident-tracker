@@ -1,5 +1,6 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.context;
 
+import com.github.copilot.rpc.SystemMessageConfig;
 import com.github.copilot.rpc.ToolDefinition;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -92,8 +93,37 @@ public class CopilotContextTierPolicy {
                 characters += length(tool.parameters());
             }
         }
+        characters += systemMessageCharacters(selectedSystemMessage(preparedSession));
         return (long) Math.ceil(characters / settings.getEstimatedCharactersPerToken())
                 + settings.getReservedTokens();
+    }
+
+    private SystemMessageConfig selectedSystemMessage(CopilotPreparedSession preparedSession) {
+        if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
+            return preparedSession.resumeSessionConfig() != null
+                    ? preparedSession.resumeSessionConfig().getSystemMessage()
+                    : null;
+        }
+        return preparedSession.sessionConfig() != null
+                ? preparedSession.sessionConfig().getSystemMessage()
+                : null;
+    }
+
+    private long systemMessageCharacters(SystemMessageConfig systemMessage) {
+        if (systemMessage == null) {
+            return 0L;
+        }
+        long characters = length(systemMessage.getContent());
+        if (systemMessage.getSections() != null) {
+            for (var entry : systemMessage.getSections().entrySet()) {
+                characters += length(entry.getKey());
+                if (entry.getValue() != null) {
+                    characters += length(entry.getValue().getAction());
+                    characters += length(entry.getValue().getContent());
+                }
+            }
+        }
+        return characters;
     }
 
     private CopilotModelOption findProfile(CopilotPreparedSession preparedSession, String modelId) {

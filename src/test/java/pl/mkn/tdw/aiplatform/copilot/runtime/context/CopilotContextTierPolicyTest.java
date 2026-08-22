@@ -6,6 +6,7 @@ import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
+import com.github.copilot.rpc.SystemMessageConfig;
 import com.github.copilot.rpc.ToolDefinition;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
@@ -78,6 +79,28 @@ class CopilotContextTierPolicyTest {
                 "crm-source.md",
                 "CRM evidence already embedded in the prompt"
         );
+    }
+
+    @Test
+    void shouldIncludeDurableCrmSystemInstructionsInInitialContextEstimate() {
+        var properties = properties(0.70D, 0.70D, 1D, 0);
+        var sessionConfig = new SessionConfig()
+                .setModel("gpt-crm-context")
+                .setSystemMessage(new SystemMessageConfig().setContent(
+                        "CRM_DURABLE_RESPONSE_CONTRACT_".repeat(3)
+                ));
+        var prepared = prepared(
+                "CRM",
+                sessionConfig,
+                new ResumeSessionConfig(),
+                List.of(),
+                new ArrayList<>()
+        );
+
+        var decision = policy(properties).prepare(prepared).decision();
+
+        assertThat(decision.estimatedInitialTokens()).isGreaterThanOrEqualTo(70);
+        assertThat(decision.useLongContextInitially()).isTrue();
     }
 
     @Test

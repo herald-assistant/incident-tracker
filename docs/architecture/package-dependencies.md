@@ -100,8 +100,8 @@ mapowane na biznesowe `visibilityLimits`. Publiczne evidence nie ujawnia
 hidden repository scope i nie importuje kontraktow integracji.
 
 `features.uiexplorer.ai.preparation` jest feature-owned granica przygotowania
-AI. Buduje logical artifacts v6 z requestem, katalogowym ekranem, czytelnym
-outline reachability, file-grouped source slices w porzadku BFS/discovery,
+AI. Buduje logical artifacts v8 z requestem, katalogowym ekranem, czytelnym
+outline reachability, warstwowym source materialem w porzadku BFS/discovery,
 coverage i kontraktami wyniku. Grupowanie deduplikuje tylko identyczne importy
 i body w obrebie jednego pliku; wszystkie odmienne body, slice refs, symbole,
 metody, relacje i omission markers pozostaja w artefakcie. Klasyfikuje opis
@@ -121,6 +121,10 @@ zlozenie `CopilotRunRequest`. Preferowane frontendowe tools przyjmuja tylko
 bezpieczny `sliceRef` i `reason`; repository/ref/path, source revision i
 rejestr dozwolonych targetow pozostaja w hidden context. Generyczny
 search/read jest fallbackiem tylko dla luki bez gotowej referencji.
+Assembler buduje dodatkowo krotkie durable system instructions z kanonicznego
+response contract oraz wybranego ekranu/source revision. Neutralny runtime
+mapuje je na SDK, ale nie importuje ani nie interpretuje kontraktow UI
+Explorera. Duze source artifacts nie sa w tym kanale duplikowane.
 Scope/ref/path validation, limity pojedynczego transferu i platformowy timeout
 pozostaja technicznymi zabezpieczeniami. Provider reuse'uje neutralne
 preparation/execution z `aiplatform`, tools z `agenttools` i deterministyczny

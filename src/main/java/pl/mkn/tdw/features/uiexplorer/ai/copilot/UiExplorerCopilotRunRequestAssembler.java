@@ -53,7 +53,7 @@ public class UiExplorerCopilotRunRequestAssembler {
                 accessPolicy.availableToolNames(),
                 new CopilotModelSelection(request.model(), request.reasoningEffort()),
                 DENIED_TOOL_MESSAGE
-        );
+        ).withDurableSystemInstructions(UiExplorerDurableSystemInstructions.render(preparation));
         var runRequest = new CopilotRunRequest(
                 toolContext.analysisRunId(),
                 runAuthMapper.toRunAuth(authRef),
