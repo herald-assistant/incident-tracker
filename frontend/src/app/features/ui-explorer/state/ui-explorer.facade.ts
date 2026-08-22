@@ -248,7 +248,7 @@ export class UiExplorerFacade {
     this.clearScreenSelection();
   }
 
-  loadScreens(): void {
+  loadScreens(refreshCache = false): void {
     if (this.controlsLocked()) {
       return;
     }
@@ -264,7 +264,7 @@ export class UiExplorerFacade {
     this.screenState.set('loading');
     this.screenError.set('');
     this.api
-      .getScreens(systemId, branch)
+      .getScreens(systemId, branch, refreshCache)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (catalog) => {

@@ -133,6 +133,12 @@ po restarcie. `features.uiexplorer.job.importing` waliduje i sanitizuje
 niezaufany portable payload, po czym zapisuje nowy read-only run przez port
 persistence feature'a; nie importuje shared `api.analysisruns`.
 
+`features.uiexplorer.catalog` posiada rowniez feature-owned trwaly cache
+katalogu widokow. Zalezy jednokierunkowo od neutralnych
+`localworkspace.storage` i `integrations.gitlab.frontend`; local workspace ani
+integracja GitLaba nie znaja kontraktu UI Explorer. Cache przechowuje publiczny
+katalog po zakonczonym discovery, a nie wewnetrzny route graph.
+
 Warstwa nie posiada:
 
 - promptow i skilli,

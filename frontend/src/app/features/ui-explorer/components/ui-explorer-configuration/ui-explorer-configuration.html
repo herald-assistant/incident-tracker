@@ -130,7 +130,7 @@
             [disabled]="facade.controlsLocked()"
             [value]="facade.branch()"
             (input)="facade.changeBranch($any($event.target).value)"
-            (keydown.enter)="facade.loadScreens()"
+            (keydown.enter)="facade.loadScreens(true)"
           />
         </label>
 
@@ -153,7 +153,7 @@
             class="secondary-button"
             type="button"
             [disabled]="facade.controlsLocked() || !facade.selectedSystemId() || !facade.branch().trim() || facade.screenState() === 'loading'"
-            (click)="facade.loadScreens()"
+            (click)="facade.loadScreens(true)"
           >
             <span class="material-symbols-outlined" aria-hidden="true">sync</span>
             <span>{{ facade.screenState() === 'loading' ? 'Loading…' : 'Load views' }}</span>

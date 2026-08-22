@@ -8,6 +8,9 @@ import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundE
 import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -100,17 +103,86 @@ class UiExplorerScreenCatalogServiceTest {
     void shouldRejectBlankScopeWithoutCallingDependencies() {
         var frontendCatalog = mock(UiExplorerFrontendCatalogService.class);
         var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
-        var service = new UiExplorerScreenCatalogService(frontendCatalog, discovery);
+        var service = new UiExplorerScreenCatalogService(
+                frontendCatalog,
+                discovery,
+                UiExplorerScreenCatalogCache.disabled()
+        );
         assertThatThrownBy(() -> service.loadCatalog(" ", "main"))
                 .isInstanceOf(UiExplorerScreenCatalogInputException.class);
         verifyNoInteractions(frontendCatalog, discovery);
+    }
+
+    @Test
+    void shouldReuseCatalogForTheSameCrmScopeAndRefreshOnlyTheMatchingEntry() {
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        when(discovery.discover(any(), any())).thenReturn(graph(false));
+        var cache = new InMemoryScreenCatalogCache();
+        var service = service(eligibleCrmCatalog(), discovery, cache);
+
+        var first = service.loadCatalog("crm-agent-portal", "release/2026.08");
+        var cached = service.loadCatalog("crm-agent-portal", "release/2026.08");
+        service.loadCatalog("crm-agent-portal", "crm-review");
+        service.loadCatalog("crm-agent-portal", "release/2026.08", true);
+
+        assertThat(cached).isEqualTo(first);
+        verify(discovery, times(3)).discover(any(), any());
+        assertThat(cache.evictions).isEqualTo(1);
+        assertThat(cache.entries).hasSize(2);
+    }
+
+    @Test
+    void shouldNotCacheFailedCrmDiscovery() {
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        when(discovery.discover(any(), any()))
+                .thenThrow(new GitLabFrontendDiscoveryException(
+                        "FRONTEND_DISCOVERY_FAILED",
+                        "Synthetic CRM route discovery failed"
+                ))
+                .thenReturn(graph(false));
+        var cache = new InMemoryScreenCatalogCache();
+        var service = service(eligibleCrmCatalog(), discovery, cache);
+
+        assertThatThrownBy(() -> service.loadCatalog("crm-agent-portal", "crm-review"))
+                .isInstanceOf(GitLabFrontendDiscoveryException.class);
+        assertThat(cache.entries).isEmpty();
+
+        assertThat(service.loadCatalog("crm-agent-portal", "crm-review").screens()).hasSize(1);
+        verify(discovery, times(2)).discover(any(), any());
+    }
+
+    @Test
+    void shouldNotReuseCatalogAcrossDifferentCrmRepositoryScopes() {
+        var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
+        when(discovery.discover(any(), any())).thenReturn(graph(false));
+        var cache = new InMemoryScreenCatalogCache();
+
+        service(eligibleCrmCatalog(), discovery, cache)
+                .loadCatalog("crm-agent-portal", "release/2026.08");
+        service(eligibleCrmPathPrefixCatalog(), discovery, cache)
+                .loadCatalog("crm-agent-portal", "release/2026.08");
+
+        verify(discovery, times(2)).discover(any(), any());
+        assertThat(cache.entries).hasSize(2);
     }
 
     private UiExplorerScreenCatalogService service(
             pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
             GitLabFrontendRouteGraphDiscoveryService discovery
     ) {
-        return new UiExplorerScreenCatalogService(new UiExplorerFrontendCatalogService(port(catalog)), discovery);
+        return service(catalog, discovery, UiExplorerScreenCatalogCache.disabled());
+    }
+
+    private UiExplorerScreenCatalogService service(
+            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
+            GitLabFrontendRouteGraphDiscoveryService discovery,
+            UiExplorerScreenCatalogCache cache
+    ) {
+        return new UiExplorerScreenCatalogService(
+                new UiExplorerFrontendCatalogService(port(catalog)),
+                discovery,
+                cache
+        );
     }
 
     private GitLabFrontendRouteGraph graph(boolean partial) {
@@ -153,5 +225,27 @@ class UiExplorerScreenCatalogServiceTest {
                         )), List.of("customerId")
                 )), List.of(), coverage, diagnostics
         );
+    }
+
+    private static final class InMemoryScreenCatalogCache implements UiExplorerScreenCatalogCache {
+
+        private final Map<Key, UiExplorerScreenCatalog> entries = new LinkedHashMap<>();
+        private int evictions;
+
+        @Override
+        public Optional<UiExplorerScreenCatalog> find(Key key) {
+            return Optional.ofNullable(entries.get(key));
+        }
+
+        @Override
+        public void save(Key key, UiExplorerScreenCatalog catalog) {
+            entries.put(key, catalog);
+        }
+
+        @Override
+        public void evict(Key key) {
+            evictions++;
+            entries.remove(key);
+        }
     }
 }

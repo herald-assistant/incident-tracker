@@ -32,13 +32,27 @@ public class UiExplorerScreenCatalogService {
 
     private final UiExplorerFrontendCatalogService frontendCatalogService;
     private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
+    private final UiExplorerScreenCatalogCache screenCatalogCache;
 
     public UiExplorerScreenCatalog loadCatalog(String systemId, String ref) {
+        return loadCatalog(systemId, ref, false);
+    }
+
+    public UiExplorerScreenCatalog loadCatalog(String systemId, String ref, boolean refreshCache) {
         var normalizedSystemId = required(systemId, "systemId", MAX_SYSTEM_ID_LENGTH);
         var normalizedRef = required(ref, "branch", MAX_REF_LENGTH);
         var frontend = frontendCatalogService.loadCatalog().findFrontend(normalizedSystemId)
                 .orElseThrow(() -> new UiExplorerFrontendNotEligibleException(normalizedSystemId));
         var limits = GitLabFrontendGraphLimits.defaults();
+        var cacheKey = cacheKey(frontend, normalizedRef, limits);
+        if (refreshCache) {
+            screenCatalogCache.evict(cacheKey);
+        } else {
+            var cached = screenCatalogCache.find(cacheKey);
+            if (cached.isPresent()) {
+                return cached.get();
+            }
+        }
         var scope = new GitLabFrontendRepositoryScope(
                         frontend.gitLabGroup(),
                         frontend.gitLabProjectName(),
@@ -47,13 +61,38 @@ public class UiExplorerScreenCatalogService {
         );
 
         try {
-            return map(frontend, routeGraphDiscoveryService.discover(scope, limits), limits);
+            var catalog = map(frontend, routeGraphDiscoveryService.discover(scope, limits), limits);
+            screenCatalogCache.save(cacheKey, catalog);
+            return catalog;
         } catch (GitLabFrontendDiscoveryException exception) {
             if ("FRONTEND_REF_NOT_FOUND".equals(exception.code())) {
                 throw new UiExplorerSourceRefNotFoundException(normalizedSystemId, normalizedRef);
             }
             throw exception;
         }
+    }
+
+    private UiExplorerScreenCatalogCache.Key cacheKey(
+            UiExplorerFrontendRegistration frontend,
+            String requestedRef,
+            GitLabFrontendGraphLimits limits
+    ) {
+        return new UiExplorerScreenCatalogCache.Key(
+                frontend.systemId(),
+                frontend.label(),
+                requestedRef,
+                frontend.gitLabGroup(),
+                frontend.gitLabProjectName(),
+                frontend.repositoryId(),
+                frontend.projectPath(),
+                frontend.searchMode(),
+                frontend.pathPrefixes(),
+                limits.maxRouteNodes(),
+                limits.maxRouteFiles(),
+                limits.maxSourceReads(),
+                limits.maxAliasResolutions(),
+                limits.maxImportDepth()
+        );
     }
 
     private UiExplorerScreenCatalog map(

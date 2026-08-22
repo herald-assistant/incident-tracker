@@ -18,8 +18,9 @@ public class UiExplorerScreenCatalogController {
     @GetMapping("/screens")
     public UiExplorerScreenCatalog screens(
             @RequestParam String systemId,
-            @RequestParam String branch
+            @RequestParam String branch,
+            @RequestParam(defaultValue = "false") boolean refresh
     ) {
-        return screenCatalogService.loadCatalog(systemId, branch);
+        return screenCatalogService.loadCatalog(systemId, branch, refresh);
     }
 }

@@ -2231,6 +2231,56 @@ do klasy bazowej. Produkcyjny prompt, skille i MCP nadal nie zostaly zmienione.
 Silnie zanonimizowane regresje CRM oraz operatorskie API — PASS; pelny
 `mvn -q test` — 1279 testow, 0 bledow, 0 pominietych — PASS.
 
+#### 8M. Trwaly cache katalogu widokow
+
+Baseline i conformance delta 8M (2026-08-22): jest to zmiana L1 w publicznym
+query API katalogu widokow oraz jego jedynym konsumencie we frontendzie. Flow
+Explorer utrwala kosztowne endpoint inventory w local workspace, kluczuje je
+pelny zakresem system/ref/repository/filtry, domyslnie zwraca cache hit, a
+jawne `refresh=true` usuwa wpis i ponownie wykonuje discovery. UI Explorer
+dotychczas wykonywal pelny route graph discovery przy kazdym wejsciu, zmianie
+aplikacji i ponownym zaladowaniu tego samego refa.
+
+Delta reuse'uje ten sam wzorzec bez zmiany odpowiedzi katalogu ani kontraktu
+joba: feature-owned cache jest kluczowany `systemId`, znormalizowanym refem,
+GitLab group/project, repository/search scope oraz limitami traversal. Zwykle
+zaladowanie uzywa cache, natomiast Enter w polu ref i przycisk `Load views`
+wysylaja jawne `refresh=true`, usuwaja tylko dokladnie dopasowany wpis i
+ponownie wykonuja discovery. Nieudane discovery nie zapisuje ani nie nadpisuje
+poprawnego wpisu. Konsumenci: `UiExplorerScreenCatalogController`,
+`UiExplorerApiService`, `UiExplorerFacade` i konfigurator ekranu. Wszystkie
+nowe testy i przyklady pozostaja silnie zanonimizowanym, syntetycznym CRM.
+
+- [x] 8M.1: Dodac trwaly feature-owned cache katalogu widokow wzorowany na
+  `FlowExplorerEndpointInventoryCache`, z pelnym cache key, bezpiecznym
+  odczytem/zapisem, precyzyjna invalidacja i testem odtworzenia po restarcie.
+- [x] 8M.2: Rozszerzyc `/api/ui-explorer/screens` o opcjonalne
+  `refresh=false`, uzyc cache hit przed route discovery oraz wymusic ponowne
+  discovery po `refresh=true`; testy maja potwierdzic hit, rozne refy/scope,
+  refresh i brak zatrucia cache po bledzie.
+- [x] 8M.3: Przekazac semantyke do Angulara: automatyczne ladowanie korzysta z
+  cache, a Enter i `Load views` jawnie odswiezaja; zweryfikowac kontrakt HTTP,
+  fasade, testy Angulara, produkcyjny build i adekwatny pion backendu.
+
+Checkpoint 8M (2026-08-22): UI Explorer utrwala publiczny screen catalog w
+`tdw-data/ui-explorer/screen-catalog-cache`. Cache key obejmuje identyfikator i
+etykiete systemu, znormalizowany ref, GitLab group/project, repository,
+search mode, path prefixes oraz wszystkie limity route graph traversal.
+Automatyczne ladowanie po wejsciu lub wyborze frontendu wysyla request bez
+`refresh`, wiec kolejny odczyt tego samego zakresu nie uruchamia GitLaba.
+Enter w polu ref oraz `Load views` wysylaja `refresh=true`, usuwaja dokladnie
+jeden wpis i ponownie wykonuja discovery. Cache przezywa restart aplikacji,
+nie zapisuje nieudanego discovery i jest izolowany pomiedzy refami oraz
+repository scopes. Odpowiedz katalogu, source revision i kontrakt joba nie
+zostaly zmienione.
+
+Silnie zanonimizowane testy syntetycznego CRM potwierdzaja cache hit,
+odtworzenie po restarcie, precyzyjna invalidacje, rozne refy i scopes, blad
+discovery, query API oraz semantyke fasady i Enter. Celowane testy backendu —
+PASS; Angular `56` plikow/`432` testy — PASS; produkcyjny build Angulara —
+PASS; `mvn -q -Pbackend-dev clean package` — `1291` testow, 0 bledow i 0
+pominietych — PASS. Produkcyjny bundle zostal odswiezony.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

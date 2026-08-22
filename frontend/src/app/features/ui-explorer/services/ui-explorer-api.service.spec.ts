@@ -25,6 +25,7 @@ describe('UiExplorerApiService', () => {
 
     const request = http.expectOne('/api/ui-explorer/input-options');
     expect(request.request.method).toBe('GET');
+    expect(request.request.params.has('refresh')).toBe(false);
     request.flush({
       featureId: 'ui-explorer',
       executionAvailability: {
@@ -38,6 +39,41 @@ describe('UiExplorerApiService', () => {
       sections: [],
       modes: [],
       configurationFindings: []
+    });
+  });
+
+  it('requests a fresh anonymized CRM screen catalog only when explicitly requested', () => {
+    service.getScreens('crm-agent-portal', 'crm-review', true).subscribe();
+
+    const request = http.expectOne(
+      (candidate) =>
+        candidate.url === '/api/ui-explorer/screens' &&
+        candidate.params.get('systemId') === 'crm-agent-portal' &&
+        candidate.params.get('branch') === 'crm-review' &&
+        candidate.params.get('refresh') === 'true'
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush({
+      systemId: 'crm-agent-portal',
+      systemLabel: 'CRM Agent Portal',
+      sourceRevision: { branch: 'crm-review', revision: 'crm-revision-refreshed' },
+      status: 'READY',
+      screens: [],
+      diagnostics: [],
+      limitations: [],
+      boundary: {
+        visitedRouteNodeCount: 2,
+        visitedRouteFileCount: 2,
+        sourceReadCount: 9,
+        aliasResolutionCount: 3,
+        unresolvedEdgeCount: 0,
+        limitReached: false,
+        maxRouteNodes: 400,
+        maxRouteFiles: 80,
+        maxSourceReads: 300,
+        maxAliasResolutions: 500,
+        maxImportDepth: 12
+      }
     });
   });
 

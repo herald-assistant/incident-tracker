@@ -59,6 +59,12 @@ bezposrednio do immutable commit id przez GitLab, niezaleznie od metadanych
 dowolnego pliku.
 Feature-owned `GET /api/ui-explorer/screens` rozwiazuje repository/ref scope z
 Operational Context i zwraca bounded katalog bez ujawniania danych GitLaba.
+Kosztowny wynik route graph discovery jest utrwalany w local workspace pod
+pelnym kluczem system/ref/repository/search scope/graph limits. Domyslny odczyt
+reuse'uje wpis rowniez po restarcie aplikacji; jawne `refresh=true` omija i
+usuwa tylko dopasowany wpis przed ponownym discovery. Automatyczne ladowanie
+widokow w Angularze korzysta z cache, natomiast Enter w polu ref oraz
+`Load views` wymuszaja refresh.
 UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
 screen reachability graph i wystawia publiczny manifest, coverage, diagnostics
 oraz limity bez repository scope. Graf zaczyna od effective route chain,

@@ -32,7 +32,7 @@ class UiExplorerScreenCatalogControllerTest {
 
     @Test
     void shouldExposeBusinessCatalogWithoutRepositoryScope() throws Exception {
-        when(screenCatalogService.loadCatalog("crm-agent-portal", "release/2026.08"))
+        when(screenCatalogService.loadCatalog("crm-agent-portal", "release/2026.08", false))
                 .thenReturn(catalog());
 
         mockMvc.perform(get("/api/ui-explorer/screens")
@@ -51,7 +51,21 @@ class UiExplorerScreenCatalogControllerTest {
                 .andExpect(jsonPath("$.projectPath").doesNotExist())
                 .andExpect(jsonPath("$.gitLabGroup").doesNotExist());
 
-        verify(screenCatalogService).loadCatalog("crm-agent-portal", "release/2026.08");
+        verify(screenCatalogService).loadCatalog("crm-agent-portal", "release/2026.08", false);
+    }
+
+    @Test
+    void shouldForwardAnExplicitCrmCatalogRefresh() throws Exception {
+        when(screenCatalogService.loadCatalog("crm-agent-portal", "crm-review", true))
+                .thenReturn(catalog());
+
+        mockMvc.perform(get("/api/ui-explorer/screens")
+                        .queryParam("systemId", "crm-agent-portal")
+                        .queryParam("branch", "crm-review")
+                        .queryParam("refresh", "true"))
+                .andExpect(status().isOk());
+
+        verify(screenCatalogService).loadCatalog("crm-agent-portal", "crm-review", true);
     }
 
     @Test
@@ -63,7 +77,7 @@ class UiExplorerScreenCatalogControllerTest {
 
     @Test
     void shouldExposeIneligibleFrontendAsPublicError() throws Exception {
-        when(screenCatalogService.loadCatalog("crm-agent-portal", "main"))
+        when(screenCatalogService.loadCatalog("crm-agent-portal", "main", false))
                 .thenThrow(new UiExplorerFrontendNotEligibleException("crm-agent-portal"));
 
         mockMvc.perform(get("/api/ui-explorer/screens")

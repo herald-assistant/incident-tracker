@@ -98,7 +98,7 @@ describe('UiExplorerFacade', () => {
     facade.initialize();
 
     expect(facade.branch()).toBe('crm-review');
-    expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'crm-review');
+    expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'crm-review', false);
   });
 
   it('builds real defaults and automatically loads screens for the selected CRM frontend', () => {
@@ -110,8 +110,20 @@ describe('UiExplorerFacade', () => {
     expect(facade.sectionModes()).toEqual({ OVERVIEW: 'DEEP', FORMS_AND_RULES: 'COMPACT' });
     expect(facade.selectedModel()).toBe('crm-doc-model');
     expect(facade.selectedReasoningEffort()).toBe('medium');
-    expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'main');
+    expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'main', false);
     expect(facade.sourceRevision()?.revision).toBe('crm-revision-a1b2c3');
+  });
+
+  it('bypasses the CRM view cache only for an explicit refresh', () => {
+    const facade = TestBed.inject(UiExplorerFacade);
+    facade.initialize();
+    vi.clearAllMocks();
+
+    facade.loadScreens();
+    facade.loadScreens(true);
+
+    expect(api.getScreens).toHaveBeenNthCalledWith(1, 'crm-agent-portal', 'main', false);
+    expect(api.getScreens).toHaveBeenNthCalledWith(2, 'crm-agent-portal', 'main', true);
   });
 
   it('clears the selected screen and source revision when the ref changes', () => {

@@ -112,7 +112,9 @@ describe('UiExplorerPageComponent', () => {
     branchInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const request = http.expectOne(
       (candidate) =>
-        candidate.url === '/api/ui-explorer/screens' && candidate.params.get('branch') === 'crm-review'
+        candidate.url === '/api/ui-explorer/screens' &&
+        candidate.params.get('branch') === 'crm-review' &&
+        candidate.params.get('refresh') === 'true'
     );
     request.flush(crmScreenCatalog('crm-review', 'crm-revision-d4e5f6'));
     fixture.detectChanges();

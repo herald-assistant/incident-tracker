@@ -20,8 +20,15 @@ export class UiExplorerApiService {
     return this.http.get<UiExplorerInputOptionsResponse>('/api/ui-explorer/input-options');
   }
 
-  getScreens(systemId: string, branch: string): Observable<UiExplorerScreenCatalogResponse> {
-    const params = new HttpParams().set('systemId', systemId).set('branch', branch);
+  getScreens(
+    systemId: string,
+    branch: string,
+    refreshCache = false
+  ): Observable<UiExplorerScreenCatalogResponse> {
+    let params = new HttpParams().set('systemId', systemId).set('branch', branch);
+    if (refreshCache) {
+      params = params.set('refresh', 'true');
+    }
     return this.http.get<UiExplorerScreenCatalogResponse>('/api/ui-explorer/screens', { params });
   }
 
