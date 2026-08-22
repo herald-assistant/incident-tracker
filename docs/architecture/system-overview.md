@@ -67,7 +67,10 @@ serwisy, state, guardy, walidatory i backend clients. Nie buduje pelnego
 snapshotu plikow ani inventory; frontier pozostaje jawna kolejka dalszego
 targeted research.
 Wewnetrzny krok `AI_PREPARATION` przygotowuje siedem logical artifacts, feature
-prompt i guidance dla trzech polskich skilli,
+prompt i guidance dla trzech polskich skilli. Prompt osadza kazdy artifact
+dokladnie raz i uklada je w kolejnosci request/sekcje, ekran/rewizja, effective
+route i BFS z zaleznosciami, source slices, coverage/research queue, kontrakt
+pisania funkcjonalnego oraz kontrakt odpowiedzi;
 publikuje bezpieczne metadane artifacts oraz zapisuje dokladny `preparedPrompt`
 przed wywolaniem AI. Feature ma rowniez izolowany provider Copilota:
 readiness gate, hidden GitLab scope, default-deny allowliste, goal-driven

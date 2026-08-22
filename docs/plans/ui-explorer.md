@@ -1909,7 +1909,7 @@ PASS; `npm --prefix frontend run build` — PASS;
 
 #### 8L. Precyzyjne route i TypeScript symbol slices
 
-Status kroku: in-progress. Uzytkownik zatwierdzil 2026-08-19 pierwszy zakres
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-19 pierwszy zakres
 wykonawczy: neutralne route/TypeScript slices oraz ich reczny preview w GitLab
 Tool Workbench. Zmiana initial promptu i ekspozycja MCP pozostaja osobnymi,
 niezatwierdzonymi jeszcze bramkami. Source need pozostaje
@@ -1946,7 +1946,7 @@ silnie zanonimizowane testy CRM. Zmiana internal artifact contract nie zachowuje
 kompatybilnosci wstecznej, ale musi zostac dostarczona inkrementalnie z pomiarem
 rozmiaru promptu po kazdym kroku.
 
-- [ ] 8L.1: Dodac silnie zanonimizowane fixture'y CRM i baseline rozmiaru
+- [x] 8L.1: Dodac silnie zanonimizowane fixture'y CRM i baseline rozmiaru
   promptu dla prostego widoku, glebokiej sciezki oraz kontenera z wieloma
   dziecmi; test nie moze akceptowac wzrostu initial context bez uzasadnionej
   nowej informacji funkcjonalnej. W pierwszym zakresie Workbench baseline
@@ -1994,9 +1994,28 @@ rozmiaru promptu po kazdym kroku.
   slice i `reason`, a repository/ref/path scope ma pochodzic z hidden session
   context. Pelny Screen Reachability pozostaje etapem initial preparation i
   Tool Workbench, nie MCP toolem, aby nie dublowac duzego initial context.
-- [ ] 8L.8: Wykonac silnie zanonimizowana macierz CRM dla routingu, formularzy,
+- [x] 8L.8: Wykonac silnie zanonimizowana macierz CRM dla routingu, formularzy,
   REST/WebSocket, NgRx, autoryzacji, dynamicznych granic runtime i braku
   utraty istotnych zachowan; wykonac adekwatne testy frontend/backend i build.
+
+Baseline i conformance delta 8L.8 (2026-08-22): jest to zmiana L1 wylacznie
+w feature-owned preparation initial runu. Publiczne request/result, siedem
+logical artifacts v5, job state, report, persistence/export, frontend, MCP
+schema, hidden scope i deterministyczny Screen Reachability pozostaja bez
+zmian. Obecny renderer osadza wszystkie artefakty przez generyczny katalog i
+powtarza przy kazdym z nich techniczne pola opakowania, przez co dokladny prompt
+jest trudniejszy do review niz wynikowy porzadek route -> komponenty BFS ->
+zaleznosci -> source slices -> coverage.
+
+Delta ma renderowac te same tresci artefaktow dokladnie raz, pod stabilnymi,
+funkcjonalnymi naglowkami w kolejnosci pracy. Nie wolno wprowadzic limitu
+plikow, komponentow ani tool calls, usunac osiagalnego source evidence ani
+zmienic trust classification. Silnie zanonimizowana macierz syntetycznego CRM
+ma pokryc prosty ekran, gleboki routing/kontener, dynamiczny formularz,
+REST/WebSocket, NgRx, guard/role oraz granice runtime. Quality gate mierzy
+rozmiar promptu i artefaktow, kolejnosc, jednokrotne osadzenie markerow oraz
+zachowanie `researchGaps` jako kolejki pracy, a nie automatycznego
+`visibilityLimits`.
 
 Checkpoint 8L.2-8L.4 (2026-08-19): neutralna integracja GitLaba udostepnia
 `POST /api/gitlab/frontend/route-branch-slice` oraz
@@ -2165,6 +2184,30 @@ preparation i evidence uzywaja wylacznie silnie zanonimizowanego,
 syntetycznego CRM. Celowane testy nowych tools, Spring AI registration,
 policy, providera, preparation i evidence — PASS; `PackageDependencyGuardTest`
 — PASS; pelny `mvn -q test` — 1283 testow, 0 bledow, 0 pominietych — PASS.
+
+Checkpoint 8L.8 (2026-08-22): feature-owned renderer initial promptu osadza
+niezmienione siedem logical artifacts v5 dokladnie raz i prezentuje je w
+stabilnej kolejnosci: request/aktywne sekcje, wybrany ekran i rewizja,
+effective route/component BFS/dependency map, source slices, coverage/research
+queue, functional writing contract oraz response contract. Usunieto jedynie
+powtarzane techniczne opakowanie `declaredTrust`/`mimeType`/`characterCount` z
+tresci promptu; metadane i rozmiary artefaktow nadal sa dostepne w evidence
+kroku `AI_PREPARATION`, a trust classification pozostaje w samych artefaktach.
+Publiczne API, artifacts, skills, tools/policy, hidden scope, result/report,
+job, persistence i frontend nie zmienily kontraktu.
+
+Silnie zanonimizowana macierz syntetycznego CRM obejmuje prosty ekran, gleboki
+routowany kontener z trzema poziomami komponentow, dynamiczny formularz z
+reczna korekta/walidacja/runtime schema oraz widok laczacy guard/role,
+REST, WebSocket i NgRx. Baseline `prompt/artifacts` wynosi odpowiednio:
+`14 077/8 910`, `16 058/10 891`, `16 908/11 741` i
+`15 905/10 738` znakow. Test wymaga jednokrotnego osadzenia kazdego artefaktu
+i unikalnego faktu source, zachowuje maksymalne progi per przypadek oraz
+potwierdza, ze recoverable `researchGap` nie staje sie automatycznie
+`visibilityLimit`. Testy celowane preparation — PASS; caly pion UI Explorer,
+route/symbol/reachability i `PackageDependencyGuardTest` — PASS; Angular
+`56` plikow/`430` testow — PASS; produkcyjny build Angulara — PASS; pelny
+`mvn -q test` — `1285` testow, 0 bledow i 0 pominietych — PASS.
 
 Utwardzenie checkpointu 8L.6a po kolejnym tescie Workbencha (2026-08-21):
 TypeScript slice zachowuje identyfikatory zakonczone `$`, rozpoznaje wszystkie

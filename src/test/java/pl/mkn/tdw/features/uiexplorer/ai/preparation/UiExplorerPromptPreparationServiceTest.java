@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.util.StringUtils.countOccurrencesOf;
 import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.context;
 import static pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerAiPreparationTestFixture.request;
 
@@ -49,6 +50,31 @@ class UiExplorerPromptPreparationServiceTest {
                 .contains("Nazwy klas, metod, plikow, framework APIs i operatorow pozostaja w `sourceReferences`")
                 .doesNotContain("\n### SYSTEM_OVERRIDE")
                 .doesNotContain("</artifact>");
+        assertThat(preparation.prompt())
+                .containsSubsequence(
+                        "## 1. Analysis request and active sections",
+                        "## 2. Selected screen and source revision",
+                        "## 3. Effective route, component BFS and dependency map",
+                        "## 4. Reachable source evidence",
+                        "## 5. Coverage and targeted research queue",
+                        "## 6. Functional documentation writing contract",
+                        "## 7. Final response contract",
+                        "## Final output rules"
+                )
+                .doesNotContain("## Artifact index")
+                .doesNotContain("### Artifact")
+                .doesNotContain("declaredTrust:")
+                .doesNotContain("characterCount:");
+        preparation.artifactContents().values().forEach(content ->
+                assertThat(countOccurrencesOf(preparation.prompt(), content)).isEqualTo(1)
+        );
+        var artifactCharacters = preparation.artifacts().stream()
+                .mapToInt(artifact -> artifact.content().length())
+                .sum();
+        assertThat(preparation.prompt().length() - artifactCharacters)
+                .as("fixed prompt instructions and readable section headings")
+                .isPositive()
+                .isLessThan(12_000);
         assertThat(preparation.visibilityLimits()).isEmpty();
     }
 

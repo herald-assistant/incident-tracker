@@ -3,12 +3,8 @@ package pl.mkn.tdw.features.uiexplorer.ai.preparation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
-
-import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -34,7 +30,7 @@ public class UiExplorerPromptPreparationService {
                 - `sourceRevision` i aktywne `sectionModes` sa niemutowalnym scope'em tego runu.
                 - `usage` jest polem backend-owned. Nigdy nie wymyslaj tokenow ani kosztu.
 
-                ## Fallback tools policy
+                ## Targeted research policy
                 - Najpierw wykorzystaj effective route chain, graf BFS komponentow oraz deduplikowane slices faktycznie uzywanych zaleznosci. Jezeli `researchGaps` wskazuja brak implementacji potrzebnej aktywnej sekcji, ustaw `needs_deeper_evidence` i obowiazkowo pogleb material przed finalizacja.
                 - Gdy artifact podaje `sliceRef`, preferuj odpowiednio `gitlab_read_frontend_route_branch_slice` albo `gitlab_read_frontend_typescript_symbol_slice`. Przekazuj tylko dokladny `sliceRef` i krotki `reason`; repository/ref/path scope pochodzi z hidden runtime context.
                 - Nie przebudowuj przez tool pelnego Screen Reachability: effective route chain, BFS, zaleznosci i source slices zostaly juz osadzone w initial artifacts. Dociagaj tylko brakujacy route branch albo symbol slice.
@@ -46,13 +42,46 @@ public class UiExplorerPromptPreparationService {
                 ## Runtime skills usage contract
                 %s
 
-                ## Artifact index
+                # Prepared run context
+
+                ## 1. Analysis request and active sections
+                Logical artifact: `%s`
+
                 %s
 
-                ## Prepared artifacts
+                ## 2. Selected screen and source revision
+                Logical artifact: `%s`
+
                 %s
 
-                ## Final output
+                ## 3. Effective route, component BFS and dependency map
+                Logical artifact: `%s`
+
+                %s
+
+                ## 4. Reachable source evidence
+                Logical artifact: `%s`
+
+                %s
+
+                ## 5. Coverage and targeted research queue
+                Logical artifact: `%s`
+
+                %s
+
+                # Documentation and response contracts
+
+                ## 6. Functional documentation writing contract
+                Logical artifact: `%s`
+
+                %s
+
+                ## 7. Final response contract
+                Logical artifact: `%s`
+
+                %s
+
+                ## Final output rules
                 - Finalny wynik musi byc jednym obiektem JSON zgodnym z `ui-explorer/response-contract.json`.
                 - `functionalOverview` i kazde `sections[].markdown` musza spelniac `ui-explorer/functional-writing-contract.md`.
                 - Glowna narracja opisuje prace uzytkownika, reguly, warunki i skutki. Nazwy klas, metod, plikow, framework APIs i operatorow pozostaja w `sourceReferences`, chyba ze identyfikator ma bezposrednie znaczenie funkcjonalne.
@@ -63,8 +92,20 @@ public class UiExplorerPromptPreparationService {
                 - Brak widocznosci opisuj w `visibilityLimits` i `unresolvedQuestions`; nie wypelniaj luki wiedza ogolna.
                 """.formatted(
                 starterGuidance(),
-                artifactIndex(artifacts),
-                renderArtifacts(artifacts, contents)
+                UiExplorerArtifactService.REQUEST_ARTIFACT,
+                artifactContent(contents, UiExplorerArtifactService.REQUEST_ARTIFACT),
+                UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT,
+                artifactContent(contents, UiExplorerArtifactService.SCREEN_CATALOG_ENTRY_ARTIFACT),
+                UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT,
+                artifactContent(contents, UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT),
+                UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT,
+                artifactContent(contents, UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT),
+                UiExplorerArtifactService.COVERAGE_ARTIFACT,
+                artifactContent(contents, UiExplorerArtifactService.COVERAGE_ARTIFACT),
+                UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
+                artifactContent(contents, UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT),
+                UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT,
+                artifactContent(contents, UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT)
         ).trim();
         return new UiExplorerPromptPreparation(
                 prompt,
@@ -90,48 +131,7 @@ public class UiExplorerPromptPreparationService {
                 """.trim();
     }
 
-    private String artifactIndex(List<CopilotRenderedArtifact> artifacts) {
-        return artifacts.stream()
-                .map(artifact -> "- `%s` | role=%s | trust=%s | characters=%d".formatted(
-                        artifact.displayName(),
-                        artifact.role(),
-                        trust(artifact.displayName()),
-                        artifact.content().length()
-                ))
-                .reduce((left, right) -> left + System.lineSeparator() + right)
-                .orElse("- none");
-    }
-
-    private String renderArtifacts(
-            List<CopilotRenderedArtifact> artifacts,
-            Map<String, String> contents
-    ) {
-        return artifacts.stream()
-                .map(artifact -> """
-                        ### Artifact `%s`
-                        declaredTrust: %s
-                        mimeType: %s
-                        characterCount: %d
-                        content: %s
-                        """.formatted(
-                        artifact.displayName(),
-                        trust(artifact.displayName()),
-                        artifact.mimeType(),
-                        artifact.content().length(),
-                        contents.getOrDefault(artifact.displayName(), "")
-                ).stripTrailing())
-                .reduce((left, right) -> left + System.lineSeparator() + System.lineSeparator() + right)
-                .orElse("- none");
-    }
-
-    private String trust(String artifactName) {
-        return switch (artifactName) {
-            case UiExplorerArtifactService.REQUEST_ARTIFACT -> "UNTRUSTED_USER_INPUT";
-            case UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT,
-                    UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT ->
-                    "MIXED_TRUST_WITH_UNTRUSTED_SOURCE_EVIDENCE";
-            case UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT -> "APPLICATION_CONTRACT";
-            default -> "APPLICATION_GENERATED";
-        };
+    private String artifactContent(java.util.Map<String, String> contents, String artifactName) {
+        return contents.getOrDefault(artifactName, "- unavailable");
     }
 }

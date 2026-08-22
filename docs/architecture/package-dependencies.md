@@ -102,7 +102,8 @@ hidden repository scope i nie importuje kontraktow integracji.
 AI. Buduje logical artifacts v5 z requestem, katalogowym ekranem, czytelnym
 outline reachability, uporzadkowanymi BFS source slices, coverage i kontraktami
 wyniku. Klasyfikuje opis uzytkownika i source slices jako untrusted evidence,
-renderuje feature prompt oraz starter guidance wskazujace trzy runtime skills.
+renderuje kazdy artifact w feature prompcie dokladnie raz w kolejnosci pracy
+oraz dodaje starter guidance wskazujace trzy runtime skills.
 Preflight widoczny w UI pokazuje dokladna tresc promptu i rozmiary artefaktow.
 Reuse'uje jedynie neutralny model
 `CopilotRenderedArtifact` i mapper tresci z `aiplatform`; nie uruchamia sesji,
