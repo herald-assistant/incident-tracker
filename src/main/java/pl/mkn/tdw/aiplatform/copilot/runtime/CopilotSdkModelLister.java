@@ -1,11 +1,11 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
-import com.github.copilot.rpc.ModelInfo;
+import com.github.copilot.generated.rpc.Model;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 
 import java.util.List;
 
 public interface CopilotSdkModelLister {
 
-    List<ModelInfo> listModels(CopilotRunAuth auth);
+    List<Model> listModels(CopilotRunAuth auth);
 }

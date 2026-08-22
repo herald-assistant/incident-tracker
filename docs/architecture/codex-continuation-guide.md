@@ -82,6 +82,8 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
 
 - `src/main/java/pl/mkn/tdw/aiplatform`
   neutralny runtime AI, sesje, tools invocation, policies, budgets i usage.
+  `copilot/runtime/context` posiada wspolna polityke `long_context`; feature nie
+  moze kopiowac progow ani metadanych modeli do swojego kodu.
 - `src/main/java/pl/mkn/tdw/agenttools`
   neutralne capability tools oraz MCP exposure nad integracjami, w tym
   frontendowe route/symbol slice tools oparte o bezpieczne `sliceRef` i hidden
@@ -162,6 +164,15 @@ wszystkie podkatalogi skilli z `SKILL.md`. Feature nie przekazuje katalogow ani
 podzbioru nazw skilli. Runtime przekazuje do `MessageOptions` tylko wykonany
 prompt. Zmiana delivery mode, session semantics, allowlisty albo hidden scope
 jest zmiana architektoniczna i wymaga planu, testow oraz rollbacku.
+
+`CopilotContextTierPolicy` jest jedynym wlascicielem automatycznego wyboru
+`long_context`. Rozmiary okien i wsparcie tieru pochodza z cache'owanego typed
+RPC `models.list`; `analysis.ai.copilot.context-tier` zawiera tylko progi,
+estymator, rezerwe i przelacznik. Preflight obejmuje prompt, definicje tools i
+rezerwe, a runtime reaguje na `session.usage_info` jednokierunkowo i najwyzej
+raz. Nie dodawaj recznego tieru do requestow feature'ow, list identyfikatorow
+modeli ani logiki po nazwie modelu. W razie regresji wylacz cala polityke przez
+`analysis.ai.copilot.context-tier.enabled=false`.
 
 Packaged resources sa immutable seedem tego katalogu. Startup dopisuje tylko
 brakujace pliki effective, a zapis i restore z `Platform / AI Skills` atomowo

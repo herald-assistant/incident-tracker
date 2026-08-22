@@ -14,7 +14,14 @@ Obecnie obejmuje:
   `SessionConfig` i `MessageOptions`.
 - `copilot/runtime/options/`
   platformowy katalog modeli Copilota: provider, neutralne DTO i cache/fallback
-  dla `CopilotClient.listModels()`.
+  dla typed RPC `models.list`; pelne metadata capability/billing sa wewnetrznym
+  source of truth takze dla polityki context tier, a publiczne API mapuje tylko
+  pola potrzebne UI.
+- `copilot/runtime/context/`
+  neutralna polityka wyboru `long_context` przed create/resume i jednokrotnego
+  runtime upgrade'u na podstawie `session.usage_info`; dynamiczne metadata
+  modeli pochodza z katalogu `runtime/options`, a progi i rollback pozostaja
+  konfiguracja platformy, nigdy feature'a.
 - `copilot/runtime/execution/`
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
   event logging, controlled invocation exception oraz `CopilotExecutionResult`

@@ -22,7 +22,8 @@ public class CopilotPreparedSessionFactory {
                 request.artifactContents(),
                 request.initialReport(),
                 request.evidenceSink(),
-                request.activitySink()
+                request.activitySink(),
+                request.auth()
         );
     }
 }

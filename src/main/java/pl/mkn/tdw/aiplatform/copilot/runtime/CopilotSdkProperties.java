@@ -40,6 +40,7 @@ public class CopilotSdkProperties {
     private PermissionMode permissionMode = PermissionMode.APPROVE_ALL;
     private String skillResourceRoot = "copilot/skills";
     private List<String> disabledSkills = List.of();
+    private ContextTierPolicy contextTier = new ContextTierPolicy();
 
     public Path resolvedCopilotHome() {
         if (copilotHome == null || copilotHome.isBlank()) {
@@ -71,5 +72,16 @@ public class CopilotSdkProperties {
 
         private String githubToken;
         private String displayName = "Local developer token";
+    }
+
+    @Getter
+    @Setter
+    public static class ContextTierPolicy {
+
+        private boolean enabled = true;
+        private double initialPromptThreshold = 0.70D;
+        private double runtimeUsageThreshold = 0.70D;
+        private double estimatedCharactersPerToken = 3.5D;
+        private int reservedTokens = 16_000;
     }
 }

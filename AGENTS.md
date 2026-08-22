@@ -224,6 +224,13 @@ Zasady granic:
   AI-guided, nie providerem evidence.
 - Optymalizacje Copilota prowadz inkrementalnie: najpierw pomiar i kontrakt
   wyniku, potem budzety eksploracji, dopiero pozniej wieksze zmiany flow.
+- Automatyczny wybor `long_context` jest wylaczna odpowiedzialnoscia
+  `aiplatform.copilot.runtime.context`. Feature nie ustawia tieru i nie kopiuje
+  metadanych modeli ani progow. Rozmiary okien i wsparcie tieru pochodza z
+  dynamicznego `models.list`; konfiguracja `analysis.ai.copilot.context-tier`
+  zawiera tylko zasady platformowe. Polityka moze ustawic tier przed
+  create/resume lub wykonac jedna probe upgrade'u po `session.usage_info`;
+  rollbackiem jest `analysis.ai.copilot.context-tier.enabled=false`.
 
 ## Gdzie czego szukac
 

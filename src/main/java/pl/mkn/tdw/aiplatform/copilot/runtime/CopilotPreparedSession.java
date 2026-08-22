@@ -4,6 +4,7 @@ import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -24,7 +25,8 @@ public record CopilotPreparedSession(
         Map<String, String> artifactContents,
         AnalysisReport initialReport,
         Consumer<AnalysisEvidenceSection> evidenceSink,
-        Consumer<AnalysisAiActivityEvent> activitySink
+        Consumer<AnalysisAiActivityEvent> activitySink,
+        CopilotRunAuth auth
 ) implements AutoCloseable {
 
     private static final Consumer<AnalysisEvidenceSection> NO_OP_EVIDENCE_SINK = section -> {
@@ -51,7 +53,8 @@ public record CopilotPreparedSession(
                 artifactContents,
                 null,
                 NO_OP_EVIDENCE_SINK,
-                NO_OP_ACTIVITY_SINK
+                NO_OP_ACTIVITY_SINK,
+                CopilotRunAuth.localToken()
         );
     }
 
@@ -76,7 +79,8 @@ public record CopilotPreparedSession(
                 artifactContents,
                 null,
                 evidenceSink,
-                activitySink
+                activitySink,
+                CopilotRunAuth.localToken()
         );
     }
 
@@ -103,7 +107,8 @@ public record CopilotPreparedSession(
                 artifactContents,
                 null,
                 evidenceSink,
-                activitySink
+                activitySink,
+                CopilotRunAuth.localToken()
         );
     }
 
@@ -114,6 +119,7 @@ public record CopilotPreparedSession(
                 : Map.of();
         evidenceSink = evidenceSink != null ? evidenceSink : NO_OP_EVIDENCE_SINK;
         activitySink = activitySink != null ? activitySink : NO_OP_ACTIVITY_SINK;
+        auth = auth != null ? auth : CopilotRunAuth.localToken();
     }
 
     public String providerName() {
@@ -132,7 +138,8 @@ public record CopilotPreparedSession(
                 artifactContents,
                 initialReport,
                 evidenceSink,
-                activitySink
+                activitySink,
+                auth
         );
     }
 
@@ -148,7 +155,8 @@ public record CopilotPreparedSession(
                 artifactContents,
                 initialReport,
                 evidenceSink,
-                activitySink
+                activitySink,
+                auth
         );
     }
 
@@ -164,7 +172,8 @@ public record CopilotPreparedSession(
                 artifactContents,
                 initialReport,
                 evidenceSink,
-                activitySink
+                activitySink,
+                auth
         );
     }
 

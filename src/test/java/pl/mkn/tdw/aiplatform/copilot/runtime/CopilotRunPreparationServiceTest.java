@@ -1,6 +1,7 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
@@ -79,9 +80,15 @@ class CopilotRunPreparationServiceTest {
                 new CopilotModelSelection("gpt-5.4", "medium"),
                 "Denied"
         );
+        var runAuth = new CopilotRunAuth(
+                CopilotAuthMode.GITHUB_APP,
+                "synthetic-crm-analyst-session",
+                "crm-analyst",
+                false
+        );
         var runRequest = new CopilotRunRequest(
                 "run-456",
-                CopilotRunAuth.localToken(),
+                runAuth,
                 CopilotSessionTarget.existing("sdk-session-456"),
                 "Next question",
                 sessionConfigRequest,
@@ -94,6 +101,7 @@ class CopilotRunPreparationServiceTest {
             assertEquals("sdk-session-456", prepared.sessionTarget().sessionId());
             assertEquals("Next question", prepared.prompt());
             assertEquals("Next question", prepared.messageOptions().getPrompt());
+            assertSame(runAuth, prepared.auth());
             assertSame(evidenceSink, prepared.evidenceSink());
             assertNotNull(prepared.resumeSessionConfig());
             assertEquals(List.of("tool-a", "skill"), prepared.resumeSessionConfig().getAvailableTools());

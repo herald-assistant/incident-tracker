@@ -1,8 +1,12 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.options;
 
-import com.github.copilot.rpc.ModelCapabilities;
-import com.github.copilot.rpc.ModelInfo;
-import com.github.copilot.rpc.ModelSupports;
+import com.github.copilot.generated.rpc.Model;
+import com.github.copilot.generated.rpc.ModelBilling;
+import com.github.copilot.generated.rpc.ModelBillingTokenPrices;
+import com.github.copilot.generated.rpc.ModelBillingTokenPricesLongContext;
+import com.github.copilot.generated.rpc.ModelCapabilities;
+import com.github.copilot.generated.rpc.ModelCapabilitiesLimits;
+import com.github.copilot.generated.rpc.ModelCapabilitiesSupports;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkModelLister;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
@@ -20,35 +24,44 @@ class CopilotSdkModelOptionsProviderTest {
     @Test
     void shouldMapSdkModelReasoningMetadata() {
         var properties = new CopilotSdkProperties();
-        properties.setModel("gpt-5.4");
+        properties.setModel("crm-reasoning-model");
         properties.setReasoningEffort("medium");
         var provider = new CopilotSdkModelOptionsProvider(
                 auth -> List.of(
-                        reasoningModel("gpt-5.4", "GPT-5.4", List.of("low", "medium", "high"), "medium"),
-                        plainModel("gpt-5.4-mini", "GPT-5.4 Mini")
+                        reasoningModel(
+                                "crm-reasoning-model",
+                                "Synthetic CRM Reasoning Model",
+                                List.of("low", "medium", "high"),
+                                "medium"
+                        ),
+                        plainModel("crm-basic-model", "Synthetic CRM Basic Model")
                 ),
                 properties
         );
 
         var response = provider.modelOptions(CopilotRunAuth.localToken());
 
-        assertEquals("gpt-5.4", response.defaultModel());
+        assertEquals("crm-reasoning-model", response.defaultModel());
         assertEquals("medium", response.defaultReasoningEffort());
         assertEquals(List.of("low", "medium", "high"), response.defaultReasoningEfforts());
         assertEquals(2, response.models().size());
-        assertEquals("gpt-5.4", response.models().get(0).id());
-        assertEquals("GPT-5.4", response.models().get(0).name());
+        assertEquals("crm-reasoning-model", response.models().get(0).id());
+        assertEquals("Synthetic CRM Reasoning Model", response.models().get(0).name());
         assertTrue(response.models().get(0).supportsReasoningEffort());
         assertEquals(List.of("low", "medium", "high"), response.models().get(0).reasoningEfforts());
         assertEquals("medium", response.models().get(0).defaultReasoningEffort());
+        assertEquals(100, response.models().get(0).defaultContextWindowTokens());
+        assertEquals(1_000, response.models().get(0).longContextWindowTokens());
+        assertTrue(response.models().get(0).supportsLongContext());
         assertFalse(response.models().get(1).supportsReasoningEffort());
         assertEquals(List.of(), response.models().get(1).reasoningEfforts());
+        assertFalse(response.models().get(1).supportsLongContext());
     }
 
     @Test
     void shouldReturnConfiguredDefaultsWhenSdkModelsAreUnavailable() {
         var properties = new CopilotSdkProperties();
-        properties.setModel("gpt-5.4");
+        properties.setModel("crm-reasoning-model");
         properties.setReasoningEffort("medium");
         var provider = new CopilotSdkModelOptionsProvider(
                 auth -> {
@@ -59,7 +72,7 @@ class CopilotSdkModelOptionsProviderTest {
 
         var response = provider.modelOptions(CopilotRunAuth.localToken());
 
-        assertEquals("gpt-5.4", response.defaultModel());
+        assertEquals("crm-reasoning-model", response.defaultModel());
         assertEquals("medium", response.defaultReasoningEffort());
         assertEquals(List.of(), response.defaultReasoningEfforts());
         assertEquals(List.of(), response.models());
@@ -78,29 +91,47 @@ class CopilotSdkModelOptionsProviderTest {
         assertEquals(1, lister.calls);
     }
 
-    private ModelInfo reasoningModel(
+    private static Model reasoningModel(
             String id,
             String name,
             List<String> reasoningEfforts,
             String defaultReasoningEffort
     ) {
-        return new ModelInfo()
-                .setId(id)
-                .setName(name)
-                .setSupportedReasoningEfforts(reasoningEfforts)
-                .setDefaultReasoningEffort(defaultReasoningEffort)
-                .setCapabilities(new ModelCapabilities().setSupports(
-                        new ModelSupports().setReasoningEffort(true)
-                ));
+        return new Model(
+                id,
+                name,
+                new ModelCapabilities(
+                        new ModelCapabilitiesSupports(false, true),
+                        new ModelCapabilitiesLimits(980L, 20L, 1_000L, null)
+                ),
+                null,
+                new ModelBilling(1D, new ModelBillingTokenPrices(
+                        1D,
+                        1D,
+                        1D,
+                        1_000L,
+                        80L,
+                        new ModelBillingTokenPricesLongContext(2D, 2D, 2D, 980L)
+                )),
+                reasoningEfforts,
+                defaultReasoningEffort,
+                null,
+                null
+        );
     }
 
-    private ModelInfo plainModel(String id, String name) {
-        return new ModelInfo()
-                .setId(id)
-                .setName(name)
-                .setCapabilities(new ModelCapabilities().setSupports(
-                        new ModelSupports().setReasoningEffort(false)
-                ));
+    private static Model plainModel(String id, String name) {
+        return new Model(
+                id,
+                name,
+                new ModelCapabilities(new ModelCapabilitiesSupports(false, false), null),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
     }
 
     private static final class CountingModelLister implements CopilotSdkModelLister {
@@ -108,9 +139,9 @@ class CopilotSdkModelOptionsProviderTest {
         private int calls;
 
         @Override
-        public List<ModelInfo> listModels(CopilotRunAuth auth) {
+        public List<Model> listModels(CopilotRunAuth auth) {
             calls++;
-            return List.of(new ModelInfo().setId("gpt-5.4").setName("GPT-5.4"));
+            return List.of(plainModel("crm-basic-model", "Synthetic CRM Basic Model"));
         }
     }
 }

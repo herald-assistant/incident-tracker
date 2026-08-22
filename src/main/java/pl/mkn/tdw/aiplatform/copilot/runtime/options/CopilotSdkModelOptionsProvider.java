@@ -1,6 +1,6 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.options;
 
-import com.github.copilot.rpc.ModelInfo;
+import com.github.copilot.generated.rpc.Model;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,7 +57,7 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
         }
     }
 
-    private CopilotModelOptionsResponse responseFrom(List<ModelInfo> modelInfos) {
+    private CopilotModelOptionsResponse responseFrom(List<Model> modelInfos) {
         var models = modelInfos == null
                 ? List.<CopilotModelOption>of()
                 : modelInfos.stream()
@@ -74,54 +74,97 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
         );
     }
 
-    private CopilotModelOption toModelOption(ModelInfo modelInfo) {
+    private CopilotModelOption toModelOption(Model modelInfo) {
         var efforts = reasoningEfforts(modelInfo);
         var supportsReasoningEffort = supportsReasoningEffort(modelInfo);
+        var contextWindows = contextWindows(modelInfo);
         return new CopilotModelOption(
-                normalized(modelInfo.getId()),
+                normalized(modelInfo.id()),
                 modelName(modelInfo),
                 supportsReasoningEffort,
                 supportsReasoningEffort ? efforts : List.of(),
-                normalized(modelInfo.getDefaultReasoningEffort())
+                normalized(modelInfo.defaultReasoningEffort()),
+                contextWindows.defaultWindowTokens(),
+                contextWindows.longContextWindowTokens()
         );
     }
 
-    private String modelName(ModelInfo modelInfo) {
-        if (StringUtils.hasText(modelInfo.getName())) {
-            return modelInfo.getName().trim();
+    private String modelName(Model modelInfo) {
+        if (StringUtils.hasText(modelInfo.name())) {
+            return modelInfo.name().trim();
         }
 
-        return normalized(modelInfo.getId());
+        return normalized(modelInfo.id());
     }
 
-    private boolean supportsReasoningEffort(ModelInfo modelInfo) {
+    private boolean supportsReasoningEffort(Model modelInfo) {
         if (!reasoningEfforts(modelInfo).isEmpty()) {
             return true;
         }
-        if (StringUtils.hasText(modelInfo.getDefaultReasoningEffort())) {
+        if (StringUtils.hasText(modelInfo.defaultReasoningEffort())) {
             return true;
         }
-        if (modelInfo.getCapabilities() == null || modelInfo.getCapabilities().getSupports() == null) {
+        if (modelInfo.capabilities() == null || modelInfo.capabilities().supports() == null) {
             return false;
         }
 
-        return modelInfo.getCapabilities().getSupports().isReasoningEffort();
+        return Boolean.TRUE.equals(modelInfo.capabilities().supports().reasoningEffort());
     }
 
-    private List<String> reasoningEfforts(ModelInfo modelInfo) {
+    private List<String> reasoningEfforts(Model modelInfo) {
         var values = new LinkedHashSet<String>();
-        if (modelInfo.getSupportedReasoningEfforts() != null) {
-            for (var effort : modelInfo.getSupportedReasoningEfforts()) {
+        if (modelInfo.supportedReasoningEfforts() != null) {
+            for (var effort : modelInfo.supportedReasoningEfforts()) {
                 if (StringUtils.hasText(effort)) {
                     values.add(effort.trim());
                 }
             }
         }
-        if (values.isEmpty() && StringUtils.hasText(modelInfo.getDefaultReasoningEffort())) {
-            values.add(modelInfo.getDefaultReasoningEffort().trim());
+        if (values.isEmpty() && StringUtils.hasText(modelInfo.defaultReasoningEffort())) {
+            values.add(modelInfo.defaultReasoningEffort().trim());
         }
 
         return List.copyOf(values);
+    }
+
+    private ContextWindows contextWindows(Model modelInfo) {
+        var limits = modelInfo.capabilities() != null ? modelInfo.capabilities().limits() : null;
+        var tokenPrices = modelInfo.billing() != null ? modelInfo.billing().tokenPrices() : null;
+        if (limits == null || tokenPrices == null) {
+            return ContextWindows.unsupported();
+        }
+
+        var defaultPromptTokens = positive(tokenPrices.contextMax());
+        if (defaultPromptTokens == 0L) {
+            return ContextWindows.unsupported();
+        }
+
+        var outputTokens = positive(limits.maxOutputTokens());
+        var defaultWindowTokens = safeAdd(defaultPromptTokens, outputTokens);
+        var longPromptTokens = Math.max(
+                positive(limits.maxPromptTokens()),
+                tokenPrices.longContext() != null ? positive(tokenPrices.longContext().contextMax()) : 0L
+        );
+        var longWindowTokens = Math.max(
+                positive(limits.maxContextWindowTokens()),
+                safeAdd(longPromptTokens, outputTokens)
+        );
+
+        return longWindowTokens > defaultWindowTokens
+                ? new ContextWindows(defaultWindowTokens, longWindowTokens)
+                : ContextWindows.unsupported();
+    }
+
+    private long positive(Number value) {
+        return value != null ? Math.max(value.longValue(), 0L) : 0L;
+    }
+
+    private long safeAdd(long left, long right) {
+        try {
+            return Math.addExact(left, right);
+        } catch (ArithmeticException ignored) {
+            return Long.MAX_VALUE;
+        }
     }
 
     private List<String> defaultReasoningEfforts(List<CopilotModelOption> models) {
@@ -169,5 +212,15 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
             CopilotModelOptionsResponse response,
             Instant expiresAt
     ) {
+    }
+
+    private record ContextWindows(
+            long defaultWindowTokens,
+            long longContextWindowTokens
+    ) {
+
+        private static ContextWindows unsupported() {
+            return new ContextWindows(0L, 0L);
+        }
     }
 }

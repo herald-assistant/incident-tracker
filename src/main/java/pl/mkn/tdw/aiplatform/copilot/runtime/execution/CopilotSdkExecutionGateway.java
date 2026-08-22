@@ -11,6 +11,8 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierSession;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportSessionStore;
@@ -37,6 +39,7 @@ public class CopilotSdkExecutionGateway {
     private final CopilotToolBudgetRegistry toolBudgetRegistry;
     private final CopilotReportSessionStore reportSessionStore;
     private final CopilotClientShutdown clientShutdown;
+    private final CopilotContextTierPolicy contextTierPolicy;
 
     public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
         var overallStart = System.nanoTime();
@@ -44,6 +47,7 @@ public class CopilotSdkExecutionGateway {
         var usageAccumulator = new CopilotUsageAccumulator();
 
         try {
+            var contextTierSession = contextTierPolicy.prepare(preparedSession);
             try (var client = new CopilotClient(preparedSession.clientOptions())) {
                 try {
                     client.onLifecycle(event -> logSession(event, runReference));
@@ -73,7 +77,8 @@ public class CopilotSdkExecutionGateway {
                                 session,
                                 sessionSummary,
                                 usageAccumulator,
-                                preparedSession.activitySink()
+                                preparedSession.activitySink(),
+                                contextTierSession
                         ));
 
                         try {
@@ -205,11 +210,15 @@ public class CopilotSdkExecutionGateway {
             CopilotSession session,
             SessionLogSummary sessionSummary,
             CopilotUsageAccumulator usageAccumulator,
-            Consumer<AnalysisAiActivityEvent> activitySink
+            Consumer<AnalysisAiActivityEvent> activitySink,
+            CopilotContextTierSession contextTierSession
     ) {
         logSessionEvent(event, session, sessionSummary);
         recordUsageEvent(event, usageAccumulator);
         publishActivityEvent(event, activitySink);
+        if (event instanceof SessionUsageInfoEvent sessionUsageInfoEvent) {
+            contextTierSession.onSessionUsage(session, sessionUsageInfoEvent);
+        }
     }
 
     private void recordUsageEvent(SessionEvent event, CopilotUsageAccumulator usageAccumulator) {

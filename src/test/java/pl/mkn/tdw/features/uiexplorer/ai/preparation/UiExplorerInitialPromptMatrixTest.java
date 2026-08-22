@@ -122,7 +122,7 @@ class UiExplorerInitialPromptMatrixTest {
                 ));
 
         assertThat(prompts.get("deep-routed-container"))
-                .containsSubsequence("### BFS depth 0", "### BFS depth 1", "### BFS depth 2")
+                .containsSubsequence("### Depth 0", "### Depth 1", "### Depth 2")
                 .contains("/crm/customers/:customerId/workspace/activities");
         assertThat(prompts.get("dynamic-form"))
                 .contains("CRM_DYNAMIC_FORM_MANUAL_OVERRIDE")
@@ -136,9 +136,9 @@ class UiExplorerInitialPromptMatrixTest {
                 .contains("CRM_REST_LOAD_CONTACT")
                 .contains("CRM_WEBSOCKET_CONTACT_REFRESH")
                 .contains("CRM_NGRX_CONTACT_STATE")
-                .contains("kind: `BACKEND_CLIENT`")
-                .contains("kind: `WEBSOCKET`")
-                .contains("kind: `NGRX`");
+                .contains("kind=BACKEND_CLIENT")
+                .contains("kind=WEBSOCKET")
+                .contains("kind=NGRX");
 
         var recoverable = service.prepare(
                 UiExplorerAiPreparationTestFixture.request(),

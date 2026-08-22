@@ -42,8 +42,8 @@ class UiExplorerArtifactServiceTest {
                 .doesNotContain("export class");
         var slices = content(artifacts, UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT);
         assertThat(slices).contains("UNTRUSTED_SOURCE_EVIDENCE")
-                .contains("slice ref: `component-crm-contact-preferences`")
-                .contains("slice ref: `dependency-crm-preferences-api`")
+                .contains("`component-crm-contact-preferences`")
+                .contains("`dependency-crm-preferences-api`")
                 .contains("crm-contact-preferences.component.ts")
                 .contains("CrmContactPreferencesApi")
                 .contains("loadDefinition")

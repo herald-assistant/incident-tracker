@@ -139,7 +139,10 @@ dostepne.
 Lista dostepnych modeli dla UI pochodzi z shared/operator endpointu
 `GET /analysis/ai/options`. Endpoint mapuje metadane Copilot SDK na generyczny
 kontrakt aplikacji i zwraca `reasoningEffort` tylko tam, gdzie SDK wystawia
-support albo domyslna wartosc dla danego modelu.
+support albo domyslna wartosc dla danego modelu. Ten sam cache'owany katalog
+typed RPC `models.list` zachowuje wewnetrznie limity capability i metadata
+billing potrzebne polityce context tier; publiczny kontrakt UI ich nie
+duplikuje.
 
 Runtime nie przywraca `branch`, `environment`, `gitLabGroup` ani innych pol
 sterujacych evidence scope'em do publicznego requestu.
@@ -164,7 +167,31 @@ Konsekwencje:
   i moze uzyc fallbacku do skonfigurowanych domyslow, gdy SDK chwilowo nie
   zwroci katalogu.
 
-## 1a. Copilot authentication ma dwa tryby
+## 1a. Context tier jest polityka platformy, nie feature'a
+
+Kazdy feature przekazuje prompt i konfiguracje sesji przez wspolny
+`CopilotSdkExecutionGateway`. Feature nie zna rozmiaru okna modelu i nie
+ustawia samodzielnie `contextTier`.
+
+Neutralna polityka `aiplatform.copilot.runtime.context` korzysta z dynamicznego
+katalogu `models.list` i ma dwa konfigurowalne progi:
+
+- przed create/resume konserwatywnie estymuje prompt, definicje tools i
+  rezerwe; od 70% zwyklego okna ustawia `long_context`,
+- dla sesji pozostawionej na domyslnym tierze reaguje na rzeczywiste
+  `session.usage_info` i od 70% wykonuje najwyzej jedna asynchroniczna probe
+  `default -> long_context`.
+
+Tier jest uznany za dostepny tylko wtedy, gdy billing/capability modelu podaje
+domyslne okno i wieksze okno maksymalne. Nieznany model albo niepelne metadata
+pozostawiaja defaulty SDK. Blad runtime switch jest widoczny w activity
+kategorii `CONTEXT`, ale nie przerywa analizy. Polityka nie anuluje
+kompaktowania, nie wywoluje eksperymentalnego `preCompact`, nie zmienia promptu,
+tools, hidden scope ani kontraktu wyniku. W properties nie ma listy nazw ani
+limitow modeli. Rollbackiem jest
+`analysis.ai.copilot.context-tier.enabled=false`.
+
+## 1b. Copilot authentication ma dwa tryby
 
 Copilot authentication has two modes:
 

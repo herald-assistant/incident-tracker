@@ -76,7 +76,10 @@ Wewnetrzny krok `AI_PREPARATION` przygotowuje siedem logical artifacts, feature
 prompt i guidance dla trzech polskich skilli. Prompt osadza kazdy artifact
 dokladnie raz i uklada je w kolejnosci request/sekcje, ekran/rewizja, effective
 route i BFS z zaleznosciami, source slices, coverage/research queue, kontrakt
-pisania funkcjonalnego oraz kontrakt odpowiedzi;
+pisania funkcjonalnego oraz kontrakt odpowiedzi. Artifact source slices v6
+grupuje komponenty i zaleznosci wedlug sciezki pliku w pierwszym porzadku
+reachability, renderuje wspolne importy i identyczne body raz oraz zachowuje
+kazdy odmienny wariant, slice ref, symbol, metode, relacje i omission marker;
 publikuje bezpieczne metadane artifacts oraz zapisuje dokladny `preparedPrompt`
 przed wywolaniem AI. Feature ma rowniez izolowany provider Copilota:
 readiness gate, hidden GitLab scope, default-deny allowliste, goal-driven
@@ -613,13 +616,23 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   Neutralne elementy runtime SDK: properties, model listing, client options,
   persistent effective katalog skilli, jego seed/save/restore, `SessionConfig`, `MessageOptions`
   i prepared session bez znajomosci incident promptu ani incident policy.
+- `pl.mkn.tdw.aiplatform.copilot.runtime.context`
+  Neutralna polityka context tier dla wszystkich feature'ow. Estymuje initial
+  prompt razem z definicjami tools i rezerwa, ustawia `long_context` przed
+  create/resume po przekroczeniu progu okna odczytanego z dynamicznego katalogu
+  modeli oraz wykonuje najwyzej jedna probe upgrade'u po `session.usage_info`.
+  Nieznany model, brak pelnych metadanych tieru i blad upgrade'u zachowuja
+  domyslne zachowanie sesji, a decyzje sa widoczne jako
+  `AnalysisAiActivityEvent` kategorii `CONTEXT`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
   Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
   `CopilotClientOptions`. Runtime zawsze przekazuje `githubToken` jawnie i
   ustawia `useLoggedInUser=false`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.options`
-  Platformowy provider katalogu modeli Copilota i neutralne DTO opcji modeli.
-  `api.aioptions` jest fasada mapujaca ten katalog na endpoint
+  Platformowy provider cache'owanego katalogu modeli Copilota i neutralne DTO.
+  Pobiera pelny typed wynik `models.list`, zachowujac reasoning metadata oraz
+  billing/capability potrzebne do dynamicznego rozpoznania context tier.
+  `api.aioptions` jest waska fasada mapujaca tylko pola UI na endpoint
   `GET /analysis/ai/options`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.execution`
   Uruchamianie klienta Copilota, sesji, lifecycle logging oraz

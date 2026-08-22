@@ -2281,6 +2281,60 @@ PASS; Angular `56` plikow/`432` testy — PASS; produkcyjny build Angulara —
 PASS; `mvn -q -Pbackend-dev clean package` — `1291` testow, 0 bledow i 0
 pominietych — PASS. Produkcyjny bundle zostal odswiezony.
 
+#### 8N. Bezstratne grupowanie i deduplikacja source slices
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-22 implementacje
+bezstratnej deduplikacji i grupowania source slices przed platformowa polityka
+`long_context`. Source need pozostaje `../needs/ui-explorer.md`.
+
+Baseline: publiczne API, siedem logical artifacts v5, Screen Reachability,
+MCP tools, hidden scope, wynik, job, persistence/export i frontend pozostaja
+bez zmian. `screen-source-slices.md` renderuje osobna karte dla kazdego
+komponentu i dependency. Gdy kilka osiagalnych symboli pochodzi z jednego
+pliku, powtarza sciezke, importy, omission markers oraz czasem identyczny
+slice. Na duzym froncie ten techniczny narzut dominuje initial prompt mimo ze
+graf jest juz deterministycznie zbudowany.
+
+Conformance delta: renderer grupuje wpisy wedlug kanonicznej sciezki pliku,
+zachowuje pierwszy porzadek BFS/discovery, laczy wszystkie slice refs, symbole,
+entry methods, statusy i relacje jako zwarta metadata pliku oraz osadza kazdy
+unikalny source slice dokladnie raz. Identyczne importy w slice'ach tego samego
+pliku sa renderowane raz; rozne body pozostaja oddzielnymi wariantami, aby nie
+usunac zadnego unikalnego fragmentu kodu ani omission marker. Pusty slice nie
+tworzy bloku pseudokodu, lecz pozostaje jawnie oznaczony w metadata targetu.
+Nie wprowadzamy limitu plikow, znakow, komponentow, dependencies ani tool
+calls i nie zmieniamy research gaps na visibility limits.
+
+Konsumenci: `UiExplorerArtifactService`, exact prepared prompt i artifact
+preview w aside, preparation evidence mapper, job snapshot oraz testy
+preparation. Zmiana jest L1, internal artifact content zmienia sie bez warstwy
+kompatybilnosci, a publiczne DTO i schema pozostaja nietkniete. Wszystkie nowe
+fixture'y i snapshoty sa silnie zanonimizowanym, syntetycznym CRM.
+
+- [x] 8N.1: Dodac file-grouped renderer zachowujacy wszystkie unikalne slice
+  refs, symbole, metody, relacje, statusy, omission markers i source body.
+- [x] 8N.2: Dedupikowac identyczne source slices oraz powtarzane importy
+  wewnatrz jednego pliku bez globalnego usuwania powtarzalnych linii kodu.
+- [x] 8N.3: Dodac CRM-only regresje dla dwoch symboli z jednego pliku,
+  identycznego slice'a, roznych slice body, wspolnych importow i pustego
+  targetu; zmierzyc spadek promptu przy zachowaniu wszystkich unikalnych
+  markerow.
+- [x] 8N.4: Wykonac celowane testy preparation, caly pion UI Explorer,
+  `PackageDependencyGuardTest` i pelny backend zgodnie z zakresem wspolnej
+  zmiany z polityka kontekstu.
+
+Wynik: artifacts v6 grupuja component/dependency targets per source file,
+przenosza unikatowy zestaw statycznych importow przed warianty body i lacza
+slice refs tylko dla identycznego body. Rozne body i celowo powtorzone linie
+wewnatrz jednego body pozostaja bez zmian. CRM-only regresja potwierdza tez, ze
+wynik po grupowaniu jest krotszy niz sama naiwna konkatenacja powtarzanych raw
+slices, jeszcze bez narzutu starej metadata per slice.
+
+Weryfikacja 2026-08-22: celowane testy preparation i context-tier oraz
+`PackageDependencyGuardTest` — PASS; `mvn -q test` — 1301 testow, 0 bledow,
+0 pominietych; `git diff --check` — PASS. Frontend nie byl uruchamiany, bo
+zmiana nie dotyka kodu Angulara ani kontraktu backend-frontend.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

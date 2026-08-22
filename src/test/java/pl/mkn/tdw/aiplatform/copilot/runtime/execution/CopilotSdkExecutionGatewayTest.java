@@ -20,6 +20,9 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
+import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOption;
+import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsResponse;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetProperties;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
@@ -38,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -50,6 +54,7 @@ import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.executionGateway;
@@ -264,6 +269,69 @@ class CopilotSdkExecutionGatewayTest {
             assertEquals(128000L, usage.contextTokenLimit());
             assertEquals(9200L, usage.contextCurrentTokens());
             assertEquals(6L, usage.contextMessages());
+        }
+    }
+
+    @Test
+    void shouldApplyPlatformLongContextPolicyToRuntimeUsageEventOnce() {
+        var properties = new CopilotSdkProperties();
+        properties.getContextTier().setInitialPromptThreshold(0.95D);
+        properties.getContextTier().setRuntimeUsageThreshold(0.70D);
+        properties.getContextTier().setEstimatedCharactersPerToken(4D);
+        properties.getContextTier().setReservedTokens(0);
+        var gateway = executionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
+        );
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var sessionConfig = new SessionConfig()
+                .setSessionId("crm-context-session")
+                .setModel("gpt-synthetic-crm")
+                .setReasoningEffort("medium");
+        var preparedRequest = new CopilotPreparedSession(
+                "crm-context-run",
+                new CopilotClientOptions(),
+                sessionConfig,
+                new MessageOptions().setPrompt("Review the synthetic CRM contact screen."),
+                "Review the synthetic CRM contact screen.",
+                Map.of(),
+                evidence -> {
+                },
+                activities::add
+        );
+        var eventHandler = new AtomicReference<Consumer<SessionEvent>>();
+        var sessionRef = new AtomicReference<CopilotSession>();
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+            sessionRef.set(session);
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(same(sessionConfig))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(session.getSessionId()).thenReturn("crm-context-session");
+            when(session.on(any())).thenAnswer(invocation -> {
+                eventHandler.set(invocation.getArgument(0));
+                return (Closeable) () -> {
+                };
+            });
+            when(session.setModel("gpt-synthetic-crm", "medium", "long_context", null))
+                    .thenReturn(CompletableFuture.completedFuture(null));
+            when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
+                    .thenAnswer(invocation -> {
+                        eventHandler.get().accept(sessionUsageInfo(100, 70, 3));
+                        eventHandler.get().accept(sessionUsageInfo(100, 85, 4));
+                        return CompletableFuture.completedFuture(assistantMessage("Synthetic CRM answer"));
+                    });
+        })) {
+            var response = gateway.execute(preparedRequest);
+
+            assertEquals("Synthetic CRM answer", response.content());
+            verify(sessionRef.get(), times(1))
+                    .setModel("gpt-synthetic-crm", "medium", "long_context", null);
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .extracting(AnalysisAiActivityEvent::status)
+                    .containsExactly("INFO", "STARTED", "COMPLETED");
         }
     }
 
@@ -563,7 +631,28 @@ class CopilotSdkExecutionGatewayTest {
                 toolEvidenceSessionStore,
                 new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
                 reportStore,
-                new CopilotClientShutdown(properties)
+                new CopilotClientShutdown(properties),
+                contextTierPolicy(properties)
+        );
+    }
+
+    private CopilotContextTierPolicy contextTierPolicy(CopilotSdkProperties properties) {
+        return new CopilotContextTierPolicy(
+                properties,
+                auth -> new CopilotModelOptionsResponse(
+                        "gpt-synthetic-crm",
+                        "medium",
+                        List.of("low", "medium", "high"),
+                        List.of(new CopilotModelOption(
+                                "gpt-synthetic-crm",
+                                "Synthetic CRM Context Model",
+                                true,
+                                List.of("low", "medium", "high"),
+                                "medium",
+                                100,
+                                1_000
+                        ))
+                )
         );
     }
 

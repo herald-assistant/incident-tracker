@@ -99,9 +99,12 @@ mapowane na biznesowe `visibilityLimits`. Publiczne evidence nie ujawnia
 hidden repository scope i nie importuje kontraktow integracji.
 
 `features.uiexplorer.ai.preparation` jest feature-owned granica przygotowania
-AI. Buduje logical artifacts v5 z requestem, katalogowym ekranem, czytelnym
-outline reachability, uporzadkowanymi BFS source slices, coverage i kontraktami
-wyniku. Klasyfikuje opis uzytkownika i source slices jako untrusted evidence,
+AI. Buduje logical artifacts v6 z requestem, katalogowym ekranem, czytelnym
+outline reachability, file-grouped source slices w porzadku BFS/discovery,
+coverage i kontraktami wyniku. Grupowanie deduplikuje tylko identyczne importy
+i body w obrebie jednego pliku; wszystkie odmienne body, slice refs, symbole,
+metody, relacje i omission markers pozostaja w artefakcie. Klasyfikuje opis
+uzytkownika i source slices jako untrusted evidence,
 renderuje kazdy artifact w feature prompcie dokladnie raz w kolejnosci pracy
 oraz dodaje starter guidance wskazujace trzy runtime skills.
 Preflight widoczny w UI pokazuje dokladna tresc promptu i rozmiary artefaktow.
@@ -185,6 +188,8 @@ Warstwa posiada neutralna mechanike uruchamiania AI:
 - hidden context jako mechanizm,
 - session-bound evidence store,
 - model/options catalog,
+- neutralna, konfigurowalna polityke context tier oparta o rozmiar initial
+  promptu i user-visible `session.usage_info`,
 - user-visible usage i techniczne wykonanie requestu.
 
 Feature przekazuje platformie prompt, guidance do uzycia skilli, available
