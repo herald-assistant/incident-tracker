@@ -63,7 +63,11 @@ istotny i ma source reference.
 7. Dla trybu `DEEP` nie zatrzymuj sie po dwoch lub trzech przykladach. Zbuduj
    pelny, deduplikowany katalog odrebnych faktow wymaganych przez strukture
    danej sekcji w `functional-writing-contract.md`.
-8. Brak implementacji nalezacej do badanego repozytorium przenies najpierw do
+8. Porownaj katalog z `completenessSignals` w coverage. Przejdz przez wszystkie
+   osiagalne eventy, form controls, warunki oraz UI entry points. Polacz je
+   tylko wtedy, gdy maja ten sam sens, warunek i skutek funkcjonalny; zapisz
+   powod deduplikacji w ledgerze, nie w finalnym raporcie.
+9. Brak implementacji nalezacej do badanego repozytorium przenies najpierw do
    `minimumNextQuestion` i wykonaj targeted search/read. Do `visibilityLimits`
    moze trafic dopiero bezskuteczne wyszukanie konkretnego zrodla albo
    potwierdzona implementacja runtime/zewnetrzna/poza scope. Nie uzywaj braku

@@ -43,10 +43,10 @@ class UiExplorerInitialPromptMatrixTest {
 
     private static final int MAX_FIXED_PROMPT_OVERHEAD = 12_000;
     private static final Map<String, Integer> MAX_PROMPT_CHARACTERS = Map.of(
-            "simple-screen", 14_500,
-            "deep-routed-container", 16_500,
-            "dynamic-form", 17_500,
-            "reactive-access", 16_500
+            "simple-screen", 15_500,
+            "deep-routed-container", 19_500,
+            "dynamic-form", 20_500,
+            "reactive-access", 19_500
     );
 
     private final UiExplorerPromptPreparationService service = new UiExplorerPromptPreparationService(
@@ -644,6 +644,7 @@ class UiExplorerInitialPromptMatrixTest {
                 "synthetic-" + id,
                 sourcePath,
                 sourcePath.replace(".ts", ".html"),
+                "<section data-crm-view=\"" + id + "\"></section>",
                 "OK",
                 List.of(),
                 List.of(),

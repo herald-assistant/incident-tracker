@@ -55,9 +55,10 @@ Warstwa posiada:
 wyszukuje jeden produkcyjny lancuch Angular
 `bootstrapApplication(...) -> provideRouter(...)`, buduje route graph przez
 targeted reads z `GitLabRepositoryPort`, a screen reachability rozwija
-effective route chain wybranego ekranu, BFS osiagalnych komponentow oraz
-kanoniczny rejestr faktycznie uzytych zaleznosci. Minimalny resolver
-selected route/view pozostaje prywatnym seedem reachability; integracja nie
+effective route chain wybranego ekranu, routowane poddrzewo view targets, BFS
+osiagalnych komponentow oraz kanoniczny rejestr faktycznie uzytych zaleznosci.
+Resolver selected route/view subtree pozostaje prywatnym seedem reachability;
+template'y osiagalnych komponentow sa zachowywane jako evidence. Integracja nie
 udostepnia pelnego screen source context ani traversal wszystkich importow.
 Symbol slices zachowuja tylko osiagalne deklaracje i potrzebne importy, a
 nieosiagniety frontier jest jawnym zadaniem dalszego targeted research.
@@ -164,7 +165,8 @@ Warstwa posiada:
 `integrations.gitlab.frontend` i wystawia route branch slice oraz TypeScript
 symbol slice. Model nie wybiera repository, refa, path ani
 symbolu: przekazuje tylko przygotowany `sliceRef` i `reason`, a wrapper
-rozstrzyga target z session-bound hidden context. Screen Reachability pozostaje
+rozstrzyga target z session-bound hidden context. Route branch safe ref zwraca
+wybrane poddrzewo kontenera. Screen Reachability pozostaje
 deterministycznym inputem initial promptu i nie jest dublowany przez MCP.
 
 MCP jest tylko sposobem ekspozycji capability. Tool nie moze zakladac, ze

@@ -39,6 +39,9 @@ final class UiExplorerSourceSliceRenderer {
         for (var level : graph.componentLevels()) {
             for (var component : level.components()) {
                 add(groups, componentTarget(component));
+                if (hasText(component.templateContent())) {
+                    add(groups, templateTarget(component));
+                }
             }
         }
         for (var dependency : graph.dependencies()) {
@@ -97,6 +100,20 @@ final class UiExplorerSourceSliceRenderer {
         return new SliceTarget(
                 "dependency", dependency.dependencyId(), dependency.symbol(), dependency.sourcePath(),
                 String.join("; ", details), dependency.sliceContent()
+        );
+    }
+
+    private SliceTarget templateTarget(GitLabFrontendReachabilityComponent component) {
+        var details = "owner=" + safe(component.symbol())
+                + "; discovery=" + safe(component.discoveryKind())
+                + "; status=" + safe(component.status());
+        return new SliceTarget(
+                "template",
+                component.componentId(),
+                component.symbol(),
+                hasText(component.templatePath()) ? component.templatePath() : component.sourcePath(),
+                details,
+                component.templateContent()
         );
     }
 

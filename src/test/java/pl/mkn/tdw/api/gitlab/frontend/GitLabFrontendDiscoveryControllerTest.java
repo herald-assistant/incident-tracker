@@ -71,7 +71,9 @@ class GitLabFrontendDiscoveryControllerTest {
         var component = new GitLabFrontendReachabilityComponent(
                 "component:CrmCustomerProfileComponent", 0, 0, true, "ROUTE_VIEW",
                 "CrmCustomerProfileComponent", "crm-customer-profile", node.viewTarget().sourcePath(),
-                null, "OK", List.of(), List.of(), List.of(), List.of(), List.of(),
+                "apps/crm-agent/src/app/customer/crm-customer-profile.component.html",
+                "<section data-crm-customer-profile></section>",
+                "OK", List.of(), List.of(), List.of(), List.of(), List.of(),
                 "export class CrmCustomerProfileComponent {}", 44, 44, false, List.of()
         );
         when(screenReachabilityService.build(any())).thenReturn(new GitLabFrontendScreenReachabilityGraph(
@@ -98,6 +100,8 @@ class GitLabFrontendDiscoveryControllerTest {
                 .andExpect(jsonPath("$.componentLevels[0].depth").value(0))
                 .andExpect(jsonPath("$.componentLevels[0].components[0].symbol")
                         .value("CrmCustomerProfileComponent"))
+                .andExpect(jsonPath("$.componentLevels[0].components[0].templateContent")
+                        .value("<section data-crm-customer-profile></section>"))
                 .andExpect(jsonPath("$.readableOutline").value(org.hamcrest.Matchers.containsString(
                         "Effective route chain")));
 

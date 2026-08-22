@@ -56,6 +56,7 @@ class GitLabFrontendMcpToolsTest {
         assertScope(request.getValue().scope());
         assertThat(request.getValue().screenId()).isEqualTo(SCREEN_REF);
         assertThat(request.getValue().expectedRevision()).isEqualTo("crm-commit-abc123");
+        assertThat(request.getValue().includeDescendantRoutes()).isTrue();
         assertThat(result.sliceRef()).isEqualTo(SCREEN_REF);
         assertThat(result.sourceRevision()).isEqualTo("crm-commit-abc123");
         assertThat(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(result))

@@ -13,6 +13,7 @@ import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerSourceRevisionChan
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerSourceRevisionUnavailableException;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerCoverageStatus;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerScreenIdentity;
+import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionId;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionMode;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSectionModeAssignment;
 import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceReference;
@@ -36,10 +37,6 @@ public class UiExplorerScreenReachabilityContextService {
     private static final int MAX_REF_LENGTH = 160;
     private static final int MAX_SCREEN_ID_LENGTH = 240;
     private static final int MAX_REVISION_LENGTH = 160;
-    private static final List<String> REACHABILITY_CATEGORIES = List.of(
-            "ROUTE_CHAIN", "COMPONENT_BFS", "FUNCTIONAL_DEPENDENCIES"
-    );
-
     private final UiExplorerFrontendCatalogService frontendCatalogService;
     private final GitLabFrontendScreenReachabilityService screenReachabilityService;
 
@@ -85,10 +82,9 @@ public class UiExplorerScreenReachabilityContextService {
                 .map(assignment -> new UiExplorerSectionContextCoverage(
                         assignment.sectionId(),
                         assignment.mode(),
-                        status,
-                        REACHABILITY_CATEGORIES,
-                        "Effective route chain, " + componentCount + " reachable components and "
-                                + graph.dependencies().size() + " deduplicated dependencies were prepared."
+                        sectionStatus(assignment.sectionId(), graph, status),
+                        sourceCategories(assignment.sectionId()),
+                        coverageDetail(assignment.sectionId(), graph, componentCount)
                 ))
                 .toList();
         var gaps = new LinkedHashSet<String>(graph.limitations());
@@ -147,6 +143,73 @@ public class UiExplorerScreenReachabilityContextService {
             return UiExplorerCoverageStatus.BLOCKED;
         }
         return "OK".equals(graph.status()) ? UiExplorerCoverageStatus.READY : UiExplorerCoverageStatus.PARTIAL;
+    }
+
+    private UiExplorerCoverageStatus sectionStatus(
+            UiExplorerSectionId sectionId,
+            GitLabFrontendScreenReachabilityGraph graph,
+            UiExplorerCoverageStatus globalStatus
+    ) {
+        if (globalStatus == UiExplorerCoverageStatus.BLOCKED) {
+            return UiExplorerCoverageStatus.BLOCKED;
+        }
+        if (graph.contextLimitReached()) {
+            return UiExplorerCoverageStatus.PARTIAL;
+        }
+        var components = graph.componentLevels().stream().flatMap(level -> level.components().stream()).toList();
+        var componentSlicesComplete = components.stream().noneMatch(component ->
+                "PARTIAL".equals(component.status()) || "UNRESOLVED".equals(component.status()));
+        var templatesComplete = components.stream().noneMatch(component ->
+                StringUtils.hasText(component.templatePath()) && !StringUtils.hasText(component.templateContent()));
+        var routedViewsComplete = graph.limitations().stream().noneMatch(limitation ->
+                limitation.contains("routed child view") || limitation.contains("router-outlet"));
+        var dependenciesComplete = graph.dependencies().stream().noneMatch(dependency ->
+                "PARTIAL".equals(dependency.status()) || "UNRESOLVED".equals(dependency.status()));
+        var complete = switch (sectionId) {
+            case NAVIGATION_AND_ACCESS -> routedViewsComplete;
+            case OVERVIEW, SCREEN_STRUCTURE -> componentSlicesComplete && templatesComplete && routedViewsComplete;
+            case ACTIONS_AND_OUTCOMES, FORMS_AND_RULES, VARIANTS_AND_FAILURES ->
+                    componentSlicesComplete && templatesComplete && routedViewsComplete;
+            case DATA_AND_SERVICES, STATE_AND_SYNCHRONIZATION ->
+                    componentSlicesComplete && routedViewsComplete && dependenciesComplete;
+        };
+        return complete ? UiExplorerCoverageStatus.READY : UiExplorerCoverageStatus.PARTIAL;
+    }
+
+    private List<String> sourceCategories(UiExplorerSectionId sectionId) {
+        return switch (sectionId) {
+            case OVERVIEW -> List.of("ROUTE_CHAIN", "ROUTED_VIEW_SUBTREE", "COMPONENT_BFS");
+            case NAVIGATION_AND_ACCESS -> List.of("ROUTE_CHAIN", "ROUTED_VIEW_SUBTREE", "ROUTE_CONFIGURATION");
+            case SCREEN_STRUCTURE -> List.of("ROUTED_VIEW_SUBTREE", "COMPONENT_BFS", "COMPONENT_TEMPLATES");
+            case ACTIONS_AND_OUTCOMES -> List.of("COMPONENT_TEMPLATES", "COMPONENT_ENTRY_POINTS", "FUNCTIONAL_DEPENDENCIES");
+            case FORMS_AND_RULES -> List.of("COMPONENT_TEMPLATES", "COMPONENT_ENTRY_POINTS", "FORM_DEPENDENCIES");
+            case DATA_AND_SERVICES -> List.of("FUNCTIONAL_DEPENDENCIES", "BACKEND_OPERATIONS");
+            case STATE_AND_SYNCHRONIZATION -> List.of("COMPONENT_ENTRY_POINTS", "STATE_DEPENDENCIES");
+            case VARIANTS_AND_FAILURES -> List.of("COMPONENT_TEMPLATES", "COMPONENT_ENTRY_POINTS", "FUNCTIONAL_DEPENDENCIES");
+        };
+    }
+
+    private String coverageDetail(
+            UiExplorerSectionId sectionId,
+            GitLabFrontendScreenReachabilityGraph graph,
+            int componentCount
+    ) {
+        var templateCount = graph.componentLevels().stream()
+                .flatMap(level -> level.components().stream())
+                .filter(component -> StringUtils.hasText(component.templateContent()))
+                .count();
+        return switch (sectionId) {
+            case NAVIGATION_AND_ACCESS -> graph.effectiveRouteChain().segments().size()
+                    + " effective route segment(s) and the selected routed subtree were prepared.";
+            case SCREEN_STRUCTURE, ACTIONS_AND_OUTCOMES, FORMS_AND_RULES, VARIANTS_AND_FAILURES ->
+                    componentCount + " reachable component(s) and " + templateCount
+                            + " rendered template(s) were prepared in breadth-first order.";
+            case DATA_AND_SERVICES, STATE_AND_SYNCHRONIZATION -> componentCount
+                    + " reachable component(s) and " + graph.dependencies().size()
+                    + " deduplicated dependency slice(s) were prepared.";
+            case OVERVIEW -> graph.effectiveRouteChain().segments().size() + " route segment(s), "
+                    + componentCount + " reachable component(s) and the routed view subtree were prepared.";
+        };
     }
 
     private RuntimeException mapDiscoveryFailure(

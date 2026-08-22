@@ -67,19 +67,24 @@ widokow w Angularze korzysta z cache, natomiast Enter w polu ref oraz
 `Load views` wymuszaja refresh.
 UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
 screen reachability graph i wystawia publiczny manifest, coverage, diagnostics
-oraz limity bez repository scope. Graf zaczyna od effective route chain,
+oraz limity bez repository scope. Graf zaczyna od effective route chain i
+poddrzewa wybranego route node, laczy view targets przez jawne `ROUTED_CHILD`,
 rozwija iteracyjny BFS osiagalnych komponentow i deduplikuje faktycznie uzyte
-serwisy, state, guardy, walidatory i backend clients. Nie buduje pelnego
+serwisy, state, guardy, walidatory i backend clients. Puste segmenty child
+routes zachowuja najblizszego routowanego rodzica. Nie buduje pelnego
 snapshotu plikow ani inventory; frontier pozostaje jawna kolejka dalszego
 targeted research.
 Wewnetrzny krok `AI_PREPARATION` przygotowuje siedem logical artifacts, feature
 prompt i guidance dla trzech polskich skilli. Prompt osadza kazdy artifact
 dokladnie raz i uklada je w kolejnosci request/sekcje, ekran/rewizja, effective
 route i BFS z zaleznosciami, source slices, coverage/research queue, kontrakt
-pisania funkcjonalnego oraz kontrakt odpowiedzi. Artifact source slices v6
-grupuje komponenty i zaleznosci wedlug sciezki pliku w pierwszym porzadku
+pisania funkcjonalnego oraz kontrakt odpowiedzi. Artifact source slices v7
+grupuje komponenty, ich pelne osiagalne template'y i zaleznosci wedlug sciezki
+pliku w pierwszym porzadku
 reachability, renderuje wspolne importy i identyczne body raz oraz zachowuje
-kazdy odmienny wariant, slice ref, symbol, metode, relacje i omission marker;
+kazdy odmienny wariant, slice ref, symbol, metode, relacje i omission marker.
+Coverage dodaje zwiezly `completenessSignals` do wykrywania pominiec w
+sekcjach `DEEP`, bez tworzenia osobnej tresci raportu;
 publikuje bezpieczne metadane artifacts oraz zapisuje dokladny `preparedPrompt`
 przed wywolaniem AI. Feature ma rowniez izolowany provider Copilota:
 readiness gate, hidden GitLab scope, default-deny allowliste, goal-driven
@@ -800,7 +805,9 @@ Znaczenie grup UI:
 - Frontendowe GitLab MCP tools mieszkaja w
   `agenttools.gitlab.frontend.mcp`, deleguja do neutralnego graph-first
   discovery i nie ujawniaja modelowi repository coordinates. Nie zwracaja
-  ponownie pelnego Screen Reachability obecnego juz w initial promptcie.
+  ponownie pelnego Screen Reachability obecnego juz w initial promptcie;
+  route branch slice obejmuje poddrzewo wybranego kontenera przez jeden
+  session-bound safe ref.
 - GitLab MCP tools potrafia nie tylko szukac kandydatow repo i flow contextu,
   ale tez znajdowac referencje/importy dla ugruntowanej klasy, zeby lepiej
   naprowadzac DB diagnostics.

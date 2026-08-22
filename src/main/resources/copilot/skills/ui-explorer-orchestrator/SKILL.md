@@ -72,7 +72,11 @@ formularzy ani NgRx i nie finalizuje wyniku z pominieciem write-report.
 8. Oddziel `businessFacts` od `technicalEvidenceLinks`. Fakt funkcjonalny
    odpowiada: kto albo co wykonuje czynność, kiedy, pod jakim warunkiem i z
    jakim widocznym skutkiem. Sama nazwa symbolu nie jest faktem funkcjonalnym.
-9. Przekaz ledger i `SourceGroundingSummary` do `ui-explorer-write-report`.
+9. Dla sekcji `DEEP` wykonaj reconciliation z `completenessSignals` w coverage.
+   Kazdy odrebny event, form control, warunek i UI entry point ma miec fakt
+   funkcjonalny albo jawne uzasadnienie deduplikacji z sygnalem o identycznym
+   zachowaniu. Liczniki nie wyznaczaja liczby wierszy; wykrywaja pominiecia.
+10. Przekaz ledger i `SourceGroundingSummary` do `ui-explorer-write-report`.
 
 ## Readiness Gate
 

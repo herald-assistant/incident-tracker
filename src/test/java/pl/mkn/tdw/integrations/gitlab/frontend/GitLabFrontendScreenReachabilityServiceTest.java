@@ -64,6 +64,7 @@ class GitLabFrontendScreenReachabilityServiceTest {
                 );
         assertThat(result.edges()).extracting(GitLabFrontendReachabilityEdge::kind)
                 .contains(GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD,
+                        GitLabFrontendReachabilityEdgeKind.ROUTED_CHILD,
                         GitLabFrontendReachabilityEdgeKind.DYNAMIC_COMPONENT,
                         GitLabFrontendReachabilityEdgeKind.COMPONENT_REFERENCE,
                         GitLabFrontendReachabilityEdgeKind.USES_DEPENDENCY,
@@ -129,7 +130,8 @@ class GitLabFrontendScreenReachabilityServiceTest {
                 .toList();
         var limitedSeed = new GitLabFrontendScreenReachabilitySeed(
                 fullContext.scope(), fullContext.sourceRevision(), fullContext.screenNode(),
-                fullContext.effectiveRouteChain(), fullContext.graphCoverage(), seedFiles,
+                fullContext.effectiveRouteChain(), fullContext.routeSubtreeNodes(),
+                fullContext.graphCoverage(), seedFiles,
                 fullContext.diagnostics()
         );
         when(contextService.select(any())).thenReturn(limitedSeed);
@@ -155,6 +157,69 @@ class GitLabFrontendScreenReachabilityServiceTest {
         assertThat(result.contextLimitReached()).isFalse();
         assertThat(result.limitations())
                 .noneMatch(limitation -> limitation.contains("context boundary"));
+    }
+
+    @Test
+    void shouldNotMarkSyntheticCrmRouterOutletContainerCompleteWithoutResolvedRoutedChild() {
+        var contextService = mock(GitLabFrontendScreenSelectionService.class);
+        var symbolSliceService = mock(GitLabTypeScriptSymbolSliceService.class);
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var fullContext = context();
+        var files = fullContext.sourceFiles().stream()
+                .map(file -> file.path().endsWith("customer-page.component.html")
+                        ? new GitLabFrontendSourceFile(
+                                file.path(), file.roles(), "<router-outlet />",
+                                "<router-outlet />".length(), false
+                        )
+                        : file)
+                .toList();
+        var containerOnlySeed = new GitLabFrontendScreenReachabilitySeed(
+                fullContext.scope(), fullContext.sourceRevision(), fullContext.screenNode(),
+                fullContext.effectiveRouteChain(), List.of(fullContext.screenNode()),
+                fullContext.graphCoverage(), files, fullContext.diagnostics()
+        );
+        when(contextService.select(any())).thenReturn(containerOnlySeed);
+        when(symbolSliceService.readSymbolSlice(any())).thenAnswer(invocation ->
+                slice(invocation.getArgument(0, GitLabTypeScriptSymbolSliceRequest.class))
+        );
+
+        var result = new GitLabFrontendScreenReachabilityService(
+                contextService, symbolSliceService, repositoryPort
+        ).build(request());
+
+        assertThat(result.status()).isEqualTo("PARTIAL");
+        assertThat(result.limitations()).anyMatch(limitation ->
+                limitation.contains("router-outlet") && limitation.contains("no child view"));
+    }
+
+    @Test
+    void shouldNotMarkSyntheticCrmScreenCompleteWhenReachableTemplateIsMissing() {
+        var contextService = mock(GitLabFrontendScreenSelectionService.class);
+        var symbolSliceService = mock(GitLabTypeScriptSymbolSliceService.class);
+        var repositoryPort = mock(GitLabRepositoryPort.class);
+        var fullContext = context();
+        var files = fullContext.sourceFiles().stream()
+                .map(file -> file.path().endsWith("customer-page.component.html")
+                        ? new GitLabFrontendSourceFile(file.path(), file.roles(), "", 0, false)
+                        : file)
+                .toList();
+        var missingTemplateSeed = new GitLabFrontendScreenReachabilitySeed(
+                fullContext.scope(), fullContext.sourceRevision(), fullContext.screenNode(),
+                fullContext.effectiveRouteChain(), fullContext.routeSubtreeNodes(),
+                fullContext.graphCoverage(), files, fullContext.diagnostics()
+        );
+        when(contextService.select(any())).thenReturn(missingTemplateSeed);
+        when(symbolSliceService.readSymbolSlice(any())).thenAnswer(invocation ->
+                slice(invocation.getArgument(0, GitLabTypeScriptSymbolSliceRequest.class))
+        );
+
+        var result = new GitLabFrontendScreenReachabilityService(
+                contextService, symbolSliceService, repositoryPort
+        ).build(request());
+
+        assertThat(result.status()).isEqualTo("PARTIAL");
+        assertThat(result.limitations()).anyMatch(limitation ->
+                limitation.contains("component template source") && limitation.contains("could not be resolved"));
     }
 
     private GitLabFrontendScreenSelectionRequest request() {
@@ -190,6 +255,25 @@ class GitLabFrontendScreenReachabilityServiceTest {
                         node.configuration(), routeSource
                 )),
                 List.of("customerId")
+        );
+        var routedChildTarget = new GitLabFrontendRouteTarget("CrmCustomerFormComponent", CHILD_PATH);
+        var routedChildIdentity = new GitLabFrontendScreenIdentity(
+                "screen-synthetic-crm-customer-form", "route-synthetic-crm-customer-form",
+                "/crm/customers/:customerId/edit", "primary", routedChildTarget
+        );
+        var emptyPathContainer = new GitLabFrontendRouteNode(
+                "route-synthetic-crm-customer-empty-container", node.nodeId(), null,
+                "Synthetic customer child container", "", node.routePattern(), "primary",
+                GitLabFrontendRouteNodeKind.ROUTE, GitLabFrontendDiscoveryStatus.RESOLVED,
+                false, List.of("customerId"), null, null, null,
+                List.of(), routeSource, List.of()
+        );
+        var routedChild = new GitLabFrontendRouteNode(
+                routedChildIdentity.routeNodeId(), emptyPathContainer.nodeId(), routedChildIdentity,
+                "Synthetic customer edit", "edit", routedChildIdentity.routePattern(), "primary",
+                GitLabFrontendRouteNodeKind.SCREEN, GitLabFrontendDiscoveryStatus.RESOLVED,
+                true, List.of("customerId"), routedChildTarget, null, null,
+                List.of(), routeSource, List.of()
         );
         var files = List.of(
                 source(ROOT_PATH, GitLabFrontendSourceRole.VIEW_COMPONENT, """
@@ -272,7 +356,7 @@ class GitLabFrontendScreenReachabilityServiceTest {
         var totalCharacters = files.stream().mapToInt(GitLabFrontendSourceFile::returnedCharacters).sum();
         return new GitLabFrontendScreenReachabilitySeed(
                 scope(), new GitLabFrontendSourceRevision(scope().ref(), "synthetic-crm-revision-20260820"),
-                node, chain,
+                node, chain, List.of(node, emptyPathContainer, routedChild),
                 new GitLabFrontendGraphCoverage(
                         GitLabFrontendCoverageStatus.READY, 1, 1, 20, 8, 0, false, List.of()
                 ),

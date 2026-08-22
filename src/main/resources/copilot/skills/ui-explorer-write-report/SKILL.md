@@ -83,6 +83,12 @@ zmienia dostep, wynik, zapis albo dalszy przebieg. Brak widocznosci nie moze
 zastapic potwierdzonej czesci opisu; przenies go do `visibilityLimits` i
 `openQuestions`.
 
+Przed finalizacja sekcji `DEEP` porownaj ledger z `completenessSignals`.
+Licznik nie oznacza wymaganej liczby wierszy, poniewaz kilka sygnalow moze
+opisywac jedno zachowanie. Kazdy sygnal musi jednak zostac zmapowany na fakt
+funkcjonalny albo swiadomie zduplikowany z innym sygnalem; nie wolno ograniczyc
+raportu do kilku reprezentatywnych przykladow.
+
 ## Kanoniczna Tresc Sekcji
 
 Dokladna struktura naglowkow i tabel pochodzi z

@@ -6,6 +6,7 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,23 +39,24 @@ class GitLabFrontendScreenSelectionService {
                         "Selected screen route chain is unavailable."
                 ));
         verifyRevision(request.expectedRevision(), graph.sourceRevision());
+        var routeSubtreeNodes = routeSubtree(screenNode, graph.nodes());
 
         var session = new GitLabFrontendTargetedSourceSession(repositoryPort, request.scope(), request.limits());
         var files = new LinkedHashMap<String, GitLabFrontendSourceFile>();
         for (var segment : chain.segments()) {
             addFile(segment.source().path(), GitLabFrontendSourceRole.ROUTE_CONFIGURATION, session, files);
         }
+        routeSubtreeNodes.forEach(node -> addFile(
+                node.routeSource().path(), GitLabFrontendSourceRole.ROUTE_CONFIGURATION, session, files
+        ));
         var viewPath = screenNode.viewTarget() != null ? screenNode.viewTarget().sourcePath() : null;
         if (!StringUtils.hasText(viewPath)) {
             throw failure("FRONTEND_SCREEN_SOURCE_UNRESOLVED", "Selected screen component source is unavailable.");
         }
-        var source = addFile(viewPath, GitLabFrontendSourceRole.VIEW_COMPONENT, session, files);
-        if (source != null) {
-            var matcher = TEMPLATE_URL.matcher(source);
-            while (matcher.find()) {
-                addFile(relative(viewPath, matcher.group(1)), GitLabFrontendSourceRole.TEMPLATE, session, files);
-            }
-        }
+        addViewFiles(screenNode, GitLabFrontendSourceRole.VIEW_COMPONENT, session, files);
+        routeSubtreeNodes.stream()
+                .filter(node -> !node.nodeId().equals(screenNode.nodeId()))
+                .forEach(node -> addViewFiles(node, GitLabFrontendSourceRole.CHILD_COMPONENT, session, files));
 
         var diagnostics = new ArrayList<>(graph.diagnostics());
         diagnostics.addAll(session.diagnostics());
@@ -63,10 +65,51 @@ class GitLabFrontendScreenSelectionService {
                 graph.sourceRevision(),
                 screenNode,
                 chain,
+                routeSubtreeNodes,
                 graph.coverage(),
                 List.copyOf(files.values()),
                 diagnostics
         );
+    }
+
+    private void addViewFiles(
+            GitLabFrontendRouteNode node,
+            GitLabFrontendSourceRole componentRole,
+            GitLabFrontendTargetedSourceSession session,
+            LinkedHashMap<String, GitLabFrontendSourceFile> files
+    ) {
+        var viewPath = node.viewTarget() != null ? node.viewTarget().sourcePath() : null;
+        if (!StringUtils.hasText(viewPath)) {
+            return;
+        }
+        var source = addFile(viewPath, componentRole, session, files);
+        if (source != null) {
+            var matcher = TEMPLATE_URL.matcher(source);
+            while (matcher.find()) {
+                addFile(relative(viewPath, matcher.group(1)), GitLabFrontendSourceRole.TEMPLATE, session, files);
+            }
+        }
+    }
+
+    private List<GitLabFrontendRouteNode> routeSubtree(
+            GitLabFrontendRouteNode selected,
+            List<GitLabFrontendRouteNode> nodes
+    ) {
+        var result = new ArrayList<GitLabFrontendRouteNode>();
+        var queue = new ArrayDeque<GitLabFrontendRouteNode>();
+        var visited = new LinkedHashSet<String>();
+        queue.add(selected);
+        while (!queue.isEmpty()) {
+            var current = queue.removeFirst();
+            if (!visited.add(current.nodeId())) {
+                continue;
+            }
+            result.add(current);
+            nodes.stream()
+                    .filter(node -> current.nodeId().equals(node.parentNodeId()))
+                    .forEach(queue::addLast);
+        }
+        return List.copyOf(result);
     }
 
     private void verifyRevision(String expected, GitLabFrontendSourceRevision revision) {

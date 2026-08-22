@@ -12,6 +12,7 @@ public record GitLabFrontendReachabilityComponent(
         String selector,
         String sourcePath,
         String templatePath,
+        String templateContent,
         String status,
         List<GitLabTypeScriptTemplateBinding> templateBindings,
         List<GitLabTypeScriptSymbolCandidate> entrySymbols,
@@ -30,6 +31,7 @@ public record GitLabFrontendReachabilityComponent(
         includedSymbols = includedSymbols != null ? List.copyOf(includedSymbols) : List.of();
         dependencyIds = dependencyIds != null ? List.copyOf(dependencyIds) : List.of();
         childComponentIds = childComponentIds != null ? List.copyOf(childComponentIds) : List.of();
+        templateContent = templateContent != null ? templateContent : "";
         sliceContent = sliceContent != null ? sliceContent : "";
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
     }

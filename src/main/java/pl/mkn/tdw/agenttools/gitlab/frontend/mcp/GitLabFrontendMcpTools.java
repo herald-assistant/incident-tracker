@@ -55,7 +55,7 @@ public class GitLabFrontendMcpTools {
                 context.scope(),
                 context.screenSliceRef(),
                 context.sourceRevision(),
-                false,
+                true,
                 GitLabAngularRouteBranchSliceService.DEFAULT_OUTPUT_CHARACTERS
         ));
         logResult(READ_FRONTEND_ROUTE_BRANCH_SLICE, sliceRef, response.status(), response.returnedCharacters());

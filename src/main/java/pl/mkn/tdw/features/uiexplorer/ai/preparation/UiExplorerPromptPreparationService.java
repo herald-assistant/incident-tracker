@@ -86,6 +86,7 @@ public class UiExplorerPromptPreparationService {
                 - `functionalOverview` i kazde `sections[].markdown` musza spelniac `ui-explorer/functional-writing-contract.md`.
                 - Glowna narracja opisuje prace uzytkownika, reguly, warunki i skutki. Nazwy klas, metod, plikow, framework APIs i operatorow pozostaja w `sourceReferences`, chyba ze identyfikator ma bezposrednie znaczenie funkcjonalne.
                 - Nie ograniczaj sekcji do stalej liczby obserwacji. Dla `DEEP` uwzglednij wszystkie odrebne potwierdzone fakty wymagane przez kontrakt sekcji.
+                - Przed finalizacja wykonaj bezstratne reconciliation z `completenessSignals` w coverage. Liczniki sa inventory do wykrycia pominiec, nie celem liczbowym ani osobna trescia raportu.
                 - Braki nie moga zastepowac potwierdzonego opisu. Umieszczaj je w `visibilityLimits` i `openQuestions`.
                 - `sections` zawiera wylacznie aktywne sekcje; sekcje `OFF` sa zabronione.
                 - Mocne twierdzenie bez source reference musi byc `INFERRED` albo `UNKNOWN`, nigdy `CONFIRMED`.

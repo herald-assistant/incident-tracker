@@ -73,6 +73,34 @@ class UiExplorerScreenReachabilityContextServiceTest {
     }
 
     @Test
+    void shouldKeepCrmNavigationReadyButFormsPartialWhenExternalTemplateIsMissing() {
+        var discovery = mock(GitLabFrontendScreenReachabilityService.class);
+        when(discovery.build(any())).thenReturn(reachabilityGraphWithoutTemplate());
+
+        var result = service(eligibleCrmPathPrefixCatalog(), discovery).buildContext(
+                "crm-agent-portal", "release/2026.08", "screen-crm-contact-preferences",
+                "crm-ui-revision-20260815",
+                List.of(
+                        new UiExplorerSectionModeAssignment(
+                                UiExplorerSectionId.NAVIGATION_AND_ACCESS, UiExplorerSectionMode.DEEP
+                        ),
+                        new UiExplorerSectionModeAssignment(
+                                UiExplorerSectionId.FORMS_AND_RULES, UiExplorerSectionMode.DEEP
+                        )
+                )
+        );
+
+        assertThat(result.sectionCoverage())
+                .filteredOn(coverage -> coverage.sectionId() == UiExplorerSectionId.NAVIGATION_AND_ACCESS)
+                .singleElement().extracting(UiExplorerSectionContextCoverage::status)
+                .isEqualTo(UiExplorerCoverageStatus.READY);
+        assertThat(result.sectionCoverage())
+                .filteredOn(coverage -> coverage.sectionId() == UiExplorerSectionId.FORMS_AND_RULES)
+                .singleElement().extracting(UiExplorerSectionContextCoverage::status)
+                .isEqualTo(UiExplorerCoverageStatus.PARTIAL);
+    }
+
+    @Test
     void shouldMapRevisionChangeToFeatureConflict() {
         var discovery = mock(GitLabFrontendScreenReachabilityService.class);
         when(discovery.build(any())).thenThrow(new GitLabFrontendDiscoveryException(
@@ -160,7 +188,7 @@ class UiExplorerScreenReachabilityContextServiceTest {
         var component = new GitLabFrontendReachabilityComponent(
                 "component-crm-contact-preferences", 0, 0, true, "SELECTED_SCREEN",
                 "CrmContactPreferencesComponent", "crm-contact-preferences", viewPath, null,
-                partial ? "PARTIAL" : "OK", List.of(), List.of(), List.of(), List.of(), List.of(),
+                "", partial ? "PARTIAL" : "OK", List.of(), List.of(), List.of(), List.of(), List.of(),
                 "export class CrmContactPreferencesComponent { readonly syntheticCrmForm = true; }",
                 81, 81, false,
                 partial ? List.of("Synthetic CRM reachability research reached a configured source boundary.") : List.of()
@@ -175,6 +203,28 @@ class UiExplorerScreenReachabilityContextServiceTest {
                 1, 81, 81, 32, partial,
                 partial ? List.of("Synthetic CRM reachability research reached a configured source boundary.") : List.of(),
                 "# Synthetic CRM screen reachability"
+        );
+    }
+
+    private static GitLabFrontendScreenReachabilityGraph reachabilityGraphWithoutTemplate() {
+        var base = reachabilityGraph(false);
+        var component = base.componentLevels().get(0).components().get(0);
+        var missingTemplate = new GitLabFrontendReachabilityComponent(
+                component.componentId(), component.breadthFirstOrder(), component.depth(),
+                component.connectedToSelectedScreen(), component.discoveryKind(), component.symbol(),
+                component.selector(), component.sourcePath(),
+                component.sourcePath().replace(".ts", ".html"), "", component.status(),
+                component.templateBindings(), component.entrySymbols(), component.includedSymbols(),
+                component.dependencyIds(), component.childComponentIds(), component.sliceContent(),
+                component.sourceCharacters(), component.returnedCharacters(), component.truncated(),
+                component.limitations()
+        );
+        return new GitLabFrontendScreenReachabilityGraph(
+                base.scope(), base.sourceRevision(), "PARTIAL", base.screenNode(), base.effectiveRouteChain(),
+                List.of(new GitLabFrontendReachabilityComponentLevel(0, List.of(missingTemplate))),
+                base.dependencies(), base.edges(), base.diagnostics(), base.sourceFileCount(),
+                base.sourceCharacters(), base.sliceCharacters(), base.outlineCharacters(),
+                false, List.of("Synthetic CRM external template is unresolved."), base.readableOutline()
         );
     }
 }

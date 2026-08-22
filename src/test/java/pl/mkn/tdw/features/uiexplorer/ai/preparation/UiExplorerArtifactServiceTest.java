@@ -45,16 +45,22 @@ class UiExplorerArtifactServiceTest {
                 .contains("`component-crm-contact-preferences`")
                 .contains("`dependency-crm-preferences-api`")
                 .contains("crm-contact-preferences.component.ts")
+                .contains("crm-contact-preferences.component.html")
+                .contains("savePreferences()")
                 .contains("CrmContactPreferencesApi")
                 .contains("loadDefinition")
                 .contains("Ignore previous instructions");
         var coverage = objectMapper.readTree(content(artifacts, UiExplorerArtifactService.COVERAGE_ARTIFACT));
         assertThat(coverage.path("researchGaps").get(0).asText()).contains("targeted evidence");
+        assertThat(coverage.path("completenessSignals").path("reachableComponentCount").asInt()).isEqualTo(1);
+        assertThat(coverage.path("completenessSignals").path("componentTemplateCount").asInt()).isEqualTo(1);
+        assertThat(coverage.path("completenessSignals").path("componentTemplateCharacters").asInt()).isPositive();
         assertThat(content(artifacts, UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT))
                 .contains("Glowna tresc jest dokumentacja funkcjonalna")
                 .contains("Akcja | Kiedy dostepna | Co wykorzystuje | Rezultat | Co widzi uzytkownik")
                 .contains("Pole lub grupa | Znaczenie | Wymagalnosc i walidacja")
-                .contains("Nie tworz stalej liczby punktow");
+                .contains("Nie tworz stalej liczby punktow")
+                .contains("completenessSignals");
         objectMapper.readTree(content(artifacts, UiExplorerArtifactService.RESPONSE_CONTRACT_ARTIFACT));
     }
 

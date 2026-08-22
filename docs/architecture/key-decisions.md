@@ -71,9 +71,11 @@ Decyzje:
   200 000 znakow na plik i 2 000 000 lacznie; wyczerpanie limitu lacznego nie
   moze generowac kaskady wtornych bledow importu.
   Source revision pochodzi z bezposredniego rozwiazania refa do commit id, nie
-  z metadanych pliku bootstrap. Screen reachability zaczyna od minimalnego,
-  wewnetrznego seed wybranego route/view, a nastepnie iteracyjnie rozwija BFS
-  komponentow oraz kanoniczny rejestr faktycznie uzytych zaleznosci. Publiczny
+  z metadanych pliku bootstrap. Screen reachability zaczyna od wewnetrznego
+  seed wybranego route/view i jego routowanego poddrzewa, a nastepnie
+  iteracyjnie rozwija BFS komponentow oraz kanoniczny rejestr faktycznie
+  uzytych zaleznosci. Pelne template'y osiagalnych komponentow sa source
+  evidence, nie jedynie sygnalem do wyboru handlerow. Publiczny
   `Screen Source Context`, jego pelny traversal plikow i endpoint
   `/screen-context` nie istnieja. Jest to shared/operator preview neutralnej
   integracji, bez AI, historii i joba UI Explorer. Waskie route/symbol slices

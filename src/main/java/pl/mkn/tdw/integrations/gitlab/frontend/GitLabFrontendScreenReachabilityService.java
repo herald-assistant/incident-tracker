@@ -92,7 +92,9 @@ public class GitLabFrontendScreenReachabilityService {
             var slice = componentSlice(request.scope(), descriptor);
             var component = new MutableComponent(position, slice);
             components.put(descriptor.componentId(), component);
-            for (var edge : componentRelations(descriptor, descriptors)) {
+            var relations = new ArrayList<>(componentRelations(descriptor, descriptors));
+            relations.addAll(routedComponentRelations(descriptor, context, descriptors));
+            for (var edge : relations) {
                 addEdge(edgeIndex, edge);
                 component.childIds.add(edge.toId());
                 if (queuedComponents.add(edge.toId())) {
@@ -126,16 +128,37 @@ public class GitLabFrontendScreenReachabilityService {
                 .map(MutableDependency::toResponse)
                 .toList();
         var edges = List.copyOf(edgeIndex.values());
-        var limitations = limitations(context, root, components, dependencies, sourceIndex);
+        var unresolvedRoutedViews = unresolvedRoutedViews(context, descriptors);
+        var unresolvedTemplates = unresolvedTemplates(components);
+        var unresolvedContainerOutlet = unresolvedContainerOutlet(context, root);
+        var limitations = limitations(
+                context, root, components, dependencies, sourceIndex,
+                unresolvedRoutedViews, unresolvedTemplates, unresolvedContainerOutlet
+        );
         var partial = root == null || context.graphCoverage().limitReached() || sourceIndex.limitReached()
+                || unresolvedRoutedViews > 0 || unresolvedTemplates > 0 || unresolvedContainerOutlet
                 || components.values().stream().anyMatch(MutableComponent::partial)
                 || dependencies.values().stream().anyMatch(MutableDependency::partial);
         var status = root == null ? "BLOCKED" : partial ? "PARTIAL" : "OK";
         var outline = readableOutline(
                 status, context, levels, dependencyResponses, edges, limitations
         );
+        var templateCharacters = components.values().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        component -> StringUtils.hasText(component.descriptor.templatePath())
+                                ? component.descriptor.templatePath()
+                                : "@inline/" + component.id(),
+                        component -> component.descriptor.template(),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ))
+                .entrySet().stream()
+                .filter(entry -> StringUtils.hasText(entry.getValue()))
+                .mapToInt(entry -> entry.getValue().length())
+                .sum();
         var sliceCharacters = components.values().stream().mapToInt(component -> component.slice.returnedCharacters()).sum()
                 + dependencies.values().stream().mapToInt(dependency -> dependency.returnedCharacters).sum();
+        sliceCharacters += templateCharacters;
         return new GitLabFrontendScreenReachabilityGraph(
                 context.scope(), context.sourceRevision(), status, context.screenNode(), context.effectiveRouteChain(),
                 levels, dependencyResponses, edges,
@@ -321,6 +344,103 @@ public class GitLabFrontendScreenReachabilityService {
         return List.copyOf(edges);
     }
 
+    private List<GitLabFrontendReachabilityEdge> routedComponentRelations(
+            ComponentDescriptor parent,
+            GitLabFrontendScreenReachabilitySeed context,
+            List<ComponentDescriptor> descriptors
+    ) {
+        var nodesById = context.routeSubtreeNodes().stream().collect(java.util.stream.Collectors.toMap(
+                GitLabFrontendRouteNode::nodeId,
+                node -> node,
+                (left, right) -> left,
+                LinkedHashMap::new
+        ));
+        var edges = new ArrayList<GitLabFrontendReachabilityEdge>();
+        for (var node : context.routeSubtreeNodes()) {
+            if (node.nodeId().equals(context.screenNode().nodeId()) || node.viewTarget() == null) {
+                continue;
+            }
+            var child = descriptorForTarget(node.viewTarget(), descriptors);
+            var parentNode = nearestViewAncestor(node.parentNodeId(), nodesById);
+            var routeParent = parentNode != null ? descriptorForTarget(parentNode.viewTarget(), descriptors) : null;
+            if (child == null || routeParent == null
+                    || !parent.componentId().equals(routeParent.componentId())
+                    || parent.componentId().equals(child.componentId())) {
+                continue;
+            }
+            edges.add(new GitLabFrontendReachabilityEdge(
+                    parent.componentId(), child.componentId(), GitLabFrontendReachabilityEdgeKind.ROUTED_CHILD,
+                    node.routePattern(), node.routeSource().path(), parent.symbol(), child.symbol()
+            ));
+        }
+        return List.copyOf(edges);
+    }
+
+    private GitLabFrontendRouteNode nearestViewAncestor(
+            String nodeId,
+            Map<String, GitLabFrontendRouteNode> nodesById
+    ) {
+        var currentId = nodeId;
+        while (StringUtils.hasText(currentId)) {
+            var current = nodesById.get(currentId);
+            if (current == null) {
+                return null;
+            }
+            if (current.viewTarget() != null) {
+                return current;
+            }
+            currentId = current.parentNodeId();
+        }
+        return null;
+    }
+
+    private ComponentDescriptor descriptorForTarget(
+            GitLabFrontendRouteTarget target,
+            List<ComponentDescriptor> descriptors
+    ) {
+        if (target == null || !StringUtils.hasText(target.sourcePath())) {
+            return null;
+        }
+        return descriptors.stream()
+                .filter(descriptor -> descriptor.sourcePath().equals(target.sourcePath()))
+                .filter(descriptor -> !StringUtils.hasText(target.symbol())
+                        || descriptor.symbol().equals(target.symbol()))
+                .findFirst()
+                .orElseGet(() -> descriptors.stream()
+                        .filter(descriptor -> descriptor.sourcePath().equals(target.sourcePath()))
+                        .findFirst().orElse(null));
+    }
+
+    private int unresolvedRoutedViews(
+            GitLabFrontendScreenReachabilitySeed context,
+            List<ComponentDescriptor> descriptors
+    ) {
+        return (int) context.routeSubtreeNodes().stream()
+                .filter(node -> node.viewTarget() != null)
+                .filter(node -> descriptorForTarget(node.viewTarget(), descriptors) == null)
+                .count();
+    }
+
+    private boolean unresolvedContainerOutlet(
+            GitLabFrontendScreenReachabilitySeed context,
+            ComponentDescriptor root
+    ) {
+        if (root == null || !Pattern.compile("(?i)<\\s*router-outlet\\b").matcher(root.template()).find()) {
+            return false;
+        }
+        return context.routeSubtreeNodes().stream()
+                .filter(node -> !node.nodeId().equals(context.screenNode().nodeId()))
+                .noneMatch(node -> node.viewTarget() != null);
+    }
+
+    private int unresolvedTemplates(Map<String, MutableComponent> components) {
+        return (int) components.values().stream()
+                .map(component -> component.descriptor)
+                .filter(descriptor -> StringUtils.hasText(descriptor.templatePath()))
+                .filter(descriptor -> !StringUtils.hasText(descriptor.template()))
+                .count();
+    }
+
     private GitLabTypeScriptSymbolSliceResponse componentSlice(
             GitLabFrontendRepositoryScope scope,
             ComponentDescriptor descriptor
@@ -446,12 +566,26 @@ public class GitLabFrontendScreenReachabilityService {
             ComponentDescriptor root,
             Map<String, MutableComponent> components,
             Map<String, MutableDependency> dependencies,
-            SourceIndex sourceIndex
+            SourceIndex sourceIndex,
+            int unresolvedRoutedViews,
+            int unresolvedTemplates,
+            boolean unresolvedContainerOutlet
     ) {
         var result = new LinkedHashSet<String>();
         result.addAll(context.graphCoverage().limitations());
         if (root == null) {
             result.add("Selected screen component was not found among deterministically delivered component sources.");
+        }
+        if (unresolvedRoutedViews > 0) {
+            result.add(unresolvedRoutedViews
+                    + " routed child view source(s) could not be resolved inside the selected route subtree.");
+        }
+        if (unresolvedTemplates > 0) {
+            result.add(unresolvedTemplates
+                    + " reachable component template source(s) could not be resolved.");
+        }
+        if (unresolvedContainerOutlet) {
+            result.add("Selected routed container declares router-outlet, but no child view was resolved in its route subtree.");
         }
         if (sourceIndex.limitReached()) {
             result.add("On-demand reachability traversal could not close every confirmed source edge.");
@@ -516,6 +650,20 @@ public class GitLabFrontendScreenReachabilityService {
             }
             result.append("\n");
         }
+        result.append("\n## Routed view subtree\n");
+        var subtreeOrder = 1;
+        for (var node : context.routeSubtreeNodes()) {
+            result.append("\n").append(subtreeOrder++).append(". route `")
+                    .append(node.routePattern()).append("` — path segment `")
+                    .append(StringUtils.hasText(node.pathSegment()) ? node.pathSegment() : "(empty child)")
+                    .append("` — view `")
+                    .append(node.viewTarget() != null ? node.viewTarget().symbol() : "structural route")
+                    .append("` — source `").append(node.routeSource().path()).append("`");
+            if (node.nodeId().equals(context.screenNode().nodeId())) {
+                result.append(" — selected container/root");
+            }
+        }
+        result.append("\n");
         result.append("\n## Component breadth-first traversal\n");
         for (var level : levels) {
             result.append("\n### Depth ").append(level.depth()).append("\n");
@@ -595,6 +743,7 @@ public class GitLabFrontendScreenReachabilityService {
         var children = edges.stream()
                 .filter(edge -> edge.fromId().equals(component.componentId()))
                 .filter(edge -> edge.kind() == GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD
+                        || edge.kind() == GitLabFrontendReachabilityEdgeKind.ROUTED_CHILD
                         || edge.kind() == GitLabFrontendReachabilityEdgeKind.DYNAMIC_COMPONENT
                         || edge.kind() == GitLabFrontendReachabilityEdgeKind.COMPONENT_REFERENCE)
                 .map(edge -> componentReferences.getOrDefault(edge.toId(), edge.toId())
@@ -953,7 +1102,7 @@ public class GitLabFrontendScreenReachabilityService {
             return new GitLabFrontendReachabilityComponent(
                     id(), position.order(), position.depth(), position.connected(), position.discoveryKind(),
                     descriptor.symbol(), descriptor.selector(), descriptor.sourcePath(), descriptor.templatePath(),
-                    slice.status(), slice.templateBindings(), slice.entrySymbols(), slice.includedSymbols(),
+                    descriptor.template(), slice.status(), slice.templateBindings(), slice.entrySymbols(), slice.includedSymbols(),
                     List.copyOf(dependencyIds), List.copyOf(childIds), slice.content(), slice.sourceCharacters(),
                     slice.returnedCharacters(), slice.truncated(), slice.limitations()
             );

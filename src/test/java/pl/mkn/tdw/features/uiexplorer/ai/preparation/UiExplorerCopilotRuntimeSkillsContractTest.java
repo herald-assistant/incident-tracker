@@ -41,17 +41,20 @@ class UiExplorerCopilotRuntimeSkillsContractTest {
 
         assertThat(orchestrator)
                 .contains("readiness")
+                .contains("completenessSignals")
                 .contains("ui-explorer-source-grounding")
                 .contains("ui-explorer-write-report")
                 .doesNotContain("\"functionalOverview\"");
         assertThat(grounding)
                 .contains("UNTRUSTED_SOURCE_EVIDENCE")
                 .contains("ignore previous instructions")
+                .contains("completenessSignals")
                 .contains("SourceGroundingSummary")
                 .doesNotContain("Finalnym artefaktem jest jeden JSON");
         assertThat(writer)
                 .contains("jedynym wlascicielem finalnego JSON")
                 .contains("FORMS_AND_RULES")
+                .contains("completenessSignals")
                 .contains("usage` pozostaje `null`");
     }
 

@@ -8,6 +8,7 @@ record GitLabFrontendScreenReachabilitySeed(
         GitLabFrontendSourceRevision sourceRevision,
         GitLabFrontendRouteNode screenNode,
         GitLabFrontendEffectiveRouteChain effectiveRouteChain,
+        List<GitLabFrontendRouteNode> routeSubtreeNodes,
         GitLabFrontendGraphCoverage graphCoverage,
         List<GitLabFrontendSourceFile> sourceFiles,
         List<GitLabFrontendGraphDiagnostic> diagnostics
@@ -17,6 +18,7 @@ record GitLabFrontendScreenReachabilitySeed(
         sourceRevision = Objects.requireNonNull(sourceRevision, "sourceRevision must not be null");
         screenNode = Objects.requireNonNull(screenNode, "screenNode must not be null");
         effectiveRouteChain = Objects.requireNonNull(effectiveRouteChain, "effectiveRouteChain must not be null");
+        routeSubtreeNodes = routeSubtreeNodes != null ? List.copyOf(routeSubtreeNodes) : List.of();
         graphCoverage = Objects.requireNonNull(graphCoverage, "graphCoverage must not be null");
         sourceFiles = sourceFiles != null ? List.copyOf(sourceFiles) : List.of();
         diagnostics = diagnostics != null ? List.copyOf(diagnostics) : List.of();

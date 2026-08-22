@@ -15,7 +15,7 @@ import static org.mockito.Mockito.*;
 class GitLabFrontendScreenSelectionServiceTest {
 
     @Test
-    void shouldReadOnlySyntheticCrmRouteSelectedComponentAndTemplateAsMinimalReachabilitySeed() {
+    void shouldReadSyntheticCrmSelectedRouteSubtreeComponentsAndTemplatesAsReachabilitySeed() {
         var graphDiscovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         var repository = mock(GitLabRepositoryPort.class);
         var graph = graph();
@@ -43,7 +43,14 @@ class GitLabFrontendScreenSelectionServiceTest {
                 .containsExactly(
                         "apps/crm-agent/src/app/app.routes.ts",
                         "apps/crm-agent/src/app/preferences/crm-preferences.component.ts",
-                        "apps/crm-agent/src/app/preferences/crm-preferences.component.html"
+                        "apps/crm-agent/src/app/preferences/crm-preferences.component.html",
+                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.ts",
+                        "apps/crm-agent/src/app/preferences/history/crm-preference-history.component.html"
+                );
+        assertThat(result.routeSubtreeNodes()).extracting(GitLabFrontendRouteNode::routePattern)
+                .containsExactly(
+                        "/contacts/:contactId/preferences",
+                        "/contacts/:contactId/preferences/history"
                 );
         verify(repository, never()).listRepositoryFiles(anyString(), anyString(), anyString(), any());
         verify(repository, never()).searchRepositoryFilesByContent(anyString(), anyString(), anyString(), anyList(), anyInt());

@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRenderedArtifact;
 import pl.mkn.tdw.features.uiexplorer.context.UiExplorerScreenReachabilityContext;
 import pl.mkn.tdw.features.uiexplorer.job.api.UiExplorerJobStartRequest;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyCategory;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKind;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,7 +27,7 @@ public class UiExplorerArtifactService {
     public static final String FUNCTIONAL_WRITING_CONTRACT_ARTIFACT = "ui-explorer/functional-writing-contract.md";
     public static final String RESPONSE_CONTRACT_ARTIFACT = "ui-explorer/response-contract.json";
 
-    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v6";
+    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v7";
 
     private final ObjectMapper objectMapper;
     private final UiExplorerSourceSliceRenderer sourceSliceRenderer = new UiExplorerSourceSliceRenderer();
@@ -160,6 +162,11 @@ public class UiExplorerArtifactService {
                 potwierdzone pola, akcje, warunki, walidacje, kalkulacje, warianty i skutki
                 widoczne w evidence. Dla `COMPACT` wybierz najwazniejsze, ale nie pomijaj
                 reguly zmieniajacej rezultat. Nie powtarzaj tego samego faktu w wielu sekcjach.
+                Przed finalizacja porownaj zawartosc `DEEP` z `completenessSignals` z coverage:
+                kazdy odrebny event, form control, warunek i entry point musi zostac opisany
+                albo jawnie uznany za techniczny duplikat bez osobnego skutku funkcjonalnego.
+                Nie traktuj licznika jako wymaganej liczby wierszy, ale nie wybieraj z niego
+                kilku przykladow zamiast przejsc przez caly osiagalny material.
                 Relacje opisz tylko tam, gdzie wyjasniaja warunek, akcje albo rezultat w
                 kanonicznej strukturze sekcji; nie tworz osobnego katalogu zaleznosci.
 
@@ -235,8 +242,47 @@ public class UiExplorerArtifactService {
         payload.put("researchGaps", context.researchGaps());
         payload.put("diagnostics", context.graph().diagnostics());
         payload.put("boundary", context.boundary());
+        payload.put("completenessSignals", completenessSignals(context));
         payload.put("visibilityLimits", context.visibilityLimits());
         return json(payload);
+    }
+
+    private Map<String, Object> completenessSignals(UiExplorerScreenReachabilityContext context) {
+        var components = context.graph().componentLevels().stream()
+                .flatMap(level -> level.components().stream())
+                .toList();
+        var bindingsByKind = components.stream()
+                .flatMap(component -> component.templateBindings().stream())
+                .collect(java.util.stream.Collectors.groupingBy(
+                        binding -> binding.kind().name(),
+                        LinkedHashMap::new,
+                        java.util.stream.Collectors.counting()
+                ));
+        var signals = new LinkedHashMap<String, Object>();
+        signals.put("purpose", "Final DEEP-section reconciliation inventory; counts are not a separate report section.");
+        signals.put("routedChildViewCount", context.graph().edges().stream()
+                .filter(edge -> edge.kind() == GitLabFrontendReachabilityEdgeKind.ROUTED_CHILD)
+                .count());
+        signals.put("reachableComponentCount", components.size());
+        signals.put("componentTemplateCount", components.stream()
+                .filter(component -> component.templateContent() != null && !component.templateContent().isBlank())
+                .count());
+        signals.put("componentTemplateCharacters", components.stream()
+                .mapToInt(component -> component.templateContent() != null ? component.templateContent().length() : 0)
+                .sum());
+        signals.put("templateBindingsByKind", bindingsByKind);
+        signals.put("distinctUiEntrySymbolCount", components.stream()
+                .flatMap(component -> component.entrySymbols().stream())
+                .map(candidate -> componentEntryKey(candidate.declaringTypeName(), candidate.symbolName()))
+                .distinct().count());
+        signals.put("functionalDependencyCount", context.graph().dependencies().stream()
+                .filter(dependency -> dependency.category() == GitLabFrontendReachabilityDependencyCategory.FUNCTIONAL)
+                .count());
+        return signals;
+    }
+
+    private String componentEntryKey(String declaringType, String symbol) {
+        return (declaringType != null ? declaringType : "") + "#" + (symbol != null ? symbol : "");
     }
 
     private LinkedHashMap<String, Object> basePayload(String trustClassification) {

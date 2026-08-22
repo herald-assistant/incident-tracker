@@ -2335,6 +2335,69 @@ Weryfikacja 2026-08-22: celowane testy preparation i context-tier oraz
 0 pominietych; `git diff --check` — PASS. Frontend nie byl uruchamiany, bo
 zmiana nie dotyka kodu Angulara ani kontraktu backend-frontend.
 
+#### 8O. Route-aware reachability i completeness dla widokow-kontenerow
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-22 implementacje
+po analizie eksportu zlozonego widoku CRM. Source need pozostaje
+`../needs/ui-explorer.md`.
+
+Baseline: publiczny request/result/report, osiem sekcji, job, export i frontend
+pozostaja bez zmian. Neutralny Screen Reachability wybiera jeden route node,
+effective route chain oraz komponent tego node'a. Component BFS przechodzi po
+template children, komponentach dynamicznych i zaleznosciach TypeScript, ale
+nie wlacza view targets z routowanego poddrzewa. Template sluzy do wyboru
+handlerow, lecz jego tresc nie trafia do source-slices. Route branch MCP czyta
+wybrany screen z `includeDescendantRoutes=false`, a hidden scope dopuszcza
+tylko pierwotny screen ref. Feature mapuje jeden status grafu na wszystkie
+sekcje, dlatego kontener bez podwidoku moze otrzymac `READY` i puste
+`researchGaps`.
+
+Conformance delta: `integrations.gitlab.frontend` pozostaje wlascicielem
+uniwersalnego rozpoznawania Angulara. Selection seed dolacza wybrany route node
+i jego deterministyczne potomki, ich route sources, view components i
+templates. Reachability tworzy jawne `ROUTED_CHILD` edges i uruchamia component
+BFS z kazdego routowanego view targetu, zachowujac kolejnosc route/component
+BFS. Source artifact osadza unikalny template source obok TypeScript slices,
+bez cofania file-grouped deduplikacji. Brak routowanego view/template albo
+partial relevant slice pozostawia research gap i section-specific `PARTIAL`,
+zamiast pozornego `READY`.
+
+Route branch tool czyta cale poddrzewo kontenera przez bezpieczny ref wybranego
+ekranu; generyczny search/read pozostaje fallbackiem dopiero dla targetu,
+ktorego graf nie potrafi rozstrzygnac. Prompt i skille dostaja maly completeness
+manifest oraz obowiazek przejscia przez odrebne akcje, pola, reguly i warianty
+sekcji `DEEP`. Section-specific deterministic coverage nie pozwala uznac
+sekcji wymagajacej template albo routed view za `READY`, gdy tego materialu
+brakuje; parser zachowuje dotychczasowa blokade pozornego `READY` bez captured
+fallback evidence.
+
+Zmiana jest L2: dotyka reusable integracji GitLab/Angular, MCP hidden scope i
+feature-owned coverage/preparation/parser. Konsumenci to Tool Workbench,
+UI Explorer context/preparation/runtime oraz testy discovery/tools. Operatorowy
+Screen Reachability response dostaje `templateContent`; schema wyniku/exportu
+UI Explorer i Angular pozostaja bez zmian. Nie ma warstwy kompatybilnosci dla
+artifacts ani grafu. Wszystkie nowe fixture'y
+i nazwy domenowe sa silnie zanonimizowanym, syntetycznym CRM.
+
+- [x] 8O.1: Rozszerzyc selection seed i component BFS o route subtree oraz
+  jawne `ROUTED_CHILD` edges, z diagnostyka brakujacego routed view.
+- [x] 8O.2: Osadzic deduplikowane Angular template sources w initial artifacts
+  i uwzglednic je w miarach slice/context.
+- [x] 8O.3: Uspojnic route branch MCP dla calego poddrzewa wybranego safe ref bez
+  generycznego browse jako pierwszego wyboru.
+- [x] 8O.4: Zastapic wspolny status section-specific coverage/readiness oraz
+  dodac completeness manifest/gate dla `DEEP`.
+- [x] 8O.5: Dodac silnie zanonimizowane regresje CRM dla empty-path container,
+  routed child, template/form/actions i niepelnego finalnego raportu.
+- [x] 8O.6: Uruchomic celowany pion, `PackageDependencyGuardTest`, pelny backend
+  i zaktualizowac dokumentacje wynikowego runtime.
+
+Weryfikacja 2026-08-22: celowany pion selection/reachability/route slice/MCP,
+context coverage, preparation, runtime skills, parser/provider oraz
+`PackageDependencyGuardTest` — PASS; `mvn -q test` — 1304 testy, 0 bledow,
+0 pominietych; `git diff --check` — PASS. Frontend nie byl uruchamiany, bo
+zmiana nie dotyka kodu Angulara ani kontraktu wyniku/exportu UI Explorer.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego
