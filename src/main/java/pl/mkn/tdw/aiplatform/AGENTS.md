@@ -18,10 +18,12 @@ Obecnie obejmuje:
   source of truth takze dla polityki context tier, a publiczne API mapuje tylko
   pola potrzebne UI.
 - `copilot/runtime/context/`
-  neutralna polityka wyboru `long_context` przed create/resume i jednokrotnego
-  runtime upgrade'u na podstawie `session.usage_info`; dynamiczne metadata
-  modeli pochodza z katalogu `runtime/options`, a progi i rollback pozostaja
-  konfiguracja platformy, nigdy feature'a.
+  neutralna polityka wyboru `long_context` przed create/resume: estymowany tryb
+  `AUTO` korzysta z dynamicznych metadanych `runtime/options`, a feature moze
+  zadeklarowac `LONG_CONTEXT_REQUIRED`. Platforma potwierdza efektywny tier
+  przez typed RPC przed pierwszym `sendAndWait`; nie wykonuje runtime upgrade'u
+  na podstawie `session.usage_info`. Progi, wykonanie SDK i rollback pozostaja
+  mechanika platformy, a semantyczna potrzeba nalezy do feature'a.
 - `copilot/runtime/execution/`
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
   event logging, controlled invocation exception oraz `CopilotExecutionResult`

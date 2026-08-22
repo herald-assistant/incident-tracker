@@ -2,7 +2,8 @@ package pl.mkn.tdw.aiplatform.copilot.runtime.context;
 
 public record CopilotContextTierDecision(
         boolean policyEnabled,
-        boolean modelSupported,
+        CopilotContextTierPreference preference,
+        boolean modelMetadataAvailable,
         String modelId,
         long defaultWindowTokens,
         long longContextWindowTokens,

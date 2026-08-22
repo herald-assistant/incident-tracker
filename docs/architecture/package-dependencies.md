@@ -194,8 +194,9 @@ Warstwa posiada neutralna mechanike uruchamiania AI:
 - hidden context jako mechanizm,
 - session-bound evidence store,
 - model/options catalog,
-- neutralna, konfigurowalna polityke context tier oparta o rozmiar initial
-  promptu i user-visible `session.usage_info`,
+- neutralna, konfigurowalna polityke context tier: estymowany preflight `AUTO`,
+  feature-owned `LONG_CONTEXT_REQUIRED` oraz typed weryfikacje efektywnego tieru
+  przed pierwszym `sendAndWait`,
 - user-visible usage i techniczne wykonanie requestu.
 
 Feature przekazuje platformie prompt, guidance do uzycia skilli, available

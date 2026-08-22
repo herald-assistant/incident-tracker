@@ -169,29 +169,31 @@ Konsekwencje:
   i moze uzyc fallbacku do skonfigurowanych domyslow, gdy SDK chwilowo nie
   zwroci katalogu.
 
-## 1a. Context tier jest polityka platformy, nie feature'a
+## 1a. Wykonanie context tier jest polityka platformy, a potrzeba nalezy do feature'a
 
 Kazdy feature przekazuje prompt i konfiguracje sesji przez wspolny
-`CopilotSdkExecutionGateway`. Feature nie zna rozmiaru okna modelu i nie
-ustawia samodzielnie `contextTier`.
+`CopilotSdkExecutionGateway`. Feature nie zna rozmiaru okna modelu ani SDK RPC
+i nie ustawia samodzielnie `SessionConfig.contextTier`, ale moze zadeklarowac
+neutralna preference `AUTO` albo `LONG_CONTEXT_REQUIRED`.
 
-Neutralna polityka `aiplatform.copilot.runtime.context` korzysta z dynamicznego
-katalogu `models.list` i ma dwa konfigurowalne progi:
+Neutralna polityka `aiplatform.copilot.runtime.context` rozstrzyga tier przed
+create/resume:
 
 - przed create/resume konserwatywnie estymuje prompt, opcjonalne durable
   system instructions, definicje tools i rezerwe; od 70% zwyklego okna
-  ustawia `long_context`,
-- dla sesji pozostawionej na domyslnym tierze reaguje na rzeczywiste
-  `session.usage_info` i od 70% wykonuje najwyzej jedna asynchroniczna probe
-  `default -> long_context`.
+  ustawia `long_context` dla `AUTO`,
+- dla `LONG_CONTEXT_REQUIRED` ustawia `long_context` niezaleznie od
+  kompletnosci metadanych katalogu, a po otwarciu sesji potwierdza efektywny
+  tier przez typed `session.model.getCurrent` przed pierwszym `sendAndWait`.
 
-Tier jest uznany za dostepny tylko wtedy, gdy billing/capability modelu podaje
-domyslne okno i wieksze okno maksymalne. Nieznany model albo niepelne metadata
-pozostawiaja defaulty SDK. Blad runtime switch jest widoczny w activity
-kategorii `CONTEXT`, ale nie przerywa analizy. Polityka nie anuluje
-kompaktowania, nie wywoluje eksperymentalnego `preCompact`, nie zmienia promptu,
-tools, hidden scope ani kontraktu wyniku. W properties nie ma listy nazw ani
-limitow modeli. Rollbackiem jest
+W trybie `AUTO` tier jest wybierany tylko wtedy, gdy billing/capability modelu
+podaje domyslne okno i wieksze okno maksymalne; niepelne metadata pozostawiaja
+default SDK. W trybie wymaganym SDK jest autorytatywnym zrodlem: brak
+efektywnego `long_context` przerywa run przed wyslaniem promptu. Polityka nie
+zmienia tieru w trakcie aktywnej wiadomosci, nie anuluje kompaktowania, nie
+wywoluje eksperymentalnego `preCompact` i nie zmienia promptu, tools, hidden
+scope ani kontraktu wyniku. W properties nie ma listy nazw ani limitow modeli.
+Rollbackiem jest
 `analysis.ai.copilot.context-tier.enabled=false`.
 
 ## 1b. Copilot authentication ma dwa tryby

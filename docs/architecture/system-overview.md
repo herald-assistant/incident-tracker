@@ -625,13 +625,15 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `systemMessage` w trybie `APPEND` dla create i resume. Platforma nie buduje
   ich tresci ani nie interpretuje kontraktu feature'a.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.context`
-  Neutralna polityka context tier dla wszystkich feature'ow. Estymuje initial
-  prompt razem z durable system instructions, definicjami tools i rezerwa,
-  ustawia `long_context` przed create/resume po przekroczeniu progu okna
-  odczytanego z dynamicznego katalogu modeli oraz wykonuje najwyzej jedna probe
-  upgrade'u po `session.usage_info`.
-  Nieznany model, brak pelnych metadanych tieru i blad upgrade'u zachowuja
-  domyslne zachowanie sesji, a decyzje sa widoczne jako
+  Neutralna polityka context tier. Dla preference `AUTO` estymuje initial
+  prompt razem z durable system instructions, definicjami tools i rezerwa oraz
+  ustawia `long_context` przed create/resume po przekroczeniu progu okna z
+  dynamicznego katalogu modeli. Feature z goal-driven researchem moze przekazac
+  `LONG_CONTEXT_REQUIRED`; wtedy platforma ustawia tier przed create/resume bez
+  zaleznosci od kompletnosci katalogu i potwierdza go przez typed
+  `session.model.getCurrent` przed pierwszym `sendAndWait`. Brak potwierdzenia
+  zatrzymuje run przed wyslaniem promptu. Runtime nie probuje zmieniac tieru w
+  trakcie aktywnej wiadomosci. Decyzje sa widoczne jako
   `AnalysisAiActivityEvent` kategorii `CONTEXT`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
   Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem

@@ -1,158 +1,105 @@
 # Platformowa polityka Copilot context tier
 
-Status: completed
+Status: in progress
 
-Source need: brak osobnego dokumentu
+Source need: brak osobnego dokumentu; korekta zatwierdzona przez uzytkownika
+2026-08-22 po obserwacji kompaktowania UI Explorera przed 272 000 tokenow.
 
 ## Potrzeba / dlaczego
 
-Wszystkie feature'y uruchamiaja Copilota przez wspolny runtime, ale obecnie
-nie ustawiaja `contextTier`. Infinite sessions korzystaja z domyslnego
-kompaktowania runtime, przez co duzy initial prompt moze zostac skompaktowany
-przed wykonaniem merytorycznej analizy. Feature nie powinien sam znac limitow
-modelu, progow kompaktowania ani RPC zmiany tieru.
+Wszystkie feature'y uruchamiaja Copilota przez wspolny runtime. Duzy initial
+prompt albo goal-driven research moze przekroczyc standardowe okno i wywolac
+infinite-session compaction przed zbudowaniem finalnego wyniku. Feature nie
+powinien znac limitow konkretnych modeli ani wywolywac provider-specific RPC,
+ale musi moc okreslic, ze jego sposob pracy wymaga rozszerzonego okna od
+pierwszej wiadomosci.
 
-Uzytkownik zatwierdzil 2026-08-22 platformowa polityke: duzy initial context
-ma startowac od razu z `long_context`, a sesja zblizajaca sie do kompaktowania
-ma jednokierunkowo przejsc z `default` do `long_context`.
+Pierwsza implementacja preflightu dodatkowo probowala reagowac na
+`session.usage_info` przez
+`setModel(model, reasoningEffort, "long_context", null)`. W uzywanym Java SDK
+trzeci `String` oznacza `reasoningSummary`, nie context tier. Dokumentacja SDK
+stwierdza tez, ze model switch obowiazuje dopiero dla nastepnej wiadomosci.
+Nie zabezpieczalo to aktywnego, jednowiadomosciowego research turnu i zostalo
+usuniete bez kompatybilnosci wstecznej.
 
-## Proponowane rozwiazanie
+## Rozwiazanie wynikowe
 
-Neutralny `aiplatform.copilot` wykorzysta dynamiczny, cache'owany katalog
-typed RPC `models.list`, estymator initial context oraz policy/session
-controller. Dla create i resume policy wybierze `long_context` przed otwarciem
-sesji, gdy estymowany prompt, definicje tools i rezerwa przekrocza 70% znanego
-standardowego okna. Wsparcie tieru i rozmiary okien wynikaja z metadanych
-billing/capability, a nie z identyfikatora modelu ani listy w properties. Dla
-sesji pozostawionej na `default`, rzeczywiste
-`session.usage_info` uruchomi jedna asynchroniczna probe upgrade'u po
-przekroczeniu 70% aktualnego standardowego `tokenLimit`, przed domyslnym
-progiem kompaktowania.
+Neutralny `CopilotSessionConfigRequest` przyjmuje preference:
 
-Decyzja oraz powod beda publikowane jako user-visible activity `CONTEXT`.
-Upgrade jest tylko `DEFAULT -> LONG_CONTEXT`; platforma nie obniza tieru.
-Brak pelnych metadanych modelu, brak wsparcia organizacji albo blad RPC nie
-przerywaja analizy i pozostawiaja domyslne zachowanie infinite sessions.
+- `AUTO` — platforma moze wybrac `long_context` przed create/resume, gdy
+  dynamiczny katalog modelu i estymacja initial context potwierdzaja potrzebe,
+- `LONG_CONTEXT_REQUIRED` — platforma ustawia `long_context` w
+  `SessionConfig` i `ResumeSessionConfig` niezaleznie od kompletnosci metadanych
+  katalogu.
 
-## Zakres
+Po otwarciu sesji, ale przed pierwszym `sendAndWait`, runtime odczytuje typed
+RPC `session.model.getCurrent`. Gdy zazadano `long_context`, efektywny tier musi
+byc rowny `long_context`. Brak potwierdzenia lub tier `default` zatrzymuje run
+przed wyslaniem duzego promptu i publikuje jawne activity `FAILED`.
 
-- nowe i wznawiane sesje wszystkich feature'ow korzystajacych z
-  `CopilotSdkExecutionGateway`,
-- konfigurowalne progi i estymacja tokenow oraz dynamiczne metadata modeli,
+UI Explorer wybiera `LONG_CONTEXT_REQUIRED`, bo jego kontekst rosnie w trakcie
+nieograniczonego researchu toolami i nie da sie go wiarygodnie przewidziec z
+samego initial promptu. Pozostale feature'y zachowuja `AUTO`.
+
+## Zakres i konsumenci
+
+- nowe i wznawiane sesje korzystajace z `CopilotSdkExecutionGateway`,
+- neutralny request/prepared-session context-tier preference,
 - preflight przed `createSession`/`resumeSession`,
-- runtime upgrade z `session.usage_info`,
-- jawna aktywnosc decyzji i testy wszystkich konsumentow platformy.
+- weryfikacja efektywnego tieru przed pierwsza wiadomoscia,
+- UI Explorer jako pierwszy konsument `LONG_CONTEXT_REQUIRED`,
+- Incident Analysis initial/chat, Flow Explorer initial/continuation, Change
+  Verification, Config Drift Viewer i Delivery Complexity Assessment pozostaja
+  konsumentami `AUTO`.
+
+Publiczne API modeli, requesty feature'ow, joby, prompty, result contracts,
+exporty, skills, tools i hidden scope nie dostaja nowych pol.
 
 ## Non-goals
 
-- brak anulowania rozpoczetego background compaction,
-- brak zaleznosci od eksperymentalnego `preCompact`,
-- brak recznego wyboru tieru w feature UI,
-- brak zmiany promptow, result contracts, exportow i hidden tool scope,
-- brak obietnicy long context dla modelu bez potwierdzonego wiekszego okna w
-  dynamicznych metadanych capability/billing.
+- brak zatrzymywania i wznawiania aktywnego turnu,
+- brak runtime tier switch na podstawie `session.usage_info`,
+- brak anulowania background compaction,
+- brak statycznej mapy identyfikatorow modeli,
+- brak recznego wyboru tieru w UI,
+- brak heurystyki po nazwie modelu.
 
-## Ograniczenia i ryzyka
+## Ryzyka i rollback
 
-- High-level `CopilotClient.listModels()` gubi czesc metadanych billing, dlatego
-  katalog korzysta z typed RPC `models.list`, ktore zachowuje
-  `tokenPrices.contextMax`, long-context metadata oraz capability limits.
-- Niepelne metadata dynamiczne oznaczaja fail-open do defaultow SDK; platforma
-  nie uzupelnia ich lista nazw ani heurystyka po identyfikatorze modelu.
-- Estymacja przed startem nie jest billingowym tokenizerem; pozostaje
-  konserwatywna i dolicza tool definitions oraz rezerwe platformowa.
-- Runtime switch jest asynchroniczny i moze przegrac wyscig z bardzo duzym
-  kolejnym wynikiem toola. Preflight pozostaje podstawowa ochrona.
-- Zmiana modelu sesji jest L3. Rollback polega na jednym property
-  `analysis.ai.copilot.context-tier.enabled=false`, ktore przywraca obecne
-  SDK/CLI defaults bez zmiany feature'ow.
-
-## Baseline i conformance delta
-
-Baseline:
-
-- `CopilotSessionConfigFactory` nie ustawia `contextTier` ani
-  `InfiniteSessionConfig` dla create/resume,
-- `CopilotSdkExecutionGateway` rejestruje usage i compaction activity, ale nie
-  reaguje na procent wykorzystania,
-- wszystkie feature'y skladaja neutralny `CopilotRunRequest`,
-- publiczne API modeli, joby, prompty, tools, usage i raporty nie zawieraja
-  context tier.
-
-Delta:
-
-- ownership: wylacznie `aiplatform.copilot.runtime`,
-- publiczne API/DTO: bez zmian,
-- context/evidence, prompt/artifacts/skills/tools/hidden scope: bez zmian,
-- session config: opcjonalny `long_context` wybrany przez neutralna policy,
-- activity: nowe jawne eventy decyzji/upgrade'u w istniejacym kontrakcie,
-- persistence/export: bez nowych pol; resumed session stosuje ta sama policy,
-- zaleznosci: bez nowego kierunku miedzy top-level pakietami.
-
-Konsumenci: Incident Analysis initial i chat, Flow Explorer initial i
-continuation, Change Verification, Config Drift Viewer DEEP, Delivery
-Complexity Assessment oraz UI Explorer.
+- `AUTO` nadal zalezy od kompletnosci typed `models.list`; brak metadanych
+  pozostawia SDK default.
+- `LONG_CONTEXT_REQUIRED` polega na oficjalnym `contextTier` create/resume, a
+  rzeczywisty stan potwierdza `session.model.getCurrent`; niewspierany model
+  zakonczy run kontrolowanym bledem przed wyslaniem promptu.
+- Estymacja `AUTO` nie jest billingowym tokenizerem; liczy prompt, system
+  message, tool definitions i rezerwe, bez ponownego liczenia osadzonych juz
+  artifacts.
+- `analysis.ai.copilot.context-tier.enabled=false` pozostaje globalnym
+  rollbackiem do SDK defaults i wylacza zarowno AUTO, jak i feature preference.
 
 ## Kryteria akceptacji
 
-- prompt przekraczajacy skonfigurowane 70% standardowego okna dostaje
-  `long_context` przed otwarciem sesji,
-- mniejszy prompt pozostaje na `default`,
-- nieznany lub niewspierany model nie dostaje wymuszonego tieru,
-- `session.usage_info` przy 70% uruchamia najwyzej jedna probe upgrade'u,
-- sesja juz korzystajaca z wiekszego `tokenLimit` nie jest przelaczana ponownie,
-- nieudany upgrade jest widoczny, ale nie przerywa runu,
-- create i resume maja spojne zachowanie,
+- UI Explorer ustawia `long_context` przed create i resume niezaleznie od
+  katalogowych metadanych modelu,
+- typed RPC potwierdza efektywny tier przed pierwszym `sendAndWait`,
+- brak potwierdzenia nie pozwala wyslac promptu,
+- AUTO nadal wybiera long context dla duzego initial context znanego modelu,
+- AUTO pozostawia default dla malego promptu albo niepelnych metadanych,
+- kod nie wywoluje `setModel(..., "long_context", ...)` i nie posiada runtime
+  usage threshold,
+- pozostale feature'y zachowuja preference AUTO,
+- activity odroznia konfiguracje oczekujaca na potwierdzenie, potwierdzony tier
+  i blad weryfikacji,
 - wszystkie fixture'y i przyklady sa silnie zanonimizowanym CRM.
 
 ## Kroki
 
-- [x] Krok 1: Dodac progi i konserwatywny estymator initial context; pokryc
-  walidacje i decyzje testami jednostkowymi.
-- [x] Krok 2: Zastosowac decyzje przed `createSession` i `resumeSession` oraz
-  opublikowac user-visible activity z estymacja, progiem i wybranym tierem.
-- [x] Krok 3: Monitorowac `session.usage_info` i wykonac jedna asynchroniczna,
-  weryfikowana probe `DEFAULT -> LONG_CONTEXT` bez blokowania dispatchera.
-- [x] Krok 4: Wykonac consumer audit, testy create/resume/runtime failure,
-  `PackageDependencyGuardTest`, pelny backend i architecture diff.
-- [x] Krok 5: Zaktualizowac kanoniczny opis runtime oraz zapisac dowod
-  weryfikacji i rollback.
-- [x] Krok 6: Usunac statyczna mape identyfikatorow i limitow modeli; rozszerzyc
-  wspolny cache katalogu o pelne dynamiczne metadata typed `models.list`,
-  przepiac policy oraz wykonac ponowna regresje na silnie zanonimizowanym CRM.
-
-## Wynik wdrozenia
-
-`CopilotContextTierPolicy` dziala przed otwarciem sesji i mutuje oba SDK
-configi tylko dla modelu, ktorego dynamiczne metadata potwierdzaja wiekszy
-context tier. Estymacja liczy prompt,
-definicje tools oraz rezerwe, ale nie liczy ponownie artifact contents, ktore
-sa juz osadzone w prompcie. Dla decyzji default/long/unsupported publikuje
-jawna aktywnosc `platform.context_tier`; wylaczenie policy nie dodaje eventow i
-pozostawia SDK defaults.
-
-`CopilotContextTierSession` reaguje na `session.usage_info`, rozpoznaje juz
-wieksze okno po `tokenLimit`, atomowo dopuszcza najwyzej jedna probe i uznaje
-zakonczony future `setModel(..., "long_context", ...)` za potwierdzenie RPC.
-Blad synchroniczny albo asynchroniczny publikuje `FAILED`, nie propaguje
-wyjatku do runu i nie ponawia upgrade'u.
-
-Consumer audit potwierdzil wspolny gateway dla Incident Analysis initial/chat,
-Flow Explorer initial/continuation, Change Verification, Config Drift Viewer,
-Delivery Complexity Assessment i UI Explorer. Zaden feature nie otrzymal
-metadanych modelu, progu ani bezposredniego `contextTier`.
-
-Po review uzytkownika usunieto `analysis.ai.copilot.context-tier.models`.
-`CopilotSdkModelOptionsProvider` jest jednym cache'owanym source of truth dla
-dynamicznie zmieniajacych sie modeli: publiczna fasada AI options nadal mapuje
-tylko pola potrzebne selectowi, natomiast policy korzysta wewnetrznie z
-domyslnego i maksymalnego okna wyprowadzonych z billing/capability. Brak tych
-danych pozostawia default SDK bez zgadywania.
-
-Weryfikacja 2026-08-22: CRM-only testy dynamicznego mapowania
-billing/capability, decyzji, create/resume, auth scope, tool definitions,
-unknown/disabled model, runtime threshold, single switch i failure — PASS;
-gateway integration, niezmieniony publiczny AI options contract i
-`PackageDependencyGuardTest` — PASS; `mvn -q test` — 1301 testow, 0 bledow,
-0 pominietych; `git diff --check` — PASS. Rollback:
-`analysis.ai.copilot.context-tier.enabled=false`.
+- [x] Krok 1: Zachowac dynamiczny katalog i preflight estimator dla AUTO.
+- [x] Krok 2: Dodac neutralne `AUTO` / `LONG_CONTEXT_REQUIRED` i przeniesc
+  preference przez przygotowanie sesji.
+- [x] Krok 3: Ustawic `contextTier` w obu configach przed create/resume.
+- [x] Krok 4: Usunac niepoprawny runtime switch oraz jego property/testy bez
+  warstwy kompatybilnosci.
+- [x] Krok 5: Dodac typed odczyt efektywnego tieru i fail-before-send.
+- [ ] Krok 6: Zakonczyc consumer audit, dokumentacje, celowane CRM-only testy,
+  `PackageDependencyGuardTest`, pelne `mvn -q test` i `git diff --check`.

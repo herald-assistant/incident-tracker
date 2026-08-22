@@ -2521,6 +2521,63 @@ skilli, parsera i package guard przeszly; pelne `mvn -q test`: 1308 testow,
 uruchamiany, poniewaz zmiana nie dotyka Angulara ani publicznego kontraktu
 request/result/report/export.
 
+#### 8R. Efektywny `long_context` przed pierwszym turnem UI Explorera
+
+Status kroku: in progress. Uzytkownik zatwierdzil 2026-08-22 poprawke po
+potwierdzeniu, ze sesja UI Explorera nadal zostala skompaktowana przed limitem
+272 000 tokenow. Source need pozostaje `../needs/ui-explorer.md`.
+
+Baseline: wspolna polityka ustawiala `contextTier` przed create/resume tylko,
+gdy niepelne dynamiczne metadata modelu potwierdzaly wieksze okno albo
+estymowany initial prompt przekraczal prog. Dla UI Explorera z malym promptem i
+duzym research frontierem pozostawiala tier `default`. Pozniejszy handler
+`session.usage_info` wywolywal
+`setModel(model, reasoningEffort, "long_context", null)`. W uzywanym Java SDK
+trzeci argument tej metody jest `reasoningSummary`, zmiana modelu obowiazuje
+dopiero od nastepnej wiadomosci, a caly research UI Explorera odbywa sie w
+jednym aktywnym `sendAndWait`. Mechanizm nie mogl wiec zabezpieczyc biezacego
+turnu, mimo ze activity sugerowalo probe zmiany tieru.
+
+Conformance delta: neutralny request sesji dostaje preference `AUTO` albo
+`LONG_CONTEXT_REQUIRED`. UI Explorer wybiera `LONG_CONTEXT_REQUIRED`, poniewaz
+rozmiar jego finalnego kontekstu wynika z nieograniczonego researchu toolami,
+a nie tylko z initial promptu. Platforma ustawia `long_context` w
+`SessionConfig` i `ResumeSessionConfig` przed otwarciem sesji, niezaleznie od
+kompletnosci katalogowych metadanych modelu. Bezposrednio po create/resume i
+przed pierwszym `sendAndWait` platforma czyta typed RPC
+`session.model.getCurrent`; brak efektywnego `long_context` albo brak mozliwosci
+jego potwierdzenia zatrzymuje run przed wyslaniem promptu i publikuje jawne
+activity `FAILED`.
+
+Usuwamy bez warstwy kompatybilnosci property runtime threshold, callback
+`session.usage_info` i wywolanie `setModel` podszywajace `reasoningSummary` pod
+context tier. Sesji nie zatrzymujemy i nie wznawiamy w trakcie aktywnego turnu:
+SDK dokumentuje, ze model switch dotyczy nastepnej wiadomosci, a przerwanie
+turnu traciloby niedokonczony research. Pozostale feature'y zachowuja `AUTO` i
+dotychczasowa preflight estymacje oparta o dynamiczny katalog. Globalne
+`analysis.ai.copilot.context-tier.enabled=false` pozostaje operacyjnym
+rollbackiem do SDK defaults.
+
+Zmiana jest L2: dotyka neutralnego kontraktu session preparation, platformowej
+orkiestracji SDK i feature-owned assemblera UI Explorera. Publiczne API,
+result/report/export, prompt, skille, tool schema, hidden scope i frontend nie
+zmieniaja sie. Konsumenci zostali objeci audytem, a wszystkie nowe testy i
+fixture'y sa silnie zanonimizowanym, syntetycznym CRM.
+
+- [x] 8R.1: Dodac neutralna preference context tier i przeniesc ja z requestu
+  feature'a do prepared session bez rozpoznawania nazw modeli.
+- [x] 8R.2: Ustawic UI Explorer jako `LONG_CONTEXT_REQUIRED` dla create i
+  resume przed otwarciem sesji.
+- [x] 8R.3: Usunac runtime `setModel` i property runtime threshold bez
+  kompatybilnosci wstecznej.
+- [x] 8R.4: Zweryfikowac efektywny tier typed RPC przed pierwszym
+  `sendAndWait` oraz przerwac run bez wyslania promptu, gdy gwarancja nie jest
+  spelniona.
+- [ ] 8R.5: Zaktualizowac kanoniczna dokumentacje oraz wykonac CRM-only testy
+  policy, create/resume, gateway ordering/failure, assemblera, wszystkich
+  konsumentow, `PackageDependencyGuardTest`, pelne `mvn -q test` i
+  `git diff --check`.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

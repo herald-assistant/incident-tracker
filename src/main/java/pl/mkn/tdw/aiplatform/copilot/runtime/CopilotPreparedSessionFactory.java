@@ -23,7 +23,8 @@ public class CopilotPreparedSessionFactory {
                 request.initialReport(),
                 request.evidenceSink(),
                 request.activitySink(),
-                request.auth()
+                request.auth(),
+                request.sessionConfigRequest().contextTierPreference()
         );
     }
 }

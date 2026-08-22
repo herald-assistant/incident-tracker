@@ -21,6 +21,10 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotEffectiveContextTier;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotEffectiveContextTierReader;
+import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOption;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsResponse;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
@@ -42,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -273,15 +278,16 @@ class CopilotSdkExecutionGatewayTest {
     }
 
     @Test
-    void shouldApplyPlatformLongContextPolicyToRuntimeUsageEventOnce() {
+    void shouldVerifyRequiredLongContextBeforeSendingFirstCrmMessage() {
         var properties = new CopilotSdkProperties();
-        properties.getContextTier().setInitialPromptThreshold(0.95D);
-        properties.getContextTier().setRuntimeUsageThreshold(0.70D);
         properties.getContextTier().setEstimatedCharactersPerToken(4D);
         properties.getContextTier().setReservedTokens(0);
+        var effectiveTierReader = mock(CopilotEffectiveContextTierReader.class);
         var gateway = executionGateway(
                 properties,
-                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper())
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
+                new CopilotReportSessionStore(),
+                effectiveTierReader
         );
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var sessionConfig = new SessionConfig()
@@ -290,14 +296,19 @@ class CopilotSdkExecutionGatewayTest {
                 .setReasoningEffort("medium");
         var preparedRequest = new CopilotPreparedSession(
                 "crm-context-run",
+                CopilotSessionTarget.newSession(),
                 new CopilotClientOptions(),
                 sessionConfig,
+                new ResumeSessionConfig().setModel("gpt-synthetic-crm"),
                 new MessageOptions().setPrompt("Review the synthetic CRM contact screen."),
                 "Review the synthetic CRM contact screen.",
                 Map.of(),
+                null,
                 evidence -> {
                 },
-                activities::add
+                activities::add,
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
         );
         var eventHandler = new AtomicReference<Consumer<SessionEvent>>();
         var sessionRef = new AtomicReference<CopilotSession>();
@@ -315,23 +326,83 @@ class CopilotSdkExecutionGatewayTest {
                 return (Closeable) () -> {
                 };
             });
-            when(session.setModel("gpt-synthetic-crm", "medium", "long_context", null))
-                    .thenReturn(CompletableFuture.completedFuture(null));
+            when(effectiveTierReader.read(session)).thenReturn(new CopilotEffectiveContextTier(
+                    "gpt-synthetic-crm",
+                    "medium",
+                    "long_context"
+            ));
             when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
                     .thenAnswer(invocation -> {
-                        eventHandler.get().accept(sessionUsageInfo(100, 70, 3));
-                        eventHandler.get().accept(sessionUsageInfo(100, 85, 4));
                         return CompletableFuture.completedFuture(assistantMessage("Synthetic CRM answer"));
                     });
         })) {
             var response = gateway.execute(preparedRequest);
 
             assertEquals("Synthetic CRM answer", response.content());
-            verify(sessionRef.get(), times(1))
-                    .setModel("gpt-synthetic-crm", "medium", "long_context", null);
+            assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");
+            var ordering = org.mockito.Mockito.inOrder(effectiveTierReader, sessionRef.get());
+            ordering.verify(effectiveTierReader).read(sessionRef.get());
+            ordering.verify(sessionRef.get()).sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L));
             assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
                     .extracting(AnalysisAiActivityEvent::status)
-                    .containsExactly("INFO", "STARTED", "COMPLETED");
+                    .containsExactly("STARTED", "COMPLETED");
+        }
+    }
+
+    @Test
+    void shouldNotSendCrmPromptWhenRequiredLongContextIsNotEffective() {
+        var properties = new CopilotSdkProperties();
+        var effectiveTierReader = mock(CopilotEffectiveContextTierReader.class);
+        var gateway = executionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
+                new CopilotReportSessionStore(),
+                effectiveTierReader
+        );
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var sessionConfig = new SessionConfig()
+                .setSessionId("crm-context-rejected-session")
+                .setModel("gpt-synthetic-crm");
+        var preparedRequest = new CopilotPreparedSession(
+                "crm-context-rejected-run",
+                CopilotSessionTarget.newSession(),
+                new CopilotClientOptions(),
+                sessionConfig,
+                new ResumeSessionConfig().setModel("gpt-synthetic-crm"),
+                new MessageOptions().setPrompt("Review the synthetic CRM contact screen."),
+                "Review the synthetic CRM contact screen.",
+                Map.of(),
+                null,
+                evidence -> {
+                },
+                activities::add,
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
+        );
+        var sessionRef = new AtomicReference<CopilotSession>();
+
+        try (MockedConstruction<CopilotClient> ignored = mockConstruction(CopilotClient.class, (client, context) -> {
+            var session = mock(CopilotSession.class);
+            sessionRef.set(session);
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.createSession(same(sessionConfig))).thenReturn(CompletableFuture.completedFuture(session));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+            when(effectiveTierReader.read(session)).thenReturn(new CopilotEffectiveContextTier(
+                    "gpt-synthetic-crm",
+                    "medium",
+                    "default"
+            ));
+        })) {
+            assertThatThrownBy(() -> gateway.execute(preparedRequest))
+                    .isInstanceOf(CopilotSdkInvocationException.class)
+                    .hasMessageContaining("did not activate long_context");
+
+            verify(sessionRef.get(), never()).sendAndWait(any(MessageOptions.class), eq(300_000L));
+            assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .extracting(AnalysisAiActivityEvent::status)
+                    .containsExactly("STARTED", "FAILED");
         }
     }
 
@@ -626,17 +697,34 @@ class CopilotSdkExecutionGatewayTest {
             CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
             CopilotReportSessionStore reportStore
     ) {
+        return executionGateway(
+                properties,
+                toolEvidenceSessionStore,
+                reportStore,
+                mock(CopilotEffectiveContextTierReader.class)
+        );
+    }
+
+    private CopilotSdkExecutionGateway executionGateway(
+            CopilotSdkProperties properties,
+            CopilotToolEvidenceSessionStore toolEvidenceSessionStore,
+            CopilotReportSessionStore reportStore,
+            CopilotEffectiveContextTierReader effectiveTierReader
+    ) {
         return new CopilotSdkExecutionGateway(
                 properties,
                 toolEvidenceSessionStore,
                 new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
                 reportStore,
                 new CopilotClientShutdown(properties),
-                contextTierPolicy(properties)
+                contextTierPolicy(properties, effectiveTierReader)
         );
     }
 
-    private CopilotContextTierPolicy contextTierPolicy(CopilotSdkProperties properties) {
+    private CopilotContextTierPolicy contextTierPolicy(
+            CopilotSdkProperties properties,
+            CopilotEffectiveContextTierReader effectiveTierReader
+    ) {
         return new CopilotContextTierPolicy(
                 properties,
                 auth -> new CopilotModelOptionsResponse(
@@ -652,7 +740,8 @@ class CopilotSdkExecutionGatewayTest {
                                 100,
                                 1_000
                         ))
-                )
+                ),
+                effectiveTierReader
         );
     }
 

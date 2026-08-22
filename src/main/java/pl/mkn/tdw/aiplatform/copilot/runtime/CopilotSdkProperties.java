@@ -80,8 +80,8 @@ public class CopilotSdkProperties {
 
         private boolean enabled = true;
         private double initialPromptThreshold = 0.70D;
-        private double runtimeUsageThreshold = 0.70D;
         private double estimatedCharactersPerToken = 3.5D;
         private int reservedTokens = 16_000;
+        private Duration verificationTimeout = Duration.ofSeconds(20);
     }
 }

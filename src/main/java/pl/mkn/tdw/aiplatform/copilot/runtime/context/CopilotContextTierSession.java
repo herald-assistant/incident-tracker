@@ -1,17 +1,13 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.context;
 
 import com.github.copilot.CopilotSession;
-import com.github.copilot.generated.SessionUsageInfoEvent;
 import lombok.extern.slf4j.Slf4j;
-import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -19,31 +15,24 @@ public final class CopilotContextTierSession {
 
     private static final String EVENT_TYPE = "platform.context_tier";
 
-    private final CopilotSdkProperties.ContextTierPolicy settings;
     private final CopilotContextTierDecision decision;
-    private final String reasoningEffort;
     private final Consumer<AnalysisAiActivityEvent> activitySink;
-    private final AtomicBoolean longContextSelected;
-    private final AtomicBoolean runtimeSwitchAttempted = new AtomicBoolean();
-    private volatile CompletableFuture<Void> runtimeSwitch = CompletableFuture.completedFuture(null);
+    private final CopilotEffectiveContextTierReader effectiveContextTierReader;
 
     CopilotContextTierSession(
-            CopilotSdkProperties.ContextTierPolicy settings,
             CopilotContextTierDecision decision,
-            String reasoningEffort,
-            Consumer<AnalysisAiActivityEvent> activitySink
+            Consumer<AnalysisAiActivityEvent> activitySink,
+            CopilotEffectiveContextTierReader effectiveContextTierReader
     ) {
-        this.settings = settings;
         this.decision = decision;
-        this.reasoningEffort = reasoningEffort;
         this.activitySink = activitySink;
-        this.longContextSelected = new AtomicBoolean(decision.useLongContextInitially());
+        this.effectiveContextTierReader = effectiveContextTierReader;
         if (decision.useLongContextInitially()) {
             publish(
-                    "COMPLETED",
-                    "Rozszerzony kontekst sesji",
-                    "Sesja została skonfigurowana z `long_context` przed wysłaniem promptu.",
-                    details("INITIAL_PROMPT", decision.estimatedInitialTokens(), decision.initialThresholdTokens())
+                    "STARTED",
+                    "Weryfikacja rozszerzonego kontekstu",
+                    "Sesja zostanie otwarta z wymaganym `long_context`, a efektywny tier zostanie sprawdzony przed wysłaniem promptu.",
+                    details("PRE_SESSION", decision.estimatedInitialTokens(), decision.initialThresholdTokens())
             );
         } else if (decision.policyEnabled()) {
             var details = details(
@@ -51,11 +40,11 @@ public final class CopilotContextTierSession {
                     decision.estimatedInitialTokens(),
                     decision.initialThresholdTokens()
             );
-            details.put("selectedTier", "default");
+            details.put("requestedTier", "default");
             publish(
                     "INFO",
                     "Standardowy kontekst sesji",
-                    decision.modelSupported()
+                    decision.modelMetadataAvailable()
                             ? "Oszacowany kontekst pozostaje poniżej progu dla `long_context`."
                             : "Dynamiczny katalog Copilota nie potwierdził tieru `long_context`; pozostawiono domyślny tier.",
                     details
@@ -67,100 +56,70 @@ public final class CopilotContextTierSession {
         return decision;
     }
 
-    public void onSessionUsage(CopilotSession session, SessionUsageInfoEvent event) {
-        if (!decision.policyEnabled() || !decision.modelSupported() || longContextSelected.get()) {
-            return;
-        }
-        var data = event != null ? event.getData() : null;
-        if (data == null) {
-            return;
-        }
-        var tokenLimit = numeric(data.tokenLimit());
-        var currentTokens = numeric(data.currentTokens());
-        if (tokenLimit <= 0D) {
-            return;
-        }
-        if (tokenLimit > decision.defaultWindowTokens()) {
-            longContextSelected.set(true);
-            return;
-        }
-        var ratio = currentTokens / tokenLimit;
-        if (ratio < settings.getRuntimeUsageThreshold()
-                || !runtimeSwitchAttempted.compareAndSet(false, true)) {
+    public void verifyBeforeFirstMessage(CopilotSession session) {
+        if (!decision.useLongContextInitially()) {
             return;
         }
 
-        var eventDetails = details("RUNTIME_USAGE", Math.round(currentTokens), Math.round(tokenLimit));
-        eventDetails.put("usageRatio", ratio);
-        publish(
-                "STARTED",
-                "Przełączenie na rozszerzony kontekst",
-                "Wykorzystanie bieżącego okna osiągnęło próg polityki platformowej.",
-                eventDetails
-        );
+        CopilotEffectiveContextTier effectiveTier;
         try {
-            runtimeSwitch = session.setModel(
-                            decision.modelId(),
-                            reasoningEffort,
-                            CopilotContextTierPolicy.LONG_CONTEXT,
-                            null
-                    )
-                    .handle((ignored, failure) -> {
-                        if (failure == null) {
-                            longContextSelected.set(true);
-                            publish(
-                                    "COMPLETED",
-                                    "Rozszerzony kontekst sesji",
-                                    "Copilot potwierdził przełączenie sesji na `long_context`.",
-                                    eventDetails
-                            );
-                        } else {
-                            var failureDetails = new LinkedHashMap<>(eventDetails);
-                            failureDetails.put("failureType", rootCause(failure).getClass().getSimpleName());
-                            publish(
-                                    "FAILED",
-                                    "Nie udało się rozszerzyć kontekstu",
-                                    "Analiza jest kontynuowana z dotychczasowym oknem kontekstowym.",
-                                    failureDetails
-                            );
-                            log.warn(
-                                    "Copilot context-tier runtime switch failed model={} reason={}",
-                                    decision.modelId(),
-                                    rootCause(failure).getMessage()
-                            );
-                        }
-                        return null;
-                    });
+            effectiveTier = effectiveContextTierReader.read(session);
         } catch (RuntimeException failure) {
-            var failureDetails = new LinkedHashMap<>(eventDetails);
-            failureDetails.put("failureType", failure.getClass().getSimpleName());
+            var details = details("SDK_MODEL_GET_CURRENT", decision.estimatedInitialTokens(), 0);
+            details.put("failureType", rootCause(failure).getClass().getSimpleName());
             publish(
                     "FAILED",
-                    "Nie udało się rozszerzyć kontekstu",
-                    "Analiza jest kontynuowana z dotychczasowym oknem kontekstowym.",
-                    failureDetails
+                    "Nie potwierdzono rozszerzonego kontekstu",
+                    "Prompt nie został wysłany, ponieważ SDK nie potwierdziło efektywnego tieru sesji.",
+                    details
             );
-            log.warn(
-                    "Copilot context-tier runtime switch could not be started model={} reason={}",
-                    decision.modelId(),
-                    failure.getMessage()
+            throw new IllegalStateException(
+                    "Copilot SDK could not verify long_context before the first message.",
+                    failure
             );
         }
+
+        var details = details("SDK_MODEL_GET_CURRENT", decision.estimatedInitialTokens(), 0);
+        details.put("effectiveTier", effectiveTier.contextTier());
+        details.put("effectiveModel", effectiveTier.modelId());
+        details.put("effectiveReasoningEffort", effectiveTier.reasoningEffort());
+        if (!CopilotContextTierPolicy.LONG_CONTEXT.equals(effectiveTier.contextTier())) {
+            publish(
+                    "FAILED",
+                    "Rozszerzony kontekst nie jest aktywny",
+                    "Prompt nie został wysłany, ponieważ efektywny tier sesji nie jest równy `long_context`.",
+                    details
+            );
+            throw new IllegalStateException(
+                    "Copilot SDK did not activate long_context before the first message; effective tier: "
+                            + effectiveTier.contextTier()
+            );
+        }
+
+        publish(
+                "COMPLETED",
+                "Rozszerzony kontekst sesji",
+                "Copilot SDK potwierdził `long_context` przed wysłaniem promptu.",
+                details
+        );
     }
 
-    CompletableFuture<Void> runtimeSwitch() {
-        return runtimeSwitch;
-    }
-
-    private LinkedHashMap<String, Object> details(String trigger, long observedTokens, long thresholdOrLimit) {
+    private LinkedHashMap<String, Object> details(String trigger, long estimatedTokens, long thresholdTokens) {
         var details = new LinkedHashMap<String, Object>();
         details.put("trigger", trigger);
         details.put("model", decision.modelId());
-        details.put("selectedTier", CopilotContextTierPolicy.LONG_CONTEXT);
-        details.put("observedTokens", observedTokens);
-        details.put("thresholdOrLimitTokens", thresholdOrLimit);
-        details.put("defaultWindowTokens", decision.defaultWindowTokens());
-        details.put("longContextWindowTokens", decision.longContextWindowTokens());
+        details.put("preference", decision.preference().name());
+        details.put("requestedTier", CopilotContextTierPolicy.LONG_CONTEXT);
+        details.put("estimatedInitialTokens", estimatedTokens);
+        if (thresholdTokens > 0) {
+            details.put("initialThresholdTokens", thresholdTokens);
+        }
+        if (decision.defaultWindowTokens() > 0) {
+            details.put("defaultWindowTokens", decision.defaultWindowTokens());
+        }
+        if (decision.longContextWindowTokens() > 0) {
+            details.put("longContextWindowTokens", decision.longContextWindowTokens());
+        }
         details.put("reason", decision.reason());
         return details;
     }
@@ -188,10 +147,6 @@ public final class CopilotContextTierSession {
         } catch (RuntimeException failure) {
             log.warn("Copilot context-tier activity listener failed status={} reason={}", status, failure.getMessage());
         }
-    }
-
-    private double numeric(Number value) {
-        return value != null ? value.doubleValue() : 0D;
     }
 
     private Throwable rootCause(Throwable failure) {

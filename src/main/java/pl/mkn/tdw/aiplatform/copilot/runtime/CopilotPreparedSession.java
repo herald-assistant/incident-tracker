@@ -5,6 +5,7 @@ import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -26,7 +27,8 @@ public record CopilotPreparedSession(
         AnalysisReport initialReport,
         Consumer<AnalysisEvidenceSection> evidenceSink,
         Consumer<AnalysisAiActivityEvent> activitySink,
-        CopilotRunAuth auth
+        CopilotRunAuth auth,
+        CopilotContextTierPreference contextTierPreference
 ) implements AutoCloseable {
 
     private static final Consumer<AnalysisEvidenceSection> NO_OP_EVIDENCE_SINK = section -> {
@@ -54,7 +56,8 @@ public record CopilotPreparedSession(
                 null,
                 NO_OP_EVIDENCE_SINK,
                 NO_OP_ACTIVITY_SINK,
-                CopilotRunAuth.localToken()
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.AUTO
         );
     }
 
@@ -80,7 +83,8 @@ public record CopilotPreparedSession(
                 null,
                 evidenceSink,
                 activitySink,
-                CopilotRunAuth.localToken()
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.AUTO
         );
     }
 
@@ -108,7 +112,39 @@ public record CopilotPreparedSession(
                 null,
                 evidenceSink,
                 activitySink,
-                CopilotRunAuth.localToken()
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.AUTO
+        );
+    }
+
+    public CopilotPreparedSession(
+            String runReference,
+            CopilotSessionTarget sessionTarget,
+            CopilotClientOptions clientOptions,
+            SessionConfig sessionConfig,
+            ResumeSessionConfig resumeSessionConfig,
+            MessageOptions messageOptions,
+            String prompt,
+            Map<String, String> artifactContents,
+            AnalysisReport initialReport,
+            Consumer<AnalysisEvidenceSection> evidenceSink,
+            Consumer<AnalysisAiActivityEvent> activitySink,
+            CopilotRunAuth auth
+    ) {
+        this(
+                runReference,
+                sessionTarget,
+                clientOptions,
+                sessionConfig,
+                resumeSessionConfig,
+                messageOptions,
+                prompt,
+                artifactContents,
+                initialReport,
+                evidenceSink,
+                activitySink,
+                auth,
+                CopilotContextTierPreference.AUTO
         );
     }
 
@@ -120,6 +156,9 @@ public record CopilotPreparedSession(
         evidenceSink = evidenceSink != null ? evidenceSink : NO_OP_EVIDENCE_SINK;
         activitySink = activitySink != null ? activitySink : NO_OP_ACTIVITY_SINK;
         auth = auth != null ? auth : CopilotRunAuth.localToken();
+        contextTierPreference = contextTierPreference != null
+                ? contextTierPreference
+                : CopilotContextTierPreference.AUTO;
     }
 
     public String providerName() {
@@ -139,7 +178,8 @@ public record CopilotPreparedSession(
                 initialReport,
                 evidenceSink,
                 activitySink,
-                auth
+                auth,
+                contextTierPreference
         );
     }
 
@@ -156,7 +196,8 @@ public record CopilotPreparedSession(
                 initialReport,
                 evidenceSink,
                 activitySink,
-                auth
+                auth,
+                contextTierPreference
         );
     }
 
@@ -173,7 +214,8 @@ public record CopilotPreparedSession(
                 initialReport,
                 evidenceSink,
                 activitySink,
-                auth
+                auth,
+                contextTierPreference
         );
     }
 

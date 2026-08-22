@@ -169,13 +169,18 @@ jest zmiana architektoniczna i wymaga planu, testow oraz rollbacku.
 `CopilotContextTierPolicy` jest jedynym wlascicielem automatycznego wyboru
 `long_context`. Rozmiary okien i wsparcie tieru pochodza z cache'owanego typed
 RPC `models.list`; `analysis.ai.copilot.context-tier` zawiera tylko progi,
-estymator, rezerwe i przelacznik. Preflight obejmuje prompt, opcjonalne durable
-system instructions, definicje tools i rezerwe, a runtime reaguje na
-`session.usage_info` jednokierunkowo i najwyzej raz. Durable instructions sa
+estymator, rezerwe i przelacznik. Preflight `AUTO` obejmuje prompt, opcjonalne
+durable system instructions, definicje tools i rezerwe. Feature, ktorego
+kontekst rosnie przez goal-driven research, moze zadeklarowac
+`LONG_CONTEXT_REQUIRED`; platforma ustawia wtedy tier w configach create/resume
+i potwierdza efektywny stan przez `session.model.getCurrent` przed pierwszym
+`sendAndWait`. Nie przywracaj runtime switcha z `session.usage_info`:
+`CopilotSession.setModel` obowiazuje od nastepnej wiadomosci, a jego trzeci
+`String` jest `reasoningSummary`, nie context tier. Durable instructions sa
 feature-owned, platforma mapuje je na `SystemMessageMode.APPEND` dla create i
-resume; nie umieszczaj w nich duzych source artifacts. Nie dodawaj recznego
-tieru do requestow feature'ow, list identyfikatorow modeli ani logiki po nazwie
-modelu. W razie regresji wylacz cala polityke przez
+resume; nie umieszczaj w nich duzych source artifacts. Nie dodawaj list
+identyfikatorow modeli ani logiki po nazwie modelu. W razie regresji wylacz
+cala polityke przez
 `analysis.ai.copilot.context-tier.enabled=false`.
 
 Packaged resources sa immutable seedem tego katalogu. Startup dopisuje tylko

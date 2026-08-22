@@ -1,6 +1,7 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import com.github.copilot.rpc.ToolDefinition;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 
 import java.util.List;
 
@@ -11,7 +12,8 @@ public record CopilotSessionConfigRequest(
         CopilotModelSelection modelSelection,
         String deniedToolUseMessage,
         boolean skillsEnabled,
-        String durableSystemInstructions
+        String durableSystemInstructions,
+        CopilotContextTierPreference contextTierPreference
 ) {
 
     public static final String SKILL_TOOL_NAME = "skill";
@@ -25,7 +27,16 @@ public record CopilotSessionConfigRequest(
             CopilotModelSelection modelSelection,
             String deniedToolUseMessage
     ) {
-        this(sessionId, tools, availableToolNames, modelSelection, deniedToolUseMessage, true, null);
+        this(
+                sessionId,
+                tools,
+                availableToolNames,
+                modelSelection,
+                deniedToolUseMessage,
+                true,
+                null,
+                CopilotContextTierPreference.AUTO
+        );
     }
 
     public CopilotSessionConfigRequest(
@@ -43,7 +54,8 @@ public record CopilotSessionConfigRequest(
                 modelSelection,
                 deniedToolUseMessage,
                 skillsEnabled,
-                null
+                null,
+                CopilotContextTierPreference.AUTO
         );
     }
 
@@ -57,6 +69,9 @@ public record CopilotSessionConfigRequest(
         deniedToolUseMessage = hasText(deniedToolUseMessage)
                 ? deniedToolUseMessage
                 : DEFAULT_DENIED_TOOL_USE_MESSAGE;
+        contextTierPreference = contextTierPreference != null
+                ? contextTierPreference
+                : CopilotContextTierPreference.AUTO;
     }
 
     public List<String> effectiveAvailableToolNames() {
@@ -81,7 +96,21 @@ public record CopilotSessionConfigRequest(
                 modelSelection,
                 deniedToolUseMessage,
                 skillsEnabled,
-                instructions
+                instructions,
+                contextTierPreference
+        );
+    }
+
+    public CopilotSessionConfigRequest withContextTierPreference(CopilotContextTierPreference preference) {
+        return new CopilotSessionConfigRequest(
+                sessionId,
+                tools,
+                availableToolNames,
+                modelSelection,
+                deniedToolUseMessage,
+                skillsEnabled,
+                durableSystemInstructions,
+                preference
         );
     }
 

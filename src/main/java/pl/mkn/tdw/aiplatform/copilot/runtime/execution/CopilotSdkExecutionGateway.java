@@ -62,6 +62,7 @@ public class CopilotSdkExecutionGateway {
 
                     try (var session = openSession(client, preparedSession)) {
                         logDuration(sessionOperation, runReference, nanosToMillis(openSessionStart));
+                        contextTierSession.verifyBeforeFirstMessage(session);
                         var sessionSummary = newSessionLogSummary(runReference);
                         var sessionId = resolvedSessionId(session, preparedSession);
                         var reportId = registerReport(preparedSession.initialReport());
@@ -77,8 +78,7 @@ public class CopilotSdkExecutionGateway {
                                 session,
                                 sessionSummary,
                                 usageAccumulator,
-                                preparedSession.activitySink(),
-                                contextTierSession
+                                preparedSession.activitySink()
                         ));
 
                         try {
@@ -210,15 +210,11 @@ public class CopilotSdkExecutionGateway {
             CopilotSession session,
             SessionLogSummary sessionSummary,
             CopilotUsageAccumulator usageAccumulator,
-            Consumer<AnalysisAiActivityEvent> activitySink,
-            CopilotContextTierSession contextTierSession
+            Consumer<AnalysisAiActivityEvent> activitySink
     ) {
         logSessionEvent(event, session, sessionSummary);
         recordUsageEvent(event, usageAccumulator);
         publishActivityEvent(event, activitySink);
-        if (event instanceof SessionUsageInfoEvent sessionUsageInfoEvent) {
-            contextTierSession.onSessionUsage(session, sessionUsageInfoEvent);
-        }
     }
 
     private void recordUsageEvent(SessionEvent event, CopilotUsageAccumulator usageAccumulator) {

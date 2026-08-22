@@ -1,7 +1,6 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime.context;
 
 import com.github.copilot.CopilotSession;
-import com.github.copilot.generated.SessionUsageInfoEvent;
 import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.ResumeSessionConfig;
@@ -23,16 +22,16 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CopilotContextTierPolicyTest {
 
     @Test
-    void shouldSelectLongContextForNewAndResumedCrmSessionAtInitialThreshold() {
-        var properties = properties(0.70D, 0.70D, 1D, 0);
+    void shouldSelectLongContextForNewAndResumedCrmSessionAtAutoThreshold() {
+        var properties = properties(0.70D, 1D, 0);
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var sessionConfig = new SessionConfig().setModel("gpt-crm-context").setReasoningEffort("medium");
         var resumeConfig = new ResumeSessionConfig().setModel("gpt-crm-context").setReasoningEffort("medium");
@@ -41,37 +40,44 @@ class CopilotContextTierPolicyTest {
                 sessionConfig,
                 resumeConfig,
                 List.of(),
-                activities
+                activities,
+                CopilotContextTierPreference.AUTO
         );
 
-        var contextTierSession = policy(properties).prepare(prepared);
+        var contextTierSession = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared);
 
         assertThat(contextTierSession.decision().estimatedInitialTokens()).isGreaterThanOrEqualTo(70);
         assertThat(contextTierSession.decision().useLongContextInitially()).isTrue();
+        assertThat(contextTierSession.decision().modelMetadataAvailable()).isTrue();
         assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");
         assertThat(resumeConfig.getContextTier()).isEqualTo("long_context");
         assertThat(activities).singleElement().satisfies(activity -> {
             assertThat(activity.category()).isEqualTo("CONTEXT");
-            assertThat(activity.status()).isEqualTo("COMPLETED");
-            assertThat(activity.details()).containsEntry("trigger", "INITIAL_PROMPT");
+            assertThat(activity.status()).isEqualTo("STARTED");
+            assertThat(activity.details()).containsEntry("trigger", "PRE_SESSION");
         });
     }
 
     @Test
     void shouldIncludeToolDefinitionsAndReserveWithoutCountingEmbeddedArtifactsTwice() {
-        var properties = properties(0.70D, 0.70D, 1D, 10);
+        var properties = properties(0.70D, 1D, 10);
         var tool = ToolDefinition.createSkipPermission(
                 "crm_contact_lookup",
                 "Read a synthetic CRM contact context",
                 Map.of("type", "object", "properties", Map.of("crmContactId", Map.of("type", "string"))),
                 invocation -> CompletableFuture.completedFuture(Map.of("status", "ok"))
         );
-        var sessionConfig = new SessionConfig()
-                .setModel("gpt-crm-context")
-                .setTools(List.of(tool));
-        var prepared = prepared("CRM", sessionConfig, new ResumeSessionConfig(), List.of(tool), new ArrayList<>());
+        var sessionConfig = new SessionConfig().setModel("gpt-crm-context").setTools(List.of(tool));
+        var prepared = prepared(
+                "CRM",
+                sessionConfig,
+                new ResumeSessionConfig(),
+                List.of(tool),
+                new ArrayList<>(),
+                CopilotContextTierPreference.AUTO
+        );
 
-        var decision = policy(properties).prepare(prepared).decision();
+        var decision = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared).decision();
 
         assertThat(decision.estimatedInitialTokens()).isGreaterThan(70);
         assertThat(decision.useLongContextInitially()).isTrue();
@@ -83,7 +89,7 @@ class CopilotContextTierPolicyTest {
 
     @Test
     void shouldIncludeDurableCrmSystemInstructionsInInitialContextEstimate() {
-        var properties = properties(0.70D, 0.70D, 1D, 0);
+        var properties = properties(0.70D, 1D, 0);
         var sessionConfig = new SessionConfig()
                 .setModel("gpt-crm-context")
                 .setSystemMessage(new SystemMessageConfig().setContent(
@@ -94,37 +100,73 @@ class CopilotContextTierPolicyTest {
                 sessionConfig,
                 new ResumeSessionConfig(),
                 List.of(),
-                new ArrayList<>()
+                new ArrayList<>(),
+                CopilotContextTierPreference.AUTO
         );
 
-        var decision = policy(properties).prepare(prepared).decision();
+        var decision = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared).decision();
 
         assertThat(decision.estimatedInitialTokens()).isGreaterThanOrEqualTo(70);
         assertThat(decision.useLongContextInitially()).isTrue();
     }
 
     @Test
-    void shouldKeepDefaultTierForSmallPromptAndUnknownModel() {
-        var properties = properties(0.70D, 0.70D, 4D, 0);
+    void shouldKeepDefaultTierForSmallAutoPromptAndUnknownModel() {
+        var properties = properties(0.70D, 4D, 0);
         var knownConfig = new SessionConfig().setModel("gpt-crm-context");
         var unknownConfig = new SessionConfig().setModel("gpt-unknown-crm");
 
-        var known = policy(properties).prepare(prepared(
-                "Small synthetic CRM prompt", knownConfig, new ResumeSessionConfig(), List.of(), new ArrayList<>()
+        var known = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
+                "Small synthetic CRM prompt",
+                knownConfig,
+                new ResumeSessionConfig(),
+                List.of(),
+                new ArrayList<>(),
+                CopilotContextTierPreference.AUTO
         ));
-        var unknown = policy(properties).prepare(prepared(
-                "CRM_LONG_PROMPT_".repeat(20), unknownConfig, new ResumeSessionConfig(), List.of(), new ArrayList<>()
+        var unknown = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
+                "CRM_LONG_PROMPT_".repeat(20),
+                unknownConfig,
+                new ResumeSessionConfig(),
+                List.of(),
+                new ArrayList<>(),
+                CopilotContextTierPreference.AUTO
         ));
 
         assertThat(known.decision().useLongContextInitially()).isFalse();
         assertThat(knownConfig.getContextTier()).isNull();
-        assertThat(unknown.decision().modelSupported()).isFalse();
+        assertThat(unknown.decision().modelMetadataAvailable()).isFalse();
         assertThat(unknownConfig.getContextTier()).isNull();
     }
 
     @Test
+    void shouldRequireLongContextWithoutDependingOnDynamicCatalogMetadata() {
+        var properties = properties(0.70D, 4D, 0);
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var sessionConfig = new SessionConfig().setModel("gpt-crm-dynamic");
+        var resumeConfig = new ResumeSessionConfig().setModel("gpt-crm-dynamic");
+        var prepared = prepared(
+                "Small synthetic CRM prompt",
+                sessionConfig,
+                resumeConfig,
+                List.of(),
+                activities,
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
+        );
+
+        var controller = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared);
+
+        assertThat(controller.decision().preference()).isEqualTo(CopilotContextTierPreference.LONG_CONTEXT_REQUIRED);
+        assertThat(controller.decision().modelMetadataAvailable()).isFalse();
+        assertThat(controller.decision().useLongContextInitially()).isTrue();
+        assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");
+        assertThat(resumeConfig.getContextTier()).isEqualTo("long_context");
+        assertThat(activities).extracting(AnalysisAiActivityEvent::status).containsExactly("STARTED");
+    }
+
+    @Test
     void shouldUseResumedCrmSessionModelAndConfigureResumeTierBeforeOpen() {
-        var properties = properties(0.70D, 0.70D, 1D, 0);
+        var properties = properties(0.70D, 1D, 0);
         var sessionConfig = new SessionConfig().setModel("gpt-unknown-crm");
         var resumeConfig = new ResumeSessionConfig().setModel("gpt-crm-context");
         var prompt = "CRM_RESUMED_CONTEXT_".repeat(5);
@@ -142,10 +184,11 @@ class CopilotContextTierPolicyTest {
                 },
                 activity -> {
                 },
-                CopilotRunAuth.localToken()
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.AUTO
         );
 
-        var controller = policy(properties).prepare(prepared);
+        var controller = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared);
 
         assertThat(controller.decision().modelId()).isEqualTo("gpt-crm-context");
         assertThat(controller.decision().useLongContextInitially()).isTrue();
@@ -154,17 +197,18 @@ class CopilotContextTierPolicyTest {
 
     @Test
     void shouldRestoreSdkDefaultsWhenPlatformPolicyIsDisabled() {
-        var properties = properties(0.70D, 0.70D, 1D, 0);
+        var properties = properties(0.70D, 1D, 0);
         properties.getContextTier().setEnabled(false);
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var sessionConfig = new SessionConfig().setModel("gpt-crm-context");
 
-        var controller = policy(properties).prepare(prepared(
+        var controller = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
                 "CRM_LONG_CONTEXT_".repeat(20),
                 sessionConfig,
                 new ResumeSessionConfig(),
                 List.of(),
-                activities
+                activities,
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
         ));
 
         assertThat(controller.decision().policyEnabled()).isFalse();
@@ -173,69 +217,59 @@ class CopilotContextTierPolicyTest {
     }
 
     @Test
-    void shouldSwitchRunningCrmSessionOnlyOnceWhenReportedUsageReachesThreshold() {
-        var properties = properties(0.95D, 0.70D, 4D, 0);
+    void shouldConfirmEffectiveLongContextBeforeFirstCrmMessage() {
         var activities = new ArrayList<AnalysisAiActivityEvent>();
-        var controller = policy(properties).prepare(prepared(
-                "Small CRM prompt",
-                new SessionConfig().setModel("gpt-crm-context").setReasoningEffort("high"),
+        var reader = mock(CopilotEffectiveContextTierReader.class);
+        var session = mock(CopilotSession.class);
+        when(reader.read(session)).thenReturn(new CopilotEffectiveContextTier(
+                "gpt-crm-dynamic",
+                "high",
+                "long_context"
+        ));
+        var controller = policy(properties(0.70D, 4D, 0), reader).prepare(prepared(
+                "Small synthetic CRM prompt",
+                new SessionConfig().setModel("gpt-crm-dynamic"),
                 new ResumeSessionConfig(),
                 List.of(),
-                activities
+                activities,
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
         ));
-        var session = mock(CopilotSession.class);
-        when(session.setModel("gpt-crm-context", "high", "long_context", null))
-                .thenReturn(CompletableFuture.completedFuture(null));
 
-        controller.onSessionUsage(session, usage(100, 69));
-        controller.onSessionUsage(session, usage(100, 70));
-        controller.onSessionUsage(session, usage(100, 90));
-        controller.runtimeSwitch().join();
+        controller.verifyBeforeFirstMessage(session);
 
-        verify(session, times(1)).setModel("gpt-crm-context", "high", "long_context", null);
+        verify(reader).read(session);
         assertThat(activities).extracting(AnalysisAiActivityEvent::status)
-                .containsExactly("INFO", "STARTED", "COMPLETED");
-        assertThat(activities.get(2).details()).containsEntry("trigger", "RUNTIME_USAGE");
+                .containsExactly("STARTED", "COMPLETED");
+        assertThat(activities.get(1).details())
+                .containsEntry("trigger", "SDK_MODEL_GET_CURRENT")
+                .containsEntry("effectiveTier", "long_context")
+                .containsEntry("effectiveModel", "gpt-crm-dynamic");
     }
 
     @Test
-    void shouldContinueAndExposeFailureWhenRuntimeSwitchFails() {
-        var properties = properties(0.95D, 0.70D, 4D, 0);
+    void shouldRejectCrmRunBeforePromptWhenSdkKeepsDefaultTier() {
         var activities = new ArrayList<AnalysisAiActivityEvent>();
-        var controller = policy(properties).prepare(prepared(
-                "Small CRM prompt",
-                new SessionConfig().setModel("gpt-crm-context"),
+        var reader = mock(CopilotEffectiveContextTierReader.class);
+        var session = mock(CopilotSession.class);
+        when(reader.read(session)).thenReturn(new CopilotEffectiveContextTier(
+                "gpt-crm-dynamic",
+                "medium",
+                "default"
+        ));
+        var controller = policy(properties(0.70D, 4D, 0), reader).prepare(prepared(
+                "Small synthetic CRM prompt",
+                new SessionConfig().setModel("gpt-crm-dynamic"),
                 new ResumeSessionConfig(),
                 List.of(),
-                activities
+                activities,
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
         ));
-        var session = mock(CopilotSession.class);
-        when(session.setModel("gpt-crm-context", null, "long_context", null))
-                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("synthetic CRM switch failure")));
 
-        controller.onSessionUsage(session, usage(100, 75));
-        controller.runtimeSwitch().join();
-
+        assertThatThrownBy(() -> controller.verifyBeforeFirstMessage(session))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("did not activate long_context");
         assertThat(activities).extracting(AnalysisAiActivityEvent::status)
-                .containsExactly("INFO", "STARTED", "FAILED");
-        assertThat(activities.get(2).summary()).contains("kontynuowana");
-    }
-
-    @Test
-    void shouldNotSwitchWhenSdkAlreadyReportsAWindowLargerThanTheDefaultProfile() {
-        var properties = properties(0.95D, 0.70D, 4D, 0);
-        var controller = policy(properties).prepare(prepared(
-                "Small CRM prompt",
-                new SessionConfig().setModel("gpt-crm-context"),
-                new ResumeSessionConfig(),
-                List.of(),
-                new ArrayList<>()
-        ));
-        var session = mock(CopilotSession.class);
-
-        controller.onSessionUsage(session, usage(1_000, 900));
-
-        verify(session, times(0)).setModel("gpt-crm-context", null, "long_context", null);
+                .containsExactly("STARTED", "FAILED");
     }
 
     private CopilotPreparedSession prepared(
@@ -243,7 +277,8 @@ class CopilotContextTierPolicyTest {
             SessionConfig sessionConfig,
             ResumeSessionConfig resumeConfig,
             List<ToolDefinition> tools,
-            List<AnalysisAiActivityEvent> activities
+            List<AnalysisAiActivityEvent> activities,
+            CopilotContextTierPreference preference
     ) {
         sessionConfig.setTools(tools);
         resumeConfig.setTools(tools);
@@ -260,25 +295,27 @@ class CopilotContextTierPolicyTest {
                 evidence -> {
                 },
                 activities::add,
-                CopilotRunAuth.localToken()
+                CopilotRunAuth.localToken(),
+                preference
         );
     }
 
     private CopilotSdkProperties properties(
             double initialThreshold,
-            double runtimeThreshold,
             double charactersPerToken,
             int reserve
     ) {
         var properties = new CopilotSdkProperties();
         properties.getContextTier().setInitialPromptThreshold(initialThreshold);
-        properties.getContextTier().setRuntimeUsageThreshold(runtimeThreshold);
         properties.getContextTier().setEstimatedCharactersPerToken(charactersPerToken);
         properties.getContextTier().setReservedTokens(reserve);
         return properties;
     }
 
-    private CopilotContextTierPolicy policy(CopilotSdkProperties properties) {
+    private CopilotContextTierPolicy policy(
+            CopilotSdkProperties properties,
+            CopilotEffectiveContextTierReader reader
+    ) {
         return new CopilotContextTierPolicy(
                 properties,
                 auth -> new CopilotModelOptionsResponse(
@@ -294,21 +331,8 @@ class CopilotContextTierPolicyTest {
                                 100,
                                 1_000
                         ))
-                )
+                ),
+                reader
         );
-    }
-
-    private SessionUsageInfoEvent usage(long tokenLimit, long currentTokens) {
-        var event = new SessionUsageInfoEvent();
-        event.setData(new SessionUsageInfoEvent.SessionUsageInfoEventData(
-                tokenLimit,
-                currentTokens,
-                3L,
-                null,
-                null,
-                null,
-                null
-        ));
-        return event;
     }
 }

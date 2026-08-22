@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncide
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentDigestService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotEffectiveContextTierReader;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsResponse;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotToolInvocationHandler;
@@ -126,7 +127,8 @@ public final class CopilotTestFixtures {
                 new CopilotClientShutdown(properties),
                 new CopilotContextTierPolicy(
                         properties,
-                        auth -> new CopilotModelOptionsResponse(null, null, List.of(), List.of())
+                        auth -> new CopilotModelOptionsResponse(null, null, List.of(), List.of()),
+                        new CopilotEffectiveContextTierReader(properties)
                 )
         );
     }

@@ -9,6 +9,7 @@ import pl.mkn.tdw.agenttools.gitlab.GitLabToolNames;
 import pl.mkn.tdw.agenttools.gitlab.frontend.GitLabFrontendToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotArtifactContentMapper;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
@@ -69,6 +70,8 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(assembly.runRequest().sessionConfigRequest().effectiveAvailableToolNames()).contains("skill");
         assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())
                 .doesNotContain("gitlab_list_available_repositories", "db_describe_table");
+        assertThat(assembly.runRequest().sessionConfigRequest().contextTierPreference())
+                .isEqualTo(CopilotContextTierPreference.LONG_CONTEXT_REQUIRED);
         assertThat(assembly.runRequest().artifactContents()).hasSize(7);
         assertThat(assembly.runRequest().artifactContents())
                 .containsKey("ui-explorer/functional-writing-contract.md");

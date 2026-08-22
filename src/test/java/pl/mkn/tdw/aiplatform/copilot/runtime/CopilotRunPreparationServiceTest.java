@@ -3,6 +3,7 @@ package pl.mkn.tdw.aiplatform.copilot.runtime;
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuth;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
@@ -55,6 +56,7 @@ class CopilotRunPreparationServiceTest {
             assertNotNull(prepared.resumeSessionConfig());
             assertEquals("gpt-5.4", prepared.sessionConfig().getModel());
             assertEquals("medium", prepared.sessionConfig().getReasoningEffort());
+            assertEquals(CopilotContextTierPreference.AUTO, prepared.contextTierPreference());
             assertEquals(List.of("tool-a", "skill"), prepared.sessionConfig().getAvailableTools());
             assertEquals(
                     List.of(properties.resolvedSkillDirectory().toString()),
@@ -79,7 +81,7 @@ class CopilotRunPreparationServiceTest {
                 List.of("tool-a"),
                 new CopilotModelSelection("gpt-5.4", "medium"),
                 "Denied"
-        );
+        ).withContextTierPreference(CopilotContextTierPreference.LONG_CONTEXT_REQUIRED);
         var runAuth = new CopilotRunAuth(
                 CopilotAuthMode.GITHUB_APP,
                 "synthetic-crm-analyst-session",
@@ -102,6 +104,10 @@ class CopilotRunPreparationServiceTest {
             assertEquals("Next question", prepared.prompt());
             assertEquals("Next question", prepared.messageOptions().getPrompt());
             assertSame(runAuth, prepared.auth());
+            assertEquals(
+                    CopilotContextTierPreference.LONG_CONTEXT_REQUIRED,
+                    prepared.contextTierPreference()
+            );
             assertSame(evidenceSink, prepared.evidenceSink());
             assertNotNull(prepared.resumeSessionConfig());
             assertEquals(List.of("tool-a", "skill"), prepared.resumeSessionConfig().getAvailableTools());

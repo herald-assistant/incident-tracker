@@ -20,6 +20,7 @@ public class CopilotContextTierPolicy {
 
     private final CopilotSdkProperties properties;
     private final CopilotModelOptionsProvider modelOptionsProvider;
+    private final CopilotEffectiveContextTierReader effectiveContextTierReader;
 
     public CopilotContextTierSession prepare(CopilotPreparedSession preparedSession) {
         var decision = decide(preparedSession);
@@ -32,10 +33,9 @@ public class CopilotContextTierPolicy {
             }
         }
         return new CopilotContextTierSession(
-                properties.getContextTier(),
                 decision,
-                selectedReasoningEffort(preparedSession),
-                preparedSession.activitySink()
+                preparedSession.activitySink(),
+                effectiveContextTierReader
         );
     }
 
@@ -43,19 +43,43 @@ public class CopilotContextTierPolicy {
         var settings = properties.getContextTier();
         validate(settings);
         var modelId = selectedModel(preparedSession);
+        var preference = preparedSession.contextTierPreference() != null
+                ? preparedSession.contextTierPreference()
+                : CopilotContextTierPreference.AUTO;
         if (!settings.isEnabled()) {
-            return unsupported(false, modelId, "Platform context-tier policy is disabled.");
+            return unsupported(false, preference, modelId, "Platform context-tier policy is disabled.");
+        }
+
+        var estimatedTokens = estimateInitialTokens(preparedSession, settings);
+        if (preference == CopilotContextTierPreference.LONG_CONTEXT_REQUIRED) {
+            return new CopilotContextTierDecision(
+                    true,
+                    preference,
+                    false,
+                    modelId,
+                    0,
+                    0,
+                    estimatedTokens,
+                    0,
+                    true,
+                    "The feature requires long_context before its first message; SDK state will be verified after session open."
+            );
         }
 
         var profile = findProfile(preparedSession, modelId);
         if (profile == null) {
-            return unsupported(true, modelId, "Dynamic model catalog does not expose a long-context tier for the selected model.");
+            return unsupported(
+                    true,
+                    preference,
+                    modelId,
+                    "Dynamic model catalog does not expose a long-context tier for the selected model."
+            );
         }
 
-        var estimatedTokens = estimateInitialTokens(preparedSession, settings);
         var thresholdTokens = Math.round(profile.defaultContextWindowTokens() * settings.getInitialPromptThreshold());
         return new CopilotContextTierDecision(
                 true,
+                preference,
                 true,
                 profile.id(),
                 profile.defaultContextWindowTokens(),
@@ -69,9 +93,14 @@ public class CopilotContextTierPolicy {
         );
     }
 
-    private CopilotContextTierDecision unsupported(boolean enabled, String modelId, String reason) {
+    private CopilotContextTierDecision unsupported(
+            boolean enabled,
+            CopilotContextTierPreference preference,
+            String modelId,
+            String reason
+    ) {
         return new CopilotContextTierDecision(
-                enabled, false, modelId, 0, 0, 0, 0, false, reason
+                enabled, preference, false, modelId, 0, 0, 0, 0, false, reason
         );
     }
 
@@ -154,20 +183,6 @@ public class CopilotContextTierPolicy {
         return StringUtils.hasText(properties.getModel()) ? properties.getModel().trim() : null;
     }
 
-    private String selectedReasoningEffort(CopilotPreparedSession preparedSession) {
-        if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
-            if (preparedSession.resumeSessionConfig() != null
-                    && StringUtils.hasText(preparedSession.resumeSessionConfig().getReasoningEffort())) {
-                return preparedSession.resumeSessionConfig().getReasoningEffort().trim();
-            }
-        }
-        if (preparedSession.sessionConfig() != null
-                && StringUtils.hasText(preparedSession.sessionConfig().getReasoningEffort())) {
-            return preparedSession.sessionConfig().getReasoningEffort().trim();
-        }
-        return null;
-    }
-
     private int length(Object value) {
         return value != null ? String.valueOf(value).length() : 0;
     }
@@ -179,14 +194,16 @@ public class CopilotContextTierPolicy {
         if (settings.getInitialPromptThreshold() <= 0D || settings.getInitialPromptThreshold() > 1D) {
             throw new IllegalStateException("analysis.ai.copilot.context-tier.initial-prompt-threshold must be in (0, 1]");
         }
-        if (settings.getRuntimeUsageThreshold() <= 0D || settings.getRuntimeUsageThreshold() > 1D) {
-            throw new IllegalStateException("analysis.ai.copilot.context-tier.runtime-usage-threshold must be in (0, 1]");
-        }
         if (settings.getEstimatedCharactersPerToken() <= 0D) {
             throw new IllegalStateException("analysis.ai.copilot.context-tier.estimated-characters-per-token must be positive");
         }
         if (settings.getReservedTokens() < 0) {
             throw new IllegalStateException("analysis.ai.copilot.context-tier.reserved-tokens must not be negative");
+        }
+        if (settings.getVerificationTimeout() == null
+                || settings.getVerificationTimeout().isZero()
+                || settings.getVerificationTimeout().isNegative()) {
+            throw new IllegalStateException("analysis.ai.copilot.context-tier.verification-timeout must be positive");
         }
     }
 

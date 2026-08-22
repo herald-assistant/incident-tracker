@@ -7,6 +7,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionContext;
 import pl.mkn.tdw.features.uiexplorer.ai.preparation.UiExplorerPromptPreparation;
@@ -53,7 +54,8 @@ public class UiExplorerCopilotRunRequestAssembler {
                 accessPolicy.availableToolNames(),
                 new CopilotModelSelection(request.model(), request.reasoningEffort()),
                 DENIED_TOOL_MESSAGE
-        ).withDurableSystemInstructions(UiExplorerDurableSystemInstructions.render(preparation));
+        ).withDurableSystemInstructions(UiExplorerDurableSystemInstructions.render(preparation))
+                .withContextTierPreference(CopilotContextTierPreference.LONG_CONTEXT_REQUIRED);
         var runRequest = new CopilotRunRequest(
                 toolContext.analysisRunId(),
                 runAuthMapper.toRunAuth(authRef),
