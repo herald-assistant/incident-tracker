@@ -41,6 +41,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -333,6 +334,7 @@ class CopilotSdkExecutionGatewayTest {
             ));
             when(session.sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L)))
                     .thenAnswer(invocation -> {
+                        eventHandler.get().accept(sessionUsageInfo(272_000, 127_863, 4));
                         return CompletableFuture.completedFuture(assistantMessage("Synthetic CRM answer"));
                     });
         })) {
@@ -345,7 +347,130 @@ class CopilotSdkExecutionGatewayTest {
             ordering.verify(sessionRef.get()).sendAndWait(same(preparedRequest.messageOptions()), eq(300_000L));
             assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
                     .extracting(AnalysisAiActivityEvent::status)
-                    .containsExactly("STARTED", "COMPLETED");
+                    .containsExactly("COMPLETED", "COMPLETED", "COMPLETED");
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .element(2)
+                    .satisfies(activity -> assertThat(activity.details())
+                            .containsEntry("phase", "EFFECTIVE_WINDOW_OBSERVED")
+                            .containsEntry("tokenLimit", 272_000L)
+                            .containsEntry("currentTokens", 127_863L));
+        }
+    }
+
+    @Test
+    void shouldAbortAndResumeSameCrmSessionWithLongContextAfterRuntimeThreshold() {
+        var properties = new CopilotSdkProperties();
+        properties.getContextTier().setInitialPromptThreshold(0.70D);
+        properties.getContextTier().setRuntimeUsageThreshold(0.70D);
+        properties.getContextTier().setEstimatedCharactersPerToken(4D);
+        properties.getContextTier().setReservedTokens(0);
+        var evidenceStore = mock(CopilotToolEvidenceSessionStore.class);
+        var budgetRegistry = mock(CopilotToolBudgetRegistry.class);
+        when(budgetRegistry.unregisterSession("crm-runtime-session")).thenReturn(Optional.empty());
+        var effectiveTierReader = mock(CopilotEffectiveContextTierReader.class);
+        var gateway = new CopilotSdkExecutionGateway(
+                properties,
+                evidenceStore,
+                budgetRegistry,
+                new CopilotReportSessionStore(),
+                new CopilotClientShutdown(properties),
+                contextTierPolicy(properties, effectiveTierReader)
+        );
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var sessionConfig = new SessionConfig()
+                .setSessionId("crm-runtime-session")
+                .setModel("gpt-synthetic-crm");
+        var resumeConfig = new ResumeSessionConfig().setModel("gpt-synthetic-crm");
+        var initialMessage = new MessageOptions().setPrompt("Review a synthetic CRM contact card.");
+        var preparedRequest = new CopilotPreparedSession(
+                "crm-runtime-tier-run",
+                CopilotSessionTarget.newSession(),
+                new CopilotClientOptions(),
+                sessionConfig,
+                resumeConfig,
+                initialMessage,
+                initialMessage.getPrompt(),
+                Map.of(),
+                null,
+                evidence -> {
+                },
+                activities::add,
+                CopilotRunAuth.localToken(),
+                CopilotContextTierPreference.AUTO
+        );
+        var firstHandler = new AtomicReference<Consumer<SessionEvent>>();
+        var resumedHandler = new AtomicReference<Consumer<SessionEvent>>();
+        var firstSession = mock(CopilotSession.class);
+        var resumedSession = mock(CopilotSession.class);
+        when(firstSession.getSessionId()).thenReturn("crm-runtime-session");
+        when(resumedSession.getSessionId()).thenReturn("crm-runtime-session");
+        when(firstSession.abort()).thenReturn(CompletableFuture.completedFuture(null));
+        when(firstSession.on(isA(Consumer.class))).thenAnswer(invocation -> {
+            firstHandler.set(invocation.getArgument(0));
+            return (Closeable) () -> {
+            };
+        });
+        when(resumedSession.on(isA(Consumer.class))).thenAnswer(invocation -> {
+            resumedHandler.set(invocation.getArgument(0));
+            return (Closeable) () -> {
+            };
+        });
+        when(firstSession.sendAndWait(same(initialMessage), eq(300_000L))).thenAnswer(invocation -> {
+            firstHandler.get().accept(sessionUsageInfo(100, 70, 8));
+            return CompletableFuture.completedFuture(assistantMessage("Partial CRM answer ignored after abort"));
+        });
+        when(resumedSession.sendAndWait(any(MessageOptions.class), eq(300_000L))).thenAnswer(invocation -> {
+            resumedHandler.get().accept(assistantUsage(
+                    "gpt-synthetic-crm", 2_400D, 420D, 300D, 50D, 2.3D, 1_100D
+            ));
+            resumedHandler.get().accept(sessionUsageInfo(1_000, 92, 9));
+            return CompletableFuture.completedFuture(assistantMessage("Complete synthetic CRM report"));
+        });
+        when(effectiveTierReader.read(resumedSession)).thenReturn(new CopilotEffectiveContextTier(
+                "gpt-synthetic-crm",
+                "medium",
+                "long_context"
+        ));
+
+        try (MockedConstruction<CopilotClient> mockedClients = mockConstruction(
+                CopilotClient.class,
+                (client, context) -> {
+                    when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+                    when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+                    when(client.createSession(same(sessionConfig)))
+                            .thenReturn(CompletableFuture.completedFuture(firstSession));
+                    when(client.resumeSession("crm-runtime-session", resumeConfig))
+                            .thenReturn(CompletableFuture.completedFuture(resumedSession));
+                    when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+                }
+        )) {
+            var result = gateway.execute(preparedRequest);
+
+            assertThat(result.content()).isEqualTo("Complete synthetic CRM report");
+            assertThat(result.sessionId()).isEqualTo("crm-runtime-session");
+            assertThat(result.usage().contextTokenLimit()).isEqualTo(1_000L);
+            assertThat(resumeConfig.getContextTier()).isEqualTo("long_context");
+            var continuation = org.mockito.ArgumentCaptor.forClass(MessageOptions.class);
+            verify(resumedSession).sendAndWait(continuation.capture(), eq(300_000L));
+            assertThat(continuation.getValue().getPrompt())
+                    .contains("Kontynuuj przerwany turn")
+                    .doesNotContain(initialMessage.getPrompt());
+            verify(firstSession).abort();
+            verify(evidenceStore).registerSession(eq("crm-runtime-session"), any());
+            verify(evidenceStore).unregisterSession("crm-runtime-session");
+            verify(budgetRegistry).registerSession("crm-runtime-session");
+            verify(budgetRegistry).unregisterSession("crm-runtime-session");
+            verify(mockedClients.constructed().get(0))
+                    .resumeSession("crm-runtime-session", resumeConfig);
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .extracting(activity -> activity.details().get("phase"))
+                    .containsExactly(
+                            "RUNTIME_TIER_SWITCH_REQUESTED",
+                            "RUNTIME_SESSION_ABORTED",
+                            "RUNTIME_RESUME_REQUESTED",
+                            "MODEL_STATE_VERIFICATION",
+                            "EFFECTIVE_WINDOW_OBSERVED"
+                    );
         }
     }
 
@@ -402,7 +527,7 @@ class CopilotSdkExecutionGatewayTest {
             assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");
             assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
                     .extracting(AnalysisAiActivityEvent::status)
-                    .containsExactly("STARTED", "FAILED");
+                    .containsExactly("COMPLETED", "FAILED");
         }
     }
 

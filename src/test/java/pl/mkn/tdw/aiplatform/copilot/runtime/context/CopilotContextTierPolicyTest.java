@@ -53,8 +53,11 @@ class CopilotContextTierPolicyTest {
         assertThat(resumeConfig.getContextTier()).isEqualTo("long_context");
         assertThat(activities).singleElement().satisfies(activity -> {
             assertThat(activity.category()).isEqualTo("CONTEXT");
-            assertThat(activity.status()).isEqualTo("STARTED");
-            assertThat(activity.details()).containsEntry("trigger", "PRE_SESSION");
+            assertThat(activity.status()).isEqualTo("COMPLETED");
+            assertThat(activity.details())
+                    .containsEntry("phase", "TIER_REQUESTED")
+                    .containsEntry("trigger", "INITIAL_CONTEXT_THRESHOLD")
+                    .containsEntry("observationSource", "SESSION_CONFIGURATION");
         });
     }
 
@@ -161,7 +164,10 @@ class CopilotContextTierPolicyTest {
         assertThat(controller.decision().useLongContextInitially()).isTrue();
         assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");
         assertThat(resumeConfig.getContextTier()).isEqualTo("long_context");
-        assertThat(activities).extracting(AnalysisAiActivityEvent::status).containsExactly("STARTED");
+        assertThat(activities).extracting(AnalysisAiActivityEvent::status).containsExactly("COMPLETED");
+        assertThat(activities.get(0).details())
+                .containsEntry("trigger", "FEATURE_REQUIREMENT")
+                .containsEntry("estimatedInitialTokens", controller.decision().estimatedInitialTokens());
     }
 
     @Test
@@ -239,11 +245,52 @@ class CopilotContextTierPolicyTest {
 
         verify(reader).read(session);
         assertThat(activities).extracting(AnalysisAiActivityEvent::status)
-                .containsExactly("STARTED", "COMPLETED");
+                .containsExactly("COMPLETED", "COMPLETED");
         assertThat(activities.get(1).details())
-                .containsEntry("trigger", "SDK_MODEL_GET_CURRENT")
+                .containsEntry("phase", "MODEL_STATE_VERIFICATION")
+                .containsEntry("trigger", "FEATURE_REQUIREMENT")
+                .containsEntry("observationSource", "SESSION_MODEL_GET_CURRENT")
                 .containsEntry("effectiveTier", "long_context")
                 .containsEntry("effectiveModel", "gpt-crm-dynamic");
+        assertThat(activities.get(1).parentEventId()).isEqualTo(activities.get(0).eventId());
+    }
+
+    @Test
+    void shouldPublishActualCrmContextWindowOnlyOnceFromSdkUsage() {
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var reader = mock(CopilotEffectiveContextTierReader.class);
+        var session = mock(CopilotSession.class);
+        var properties = properties(0.70D, 4D, 0);
+        properties.getContextTier().setRuntimeUsageThreshold(0.90D);
+        when(reader.read(session)).thenReturn(new CopilotEffectiveContextTier(
+                "gpt-crm-dynamic",
+                "high",
+                "long_context"
+        ));
+        var controller = policy(properties, reader).prepare(prepared(
+                "Synthetic CRM contact workspace",
+                new SessionConfig().setModel("gpt-crm-dynamic"),
+                new ResumeSessionConfig(),
+                List.of(),
+                activities,
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
+        ));
+
+        controller.verifyBeforeFirstMessage(session);
+        controller.observeEffectiveWindow(session, 272_000, 127_863, 4);
+        controller.observeEffectiveWindow(session, 272_000, 201_237, 10);
+
+        assertThat(activities).extracting(AnalysisAiActivityEvent::status)
+                .containsExactly("COMPLETED", "COMPLETED", "COMPLETED");
+        assertThat(activities.get(2).title()).isEqualTo("Rzeczywisty limit kontekstu");
+        assertThat(activities.get(2).parentEventId()).isEqualTo(activities.get(0).eventId());
+        assertThat(activities.get(2).details())
+                .containsEntry("phase", "EFFECTIVE_WINDOW_OBSERVED")
+                .containsEntry("observationSource", "SESSION_USAGE_INFO")
+                .containsEntry("tokenLimit", 272_000L)
+                .containsEntry("currentTokens", 127_863L)
+                .containsEntry("utilizationPercent", 47.0D)
+                .containsEntry("verification", "TOKEN_LIMIT_OBSERVED");
     }
 
     @Test
@@ -269,7 +316,81 @@ class CopilotContextTierPolicyTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("did not activate long_context");
         assertThat(activities).extracting(AnalysisAiActivityEvent::status)
-                .containsExactly("STARTED", "FAILED");
+                .containsExactly("COMPLETED", "FAILED");
+    }
+
+    @Test
+    void shouldAbortAndPrepareSingleCrmRuntimeResumeWhenActualWindowCrossesThreshold() {
+        var properties = properties(0.70D, 4D, 0);
+        properties.getContextTier().setRuntimeUsageThreshold(0.70D);
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var reader = mock(CopilotEffectiveContextTierReader.class);
+        var session = mock(CopilotSession.class);
+        var resumedSession = mock(CopilotSession.class);
+        when(session.abort()).thenReturn(CompletableFuture.completedFuture(null));
+        when(reader.read(resumedSession)).thenReturn(new CopilotEffectiveContextTier(
+                "gpt-crm-context",
+                "high",
+                "long_context"
+        ));
+        var resumeConfig = new ResumeSessionConfig().setModel("gpt-crm-context");
+        var controller = policy(properties, reader).prepare(prepared(
+                "Small synthetic CRM prompt",
+                new SessionConfig().setModel("gpt-crm-context"),
+                resumeConfig,
+                List.of(),
+                activities,
+                CopilotContextTierPreference.AUTO
+        ));
+
+        controller.observeEffectiveWindow(session, 100, 69, 6);
+        controller.observeEffectiveWindow(session, 100, 70, 7);
+        controller.observeEffectiveWindow(session, 100, 85, 8);
+        controller.awaitRuntimeAbort();
+        controller.prepareRuntimeResume(resumeConfig, "crm-runtime-tier-session");
+        controller.verifyAfterRuntimeResume(resumedSession);
+        controller.observeEffectiveWindow(resumedSession, 1_000, 90, 9);
+
+        verify(session).abort();
+        assertThat(controller.runtimeUpgradeRequested()).isTrue();
+        assertThat(resumeConfig.getContextTier()).isEqualTo("long_context");
+        assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                .extracting(activity -> activity.details().get("phase"))
+                .containsExactly(
+                        "RUNTIME_TIER_SWITCH_REQUESTED",
+                        "RUNTIME_SESSION_ABORTED",
+                        "RUNTIME_RESUME_REQUESTED",
+                        "MODEL_STATE_VERIFICATION",
+                        "EFFECTIVE_WINDOW_OBSERVED"
+                );
+        assertThat(activities.get(0).details())
+                .containsEntry("trigger", "RUNTIME_USAGE_THRESHOLD")
+                .containsEntry("runtimeUsageThreshold", 0.70D)
+                .containsEntry("runtimeThresholdTokens", 70L)
+                .containsEntry("tokenLimit", 100L)
+                .containsEntry("currentTokens", 70L);
+        assertThat(activities.get(4).details())
+                .containsEntry("tokenLimit", 1_000L)
+                .containsEntry("effectiveTier", "long_context");
+    }
+
+    @Test
+    void shouldNotResumeCrmSessionAlreadyUsingExpectedLongWindow() {
+        var properties = properties(0.70D, 4D, 0);
+        var session = mock(CopilotSession.class);
+        var controller = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
+                "Small synthetic CRM prompt",
+                new SessionConfig().setModel("gpt-crm-context"),
+                new ResumeSessionConfig().setModel("gpt-crm-context"),
+                List.of(),
+                new ArrayList<>(),
+                CopilotContextTierPreference.AUTO
+        ));
+
+        controller.observeEffectiveWindow(session, 1_000, 800, 12);
+
+        assertThat(controller.runtimeUpgradeRequested()).isFalse();
+        verify(session, org.mockito.Mockito.never()).abort();
     }
 
     private CopilotPreparedSession prepared(

@@ -9,6 +9,8 @@ public record CopilotContextTierDecision(
         long longContextWindowTokens,
         long estimatedInitialTokens,
         long initialThresholdTokens,
+        double runtimeUsageThreshold,
+        long switchTimeoutMillis,
         boolean useLongContextInitially,
         String reason
 ) {

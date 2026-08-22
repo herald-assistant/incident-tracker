@@ -3232,6 +3232,22 @@ body.is-column-resizing {
   line-height: 1.35;
 }
 
+.ai-work-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-work-item__meta span {
+  padding: 3px 7px;
+  border: 1px solid rgba(185, 201, 220, 0.82);
+  border-radius: 999px;
+  background: #f5f8fc;
+  color: var(--text-muted);
+  font-size: 0.73rem;
+  line-height: 1.25;
+}
+
 .ai-work-item__technical {
   border-top: 1px dashed rgba(184, 198, 216, 0.92);
   padding-top: 8px;

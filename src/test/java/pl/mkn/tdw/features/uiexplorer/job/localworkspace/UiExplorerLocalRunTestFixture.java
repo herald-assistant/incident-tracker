@@ -81,7 +81,7 @@ final class UiExplorerLocalRunTestFixture {
                         ))
                 )),
                 List.of(rawToolEvidence()),
-                List.of(rawActivity()),
+                List.of(rawActivity(), rawContextTierActivity()),
                 List.of(new AnalysisAiToolFeedback(
                         "crm-feedback-1",
                         "gitlab_read_repository_file",
@@ -196,6 +196,33 @@ final class UiExplorerLocalRunTestFixture {
                 "gitlab_read_repository_file",
                 UPDATED_AT,
                 Map.of("rawArguments", "CRM_HIDDEN_ACTIVITY_SECRET")
+        );
+    }
+
+    private static AnalysisAiActivityEvent rawContextTierActivity() {
+        return new AnalysisAiActivityEvent(
+                "crm-context-tier-1",
+                null,
+                "platform.context_tier",
+                "CONTEXT",
+                "COMPLETED",
+                "Żądanie rozszerzonego kontekstu",
+                "Platforma ustawiła long_context dla syntetycznego ekranu CRM.",
+                null,
+                null,
+                null,
+                null,
+                UPDATED_AT,
+                Map.of(
+                        "phase", "TIER_REQUESTED",
+                        "trigger", "FEATURE_REQUIREMENT",
+                        "requestedTier", "long_context",
+                        "estimatedInitialTokens", 96_000L,
+                        "runtimeUsageThreshold", 0.70D,
+                        "runtimeThresholdTokens", 190_400L,
+                        "sessionId", "crm-anonymized-session-17",
+                        "rawArguments", "CRM_HIDDEN_CONTEXT_TIER_SECRET"
+                )
         );
     }
 

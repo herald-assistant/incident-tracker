@@ -174,12 +174,16 @@ durable system instructions, definicje tools i rezerwe. Feature, ktorego
 kontekst rosnie przez goal-driven research, moze zadeklarowac
 `LONG_CONTEXT_REQUIRED`; platforma ustawia wtedy tier w configach create/resume
 i potwierdza efektywny stan przez `session.model.getCurrent` przed pierwszym
-`sendAndWait`. Nie przywracaj runtime switcha z `session.usage_info`:
-`CopilotSession.setModel` obowiazuje od nastepnej wiadomosci, a jego trzeci
-`String` jest `reasoningSummary`, nie context tier. Durable instructions sa
-feature-owned, platforma mapuje je na `SystemMessageMode.APPEND` dla create i
-resume; nie umieszczaj w nich duzych source artifacts. Nie dodawaj list
-identyfikatorow modeli ani logiki po nazwie modelu. W razie regresji wylacz
+`sendAndWait`. `session.usage_info` steruje jednym bezpiecznym runtime upgradem
+przed kompaktowaniem: `abort`, zamkniecie uchwytu i resume tego samego
+`sessionId` z `long_context`. Initial prompt nie moze byc wyslany ponownie;
+resume dostaje tylko neutralna instrukcje kontynuacji, a rejestracje report,
+tool evidence i tool budget pozostaja aktywne przez oba uchwyty. Nie przywracaj
+wariantu opartego o `CopilotSession.setModel`: dotyczy on nastepnej wiadomosci,
+a trzeci `String` jest `reasoningSummary`, nie context tier. Durable
+instructions sa feature-owned, platforma mapuje je na `SystemMessageMode.APPEND`
+dla create i resume; nie umieszczaj w nich duzych source artifacts. Nie dodawaj
+list identyfikatorow modeli ani logiki po nazwie modelu. W razie regresji wylacz
 cala polityke przez
 `analysis.ai.copilot.context-tier.enabled=false`.
 

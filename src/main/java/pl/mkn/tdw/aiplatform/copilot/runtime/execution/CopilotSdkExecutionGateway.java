@@ -3,6 +3,7 @@ package pl.mkn.tdw.aiplatform.copilot.runtime.execution;
 import com.github.copilot.CopilotClient;
 import com.github.copilot.CopilotSession;
 import com.github.copilot.generated.*;
+import com.github.copilot.rpc.MessageOptions;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,12 @@ import static pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSessionEven
 @RequiredArgsConstructor
 public class CopilotSdkExecutionGateway {
 
+    private static final String RUNTIME_CONTEXT_TIER_CONTINUATION_PROMPT = """
+            Kontynuuj przerwany turn na podstawie zachowanej historii tej samej sesji.
+            Nie zaczynaj analizy od początku i nie powtarzaj zakończonych wywołań tools.
+            Dokończ pierwotne zadanie i zwróć finalną odpowiedź zgodną z obowiązującym kontraktem.
+            """;
+
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
     private final CopilotToolBudgetRegistry toolBudgetRegistry;
@@ -57,57 +64,115 @@ public class CopilotSdkExecutionGateway {
                     logClientState("after-start", client.getState(), runReference);
                     logDuration("client-start", runReference, nanosToMillis(clientStart));
 
-                    var openSessionStart = System.nanoTime();
-                    var sessionOperation = sessionOperation(preparedSession);
+                    var sessionSummary = newSessionLogSummary(runReference);
+                    String registeredSessionId = null;
+                    String runtimeResumeSessionId = null;
+                    String reportId = null;
+                    var messageOptions = preparedSession.messageOptions();
 
-                    try (var session = openSession(client, preparedSession)) {
-                        logDuration(sessionOperation, runReference, nanosToMillis(openSessionStart));
-                        contextTierSession.verifyBeforeFirstMessage(session);
-                        var sessionSummary = newSessionLogSummary(runReference);
-                        var sessionId = resolvedSessionId(session, preparedSession);
-                        var reportId = registerReport(preparedSession.initialReport());
+                    try {
+                        for (var attempt = 0; attempt < 2; attempt++) {
+                            var runtimeResume = runtimeResumeSessionId != null;
+                            if (runtimeResume) {
+                                contextTierSession.prepareRuntimeResume(
+                                        preparedSession.resumeSessionConfig(),
+                                        runtimeResumeSessionId
+                                );
+                                messageOptions = runtimeContinuationMessage();
+                            }
 
-                        toolEvidenceSessionStore.registerSession(
-                                sessionId,
-                                preparedSession.evidenceSink()
-                        );
-                        toolBudgetRegistry.registerSession(sessionId);
+                            var openSessionStart = System.nanoTime();
+                            var sessionOperation = sessionOperation(preparedSession, runtimeResume);
+                            AssistantMessageEvent response = null;
+                            RuntimeException sendFailure = null;
 
-                        session.on(event -> handleSessionEvent(
-                                event,
-                                session,
-                                sessionSummary,
-                                usageAccumulator,
-                                preparedSession.activitySink()
-                        ));
+                            try (var session = openSession(client, preparedSession, runtimeResumeSessionId)) {
+                                logDuration(sessionOperation, runReference, nanosToMillis(openSessionStart));
+                                var sessionId = resolvedSessionId(session, preparedSession, runtimeResumeSessionId);
 
-                        try {
-                            var sendAndWaitStart = System.nanoTime();
-                            var timeoutMs = sendAndWaitTimeoutMs();
-                            log.info(
-                                    "Copilot sendAndWait configuration runReference={} timeoutMs={}",
-                                    runReference,
-                                    timeoutMs
-                            );
-                            var response = session.sendAndWait(preparedSession.messageOptions(), timeoutMs).join();
+                                session.on(event -> handleSessionEvent(
+                                        event,
+                                        session,
+                                        sessionSummary,
+                                        usageAccumulator,
+                                        preparedSession.activitySink(),
+                                        contextTierSession
+                                ));
+                                if (runtimeResume) {
+                                    contextTierSession.verifyAfterRuntimeResume(session);
+                                } else {
+                                    contextTierSession.verifyBeforeFirstMessage(session);
+                                }
 
-                            logDuration("send-and-wait", runReference, nanosToMillis(sendAndWaitStart));
-                            var content = response.getData() != null ? response.getData().content() : null;
+                                if (registeredSessionId == null) {
+                                    if (!StringUtils.hasText(sessionId)) {
+                                        throw new CopilotSdkInvocationException(
+                                                "Copilot SDK runtime context-tier upgrade requires a stable sessionId."
+                                        );
+                                    }
+                                    registeredSessionId = sessionId;
+                                    reportId = registerReport(preparedSession.initialReport());
+                                    toolEvidenceSessionStore.registerSession(
+                                            registeredSessionId,
+                                            preparedSession.evidenceSink()
+                                    );
+                                    toolBudgetRegistry.registerSession(registeredSessionId);
+                                } else if (!registeredSessionId.equals(sessionId)) {
+                                    throw new CopilotSdkInvocationException(
+                                            "Copilot SDK runtime context-tier resume changed sessionId."
+                                    );
+                                }
+
+                                try {
+                                    var sendAndWaitStart = System.nanoTime();
+                                    var timeoutMs = sendAndWaitTimeoutMs();
+                                    log.info(
+                                            "Copilot sendAndWait configuration runReference={} timeoutMs={} runtimeResume={}",
+                                            runReference,
+                                            timeoutMs,
+                                            runtimeResume
+                                    );
+                                    response = session.sendAndWait(messageOptions, timeoutMs).join();
+                                    logDuration("send-and-wait", runReference, nanosToMillis(sendAndWaitStart));
+                                } catch (RuntimeException failure) {
+                                    sendFailure = failure;
+                                }
+                                if (!runtimeResume && contextTierSession.runtimeUpgradeRequested()) {
+                                    contextTierSession.awaitRuntimeAbort();
+                                }
+                            }
+
+                            if (!runtimeResume && contextTierSession.runtimeUpgradeRequested()) {
+                                runtimeResumeSessionId = registeredSessionId;
+                                continue;
+                            }
+                            if (sendFailure != null) {
+                                throw sendFailure;
+                            }
+
+                            var content = response != null && response.getData() != null
+                                    ? response.getData().content()
+                                    : null;
                             if (content == null || content.isBlank()) {
                                 throw new CopilotSdkInvocationException("Copilot SDK returned an empty assistant response.");
                             }
 
-                            logSessionSummary(sessionId, sessionSummary, nanosToMillis(overallStart));
+                            logSessionSummary(registeredSessionId, sessionSummary, nanosToMillis(overallStart));
                             return new CopilotExecutionResult(
                                     content,
                                     usageAccumulator.snapshot(),
-                                    sessionId,
+                                    registeredSessionId,
                                     currentReport(reportId)
                             );
-                        } finally {
-                            toolEvidenceSessionStore.unregisterSession(sessionId);
-                            unregisterReport(reportId);
-                            toolBudgetRegistry.unregisterSession(sessionId).ifPresent(snapshot -> log.info(
+                        }
+
+                        throw new CopilotSdkInvocationException(
+                                "Copilot SDK runtime context-tier resume did not complete the analysis."
+                        );
+                    } finally {
+                        if (registeredSessionId != null) {
+                            toolEvidenceSessionStore.unregisterSession(registeredSessionId);
+                            toolBudgetRegistry.unregisterSession(registeredSessionId).ifPresent(snapshot -> log.info(
                                     "Copilot tool budget summary sessionId={} totalCalls={} softLimitExceeded={} deniedToolCalls={} rawSqlAttempts={}",
                                     snapshot.sessionId(),
                                     snapshot.totalCalls(),
@@ -116,6 +181,7 @@ public class CopilotSdkExecutionGateway {
                                     snapshot.rawSqlAttempts()
                             ));
                         }
+                        unregisterReport(reportId);
                     }
                 } finally {
                     logClientState("before-stop", client.getState(), runReference);
@@ -159,10 +225,18 @@ public class CopilotSdkExecutionGateway {
         reportSessionStore.unregister(reportId);
     }
 
-    private String resolvedSessionId(CopilotSession session, CopilotPreparedSession preparedSession) {
+    private String resolvedSessionId(
+            CopilotSession session,
+            CopilotPreparedSession preparedSession,
+            String runtimeResumeSessionId
+    ) {
         var sessionId = session.getSessionId();
         if (StringUtils.hasText(sessionId)) {
             return sessionId;
+        }
+
+        if (StringUtils.hasText(runtimeResumeSessionId)) {
+            return runtimeResumeSessionId;
         }
 
         if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
@@ -172,7 +246,17 @@ public class CopilotSdkExecutionGateway {
         return preparedSession.sessionConfig() != null ? preparedSession.sessionConfig().getSessionId() : null;
     }
 
-    private CopilotSession openSession(CopilotClient client, CopilotPreparedSession preparedSession) {
+    private CopilotSession openSession(
+            CopilotClient client,
+            CopilotPreparedSession preparedSession,
+            String runtimeResumeSessionId
+    ) {
+        if (StringUtils.hasText(runtimeResumeSessionId)) {
+            if (preparedSession.resumeSessionConfig() == null) {
+                throw new CopilotSdkInvocationException("Copilot SDK runtime resume requires ResumeSessionConfig.");
+            }
+            return client.resumeSession(runtimeResumeSessionId, preparedSession.resumeSessionConfig()).join();
+        }
         if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
             var sessionId = preparedSession.sessionTarget().sessionId();
             if (!StringUtils.hasText(sessionId)) {
@@ -187,11 +271,19 @@ public class CopilotSdkExecutionGateway {
         return client.createSession(preparedSession.sessionConfig()).join();
     }
 
-    private String sessionOperation(CopilotPreparedSession preparedSession) {
+    private String sessionOperation(CopilotPreparedSession preparedSession, boolean runtimeResume) {
+        if (runtimeResume) {
+            return "runtime-resume-session";
+        }
         return preparedSession.sessionTarget() != null
                 && preparedSession.sessionTarget().type() == CopilotSessionTarget.Type.EXISTING
                 ? "resume-session"
                 : "create-session";
+    }
+
+    private MessageOptions runtimeContinuationMessage() {
+        return new MessageOptions()
+                .setPrompt(RUNTIME_CONTEXT_TIER_CONTINUATION_PROMPT);
     }
 
     private Throwable unwrapCompletionException(Throwable throwable) {
@@ -210,11 +302,32 @@ public class CopilotSdkExecutionGateway {
             CopilotSession session,
             SessionLogSummary sessionSummary,
             CopilotUsageAccumulator usageAccumulator,
-            Consumer<AnalysisAiActivityEvent> activitySink
+            Consumer<AnalysisAiActivityEvent> activitySink,
+            CopilotContextTierSession contextTierSession
     ) {
         logSessionEvent(event, session, sessionSummary);
         recordUsageEvent(event, usageAccumulator);
+        observeContextTierWindow(event, session, contextTierSession);
         publishActivityEvent(event, activitySink);
+    }
+
+    private void observeContextTierWindow(
+            SessionEvent event,
+            CopilotSession session,
+            CopilotContextTierSession contextTierSession
+    ) {
+        if (!(event instanceof SessionUsageInfoEvent sessionUsageInfoEvent)
+                || sessionUsageInfoEvent.getData() == null
+                || contextTierSession == null) {
+            return;
+        }
+        var data = sessionUsageInfoEvent.getData();
+        contextTierSession.observeEffectiveWindow(
+                session,
+                Math.round(numeric(data.tokenLimit())),
+                Math.round(numeric(data.currentTokens())),
+                Math.round(numeric(data.messagesLength()))
+        );
     }
 
     private void recordUsageEvent(SessionEvent event, CopilotUsageAccumulator usageAccumulator) {

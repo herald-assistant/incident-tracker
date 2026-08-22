@@ -21,8 +21,13 @@ Obecnie obejmuje:
   neutralna polityka wyboru `long_context` przed create/resume: estymowany tryb
   `AUTO` korzysta z dynamicznych metadanych `runtime/options`, a feature moze
   zadeklarowac `LONG_CONTEXT_REQUIRED`. Platforma potwierdza efektywny tier
-  przez typed RPC przed pierwszym `sendAndWait`; nie wykonuje runtime upgrade'u
-  na podstawie `session.usage_info`. Progi, wykonanie SDK i rollback pozostaja
+  przez typed RPC przed pierwszym `sendAndWait`, a user-visible lifecycle
+  koreluje zazadanie i stan modelu z pierwszym rzeczywistym `tokenLimit` z
+  `session.usage_info`. Po przekroczeniu runtime threshold platforma moze
+  wykonac najwyzej jeden upgrade `abort -> close handle -> resume same
+  sessionId` z `long_context`; initial prompt nie jest wysylany drugi raz, a
+  report/tool evidence/tool budget stores pozostaja wspolne. Nie przywracaj
+  blednego wariantu przez `setModel`. Progi, wykonanie SDK i rollback pozostaja
   mechanika platformy, a semantyczna potrzeba nalezy do feature'a.
 - `copilot/runtime/execution/`
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,

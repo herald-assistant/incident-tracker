@@ -632,9 +632,17 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `LONG_CONTEXT_REQUIRED`; wtedy platforma ustawia tier przed create/resume bez
   zaleznosci od kompletnosci katalogu i potwierdza go przez typed
   `session.model.getCurrent` przed pierwszym `sendAndWait`. Brak potwierdzenia
-  zatrzymuje run przed wyslaniem promptu. Runtime nie probuje zmieniac tieru w
-  trakcie aktywnej wiadomosci. Decyzje sa widoczne jako
-  `AnalysisAiActivityEvent` kategorii `CONTEXT`.
+  zatrzymuje run przed wyslaniem promptu. Podczas turnu platforma obserwuje
+  `session.usage_info`; po przekroczeniu konfigurowalnego progu wykonuje najwyzej
+  jeden kontrolowany upgrade `abort -> close handle -> resume same sessionId`
+  z `contextTier=long_context`. Initial prompt nie jest wysylany ponownie, a
+  wznowiona sesja dostaje tylko krotka instrukcje kontynuacji zachowanego planu.
+  User-visible lifecycle
+  `platform.context_tier` rozdziela zazadanie tieru, stan raportowany przez
+  model RPC i pierwszy rzeczywisty `tokenLimit/currentTokens` z
+  `session.usage_info` oraz fazy abort/resume; wszystkie zdarzenia zachowuja
+  parametry decyzji i sa renderowane jako `AnalysisAiActivityEvent` kategorii
+  `CONTEXT`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
   Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
   `CopilotClientOptions`. Runtime zawsze przekazuje `githubToken` jawnie i

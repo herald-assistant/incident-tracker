@@ -1567,6 +1567,13 @@
                 <div class="ai-work-item__details">
                   <div class="ai-work-item__details-header">
                     <h6 class="ai-work-item__details-title">{{ item.title }}</h6>
+                    @if (item.meta.length > 0) {
+                      <div class="ai-work-item__meta" aria-label="Parametry zdarzenia">
+                        @for (meta of item.meta; track meta) {
+                          <span>{{ meta }}</span>
+                        }
+                      </div>
+                    }
                   </div>
 
                   @if (item.markdownContent) {

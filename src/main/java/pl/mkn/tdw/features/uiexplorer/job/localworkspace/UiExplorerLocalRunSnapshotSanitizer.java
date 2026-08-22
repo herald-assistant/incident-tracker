@@ -12,6 +12,7 @@ import pl.mkn.tdw.shared.evidence.AnalysisEvidenceAttribute;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceItem;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,6 +55,32 @@ public class UiExplorerLocalRunSnapshotSanitizer {
             "candidateCount",
             "returnedStartLine",
             "returnedEndLine"
+    );
+
+    private static final Set<String> SAFE_CONTEXT_TIER_ACTIVITY_DETAILS = Set.of(
+            "phase",
+            "trigger",
+            "observationSource",
+            "model",
+            "preference",
+            "requestedTier",
+            "estimatedInitialTokens",
+            "initialThresholdTokens",
+            "runtimeUsageThreshold",
+            "runtimeThresholdTokens",
+            "defaultWindowTokens",
+            "longContextWindowTokens",
+            "reason",
+            "effectiveTier",
+            "effectiveModel",
+            "effectiveReasoningEffort",
+            "tokenLimit",
+            "currentTokens",
+            "messagesLength",
+            "utilizationPercent",
+            "verification",
+            "failureType",
+            "sessionId"
     );
 
     private final UiExplorerResultReportAssembler reportAssembler;
@@ -207,7 +234,24 @@ public class UiExplorerLocalRunSnapshotSanitizer {
                 event.toolCallId(),
                 event.toolName(),
                 event.timestamp(),
-                Map.of()
+                sanitizeActivityDetails(event)
         );
+    }
+
+    private Map<String, Object> sanitizeActivityDetails(AnalysisAiActivityEvent event) {
+        if (!"platform.context_tier".equals(event.type()) || event.details().isEmpty()) {
+            return Map.of();
+        }
+        var safeDetails = new LinkedHashMap<String, Object>();
+        event.details().forEach((name, value) -> {
+            if (SAFE_CONTEXT_TIER_ACTIVITY_DETAILS.contains(name) && isSafeActivityDetailValue(value)) {
+                safeDetails.put(name, value);
+            }
+        });
+        return safeDetails;
+    }
+
+    private boolean isSafeActivityDetailValue(Object value) {
+        return value instanceof Number || value instanceof Boolean || value instanceof String string && string.length() <= 500;
     }
 }

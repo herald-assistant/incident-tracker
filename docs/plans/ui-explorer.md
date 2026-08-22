@@ -2590,6 +2590,41 @@ guard przeszly; pelne `mvn -q test`: 1310 testow, 0 failures, 0 errors,
 0 skipped. `git diff --check` — PASS. Frontend nie byl uruchamiany, poniewaz
 zmiana nie dotyka Angulara ani publicznego kontraktu backend-frontend.
 
+### 8S. Kontrolowany runtime upgrade przed kompaktowaniem
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-22 uzupelnienie
+platformowej ochrony po potwierdzeniu, ze samo ustawienie tieru przed sesja nie
+chroni goal-driven researchu, gdy SDK nadal raportuje mniejsze rzeczywiste okno
+albo kontekst rosnie w trakcie turnu.
+
+Historyczny mechanizm przez `setModel` pozostaje usuniety. Nowy wariant nie
+zmienia modelu aktywnej wiadomosci: obserwuje `session.usage_info`, a po
+przekroczeniu platformowego progu wykonuje najwyzej raz `abort -> close handle
+-> resume same sessionId` z `contextTier=long_context`. Resume nie wysyla
+ponownie initial promptu; korzysta z historii sesji i krotkiej instrukcji
+kontynuacji. Rejestracje report, tool evidence i tool budget obejmuja oba
+uchwyty, a operator widzi decyzje, abort, resume, weryfikacje tieru i
+rzeczywisty limit po resume.
+
+- [x] 8S.1: Dodac runtime threshold oparty o `currentTokens / tokenLimit` bez
+  listy modeli i bez publicznych pol feature'a.
+- [x] 8S.2: Zachowac ten sam `sessionId` i stan analizy przez kontrolowany
+  abort/resume bez powtarzania initial promptu.
+- [x] 8S.3: Utrzymac jedna akumulacje usage oraz jedna rejestracje report/tool
+  evidence/tool budget przez oba uchwyty sesji.
+- [x] 8S.4: Pokazac user-visible lifecycle i bezpieczne parametry decyzji we
+  wspolnym panelu oraz eksporcie UI Explorera.
+- [x] 8S.5: Wykonac silnie zanonimizowane testy CRM, pelna regresje wspolnego
+  backend-frontend i `git diff --check`.
+
+Rezultat: przekroczenie 70% rzeczywistego okna prowadzi przez jeden
+kontrolowany abort/resume tego samego `sessionId`; initial prompt nie jest
+duplikowany, a operator widzi pelny lifecycle i bezpieczne parametry decyzji.
+Silnie zanonimizowane testy CRM objely policy, gateway, persistence i shared
+panel FE. Testy Angular: 433/433 PASS; produkcyjny build Angular PASS;
+`mvn -q -Pbackend-dev clean package`: 1314 testow, 0 failures, 0 errors,
+0 skipped; `git diff --check` — PASS.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

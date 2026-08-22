@@ -1603,7 +1603,7 @@ function buildRuntimeWorkItem(event: AnalysisAiActivityEvent): AiWorkItemView {
     previewMarkdown: '',
     markdownContent: '',
     iconName: failed ? 'error' : runtimeEventIcon(type),
-    meta: buildTimelineEventMeta(event),
+    meta: [...buildTimelineEventMeta(event), ...buildContextTierMeta(event)],
     technicalTooltip: buildAiActivityTooltip(event),
     timestampMs: activityTimestampMs(event),
     ...buildDisplayStatus(failed ? 'FAILED' : event.status || 'INFO', event.summary),
@@ -1767,6 +1767,7 @@ function extractToolRequests(event: AnalysisAiActivityEvent): ToolRequestInfo[] 
 
 function shouldRenderRuntimeEvent(type: string): boolean {
   return (
+    type === 'platform.context_tier' ||
     type === 'session.usage_info' ||
     type === 'session.truncation' ||
     type === 'session.compaction_complete' ||
@@ -1860,6 +1861,19 @@ function buildRuntimeSummary(event: AnalysisAiActivityEvent): string {
   const type = normalizeEventType(event.type);
   const details = activityDetails(event);
 
+  if (type === 'platform.context_tier') {
+    const phase = stringFromRecord(details, 'phase');
+    const requestedTier = stringFromRecord(details, 'requestedTier');
+    const tokenLimit = numberFromRecord(details, 'tokenLimit');
+    const currentTokens = numberFromRecord(details, 'currentTokens');
+    if (phase === 'EFFECTIVE_WINDOW_OBSERVED' && tokenLimit !== null) {
+      return `Copilot zgłosił rzeczywisty limit ${formatTokenCount(tokenLimit)} tokenów przy użyciu ${formatTokenCount(currentTokens ?? 0)} tokenów.`;
+    }
+    if (requestedTier) {
+      return `Platforma zażądała tieru ${requestedTier} przed otwarciem sesji.`;
+    }
+  }
+
   if (type === 'session.usage_info') {
     const currentTokens = numberFromRecord(details, 'currentTokens');
     const tokenLimit = numberFromRecord(details, 'tokenLimit');
@@ -1909,6 +1923,58 @@ function buildTimelineEventMeta(event: AnalysisAiActivityEvent): string[] {
   }
 
   return meta;
+}
+
+function buildContextTierMeta(event: AnalysisAiActivityEvent): string[] {
+  if (normalizeEventType(event.type) !== 'platform.context_tier') {
+    return [];
+  }
+
+  const details = activityDetails(event);
+  const trigger = stringFromRecord(details, 'trigger');
+  const requestedTier = stringFromRecord(details, 'requestedTier');
+  const effectiveTier = stringFromRecord(details, 'effectiveTier');
+  const estimatedInitialTokens = numberFromRecord(details, 'estimatedInitialTokens');
+  const initialThresholdTokens = numberFromRecord(details, 'initialThresholdTokens');
+  const runtimeUsageThreshold = numberFromRecord(details, 'runtimeUsageThreshold');
+  const runtimeThresholdTokens = numberFromRecord(details, 'runtimeThresholdTokens');
+  const tokenLimit = numberFromRecord(details, 'tokenLimit');
+  const currentTokens = numberFromRecord(details, 'currentTokens');
+  const utilizationPercent = numberFromRecord(details, 'utilizationPercent');
+
+  return [
+    trigger ? contextTierTriggerLabel(trigger) : '',
+    requestedTier ? `Żądany tier: ${requestedTier}` : '',
+    effectiveTier ? `Stan SDK: ${effectiveTier}` : '',
+    estimatedInitialTokens !== null
+      ? `Initial context: ${formatTokenCount(estimatedInitialTokens)} tokenów`
+      : '',
+    initialThresholdTokens !== null
+      ? `Próg: ${formatTokenCount(initialThresholdTokens)} tokenów`
+      : '',
+    runtimeUsageThreshold !== null
+      ? `Próg runtime: ${(runtimeUsageThreshold * 100).toLocaleString('pl-PL')}%`
+      : '',
+    runtimeThresholdTokens !== null
+      ? `Przełączenie od: ${formatTokenCount(runtimeThresholdTokens)} tokenów`
+      : '',
+    tokenLimit !== null ? `Rzeczywisty limit: ${formatTokenCount(tokenLimit)} tokenów` : '',
+    currentTokens !== null ? `Aktualnie: ${formatTokenCount(currentTokens)} tokenów` : '',
+    utilizationPercent !== null ? `Wykorzystanie: ${utilizationPercent.toLocaleString('pl-PL')}%` : ''
+  ].filter(Boolean);
+}
+
+function contextTierTriggerLabel(trigger: string): string {
+  if (trigger === 'FEATURE_REQUIREMENT') {
+    return 'Powód: wymaganie feature’a';
+  }
+  if (trigger === 'INITIAL_CONTEXT_THRESHOLD') {
+    return 'Powód: initial context przekroczył próg';
+  }
+  if (trigger === 'RUNTIME_USAGE_THRESHOLD') {
+    return 'Powód: wykorzystanie okna przekroczyło próg';
+  }
+  return `Powód: ${trigger}`;
 }
 
 function buildDisplayStatus(
@@ -2278,6 +2344,9 @@ function toolIconByName(toolName: string): string {
 }
 
 function runtimeEventIcon(type: string): string {
+  if (type === 'platform.context_tier') {
+    return 'aspect_ratio';
+  }
   if (type === 'session.usage_info') {
     return 'account_tree';
   }

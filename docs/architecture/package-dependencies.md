@@ -196,7 +196,10 @@ Warstwa posiada neutralna mechanike uruchamiania AI:
 - model/options catalog,
 - neutralna, konfigurowalna polityke context tier: estymowany preflight `AUTO`,
   feature-owned `LONG_CONTEXT_REQUIRED` oraz typed weryfikacje efektywnego tieru
-  przed pierwszym `sendAndWait`,
+  przed pierwszym `sendAndWait`; user-visible lifecycle koreluje zazadany tier,
+  stan model RPC i rzeczywisty limit okna z `session.usage_info`, a kontrolowany
+  runtime upgrade wykonuje co najwyzej jeden abort/resume tego samego
+  `sessionId` bez ponownego wyslania initial promptu,
 - user-visible usage i techniczne wykonanie requestu.
 
 Feature przekazuje platformie prompt, guidance do uzycia skilli, available

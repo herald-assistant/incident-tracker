@@ -190,11 +190,28 @@ W trybie `AUTO` tier jest wybierany tylko wtedy, gdy billing/capability modelu
 podaje domyslne okno i wieksze okno maksymalne; niepelne metadata pozostawiaja
 default SDK. W trybie wymaganym SDK jest autorytatywnym zrodlem: brak
 efektywnego `long_context` przerywa run przed wyslaniem promptu. Polityka nie
-zmienia tieru w trakcie aktywnej wiadomosci, nie anuluje kompaktowania, nie
-wywoluje eksperymentalnego `preCompact` i nie zmienia promptu, tools, hidden
-scope ani kontraktu wyniku. W properties nie ma listy nazw ani limitow modeli.
+uzywa `setModel` do zmiany tieru i nie wywoluje eksperymentalnego `preCompact`.
+Obserwuje natomiast rzeczywiste zapelnienie okna z `session.usage_info` i po
+przekroczeniu `runtime-usage-threshold` wykonuje najwyzej jeden kontrolowany
+upgrade: abort aktywnego turnu, zamkniecie uchwytu i resume tego samego
+`sessionId` z `long_context`. Resume nie powtarza initial promptu, zachowuje
+session history oraz wspolne report/tool evidence/tool budget stores i wysyla
+tylko neutralna instrukcje kontynuacji. Prompt, tools, hidden scope i kontrakt
+wyniku nie zmieniaja sie. W properties nie ma listy nazw ani limitow modeli.
 Rollbackiem jest
 `analysis.ai.copilot.context-tier.enabled=false`.
+
+`session.model.getCurrent` potwierdza stan tieru zapisany przez sesje, ale nie
+jest samodzielnym dowodem rozmiaru aktywnego okna. Platforma publikuje dlatego
+user-visible lifecycle `platform.context_tier`: `TIER_REQUESTED` z przyczyna i
+parametrami decyzji, `MODEL_STATE_VERIFICATION` z wynikiem typed RPC oraz
+`EFFECTIVE_WINDOW_OBSERVED` z pierwszym rzeczywistym `tokenLimit`,
+`currentTokens` i wykorzystaniem odczytanym z `session.usage_info`. Eventy sa
+czescia wspolnego activity trace i UI, a nie ukryta telemetryka. Przy runtime
+upgrade lifecycle pokazuje dodatkowo decyzje progowa, wynik abortu, zadanie
+resume tego samego `sessionId`, ponowna weryfikacje tieru oraz rzeczywisty limit
+po resume. Gdy rozszerzone okno nadal nie jest wieksze, platforma nie tworzy
+petli kolejnych resume; rozbieznosc pozostaje jawna dla operatora.
 
 ## 1b. Copilot authentication ma dwa tryby
 

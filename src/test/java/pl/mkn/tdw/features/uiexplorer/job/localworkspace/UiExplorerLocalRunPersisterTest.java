@@ -73,6 +73,23 @@ class UiExplorerLocalRunPersisterTest {
         assertThat(persistedAttributeNames)
                 .containsOnly("filePath", "reason", "toolCallId", "toolName");
         assertThat(envelope.at("/payload/job/aiActivityEvents/0/details").isEmpty()).isTrue();
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/type").asText())
+                .isEqualTo("platform.context_tier");
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/phase").asText())
+                .isEqualTo("TIER_REQUESTED");
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/trigger").asText())
+                .isEqualTo("FEATURE_REQUIREMENT");
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/requestedTier").asText())
+                .isEqualTo("long_context");
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/estimatedInitialTokens").asLong())
+                .isEqualTo(96_000L);
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/runtimeUsageThreshold").asDouble())
+                .isEqualTo(0.70D);
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/runtimeThresholdTokens").asLong())
+                .isEqualTo(190_400L);
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/sessionId").asText())
+                .isEqualTo("crm-anonymized-session-17");
+        assertThat(envelope.at("/payload/job/aiActivityEvents/1/details/rawArguments").isMissingNode()).isTrue();
         assertThat(envelope.at("/payload/job/toolFeedback").isEmpty()).isTrue();
         assertThat(envelope.at("/payload/job/preparedPrompt").asText()).isEqualTo(PREPARED_PROMPT);
         assertThat(envelope.at("/payload/job/exportAvailable").asBoolean()).isTrue();
@@ -83,6 +100,7 @@ class UiExplorerLocalRunPersisterTest {
                         "CRM_RAW_SOURCE_SECRET",
                         "CRM_HIDDEN_SCOPE_SECRET",
                         "CRM_HIDDEN_ACTIVITY_SECRET",
+                        "CRM_HIDDEN_CONTEXT_TIER_SECRET",
                         "CRM_HIDDEN_FEEDBACK_SECRET",
                         "confidential-crm-group",
                         "internal-crm-ui-project"

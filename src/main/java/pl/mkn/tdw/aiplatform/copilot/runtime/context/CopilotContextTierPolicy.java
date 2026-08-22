@@ -52,15 +52,18 @@ public class CopilotContextTierPolicy {
 
         var estimatedTokens = estimateInitialTokens(preparedSession, settings);
         if (preference == CopilotContextTierPreference.LONG_CONTEXT_REQUIRED) {
+            var profile = findProfileBestEffort(preparedSession, modelId);
             return new CopilotContextTierDecision(
                     true,
                     preference,
-                    false,
-                    modelId,
-                    0,
-                    0,
+                    profile != null,
+                    profile != null ? profile.id() : modelId,
+                    profile != null ? profile.defaultContextWindowTokens() : 0,
+                    profile != null ? profile.longContextWindowTokens() : 0,
                     estimatedTokens,
                     0,
+                    settings.getRuntimeUsageThreshold(),
+                    settings.getVerificationTimeout().toMillis(),
                     true,
                     "The feature requires long_context before its first message; SDK state will be verified after session open."
             );
@@ -86,6 +89,8 @@ public class CopilotContextTierPolicy {
                 profile.longContextWindowTokens(),
                 estimatedTokens,
                 thresholdTokens,
+                settings.getRuntimeUsageThreshold(),
+                settings.getVerificationTimeout().toMillis(),
                 estimatedTokens >= thresholdTokens,
                 estimatedTokens >= thresholdTokens
                         ? "Estimated initial context reached the configured default-window threshold."
@@ -100,7 +105,18 @@ public class CopilotContextTierPolicy {
             String reason
     ) {
         return new CopilotContextTierDecision(
-                enabled, preference, false, modelId, 0, 0, 0, 0, false, reason
+                enabled,
+                preference,
+                false,
+                modelId,
+                0,
+                0,
+                0,
+                0,
+                properties.getContextTier().getRuntimeUsageThreshold(),
+                properties.getContextTier().getVerificationTimeout().toMillis(),
+                false,
+                reason
         );
     }
 
@@ -170,6 +186,14 @@ public class CopilotContextTierPolicy {
                 .orElse(null);
     }
 
+    private CopilotModelOption findProfileBestEffort(CopilotPreparedSession preparedSession, String modelId) {
+        try {
+            return findProfile(preparedSession, modelId);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
     private String selectedModel(CopilotPreparedSession preparedSession) {
         if (preparedSession.sessionTarget() != null && preparedSession.sessionTarget().existing()) {
             if (preparedSession.resumeSessionConfig() != null
@@ -193,6 +217,9 @@ public class CopilotContextTierPolicy {
         }
         if (settings.getInitialPromptThreshold() <= 0D || settings.getInitialPromptThreshold() > 1D) {
             throw new IllegalStateException("analysis.ai.copilot.context-tier.initial-prompt-threshold must be in (0, 1]");
+        }
+        if (settings.getRuntimeUsageThreshold() <= 0D || settings.getRuntimeUsageThreshold() >= 1D) {
+            throw new IllegalStateException("analysis.ai.copilot.context-tier.runtime-usage-threshold must be in (0, 1)");
         }
         if (settings.getEstimatedCharactersPerToken() <= 0D) {
             throw new IllegalStateException("analysis.ai.copilot.context-tier.estimated-characters-per-token must be positive");
