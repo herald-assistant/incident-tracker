@@ -43,10 +43,10 @@ class UiExplorerInitialPromptMatrixTest {
 
     private static final int MAX_FIXED_PROMPT_OVERHEAD = 12_000;
     private static final Map<String, Integer> MAX_PROMPT_CHARACTERS = Map.of(
-            "simple-screen", 15_500,
-            "deep-routed-container", 19_500,
-            "dynamic-form", 20_500,
-            "reactive-access", 19_500
+            "simple-screen", 17_000,
+            "deep-routed-container", 21_000,
+            "dynamic-form", 22_000,
+            "reactive-access", 21_000
     );
 
     private final UiExplorerPromptPreparationService service = new UiExplorerPromptPreparationService(
@@ -55,7 +55,7 @@ class UiExplorerInitialPromptMatrixTest {
     );
 
     @Test
-    void shouldKeepEveryReachableCrmFactOnceInAReadablePromptAcrossTheMatrix() {
+    void shouldKeepACompleteTargetableCrmFrontierAndEmbedInitialFactsOnceAcrossTheMatrix() {
         var preparedCases = matrix().stream()
                 .map(scenario -> new PreparedCase(
                         scenario,
@@ -72,7 +72,7 @@ class UiExplorerInitialPromptMatrixTest {
                     "## 1. Analysis request and active sections",
                     "## 2. Selected screen and source revision",
                     "## 3. Effective route, component BFS and dependency map",
-                    "## 4. Reachable source evidence",
+                    "## 4. Initial reachable source evidence and on-demand frontier",
                     "## 5. Coverage and targeted research queue",
                     "## 6. Functional documentation writing contract",
                     "## 7. Final response contract",
@@ -123,7 +123,11 @@ class UiExplorerInitialPromptMatrixTest {
 
         assertThat(prompts.get("deep-routed-container"))
                 .containsSubsequence("### Depth 0", "### Depth 1", "### Depth 2")
-                .contains("/crm/customers/:customerId/workspace/activities");
+                .contains("/crm/customers/:customerId/workspace/activities")
+                .contains("sliceRef=`component-crm-activity-detail`; initial=ON_DEMAND")
+                .contains("sliceRef=`dependency-crm-activity-api`; initial=ON_DEMAND")
+                .doesNotContain("readonly selectedActivityId = input.required<string>();")
+                .doesNotContain("loadActivity(id: string)");
         assertThat(prompts.get("dynamic-form"))
                 .contains("CRM_DYNAMIC_FORM_MANUAL_OVERRIDE")
                 .contains("CRM_DYNAMIC_FORM_VALIDATION")
@@ -148,6 +152,63 @@ class UiExplorerInitialPromptMatrixTest {
                 .contains("Runtime field definition requires targeted evidence.")
                 .contains("\"visibilityLimits\":[]");
         assertThat(recoverable.visibilityLimits()).isEmpty();
+    }
+
+    @Test
+    void shouldKeepADeepSyntheticCrmGraphTargetableWithoutEmbeddingEverySourceLayer() {
+        var components = new java.util.ArrayList<GitLabFrontendReachabilityComponent>();
+        for (var index = 0; index < 12; index++) {
+            var id = "component-crm-layer-" + index;
+            var symbol = "CrmLayer" + index + "Component";
+            var filler = ("  readonly syntheticCrmFiller" + index + " = 'anonymized';\n").repeat(400);
+            var content = "export class " + symbol + " {\n" + filler
+                    + "  readonly CRM_LAYER_SOURCE_" + index + " = true;\n}";
+            components.add(component(
+                    id,
+                    index,
+                    index,
+                    symbol,
+                    index == 2 ? List.of("dependency-crm-layer-view-model") : List.of(),
+                    index < 11 ? List.of("component-crm-layer-" + (index + 1)) : List.of(),
+                    content
+            ));
+        }
+        var viewModel = dependency(
+                "dependency-crm-layer-view-model",
+                0,
+                GitLabFrontendReachabilityDependencyKind.INHERITED_TYPE,
+                GitLabFrontendReachabilityDependencyCategory.DATA_MODEL,
+                "CrmLayerViewModel",
+                List.of(),
+                List.of("component-crm-layer-2"),
+                List.of(),
+                "export interface CrmLayerViewModel { readonly CRM_DEFERRED_MODEL_SOURCE: string; }"
+        );
+        var scenario = scenario(
+                "deep-source-frontier",
+                List.of("/crm/customers/:customerId/deep-workspace"),
+                List.copyOf(components),
+                List.of(viewModel),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of("CRM_LAYER_SOURCE_0", "CRM_LAYER_SOURCE_1")
+        );
+
+        var prompt = service.prepare(scenario.request(), scenario.context()).prompt();
+
+        components.forEach(component -> assertThat(prompt).contains("sliceRef=`" + component.componentId() + "`"));
+        assertThat(prompt)
+                .contains("CRM_LAYER_SOURCE_0", "CRM_LAYER_SOURCE_1")
+                .contains("sliceRef=`component-crm-layer-2`; initial=ON_DEMAND")
+                .contains("sliceRef=`dependency-crm-layer-view-model`; initial=ON_DEMAND")
+                .doesNotContain("CRM_LAYER_SOURCE_2", "CRM_LAYER_SOURCE_11", "CRM_DEFERRED_MODEL_SOURCE");
+        var allSourceCharacters = components.stream()
+                .mapToInt(GitLabFrontendReachabilityComponent::returnedCharacters)
+                .sum();
+        assertThat(prompt.length())
+                .as("initial prompt should stay far below eager embedding of all deep CRM source layers")
+                .isLessThan(allSourceCharacters / 2);
     }
 
     private int promptLength(List<PreparedCase> preparedCases, String id) {

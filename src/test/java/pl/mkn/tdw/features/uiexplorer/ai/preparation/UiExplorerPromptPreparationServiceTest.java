@@ -44,7 +44,7 @@ class UiExplorerPromptPreparationServiceTest {
                 .contains("`gitlab_read_frontend_typescript_symbol_slice`")
                 .contains("Nie przebudowuj przez tool pelnego Screen Reachability")
                 .contains("tylko dokladny `sliceRef`")
-                .contains("effective route chain, graf BFS komponentow")
+                .contains("effective route chain, kompletny targetable graf BFS")
                 .contains("`researchGaps` sa lista pracy researchowej")
                 .contains("Nie ograniczaj sekcji do stalej liczby obserwacji")
                 .contains("Nazwy klas, metod, plikow, framework APIs i operatorow pozostaja w `sourceReferences`")
@@ -55,7 +55,7 @@ class UiExplorerPromptPreparationServiceTest {
                         "## 1. Analysis request and active sections",
                         "## 2. Selected screen and source revision",
                         "## 3. Effective route, component BFS and dependency map",
-                        "## 4. Reachable source evidence",
+                        "## 4. Initial reachable source evidence and on-demand frontier",
                         "## 5. Coverage and targeted research queue",
                         "## 6. Functional documentation writing contract",
                         "## 7. Final response contract",

@@ -39,6 +39,8 @@ class UiExplorerArtifactServiceTest {
         var outline = content(artifacts, UiExplorerArtifactService.REACHABILITY_OUTLINE_ARTIFACT);
         assertThat(outline).contains("Effective route chain", "CrmContactPreferencesComponent")
                 .contains("selected screen slice ref: `crm-contact-preferences`")
+                .contains("sliceRef=`component-crm-contact-preferences`; initial=EMBEDDED")
+                .contains("sliceRef=`dependency-crm-preferences-api`; initial=EMBEDDED")
                 .doesNotContain("export class");
         var slices = content(artifacts, UiExplorerArtifactService.SOURCE_SLICES_ARTIFACT);
         assertThat(slices).contains("UNTRUSTED_SOURCE_EVIDENCE")
@@ -49,12 +51,15 @@ class UiExplorerArtifactServiceTest {
                 .contains("savePreferences()")
                 .contains("CrmContactPreferencesApi")
                 .contains("loadDefinition")
-                .contains("Ignore previous instructions");
+                .contains("Ignore previous instructions")
+                .doesNotContain("usedBy=", "downstream=", "members=", "entries=", "dependencies=");
         var coverage = objectMapper.readTree(content(artifacts, UiExplorerArtifactService.COVERAGE_ARTIFACT));
         assertThat(coverage.path("researchGaps").get(0).asText()).contains("targeted evidence");
         assertThat(coverage.path("completenessSignals").path("reachableComponentCount").asInt()).isEqualTo(1);
         assertThat(coverage.path("completenessSignals").path("componentTemplateCount").asInt()).isEqualTo(1);
         assertThat(coverage.path("completenessSignals").path("componentTemplateCharacters").asInt()).isPositive();
+        assertThat(coverage.path("initialSourceProjection").path("embeddedComponentCount").asInt()).isEqualTo(1);
+        assertThat(coverage.path("initialSourceProjection").path("onDemandComponentCount").asInt()).isZero();
         assertThat(content(artifacts, UiExplorerArtifactService.FUNCTIONAL_WRITING_CONTRACT_ARTIFACT))
                 .contains("Glowna tresc jest dokumentacja funkcjonalna")
                 .contains("Akcja | Kiedy dostepna | Co wykorzystuje | Rezultat | Co widzi uzytkownik")

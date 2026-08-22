@@ -27,15 +27,18 @@ public class UiExplorerArtifactService {
     public static final String FUNCTIONAL_WRITING_CONTRACT_ARTIFACT = "ui-explorer/functional-writing-contract.md";
     public static final String RESPONSE_CONTRACT_ARTIFACT = "ui-explorer/response-contract.json";
 
-    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v7";
+    private static final String FORMAT_VERSION = "ui-explorer-artifacts-v8";
 
     private final ObjectMapper objectMapper;
     private final UiExplorerSourceSliceRenderer sourceSliceRenderer = new UiExplorerSourceSliceRenderer();
+    private final UiExplorerReachabilityOutlineRenderer reachabilityOutlineRenderer =
+            new UiExplorerReachabilityOutlineRenderer();
 
     public List<CopilotRenderedArtifact> renderArtifacts(
             UiExplorerJobStartRequest request,
             UiExplorerScreenReachabilityContext context
     ) {
+        var initialProjection = UiExplorerInitialSourceProjection.from(context.graph());
         return List.of(
                 artifact(
                         REQUEST_ARTIFACT,
@@ -55,19 +58,19 @@ public class UiExplorerArtifactService {
                 ),
                 artifact(
                         REACHABILITY_OUTLINE_ARTIFACT,
-                        "Readable effective route, component BFS and canonical dependency registry",
+                        "Readable effective route and complete targetable component/dependency frontier",
                         "screen-reachability-outline",
                         context.boundary().componentCount() + context.boundary().dependencyCount(),
                         "text/markdown",
-                        reachabilityOutlineArtifact(context)
+                        reachabilityOutlineArtifact(context, initialProjection)
                 ),
                 artifact(
                         SOURCE_SLICES_ARTIFACT,
-                        "File-grouped component and dependency slices in reachability order",
+                        "File-grouped first BFS source layer; deeper targets remain available on demand",
                         "screen-source-slices",
-                        context.boundary().componentCount() + context.boundary().dependencyCount(),
+                        initialProjection.embeddedTargetCount(context.graph()),
                         "text/markdown",
-                        sourceSlicesArtifact(context)
+                        sourceSlicesArtifact(context, initialProjection)
                 ),
                 artifact(
                         COVERAGE_ARTIFACT,
@@ -75,7 +78,7 @@ public class UiExplorerArtifactService {
                         "coverage",
                         context.sectionCoverage().size(),
                         "application/json",
-                        coverageArtifact(context)
+                        coverageArtifact(context, initialProjection)
                 ),
                 artifact(
                         FUNCTIONAL_WRITING_CONTRACT_ARTIFACT,
@@ -215,7 +218,10 @@ public class UiExplorerArtifactService {
         return json(payload);
     }
 
-    private String reachabilityOutlineArtifact(UiExplorerScreenReachabilityContext context) {
+    private String reachabilityOutlineArtifact(
+            UiExplorerScreenReachabilityContext context,
+            UiExplorerInitialSourceProjection projection
+    ) {
         var lines = new ArrayList<String>();
         lines.add("# UI Explorer Screen Reachability");
         lines.add("");
@@ -226,22 +232,41 @@ public class UiExplorerArtifactService {
         lines.add("- reachability status: `" + context.status().name() + "`");
         lines.add("- components in BFS: " + context.boundary().componentCount());
         lines.add("- deduplicated dependencies: " + context.boundary().dependencyCount());
+        lines.add("- initial source components: " + projection.embeddedComponentCount());
+        lines.add("- on-demand component frontier: " + projection.deferredComponentCount());
+        lines.add("- initial source dependencies: " + projection.embeddedDependencyCount());
+        lines.add("- on-demand dependency frontier: " + projection.deferredDependencyCount());
+        lines.add("- external or unresolved dependencies: " + projection.unavailableDependencyCount());
         lines.add("");
-        lines.add(context.graph().readableOutline());
+        lines.add(reachabilityOutlineRenderer.render(context.graph(), projection));
         return String.join(System.lineSeparator(), lines);
     }
 
-    private String sourceSlicesArtifact(UiExplorerScreenReachabilityContext context) {
-        return sourceSliceRenderer.render(context.graph());
+    private String sourceSlicesArtifact(
+            UiExplorerScreenReachabilityContext context,
+            UiExplorerInitialSourceProjection projection
+    ) {
+        return sourceSliceRenderer.render(context.graph(), projection);
     }
 
-    private String coverageArtifact(UiExplorerScreenReachabilityContext context) {
+    private String coverageArtifact(
+            UiExplorerScreenReachabilityContext context,
+            UiExplorerInitialSourceProjection projection
+    ) {
         var payload = basePayload("APPLICATION_GENERATED");
         payload.put("overallStatus", context.status());
         payload.put("activeSectionCoverage", context.sectionCoverage());
         payload.put("researchGaps", context.researchGaps());
         payload.put("diagnostics", context.graph().diagnostics());
         payload.put("boundary", context.boundary());
+        payload.put("initialSourceProjection", Map.of(
+                "policy", "BFS depth 0-1 is embedded; ON_DEMAND targets remain mandatory research frontier when material to an active section.",
+                "embeddedComponentCount", projection.embeddedComponentCount(),
+                "onDemandComponentCount", projection.deferredComponentCount(),
+                "embeddedDependencyCount", projection.embeddedDependencyCount(),
+                "onDemandDependencyCount", projection.deferredDependencyCount(),
+                "externalOrUnresolvedDependencyCount", projection.unavailableDependencyCount()
+        ));
         payload.put("completenessSignals", completenessSignals(context));
         payload.put("visibilityLimits", context.visibilityLimits());
         return json(payload);

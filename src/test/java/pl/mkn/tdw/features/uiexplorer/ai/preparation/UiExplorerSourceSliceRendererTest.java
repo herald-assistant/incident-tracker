@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependency;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyCategory;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityDependencyKind;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponentLevel;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
 
 import java.util.List;
@@ -59,7 +61,8 @@ class UiExplorerSourceSliceRendererTest {
                 .contains("// ... 2 unrelated methods omitted ...")
                 .contains("`dependency-crm-contact-load`, `dependency-crm-contact-load-alias`")
                 .contains("`dependency-crm-contact-save`")
-                .contains("no source slice returned for: `dependency-crm-contact-empty`")
+                .doesNotContain("dependency-crm-contact-empty")
+                .doesNotContain("usedBy=", "downstream=", "members=", "entries=", "dependencies=")
                 .doesNotContain("    // no source slice returned");
 
         var naiveRawSlices = UiExplorerAiPreparationTestFixture.context().graph().componentLevels().stream()
@@ -70,6 +73,39 @@ class UiExplorerSourceSliceRendererTest {
         assertThat(rendered.length())
                 .as("file grouping should be shorter even than raw repeated slices without old per-slice metadata")
                 .isLessThan(naiveRawSlices);
+    }
+
+    @Test
+    void shouldUseASourceFenceLongerThanBackticksInsideSyntheticCrmEvidence() {
+        var base = UiExplorerAiPreparationTestFixture.context().graph();
+        var component = base.componentLevels().get(0).components().get(0);
+        var sourceWithFence = """
+                export class CrmContactPreferencesComponent {
+                  readonly markdownFence = "```";
+                }
+                """;
+        var replaced = new GitLabFrontendReachabilityComponent(
+                component.componentId(), component.breadthFirstOrder(), component.depth(),
+                component.connectedToSelectedScreen(), component.discoveryKind(), component.symbol(),
+                component.selector(), component.sourcePath(), component.templatePath(), component.templateContent(),
+                component.status(), component.templateBindings(), component.entrySymbols(), component.includedSymbols(),
+                component.dependencyIds(), component.childComponentIds(), sourceWithFence,
+                component.sourceCharacters(), sourceWithFence.length(), component.truncated(), component.limitations()
+        );
+        var graph = new GitLabFrontendScreenReachabilityGraph(
+                base.scope(), base.sourceRevision(), base.status(), base.screenNode(), base.effectiveRouteChain(),
+                List.of(new GitLabFrontendReachabilityComponentLevel(0, List.of(replaced))),
+                List.of(), base.edges(), base.diagnostics(), base.sourceFileCount(), base.sourceCharacters(),
+                sourceWithFence.length(), base.outlineCharacters(), base.contextLimitReached(), base.limitations(),
+                base.readableOutline()
+        );
+
+        var rendered = renderer.render(graph);
+
+        assertThat(rendered)
+                .contains("````typescript")
+                .contains("readonly markdownFence = \"```\";")
+                .contains("\n````");
     }
 
     private GitLabFrontendReachabilityDependency dependency(

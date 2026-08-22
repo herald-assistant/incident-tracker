@@ -2398,6 +2398,68 @@ context coverage, preparation, runtime skills, parser/provider oraz
 0 pominietych; `git diff --check` — PASS. Frontend nie byl uruchamiany, bo
 zmiana nie dotyka kodu Angulara ani kontraktu wyniku/exportu UI Explorer.
 
+#### 8P. Warstwowy initial prompt nad pelnym Screen Reachability
+
+Status kroku: completed. Uzytkownik zatwierdzil 2026-08-22 poprawke po
+analizie eksportu zlozonego kalkulatora CRM, ktorego initial prompt przekroczyl
+limit modelu. Source need pozostaje `../needs/ui-explorer.md`.
+
+Baseline: route-aware Screen Reachability prawidlowo odkrywa pelny graf i
+udostepnia wszystkie component/dependency `sliceRef` w hidden tool context.
+Artifacts v7 osadzaja jednak source dla calego grafu od razu. Dla badanego
+widoku oznaczalo to 102 komponenty, 331 dependencies, 1396 krawedzi i
+1 420 120 znakow promptu. Ten sam opis relacji wystepowal w canonical outline
+oraz metadata source targetow, a czteroznakowe wciecie kazdej linii kodu
+zwiekszalo payload bez wartosci merytorycznej. Sesja wystartowala z 346 372
+tokenami przy limicie 272 000 i zakonczyla sie przed analiza.
+
+Conformance delta: neutralna integracja nadal buduje pelny graf bez limitu
+researchu, a hidden allowlista zachowuje wszystkie jego bezpieczne `sliceRef`.
+Feature-owned initial artifact osadza source tylko dla pierwszej warstwy BFS:
+komponentow na depth 0-1, ich template oraz bezposrednio uzywanych, dostepnych
+dependency slices. Pozostale komponenty i zaleznosci zostaja w canonical
+reachability outline jako jawny frontier do deterministycznego poglebiania.
+Runtime skille maja przechodzic frontier warstwami i wywolywac waski TypeScript
+slice tool dla kolejnych materialnych komponentow/dependencies wymaganych przez
+aktywne sekcje; liczba wywolan i laczna mozliwosc researchu nie sa ograniczane.
+
+`screen-source-slices.md` przestaje powtarzac entries/children/dependencies,
+`usedBy` i downstream obecne w outline. Zachowuje jedynie tozsamosc targetu,
+unikalne importy, unikalne source body i omission markers. Source jest
+renderowany w bezpiecznych, dynamicznie domknietych fenced blocks bez stalego
+wciecia kazdej linii. Internal artifact format przechodzi na v8 bez warstwy
+kompatybilnosci. Publiczny request/result/report, job/export, Screen
+Reachability API, MCP schema, hidden scope i frontend pozostaja bez zmian.
+
+Konsumenci: `UiExplorerArtifactService`, `UiExplorerSourceSliceRenderer`, exact
+prepared prompt i artifact preview w aside, trzy runtime skille, preparation
+evidence oraz testy initial promptu. Zmiana jest L1 i nie zmienia grafu
+zaleznosci pakietow. Wszystkie nowe fixtures, nazwy domenowe, snapshoty i
+metryki sa silnie zanonimizowanym, syntetycznym CRM.
+
+- [x] 8P.1: Dodac semantyczna projekcje pierwszej warstwy BFS do initial source
+  artifactu bez usuwania targetow z pelnego grafu ani hidden tool allowlisty.
+- [x] 8P.2: Usunac powtorzona metadata relacji z source artifactu i zastapic
+  stale wciecie source bezpiecznymi fenced blocks zachowujacymi source 1:1.
+- [x] 8P.3: Uspojnic prompt oraz runtime skille z warstwowym traversalem
+  frontieru i obowiazkiem targeted reads do readiness aktywnych sekcji.
+- [x] 8P.4: Dodac CRM-only regresje potwierdzajace pelny frontier, zachowanie
+  source pierwszej warstwy, brak source dalszych warstw, brak powtorzonych
+  relacji i istotny spadek initial promptu bez zmiany result contractu.
+- [x] 8P.5: Wykonac celowane testy preparation/runtime skills, caly pion UI
+  Explorer, `PackageDependencyGuardTest`, pelny backend i `git diff --check`.
+
+Rezultat: artifacts v8 zachowuja kompletny route/component/dependency frontier
+oraz wszystkie session-bound targety, ale initial source osadza tylko komponenty
+depth 0-1, ich template i bezposrednio uzywane source-bearing dependencies.
+Dalszy kod jest jawnie oznaczony jako `ON_DEMAND` i pozostaje dostepny przez
+waske frontend slice tools bez limitu liczby wywolan. Source artifact nie
+powtarza metadanych relacji i uzywa dynamicznych Markdown fences bez stalego
+wciecia kodu. Zweryfikowano celowany pion UI Explorer i tooli, a nastepnie
+pelne `mvn -q test`: 1306 testow, 0 failures, 0 errors, 0 skipped. `git diff
+--check` — PASS. Frontend nie byl uruchamiany, bo zmiana nie dotyka kodu
+Angulara ani publicznego kontraktu request/result/report/export.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego
