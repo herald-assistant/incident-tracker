@@ -21,6 +21,27 @@ class LocalOperationalContextStoreTest {
     Path temporaryDirectory;
 
     @Test
+    void shouldBootstrapEnabledLocalCopyAtStartup() {
+        var root = temporaryDirectory.resolve("tdw-data").resolve("operational-context");
+        var store = store(root, new OperationalContextAtomicMover(), true);
+
+        store.initializeLocalCopyAtStartup();
+
+        assertTrue(Files.isRegularFile(root.resolve("systems.yml")));
+        assertTrue(Files.isRegularFile(root.resolve("operational-context-index.md")));
+    }
+
+    @Test
+    void shouldNotBootstrapDisabledLocalCopyAtStartup() {
+        var root = temporaryDirectory.resolve("tdw-data").resolve("operational-context");
+        var store = store(root, new OperationalContextAtomicMover(), false);
+
+        store.initializeLocalCopyAtStartup();
+
+        assertFalse(Files.exists(root));
+    }
+
+    @Test
     void shouldBootstrapOneLocalCrmCopyAndKeepLocalChangesAfterRestart() throws Exception {
         var root = temporaryDirectory.resolve("tdw-data").resolve("operational-context");
         var store = store(root, new OperationalContextAtomicMover());
@@ -94,8 +115,17 @@ class LocalOperationalContextStoreTest {
     }
 
     private LocalOperationalContextStore store(Path root, OperationalContextAtomicMover mover) {
+        return store(root, mover, true);
+    }
+
+    private LocalOperationalContextStore store(
+            Path root,
+            OperationalContextAtomicMover mover,
+            boolean enabled
+    ) {
         var properties = new OperationalContextProperties();
         properties.setStorageDirectory(root.toString());
+        properties.setEnabled(enabled);
         OperationalContextDocumentSource seed = () -> new OperationalContextRawDocuments("crm-seed", seedDocuments());
         var validation = new OperationalContextCatalogValidationService(() ->
                 new OperationalContextValidationBaseline(

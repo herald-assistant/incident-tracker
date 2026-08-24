@@ -1,5 +1,6 @@
 package pl.mkn.tdw.integrations.operationalcontext;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,13 @@ final class LocalOperationalContextStore {
     private final OperationalContextCatalogCodec catalogCodec;
     private final OperationalContextAtomicMover atomicMover;
     private final OperationalContextCatalogValidationService validationService;
+
+    @PostConstruct
+    void initializeLocalCopyAtStartup() {
+        if (properties.isEnabled()) {
+            loadOrBootstrap();
+        }
+    }
 
     synchronized OperationalContextStoredSnapshot loadOrBootstrap() {
         var root = properties.resolvedStorageDirectory();

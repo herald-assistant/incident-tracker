@@ -97,7 +97,9 @@ Po uruchomieniu przez `run-tdw.ps1` powstaje katalog:
 tdw-data/
 ```
 
-Kolejne pliki i katalogi powstaja dopiero wtedy, gdy sa potrzebne:
+Katalog Operational Context oraz bazowy katalog skilli Copilota sa
+inicjalizowane przy starcie. Pozostale pliki i katalogi powstaja wtedy, gdy sa
+potrzebne:
 
 ```text
 tdw-data/
@@ -133,11 +135,11 @@ logami.
 `copilot/` przechowuje lokalny stan GitHub Copilot SDK/CLI, w tym material
 potrzebny do kontynuacji tej samej sesji.
 
-`operational-context/` jest tworzony przy pierwszym odczycie katalogu przez
-skopiowanie bundled seeda. Od tej chwili UI, tools i feature'y korzystaja
-wylacznie z tej lokalnej, niewersjonowanej kopii. Aktualizacja JAR-a jej nie
-nadpisuje. Aplikacja nie tworzy historii ani rollbacku Operational Context;
-backup polega na skopiowaniu tego katalogu albo calego `tdw-data`.
+`operational-context/` jest tworzony przy pierwszym starcie przez skopiowanie
+bundled seeda. Od tej chwili UI, tools i feature'y korzystaja wylacznie z tej
+lokalnej, niewersjonowanej kopii. Aktualizacja JAR-a jej nie nadpisuje.
+Aplikacja nie tworzy historii ani rollbacku Operational Context; backup polega
+na skopiowaniu tego katalogu albo calego `tdw-data`.
 
 ## Local Workspace A Export
 
