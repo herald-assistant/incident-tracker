@@ -8,6 +8,11 @@ export const AI_SKILL_FAMILIES = [
     label: 'Delivery Complexity Assessment',
     prefix: 'delivery-complexity-assessment-'
   },
+  {
+    id: 'delivery-scope-complexity',
+    label: 'Delivery Scope Complexity',
+    prefix: 'delivery-scope-complexity-'
+  },
   { id: 'other', label: 'Other', prefix: '' }
 ] as const;
 

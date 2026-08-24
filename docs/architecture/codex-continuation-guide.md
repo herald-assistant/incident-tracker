@@ -67,6 +67,9 @@ zatwierdzony invariant trafia do architektury.
 - `src/main/java/pl/mkn/tdw/features/deliverycomplexityassessment`
   Delivery Complexity Assessment: Jira discovery, Delivery Units, bounded
   evidence, Copilot scoring, partial runs i aggregate.
+- `src/main/java/pl/mkn/tdw/features/deliveryscopecomplexity`
+  Delivery Scope Complexity: niezalezny eksperyment score x scope `0-200`,
+  wlasny lifecycle runu i kontrakt bez zaleznosci do sibling assessmentu.
 - `src/main/java/pl/mkn/tdw/features/uiexplorer`
   UI Explorer: katalog ekranow bez ujawniania repository scope, selected-screen
   reachability z effective route chain, iteracyjnym BFS komponentow i

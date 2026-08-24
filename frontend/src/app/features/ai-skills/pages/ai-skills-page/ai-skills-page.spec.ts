@@ -19,11 +19,12 @@ describe('AiSkillsPageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(api.getCatalog).toHaveBeenCalledTimes(1);
-    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(4);
+    expect(compiled.querySelectorAll('.ai-skills-row')).toHaveLength(5);
     expect(compiled.textContent).toContain('Effective runtime catalog');
     expect(compiled.textContent).toContain('incident-analysis-orchestrator');
     expect(compiled.textContent).toContain('Flow Explorer');
     expect(compiled.textContent).toContain('Delivery Complexity Assessment');
+    expect(compiled.textContent).toContain('Delivery Scope Complexity');
 
     fixture.componentInstance.searchControl.setValue('follow-up');
     fixture.detectChanges();
@@ -58,6 +59,21 @@ describe('AiSkillsPageComponent', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.textContent).toContain('delivery-complexity-assessment-evaluator');
     expect(rows[0]?.textContent).toContain('Delivery Complexity Assessment');
+    expect(rows[0]?.textContent).toContain('Assessment');
+  });
+
+  it('should expose the Delivery Scope Complexity evaluator as its own family', async () => {
+    const { fixture } = await createComponent();
+
+    fixture.componentInstance.setFamilyFilter('delivery-scope-complexity');
+    fixture.detectChanges();
+
+    const rows = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.ai-skills-row')
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toContain('delivery-scope-complexity-evaluator');
+    expect(rows[0]?.textContent).toContain('Delivery Scope Complexity');
     expect(rows[0]?.textContent).toContain('Assessment');
   });
 
@@ -200,8 +216,8 @@ function catalog(): AiSkillCatalogResponse {
     version: 2,
     mode: 'EDITABLE',
     source: 'COPILOT_RUNTIME',
-    skillCount: 4,
-    defaultSkillCount: 4,
+    skillCount: 5,
+    defaultSkillCount: 5,
     customSkillCount: 0,
     skills: [
       {
@@ -229,6 +245,13 @@ function catalog(): AiSkillCatalogResponse {
         name: 'delivery-complexity-assessment-evaluator',
         description: 'Assesses one delivered change.',
         lineCount: 138,
+        state: 'DEFAULT',
+        restoreAvailable: true
+      },
+      {
+        name: 'delivery-scope-complexity-evaluator',
+        description: 'Assesses intensity and semantic scope.',
+        lineCount: 150,
         state: 'DEFAULT',
         restoreAvailable: true
       }

@@ -243,6 +243,9 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'delivery-complexity-assessment') {
       return 'Delivery Complexity Assessment';
     }
+    if (feature === 'delivery-scope-complexity') {
+      return 'Delivery Scope Complexity';
+    }
     return feature
       ? feature
           .split(/[-_]/)
@@ -270,6 +273,9 @@ export class AnalysisHistoryPageComponent {
     }
     if (feature === 'delivery-complexity-assessment') {
       return 'query_stats';
+    }
+    if (feature === 'delivery-scope-complexity') {
+      return 'function';
     }
     return 'analytics';
   }
@@ -363,6 +369,9 @@ function routeForFeature(feature: string): string | null {
   }
   if (feature === 'delivery-complexity-assessment') {
     return '/delivery-complexity-assessment';
+  }
+  if (feature === 'delivery-scope-complexity') {
+    return '/delivery-scope-complexity';
   }
   return null;
 }

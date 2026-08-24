@@ -1,0 +1,640 @@
+<div class="page-shell delivery-assessment-page">
+  <main class="delivery-assessment-workspace" aria-labelledby="deliveryScopeTitle">
+    <section class="delivery-assessment-composer analysis-card">
+      <div class="section-heading">
+        <div>
+          <p class="section-eyebrow">Delivery portfolio</p>
+          <h2 id="deliveryScopeTitle">Delivery Scope Complexity</h2>
+        </div>
+        <div class="section-heading__actions">
+          @if (localRunName()) {
+            <span class="local-run-badge">
+              <span class="material-symbols-outlined" aria-hidden="true">history</span>
+              <span class="local-run-badge__name">{{ localRunName() }}</span>
+            </span>
+          }
+          <input
+            #runImportInput
+            class="run-file-input"
+            type="file"
+            accept=".json,application/json"
+            (change)="importRun($event)"
+          />
+          <button
+            type="button"
+            class="icon-button"
+            aria-label="Importuj run"
+            matTooltip="Importuj run"
+            [disabled]="!canImport()"
+            (click)="triggerImport(runImportInput)"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+          </button>
+          @if (hasTerminalRun()) {
+            <button
+              type="button"
+              class="icon-button"
+              aria-label="Eksportuj run"
+              matTooltip="Eksportuj run"
+              [disabled]="!canExport()"
+              (click)="exportRun()"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">download</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="assessment-form-grid">
+        <label class="field-control">
+          <span class="field-label">Projekt Jira</span>
+          <input
+            class="text-input"
+            type="text"
+            maxlength="50"
+            spellcheck="false"
+            placeholder="np. CRM"
+            [formControl]="jiraProjectControl"
+          />
+        </label>
+
+        <label class="field-control">
+          <span class="field-label">Od</span>
+          <input class="text-input" type="date" [formControl]="fromDateControl" />
+        </label>
+
+        <label class="field-control">
+          <span class="field-label">Do</span>
+          <input class="text-input" type="date" [formControl]="toDateControl" />
+        </label>
+
+        <label class="field-control">
+          <span class="field-label">Model AI</span>
+          <span class="select-loading-control">
+            <select class="select-input" [formControl]="aiModelControl">
+              @for (option of aiModelOptions(); track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            @if (aiOptionsLoading()) {
+              <span class="runtime-spinner" aria-hidden="true"></span>
+            }
+          </span>
+        </label>
+
+        <label class="field-control">
+          <span class="field-label">Reasoning effort</span>
+          <select class="select-input" [formControl]="reasoningEffortControl">
+            @for (effort of reasoningEffortOptions(); track effort) {
+              <option [value]="effort">{{ statusLabel(effort) }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="composer-action">
+          <button
+            type="button"
+            class="primary-button"
+            [class.is-loading]="submitting()"
+            [disabled]="!canStart()"
+            (click)="startJob()"
+          >
+            @if (submitting()) {
+              <span class="button-spinner" aria-hidden="true"></span>
+            } @else {
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+            }
+            <span class="button-label">Rozpocznij</span>
+          </button>
+        </div>
+      </div>
+
+      @if (githubAuthStatus()?.mode === 'GITHUB_APP' && (!githubAuthStatus()?.connected || githubAuthStatus()?.reauthRequired)) {
+        <div class="runtime-message runtime-message--warning" role="status">
+          <span>{{ githubAuthStatus()?.reauthRequired ? 'Połączenie GitHub wymaga odnowienia.' : 'Połącz GitHub przed uruchomieniem analizy.' }}</span>
+          <button type="button" class="secondary-button" (click)="connectGithub()">
+            <span class="material-symbols-outlined" aria-hidden="true">login</span>
+            Połącz
+          </button>
+        </div>
+      }
+
+      @if (aiOptionsError() || githubAuthError()) {
+        <div class="runtime-message runtime-message--warning" role="status">
+          {{ aiOptionsError() || githubAuthError() }}
+        </div>
+      }
+
+      @if (jobError()) {
+        <div class="runtime-message runtime-message--error" role="alert">{{ jobError() }}</div>
+      }
+
+      <details class="assessment-algorithm">
+        <summary class="assessment-algorithm__heading">
+          <span class="material-symbols-outlined" aria-hidden="true">calculate</span>
+          <h3>Jak liczony jest wynik</h3>
+          <span class="material-symbols-outlined assessment-algorithm__toggle" aria-hidden="true">expand_more</span>
+        </summary>
+
+        <div class="assessment-algorithm__body">
+          <div class="assessment-algorithm__intro">
+            <p>
+              AI ocenia intensywność zmiany od 0 do 100 oraz jej semantyczny zakres od 0 do 1
+              osobno w sześciu wymiarach. Backend przelicza zakres na mnożnik od 0,5 do 2,0,
+              stosuje stałe wagi i wylicza wynik jednostki od 0 do 200.
+            </p>
+          </div>
+
+          <dl class="assessment-algorithm__weights" aria-label="Wagi wymiarów oceny">
+            <div>
+              <dt>Nowość</dt>
+              <dd>15%</dd>
+            </div>
+            <div>
+              <dt>Struktura i logika</dt>
+              <dd>25%</dd>
+            </div>
+            <div>
+              <dt>Reguły i inwarianty</dt>
+              <dd>15%</dd>
+            </div>
+            <div>
+              <dt>Odporność i testy</dt>
+              <dd>10%</dd>
+            </div>
+            <div>
+              <dt>Refaktoryzacja i architektura</dt>
+              <dd>15%</dd>
+            </div>
+            <div>
+              <dt>Dystrybucja zmiany</dt>
+              <dd>20%</dd>
+            </div>
+          </dl>
+
+          <div class="assessment-algorithm__conversion">
+            <h4>Deterministyczne przeliczenie</h4>
+            <p>
+              scope = 0,5 + 1,5 × scopeSignal · scaledScore = score × scope ·
+              punkty wymiaru = scaledScore × waga. Wynik jednostki jest sumą punktów wymiarów,
+              ograniczoną do 200 i zaokrągloną do jednego miejsca.
+            </p>
+          </div>
+
+          <p class="assessment-algorithm__note">
+            Raport pokazuje sumę oraz średnią wyników ocenionych jednostek. Jednostki pominięte i zakończone
+            błędem nie dodają punktów. Confidence jest prezentowane osobno i nie zmienia wyniku.
+          </p>
+        </div>
+      </details>
+    </section>
+
+    @if (job(); as currentJob) {
+      <section class="units-section analysis-card" aria-live="polite">
+        <div class="units-heading">
+          <div>
+            <p class="section-eyebrow">{{ currentJob.jiraProject }} · {{ currentJob.fromDate }} – {{ currentJob.toDate }}</p>
+            <h2>Jednostki dostarczenia</h2>
+          </div>
+          <div class="units-heading__status">
+            <span [attr.class]="statusClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
+            <span class="units-count">{{ filteredResultLabel(currentJob) }}</span>
+          </div>
+        </div>
+
+        @if (workflowRunning()) {
+          <div class="units-progress">
+            <div class="progress-track" aria-hidden="true">
+              <span [style.width.%]="progressPercent()"></span>
+            </div>
+            <span>{{ currentJob.processedIssues }} / {{ currentJob.totalIssues || currentJob.discoveredIssues }} issue</span>
+          </div>
+        }
+
+        @if (teamFilterOptions().length || authorFilterOptions().length) {
+          <div class="unit-filters" aria-label="Filtry Delivery Units">
+            <label class="field-control">
+              <span class="field-label">Team</span>
+              <select class="select-input" [formControl]="teamFilterControl">
+                <option value="">Wszystkie teamy</option>
+                @for (option of teamFilterOptions(); track option.value) {
+                  <option [value]="option.value">{{ filterOptionLabel(option) }}</option>
+                }
+              </select>
+            </label>
+            <label class="field-control">
+              <span class="field-label">Autor MR</span>
+              <select class="select-input" [formControl]="authorFilterControl">
+                <option value="">Wszyscy autorzy</option>
+                @for (option of authorFilterOptions(); track option.value) {
+                  <option [value]="option.value">{{ filterOptionLabel(option) }}</option>
+                }
+              </select>
+            </label>
+            @if (filtersActive()) {
+              <button
+                type="button"
+                class="icon-button"
+                aria-label="Wyczyść filtry"
+                matTooltip="Wyczyść filtry"
+                (click)="clearFilters()"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+              </button>
+            }
+            @if (multiAuthorIssueKeys().length) {
+              <span class="multi-author-indicator" [matTooltip]="multiAuthorTooltip()">
+                <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+                <span>{{ multiAuthorIssueKeys().length }}</span>
+              </span>
+            }
+          </div>
+        }
+
+        <div class="units-table" role="table" aria-label="Delivery Units">
+          <div class="units-table__header" role="row">
+            <span role="columnheader">Issue</span>
+            <span role="columnheader">Merge Requests</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader">Wynik</span>
+            <span role="columnheader">Koszt AI</span>
+            <span role="columnheader"></span>
+          </div>
+          @for (unit of visibleUnits(); track trackUnit($index, unit)) {
+            <article class="unit-row" role="row">
+              <div class="unit-row__summary">
+                <div class="unit-row__issues" role="cell">
+                  @for (issue of unit.issues; track issue.issueKey) {
+                    <a [href]="issue.issueUrl" target="_blank" rel="noreferrer">{{ issue.issueKey }}</a>
+                  }
+                  <small>{{ unit.issues[0]?.summary || unit.unitId }}</small>
+                </div>
+                <div class="unit-row__mrs" role="cell">
+                  <strong>{{ unit.mergeRequests.length }}</strong>
+                  <small>{{ unit.mergeRequests[0]?.projectPath || 'Brak merged code evidence' }}</small>
+                </div>
+                <div class="unit-row__status" role="cell">
+                  <span [attr.class]="statusClass(unit.status)">{{ statusLabel(unit.status) }}</span>
+                  @if (unitHasAttention(unit)) {
+                    <span
+                      [class]="unitAttentionClass(unit)"
+                      role="img"
+                      [attr.aria-label]="unitAttentionLabel(unit)"
+                      [matTooltip]="unitAttentionLabel(unit)"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">{{ unitAttentionIcon(unit) }}</span>
+                    </span>
+                  }
+                </div>
+                <div class="unit-row__points" role="cell">
+                  <strong>{{ unit.assessment?.finalScore ?? '—' }}</strong>
+                  @if (unit.assessment) {
+                    <small>/200</small>
+                  }
+                </div>
+                <div class="unit-row__cost" role="cell" [matTooltip]="unitCostTooltip(unit)">
+                  @if (unitCostEstimate(unit); as estimate) {
+                    <strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong>
+                  } @else {
+                    <strong>—</strong>
+                  }
+                </div>
+                @if (unitHasDetails(unit)) {
+                  <button
+                    type="button"
+                    class="icon-button"
+                    [attr.aria-label]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
+                    [matTooltip]="isUnitExpanded(unit.unitId) ? 'Zwiń szczegóły' : 'Rozwiń szczegóły'"
+                    (click)="toggleUnit(unit.unitId)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ isUnitExpanded(unit.unitId) ? 'expand_less' : 'expand_more' }}
+                    </span>
+                  </button>
+                } @else {
+                  <span class="unit-row__empty-action" aria-hidden="true"></span>
+                }
+              </div>
+
+              @if (isUnitExpanded(unit.unitId)) {
+                <div class="unit-details">
+                  @if (unit.mergeRequests.length) {
+                    <section class="unit-merge-requests" aria-label="Merge Requests jednostki">
+                      <header>
+                        <h3>Merge Requests</h3>
+                        <span>{{ unit.mergeRequests.length }}</span>
+                      </header>
+                      <ul>
+                        @for (mergeRequest of unit.mergeRequests; track mergeRequest.identity) {
+                          <li>
+                            @if (mergeRequest.webUrl) {
+                              <a
+                                class="unit-merge-request-link"
+                                [href]="mergeRequest.webUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                [attr.aria-label]="'Otwórz Merge Request ' + mergeRequest.projectPath + '!' + mergeRequest.iid"
+                              >
+                                <span class="material-symbols-outlined" aria-hidden="true">merge_type</span>
+                                <span class="unit-merge-request-link__copy">
+                                  <strong>{{ mergeRequest.title || 'Merge Request' }}</strong>
+                                  <small>
+                                    {{ mergeRequest.projectPath }}{{ mergeRequest.iid !== null ? '!' + mergeRequest.iid : '' }}
+                                  </small>
+                                </span>
+                                <span class="material-symbols-outlined unit-merge-request-link__external" aria-hidden="true">
+                                  open_in_new
+                                </span>
+                              </a>
+                            } @else {
+                              <div class="unit-merge-request-link unit-merge-request-link--unavailable">
+                                <span class="material-symbols-outlined" aria-hidden="true">merge_type</span>
+                                <span class="unit-merge-request-link__copy">
+                                  <strong>{{ mergeRequest.title || 'Merge Request' }}</strong>
+                                  <small>
+                                    {{ mergeRequest.projectPath }}{{ mergeRequest.iid !== null ? '!' + mergeRequest.iid : '' }}
+                                  </small>
+                                </span>
+                              </div>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    </section>
+                  }
+
+                  @if (unit.assessment; as assessment) {
+                    <section class="dimension-panel">
+                      <header>
+                        <h3>Rozkład wyniku</h3>
+                        <span>Confidence {{ percent(assessment.confidence) }}</span>
+                      </header>
+                      <div class="dimension-grid">
+                        @for (dimension of dimensions(assessment.dimensions); track dimension.label) {
+                          <div>
+                            <span>{{ dimension.label }}</span>
+                            <strong>{{ dimension.value.points | number:'1.1-1' }} pkt</strong>
+                            <small>
+                              score {{ dimension.value.score }}/100 · zakres {{ dimension.value.scopeSignal | number:'1.1-1' }}
+                              · mnożnik {{ dimension.value.scope | number:'1.1-1' }} · waga {{ percent(dimension.value.weight) }}
+                            </small>
+                            <span class="dimension-track"><i [style.width.%]="dimension.value.score"></i></span>
+                            @if (dimension.value.evidence.length) {
+                              <ul class="dimension-evidence">
+                                @for (evidence of dimension.value.evidence; track evidence) {
+                                  <li>{{ evidence }}</li>
+                                }
+                              </ul>
+                            }
+                          </div>
+                        }
+                      </div>
+                    </section>
+
+                  }
+
+                  <div class="unit-insights">
+                    @if (unit.assessment?.evidenceSummary?.length) {
+                      <section class="unit-insight">
+                        <h3>Evidence</h3>
+                        <ul>
+                          @for (item of unit.assessment?.evidenceSummary; track item) {
+                            <li>{{ item }}</li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                    @if (unit.assessment?.qualityFlags?.length) {
+                      <section class="unit-insight">
+                        <h3>Quality flags</h3>
+                        <ul>
+                          @for (flag of unit.assessment?.qualityFlags; track flag) {
+                            <li>{{ flag }}</li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                    @if (unit.visibilityLimits.length) {
+                      <section class="unit-insight unit-insight--attention">
+                        <h3>Visibility limits</h3>
+                        <ul>
+                          @for (limit of unit.visibilityLimits; track limit) {
+                            <li>{{ limit }}</li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                    @if (unitWarnings(unit).length) {
+                      <section class="unit-insight unit-insight--attention">
+                        <h3>Warnings</h3>
+                        <ul>
+                          @for (warning of unitWarnings(unit); track warning) {
+                            <li>{{ warning }}</li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                    @if (unit.rawAiResponse !== null) {
+                      <details class="unit-raw-response">
+                        <summary>
+                          <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
+                          <span>Raw AI response</span>
+                        </summary>
+                        <pre>{{ unit.rawAiResponse || '(empty response)' }}</pre>
+                      </details>
+                    }
+                  </div>
+                </div>
+              }
+            </article>
+          } @empty {
+            <div class="units-empty">
+              @if (workflowRunning()) {
+                <span class="runtime-spinner" aria-hidden="true"></span>
+                <span>Oczekiwanie na Delivery Units</span>
+              } @else if (filtersActive()) {
+                <span>Brak Delivery Units dla wybranego filtra.</span>
+              } @else {
+                <span>Brak Delivery Units w wybranym zakresie.</span>
+              }
+            </div>
+          }
+        </div>
+
+        @if (visibleAggregate(); as aggregate) {
+          <section class="overall-result" aria-label="Wynik całościowy">
+            <div class="overall-result__primary">
+              <p class="section-eyebrow overall-result__label">
+                <span>Wynik całościowy</span>
+                <button
+                  type="button"
+                  class="overall-result__help"
+                  aria-label="Wyjaśnienie wyniku całościowego"
+                  [matTooltip]="overallResultTooltip(currentJob, aggregate)"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                </button>
+              </p>
+              <div>
+                <strong>{{ aggregate.totalComplexityPoints | number:'1.1-1' }}</strong>
+                <span class="overall-result__label">
+                  <span>Punkty complexity</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie punktów complexity"
+                    [matTooltip]="complexityPointsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </span>
+              </div>
+            </div>
+            <dl class="overall-result__metrics">
+              <div>
+                <dt class="overall-result__label">
+                  <span>Średnia</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie średniego wyniku"
+                    [matTooltip]="averageComplexityTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
+                <dd>{{ aggregate.averageComplexityScore | number:'1.1-1' }} / 200</dd>
+              </div>
+              <div>
+                <dt class="overall-result__label">
+                  <span>Confidence</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie Confidence"
+                    [matTooltip]="confidenceTooltip(visibleUnits(), aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
+                <dd>{{ statusLabel(aggregate.confidence) }}</dd>
+              </div>
+              <div>
+                <dt class="overall-result__label">
+                  <span>Ocenione</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie liczby ocenionych jednostek"
+                    [matTooltip]="assessedUnitsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
+                <dd>{{ aggregate.assessedUnits }} / {{ aggregate.totalUnits }}</dd>
+              </div>
+              <div>
+                <dt class="overall-result__label">
+                  <span>Brak oceny</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie liczby jednostek bez oceny"
+                    [matTooltip]="notAssessedUnitsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
+                <dd>{{ aggregate.excludedUnits + aggregate.notScorableUnits }}</dd>
+              </div>
+              <div>
+                <dt class="overall-result__label">
+                  <span>Błędy</span>
+                  <button
+                    type="button"
+                    class="overall-result__help"
+                    aria-label="Wyjaśnienie liczby błędów"
+                    [matTooltip]="failedUnitsTooltip(aggregate)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                  </button>
+                </dt>
+                <dd>{{ aggregate.failedUnits }}</dd>
+              </div>
+            </dl>
+          </section>
+
+          @if (aggregate.usage; as usage) {
+            <footer class="cost-summary" aria-label="Całościowy koszt AI">
+              <div class="cost-summary__primary">
+                <p class="section-eyebrow">Koszt AI całości</p>
+                @if (usageCostEstimate(); as estimate) {
+                  <strong>{{ estimate.dollars | currency:'USD':'symbol':'1.2-4' }}</strong>
+                  <span>szacowany koszt tokenów</span>
+                } @else {
+                  <strong>n/a</strong>
+                }
+              </div>
+              <dl>
+                <div>
+                  <dt>Input</dt>
+                  <dd>{{ tokenCount(usage.inputTokens) }}</dd>
+                </div>
+                <div>
+                  <dt>Cache</dt>
+                  <dd>{{ tokenCount(usage.cacheReadTokens) }}</dd>
+                </div>
+                <div>
+                  <dt>Output</dt>
+                  <dd>{{ tokenCount(usage.outputTokens) }}</dd>
+                </div>
+                <div>
+                  <dt>Wywołania AI</dt>
+                  <dd>{{ usage.apiCallCount }}</dd>
+                </div>
+              </dl>
+            </footer>
+          }
+        }
+      </section>
+
+      <app-analysis-feature-aside
+        ariaLabel="Panel pracy Delivery Scope Complexity"
+        [progressActive]="workflowRunning()"
+        [aiActive]="currentJob.status === 'ANALYZING'"
+        [progressCount]="currentJob.steps.length"
+        [aiCount]="currentJob.aiActivityEvents.length"
+        [showChat]="false"
+        [showFeedback]="false"
+      >
+        <div progressPanel>
+          <app-analysis-steps-panel
+            [steps]="currentJob.steps"
+            [evidenceSections]="currentJob.contextSections"
+            [aiActivityEvents]="currentJob.aiActivityEvents"
+            [preparedPrompts]="preparedPrompts()"
+            [showAiWorkflow]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+        <div aiPanel>
+          <app-analysis-steps-panel
+            [steps]="currentJob.steps"
+            [evidenceSections]="currentJob.contextSections"
+            [aiActivityEvents]="currentJob.aiActivityEvents"
+            [preparedPrompts]="preparedPrompts()"
+            [showProgress]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+      </app-analysis-feature-aside>
+    } @else {
+      <section class="assessment-empty analysis-card">
+        <span class="material-symbols-outlined" aria-hidden="true">query_stats</span>
+        <h2>Brak uruchomionej analizy</h2>
+      </section>
+    }
+  </main>
+</div>

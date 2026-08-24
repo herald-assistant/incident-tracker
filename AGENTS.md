@@ -46,7 +46,9 @@ Przed wieksza zmiana zacznij od:
     dla zmian Config Drift Viewer
 11. `docs/architecture/delivery-complexity-assessment-runtime-flow.md`
     dla zmian Delivery Complexity Assessment
-12. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
+12. `docs/architecture/delivery-scope-complexity-runtime-flow.md`
+    dla zmian eksperymentalnego Delivery Scope Complexity
+13. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
 
 ## Najwazniejsze niezmienniki
@@ -285,6 +287,10 @@ Zasady granic:
   Delivery Units issue-MR, pelne inline evidence zwrocone przez integracje,
   rownolegle sesje Copilota, deterministyczny scoring oraz czastkowy zapis w
   Analysis History.
+- `src/main/java/pl/mkn/tdw/features/deliveryscopecomplexity`
+  Niezalezny eksperymentalny feature score x scope: wlasny skill, kontrakt
+  `0-200`, job, historia/import-export i UI bez importow do drugiego
+  assessmentu.
 - `src/main/java/pl/mkn/tdw/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`

@@ -29,9 +29,9 @@ platforma analityczna ma obslugiwac wiele sposobow zadawania pytan o system.
 Glowny shell UI jest zorganizowany wokol trzech grup:
 
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
-  `Incident Analysis`, `Flow Explorer`, `Change Verification` i
-  `Config Drift Viewer`, `Delivery Complexity Assessment` oraz przyszle miejsce na Data
-  Diagnostics.
+  `Incident Analysis`, `Flow Explorer`, `Change Verification`,
+  `Config Drift Viewer`, `Delivery Complexity Assessment`, eksperymentalny
+  `Delivery Scope Complexity` oraz przyszle miejsce na Data Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
   i Operational Context. Te widoki sluza do testow, debugowania i recznego
@@ -175,6 +175,18 @@ wynikami czastkowymi. Feature korzysta z neutralnych Jira/GitLab ports,
 platformy Copilota i shared run UI, ale posiada wlasny request, evidence,
 policy, scoring, report i job state.
 
+### Delivery Scope Complexity
+
+To niezalezny eksperyment uruchamiany rownolegle z Delivery Complexity
+Assessment dla tych samych zakresow Jira. AI oddzielnie ocenia intensywnosc
+`0-100` i semantyczny zakres `0-1` szesciu wymiarow. Backend liczy jawny
+mnoznik zakresu `0.5-2.0`, wazone skladowe i finalny wynik `0-200`.
+
+Feature ma wlasny endpoint, historie, skill, prompt, kontrakt, import/export i
+ekran. Swiadomie nie reuse'uje feature-owned orchestration drugiego
+assessmentu. Pozwala to porownac stabilnosc, evidence i koszt obu metod, a
+nastepnie usunac jedna z nich bez migracji pozostawionej.
+
 ### Functional logic explorer
 
 Uzytkownik pyta o logike funkcjonalna konkretnego use case'u, procesu,
@@ -283,7 +295,8 @@ generycznym silnikiem analitycznym.
 
 ## Najwazniejszy dowod architektury
 
-Flow Explorer, Change Verification i Delivery Complexity Assessment sa
+Flow Explorer, Change Verification, Delivery Complexity Assessment i
+Delivery Scope Complexity sa
 kolejnymi feature'ami obok Incident Analysis i stanowia praktyczny test, czy platforma nie jest tylko
 przemianowanym incident trackerem. Kazdy obecny i kolejny feature:
 

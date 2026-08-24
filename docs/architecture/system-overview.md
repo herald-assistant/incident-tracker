@@ -39,7 +39,8 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
    naprawy, weryfikacji albo przekazania dalej.
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
-Config Drift Viewer i Delivery Complexity Assessment.
+Config Drift Viewer, Delivery Complexity Assessment i eksperymentalny
+Delivery Scope Complexity.
 Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
 asynchroniczny job oraz neutralna capability GitLaba do graph-first
 rozpoznawania Angular/Nx route/view catalog i screen reachability. Integracja
@@ -197,6 +198,9 @@ Na dzisiaj projekt ma:
   dostarczonej zlozonosci dla projektu Jira i zakresu dat; widok pokazuje
   postep, czastkowe Delivery Units, DSP, coverage, confidence, visibility
   limits i usage/cost oraz odtwarza aktywny lub terminalny local run,
+- ekran `GET /delivery-scope-complexity` do rownoleglego testowania
+  niezaleznego algorytmu score x scope; pokazuje wynik `0-200`, pelne skladowe
+  per wymiar, evidence, raw AI response, usage/cost i wlasny local run,
 - w ekranie `GET /incident-analysis` start analizy ma wybor zrodla logow:
   Elasticsearch po `correlationId` albo upload CSV; gdy konfiguracja
   Elasticsearch/Kibana jest niepelna, sciezka `correlationId` jest zablokowana,
@@ -344,6 +348,15 @@ Na dzisiaj projekt ma:
   przez ograniczony fan-out, a `GET` z `/{jobId}` zwraca Jira progress,
   effective JQL, steps/activity, Delivery Units, aggregate, usage, visibility
   limits i report.
+- `GET /delivery-scope-complexity`
+  Angularowy workspace niezaleznego eksperymentu score x scope.
+- `POST /api/delivery-scope-complexity/jobs`
+  Zapisuje `QUEUED` w Analysis History i uruchamia wlasny lifecycle. Polling
+  `GET /api/delivery-scope-complexity/jobs/{jobId}` zwraca czastkowe jednostki,
+  score/scope breakdown oraz sume i srednia `0-200`.
+- `POST /api/delivery-scope-complexity/imports`
+  Waliduje read-only envelope `tdw.delivery-scope-complexity-export` V1 bez
+  kompatybilnosci z eksportem drugiego assessmentu.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.
@@ -789,8 +802,8 @@ Znaczenie grup UI:
 - `Analysis Features` - pionowe feature'y produktowe. `Incident Analysis` jest
   pierwszym dostepnym feature'em; Flow Explorer i Change Verification sa
   kolejnymi dostepnymi feature'ami, podobnie jak Config Drift Viewer i
-  Delivery Complexity Assessment, a Data Diagnostics pozostaje placeholderem
-  dla przyszlego feature'a.
+  Delivery Complexity Assessment i eksperymentalny Delivery Scope Complexity,
+  a Data Diagnostics pozostaje placeholderem dla przyszlego feature'a.
 - `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
   GitLab, Jira, Confluence, Database i Operational Context sa
   analysis-independent i nie eksponuja incidentowego `analysisRunId`;

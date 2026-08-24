@@ -1011,3 +1011,23 @@ na jednostce przed wyslaniem i pokazywany w kroku `AI_INPUT_PREPARATION`.
 Raport jednostki powstaje deterministycznie z finalnego JSON-a. SDK `cost` jest
 agregowany jako mnoznik rozliczeniowy i nie jest prezentowany jako USD; koszt
 tokenow w UI pozostaje osobnym oszacowaniem.
+
+## 29. Alternatywny scoring jest izolowany jako osobny eksperyment
+
+`Delivery Scope Complexity` nie jest trybem ani wersja Delivery Complexity
+Assessment. Ma wlasny feature id, API, properties, skill, kontrakt wyniku,
+local run codec, import/export i ekran. Oba feature'y korzystaja z neutralnych
+Jira/GitLab/Copilot capabilities, ale nie importuja siebie wzajemnie. Czasowe
+powtorzenie source/job orchestration jest zaakceptowanym kosztem deletion
+boundary: po porownaniu mozna usunac jeden algorytm bez migracji drugiego.
+
+Alternatywny model rozdziela `score` `0-100` od `scopeSignal` `0-1` w szesciu
+wymiarach. AI zwraca tylko te decyzje i evidence. Backend zaokragla sygnal,
+mapuje go liniowo na `scope` `0.5-2.0`, liczy wazone punkty i ogranicza wynik
+jednostki do `0-200`. Publiczny breakdown zawiera kazda skladowa arytmetyki,
+wiec wynik jest odtwarzalny bez interpretowania raw response.
+
+Eksperyment nie mapuje wyniku na DSP i nie mierzy produktywnosci. Aggregate
+zawiera sume i srednia final score, liczniki statusow, confidence oraz
+usage/cost. Wspolny dashboard porownawczy nie jest czescia pierwszej wersji;
+uzytkownik uruchamia oba niezalezne runy na tym samym zakresie.

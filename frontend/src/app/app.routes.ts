@@ -131,6 +131,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'delivery-scope-complexity',
+        loadComponent: () =>
+          import(
+            './features/delivery-scope-complexity/pages/delivery-scope-complexity-page/delivery-scope-complexity-page'
+          ).then((module) => module.DeliveryScopeComplexityPageComponent),
+        data: {
+          section: 'Analysis Features',
+          title: 'Delivery Scope Complexity'
+        }
+      },
+      {
         path: 'evidence',
         redirectTo: 'elastic',
         pathMatch: 'full'

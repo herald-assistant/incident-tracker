@@ -118,6 +118,17 @@ class FrontendPageTest {
     }
 
     @Test
+    void shouldServeBothDeliveryComplexityRoutes() throws Exception {
+        mockMvc.perform(get("/delivery-complexity-assessment"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+
+        mockMvc.perform(get("/delivery-scope-complexity"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
+    @Test
     void shouldServeAnyFutureFrontendRouteWithoutControllerUpdates() throws Exception {
         mockMvc.perform(get("/future-feature"))
                 .andExpect(status().isOk())

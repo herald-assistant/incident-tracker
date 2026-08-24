@@ -11,6 +11,9 @@ describe('AI Skills display projection', () => {
     expect(aiSkillFamily('delivery-complexity-assessment-evaluator').label).toBe(
       'Delivery Complexity Assessment'
     );
+    expect(aiSkillFamily('delivery-scope-complexity-evaluator').label).toBe(
+      'Delivery Scope Complexity'
+    );
     expect(aiSkillFamily('future-skill').label).toBe('Other');
   });
 
@@ -21,6 +24,7 @@ describe('AI Skills display projection', () => {
     expect(aiSkillResponsibility('delivery-complexity-assessment-evaluator')).toBe(
       'Assessment'
     );
+    expect(aiSkillResponsibility('delivery-scope-complexity-evaluator')).toBe('Assessment');
     expect(aiSkillResponsibility('future-skill')).toBe('Guidance');
   });
 

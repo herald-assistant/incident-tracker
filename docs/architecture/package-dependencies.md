@@ -379,6 +379,12 @@ regula zabrania pakietowi
 `deterministic.projection` z dokladnymi wartosciami oraz warstwy
 `presentation`; adnotacje DEEP sa laczone dopiero poza granica AI.
 
+Delivery Scope Complexity celowo posiada wlasna orchestration obok Delivery
+Complexity Assessment. Oba feature'y moga korzystac z tych samych neutralnych
+integracji i platformy, ale nie importuja siebie wzajemnie. Powtorzenie
+feature-owned lifecycle jest czasowym kosztem eksperymentu i zapewnia, ze
+usuniecie jednego algorytmu nie zmienia kontraktu drugiego.
+
 ## Frontend
 
 Docelowy kierunek zaleznosci Angulara:

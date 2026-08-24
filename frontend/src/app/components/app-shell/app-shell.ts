@@ -98,6 +98,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: 'query_stats',
         reloadOnActiveClick: true
       },
+      {
+        label: 'Delivery Scope Complexity',
+        route: '/delivery-scope-complexity',
+        icon: 'function',
+        reloadOnActiveClick: true
+      },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
     ]
   },

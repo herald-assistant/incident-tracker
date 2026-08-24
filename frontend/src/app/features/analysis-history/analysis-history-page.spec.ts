@@ -63,6 +63,18 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('delivery-complexity-assessment')).toBe('query_stats');
   });
 
+  it('should use the Delivery Scope Complexity product mapping', async () => {
+    const { fixture } = await createComponent();
+    const component = fixture.componentInstance as unknown as {
+      featureLabel: (feature: string) => string;
+      featureIcon: (feature: string) => string;
+    };
+
+    expect(component.featureLabel('delivery-scope-complexity'))
+      .toBe('Delivery Scope Complexity');
+    expect(component.featureIcon('delivery-scope-complexity')).toBe('function');
+  });
+
   it('should use the UI Explorer product mapping', async () => {
     const { fixture } = await createComponent();
     const component = fixture.componentInstance as unknown as {
@@ -259,6 +271,27 @@ describe('AnalysisHistoryPageComponent', () => {
 
     expect(navigateSpy).toHaveBeenCalledWith(['/delivery-complexity-assessment'], {
       queryParams: { localRunId: 'delivery-1' }
+    });
+  });
+
+  it('should route a delivery scope run to its independent feature screen', async () => {
+    const { fixture, router } = await createComponent();
+    const run: LocalAnalysisRunListItemResponse = {
+      analysisId: 'delivery-scope-1',
+      feature: 'delivery-scope-complexity',
+      name: 'CRM | July | scope',
+      status: 'ANALYZING',
+      createdAt: '2026-07-30T10:00:00Z',
+      updatedAt: '2026-07-30T10:01:00Z',
+      completedAt: ''
+    };
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.openRun(run);
+    await fixture.whenStable();
+
+    expect(navigateSpy).toHaveBeenCalledWith(['/delivery-scope-complexity'], {
+      queryParams: { localRunId: 'delivery-scope-1' }
     });
   });
 
