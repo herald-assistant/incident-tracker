@@ -702,11 +702,11 @@ function completedUnit(): DeliveryScopeComplexityJobStateSnapshot['units'][numbe
     assessment: {
       finalScore: 8,
       dimensions: {
-        novelty: dimensionScore(35, 0.2, 0.15, 3.9),
+        novelty: dimensionScore(35, 0.2, 0.20, 5.6),
         structuralAndLogic: dimensionScore(45, 0.3, 0.25, 10.8),
         businessAndInvariants: dimensionScore(30, 0.2, 0.15, 3.4),
         robustnessAndTests: dimensionScore(25, 0.2, 0.10, 1.9),
-        refactorAndArchitecture: dimensionScore(20, 0.1, 0.15, 2.0),
+        refactorAndArchitecture: dimensionScore(20, 0.1, 0.10, 1.4),
         distribution: dimensionScore(25, 0.2, 0.20, 3.8)
       },
       confidence: 0.85,

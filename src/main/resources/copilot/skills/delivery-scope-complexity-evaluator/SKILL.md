@@ -27,6 +27,7 @@ Nie uzywaj jako bezposredniego sygnalu zlozonosci:
 - surowej liczby plikow, testow lub LOC,
 - formatowania, importow, plikow generowanych, lockfile i boilerplate,
 - powtorzen tego samego wzorca jako wielu niezaleznych zachowan,
+- przeniesienia istniejacych regul i inwariantow bez zmiany semantyki,
 - samego faktu dodania testow, logow albo nowej klasy.
 
 Opis issue wyraza intencje. Score wymaga potwierdzenia w dostarczonym kodzie
@@ -52,17 +53,28 @@ gadatliwosci kodu ani liczby plikow testowych.
 
 ### `novelty`
 
-Nowosc dostarczonego bytu lub zdolnosci wobec widocznego kontekstu.
+Nowosc dostarczonego bytu lub zdolnosci wobec widocznego kontekstu. Score
+mierzy odleglosc od juz istniejacego wzorca, nie sam fakt dodania nowego pliku,
+klienta, endpointu albo integracji.
 
-- `0-20`: trywialna edycja, konfiguracja lub powtorzenie wzorca.
-- `21-40`: rozszerzenie istniejacego wzorca w module.
-- `41-60`: nowy komponent wedlug znanego wzorca w bounded context.
-- `61-80`: nowa zdolnosc, integracja albo koncept domenowy.
+- `0-20`: trywialna edycja, konfiguracja albo kolejna instancja juz
+  stosowanego wzorca.
+- `21-40`: rozszerzenie istniejacego wzorca w module bez nowego rodzaju
+  zdolnosci.
+- `41-60`: nowy komponent wedlug znanego wzorca w bounded context, gdy ten
+  wzorzec nie byl jeszcze uzyty w danym miejscu, ale ma precedens w tym samym
+  context.
+- `61-80`: nowa zdolnosc, nowy rodzaj integracji albo nowy koncept domenowy
+  bez lokalnego precedensu.
 - `81-100`: nowy bounded context lub wzorzec bez widocznego precedensu.
 
-Nie twierdz, ze wzorzec nie ma precedensu, jezeli evidence nie pokazuje
-wystarczajacego kontekstu. Analogiczne nowe klasy sa jedna nowoscia; ich zakres
-ujmij w `scopeSignal`.
+Nie przyznawaj wysokiego novelty za n-ta kopie tego samego mechanizmu. Jesli
+serwis juz integruje systemy zewnetrzne tym samym stylem klienta, portu albo
+mapowania, kolejna prosta integracja pozostaje w `0-20`, co najwyzej `21-40`
+przy niebanalnym rozszerzeniu wzorca. Score `61+` wymaga nowego rodzaju
+zdolnosci, a nie nowego wystapienia znanego wzorca. Nie twierdz, ze wzorzec nie
+ma precedensu, jezeli evidence nie pokazuje wystarczajacego kontekstu.
+Analogiczne nowe klasy sa jedna nowoscia; ich zakres ujmij w `scopeSignal`.
 
 ### `structuralAndLogic`
 
@@ -79,15 +91,25 @@ score. Powtorzenia wplywaja na scope subliniowo.
 
 ### `businessAndInvariants`
 
-Sila regul domenowych, skutku dla uzytkownika, pieniedzy i niezmiennikow.
+Sila nowej lub zmienionej wartosci biznesowej: regul domenowych, skutku dla
+uzytkownika, pieniedzy i niezmiennikow. Ocena dotyczy znaczenia reguly, nie jej
+lokalizacji w kodzie.
 
-- `0-20`: brak istotnej nowej reguly biznesowej.
-- `21-40`: konfiguracja albo lokalne rozszerzenie istniejacej reguly.
+- `0-20`: brak istotnej nowej albo zmienionej semantyki biznesowej;
+  przeniesienie, wydzielenie albo przepisanie istniejacego inwariantu bez
+  zmiany znaczenia pozostaje w tym przedziale.
+- `21-40`: konfiguracja albo lokalne rozszerzenie istniejacej reguly ze zmiana
+  zachowania.
 - `41-60`: zmiana widocznego zachowania lub istniejacej istotnej reguly.
 - `61-80`: nowe inwarianty, compliance, wyliczenia finansowe albo limity.
 - `81-100`: krytyczny rdzen domeny, skutki nieodwracalne lub wielostronne.
 
-Liczba regul wplywa na scope, a nie na sile pojedynczego inwariantu.
+Punkty przyznawaj tylko za dodanie albo zmiane semantyki biznesowej.
+Przeniesienie reguly miedzy klasami, warstwami, modulami albo MR-ami, extract
+policy, relocate walidacji i analogiczny move bez zmiany skutku dla
+uzytkownika, pieniedzy albo niezmiennika nie podnosi score. Liczba naprawde
+nowych lub zmienionych regul wplywa na scope, a nie na sile pojedynczego
+inwariantu.
 
 ### `robustnessAndTests`
 
@@ -138,9 +160,13 @@ commitow ani MR-ow. Zwracaj `scopeSignal` zaokraglony do jednego miejsca.
 - `refactorAndArchitecture`: `min(1, distinctArchitecturalMoves / 5)`.
 - `distribution`: `min(1, distinctBoundedContextsOrContracts / 5)`.
 
-Dla `structuralAndLogic` n powtorzen jednego wzorca daje efektywny wklad
-`1.0 + 0.2 * log2(n)`, a nie n jednostek. Dla czystego rename scope signal to
-co najwyzej `log10(1 + filesTouched) / log10(81) * 0.4`.
+Dla `novelty` kolejne instancje tego samego wzorca nie zwiekszaja
+`distinctNewTypesOrCapabilities`. Dla `structuralAndLogic` n powtorzen jednego
+wzorca daje efektywny wklad `1.0 + 0.2 * log2(n)`, a nie n jednostek. Dla
+`businessAndInvariants` licz tylko inwarianty o nowej albo zmienionej semantyce
+biznesowej; przeniesione bez zmiany znaczenia nie sa distinct. Dla czystego
+rename scope signal to co najwyzej
+`log10(1 + filesTouched) / log10(81) * 0.4`.
 
 Niski score i duzy obszar podnosza tylko scope w odpowiednim wymiarze. Wysoki
 score malej zmiany moze miec scopeSignal bliski `0.0-0.1`.

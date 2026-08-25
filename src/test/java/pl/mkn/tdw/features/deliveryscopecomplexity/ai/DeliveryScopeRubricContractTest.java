@@ -47,6 +47,12 @@ class DeliveryScopeRubricContractTest {
                 .contains("scopeSignal")
                 .contains("Nie sumuj score podzadan")
                 .contains("Nie uzywaj jako bezposredniego sygnalu zlozonosci")
+                .contains("przeniesienia istniejacych regul i inwariantow bez zmiany semantyki")
+                .contains("Score mierzy odleglosc od juz istniejacego wzorca")
+                .contains("kolejna prosta integracja pozostaje w `0-20`")
+                .contains("Score `61+` wymaga nowego rodzaju zdolnosci")
+                .contains("Punkty przyznawaj tylko za dodanie albo zmiane semantyki biznesowej")
+                .contains("przeniesione bez zmiany znaczenia nie sa distinct")
                 .doesNotContain(
                         "Story Points",
                         "## Kalibracja finalnego wyniku",

@@ -53,11 +53,11 @@ response sa zapisywane przy jednostce przed dalszym przetwarzaniem.
 
 AI zwraca klasyfikacje, confidence, ograniczenia oraz szesc wymiarow:
 
-- `novelty` - waga `0.15`,
+- `novelty` - waga `0.20`,
 - `structuralAndLogic` - waga `0.25`,
 - `businessAndInvariants` - waga `0.15`,
 - `robustnessAndTests` - waga `0.10`,
-- `refactorAndArchitecture` - waga `0.15`,
+- `refactorAndArchitecture` - waga `0.10`,
 - `distribution` - waga `0.20`.
 
 Kazdy wymiar zawiera calkowity `score` `0-100`, `scopeSignal` `0-1` i

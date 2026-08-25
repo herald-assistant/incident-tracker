@@ -14,11 +14,11 @@ public class DeliveryScopeScoringService {
         }
         var dimensions = response.dimensions();
         var breakdown = new DeliveryScopeScoreBreakdown(
-                dimension(dimensions.novelty(), 0.15),
+                dimension(dimensions.novelty(), 0.20),
                 dimension(dimensions.structuralAndLogic(), 0.25),
                 dimension(dimensions.businessAndInvariants(), 0.15),
                 dimension(dimensions.robustnessAndTests(), 0.10),
-                dimension(dimensions.refactorAndArchitecture(), 0.15),
+                dimension(dimensions.refactorAndArchitecture(), 0.10),
                 dimension(dimensions.distribution(), 0.20)
         );
         var finalScore = round1(Math.min(200.0,

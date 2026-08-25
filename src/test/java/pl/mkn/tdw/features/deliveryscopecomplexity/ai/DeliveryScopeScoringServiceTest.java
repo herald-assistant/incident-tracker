@@ -16,11 +16,27 @@ class DeliveryScopeScoringServiceTest {
         var score = service.score(response(dimensions(dimension(100, 1.0))));
 
         assertThat(score.finalScore()).isEqualTo(200.0);
+        assertThat(List.of(
+                score.dimensions().novelty().weight(),
+                score.dimensions().structuralAndLogic().weight(),
+                score.dimensions().businessAndInvariants().weight(),
+                score.dimensions().robustnessAndTests().weight(),
+                score.dimensions().refactorAndArchitecture().weight(),
+                score.dimensions().distribution().weight()
+        )).containsExactly(0.20, 0.25, 0.15, 0.10, 0.10, 0.20);
+        assertThat(score.dimensions().novelty()).satisfies(dimension -> {
+            assertThat(dimension.weight()).isEqualTo(0.20);
+            assertThat(dimension.points()).isEqualTo(40.0);
+        });
         assertThat(score.dimensions().structuralAndLogic()).satisfies(dimension -> {
             assertThat(dimension.scope()).isEqualTo(2.0);
             assertThat(dimension.scaledScore()).isEqualTo(200.0);
             assertThat(dimension.weight()).isEqualTo(0.25);
             assertThat(dimension.points()).isEqualTo(50.0);
+        });
+        assertThat(score.dimensions().refactorAndArchitecture()).satisfies(dimension -> {
+            assertThat(dimension.weight()).isEqualTo(0.10);
+            assertThat(dimension.points()).isEqualTo(20.0);
         });
     }
 
