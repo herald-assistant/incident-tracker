@@ -13,7 +13,10 @@ Publiczne wejscia:
 - start: `POST /api/delivery-scope-complexity/jobs`,
 - polling: `GET /api/delivery-scope-complexity/jobs/{jobId}`,
 - import: `POST /api/delivery-scope-complexity/imports`,
-- export: wspolny `GET /api/analysis/runs/{analysisId}/export`,
+- przenosny export JSON: wspolny
+  `GET /api/analysis/runs/{analysisId}/export`,
+- biznesowy export CSV: generowany przez UI z terminalnego snapshotu bez
+  dodatkowego endpointu,
 - historia: wspolne `/api/analysis/runs/**` z feature id
   `delivery-scope-complexity`.
 
@@ -91,6 +94,18 @@ Units, linki Jira/MR, final score `0-200`, rozklad wymiarow, evidence, quality
 flags, visibility limits, warnings, raw response i koszt AI. Filtry team/author
 sa deterministyczna projekcja zakonczonego runu i nie zmieniaja zapisanych
 wynikow.
+
+Obok przenosnego JSON UI udostepnia niewersjonowany, biznesowy CSV calego runu
+z jednym wierszem na issue, niezaleznie od aktywnych filtrow. CSV zawiera
+zapisane metadata Jira issue, wspolna liste linkow MR z Delivery Unit, punktowy
+wklad szesciu wymiarow, `finalScore` i `pointsForAggregation`. Nie eksportuje
+wewnetrznych skladowych `score`, `scopeSignal`, `scope`, `scaledScore` ani
+`weight`. Ocena pozostaje ocena Delivery Unit i jest powtarzana przy jej
+issue. `pointsForAggregation` jest wypelnione tylko dla issue z najpozniejszym
+`doneAt`, a przy remisie z leksykograficznie najmniejszym `issueKey`, przez co
+suma tej kolumny nie zwielokrotnia wyniku jednostki. CSV nie jest formatem
+importu; uzywa separatora `;`, UTF-8 z BOM i cytowania wartosci z separatorem,
+cudzyslowem albo nowa linia.
 
 ## Ownership i usuniecie eksperymentu
 

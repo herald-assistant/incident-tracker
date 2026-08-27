@@ -505,6 +505,51 @@ describe('DeliveryScopeComplexityPageComponent', () => {
       });
     }
   });
+
+  it('should download a dedicated business CSV for a terminal assessment', async () => {
+    const completed = snapshot('COMPLETED', 8, [completedUnit()]);
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => 'blob:delivery-scope-csv');
+    const revokeObjectURL = vi.fn();
+    const downloads: string[] = [];
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
+      downloads.push(this.download);
+    });
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+
+    try {
+      const { fixture } = await createComponent({
+        localRun: completed,
+        localRunId: 'job-1'
+      });
+      const exportButton = fixture.nativeElement.querySelector(
+        'button[aria-label="Eksportuj CSV"]'
+      ) as HTMLButtonElement;
+
+      expect(exportButton.disabled).toBe(false);
+      exportButton.click();
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect((createObjectURL.mock.calls[0][0] as Blob).type).toBe('text/csv;charset=utf-8');
+      expect(downloads).toEqual([
+        'delivery-scope-complexity-CRM-2026-07-01-2026-07-31.csv'
+      ]);
+    } finally {
+      clickSpy.mockRestore();
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        value: originalCreateObjectURL
+      });
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        value: originalRevokeObjectURL
+      });
+    }
+  });
 });
 
 async function createComponent(options: {

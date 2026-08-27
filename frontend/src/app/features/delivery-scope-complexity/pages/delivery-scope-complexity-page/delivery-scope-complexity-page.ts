@@ -48,6 +48,7 @@ import {
   DeliveryScopeComplexityJobStateSnapshot
 } from '../../models/delivery-scope-complexity.models';
 import { DeliveryScopeComplexityApiService } from '../../services/delivery-scope-complexity-api.service';
+import { downloadDeliveryScopeComplexityCsv } from '../../utils/delivery-scope-complexity-csv.utils';
 
 type SelectOption = { value: string; label: string };
 type DimensionRow = { label: string; value: DeliveryScopeDimensionScore };
@@ -348,6 +349,14 @@ export class DeliveryScopeComplexityPageComponent implements OnDestroy {
         next: (document) => downloadJsonFile(this.exportFileName(job, document), document),
         error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))
       });
+  }
+
+  protected exportCsv(): void {
+    const job = this.job();
+    if (!job || !this.canExport()) {
+      return;
+    }
+    downloadDeliveryScopeComplexityCsv(job);
   }
 
   protected toggleUnit(unitId: string): void {

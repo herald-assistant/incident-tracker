@@ -13,7 +13,10 @@ Publiczne wejscia:
 - start: `POST /api/delivery-complexity-assessment/jobs`,
 - polling: `GET /api/delivery-complexity-assessment/jobs/{jobId}`,
 - import: `POST /api/delivery-complexity-assessment/imports`,
-- export: wspolny `GET /api/analysis/runs/{analysisId}/export`,
+- przenosny export JSON: wspolny
+  `GET /api/analysis/runs/{analysisId}/export`,
+- biznesowy export CSV: generowany przez UI z terminalnego snapshotu bez
+  dodatkowego endpointu,
 - modele AI: wspolny `GET /api/analysis/ai/options`,
 - historia: wspolne `/api/analysis/runs/**` z feature id
   `delivery-complexity-assessment`.
@@ -67,6 +70,17 @@ zapisuje go od razu jako osobny local run i zwraca wynik tylko do odczytu.
 Import nie rejestruje live joba, nie uruchamia pollingu, Jira, GitLab ani AI i
 nie dodaje continuation. Gdy local workspace jest wylaczony albo zapis sie nie
 powiedzie, import jest odrzucany zamiast zwracac wynik niewidoczny w historii.
+
+Obok przenosnego JSON UI udostepnia niewersjonowany, biznesowy CSV calego runu
+z jednym wierszem na issue. CSV nie jest formatem importu i nie zalezy od
+aktywnych filtrow raportu. Zawiera zapisane metadata Jira issue, wspolna liste
+linkow MR z Delivery Unit, wymiary oceny, `score100`,
+`deliveredStoryPoints` oraz `pointsForAggregation`. Ocena pozostaje ocena
+Delivery Unit i jest powtarzana przy jej issue. Aby analiza w Excelu nie
+zwielokrotniala DSP, `pointsForAggregation` jest wypelnione tylko dla issue z
+najpozniejszym `doneAt`, a przy remisie z leksykograficznie najmniejszym
+`issueKey`. CSV uzywa separatora `;`, UTF-8 z BOM oraz cytowania wartosci
+z separatorem, cudzyslowem albo nowa linia.
 
 Przed kazdym wywolaniem modelu feature zapisuje na Delivery Unit dokladny
 `preparedPrompt` i `promptPreparedAt`, a dopiero potem uruchamia sesje. Krok

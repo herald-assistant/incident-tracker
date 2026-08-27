@@ -47,6 +47,7 @@ import {
   DeliveryComplexityAssessmentJobStateSnapshot
 } from '../../models/delivery-complexity-assessment.models';
 import { DeliveryComplexityAssessmentApiService } from '../../services/delivery-complexity-assessment-api.service';
+import { downloadDeliveryComplexityAssessmentCsv } from '../../utils/delivery-complexity-assessment-csv.utils';
 
 type SelectOption = { value: string; label: string };
 type DimensionRow = { label: string; value: number };
@@ -347,6 +348,14 @@ export class DeliveryComplexityAssessmentPageComponent implements OnDestroy {
         next: (document) => downloadJsonFile(this.exportFileName(job, document), document),
         error: (error: HttpErrorResponse) => this.jobError.set(this.errorMessage(error))
       });
+  }
+
+  protected exportCsv(): void {
+    const job = this.job();
+    if (!job || !this.canExport()) {
+      return;
+    }
+    downloadDeliveryComplexityAssessmentCsv(job);
   }
 
   protected toggleUnit(unitId: string): void {

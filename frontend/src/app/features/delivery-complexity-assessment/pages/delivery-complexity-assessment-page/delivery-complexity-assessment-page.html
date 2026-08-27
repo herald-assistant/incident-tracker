@@ -34,6 +34,16 @@
             <button
               type="button"
               class="icon-button"
+              aria-label="Eksportuj CSV"
+              matTooltip="Eksportuj CSV do Excela"
+              [disabled]="!canExport()"
+              (click)="exportCsv()"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">csv</span>
+            </button>
+            <button
+              type="button"
+              class="icon-button"
               aria-label="Eksportuj run"
               matTooltip="Eksportuj run"
               [disabled]="!canExport()"
