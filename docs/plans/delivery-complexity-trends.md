@@ -4,13 +4,27 @@ Status: done
 
 Source need: [Delivery Complexity Trends - analiza trendow z CSV](../needs/delivery-complexity-trends.md)
 
+## Inkrement 2026-08-27: granulacja tygodniowa
+
+Poziom zmiany: L1. Uzytkownik rozszerza istniejacy filtr okresu o tydzien.
+
+Baseline: model, agregacja, UI i dokumentacja obsluguja `DAY`, `MONTH` oraz
+`QUARTER`. Delta dodaje `WEEK` jako tydzien ISO od poniedzialku do niedzieli,
+z ISO week-year na granicy roku. Konsumentami sa typ filtra, funkcje klucza i
+etykiety okresu, select strony, testy agregacji/komponentu oraz kanoniczny opis
+runtime. Import, deduplikacja, addytywnosc Delivery Unit, CSV i granice sibling
+feature'ow pozostaja bez zmian.
+
+Macierz weryfikacji obejmuje wspolny tydzien, rozne tygodnie, granice ISO roku,
+widoczna opcje filtra, pelny zestaw testow frontendu i produkcyjny build.
+
 ## Potrzeba / dlaczego
 
 Biznesowe CSV obu assessmentow pozwalaja obrabiac pojedynczy run w Excelu, ale
 aplikacja nie potrafi obecnie polaczyc raportow z wielu okresow ani pokazac
-zmiany dostarczonej zlozonosci dzien do dnia, miesiac do miesiaca lub kwartal
-do kwartalu. Uzytkownik potrzebuje lokalnego, uruchamianego na zadanie
-dashboardu z filtrami zespolu, autora MR i dat.
+zmiany dostarczonej zlozonosci dzien do dnia, tydzien do tygodnia, miesiac do
+miesiaca lub kwartal do kwartalu. Uzytkownik potrzebuje lokalnego,
+uruchamianego na zadanie dashboardu z filtrami zespolu, autora MR i dat.
 
 ## Poziom zmiany
 
@@ -88,6 +102,7 @@ jednostki raz, bez dzielenia jej pomiedzy osoby lub zespoly. Zakres dat bedzie
 inkluzywny i zastosowany do daty punktowej jednostki. Granulacja utworzy klucze:
 
 - dzien: `YYYY-MM-DD`,
+- tydzien ISO: `GGGG-Www`, od poniedzialku do niedzieli,
 - miesiac: `YYYY-MM`,
 - kwartal: `YYYY-Q1` do `YYYY-Q4`.
 
@@ -103,8 +118,8 @@ Strona bedzie zawierala:
 - zwarty panel wyboru wielu CSV z lista nazw oraz akcja podmiany/wyczyszczenia
   danych,
 - komunikat o lokalnym przetwarzaniu i obslugiwanym typie pliku,
-- filtry `Okres: dzien / miesiac / kwartal`, `Zespol`, `Autor MR`, `Od`, `Do`
-  oraz reset,
+- filtry `Okres: dzien / tydzien / miesiac / kwartal`, `Zespol`, `Autor MR`,
+  `Od`, `Do` oraz reset,
 - karty podsumowania: laczna zlozonosc, zmiana ostatniego okresu, liczba
   Delivery Units i liczba unikalnych issue,
 - responsywny, przewijany wykres slupkowy bez nowej biblioteki z etykieta
@@ -180,7 +195,8 @@ do nowego ekranu. Feature pozostanie lazy-loaded i nie bedzie wymagac backendu.
 - Feature-local rozpoznawanie i normalizacja dwoch formatow bez importu sibling
   feature'ow.
 - Transakcyjny upload wielu plikow, walidacja, deduplikacja i raport jakosci.
-- Agregacja Delivery Units oraz granulacje dzien, miesiac i kwartal.
+- Agregacja Delivery Units oraz granulacje dzien, tydzien ISO, miesiac i
+  kwartal.
 - Filtry zespolu, autora MR i inkluzywnego zakresu dat.
 - Wykres slupkowy, summary, szczegoly okresow i sekcje pomocnicze.
 - Lazy route, sidebar, Workspace Overview i testy composition rootow.
@@ -226,8 +242,8 @@ do nowego ekranu. Feature pozostanie lazy-loaded i nie bedzie wymagac backendu.
 - Starszy prawidlowy CSV bez autorow nadal tworzy trend i jawne ograniczenie.
 - Deduplikacja `issueKey` oraz agregacja `pointsForAggregation` nie zawyzaja
   liczby issue ani zlozonosci Delivery Unit.
-- Dzien, miesiac i kwartal, daty od-do oraz filtry zespolu/autora zwracaja
-  wyniki zgodne z tabela szczegolow.
+- Dzien, tydzien ISO, miesiac i kwartal, daty od-do oraz filtry zespolu/autora
+  zwracaja wyniki zgodne z tabela szczegolow.
 - Wykres pokazuje wartosci i kierunek zmiany, a brak poprzedniej podstawy nie
   tworzy blednego procentu.
 - Statusy, duplikaty, konflikty, fallbacki i odrzucone dane sa widoczne w
@@ -280,3 +296,10 @@ do nowego ekranu. Feature pozostanie lazy-loaded i nie bedzie wymagac backendu.
   testowe i 489 testow przechodza; produkcyjny build Angulara przechodzi i
   zapisuje lazy chunk `delivery-complexity-trends-page` w
   `src/main/resources/static`.
+- [x] Krok 8: Dodac granulacje `WEEK` jako tydzien ISO poniedzialek-niedziela,
+  opcje `Tydzien` w filtrze oraz regresje wspolnego tygodnia i granicy roku.
+  Zaktualizowac need/runtime flow, uruchomic pelne testy frontendu i build, a
+  nastepnie ponownie ustawic `Status: done`. Wynik: regresja laczy 31 grudnia i
+  3 stycznia w `2020-W53`, rozpoczyna `2021-W01` w poniedzialek 4 stycznia,
+  63 pliki testowe i 490 testow przechodza, a produkcyjny build zawiera
+  zaktualizowany lazy chunk `delivery-complexity-trends-page`.

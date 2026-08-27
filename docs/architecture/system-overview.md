@@ -362,8 +362,9 @@ Na dzisiaj projekt ma:
 - `GET /delivery-complexity-trends`
   Angularowy, client-only workspace laczacy wiele niewersjonowanych biznesowych
   CSV jednego assessmentu. Deduplikuje `issueKey`, odtwarza addytywne Delivery
-  Units i prezentuje trend dzien/miesiac/kwartal z filtrami zespolu, autora MR
-  i dat. Pliki nie sa wysylane do backendu ani zapisywane w Analysis History.
+  Units i prezentuje trend dzien/tydzien ISO/miesiac/kwartal z filtrami
+  zespolu, autora MR i dat. Pliki nie sa wysylane do backendu ani zapisywane w
+  Analysis History.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.

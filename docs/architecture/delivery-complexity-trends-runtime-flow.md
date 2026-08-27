@@ -60,8 +60,11 @@ czesci daty zapisanej w CSV, bez przesuniecia przez strefe czasowa przegladarki.
 
 ## Filtry, okresy i wynik
 
-Uzytkownik wybiera granularnosc `Dzien`, `Miesiac` albo `Kwartal` oraz moze
-ograniczyc widok po zespole, autorze MR i inkluzywnych datach `od`/`do`.
+Uzytkownik wybiera granularnosc `Dzien`, `Tydzien`, `Miesiac` albo `Kwartal`
+oraz moze ograniczyc widok po zespole, autorze MR i inkluzywnych datach
+`od`/`do`. `Tydzien` oznacza tydzien ISO od poniedzialku do niedzieli i uzywa
+ISO week-year, dlatego pierwsze dni stycznia moga nalezec do ostatniego
+tygodnia poprzedniego roku.
 Filtry zespolu i autora dzialaja na poziomie Delivery Unit: jesli jednostka ma
 pasujacy zespol albo co najmniej jeden MR danego autora, do trendu trafia jej
 pelna wartosc. Filtr autora nie dzieli punktow pomiedzy osoby i nie jest miara

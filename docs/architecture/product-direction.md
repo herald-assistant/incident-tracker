@@ -191,8 +191,9 @@ nastepnie usunac jedna z nich bez migracji pozostawionej.
 ### Delivery Complexity Trends
 
 Uzytkownik laczy na zadanie biznesowe CSV z kolejnych runow jednego
-assessmentu i oglada zmiane dostarczonej zlozonosci dziennie, miesiecznie albo
-kwartalnie. Widok deduplikuje issue, zachowuje addytywnosc Delivery Units i
+assessmentu i oglada zmiane dostarczonej zlozonosci dziennie, tygodniowo,
+miesiecznie albo kwartalnie. Widok deduplikuje issue, zachowuje addytywnosc
+Delivery Units i
 pozwala filtrowac po zespole, autorze MR oraz datach. Slupki, tabela, delty,
 statusy i jakosc importu ulatwiaja odczyt trendu bez przygotowywania stalego
 dashboardu albo zapisywania danych na serwerze.

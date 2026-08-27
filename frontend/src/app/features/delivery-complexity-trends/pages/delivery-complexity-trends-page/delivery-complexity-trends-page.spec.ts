@@ -67,6 +67,11 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(compiled.textContent).toContain('lip 2026');
     expect(compiled.textContent).toContain('sie 2026');
     expect(compiled.textContent).toContain('nie są to punkty osoby ani miara produktywności');
+    expect(Array.from(
+      compiled.querySelector<HTMLSelectElement>('.trend-field select')!.options
+    ).map((option) => option.text.trim())).toEqual([
+      'Dzień', 'Tydzień', 'Miesiąc', 'Kwartał'
+    ]);
   });
 
   it('should filter full Delivery Units by team and update the chart and summary', async () => {

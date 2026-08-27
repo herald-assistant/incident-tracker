@@ -123,6 +123,46 @@ describe('Delivery Complexity Trends aggregation', () => {
     expect(quarters.periods.map((period) => period.key)).toEqual(['2026-Q1', '2026-Q2']);
   });
 
+  it('should group ISO weeks from Monday to Sunday across the calendar-year boundary', () => {
+    const data = dataset([
+      issue({
+        issueKey: 'CRM-1',
+        doneAt: '2020-12-31T23:30:00-10:00',
+        doneDate: '2020-12-31',
+        finalPoints: 5,
+        aggregationPoints: 5
+      }),
+      issue({
+        issueKey: 'CRM-2',
+        doneAt: '2021-01-03T00:30:00+14:00',
+        doneDate: '2021-01-03',
+        deliveryUnitId: 'DU-CRM-2',
+        finalPoints: 8,
+        aggregationPoints: 8
+      }),
+      issue({
+        issueKey: 'CRM-3',
+        doneAt: '2021-01-04T09:00:00+01:00',
+        doneDate: '2021-01-04',
+        deliveryUnitId: 'DU-CRM-3',
+        finalPoints: 13,
+        aggregationPoints: 13
+      })
+    ]);
+
+    const weeks = buildAssessmentTrendView(data, filters({ granularity: 'WEEK' }));
+
+    expect(weeks.periods.map((period) => ({
+      key: period.key,
+      label: period.label,
+      points: period.points,
+      issues: period.issueCount
+    }))).toEqual([
+      { key: '2020-W53', label: 'tydz. 53 · 2020', points: 13, issues: 2 },
+      { key: '2021-W01', label: 'tydz. 1 · 2021', points: 13, issues: 1 }
+    ]);
+  });
+
   it('should apply inclusive dates and avoid a percentage after a zero period', () => {
     const data = dataset([
       issue({ issueKey: 'CRM-1', doneAt: '2026-01-01', doneDate: '2026-01-01', finalPoints: 0, aggregationPoints: 0 }),

@@ -270,6 +270,9 @@ function periodKey(date: string, granularity: AssessmentTrendGranularity): strin
   if (granularity === 'DAY') {
     return date;
   }
+  if (granularity === 'WEEK') {
+    return isoWeekKey(date);
+  }
   if (granularity === 'MONTH') {
     return date.slice(0, 7);
   }
@@ -279,6 +282,9 @@ function periodKey(date: string, granularity: AssessmentTrendGranularity): strin
 }
 
 function periodLabel(key: string, granularity: AssessmentTrendGranularity): string {
+  if (granularity === 'WEEK') {
+    return `tydz. ${Number(key.slice(6))} · ${key.slice(0, 4)}`;
+  }
   if (granularity === 'QUARTER') {
     const [year, quarter] = key.split('-');
     return `${quarter} ${year}`;
@@ -290,6 +296,20 @@ function periodLabel(key: string, granularity: AssessmentTrendGranularity): stri
   }
   const day = Number(key.slice(8, 10));
   return `${day} ${MONTH_LABELS[month - 1]} ${year}`;
+}
+
+function isoWeekKey(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const thursday = new Date(Date.UTC(year, month - 1, day));
+  const isoDay = thursday.getUTCDay() || 7;
+  thursday.setUTCDate(thursday.getUTCDate() + 4 - isoDay);
+
+  const isoYear = thursday.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil(
+    ((thursday.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7
+  );
+  return `${isoYear}-W${String(week).padStart(2, '0')}`;
 }
 
 function compareRows(first: AssessmentTrendIssueRow, second: AssessmentTrendIssueRow): number {

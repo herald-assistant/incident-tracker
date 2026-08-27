@@ -11,8 +11,9 @@ zlozonosc zmienia sie w czasie.
 
 Uzytkownik potrzebuje widoku uruchamianego na zadanie, do ktorego lokalnie
 zalacza kilka biznesowych CSV z kolejnych okresow. Widok powinien polaczyc dane
-bez zapisu po stronie serwera i pokazac, w ktorych dniach, miesiacach albo
-kwartalach laczna zlozonosc rosla, malala lub pozostawala bez zmian.
+bez zapisu po stronie serwera i pokazac, w ktorych dniach, tygodniach,
+miesiacach albo kwartalach laczna zlozonosc rosla, malala lub pozostawala bez
+zmian.
 
 ## Uzytkownicy i decyzje
 
@@ -24,7 +25,7 @@ produktywnosci ludzi.
 Uzytkownik chce przede wszystkim:
 
 - rozpoznac kierunek i skale zmiany pomiedzy kolejnymi okresami,
-- przejsc pomiedzy perspektywa dnia, miesiaca i kwartalu,
+- przejsc pomiedzy perspektywa dnia, tygodnia, miesiaca i kwartalu,
 - ograniczyc wynik do wybranego zespolu, autora MR oraz zakresu dat,
 - zobaczyc liczbe issue i Delivery Units stojacych za lacznym wynikiem,
 - sprawdzic, ile rekordow zostalo pominietych, zduplikowanych albo nie mialo
@@ -93,7 +94,8 @@ MVP jest uzyteczny, jezeli:
   aktualnego widoku,
 - powtorzone `issueKey` nie zwieksza liczby issue ani punktow,
 - suma punktow nie zwielokrotnia Delivery Unit zawierajacych kilka issue,
-- dzien, miesiac i kwartal tworza deterministyczne okresy z `doneAt`,
+- dzien, tydzien ISO, miesiac i kwartal tworza deterministyczne okresy z
+  `doneAt`,
 - filtry zespolu, autora i dat zachowuja addytywna semantyke jednostek,
 - wykres oraz tabela pokazuja ten sam wynik i te same zmiany okresowe,
 - bledny, pusty albo niekompatybilny plik daje zrozumialy komunikat,

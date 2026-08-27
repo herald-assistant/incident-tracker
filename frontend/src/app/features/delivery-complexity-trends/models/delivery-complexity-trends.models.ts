@@ -2,7 +2,7 @@ export type AssessmentTrendSource =
   | 'DELIVERY_COMPLEXITY_ASSESSMENT'
   | 'DELIVERY_SCOPE_COMPLEXITY';
 
-export type AssessmentTrendGranularity = 'DAY' | 'MONTH' | 'QUARTER';
+export type AssessmentTrendGranularity = 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER';
 
 export interface AssessmentTrendAuthor {
   key: string;
