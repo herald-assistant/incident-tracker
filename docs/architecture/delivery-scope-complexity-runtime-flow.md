@@ -97,15 +97,19 @@ wynikow.
 
 Obok przenosnego JSON UI udostepnia niewersjonowany, biznesowy CSV calego runu
 z jednym wierszem na issue, niezaleznie od aktywnych filtrow. CSV zawiera
-zapisane metadata Jira issue, wspolna liste linkow MR z Delivery Unit, punktowy
-wklad szesciu wymiarow, `finalScore` i `pointsForAggregation`. Nie eksportuje
+zapisane metadata Jira issue, wspolna liste linkow MR z Delivery Unit,
+stabilnie sparowane listy `mergeRequestAuthorIds` i
+`mergeRequestAuthorNames`, punktowy wklad szesciu wymiarow, `finalScore` i
+`pointsForAggregation`. Nie eksportuje
 wewnetrznych skladowych `score`, `scopeSignal`, `scope`, `scaledScore` ani
 `weight`. Ocena pozostaje ocena Delivery Unit i jest powtarzana przy jej
 issue. `pointsForAggregation` jest wypelnione tylko dla issue z najpozniejszym
 `doneAt`, a przy remisie z leksykograficznie najmniejszym `issueKey`, przez co
 suma tej kolumny nie zwielokrotnia wyniku jednostki. CSV nie jest formatem
 importu; uzywa separatora `;`, UTF-8 z BOM i cytowania wartosci z separatorem,
-cudzyslowem albo nowa linia.
+cudzyslowem albo nowa linia. Ten biznesowy CSV moze byc lokalnie wczytany
+przez `Delivery Complexity Trends`; nie staje sie przez to wersjonowanym
+kontraktem backendowego importu.
 
 ## Ownership i usuniecie eksperymentu
 

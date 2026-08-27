@@ -1,0 +1,386 @@
+<div class="page-shell delivery-trends-page">
+  <section class="trend-import-card" aria-labelledby="trendImportTitle">
+    <div class="trend-import-card__copy">
+      <p class="section-eyebrow">Raporty okresowe</p>
+      <h2 id="trendImportTitle">Połącz raporty i zobacz zmianę złożoności</h2>
+      <p>
+        Wybierz CSV z kolejnych okresów. Wszystkie pliki muszą pochodzić z jednego
+        assessmentu oraz z runów wykonanych tym samym modelem i reasoning effort.
+        Dane są przetwarzane wyłącznie w tej przeglądarce.
+      </p>
+    </div>
+
+    <div class="trend-import-card__actions">
+      <input
+        #trendFileInput
+        class="trend-file-input"
+        type="file"
+        accept=".csv,text/csv"
+        multiple
+        (change)="loadFiles($event)"
+      />
+      <button
+        class="trend-primary-button"
+        type="button"
+        [disabled]="importing()"
+        (click)="trendFileInput.click()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
+        {{ importing() ? 'Przetwarzanie…' : 'Wybierz pliki CSV' }}
+      </button>
+      @if (dataset()) {
+        <button class="trend-secondary-button" type="button" (click)="clearDataset()">
+          <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>
+          Wyczyść dane
+        </button>
+      }
+      <small>Maksymalnie {{ maxFiles }} plików i 20 MB łącznie.</small>
+    </div>
+
+    @if (importError()) {
+      <div class="trend-message trend-message--error" role="alert">
+        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+        <span>{{ importError() }}</span>
+      </div>
+    }
+
+    @if (dataset(); as data) {
+      <div class="trend-loaded-files" aria-label="Załadowany zestaw raportów">
+        <div class="trend-loaded-files__summary">
+          <span class="trend-source-badge">{{ sourceLabel(data) }}</span>
+          <strong>{{ data.files.length }} {{ data.files.length === 1 ? 'plik' : 'plików' }}</strong>
+          <span>{{ data.quality.uniqueIssues }} unikalnych issue</span>
+          @if (loadedDateRange(); as range) {
+            <span>{{ range.from }} – {{ range.to }}</span>
+          }
+        </div>
+        <details>
+          <summary>Pokaż listę plików</summary>
+          <ul>
+            @for (file of data.files; track file.name) {
+              <li>
+                <span>{{ file.name }}</span>
+                <small>{{ file.rowCount }} wierszy</small>
+              </li>
+            }
+          </ul>
+        </details>
+      </div>
+    }
+  </section>
+
+  @if (dataset(); as data) {
+    @if (trend(); as currentTrend) {
+      <section class="trend-filters-card" aria-labelledby="trendFiltersTitle">
+        <div class="trend-section-heading">
+          <div>
+            <p class="section-eyebrow">Zakres widoku</p>
+            <h2 id="trendFiltersTitle">Filtry trendu</h2>
+          </div>
+          @if (filtersActive()) {
+            <button class="trend-link-button" type="button" (click)="resetFilters()">
+              <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+              Wyczyść filtry
+            </button>
+          }
+        </div>
+
+        <div class="trend-filter-grid">
+          <label class="trend-field">
+            <span>Okres</span>
+            <select [formControl]="granularityControl">
+              <option value="DAY">Dzień</option>
+              <option value="MONTH">Miesiąc</option>
+              <option value="QUARTER">Kwartał</option>
+            </select>
+          </label>
+
+          <label class="trend-field">
+            <span>Zespół</span>
+            <select [formControl]="teamControl">
+              <option value="">Wszystkie zespoły</option>
+              @for (option of currentTrend.teamOptions; track option.key) {
+                <option [value]="option.key">
+                  {{ option.label }} ({{ option.unitCount }} DU)
+                </option>
+              }
+            </select>
+          </label>
+
+          <label class="trend-field">
+            <span>Autor MR</span>
+            <select [formControl]="authorControl">
+              <option value="">
+                {{ currentTrend.authorOptions.length ? 'Wszyscy autorzy' : 'Brak danych o autorach' }}
+              </option>
+              @for (option of currentTrend.authorOptions; track option.key) {
+                <option [value]="option.key">
+                  {{ option.label }} ({{ option.unitCount }} DU)
+                </option>
+              }
+            </select>
+          </label>
+
+          <label class="trend-field">
+            <span>Od</span>
+            <input type="date" [formControl]="fromDateControl" />
+          </label>
+
+          <label class="trend-field">
+            <span>Do</span>
+            <input type="date" [formControl]="toDateControl" />
+          </label>
+        </div>
+
+        @if (dateFilterInvalid()) {
+          <p class="trend-field-error" role="alert">Data „Od” nie może być późniejsza niż „Do”.</p>
+        }
+
+        <div class="trend-author-note">
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          <p>
+            Filtr autora oznacza, że osoba była autorem co najmniej jednego MR w Delivery Unit.
+            Pokazywana jest pełna złożoność jednostki — nie są to punkty osoby ani miara produktywności.
+          </p>
+        </div>
+      </section>
+
+      <section class="trend-summary-grid" aria-label="Podsumowanie trendu">
+        <article class="trend-summary-card trend-summary-card--primary">
+          <span>Łączna złożoność</span>
+          <strong>{{ formatPoints(currentTrend.totalPoints) }}</strong>
+          <small>{{ data.metricLabel }}</small>
+        </article>
+        <article class="trend-summary-card">
+          <span>Ostatnia zmiana</span>
+          @if (lastPeriod(currentTrend); as latest) {
+            <strong
+              [class.trend-value--up]="latest.direction === 'UP'"
+              [class.trend-value--down]="latest.direction === 'DOWN'"
+            >
+              {{ signedPoints(latest.delta) }}
+            </strong>
+            <small>{{ latest.label }} · {{ percentLabel(latest.deltaPercent) }}</small>
+          } @else {
+            <strong>–</strong>
+            <small>Brak okresów</small>
+          }
+        </article>
+        <article class="trend-summary-card">
+          <span>Ocenione Delivery Units</span>
+          <strong>{{ currentTrend.scoredUnitCount }}</strong>
+          <small>z {{ currentTrend.totalUnitCount }} w wybranym zakresie</small>
+        </article>
+        <article class="trend-summary-card">
+          <span>Unikalne issue</span>
+          <strong>{{ currentTrend.issueCount }}</strong>
+          <small>po deduplikacji `issueKey`</small>
+        </article>
+      </section>
+
+      @if (currentTrend.periods.length > 0 && !dateFilterInvalid()) {
+        <section class="trend-panel trend-chart-panel" aria-labelledby="trendChartTitle">
+          <div class="trend-section-heading">
+            <div>
+              <p class="section-eyebrow">Kierunek w czasie</p>
+              <h2 id="trendChartTitle">Dostarczona złożoność według okresu</h2>
+            </div>
+            <p class="trend-section-note">
+              Zmiana jest liczona względem poprzedniego widocznego okresu z danymi.
+            </p>
+          </div>
+
+          <div class="trend-chart-scroll">
+            <div
+              class="trend-chart"
+              role="img"
+              [style.--trend-period-count]="currentTrend.periods.length"
+              [attr.aria-label]="chartAriaLabel(data, currentTrend)"
+              aria-describedby="trendPeriodsTableCaption"
+            >
+              @for (period of currentTrend.periods; track period.key) {
+                <div class="trend-bar">
+                  <span class="trend-bar__value">
+                    {{ formatPoints(period.points) }}
+                  </span>
+                  <div class="trend-bar__track" aria-hidden="true">
+                    <span
+                      class="trend-bar__fill"
+                      [class.trend-bar__fill--up]="period.direction === 'UP'"
+                      [class.trend-bar__fill--down]="period.direction === 'DOWN'"
+                      [class.trend-bar__fill--flat]="period.direction === 'FLAT'"
+                      [style.height.%]="barHeight(period, currentTrend)"
+                    ></span>
+                  </div>
+                  <strong>{{ period.label }}</strong>
+                  <small
+                    [class.trend-value--up]="period.direction === 'UP'"
+                    [class.trend-value--down]="period.direction === 'DOWN'"
+                  >
+                    {{ period.delta === null ? 'pierwszy okres' : signedPoints(period.delta) }}
+                  </small>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="trend-legend" aria-label="Legenda kierunku zmiany">
+            <span><i class="trend-legend__marker trend-legend__marker--up"></i> wzrost</span>
+            <span><i class="trend-legend__marker trend-legend__marker--down"></i> spadek</span>
+            <span><i class="trend-legend__marker"></i> bez zmiany / pierwszy okres</span>
+            <small>Kierunek nie oznacza oceny dobre/źle.</small>
+          </div>
+        </section>
+
+        <section class="trend-panel" aria-labelledby="trendPeriodDetailsTitle">
+          <div class="trend-section-heading">
+            <div>
+              <p class="section-eyebrow">Dokładne wartości</p>
+              <h2 id="trendPeriodDetailsTitle">Szczegóły okresów</h2>
+            </div>
+          </div>
+          <div class="trend-table-scroll">
+            <table class="trend-table">
+              <caption id="trendPeriodsTableCaption">
+                Punkty, zmiana oraz liczba Delivery Units i issue w każdym widocznym okresie.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Okres</th>
+                  <th scope="col">{{ data.metricShortLabel }}</th>
+                  <th scope="col">Zmiana</th>
+                  <th scope="col">Zmiana %</th>
+                  <th scope="col">Delivery Units</th>
+                  <th scope="col">Issue</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (period of currentTrend.periods; track period.key) {
+                  <tr>
+                    <th scope="row">{{ period.label }}</th>
+                    <td>{{ formatPoints(period.points) }}</td>
+                    <td
+                      [class.trend-value--up]="period.direction === 'UP'"
+                      [class.trend-value--down]="period.direction === 'DOWN'"
+                    >{{ signedPoints(period.delta) }}</td>
+                    <td>{{ percentLabel(period.deltaPercent) }}</td>
+                    <td>{{ period.unitCount }}</td>
+                    <td>{{ period.issueCount }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      } @else {
+        <section class="trend-panel trend-empty-result" aria-live="polite">
+          <span class="material-symbols-outlined" aria-hidden="true">bar_chart_off</span>
+          <div>
+            <h2>Brak punktów dla wybranego zakresu</h2>
+            <p>Zmień filtry albo sprawdź statusy i jakość zaimportowanych danych.</p>
+          </div>
+        </section>
+      }
+
+      <div class="trend-details-grid">
+        <section class="trend-panel" aria-labelledby="trendHighlightsTitle">
+          <div class="trend-section-heading">
+            <div>
+              <p class="section-eyebrow">Szybki odczyt</p>
+              <h2 id="trendHighlightsTitle">Najważniejsze zmiany</h2>
+            </div>
+          </div>
+          @if (currentTrend.highlights.length > 0) {
+            <div class="trend-highlight-list">
+              @for (highlight of currentTrend.highlights; track highlight.kind) {
+                <article [class]="'trend-highlight trend-highlight--' + highlight.kind.toLowerCase()">
+                  <span>{{ highlight.label }}</span>
+                  <strong>{{ highlight.periodLabel }}</strong>
+                  <small>
+                    {{ highlight.kind === 'PEAK' ? formatPoints(highlight.value) : signedPoints(highlight.value) }}
+                    {{ data.metricShortLabel }}
+                  </small>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="trend-empty-copy">Potrzebny jest co najmniej jeden okres z punktami.</p>
+          }
+        </section>
+
+        <section class="trend-panel" aria-labelledby="trendStatusesTitle">
+          <div class="trend-section-heading">
+            <div>
+              <p class="section-eyebrow">Pokrycie</p>
+              <h2 id="trendStatusesTitle">Status ocen</h2>
+            </div>
+          </div>
+          @if (currentTrend.statusCounts.length > 0) {
+            <div class="trend-status-list">
+              @for (status of currentTrend.statusCounts; track status.status) {
+                <div>
+                  <span>{{ statusLabel(status.status) }}</span>
+                  <strong>{{ status.count }}</strong>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="trend-empty-copy">Brak Delivery Units w wybranym zakresie.</p>
+          }
+        </section>
+      </div>
+
+      <section class="trend-panel trend-quality-panel" aria-labelledby="trendQualityTitle">
+        <div class="trend-section-heading">
+          <div>
+            <p class="section-eyebrow">Kontrola danych</p>
+            <h2 id="trendQualityTitle">Jakość importu</h2>
+          </div>
+          <span class="trend-source-badge">{{ data.files.length }} plików</span>
+        </div>
+
+        <dl class="trend-quality-grid">
+          <div><dt>Wiersze wejściowe</dt><dd>{{ data.quality.inputRows }}</dd></div>
+          <div><dt>Unikalne issue</dt><dd>{{ data.quality.uniqueIssues }}</dd></div>
+          <div><dt>Usunięte duplikaty</dt><dd>{{ data.quality.duplicatesRemoved }}</dd></div>
+          <div><dt>Konflikty duplikatów</dt><dd>{{ data.quality.conflictingDuplicates }}</dd></div>
+          <div><dt>Puste wiersze</dt><dd>{{ data.quality.ignoredEmptyRows }}</dd></div>
+          <div><dt>Starsze pliki bez autorów</dt><dd>{{ data.quality.legacyFilesWithoutAuthors }}</dd></div>
+          <div><dt>Issue bez autora MR</dt><dd>{{ data.quality.rowsWithoutAuthors }}</dd></div>
+          <div><dt>Autorzy bez stabilnego ID</dt><dd>{{ data.quality.authorsUsingNameFallback }}</dd></div>
+          <div><dt>Fallback wyniku jednostki</dt><dd>{{ currentTrend.quality.unitsUsingFinalScoreFallback }}</dd></div>
+          <div><dt>Wiele kotwic punktów</dt><dd>{{ currentTrend.quality.unitsWithMultipleAggregationAnchors }}</dd></div>
+          <div><dt>Rozbieżne wyniki jednostki</dt><dd>{{ currentTrend.quality.unitsWithConflictingFinalScores }}</dd></div>
+        </dl>
+
+        @if (
+          data.quality.conflictingDuplicates
+          || data.quality.legacyFilesWithoutAuthors
+          || data.quality.authorsUsingNameFallback
+          || currentTrend.quality.unitsUsingFinalScoreFallback
+          || currentTrend.quality.unitsWithMultipleAggregationAnchors
+          || currentTrend.quality.unitsWithConflictingFinalScores
+        ) {
+          <div class="trend-message trend-message--warning">
+            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+            <span>
+              Wynik został policzony deterministycznie, ale zestaw zawiera ograniczenia.
+              Uwzględnij powyższe liczniki podczas interpretacji trendu.
+            </span>
+          </div>
+        }
+      </section>
+    }
+  } @else {
+    <section class="trend-empty-state" aria-labelledby="trendEmptyTitle">
+      <span class="material-symbols-outlined" aria-hidden="true">stacked_bar_chart</span>
+      <div>
+        <h2 id="trendEmptyTitle">Dodaj raporty, aby zbudować trend</h2>
+        <p>
+          Możesz wybrać raporty miesięczne z ostatnich kilku lub kilkunastu miesięcy.
+          Powtórzone issue zostaną rozpoznane po `issueKey`.
+        </p>
+      </div>
+    </section>
+  }
+</div>

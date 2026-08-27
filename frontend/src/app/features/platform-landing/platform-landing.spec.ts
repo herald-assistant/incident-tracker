@@ -32,7 +32,8 @@ describe('PlatformLandingPageComponent', () => {
       '/change-verification',
       '/config-drift-viewer',
       '/delivery-complexity-assessment',
-      '/delivery-scope-complexity'
+      '/delivery-scope-complexity',
+      '/delivery-complexity-trends'
     ]);
     expect(
       featureLinks.map((link) =>
@@ -47,10 +48,12 @@ describe('PlatformLandingPageComponent', () => {
       'platform-landing__feature-card--change',
       'platform-landing__feature-card--config',
       'platform-landing__feature-card--delivery',
+      'platform-landing__feature-card--delivery',
       'platform-landing__feature-card--delivery'
     ]);
     expect(featureGrid?.textContent).toContain('Delivery Complexity Assessment');
     expect(featureGrid?.textContent).toContain('Delivery Scope Complexity');
+    expect(featureGrid?.textContent).toContain('Delivery Complexity Trends');
     expect(featureGrid?.textContent).not.toContain('Data Diagnostics');
     expect(
       featureLinks[2]?.querySelector('.platform-landing__feature-icon')?.textContent?.trim()

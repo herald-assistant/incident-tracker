@@ -20,6 +20,8 @@ export const DELIVERY_COMPLEXITY_ASSESSMENT_CSV_HEADERS = [
   'teamName',
   'teamFieldId',
   'mergeRequestUrls',
+  'mergeRequestAuthorIds',
+  'mergeRequestAuthorNames',
   'deliveryUnitId',
   'assessmentStatus',
   'outcomeBreadth',
@@ -68,6 +70,7 @@ function rowsForUnit(unit: DeliveryAssessmentUnit): CsvValue[][] {
       .map((mergeRequest) => mergeRequest.webUrl?.trim())
       .filter((url): url is string => Boolean(url))
   )).join(' | ');
+  const mergeRequestAuthors = authorsForUnit(unit);
 
   return unit.issues.map((issue) => {
     const dimensions = unit.assessment?.dimensions;
@@ -81,6 +84,8 @@ function rowsForUnit(unit: DeliveryAssessmentUnit): CsvValue[][] {
       issue.team?.name,
       issue.team?.fieldId,
       mergeRequestUrls,
+      mergeRequestAuthors.map((author) => author.id).join(' | '),
+      mergeRequestAuthors.map((author) => author.name).join(' | '),
       unit.unitId,
       unit.status,
       dimensions?.outcomeBreadth,
@@ -95,6 +100,22 @@ function rowsForUnit(unit: DeliveryAssessmentUnit): CsvValue[][] {
       issue.issueKey === aggregationIssueKey ? unit.assessment?.deliveredStoryPoints : null
     ];
   });
+}
+
+function authorsForUnit(unit: DeliveryAssessmentUnit): { id: string; name: string }[] {
+  const authors = new Map<string, { id: string; name: string }>();
+  for (const mergeRequest of unit.mergeRequests) {
+    const id = mergeRequest.authorId === null ? '' : String(mergeRequest.authorId);
+    const rawName = mergeRequest.authorName?.trim() ?? '';
+    if (!id && !rawName) {
+      continue;
+    }
+    const key = id ? `id:${id}` : `name:${rawName.toLocaleLowerCase('pl')}`;
+    if (!authors.has(key)) {
+      authors.set(key, { id, name: rawName || `Author ${id}` });
+    }
+  }
+  return Array.from(authors.values());
 }
 
 function aggregationAnchor(issues: DeliveryAssessmentIssue[]): DeliveryAssessmentIssue | null {

@@ -74,13 +74,16 @@ powiedzie, import jest odrzucany zamiast zwracac wynik niewidoczny w historii.
 Obok przenosnego JSON UI udostepnia niewersjonowany, biznesowy CSV calego runu
 z jednym wierszem na issue. CSV nie jest formatem importu i nie zalezy od
 aktywnych filtrow raportu. Zawiera zapisane metadata Jira issue, wspolna liste
-linkow MR z Delivery Unit, wymiary oceny, `score100`,
+linkow MR z Delivery Unit, stabilnie sparowane listy `mergeRequestAuthorIds`
+i `mergeRequestAuthorNames`, wymiary oceny, `score100`,
 `deliveredStoryPoints` oraz `pointsForAggregation`. Ocena pozostaje ocena
 Delivery Unit i jest powtarzana przy jej issue. Aby analiza w Excelu nie
 zwielokrotniala DSP, `pointsForAggregation` jest wypelnione tylko dla issue z
 najpozniejszym `doneAt`, a przy remisie z leksykograficznie najmniejszym
 `issueKey`. CSV uzywa separatora `;`, UTF-8 z BOM oraz cytowania wartosci
-z separatorem, cudzyslowem albo nowa linia.
+z separatorem, cudzyslowem albo nowa linia. Ten biznesowy CSV moze byc lokalnie
+wczytany przez `Delivery Complexity Trends`; nie zmienia to jego
+niewersjonowanego, niezaleznego od backendowego importu charakteru.
 
 Przed kazdym wywolaniem modelu feature zapisuje na Delivery Unit dokladny
 `preparedPrompt` i `promptPreparedAt`, a dopiero potem uruchamia sesje. Krok

@@ -104,6 +104,12 @@ const NAV_GROUPS: NavGroup[] = [
         icon: 'function',
         reloadOnActiveClick: true
       },
+      {
+        label: 'Delivery Complexity Trends',
+        route: '/delivery-complexity-trends',
+        icon: 'monitoring',
+        reloadOnActiveClick: true
+      },
       { label: 'Data Diagnostics', icon: 'database_search', disabled: true }
     ]
   },

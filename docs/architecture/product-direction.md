@@ -31,7 +31,8 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
   `Incident Analysis`, `Flow Explorer`, `Change Verification`,
   `Config Drift Viewer`, `Delivery Complexity Assessment`, eksperymentalny
-  `Delivery Scope Complexity` oraz przyszle miejsce na Data Diagnostics.
+  `Delivery Scope Complexity`, `Delivery Complexity Trends` oraz przyszle
+  miejsce na Data Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
   i Operational Context. Te widoki sluza do testow, debugowania i recznego
@@ -186,6 +187,20 @@ Feature ma wlasny endpoint, historie, skill, prompt, kontrakt, import/export i
 ekran. Swiadomie nie reuse'uje feature-owned orchestration drugiego
 assessmentu. Pozwala to porownac stabilnosc, evidence i koszt obu metod, a
 nastepnie usunac jedna z nich bez migracji pozostawionej.
+
+### Delivery Complexity Trends
+
+Uzytkownik laczy na zadanie biznesowe CSV z kolejnych runow jednego
+assessmentu i oglada zmiane dostarczonej zlozonosci dziennie, miesiecznie albo
+kwartalnie. Widok deduplikuje issue, zachowuje addytywnosc Delivery Units i
+pozwala filtrowac po zespole, autorze MR oraz datach. Slupki, tabela, delty,
+statusy i jakosc importu ulatwiaja odczyt trendu bez przygotowywania stalego
+dashboardu albo zapisywania danych na serwerze.
+
+To frontendowy konsument obu niezaleznych assessmentow, a nie wspolna domena
+ich scoringu. Jeden zestaw nie miesza algorytmow. Filtr autora oznacza udzial
+w co najmniej jednym MR jednostki i pokazuje jej pelna zlozonosc; nie
+przypisuje punktow osobie ani nie mierzy produktywnosci.
 
 ### Functional logic explorer
 

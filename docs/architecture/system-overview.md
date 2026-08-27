@@ -40,7 +40,9 @@ Obecny incident flow jest pierwsza realizacja tego modelu:
 
 Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
 Config Drift Viewer, Delivery Complexity Assessment i eksperymentalny
-Delivery Scope Complexity.
+Delivery Scope Complexity. Frontendowy Delivery Complexity Trends laczy
+lokalnie biznesowe CSV jednego z assessmentow i pokazuje addytywny trend bez
+nowego backendowego API ani storage.
 Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
 asynchroniczny job oraz neutralna capability GitLaba do graph-first
 rozpoznawania Angular/Nx route/view catalog i screen reachability. Integracja
@@ -357,6 +359,11 @@ Na dzisiaj projekt ma:
 - `POST /api/delivery-scope-complexity/imports`
   Waliduje read-only envelope `tdw.delivery-scope-complexity-export` V1 bez
   kompatybilnosci z eksportem drugiego assessmentu.
+- `GET /delivery-complexity-trends`
+  Angularowy, client-only workspace laczacy wiele niewersjonowanych biznesowych
+  CSV jednego assessmentu. Deduplikuje `issueKey`, odtwarza addytywne Delivery
+  Units i prezentuje trend dzien/miesiac/kwartal z filtrami zespolu, autora MR
+  i dat. Pliki nie sa wysylane do backendu ani zapisywane w Analysis History.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.
@@ -802,8 +809,9 @@ Znaczenie grup UI:
 - `Analysis Features` - pionowe feature'y produktowe. `Incident Analysis` jest
   pierwszym dostepnym feature'em; Flow Explorer i Change Verification sa
   kolejnymi dostepnymi feature'ami, podobnie jak Config Drift Viewer i
-  Delivery Complexity Assessment i eksperymentalny Delivery Scope Complexity,
-  a Data Diagnostics pozostaje placeholderem dla przyszlego feature'a.
+  Delivery Complexity Assessment, eksperymentalny Delivery Scope Complexity
+  i client-only Delivery Complexity Trends, a Data Diagnostics pozostaje
+  placeholderem dla przyszlego feature'a.
 - `Tool Workbench` - zaplecze operatorskie reusable capability. Elastic,
   GitLab, Jira, Confluence, Database i Operational Context sa
   analysis-independent i nie eksponuja incidentowego `analysisRunId`;

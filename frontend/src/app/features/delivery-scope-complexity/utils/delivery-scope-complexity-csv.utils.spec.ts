@@ -29,10 +29,37 @@ describe('Delivery Scope Complexity CSV', () => {
     expect(headers).toEqual([...DELIVERY_SCOPE_COMPLEXITY_CSV_HEADERS]);
     expect(first[headers.indexOf('issueKey')]).toBe('CRM-2');
     expect(first[headers.indexOf('mergeRequestUrls')]).toBe('https://gitlab.example.com/mr/7');
+    expect(first[headers.indexOf('mergeRequestAuthorIds')]).toBe('101');
+    expect(first[headers.indexOf('mergeRequestAuthorNames')]).toBe('MR Author');
     expect(first[headers.indexOf('noveltyPoints')]).toBe('20,5');
     expect(first[headers.indexOf('finalScore')]).toBe('122,5');
     expect(first[headers.indexOf('pointsForAggregation')]).toBe('122,5');
     expect(second[headers.indexOf('pointsForAggregation')]).toBe('');
+  });
+
+  it('should keep unique MR author ids and names in the same stable order', () => {
+    const job = snapshot();
+    job.units[0].mergeRequests.push(
+      {
+        ...job.units[0].mergeRequests[0],
+        identity: 'id:8',
+        iid: 8,
+        authorId: null,
+        authorName: 'Fallback Author'
+      },
+      {
+        ...job.units[0].mergeRequests[0],
+        identity: 'id:9',
+        iid: 9
+      }
+    );
+
+    const lines = csvLines(buildDeliveryScopeComplexityCsv(job));
+    const headers = lines[0].split(';');
+    const row = lines[1].split(';');
+
+    expect(row[headers.indexOf('mergeRequestAuthorIds')]).toBe('101 | ');
+    expect(row[headers.indexOf('mergeRequestAuthorNames')]).toBe('MR Author | Fallback Author');
   });
 
   it('should choose the lower issue key when Done timestamps are equal', () => {

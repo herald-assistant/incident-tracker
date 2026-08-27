@@ -35,14 +35,15 @@ Przed wieksza zmiana przeczytaj:
 6. `architecture/config-drift-viewer-runtime-flow.md`
 7. `architecture/delivery-complexity-assessment-runtime-flow.md`
 8. `architecture/delivery-scope-complexity-runtime-flow.md`
-9. `architecture/package-dependencies.md`
-10. `architecture/operational-context-model-tools-and-usage.md`
-11. `architecture/codex-continuation-guide.md`
+9. `architecture/delivery-complexity-trends-runtime-flow.md`
+10. `architecture/package-dependencies.md`
+11. `architecture/operational-context-model-tools-and-usage.md`
+12. `architecture/codex-continuation-guide.md`
 
 Przy tworzeniu nowego feature'a albo zmianie L1-L3 istniejacego feature'a lub
 mechanizmu wspolnego przeczytaj dodatkowo:
 
-11. `architecture/analysis-feature-delivery-playbook.md`
+13. `architecture/analysis-feature-delivery-playbook.md`
 
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
@@ -75,6 +76,13 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   opisuje potrzebe generowania funkcjonalnej lub technicznej dokumentacji
   zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez
   analityka, ktory nie musi znac repozytorium ani mechaniki AI.
+- `needs/delivery-complexity-trends.md`
+  opisuje potrzebe lokalnego polaczenia biznesowych CSV jednego assessmentu i
+  podgladu zmian dostarczonej zlozonosci dziennie, miesiecznie lub kwartalnie.
+- `plans/delivery-complexity-trends.md`
+  dokumentuje zrealizowany plan L2 dla uniwersalnego frontendowego dashboardu,
+  rozszerzenia obu CSV o autorow MR oraz filtrow zespolu, autora i dat bez
+  zapisu na serwerze.
 - `plans/ui-explorer.md`
   jest zatwierdzonym planem L2 w realizacji dla statycznego, screen-centered MVP z katalogiem
   ekranow wybieranych przez jawnie zarejestrowany system
@@ -115,6 +123,10 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `architecture/delivery-scope-complexity-runtime-flow.md`
   opisuje niezalezny eksperyment score x scope, kontrakt `0-200`, izolacje od
   drugiego assessmentu i deletion boundary.
+- `architecture/delivery-complexity-trends-runtime-flow.md`
+  opisuje client-only import wielu biznesowych CSV jednego assessmentu,
+  deduplikacje issue, addytywnosc Delivery Units, okresy, filtry i jakosc
+  trendu.
 - `architecture/package-dependencies.md`
   definiuje dozwolony graf zaleznosci i odpowiedzialnosc warstw.
 - `architecture/operational-context-model-tools-and-usage.md`

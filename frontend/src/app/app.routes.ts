@@ -142,6 +142,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'delivery-complexity-trends',
+        loadComponent: () =>
+          import(
+            './features/delivery-complexity-trends/pages/delivery-complexity-trends-page/delivery-complexity-trends-page'
+          ).then((module) => module.DeliveryComplexityTrendsPageComponent),
+        data: {
+          section: 'Analysis Features',
+          title: 'Delivery Complexity Trends'
+        }
+      },
+      {
         path: 'evidence',
         redirectTo: 'elastic',
         pathMatch: 'full'

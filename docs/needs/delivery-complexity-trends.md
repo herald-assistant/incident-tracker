@@ -1,0 +1,129 @@
+# Delivery Complexity Trends - analiza trendow z CSV
+
+Status: draft
+
+## Potrzeba
+
+Uzytkownik wykonuje Delivery Complexity Assessment albo Delivery Scope
+Complexity cyklicznie, np. raz w miesiacu. Pojedynczy raport pokazuje wynik
+jednego zakresu, ale nie odpowiada na pytanie, jak obserwowalna dostarczona
+zlozonosc zmienia sie w czasie.
+
+Uzytkownik potrzebuje widoku uruchamianego na zadanie, do ktorego lokalnie
+zalacza kilka biznesowych CSV z kolejnych okresow. Widok powinien polaczyc dane
+bez zapisu po stronie serwera i pokazac, w ktorych dniach, miesiacach albo
+kwartalach laczna zlozonosc rosla, malala lub pozostawala bez zmian.
+
+## Uzytkownicy i decyzje
+
+Glownym uzytkownikiem jest osoba analizujaca dostawy zespolu, np. analityk,
+product owner, engineering manager albo czlonek zespolu. Widok ma wspierac
+rozmowe o charakterze i rozkladzie dostarczonych zmian, a nie ocene
+produktywnosci ludzi.
+
+Uzytkownik chce przede wszystkim:
+
+- rozpoznac kierunek i skale zmiany pomiedzy kolejnymi okresami,
+- przejsc pomiedzy perspektywa dnia, miesiaca i kwartalu,
+- ograniczyc wynik do wybranego zespolu, autora MR oraz zakresu dat,
+- zobaczyc liczbe issue i Delivery Units stojacych za lacznym wynikiem,
+- sprawdzic, ile rekordow zostalo pominietych, zduplikowanych albo nie mialo
+  prawidlowej oceny.
+
+## Oczekiwane wejscie
+
+Uzytkownik zalacza jednoczesnie jeden lub wiele biznesowych plikow CSV
+wyeksportowanych z jednego assessmentu:
+
+- wszystkie pliki z Delivery Complexity Assessment, albo
+- wszystkie pliki z Delivery Scope Complexity.
+
+Jedna sesja podgladu nie miesza obu algorytmow. Porownywane raporty maja byc
+wykonane tym samym modelem i reasoning effort, ale te informacje nie sa
+elementem biznesowego CSV, dlatego ich zgodnosc pozostaje odpowiedzialnoscia
+uzytkownika.
+
+Pliki sa wybierane lokalnie i nie sa wysylane do backendu, dopisywane do
+Analysis History ani przechowywane po odswiezeniu strony.
+
+## Semantyka wyniku
+
+CSV ma jeden wiersz na issue, natomiast ocena powstaje dla Delivery Unit i moze
+byc powtorzona przy kilku issue. Widok musi zachowac nastepujace zasady:
+
+- issue jest deduplikowane globalnie po `issueKey`,
+- addytywna zlozonosc korzysta z `pointsForAggregation`, aby jedna Delivery
+  Unit nie byla liczona wielokrotnie,
+- okres wyniku wynika z `doneAt` wiersza niosacego addytywne punkty,
+- filtr zespolu dopasowuje Delivery Unit, jezeli nalezy do niej issue tego
+  zespolu,
+- filtr osoby dopasowuje Delivery Unit, jezeli jej MR ma wskazanego autora,
+- po dopasowaniu zespolu lub autora do wyniku trafia pelna obserwowalna
+  zlozonosc Delivery Unit; nie jest ona dzielona ani przypisywana jako wynik
+  konkretnej osoby,
+- brak wierszy w okresie nie moze byc automatycznie interpretowany jako zero,
+  bo biznesowy CSV nie opisuje kompletnego kalendarza wykonanych raportow.
+
+Porownanie okres do okresu dotyczy kolejnych okresow widocznych w zaladowanych
+danych. Wzrost lub spadek jest opisem kierunku liczby punktow, a nie pozytywna
+lub negatywna ocena pracy zespolu.
+
+## Oczekiwany wynik
+
+Po prawidlowym zaladowaniu plikow strona powinna pokazac:
+
+- rozpoznany typ assessmentu i jednostke punktowa,
+- filtry granulacji, zespolu, autora MR oraz dat od-do,
+- wykres slupkowy lacznej zlozonosci dla kolejnych okresow,
+- wartosc i zmiane bezwzgledna oraz procentowa wzgledem poprzedniego okresu z
+  danymi,
+- podsumowanie lacznej zlozonosci, liczby Delivery Units i unikalnych issue,
+- tabelaryczne szczegoly okresow jako dokladne i dostepne uzupelnienie wykresu,
+- osobna sekcje statusow ocen i jakosci importu, w tym liczbe plikow, wierszy,
+  duplikatow oraz odrzuconych danych,
+- jawna informacje, ze filtr autora MR nie jest miara indywidualnej
+  produktywnosci ani przypisaniem punktow do osoby.
+
+## Kryteria sukcesu MVP
+
+MVP jest uzyteczny, jezeli:
+
+- uzytkownik moze wybrac wiele plikow CSV jednym razem,
+- mieszany zestaw obu assessmentow jest odrzucany bez czesciowego podmienienia
+  aktualnego widoku,
+- powtorzone `issueKey` nie zwieksza liczby issue ani punktow,
+- suma punktow nie zwielokrotnia Delivery Unit zawierajacych kilka issue,
+- dzien, miesiac i kwartal tworza deterministyczne okresy z `doneAt`,
+- filtry zespolu, autora i dat zachowuja addytywna semantyke jednostek,
+- wykres oraz tabela pokazuja ten sam wynik i te same zmiany okresowe,
+- bledny, pusty albo niekompatybilny plik daje zrozumialy komunikat,
+- starszy CSV bez informacji o autorach nadal pozwala zobaczyc trend i filtr
+  zespolu, ale jawnie ogranicza filtr osoby,
+- wszystkie obliczenia pozostaja lokalne w przegladarce.
+
+## Non-goals MVP
+
+MVP nie ma:
+
+- porownywac obu assessmentow na jednym wykresie,
+- weryfikowac modelu AI ani reasoning effort na podstawie nazwy pliku,
+- zapisywac zestawu CSV, dashboardu albo ustawionych filtrow,
+- tworzyc backendowego endpointu importu lub agregacji,
+- prognozowac przyszlej zlozonosci ani oceniac velocity,
+- dzielic punktow Delivery Unit pomiedzy zespoly lub autorow,
+- tworzyc rankingu osob, zespolow, vendorow ani dostawcow,
+- uznawac okresu bez zaimportowanych danych za okres z wynikiem zero,
+- edytowac, poprawiac lub ponownie eksportowac zaladowanych danych.
+
+## Ryzyka i kompromisy
+
+- CSV nie zawiera modelu ani effortu, wiec strona nie moze potwierdzic ich
+  zgodnosci pomiedzy raportami.
+- Ten sam `issueKey` moze miec rozne wartosci w kilku plikach; potrzebna jest
+  jawna, deterministyczna regula wyboru oraz licznik konfliktow.
+- Autor MR opisuje powiazanie z zakresem zmiany. Jedna Delivery Unit moze miec
+  wielu autorow, dlatego filtr osoby nie stanowi indywidualnej atrybucji.
+- Nazwa autora nie jest stabilnym identyfikatorem. Nowe eksporty powinny
+  zachowac rowniez ID autora, a nazwy sluzyc do prezentacji.
+- Bez metadanych pokrycia raportu nie da sie odroznic okresu bez dostaw od
+  okresu, dla ktorego nie zalaczono CSV.
