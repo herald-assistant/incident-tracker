@@ -193,8 +193,9 @@ nastepnie usunac jedna z nich bez migracji pozostawionej.
 Uzytkownik laczy na zadanie biznesowe CSV z kolejnych runow jednego
 assessmentu i oglada zmiane dostarczonej zlozonosci dziennie, tygodniowo,
 miesiecznie albo kwartalnie. Widok deduplikuje issue, zachowuje addytywnosc
-Delivery Units i
-pozwala filtrowac po zespole, autorze MR oraz datach. Slupki, tabela, delty,
+Delivery Units i pozwala filtrowac po zespole, autorze MR, typach issue oraz
+datach. Wielokrotny wybor typow zachowuje pelna jednostke i semantyke OR, wiec
+wynikow osobnych typow nie nalezy sumowac. Slupki, tabela, delty,
 statusy i jakosc importu ulatwiaja odczyt trendu bez przygotowywania stalego
 dashboardu albo zapisywania danych na serwerze.
 Sekcja ocen czastkowych wyjasnia kompozycje zmiany: Scope zachowuje addytywny

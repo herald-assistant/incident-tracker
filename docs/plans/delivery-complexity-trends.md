@@ -4,6 +4,30 @@ Status: done
 
 Source need: [Delivery Complexity Trends - analiza trendow z CSV](../needs/delivery-complexity-trends.md)
 
+## Inkrement 2026-08-28: filtr typu issue
+
+Poziom zmiany: L1. Rozszerzenie dotyczy lokalnego kontraktu filtrow i
+interpretacji juz importowanego `issueType`; nie zmienia CSV, scoringu, API ani
+backendu.
+
+Baseline: znormalizowany wiersz zachowuje `issueType`, ale Delivery Unit nie
+buduje katalogu typow, agregacja nie potrafi po nim filtrowac, a UI udostepnia
+tylko zespol, autora MR i daty. Delta doda wielokrotny filtr z semantyka OR:
+jednostka pasuje, jezeli co najmniej jedno nalezace do niej issue ma wybrany
+typ. Do wyniku nadal trafia cala zlozonosc Delivery Unit tylko raz. Wynikow
+osobnych filtrow typow nie wolno sumowac, bo jedna jednostka moze zawierac
+kilka typow issue.
+
+Konsumentami sa feature-local model filtrow i widoku, skladanie Delivery Unit,
+agregacja, panel filtrow, testy oraz dokumentacja need/runtime. Import,
+deduplikacja `issueKey`, wybor kotwicy punktowej, trendy wymiarow, oba sibling
+assessmenty i neutralny parser CSV pozostaja bez zmian.
+
+Macierz weryfikacji obejmuje dopasowanie typu z niekotwiczacego issue, OR dla
+wielu zaznaczen, jednokrotne policzenie jednostki wielotypowej, katalog opcji z
+liczba DU, reset filtrow, komunikat o nakladaniu typow, dostepne przyciski
+`aria-pressed`, pelne testy frontendu, produkcyjny build i kontrole granic.
+
 ## Inkrement 2026-08-27: granulacja tygodniowa
 
 Poziom zmiany: L1. Uzytkownik rozszerza istniejacy filtr okresu o tydzien.
@@ -344,3 +368,17 @@ do nowego ekranu. Feature pozostanie lazy-loaded i nie bedzie wymagac backendu.
   Kontrola w przegladarce potwierdza domyslny heatmap DCA, przelacznik widoku,
   skumulowane segmenty, liczebnosc DU, karte najwiekszej zmiany i brak bledow
   konsoli; regresja komponentu potwierdza domyslny widok addytywny Scope.
+- [x] Krok 10: Dodac wielokrotny filtr `Typ issue` z semantyka OR na poziomie
+  Delivery Unit, licznikiem jednostek wielotypowych i jawnym komunikatem, ze
+  filtrowane wyniki typow moga sie nakladac. Zachowac pelna wartosc jednostki
+  raz, zaktualizowac need/runtime flow, uruchomic testy celowane, pelny zestaw
+  frontendu i build, a `Status: done` ustawic dopiero po ich przejsciu.
+  Wynik: typy sa katalogowane ze wszystkich issue jednostki, opcje pokazuja
+  liczbe DU, kilka zaznaczen dziala jako OR, a jednostka wielotypowa pozostaje
+  pojedynczym wkladem. Celowane 22 testy oraz pelne 63 pliki / 495 testow
+  przechodza. Produkcyjny build Angulara zapisuje lazy chunk
+  `chunk-BKARX2QM.js` (`delivery-complexity-trends-page`) w statycznym bundle.
+  Kontrola w przegladarce potwierdza czytelne chipy, `aria-pressed`, wynik 8 po
+  jednoczesnym wybraniu `Bug` i `Story`, brak podwojenia wspolnej jednostki i
+  brak bledow konsoli. `diff --check` przechodzi, a feature nadal nie importuje
+  sibling assessmentow.

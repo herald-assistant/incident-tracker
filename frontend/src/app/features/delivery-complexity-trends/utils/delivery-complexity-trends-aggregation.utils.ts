@@ -120,6 +120,8 @@ export function buildAssessmentTrendView(
     statusCounts: statusCounts(selectedUnits),
     teamOptions: optionsForUnits(units, (unit) => unit.teams),
     authorOptions: optionsForUnits(units, (unit) => unit.authors),
+    issueTypeOptions: optionsForUnits(units, (unit) => unit.issueTypes),
+    multiIssueTypeUnitCount: selectedUnits.filter((unit) => unit.issueTypes.size > 1).length,
     highlights: highlights(periods),
     dimensionDefinitions: dimensionConfigurations.map((configuration) => ({
       key: configuration.key,
@@ -144,6 +146,7 @@ interface TrendUnit {
   issueKeys: string[];
   teams: Map<string, string>;
   authors: Map<string, string>;
+  issueTypes: Map<string, string>;
   status: string;
   effectiveDate: string;
   pointDate: string | null;
@@ -198,6 +201,7 @@ function buildUnit(
   const finalPointValues = new Set(finalRows.map((row) => round1(row.finalPoints!)));
   const teams = new Map<string, string>();
   const authors = new Map<string, string>();
+  const issueTypes = new Map<string, string>();
 
   for (const row of sorted) {
     if (row.teamKey && !teams.has(row.teamKey)) {
@@ -206,6 +210,13 @@ function buildUnit(
     for (const author of row.authors) {
       if (!authors.has(author.key)) {
         authors.set(author.key, author.name);
+      }
+    }
+    const issueType = row.issueType.trim();
+    if (issueType) {
+      const key = issueTypeKey(issueType);
+      if (!issueTypes.has(key)) {
+        issueTypes.set(key, issueType);
       }
     }
   }
@@ -225,6 +236,7 @@ function buildUnit(
     ),
     teams,
     authors,
+    issueTypes,
     status: statuses.length === 1 ? statuses[0] : 'MIXED',
     effectiveDate: sorted.at(-1)?.doneDate ?? '',
     pointDate: pointRow?.doneDate ?? null,
@@ -307,6 +319,12 @@ function matchesFilters(unit: TrendUnit, filters: AssessmentTrendFilters): boole
   if (filters.authorKey && !unit.authors.has(filters.authorKey)) {
     return false;
   }
+  if (
+    filters.issueTypeKeys.length > 0
+    && !filters.issueTypeKeys.some((key) => unit.issueTypes.has(key))
+  ) {
+    return false;
+  }
   const date = unit.pointDate ?? unit.effectiveDate;
   if (filters.fromDate && date < filters.fromDate) {
     return false;
@@ -315,6 +333,10 @@ function matchesFilters(unit: TrendUnit, filters: AssessmentTrendFilters): boole
     return false;
   }
   return true;
+}
+
+function issueTypeKey(value: string): string {
+  return `type:${value.trim().toLocaleLowerCase('pl')}`;
 }
 
 function optionsForUnits(

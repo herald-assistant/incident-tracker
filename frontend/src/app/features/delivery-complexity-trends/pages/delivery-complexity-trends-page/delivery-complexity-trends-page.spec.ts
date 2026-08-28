@@ -116,6 +116,69 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(element().textContent).toContain('1 w wybranym zakresie');
   });
 
+  it('should filter whole Delivery Units by multiple issue types without double counting', async () => {
+    await selectFiles([csvFile('types.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, {
+        issueKey: 'CRM-1',
+        issueType: 'Bug',
+        deliveryUnitId: 'DU-SHARED',
+        deliveredStoryPoints: '8',
+        pointsForAggregation: ''
+      }),
+      row(DCA_HEADERS, {
+        issueKey: 'CRM-2',
+        issueType: 'Story',
+        doneAt: '2026-07-02T09:00:00+02:00',
+        deliveryUnitId: 'DU-SHARED',
+        deliveredStoryPoints: '8',
+        pointsForAggregation: '8'
+      }),
+      row(DCA_HEADERS, {
+        issueKey: 'CRM-3',
+        issueType: 'Task',
+        deliveryUnitId: 'DU-TASK',
+        deliveredStoryPoints: '5',
+        pointsForAggregation: '5'
+      })
+    ])]);
+
+    const chips = Array.from(element().querySelectorAll<HTMLButtonElement>(
+      '.trend-issue-type-chip'
+    ));
+    const allTypes = chips.find((button) => button.textContent?.includes('Wszystkie typy'))!;
+    const bug = chips.find((button) => button.textContent?.includes('Bug'))!;
+    const story = chips.find((button) => button.textContent?.includes('Story'))!;
+
+    expect(allTypes.getAttribute('aria-pressed')).toBe('true');
+    expect(bug.querySelector('span')?.textContent?.trim()).toBe('Bug');
+    expect(bug.querySelector('small')?.textContent?.trim()).toBe('1 DU');
+    expect(story.querySelector('span')?.textContent?.trim()).toBe('Story');
+    expect(story.querySelector('small')?.textContent?.trim()).toBe('1 DU');
+
+    bug.click();
+    fixture.detectChanges();
+
+    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
+    expect(bug.getAttribute('aria-pressed')).toBe('true');
+    expect(element().textContent).toContain(
+      'Delivery Units z więcej niż jednym typem w bieżącym widoku:'
+    );
+
+    story.click();
+    fixture.detectChanges();
+
+    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
+    expect(element().textContent).toContain('Wybrane typy działają jako OR');
+
+    const reset = Array.from(element().querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('Wyczyść filtry'))!;
+    reset.click();
+    fixture.detectChanges();
+
+    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('13');
+    expect(allTypes.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('should default Scope reports to the additive dimension contribution', async () => {
     await selectFiles([csvFile('scope.csv', DSC_HEADERS, [row(DSC_HEADERS)])]);
 

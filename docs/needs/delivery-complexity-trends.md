@@ -27,7 +27,8 @@ Uzytkownik chce przede wszystkim:
 - rozpoznac kierunek i skale zmiany pomiedzy kolejnymi okresami,
 - wyjasnic, ktore oceny czastkowe najbardziej napedzily zmiane wyniku,
 - przejsc pomiedzy perspektywa dnia, tygodnia, miesiaca i kwartalu,
-- ograniczyc wynik do wybranego zespolu, autora MR oraz zakresu dat,
+- ograniczyc wynik do wybranego zespolu, autora MR, jednego lub kilku typow
+  issue oraz zakresu dat,
 - zobaczyc liczbe issue i Delivery Units stojacych za lacznym wynikiem,
 - sprawdzic, ile rekordow zostalo pominietych, zduplikowanych albo nie mialo
   prawidlowej oceny.
@@ -60,9 +61,14 @@ byc powtorzona przy kilku issue. Widok musi zachowac nastepujace zasady:
 - filtr zespolu dopasowuje Delivery Unit, jezeli nalezy do niej issue tego
   zespolu,
 - filtr osoby dopasowuje Delivery Unit, jezeli jej MR ma wskazanego autora,
-- po dopasowaniu zespolu lub autora do wyniku trafia pelna obserwowalna
+- filtr typu issue dopasowuje Delivery Unit, jezeli zawiera co najmniej jedno
+  issue dowolnego wybranego typu; kilka zaznaczen dziala jako OR,
+- po dopasowaniu zespolu, autora lub typu issue do wyniku trafia pelna obserwowalna
   zlozonosc Delivery Unit; nie jest ona dzielona ani przypisywana jako wynik
   konkretnej osoby,
+- jednostka zawierajaca kilka typow nadal jest liczona raz, ale moze pojawic
+  sie w wynikach kilku osobno wykonanych filtrow, dlatego tych wynikow nie
+  nalezy sumowac,
 - brak wierszy w okresie nie moze byc automatycznie interpretowany jako zero,
   bo biznesowy CSV nie opisuje kompletnego kalendarza wykonanych raportow.
 
@@ -75,7 +81,7 @@ lub negatywna ocena pracy zespolu.
 Po prawidlowym zaladowaniu plikow strona powinna pokazac:
 
 - rozpoznany typ assessmentu i jednostke punktowa,
-- filtry granulacji, zespolu, autora MR oraz dat od-do,
+- filtry granulacji, zespolu, autora MR, typow issue oraz dat od-do,
 - wykres slupkowy lacznej zlozonosci dla kolejnych okresow,
 - sekcje `Co napedza zmiane`, ktora pokazuje laczny wklad wymiarow albo ich
   srednia na Delivery Unit oraz wskazuje wymiar o najwiekszej zmianie,
@@ -105,7 +111,10 @@ MVP jest uzyteczny, jezeli:
 - suma punktow nie zwielokrotnia Delivery Unit zawierajacych kilka issue,
 - dzien, tydzien ISO, miesiac i kwartal tworza deterministyczne okresy z
   `doneAt`,
-- filtry zespolu, autora i dat zachowuja addytywna semantyke jednostek,
+- filtry zespolu, autora, typow issue i dat zachowuja addytywna semantyke
+  jednostek,
+- wielokrotny filtr typow dziala jako OR i nie liczy wielotypowej Delivery Unit
+  wiecej niz raz,
 - wykres oraz tabela pokazuja ten sam wynik i te same zmiany okresowe,
 - oceny czastkowe sa liczone z tej samej Delivery Unit, daty i filtrow co
   wynik glowny oraz zawsze pokazuja liczebnosc proby,
@@ -126,6 +135,8 @@ MVP nie ma:
 - tworzyc backendowego endpointu importu lub agregacji,
 - prognozowac przyszlej zlozonosci ani oceniac velocity,
 - dzielic punktow Delivery Unit pomiedzy zespoly lub autorow,
+- przypisywac punktow wylacznie jednemu typowi issue ani traktowac typow jako
+  rozlacznych kategorii Delivery Unit,
 - tworzyc rankingu osob, zespolow, vendorow ani dostawcow,
 - interpretowac profilu wymiarow jako oceny produktywnosci osoby lub zespolu,
 - uznawac okresu bez zaimportowanych danych za okres z wynikiem zero,
@@ -139,6 +150,10 @@ MVP nie ma:
   jawna, deterministyczna regula wyboru oraz licznik konfliktow.
 - Autor MR opisuje powiazanie z zakresem zmiany. Jedna Delivery Unit moze miec
   wielu autorow, dlatego filtr osoby nie stanowi indywidualnej atrybucji.
+- Jedna Delivery Unit moze zawierac kilka typow issue, a nazwy typow moga byc
+  konfigurowane inaczej w roznych projektach Jira. Filtr opisuje metadane
+  workflow i korelacje z profilem zlozonosci, a nie jej przyczyne ani
+  rozlaczna klasyfikacje techniczna.
 - Nazwa autora nie jest stabilnym identyfikatorem. Nowe eksporty powinny
   zachowac rowniez ID autora, a nazwy sluzyc do prezentacji.
 - Bez metadanych pokrycia raportu nie da sie odroznic okresu bez dostaw od

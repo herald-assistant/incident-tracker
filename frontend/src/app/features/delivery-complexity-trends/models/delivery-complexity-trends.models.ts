@@ -72,6 +72,7 @@ export interface AssessmentTrendFilters {
   granularity: AssessmentTrendGranularity;
   teamKey: string;
   authorKey: string;
+  issueTypeKeys: readonly string[];
   fromDate: string;
   toDate: string;
 }
@@ -138,6 +139,8 @@ export interface AssessmentTrendView {
   statusCounts: AssessmentTrendStatusCount[];
   teamOptions: AssessmentTrendFilterOption[];
   authorOptions: AssessmentTrendFilterOption[];
+  issueTypeOptions: AssessmentTrendFilterOption[];
+  multiIssueTypeUnitCount: number;
   highlights: AssessmentTrendHighlight[];
   dimensionDefinitions: AssessmentTrendDimensionDefinition[];
   dimensionDrivers: Record<AssessmentTrendDimensionMode, AssessmentTrendDimensionChange | null>;

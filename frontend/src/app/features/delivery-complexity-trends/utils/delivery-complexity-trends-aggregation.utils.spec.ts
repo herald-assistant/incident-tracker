@@ -63,11 +63,12 @@ describe('Delivery Complexity Trends aggregation', () => {
     ]);
   });
 
-  it('should filter the whole unit by a team or author found on a non-anchor issue', () => {
+  it('should filter the whole unit by team, author or issue type found on any issue', () => {
     const rows = [
       issue({
         issueKey: 'CRM-1',
         deliveryUnitId: 'DU-SHARED',
+        issueType: 'Bug',
         teamKey: 'id:team-b',
         teamId: 'team-b',
         teamName: 'Team B',
@@ -84,17 +85,44 @@ describe('Delivery Complexity Trends aggregation', () => {
         finalPoints: 8,
         aggregationPoints: 8
       }),
-      issue({ issueKey: 'CRM-3', deliveryUnitId: 'DU-OTHER', finalPoints: 5, aggregationPoints: 5 })
+      issue({
+        issueKey: 'CRM-3',
+        deliveryUnitId: 'DU-OTHER',
+        issueType: 'Task',
+        finalPoints: 5,
+        aggregationPoints: 5
+      }),
+      issue({
+        issueKey: 'CRM-4',
+        deliveryUnitId: 'DU-STORY',
+        issueType: 'Story',
+        finalPoints: 3,
+        aggregationPoints: 3
+      })
     ];
     const data = dataset(rows);
 
     const byTeam = buildAssessmentTrendView(data, filters({ teamKey: 'id:team-b' }));
     const byAuthor = buildAssessmentTrendView(data, filters({ authorKey: 'id:202' }));
+    const byBug = buildAssessmentTrendView(data, filters({ issueTypeKeys: ['type:bug'] }));
+    const byBugOrStory = buildAssessmentTrendView(data, filters({
+      issueTypeKeys: ['type:bug', 'type:story']
+    }));
 
     expect(byTeam.totalPoints).toBe(8);
     expect(byTeam.issueCount).toBe(2);
     expect(byAuthor.totalPoints).toBe(8);
     expect(byAuthor.scoredUnitCount).toBe(1);
+    expect(byBug.totalPoints).toBe(8);
+    expect(byBug.issueCount).toBe(2);
+    expect(byBug.multiIssueTypeUnitCount).toBe(1);
+    expect(byBugOrStory.totalPoints).toBe(11);
+    expect(byBugOrStory.scoredUnitCount).toBe(2);
+    expect(byBugOrStory.issueTypeOptions).toEqual([
+      { key: 'type:bug', label: 'Bug', unitCount: 1 },
+      { key: 'type:story', label: 'Story', unitCount: 2 },
+      { key: 'type:task', label: 'Task', unitCount: 1 }
+    ]);
   });
 
   it('should group calendar dates without browser-timezone shifts for days and quarters', () => {
@@ -342,6 +370,7 @@ function filters(overrides: Partial<AssessmentTrendFilters> = {}): AssessmentTre
     granularity: 'DAY',
     teamKey: '',
     authorKey: '',
+    issueTypeKeys: [],
     fromDate: '',
     toDate: '',
     ...overrides

@@ -32,6 +32,7 @@ export class DeliveryComplexityTrendsPageComponent {
   readonly importing = signal(false);
   readonly importError = signal('');
   readonly dimensionMode = signal<AssessmentTrendDimensionMode>('AVERAGE');
+  readonly selectedIssueTypeKeys = signal<readonly string[]>([]);
   private readonly filterRevision = signal(0);
 
   readonly granularityControl = new FormControl<AssessmentTrendGranularity>('MONTH', {
@@ -52,6 +53,7 @@ export class DeliveryComplexityTrendsPageComponent {
   readonly filtersActive = computed(() => {
     this.filterRevision();
     return this.granularityControl.value !== 'MONTH'
+      || this.selectedIssueTypeKeys().length > 0
       || Boolean(
         this.teamControl.value
         || this.authorControl.value
@@ -70,6 +72,7 @@ export class DeliveryComplexityTrendsPageComponent {
       granularity: this.granularityControl.value,
       teamKey: this.teamControl.value,
       authorKey: this.authorControl.value,
+      issueTypeKeys: this.selectedIssueTypeKeys(),
       fromDate: this.fromDateControl.value,
       toDate: this.toDateControl.value
     });
@@ -131,6 +134,7 @@ export class DeliveryComplexityTrendsPageComponent {
     this.granularityControl.setValue('MONTH', { emitEvent: false });
     this.teamControl.setValue('', { emitEvent: false });
     this.authorControl.setValue('', { emitEvent: false });
+    this.selectedIssueTypeKeys.set([]);
     this.fromDateControl.setValue('', { emitEvent: false });
     this.toDateControl.setValue('', { emitEvent: false });
     this.filterRevision.update((revision) => revision + 1);
@@ -140,6 +144,21 @@ export class DeliveryComplexityTrendsPageComponent {
     return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
       ? 'Delivery Complexity Assessment'
       : 'Delivery Scope Complexity';
+  }
+
+  protected issueTypeSelected(key: string): boolean {
+    return this.selectedIssueTypeKeys().includes(key);
+  }
+
+  protected toggleIssueType(key: string): void {
+    this.selectedIssueTypeKeys.update((selected) => selected.includes(key)
+      ? selected.filter((item) => item !== key)
+      : [...selected, key].sort()
+    );
+  }
+
+  protected clearIssueTypes(): void {
+    this.selectedIssueTypeKeys.set([]);
   }
 
   protected setDimensionMode(mode: AssessmentTrendDimensionMode): void {

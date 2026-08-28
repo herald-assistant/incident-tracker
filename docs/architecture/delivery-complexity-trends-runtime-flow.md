@@ -61,14 +61,21 @@ czesci daty zapisanej w CSV, bez przesuniecia przez strefe czasowa przegladarki.
 ## Filtry, okresy i wynik
 
 Uzytkownik wybiera granularnosc `Dzien`, `Tydzien`, `Miesiac` albo `Kwartal`
-oraz moze ograniczyc widok po zespole, autorze MR i inkluzywnych datach
-`od`/`do`. `Tydzien` oznacza tydzien ISO od poniedzialku do niedzieli i uzywa
-ISO week-year, dlatego pierwsze dni stycznia moga nalezec do ostatniego
+oraz moze ograniczyc widok po zespole, autorze MR, typach issue i inkluzywnych
+datach `od`/`do`. `Tydzien` oznacza tydzien ISO od poniedzialku do niedzieli i
+uzywa ISO week-year, dlatego pierwsze dni stycznia moga nalezec do ostatniego
 tygodnia poprzedniego roku.
-Filtry zespolu i autora dzialaja na poziomie Delivery Unit: jesli jednostka ma
-pasujacy zespol albo co najmniej jeden MR danego autora, do trendu trafia jej
-pelna wartosc. Filtr autora nie dzieli punktow pomiedzy osoby i nie jest miara
-produktywnosci.
+
+Filtry zespolu, autora i typu issue dzialaja na poziomie Delivery Unit. Jesli
+jednostka ma pasujacy zespol, co najmniej jeden MR danego autora albo co
+najmniej jedno issue wybranego typu, do trendu trafia jej pelna wartosc.
+Wielokrotny wybor typow dziala jako OR, a pasujaca jednostka jest liczona raz
+nawet wtedy, gdy zawiera kilka zaznaczonych typow. Katalog opcji pokazuje
+liczbe Delivery Units zawierajacych dany typ, a ekran podaje liczbe
+wielotypowych jednostek w biezacym widoku i ostrzega, ze wynikow osobnych
+filtrow typow nie nalezy sumowac. Filtr autora nie dzieli punktow pomiedzy
+osoby i nie jest miara produktywnosci; analogicznie filtr typu nie przypisuje
+punktow wylacznie jednej kategorii Jira.
 
 Dla kazdego widocznego okresu ekran pokazuje:
 

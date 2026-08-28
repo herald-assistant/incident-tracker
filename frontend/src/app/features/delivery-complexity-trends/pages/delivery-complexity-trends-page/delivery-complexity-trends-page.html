@@ -133,16 +133,57 @@
           </label>
         </div>
 
+        @if (currentTrend.issueTypeOptions.length > 0) {
+          <fieldset class="trend-issue-type-filter">
+            <legend>Typ issue <small>możesz wybrać kilka</small></legend>
+            <div class="trend-issue-type-options">
+              <button
+                type="button"
+                class="trend-issue-type-chip"
+                [class.trend-issue-type-chip--active]="selectedIssueTypeKeys().length === 0"
+                [attr.aria-pressed]="selectedIssueTypeKeys().length === 0"
+                (click)="clearIssueTypes()"
+              >Wszystkie typy</button>
+              @for (option of currentTrend.issueTypeOptions; track option.key) {
+                <button
+                  type="button"
+                  class="trend-issue-type-chip"
+                  [class.trend-issue-type-chip--active]="issueTypeSelected(option.key)"
+                  [attr.aria-pressed]="issueTypeSelected(option.key)"
+                  [attr.title]="'Pokaż Delivery Units zawierające issue typu ' + option.label"
+                  (click)="toggleIssueType(option.key)"
+                >
+                  <span>{{ option.label }}</span>
+                  <small>{{ option.unitCount }} DU</small>
+                </button>
+              }
+            </div>
+          </fieldset>
+        }
+
         @if (dateFilterInvalid()) {
           <p class="trend-field-error" role="alert">Data „Od” nie może być późniejsza niż „Do”.</p>
         }
 
-        <div class="trend-author-note">
+        <div class="trend-filter-note">
           <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          <p>
-            Filtr autora oznacza, że osoba była autorem co najmniej jednego MR w Delivery Unit.
-            Pokazywana jest pełna złożoność jednostki — nie są to punkty osoby ani miara produktywności.
-          </p>
+          <div>
+            <p>
+              Filtr typu issue obejmuje pełną Delivery Unit, jeśli zawiera ona co najmniej jedno issue
+              wybranego typu. Wybrane typy działają jako OR, a jednostka jest liczona tylko raz.
+              @if (currentTrend.multiIssueTypeUnitCount > 0) {
+                <strong>
+                  Delivery Units z więcej niż jednym typem w bieżącym widoku:
+                  {{ currentTrend.multiIssueTypeUnitCount }};
+                  wyników osobnych filtrów typów nie należy sumować.
+                </strong>
+              }
+            </p>
+            <p>
+              Filtr autora oznacza, że osoba była autorem co najmniej jednego MR w Delivery Unit.
+              Pokazywana jest pełna złożoność jednostki — nie są to punkty osoby ani miara produktywności.
+            </p>
+          </div>
         </div>
       </section>
 
