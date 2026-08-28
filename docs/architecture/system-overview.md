@@ -42,7 +42,9 @@ Dostepne obok Incident Analysis sa Flow Explorer, Change Verification,
 Config Drift Viewer, Delivery Complexity Assessment i eksperymentalny
 Delivery Scope Complexity. Frontendowy Delivery Complexity Trends laczy
 lokalnie biznesowe CSV jednego z assessmentow i pokazuje addytywny trend bez
-nowego backendowego API ani storage.
+nowego backendowego API ani storage. Trend wymiarow wyjasnia, co napedza
+zmiane: Scope jako addytywny rozklad, a Assessment jako profil `0-4` lub
+wazony wklad do `score100`, bez udawania rozkladu DSP.
 Backendowa podstawa UI Explorer udostepnia feature-owned kontrakt,
 asynchroniczny job oraz neutralna capability GitLaba do graph-first
 rozpoznawania Angular/Nx route/view catalog i screen reachability. Integracja
@@ -363,8 +365,10 @@ Na dzisiaj projekt ma:
   Angularowy, client-only workspace laczacy wiele niewersjonowanych biznesowych
   CSV jednego assessmentu. Deduplikuje `issueKey`, odtwarza addytywne Delivery
   Units i prezentuje trend dzien/tydzien ISO/miesiac/kwartal z filtrami
-  zespolu, autora MR i dat. Pliki nie sa wysylane do backendu ani zapisywane w
-  Analysis History.
+  zespolu, autora MR i dat. Sekcja `Co napedza zmiane` pokazuje laczny lub
+  sredni profil wymiarow oraz najwiekszy driver okresowej zmiany zgodnie z
+  semantyka rozpoznanego assessmentu. Pliki nie sa wysylane do backendu ani
+  zapisywane w Analysis History.
 - `GET /elastic`
   Angularowy ekran `Tool Workbench / Elastic Logs` do recznego testowania
   helper endpointow Elastica oraz podgladu request/response JSON.

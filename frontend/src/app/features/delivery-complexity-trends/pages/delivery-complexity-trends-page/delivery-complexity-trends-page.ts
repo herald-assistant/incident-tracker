@@ -5,8 +5,12 @@ import { merge } from 'rxjs';
 
 import {
   AssessmentTrendDataset,
+  AssessmentTrendDimensionChange,
+  AssessmentTrendDimensionDefinition,
+  AssessmentTrendDimensionMode,
   AssessmentTrendGranularity,
   AssessmentTrendPeriod,
+  AssessmentTrendPeriodDimension,
   AssessmentTrendStatusCount,
   AssessmentTrendView
 } from '../../models/delivery-complexity-trends.models';
@@ -27,6 +31,7 @@ export class DeliveryComplexityTrendsPageComponent {
   readonly dataset = signal<AssessmentTrendDataset | null>(null);
   readonly importing = signal(false);
   readonly importError = signal('');
+  readonly dimensionMode = signal<AssessmentTrendDimensionMode>('AVERAGE');
   private readonly filterRevision = signal(0);
 
   readonly granularityControl = new FormControl<AssessmentTrendGranularity>('MONTH', {
@@ -104,6 +109,7 @@ export class DeliveryComplexityTrendsPageComponent {
     try {
       const dataset = await importAssessmentTrendFiles(files);
       this.dataset.set(dataset);
+      this.dimensionMode.set(dataset.source === 'DELIVERY_SCOPE_COMPLEXITY' ? 'TOTAL' : 'AVERAGE');
       this.resetFilters();
     } catch (error) {
       this.importError.set(error instanceof AssessmentTrendImportError
@@ -116,6 +122,7 @@ export class DeliveryComplexityTrendsPageComponent {
 
   protected clearDataset(): void {
     this.dataset.set(null);
+    this.dimensionMode.set('AVERAGE');
     this.importError.set('');
     this.resetFilters();
   }
@@ -135,8 +142,105 @@ export class DeliveryComplexityTrendsPageComponent {
       : 'Delivery Scope Complexity';
   }
 
+  protected setDimensionMode(mode: AssessmentTrendDimensionMode): void {
+    this.dimensionMode.set(mode);
+  }
+
+  protected dimensionDriver(trend: AssessmentTrendView): AssessmentTrendDimensionChange | null {
+    return trend.dimensionDrivers[this.dimensionMode()];
+  }
+
+  protected dimensionModeDescription(dataset: AssessmentTrendDataset): string {
+    if (this.dimensionMode() === 'AVERAGE') {
+      return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+        ? 'Średnia ocena 0–4 pokazuje profil typowej ocenionej Delivery Unit, niezależnie od liczby dostaw.'
+        : 'Średni punktowy wkład wymiaru na ocenioną Delivery Unit oddziela charakter zmiany od liczby dostaw.';
+    }
+    return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+      ? 'Przy kompletnych ocenach ważone segmenty sumują się do score100 jednostek. Nie są rozkładem DSP, które powstaje przez progi.'
+      : 'Przy kompletnych ocenach segmenty są punktowym wkładem wymiarów i sumują się do Complexity Points ocenionych jednostek.';
+  }
+
+  protected dimensionMetricLabel(dataset: AssessmentTrendDataset): string {
+    if (this.dimensionMode() === 'AVERAGE') {
+      return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+        ? 'średnia 0–4'
+        : 'pkt / Delivery Unit';
+    }
+    return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+      ? 'pkt score100'
+      : 'Complexity Points';
+  }
+
+  protected dimensionPeriodTotal(period: AssessmentTrendPeriod): number {
+    return this.roundDimensionDisplay(period.dimensions.reduce(
+      (total, dimension) => total + (dimension.total ?? 0),
+      0
+    ));
+  }
+
+  protected dimensionTotalBarWidth(
+    period: AssessmentTrendPeriod,
+    trend: AssessmentTrendView
+  ): number {
+    const maximum = Math.max(...trend.periods.map((item) => this.dimensionPeriodTotal(item)), 0);
+    const value = this.dimensionPeriodTotal(period);
+    return maximum === 0 ? 2 : Math.max(value === 0 ? 2 : 8, value / maximum * 100);
+  }
+
+  protected dimensionShare(
+    dimension: AssessmentTrendPeriodDimension,
+    period: AssessmentTrendPeriod
+  ): number {
+    const total = this.dimensionPeriodTotal(period);
+    return total === 0 || dimension.total === null ? 0 : dimension.total / total * 100;
+  }
+
+  protected dimensionColor(index: number): string {
+    return [
+      '#0c66e4', '#087e8b', '#6554c0', '#c47a00', '#ae2e24', '#1f845a', '#44546f'
+    ][index % 7];
+  }
+
+  protected dimensionHeatColor(
+    index: number,
+    dimension: AssessmentTrendPeriodDimension,
+    definition: AssessmentTrendDimensionDefinition
+  ): string {
+    const value = dimension.average;
+    if (value === null) {
+      return 'transparent';
+    }
+    const ratio = Math.min(1, Math.max(0, value / definition.averageMaximum));
+    const rgb = [
+      '12, 102, 228', '8, 126, 139', '101, 84, 192', '196, 122, 0',
+      '174, 46, 36', '31, 132, 90', '68, 84, 111'
+    ][index % 7];
+    return `rgba(${rgb}, ${0.08 + ratio * 0.28})`;
+  }
+
+  protected dimensionChartAriaLabel(
+    trend: AssessmentTrendView,
+    dataset: AssessmentTrendDataset
+  ): string {
+    const labels = new Map(trend.dimensionDefinitions.map((item) => [item.key, item.label]));
+    const periods = trend.periods.map((period) => {
+      const values = period.dimensions.map((dimension) =>
+        `${labels.get(dimension.key) ?? dimension.key}: ${dimension.total === null
+          ? 'brak danych'
+          : this.formatDimensionPoints(dimension.total)}`
+      ).join(', ');
+      return `${period.label}, ${period.unitCount} Delivery Units: ${values}`;
+    }).join('. ');
+    return `Łączny wkład wymiarów dla ${this.sourceLabel(dataset)}. ${periods}.`;
+  }
+
   protected formatPoints(value: number): string {
     return value.toLocaleString('pl-PL', { maximumFractionDigits: 1 });
+  }
+
+  protected formatDimensionPoints(value: number): string {
+    return value.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
   }
 
   protected signedPoints(value: number | null): string {
@@ -145,6 +249,14 @@ export class DeliveryComplexityTrendsPageComponent {
     }
     const prefix = value > 0 ? '+' : '';
     return `${prefix}${this.formatPoints(value)}`;
+  }
+
+  protected signedDimensionPoints(value: number | null): string {
+    if (value === null) {
+      return '-';
+    }
+    const prefix = value > 0 ? '+' : '';
+    return `${prefix}${this.formatDimensionPoints(value)}`;
   }
 
   protected percentLabel(value: number | null): string {
@@ -190,4 +302,8 @@ export class DeliveryComplexityTrendsPageComponent {
   }
 
   protected readonly maxFiles = ASSESSMENT_TREND_MAX_FILES;
+
+  private roundDimensionDisplay(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
 }

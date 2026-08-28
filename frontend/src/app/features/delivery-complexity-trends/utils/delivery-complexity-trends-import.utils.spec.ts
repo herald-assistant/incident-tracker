@@ -62,6 +62,15 @@ describe('Delivery Complexity Trends CSV import', () => {
     expect(result.rows.map((item) => item.issueKey)).toEqual(['CRM-1', 'CRM-2']);
     expect(result.rows[0].finalPoints).toBe(13);
     expect(result.rows[0].sourceFileName).toBe('2026-08.csv');
+    expect(result.rows[0].dimensionValues).toEqual({
+      outcomeBreadth: 2,
+      domainDecisionComplexity: 3,
+      applicationFlowComplexity: 3,
+      boundaryAndDataComplexity: 2,
+      verificationStateSpace: 3,
+      implementedCompatibilityScope: 2,
+      parameterizationComplexity: 3
+    });
     expect(result.rows[0].authors).toEqual([
       { key: 'id:101', id: '101', name: 'Anna Nowak', usesNameFallback: false },
       {
@@ -106,6 +115,14 @@ describe('Delivery Complexity Trends CSV import', () => {
 
     expect(result.source).toBe('DELIVERY_SCOPE_COMPLEXITY');
     expect(result.rows[0].finalPoints).toBe(122.5);
+    expect(result.rows[0].dimensionValues).toEqual({
+      noveltyPoints: 20.5,
+      structuralAndLogicPoints: 31,
+      businessAndInvariantsPoints: 18,
+      robustnessAndTestsPoints: 14,
+      refactorAndArchitecturePoints: 13,
+      distributionPoints: 26
+    });
     expect(result.rows[0].authors).toEqual([]);
     expect(result.quality.legacyFilesWithoutAuthors).toBe(1);
     expect(result.quality.rowsWithoutAuthors).toBe(1);
@@ -125,6 +142,9 @@ describe('Delivery Complexity Trends CSV import', () => {
       row(DCA_HEADERS, { deliveredStoryPoints: '-2', pointsForAggregation: '-2' })
     ]);
     const malformed = textFile('broken.csv', 'issueKey;doneAt\n"CRM-1;2026-07-01');
+    const invalidDimension = csvFile('invalid-dimension.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, { outcomeBreadth: '4,5' })
+    ]);
 
     await expect(importAssessmentTrendFiles([invalidPoints])).rejects.toMatchObject({
       code: 'INVALID_ROW'
@@ -135,6 +155,9 @@ describe('Delivery Complexity Trends CSV import', () => {
         message: expect.stringContaining('broken.csv')
       })
     );
+    await expect(importAssessmentTrendFiles([invalidDimension])).rejects.toMatchObject({
+      code: 'INVALID_ROW'
+    });
   });
 
   it('should reject a file with only one of the paired author columns', async () => {

@@ -25,6 +25,7 @@ produktywnosci ludzi.
 Uzytkownik chce przede wszystkim:
 
 - rozpoznac kierunek i skale zmiany pomiedzy kolejnymi okresami,
+- wyjasnic, ktore oceny czastkowe najbardziej napedzily zmiane wyniku,
 - przejsc pomiedzy perspektywa dnia, tygodnia, miesiaca i kwartalu,
 - ograniczyc wynik do wybranego zespolu, autora MR oraz zakresu dat,
 - zobaczyc liczbe issue i Delivery Units stojacych za lacznym wynikiem,
@@ -76,6 +77,8 @@ Po prawidlowym zaladowaniu plikow strona powinna pokazac:
 - rozpoznany typ assessmentu i jednostke punktowa,
 - filtry granulacji, zespolu, autora MR oraz dat od-do,
 - wykres slupkowy lacznej zlozonosci dla kolejnych okresow,
+- sekcje `Co napedza zmiane`, ktora pokazuje laczny wklad wymiarow albo ich
+  srednia na Delivery Unit oraz wskazuje wymiar o najwiekszej zmianie,
 - wartosc i zmiane bezwzgledna oraz procentowa wzgledem poprzedniego okresu z
   danymi,
 - podsumowanie lacznej zlozonosci, liczby Delivery Units i unikalnych issue,
@@ -84,6 +87,12 @@ Po prawidlowym zaladowaniu plikow strona powinna pokazac:
   duplikatow oraz odrzuconych danych,
 - jawna informacje, ze filtr autora MR nie jest miara indywidualnej
   produktywnosci ani przypisaniem punktow do osoby.
+
+Interpretacja ocen czastkowych zalezy od zrodla. W Delivery Scope Complexity
+kolumny `*Points` sa addytywne i w widoku lacznym skladaja sie na
+`finalScore`. W Delivery Complexity Assessment surowe wymiary `0-4` pokazuja
+profil typowej jednostki, a ich laczny widok jest wazonym wkladem do
+`score100`; nie jest rozkladem progowego wyniku DSP.
 
 ## Kryteria sukcesu MVP
 
@@ -98,6 +107,10 @@ MVP jest uzyteczny, jezeli:
   `doneAt`,
 - filtry zespolu, autora i dat zachowuja addytywna semantyke jednostek,
 - wykres oraz tabela pokazuja ten sam wynik i te same zmiany okresowe,
+- oceny czastkowe sa liczone z tej samej Delivery Unit, daty i filtrow co
+  wynik glowny oraz zawsze pokazuja liczebnosc proby,
+- Scope zachowuje dokladny addytywny rozklad punktow, a Assessment nie
+  przedstawia wymiarow `0-4` jako liniowego rozkladu DSP,
 - bledny, pusty albo niekompatybilny plik daje zrozumialy komunikat,
 - starszy CSV bez informacji o autorach nadal pozwala zobaczyc trend i filtr
   zespolu, ale jawnie ogranicza filtr osoby,
@@ -114,6 +127,7 @@ MVP nie ma:
 - prognozowac przyszlej zlozonosci ani oceniac velocity,
 - dzielic punktow Delivery Unit pomiedzy zespoly lub autorow,
 - tworzyc rankingu osob, zespolow, vendorow ani dostawcow,
+- interpretowac profilu wymiarow jako oceny produktywnosci osoby lub zespolu,
 - uznawac okresu bez zaimportowanych danych za okres z wynikiem zero,
 - edytowac, poprawiac lub ponownie eksportowac zaladowanych danych.
 
@@ -129,3 +143,6 @@ MVP nie ma:
   zachowac rowniez ID autora, a nazwy sluzyc do prezentacji.
 - Bez metadanych pokrycia raportu nie da sie odroznic okresu bez dostaw od
   okresu, dla ktorego nie zalaczono CSV.
+- Srednia wymiaru moze zmienic sie przy malej liczbie Delivery Units, dlatego
+  widok musi eksponowac liczebnosc proby i nie ukrywac brakujacych ocen
+  czastkowych.

@@ -197,6 +197,9 @@ Delivery Units i
 pozwala filtrowac po zespole, autorze MR oraz datach. Slupki, tabela, delty,
 statusy i jakosc importu ulatwiaja odczyt trendu bez przygotowywania stalego
 dashboardu albo zapisywania danych na serwerze.
+Sekcja ocen czastkowych wyjasnia kompozycje zmiany: Scope zachowuje addytywny
+rozklad punktow, a Assessment pokazuje profil `0-4` lub wazony wklad do
+`score100`, nigdy pozorny rozklad progowego DSP.
 
 To frontendowy konsument obu niezaleznych assessmentow, a nie wspolna domena
 ich scoringu. Jeden zestaw nie miesza algorytmow. Filtr autora oznacza udzial

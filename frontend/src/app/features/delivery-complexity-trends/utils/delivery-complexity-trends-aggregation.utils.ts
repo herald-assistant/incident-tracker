@@ -1,5 +1,8 @@
 import {
   AssessmentTrendDataset,
+  AssessmentTrendDimensionChange,
+  AssessmentTrendDimensionDefinition,
+  AssessmentTrendDimensionMode,
   AssessmentTrendFilterOption,
   AssessmentTrendFilters,
   AssessmentTrendGranularity,
@@ -15,11 +18,35 @@ const MONTH_LABELS = [
   'lip', 'sie', 'wrz', 'paz', 'lis', 'gru'
 ] as const;
 
+interface DimensionConfiguration extends AssessmentTrendDimensionDefinition {
+  totalMultiplier: number;
+}
+
+const DELIVERY_COMPLEXITY_DIMENSIONS: readonly DimensionConfiguration[] = [
+  { key: 'outcomeBreadth', label: 'Szerokość rezultatu', averageMaximum: 4, totalMultiplier: 2.5 },
+  { key: 'domainDecisionComplexity', label: 'Decyzje domenowe', averageMaximum: 4, totalMultiplier: 5 },
+  { key: 'applicationFlowComplexity', label: 'Przepływ aplikacji', averageMaximum: 4, totalMultiplier: 5 },
+  { key: 'boundaryAndDataComplexity', label: 'Granice i dane', averageMaximum: 4, totalMultiplier: 3.75 },
+  { key: 'verificationStateSpace', label: 'Przestrzeń weryfikacji', averageMaximum: 4, totalMultiplier: 2.5 },
+  { key: 'implementedCompatibilityScope', label: 'Kompatybilność', averageMaximum: 4, totalMultiplier: 2.5 },
+  { key: 'parameterizationComplexity', label: 'Parametryzacja', averageMaximum: 4, totalMultiplier: 3.75 }
+];
+
+const DELIVERY_SCOPE_DIMENSIONS: readonly DimensionConfiguration[] = [
+  { key: 'noveltyPoints', label: 'Nowość', averageMaximum: 40, totalMultiplier: 1 },
+  { key: 'structuralAndLogicPoints', label: 'Struktura i logika', averageMaximum: 50, totalMultiplier: 1 },
+  { key: 'businessAndInvariantsPoints', label: 'Biznes i inwarianty', averageMaximum: 30, totalMultiplier: 1 },
+  { key: 'robustnessAndTestsPoints', label: 'Odporność i testy', averageMaximum: 20, totalMultiplier: 1 },
+  { key: 'refactorAndArchitecturePoints', label: 'Refaktoryzacja i architektura', averageMaximum: 20, totalMultiplier: 1 },
+  { key: 'distributionPoints', label: 'Rozproszenie zmiany', averageMaximum: 40, totalMultiplier: 1 }
+];
+
 export function buildAssessmentTrendView(
   dataset: AssessmentTrendDataset,
   filters: AssessmentTrendFilters
 ): AssessmentTrendView {
-  const units = buildUnits(dataset.rows);
+  const dimensionConfigurations = dimensionsFor(dataset.source);
+  const units = buildUnits(dataset.rows, dimensionConfigurations);
   const selectedUnits = units.filter((unit) => matchesFilters(unit, filters));
   const periodMap = new Map<string, PeriodAccumulator>();
 
@@ -33,11 +60,27 @@ export function buildAssessmentTrendView(
       label: periodLabel(key, filters.granularity),
       points: 0,
       unitIds: new Set<string>(),
-      issueKeys: new Set<string>()
+      issueKeys: new Set<string>(),
+      dimensions: new Map<string, DimensionAccumulator>()
     };
     period.points += unit.points;
     period.unitIds.add(unit.id);
     unit.issueKeys.forEach((issueKey) => period.issueKeys.add(issueKey));
+    for (const configuration of dimensionConfigurations) {
+      const value = unit.dimensionValues[configuration.key];
+      if (value === null || value === undefined) {
+        continue;
+      }
+      const dimension = period.dimensions.get(configuration.key) ?? {
+        rawTotal: 0,
+        weightedTotal: 0,
+        unitIds: new Set<string>()
+      };
+      dimension.rawTotal += value;
+      dimension.weightedTotal += value * configuration.totalMultiplier;
+      dimension.unitIds.add(unit.id);
+      period.dimensions.set(configuration.key, dimension);
+    }
     periodMap.set(key, period);
   }
 
@@ -46,31 +89,22 @@ export function buildAssessmentTrendView(
     .map((period, index, all): AssessmentTrendPeriod => {
       const points = round1(period.points);
       const previous = all[index - 1];
-      if (!previous) {
-        return {
-          key: period.key,
-          label: period.label,
-          points,
-          delta: null,
-          deltaPercent: null,
-          direction: 'NONE',
-          unitCount: period.unitIds.size,
-          issueCount: period.issueKeys.size
-        };
-      }
-      const previousPoints = round1(previous.points);
-      const delta = round1(points - previousPoints);
+      const previousPoints = previous ? round1(previous.points) : null;
+      const delta = previousPoints === null ? null : round1(points - previousPoints);
       return {
         key: period.key,
         label: period.label,
         points,
         delta,
-        deltaPercent: previousPoints === 0
+        deltaPercent: previousPoints === null || previousPoints === 0 || delta === null
           ? null
           : round1((delta / Math.abs(previousPoints)) * 100),
-        direction: delta > 0 ? 'UP' : delta < 0 ? 'DOWN' : 'FLAT',
+        direction: delta === null ? 'NONE' : delta > 0 ? 'UP' : delta < 0 ? 'DOWN' : 'FLAT',
         unitCount: period.unitIds.size,
-        issueCount: period.issueKeys.size
+        issueCount: period.issueKeys.size,
+        dimensions: dimensionConfigurations.map((configuration) =>
+          periodDimension(period, previous, configuration)
+        )
       };
     });
 
@@ -87,10 +121,20 @@ export function buildAssessmentTrendView(
     teamOptions: optionsForUnits(units, (unit) => unit.teams),
     authorOptions: optionsForUnits(units, (unit) => unit.authors),
     highlights: highlights(periods),
+    dimensionDefinitions: dimensionConfigurations.map((configuration) => ({
+      key: configuration.key,
+      label: configuration.label,
+      averageMaximum: configuration.averageMaximum
+    })),
+    dimensionDrivers: {
+      TOTAL: largestDimensionChange(periods, dimensionConfigurations, 'TOTAL'),
+      AVERAGE: largestDimensionChange(periods, dimensionConfigurations, 'AVERAGE')
+    },
     quality: {
       unitsUsingFinalScoreFallback: units.filter((unit) => unit.usesFinalScoreFallback).length,
       unitsWithMultipleAggregationAnchors: units.filter((unit) => unit.multipleAnchors).length,
-      unitsWithConflictingFinalScores: units.filter((unit) => unit.conflictingFinalScores).length
+      unitsWithConflictingFinalScores: units.filter((unit) => unit.conflictingFinalScores).length,
+      unitsWithIncompleteDimensions: units.filter((unit) => unit.incompleteDimensions).length
     }
   };
 }
@@ -104,6 +148,8 @@ interface TrendUnit {
   effectiveDate: string;
   pointDate: string | null;
   points: number | null;
+  dimensionValues: Readonly<Record<string, number | null>>;
+  incompleteDimensions: boolean;
   usesFinalScoreFallback: boolean;
   multipleAnchors: boolean;
   conflictingFinalScores: boolean;
@@ -115,19 +161,35 @@ interface PeriodAccumulator {
   points: number;
   unitIds: Set<string>;
   issueKeys: Set<string>;
+  dimensions: Map<string, DimensionAccumulator>;
 }
 
-function buildUnits(rows: AssessmentTrendIssueRow[]): TrendUnit[] {
+interface DimensionAccumulator {
+  rawTotal: number;
+  weightedTotal: number;
+  unitIds: Set<string>;
+}
+
+function buildUnits(
+  rows: AssessmentTrendIssueRow[],
+  dimensionConfigurations: readonly DimensionConfiguration[]
+): TrendUnit[] {
   const rowsByUnit = new Map<string, AssessmentTrendIssueRow[]>();
   for (const row of rows) {
     const current = rowsByUnit.get(row.deliveryUnitId) ?? [];
     current.push(row);
     rowsByUnit.set(row.deliveryUnitId, current);
   }
-  return Array.from(rowsByUnit.entries()).map(([id, unitRows]) => buildUnit(id, unitRows));
+  return Array.from(rowsByUnit.entries()).map(([id, unitRows]) =>
+    buildUnit(id, unitRows, dimensionConfigurations)
+  );
 }
 
-function buildUnit(id: string, rows: AssessmentTrendIssueRow[]): TrendUnit {
+function buildUnit(
+  id: string,
+  rows: AssessmentTrendIssueRow[],
+  dimensionConfigurations: readonly DimensionConfiguration[]
+): TrendUnit {
   const sorted = [...rows].sort(compareRows);
   const anchors = sorted.filter((row) => row.aggregationPoints !== null);
   const selectedAnchor = anchors.at(-1) ?? null;
@@ -151,6 +213,10 @@ function buildUnit(id: string, rows: AssessmentTrendIssueRow[]): TrendUnit {
   const statuses = Array.from(new Set(sorted.map((row) => row.assessmentStatus)));
   const usesFinalScoreFallback = !selectedAnchor && Boolean(selectedFinal);
   const pointRow = selectedAnchor ?? selectedFinal;
+  const dimensionValues = Object.fromEntries(dimensionConfigurations.map((configuration) => [
+    configuration.key,
+    pointRow?.dimensionValues[configuration.key] ?? null
+  ]));
 
   return {
     id,
@@ -165,10 +231,73 @@ function buildUnit(id: string, rows: AssessmentTrendIssueRow[]): TrendUnit {
     points: pointRow
       ? round1(selectedAnchor?.aggregationPoints ?? selectedFinal?.finalPoints ?? 0)
       : null,
+    dimensionValues,
+    incompleteDimensions: Boolean(pointRow) && dimensionConfigurations.some(
+      (configuration) => dimensionValues[configuration.key] === null
+    ),
     usesFinalScoreFallback,
     multipleAnchors: anchors.length > 1,
     conflictingFinalScores: finalPointValues.size > 1
   };
+}
+
+function dimensionsFor(source: AssessmentTrendDataset['source']): readonly DimensionConfiguration[] {
+  return source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+    ? DELIVERY_COMPLEXITY_DIMENSIONS
+    : DELIVERY_SCOPE_DIMENSIONS;
+}
+
+function periodDimension(
+  period: PeriodAccumulator,
+  previous: PeriodAccumulator | undefined,
+  configuration: DimensionConfiguration
+): AssessmentTrendPeriod['dimensions'][number] {
+  const current = period.dimensions.get(configuration.key);
+  const previousValue = previous?.dimensions.get(configuration.key);
+  const total = current ? round2(current.weightedTotal) : null;
+  const average = current
+    ? round2(current.rawTotal / current.unitIds.size)
+    : null;
+  const previousTotal = previousValue ? round2(previousValue.weightedTotal) : null;
+  const previousAverage = previousValue
+    ? round2(previousValue.rawTotal / previousValue.unitIds.size)
+    : null;
+  return {
+    key: configuration.key,
+    total,
+    average,
+    sampleUnitCount: current?.unitIds.size ?? 0,
+    totalDelta: total === null || previousTotal === null ? null : round2(total - previousTotal),
+    averageDelta: average === null || previousAverage === null
+      ? null
+      : round2(average - previousAverage)
+  };
+}
+
+function largestDimensionChange(
+  periods: AssessmentTrendPeriod[],
+  dimensions: readonly DimensionConfiguration[],
+  mode: AssessmentTrendDimensionMode
+): AssessmentTrendDimensionChange | null {
+  let selected: AssessmentTrendDimensionChange | null = null;
+  const labels = new Map(dimensions.map((dimension) => [dimension.key, dimension.label]));
+  for (const period of periods) {
+    for (const dimension of period.dimensions) {
+      const delta = mode === 'TOTAL' ? dimension.totalDelta : dimension.averageDelta;
+      if (delta === null || delta === 0) {
+        continue;
+      }
+      if (!selected || Math.abs(delta) > Math.abs(selected.delta)) {
+        selected = {
+          dimensionKey: dimension.key,
+          dimensionLabel: labels.get(dimension.key) ?? dimension.key,
+          periodLabel: period.label,
+          delta
+        };
+      }
+    }
+  }
+  return selected;
 }
 
 function matchesFilters(unit: TrendUnit, filters: AssessmentTrendFilters): boolean {
@@ -325,4 +454,8 @@ function comparableTimestamp(row: AssessmentTrendIssueRow): number {
 
 function round1(value: number): number {
   return Math.round((value + Number.EPSILON) * 10) / 10;
+}
+
+function round2(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

@@ -163,6 +163,125 @@ describe('Delivery Complexity Trends aggregation', () => {
     ]);
   });
 
+  it('should aggregate DCA averages and weighted score100 contributions once per unit', () => {
+    const data = dataset([
+      issue({
+        issueKey: 'CRM-1',
+        dimensionValues: dcaDimensions({
+          outcomeBreadth: 1,
+          domainDecisionComplexity: 4,
+          boundaryAndDataComplexity: 1
+        })
+      }),
+      issue({
+        issueKey: 'CRM-2',
+        deliveryUnitId: 'DU-CRM-2',
+        finalPoints: 5,
+        aggregationPoints: 5,
+        dimensionValues: dcaDimensions({ outcomeBreadth: 3, domainDecisionComplexity: 2 })
+      }),
+      issue({
+        issueKey: 'CRM-1-B',
+        deliveryUnitId: 'DU-CRM-1',
+        finalPoints: 8,
+        aggregationPoints: null,
+        dimensionValues: dcaDimensions({
+          outcomeBreadth: 4,
+          domainDecisionComplexity: 0,
+          boundaryAndDataComplexity: 4
+        })
+      })
+    ]);
+
+    const view = buildAssessmentTrendView(data, filters({ granularity: 'MONTH' }));
+    const outcome = view.periods[0].dimensions.find(
+      (dimension) => dimension.key === 'outcomeBreadth'
+    );
+    const domain = view.periods[0].dimensions.find(
+      (dimension) => dimension.key === 'domainDecisionComplexity'
+    );
+    const boundary = view.periods[0].dimensions.find(
+      (dimension) => dimension.key === 'boundaryAndDataComplexity'
+    );
+
+    expect(outcome).toMatchObject({ total: 10, average: 2, sampleUnitCount: 2 });
+    expect(domain).toMatchObject({ total: 30, average: 3, sampleUnitCount: 2 });
+    expect(boundary).toMatchObject({ total: 11.25, average: 1.5, sampleUnitCount: 2 });
+    expect(view.dimensionDefinitions).toHaveLength(7);
+    expect(view.quality.unitsWithIncompleteDimensions).toBe(0);
+  });
+
+  it('should expose incomplete dimensions without treating them as zero samples', () => {
+    const data = dataset([
+      issue({
+        dimensionValues: dcaDimensions({ parameterizationComplexity: null })
+      })
+    ]);
+
+    const view = buildAssessmentTrendView(data, filters({ granularity: 'MONTH' }));
+    const parameterization = view.periods[0].dimensions.find(
+      (dimension) => dimension.key === 'parameterizationComplexity'
+    );
+
+    expect(parameterization).toMatchObject({
+      total: null,
+      average: null,
+      sampleUnitCount: 0,
+      totalDelta: null,
+      averageDelta: null
+    });
+    expect(view.quality.unitsWithIncompleteDimensions).toBe(1);
+  });
+
+  it('should preserve the additive Scope breakdown and identify its largest driver', () => {
+    const first = {
+      noveltyPoints: 10,
+      structuralAndLogicPoints: 15,
+      businessAndInvariantsPoints: 10,
+      robustnessAndTestsPoints: 5,
+      refactorAndArchitecturePoints: 5,
+      distributionPoints: 15
+    };
+    const second = {
+      noveltyPoints: 20,
+      structuralAndLogicPoints: 20,
+      businessAndInvariantsPoints: 15,
+      robustnessAndTestsPoints: 10,
+      refactorAndArchitecturePoints: 10,
+      distributionPoints: 15
+    };
+    const data = dataset([
+      issue({
+        issueKey: 'CRM-1',
+        finalPoints: 60,
+        aggregationPoints: 60,
+        dimensionValues: first
+      }),
+      issue({
+        issueKey: 'CRM-2',
+        doneAt: '2026-02-01',
+        doneDate: '2026-02-01',
+        deliveryUnitId: 'DU-CRM-2',
+        finalPoints: 90,
+        aggregationPoints: 90,
+        dimensionValues: second
+      })
+    ], 'DELIVERY_SCOPE_COMPLEXITY');
+
+    const view = buildAssessmentTrendView(data, filters({ granularity: 'MONTH' }));
+
+    expect(view.periods.map((period) => period.dimensions.reduce(
+      (total, dimension) => total + (dimension.total ?? 0),
+      0
+    ))).toEqual([60, 90]);
+    expect(view.dimensionDrivers.TOTAL).toEqual({
+      dimensionKey: 'noveltyPoints',
+      dimensionLabel: 'Nowość',
+      periodLabel: 'lut 2026',
+      delta: 10
+    });
+  });
+
   it('should apply inclusive dates and avoid a percentage after a zero period', () => {
     const data = dataset([
       issue({ issueKey: 'CRM-1', doneAt: '2026-01-01', doneDate: '2026-01-01', finalPoints: 0, aggregationPoints: 0 }),
@@ -212,7 +331,8 @@ describe('Delivery Complexity Trends aggregation', () => {
     expect(view.quality).toEqual({
       unitsUsingFinalScoreFallback: 1,
       unitsWithMultipleAggregationAnchors: 1,
-      unitsWithConflictingFinalScores: 1
+      unitsWithConflictingFinalScores: 1,
+      unitsWithIncompleteDimensions: 0
     });
   });
 });
@@ -228,11 +348,16 @@ function filters(overrides: Partial<AssessmentTrendFilters> = {}): AssessmentTre
   };
 }
 
-function dataset(rows: AssessmentTrendIssueRow[]): AssessmentTrendDataset {
+function dataset(
+  rows: AssessmentTrendIssueRow[],
+  source: AssessmentTrendDataset['source'] = 'DELIVERY_COMPLEXITY_ASSESSMENT'
+): AssessmentTrendDataset {
   return {
-    source: 'DELIVERY_COMPLEXITY_ASSESSMENT',
-    metricLabel: 'Delivered Story Points',
-    metricShortLabel: 'DSP',
+    source,
+    metricLabel: source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+      ? 'Delivered Story Points'
+      : 'Complexity Points',
+    metricShortLabel: source === 'DELIVERY_COMPLEXITY_ASSESSMENT' ? 'DSP' : 'punkty',
     files: [],
     rows,
     quality: {
@@ -266,6 +391,7 @@ function issue(overrides: Partial<AssessmentTrendIssueRow> = {}): AssessmentTren
     assessmentStatus: 'COMPLETED',
     finalPoints: 8,
     aggregationPoints: 8,
+    dimensionValues: dcaDimensions(),
     sourceFileName: 'report.csv',
     sourceFileIndex: 0,
     sourceRowNumber: 2,
@@ -275,4 +401,19 @@ function issue(overrides: Partial<AssessmentTrendIssueRow> = {}): AssessmentTren
     value.doneDate = overrides.doneAt.slice(0, 10);
   }
   return value;
+}
+
+function dcaDimensions(
+  overrides: Partial<Record<string, number | null>> = {}
+): Readonly<Record<string, number | null>> {
+  return {
+    outcomeBreadth: 2,
+    domainDecisionComplexity: 3,
+    applicationFlowComplexity: 3,
+    boundaryAndDataComplexity: 2,
+    verificationStateSpace: 3,
+    implementedCompatibilityScope: 2,
+    parameterizationComplexity: 3,
+    ...overrides
+  };
 }

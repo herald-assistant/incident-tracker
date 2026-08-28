@@ -67,11 +67,23 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(compiled.textContent).toContain('lip 2026');
     expect(compiled.textContent).toContain('sie 2026');
     expect(compiled.textContent).toContain('nie są to punkty osoby ani miara produktywności');
+    expect(compiled.textContent).toContain('Co napędza zmianę');
+    expect(compiled.textContent).toContain('Średnia ocena 0–4');
+    expect(compiled.querySelectorAll('.trend-dimension-heatmap tbody tr')).toHaveLength(2);
     expect(Array.from(
       compiled.querySelector<HTMLSelectElement>('.trend-field select')!.options
     ).map((option) => option.text.trim())).toEqual([
       'Dzień', 'Tydzień', 'Miesiąc', 'Kwartał'
     ]);
+
+    const totalButton = Array.from(compiled.querySelectorAll<HTMLButtonElement>(
+      '.trend-dimension-mode button'
+    )).find((button) => button.textContent?.includes('Łączny wkład'))!;
+    totalButton.click();
+    fixture.detectChanges();
+
+    expect(element().textContent).toContain('Nie są rozkładem DSP');
+    expect(element().querySelectorAll('.trend-dimension-row')).toHaveLength(2);
   });
 
   it('should filter full Delivery Units by team and update the chart and summary', async () => {
@@ -102,6 +114,28 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('5');
     expect(element().querySelectorAll('.trend-bar')).toHaveLength(1);
     expect(element().textContent).toContain('1 w wybranym zakresie');
+  });
+
+  it('should default Scope reports to the additive dimension contribution', async () => {
+    await selectFiles([csvFile('scope.csv', DSC_HEADERS, [row(DSC_HEADERS)])]);
+
+    const buttons = Array.from(element().querySelectorAll<HTMLButtonElement>(
+      '.trend-dimension-mode button'
+    ));
+    const totalButton = buttons.find((button) => button.textContent?.includes('Łączny wkład'))!;
+    const averageButton = buttons.find(
+      (button) => button.textContent?.includes('Średnia na Delivery Unit')
+    )!;
+
+    expect(totalButton.getAttribute('aria-pressed')).toBe('true');
+    expect(element().textContent).toContain('sumują się do Complexity Points');
+    expect(element().querySelectorAll('.trend-dimension-row')).toHaveLength(1);
+
+    averageButton.click();
+    fixture.detectChanges();
+
+    expect(element().textContent).toContain('Średni punktowy wkład wymiaru');
+    expect(element().querySelectorAll('.trend-dimension-heatmap tbody tr')).toHaveLength(1);
   });
 
   it('should keep the previous dataset when a later selection mixes assessment formats', async () => {

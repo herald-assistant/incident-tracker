@@ -18,6 +18,32 @@ feature'ow pozostaja bez zmian.
 Macierz weryfikacji obejmuje wspolny tydzien, rozne tygodnie, granice ISO roku,
 widoczna opcje filtra, pelny zestaw testow frontendu i produkcyjny build.
 
+## Inkrement 2026-08-28: trendy ocen czastkowych
+
+Poziom zmiany: L1. Rozszerzenie dotyczy interpretacji istniejacych kolumn CSV
+i nowej sekcji raportu; nie zmienia scoringu, eksportu CSV ani API.
+
+Baseline: import rozpoznaje kolumny wymiarow obu assessmentow, ale po walidacji
+ich nie zachowuje. Agregacja pokazuje tylko wynik koncowy Delivery Unit. Delta
+zachowa wartosci wymiarow na znormalizowanym wierszu, wybierze je z tego samego
+wiersza jednostki co wynik punktowy i zagreguje po tych samych filtrach oraz
+okresach. Konsumentami sa feature-local modele importu, deduplikacja,
+agregacja, strona, testy i runtime flow. Neutralny parser CSV, sibling
+assessmenty, ich eksporty i scoring pozostaja bez zmian.
+
+Semantyka zrodel:
+
+- Delivery Scope Complexity: `*Points` sa addytywnym rozkladem `finalScore`,
+  dlatego widok laczny moze byc dokladnym wykresem skumulowanym,
+- Delivery Complexity Assessment: wymiary `0-4` beda pokazane jako sredni
+  profil jednostki, a widok laczny uzyje ich wag `10/20/20/15/10/10/15` do
+  pokazania wkladu do `score100`; nie bedzie udawal rozkladu progowego DSP.
+
+Macierz weryfikacji obejmuje parsing i deduplikacje wymiarow, addytywny rozklad
+Scope, wazony wklad i srednie `0-4` Assessment, filtry/okresy, najwieksza zmiane
+wymiaru, przelacznik widoku, dostepna reprezentacje danych, pelne testy
+frontendu i produkcyjny build.
+
 ## Potrzeba / dlaczego
 
 Biznesowe CSV obu assessmentow pozwalaja obrabiac pojedynczy run w Excelu, ale
@@ -303,3 +329,18 @@ do nowego ekranu. Feature pozostanie lazy-loaded i nie bedzie wymagac backendu.
   3 stycznia w `2020-W53`, rozpoczyna `2021-W01` w poniedzialek 4 stycznia,
   63 pliki testowe i 490 testow przechodza, a produkcyjny build zawiera
   zaktualizowany lazy chunk `delivery-complexity-trends-page`.
+- [x] Krok 9: Zachowac czastkowe wymiary obu CSV, agregowac je raz na Delivery
+  Unit i dodac sekcje `Co napedza zmiane` z widokiem lacznym, srednia na DU,
+  liczebnoscia proby oraz najwieksza zmiana wymiaru. Dla Scope zachowac
+  addytywny rozklad `finalScore`, a dla Assessment jawnie oddzielic srednia
+  `0-4` i wazony wklad `score100` od DSP. Zaktualizowac dokumentacje, uruchomic
+  pelne testy frontendu i build, a nastepnie ustawic `Status: done`.
+  Wynik: wymiary sa wybierane z tej samej kotwicy punktowej co Delivery Unit,
+  brakujace wartosci maja osobna liczebnosc i ostrzezenie jakosci, a wazone
+  czesci DCA zachowuja precyzje do setnych. Celowane 21 testow importu,
+  agregacji i strony oraz pelne 63 pliki / 494 testy przechodza. Produkcyjny
+  build Angulara przechodzi i zapisuje lazy chunk
+  `chunk-U2VV7T6B.js` (`delivery-complexity-trends-page`) w statycznym bundle.
+  Kontrola w przegladarce potwierdza domyslny heatmap DCA, przelacznik widoku,
+  skumulowane segmenty, liczebnosc DU, karte najwiekszej zmiany i brak bledow
+  konsoli; regresja komponentu potwierdza domyslny widok addytywny Scope.

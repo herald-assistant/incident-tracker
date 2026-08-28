@@ -83,6 +83,36 @@ nieokreslony. Slupki pokazuja kierunek wzrost/spadek/bez zmiany, ale ten
 kierunek nie oznacza automatycznie oceny dobre/zle. Tabela pod wykresem jest
 kanonicznym, dokladnym odpowiednikiem tych samych danych.
 
+## Oceny czastkowe i przyczyny zmiany
+
+Wymiary sa pobierane raz na Delivery Unit z tego samego wiersza kotwiczacego,
+ktory niesie `pointsForAggregation`, albo z tego samego wiersza fallbacku co
+wynik koncowy. Dzieki temu sekcja `Co napedza zmiane` zachowuje identyczna
+deduplikacje, date punktowa, filtry i granularnosc jak wykres wyniku glownego.
+Nie sumuje powtorzonych wymiarow z kazdego issue jednostki.
+
+Semantyka prezentacji jest jawnie zalezna od assessmentu:
+
+- dla Delivery Scope Complexity szesc kolumn `*Points` tworzy addytywny
+  rozklad `finalScore`; domyslny skumulowany wykres laczny sumuje sie do
+  `Complexity Points`, a tryb sredni pokazuje punktowy wklad wymiaru na
+  Delivery Unit,
+- dla Delivery Complexity Assessment domyslny heatmap pokazuje srednia
+  surowa ocene `0-4`; opcjonalny wykres laczny stosuje wagi
+  `10/20/20/15/10/10/15` i pokazuje wklad do `score100`. Nie jest to rozklad
+  Delivered Story Points, poniewaz DSP powstaje przez progi wyniku `score100`.
+
+Oba tryby pokazuja liczbe Delivery Units w okresie, a srednia dodatkowo liczbe
+jednostek z dostepna wartoscia konkretnego wymiaru. Karta `Najwieksza zmiana
+wymiaru` wybiera najwieksza bezwzgledna delte wzgledem poprzedniego widocznego
+okresu, osobno dla trybu lacznego i sredniego. Brakujace wymiary nie staja sie
+zerami: sa pomijane w danej sredniej i liczone jako niepelne oceny czastkowe w
+jakosci importu.
+
+Profil wymiarow wyjasnia kompozycje obserwowalnej zlozonosci. Tak samo jak
+wynik glowny nie jest miara produktywnosci osoby ani automatyczna ocena
+dobrze/zle.
+
 Osobne sekcje pokazuja laczna zlozonosc, ostatnia zmiane, pokrycie jednostek i
 issue, najwyzszy okres, najwiekszy wzrost/spadek, statusy ocen oraz jakosc
 importu. Stan pusty prowadzi do wyboru plikow, a wyczyszczenie usuwa dane i

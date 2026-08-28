@@ -233,6 +233,155 @@
           </div>
         </section>
 
+        <section class="trend-panel trend-dimensions-panel" aria-labelledby="trendDimensionsTitle">
+          <div class="trend-section-heading trend-dimensions-heading">
+            <div>
+              <p class="section-eyebrow">Struktura wyniku</p>
+              <h2 id="trendDimensionsTitle">Co napędza zmianę</h2>
+            </div>
+            <div class="trend-dimension-mode" role="group" aria-label="Sposób prezentacji ocen cząstkowych">
+              <button
+                type="button"
+                [class.trend-dimension-mode__button--active]="dimensionMode() === 'TOTAL'"
+                [attr.aria-pressed]="dimensionMode() === 'TOTAL'"
+                (click)="setDimensionMode('TOTAL')"
+              >Łączny wkład</button>
+              <button
+                type="button"
+                [class.trend-dimension-mode__button--active]="dimensionMode() === 'AVERAGE'"
+                [attr.aria-pressed]="dimensionMode() === 'AVERAGE'"
+                (click)="setDimensionMode('AVERAGE')"
+              >Średnia na Delivery Unit</button>
+            </div>
+          </div>
+
+          <div class="trend-dimension-context">
+            <p>{{ dimensionModeDescription(data) }}</p>
+            @if (dimensionDriver(currentTrend); as driver) {
+              <article class="trend-dimension-driver">
+                <span>Największa zmiana wymiaru</span>
+                <strong>{{ driver.dimensionLabel }}</strong>
+                <small
+                  [class.trend-value--up]="driver.delta > 0"
+                  [class.trend-value--down]="driver.delta < 0"
+                >
+                  {{ driver.periodLabel }} · {{ signedDimensionPoints(driver.delta) }}
+                  {{ dimensionMetricLabel(data) }}
+                </small>
+              </article>
+            }
+          </div>
+
+          @if (dimensionMode() === 'TOTAL') {
+            <div
+              class="trend-dimension-chart"
+              role="img"
+              [attr.aria-label]="dimensionChartAriaLabel(currentTrend, data)"
+            >
+              @for (period of currentTrend.periods; track period.key) {
+                <div class="trend-dimension-row">
+                  <div class="trend-dimension-row__period">
+                    <strong>{{ period.label }}</strong>
+                    <small>{{ period.unitCount }} DU</small>
+                  </div>
+                  <div class="trend-dimension-row__track" aria-hidden="true">
+                    <div
+                      class="trend-dimension-row__stack"
+                      [style.width.%]="dimensionTotalBarWidth(period, currentTrend)"
+                    >
+                      @for (
+                        dimension of period.dimensions;
+                        track dimension.key;
+                        let dimensionIndex = $index
+                      ) {
+                        @if (dimension.total !== null && dimension.total > 0) {
+                          <span
+                            class="trend-dimension-segment"
+                            [style.width.%]="dimensionShare(dimension, period)"
+                            [style.background-color]="dimensionColor(dimensionIndex)"
+                            [attr.title]="currentTrend.dimensionDefinitions[dimensionIndex].label
+                              + ': ' + formatDimensionPoints(dimension.total)"
+                          ></span>
+                        }
+                      }
+                    </div>
+                  </div>
+                  <strong class="trend-dimension-row__total">
+                    {{ formatDimensionPoints(dimensionPeriodTotal(period)) }}
+                  </strong>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="trend-table-scroll trend-dimension-heatmap-scroll">
+              <table class="trend-dimension-heatmap">
+                <caption>
+                  Średnia ocena cząstkowa i liczba Delivery Units z wartością wymiaru w okresie.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Okres</th>
+                    @for (
+                      definition of currentTrend.dimensionDefinitions;
+                      track definition.key;
+                      let definitionIndex = $index
+                    ) {
+                      <th scope="col">
+                        <i [style.background-color]="dimensionColor(definitionIndex)"></i>
+                        {{ definition.label }}
+                      </th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (period of currentTrend.periods; track period.key) {
+                    <tr>
+                      <th scope="row">
+                        <strong>{{ period.label }}</strong>
+                        <small>{{ period.unitCount }} DU w okresie</small>
+                      </th>
+                      @for (
+                        dimension of period.dimensions;
+                        track dimension.key;
+                        let dimensionIndex = $index
+                      ) {
+                        <td
+                          [style.background-color]="dimensionHeatColor(
+                            dimensionIndex,
+                            dimension,
+                            currentTrend.dimensionDefinitions[dimensionIndex]
+                          )"
+                        >
+                          @if (dimension.average !== null) {
+                            <strong>{{ formatDimensionPoints(dimension.average) }}</strong>
+                            <small>{{ dimension.sampleUnitCount }} DU</small>
+                          } @else {
+                            <strong>–</strong>
+                            <small>brak danych</small>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          <div class="trend-dimension-legend" aria-label="Legenda wymiarów oceny">
+            @for (
+              definition of currentTrend.dimensionDefinitions;
+              track definition.key;
+              let definitionIndex = $index
+            ) {
+              <span>
+                <i [style.background-color]="dimensionColor(definitionIndex)"></i>
+                {{ definition.label }}
+              </span>
+            }
+          </div>
+        </section>
+
         <section class="trend-panel" aria-labelledby="trendPeriodDetailsTitle">
           <div class="trend-section-heading">
             <div>
@@ -352,6 +501,7 @@
           <div><dt>Fallback wyniku jednostki</dt><dd>{{ currentTrend.quality.unitsUsingFinalScoreFallback }}</dd></div>
           <div><dt>Wiele kotwic punktów</dt><dd>{{ currentTrend.quality.unitsWithMultipleAggregationAnchors }}</dd></div>
           <div><dt>Rozbieżne wyniki jednostki</dt><dd>{{ currentTrend.quality.unitsWithConflictingFinalScores }}</dd></div>
+          <div><dt>Niepełne oceny cząstkowe</dt><dd>{{ currentTrend.quality.unitsWithIncompleteDimensions }}</dd></div>
         </dl>
 
         @if (
@@ -361,6 +511,7 @@
           || currentTrend.quality.unitsUsingFinalScoreFallback
           || currentTrend.quality.unitsWithMultipleAggregationAnchors
           || currentTrend.quality.unitsWithConflictingFinalScores
+          || currentTrend.quality.unitsWithIncompleteDimensions
         ) {
           <div class="trend-message trend-message--warning">
             <span class="material-symbols-outlined" aria-hidden="true">warning</span>

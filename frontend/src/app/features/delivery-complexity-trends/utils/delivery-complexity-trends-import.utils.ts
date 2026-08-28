@@ -26,25 +26,33 @@ const COMMON_REQUIRED_HEADERS = [
   'pointsForAggregation'
 ] as const;
 
-const DELIVERY_COMPLEXITY_HEADERS = [
+const DELIVERY_COMPLEXITY_DIMENSION_HEADERS = [
   'outcomeBreadth',
   'domainDecisionComplexity',
   'applicationFlowComplexity',
   'boundaryAndDataComplexity',
   'verificationStateSpace',
   'implementedCompatibilityScope',
-  'parameterizationComplexity',
+  'parameterizationComplexity'
+] as const;
+
+const DELIVERY_COMPLEXITY_HEADERS = [
+  ...DELIVERY_COMPLEXITY_DIMENSION_HEADERS,
   'score100',
   'deliveredStoryPoints'
 ] as const;
 
-const DELIVERY_SCOPE_HEADERS = [
+const DELIVERY_SCOPE_DIMENSION_HEADERS = [
   'noveltyPoints',
   'structuralAndLogicPoints',
   'businessAndInvariantsPoints',
   'robustnessAndTestsPoints',
   'refactorAndArchitecturePoints',
-  'distributionPoints',
+  'distributionPoints'
+] as const;
+
+const DELIVERY_SCOPE_HEADERS = [
+  ...DELIVERY_SCOPE_DIMENSION_HEADERS,
   'finalScore'
 ] as const;
 
@@ -326,6 +334,7 @@ function normalizeRow(
   const teamName = nullable(value('teamName'));
   const authorIds = hasAuthorColumns ? value(AUTHOR_ID_HEADER) : '';
   const authorNames = hasAuthorColumns ? value(AUTHOR_NAME_HEADER) : '';
+  const dimensionValues = parseDimensionValues(source, value, fileName, rowNumber);
 
   return {
     source,
@@ -348,10 +357,33 @@ function normalizeRow(
     assessmentStatus: assessmentStatus || 'UNKNOWN',
     finalPoints,
     aggregationPoints,
+    dimensionValues,
     sourceFileName: fileName,
     sourceFileIndex: fileIndex,
     sourceRowNumber: rowNumber
   };
+}
+
+function parseDimensionValues(
+  source: AssessmentTrendSource,
+  value: (header: string) => string,
+  fileName: string,
+  rowNumber: number
+): Readonly<Record<string, number | null>> {
+  const headers = source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+    ? DELIVERY_COMPLEXITY_DIMENSION_HEADERS
+    : DELIVERY_SCOPE_DIMENSION_HEADERS;
+  return Object.fromEntries(headers.map((header) => {
+    const parsed = parsePoints(value(header), fileName, rowNumber, header);
+    if (
+      source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
+      && parsed !== null
+      && (!Number.isInteger(parsed) || parsed > 4)
+    ) {
+      throw rowError(fileName, rowNumber, `${header} musi byc liczba calkowita 0-4.`);
+    }
+    return [header, parsed];
+  }));
 }
 
 function parseAuthors(idsValue: string, namesValue: string): AssessmentTrendAuthor[] {
@@ -482,7 +514,8 @@ function rowFingerprint(row: AssessmentTrendIssueRow): string {
     deliveryUnitId: row.deliveryUnitId,
     assessmentStatus: row.assessmentStatus,
     finalPoints: row.finalPoints,
-    aggregationPoints: row.aggregationPoints
+    aggregationPoints: row.aggregationPoints,
+    dimensionValues: row.dimensionValues
   });
 }
 

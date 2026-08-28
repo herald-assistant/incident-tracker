@@ -4,6 +4,8 @@ export type AssessmentTrendSource =
 
 export type AssessmentTrendGranularity = 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER';
 
+export type AssessmentTrendDimensionMode = 'TOTAL' | 'AVERAGE';
+
 export interface AssessmentTrendAuthor {
   key: string;
   id: string | null;
@@ -28,6 +30,7 @@ export interface AssessmentTrendIssueRow {
   assessmentStatus: string;
   finalPoints: number | null;
   aggregationPoints: number | null;
+  dimensionValues: Readonly<Record<string, number | null>>;
   sourceFileName: string;
   sourceFileIndex: number;
   sourceRowNumber: number;
@@ -82,6 +85,29 @@ export interface AssessmentTrendPeriod {
   direction: 'UP' | 'DOWN' | 'FLAT' | 'NONE';
   unitCount: number;
   issueCount: number;
+  dimensions: AssessmentTrendPeriodDimension[];
+}
+
+export interface AssessmentTrendDimensionDefinition {
+  key: string;
+  label: string;
+  averageMaximum: number;
+}
+
+export interface AssessmentTrendPeriodDimension {
+  key: string;
+  total: number | null;
+  average: number | null;
+  sampleUnitCount: number;
+  totalDelta: number | null;
+  averageDelta: number | null;
+}
+
+export interface AssessmentTrendDimensionChange {
+  dimensionKey: string;
+  dimensionLabel: string;
+  periodLabel: string;
+  delta: number;
 }
 
 export interface AssessmentTrendStatusCount {
@@ -100,6 +126,7 @@ export interface AssessmentTrendAggregationQuality {
   unitsUsingFinalScoreFallback: number;
   unitsWithMultipleAggregationAnchors: number;
   unitsWithConflictingFinalScores: number;
+  unitsWithIncompleteDimensions: number;
 }
 
 export interface AssessmentTrendView {
@@ -112,5 +139,7 @@ export interface AssessmentTrendView {
   teamOptions: AssessmentTrendFilterOption[];
   authorOptions: AssessmentTrendFilterOption[];
   highlights: AssessmentTrendHighlight[];
+  dimensionDefinitions: AssessmentTrendDimensionDefinition[];
+  dimensionDrivers: Record<AssessmentTrendDimensionMode, AssessmentTrendDimensionChange | null>;
   quality: AssessmentTrendAggregationQuality;
 }
