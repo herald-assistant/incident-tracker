@@ -5,7 +5,6 @@ import { merge } from 'rxjs';
 
 import {
   AssessmentTrendDataset,
-  AssessmentTrendDimensionChange,
   AssessmentTrendDimensionDefinition,
   AssessmentTrendDimensionMode,
   AssessmentTrendGranularity,
@@ -165,10 +164,6 @@ export class DeliveryComplexityTrendsPageComponent {
     this.dimensionMode.set(mode);
   }
 
-  protected dimensionDriver(trend: AssessmentTrendView): AssessmentTrendDimensionChange | null {
-    return trend.dimensionDrivers[this.dimensionMode()];
-  }
-
   protected dimensionModeDescription(dataset: AssessmentTrendDataset): string {
     if (this.dimensionMode() === 'AVERAGE') {
       return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
@@ -178,17 +173,6 @@ export class DeliveryComplexityTrendsPageComponent {
     return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
       ? 'Przy kompletnych ocenach ważone segmenty sumują się do score100 jednostek. Nie są rozkładem DSP, które powstaje przez progi.'
       : 'Przy kompletnych ocenach segmenty są punktowym wkładem wymiarów i sumują się do Complexity Points ocenionych jednostek.';
-  }
-
-  protected dimensionMetricLabel(dataset: AssessmentTrendDataset): string {
-    if (this.dimensionMode() === 'AVERAGE') {
-      return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
-        ? 'średnia 0–4'
-        : 'pkt / Delivery Unit';
-    }
-    return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
-      ? 'pkt score100'
-      : 'Complexity Points';
   }
 
   protected dimensionPeriodTotal(period: AssessmentTrendPeriod): number {
@@ -268,14 +252,6 @@ export class DeliveryComplexityTrendsPageComponent {
     }
     const prefix = value > 0 ? '+' : '';
     return `${prefix}${this.formatPoints(value)}`;
-  }
-
-  protected signedDimensionPoints(value: number | null): string {
-    if (value === null) {
-      return '-';
-    }
-    const prefix = value > 0 ? '+' : '';
-    return `${prefix}${this.formatDimensionPoints(value)}`;
   }
 
   protected percentLabel(value: number | null): string {

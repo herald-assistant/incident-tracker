@@ -71,11 +71,9 @@ jednostka ma pasujacy zespol, co najmniej jeden MR danego autora albo co
 najmniej jedno issue wybranego typu, do trendu trafia jej pelna wartosc.
 Wielokrotny wybor typow dziala jako OR, a pasujaca jednostka jest liczona raz
 nawet wtedy, gdy zawiera kilka zaznaczonych typow. Katalog opcji pokazuje
-liczbe Delivery Units zawierajacych dany typ, a ekran podaje liczbe
-wielotypowych jednostek w biezacym widoku i ostrzega, ze wynikow osobnych
-filtrow typow nie nalezy sumowac. Filtr autora nie dzieli punktow pomiedzy
-osoby i nie jest miara produktywnosci; analogicznie filtr typu nie przypisuje
-punktow wylacznie jednej kategorii Jira.
+liczbe Delivery Units zawierajacych dany typ. Filtr autora nie dzieli punktow
+pomiedzy osoby i nie jest miara produktywnosci; analogicznie filtr typu nie
+przypisuje punktow wylacznie jednej kategorii Jira.
 
 Dla kazdego widocznego okresu ekran pokazuje:
 
@@ -110,11 +108,9 @@ Semantyka prezentacji jest jawnie zalezna od assessmentu:
   Delivered Story Points, poniewaz DSP powstaje przez progi wyniku `score100`.
 
 Oba tryby pokazuja liczbe Delivery Units w okresie, a srednia dodatkowo liczbe
-jednostek z dostepna wartoscia konkretnego wymiaru. Karta `Najwieksza zmiana
-wymiaru` wybiera najwieksza bezwzgledna delte wzgledem poprzedniego widocznego
-okresu, osobno dla trybu lacznego i sredniego. Brakujace wymiary nie staja sie
-zerami: sa pomijane w danej sredniej i liczone jako niepelne oceny czastkowe w
-jakosci importu.
+jednostek z dostepna wartoscia konkretnego wymiaru. Brakujace wymiary nie staja
+sie zerami: sa pomijane w danej sredniej i liczone jako niepelne oceny
+czastkowe w jakosci importu.
 
 Profil wymiarow wyjasnia kompozycje obserwowalnej zlozonosci. Tak samo jak
 wynik glowny nie jest miara produktywnosci osoby ani automatyczna ocena

@@ -1,8 +1,6 @@
 import {
   AssessmentTrendDataset,
-  AssessmentTrendDimensionChange,
   AssessmentTrendDimensionDefinition,
-  AssessmentTrendDimensionMode,
   AssessmentTrendFilterOption,
   AssessmentTrendFilters,
   AssessmentTrendGranularity,
@@ -121,17 +119,12 @@ export function buildAssessmentTrendView(
     teamOptions: optionsForUnits(units, (unit) => unit.teams),
     authorOptions: optionsForUnits(units, (unit) => unit.authors),
     issueTypeOptions: optionsForUnits(units, (unit) => unit.issueTypes),
-    multiIssueTypeUnitCount: selectedUnits.filter((unit) => unit.issueTypes.size > 1).length,
     highlights: highlights(periods),
     dimensionDefinitions: dimensionConfigurations.map((configuration) => ({
       key: configuration.key,
       label: configuration.label,
       averageMaximum: configuration.averageMaximum
     })),
-    dimensionDrivers: {
-      TOTAL: largestDimensionChange(periods, dimensionConfigurations, 'TOTAL'),
-      AVERAGE: largestDimensionChange(periods, dimensionConfigurations, 'AVERAGE')
-    },
     quality: {
       unitsUsingFinalScoreFallback: units.filter((unit) => unit.usesFinalScoreFallback).length,
       unitsWithMultipleAggregationAnchors: units.filter((unit) => unit.multipleAnchors).length,
@@ -284,32 +277,6 @@ function periodDimension(
       ? null
       : round2(average - previousAverage)
   };
-}
-
-function largestDimensionChange(
-  periods: AssessmentTrendPeriod[],
-  dimensions: readonly DimensionConfiguration[],
-  mode: AssessmentTrendDimensionMode
-): AssessmentTrendDimensionChange | null {
-  let selected: AssessmentTrendDimensionChange | null = null;
-  const labels = new Map(dimensions.map((dimension) => [dimension.key, dimension.label]));
-  for (const period of periods) {
-    for (const dimension of period.dimensions) {
-      const delta = mode === 'TOTAL' ? dimension.totalDelta : dimension.averageDelta;
-      if (delta === null || delta === 0) {
-        continue;
-      }
-      if (!selected || Math.abs(delta) > Math.abs(selected.delta)) {
-        selected = {
-          dimensionKey: dimension.key,
-          dimensionLabel: labels.get(dimension.key) ?? dimension.key,
-          periodLabel: period.label,
-          delta
-        };
-      }
-    }
-  }
-  return selected;
 }
 
 function matchesFilters(unit: TrendUnit, filters: AssessmentTrendFilters): boolean {

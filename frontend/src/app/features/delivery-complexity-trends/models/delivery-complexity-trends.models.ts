@@ -104,13 +104,6 @@ export interface AssessmentTrendPeriodDimension {
   averageDelta: number | null;
 }
 
-export interface AssessmentTrendDimensionChange {
-  dimensionKey: string;
-  dimensionLabel: string;
-  periodLabel: string;
-  delta: number;
-}
-
 export interface AssessmentTrendStatusCount {
   status: string;
   count: number;
@@ -140,9 +133,7 @@ export interface AssessmentTrendView {
   teamOptions: AssessmentTrendFilterOption[];
   authorOptions: AssessmentTrendFilterOption[];
   issueTypeOptions: AssessmentTrendFilterOption[];
-  multiIssueTypeUnitCount: number;
   highlights: AssessmentTrendHighlight[];
   dimensionDefinitions: AssessmentTrendDimensionDefinition[];
-  dimensionDrivers: Record<AssessmentTrendDimensionMode, AssessmentTrendDimensionChange | null>;
   quality: AssessmentTrendAggregationQuality;
 }

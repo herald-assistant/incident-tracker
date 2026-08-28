@@ -84,15 +84,13 @@ Po prawidlowym zaladowaniu plikow strona powinna pokazac:
 - filtry granulacji, zespolu, autora MR, typow issue oraz dat od-do,
 - wykres slupkowy lacznej zlozonosci dla kolejnych okresow,
 - sekcje `Co napedza zmiane`, ktora pokazuje laczny wklad wymiarow albo ich
-  srednia na Delivery Unit oraz wskazuje wymiar o najwiekszej zmianie,
+  srednia na Delivery Unit,
 - wartosc i zmiane bezwzgledna oraz procentowa wzgledem poprzedniego okresu z
   danymi,
 - podsumowanie lacznej zlozonosci, liczby Delivery Units i unikalnych issue,
 - tabelaryczne szczegoly okresow jako dokladne i dostepne uzupelnienie wykresu,
 - osobna sekcje statusow ocen i jakosci importu, w tym liczbe plikow, wierszy,
   duplikatow oraz odrzuconych danych,
-- jawna informacje, ze filtr autora MR nie jest miara indywidualnej
-  produktywnosci ani przypisaniem punktow do osoby.
 
 Interpretacja ocen czastkowych zalezy od zrodla. W Delivery Scope Complexity
 kolumny `*Points` sa addytywne i w widoku lacznym skladaja sie na

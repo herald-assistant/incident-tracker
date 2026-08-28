@@ -66,9 +66,12 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(compiled.querySelectorAll('.trend-table tbody tr')).toHaveLength(2);
     expect(compiled.textContent).toContain('lip 2026');
     expect(compiled.textContent).toContain('sie 2026');
-    expect(compiled.textContent).toContain('nie są to punkty osoby ani miara produktywności');
+    expect(compiled.querySelector('.trend-filter-note')).toBeNull();
+    expect(compiled.textContent).not.toContain('Kierunek nie oznacza oceny dobre/źle');
     expect(compiled.textContent).toContain('Co napędza zmianę');
     expect(compiled.textContent).toContain('Średnia ocena 0–4');
+    expect(compiled.textContent).not.toContain('Największa zmiana wymiaru');
+    expect(compiled.querySelector('.trend-dimension-driver')).toBeNull();
     expect(compiled.querySelectorAll('.trend-dimension-heatmap tbody tr')).toHaveLength(2);
     expect(Array.from(
       compiled.querySelector<HTMLSelectElement>('.trend-field select')!.options
@@ -160,16 +163,10 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
 
     expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
     expect(bug.getAttribute('aria-pressed')).toBe('true');
-    expect(element().textContent).toContain(
-      'Delivery Units z więcej niż jednym typem w bieżącym widoku:'
-    );
-
     story.click();
     fixture.detectChanges();
 
     expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
-    expect(element().textContent).toContain('Wybrane typy działają jako OR');
-
     const reset = Array.from(element().querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => button.textContent?.includes('Wyczyść filtry'))!;
     reset.click();

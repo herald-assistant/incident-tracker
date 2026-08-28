@@ -115,7 +115,6 @@ describe('Delivery Complexity Trends aggregation', () => {
     expect(byAuthor.scoredUnitCount).toBe(1);
     expect(byBug.totalPoints).toBe(8);
     expect(byBug.issueCount).toBe(2);
-    expect(byBug.multiIssueTypeUnitCount).toBe(1);
     expect(byBugOrStory.totalPoints).toBe(11);
     expect(byBugOrStory.scoredUnitCount).toBe(2);
     expect(byBugOrStory.issueTypeOptions).toEqual([
@@ -261,7 +260,7 @@ describe('Delivery Complexity Trends aggregation', () => {
     expect(view.quality.unitsWithIncompleteDimensions).toBe(1);
   });
 
-  it('should preserve the additive Scope breakdown and identify its largest driver', () => {
+  it('should preserve the additive Scope breakdown', () => {
     const first = {
       noveltyPoints: 10,
       structuralAndLogicPoints: 15,
@@ -302,12 +301,6 @@ describe('Delivery Complexity Trends aggregation', () => {
       (total, dimension) => total + (dimension.total ?? 0),
       0
     ))).toEqual([60, 90]);
-    expect(view.dimensionDrivers.TOTAL).toEqual({
-      dimensionKey: 'noveltyPoints',
-      dimensionLabel: 'Nowość',
-      periodLabel: 'lut 2026',
-      delta: 10
-    });
   });
 
   it('should apply inclusive dates and avoid a percentage after a zero period', () => {

@@ -165,26 +165,6 @@
           <p class="trend-field-error" role="alert">Data „Od” nie może być późniejsza niż „Do”.</p>
         }
 
-        <div class="trend-filter-note">
-          <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          <div>
-            <p>
-              Filtr typu issue obejmuje pełną Delivery Unit, jeśli zawiera ona co najmniej jedno issue
-              wybranego typu. Wybrane typy działają jako OR, a jednostka jest liczona tylko raz.
-              @if (currentTrend.multiIssueTypeUnitCount > 0) {
-                <strong>
-                  Delivery Units z więcej niż jednym typem w bieżącym widoku:
-                  {{ currentTrend.multiIssueTypeUnitCount }};
-                  wyników osobnych filtrów typów nie należy sumować.
-                </strong>
-              }
-            </p>
-            <p>
-              Filtr autora oznacza, że osoba była autorem co najmniej jednego MR w Delivery Unit.
-              Pokazywana jest pełna złożoność jednostki — nie są to punkty osoby ani miara produktywności.
-            </p>
-          </div>
-        </div>
       </section>
 
       <section class="trend-summary-grid" aria-label="Podsumowanie trendu">
@@ -270,7 +250,6 @@
             <span><i class="trend-legend__marker trend-legend__marker--up"></i> wzrost</span>
             <span><i class="trend-legend__marker trend-legend__marker--down"></i> spadek</span>
             <span><i class="trend-legend__marker"></i> bez zmiany / pierwszy okres</span>
-            <small>Kierunek nie oznacza oceny dobre/źle.</small>
           </div>
         </section>
 
@@ -298,19 +277,6 @@
 
           <div class="trend-dimension-context">
             <p>{{ dimensionModeDescription(data) }}</p>
-            @if (dimensionDriver(currentTrend); as driver) {
-              <article class="trend-dimension-driver">
-                <span>Największa zmiana wymiaru</span>
-                <strong>{{ driver.dimensionLabel }}</strong>
-                <small
-                  [class.trend-value--up]="driver.delta > 0"
-                  [class.trend-value--down]="driver.delta < 0"
-                >
-                  {{ driver.periodLabel }} · {{ signedDimensionPoints(driver.delta) }}
-                  {{ dimensionMetricLabel(data) }}
-                </small>
-              </article>
-            }
           </div>
 
           @if (dimensionMode() === 'TOTAL') {
