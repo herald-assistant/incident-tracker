@@ -58,6 +58,10 @@ const DELIVERY_SCOPE_HEADERS = [
 
 const AUTHOR_ID_HEADER = 'mergeRequestAuthorIds';
 const AUTHOR_NAME_HEADER = 'mergeRequestAuthorNames';
+const TIME_SPENT_HEADER = 'timeSpentSeconds';
+const ORIGINAL_ESTIMATE_HEADER = 'originalEstimateSeconds';
+const REMAINING_ESTIMATE_HEADER = 'remainingEstimateSeconds';
+const TIME_TRACKING_CAPTURED_AT_HEADER = 'timeTrackingCapturedAt';
 
 export class AssessmentTrendImportError extends Error {
   constructor(
@@ -289,6 +293,10 @@ function normalizeRow(
   hasAuthorColumns: boolean
 ): AssessmentTrendIssueRow {
   const value = (header: string) => values[requiredIndex(headerIndex, header)]?.trim() ?? '';
+  const optionalValue = (header: string) => {
+    const index = headerIndex.get(header);
+    return index === undefined ? '' : values[index]?.trim() ?? '';
+  };
   const issueKey = value('issueKey');
   if (!issueKey) {
     throw rowError(fileName, rowNumber, 'issueKey nie moze byc pusty.');
@@ -335,6 +343,21 @@ function normalizeRow(
   const authorIds = hasAuthorColumns ? value(AUTHOR_ID_HEADER) : '';
   const authorNames = hasAuthorColumns ? value(AUTHOR_NAME_HEADER) : '';
   const dimensionValues = parseDimensionValues(source, value, fileName, rowNumber);
+  const timeSpentSeconds = parseSeconds(
+    optionalValue(TIME_SPENT_HEADER), fileName, rowNumber, TIME_SPENT_HEADER
+  );
+  const originalEstimateSeconds = parseSeconds(
+    optionalValue(ORIGINAL_ESTIMATE_HEADER), fileName, rowNumber, ORIGINAL_ESTIMATE_HEADER
+  );
+  const remainingEstimateSeconds = parseSeconds(
+    optionalValue(REMAINING_ESTIMATE_HEADER), fileName, rowNumber, REMAINING_ESTIMATE_HEADER
+  );
+  const timeTrackingCapturedAt = parseTimestamp(
+    optionalValue(TIME_TRACKING_CAPTURED_AT_HEADER),
+    fileName,
+    rowNumber,
+    TIME_TRACKING_CAPTURED_AT_HEADER
+  );
 
   return {
     source,
@@ -357,6 +380,10 @@ function normalizeRow(
     assessmentStatus: assessmentStatus || 'UNKNOWN',
     finalPoints,
     aggregationPoints,
+    timeSpentSeconds,
+    originalEstimateSeconds,
+    remainingEstimateSeconds,
+    timeTrackingCapturedAt,
     dimensionValues,
     sourceFileName: fileName,
     sourceFileIndex: fileIndex,
@@ -434,6 +461,41 @@ function parsePoints(
   return parsed;
 }
 
+function parseSeconds(
+  value: string,
+  fileName: string,
+  rowNumber: number,
+  fieldName: string
+): number | null {
+  if (!value) {
+    return null;
+  }
+  const normalized = value.replace(/\s/g, '');
+  if (!/^\d+$/.test(normalized)) {
+    throw rowError(fileName, rowNumber, `${fieldName} musi byc nieujemna liczba calkowita sekund.`);
+  }
+  const parsed = Number(normalized);
+  if (!Number.isSafeInteger(parsed)) {
+    throw rowError(fileName, rowNumber, `${fieldName} przekracza bezpieczny zakres liczbowy.`);
+  }
+  return parsed;
+}
+
+function parseTimestamp(
+  value: string,
+  fileName: string,
+  rowNumber: number,
+  fieldName: string
+): string | null {
+  if (!value) {
+    return null;
+  }
+  if (Number.isNaN(Date.parse(value))) {
+    throw rowError(fileName, rowNumber, `${fieldName} ma nieprawidlowa wartosc: ${value}.`);
+  }
+  return value;
+}
+
 function calendarDate(value: string): string | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(value);
   if (!match) {
@@ -492,10 +554,23 @@ function isPreferredDuplicate(
   if (candidateTime !== currentTime) {
     return candidateTime > currentTime;
   }
+  const candidateSnapshot = comparableOptionalTimestamp(candidate.timeTrackingCapturedAt);
+  const currentSnapshot = comparableOptionalTimestamp(current.timeTrackingCapturedAt);
+  if (candidateSnapshot !== currentSnapshot) {
+    return candidateSnapshot > currentSnapshot;
+  }
   if (candidate.sourceFileIndex !== current.sourceFileIndex) {
     return candidate.sourceFileIndex > current.sourceFileIndex;
   }
   return candidate.sourceRowNumber > current.sourceRowNumber;
+}
+
+function comparableOptionalTimestamp(value: string | null): number {
+  if (!value) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
 }
 
 function comparableTimestamp(value: string, fallbackDate: string): number {
@@ -515,6 +590,10 @@ function rowFingerprint(row: AssessmentTrendIssueRow): string {
     assessmentStatus: row.assessmentStatus,
     finalPoints: row.finalPoints,
     aggregationPoints: row.aggregationPoints,
+    timeSpentSeconds: row.timeSpentSeconds,
+    originalEstimateSeconds: row.originalEstimateSeconds,
+    remainingEstimateSeconds: row.remainingEstimateSeconds,
+    timeTrackingCapturedAt: row.timeTrackingCapturedAt,
     dimensionValues: row.dimensionValues
   });
 }

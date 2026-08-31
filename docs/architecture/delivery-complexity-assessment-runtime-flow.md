@@ -37,10 +37,12 @@ pomagac w retrospektywnej analizie zakresu dostawy wraz z coverage, confidence,
 visibility limits i kosztem AI. Nie jest estymacja czasu, predykcja effortu,
 velocity ani miara produktywnosci osoby, zespolu, tribe'a lub vendora.
 
-Feature nie rekonstruuje czasu pracy, nie kalibruje sie do historycznych Story
-Points, nie analizuje worklogow i komentarzy oraz nie pozwala recznie
-korygowac wyniku w UI. POC nie ma follow-up chat, trwalego cache miedzy jobami
-ani durable kolejki wznawianej po restarcie backendu.
+Feature nie rekonstruuje historii czasu pracy, nie kalibruje sie do
+historycznych Story Points, nie analizuje worklogow i komentarzy oraz nie
+pozwala recznie korygowac wyniku w UI. Zapisuje jedynie biezacy snapshot
+`timespent` i estimate z Jira jako metadata raportowa do przyszlych analiz.
+POC nie ma follow-up chat, trwalego cache miedzy jobami ani durable kolejki
+wznawianej po restarcie backendu.
 
 ## Start i historia
 
@@ -70,12 +72,18 @@ zapisuje go od razu jako osobny local run i zwraca wynik tylko do odczytu.
 Import nie rejestruje live joba, nie uruchamia pollingu, Jira, GitLab ani AI i
 nie dodaje continuation. Gdy local workspace jest wylaczony albo zapis sie nie
 powiedzie, import jest odrzucany zamiast zwracac wynik niewidoczny w historii.
+Issue snapshot zawiera opcjonalne `timeSpentSeconds`,
+`originalEstimateSeconds`, `remainingEstimateSeconds` oraz
+`timeTrackingCapturedAt`. Pola sa addytywne w envelope V1: starszy eksport bez
+nich pozostaje czytelny, a brak wartosci mapuje sie na `null`.
 
 Obok przenosnego JSON UI udostepnia niewersjonowany, biznesowy CSV calego runu
 z jednym wierszem na issue. CSV nie jest formatem importu i nie zalezy od
 aktywnych filtrow raportu. Zawiera zapisane metadata Jira issue, wspolna liste
 linkow MR z Delivery Unit, stabilnie sparowane listy `mergeRequestAuthorIds`
-i `mergeRequestAuthorNames`, wymiary oceny, `score100`,
+i `mergeRequestAuthorNames`, snapshot `timeSpentSeconds`,
+`originalEstimateSeconds`, `remainingEstimateSeconds` i
+`timeTrackingCapturedAt`, wymiary oceny, `score100`,
 `deliveredStoryPoints` oraz `pointsForAggregation`. Ocena pozostaje ocena
 Delivery Unit i jest powtarzana przy jej issue. Aby analiza w Excelu nie
 zwielokrotniala DSP, `pointsForAggregation` jest wypelnione tylko dla issue z
@@ -126,8 +134,11 @@ assessment: bez komentarzy, parent i subtasks, z opisem, acceptance criteria,
 issue links, remote links, jawnie powiazanymi stronami Confluence oraz
 opcjonalnym polem zespolu z
 `delivery-complexity-assessment.jira-team-field-id`. Pole zespolu jest
-metadana raportu i filtra, nie evidence dla AI. Stary profil detailed
-pozostaje kontraktem Change Verification.
+metadana raportu i filtra, nie evidence dla AI. Neutralny material zapisuje
+tez widoczne w chwili pobrania `timespent`, original estimate i remaining
+estimate wraz z timestampem snapshotu. Te pola sa metadanymi raportowymi i nie
+sa evidence dla AI. Stary profil detailed pozostaje kontraktem Change
+Verification.
 
 Przetwarzanie kandydatow issue po wyszukaniu JQL jest wykonywane przez
 dedykowany, ograniczony executor source discovery. Limit
@@ -174,8 +185,9 @@ daje `NOT_SCORABLE`. Zmiany skladajace sie wylacznie z
 generated/build/dist/lock/minified/binary artifacts sa `EXCLUDED` bez
 uruchamiania AI.
 
-Artifacts i prompt nie zawieraja istniejacych Story Points, worklogow,
-assignee, autorow, reviewerow, komentarzy ani pola zespolu. Wynik nie moze
+Artifacts i prompt nie zawieraja istniejacych Story Points, snapshotu
+`timespent` ani estimate, worklogow, assignee, autorow, reviewerow, komentarzy
+ani pola zespolu. Wynik nie moze
 sluzyc do rankingu osob lub zespolow. Team Jira i autor MR pozostaja tylko
 deterministycznymi metadanymi UI do filtrowania obserwowalnej zlozonosci.
 

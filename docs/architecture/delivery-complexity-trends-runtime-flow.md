@@ -40,12 +40,23 @@ autora. Obecnosc tylko jednej kolumny autora jest bledem kontraktu. Autor jest
 identyfikowany po ID, a nazwa jest etykieta; rekord bez ID uzywa jawnego,
 mniej stabilnego klucza opartego o nazwe i jest liczony w jakosci importu.
 
+Cztery kolumny time tracking sa opcjonalne: `timeSpentSeconds`,
+`originalEstimateSeconds`, `remainingEstimateSeconds` oraz
+`timeTrackingCapturedAt`. Ich brak zachowuje caly dotychczasowy trend bez
+sekcji efektywnosci. Puste komorki oznaczaja brak danych, nigdy zero.
+Starsze raporty moga zostac wzbogacone poza aplikacja przez
+`tools/enrich-assessment-csv-time-tracking.mjs`; skrypt zachowuje zrodla i
+domyslnie zapisuje kopie w osobnym katalogu. Jest to snapshot aktualnego stanu
+Jira w chwili backfillu, a nie rekonstrukcja historycznego nakladu.
+
 ## Deduplikacja i addytywnosc
 
 Wiersze sa deduplikowane globalnie po `issueKey` bez rozrozniania wielkosci
 liter. Wygrywa rekord z pozniejszym `doneAt`; przy tym samym czasie wygrywa
-rekord z pliku wybranego pozniej, a nastepnie pozniejszy wiersz. Liczba
-usunietych i konfliktowych duplikatow jest jawna w sekcji jakosci.
+nowszy `timeTrackingCapturedAt`, a dopiero potem rekord z pliku wybranego
+pozniej i pozniejszy wiersz. Starszy CSV bez timestampu zachowuje poprzednia
+kolejnosc. Liczba usunietych i konfliktowych duplikatow jest jawna w sekcji
+jakosci.
 
 Po deduplikacji issue sa ponownie skladane po `deliveryUnitId`. Punkty jednej
 Delivery Unit pochodza z jej pojedynczego niepustego
@@ -115,6 +126,43 @@ czastkowe w jakosci importu.
 Profil wymiarow wyjasnia kompozycje obserwowalnej zlozonosci. Tak samo jak
 wynik glowny nie jest miara produktywnosci osoby ani automatyczna ocena
 dobrze/zle.
+
+## Efektywnosc czasu i estimate
+
+Gdy zaimportowany zestaw zawiera dane Jira time tracking, ekran dodaje osobna
+sekcje bez zmiany istniejacych wykresow. Glowny wskaznik to:
+
+`punkty zlozonosci / osobodzien`, gdzie osobodzien domyslnie ma 8 godzin i moze
+byc lokalnie zmieniony przez uzytkownika w zakresie 1-24 godzin.
+
+Punkty sa nadal liczone raz na Delivery Unit, a `timeSpentSeconds` raz na
+unikalne issue. Do wskaznika kwalifikuje sie tylko Delivery Unit, dla ktorej
+kazde issue ma snapshot `timeSpentSeconds`, a suma czasu jest dodatnia.
+Niepelny czas i czas zero sa wykluczane i pokazywane osobno. Pokrycie punktow
+oznacza udzial punktow kwalifikujacej sie proby we wszystkich punktach
+widocznego zakresu.
+
+Calosc snapshotu czasu jest przypisana do okresu `doneAt` punktowej kotwicy
+Delivery Unit. CSV nie zawiera historii worklogow, dlatego ekran nie rozklada
+nakladu na rzeczywiste dni jego poniesienia. Okresy bez kwalifikujacej sie
+proby nie sa dopisywane jako zera. Dla kazdego okresu widoczne sa punkty,
+osobodni, punkty/osobodzien, zmiana, pokrycie i wielkosc proby; okres ponizej
+trzech Delivery Units jest liczony jako mala proba.
+
+Dla calego tribe jednostki wielozespolowe pozostaja w wyniku. Po wyborze
+konkretnego zespolu wskaznik obejmuje tylko Delivery Units, ktorych wszystkie
+issue maja ten sam wybrany Team; jednostki wspoldzielone sa wykluczone i
+policzone osobno. Filtr autora MR jedynie zaweza zakres dostaw. Nie rozdziela
+`timespent` na autorow i nie tworzy indywidualnej miary efektywnosci.
+
+Jesli ta sama kwalifikujaca sie jednostka ma kompletne, dodatnie
+`originalEstimateSeconds`, ekran porownuje estymowane osobodni z rzeczywistym
+`timeSpentSeconds` oraz pokazuje procentowe odchylenie. Pozostale estimate nie
+sa mieszane z ta proba. Dodatni `remainingEstimateSeconds` dla issue w Done
+jest licznikiem jakosci danych, a nie czescia efektywnosci.
+
+Wskaznik pokazuje obserwowana relacje wyniku assessmentu do zarejestrowanego
+czasu. Nie dowodzi przyczynowego uzysku z AI i nie sluzy do rankingow osob.
 
 Osobne sekcje pokazuja laczna zlozonosc, ostatnia zmiane, pokrycie jednostek i
 issue, najwyzszy okres, najwiekszy wzrost/spadek, statusy ocen oraz jakosc

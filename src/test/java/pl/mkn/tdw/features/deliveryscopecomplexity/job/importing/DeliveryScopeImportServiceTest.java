@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeAggregateResponse;
+import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeIssueResponse;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.api.DeliveryScopeComplexityJobStateSnapshot;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.error.DeliveryScopeImportException;
 import pl.mkn.tdw.features.deliveryscopecomplexity.job.error.DeliveryScopeImportPersistenceException;
@@ -58,6 +59,27 @@ class DeliveryScopeImportServiceTest {
         assertThat(imported.completedAt()).isEqualTo(source.completedAt());
         assertThat(imported.updatedAt()).isAfter(source.updatedAt());
         verify(localRunPersistence).persistRunSnapshot(imported);
+    }
+
+    @Test
+    void shouldReadLegacyV1IssueWithoutTimeTrackingFields() throws Exception {
+        var objectMapper = JsonMapper.builder().findAndAddModules().build();
+
+        var issue = objectMapper.readValue("""
+                {
+                  "issueKey": "CRM-1",
+                  "issueUrl": "https://jira.example.com/browse/CRM-1",
+                  "summary": "Legacy issue",
+                  "issueType": "Story",
+                  "doneAt": "2026-07-10T10:00:00Z",
+                  "team": null
+                }
+                """, DeliveryScopeIssueResponse.class);
+
+        assertThat(issue.timeSpentSeconds()).isNull();
+        assertThat(issue.originalEstimateSeconds()).isNull();
+        assertThat(issue.remainingEstimateSeconds()).isNull();
+        assertThat(issue.timeTrackingCapturedAt()).isNull();
     }
 
     @Test

@@ -30,6 +30,10 @@ export interface DeliveryAssessmentIssue {
   issueType: string;
   doneAt: string;
   team: DeliveryAssessmentTeam | null;
+  timeSpentSeconds?: number | null;
+  originalEstimateSeconds?: number | null;
+  remainingEstimateSeconds?: number | null;
+  timeTrackingCapturedAt?: string | null;
 }
 
 export interface DeliveryAssessmentTeam {

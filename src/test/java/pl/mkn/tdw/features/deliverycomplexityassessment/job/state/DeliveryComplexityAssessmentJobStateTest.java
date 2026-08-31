@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.deliverycomplexityassessment.source.DeliveryAssessmen
 import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +31,12 @@ class DeliveryComplexityAssessmentJobStateTest {
         assertThat(partial.status()).isEqualTo("ANALYZING");
         assertThat(partial.aggregate().totalDeliveredStoryPoints()).isEqualTo(5);
         assertThat(partial.aggregate().coverage()).isEqualTo(0.5);
+        assertThat(partial.units().get(0).issues()).singleElement().satisfies(issue -> {
+            assertThat(issue.timeSpentSeconds()).isEqualTo(14400L);
+            assertThat(issue.originalEstimateSeconds()).isEqualTo(28800L);
+            assertThat(issue.remainingEstimateSeconds()).isEqualTo(7200L);
+            assertThat(issue.timeTrackingCapturedAt()).isEqualTo(Instant.parse("2026-07-11T08:00:00Z"));
+        });
 
         state.markUnitNotScorable(second.unitId(), "No changed files");
         state.finalizeJob();

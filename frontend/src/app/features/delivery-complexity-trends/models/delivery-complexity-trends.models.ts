@@ -30,6 +30,10 @@ export interface AssessmentTrendIssueRow {
   assessmentStatus: string;
   finalPoints: number | null;
   aggregationPoints: number | null;
+  timeSpentSeconds: number | null;
+  originalEstimateSeconds: number | null;
+  remainingEstimateSeconds: number | null;
+  timeTrackingCapturedAt: string | null;
   dimensionValues: Readonly<Record<string, number | null>>;
   sourceFileName: string;
   sourceFileIndex: number;
@@ -136,4 +140,46 @@ export interface AssessmentTrendView {
   highlights: AssessmentTrendHighlight[];
   dimensionDefinitions: AssessmentTrendDimensionDefinition[];
   quality: AssessmentTrendAggregationQuality;
+  efficiency: AssessmentTrendEfficiencyView;
+}
+
+export interface AssessmentTrendEfficiencyPeriod {
+  key: string;
+  label: string;
+  eligiblePoints: number;
+  personDays: number;
+  pointsPerPersonDay: number;
+  delta: number | null;
+  deltaPercent: number | null;
+  direction: 'UP' | 'DOWN' | 'FLAT' | 'NONE';
+  eligibleUnitCount: number;
+  eligibleIssueCount: number;
+  pointsCoveragePercent: number;
+  estimatedPersonDays: number | null;
+  actualPersonDaysForEstimate: number | null;
+  estimateVariancePercent: number | null;
+  estimateUnitCount: number;
+}
+
+export interface AssessmentTrendEfficiencyView {
+  hasTimeSpentData: boolean;
+  hasEstimateData: boolean;
+  periods: AssessmentTrendEfficiencyPeriod[];
+  pointsPerPersonDay: number | null;
+  totalEligiblePoints: number;
+  totalPersonDays: number;
+  pointsCoveragePercent: number;
+  eligibleUnitCount: number;
+  totalScoredUnitCount: number;
+  unitsWithoutCompleteTime: number;
+  unitsWithZeroTime: number;
+  crossTeamUnitsExcluded: number;
+  lowSamplePeriodCount: number;
+  estimatedIssueCount: number;
+  timeSpentIssueCount: number;
+  issuesWithRemainingEstimate: number;
+  totalEstimatedPersonDays: number | null;
+  totalActualPersonDaysForEstimate: number | null;
+  estimateVariancePercent: number | null;
+  estimateEligibleUnitCount: number;
 }

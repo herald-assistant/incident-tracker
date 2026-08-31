@@ -39,6 +39,10 @@ export interface DeliveryScopeIssue {
   issueType: string;
   doneAt: string;
   team: DeliveryScopeTeam | null;
+  timeSpentSeconds?: number | null;
+  originalEstimateSeconds?: number | null;
+  remainingEstimateSeconds?: number | null;
+  timeTrackingCapturedAt?: string | null;
 }
 
 export interface DeliveryScopeTeam {

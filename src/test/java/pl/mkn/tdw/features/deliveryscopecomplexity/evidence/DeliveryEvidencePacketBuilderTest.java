@@ -22,7 +22,17 @@ class DeliveryEvidencePacketBuilderTest {
         assertThat(packet.mechanicallyExcluded()).isFalse();
         assertThat(allArtifacts)
                 .contains("CRM-123", "CustomerStatus")
-                .doesNotContain("jira-comment-author-1", "mr-author-101", "internal comment payload", "Story Points");
+                .doesNotContain(
+                        "jira-comment-author-1",
+                        "mr-author-101",
+                        "internal comment payload",
+                        "Story Points",
+                        "timeSpentSeconds",
+                        "originalEstimateSeconds",
+                        "remainingEstimateSeconds",
+                        "14400",
+                        "28800"
+                );
     }
 
     @Test

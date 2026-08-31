@@ -6,6 +6,145 @@ import {
 import { buildAssessmentTrendView } from './delivery-complexity-trends-aggregation.utils';
 
 describe('Delivery Complexity Trends aggregation', () => {
+  it('should calculate complexity points per person-day and period deltas', () => {
+    const data = dataset([
+      issue({
+        issueKey: 'CRM-1',
+        deliveryUnitId: 'DU-JAN',
+        aggregationPoints: null,
+        timeSpentSeconds: 4 * 3600
+      }),
+      issue({
+        issueKey: 'CRM-2',
+        deliveryUnitId: 'DU-JAN',
+        aggregationPoints: 8,
+        timeSpentSeconds: 4 * 3600
+      }),
+      issue({
+        issueKey: 'CRM-3',
+        deliveryUnitId: 'DU-FEB',
+        doneAt: '2026-02-02T09:00:00+01:00',
+        finalPoints: 12,
+        aggregationPoints: 12,
+        timeSpentSeconds: 8 * 3600
+      })
+    ]);
+
+    const efficiency = buildAssessmentTrendView(
+      data,
+      filters({ granularity: 'MONTH' })
+    ).efficiency;
+
+    expect(efficiency.pointsPerPersonDay).toBe(10);
+    expect(efficiency.totalEligiblePoints).toBe(20);
+    expect(efficiency.totalPersonDays).toBe(2);
+    expect(efficiency.pointsCoveragePercent).toBe(100);
+    expect(efficiency.periods.map((period) => ({
+      key: period.key,
+      value: period.pointsPerPersonDay,
+      delta: period.delta,
+      deltaPercent: period.deltaPercent
+    }))).toEqual([
+      { key: '2026-01', value: 8, delta: null, deltaPercent: null },
+      { key: '2026-02', value: 12, delta: 4, deltaPercent: 50 }
+    ]);
+  });
+
+  it('should exclude incomplete and zero-time units without treating missing time as zero', () => {
+    const data = dataset([
+      issue({ issueKey: 'CRM-1', deliveryUnitId: 'DU-INCOMPLETE', timeSpentSeconds: 3600 }),
+      issue({
+        issueKey: 'CRM-2',
+        deliveryUnitId: 'DU-INCOMPLETE',
+        aggregationPoints: null,
+        timeSpentSeconds: null
+      }),
+      issue({
+        issueKey: 'CRM-3',
+        deliveryUnitId: 'DU-ZERO',
+        finalPoints: 4,
+        aggregationPoints: 4,
+        timeSpentSeconds: 0
+      }),
+      issue({
+        issueKey: 'CRM-4',
+        deliveryUnitId: 'DU-ELIGIBLE',
+        finalPoints: 8,
+        aggregationPoints: 8,
+        timeSpentSeconds: 8 * 3600
+      })
+    ]);
+
+    const efficiency = buildAssessmentTrendView(data, filters()).efficiency;
+
+    expect(efficiency.totalEligiblePoints).toBe(8);
+    expect(efficiency.pointsCoveragePercent).toBe(40);
+    expect(efficiency.unitsWithoutCompleteTime).toBe(1);
+    expect(efficiency.unitsWithZeroTime).toBe(1);
+    expect(efficiency.eligibleUnitCount).toBe(1);
+  });
+
+  it('should include cross-team units for tribe and exclude them from a selected team efficiency', () => {
+    const data = dataset([
+      issue({ issueKey: 'CRM-1', deliveryUnitId: 'DU-SHARED', timeSpentSeconds: 4 * 3600 }),
+      issue({
+        issueKey: 'CRM-2',
+        deliveryUnitId: 'DU-SHARED',
+        aggregationPoints: null,
+        teamKey: 'id:team-b',
+        teamId: 'team-b',
+        teamName: 'Team B',
+        timeSpentSeconds: 4 * 3600
+      }),
+      issue({
+        issueKey: 'CRM-3',
+        deliveryUnitId: 'DU-TEAM-A',
+        finalPoints: 4,
+        aggregationPoints: 4,
+        timeSpentSeconds: 4 * 3600
+      })
+    ]);
+
+    const tribe = buildAssessmentTrendView(data, filters()).efficiency;
+    const team = buildAssessmentTrendView(data, filters({ teamKey: 'id:team-a' })).efficiency;
+
+    expect(tribe.totalEligiblePoints).toBe(12);
+    expect(tribe.crossTeamUnitsExcluded).toBe(0);
+    expect(team.totalEligiblePoints).toBe(4);
+    expect(team.crossTeamUnitsExcluded).toBe(1);
+  });
+
+  it('should compare original estimate with actual time for the same eligible sample', () => {
+    const data = dataset([
+      issue({
+        timeSpentSeconds: 10 * 3600,
+        originalEstimateSeconds: 8 * 3600,
+        remainingEstimateSeconds: 2 * 3600
+      })
+    ]);
+
+    const efficiency = buildAssessmentTrendView(data, filters()).efficiency;
+
+    expect(efficiency.totalEstimatedPersonDays).toBe(1);
+    expect(efficiency.totalActualPersonDaysForEstimate).toBe(1.25);
+    expect(efficiency.estimateVariancePercent).toBe(25);
+    expect(efficiency.estimateEligibleUnitCount).toBe(1);
+    expect(efficiency.issuesWithRemainingEstimate).toBe(1);
+  });
+
+  it('should use configurable workday hours and hide periods when no timespent exists', () => {
+    const withTime = dataset([issue({ timeSpentSeconds: 8 * 3600 })]);
+    const withoutTime = dataset([issue()]);
+    const emptyEfficiency = buildAssessmentTrendView(withoutTime, filters()).efficiency;
+
+    expect(buildAssessmentTrendView(withTime, filters(), 8).efficiency.pointsPerPersonDay).toBe(8);
+    expect(buildAssessmentTrendView(withTime, filters(), 4).efficiency.pointsPerPersonDay).toBe(4);
+    expect(emptyEfficiency.hasTimeSpentData).toBe(false);
+    expect(emptyEfficiency.hasEstimateData).toBe(false);
+    expect(emptyEfficiency.periods).toEqual([]);
+    expect(emptyEfficiency.pointsPerPersonDay).toBeNull();
+  });
+
   it('should aggregate one contribution per Delivery Unit and calculate observed-period deltas', () => {
     const data = dataset([
       issue({
@@ -413,6 +552,10 @@ function issue(overrides: Partial<AssessmentTrendIssueRow> = {}): AssessmentTren
     assessmentStatus: 'COMPLETED',
     finalPoints: 8,
     aggregationPoints: 8,
+    timeSpentSeconds: null,
+    originalEstimateSeconds: null,
+    remainingEstimateSeconds: null,
+    timeTrackingCapturedAt: null,
     dimensionValues: dcaDimensions(),
     sourceFileName: 'report.csv',
     sourceFileIndex: 0,

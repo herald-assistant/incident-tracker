@@ -8,6 +8,7 @@ import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
 import pl.mkn.tdw.integrations.jira.JiraConfluencePage;
 import pl.mkn.tdw.integrations.jira.JiraIssueComment;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
+import pl.mkn.tdw.integrations.jira.JiraIssueTimeTracking;
 
 import java.time.Instant;
 import java.util.List;
@@ -35,7 +36,14 @@ public final class DeliveryScopeTestFixtures {
                         "Customer status follows the eligibility decision.", "2", List.of()
                 )),
                 List.of(new JiraIssueComment("jira-comment-author-1", "2026-07-10", "internal comment payload")),
-                List.of()
+                List.of(),
+                List.of(),
+                new JiraIssueTimeTracking(
+                        14400L,
+                        28800L,
+                        7200L,
+                        Instant.parse("2026-07-11T08:00:00Z")
+                )
         );
     }
 

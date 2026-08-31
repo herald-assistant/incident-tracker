@@ -91,5 +91,10 @@ class DeliveryScopeLocalRunPersisterTest {
                 .isEqualTo("delivery-scope-complexity-v1");
         assertThat(envelope.path("payload").path("job").path("units").path(0).path("rawAiResponse").asText())
                 .isEqualTo("not valid JSON");
+        var issue = envelope.path("payload").path("job").path("units").path(0).path("issues").path(0);
+        assertThat(issue.path("timeSpentSeconds").asLong()).isEqualTo(14400L);
+        assertThat(issue.path("originalEstimateSeconds").asLong()).isEqualTo(28800L);
+        assertThat(issue.path("remainingEstimateSeconds").asLong()).isEqualTo(7200L);
+        assertThat(issue.path("timeTrackingCapturedAt").asDouble()).isEqualTo(1783756800.0);
     }
 }

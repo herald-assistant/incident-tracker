@@ -43,8 +43,9 @@ executors kontrolowane przez:
 ## Evidence i wykonanie AI
 
 Feature buduje wlasny inline evidence packet z Jira, Confluence i pelnych
-danych merged MR zwroconych przez integracje. Story Points, worklogi,
-komentarze i dane osobowe nie sa evidence dla modelu.
+danych merged MR zwroconych przez integracje. Story Points, snapshot
+`timespent` i estimate, worklogi, komentarze i dane osobowe nie sa evidence dla
+modelu.
 
 Kazda ocenialna Delivery Unit uruchamia jedna nowa sesje Copilota. Prompt
 zawiera effective tresc skilla `delivery-scope-complexity-evaluator`, kontrakt
@@ -88,6 +89,11 @@ liczniki statusow i usage/cost. Wynik nie jest mapowany na DSP.
 Snapshot `QUEUED` musi zostac zapisany w Analysis History przed zaplanowaniem
 wykonania. Discovery, przygotowanie promptow, wyniki jednostek, raw responses,
 usage i status terminalny aktualizuja ten sam run czastkowo.
+Kazdy issue snapshot zawiera opcjonalne `timeSpentSeconds`,
+`originalEstimateSeconds`, `remainingEstimateSeconds` oraz
+`timeTrackingCapturedAt` pobrane z Jira. Pola sa addytywne w envelope V1:
+starszy eksport bez nich pozostaje czytelny, a brak wartosci mapuje sie na
+`null`. Nie sa uzywane przez scoring ani UI raportu.
 
 UI ma wlasna route i API service. Pokazuje jedna rozwijalna tabele Delivery
 Units, linki Jira/MR, final score `0-200`, rozklad wymiarow, evidence, quality
@@ -99,7 +105,9 @@ Obok przenosnego JSON UI udostepnia niewersjonowany, biznesowy CSV calego runu
 z jednym wierszem na issue, niezaleznie od aktywnych filtrow. CSV zawiera
 zapisane metadata Jira issue, wspolna liste linkow MR z Delivery Unit,
 stabilnie sparowane listy `mergeRequestAuthorIds` i
-`mergeRequestAuthorNames`, punktowy wklad szesciu wymiarow, `finalScore` i
+`mergeRequestAuthorNames`, snapshot `timeSpentSeconds`,
+`originalEstimateSeconds`, `remainingEstimateSeconds` i
+`timeTrackingCapturedAt`, punktowy wklad szesciu wymiarow, `finalScore` i
 `pointsForAggregation`. Nie eksportuje
 wewnetrznych skladowych `score`, `scopeSignal`, `scope`, `scaledScore` ani
 `weight`. Ocena pozostaje ocena Delivery Unit i jest powtarzana przy jej

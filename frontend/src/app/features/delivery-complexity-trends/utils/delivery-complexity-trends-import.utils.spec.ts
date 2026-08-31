@@ -8,6 +8,8 @@ import {
 
 const DCA_HEADERS = [
   'issueKey', 'issueUrl', 'summary', 'issueType', 'doneAt',
+  'timeSpentSeconds', 'originalEstimateSeconds', 'remainingEstimateSeconds',
+  'timeTrackingCapturedAt',
   'teamId', 'teamName', 'teamFieldId', 'mergeRequestUrls',
   'mergeRequestAuthorIds', 'mergeRequestAuthorNames',
   'deliveryUnitId', 'assessmentStatus', 'outcomeBreadth',
@@ -19,6 +21,8 @@ const DCA_HEADERS = [
 
 const DSC_HEADERS = [
   'issueKey', 'issueUrl', 'summary', 'issueType', 'doneAt',
+  'timeSpentSeconds', 'originalEstimateSeconds', 'remainingEstimateSeconds',
+  'timeTrackingCapturedAt',
   'teamId', 'teamName', 'teamFieldId', 'mergeRequestUrls',
   'mergeRequestAuthorIds', 'mergeRequestAuthorNames',
   'deliveryUnitId', 'assessmentStatus', 'noveltyPoints',
@@ -62,6 +66,12 @@ describe('Delivery Complexity Trends CSV import', () => {
     expect(result.rows.map((item) => item.issueKey)).toEqual(['CRM-1', 'CRM-2']);
     expect(result.rows[0].finalPoints).toBe(13);
     expect(result.rows[0].sourceFileName).toBe('2026-08.csv');
+    expect(result.rows[0]).toMatchObject({
+      timeSpentSeconds: 14400,
+      originalEstimateSeconds: 28800,
+      remainingEstimateSeconds: 7200,
+      timeTrackingCapturedAt: '2026-07-11T08:00:00Z'
+    });
     expect(result.rows[0].dimensionValues).toEqual({
       outcomeBreadth: 2,
       domainDecisionComplexity: 3,
@@ -103,9 +113,38 @@ describe('Delivery Complexity Trends CSV import', () => {
     expect(result.rows[0].sourceFileName).toBe('second.csv');
   });
 
+  it('should prefer the newer Jira time snapshot before file order', async () => {
+    const newer = csvFile('newer-snapshot.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, {
+        issueKey: 'CRM-1',
+        timeSpentSeconds: '28800',
+        timeTrackingCapturedAt: '2026-08-10T08:00:00Z'
+      })
+    ]);
+    const older = csvFile('older-snapshot-selected-later.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, {
+        issueKey: 'CRM-1',
+        timeSpentSeconds: '14400',
+        timeTrackingCapturedAt: '2026-08-01T08:00:00Z'
+      })
+    ]);
+
+    const result = await importAssessmentTrendFiles([newer, older]);
+
+    expect(result.rows[0].sourceFileName).toBe('newer-snapshot.csv');
+    expect(result.rows[0].timeSpentSeconds).toBe(28800);
+  });
+
   it('should accept an older Scope CSV without author columns and expose the limitation', async () => {
     const legacyHeaders = DSC_HEADERS.filter(
-      (header) => !['mergeRequestAuthorIds', 'mergeRequestAuthorNames'].includes(header)
+      (header) => ![
+        'mergeRequestAuthorIds',
+        'mergeRequestAuthorNames',
+        'timeSpentSeconds',
+        'originalEstimateSeconds',
+        'remainingEstimateSeconds',
+        'timeTrackingCapturedAt'
+      ].includes(header)
     );
     const file = csvFile('legacy-scope.csv', legacyHeaders, [
       row(legacyHeaders, { finalScore: '122,5', pointsForAggregation: '122,5' })
@@ -145,6 +184,12 @@ describe('Delivery Complexity Trends CSV import', () => {
     const invalidDimension = csvFile('invalid-dimension.csv', DCA_HEADERS, [
       row(DCA_HEADERS, { outcomeBreadth: '4,5' })
     ]);
+    const invalidSeconds = csvFile('invalid-seconds.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, { timeSpentSeconds: '-1' })
+    ]);
+    const invalidSnapshot = csvFile('invalid-snapshot.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, { timeTrackingCapturedAt: 'not-a-date' })
+    ]);
 
     await expect(importAssessmentTrendFiles([invalidPoints])).rejects.toMatchObject({
       code: 'INVALID_ROW'
@@ -156,6 +201,12 @@ describe('Delivery Complexity Trends CSV import', () => {
       })
     );
     await expect(importAssessmentTrendFiles([invalidDimension])).rejects.toMatchObject({
+      code: 'INVALID_ROW'
+    });
+    await expect(importAssessmentTrendFiles([invalidSeconds])).rejects.toMatchObject({
+      code: 'INVALID_ROW'
+    });
+    await expect(importAssessmentTrendFiles([invalidSnapshot])).rejects.toMatchObject({
       code: 'INVALID_ROW'
     });
   });
@@ -203,6 +254,10 @@ function row(
     summary: 'Obsługa płatności',
     issueType: 'Story',
     doneAt: '2026-07-01T09:00:00+02:00',
+    timeSpentSeconds: '14400',
+    originalEstimateSeconds: '28800',
+    remainingEstimateSeconds: '7200',
+    timeTrackingCapturedAt: '2026-07-11T08:00:00Z',
     teamId: '1900',
     teamName: 'Team A',
     teamFieldId: 'customfield_10000',

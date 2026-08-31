@@ -17,7 +17,8 @@ public record JiraIssueMaterial(
         List<JiraConfluencePage> confluencePages,
         List<JiraIssueComment> comments,
         List<String> limitations,
-        List<JiraIssueCustomField> customFields
+        List<JiraIssueCustomField> customFields,
+        JiraIssueTimeTracking timeTracking
 ) {
 
     public JiraIssueMaterial {
@@ -29,6 +30,43 @@ public record JiraIssueMaterial(
         comments = comments != null ? List.copyOf(comments) : List.of();
         limitations = limitations != null ? List.copyOf(limitations) : List.of();
         customFields = customFields != null ? List.copyOf(customFields) : List.of();
+    }
+
+    public JiraIssueMaterial(
+            String issueKey,
+            String issueUrl,
+            String summary,
+            String description,
+            String issueType,
+            String status,
+            List<String> labels,
+            List<String> acceptanceCriteria,
+            List<JiraIssueLink> links,
+            List<JiraIssueMaterial> subTasks,
+            JiraIssueMaterial parentIssue,
+            List<JiraConfluencePage> confluencePages,
+            List<JiraIssueComment> comments,
+            List<String> limitations,
+            List<JiraIssueCustomField> customFields
+    ) {
+        this(
+                issueKey,
+                issueUrl,
+                summary,
+                description,
+                issueType,
+                status,
+                labels,
+                acceptanceCriteria,
+                links,
+                subTasks,
+                parentIssue,
+                confluencePages,
+                comments,
+                limitations,
+                customFields,
+                null
+        );
     }
 
     public JiraIssueMaterial(
@@ -62,7 +100,8 @@ public record JiraIssueMaterial(
                 confluencePages,
                 comments,
                 limitations,
-                List.of()
+                List.of(),
+                null
         );
     }
 
@@ -96,7 +135,8 @@ public record JiraIssueMaterial(
                 confluencePages,
                 comments,
                 limitations,
-                List.of()
+                List.of(),
+                null
         );
     }
 
@@ -128,7 +168,8 @@ public record JiraIssueMaterial(
                 List.of(),
                 comments,
                 limitations,
-                List.of()
+                List.of(),
+                null
         );
     }
 }

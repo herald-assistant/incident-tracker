@@ -28,6 +28,10 @@ describe('Delivery Scope Complexity CSV', () => {
 
     expect(headers).toEqual([...DELIVERY_SCOPE_COMPLEXITY_CSV_HEADERS]);
     expect(first[headers.indexOf('issueKey')]).toBe('CRM-2');
+    expect(first[headers.indexOf('timeSpentSeconds')]).toBe('14400');
+    expect(first[headers.indexOf('originalEstimateSeconds')]).toBe('28800');
+    expect(first[headers.indexOf('remainingEstimateSeconds')]).toBe('7200');
+    expect(first[headers.indexOf('timeTrackingCapturedAt')]).toBe('2026-07-11T08:00:00Z');
     expect(first[headers.indexOf('mergeRequestUrls')]).toBe('https://gitlab.example.com/mr/7');
     expect(first[headers.indexOf('mergeRequestAuthorIds')]).toBe('101');
     expect(first[headers.indexOf('mergeRequestAuthorNames')]).toBe('MR Author');
@@ -90,6 +94,26 @@ describe('Delivery Scope Complexity CSV', () => {
     expect(row[headers.indexOf('noveltyPoints')]).toBe('');
     expect(row[headers.indexOf('finalScore')]).toBe('');
     expect(row[headers.indexOf('pointsForAggregation')]).toBe('');
+  });
+
+  it('should preserve missing Jira time tracking as empty cells', () => {
+    const job = snapshot();
+    job.units[0].issues[0] = {
+      ...job.units[0].issues[0],
+      timeSpentSeconds: null,
+      originalEstimateSeconds: undefined,
+      remainingEstimateSeconds: null,
+      timeTrackingCapturedAt: undefined
+    };
+
+    const lines = csvLines(buildDeliveryScopeComplexityCsv(job));
+    const headers = lines[0].split(';');
+    const row = lines[1].split(';');
+
+    expect(row[headers.indexOf('timeSpentSeconds')]).toBe('');
+    expect(row[headers.indexOf('originalEstimateSeconds')]).toBe('');
+    expect(row[headers.indexOf('remainingEstimateSeconds')]).toBe('');
+    expect(row[headers.indexOf('timeTrackingCapturedAt')]).toBe('');
   });
 
   it('should preserve Excel-compatible quoting through the shared CSV writer', () => {
@@ -206,7 +230,11 @@ function issue(issueKey: string, doneAt: string) {
     summary: `Summary ${issueKey}`,
     issueType: 'Story',
     doneAt,
-    team: { id: '1900', name: 'Team A', fieldId: 'customfield_10000' }
+    team: { id: '1900', name: 'Team A', fieldId: 'customfield_10000' },
+    timeSpentSeconds: 14400,
+    originalEstimateSeconds: 28800,
+    remainingEstimateSeconds: 7200,
+    timeTrackingCapturedAt: '2026-07-11T08:00:00Z'
   };
 }
 

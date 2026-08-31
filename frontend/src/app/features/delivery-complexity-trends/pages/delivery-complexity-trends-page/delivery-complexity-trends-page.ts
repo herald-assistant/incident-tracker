@@ -7,6 +7,8 @@ import {
   AssessmentTrendDataset,
   AssessmentTrendDimensionDefinition,
   AssessmentTrendDimensionMode,
+  AssessmentTrendEfficiencyPeriod,
+  AssessmentTrendEfficiencyView,
   AssessmentTrendGranularity,
   AssessmentTrendPeriod,
   AssessmentTrendPeriodDimension,
@@ -41,6 +43,7 @@ export class DeliveryComplexityTrendsPageComponent {
   readonly authorControl = new FormControl('', { nonNullable: true });
   readonly fromDateControl = new FormControl('', { nonNullable: true });
   readonly toDateControl = new FormControl('', { nonNullable: true });
+  readonly workdayHoursControl = new FormControl(8, { nonNullable: true });
 
   readonly dateFilterInvalid = computed(() => {
     this.filterRevision();
@@ -52,6 +55,7 @@ export class DeliveryComplexityTrendsPageComponent {
   readonly filtersActive = computed(() => {
     this.filterRevision();
     return this.granularityControl.value !== 'MONTH'
+      || this.workdayHoursControl.value !== 8
       || this.selectedIssueTypeKeys().length > 0
       || Boolean(
         this.teamControl.value
@@ -74,7 +78,7 @@ export class DeliveryComplexityTrendsPageComponent {
       issueTypeKeys: this.selectedIssueTypeKeys(),
       fromDate: this.fromDateControl.value,
       toDate: this.toDateControl.value
-    });
+    }, this.workdayHoursControl.value);
   });
 
   readonly loadedDateRange = computed(() => {
@@ -92,7 +96,8 @@ export class DeliveryComplexityTrendsPageComponent {
       this.teamControl.valueChanges,
       this.authorControl.valueChanges,
       this.fromDateControl.valueChanges,
-      this.toDateControl.valueChanges
+      this.toDateControl.valueChanges,
+      this.workdayHoursControl.valueChanges
     )
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.filterRevision.update((revision) => revision + 1));
@@ -136,6 +141,7 @@ export class DeliveryComplexityTrendsPageComponent {
     this.selectedIssueTypeKeys.set([]);
     this.fromDateControl.setValue('', { emitEvent: false });
     this.toDateControl.setValue('', { emitEvent: false });
+    this.workdayHoursControl.setValue(8, { emitEvent: false });
     this.filterRevision.update((revision) => revision + 1);
   }
 
@@ -262,6 +268,10 @@ export class DeliveryComplexityTrendsPageComponent {
     return `${prefix}${value.toLocaleString('pl-PL', { maximumFractionDigits: 1 })}%`;
   }
 
+  protected percentageLabel(value: number): string {
+    return `${value.toLocaleString('pl-PL', { maximumFractionDigits: 1 })}%`;
+  }
+
   protected barHeight(period: AssessmentTrendPeriod, trend: AssessmentTrendView): number {
     const maximum = Math.max(...trend.periods.map((item) => item.points), 0);
     if (maximum === 0) {
@@ -282,6 +292,54 @@ export class DeliveryComplexityTrendsPageComponent {
 
   protected lastPeriod(trend: AssessmentTrendView): AssessmentTrendPeriod | null {
     return trend.periods.at(-1) ?? null;
+  }
+
+  protected formatEfficiency(value: number | null): string {
+    return value === null
+      ? '-'
+      : value.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
+  }
+
+  protected formatPersonDays(value: number | null): string {
+    return value === null
+      ? '-'
+      : value.toLocaleString('pl-PL', { maximumFractionDigits: 2 });
+  }
+
+  protected signedEfficiency(value: number | null): string {
+    if (value === null) {
+      return '-';
+    }
+    return `${value > 0 ? '+' : ''}${this.formatEfficiency(value)}`;
+  }
+
+  protected efficiencyBarHeight(
+    period: AssessmentTrendEfficiencyPeriod,
+    efficiency: AssessmentTrendEfficiencyView
+  ): number {
+    const maximum = Math.max(...efficiency.periods.map((item) => item.pointsPerPersonDay), 0);
+    return maximum === 0 ? 2 : Math.max(7, period.pointsPerPersonDay / maximum * 100);
+  }
+
+  protected effortBarWidth(
+    value: number | null,
+    efficiency: AssessmentTrendEfficiencyView
+  ): number {
+    if (value === null) {
+      return 0;
+    }
+    const maximum = Math.max(...efficiency.periods.flatMap((period) => [
+      period.estimatedPersonDays ?? 0,
+      period.actualPersonDaysForEstimate ?? 0
+    ]), 0);
+    return maximum === 0 ? 2 : Math.max(value === 0 ? 2 : 8, value / maximum * 100);
+  }
+
+  protected efficiencyChartAriaLabel(efficiency: AssessmentTrendEfficiencyView): string {
+    const periods = efficiency.periods.map((period) =>
+      `${period.label}: ${this.formatEfficiency(period.pointsPerPersonDay)} punktów na osobodzień`
+    ).join(', ');
+    return `Efektywność dostarczenia. ${periods}. Dokładne dane znajdują się w tabeli pod wykresem.`;
   }
 
   protected statusLabel(status: AssessmentTrendStatusCount['status']): string {

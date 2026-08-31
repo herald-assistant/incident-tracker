@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryAssessmentAggregateResponse;
+import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryAssessmentIssueResponse;
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.api.DeliveryComplexityAssessmentJobStateSnapshot;
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.error.DeliveryAssessmentImportException;
 import pl.mkn.tdw.features.deliverycomplexityassessment.job.error.DeliveryAssessmentImportPersistenceException;
@@ -59,6 +60,27 @@ class DeliveryAssessmentImportServiceTest {
         assertThat(imported.completedAt()).isEqualTo(source.completedAt());
         assertThat(imported.updatedAt()).isAfter(source.updatedAt());
         verify(localRunPersistence).persistRunSnapshot(imported);
+    }
+
+    @Test
+    void shouldReadLegacyV1IssueWithoutTimeTrackingFields() throws Exception {
+        var objectMapper = JsonMapper.builder().findAndAddModules().build();
+
+        var issue = objectMapper.readValue("""
+                {
+                  "issueKey": "CRM-1",
+                  "issueUrl": "https://jira.example.com/browse/CRM-1",
+                  "summary": "Legacy issue",
+                  "issueType": "Story",
+                  "doneAt": "2026-07-10T10:00:00Z",
+                  "team": null
+                }
+                """, DeliveryAssessmentIssueResponse.class);
+
+        assertThat(issue.timeSpentSeconds()).isNull();
+        assertThat(issue.originalEstimateSeconds()).isNull();
+        assertThat(issue.remainingEstimateSeconds()).isNull();
+        assertThat(issue.timeTrackingCapturedAt()).isNull();
     }
 
     @Test

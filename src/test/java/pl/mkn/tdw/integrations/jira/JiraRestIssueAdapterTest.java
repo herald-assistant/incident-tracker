@@ -33,6 +33,7 @@ class JiraRestIssueAdapterTest {
         server.expect(requestTo(containsString("https://jira.example.com/rest/api/2/issue/CRM-123?fields=")))
                 .andExpect(requestTo(containsString("customfield_10042")))
                 .andExpect(request -> assertThat(request.getURI().getQuery())
+                        .contains("timespent", "timeoriginalestimate", "timeestimate")
                         .doesNotContain("comment", "parent", "subtasks"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
@@ -44,6 +45,9 @@ class JiraRestIssueAdapterTest {
                             "issuetype": { "name": "Story" },
                             "status": { "name": "Done" },
                             "labels": ["release"],
+                            "timespent": 14400,
+                            "timeoriginalestimate": 28800,
+                            "timeestimate": 7200,
                             "customfield_10042": "Status is visible.",
                             "issuelinks": []
                           }
@@ -59,6 +63,12 @@ class JiraRestIssueAdapterTest {
         assertThat(material.parentIssue()).isNull();
         assertThat(material.subTasks()).isEmpty();
         assertThat(material.acceptanceCriteria()).containsExactly("Status is visible.");
+        assertThat(material.timeTracking()).isNotNull().satisfies(timeTracking -> {
+            assertThat(timeTracking.timeSpentSeconds()).isEqualTo(14400L);
+            assertThat(timeTracking.originalEstimateSeconds()).isEqualTo(28800L);
+            assertThat(timeTracking.remainingEstimateSeconds()).isEqualTo(7200L);
+            assertThat(timeTracking.capturedAt()).isNotNull();
+        });
         server.verify();
     }
 
@@ -105,6 +115,12 @@ class JiraRestIssueAdapterTest {
             assertThat(field.id()).isEqualTo("1900");
             assertThat(field.name()).isEqualTo("Team A");
             assertThat(field.value()).isEqualTo("Team A");
+        });
+        assertThat(material.timeTracking()).isNotNull().satisfies(timeTracking -> {
+            assertThat(timeTracking.timeSpentSeconds()).isNull();
+            assertThat(timeTracking.originalEstimateSeconds()).isNull();
+            assertThat(timeTracking.remainingEstimateSeconds()).isNull();
+            assertThat(timeTracking.capturedAt()).isNotNull();
         });
         server.verify();
     }

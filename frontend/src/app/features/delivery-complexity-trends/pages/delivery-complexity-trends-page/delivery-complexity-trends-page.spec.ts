@@ -11,7 +11,9 @@ const DCA_HEADERS = [
   'domainDecisionComplexity', 'applicationFlowComplexity',
   'boundaryAndDataComplexity', 'verificationStateSpace',
   'implementedCompatibilityScope', 'parameterizationComplexity',
-  'score100', 'deliveredStoryPoints', 'pointsForAggregation'
+  'score100', 'deliveredStoryPoints', 'pointsForAggregation',
+  'timeSpentSeconds', 'originalEstimateSeconds', 'remainingEstimateSeconds',
+  'timeTrackingCapturedAt'
 ] as const;
 
 const DSC_HEADERS = [
@@ -21,7 +23,9 @@ const DSC_HEADERS = [
   'deliveryUnitId', 'assessmentStatus', 'noveltyPoints',
   'structuralAndLogicPoints', 'businessAndInvariantsPoints',
   'robustnessAndTestsPoints', 'refactorAndArchitecturePoints',
-  'distributionPoints', 'finalScore', 'pointsForAggregation'
+  'distributionPoints', 'finalScore', 'pointsForAggregation',
+  'timeSpentSeconds', 'originalEstimateSeconds', 'remainingEstimateSeconds',
+  'timeTrackingCapturedAt'
 ] as const;
 
 describe('DeliveryComplexityTrendsPageComponent', () => {
@@ -117,6 +121,53 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('5');
     expect(element().querySelectorAll('.trend-bar')).toHaveLength(1);
     expect(element().textContent).toContain('1 w wybranym zakresie');
+  });
+
+  it('should render efficiency and estimate comparison when Jira time data is present', async () => {
+    await selectFiles([csvFile('efficiency.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, {
+        timeSpentSeconds: '28800',
+        originalEstimateSeconds: '28800',
+        remainingEstimateSeconds: '0',
+        timeTrackingCapturedAt: '2026-07-11T08:00:00Z'
+      }),
+      row(DCA_HEADERS, {
+        issueKey: 'CRM-2',
+        doneAt: '2026-08-10T09:00:00+02:00',
+        deliveryUnitId: 'DU-CRM-2',
+        deliveredStoryPoints: '13',
+        pointsForAggregation: '13',
+        timeSpentSeconds: '28800',
+        originalEstimateSeconds: '21600',
+        remainingEstimateSeconds: '3600',
+        timeTrackingCapturedAt: '2026-08-11T08:00:00Z'
+      })
+    ])]);
+
+    const efficiency = element().querySelector<HTMLElement>('.trend-efficiency-panel')!;
+    expect(efficiency).not.toBeNull();
+    expect(efficiency.textContent).toContain('Efektywność dostarczenia');
+    expect(efficiency.textContent).toContain('Estymacja a czas zarejestrowany');
+    expect(efficiency.querySelectorAll('.trend-efficiency-bar')).toHaveLength(2);
+    expect(efficiency.querySelectorAll('.trend-efficiency-table tbody tr')).toHaveLength(2);
+    expect(efficiency.querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('10,5');
+
+    const workday = efficiency.querySelector<HTMLInputElement>(
+      'input[aria-label="Liczba godzin w osobodniu"]'
+    )!;
+    workday.value = '4';
+    workday.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(element().querySelector(
+      '.trend-efficiency-panel .trend-summary-card strong'
+    )?.textContent?.trim()).toBe('5,25');
+
+    fixture.componentInstance.authorControl.setValue('id:101');
+    fixture.detectChanges();
+    expect(element().querySelector('.trend-efficiency-panel')?.textContent).toContain(
+      'Nie przypisuje czasu Jira ani efektywności do tej osoby'
+    );
   });
 
   it('should filter whole Delivery Units by multiple issue types without double counting', async () => {
@@ -277,7 +328,11 @@ function row(headers: readonly string[], overrides: Record<string, string> = {})
     refactorAndArchitecturePoints: '20',
     distributionPoints: '20',
     finalScore: '120',
-    pointsForAggregation: headers.includes('finalScore') ? '120' : '8'
+    pointsForAggregation: headers.includes('finalScore') ? '120' : '8',
+    timeSpentSeconds: '',
+    originalEstimateSeconds: '',
+    remainingEstimateSeconds: '',
+    timeTrackingCapturedAt: ''
   };
   return headers.map((header) => overrides[header] ?? values[header] ?? '');
 }

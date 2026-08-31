@@ -8,8 +8,23 @@ public record DeliveryScopeIssueResponse(
         String summary,
         String issueType,
         Instant doneAt,
-        DeliveryScopeTeamResponse team
+        DeliveryScopeTeamResponse team,
+        Long timeSpentSeconds,
+        Long originalEstimateSeconds,
+        Long remainingEstimateSeconds,
+        Instant timeTrackingCapturedAt
 ) {
+
+    public DeliveryScopeIssueResponse(
+            String issueKey,
+            String issueUrl,
+            String summary,
+            String issueType,
+            Instant doneAt,
+            DeliveryScopeTeamResponse team
+    ) {
+        this(issueKey, issueUrl, summary, issueType, doneAt, team, null, null, null, null);
+    }
 
     public DeliveryScopeIssueResponse(
             String issueKey,
@@ -18,6 +33,6 @@ public record DeliveryScopeIssueResponse(
             String issueType,
             Instant doneAt
     ) {
-        this(issueKey, issueUrl, summary, issueType, doneAt, null);
+        this(issueKey, issueUrl, summary, issueType, doneAt, null, null, null, null, null);
     }
 }

@@ -152,20 +152,27 @@ final class DeliveryScopeUnitState {
 
     DeliveryScopeUnitResponse snapshot() {
         var issues = unit.issues().stream()
-                .map(issue -> new DeliveryScopeIssueResponse(
-                        issue.issueKey(),
-                        issue.material().issueUrl(),
-                        issue.material().summary(),
-                        issue.material().issueType(),
-                        issue.doneAt(),
-                        issue.team() != null
-                                ? new DeliveryScopeTeamResponse(
-                                issue.team().id(),
-                                issue.team().name(),
-                                issue.team().fieldId()
-                        )
-                                : null
-                ))
+                .map(issue -> {
+                    var timeTracking = issue.material().timeTracking();
+                    return new DeliveryScopeIssueResponse(
+                            issue.issueKey(),
+                            issue.material().issueUrl(),
+                            issue.material().summary(),
+                            issue.material().issueType(),
+                            issue.doneAt(),
+                            issue.team() != null
+                                    ? new DeliveryScopeTeamResponse(
+                                    issue.team().id(),
+                                    issue.team().name(),
+                                    issue.team().fieldId()
+                            )
+                                    : null,
+                            timeTracking != null ? timeTracking.timeSpentSeconds() : null,
+                            timeTracking != null ? timeTracking.originalEstimateSeconds() : null,
+                            timeTracking != null ? timeTracking.remainingEstimateSeconds() : null,
+                            timeTracking != null ? timeTracking.capturedAt() : null
+                    );
+                })
                 .toList();
         var mergeRequests = unit.mergeRequests().stream()
                 .map(mergeRequest -> new DeliveryScopeMergeRequestResponse(

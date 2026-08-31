@@ -439,6 +439,199 @@
         </section>
       }
 
+      @if (currentTrend.efficiency.hasTimeSpentData || currentTrend.efficiency.hasEstimateData) {
+        <section class="trend-panel trend-efficiency-panel" aria-labelledby="trendEfficiencyTitle">
+          <div class="trend-section-heading trend-efficiency-heading">
+            <div>
+              <p class="section-eyebrow">Czas Jira + wynik assessmentu</p>
+              <h2 id="trendEfficiencyTitle">Efektywność dostarczenia</h2>
+            </div>
+            <label class="trend-field trend-efficiency-workday">
+              <span>Godzin w osobodniu</span>
+              <input
+                type="number"
+                min="1"
+                max="24"
+                step="0.5"
+                [formControl]="workdayHoursControl"
+                aria-label="Liczba godzin w osobodniu"
+              />
+            </label>
+          </div>
+
+          <p class="trend-efficiency-context">
+            Punkty złożoności dzielimy przez zarejestrowany czas. Delivery Unit wchodzi do
+            wyniku tylko wtedy, gdy każde jej issue ma `timespent` większy łącznie od zera.
+          </p>
+
+          @if (authorControl.value) {
+            <div class="trend-message trend-message--warning">
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+              <span>
+                Filtr autora zawęża Delivery Units powiązane z jego MR-ami. Nie przypisuje
+                czasu Jira ani efektywności do tej osoby.
+              </span>
+            </div>
+          }
+
+          @if (currentTrend.efficiency.periods.length > 0) {
+            <section class="trend-efficiency-summary-grid" aria-label="Podsumowanie efektywności">
+              <article class="trend-summary-card trend-summary-card--primary">
+                <span>Punkty / osobodzień</span>
+                <strong>{{ formatEfficiency(currentTrend.efficiency.pointsPerPersonDay) }}</strong>
+                <small>dla całego widocznego zakresu</small>
+              </article>
+              <article class="trend-summary-card">
+                <span>Punkty w próbie</span>
+                <strong>{{ formatPoints(currentTrend.efficiency.totalEligiblePoints) }}</strong>
+                <small>z pełnym `timespent` w Delivery Unit</small>
+              </article>
+              <article class="trend-summary-card">
+                <span>Zarejestrowane osobodni</span>
+                <strong>{{ formatPersonDays(currentTrend.efficiency.totalPersonDays) }}</strong>
+                <small>przy {{ workdayHoursControl.value }} h / osobodzień</small>
+              </article>
+              <article class="trend-summary-card">
+                <span>Pokrycie punktów</span>
+                <strong>{{ percentageLabel(currentTrend.efficiency.pointsCoveragePercent) }}</strong>
+                <small>{{ currentTrend.efficiency.eligibleUnitCount }} kwalifikujących się DU</small>
+              </article>
+            </section>
+
+            <div class="trend-chart-scroll">
+              <div
+                class="trend-chart trend-efficiency-chart"
+                role="img"
+                [style.--trend-period-count]="currentTrend.efficiency.periods.length"
+                [attr.aria-label]="efficiencyChartAriaLabel(currentTrend.efficiency)"
+                aria-describedby="trendEfficiencyTableCaption"
+              >
+                @for (period of currentTrend.efficiency.periods; track period.key) {
+                  <div class="trend-bar trend-efficiency-bar">
+                    <span class="trend-bar__value">{{ formatEfficiency(period.pointsPerPersonDay) }}</span>
+                    <div class="trend-bar__track" aria-hidden="true">
+                      <span
+                        class="trend-bar__fill"
+                        [class.trend-bar__fill--up]="period.direction === 'UP'"
+                        [class.trend-bar__fill--down]="period.direction === 'DOWN'"
+                        [class.trend-bar__fill--flat]="period.direction === 'FLAT'"
+                        [style.height.%]="efficiencyBarHeight(period, currentTrend.efficiency)"
+                      ></span>
+                    </div>
+                    <strong>{{ period.label }}</strong>
+                    <small
+                      [class.trend-value--up]="period.direction === 'UP'"
+                      [class.trend-value--down]="period.direction === 'DOWN'"
+                    >{{ period.delta === null ? 'pierwszy okres' : signedEfficiency(period.delta) }}</small>
+                    <small>{{ period.eligibleUnitCount }} DU · {{ period.pointsCoveragePercent }}% pokrycia</small>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="trend-table-scroll">
+              <table class="trend-table trend-efficiency-table">
+                <caption id="trendEfficiencyTableCaption">
+                  Punkty, czas i efektywność dla każdego widocznego okresu.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Okres</th>
+                    <th scope="col">Punkty</th>
+                    <th scope="col">Osobodni</th>
+                    <th scope="col">Punkty / osobodzień</th>
+                    <th scope="col">Zmiana</th>
+                    <th scope="col">Zmiana %</th>
+                    <th scope="col">Pokrycie punktów</th>
+                    <th scope="col">DU</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (period of currentTrend.efficiency.periods; track period.key) {
+                    <tr>
+                      <th scope="row">{{ period.label }}</th>
+                      <td>{{ formatPoints(period.eligiblePoints) }}</td>
+                      <td>{{ formatPersonDays(period.personDays) }}</td>
+                      <td><strong>{{ formatEfficiency(period.pointsPerPersonDay) }}</strong></td>
+                      <td
+                        [class.trend-value--up]="period.direction === 'UP'"
+                        [class.trend-value--down]="period.direction === 'DOWN'"
+                      >{{ signedEfficiency(period.delta) }}</td>
+                      <td>{{ percentLabel(period.deltaPercent) }}</td>
+                      <td>{{ period.pointsCoveragePercent }}%</td>
+                      <td>{{ period.eligibleUnitCount }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else if (currentTrend.efficiency.hasTimeSpentData) {
+            <p class="trend-empty-copy">
+              Dane `timespent` są obecne, ale żadna Delivery Unit w wybranym zakresie nie ma
+              kompletnego, dodatniego czasu dla wszystkich swoich issue.
+            </p>
+          } @else {
+            <p class="trend-empty-copy">
+              Estymacje są obecne, ale bez `timespent` nie można policzyć efektywności ani
+              porównać estymacji z czasem zarejestrowanym.
+            </p>
+          }
+
+          @if (currentTrend.efficiency.estimateEligibleUnitCount > 0) {
+            <section class="trend-effort-comparison" aria-labelledby="trendEstimateTitle">
+              <div class="trend-section-heading">
+                <div>
+                  <p class="section-eyebrow">Ta sama próba Delivery Units</p>
+                  <h3 id="trendEstimateTitle">Estymacja a czas zarejestrowany</h3>
+                </div>
+              </div>
+
+              <div class="trend-effort-summary">
+                <div><span>Estymacja</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalEstimatedPersonDays) }}</strong><small>osobodni</small></div>
+                <div><span>Czas zarejestrowany</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalActualPersonDaysForEstimate) }}</strong><small>osobodni</small></div>
+                <div><span>Odchylenie</span><strong>{{ percentLabel(currentTrend.efficiency.estimateVariancePercent) }}</strong><small>actual względem estimate</small></div>
+                <div><span>Próba</span><strong>{{ currentTrend.efficiency.estimateEligibleUnitCount }}</strong><small>Delivery Units</small></div>
+              </div>
+
+              <div class="trend-effort-periods">
+                @for (period of currentTrend.efficiency.periods; track period.key) {
+                  @if (period.estimateUnitCount > 0) {
+                    <div class="trend-effort-row">
+                      <strong>{{ period.label }}</strong>
+                      <div class="trend-effort-bars">
+                        <div>
+                          <span>Estymacja</span>
+                          <i [style.width.%]="effortBarWidth(period.estimatedPersonDays, currentTrend.efficiency)"></i>
+                          <small>{{ formatPersonDays(period.estimatedPersonDays) }} os.</small>
+                        </div>
+                        <div>
+                          <span>Actual</span>
+                          <i class="trend-effort-bar--actual" [style.width.%]="effortBarWidth(period.actualPersonDaysForEstimate, currentTrend.efficiency)"></i>
+                          <small>{{ formatPersonDays(period.actualPersonDaysForEstimate) }} os.</small>
+                        </div>
+                      </div>
+                      <span>{{ percentLabel(period.estimateVariancePercent) }}</span>
+                    </div>
+                  }
+                }
+              </div>
+            </section>
+          }
+
+          <dl class="trend-quality-grid trend-efficiency-quality">
+            <div><dt>Issue z `timespent`</dt><dd>{{ currentTrend.efficiency.timeSpentIssueCount }}</dd></div>
+            <div><dt>Issue z estymacją</dt><dd>{{ currentTrend.efficiency.estimatedIssueCount }}</dd></div>
+            <div><dt>DU bez pełnego czasu</dt><dd>{{ currentTrend.efficiency.unitsWithoutCompleteTime }}</dd></div>
+            <div><dt>DU z czasem 0</dt><dd>{{ currentTrend.efficiency.unitsWithZeroTime }}</dd></div>
+            @if (teamControl.value) {
+              <div><dt>DU wielozespołowe poza wynikiem</dt><dd>{{ currentTrend.efficiency.crossTeamUnitsExcluded }}</dd></div>
+            }
+            <div><dt>Issue z remaining estimate</dt><dd>{{ currentTrend.efficiency.issuesWithRemainingEstimate }}</dd></div>
+            <div><dt>Okresy z próbą poniżej 3 DU</dt><dd>{{ currentTrend.efficiency.lowSamplePeriodCount }}</dd></div>
+          </dl>
+        </section>
+      }
+
       <div class="trend-details-grid">
         <section class="trend-panel" aria-labelledby="trendHighlightsTitle">
           <div class="trend-section-heading">

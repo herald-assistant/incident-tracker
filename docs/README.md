@@ -79,10 +79,28 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `needs/delivery-complexity-trends.md`
   opisuje potrzebe lokalnego polaczenia biznesowych CSV jednego assessmentu i
   podgladu zmian dostarczonej zlozonosci dziennie, miesiecznie lub kwartalnie.
+- `needs/delivery-complexity-effort-data.md`
+  opisuje potrzebe rozpoczecia zapisu snapshotow czasu i estimate z Jira per
+  issue jako podstawy przyszlej analizy relacji zlozonosci do nakladu.
+- `needs/delivery-complexity-efficiency-trends.md`
+  opisuje zatwierdzona interpretacje punktow na osobodzien, rygor kompletnej
+  Delivery Unit, pokrycie, filtry zespolu i porownanie estimate z actual.
+- `needs/delivery-complexity-csv-time-tracking-backfill.md`
+  opisuje potrzebe bezpiecznego uzupelnienia starszych biznesowych CSV o
+  aktualny snapshot time tracking z Jira.
+- `plans/delivery-complexity-time-tracking-snapshots.md`
+  dokumentuje wykonany inkrement L2 obejmujacy neutralny material Jira,
+  snapshoty i eksporty obu assessmentow bez wlaczania danych czasu do AI.
 - `plans/delivery-complexity-trends.md`
   dokumentuje zrealizowany plan L2 dla uniwersalnego frontendowego dashboardu,
   rozszerzenia obu CSV o autorow MR oraz filtrow zespolu, autora i dat bez
   zapisu na serwerze.
+- `plans/delivery-complexity-efficiency-trends.md`
+  dokumentuje inkrement L1 rozszerzajacy dashboard o warunkowa analize
+  efektywnosci i estymacji z zachowaniem prezentacji zlozonosci.
+- `plans/delivery-complexity-csv-time-tracking-backfill.md`
+  dokumentuje samodzielny skrypt Node, deduplikacje issue, pobranie Jira i
+  bezpieczny zapis wzbogaconych raportow.
 - `plans/ui-explorer.md`
   jest zatwierdzonym planem L2 w realizacji dla statycznego, screen-centered MVP z katalogiem
   ekranow wybieranych przez jawnie zarejestrowany system
@@ -125,8 +143,8 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
   drugiego assessmentu i deletion boundary.
 - `architecture/delivery-complexity-trends-runtime-flow.md`
   opisuje client-only import wielu biznesowych CSV jednego assessmentu,
-  deduplikacje issue, addytywnosc Delivery Units, okresy, filtry i jakosc
-  trendu.
+  deduplikacje issue, addytywnosc Delivery Units, okresy, filtry, jakosc oraz
+  opcjonalna analize punktow na osobodzien i estimate kontra actual.
 - `architecture/package-dependencies.md`
   definiuje dozwolony graf zaleznosci i odpowiedzialnosc warstw.
 - `architecture/operational-context-model-tools-and-usage.md`

@@ -1,6 +1,8 @@
 import {
   AssessmentTrendDataset,
   AssessmentTrendDimensionDefinition,
+  AssessmentTrendEfficiencyPeriod,
+  AssessmentTrendEfficiencyView,
   AssessmentTrendFilterOption,
   AssessmentTrendFilters,
   AssessmentTrendGranularity,
@@ -41,7 +43,8 @@ const DELIVERY_SCOPE_DIMENSIONS: readonly DimensionConfiguration[] = [
 
 export function buildAssessmentTrendView(
   dataset: AssessmentTrendDataset,
-  filters: AssessmentTrendFilters
+  filters: AssessmentTrendFilters,
+  hoursPerWorkday = 8
 ): AssessmentTrendView {
   const dimensionConfigurations = dimensionsFor(dataset.source);
   const units = buildUnits(dataset.rows, dimensionConfigurations);
@@ -130,7 +133,8 @@ export function buildAssessmentTrendView(
       unitsWithMultipleAggregationAnchors: units.filter((unit) => unit.multipleAnchors).length,
       unitsWithConflictingFinalScores: units.filter((unit) => unit.conflictingFinalScores).length,
       unitsWithIncompleteDimensions: units.filter((unit) => unit.incompleteDimensions).length
-    }
+    },
+    efficiency: buildEfficiencyView(selectedUnits, filters, hoursPerWorkday)
   };
 }
 
@@ -149,6 +153,14 @@ interface TrendUnit {
   usesFinalScoreFallback: boolean;
   multipleAnchors: boolean;
   conflictingFinalScores: boolean;
+  singleTeamKey: string | null;
+  timeSpentSeconds: number | null;
+  originalEstimateSeconds: number | null;
+  hasAnyTimeSpent: boolean;
+  hasAnyEstimate: boolean;
+  timeSpentIssueCount: number;
+  estimatedIssueCount: number;
+  issuesWithRemainingEstimate: number;
 }
 
 interface PeriodAccumulator {
@@ -195,6 +207,9 @@ function buildUnit(
   const teams = new Map<string, string>();
   const authors = new Map<string, string>();
   const issueTypes = new Map<string, string>();
+  const rowTeamKeys = new Set(sorted.map((row) => row.teamKey));
+  const timeSpentValues = sorted.map((row) => row.timeSpentSeconds);
+  const originalEstimateValues = sorted.map((row) => row.originalEstimateSeconds);
 
   for (const row of sorted) {
     if (row.teamKey && !teams.has(row.teamKey)) {
@@ -242,7 +257,186 @@ function buildUnit(
     ),
     usesFinalScoreFallback,
     multipleAnchors: anchors.length > 1,
-    conflictingFinalScores: finalPointValues.size > 1
+    conflictingFinalScores: finalPointValues.size > 1,
+    singleTeamKey: rowTeamKeys.size === 1 && !rowTeamKeys.has(null)
+      ? Array.from(rowTeamKeys)[0]
+      : null,
+    timeSpentSeconds: timeSpentValues.every((value) => value !== null)
+      ? timeSpentValues.reduce((total, value) => total + value!, 0)
+      : null,
+    originalEstimateSeconds: originalEstimateValues.every((value) => value !== null)
+      ? originalEstimateValues.reduce((total, value) => total + value!, 0)
+      : null,
+    hasAnyTimeSpent: timeSpentValues.some((value) => value !== null),
+    hasAnyEstimate: originalEstimateValues.some((value) => value !== null),
+    timeSpentIssueCount: timeSpentValues.filter((value) => value !== null).length,
+    estimatedIssueCount: originalEstimateValues.filter((value) => value !== null).length,
+    issuesWithRemainingEstimate: sorted.filter(
+      (row) => (row.remainingEstimateSeconds ?? 0) > 0
+    ).length
+  };
+}
+
+interface EfficiencyPeriodAccumulator {
+  key: string;
+  label: string;
+  totalScoredPoints: number;
+  eligiblePoints: number;
+  timeSpentSeconds: number;
+  eligibleUnitIds: Set<string>;
+  eligibleIssueKeys: Set<string>;
+  originalEstimateSeconds: number;
+  actualSecondsForEstimate: number;
+  estimateUnitIds: Set<string>;
+}
+
+function buildEfficiencyView(
+  selectedUnits: TrendUnit[],
+  filters: AssessmentTrendFilters,
+  hoursPerWorkday: number
+): AssessmentTrendEfficiencyView {
+  const effectiveHours = Number.isFinite(hoursPerWorkday)
+    ? Math.min(24, Math.max(1, hoursPerWorkday))
+    : 8;
+  const secondsPerWorkday = effectiveHours * 3600;
+  const scoredUnits = selectedUnits.filter((unit) => unit.points !== null && unit.pointDate);
+  const periodMap = new Map<string, EfficiencyPeriodAccumulator>();
+  let crossTeamUnitsExcluded = 0;
+  let unitsWithoutCompleteTime = 0;
+  let unitsWithZeroTime = 0;
+
+  for (const unit of scoredUnits) {
+    const key = periodKey(unit.pointDate!, filters.granularity);
+    const period = periodMap.get(key) ?? {
+      key,
+      label: periodLabel(key, filters.granularity),
+      totalScoredPoints: 0,
+      eligiblePoints: 0,
+      timeSpentSeconds: 0,
+      eligibleUnitIds: new Set<string>(),
+      eligibleIssueKeys: new Set<string>(),
+      originalEstimateSeconds: 0,
+      actualSecondsForEstimate: 0,
+      estimateUnitIds: new Set<string>()
+    };
+    period.totalScoredPoints += unit.points!;
+    periodMap.set(key, period);
+
+    if (filters.teamKey && unit.singleTeamKey !== filters.teamKey) {
+      crossTeamUnitsExcluded += 1;
+      continue;
+    }
+    if (unit.timeSpentSeconds === null) {
+      unitsWithoutCompleteTime += 1;
+      continue;
+    }
+    if (unit.timeSpentSeconds <= 0) {
+      unitsWithZeroTime += 1;
+      continue;
+    }
+
+    period.eligiblePoints += unit.points!;
+    period.timeSpentSeconds += unit.timeSpentSeconds;
+    period.eligibleUnitIds.add(unit.id);
+    unit.issueKeys.forEach((issueKey) => period.eligibleIssueKeys.add(issueKey));
+
+    if (unit.originalEstimateSeconds !== null && unit.originalEstimateSeconds > 0) {
+      period.originalEstimateSeconds += unit.originalEstimateSeconds;
+      period.actualSecondsForEstimate += unit.timeSpentSeconds;
+      period.estimateUnitIds.add(unit.id);
+    }
+  }
+
+  const periods = Array.from(periodMap.values())
+    .filter((period) => period.timeSpentSeconds > 0)
+    .sort((first, second) => first.key.localeCompare(second.key))
+    .map((period, index, all): AssessmentTrendEfficiencyPeriod => {
+      const personDays = period.timeSpentSeconds / secondsPerWorkday;
+      const pointsPerPersonDay = period.eligiblePoints / personDays;
+      const previous = all[index - 1];
+      const previousEfficiency = previous
+        ? previous.eligiblePoints / (previous.timeSpentSeconds / secondsPerWorkday)
+        : null;
+      const delta = previousEfficiency === null
+        ? null
+        : round2(pointsPerPersonDay - previousEfficiency);
+      const estimatedPersonDays = period.estimateUnitIds.size > 0
+        ? round2(period.originalEstimateSeconds / secondsPerWorkday)
+        : null;
+      const actualPersonDaysForEstimate = period.estimateUnitIds.size > 0
+        ? round2(period.actualSecondsForEstimate / secondsPerWorkday)
+        : null;
+      return {
+        key: period.key,
+        label: period.label,
+        eligiblePoints: round1(period.eligiblePoints),
+        personDays: round2(personDays),
+        pointsPerPersonDay: round2(pointsPerPersonDay),
+        delta,
+        deltaPercent: previousEfficiency === null || previousEfficiency === 0 || delta === null
+          ? null
+          : round1(delta / Math.abs(previousEfficiency) * 100),
+        direction: delta === null ? 'NONE' : delta > 0 ? 'UP' : delta < 0 ? 'DOWN' : 'FLAT',
+        eligibleUnitCount: period.eligibleUnitIds.size,
+        eligibleIssueCount: period.eligibleIssueKeys.size,
+        pointsCoveragePercent: percentage(period.eligiblePoints, period.totalScoredPoints),
+        estimatedPersonDays,
+        actualPersonDaysForEstimate,
+        estimateVariancePercent: estimatedPersonDays === null
+          || actualPersonDaysForEstimate === null
+          || estimatedPersonDays === 0
+          ? null
+          : round1((actualPersonDaysForEstimate - estimatedPersonDays) / estimatedPersonDays * 100),
+        estimateUnitCount: period.estimateUnitIds.size
+      };
+    });
+
+  const eligiblePoints = periods.reduce((total, period) => total + period.eligiblePoints, 0);
+  const totalPersonDays = periods.reduce((total, period) => total + period.personDays, 0);
+  const totalScoredPoints = scoredUnits.reduce((total, unit) => total + unit.points!, 0);
+  const estimatePeriods = periods.filter((period) => period.estimateUnitCount > 0);
+  const totalEstimatedPersonDays = estimatePeriods.length
+    ? round2(estimatePeriods.reduce((total, period) => total + period.estimatedPersonDays!, 0))
+    : null;
+  const totalActualPersonDaysForEstimate = estimatePeriods.length
+    ? round2(estimatePeriods.reduce(
+      (total, period) => total + period.actualPersonDaysForEstimate!, 0
+    ))
+    : null;
+
+  return {
+    hasTimeSpentData: selectedUnits.some((unit) => unit.hasAnyTimeSpent),
+    hasEstimateData: selectedUnits.some((unit) => unit.hasAnyEstimate),
+    periods,
+    pointsPerPersonDay: totalPersonDays > 0 ? round2(eligiblePoints / totalPersonDays) : null,
+    totalEligiblePoints: round1(eligiblePoints),
+    totalPersonDays: round2(totalPersonDays),
+    pointsCoveragePercent: percentage(eligiblePoints, totalScoredPoints),
+    eligibleUnitCount: periods.reduce((total, period) => total + period.eligibleUnitCount, 0),
+    totalScoredUnitCount: scoredUnits.length,
+    unitsWithoutCompleteTime,
+    unitsWithZeroTime,
+    crossTeamUnitsExcluded,
+    lowSamplePeriodCount: periods.filter((period) => period.eligibleUnitCount < 3).length,
+    estimatedIssueCount: selectedUnits.reduce((total, unit) => total + unit.estimatedIssueCount, 0),
+    timeSpentIssueCount: selectedUnits.reduce((total, unit) => total + unit.timeSpentIssueCount, 0),
+    issuesWithRemainingEstimate: selectedUnits.reduce(
+      (total, unit) => total + unit.issuesWithRemainingEstimate, 0
+    ),
+    totalEstimatedPersonDays,
+    totalActualPersonDaysForEstimate,
+    estimateVariancePercent: totalEstimatedPersonDays === null
+      || totalActualPersonDaysForEstimate === null
+      || totalEstimatedPersonDays === 0
+      ? null
+      : round1(
+        (totalActualPersonDaysForEstimate - totalEstimatedPersonDays)
+        / totalEstimatedPersonDays
+        * 100
+      ),
+    estimateEligibleUnitCount: estimatePeriods.reduce(
+      (total, period) => total + period.estimateUnitCount, 0
+    )
   };
 }
 
@@ -447,4 +641,8 @@ function round1(value: number): number {
 
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function percentage(value: number, total: number): number {
+  return total <= 0 ? 0 : round1(value / total * 100);
 }

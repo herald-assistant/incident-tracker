@@ -11,6 +11,7 @@ import pl.mkn.tdw.integrations.confluence.ConfluencePagePort;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -125,7 +126,13 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                         ? comments(fields != null ? fields.path("comment").path("comments") : null)
                         : List.of(),
                 limitations,
-                customFields(fields, request.customFieldIds())
+                customFields(fields, request.customFieldIds()),
+                new JiraIssueTimeTracking(
+                        nonNegativeLong(fields, "timespent"),
+                        nonNegativeLong(fields, "timeoriginalestimate"),
+                        nonNegativeLong(fields, "timeestimate"),
+                        Instant.now()
+                )
         );
     }
 
@@ -145,7 +152,8 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
                 List.of(),
                 List.of(),
                 List.of("Jira issue was not found or is not visible for configured credentials."),
-                List.of()
+                List.of(),
+                null
         );
     }
 
@@ -446,6 +454,18 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
         return "";
     }
 
+    private Long nonNegativeLong(JsonNode node, String fieldName) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        var value = node.path(fieldName);
+        if (!value.isIntegralNumber() || !value.canConvertToLong()) {
+            return null;
+        }
+        var seconds = value.longValue();
+        return seconds >= 0 ? seconds : null;
+    }
+
     private String limitText(String value) {
         if (!StringUtils.hasText(value)) {
             return "";
@@ -457,7 +477,16 @@ public class JiraRestIssueAdapter implements JiraIssuePort {
 
     private URI issueUri(JiraIssueMaterialRequest request) {
         var fields = new LinkedHashSet<String>();
-        fields.addAll(List.of("summary", "description", "status", "issuetype", "labels"));
+        fields.addAll(List.of(
+                "summary",
+                "description",
+                "status",
+                "issuetype",
+                "labels",
+                "timespent",
+                "timeoriginalestimate",
+                "timeestimate"
+        ));
         if (request.includeIssueLinks()) {
             fields.add("issuelinks");
         }
