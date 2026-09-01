@@ -172,10 +172,14 @@ policzone osobno. Filtr autora MR jedynie zaweza zakres dostaw. Nie rozdziela
 Jesli ta sama kwalifikujaca sie jednostka ma kompletne, dodatnie
 `originalEstimateSeconds`, ekran porownuje Original Estimate (MD) z Time Spent
 (MD). Sumy MD pozostaja kontekstem dla calego zakresu, natomiast trend per
-okres pokazuje znormalizowane odchylenie
-`(Time Spent - Original Estimate) / Original Estimate * 100%` wokol osi `0%`.
-Wartosc ujemna oznacza naklad ponizej estymaty, a dodatnia naklad powyzej
-estymaty. Pozostale estimate nie sa mieszane z ta proba. Dodatni
+okres pokazuje wskaznik `Time Spent / Original Estimate * 100%` z linia
+referencyjna `100%` oraz zmiane wzgledem poprzedniego okresu w punktach
+procentowych. Wartosc ponizej `100%` oznacza przeszacowanie, a powyzej `100%`
+niedoszacowanie. Kolor slupka nie koduje polozenia wzgledem `100%`, tylko
+kierunek zmiany wobec poprzedniego okresu: spadek wskaznika oznacza bardziej
+efektywna realizacje i kolor zielony, wzrost mniej efektywna realizacje i kolor
+pomaranczowy, brak zmiany kolor szary, a pierwszy okres kolor niebieski.
+Pozostale estimate nie sa mieszane z ta proba. Dodatni
 `remainingEstimateSeconds` dla issue w Done jest licznikiem jakosci danych, a
 nie czescia efektywnosci.
 

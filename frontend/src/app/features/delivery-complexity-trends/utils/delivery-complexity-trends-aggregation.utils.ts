@@ -363,6 +363,18 @@ function buildEfficiencyView(
       const actualPersonDaysForEstimate = period.estimateUnitIds.size > 0
         ? round2(period.actualSecondsForEstimate / secondsPerWorkday)
         : null;
+      const estimateRealizationPercent = estimatedPersonDays === null
+        || actualPersonDaysForEstimate === null
+        || estimatedPersonDays === 0
+        ? null
+        : round1(actualPersonDaysForEstimate / estimatedPersonDays * 100);
+      const previousEstimatePeriod = all.slice(0, index).reverse().find((item) =>
+        item.estimateUnitIds.size > 0 && item.originalEstimateSeconds > 0
+      );
+      const previousEstimateRealizationPercent = previousEstimatePeriod
+        ? round1(previousEstimatePeriod.actualSecondsForEstimate
+          / previousEstimatePeriod.originalEstimateSeconds * 100)
+        : null;
       return {
         key: period.key,
         label: period.label,
@@ -384,6 +396,11 @@ function buildEfficiencyView(
           || estimatedPersonDays === 0
           ? null
           : round1((actualPersonDaysForEstimate - estimatedPersonDays) / estimatedPersonDays * 100),
+        estimateRealizationPercent,
+        estimateRealizationDeltaPoints: estimateRealizationPercent === null
+          || previousEstimateRealizationPercent === null
+          ? null
+          : round1(estimateRealizationPercent - previousEstimateRealizationPercent),
         estimateUnitCount: period.estimateUnitIds.size
       };
     });
@@ -431,6 +448,11 @@ function buildEfficiencyView(
         / totalEstimatedPersonDays
         * 100
       ),
+    estimateRealizationPercent: totalEstimatedPersonDays === null
+      || totalActualPersonDaysForEstimate === null
+      || totalEstimatedPersonDays === 0
+      ? null
+      : round1(totalActualPersonDaysForEstimate / totalEstimatedPersonDays * 100),
     estimateEligibleUnitCount: estimatePeriods.reduce(
       (total, period) => total + period.estimateUnitCount, 0
     )

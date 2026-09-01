@@ -339,34 +339,77 @@ export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
     return maximum === 0 ? 2 : Math.max(7, period.pointsPerPersonDay / maximum * 100);
   }
 
-  protected estimateVarianceBarWidth(
+  protected estimateRealizationBarHeight(
     period: AssessmentTrendEfficiencyPeriod,
     efficiency: AssessmentTrendEfficiencyView
   ): number {
-    if (period.estimateVariancePercent === null || period.estimateVariancePercent === 0) {
-      return 0;
+    if (period.estimateRealizationPercent === null) {
+      return 2;
     }
-    const maximum = Math.max(...efficiency.periods.map((item) =>
-      Math.abs(item.estimateVariancePercent ?? 0)
-    ), 0);
-    return maximum === 0
-      ? 0
-      : Math.max(6, Math.abs(period.estimateVariancePercent) / maximum * 100);
+    return Math.max(7, period.estimateRealizationPercent / this.estimateTrendMaximum(efficiency) * 100);
   }
 
-  protected estimateVarianceTooltip(period: AssessmentTrendEfficiencyPeriod): string {
-    return `Original Estimate: ${this.formatPersonDays(period.estimatedPersonDays)} MD`
+  protected estimateBaselinePosition(efficiency: AssessmentTrendEfficiencyView): number {
+    return 100 / this.estimateTrendMaximum(efficiency) * 100;
+  }
+
+  protected estimatePeriodCount(efficiency: AssessmentTrendEfficiencyView): number {
+    return efficiency.periods.filter((period) => period.estimateUnitCount > 0).length;
+  }
+
+  protected estimateRealizationLabel(value: number | null): string {
+    return value === null ? '-' : this.percentageLabel(value);
+  }
+
+  protected signedPercentagePoints(value: number | null): string {
+    if (value === null) {
+      return 'pierwszy okres';
+    }
+    const prefix = value > 0 ? '+' : '';
+    return `${prefix}${value.toLocaleString('pl-PL', { maximumFractionDigits: 1 })} p.p.`;
+  }
+
+  protected estimateChangeMeaning(value: number | null): string {
+    if (value === null) {
+      return 'punkt odniesienia dla kolejnych okresów';
+    }
+    if (value < 0) {
+      return 'efektywniej niż w poprzednim okresie';
+    }
+    if (value > 0) {
+      return 'mniej efektywnie niż w poprzednim okresie';
+    }
+    return 'bez zmiany względem poprzedniego okresu';
+  }
+
+  protected estimateRealizationTooltip(period: AssessmentTrendEfficiencyPeriod): string {
+    const relation = period.estimateVariancePercent === null || period.estimateVariancePercent === 0
+      ? 'zgodnie z estymatą'
+      : period.estimateVariancePercent < 0
+        ? `przeszacowanie ${this.percentageLabel(Math.abs(period.estimateVariancePercent))}`
+        : `niedoszacowanie ${this.percentageLabel(period.estimateVariancePercent)}`;
+    return `Time Spent / Original Estimate: ${this.estimateRealizationLabel(period.estimateRealizationPercent)}`
+      + ` · ${relation}`
+      + ` · zmiana: ${this.signedPercentagePoints(period.estimateRealizationDeltaPoints)}`
+      + ` · ${this.estimateChangeMeaning(period.estimateRealizationDeltaPoints)}`
+      + ` · Original Estimate: ${this.formatPersonDays(period.estimatedPersonDays)} MD`
       + ` · Time Spent: ${this.formatPersonDays(period.actualPersonDaysForEstimate)} MD`
-      + ` · Odchylenie: ${this.percentLabel(period.estimateVariancePercent)}`
       + ` · ${this.jiraIssueCountLabel(period.estimateUnitCount)}`;
   }
 
-  protected estimateVarianceChartAriaLabel(efficiency: AssessmentTrendEfficiencyView): string {
+  protected estimateRealizationChartAriaLabel(efficiency: AssessmentTrendEfficiencyView): string {
     const periods = efficiency.periods
       .filter((period) => period.estimateUnitCount > 0)
-      .map((period) => `${period.label}: ${this.percentLabel(period.estimateVariancePercent)}`)
+      .map((period) => `${period.label}: ${this.estimateRealizationLabel(period.estimateRealizationPercent)}, zmiana ${this.signedPercentagePoints(period.estimateRealizationDeltaPoints)}, ${this.estimateChangeMeaning(period.estimateRealizationDeltaPoints)}`)
       .join(', ');
-    return `Odchylenie Time Spent od Original Estimate. Wartość ujemna oznacza Time Spent poniżej estymaty, a dodatnia powyżej estymaty. ${periods}.`;
+    return `Trend Time Spent do Original Estimate. 100% oznacza realizację zgodną z estymatą, wartość poniżej 100% przeszacowanie, a powyżej 100% niedoszacowanie. ${periods}.`;
+  }
+
+  private estimateTrendMaximum(efficiency: AssessmentTrendEfficiencyView): number {
+    const maximum = Math.max(...efficiency.periods.map((period) =>
+      period.estimateRealizationPercent ?? 0
+    ), 100);
+    return maximum * 1.08;
   }
 
   protected efficiencyChartAriaLabel(efficiency: AssessmentTrendEfficiencyView): string {

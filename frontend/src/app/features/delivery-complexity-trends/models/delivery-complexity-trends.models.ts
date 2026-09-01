@@ -158,6 +158,8 @@ export interface AssessmentTrendEfficiencyPeriod {
   estimatedPersonDays: number | null;
   actualPersonDaysForEstimate: number | null;
   estimateVariancePercent: number | null;
+  estimateRealizationPercent: number | null;
+  estimateRealizationDeltaPoints: number | null;
   estimateUnitCount: number;
 }
 
@@ -181,5 +183,6 @@ export interface AssessmentTrendEfficiencyView {
   totalEstimatedPersonDays: number | null;
   totalActualPersonDaysForEstimate: number | null;
   estimateVariancePercent: number | null;
+  estimateRealizationPercent: number | null;
   estimateEligibleUnitCount: number;
 }

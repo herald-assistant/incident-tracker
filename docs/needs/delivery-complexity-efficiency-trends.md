@@ -20,8 +20,9 @@ warunkowa sekcja nakladu, ktora pokazuje:
 - Complexity Points (CP) i Time Spent (MD) bedace podstawa wskaznika,
 - zmiane wskaznika pomiedzy kolejnymi okresami z danymi,
 - pokrycie punktow kompletnym `timespent`,
-- estymowany i faktyczny naklad dla calego zakresu oraz procentowy trend
-  odchylenia Time Spent od Original Estimate per okres, gdy oba sa dostepne,
+- estymowany i faktyczny naklad dla calego zakresu oraz trend wskaznika
+  `Time Spent / Original Estimate` i jego zmiany w punktach procentowych per
+  okres, gdy oba sa dostepne,
 - liczebnosc proby i przyczyny pominiecia danych.
 
 ## Semantyka

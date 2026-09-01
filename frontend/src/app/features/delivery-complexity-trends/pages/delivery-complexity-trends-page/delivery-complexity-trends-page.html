@@ -498,68 +498,58 @@
             <div class="trend-effort-summary">
               <div><span>Original Estimate (MD)</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalEstimatedPersonDays) }}</strong><small>MD</small></div>
               <div><span>Time Spent (MD)</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalActualPersonDaysForEstimate) }}</strong><small>MD</small></div>
-              <div><span>Odchylenie Time Spent</span><strong>{{ percentLabel(currentTrend.efficiency.estimateVariancePercent) }}</strong><small>względem Original Estimate</small></div>
+              <div><span>Realizacja estymaty</span><strong>{{ estimateRealizationLabel(currentTrend.efficiency.estimateRealizationPercent) }}</strong><small>Time Spent / Original Estimate</small></div>
               <div><span>Próba</span><strong>{{ currentTrend.efficiency.estimateEligibleUnitCount }}</strong><small>Jira Issues</small></div>
             </div>
 
-            <div class="trend-estimate-variance-heading">
+            <div class="trend-estimate-trend-heading">
               <p>
-                Porównanie jest znormalizowane względem Original Estimate, dlatego wielkość
-                backlogu w okresie nie zmienia skali wyniku.
+                100% oznacza, że Time Spent pokrywa się z Original Estimate. Zmiana pod okresem
+                pokazuje różnicę względem poprzedniego okresu w punktach procentowych.
               </p>
-              <div class="trend-estimate-variance-legend" aria-label="Legenda odchylenia od estymaty">
-                <span><i class="trend-estimate-variance-legend__under"></i> poniżej estymaty</span>
-                <span><i class="trend-estimate-variance-legend__over"></i> powyżej estymaty</span>
-                <span><i></i> zgodnie z estymatą</span>
+            </div>
+
+            <div class="trend-chart-scroll">
+              <div
+                class="trend-chart trend-estimate-trend-chart"
+                role="img"
+                [style.--trend-period-count]="estimatePeriodCount(currentTrend.efficiency)"
+                [attr.aria-label]="estimateRealizationChartAriaLabel(currentTrend.efficiency)"
+              >
+                @for (period of currentTrend.efficiency.periods; track period.key) {
+                  @if (period.estimateUnitCount > 0) {
+                    <div
+                      class="trend-bar trend-estimate-trend-bar"
+                      [style.--estimate-baseline]="estimateBaselinePosition(currentTrend.efficiency) + '%'"
+                      [attr.title]="estimateRealizationTooltip(period)"
+                    >
+                      <span class="trend-bar__value">{{ estimateRealizationLabel(period.estimateRealizationPercent) }}</span>
+                      <div class="trend-bar__track" aria-hidden="true">
+                        <span
+                          class="trend-bar__fill"
+                          [class.trend-estimate-trend-bar__fill--first]="period.estimateRealizationDeltaPoints === null"
+                          [class.trend-estimate-trend-bar__fill--improved]="period.estimateRealizationDeltaPoints !== null && period.estimateRealizationDeltaPoints < 0"
+                          [class.trend-estimate-trend-bar__fill--flat]="period.estimateRealizationDeltaPoints === 0"
+                          [class.trend-estimate-trend-bar__fill--worsened]="period.estimateRealizationDeltaPoints !== null && period.estimateRealizationDeltaPoints > 0"
+                          [style.height.%]="estimateRealizationBarHeight(period, currentTrend.efficiency)"
+                        ></span>
+                      </div>
+                      <strong>{{ period.label }}</strong>
+                      <div class="trend-bar__change">
+                        <small>{{ signedPercentagePoints(period.estimateRealizationDeltaPoints) }}</small>
+                        <small>{{ jiraIssueCountLabel(period.estimateUnitCount) }}</small>
+                      </div>
+                    </div>
+                  }
+                }
               </div>
             </div>
 
-            <div
-              class="trend-estimate-variance-chart"
-              role="img"
-              [attr.aria-label]="estimateVarianceChartAriaLabel(currentTrend.efficiency)"
-            >
-              <div class="trend-estimate-variance-axis" aria-hidden="true">
-                <span></span>
-                <div>
-                  <span>mniej czasu</span>
-                  <strong>0%</strong>
-                  <span>więcej czasu</span>
-                </div>
-                <span>Odchylenie / próba</span>
-              </div>
-              @for (period of currentTrend.efficiency.periods; track period.key) {
-                @if (period.estimateUnitCount > 0) {
-                  <div
-                    class="trend-estimate-variance-row"
-                    [attr.title]="estimateVarianceTooltip(period)"
-                  >
-                    <strong>{{ period.label }}</strong>
-                    <div class="trend-estimate-variance-track" aria-hidden="true">
-                      <span class="trend-estimate-variance-track__under">
-                        @if (period.estimateVariancePercent !== null && period.estimateVariancePercent < 0) {
-                          <i [style.width.%]="estimateVarianceBarWidth(period, currentTrend.efficiency)"></i>
-                        }
-                      </span>
-                      <span class="trend-estimate-variance-track__over">
-                        @if (period.estimateVariancePercent !== null && period.estimateVariancePercent > 0) {
-                          <i [style.width.%]="estimateVarianceBarWidth(period, currentTrend.efficiency)"></i>
-                        }
-                      </span>
-                      @if (period.estimateVariancePercent === 0) {
-                        <i class="trend-estimate-variance-track__zero"></i>
-                      }
-                    </div>
-                    <div class="trend-estimate-variance-value">
-                      <strong
-                        [class.trend-estimate-variance-value--under]="period.estimateVariancePercent !== null && period.estimateVariancePercent < 0"
-                        [class.trend-estimate-variance-value--over]="period.estimateVariancePercent !== null && period.estimateVariancePercent > 0"
-                      >{{ percentLabel(period.estimateVariancePercent) }}</strong>
-                      <small>{{ jiraIssueCountLabel(period.estimateUnitCount) }}</small>
-                    </div>
-                  </div>
-                }
-              }
+            <div class="trend-estimate-trend-legend" aria-label="Legenda zmiany efektywności względem poprzedniego okresu">
+              <span><i class="trend-estimate-trend-legend__first"></i> pierwszy okres</span>
+              <span><i class="trend-estimate-trend-legend__improved"></i> efektywniej</span>
+              <span><i class="trend-estimate-trend-legend__worsened"></i> mniej efektywnie</span>
+              <span><i></i> bez zmiany</span>
             </div>
           </section>
         }

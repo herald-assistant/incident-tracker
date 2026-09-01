@@ -128,6 +128,9 @@ describe('Delivery Complexity Trends aggregation', () => {
     expect(efficiency.totalEstimatedPersonDays).toBe(1);
     expect(efficiency.totalActualPersonDaysForEstimate).toBe(1.25);
     expect(efficiency.estimateVariancePercent).toBe(25);
+    expect(efficiency.estimateRealizationPercent).toBe(125);
+    expect(efficiency.periods[0].estimateRealizationPercent).toBe(125);
+    expect(efficiency.periods[0].estimateRealizationDeltaPoints).toBeNull();
     expect(efficiency.estimateEligibleUnitCount).toBe(1);
     expect(efficiency.issuesWithRemainingEstimate).toBe(1);
   });

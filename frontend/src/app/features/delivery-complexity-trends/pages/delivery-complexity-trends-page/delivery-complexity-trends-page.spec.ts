@@ -174,7 +174,8 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(efficiency.textContent).toContain('Efficiency');
     expect(efficiency.textContent).not.toContain('Original Estimate a Time Spent');
     expect(estimateComparison.textContent).toContain('Original Estimate a Time Spent');
-    expect(estimateComparison.textContent).toContain('Odchylenie Time Spent');
+    expect(estimateComparison.textContent).toContain('Realizacja estymaty');
+    expect(estimateComparison.textContent).toContain('Time Spent / Original Estimate');
     expect(estimateComparison.previousElementSibling).toBe(efficiency);
     expect(efficiency.textContent).toContain('Efficiency');
     expect(efficiency.textContent).toContain('CP/MD');
@@ -190,18 +191,22 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(efficiencyDetails.open).toBe(false);
     expect(efficiencyDetails.querySelector('summary')?.textContent).toContain('Pokaż dokładne wartości okresów');
     expect(efficiency.querySelectorAll('.trend-efficiency-table tbody tr')).toHaveLength(2);
-    const varianceRows = Array.from(
-      estimateComparison.querySelectorAll<HTMLElement>('.trend-estimate-variance-row')
+    const estimateBars = Array.from(
+      estimateComparison.querySelectorAll<HTMLElement>('.trend-estimate-trend-bar')
     );
-    expect(varianceRows).toHaveLength(2);
+    expect(estimateBars).toHaveLength(2);
     expect(estimateComparison.querySelector('.trend-effort-bars')).toBeNull();
-    expect(varianceRows[0].title).toBe(
-      'Original Estimate: 1 MD · Time Spent: 1 MD · Odchylenie: 0% · 1 Jira Issue'
+    expect(estimateBars[0].title).toBe(
+      'Time Spent / Original Estimate: 100% · zgodnie z estymatą · zmiana: pierwszy okres · punkt odniesienia dla kolejnych okresów · Original Estimate: 1 MD · Time Spent: 1 MD · 1 Jira Issue'
     );
-    expect(varianceRows[1].textContent).toContain('+33,3%');
+    expect(estimateBars[1].textContent).toContain('133,3%');
+    expect(estimateBars[1].textContent).toContain('+33,3 p.p.');
+    expect(estimateBars[0].querySelector('.trend-estimate-trend-bar__fill--first')).not.toBeNull();
+    expect(estimateBars[1].querySelector('.trend-estimate-trend-bar__fill--worsened')).not.toBeNull();
+    expect(estimateBars[1].title).toContain('mniej efektywnie niż w poprzednim okresie');
     expect(
-      estimateComparison.querySelector('.trend-estimate-variance-chart')?.getAttribute('aria-label')
-    ).toContain('Wartość ujemna oznacza Time Spent poniżej estymaty');
+      estimateComparison.querySelector('.trend-estimate-trend-chart')?.getAttribute('aria-label')
+    ).toContain('100% oznacza realizację zgodną z estymatą');
     expect(efficiency.querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('10,5');
     expect(efficiency.querySelector('input[type="number"]')).toBeNull();
     expect(efficiency.textContent).toContain('1 MD odpowiada 8 godzinom');
@@ -212,6 +217,30 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(element().querySelector('.trend-efficiency-panel')?.textContent).toContain(
       'Nie przypisuje Time Spent ani Efficiency do tej osoby'
     );
+  });
+
+  it('should color a lower estimate realization ratio as more efficient than the previous period', async () => {
+    await selectFiles([csvFile('estimate-direction.csv', DCA_HEADERS, [
+      row(DCA_HEADERS, {
+        timeSpentSeconds: '28800',
+        originalEstimateSeconds: '21600',
+        timeTrackingCapturedAt: '2026-07-11T08:00:00Z'
+      }),
+      row(DCA_HEADERS, {
+        issueKey: 'CRM-2',
+        doneAt: '2026-08-10T09:00:00+02:00',
+        deliveryUnitId: 'DU-CRM-2',
+        timeSpentSeconds: '28800',
+        originalEstimateSeconds: '36000',
+        timeTrackingCapturedAt: '2026-08-11T08:00:00Z'
+      })
+    ])]);
+
+    const estimateBars = element().querySelectorAll<HTMLElement>('.trend-estimate-trend-bar');
+    expect(estimateBars).toHaveLength(2);
+    expect(estimateBars[1].textContent).toContain('-53,3 p.p.');
+    expect(estimateBars[1].querySelector('.trend-estimate-trend-bar__fill--improved')).not.toBeNull();
+    expect(estimateBars[1].title).toContain('efektywniej niż w poprzednim okresie');
   });
 
   it('should filter whole Delivery Units by multiple issue types without double counting', async () => {
