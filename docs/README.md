@@ -76,31 +76,6 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   opisuje potrzebe generowania funkcjonalnej lub technicznej dokumentacji
   zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez
   analityka, ktory nie musi znac repozytorium ani mechaniki AI.
-- `needs/delivery-complexity-trends.md`
-  opisuje potrzebe lokalnego polaczenia biznesowych CSV jednego assessmentu i
-  podgladu zmian dostarczonej zlozonosci dziennie, miesiecznie lub kwartalnie.
-- `needs/delivery-complexity-effort-data.md`
-  opisuje potrzebe rozpoczecia zapisu snapshotow czasu i estimate z Jira per
-  issue jako podstawy przyszlej analizy relacji zlozonosci do nakladu.
-- `needs/delivery-complexity-efficiency-trends.md`
-  opisuje zatwierdzona interpretacje punktow na osobodzien, rygor kompletnej
-  Delivery Unit, pokrycie, filtry zespolu i porownanie estimate z actual.
-- `needs/delivery-complexity-csv-time-tracking-backfill.md`
-  opisuje potrzebe bezpiecznego uzupelnienia starszych biznesowych CSV o
-  aktualny snapshot time tracking z Jira.
-- `plans/delivery-complexity-time-tracking-snapshots.md`
-  dokumentuje wykonany inkrement L2 obejmujacy neutralny material Jira,
-  snapshoty i eksporty obu assessmentow bez wlaczania danych czasu do AI.
-- `plans/delivery-complexity-trends.md`
-  dokumentuje zrealizowany plan L2 dla uniwersalnego frontendowego dashboardu,
-  rozszerzenia obu CSV o autorow MR oraz filtrow zespolu, autora i dat bez
-  zapisu na serwerze.
-- `plans/delivery-complexity-efficiency-trends.md`
-  dokumentuje inkrement L1 rozszerzajacy dashboard o warunkowa analize
-  efektywnosci i estymacji z zachowaniem prezentacji zlozonosci.
-- `plans/delivery-complexity-csv-time-tracking-backfill.md`
-  dokumentuje samodzielny skrypt Node, deduplikacje issue, pobranie Jira i
-  bezpieczny zapis wzbogaconych raportow.
 - `plans/ui-explorer.md`
   jest zatwierdzonym planem L2 w realizacji dla statycznego, screen-centered MVP z katalogiem
   ekranow wybieranych przez jawnie zarejestrowany system
@@ -116,6 +91,13 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
+
+Rodzina Delivery Complexity nie utrzymuje zakonczonych potrzeb ani planow jako
+archiwum. Aktualny stan Delivery Complexity Assessment, Delivery Scope
+Complexity i Delivery Complexity Trends jest opisany w odpowiednich dokumentach
+`architecture/*-runtime-flow.md`. Kolejny inkrement L1-L3 wymaga nowego albo
+zaktualizowanego dokumentu potrzeby oraz zatwierdzonego planu; historie
+zakonczonych prac zachowuje Git.
 
 Dla nowego feature'a albo kolejnego inkrementu L1-L3 utworz lub zaktualizuj
 konkretny dokument w `needs/` oraz zatwierdzony plan w `plans/`, zamiast
