@@ -75,6 +75,20 @@ Pelna lista opcji:
 node "C:\sciezka\do\incident-tracker\tools\enrich-assessment-csv-time-tracking.mjs" --help
 ```
 
+## Wewnetrzny certyfikat Jira
+
+Preferowane rozwiazanie to wskazanie firmowego CA przez `NODE_EXTRA_CA_CERTS`
+albo uruchomienie Node z `--use-system-ca`. Gdy srodowisko wymaga swiadomego
+wylaczenia weryfikacji certyfikatu, uzyj jawnej opcji:
+
+```powershell
+node "C:\sciezka\do\incident-tracker\tools\enrich-assessment-csv-time-tracking.mjs" --insecure
+```
+
+Alternatywnie mozna ustawic `$env:JIRA_INSECURE_TLS = "true"`. Tryb jest
+ograniczony do zapytan Jira wykonywanych przez ten proces i wypisuje
+ostrzezenie. Nie zmienia ustawien systemu ani aplikacji.
+
 ## Bledy i bezpieczenstwo danych
 
 - HTTP 429 i bledy 5xx sa ponawiane z opoznieniem.
@@ -88,8 +102,7 @@ node "C:\sciezka\do\incident-tracker\tools\enrich-assessment-csv-time-tracking.m
   `ANALYSIS_JIRA_TOKEN`, nie przez argument CLI.
 - Istniejace pliki wynikowe nie sa nadpisywane bez `--overwrite`.
 
-Jezeli firmowa Jira uzywa prywatnego urzedu certyfikacji, wskaz zaufany
-certyfikat CA zamiast wylaczac walidacje TLS:
+Jezeli certyfikat CA jest dostepny, wskaz go zamiast uzywac `--insecure`:
 
 ```powershell
 $env:NODE_EXTRA_CA_CERTS = "C:\certyfikaty\corporate-ca.pem"

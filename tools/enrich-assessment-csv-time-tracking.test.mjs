@@ -242,6 +242,40 @@ test('tryb in-place tworzy kopie zapasowa przed zmiana zrodla', async (t) => {
     .includes('timeSpentSeconds'), true);
 });
 
+test('tryb insecure ogranicza zmienna TLS do fazy pobierania Jira', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tdw-time-tracking-tls-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  await fs.writeFile(
+    path.join(directory, 'may.csv'),
+    buildExcelCsv([OLD_HEADERS, oldRow('CRM-1', 'Maj')]),
+    'utf8'
+  );
+  const previous = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  t.after(() => {
+    if (previous === undefined) {
+      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    } else {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = previous;
+    }
+  });
+  let valueDuringFetch;
+
+  await enrichDirectory({
+    ...baseOptions(directory, async () => {
+      valueDuringFetch = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      return new Response(
+        JSON.stringify({ fields: { timespent: 3_600 } }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+    }),
+    insecureTls: true
+  });
+
+  assert.equal(valueDuringFetch, '0');
+  assert.equal(process.env.NODE_TLS_REJECT_UNAUTHORIZED, undefined);
+});
+
 test('preflight nie zapisuje czesci wynikow, gdy jeden plik docelowy juz istnieje', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tdw-time-tracking-conflict-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
@@ -294,6 +328,8 @@ test('argumenty nie przyjmuja tokenu w CLI i domyslnie uzywaja aktualnego katalo
     ANALYSIS_JIRA_BASE_URL: 'https://jira.internal',
     ANALYSIS_JIRA_TOKEN: 'application-token'
   }).token, 'application-token');
+  assert.equal(parseArguments(['--insecure'], {}).insecureTls, true);
+  assert.equal(parseArguments([], { JIRA_INSECURE_TLS: 'true' }).insecureTls, true);
 });
 
 function oldRow(issueKey, summary) {
@@ -364,6 +400,7 @@ function baseOptions(directory, fetchImpl) {
     inPlace: false,
     overwrite: false,
     dryRun: false,
+    insecureTls: false,
     capturedAt: '2026-09-01T09:00:00.000Z',
     fetchImpl
   };

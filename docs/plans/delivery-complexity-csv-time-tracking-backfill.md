@@ -16,6 +16,8 @@ plikach.
 - [x] Dodac parser/zapis zgodny z biznesowym CSV oraz walidacje assessmentu.
 - [x] Deduplikowac issue globalnie, ograniczyc rownoleglosc i obsluzyc retry.
 - [x] Dodac bezpieczny output, dry-run, overwrite oraz in-place z backupem.
+- [x] Dodac jawny, procesowo ograniczony tryb `--insecure` dla wewnetrznych
+  certyfikatow Jira.
 - [x] Dodac testy parsera, Jira HTTP, deduplikacji i operacji plikowych.
 - [x] Udokumentowac uruchomienie, wynik i ograniczenia.
 

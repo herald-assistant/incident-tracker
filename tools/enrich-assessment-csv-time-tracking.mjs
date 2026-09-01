@@ -347,15 +347,17 @@ export async function enrichDirectory(options) {
     }
   }
   const issueKeys = documents.flatMap((document) => document.issueKeys);
-  const capture = await collectJiraSnapshots(issueKeys, {
-    baseUrl: options.baseUrl,
-    token: options.token,
-    capturedAt: options.capturedAt ?? new Date().toISOString(),
-    concurrency: options.concurrency,
-    timeoutMs: options.timeoutMs,
-    retries: options.retries,
-    fetchImpl: options.fetchImpl ?? fetch
-  });
+  const capture = await withTlsVerificationMode(options.insecureTls, () =>
+    collectJiraSnapshots(issueKeys, {
+      baseUrl: options.baseUrl,
+      token: options.token,
+      capturedAt: options.capturedAt ?? new Date().toISOString(),
+      concurrency: options.concurrency,
+      timeoutMs: options.timeoutMs,
+      retries: options.retries,
+      fetchImpl: options.fetchImpl ?? fetch
+    })
+  );
 
   const outputs = [];
   for (const document of documents) {
@@ -460,6 +462,23 @@ async function fileExists(filePath) {
   }
 }
 
+async function withTlsVerificationMode(insecureTls, operation) {
+  if (!insecureTls) {
+    return operation();
+  }
+  const previous = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  try {
+    return await operation();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    } else {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = previous;
+    }
+  }
+}
+
 function safeErrorMessage(error) {
   if (error?.name === 'AbortError') {
     return 'przekroczono limit czasu zapytania do Jira';
@@ -491,6 +510,9 @@ export function parseArguments(argv, environment = process.env) {
     inPlace: false,
     overwrite: false,
     dryRun: false,
+    insecureTls: ['1', 'true', 'yes'].includes(
+      (environment.JIRA_INSECURE_TLS ?? '').trim().toLowerCase()
+    ),
     help: false
   };
 
@@ -532,6 +554,8 @@ export function parseArguments(argv, environment = process.env) {
       options.overwrite = true;
     } else if (argument === '--dry-run') {
       options.dryRun = true;
+    } else if (argument === '--insecure') {
+      options.insecureTls = true;
     } else if (argument === '--help' || argument === '-h') {
       options.help = true;
     } else {
@@ -587,6 +611,7 @@ Opcje:
   --timeout-ms <n>             timeout pojedynczego zapytania; domyslnie ${DEFAULT_TIMEOUT_MS}
   --retries <n>                ponowienia dla HTTP 429/5xx; domyslnie ${DEFAULT_RETRIES}
   --dry-run                    pobiera i waliduje dane, ale nie zapisuje plikow
+  --insecure                   wylacza weryfikacje TLS tylko dla zapytan Jira
   --overwrite                  pozwala nadpisac pliki w katalogu wynikowym
   --in-place                   nadpisuje zrodla po utworzeniu kopii .csv.bak-<timestamp>
   --help                       pokazuje te pomoc
@@ -613,6 +638,11 @@ export async function runCli(argv = process.argv.slice(2), environment = process
       ? 'Tryb in-place: przed zmiana kazdego CSV powstanie kopia zapasowa.'
       : `Wynik: podkatalog ${options.outputDirectory}`
   );
+  if (options.insecureTls) {
+    console.warn(
+      'UWAGA: weryfikacja certyfikatu TLS jest wylaczona dla zapytan Jira w tym procesie.'
+    );
+  }
   const result = await enrichDirectory(options);
   console.log(
     `Pliki: ${result.fileCount}, wiersze: ${result.rowCount}, unikalne issue: ${result.requestedIssueCount}.`
