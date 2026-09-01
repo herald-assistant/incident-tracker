@@ -41,10 +41,11 @@ const DELIVERY_SCOPE_DIMENSIONS: readonly DimensionConfiguration[] = [
   { key: 'distributionPoints', label: 'Rozproszenie zmiany', averageMaximum: 40, totalMultiplier: 1 }
 ];
 
+const MD_HOURS = 8;
+
 export function buildAssessmentTrendView(
   dataset: AssessmentTrendDataset,
-  filters: AssessmentTrendFilters,
-  hoursPerWorkday = 8
+  filters: AssessmentTrendFilters
 ): AssessmentTrendView {
   const dimensionConfigurations = dimensionsFor(dataset.source);
   const units = buildUnits(dataset.rows, dimensionConfigurations);
@@ -134,7 +135,7 @@ export function buildAssessmentTrendView(
       unitsWithConflictingFinalScores: units.filter((unit) => unit.conflictingFinalScores).length,
       unitsWithIncompleteDimensions: units.filter((unit) => unit.incompleteDimensions).length
     },
-    efficiency: buildEfficiencyView(selectedUnits, filters, hoursPerWorkday)
+    efficiency: buildEfficiencyView(selectedUnits, filters)
   };
 }
 
@@ -292,13 +293,9 @@ interface EfficiencyPeriodAccumulator {
 
 function buildEfficiencyView(
   selectedUnits: TrendUnit[],
-  filters: AssessmentTrendFilters,
-  hoursPerWorkday: number
+  filters: AssessmentTrendFilters
 ): AssessmentTrendEfficiencyView {
-  const effectiveHours = Number.isFinite(hoursPerWorkday)
-    ? Math.min(24, Math.max(1, hoursPerWorkday))
-    : 8;
-  const secondsPerWorkday = effectiveHours * 3600;
+  const secondsPerWorkday = MD_HOURS * 3600;
   const scoredUnits = selectedUnits.filter((unit) => unit.points !== null && unit.pointDate);
   const periodMap = new Map<string, EfficiencyPeriodAccumulator>();
   let crossTeamUnitsExcluded = 0;

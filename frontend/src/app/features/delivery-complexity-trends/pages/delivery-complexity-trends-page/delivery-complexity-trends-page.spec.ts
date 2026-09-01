@@ -63,11 +63,25 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     ]);
 
     const compiled = element();
-    const summaryCards = compiled.querySelectorAll<HTMLElement>('.trend-summary-card');
-    expect(compiled.textContent).toContain('Delivery Complexity Assessment');
-    expect(summaryCards[0].querySelector('strong')?.textContent?.trim()).toBe('21');
+    expect(compiled.querySelector('.trend-import-card details')).toBeNull();
+    expect(compiled.querySelector('.trend-summary-grid')).toBeNull();
+    expect(compiled.textContent).not.toContain('Ostatnia zmiana (CP)');
+    expect(compiled.textContent).not.toContain('Najważniejsze zmiany');
+    expect(compiled.textContent).not.toContain('Status ocen');
     expect(compiled.querySelectorAll('.trend-bar')).toHaveLength(2);
-    expect(compiled.querySelectorAll('.trend-table tbody tr')).toHaveLength(2);
+    expect(compiled.querySelector('.trend-table')).toBeNull();
+    expect(compiled.textContent).not.toContain('Szczegóły okresów');
+    const directionLegend = compiled.querySelector<HTMLElement>('.trend-legend')!;
+    expect(directionLegend.querySelector('.trend-legend__marker--first')).not.toBeNull();
+    expect(directionLegend.textContent).toContain('pierwszy okres');
+    expect(directionLegend.textContent).toContain('bez zmiany');
+    expect(directionLegend.textContent).not.toContain('bez zmiany / pierwszy okres');
+    const chartChanges = compiled.querySelectorAll<HTMLElement>('.trend-bar__change');
+    expect(chartChanges[0].querySelectorAll('small')).toHaveLength(1);
+    expect(chartChanges[0].textContent).toContain('pierwszy okres');
+    expect(chartChanges[1].querySelectorAll('small')).toHaveLength(2);
+    expect(chartChanges[1].querySelectorAll('small')[0].textContent?.trim()).toBe('+5');
+    expect(chartChanges[1].querySelectorAll('small')[1].textContent?.trim()).toBe('+62,5%');
     expect(compiled.textContent).toContain('lip 2026');
     expect(compiled.textContent).toContain('sie 2026');
     expect(compiled.querySelector('.trend-filter-note')).toBeNull();
@@ -77,6 +91,13 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(compiled.textContent).not.toContain('Największa zmiana wymiaru');
     expect(compiled.querySelector('.trend-dimension-driver')).toBeNull();
     expect(compiled.querySelectorAll('.trend-dimension-heatmap tbody tr')).toHaveLength(2);
+    expect(compiled.querySelector('.trend-dimension-legend')).toBeNull();
+    expect(compiled.querySelectorAll('.trend-dimension-heatmap tbody td small')).toHaveLength(0);
+    expect(compiled.querySelectorAll('.trend-dimension-heatmap tbody th small')).toHaveLength(2);
+    const qualityValues = Array.from(compiled.querySelectorAll('.trend-quality-grid > div'))
+      .map((item) => item.textContent?.replace(/\s+/g, ' ').trim());
+    expect(qualityValues).toContain('Ocenione2');
+    expect(compiled.textContent).not.toContain('Wynik został policzony deterministycznie');
     expect(Array.from(
       compiled.querySelector<HTMLSelectElement>('.trend-field select')!.options
     ).map((option) => option.text.trim())).toEqual([
@@ -89,11 +110,11 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     totalButton.click();
     fixture.detectChanges();
 
-    expect(element().textContent).toContain('Nie są rozkładem DSP');
+    expect(element().textContent).toContain('Nie są bezpośrednim rozkładem CP');
     expect(element().querySelectorAll('.trend-dimension-row')).toHaveLength(2);
   });
 
-  it('should filter full Delivery Units by team and update the chart and summary', async () => {
+  it('should filter full Delivery Units by team and update the chart', async () => {
     await selectFiles([csvFile('teams.csv', DCA_HEADERS, [
       row(DCA_HEADERS, {
         issueKey: 'CRM-1',
@@ -118,9 +139,11 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     teamSelect.dispatchEvent(new Event('change', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('5');
+    expect(element().querySelector('.trend-bar__value')?.textContent?.trim()).toBe('5');
     expect(element().querySelectorAll('.trend-bar')).toHaveLength(1);
-    expect(element().textContent).toContain('1 w wybranym zakresie');
+    expect(element().querySelector('.trend-dimension-heatmap tbody th small')?.textContent?.trim()).toBe(
+      '1 Jira Issue w okresie'
+    );
   });
 
   it('should render efficiency and estimate comparison when Jira time data is present', async () => {
@@ -145,28 +168,49 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     ])]);
 
     const efficiency = element().querySelector<HTMLElement>('.trend-efficiency-panel')!;
+    const estimateComparison = element().querySelector<HTMLElement>('.trend-effort-comparison')!;
     expect(efficiency).not.toBeNull();
-    expect(efficiency.textContent).toContain('Efektywność dostarczenia');
-    expect(efficiency.textContent).toContain('Estymacja a czas zarejestrowany');
+    expect(estimateComparison).not.toBeNull();
+    expect(efficiency.textContent).toContain('Efficiency');
+    expect(efficiency.textContent).not.toContain('Original Estimate a Time Spent');
+    expect(estimateComparison.textContent).toContain('Original Estimate a Time Spent');
+    expect(estimateComparison.textContent).toContain('Odchylenie Time Spent');
+    expect(estimateComparison.previousElementSibling).toBe(efficiency);
+    expect(efficiency.textContent).toContain('Efficiency');
+    expect(efficiency.textContent).toContain('CP/MD');
+    expect(efficiency.textContent).toContain('Time Spent (MD)');
     expect(efficiency.querySelectorAll('.trend-efficiency-bar')).toHaveLength(2);
+    const coverageLabels = Array.from(
+      efficiency.querySelectorAll<HTMLElement>('.trend-efficiency-bar__coverage')
+    );
+    expect(coverageLabels.map((label) => label.textContent?.trim())).toEqual(['1 / 100%', '1 / 100%']);
+    expect(coverageLabels[0].title).toBe('1 Jira Issue · 100% pokrycia');
+    const efficiencyDetails = efficiency.querySelector<HTMLDetailsElement>('.trend-efficiency-details')!;
+    expect(efficiencyDetails).not.toBeNull();
+    expect(efficiencyDetails.open).toBe(false);
+    expect(efficiencyDetails.querySelector('summary')?.textContent).toContain('Pokaż dokładne wartości okresów');
     expect(efficiency.querySelectorAll('.trend-efficiency-table tbody tr')).toHaveLength(2);
+    const varianceRows = Array.from(
+      estimateComparison.querySelectorAll<HTMLElement>('.trend-estimate-variance-row')
+    );
+    expect(varianceRows).toHaveLength(2);
+    expect(estimateComparison.querySelector('.trend-effort-bars')).toBeNull();
+    expect(varianceRows[0].title).toBe(
+      'Original Estimate: 1 MD · Time Spent: 1 MD · Odchylenie: 0% · 1 Jira Issue'
+    );
+    expect(varianceRows[1].textContent).toContain('+33,3%');
+    expect(
+      estimateComparison.querySelector('.trend-estimate-variance-chart')?.getAttribute('aria-label')
+    ).toContain('Wartość ujemna oznacza Time Spent poniżej estymaty');
     expect(efficiency.querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('10,5');
-
-    const workday = efficiency.querySelector<HTMLInputElement>(
-      'input[aria-label="Liczba godzin w osobodniu"]'
-    )!;
-    workday.value = '4';
-    workday.dispatchEvent(new Event('input', { bubbles: true }));
-    fixture.detectChanges();
-
-    expect(element().querySelector(
-      '.trend-efficiency-panel .trend-summary-card strong'
-    )?.textContent?.trim()).toBe('5,25');
+    expect(efficiency.querySelector('input[type="number"]')).toBeNull();
+    expect(efficiency.textContent).toContain('1 MD odpowiada 8 godzinom');
+    expect(efficiency.textContent).toContain('1 MD = 8 h');
 
     fixture.componentInstance.authorControl.setValue('id:101');
     fixture.detectChanges();
     expect(element().querySelector('.trend-efficiency-panel')?.textContent).toContain(
-      'Nie przypisuje czasu Jira ani efektywności do tej osoby'
+      'Nie przypisuje Time Spent ani Efficiency do tej osoby'
     );
   });
 
@@ -196,35 +240,32 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
       })
     ])]);
 
-    const chips = Array.from(element().querySelectorAll<HTMLButtonElement>(
-      '.trend-issue-type-chip'
-    ));
-    const allTypes = chips.find((button) => button.textContent?.includes('Wszystkie typy'))!;
-    const bug = chips.find((button) => button.textContent?.includes('Bug'))!;
-    const story = chips.find((button) => button.textContent?.includes('Story'))!;
+    const multiselect = element().querySelector<HTMLDetailsElement>('.trend-multiselect')!;
+    const checkboxes = Array.from(multiselect.querySelectorAll<HTMLInputElement>('input'));
+    const bug = checkboxes.find((input) => input.parentElement?.textContent?.includes('Bug'))!;
+    const story = checkboxes.find((input) => input.parentElement?.textContent?.includes('Story'))!;
 
-    expect(allTypes.getAttribute('aria-pressed')).toBe('true');
-    expect(bug.querySelector('span')?.textContent?.trim()).toBe('Bug');
-    expect(bug.querySelector('small')?.textContent?.trim()).toBe('1 DU');
-    expect(story.querySelector('span')?.textContent?.trim()).toBe('Story');
-    expect(story.querySelector('small')?.textContent?.trim()).toBe('1 DU');
+    expect(multiselect.querySelector('summary')?.textContent).toContain('Wszystkie typy');
+    expect(bug.checked).toBe(false);
+    expect(bug.parentElement?.querySelector('small')?.textContent?.trim()).toBe('1 Jira Issue');
 
     bug.click();
     fixture.detectChanges();
 
-    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
-    expect(bug.getAttribute('aria-pressed')).toBe('true');
+    expect(element().querySelector('.trend-bar__value')?.textContent?.trim()).toBe('8');
+    expect(bug.checked).toBe(true);
+    expect(multiselect.querySelector('summary')?.textContent).toContain('Bug');
     story.click();
     fixture.detectChanges();
 
-    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
-    const reset = Array.from(element().querySelectorAll<HTMLButtonElement>('button'))
-      .find((button) => button.textContent?.includes('Wyczyść filtry'))!;
+    expect(element().querySelector('.trend-bar__value')?.textContent?.trim()).toBe('8');
+    expect(multiselect.querySelector('summary')?.textContent).toContain('2 wybrane typy');
+    const reset = element().querySelector<HTMLButtonElement>('[aria-label="Wyczyść filtry"]')!;
     reset.click();
     fixture.detectChanges();
 
-    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('13');
-    expect(allTypes.getAttribute('aria-pressed')).toBe('true');
+    expect(element().querySelector('.trend-bar__value')?.textContent?.trim()).toBe('13');
+    expect(multiselect.querySelector('summary')?.textContent).toContain('Wszystkie typy');
   });
 
   it('should default Scope reports to the additive dimension contribution', async () => {
@@ -235,7 +276,7 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     ));
     const totalButton = buttons.find((button) => button.textContent?.includes('Łączny wkład'))!;
     const averageButton = buttons.find(
-      (button) => button.textContent?.includes('Średnia na Delivery Unit')
+      (button) => button.textContent?.includes('Średnia na Jira Issue')
     )!;
 
     expect(totalButton.getAttribute('aria-pressed')).toBe('true');
@@ -252,7 +293,7 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
   it('should keep the previous dataset when a later selection mixes assessment formats', async () => {
     const dca = csvFile('dca.csv', DCA_HEADERS, [row(DCA_HEADERS)]);
     await selectFiles([dca]);
-    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
+    expect(element().querySelector('.trend-bar__value')?.textContent?.trim()).toBe('8');
 
     const scope = csvFile('scope.csv', DSC_HEADERS, [row(DSC_HEADERS)]);
     await selectFiles([dca, scope]);
@@ -260,8 +301,7 @@ describe('DeliveryComplexityTrendsPageComponent', () => {
     expect(element().querySelector('[role="alert"]')?.textContent).toContain(
       'Wszystkie pliki musza pochodzic z tego samego assessmentu'
     );
-    expect(element().querySelector('.trend-summary-card strong')?.textContent?.trim()).toBe('8');
-    expect(element().textContent).toContain('Delivery Complexity Assessment');
+    expect(element().querySelector('.trend-bar__value')?.textContent?.trim()).toBe('8');
   });
 
   it('should expose legacy author limitations and clear the local dataset', async () => {

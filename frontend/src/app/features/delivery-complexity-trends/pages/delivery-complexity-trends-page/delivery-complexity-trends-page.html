@@ -44,46 +44,17 @@
       </div>
     }
 
-    @if (dataset(); as data) {
-      <div class="trend-loaded-files" aria-label="Załadowany zestaw raportów">
-        <div class="trend-loaded-files__summary">
-          <span class="trend-source-badge">{{ sourceLabel(data) }}</span>
-          <strong>{{ data.files.length }} {{ data.files.length === 1 ? 'plik' : 'plików' }}</strong>
-          <span>{{ data.quality.uniqueIssues }} unikalnych issue</span>
-          @if (loadedDateRange(); as range) {
-            <span>{{ range.from }} – {{ range.to }}</span>
-          }
-        </div>
-        <details>
-          <summary>Pokaż listę plików</summary>
-          <ul>
-            @for (file of data.files; track file.name) {
-              <li>
-                <span>{{ file.name }}</span>
-                <small>{{ file.rowCount }} wierszy</small>
-              </li>
-            }
-          </ul>
-        </details>
-      </div>
-    }
   </section>
 
   @if (dataset(); as data) {
     @if (trend(); as currentTrend) {
-      <section class="trend-filters-card" aria-labelledby="trendFiltersTitle">
-        <div class="trend-section-heading">
-          <div>
-            <p class="section-eyebrow">Zakres widoku</p>
-            <h2 id="trendFiltersTitle">Filtry trendu</h2>
-          </div>
-          @if (filtersActive()) {
-            <button class="trend-link-button" type="button" (click)="resetFilters()">
-              <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
-              Wyczyść filtry
-            </button>
-          }
-        </div>
+      <div #filterStickySentinel class="trend-filters-sticky-sentinel" aria-hidden="true"></div>
+      <section
+        class="trend-filters-card"
+        [class.trend-filters-card--stuck]="filtersStuck()"
+        aria-label="Filtry trendu"
+      >
+        <p class="section-eyebrow trend-filter-context">Zakres widoku</p>
 
         <div class="trend-filter-grid">
           <label class="trend-field">
@@ -102,7 +73,7 @@
               <option value="">Wszystkie zespoły</option>
               @for (option of currentTrend.teamOptions; track option.key) {
                 <option [value]="option.key">
-                  {{ option.label }} ({{ option.unitCount }} DU)
+                  {{ option.label }} ({{ jiraIssueCountLabel(option.unitCount) }})
                 </option>
               }
             </select>
@@ -116,11 +87,37 @@
               </option>
               @for (option of currentTrend.authorOptions; track option.key) {
                 <option [value]="option.key">
-                  {{ option.label }} ({{ option.unitCount }} DU)
+                  {{ option.label }} ({{ jiraIssueCountLabel(option.unitCount) }})
                 </option>
               }
             </select>
           </label>
+
+          @if (currentTrend.issueTypeOptions.length > 0) {
+            <div class="trend-field trend-field--issue-types">
+              <span>Typ issue</span>
+              <details class="trend-multiselect">
+                <summary>
+                  <span>{{ issueTypeSelectionLabel(currentTrend.issueTypeOptions) }}</span>
+                  <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                </summary>
+                <div class="trend-multiselect__options" role="group" aria-label="Typy issue">
+                  <small>Brak zaznaczenia oznacza wszystkie typy.</small>
+                  @for (option of currentTrend.issueTypeOptions; track option.key) {
+                    <label>
+                      <input
+                        type="checkbox"
+                        [checked]="issueTypeSelected(option.key)"
+                        (change)="toggleIssueType(option.key)"
+                      />
+                      <span>{{ option.label }}</span>
+                      <small>{{ jiraIssueCountLabel(option.unitCount) }}</small>
+                    </label>
+                  }
+                </div>
+              </details>
+            </div>
+          }
 
           <label class="trend-field">
             <span>Od</span>
@@ -131,35 +128,18 @@
             <span>Do</span>
             <input type="date" [formControl]="toDateControl" />
           </label>
-        </div>
 
-        @if (currentTrend.issueTypeOptions.length > 0) {
-          <fieldset class="trend-issue-type-filter">
-            <legend>Typ issue <small>możesz wybrać kilka</small></legend>
-            <div class="trend-issue-type-options">
-              <button
-                type="button"
-                class="trend-issue-type-chip"
-                [class.trend-issue-type-chip--active]="selectedIssueTypeKeys().length === 0"
-                [attr.aria-pressed]="selectedIssueTypeKeys().length === 0"
-                (click)="clearIssueTypes()"
-              >Wszystkie typy</button>
-              @for (option of currentTrend.issueTypeOptions; track option.key) {
-                <button
-                  type="button"
-                  class="trend-issue-type-chip"
-                  [class.trend-issue-type-chip--active]="issueTypeSelected(option.key)"
-                  [attr.aria-pressed]="issueTypeSelected(option.key)"
-                  [attr.title]="'Pokaż Delivery Units zawierające issue typu ' + option.label"
-                  (click)="toggleIssueType(option.key)"
-                >
-                  <span>{{ option.label }}</span>
-                  <small>{{ option.unitCount }} DU</small>
-                </button>
-              }
-            </div>
-          </fieldset>
-        }
+          <button
+            class="trend-filter-reset"
+            type="button"
+            aria-label="Wyczyść filtry"
+            title="Wyczyść filtry"
+            [disabled]="!filtersActive()"
+            (click)="resetFilters()"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">filter_alt_off</span>
+          </button>
+        </div>
 
         @if (dateFilterInvalid()) {
           <p class="trend-field-error" role="alert">Data „Od” nie może być późniejsza niż „Do”.</p>
@@ -167,45 +147,12 @@
 
       </section>
 
-      <section class="trend-summary-grid" aria-label="Podsumowanie trendu">
-        <article class="trend-summary-card trend-summary-card--primary">
-          <span>Łączna złożoność</span>
-          <strong>{{ formatPoints(currentTrend.totalPoints) }}</strong>
-          <small>{{ data.metricLabel }}</small>
-        </article>
-        <article class="trend-summary-card">
-          <span>Ostatnia zmiana</span>
-          @if (lastPeriod(currentTrend); as latest) {
-            <strong
-              [class.trend-value--up]="latest.direction === 'UP'"
-              [class.trend-value--down]="latest.direction === 'DOWN'"
-            >
-              {{ signedPoints(latest.delta) }}
-            </strong>
-            <small>{{ latest.label }} · {{ percentLabel(latest.deltaPercent) }}</small>
-          } @else {
-            <strong>–</strong>
-            <small>Brak okresów</small>
-          }
-        </article>
-        <article class="trend-summary-card">
-          <span>Ocenione Delivery Units</span>
-          <strong>{{ currentTrend.scoredUnitCount }}</strong>
-          <small>z {{ currentTrend.totalUnitCount }} w wybranym zakresie</small>
-        </article>
-        <article class="trend-summary-card">
-          <span>Unikalne issue</span>
-          <strong>{{ currentTrend.issueCount }}</strong>
-          <small>po deduplikacji `issueKey`</small>
-        </article>
-      </section>
-
       @if (currentTrend.periods.length > 0 && !dateFilterInvalid()) {
         <section class="trend-panel trend-chart-panel" aria-labelledby="trendChartTitle">
           <div class="trend-section-heading">
             <div>
               <p class="section-eyebrow">Kierunek w czasie</p>
-              <h2 id="trendChartTitle">Dostarczona złożoność według okresu</h2>
+              <h2 id="trendChartTitle">Dostarczona złożoność (CP) według okresu</h2>
             </div>
             <p class="trend-section-note">
               Zmiana jest liczona względem poprzedniego widocznego okresu z danymi.
@@ -218,7 +165,6 @@
               role="img"
               [style.--trend-period-count]="currentTrend.periods.length"
               [attr.aria-label]="chartAriaLabel(data, currentTrend)"
-              aria-describedby="trendPeriodsTableCaption"
             >
               @for (period of currentTrend.periods; track period.key) {
                 <div class="trend-bar">
@@ -235,21 +181,26 @@
                     ></span>
                   </div>
                   <strong>{{ period.label }}</strong>
-                  <small
+                  <div
+                    class="trend-bar__change"
                     [class.trend-value--up]="period.direction === 'UP'"
                     [class.trend-value--down]="period.direction === 'DOWN'"
                   >
-                    {{ period.delta === null ? 'pierwszy okres' : signedPoints(period.delta) }}
-                  </small>
+                    <small>{{ period.delta === null ? 'pierwszy okres' : signedPoints(period.delta) }}</small>
+                    @if (period.delta !== null) {
+                      <small>{{ percentLabel(period.deltaPercent) }}</small>
+                    }
+                  </div>
                 </div>
               }
             </div>
           </div>
 
           <div class="trend-legend" aria-label="Legenda kierunku zmiany">
+            <span><i class="trend-legend__marker trend-legend__marker--first"></i> pierwszy okres</span>
             <span><i class="trend-legend__marker trend-legend__marker--up"></i> wzrost</span>
             <span><i class="trend-legend__marker trend-legend__marker--down"></i> spadek</span>
-            <span><i class="trend-legend__marker"></i> bez zmiany / pierwszy okres</span>
+            <span><i class="trend-legend__marker"></i> bez zmiany</span>
           </div>
         </section>
 
@@ -271,7 +222,7 @@
                 [class.trend-dimension-mode__button--active]="dimensionMode() === 'AVERAGE'"
                 [attr.aria-pressed]="dimensionMode() === 'AVERAGE'"
                 (click)="setDimensionMode('AVERAGE')"
-              >Średnia na Delivery Unit</button>
+              >Średnia na Jira Issue</button>
             </div>
           </div>
 
@@ -289,7 +240,7 @@
                 <div class="trend-dimension-row">
                   <div class="trend-dimension-row__period">
                     <strong>{{ period.label }}</strong>
-                    <small>{{ period.unitCount }} DU</small>
+                    <small>{{ jiraIssueCountLabel(period.unitCount) }}</small>
                   </div>
                   <div class="trend-dimension-row__track" aria-hidden="true">
                     <div
@@ -323,7 +274,7 @@
             <div class="trend-table-scroll trend-dimension-heatmap-scroll">
               <table class="trend-dimension-heatmap">
                 <caption>
-                  Średnia ocena cząstkowa i liczba Delivery Units z wartością wymiaru w okresie.
+                  Średnia ocena cząstkowa w okresie. Liczba Jira Issues znajduje się w kolumnie okresu.
                 </caption>
                 <thead>
                   <tr>
@@ -345,7 +296,7 @@
                     <tr>
                       <th scope="row">
                         <strong>{{ period.label }}</strong>
-                        <small>{{ period.unitCount }} DU w okresie</small>
+                        <small>{{ jiraIssueCountLabel(period.unitCount) }} w okresie</small>
                       </th>
                       @for (
                         dimension of period.dimensions;
@@ -361,7 +312,6 @@
                         >
                           @if (dimension.average !== null) {
                             <strong>{{ formatDimensionPoints(dimension.average) }}</strong>
-                            <small>{{ dimension.sampleUnitCount }} DU</small>
                           } @else {
                             <strong>–</strong>
                             <small>brak danych</small>
@@ -375,59 +325,6 @@
             </div>
           }
 
-          <div class="trend-dimension-legend" aria-label="Legenda wymiarów oceny">
-            @for (
-              definition of currentTrend.dimensionDefinitions;
-              track definition.key;
-              let definitionIndex = $index
-            ) {
-              <span>
-                <i [style.background-color]="dimensionColor(definitionIndex)"></i>
-                {{ definition.label }}
-              </span>
-            }
-          </div>
-        </section>
-
-        <section class="trend-panel" aria-labelledby="trendPeriodDetailsTitle">
-          <div class="trend-section-heading">
-            <div>
-              <p class="section-eyebrow">Dokładne wartości</p>
-              <h2 id="trendPeriodDetailsTitle">Szczegóły okresów</h2>
-            </div>
-          </div>
-          <div class="trend-table-scroll">
-            <table class="trend-table">
-              <caption id="trendPeriodsTableCaption">
-                Punkty, zmiana oraz liczba Delivery Units i issue w każdym widocznym okresie.
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Okres</th>
-                  <th scope="col">{{ data.metricShortLabel }}</th>
-                  <th scope="col">Zmiana</th>
-                  <th scope="col">Zmiana %</th>
-                  <th scope="col">Delivery Units</th>
-                  <th scope="col">Issue</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (period of currentTrend.periods; track period.key) {
-                  <tr>
-                    <th scope="row">{{ period.label }}</th>
-                    <td>{{ formatPoints(period.points) }}</td>
-                    <td
-                      [class.trend-value--up]="period.direction === 'UP'"
-                      [class.trend-value--down]="period.direction === 'DOWN'"
-                    >{{ signedPoints(period.delta) }}</td>
-                    <td>{{ percentLabel(period.deltaPercent) }}</td>
-                    <td>{{ period.unitCount }}</td>
-                    <td>{{ period.issueCount }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
         </section>
       } @else {
         <section class="trend-panel trend-empty-result" aria-live="polite">
@@ -441,35 +338,24 @@
 
       @if (currentTrend.efficiency.hasTimeSpentData || currentTrend.efficiency.hasEstimateData) {
         <section class="trend-panel trend-efficiency-panel" aria-labelledby="trendEfficiencyTitle">
-          <div class="trend-section-heading trend-efficiency-heading">
+          <div class="trend-section-heading">
             <div>
-              <p class="section-eyebrow">Czas Jira + wynik assessmentu</p>
-              <h2 id="trendEfficiencyTitle">Efektywność dostarczenia</h2>
+              <p class="section-eyebrow">Time Spent + Complexity Points</p>
+              <h2 id="trendEfficiencyTitle">Efficiency</h2>
             </div>
-            <label class="trend-field trend-efficiency-workday">
-              <span>Godzin w osobodniu</span>
-              <input
-                type="number"
-                min="1"
-                max="24"
-                step="0.5"
-                [formControl]="workdayHoursControl"
-                aria-label="Liczba godzin w osobodniu"
-              />
-            </label>
           </div>
 
           <p class="trend-efficiency-context">
-            Punkty złożoności dzielimy przez zarejestrowany czas. Delivery Unit wchodzi do
-            wyniku tylko wtedy, gdy każde jej issue ma `timespent` większy łącznie od zera.
+            Complexity Points dzielimy przez Time Spent. Jira Issue wchodzi do wyniku tylko
+            wtedy, gdy powiązane dane mają dodatni Time Spent. 1 MD odpowiada 8 godzinom.
           </p>
 
           @if (authorControl.value) {
             <div class="trend-message trend-message--warning">
               <span class="material-symbols-outlined" aria-hidden="true">info</span>
               <span>
-                Filtr autora zawęża Delivery Units powiązane z jego MR-ami. Nie przypisuje
-                czasu Jira ani efektywności do tej osoby.
+                Filtr autora zawęża Jira Issues powiązane z jego MR-ami. Nie przypisuje
+                Time Spent ani Efficiency do tej osoby.
               </span>
             </div>
           }
@@ -477,24 +363,24 @@
           @if (currentTrend.efficiency.periods.length > 0) {
             <section class="trend-efficiency-summary-grid" aria-label="Podsumowanie efektywności">
               <article class="trend-summary-card trend-summary-card--primary">
-                <span>Punkty / osobodzień</span>
+                <span>Efficiency</span>
                 <strong>{{ formatEfficiency(currentTrend.efficiency.pointsPerPersonDay) }}</strong>
-                <small>dla całego widocznego zakresu</small>
+                <small>CP/MD dla całego widocznego zakresu</small>
               </article>
               <article class="trend-summary-card">
-                <span>Punkty w próbie</span>
+                <span>Complexity Points (CP)</span>
                 <strong>{{ formatPoints(currentTrend.efficiency.totalEligiblePoints) }}</strong>
-                <small>z pełnym `timespent` w Delivery Unit</small>
+                <small>w próbie z pełnym Time Spent</small>
               </article>
               <article class="trend-summary-card">
-                <span>Zarejestrowane osobodni</span>
+                <span>Time Spent (MD)</span>
                 <strong>{{ formatPersonDays(currentTrend.efficiency.totalPersonDays) }}</strong>
-                <small>przy {{ workdayHoursControl.value }} h / osobodzień</small>
+                <small>1 MD = 8 h</small>
               </article>
               <article class="trend-summary-card">
-                <span>Pokrycie punktów</span>
+                <span>Pokrycie CP</span>
                 <strong>{{ percentageLabel(currentTrend.efficiency.pointsCoveragePercent) }}</strong>
-                <small>{{ currentTrend.efficiency.eligibleUnitCount }} kwalifikujących się DU</small>
+                <small>{{ jiraIssueCountLabel(currentTrend.efficiency.eligibleUnitCount) }} w próbie</small>
               </article>
             </section>
 
@@ -504,7 +390,6 @@
                 role="img"
                 [style.--trend-period-count]="currentTrend.efficiency.periods.length"
                 [attr.aria-label]="efficiencyChartAriaLabel(currentTrend.efficiency)"
-                aria-describedby="trendEfficiencyTableCaption"
               >
                 @for (period of currentTrend.efficiency.periods; track period.key) {
                   <div class="trend-bar trend-efficiency-bar">
@@ -523,162 +408,162 @@
                       [class.trend-value--up]="period.direction === 'UP'"
                       [class.trend-value--down]="period.direction === 'DOWN'"
                     >{{ period.delta === null ? 'pierwszy okres' : signedEfficiency(period.delta) }}</small>
-                    <small>{{ period.eligibleUnitCount }} DU · {{ period.pointsCoveragePercent }}% pokrycia</small>
+                    <small
+                      class="trend-efficiency-bar__coverage"
+                      [attr.title]="jiraIssueCountLabel(period.eligibleUnitCount)
+                        + ' · ' + period.pointsCoveragePercent + '% pokrycia'"
+                    >{{ period.eligibleUnitCount }} / {{ period.pointsCoveragePercent }}%</small>
                   </div>
                 }
               </div>
             </div>
 
-            <div class="trend-table-scroll">
-              <table class="trend-table trend-efficiency-table">
-                <caption id="trendEfficiencyTableCaption">
-                  Punkty, czas i efektywność dla każdego widocznego okresu.
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Okres</th>
-                    <th scope="col">Punkty</th>
-                    <th scope="col">Osobodni</th>
-                    <th scope="col">Punkty / osobodzień</th>
-                    <th scope="col">Zmiana</th>
-                    <th scope="col">Zmiana %</th>
-                    <th scope="col">Pokrycie punktów</th>
-                    <th scope="col">DU</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (period of currentTrend.efficiency.periods; track period.key) {
+            <details class="trend-efficiency-details">
+              <summary>
+                <span class="trend-efficiency-details__closed">Pokaż dokładne wartości okresów</span>
+                <span class="trend-efficiency-details__open">Ukryj dokładne wartości okresów</span>
+                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+              </summary>
+              <div class="trend-table-scroll">
+                <table class="trend-table trend-efficiency-table">
+                  <caption>
+                    Complexity Points, Time Spent i Efficiency dla każdego widocznego okresu.
+                  </caption>
+                  <thead>
                     <tr>
-                      <th scope="row">{{ period.label }}</th>
-                      <td>{{ formatPoints(period.eligiblePoints) }}</td>
-                      <td>{{ formatPersonDays(period.personDays) }}</td>
-                      <td><strong>{{ formatEfficiency(period.pointsPerPersonDay) }}</strong></td>
-                      <td
-                        [class.trend-value--up]="period.direction === 'UP'"
-                        [class.trend-value--down]="period.direction === 'DOWN'"
-                      >{{ signedEfficiency(period.delta) }}</td>
-                      <td>{{ percentLabel(period.deltaPercent) }}</td>
-                      <td>{{ period.pointsCoveragePercent }}%</td>
-                      <td>{{ period.eligibleUnitCount }}</td>
+                      <th scope="col">Okres</th>
+                      <th scope="col">CP</th>
+                      <th scope="col">Time Spent (MD)</th>
+                      <th scope="col">Efficiency (CP/MD)</th>
+                      <th scope="col">Zmiana (CP/MD)</th>
+                      <th scope="col">Zmiana %</th>
+                      <th scope="col">Pokrycie CP</th>
+                      <th scope="col">Jira Issues</th>
                     </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    @for (period of currentTrend.efficiency.periods; track period.key) {
+                      <tr>
+                        <th scope="row">{{ period.label }}</th>
+                        <td>{{ formatPoints(period.eligiblePoints) }}</td>
+                        <td>{{ formatPersonDays(period.personDays) }}</td>
+                        <td><strong>{{ formatEfficiency(period.pointsPerPersonDay) }}</strong></td>
+                        <td
+                          [class.trend-value--up]="period.direction === 'UP'"
+                          [class.trend-value--down]="period.direction === 'DOWN'"
+                        >{{ signedEfficiency(period.delta) }}</td>
+                        <td>{{ percentLabel(period.deltaPercent) }}</td>
+                        <td>{{ period.pointsCoveragePercent }}%</td>
+                        <td>{{ period.eligibleUnitCount }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </details>
           } @else if (currentTrend.efficiency.hasTimeSpentData) {
             <p class="trend-empty-copy">
-              Dane `timespent` są obecne, ale żadna Delivery Unit w wybranym zakresie nie ma
-              kompletnego, dodatniego czasu dla wszystkich swoich issue.
+              Dane Time Spent są obecne, ale żadne Jira Issue w wybranym zakresie nie ma
+              kompletnego, dodatniego Time Spent.
             </p>
           } @else {
             <p class="trend-empty-copy">
-              Estymacje są obecne, ale bez `timespent` nie można policzyć efektywności ani
-              porównać estymacji z czasem zarejestrowanym.
+              Original Estimate jest obecne, ale bez Time Spent nie można policzyć Efficiency
+              ani porównać Original Estimate z Time Spent.
             </p>
-          }
-
-          @if (currentTrend.efficiency.estimateEligibleUnitCount > 0) {
-            <section class="trend-effort-comparison" aria-labelledby="trendEstimateTitle">
-              <div class="trend-section-heading">
-                <div>
-                  <p class="section-eyebrow">Ta sama próba Delivery Units</p>
-                  <h3 id="trendEstimateTitle">Estymacja a czas zarejestrowany</h3>
-                </div>
-              </div>
-
-              <div class="trend-effort-summary">
-                <div><span>Estymacja</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalEstimatedPersonDays) }}</strong><small>osobodni</small></div>
-                <div><span>Czas zarejestrowany</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalActualPersonDaysForEstimate) }}</strong><small>osobodni</small></div>
-                <div><span>Odchylenie</span><strong>{{ percentLabel(currentTrend.efficiency.estimateVariancePercent) }}</strong><small>actual względem estimate</small></div>
-                <div><span>Próba</span><strong>{{ currentTrend.efficiency.estimateEligibleUnitCount }}</strong><small>Delivery Units</small></div>
-              </div>
-
-              <div class="trend-effort-periods">
-                @for (period of currentTrend.efficiency.periods; track period.key) {
-                  @if (period.estimateUnitCount > 0) {
-                    <div class="trend-effort-row">
-                      <strong>{{ period.label }}</strong>
-                      <div class="trend-effort-bars">
-                        <div>
-                          <span>Estymacja</span>
-                          <i [style.width.%]="effortBarWidth(period.estimatedPersonDays, currentTrend.efficiency)"></i>
-                          <small>{{ formatPersonDays(period.estimatedPersonDays) }} os.</small>
-                        </div>
-                        <div>
-                          <span>Actual</span>
-                          <i class="trend-effort-bar--actual" [style.width.%]="effortBarWidth(period.actualPersonDaysForEstimate, currentTrend.efficiency)"></i>
-                          <small>{{ formatPersonDays(period.actualPersonDaysForEstimate) }} os.</small>
-                        </div>
-                      </div>
-                      <span>{{ percentLabel(period.estimateVariancePercent) }}</span>
-                    </div>
-                  }
-                }
-              </div>
-            </section>
           }
 
           <dl class="trend-quality-grid trend-efficiency-quality">
-            <div><dt>Issue z `timespent`</dt><dd>{{ currentTrend.efficiency.timeSpentIssueCount }}</dd></div>
-            <div><dt>Issue z estymacją</dt><dd>{{ currentTrend.efficiency.estimatedIssueCount }}</dd></div>
-            <div><dt>DU bez pełnego czasu</dt><dd>{{ currentTrend.efficiency.unitsWithoutCompleteTime }}</dd></div>
-            <div><dt>DU z czasem 0</dt><dd>{{ currentTrend.efficiency.unitsWithZeroTime }}</dd></div>
+            <div><dt>Jira Issues z Time Spent</dt><dd>{{ currentTrend.efficiency.timeSpentIssueCount }}</dd></div>
+            <div><dt>Jira Issues z Original Estimate</dt><dd>{{ currentTrend.efficiency.estimatedIssueCount }}</dd></div>
+            <div><dt>Jira Issues bez pełnego Time Spent</dt><dd>{{ currentTrend.efficiency.unitsWithoutCompleteTime }}</dd></div>
+            <div><dt>Jira Issues z Time Spent = 0</dt><dd>{{ currentTrend.efficiency.unitsWithZeroTime }}</dd></div>
             @if (teamControl.value) {
-              <div><dt>DU wielozespołowe poza wynikiem</dt><dd>{{ currentTrend.efficiency.crossTeamUnitsExcluded }}</dd></div>
+              <div><dt>Wielozespołowe Jira Issues poza wynikiem</dt><dd>{{ currentTrend.efficiency.crossTeamUnitsExcluded }}</dd></div>
             }
-            <div><dt>Issue z remaining estimate</dt><dd>{{ currentTrend.efficiency.issuesWithRemainingEstimate }}</dd></div>
-            <div><dt>Okresy z próbą poniżej 3 DU</dt><dd>{{ currentTrend.efficiency.lowSamplePeriodCount }}</dd></div>
+            <div><dt>Jira Issues z Remaining Estimate</dt><dd>{{ currentTrend.efficiency.issuesWithRemainingEstimate }}</dd></div>
+            <div><dt>Okresy z próbą poniżej 3 Jira Issues</dt><dd>{{ currentTrend.efficiency.lowSamplePeriodCount }}</dd></div>
           </dl>
         </section>
-      }
 
-      <div class="trend-details-grid">
-        <section class="trend-panel" aria-labelledby="trendHighlightsTitle">
-          <div class="trend-section-heading">
-            <div>
-              <p class="section-eyebrow">Szybki odczyt</p>
-              <h2 id="trendHighlightsTitle">Najważniejsze zmiany</h2>
+        @if (currentTrend.efficiency.estimateEligibleUnitCount > 0) {
+          <section class="trend-panel trend-effort-comparison" aria-labelledby="trendEstimateTitle">
+            <div class="trend-section-heading">
+              <div>
+                <p class="section-eyebrow">Ta sama próba Jira Issues</p>
+                <h2 id="trendEstimateTitle">Original Estimate a Time Spent</h2>
+              </div>
             </div>
-          </div>
-          @if (currentTrend.highlights.length > 0) {
-            <div class="trend-highlight-list">
-              @for (highlight of currentTrend.highlights; track highlight.kind) {
-                <article [class]="'trend-highlight trend-highlight--' + highlight.kind.toLowerCase()">
-                  <span>{{ highlight.label }}</span>
-                  <strong>{{ highlight.periodLabel }}</strong>
-                  <small>
-                    {{ highlight.kind === 'PEAK' ? formatPoints(highlight.value) : signedPoints(highlight.value) }}
-                    {{ data.metricShortLabel }}
-                  </small>
-                </article>
-              }
-            </div>
-          } @else {
-            <p class="trend-empty-copy">Potrzebny jest co najmniej jeden okres z punktami.</p>
-          }
-        </section>
 
-        <section class="trend-panel" aria-labelledby="trendStatusesTitle">
-          <div class="trend-section-heading">
-            <div>
-              <p class="section-eyebrow">Pokrycie</p>
-              <h2 id="trendStatusesTitle">Status ocen</h2>
+            <div class="trend-effort-summary">
+              <div><span>Original Estimate (MD)</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalEstimatedPersonDays) }}</strong><small>MD</small></div>
+              <div><span>Time Spent (MD)</span><strong>{{ formatPersonDays(currentTrend.efficiency.totalActualPersonDaysForEstimate) }}</strong><small>MD</small></div>
+              <div><span>Odchylenie Time Spent</span><strong>{{ percentLabel(currentTrend.efficiency.estimateVariancePercent) }}</strong><small>względem Original Estimate</small></div>
+              <div><span>Próba</span><strong>{{ currentTrend.efficiency.estimateEligibleUnitCount }}</strong><small>Jira Issues</small></div>
             </div>
-          </div>
-          @if (currentTrend.statusCounts.length > 0) {
-            <div class="trend-status-list">
-              @for (status of currentTrend.statusCounts; track status.status) {
+
+            <div class="trend-estimate-variance-heading">
+              <p>
+                Porównanie jest znormalizowane względem Original Estimate, dlatego wielkość
+                backlogu w okresie nie zmienia skali wyniku.
+              </p>
+              <div class="trend-estimate-variance-legend" aria-label="Legenda odchylenia od estymaty">
+                <span><i class="trend-estimate-variance-legend__under"></i> poniżej estymaty</span>
+                <span><i class="trend-estimate-variance-legend__over"></i> powyżej estymaty</span>
+                <span><i></i> zgodnie z estymatą</span>
+              </div>
+            </div>
+
+            <div
+              class="trend-estimate-variance-chart"
+              role="img"
+              [attr.aria-label]="estimateVarianceChartAriaLabel(currentTrend.efficiency)"
+            >
+              <div class="trend-estimate-variance-axis" aria-hidden="true">
+                <span></span>
                 <div>
-                  <span>{{ statusLabel(status.status) }}</span>
-                  <strong>{{ status.count }}</strong>
+                  <span>mniej czasu</span>
+                  <strong>0%</strong>
+                  <span>więcej czasu</span>
                 </div>
+                <span>Odchylenie / próba</span>
+              </div>
+              @for (period of currentTrend.efficiency.periods; track period.key) {
+                @if (period.estimateUnitCount > 0) {
+                  <div
+                    class="trend-estimate-variance-row"
+                    [attr.title]="estimateVarianceTooltip(period)"
+                  >
+                    <strong>{{ period.label }}</strong>
+                    <div class="trend-estimate-variance-track" aria-hidden="true">
+                      <span class="trend-estimate-variance-track__under">
+                        @if (period.estimateVariancePercent !== null && period.estimateVariancePercent < 0) {
+                          <i [style.width.%]="estimateVarianceBarWidth(period, currentTrend.efficiency)"></i>
+                        }
+                      </span>
+                      <span class="trend-estimate-variance-track__over">
+                        @if (period.estimateVariancePercent !== null && period.estimateVariancePercent > 0) {
+                          <i [style.width.%]="estimateVarianceBarWidth(period, currentTrend.efficiency)"></i>
+                        }
+                      </span>
+                      @if (period.estimateVariancePercent === 0) {
+                        <i class="trend-estimate-variance-track__zero"></i>
+                      }
+                    </div>
+                    <div class="trend-estimate-variance-value">
+                      <strong
+                        [class.trend-estimate-variance-value--under]="period.estimateVariancePercent !== null && period.estimateVariancePercent < 0"
+                        [class.trend-estimate-variance-value--over]="period.estimateVariancePercent !== null && period.estimateVariancePercent > 0"
+                      >{{ percentLabel(period.estimateVariancePercent) }}</strong>
+                      <small>{{ jiraIssueCountLabel(period.estimateUnitCount) }}</small>
+                    </div>
+                  </div>
+                }
               }
             </div>
-          } @else {
-            <p class="trend-empty-copy">Brak Delivery Units w wybranym zakresie.</p>
-          }
-        </section>
-      </div>
+          </section>
+        }
+      }
 
       <section class="trend-panel trend-quality-panel" aria-labelledby="trendQualityTitle">
         <div class="trend-section-heading">
@@ -702,25 +587,10 @@
           <div><dt>Wiele kotwic punktów</dt><dd>{{ currentTrend.quality.unitsWithMultipleAggregationAnchors }}</dd></div>
           <div><dt>Rozbieżne wyniki jednostki</dt><dd>{{ currentTrend.quality.unitsWithConflictingFinalScores }}</dd></div>
           <div><dt>Niepełne oceny cząstkowe</dt><dd>{{ currentTrend.quality.unitsWithIncompleteDimensions }}</dd></div>
+          @for (status of currentTrend.statusCounts; track status.status) {
+            <div><dt>{{ statusLabel(status.status) }}</dt><dd>{{ status.count }}</dd></div>
+          }
         </dl>
-
-        @if (
-          data.quality.conflictingDuplicates
-          || data.quality.legacyFilesWithoutAuthors
-          || data.quality.authorsUsingNameFallback
-          || currentTrend.quality.unitsUsingFinalScoreFallback
-          || currentTrend.quality.unitsWithMultipleAggregationAnchors
-          || currentTrend.quality.unitsWithConflictingFinalScores
-          || currentTrend.quality.unitsWithIncompleteDimensions
-        ) {
-          <div class="trend-message trend-message--warning">
-            <span class="material-symbols-outlined" aria-hidden="true">warning</span>
-            <span>
-              Wynik został policzony deterministycznie, ale zestaw zawiera ograniczenia.
-              Uwzględnij powyższe liczniki podczas interpretacji trendu.
-            </span>
-          </div>
-        }
       </section>
     }
   } @else {

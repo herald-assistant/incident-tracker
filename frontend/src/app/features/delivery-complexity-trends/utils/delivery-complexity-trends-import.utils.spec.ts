@@ -62,7 +62,8 @@ describe('Delivery Complexity Trends CSV import', () => {
     const result = await importAssessmentTrendFiles([first, second]);
 
     expect(result.source).toBe('DELIVERY_COMPLEXITY_ASSESSMENT');
-    expect(result.metricShortLabel).toBe('DSP');
+    expect(result.metricLabel).toBe('Complexity Points (CP)');
+    expect(result.metricShortLabel).toBe('CP');
     expect(result.rows.map((item) => item.issueKey)).toEqual(['CRM-1', 'CRM-2']);
     expect(result.rows[0].finalPoints).toBe(13);
     expect(result.rows[0].sourceFileName).toBe('2026-08.csv');
@@ -153,6 +154,8 @@ describe('Delivery Complexity Trends CSV import', () => {
     const result = await importAssessmentTrendFiles([file]);
 
     expect(result.source).toBe('DELIVERY_SCOPE_COMPLEXITY');
+    expect(result.metricLabel).toBe('Complexity Points (CP)');
+    expect(result.metricShortLabel).toBe('CP');
     expect(result.rows[0].finalPoints).toBe(122.5);
     expect(result.rows[0].dimensionValues).toEqual({
       noveltyPoints: 20.5,

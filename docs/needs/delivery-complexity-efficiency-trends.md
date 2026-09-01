@@ -16,11 +16,12 @@ lub wybranego zespolu.
 Istniejacy ekran i jego wykresy pozostaja bez zmian. Ponizej nich pojawia sie
 warunkowa sekcja nakladu, ktora pokazuje:
 
-- Complexity Points na osobodzien,
-- punkty i osobodni bedace podstawa wskaznika,
+- Efficiency w jednostce CP/MD,
+- Complexity Points (CP) i Time Spent (MD) bedace podstawa wskaznika,
 - zmiane wskaznika pomiedzy kolejnymi okresami z danymi,
 - pokrycie punktow kompletnym `timespent`,
-- estymowany i faktyczny naklad oraz odchylenie, gdy oba sa dostepne,
+- estymowany i faktyczny naklad dla calego zakresu oraz procentowy trend
+  odchylenia Time Spent od Original Estimate per okres, gdy oba sa dostepne,
 - liczebnosc proby i przyczyny pominiecia danych.
 
 ## Semantyka
@@ -55,7 +56,7 @@ warunkowa sekcja nakladu, ktora pokazuje:
 - Nowe pola sa walidowane jako opcjonalne, nieujemne sekundy.
 - Deduplikacja preferuje nowszy `timeTrackingCapturedAt` przy tym samym
   `doneAt`.
-- Wskaznik, delta, pokrycie, filtry i konwersja osobodnia sa deterministyczne.
+- Wskaznik, delta, pokrycie, filtry i konwersja MD sa deterministyczne.
 - Niepelne i zerowe dane czasu nie zawyzaja efektywnosci.
 - Estymacja kontra wykonanie korzysta tylko z jednostek z kompletnymi obiema
   wartosciami.

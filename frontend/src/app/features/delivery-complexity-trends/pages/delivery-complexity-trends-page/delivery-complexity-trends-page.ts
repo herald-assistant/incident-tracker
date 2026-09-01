@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, ElementRef, OnDestroy, signal, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { merge } from 'rxjs';
@@ -9,6 +9,7 @@ import {
   AssessmentTrendDimensionMode,
   AssessmentTrendEfficiencyPeriod,
   AssessmentTrendEfficiencyView,
+  AssessmentTrendFilterOption,
   AssessmentTrendGranularity,
   AssessmentTrendPeriod,
   AssessmentTrendPeriodDimension,
@@ -28,13 +29,32 @@ import {
   templateUrl: './delivery-complexity-trends-page.html',
   styleUrl: './delivery-complexity-trends-page.scss'
 })
-export class DeliveryComplexityTrendsPageComponent {
+export class DeliveryComplexityTrendsPageComponent implements OnDestroy {
   readonly dataset = signal<AssessmentTrendDataset | null>(null);
   readonly importing = signal(false);
   readonly importError = signal('');
   readonly dimensionMode = signal<AssessmentTrendDimensionMode>('AVERAGE');
   readonly selectedIssueTypeKeys = signal<readonly string[]>([]);
+  readonly filtersStuck = signal(false);
   private readonly filterRevision = signal(0);
+  private filterStickyObserver?: IntersectionObserver;
+
+  @ViewChild('filterStickySentinel')
+  set filterStickySentinel(element: ElementRef<HTMLElement> | undefined) {
+    this.filterStickyObserver?.disconnect();
+    this.filterStickyObserver = undefined;
+    this.filtersStuck.set(false);
+    if (!element || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+    this.filterStickyObserver = new IntersectionObserver(([entry]) => {
+      this.filtersStuck.set(!entry.isIntersecting && entry.boundingClientRect.top < 64);
+    }, {
+      rootMargin: '-64px 0px 0px',
+      threshold: 0
+    });
+    this.filterStickyObserver.observe(element.nativeElement);
+  }
 
   readonly granularityControl = new FormControl<AssessmentTrendGranularity>('MONTH', {
     nonNullable: true
@@ -43,7 +63,6 @@ export class DeliveryComplexityTrendsPageComponent {
   readonly authorControl = new FormControl('', { nonNullable: true });
   readonly fromDateControl = new FormControl('', { nonNullable: true });
   readonly toDateControl = new FormControl('', { nonNullable: true });
-  readonly workdayHoursControl = new FormControl(8, { nonNullable: true });
 
   readonly dateFilterInvalid = computed(() => {
     this.filterRevision();
@@ -55,7 +74,6 @@ export class DeliveryComplexityTrendsPageComponent {
   readonly filtersActive = computed(() => {
     this.filterRevision();
     return this.granularityControl.value !== 'MONTH'
-      || this.workdayHoursControl.value !== 8
       || this.selectedIssueTypeKeys().length > 0
       || Boolean(
         this.teamControl.value
@@ -78,16 +96,7 @@ export class DeliveryComplexityTrendsPageComponent {
       issueTypeKeys: this.selectedIssueTypeKeys(),
       fromDate: this.fromDateControl.value,
       toDate: this.toDateControl.value
-    }, this.workdayHoursControl.value);
-  });
-
-  readonly loadedDateRange = computed(() => {
-    const rows = this.dataset()?.rows ?? [];
-    if (rows.length === 0) {
-      return null;
-    }
-    const dates = rows.map((row) => row.doneDate).sort();
-    return { from: dates[0], to: dates.at(-1)! };
+    });
   });
 
   constructor() {
@@ -96,11 +105,14 @@ export class DeliveryComplexityTrendsPageComponent {
       this.teamControl.valueChanges,
       this.authorControl.valueChanges,
       this.fromDateControl.valueChanges,
-      this.toDateControl.valueChanges,
-      this.workdayHoursControl.valueChanges
+      this.toDateControl.valueChanges
     )
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.filterRevision.update((revision) => revision + 1));
+  }
+
+  ngOnDestroy(): void {
+    this.filterStickyObserver?.disconnect();
   }
 
   protected async loadFiles(event: Event): Promise<void> {
@@ -141,7 +153,6 @@ export class DeliveryComplexityTrendsPageComponent {
     this.selectedIssueTypeKeys.set([]);
     this.fromDateControl.setValue('', { emitEvent: false });
     this.toDateControl.setValue('', { emitEvent: false });
-    this.workdayHoursControl.setValue(8, { emitEvent: false });
     this.filterRevision.update((revision) => revision + 1);
   }
 
@@ -155,15 +166,26 @@ export class DeliveryComplexityTrendsPageComponent {
     return this.selectedIssueTypeKeys().includes(key);
   }
 
+  protected issueTypeSelectionLabel(options: readonly AssessmentTrendFilterOption[]): string {
+    const selected = this.selectedIssueTypeKeys();
+    if (selected.length === 0) {
+      return 'Wszystkie typy';
+    }
+    if (selected.length === 1) {
+      return options.find((option) => option.key === selected[0])?.label ?? '1 wybrany typ';
+    }
+    return `${selected.length} wybrane typy`;
+  }
+
+  protected jiraIssueCountLabel(count: number): string {
+    return `${count} ${count === 1 ? 'Jira Issue' : 'Jira Issues'}`;
+  }
+
   protected toggleIssueType(key: string): void {
     this.selectedIssueTypeKeys.update((selected) => selected.includes(key)
       ? selected.filter((item) => item !== key)
       : [...selected, key].sort()
     );
-  }
-
-  protected clearIssueTypes(): void {
-    this.selectedIssueTypeKeys.set([]);
   }
 
   protected setDimensionMode(mode: AssessmentTrendDimensionMode): void {
@@ -173,12 +195,12 @@ export class DeliveryComplexityTrendsPageComponent {
   protected dimensionModeDescription(dataset: AssessmentTrendDataset): string {
     if (this.dimensionMode() === 'AVERAGE') {
       return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
-        ? 'Średnia ocena 0–4 pokazuje profil typowej ocenionej Delivery Unit, niezależnie od liczby dostaw.'
-        : 'Średni punktowy wkład wymiaru na ocenioną Delivery Unit oddziela charakter zmiany od liczby dostaw.';
+        ? 'Średnia ocena 0–4 pokazuje profil typowego ocenionego Jira Issue, niezależnie od liczby dostaw.'
+        : 'Średni punktowy wkład wymiaru na ocenione Jira Issue oddziela charakter zmiany od liczby dostaw.';
     }
     return dataset.source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
-      ? 'Przy kompletnych ocenach ważone segmenty sumują się do score100 jednostek. Nie są rozkładem DSP, które powstaje przez progi.'
-      : 'Przy kompletnych ocenach segmenty są punktowym wkładem wymiarów i sumują się do Complexity Points ocenionych jednostek.';
+        ? 'Przy kompletnych ocenach ważone segmenty sumują się do score100. Nie są bezpośrednim rozkładem CP, które powstają przez progi.'
+        : 'Przy kompletnych ocenach segmenty są wkładem wymiarów i sumują się do Complexity Points (CP) ocenionych Jira Issues.';
   }
 
   protected dimensionPeriodTotal(period: AssessmentTrendPeriod): number {
@@ -239,7 +261,7 @@ export class DeliveryComplexityTrendsPageComponent {
           ? 'brak danych'
           : this.formatDimensionPoints(dimension.total)}`
       ).join(', ');
-      return `${period.label}, ${period.unitCount} Delivery Units: ${values}`;
+      return `${period.label}, ${period.unitCount} Jira Issues: ${values}`;
     }).join('. ');
     return `Łączny wkład wymiarów dla ${this.sourceLabel(dataset)}. ${periods}.`;
   }
@@ -287,11 +309,7 @@ export class DeliveryComplexityTrendsPageComponent {
     const periods = trend.periods
       .map((period) => `${period.label}: ${this.formatPoints(period.points)} ${dataset.metricShortLabel}`)
       .join(', ');
-    return `Trend ${dataset.metricLabel}. ${periods}. Dokladne dane znajduja sie w tabeli pod wykresem.`;
-  }
-
-  protected lastPeriod(trend: AssessmentTrendView): AssessmentTrendPeriod | null {
-    return trend.periods.at(-1) ?? null;
+    return `Trend ${dataset.metricLabel}. ${periods}. Zmiany liczbowe i procentowe są pokazane pod okresami.`;
   }
 
   protected formatEfficiency(value: number | null): string {
@@ -321,23 +339,39 @@ export class DeliveryComplexityTrendsPageComponent {
     return maximum === 0 ? 2 : Math.max(7, period.pointsPerPersonDay / maximum * 100);
   }
 
-  protected effortBarWidth(
-    value: number | null,
+  protected estimateVarianceBarWidth(
+    period: AssessmentTrendEfficiencyPeriod,
     efficiency: AssessmentTrendEfficiencyView
   ): number {
-    if (value === null) {
+    if (period.estimateVariancePercent === null || period.estimateVariancePercent === 0) {
       return 0;
     }
-    const maximum = Math.max(...efficiency.periods.flatMap((period) => [
-      period.estimatedPersonDays ?? 0,
-      period.actualPersonDaysForEstimate ?? 0
-    ]), 0);
-    return maximum === 0 ? 2 : Math.max(value === 0 ? 2 : 8, value / maximum * 100);
+    const maximum = Math.max(...efficiency.periods.map((item) =>
+      Math.abs(item.estimateVariancePercent ?? 0)
+    ), 0);
+    return maximum === 0
+      ? 0
+      : Math.max(6, Math.abs(period.estimateVariancePercent) / maximum * 100);
+  }
+
+  protected estimateVarianceTooltip(period: AssessmentTrendEfficiencyPeriod): string {
+    return `Original Estimate: ${this.formatPersonDays(period.estimatedPersonDays)} MD`
+      + ` · Time Spent: ${this.formatPersonDays(period.actualPersonDaysForEstimate)} MD`
+      + ` · Odchylenie: ${this.percentLabel(period.estimateVariancePercent)}`
+      + ` · ${this.jiraIssueCountLabel(period.estimateUnitCount)}`;
+  }
+
+  protected estimateVarianceChartAriaLabel(efficiency: AssessmentTrendEfficiencyView): string {
+    const periods = efficiency.periods
+      .filter((period) => period.estimateUnitCount > 0)
+      .map((period) => `${period.label}: ${this.percentLabel(period.estimateVariancePercent)}`)
+      .join(', ');
+    return `Odchylenie Time Spent od Original Estimate. Wartość ujemna oznacza Time Spent poniżej estymaty, a dodatnia powyżej estymaty. ${periods}.`;
   }
 
   protected efficiencyChartAriaLabel(efficiency: AssessmentTrendEfficiencyView): string {
     const periods = efficiency.periods.map((period) =>
-      `${period.label}: ${this.formatEfficiency(period.pointsPerPersonDay)} punktów na osobodzień`
+      `${period.label}: ${this.formatEfficiency(period.pointsPerPersonDay)} CP/MD`
     ).join(', ');
     return `Efektywność dostarczenia. ${periods}. Dokładne dane znajdują się w tabeli pod wykresem.`;
   }

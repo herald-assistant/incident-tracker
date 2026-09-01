@@ -114,10 +114,8 @@ export async function importAssessmentTrendFiles(
 
   return {
     source,
-    metricLabel: source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
-      ? 'Delivered Story Points'
-      : 'Complexity Points',
-    metricShortLabel: source === 'DELIVERY_COMPLEXITY_ASSESSMENT' ? 'DSP' : 'punkty',
+    metricLabel: 'Complexity Points (CP)',
+    metricShortLabel: 'CP',
     files: parsedFiles.map((file): AssessmentTrendImportedFile => ({
       name: file.name,
       rowCount: file.rows.length,
@@ -334,7 +332,7 @@ function normalizeRow(
     throw rowError(
       fileName,
       rowNumber,
-      'pointsForAggregation musi byc rowne koncowej wartosci Delivery Unit.'
+      'pointsForAggregation musi byc rowne koncowej wartosci Jira Issue.'
     );
   }
 

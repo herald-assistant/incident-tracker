@@ -132,13 +132,12 @@ describe('Delivery Complexity Trends aggregation', () => {
     expect(efficiency.issuesWithRemainingEstimate).toBe(1);
   });
 
-  it('should use configurable workday hours and hide periods when no timespent exists', () => {
+  it('should use a fixed eight-hour MD and hide periods when no timespent exists', () => {
     const withTime = dataset([issue({ timeSpentSeconds: 8 * 3600 })]);
     const withoutTime = dataset([issue()]);
     const emptyEfficiency = buildAssessmentTrendView(withoutTime, filters()).efficiency;
 
-    expect(buildAssessmentTrendView(withTime, filters(), 8).efficiency.pointsPerPersonDay).toBe(8);
-    expect(buildAssessmentTrendView(withTime, filters(), 4).efficiency.pointsPerPersonDay).toBe(4);
+    expect(buildAssessmentTrendView(withTime, filters()).efficiency.pointsPerPersonDay).toBe(8);
     expect(emptyEfficiency.hasTimeSpentData).toBe(false);
     expect(emptyEfficiency.hasEstimateData).toBe(false);
     expect(emptyEfficiency.periods).toEqual([]);
@@ -515,10 +514,8 @@ function dataset(
 ): AssessmentTrendDataset {
   return {
     source,
-    metricLabel: source === 'DELIVERY_COMPLEXITY_ASSESSMENT'
-      ? 'Delivered Story Points'
-      : 'Complexity Points',
-    metricShortLabel: source === 'DELIVERY_COMPLEXITY_ASSESSMENT' ? 'DSP' : 'punkty',
+    metricLabel: 'Complexity Points (CP)',
+    metricShortLabel: 'CP',
     files: [],
     rows,
     quality: {

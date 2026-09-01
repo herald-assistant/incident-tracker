@@ -3,10 +3,10 @@
 ## Cel i granica
 
 `Delivery Complexity Trends` jest uniwersalnym, frontendowym konsumentem
-biznesowych CSV z:
-
-- `Delivery Complexity Assessment`, gdzie metryka to `Delivered Story Points`,
-- `Delivery Scope Complexity`, gdzie metryka to `Complexity Points`.
+biznesowych CSV z `Delivery Complexity Assessment` oraz
+`Delivery Scope Complexity`. Oba zrodla sa w prezentacji normalizowane do
+wspolnej metryki `Complexity Points (CP)`; zrodlowe nazwy pol scoringu
+pozostaja detalem kompatybilnego formatu CSV.
 
 Ekran jest dostepny pod `GET /delivery-complexity-trends`. Nie uruchamia
 assessmentu, nie ma API, historii ani storage po stronie serwera i nie importuje
@@ -129,24 +129,38 @@ dobrze/zle.
 
 ## Efektywnosc czasu i estimate
 
+Warstwa prezentacji uzywa jednego slownika niezaleznie od assessmentu:
+
+- `Complexity Points (CP)` oznacza koncowy wynik zlozonosci uzywany w trendzie,
+- `Original Estimate (MD)` oznacza pierwotna estymacje z Jira przeliczona z
+  sekund na MD,
+- `Time Spent (MD)` oznacza czas zalogowany w Jira przeliczony z sekund na MD,
+- `Remaining Estimate (MD)` oznacza pozostala estymacje z Jira, gdy raport
+  pokazuje jej wartosc,
+- `Efficiency` ma jednostke `CP/MD`.
+
+UI nie uzywa dla tych wartosci nazw Delivered Story Points, DSP, punktow
+delivery ani osobodni. Techniczny kontrakt CSV pozostaje kompatybilny i nadal
+przechowuje `timeSpentSeconds`, `originalEstimateSeconds` oraz
+`remainingEstimateSeconds`. Przelicznik jest staly: `1 MD = 8 h`.
+
 Gdy zaimportowany zestaw zawiera dane Jira time tracking, ekran dodaje osobna
 sekcje bez zmiany istniejacych wykresow. Glowny wskaznik to:
 
-`punkty zlozonosci / osobodzien`, gdzie osobodzien domyslnie ma 8 godzin i moze
-byc lokalnie zmieniony przez uzytkownika w zakresie 1-24 godzin.
+`CP/MD`, gdzie MD ma zawsze 8 godzin.
 
 Punkty sa nadal liczone raz na Delivery Unit, a `timeSpentSeconds` raz na
 unikalne issue. Do wskaznika kwalifikuje sie tylko Delivery Unit, dla ktorej
 kazde issue ma snapshot `timeSpentSeconds`, a suma czasu jest dodatnia.
-Niepelny czas i czas zero sa wykluczane i pokazywane osobno. Pokrycie punktow
-oznacza udzial punktow kwalifikujacej sie proby we wszystkich punktach
+Niepelny Time Spent i Time Spent rowny zero sa wykluczane i pokazywane osobno.
+Pokrycie CP oznacza udzial CP kwalifikujacej sie proby we wszystkich CP
 widocznego zakresu.
 
 Calosc snapshotu czasu jest przypisana do okresu `doneAt` punktowej kotwicy
 Delivery Unit. CSV nie zawiera historii worklogow, dlatego ekran nie rozklada
 nakladu na rzeczywiste dni jego poniesienia. Okresy bez kwalifikujacej sie
-proby nie sa dopisywane jako zera. Dla kazdego okresu widoczne sa punkty,
-osobodni, punkty/osobodzien, zmiana, pokrycie i wielkosc proby; okres ponizej
+proby nie sa dopisywane jako zera. Dla kazdego okresu widoczne sa CP,
+Time Spent (MD), Efficiency (CP/MD), zmiana, pokrycie i wielkosc proby; okres ponizej
 trzech Delivery Units jest liczony jako mala proba.
 
 Dla calego tribe jednostki wielozespolowe pozostaja w wyniku. Po wyborze
@@ -156,10 +170,14 @@ policzone osobno. Filtr autora MR jedynie zaweza zakres dostaw. Nie rozdziela
 `timespent` na autorow i nie tworzy indywidualnej miary efektywnosci.
 
 Jesli ta sama kwalifikujaca sie jednostka ma kompletne, dodatnie
-`originalEstimateSeconds`, ekran porownuje estymowane osobodni z rzeczywistym
-`timeSpentSeconds` oraz pokazuje procentowe odchylenie. Pozostale estimate nie
-sa mieszane z ta proba. Dodatni `remainingEstimateSeconds` dla issue w Done
-jest licznikiem jakosci danych, a nie czescia efektywnosci.
+`originalEstimateSeconds`, ekran porownuje Original Estimate (MD) z Time Spent
+(MD). Sumy MD pozostaja kontekstem dla calego zakresu, natomiast trend per
+okres pokazuje znormalizowane odchylenie
+`(Time Spent - Original Estimate) / Original Estimate * 100%` wokol osi `0%`.
+Wartosc ujemna oznacza naklad ponizej estymaty, a dodatnia naklad powyzej
+estymaty. Pozostale estimate nie sa mieszane z ta proba. Dodatni
+`remainingEstimateSeconds` dla issue w Done jest licznikiem jakosci danych, a
+nie czescia efektywnosci.
 
 Wskaznik pokazuje obserwowana relacje wyniku assessmentu do zarejestrowanego
 czasu. Nie dowodzi przyczynowego uzysku z AI i nie sluzy do rankingow osob.
