@@ -1727,7 +1727,7 @@ przyklady tego inkrementu sa silnie zanonimizowanym, syntetycznym CRM.
 
 Baseline: analiza `/admin` osiagnela `maxContextFiles=40` po pobraniu wielu
 ogolnych modeli i zaleznosci infrastrukturalnych, zanim zebrala istotne
-komponenty potomne, modale i serwisy. Analiza `/wallet` zebrala 35 plikow i
+komponenty potomne, modale i serwisy. Analiza `/crm/customers/:customerId` zebrala 35 plikow i
 nie osiagnela limitu, ale zatrzymala sie na komponencie-kontenerze, poniewaz
 context traversal nie wlaczal routowanego poddrzewa wybranego ekranu. Oba runy
 zakonczyly sie bez wywolan fallbackowych GitLab tools. Wynik przeniosl te
@@ -1914,7 +1914,7 @@ wykonawczy: neutralne route/TypeScript slices oraz ich reczny preview w GitLab
 Tool Workbench. Zmiana initial promptu i ekspozycja MCP pozostaja osobnymi,
 niezatwierdzonymi jeszcze bramkami. Source need pozostaje
 `../needs/ui-explorer.md`. Pilot artefaktow v5 zostal wycofany: dla tego samego
-widoku `/wallet` zwiekszyl inicjalny prompt z 745 938 do 1 239 678 znakow
+widoku `/crm/customers/:customerId` zwiekszyl inicjalny prompt z 745 938 do 1 239 678 znakow
 (+66,2%) i przekroczyl limit modelu wynikiem 318 391 tokenow. Pelny
 `screen-use-case-manifest.json`, szczegolowy `screen-research-frontier.json`
 oraz setki powtarzalnych diagnostics nie sa akceptowanym kierunkiem.

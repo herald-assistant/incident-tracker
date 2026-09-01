@@ -104,10 +104,10 @@ class ConfigDriftViewerPortabilityTest {
                 document.at("/payload/resultContract").asText()
         );
         assertEquals(sourceResult.status(), importedResult.status());
-        assertEquals(List.of("crm-backend", "billing-backend"), imported.systemIds());
+        assertEquals(List.of("crm-backend", "customer-profile-backend"), imported.systemIds());
         assertEquals(2, imported.components().size());
         assertEquals("FAILED", imported.components().get(1).status());
-        assertEquals("BILLING_SCOPE_FAILED", imported.components().get(1).errorCode());
+        assertEquals("CUSTOMER_PROFILE_SCOPE_FAILED", imported.components().get(1).errorCode());
         assertEquals(sourceResult.configurationDiff(), importedResult.configurationDiff());
         assertEquals(
                 sourceResult.configurationDiffAnnotations(),
@@ -332,7 +332,7 @@ class ConfigDriftViewerPortabilityTest {
                 source.jobId(),
                 source.mode(),
                 source.repositoryId(),
-                List.of("crm-backend", "billing-backend"),
+                List.of("crm-backend", "customer-profile-backend"),
                 source.sourceBranch(),
                 source.targetBranch(),
                 source.codeRef(),
@@ -351,14 +351,14 @@ class ConfigDriftViewerPortabilityTest {
                         source.components().get(0),
                         new ConfigDriftViewerComponentRunSnapshot(
                                 source.jobId() + ":1",
-                                "billing-backend",
-                                "Billing Backend",
-                                "billing",
+                                "customer-profile-backend",
+                                "Customer Profile Backend",
+                                "customer-profile",
                                 "FAILED",
                                 null,
                                 null,
-                                "BILLING_SCOPE_FAILED",
-                                "Billing configuration scope could not be resolved.",
+                                "CUSTOMER_PROFILE_SCOPE_FAILED",
+                                "Customer profile configuration scope could not be resolved.",
                                 source.createdAt(),
                                 now,
                                 now,

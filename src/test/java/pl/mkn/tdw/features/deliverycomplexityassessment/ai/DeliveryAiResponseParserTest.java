@@ -144,10 +144,10 @@ class DeliveryAiResponseParserTest {
                   "boundaryAndDataComplexity":0,"verificationStateSpace":2,"implementedCompatibilityScope":0,
                   "parameterizationComplexity":0
                 },"confidence":0.93,"evidenceSummary":[
-                  "outcomeBreadth | delivery-complexity/issues.md#CLP-37416 | visible regression",
-                  "domainDecisionComplexity | delivery-complexity/issues.md#CLP-37416 | call ordering rule",
-                  "applicationFlowComplexity | delivery-complexity/diffs.md#CLP_FRONTEND!10413:libs/feature/guard.service.ts | waits for availability",
-                  "verificationStateSpace | delivery-complexity/diffs.md#CLP_FRONTEND!10413:libs/feature/guard.service.spec.ts | immediate and delayed states"
+                  "outcomeBreadth | delivery-complexity/issues.md#CRM-37416 | visible regression",
+                  "domainDecisionComplexity | delivery-complexity/issues.md#CRM-37416 | contact preference rule",
+                  "applicationFlowComplexity | delivery-complexity/diffs.md#CRM_FRONTEND!10413:libs/customer-profile/guard.service.ts | waits for profile availability",
+                  "verificationStateSpace | delivery-complexity/diffs.md#CRM_FRONTEND!10413:libs/customer-profile/guard.service.spec.ts | immediate and delayed profile states"
                 ],"qualityFlags":[],"visibilityLimits":[]}
                 """);
 
@@ -198,7 +198,7 @@ class DeliveryAiResponseParserTest {
                   "parameterizationComplexity":0
                 },"confidence":0.88,
                   "evidenceSummary":[
-                    "outcomeBreadth | issues.md#CLP-36597 | sekcja „POLITYKI W DECYZJI – OPIS KOMPLETNY" z pelnymi opisami"
+                    "outcomeBreadth | issues.md#CRM-36597 | sekcja „REGULY SEGMENTACJI – OPIS KOMPLETNY" z pelnymi opisami"
                   ],"qualityFlags":[],"visibilityLimits":[]}
                 """);
 

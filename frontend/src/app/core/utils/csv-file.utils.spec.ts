@@ -4,10 +4,10 @@ describe('CSV file utilities', () => {
   it('should build a semicolon-separated UTF-8 BOM document with CRLF lines', () => {
     const csv = buildExcelCsv([
       ['name', 'score', 'note'],
-      ['Płatność', 72.5, null]
+      ['Profil klienta', 72.5, null]
     ]);
 
-    expect(csv).toBe('\uFEFFname;score;note\r\nPłatność;72,5;\r\n');
+    expect(csv).toBe('\uFEFFname;score;note\r\nProfil klienta;72,5;\r\n');
   });
 
   it('should quote separators, quotes and line breaks', () => {
@@ -22,12 +22,12 @@ describe('CSV file utilities', () => {
   it('should parse the writer output including BOM, decimal commas and quoted new lines', () => {
     const csv = buildExcelCsv([
       ['name', 'score', 'note'],
-      ['Płatność', 72.5, 'Wariant; "pilny"\nDruga linia']
+      ['Profil klienta', 72.5, 'Wariant; "pilny"\nDruga linia']
     ]);
 
     expect(parseExcelCsv(csv)).toEqual([
       ['name', 'score', 'note'],
-      ['Płatność', '72,5', 'Wariant; "pilny"\nDruga linia']
+      ['Profil klienta', '72,5', 'Wariant; "pilny"\nDruga linia']
     ]);
   });
 

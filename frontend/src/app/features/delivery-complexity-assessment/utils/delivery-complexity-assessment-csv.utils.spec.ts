@@ -115,12 +115,12 @@ describe('Delivery Complexity Assessment CSV', () => {
 
   it('should quote separators, quotes and line breaks for Excel-compatible cells', () => {
     const job = snapshot();
-    job.units[0].issues[0].summary = 'Płatność; wariant "pilny"\nDruga linia';
+    job.units[0].issues[0].summary = 'Profil klienta; wariant "pilny"\nDruga linia';
 
     const csv = buildDeliveryComplexityAssessmentCsv(job);
 
     expect(csv.startsWith('\uFEFF')).toBe(true);
-    expect(csv).toContain('"Płatność; wariant ""pilny""\nDruga linia"');
+    expect(csv).toContain('"Profil klienta; wariant ""pilny""\nDruga linia"');
     expect(csv.endsWith('\r\n')).toBe(true);
   });
 

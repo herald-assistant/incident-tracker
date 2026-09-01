@@ -244,18 +244,18 @@ class ConfigDriftViewerJobServiceTest {
 
     @Test
     void shouldPreserveRequestOrderInComponentSnapshots() {
-        when(scopeResolver.resolve("runtime-config", "billing-backend")).thenReturn(new ConfigDriftViewerScope(
+        when(scopeResolver.resolve("runtime-config", "customer-profile-backend")).thenReturn(new ConfigDriftViewerScope(
                 "runtime-config",
                 "config-gitlab",
                 "platform/runtime-config",
-                "billing-backend",
-                "Billing Backend",
-                "billing"
+                "customer-profile-backend",
+                "Customer Profile Backend",
+                "customer-profile"
         ));
         var batchRequest = new ConfigDriftViewerJobStartRequest(
                 ConfigDriftViewerMode.BASIC,
                 "runtime-config",
-                List.of("crm-backend", "billing-backend"),
+                List.of("crm-backend", "customer-profile-backend"),
                 "dev1",
                 "zt001",
                 null,
@@ -264,7 +264,7 @@ class ConfigDriftViewerJobServiceTest {
         );
 
         var created = service.startJob(batchRequest);
-        assertEquals(List.of("crm-backend", "billing-backend"), created.systemIds());
+        assertEquals(List.of("crm-backend", "customer-profile-backend"), created.systemIds());
         assertEquals(2, created.components().size());
         assertEquals(1, executor.size());
 
@@ -272,7 +272,7 @@ class ConfigDriftViewerJobServiceTest {
         var completed = service.getJob(created.jobId());
         assertEquals("COMPLETED", completed.status());
         assertEquals(
-                List.of("crm-backend", "billing-backend"),
+                List.of("crm-backend", "customer-profile-backend"),
                 completed.components().stream().map(component -> component.systemId()).toList()
         );
         assertTrue(completed.components().stream().allMatch(component -> "COMPLETED".equals(component.status())));
@@ -308,8 +308,8 @@ class ConfigDriftViewerJobServiceTest {
 
     @Test
     void shouldCompleteWithLimitationsWhenOneComponentFails() {
-        when(scopeResolver.resolve("runtime-config", "billing-backend")).thenThrow(
-                ConfigDriftViewerScopeException.configurationDirectoryMissing("billing-backend")
+        when(scopeResolver.resolve("runtime-config", "customer-profile-backend")).thenThrow(
+                ConfigDriftViewerScopeException.configurationDirectoryMissing("customer-profile-backend")
         );
 
         var created = service.startJob(batchRequest());
@@ -328,8 +328,8 @@ class ConfigDriftViewerJobServiceTest {
         when(scopeResolver.resolve("runtime-config", "crm-backend")).thenThrow(
                 ConfigDriftViewerScopeException.configurationDirectoryMissing("crm-backend")
         );
-        when(scopeResolver.resolve("runtime-config", "billing-backend")).thenThrow(
-                ConfigDriftViewerScopeException.configurationDirectoryMissing("billing-backend")
+        when(scopeResolver.resolve("runtime-config", "customer-profile-backend")).thenThrow(
+                ConfigDriftViewerScopeException.configurationDirectoryMissing("customer-profile-backend")
         );
 
         var created = service.startJob(batchRequest());
@@ -568,7 +568,7 @@ class ConfigDriftViewerJobServiceTest {
         return new ConfigDriftViewerJobStartRequest(
                 ConfigDriftViewerMode.BASIC,
                 "runtime-config",
-                List.of("crm-backend", "billing-backend"),
+                List.of("crm-backend", "customer-profile-backend"),
                 "dev1",
                 "zt001",
                 null,

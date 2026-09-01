@@ -286,7 +286,7 @@ class AnalysisJobControllerTest {
                                 "Profil klienta CRM",
                                 "CRM Customer Context",
                                 "CRM Customer Team",
-                                "Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych.",
+                                "Analiza funkcjonalna opisuje proces aktualizacji profilu klienta i miejsce pobrania danych katalogowych.",
                                 "Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke.",
                                 "medium",
                                 List.of("Brak potwierdzenia po stronie downstream."),
@@ -303,7 +303,7 @@ class AnalysisJobControllerTest {
                 .andExpect(jsonPath("$.result.affectedProcess").value("Profil klienta CRM"))
                 .andExpect(jsonPath("$.result.affectedBoundedContext").value("CRM Customer Context"))
                 .andExpect(jsonPath("$.result.affectedTeam").value("CRM Customer Team"))
-                .andExpect(jsonPath("$.result.functionalAnalysis").value("Analiza funkcjonalna opisuje proces rozliczenia klienta i miejsce pobrania danych katalogowych."))
+                .andExpect(jsonPath("$.result.functionalAnalysis").value("Analiza funkcjonalna opisuje proces aktualizacji profilu klienta i miejsce pobrania danych katalogowych."))
                 .andExpect(jsonPath("$.result.technicalAnalysis").value("Analiza techniczna wskazuje klienta HTTP, timeout i rekomendowana poprawke."))
                 .andExpect(jsonPath("$.result.confidence").value("medium"))
                 .andExpect(jsonPath("$.result.visibilityLimits[0]").value("Brak potwierdzenia po stronie downstream."))

@@ -90,7 +90,7 @@ class CopilotInitialAnalysisProviderTest {
                   "affectedProcess": "Profil klienta CRM",
                   "affectedBoundedContext": "CRM Customer Context",
                   "affectedTeam": "CRM Customer Team",
-                  "functionalAnalysis": "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu customer-profile.",
+                  "functionalAnalysis": "Timeout dotyka procesu aktualizacji profilu klienta, ktory czeka na wynik lookupu customer-profile.",
                   "technicalAnalysis": "Inspect dependency latency distribution and adjust timeout defaults with targeted metrics.",
                   "confidence": "high",
                   "visibilityLimits": []
@@ -105,7 +105,7 @@ class CopilotInitialAnalysisProviderTest {
                 response.detectedProblem()
         );
         assertEquals(
-                "Timeout dotyka procesu rozliczenia klienta, ktory czeka na wynik lookupu customer-profile.",
+                "Timeout dotyka procesu aktualizacji profilu klienta, ktory czeka na wynik lookupu customer-profile.",
                 response.functionalAnalysis()
         );
         assertEquals(

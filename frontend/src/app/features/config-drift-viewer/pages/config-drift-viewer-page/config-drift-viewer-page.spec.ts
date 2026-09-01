@@ -94,7 +94,7 @@ describe('ConfigDriftViewerPageComponent', () => {
   it('should select all systems by default and support clear, select all and checkbox changes', () => {
     expect(fixture.componentInstance.systemControl.value).toEqual([
       'backend',
-      'billing',
+      'customer-profile',
       'notifications'
     ]);
 
@@ -102,7 +102,7 @@ describe('ConfigDriftViewerPageComponent', () => {
     fixture.detectChanges();
     let compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Backend · backend');
-    expect(compiled.textContent).toContain('Billing · billing');
+    expect(compiled.textContent).toContain('Customer Profile · customer-profile');
     expect(compiled.textContent).toContain('Notifications · notifications');
 
     buttonContaining(compiled, 'Wyczyść')?.click();
@@ -116,9 +116,9 @@ describe('ConfigDriftViewerPageComponent', () => {
     buttonContaining(compiled, 'Zaznacz wszystkie')?.click();
     fixture.detectChanges();
     compiled = fixture.nativeElement as HTMLElement;
-    const billing = labelContaining(compiled, 'Billing · billing')
+    const customerProfile = labelContaining(compiled, 'Customer Profile · customer-profile')
       ?.querySelector<HTMLInputElement>('input[type="checkbox"]');
-    billing?.click();
+    customerProfile?.click();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.systemControl.value).toEqual([
@@ -179,7 +179,7 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(api.startJob).toHaveBeenCalledWith({
       mode: 'BASIC',
       repositoryId: 'runtime-config',
-      systemIds: ['backend', 'billing', 'notifications'],
+      systemIds: ['backend', 'customer-profile', 'notifications'],
       sourceBranch: 'dev1',
       targetBranch: 'zt001'
     });
@@ -209,28 +209,28 @@ describe('ConfigDriftViewerPageComponent', () => {
       report: null
     });
     const backend = backendJob.components[0]!;
-    const billingResult = basicResult();
-    billingResult.deterministicResult = {
-      ...billingResult.deterministicResult,
-      systemId: 'billing',
-      systemLabel: 'Billing',
-      configurationDirectory: 'billing'
+    const customerProfileResult = basicResult();
+    customerProfileResult.deterministicResult = {
+      ...customerProfileResult.deterministicResult,
+      systemId: 'customer-profile',
+      systemLabel: 'Customer Profile',
+      configurationDirectory: 'customer-profile'
     };
-    billingResult.configurationDiff = {
-      ...billingResult.configurationDiff!,
-      files: billingResult.configurationDiff!.files.map((file) => ({
+    customerProfileResult.configurationDiff = {
+      ...customerProfileResult.configurationDiff!,
+      files: customerProfileResult.configurationDiff!.files.map((file) => ({
         ...file,
-        sourcePath: file.sourcePath?.replace('backend/', 'billing/') ?? null,
-        targetPath: file.targetPath?.replace('backend/', 'billing/') ?? null
+        sourcePath: file.sourcePath?.replace('backend/', 'customer-profile/') ?? null,
+        targetPath: file.targetPath?.replace('backend/', 'customer-profile/') ?? null
       }))
     };
-    const billing: ConfigDriftViewerComponentRunSnapshot = {
+    const customerProfile: ConfigDriftViewerComponentRunSnapshot = {
       ...backend,
       componentRunId: 'job-1:1',
-      systemId: 'billing',
-      systemLabel: 'Billing',
-      configurationDirectory: 'billing',
-      result: billingResult
+      systemId: 'customer-profile',
+      systemLabel: 'Customer Profile',
+      configurationDirectory: 'customer-profile',
+      result: customerProfileResult
     };
     const notifications: ConfigDriftViewerComponentRunSnapshot = {
       ...backend,
@@ -248,8 +248,8 @@ describe('ConfigDriftViewerPageComponent', () => {
     fixture.componentInstance.job.set({
       ...backendJob,
       status: 'COMPLETED_WITH_LIMITATIONS',
-      systemIds: ['backend', 'billing', 'notifications'],
-      components: [backend, billing, notifications]
+      systemIds: ['backend', 'customer-profile', 'notifications'],
+      components: [backend, customerProfile, notifications]
     });
     fixture.detectChanges();
 
@@ -259,7 +259,7 @@ describe('ConfigDriftViewerPageComponent', () => {
     );
     expect(tabs.map((tab) => tab.textContent?.trim())).toEqual([
       'Backend · Zakończona',
-      'Billing · Zakończona',
+      'Customer Profile · Zakończona',
       'Notifications · Błąd'
     ]);
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
@@ -267,8 +267,8 @@ describe('ConfigDriftViewerPageComponent', () => {
 
     tabs[1]?.click();
     fixture.detectChanges();
-    expect(fixture.componentInstance.activeComponent()?.systemId).toBe('billing');
-    expect(fixture.nativeElement.textContent).toContain('billing/application.yml.kv');
+    expect(fixture.componentInstance.activeComponent()?.systemId).toBe('customer-profile');
+    expect(fixture.nativeElement.textContent).toContain('customer-profile/application.yml.kv');
     expect(fixture.nativeElement.textContent).not.toContain('backend/application.yml.kv');
 
     tabs = Array.from(
@@ -346,7 +346,7 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(api.startJob).toHaveBeenCalledWith({
       mode: 'DEEP',
       repositoryId: 'runtime-config',
-      systemIds: ['backend', 'billing', 'notifications'],
+      systemIds: ['backend', 'customer-profile', 'notifications'],
       sourceBranch: 'dev1',
       targetBranch: 'zt001',
       codeRef: 'release/42',
@@ -567,7 +567,11 @@ function inputOptions(): ConfigDriftViewerInputOptions {
     repositories: [{ id: 'runtime-config', label: 'Runtime config' }],
     systems: [
       { id: 'backend', label: 'Backend', configurationDirectory: 'backend' },
-      { id: 'billing', label: 'Billing', configurationDirectory: 'billing' },
+      {
+        id: 'customer-profile',
+        label: 'Customer Profile',
+        configurationDirectory: 'customer-profile'
+      },
       {
         id: 'notifications',
         label: 'Notifications',

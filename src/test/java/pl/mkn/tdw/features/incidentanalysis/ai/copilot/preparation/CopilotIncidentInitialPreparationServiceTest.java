@@ -701,7 +701,7 @@ class CopilotIncidentInitialPreparationServiceTest {
                                 "Operational context summary",
                                 List.of(
                                         new AnalysisEvidenceAttribute("team", "CRM Team"),
-                                        new AnalysisEvidenceAttribute("process", "Rozliczenie katalogu")
+                                        new AnalysisEvidenceAttribute("process", "Synchronizacja profilu CRM")
                                 )
                         ))
                 ))

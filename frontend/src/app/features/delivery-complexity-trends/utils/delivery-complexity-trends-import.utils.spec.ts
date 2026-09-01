@@ -254,7 +254,7 @@ function row(
   const defaults: Record<string, string> = {
     issueKey: 'CRM-1',
     issueUrl: 'https://jira.example.com/browse/CRM-1',
-    summary: 'Obsługa płatności',
+    summary: 'Obsługa profilu klienta',
     issueType: 'Story',
     doneAt: '2026-07-01T09:00:00+02:00',
     timeSpentSeconds: '14400',
