@@ -668,6 +668,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   jeden kontrolowany upgrade `abort -> close handle -> resume same sessionId`
   z `contextTier=long_context`. Initial prompt nie jest wysylany ponownie, a
   wznowiona sesja dostaje tylko krotka instrukcje kontynuacji zachowanego planu.
+  W `AUTO` brak `contextTier` po resume jest stanem niepotwierdzonym, nie
+  terminalnym: pierwsze kolejne `session.usage_info` potwierdza upgrade przez
+  wzrost `tokenLimit` albo publikuje ostrzezenie i pozwala SDK dokonczyc przez
+  compaction, bez kolejnej proby resume.
   User-visible lifecycle
   `platform.context_tier` rozdziela zazadanie tieru, stan raportowany przez
   model RPC i pierwszy rzeczywisty `tokenLimit/currentTokens` z
@@ -880,6 +884,10 @@ Znaczenie grup UI:
   provider'a opcji Copilota przez backendowy shared/operator endpoint opcji AI.
   Frontend nie jest source of truth dla mozliwosci modeli.
 - Runtime AI providerem jest GitHub Copilot SDK.
+- Build przypina Java SDK 1.0.11 i wymaga Copilot CLI 1.0.57 lub nowszego.
+  Po starcie klienta `status.get` dostarcza rzeczywista wersje CLI i protokolu;
+  neutralne activity `platform.copilot_runtime` zachowuje je dla lifecycle i
+  eksportow diagnostycznych, a starszy CLI jest odrzucany przed otwarciem sesji.
 - Lifecycle procesu Copilot CLI jest wspolna odpowiedzialnoscia
   `aiplatform.copilot`. Na Windows runtime rozwiazuje CLI do bezwzglednego
   pliku `.exe` z working directory, `PATH` albo lokalnej instalacji WinGet, aby

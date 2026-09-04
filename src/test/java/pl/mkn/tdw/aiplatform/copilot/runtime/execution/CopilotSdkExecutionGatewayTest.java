@@ -19,6 +19,8 @@ import org.mockito.MockedConstruction;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeCompatibility;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeVersionInfo;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
@@ -374,7 +376,8 @@ class CopilotSdkExecutionGatewayTest {
                 budgetRegistry,
                 new CopilotReportSessionStore(),
                 new CopilotClientShutdown(properties),
-                contextTierPolicy(properties, effectiveTierReader)
+                contextTierPolicy(properties, effectiveTierReader),
+                compatibleRuntime()
         );
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var sessionConfig = new SessionConfig()
@@ -429,7 +432,7 @@ class CopilotSdkExecutionGatewayTest {
         when(effectiveTierReader.read(resumedSession)).thenReturn(new CopilotEffectiveContextTier(
                 "gpt-synthetic-crm",
                 "medium",
-                "long_context"
+                null
         ));
 
         try (MockedConstruction<CopilotClient> mockedClients = mockConstruction(
@@ -471,6 +474,17 @@ class CopilotSdkExecutionGatewayTest {
                             "MODEL_STATE_VERIFICATION",
                             "EFFECTIVE_WINDOW_OBSERVED"
                     );
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .element(3)
+                    .satisfies(activity -> {
+                        assertThat(activity.status()).isEqualTo("WARNING");
+                        assertThat(activity.details()).containsEntry("verification", "TIER_UNCONFIRMED");
+                    });
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .element(4)
+                    .satisfies(activity -> assertThat(activity.details())
+                            .containsEntry("verification", "TOKEN_LIMIT_INCREASED")
+                            .containsEntry("runtimeUpgradeConfirmed", true));
         }
     }
 
@@ -810,6 +824,60 @@ class CopilotSdkExecutionGatewayTest {
         }
     }
 
+    @Test
+    void shouldRejectIncompatibleCliBeforeOpeningSessionAndPublishVersions() {
+        var properties = new CopilotSdkProperties();
+        var compatibility = mock(CopilotRuntimeCompatibility.class);
+        when(compatibility.inspect(any())).thenReturn(new CopilotRuntimeVersionInfo(
+                "1.0.11",
+                "1.0.56-9",
+                3,
+                "1.0.57",
+                false
+        ));
+        var gateway = new CopilotSdkExecutionGateway(
+                properties,
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()),
+                new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
+                new CopilotReportSessionStore(),
+                new CopilotClientShutdown(properties),
+                contextTierPolicy(properties, mock(CopilotEffectiveContextTierReader.class)),
+                compatibility
+        );
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var preparedRequest = new CopilotPreparedSession(
+                "incompatible-runtime",
+                new CopilotClientOptions(),
+                new SessionConfig(),
+                new MessageOptions().setPrompt("Diagnose incident"),
+                "Diagnose incident",
+                Map.of()
+        ).withActivitySink(activities::add);
+
+        try (MockedConstruction<CopilotClient> mockedClients = mockConstruction(CopilotClient.class, (client, context) -> {
+            when(client.getState()).thenReturn(ConnectionState.CONNECTED);
+            when(client.start()).thenReturn(CompletableFuture.completedFuture(null));
+            when(client.stop()).thenReturn(CompletableFuture.completedFuture(null));
+        })) {
+            assertThatThrownBy(() -> gateway.execute(preparedRequest))
+                    .isInstanceOf(CopilotSdkInvocationException.class)
+                    .hasMessageContaining("required CLI version is 1.0.57 or newer");
+
+            var client = mockedClients.constructed().get(0);
+            verify(client, never()).createSession(any());
+            verify(client).stop();
+        }
+
+        assertThat(activities).singleElement().satisfies(activity -> {
+            assertThat(activity.type()).isEqualTo("platform.copilot_runtime");
+            assertThat(activity.status()).isEqualTo("FAILED");
+            assertThat(activity.details())
+                    .containsEntry("sdkVersion", "1.0.11")
+                    .containsEntry("cliVersion", "1.0.56-9")
+                    .containsEntry("compatible", false);
+        });
+    }
+
     private CopilotSdkExecutionGateway executionGateway(
             CopilotSdkProperties properties,
             CopilotToolEvidenceSessionStore toolEvidenceSessionStore
@@ -842,8 +910,21 @@ class CopilotSdkExecutionGatewayTest {
                 new CopilotToolBudgetRegistry(new CopilotToolBudgetProperties()),
                 reportStore,
                 new CopilotClientShutdown(properties),
-                contextTierPolicy(properties, effectiveTierReader)
+                contextTierPolicy(properties, effectiveTierReader),
+                compatibleRuntime()
         );
+    }
+
+    private CopilotRuntimeCompatibility compatibleRuntime() {
+        var compatibility = mock(CopilotRuntimeCompatibility.class);
+        when(compatibility.inspect(any())).thenReturn(new CopilotRuntimeVersionInfo(
+                "1.0.11",
+                "1.0.57-5",
+                3,
+                "1.0.57",
+                true
+        ));
+        return compatibility;
     }
 
     private CopilotContextTierPolicy contextTierPolicy(
@@ -884,22 +965,10 @@ class CopilotSdkExecutionGatewayTest {
     private AssistantMessageEvent assistantMessage(String content) {
         var event = new AssistantMessageEvent();
         event.setData(new AssistantMessageEvent.AssistantMessageEventData(
-                "message-1",
-                null,
-                content,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "interaction-1",
-                null,
-                null,
-                null,
-                null,
-                null
+                "message-1", null, content, null,
+                null, null, null, null, null,
+                null, null, null,
+                "interaction-1", null, null, null, null, null, null, null, null, null
         ));
         return event;
     }
@@ -907,36 +976,21 @@ class CopilotSdkExecutionGatewayTest {
     private AssistantMessageEvent assistantMessageWithReasoning(
             String content,
             String reasoningText,
-            List<AssistantMessageToolRequest> toolRequests
+        List<AssistantMessageToolRequest> toolRequests
     ) {
         var event = new AssistantMessageEvent();
         event.setData(new AssistantMessageEvent.AssistantMessageEventData(
-                "message-reasoning",
-                null,
-                content,
-                toolRequests,
-                null,
-                reasoningText,
-                null,
-                null,
-                null,
-                "interaction-reasoning",
-                null,
-                null,
-                null,
-                null,
-                "reasoning-1",
-                null
+                "message-reasoning", null, content, toolRequests,
+                null, reasoningText, null, null, null,
+                null, null, null,
+                "interaction-reasoning", null, null, null, null, null, null, null, "reasoning-1", null
         ));
         return event;
     }
 
     private AssistantReasoningEvent assistantReasoning(String reasoningId, String content) {
         var event = new AssistantReasoningEvent();
-        event.setData(new AssistantReasoningEvent.AssistantReasoningEventData(
-                reasoningId,
-                content
-        ));
+        event.setData(new AssistantReasoningEvent.AssistantReasoningEventData(reasoningId, content, null));
         return event;
     }
 
@@ -957,19 +1011,14 @@ class CopilotSdkExecutionGatewayTest {
                 cacheReadTokens != null ? cacheReadTokens.longValue() : null,
                 cacheWriteTokens != null ? cacheWriteTokens.longValue() : null,
                 null,
+                null,
                 cost,
                 duration != null ? duration.longValue() : null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                null, null, null, null, null, null, null, null, null, null,
                 Map.of(),
-                null,
-                null
+                null, null, null, null, null,
+                Map.of(),
+                null, null
         ));
         return event;
     }
@@ -999,9 +1048,13 @@ class CopilotSdkExecutionGatewayTest {
     ) {
         var event = new SessionCompactionStartEvent();
         event.setData(new SessionCompactionStartEvent.SessionCompactionStartEventData(
+                null,
                 systemTokens,
                 conversationTokens,
-                toolDefinitionsTokens
+                toolDefinitionsTokens,
+                null,
+                null,
+                null
         ));
         return event;
     }

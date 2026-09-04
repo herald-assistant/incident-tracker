@@ -141,7 +141,7 @@ dostepne.
 Lista dostepnych modeli dla UI pochodzi z shared/operator endpointu
 `GET /analysis/ai/options`. Endpoint mapuje metadane Copilot SDK na generyczny
 kontrakt aplikacji i zwraca `reasoningEffort` tylko tam, gdzie SDK wystawia
-support albo domyslna wartosc dla danego modelu. Ten sam cache'owany katalog
+support albo liste wartosci dla danego modelu. Ten sam cache'owany katalog
 typed RPC `models.list` zachowuje wewnetrznie limity capability i metadata
 billing potrzebne polityce context tier; publiczny kontrakt UI ich nie
 duplikuje.
@@ -200,6 +200,21 @@ tylko neutralna instrukcje kontynuacji. Prompt, tools, hidden scope i kontrakt
 wyniku nie zmieniaja sie. W properties nie ma listy nazw ani limitow modeli.
 Rollbackiem jest
 `analysis.ai.copilot.context-tier.enabled=false`.
+
+Dla runtime resume w `AUTO` brak `contextTier` w
+`session.model.getCurrent` nie jest dowodem braku aktywacji. Platforma wysyla
+jedna instrukcje kontynuacji i interpretuje pierwszy kolejny
+`session.usage_info`: wzrost `tokenLimit` potwierdza upgrade, a brak wzrostu
+publikuje ostrzezenie i pozwala SDK dokonczyc turn przez compaction. Druga proba
+resume nie jest wykonywana. Zasada fail-before-send pozostaje ograniczona do
+jawnego `LONG_CONTEXT_REQUIRED`, a Change Verification nadal korzysta z
+`AUTO`.
+
+Build przypina Java SDK 1.0.11 i minimalny Copilot CLI 1.0.57, czyli pierwsza
+wersje schematu CLI wystawiajaca `contextTier` dla `model.getCurrent`. Po
+`client.start()` runtime odczytuje `status.get`, odrzuca starszy CLI i
+publikuje neutralne activity `platform.copilot_runtime` z wersjami SDK, CLI i
+protokolu. Change Verification zapisuje te pola w diagnostyce eksportu v5.
 
 `session.model.getCurrent` potwierdza stan tieru zapisany przez sesje, ale nie
 jest samodzielnym dowodem rozmiaru aktywnego okna. Platforma publikuje dlatego

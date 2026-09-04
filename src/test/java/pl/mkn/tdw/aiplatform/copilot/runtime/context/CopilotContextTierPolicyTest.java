@@ -331,7 +331,7 @@ class CopilotContextTierPolicyTest {
         when(reader.read(resumedSession)).thenReturn(new CopilotEffectiveContextTier(
                 "gpt-crm-context",
                 "high",
-                "long_context"
+                null
         ));
         var resumeConfig = new ResumeSessionConfig().setModel("gpt-crm-context");
         var controller = policy(properties, reader).prepare(prepared(
@@ -371,7 +371,55 @@ class CopilotContextTierPolicyTest {
                 .containsEntry("currentTokens", 70L);
         assertThat(activities.get(4).details())
                 .containsEntry("tokenLimit", 1_000L)
-                .containsEntry("effectiveTier", "long_context");
+                .containsEntry("verification", "TOKEN_LIMIT_INCREASED")
+                .containsEntry("runtimeUpgradeConfirmed", true);
+        assertThat(activities.get(3).status()).isEqualTo("WARNING");
+        assertThat(activities.get(3).details()).containsEntry("verification", "TIER_UNCONFIRMED");
+    }
+
+    @Test
+    void shouldWarnAndAllowCompactionWhenRuntimeResumeKeepsSameWindow() {
+        var properties = properties(0.70D, 4D, 0);
+        properties.getContextTier().setRuntimeUsageThreshold(0.70D);
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var reader = mock(CopilotEffectiveContextTierReader.class);
+        var session = mock(CopilotSession.class);
+        var resumedSession = mock(CopilotSession.class);
+        when(session.abort()).thenReturn(CompletableFuture.completedFuture(null));
+        when(reader.read(resumedSession)).thenReturn(new CopilotEffectiveContextTier(
+                "gpt-crm-context",
+                "high",
+                null
+        ));
+        var resumeConfig = new ResumeSessionConfig().setModel("gpt-crm-context");
+        var controller = policy(properties, reader).prepare(prepared(
+                "Small synthetic CRM prompt",
+                new SessionConfig().setModel("gpt-crm-context"),
+                resumeConfig,
+                List.of(),
+                activities,
+                CopilotContextTierPreference.AUTO
+        ));
+
+        controller.observeEffectiveWindow(session, 100, 70, 7);
+        controller.awaitRuntimeAbort();
+        controller.prepareRuntimeResume(resumeConfig, "crm-runtime-tier-session");
+        controller.verifyAfterRuntimeResume(resumedSession);
+        controller.observeEffectiveWindow(resumedSession, 100, 71, 8);
+        controller.observeEffectiveWindow(resumedSession, 100, 72, 9);
+
+        verify(session).abort();
+        verify(resumedSession, org.mockito.Mockito.never()).abort();
+        assertThat(activities.get(4).status()).isEqualTo("WARNING");
+        assertThat(activities.get(4).summary()).contains("compaction");
+        assertThat(activities.get(4).details())
+                .containsEntry("tokenLimit", 100L)
+                .containsEntry("verification", "TOKEN_LIMIT_NOT_INCREASED")
+                .containsEntry("runtimeUpgradeConfirmed", false);
+        assertThat(activities).filteredOn(activity -> "EFFECTIVE_WINDOW_OBSERVED".equals(
+                        activity.details().get("phase")
+                ))
+                .hasSize(1);
     }
 
     @Test

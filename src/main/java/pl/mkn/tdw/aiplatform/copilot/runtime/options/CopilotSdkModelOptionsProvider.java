@@ -83,7 +83,7 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
                 modelName(modelInfo),
                 supportsReasoningEffort,
                 supportsReasoningEffort ? efforts : List.of(),
-                normalized(modelInfo.defaultReasoningEffort()),
+                null,
                 contextWindows.defaultWindowTokens(),
                 contextWindows.longContextWindowTokens()
         );
@@ -99,9 +99,6 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
 
     private boolean supportsReasoningEffort(Model modelInfo) {
         if (!reasoningEfforts(modelInfo).isEmpty()) {
-            return true;
-        }
-        if (StringUtils.hasText(modelInfo.defaultReasoningEffort())) {
             return true;
         }
         if (modelInfo.capabilities() == null || modelInfo.capabilities().supports() == null) {
@@ -120,10 +117,6 @@ public class CopilotSdkModelOptionsProvider implements CopilotModelOptionsProvid
                 }
             }
         }
-        if (values.isEmpty() && StringUtils.hasText(modelInfo.defaultReasoningEffort())) {
-            values.add(modelInfo.defaultReasoningEffort().trim());
-        }
-
         return List.copyOf(values);
     }
 

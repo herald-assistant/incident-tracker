@@ -11,7 +11,10 @@ Obecnie obejmuje:
   techniczny runtime Copilot SDK: properties, model listing, skill runtime
   loading, `CopilotRunRequest`, `CopilotPreparedSession`,
   `CopilotSessionConfigRequest`, rendered artifacts oraz factory budujace
-  `SessionConfig` i `MessageOptions`.
+  `SessionConfig` i `MessageOptions`. Build przypina Java SDK 1.0.11 oraz
+  minimalny Copilot CLI 1.0.57. Po `client.start()` runtime pobiera rzeczywista
+  wersje CLI i protokolu przez `status.get`, publikuje
+  `platform.copilot_runtime` i nie otwiera sesji dla starszego CLI.
 - `copilot/runtime/options/`
   platformowy katalog modeli Copilota: provider, neutralne DTO i cache/fallback
   dla typed RPC `models.list`; pelne metadata capability/billing sa wewnetrznym
@@ -26,7 +29,12 @@ Obecnie obejmuje:
   `session.usage_info`. Po przekroczeniu runtime threshold platforma moze
   wykonac najwyzej jeden upgrade `abort -> close handle -> resume same
   sessionId` z `long_context`; initial prompt nie jest wysylany drugi raz, a
-  report/tool evidence/tool budget stores pozostaja wspolne. Nie przywracaj
+  report/tool evidence/tool budget stores pozostaja wspolne. Dla runtime
+  resume w `AUTO` wartosc `contextTier=null` z `model.getCurrent` oznacza stan
+  niepotwierdzony: continuation jest wysylane raz, a pierwszy
+  `session.usage_info` potwierdza upgrade wzrostem `tokenLimit` albo publikuje
+  ostrzezenie i pozostawia dokonczenie mechanizmowi compaction SDK. Nie
+  podejmuj drugiej proby resume. Nie przywracaj
   blednego wariantu przez `setModel`. Progi, wykonanie SDK i rollback pozostaja
   mechanika platformy, a semantyczna potrzeba nalezy do feature'a.
 - `copilot/runtime/execution/`
@@ -109,3 +117,7 @@ Nie obejmuje:
 
 - `PackageDependencyGuardTest` pilnuje, zeby `aiplatform.*` nie importowalo
   warstw aplikacyjnych ani feature'ow.
+- Rzeczywisty test pary SDK/CLI uruchamia sie jawnie przez
+  `COPILOT_SDK_LIVE_TEST=true` oraz opcjonalne `COPILOT_CLI_PATH`,
+  `COPILOT_GITHUB_TOKEN` i `COPILOT_TEST_MODEL`; pokrywa sekwencje
+  `create -> abort -> resume(long_context) -> model.getCurrent`.

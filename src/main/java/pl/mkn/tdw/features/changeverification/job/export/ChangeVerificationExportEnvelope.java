@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.changeverification.job.export;
 
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
 import java.time.Instant;
@@ -14,7 +15,7 @@ public record ChangeVerificationExportEnvelope(
         Payload payload
 ) {
     public static final String SCHEMA = "tdw.change-verification-export";
-    public static final int VERSION = 4;
+    public static final int VERSION = 5;
     public static final String PAYLOAD_TYPE = "change-verification-analysis";
     public static final String RESULT_CONTRACT = "change-verification-result-v4";
 
@@ -49,6 +50,7 @@ public record ChangeVerificationExportEnvelope(
             Request request,
             Result result,
             Workflow workflow,
+            CopilotRuntime copilotRuntime,
             List<DiagnosticArtifactSummary> artifacts
     ) {
         static ChangeVerificationExportDiagnostics from(ChangeVerificationJobStateSnapshot snapshot) {
@@ -58,6 +60,7 @@ public record ChangeVerificationExportEnvelope(
                     ChangeVerificationExportEnvelope.request(snapshot),
                     ChangeVerificationExportEnvelope.result(snapshot),
                     ChangeVerificationExportEnvelope.workflow(snapshot),
+                    ChangeVerificationExportEnvelope.copilotRuntime(snapshot),
                     ChangeVerificationExportEnvelope.artifacts(snapshot)
             );
         }
@@ -91,6 +94,15 @@ public record ChangeVerificationExportEnvelope(
             int toolEvidenceItemCount,
             int aiActivityEventCount,
             boolean usageIncluded
+    ) {
+    }
+
+    public record CopilotRuntime(
+            String sdkVersion,
+            String cliVersion,
+            Integer protocolVersion,
+            String minimumCliVersion,
+            boolean compatible
     ) {
     }
 
@@ -138,6 +150,31 @@ public record ChangeVerificationExportEnvelope(
                 snapshot != null ? safeList(snapshot.aiActivityEvents()).size() : 0,
                 snapshot != null && snapshot.result() != null && snapshot.result().usage() != null
         );
+    }
+
+    private static CopilotRuntime copilotRuntime(ChangeVerificationJobStateSnapshot snapshot) {
+        var event = snapshot != null
+                ? safeList(snapshot.aiActivityEvents()).stream()
+                .filter(ChangeVerificationExportEnvelope::isCopilotRuntimeEvent)
+                .reduce((first, second) -> second)
+                .orElse(null)
+                : null;
+        if (event == null) {
+            return null;
+        }
+
+        var details = event.details();
+        return new CopilotRuntime(
+                detailText(details.get("sdkVersion")),
+                detailText(details.get("cliVersion")),
+                detailInteger(details.get("protocolVersion")),
+                detailText(details.get("minimumCliVersion")),
+                Boolean.TRUE.equals(details.get("compatible"))
+        );
+    }
+
+    private static boolean isCopilotRuntimeEvent(AnalysisAiActivityEvent event) {
+        return event != null && "platform.copilot_runtime".equals(event.type());
     }
 
     private static List<DiagnosticArtifactSummary> artifacts(ChangeVerificationJobStateSnapshot snapshot) {
@@ -211,6 +248,14 @@ public record ChangeVerificationExportEnvelope(
 
     private static String text(String value) {
         return value != null ? value : "";
+    }
+
+    private static String detailText(Object value) {
+        return value instanceof String text ? text : null;
+    }
+
+    private static Integer detailInteger(Object value) {
+        return value instanceof Number number ? number.intValue() : null;
     }
 
     private static boolean hasText(String value) {

@@ -179,6 +179,26 @@ public final class CopilotContextTierSession {
 
     public void verifyAfterRuntimeResume(CopilotSession session) {
         runtimeResumeActive = true;
+        if (decision.preference() == CopilotContextTierPreference.AUTO) {
+            var effectiveTier = effectiveContextTierReader.read(session);
+            if (effectiveTier.contextTier() == null) {
+                verifiedTier = effectiveTier;
+                var details = details("MODEL_STATE_VERIFICATION", "RUNTIME_USAGE_THRESHOLD");
+                details.put("observationSource", "SESSION_MODEL_GET_CURRENT");
+                details.put("effectiveModel", effectiveTier.modelId());
+                details.put("effectiveReasoningEffort", effectiveTier.reasoningEffort());
+                details.put("verification", "TIER_UNCONFIRMED");
+                publish(
+                        eventId("runtime-model-state-unconfirmed"),
+                        runtimeRequestEventId,
+                        "WARNING",
+                        "Tier sesji niepotwierdzony",
+                        "SDK nie zwróciło `contextTier`; platforma wyśle jedną wiadomość kontynuującą i zweryfikuje pierwszy `session.usage_info`.",
+                        details
+                );
+                return;
+            }
+        }
         verifyExpectedLongContext(
                 session,
                 runtimeRequestEventId,
@@ -265,13 +285,24 @@ public final class CopilotContextTierSession {
             details.put("effectiveReasoningEffort", verifiedTier.reasoningEffort());
         }
         addWindowDetails(details, observation);
-        details.put("verification", "TOKEN_LIMIT_OBSERVED");
+        var runtimeWindowIncreased = runtimeResumeActive
+                && runtimeUpgradeSource != null
+                && observation.tokenLimit() > runtimeUpgradeSource.tokenLimit();
+        details.put("verification", runtimeResumeActive
+                ? runtimeWindowIncreased ? "TOKEN_LIMIT_INCREASED" : "TOKEN_LIMIT_NOT_INCREASED"
+                : "TOKEN_LIMIT_OBSERVED");
+        if (runtimeResumeActive) {
+            details.put("runtimeUpgradeConfirmed", runtimeWindowIncreased);
+        }
         publish(
                 eventId(runtimeResumeActive ? "runtime-effective-window" : "initial-effective-window"),
                 runtimeResumeActive ? runtimeRequestEventId : initialRequestEventId,
-                "COMPLETED",
+                runtimeResumeActive && !runtimeWindowIncreased ? "WARNING" : "COMPLETED",
                 "Rzeczywisty limit kontekstu",
-                "Copilot zgłosił efektywny limit " + observation.tokenLimit()
+                runtimeResumeActive && !runtimeWindowIncreased
+                        ? "Po resume Copilot nadal zgłasza limit " + observation.tokenLimit()
+                        + " tokenów; kolejna próba resume nie zostanie wykonana, a SDK może dokończyć przez compaction."
+                        : "Copilot zgłosił efektywny limit " + observation.tokenLimit()
                         + " tokenów przy aktualnym użyciu " + observation.currentTokens() + " tokenów.",
                 details
         );

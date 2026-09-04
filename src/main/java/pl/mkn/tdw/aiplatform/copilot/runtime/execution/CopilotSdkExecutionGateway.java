@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeCompatibility;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeVersionInfo;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
@@ -23,6 +25,7 @@ import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -47,6 +50,7 @@ public class CopilotSdkExecutionGateway {
     private final CopilotReportSessionStore reportSessionStore;
     private final CopilotClientShutdown clientShutdown;
     private final CopilotContextTierPolicy contextTierPolicy;
+    private final CopilotRuntimeCompatibility runtimeCompatibility;
 
     public CopilotExecutionResult execute(CopilotPreparedSession preparedSession) {
         var overallStart = System.nanoTime();
@@ -63,6 +67,15 @@ public class CopilotSdkExecutionGateway {
                     client.start().join();
                     logClientState("after-start", client.getState(), runReference);
                     logDuration("client-start", runReference, nanosToMillis(clientStart));
+                    var runtimeVersionInfo = runtimeCompatibility.inspect(client);
+                    publishRuntimeVersion(preparedSession.activitySink(), runtimeVersionInfo);
+                    if (!runtimeVersionInfo.compatible()) {
+                        throw new CopilotSdkInvocationException(
+                                "Copilot CLI " + runtimeVersionInfo.cliVersion()
+                                        + " is incompatible with Copilot Java SDK " + runtimeVersionInfo.sdkVersion()
+                                        + "; required CLI version is " + runtimeVersionInfo.minimumCliVersion() + " or newer."
+                        );
+                    }
 
                     var sessionSummary = newSessionLogSummary(runReference);
                     String registeredSessionId = null;
@@ -284,6 +297,42 @@ public class CopilotSdkExecutionGateway {
     private MessageOptions runtimeContinuationMessage() {
         return new MessageOptions()
                 .setPrompt(RUNTIME_CONTEXT_TIER_CONTINUATION_PROMPT);
+    }
+
+    private void publishRuntimeVersion(
+            Consumer<AnalysisAiActivityEvent> activitySink,
+            CopilotRuntimeVersionInfo versionInfo
+    ) {
+        if (activitySink == null) {
+            return;
+        }
+        var details = new LinkedHashMap<String, Object>();
+        details.put("sdkVersion", versionInfo.sdkVersion());
+        details.put("cliVersion", versionInfo.cliVersion());
+        details.put("protocolVersion", versionInfo.protocolVersion());
+        details.put("minimumCliVersion", versionInfo.minimumCliVersion());
+        details.put("compatible", versionInfo.compatible());
+        try {
+            activitySink.accept(new AnalysisAiActivityEvent(
+                    "copilot-runtime-" + UUID.randomUUID(),
+                    null,
+                    "platform.copilot_runtime",
+                    "RUNTIME",
+                    versionInfo.compatible() ? "COMPLETED" : "FAILED",
+                    "Wersje Copilot runtime",
+                    versionInfo.compatible()
+                            ? "Copilot Java SDK i CLI używają zgodnego protokołu."
+                            : "Copilot CLI jest starszy od minimalnej wersji wymaganej przez aplikację.",
+                    null,
+                    null,
+                    null,
+                    null,
+                    Instant.now(),
+                    details
+            ));
+        } catch (RuntimeException failure) {
+            log.warn("Copilot runtime version activity listener failed reason={}", failure.getMessage());
+        }
     }
 
     private Throwable unwrapCompletionException(Throwable throwable) {

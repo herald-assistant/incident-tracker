@@ -11,12 +11,14 @@ import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultRe
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
+import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.ai.report.AnalysisReport;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
 import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,7 +61,7 @@ class ChangeVerificationLocalRunPersisterTest {
 
         var exportEnvelope = store.savedRecord.exportEnvelope();
         assertEquals("tdw.change-verification-export", exportEnvelope.path("schema").asText());
-        assertEquals(4, exportEnvelope.path("version").asInt());
+        assertEquals(5, exportEnvelope.path("version").asInt());
         assertEquals(COMPLETED_AT.toString(), exportEnvelope.path("exportedAt").asText());
         assertEquals("change-verification-analysis", exportEnvelope.at("/payload/type").asText());
         assertEquals("change-verification-result-v4", exportEnvelope.at("/payload/resultContract").asText());
@@ -67,6 +69,11 @@ class ChangeVerificationLocalRunPersisterTest {
         assertEquals("change-job-1", exportEnvelope.at("/payload/job/jobId").asText());
         assertEquals("CRM-123", exportEnvelope.at("/payload/job/issueKey").asText());
         assertEquals("change-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
+        assertEquals("1.0.11", exportEnvelope.at("/payload/diagnostics/copilotRuntime/sdkVersion").asText());
+        assertEquals("1.0.57-5", exportEnvelope.at("/payload/diagnostics/copilotRuntime/cliVersion").asText());
+        assertEquals(3, exportEnvelope.at("/payload/diagnostics/copilotRuntime/protocolVersion").asInt());
+        assertEquals("1.0.57", exportEnvelope.at("/payload/diagnostics/copilotRuntime/minimumCliVersion").asText());
+        assertEquals(true, exportEnvelope.at("/payload/diagnostics/copilotRuntime/compatible").asBoolean());
     }
 
     @Test
@@ -122,7 +129,7 @@ class ChangeVerificationLocalRunPersisterTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
+                List.of(runtimeVersionActivity()),
                 "Prepared prompt",
                 result,
                 report()
@@ -170,6 +177,30 @@ class ChangeVerificationLocalRunPersisterTest {
                         AnalysisReportMeta.empty()
                 )),
                 AnalysisReportMeta.empty()
+        );
+    }
+
+    private AnalysisAiActivityEvent runtimeVersionActivity() {
+        return new AnalysisAiActivityEvent(
+                "copilot-runtime-1",
+                null,
+                "platform.copilot_runtime",
+                "RUNTIME",
+                "COMPLETED",
+                "Wersje Copilot runtime",
+                "SDK i CLI są zgodne.",
+                null,
+                null,
+                null,
+                null,
+                UPDATED_AT,
+                Map.of(
+                        "sdkVersion", "1.0.11",
+                        "cliVersion", "1.0.57-5",
+                        "protocolVersion", 3,
+                        "minimumCliVersion", "1.0.57",
+                        "compatible", true
+                )
         );
     }
 

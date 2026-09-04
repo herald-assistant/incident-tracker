@@ -31,8 +31,7 @@ class CopilotSdkModelOptionsProviderTest {
                         reasoningModel(
                                 "crm-reasoning-model",
                                 "Synthetic CRM Reasoning Model",
-                                List.of("low", "medium", "high"),
-                                "medium"
+                                List.of("low", "medium", "high")
                         ),
                         plainModel("crm-basic-model", "Synthetic CRM Basic Model")
                 ),
@@ -49,7 +48,7 @@ class CopilotSdkModelOptionsProviderTest {
         assertEquals("Synthetic CRM Reasoning Model", response.models().get(0).name());
         assertTrue(response.models().get(0).supportsReasoningEffort());
         assertEquals(List.of("low", "medium", "high"), response.models().get(0).reasoningEfforts());
-        assertEquals("medium", response.models().get(0).defaultReasoningEffort());
+        assertEquals("", response.models().get(0).defaultReasoningEffort());
         assertEquals(100, response.models().get(0).defaultContextWindowTokens());
         assertEquals(1_000, response.models().get(0).longContextWindowTokens());
         assertTrue(response.models().get(0).supportsLongContext());
@@ -94,14 +93,13 @@ class CopilotSdkModelOptionsProviderTest {
     private static Model reasoningModel(
             String id,
             String name,
-            List<String> reasoningEfforts,
-            String defaultReasoningEffort
+            List<String> reasoningEfforts
     ) {
         return new Model(
                 id,
                 name,
                 new ModelCapabilities(
-                        new ModelCapabilitiesSupports(false, true),
+                        new ModelCapabilitiesSupports(false, true, null),
                         new ModelCapabilitiesLimits(980L, 20L, 1_000L, null)
                 ),
                 null,
@@ -109,12 +107,14 @@ class CopilotSdkModelOptionsProviderTest {
                         1D,
                         1D,
                         1D,
-                        1_000L,
+                        null,
+                        null,
+                        null,
                         80L,
-                        new ModelBillingTokenPricesLongContext(2D, 2D, 2D, 980L)
-                )),
+                        null,
+                        new ModelBillingTokenPricesLongContext(2D, 2D, 2D, null, null, 980L, null)
+                ), null, null),
                 reasoningEfforts,
-                defaultReasoningEffort,
                 null,
                 null
         );
@@ -124,8 +124,7 @@ class CopilotSdkModelOptionsProviderTest {
         return new Model(
                 id,
                 name,
-                new ModelCapabilities(new ModelCapabilitiesSupports(false, false), null),
-                null,
+                new ModelCapabilities(new ModelCapabilitiesSupports(false, false, null), null),
                 null,
                 null,
                 null,

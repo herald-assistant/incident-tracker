@@ -8,6 +8,8 @@ import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncide
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentArtifactItemIdGenerator;
 import pl.mkn.tdw.features.incidentanalysis.ai.copilot.preparation.CopilotIncidentDigestService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeCompatibility;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeVersionInfo;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotEffectiveContextTierReader;
 import pl.mkn.tdw.aiplatform.copilot.runtime.options.CopilotModelOptionsResponse;
@@ -129,7 +131,15 @@ public final class CopilotTestFixtures {
                         properties,
                         auth -> new CopilotModelOptionsResponse(null, null, List.of(), List.of()),
                         new CopilotEffectiveContextTierReader(properties)
-                )
+                ),
+                compatibleRuntime()
         );
+    }
+
+    private static CopilotRuntimeCompatibility compatibleRuntime() {
+        var compatibility = org.mockito.Mockito.mock(CopilotRuntimeCompatibility.class);
+        org.mockito.Mockito.when(compatibility.inspect(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new CopilotRuntimeVersionInfo("1.0.11", "1.0.57-5", 3, "1.0.57", true));
+        return compatibility;
     }
 }
