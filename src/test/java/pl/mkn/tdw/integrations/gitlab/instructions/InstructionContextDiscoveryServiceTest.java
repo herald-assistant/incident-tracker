@@ -9,6 +9,7 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryProjectCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -98,6 +99,48 @@ class InstructionContextDiscoveryServiceTest {
         );
     }
 
+    @Test
+    void shouldCoalesceEquivalentRepositoryScopesAndMergeChangedFiles() {
+        var properties = new InstructionDiscoveryProperties();
+        var repositoryPort = new TestGitLabRepositoryPort();
+        var service = new InstructionContextDiscoveryService(repositoryPort, properties);
+        var controllerPath = "src/main/java/com/example/customer/CustomerController.java";
+        var servicePath = "src/main/java/com/example/customer/CustomerService.java";
+
+        var result = service.discover(new InstructionContextRequest(List.of(
+                new InstructionRepositoryScope(
+                        "CRM/runtime/customer-api",
+                        "main",
+                        List.of(controllerPath)
+                ),
+                new InstructionRepositoryScope(
+                        "CRM/runtime/customer-api",
+                        "main",
+                        List.of(servicePath, controllerPath)
+                )
+        )));
+
+        assertThat(result.sources())
+                .extracting(InstructionSource::path)
+                .containsExactly(
+                        "AGENTS.md",
+                        ".github/copilot-instructions.md",
+                        "src/main/java/com/example/customer/AGENTS.md",
+                        "docs/architecture-instructions.md"
+                );
+        assertThat(result.sources())
+                .filteredOn(source -> "AGENTS.md".equals(source.path()))
+                .singleElement()
+                .extracting(InstructionSource::applicableChangedFiles)
+                .isEqualTo(List.of(controllerPath, servicePath));
+        assertThat(repositoryPort.inventoryRequestCount).isEqualTo(1);
+        assertThat(repositoryPort.readRequestCountByPath)
+                .containsEntry("AGENTS.md", 1)
+                .containsEntry(".github/copilot-instructions.md", 1)
+                .containsEntry("src/main/java/com/example/customer/AGENTS.md", 1)
+                .containsEntry("docs/architecture-instructions.md", 1);
+    }
+
     private static final class TestGitLabRepositoryPort implements GitLabRepositoryPort {
 
         private static final Map<String, String> FILES = Map.of(
@@ -110,9 +153,12 @@ class InstructionContextDiscoveryServiceTest {
                 "docs/architecture-instructions.md",
                 "Hexagonal boundaries apply."
         );
+        private final Map<String, Integer> readRequestCountByPath = new LinkedHashMap<>();
+        private int inventoryRequestCount;
 
         @Override
         public InstructionRepositoryFile readFile(InstructionRepositoryFileRequest request) {
+            readRequestCountByPath.merge(request.path(), 1, Integer::sum);
             var content = FILES.get(request.path());
             if (content == null) {
                 return InstructionRepositoryFile.missing(request.repositoryKey(), request.ref(), request.path());
@@ -130,6 +176,7 @@ class InstructionContextDiscoveryServiceTest {
 
         @Override
         public InstructionRepositoryInventory loadFileInventory(InstructionRepositoryInventoryRequest request) {
+            inventoryRequestCount++;
             return InstructionRepositoryInventory.available(FILES.keySet().stream().toList());
         }
 

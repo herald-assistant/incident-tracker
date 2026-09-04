@@ -30,11 +30,39 @@ public class InstructionContextDiscoveryService {
         var limitations = new ArrayList<String>();
         var sources = new ArrayList<InstructionSource>();
 
-        for (var scope : request.scopes()) {
+        for (var scope : coalesceScopes(request.scopes())) {
             sources.addAll(discoverScope(scope, limitations));
         }
 
         return new InstructionContextResult(sources, limitations.stream().distinct().toList());
+    }
+
+    private List<InstructionRepositoryScope> coalesceScopes(List<InstructionRepositoryScope> scopes) {
+        var groupedScopes = new LinkedHashMap<InstructionScopeKey, List<InstructionRepositoryScope>>();
+        for (var scope : scopes) {
+            var key = new InstructionScopeKey(scope.repositoryKey(), scope.ref());
+            groupedScopes.computeIfAbsent(key, ignored -> new ArrayList<>()).add(scope);
+        }
+
+        return groupedScopes.values().stream()
+                .map(this::coalesceScope)
+                .toList();
+    }
+
+    private InstructionRepositoryScope coalesceScope(List<InstructionRepositoryScope> scopes) {
+        var first = scopes.get(0);
+        var changedFilePaths = new LinkedHashSet<String>();
+        scopes.stream()
+                .flatMap(scope -> scope.changedFilePaths().stream())
+                .forEach(changedFilePaths::add);
+        return new InstructionRepositoryScope(
+                first.repositoryKey(),
+                first.ref(),
+                List.copyOf(changedFilePaths)
+        );
+    }
+
+    private record InstructionScopeKey(String repositoryKey, String ref) {
     }
 
     private List<InstructionSource> discoverScope(InstructionRepositoryScope scope, List<String> limitations) {
