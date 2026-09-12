@@ -63,23 +63,6 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `plans/operational-context-ai-assisted-maintenance.md`
   jest szkicem L2 pomocy AI na ekranie katalogu: prowadzone zbieranie
   informacji, typowane propozycje, review i pojedyncze walidowane zapisy.
-- `needs/operational-context-catalog-editing.md`
-  opisuje potrzebe bezpiecznego create, edit i delete katalogu Operational
-  Context z poziomu UI przy zachowaniu spojnosci relacji i wszystkich
-  konsumentow.
-- `plans/operational-context-catalog-editing.md`
-  dokumentuje wykonana ewolucje L3 oraz wynikowy prosty MVP: bundled seed jest
-  kopiowany raz do `tdw-data/operational-context`, wszystkie dziewiec typow ma
-  CRUD przez UI, a zapis korzysta z walidacji domenowej i atomowej podmiany
-  jednego dokumentu. Wynik nie ma storage modes, security gate, rewizji,
-  historii ani rollbacku Operational Context.
-- `needs/ai-skills-catalog-preview.md`
-  opisuje potrzebe wygodnego podgladu efektywnego katalogu runtime bez
-  filesystemu, edycji, uruchamiania ani przypisywania skilli per feature.
-- `plans/ai-skills-catalog-preview.md`
-  dokumentuje wykonany read-only MVP L2: immutable projekcje zwalidowanych
-  `SKILL.md`, shared/operator API, ekran `Platform / AI Skills`, deep link,
-  wyszukiwanie, filtry oraz renderowany i surowy Markdown.
 - `needs/ui-explorer.md`
   opisuje potrzebe generowania funkcjonalnej lub technicznej dokumentacji
   zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez
@@ -92,16 +75,9 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   migracje Operational Context bez warstwy kompatybilnosci dla zmienianych
   kontraktow. Wykonanie kolejnych niezaznaczonych krokow nadal podlega osobnym
   bramkom akceptacji zapisanym w planie.
-- Config Drift Viewer wraz z Runtime Configuration Tool Workbench jest
-  zakonczony. Wynikowy kontrakt, runtime flow, UI, granice bezpieczenstwa i
-  ograniczenia sa opisane kanonicznie w
-  `architecture/config-drift-viewer-runtime-flow.md`.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
-- `plans/copilot-cli-neutral-working-directory.md`
-  dokumentuje zakonczona zmiane neutralnego katalogu sesji Copilota i
-  potwierdzenie jej dzialania w nowym runie przez Agent Scanner.
 
 Rodzina Delivery Complexity nie utrzymuje zakonczonych potrzeb ani planow jako
 archiwum. Aktualny stan Delivery Complexity Assessment, Delivery Scope
