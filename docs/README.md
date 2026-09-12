@@ -55,6 +55,12 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
+- `needs/operational-context-ai-assisted-maintenance.md`
+  opisuje trudnosc pierwszego utworzenia i pozniejszej aktualizacji katalogu
+  przez uzytkownika nieznajacego modelu Operational Context.
+- `plans/operational-context-ai-assisted-maintenance.md`
+  jest szkicem L2 pomocy AI na ekranie katalogu: prowadzone zbieranie
+  informacji, typowane propozycje, review i pojedyncze walidowane zapisy.
 - `needs/operational-context-catalog-editing.md`
   opisuje potrzebe bezpiecznego create, edit i delete katalogu Operational
   Context z poziomu UI przy zachowaniu spojnosci relacji i wszystkich
