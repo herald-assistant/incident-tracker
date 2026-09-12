@@ -126,10 +126,13 @@ Zasady granic:
   allowliste tools, hidden context, execution i capture jako
   mechanike runtime. Docelowo ma dostawac te parametry od feature'a, a nie
   sam wybierac incident prompt, skille albo tools.
-- Obecnie nie utrzymujemy niewidocznej dla uzytkownika telemetryki sesji
-  Copilota. Zostaje tylko usage/token/cost widoczny w job state/UI oraz
-  user-facing tool evidence. Nowa telemetryka moze wrocic dopiero jako jawny,
-  productized element z widocznym celem, testami i dokumentacja.
+- Nie utrzymujemy niewidocznego magazynu telemetryki sesji Copilota w TDW.
+  Usage/token/cost pozostaje widoczne w job state/UI, a tool evidence w toku
+  analizy. Zewnetrzny eksport OTLP procesu CLI jest jawnym trybem
+  diagnostycznym; obecny `application.properties` wlacza go dla lokalnego
+  Agent Scanner na porcie 8081. `capture-content=true` pozostaje wartoscia
+  domyslna. Konfiguracja i rollback sa opisane w
+  `docs/copilot-sdk-otlp-agent-scanner.md`.
 - Dedykowane feature'y analityczne dostarczaja prompt, evidence, skille,
   hidden tool context, polityke uzycia capability i kontrakt odpowiedzi.
   Feature moze zalezec od platformy, tools i adapterow; platforma, tools i

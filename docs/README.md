@@ -17,6 +17,8 @@ tworzenia oraz aktualizowania dokumentow sa w `AGENTS.md`.
 - `local-workspace-and-launcher.md`
   instrukcja lokalnego uruchamiania JAR-a, katalogu `tdw-data`, backupu oraz
   roznicy pomiedzy local workspace i exportem.
+- `copilot-sdk-otlp-agent-scanner.md`
+  instrukcja opt-in diagnostyki sesji Copilot SDK w lokalnym Agent Scanner.
 - `presentations/`
   materialy prezentacyjne i ich zrodla.
 

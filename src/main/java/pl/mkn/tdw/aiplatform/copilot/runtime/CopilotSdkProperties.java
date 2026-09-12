@@ -1,17 +1,21 @@
 package pl.mkn.tdw.aiplatform.copilot.runtime;
 
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 
 @Getter
 @Setter
+@Slf4j
 @Component
 @ConfigurationProperties(prefix = "analysis.ai.copilot")
 public class CopilotSdkProperties {
@@ -41,6 +45,20 @@ public class CopilotSdkProperties {
     private String skillResourceRoot = "copilot/skills";
     private List<String> disabledSkills = List.of();
     private ContextTierPolicy contextTier = new ContextTierPolicy();
+    private Telemetry telemetry = new Telemetry();
+
+    @PostConstruct
+    public void logTelemetryConfiguration() {
+        if (telemetry == null || !telemetry.isEnabled()) {
+            log.info("Copilot OTLP export configured enabled=false");
+            return;
+        }
+
+        log.info("Copilot OTLP export configured enabled=true endpoint={} sourceName={} captureContent={}",
+                telemetry.validatedOtlpEndpoint(),
+                telemetry.validatedSourceName(),
+                telemetry.isCaptureContent());
+    }
 
     public Path resolvedCopilotHome() {
         if (copilotHome == null || copilotHome.isBlank()) {
@@ -84,5 +102,51 @@ public class CopilotSdkProperties {
         private double estimatedCharactersPerToken = 3.5D;
         private int reservedTokens = 16_000;
         private Duration verificationTimeout = Duration.ofSeconds(20);
+    }
+
+    @Getter
+    @Setter
+    public static class Telemetry {
+
+        private boolean enabled;
+        private String otlpEndpoint;
+        private boolean captureContent;
+        private String sourceName = "team-delivery-workspace";
+
+        public String validatedOtlpEndpoint() {
+            if (otlpEndpoint == null || otlpEndpoint.isBlank()) {
+                throw new IllegalStateException(
+                        "analysis.ai.copilot.telemetry.otlp-endpoint is required when telemetry is enabled."
+                );
+            }
+
+            var endpoint = otlpEndpoint.trim();
+            try {
+                var uri = URI.create(endpoint);
+                if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                        || uri.getHost() == null
+                        || uri.getRawUserInfo() != null
+                        || uri.getRawQuery() != null
+                        || uri.getRawFragment() != null
+                        || uri.getPath().matches("/v1/(traces|metrics|logs)/?")) {
+                    throw new IllegalArgumentException("Unsupported OTLP endpoint URI");
+                }
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalStateException(
+                        "analysis.ai.copilot.telemetry.otlp-endpoint must be an HTTP(S) base URL without credentials, query or fragment.",
+                        exception
+                );
+            }
+            return endpoint;
+        }
+
+        public String validatedSourceName() {
+            if (sourceName == null || sourceName.isBlank()) {
+                throw new IllegalStateException(
+                        "analysis.ai.copilot.telemetry.source-name must not be blank when telemetry is enabled."
+                );
+            }
+            return sourceName.trim();
+        }
     }
 }

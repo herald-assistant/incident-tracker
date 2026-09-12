@@ -10,6 +10,7 @@ import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import com.github.copilot.rpc.SessionHooks;
 import com.github.copilot.rpc.SystemMessageConfig;
+import com.github.copilot.rpc.TelemetryConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -40,6 +41,15 @@ public class CopilotSessionConfigFactory {
                 ));
 
         clientOptions.setCopilotHome(properties.resolvedCopilotHome().toString());
+
+        var telemetry = properties.getTelemetry();
+        if (telemetry != null && telemetry.isEnabled()) {
+            clientOptions.setTelemetry(new TelemetryConfig()
+                    .setOtlpEndpoint(telemetry.validatedOtlpEndpoint())
+                    .setExporterType("otlp-http")
+                    .setSourceName(telemetry.validatedSourceName())
+                    .setCaptureContent(telemetry.isCaptureContent()));
+        }
 
         return clientOptions;
     }

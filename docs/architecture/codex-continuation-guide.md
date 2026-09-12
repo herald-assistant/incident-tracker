@@ -163,6 +163,13 @@ sprawdz upstream `github/copilot-sdk`, zwlaszcza `nodejs/README.md` oraz
 schemat/protokol `@github/copilot`. Nie zgaduj defaultow, limitow,
 `infiniteSessions`, workspace sesji ani zachowania skill directories.
 
+Eksport OTLP Copilot CLI jest w `CopilotSessionConfigFactory.clientOptions`,
+sterowany przez `analysis.ai.copilot.telemetry`; dotyczy wspolnego runtime,
+nie konkretnego feature'a. `application.properties` wlacza go dla lokalnego
+Agent Scanner na porcie 8081, z `capture-content=true`. Agent Scanner jest
+widocznym miejscem odczytu;
+`../copilot-sdk-otlp-agent-scanner.md` opisuje uruchomienie i rollback.
+
 `SessionConfig.skillDirectories` i `ResumeSessionConfig.skillDirectories`
 otrzymuja dokladnie jeden wspolny root `${copilot-home}/skills` zawierajacy
 wszystkie podkatalogi skilli z `SKILL.md`. Feature nie przekazuje katalogow ani

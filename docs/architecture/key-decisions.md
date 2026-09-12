@@ -650,10 +650,10 @@ bledy listenerow, zeby awaria audytu albo logowania nie zmieniala wyniku toola.
 lifecycle sesji i publikacja zaktualizowanych sekcji, ale szczegoly mapowania
 GitLab/DB pozostaja w odpowiednich pakietach tool capability.
 
-## 17. Zostaje tylko usage widoczny dla uzytkownika
+## 17. Widoczne usage i jawna diagnostyka OTLP
 
-Na teraz nie utrzymujemy osobnej, niewidocznej dla operatora telemetryki
-sesji Copilota. Runtime agreguje jedynie usage z eventow SDK
+Nie utrzymujemy osobnej, niewidocznej dla operatora telemetryki w bazie TDW.
+Runtime agreguje usage z eventow SDK
 `assistant.usage` i `session.usage_info` do neutralnego
 `shared.ai.AnalysisAiUsage`, bo ten kontrakt jest pokazany w job state/UI.
 
@@ -662,9 +662,16 @@ GitLab/DB capture publikuje `toolEvidenceSections`, a UI pokazuje je przy
 analizie. Budzet tools pozostaje backendowym guardrailem i loguje
 przekroczenia, ale jego liczniki nie sa osobnym feature'em telemetrycznym.
 
-Jesli metryki optymalizacyjne wroca, powinny byc zaprojektowane jako jawny
-productized element: z celem widocznym dla zespolu/operacji, testami,
-dokumentacja i decyzja, gdzie uzytkownik lub operator ma do nich dostep.
+Opcjonalny `analysis.ai.copilot.telemetry` ustawia na
+`CopilotClientOptions` exporter OTLP procesu Copilot CLI. Biezacy
+`application.properties` wlacza go do lokalnego Agent Scanner na porcie 8081;
+mozna go wylaczyc przez `TDW_COPILOT_OTLP_ENABLED=false` i zmienic adres przez
+`TDW_COPILOT_OTLP_ENDPOINT`. Domyslnie nie przechwytuje tresci. Widocznym
+miejscem odczytu surowych sygnalow i ich
+interpretacji jest osobny Agent Scanner. TDW loguje aktywna konfiguracje przy
+starcie i nie utrwala drugiej kopii raw OTLP. Wylaczenie eksportu wymaga
+restartu TDW; juz odebrane dane podlegaja retencji Scanner. Instrukcja
+operatora i ograniczenia prywatnosci sa w `../copilot-sdk-otlp-agent-scanner.md`.
 
 ## 17a. Tool feedback jest jawny i user-visible
 

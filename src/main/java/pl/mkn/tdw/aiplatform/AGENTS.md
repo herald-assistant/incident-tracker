@@ -103,10 +103,12 @@ Nie obejmuje:
   run. `skill` pozostaje domyslnie dostepny, ale feature moze jawnie wylaczyc
   skills wraz z katalogami dla sesji one-shot, jesli osadza effective tresc
   skilla w jedynym prompcie i konfiguruje pusta allowliste tools.
-- Platforma nie utrzymuje obecnie niewidocznej dla uzytkownika telemetryki
-  sesji. Zdarzenia SDK usage sa agregowane tylko do `AnalysisAiUsage`, ktore
-  trafia do job state/UI. Nowa telemetryka moze wrocic dopiero jako jawny,
-  productized element z widocznym celem, testami i dokumentacja.
+- Platforma nie utrzymuje niewidocznego magazynu telemetryki sesji. Zdarzenia
+  SDK usage sa agregowane do `AnalysisAiUsage` w job state/UI. Opt-in
+  `analysis.ai.copilot.telemetry` konfiguruje eksport OTLP z procesu CLI do
+  osobnego Agent Scanner jako jawna diagnostyke operatora. Obecny
+  `application.properties` wlacza eksport na lokalny port 8081;
+  przechwytywanie tresci pozostaje wylaczone. Nie kopiuj raw OTLP do TDW.
 - Platforma nie moze zakladac `correlationId`, GitLaba, Database ani
   semantyki incident analysis jako stalego wymogu runtime.
 - Jesli kiedys wydzielasz kolejny runtime element z dawnego obszaru Copilota,

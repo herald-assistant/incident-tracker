@@ -668,7 +668,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   i prepared session bez znajomosci incident promptu ani incident policy.
   Opcjonalne feature-owned durable system instructions mapuje 1:1 na SDK
   `systemMessage` w trybie `APPEND` dla create i resume. Platforma nie buduje
-  ich tresci ani nie interpretuje kontraktu feature'a.
+  ich tresci ani nie interpretuje kontraktu feature'a. `CopilotClientOptions`
+  moze tez miec opcjonalny exporter OTLP procesu CLI do Agent Scanner;
+  konfiguracja jest platformowa i wspolna dla feature'ow.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.context`
   Neutralna polityka context tier. Dla preference `AUTO` estymuje initial
   prompt razem z durable system instructions, definicjami tools i rezerwa oraz
@@ -918,6 +920,11 @@ Znaczenie grup UI:
   frontendu.
   Frontend liczy orientacyjne GitHub AI Credits/USD z tokenow i modelu jako
   product-facing estymacje oplacalnosci, nie jako fakture.
+- Diagnostyka OTLP z procesu Copilot CLI jest wlaczona w
+  `application.properties` dla lokalnego Agent Scanner na porcie 8081.
+  Pelne tresci pozostaja
+  wylaczone bez osobnego opt-in. TDW loguje status eksportu przy starcie i
+  nie trzyma raw OTLP we wlasnej bazie.
 - Aktywnosc sesji Copilota jest productized i widoczna w job state jako
   generyczne `shared.ai.AnalysisAiActivityEvent`: turny, komunikaty,
   wywolania tooli, snapshoty context tokens/messages i usage eventy. Frontend

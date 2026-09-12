@@ -723,6 +723,10 @@ nich dostepu.
 ## 14. User-visible usage i activity
 
 Nie ma obecnie osobnego registry niewidocznej dla operatora telemetryki sesji.
+Platformowy eksport OTLP procesu Copilot CLI przekazuje surowe sygnaly do
+osobnego Agent Scanner, widocznego dla operatora, gdy jest wlaczony.
+Obecna konfiguracja aplikacji wlacza go dla `127.0.0.1:8081`.
+Nie zmienia on `AnalysisAiUsage`, activity, job state ani kontraktu wyniku.
 Execution gateway agreguje tylko zdarzenia SDK potrzebne do publicznego
 `shared.ai.AnalysisAiUsage`:
 
@@ -831,6 +835,10 @@ analysis.ai.copilot.client-stop-timeout=20s
 analysis.ai.copilot.model-options-timeout=20s
 analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-root=copilot/skills
+analysis.ai.copilot.telemetry.enabled=${TDW_COPILOT_OTLP_ENABLED:true}
+analysis.ai.copilot.telemetry.otlp-endpoint=${TDW_COPILOT_OTLP_ENDPOINT:http://127.0.0.1:8081}
+analysis.ai.copilot.telemetry.capture-content=${TDW_COPILOT_OTLP_CAPTURE_CONTENT:false}
+analysis.ai.copilot.telemetry.source-name=${TDW_COPILOT_OTLP_SOURCE_NAME:team-delivery-workspace}
 
 analysis.ai.copilot.tool-budget.enabled=true
 analysis.ai.copilot.tool-budget.mode=soft

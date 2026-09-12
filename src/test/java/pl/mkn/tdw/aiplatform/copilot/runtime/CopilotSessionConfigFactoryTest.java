@@ -53,6 +53,7 @@ class CopilotSessionConfigFactoryTest {
         assertEquals(normalized("C:\\tdw-data\\copilot"), clientOptions.getCopilotHome());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
         assertEquals("test-token", clientOptions.getGithubToken());
+        assertNull(clientOptions.getTelemetry());
         assertEquals("analysis-123", sessionConfig.getSessionId());
         assertEquals("incidenttracker-test", sessionConfig.getClientName());
         assertEquals("C:\\workspace", sessionConfig.getWorkingDirectory());
@@ -227,6 +228,57 @@ class CopilotSessionConfigFactoryTest {
 
         assertEquals("ghp_test_token", clientOptions.getGithubToken());
         assertEquals(Boolean.FALSE, clientOptions.getUseLoggedInUser().orElseThrow());
+    }
+
+    @Test
+    void shouldConfigureOptInCliOtlpExportWithoutContentCapture() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.getTelemetry().setEnabled(true);
+        properties.getTelemetry().setOtlpEndpoint("  http://127.0.0.1:8081  ");
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+
+        var telemetry = factory.clientOptions().getTelemetry();
+
+        assertNotNull(telemetry);
+        assertEquals("http://127.0.0.1:8081", telemetry.getOtlpEndpoint());
+        assertEquals("otlp-http", telemetry.getExporterType());
+        assertEquals("team-delivery-workspace", telemetry.getSourceName());
+        assertEquals(false, telemetry.getCaptureContent().orElseThrow());
+    }
+
+    @Test
+    void shouldCaptureContentOnlyWhenExplicitlyEnabled() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.getTelemetry().setEnabled(true);
+        properties.getTelemetry().setOtlpEndpoint("http://127.0.0.1:8081");
+        properties.getTelemetry().setCaptureContent(true);
+
+        var telemetry = CopilotSessionConfigFactoryTestCreator.create(properties)
+                .clientOptions().getTelemetry();
+
+        assertNotNull(telemetry);
+        assertEquals(true, telemetry.getCaptureContent().orElseThrow());
+    }
+
+    @Test
+    void shouldRejectMissingOrInvalidOtlpBaseUrlWhenEnabled() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.getTelemetry().setEnabled(true);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+
+        assertThrows(IllegalStateException.class, factory::clientOptions);
+        for (var endpoint : List.of(
+                "ftp://127.0.0.1:8081",
+                "http://user:password@127.0.0.1:8081",
+                "http://127.0.0.1:8081?token=value",
+                "http://127.0.0.1:8081/v1/traces"
+        )) {
+            properties.getTelemetry().setOtlpEndpoint(endpoint);
+            assertThrows(IllegalStateException.class, factory::clientOptions);
+        }
     }
 
     @Test
