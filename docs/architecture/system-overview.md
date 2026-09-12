@@ -437,6 +437,11 @@ Na dzisiaj projekt ma:
   Feature-owned endpoint dla UI startu analizy. Zwraca dostepne zrodla logow i
   powod blokady Elasticsearch, jezeli brakuje wymaganej konfiguracji
   Elasticsearch/Kibana.
+- `GET /api/flow-explorer/systems`
+  Feature-owned wybor systemow wewnetrznych i `api-gateway` z Operational
+  Context. Pomija systemy jawnie oznaczone `systemSubtype=frontend`; `mixed`
+  pozostaje dostepny. Lista nie potwierdza istnienia endpointow. Ich katalog
+  jest pobierany osobno dla wybranego systemu i branch/ref.
 - `GET /api/ui-explorer/input-options`
   Feature-owned katalog kwalifikujacych sie systemow
   `internal-service/frontend`, domyslnych trybow sekcji oraz dostepnosci

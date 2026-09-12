@@ -19,7 +19,7 @@ import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntry
 class FlowExplorerSystemSelectionServiceTest {
 
     @Test
-    void shouldReturnInternalSystemsWithCatalogSignalsForUiSelection() {
+    void shouldExcludeFrontendButKeepMixedAndOtherInternalSystemsForUiSelection() {
         var capturedQuery = new AtomicReference<OperationalContextQuery>();
         var service = new FlowExplorerSystemSelectionService(query -> {
             capturedQuery.set(query);
@@ -28,9 +28,10 @@ class FlowExplorerSystemSelectionServiceTest {
 
         var systems = service.systems();
 
-        assertEquals(2, systems.size());
+        assertEquals(3, systems.size());
         assertEquals("api-gateway", systems.get(0).systemId());
         assertEquals("crm-customer-profile", systems.get(1).systemId());
+        assertEquals("order-composer", systems.get(2).systemId());
 
         var catalog = systems.get(1);
         assertEquals("CRM Customer Profile", catalog.name());
@@ -87,6 +88,18 @@ class FlowExplorerSystemSelectionServiceTest {
                                 "id", "api-gateway",
                                 "name", "API Gateway",
                                 "systemType", "api-gateway"
+                        ),
+                        map(
+                                "id", "crm-frontend",
+                                "name", "CRM Frontend",
+                                "systemType", "internal-service",
+                                "systemSubtype", "frontend"
+                        ),
+                        map(
+                                "id", "order-composer",
+                                "name", "Order Composer",
+                                "systemType", "internal-service",
+                                "systemSubtype", "mixed"
                         ),
                         map(
                                 "id", "notification-gateway",

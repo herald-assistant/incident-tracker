@@ -74,6 +74,9 @@ public class FlowExplorerSystemSelectionService {
     }
 
     private boolean internalSystem(OperationalContextSystem system) {
+        if (normalize(system.systemSubtype()).equals("frontend")) {
+            return false;
+        }
         var kind = normalize(system.systemType());
         return kind.equals("internal") || kind.startsWith("internal-") || kind.equals("api-gateway");
     }
