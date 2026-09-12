@@ -7,7 +7,7 @@ describe('OperationalContextFormAdapter', () => {
   it.each(OPERATIONAL_CONTEXT_WRITABLE_TYPES)('round-trips the complete anonymized CRM payload for %s', (type) => {
     const payload = crmPayload(type);
     const form = adapter.build(type, payload);
-    expect(adapter.payload(type, form, payload)).toEqual(payload);
+    expect(adapter.payload(type, form)).toEqual(payload);
   });
 
   it('maps a backend JSON Pointer to the owning structured CRM control', () => {
@@ -30,11 +30,33 @@ describe('OperationalContextFormAdapter', () => {
     expect(adapter.fieldForPointer('system', '/payload/name')?.path).toBe('name');
   });
 
-  it('preserves unrecognized canonical fields during an edit', () => {
+  it.each(OPERATIONAL_CONTEXT_WRITABLE_TYPES)('omits unrecognized top-level fields when editing %s', (type) => {
     const payload = { id: 'crm-contact-core', name: 'CRM Contact Core', futureCrmAttribute: { enabled: true } };
-    const form = adapter.build('system', payload);
-    form.controls['name'].setValue('CRM Contact Platform');
-    expect(adapter.payload('system', form, payload)['futureCrmAttribute']).toEqual({ enabled: true });
+    const form = adapter.build(type, payload);
+    form.controls['id'].setValue('crm-contact-core-updated');
+    expect(adapter.payload(type, form)).not.toHaveProperty('futureCrmAttribute');
+  });
+
+  it('drops obsolete handoff fields from an existing rule while preserving references', () => {
+    const payload = {
+      id: 'crm-contact-sync-delayed',
+      title: 'CRM contact synchronization is delayed',
+      confidence: 'medium',
+      affectedSystems: ['system:crm-system-01'],
+      affectedProcesses: ['process:crm-contact-update'],
+      affectedIntegrations: ['integration:crm-contact-sync'],
+      references: { systems: ['crm-system-01'], processes: ['crm-contact-update'], integrations: ['crm-contact-sync'] }
+    };
+    const form = adapter.build('handoff-rule', payload);
+    const fieldPaths = adapter.fields('handoff-rule').map((field) => field.path);
+    for (const obsoleteField of ['confidence', 'affectedSystems', 'affectedProcesses', 'affectedIntegrations']) {
+      expect(fieldPaths).not.toContain(obsoleteField);
+    }
+    expect(adapter.payload('handoff-rule', form)).toEqual({
+      id: payload.id,
+      title: payload.title,
+      references: payload.references
+    });
   });
 
   it.each(OPERATIONAL_CONTEXT_WRITABLE_TYPES)('provides complete runtime and AI guidance for every anonymized CRM %s input', (type) => {
@@ -110,6 +132,17 @@ describe('OperationalContextFormAdapter', () => {
     expect(adapter.fields('bounded-context').find((field) => field.path === 'gaps')?.kind).toBe('catalog-gaps');
   });
 
+  it('does not expose unused process and integration fields in the editor', () => {
+    expect(adapter.fields('process').some((field) => field.path === 'operationalOutcome')).toBe(false);
+    expect(adapter.fields('integration').some((field) => field.path === 'dataSensitivity')).toBe(false);
+    expect(adapter.fieldForPointer('process', '/payload/operationalOutcome')).toBeNull();
+    expect(adapter.fieldForPointer('integration', '/payload/dataSensitivity')).toBeNull();
+    const process = { id: 'crm-contact-update', name: 'CRM Contact Update', operationalOutcome: 'CRM contact update is visible.' };
+    const integration = { id: 'crm-contact-sync', name: 'CRM Contact Sync', dataSensitivity: 'confidential' };
+    expect(adapter.payload('process', adapter.build('process', process))).toEqual({ id: process.id, name: process.name });
+    expect(adapter.payload('integration', adapter.build('integration', integration))).toEqual({ id: integration.id, name: integration.name });
+  });
+
   it('uses the Recognition signals label for the canonical matchSignals payload', () => {
     for (const type of OPERATIONAL_CONTEXT_WRITABLE_TYPES) {
       const field = adapter.fields(type).find((field) => field.path === 'matchSignals');
@@ -122,7 +155,7 @@ describe('OperationalContextFormAdapter', () => {
   it('does not send server-owned CRM Git, participant repository or legacy step fields back to maintenance API', () => {
     const repository = { id: 'crm-contact-repository', name: 'CRM Contact Repository', git: { projectPath: 'crm/contact-service', inferred: true } };
     const repositoryForm = adapter.build('repository', repository);
-    expect(adapter.payload('repository', repositoryForm, repository)['git']).toEqual({ projectPath: 'crm/contact-service' });
+    expect(adapter.payload('repository', repositoryForm)['git']).toEqual({ projectPath: 'crm/contact-service' });
 
     const process = {
       id: 'crm-contact-update',
@@ -130,7 +163,7 @@ describe('OperationalContextFormAdapter', () => {
       steps: [{ id: 'accept-update', name: 'Accept update', match: { routes: ['/crm/contacts'] }, futureCrmStepField: true }]
     };
     const processForm = adapter.build('process', process);
-    expect(adapter.payload('process', processForm, process)['steps']).toEqual([
+    expect(adapter.payload('process', processForm)['steps']).toEqual([
       { id: 'accept-update', name: 'Accept update', futureCrmStepField: true }
     ]);
 
@@ -143,7 +176,7 @@ describe('OperationalContextFormAdapter', () => {
       }
     };
     const integrationForm = adapter.build('integration', integration);
-    expect(adapter.payload('integration', integrationForm, integration)['participants']).toEqual({
+    expect(adapter.payload('integration', integrationForm)['participants']).toEqual({
       source: { system: 'crm-contact-core', futureCrmParticipantField: true },
       targets: [{ system: 'crm-profile-store' }]
     });
@@ -158,7 +191,7 @@ describe('OperationalContextFormAdapter', () => {
       repositories: [{ repoId: 'crm-contact-repository', role: 'primary', priority: 1, searchMode: 'whole-repository' }]
     };
     const form = adapter.build('code-search-scope', payload);
-    expect(adapter.payload('code-search-scope', form, payload)['scopeType']).toBe('system');
+    expect(adapter.payload('code-search-scope', form)['scopeType']).toBe('system');
     expect(adapter.fields('code-search-scope').some((field) => field.path === 'scopeType')).toBe(false);
   });
 });
@@ -174,6 +207,6 @@ function crmPayload(type: OperationalContextWritableType): Record<string, unknow
     case 'bounded-context': return { ...base, type: 'core-domain', localLanguageSummary: ['In CRM, contact means the communication profile, not an authentication account.'], ownership: { ownerTeamIds: ['crm-domain-team'], ownershipStatus: 'explicit', confidence: 'high' }, scope: { includes: ['CRM contact preference validation'], excludes: ['Authentication credential lifecycle'], businessCapabilities: ['CRM Contact Preference Management'], coreEntities: ['ContactPreference'], keyDecisions: ['Whether an anonymized contact preference is valid.'] }, semanticBoundary: { coreConcepts: ['Contact preference'], localConcepts: ['CRM contact profile'], canonicalEntities: ['ContactPreference'], commands: ['UpdateContactPreference'], events: ['ContactPreferenceUpdated'], invariants: ['A CRM preference belongs to one anonymized contact profile.'], ownsLanguage: ['CRM contact preference'], doesNotOwn: ['Authentication account credential'] }, evidence: [{ sourceRef: 'Anonymized CRM domain glossary', evidenceType: 'domain-documentation', note: 'CRM semantic boundary review.' }], llmToolHints: { answerWhenUserMentions: ['CRM contact preference'], disambiguateFrom: ['Authentication account'], usefulSearchKeywords: ['ContactPreference'], explanationStyle: 'Explain as the CRM contact-preference boundary.' }, sourceCoverage: { status: 'partial', scannedSources: ['Anonymized CRM domain notes'] }, gaps: [{ id: 'crm-consent-boundary', type: 'unresolved-boundary', summary: 'Confirm the CRM consent boundary.', severity: 'info', status: 'open' }] };
     case 'team': return { ...base, type: 'product', matchSignals: { aliases: ['crm-domain-team'] } };
     case 'glossary-term': return { id: 'crm-customer-profile', term: 'Customer profile', category: 'domain-term', lifecycleStatus: 'active', definition: 'An anonymized CRM customer profile.', localMeaningAndBoundaries: ['Represents the CRM view of a customer.'], aliases: ['CRM profile'], useFor: ['case-routing'], matchSignals: { exact: { alias: ['customer profile'] } }, canonicalReferences: ['system:crm-system-01'], relatedTerms: ['crm-contact-preference'], doNotConfuseWith: ['Authentication account'], responsibilityHints: ['Resolve ownership through the CRM customer context.'], llmToolHints: ['Use for CRM terminology only.'], notes: ['Anonymized CRM fixture.'] };
-    case 'handoff-rule': return { id: 'crm-contact-sync-delayed', title: 'CRM contact synchronization is delayed', confidence: 'medium', useWhen: ['A CRM contact update is not visible downstream.'], doNotUseWhen: ['The update is still inside its documented processing window.'], requiredEvidence: ['Anonymized CRM correlation key.'], expectedFirstAction: ['Verify the CRM synchronization boundary.'], references: { systems: ['crm-system-01'], terms: ['crm-customer-profile'] }, affectedSystems: ['system:crm-system-01'], affectedProcesses: ['process:crm-contact-update'], affectedIntegrations: ['integration:crm-contact-sync'], notes: ['Anonymized CRM fixture.'], llmToolHints: ['Collect evidence from both CRM sides.'], limitations: ['No production identifiers.'] };
+    case 'handoff-rule': return { id: 'crm-contact-sync-delayed', title: 'CRM contact synchronization is delayed', useWhen: ['A CRM contact update is not visible downstream.'], doNotUseWhen: ['The update is still inside its documented processing window.'], requiredEvidence: ['Anonymized CRM correlation key.'], expectedFirstAction: ['Verify the CRM synchronization boundary.'], references: { systems: ['crm-system-01'], terms: ['crm-customer-profile'] }, notes: ['Anonymized CRM fixture.'], llmToolHints: ['Collect evidence from both CRM sides.'], limitations: ['No production identifiers.'] };
   }
 }

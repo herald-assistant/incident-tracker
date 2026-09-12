@@ -165,6 +165,7 @@ public class OperationalContextCatalogMaintenanceService {
         var errors = new ArrayList<OperationalContextCatalogFieldError>();
         validateValue(payload, "/payload", errors);
         validateFields(type, payload, errors);
+        OperationalContextCatalogNestedFields.rejectUnknown(type, payload, errors);
         validateIdentity(type, command.id(), payload, errors);
         validateTypeRules(type, payload, errors);
         validateReferences(stored, type, command.id(), payload, errors);
@@ -176,6 +177,7 @@ public class OperationalContextCatalogMaintenanceService {
             canonicalizeAliases(type, canonicalExisting);
             preserveServerOwned(type, canonicalExisting, payload);
         }
+        OperationalContextCatalogNestedFields.removeUnknown(type, payload);
         return payload;
     }
 
@@ -1430,9 +1432,7 @@ public class OperationalContextCatalogMaintenanceService {
             Map<String, Object> payload
     ) {
         for (var entry : existing.entrySet()) {
-            if (!OperationalContextCatalogEntitySchema.known(type, entry.getKey())) {
-                payload.putIfAbsent(entry.getKey(), mutableValue(entry.getValue()));
-            } else if (OperationalContextCatalogEntitySchema.preserveOnly(type, entry.getKey())) {
+            if (OperationalContextCatalogEntitySchema.preserveOnly(type, entry.getKey())) {
                 payload.put(entry.getKey(), mutableValue(entry.getValue()));
             }
         }
@@ -1545,6 +1545,10 @@ public class OperationalContextCatalogMaintenanceService {
         }
         var payload = mutableMap(entities.get(index));
         canonicalizeAliases(type, payload);
+        payload.keySet().removeIf(field ->
+                !OperationalContextCatalogEntitySchema.editable(type, field)
+                        && !OperationalContextCatalogEntitySchema.preserveOnly(type, field));
+        OperationalContextCatalogNestedFields.removeUnknown(type, payload);
         return new OperationalContextEditableEntity(
                 type.externalName(), id, type.logicalDocument(), payload
         );

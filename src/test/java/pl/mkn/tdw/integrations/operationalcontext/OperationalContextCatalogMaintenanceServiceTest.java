@@ -86,7 +86,6 @@ class OperationalContextCatalogMaintenanceServiceTest {
                     entity("handoff-rule", "crm-customer-sync-delayed", map(
                             "id", "crm-customer-sync-delayed",
                             "title", "CRM customer synchronization is delayed",
-                            "confidence", "medium",
                             "useWhen", List.of("An anonymized CRM customer update is delayed."),
                             "requiredEvidence", List.of("An anonymized CRM correlation key."),
                             "expectedFirstAction", List.of("Verify the CRM synchronization boundary."),
@@ -124,7 +123,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
     }
 
     @Test
-    void shouldApplyCompletePutAndPreserveOnlyServerOwnedExtensions() {
+    void shouldApplyCompletePutAndDropUnknownTopLevelExtensions() {
         try (var harness = harness("crm-preserve")) {
             var current = harness.service().entity("system", "crm-source-system");
             var replacement = map(
@@ -141,12 +140,173 @@ class OperationalContextCatalogMaintenanceServiceTest {
 
             assertEquals(List.of(), result.entity().payload().get("aliases"));
             assertFalse(result.entity().payload().containsKey("summary"));
-            assertEquals(
-                    Map.of("label", "anonymous-crm-extension"),
-                    result.entity().payload().get("xCrmExtension")
-            );
+            assertFalse(result.entity().payload().containsKey("xCrmExtension"));
+            assertFalse(harness.snapshotStore().currentStoredSnapshot().rawDocuments()
+                    .content("systems.yml").contains("xCrmExtension"));
             assertFalse(result.entity().payload().containsKey("kind"));
             assertEquals("internal-service", result.entity().payload().get("systemType"));
+        }
+    }
+
+    @Test
+    void shouldRejectRetiredHandoffRuleFieldsWithoutChangingTheCatalog() {
+        try (var harness = harness("crm-retired-handoff-fields")) {
+            var digest = harness.digest();
+            for (var field : List.of("confidence", "affectedSystems", "affectedProcesses", "affectedIntegrations")) {
+                var payload = map(
+                        "id", "crm-contact-sync-delayed",
+                        "title", "CRM contact synchronization is delayed",
+                        field, field.equals("confidence") ? "medium" : List.of("system:crm-source-system")
+                );
+                var exception = assertThrows(
+                        OperationalContextCatalogMaintenanceException.class,
+                        () -> harness.service().create(new OperationalContextCatalogMutationCommand(
+                                "handoff-rule", "crm-contact-sync-delayed", payload
+                        ))
+                );
+                assertTrue(exception.fieldErrors().stream().anyMatch(error ->
+                        error.pointer().equals("/payload/" + field)
+                                && error.message().equals("Unknown field is not writable")
+                ));
+                assertEquals(digest, harness.digest());
+            }
+        }
+    }
+
+    @Test
+    void shouldDropRetiredHandoffRuleFieldsFromLegacyEntityOnUpdate() {
+        var documents = new LinkedHashMap<>(crmDocuments());
+        documents.put("handoff-rules.yml", """
+                schemaVersion: 1
+                catalogKind: operational-context-handoff-rules
+                handoffRules:
+                  - id: crm-contact-sync-delayed
+                    title: CRM contact synchronization is delayed
+                    confidence: medium
+                    affectedSystems: [system:crm-source-system]
+                    affectedProcesses: [process:crm-contact-update]
+                    affectedIntegrations: [integration:crm-contact-sync]
+                    references:
+                      systems: [crm-source-system]
+                    useWhen:
+                      - An anonymized CRM customer update is delayed.
+                gaps: []
+                """);
+        try (var harness = harness("crm-legacy-handoff-fields", Map.copyOf(documents))) {
+            var editable = harness.service().entity("handoff-rule", "crm-contact-sync-delayed");
+            for (var field : List.of("confidence", "affectedSystems", "affectedProcesses", "affectedIntegrations")) {
+                assertFalse(editable.payload().containsKey(field));
+            }
+
+            var payload = new LinkedHashMap<>(editable.payload());
+            payload.put("title", "CRM handoff rule updated");
+            var updated = harness.service().update(new OperationalContextCatalogMutationCommand(
+                    "handoff-rule", "crm-contact-sync-delayed", payload
+            ));
+
+            assertEquals("CRM handoff rule updated", updated.entity().payload().get("title"));
+            assertEquals(Map.of("systems", List.of("crm-source-system")), updated.entity().payload().get("references"));
+            var savedYaml = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content("handoff-rules.yml");
+            for (var field : List.of("confidence", "affectedSystems", "affectedProcesses", "affectedIntegrations")) {
+                assertFalse(updated.entity().payload().containsKey(field));
+                assertFalse(savedYaml.contains(field + ":"));
+            }
+        }
+    }
+
+    @Test
+    void shouldRejectUnknownProcessAndIntegrationFieldsAndRemoveLegacyValuesOnUpdate() {
+        var documents = new LinkedHashMap<>(crmDocuments());
+        documents.put("processes.yml", """
+                schemaVersion: 1
+                catalogKind: operational-context-processes
+                processes:
+                  - id: crm-contact-update
+                    name: CRM Contact Update
+                    operationalOutcome: The CRM profile reflects the update.
+                    xCrmExtension: obsolete
+                """);
+        documents.put("integrations.yml", documents.get("integrations.yml").replace(
+                "name: CRM Existing Integration",
+                "name: CRM Existing Integration\n    dataSensitivity: confidential\n    xCrmExtension: obsolete"
+        ));
+
+        try (var harness = harness("crm-unknown-process-integration-fields", Map.copyOf(documents))) {
+            for (var example : List.of(
+                    new String[] {"process", "crm-contact-update", "operationalOutcome", "processes.yml"},
+                    new String[] {"integration", "crm-existing-integration", "dataSensitivity", "integrations.yml"}
+            )) {
+                var type = example[0];
+                var id = example[1];
+                var obsoleteField = example[2];
+                var document = example[3];
+                var editable = harness.service().entity(type, id);
+                assertFalse(editable.payload().containsKey(obsoleteField));
+                assertFalse(editable.payload().containsKey("xCrmExtension"));
+
+                var invalid = new LinkedHashMap<>(editable.payload());
+                invalid.put(obsoleteField, "legacy value");
+                var digest = harness.digest();
+                var exception = assertThrows(
+                        OperationalContextCatalogMaintenanceException.class,
+                        () -> harness.service().update(new OperationalContextCatalogMutationCommand(type, id, invalid))
+                );
+                assertTrue(exception.fieldErrors().stream().anyMatch(error ->
+                        error.pointer().equals("/payload/" + obsoleteField)
+                                && error.message().equals("Unknown field is not writable")));
+                assertEquals(digest, harness.digest());
+
+                var replacement = new LinkedHashMap<>(editable.payload());
+                replacement.put("summary", "Anonymized CRM maintenance update");
+                if (type.equals("integration")) {
+                    replacement.put("participants", map(
+                            "source", map("system", "crm-source-system", "role", "producer"),
+                            "targets", List.of(map("system", "crm-target-system", "role", "consumer"))
+                    ));
+                }
+                harness.service().update(new OperationalContextCatalogMutationCommand(type, id, replacement));
+                var savedYaml = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content(document);
+                assertFalse(savedYaml.contains(obsoleteField + ":"));
+                assertFalse(savedYaml.contains("xCrmExtension:"));
+                assertTrue(savedYaml.contains("Anonymized CRM maintenance update"));
+            }
+        }
+    }
+
+    @Test
+    void shouldKeepRuntimeConsumedPreserveOnlyFieldsWhileRemovingUnknownExtensions() {
+        var documents = new LinkedHashMap<>(crmDocuments());
+        documents.put("processes.yml", """
+                schemaVersion: 1
+                processes:
+                  - id: crm-contact-update
+                    name: CRM Contact Update
+                    outcomes:
+                      successArtifacts: [CRM contact confirmation]
+                    oldProcessHint: obsolete
+                """);
+        documents.put("teams.yml", documents.get("teams.yml").replace(
+                "type: internal-development",
+                "type: internal-development\n    references:\n      systems: [crm-source-system]\n"
+                        + "    relations:\n      - type: supports\n        targetType: system\n"
+                        + "        target: crm-source-system\n    oldTeamHint: obsolete"
+        ));
+
+        try (var harness = harness("crm-runtime-consumed-preserve-only", Map.copyOf(documents))) {
+            harness.service().update(new OperationalContextCatalogMutationCommand(
+                    "process", "crm-contact-update", map("id", "crm-contact-update", "name", "CRM Contact Update")
+            ));
+            harness.service().update(new OperationalContextCatalogMutationCommand(
+                    "team", "crm-operations-team", map("id", "crm-operations-team", "name", "CRM Operations Team")
+            ));
+
+            var processYaml = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content("processes.yml");
+            var teamYaml = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content("teams.yml");
+            assertTrue(processYaml.contains("successArtifacts:"));
+            assertFalse(processYaml.contains("oldProcessHint:"));
+            assertTrue(teamYaml.contains("systems:"));
+            assertTrue(teamYaml.contains("type: supports"));
+            assertFalse(teamYaml.contains("oldTeamHint:"));
         }
     }
 
@@ -611,14 +771,8 @@ class OperationalContextCatalogMaintenanceServiceTest {
                             "name", "CRM Contact Platform",
                             "systemType", "internal-service",
                             "systemSubtype", "backend",
-                            "participants", map(
-                                    "externalOwner", "CRM managed platform provider",
-                                    "futureCrmParticipantHint", map("reviewed", true)
-                            ),
-                            "runtime", map(
-                                    "configurationDirectory", "crm/contact-platform",
-                                    "futureCrmRuntimeHint", map("reviewed", true)
-                            )
+                            "participants", map("externalOwner", "CRM managed platform provider"),
+                            "runtime", map("configurationDirectory", "crm/contact-platform")
                     )
             ));
             assertEquals(
@@ -636,13 +790,11 @@ class OperationalContextCatalogMaintenanceServiceTest {
                             "evidence", List.of(map(
                                     "sourceRef", "crm/contact-platform/pom.xml",
                                     "evidenceType", "build-definition",
-                                    "note", "Anonymized CRM service module.",
-                                    "futureCrmEvidenceHint", true
+                                    "note", "Anonymized CRM service module."
                             )),
                             "llmToolHints", map(
                                     "answerWhenUserMentions", List.of("CRM contact validation"),
-                                    "disambiguateFrom", List.of("CRM authentication account service"),
-                                    "futureCrmToolHint", map("reviewed", true)
+                                    "disambiguateFrom", List.of("CRM authentication account service")
                             )
                     )
             ));
@@ -700,7 +852,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
     }
 
     @Test
-    void shouldValidateGuidedAnonymousCrmBoundedContextSemanticsAndPreserveExtensions() {
+    void shouldValidateGuidedAnonymousCrmBoundedContextSemantics() {
         try (var harness = harness("crm-guided-bounded-context-semantics")) {
             var created = harness.service().create(new OperationalContextCatalogMutationCommand(
                     "bounded-context",
@@ -717,8 +869,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                                     "excludes", List.of("Authentication credential lifecycle"),
                                     "businessCapabilities", List.of("CRM Contact Preference Management"),
                                     "coreEntities", List.of("ContactPreference"),
-                                    "keyDecisions", List.of("Whether an anonymized CRM preference is valid"),
-                                    "futureCrmScopeHint", map("reviewed", true)
+                                    "keyDecisions", List.of("Whether an anonymized CRM preference is valid")
                             ),
                             "semanticBoundary", map(
                                     "coreConcepts", List.of("Contact preference"),
@@ -728,29 +879,26 @@ class OperationalContextCatalogMaintenanceServiceTest {
                                     "events", List.of("ContactPreferenceUpdated"),
                                     "invariants", List.of("A preference belongs to one anonymized CRM contact profile"),
                                     "ownsLanguage", List.of("CRM contact preference"),
-                                    "doesNotOwn", List.of("Authentication account credential"),
-                                    "futureCrmSemanticHint", map("reviewed", true)
+                                    "doesNotOwn", List.of("Authentication account credential")
                             ),
                             "evidence", List.of(map(
                                     "sourceRef", "Anonymized CRM domain glossary",
                                     "evidenceType", "domain-documentation",
-                                    "note", "CRM semantic boundary review.",
-                                    "futureCrmEvidenceHint", true
+                                    "note", "CRM semantic boundary review."
                             )),
                             "llmToolHints", map(
                                     "answerWhenUserMentions", List.of("CRM contact preference"),
                                     "disambiguateFrom", List.of("Authentication account"),
                                     "usefulSearchKeywords", List.of("ContactPreference"),
-                                    "explanationStyle", "Explain as the CRM contact-preference boundary.",
-                                    "futureCrmToolHint", map("reviewed", true)
+                                    "explanationStyle", "Explain as the CRM contact-preference boundary."
                             )
                     )
             ));
 
-            assertTrue(((Map<?, ?>) created.entity().payload().get("scope")).containsKey("futureCrmScopeHint"));
-            assertTrue(((Map<?, ?>) created.entity().payload().get("semanticBoundary")).containsKey("futureCrmSemanticHint"));
-            assertTrue(((Map<?, ?>) ((List<?>) created.entity().payload().get("evidence")).get(0)).containsKey("futureCrmEvidenceHint"));
-            assertTrue(((Map<?, ?>) created.entity().payload().get("llmToolHints")).containsKey("futureCrmToolHint"));
+            assertTrue(((Map<?, ?>) created.entity().payload().get("scope")).containsKey("keyDecisions"));
+            assertTrue(((Map<?, ?>) created.entity().payload().get("semanticBoundary")).containsKey("invariants"));
+            assertTrue(((Map<?, ?>) ((List<?>) created.entity().payload().get("evidence")).get(0)).containsKey("evidenceType"));
+            assertTrue(((Map<?, ?>) created.entity().payload().get("llmToolHints")).containsKey("explanationStyle"));
 
             var invalid = assertThrows(
                     OperationalContextCatalogMaintenanceException.class,
@@ -795,48 +943,37 @@ class OperationalContextCatalogMaintenanceServiceTest {
                                     "endsWhen", List.of("The CRM contact view confirms the update."),
                                     "includes", List.of("CRM contact preference validation"),
                                     "excludes", List.of("Authentication credential lifecycle"),
-                                    "assumptions", List.of("CRM contact identity is already resolved."),
-                                    "futureCrmBoundaryHint", true
+                                    "assumptions", List.of("CRM contact identity is already resolved.")
                             ),
                             "lifecycle", map(
                                     "triggers", List.of(map(
                                             "type", "api",
                                             "name", "CRM contact update",
-                                            "exchange", "crm.contact.update",
-                                            "futureCrmTriggerHint", true
+                                            "exchange", "crm.contact.update"
                                     )),
                                     "entryCriteria", List.of("CRM contact identity is available."),
                                     "statuses", List.of("requested", "applied"),
                                     "transitions", List.of(map(
                                             "from", "requested",
                                             "to", "applied",
-                                            "trigger", "CRM validation succeeds.",
-                                            "futureCrmTransitionHint", true
+                                            "trigger", "CRM validation succeeds."
                                     )),
                                     "terminalStates", List.of("applied"),
                                     "successOutcomes", List.of("CRM contact preference is applied."),
                                     "partialOutcomes", List.of("CRM projection remains pending."),
                                     "failedOutcomes", List.of("CRM validation rejects the update."),
-                                    "cancellationOutcomes", List.of("CRM agent cancels the update."),
-                                    "futureCrmLifecycleHint", true
+                                    "cancellationOutcomes", List.of("CRM agent cancels the update.")
                             ),
                             "completionSignals", map(
                                     "successful", List.of("CRM contact confirmation is recorded."),
                                     "partial", List.of("CRM projection remains pending."),
                                     "failed", List.of("CRM validation rejection is recorded."),
-                                    "cancelled", List.of("CRM cancellation is recorded."),
-                                    "futureCrmCompletionHint", true
+                                    "cancelled", List.of("CRM cancellation is recorded.")
                             )
                     )
             ));
-            assertEquals(
-                    true,
-                    ((Map<?, ?>) created.entity().payload().get("processBoundary")).get("futureCrmBoundaryHint")
-            );
-            assertEquals(
-                    true,
-                    ((Map<?, ?>) created.entity().payload().get("lifecycle")).get("futureCrmLifecycleHint")
-            );
+            assertTrue(((Map<?, ?>) created.entity().payload().get("processBoundary")).containsKey("endsWhen"));
+            assertTrue(((Map<?, ?>) created.entity().payload().get("lifecycle")).containsKey("transitions"));
 
             var legacy = harness.service().create(new OperationalContextCatalogMutationCommand(
                     "process",
@@ -1009,9 +1146,13 @@ class OperationalContextCatalogMaintenanceServiceTest {
     }
 
     private Harness harness(String directory) {
+        return harness(directory, crmDocuments());
+    }
+
+    private Harness harness(String directory, Map<String, String> documents) {
         var properties = new OperationalContextProperties();
         properties.setStorageDirectory(temporaryDirectory.resolve(directory).toString());
-        var source = (OperationalContextDocumentSource) () -> new OperationalContextRawDocuments("classpath", crmDocuments());
+        var source = (OperationalContextDocumentSource) () -> new OperationalContextRawDocuments("classpath", documents);
         var codec = new OperationalContextCatalogCodec();
         var mapper = JsonMapper.builder().findAndAddModules().build();
         var validationService = new OperationalContextCatalogValidationService(

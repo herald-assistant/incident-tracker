@@ -78,7 +78,8 @@ class OperationalContextMaintenanceInstructionsTest {
         assertTrue(guidance.contains("references use per-entity-type catalogue pickers"));
         assertTrue(guidance.contains("`scopeType` is derived from `target.type`"));
         assertTrue(guidance.contains("integration participants use source/target/intermediary/final-target cards"));
-        assertTrue(guidance.contains("preserve unknown extensions"));
+        assertTrue(guidance.contains("New unknown"));
+        assertTrue(guidance.contains("removed when the entity is updated"));
         assertTrue(codeSearchPrompt.contains("The UI derives `scopeType`"));
         assertTrue(integrationsPrompt.contains("structured participant cards"));
     }

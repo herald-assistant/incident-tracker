@@ -48,11 +48,11 @@ not raw JSON:
   and AI exploration hints use dedicated list fields and repeatable evidence
   cards.
 
-These controls serialize the unchanged canonical YAML/JSON shapes described
-below and preserve unknown extensions already present in an edited entry.
-No supported canonical field requires a raw JSON input in the MVP. Unknown
-extensions remain preserved by the edit round-trip, but are not presented as
-editable fields until they become part of the documented contract.
+These controls serialize the canonical YAML/JSON shapes described below.
+No supported canonical field requires a raw JSON input in the MVP. New unknown
+keys are rejected by the maintenance API. Existing unknown keys are omitted
+from the edit payload and removed when the entity is updated; documented
+preserve-only fields and dynamic recognition-signal names remain supported.
 
 ## Strict maintenance validation
 
@@ -89,8 +89,7 @@ editable fields until they become part of the documented contract.
   non-blank statements. The UI reads the legacy scalar and normalizes it to a
   list only after the operator changes the field.
 - Bounded-context `scope` and `semanticBoundary` are objects. Every known field
-  is a list of non-blank text; unknown extensions are preserved but are not
-  projected to AI.
+  is a list of non-blank text; unknown extensions are removed on update.
 - Bounded-context `evidence` is a list of objects with required non-blank
   `sourceRef` and `evidenceType` plus optional non-blank `note`.
 - Bounded-context `llmToolHints` is an object. Its known phrase fields are lists
@@ -214,8 +213,8 @@ Relations become graph edges for related-entity reads, ownership/navigation
 inference and delete-impact checks. Avoid duplicating a reference without
 adding semantic meaning. Legacy `targetContextId`, `targetProcessId` and a
 missing `targetType` for a system target remain readable; changing their target
-through the UI writes canonical `targetType` plus `target` and preserves other
-unknown relation extensions.
+through the UI writes canonical `targetType` plus `target`; unknown relation
+extensions are removed on update.
 
 ### `sourceCoverage`
 
@@ -382,7 +381,6 @@ satisfy frontend eligibility.
 | --- | --- | --- |
 | `type` | Established process vocabulary, for example `business-process`; backend free text. | Distinguishes business and operational flows in search and AI context. |
 | `criticality` | Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Prioritizes affected functional paths. |
-| `operationalOutcome` | Observable successful business result. | Gives AI a functional completion target. |
 | `participants` | Guided actor lines plus role-specific selectors for existing `primarySystems`, `supportingSystems`, `externalSystems` and `platformComponents`. A system should have one role in a process. | Creates typed system graph edges used by related-entity views, Flow Explorer and AI to reconstruct the functional path. Actors explain human roles but do not create ownership. |
 | `steps` | Ordered cards with a unique lowercase kebab-case `id`, required `name`, optional `type`/`summary`, canonical `references` and optional strong business terms stored as `matchSignals.strong.terms`. | The array order is the process sequence. Step identity, text and recognition signals are searchable; references create step graph edges and give AI an explainable flow. |
 | `processBoundary` | Guided object with optional `businessCapability` and non-blank text lists `startsWhen`, `endsWhen`, `includes`, `excludes`, `assumptions`. Legacy non-blank string/list values remain readable as `endsWhen`. | The full known boundary is indexed and exposed by `opctx_get_entity`; it tells AI where the functional flow starts and ends and which adjacent responsibilities must not be attributed to this process. Assumptions remain explicit limitations, not evidence. |
@@ -408,9 +406,8 @@ existing signal buckets and keys.
   concrete execution.
 
 Editing any legacy string/list shape writes the canonical object while leaving
-an untouched legacy value unchanged. Unknown object fields are preserved by the
-editor and storage codec. AI tools receive only the known projection, never
-unknown raw extensions.
+an untouched legacy value unchanged. Unknown object fields are removed when
+the entity is updated. AI tools receive only the known projection.
 
 CRM process-boundary example:
 
@@ -506,7 +503,6 @@ CRM step example:
 | `integrationStyle` | Current vocabulary includes `synchronous`, `synchronous-request`, `asynchronous`, `async-message`, `event-stream`, `gateway-mediated`, `mixed`. | Grounds synchronous/asynchronous failure reasoning. |
 | `flowDirection` | Current vocabulary includes `source-to-target`, `request-response`, `bidirectional`, `fanout`. | Explains information flow; bidirectional-like values are interpreted as both-sided context. |
 | `criticality` | Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Prioritizes boundary impact. |
-| `dataSensitivity` | Current vocabulary includes `internal`, `confidential`; backend free text. | Descriptive handling context for AI; it does not implement access control. |
 | `participants` | Required source and target structure described below. | Produces directed graph edges and identifies boundary start, intermediaries and destination. |
 | `failureModes` | Guided cards with required `name` and `type`, plus at least `symptom` or `impact`. Stable type examples: `timeout`, `upstream-error`, `rejected-message`, `unavailable`, `contract-mismatch`, `delivery-failure`. Legacy non-blank strings remain readable. | Structured cards are exposed by catalogue detail and `opctx_get_entity`; their leaf text is indexed as integration signals and grounds hypotheses/handoff without proving diagnosis. |
 
@@ -637,15 +633,11 @@ Guided, strongly anonymized CRM example:
 | --- | --- | --- |
 | `id` | Required immutable kebab-case rule ID, for example `crm-contact-sync-delayed`. | Canonical rule key and graph target. |
 | `title` | Required recognizable situation. | Primary matching and display label. |
-| `confidence` | Backend free text; convention `high`, `medium`, `low`. | Calibrates the suggestion but never replaces evidence. |
 | `useWhen` | Observable positive applicability conditions. | AI checks them before recommending handoff. |
 | `doNotUseWhen` | Observable exclusions. | Suppresses misleading handoff matches. |
 | `requiredEvidence` | Minimum collectible evidence, without real customer data. | Becomes the AI evidence checklist and visibility limit. |
 | `expectedFirstAction` | Ordered, concrete receiving-side actions. | Included in technical handoff. |
 | `references` | Existing operational-context IDs grouped by type; never team ownership. | Lets AI read supporting context before applying the rule. |
-| `affectedSystems` | One `system:id` per item. | Scopes system impact and follow-up reads. |
-| `affectedProcesses` | One `process:id` per item. | Grounds functional impact. |
-| `affectedIntegrations` | One `integration:id` per item. | Grounds boundary and participant analysis. |
 | `notes` | Durable clarification or provenance. | Available in detailed context. |
 | `llmToolHints` | Evidence/tool reads to perform before applying the rule. | Directly guides AI handoff preparation. |
 | `limitations` | Explicit cases or visibility boundaries not covered. | Prevents AI from presenting the rule as universal. |

@@ -62,7 +62,7 @@ export class ContextEntityEditorDrawerComponent {
     if (this.form.invalid) return;
     try {
       const state = this.state();
-      const payload = this.adapter.payload(state.type, this.form, state.entity.payload);
+      const payload = this.adapter.payload(state.type, this.form);
       if (state.mode === 'edit') payload['id'] = state.entity.id;
       this.saveEntity.emit(payload);
     } catch {

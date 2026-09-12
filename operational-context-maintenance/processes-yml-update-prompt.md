@@ -221,7 +221,8 @@ completionSignals:
   field unless they are independently observable facts.
 - Legacy non-blank string/list shapes remain readable. Normalize them only
   after actual editing: boundary to `endsWhen`, lifecycle to `statuses` and
-  completion signals to `successful`. Preserve unknown object extensions.
+  completion signals to `successful`. Unknown object keys are removed when
+  the entity is updated.
 - Keep process `failureModes` as guided cards with unique kebab-case `id`,
   required `name` and `summary`, optional existing `affectedStep`, and
   observable `signals`; they are hypotheses, not confirmed root causes.

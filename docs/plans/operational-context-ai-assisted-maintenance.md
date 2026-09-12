@@ -1,6 +1,6 @@
 # Pomoc AI przy tworzeniu i aktualizacji Operational Context
 
-Status: draft
+Status: in-progress
 
 Source need: [Pomoc AI przy tworzeniu i aktualizacji Operational Context](../needs/operational-context-ai-assisted-maintenance.md)
 
@@ -18,6 +18,32 @@ Proponowany pierwszy przyrost to L2: nowy przeplyw AI i kontrakt HTTP/UI nad
 reusable katalogiem, istniejacymi integracjami i platforma AI. Zmiana modelu
 storage albo atomowy zapis wielu dokumentow podnioslyby zakres do L3 i nie
 naleza do tego przyrostu.
+
+Zatwierdzony krok przygotowawczy upraszcza istniejacy kontrakt L2 przed
+projektowaniem propozycji AI. `handoff-rule.confidence`, `affectedSystems`,
+`affectedProcesses` i `affectedIntegrations` byly edytowalne przed krokiem 0,
+lecz nie byly odczytywane do runtime DTO ani do `opctx_get_entity`.
+`affected*` dubluja
+powiazania utrzymywane w `references`. Biezacy bundled seed i lokalna kopia nie
+zawieraja tych pol, ale starsze lokalne katalogi moga je miec. Reguly
+`useWhen`, `doNotUseWhen`, `requiredEvidence`, `expectedFirstAction`,
+`references`, `notes`, `llmToolHints` i `limitations` pozostaja poza zakresem
+redukcji.
+
+Zatwierdzony kolejny krok przygotowawczy usuwa `process.operationalOutcome`
+oraz `integration.dataSensitivity`. Oba pola byly edytowalne, lecz nie byly
+projektowane do runtime DTO ani do `opctx_get_entity`. Usuwamy je z
+kanonicznego schematu, formularza i instrukcji, bez utrzymywania osobnej
+listy wycofanych kluczy. Znaczenie wyniku procesu pozostaje w strukturalnych
+`completionSignals` i `lifecycle`; pozostale pola procesu i integracji nie sa
+objete tym krokiem.
+
+Po sprawdzeniu kontraktu uzytkownik zatwierdzil oczyszczanie wszystkich
+nieznanych pol istniejacych encji przy aktualizacji, dla kazdego typu.
+Wczesniej nowe nieznane klucze najwyzszego poziomu byly odrzucane, ale
+istniejace w YAML byly zachowywane. Zagniezdzone rozszerzenia takze byly
+przepuszczane; teraz podlegaja jawnej walidacji znanych ksztaltow, z
+wyjatkiem celowo dynamicznych nazw sygnalow.
 
 Obecnie `/operational-context` pokazuje summary, katalog, Signal Resolver,
 Validation i Open Questions. `Add` dziala na zakladce konkretnego typu, a
@@ -93,8 +119,11 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 
 | Obszar | Zamierzona zmiana |
 | --- | --- |
+| Handoff-rule maintenance (zatwierdzony krok 0) | Usuniete cztery nieodczytywane pola z zapisu, edytora i instrukcji; starsze lokalne YAML czyszczone tylko po dry-run i jawnym `-Apply`. `references` i read API pozostaja. |
+| Process/integration maintenance (zatwierdzony krok 0b) | Usuniecie `operationalOutcome` i `dataSensitivity` z kanonicznego schematu, formularza i instrukcji; bez osobnej listy dawnych kluczy. Biezace katalogi nie zawieraja tych pol; starsze wpisy sa oczyszczane przy aktualizacji encji. |
+| Nieznane klucze JSON/YAML (zatwierdzony krok 0b) | Nowe klucze poza schematem sa odrzucane. Istniejace nieznane pola sa pomijane przez edytor i usuwane podczas aktualizacji encji; jawne preserve-only pola pozostaja. |
 | Publiczny odczyt katalogu i `opctx_*` | Bez zmian. |
-| Maintenance CRUD | Bez zmiany semantyki pojedynczego zapisu; dodana read-only walidacja propozycji. |
+| Maintenance CRUD | Pojedynczy zapis pozostaje atomowy; dodatkowo odrzuca nieznane klucze i nie zachowuje nieznanych rozszerzen przy aktualizacji. W przyszlym przeplywie asysty dodana read-only walidacja propozycji. |
 | AI runtime | Nowy feature-owned prompt, skill, kontrakt draftu i ograniczony run; bez mutation tools. |
 | Zrodla | Read-only, operator-selected, ograniczony bootstrap bez zaleznosci od istniejacego scope'u. |
 | UI | Nowe wejscia z empty state, detail i maintenance inbox; field-level review i uproszczony domyslny widok formularza w istniejacym workbench. |
@@ -112,6 +141,13 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 
 ## Zakres
 
+- Usuniecie czterech nieodczytywanych pol `handoff-rule` z kanonicznego
+  maintenance payloadu, formularza i instrukcji; dry-run migracji starszych
+  lokalnych katalogow bez automatycznego nadpisywania danych uzytkownika.
+- Usuniecie nieodczytywanych `process.operationalOutcome` i
+  `integration.dataSensitivity` z maintenance payloadu, formularza i
+  instrukcji; odrzucanie nowych nieznanych kluczy i usuwanie istniejacych
+  nieznanych pol przy aktualizacji encji, bez listy wycofanych kluczy.
 - Jeden pionowy przebieg pierwszego obszaru i kontekstowa poprawa wpisu.
 - Typowane propozycje, zrodla, pytania, diff, walidacja bez zapisu i
   jednoznaczny zapis zaakceptowanej encji.
@@ -136,6 +172,8 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 - `ownershipStatus=explicit` wymaga jawnego potwierdzenia czlowieka.
   Klasyfikacja frontendu wymaga osobnego potwierdzenia zgodnego z kontraktem
   katalogu. Nieznane zostaje nieznane.
+- Aktualizacja starszej encji usuwa jej nieznane rozszerzenia z YAML;
+  jawnie znane pola preserve-only pozostaja zachowane.
 - Zmiana obejmuje kontrakt backend-frontend, wiec wymaga sekwencji testow
   frontend, build Angulara i `mvn -q -Pbackend-dev clean package`.
 
@@ -144,7 +182,7 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 - Nowy uzytkownik tworzy pierwszy przydatny system i, jesli wybral
   potwierdzony projekt, droge do kodu bez recznego wyboru typow encji.
 - Dla istniejacego wpisu lub findingu dostaje czytelny diff i moze przyjac
-  tylko wybrane pola, bez utraty reszty payloadu.
+  tylko wybrane pola, bez utraty pozostalych znanych danych.
 - AI nie zapisuje bez decyzji uzytkownika; niepoprawny lub nieaktualny draft
   nie zmienia katalogu.
 - Walidacja propozycji, provenance, pytania i visibility limits sa widoczne
@@ -155,6 +193,33 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 
 ## Kroki
 
+- [x] Krok 0 (zatwierdzony 2026-09-12): Usunac `handoff-rule.confidence` oraz
+  `affectedSystems`, `affectedProcesses`, `affectedIntegrations` z kontraktu
+  maintenance, edytora, promptu utrzymaniowego i field guidance. Rozszerzyc
+  skrypt cleanup o deterministyczny dry-run i jawne `-Apply` dla starszych
+  lokalnych katalogow; nie zmieniac `references` ani innych pol reguly.
+  Dowod: test zapisu/odmowy usunietych pol, test edytora i round-trip legacy,
+  probny cleanup zachowujacy inne pola, testy FE i backendu zgodne z zakresem
+  wspolnym oraz brak wystapien usunietych pol w aktywnym kontrakcie.
+  Weryfikacja: probny dry-run i `-Apply` na legacy YAML usunely cztery pola,
+  zachowujac `references` i zagniezdzone `gaps[].confidence`; dry-run seed i
+  lokalnej kopii wykazal `Changes: 0`. Testy adaptera formularza: 29/29,
+  pelny zestaw FE: 507/509 (dwa timeouty), ponowne uruchomienie dwoch
+  plikow: 43/43. Build Angulara i `mvn -q -Pbackend-dev clean package`
+  zakonczone powodzeniem.
+- [x] Krok 0b (zatwierdzony 2026-09-12): Usunac
+  `process.operationalOutcome` i `integration.dataSensitivity` z kanonicznego
+  schematu, edytora oraz instrukcji. Nie utrzymywac listy dawnych kluczy.
+  Odrzucac nowe nieznane klucze i oczyszczac istniejace wpisy z nieznanych
+  pol przy aktualizacji, we wszystkich typach, zachowujac pola jawnie
+  preserve-only i dynamiczne nazwy sygnalow. Dowod: testy walidacji zapisu,
+  starszego YAML i zagniezdzonych struktur, testy formularza, probny cleanup
+  zachowujacy znane pola oraz weryfikacja backendu i frontendu dla zmiany
+  wspolnego kontraktu. Weryfikacja: celowane testy maintenance i nested schema
+  przeszly; pelny zestaw Angulara 518/518, build produkcyjny Angulara oraz
+  `mvn -q -Pbackend-dev clean package` zakonczyly sie powodzeniem. Test
+  starszego YAML potwierdza usuniecie nieznanych kluczy i zachowanie
+  `process.outcomes`, `team.references`, `team.relations`.
 - [ ] Krok 1: Zamknac kontrakt pionowego MVP i baseline: trzy scenariusze
   operatora, wybrane zrodla, typowany draft, status runu, granice prywatnosci,
   liste konsumentow, conformance delta i macierz testow. Dowod: review

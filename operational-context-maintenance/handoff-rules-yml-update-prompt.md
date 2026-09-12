@@ -17,7 +17,6 @@ catalogKind: operational-context-handoff-rules
 handoffRules:
   - id: crm-contact-sync-delayed
     title: CRM contact synchronization is delayed
-    confidence: medium
     useWhen:
       - An anonymized CRM customer update is not visible downstream.
     doNotUseWhen:
@@ -35,12 +34,6 @@ handoffRules:
         - crm-contact-sync
       terms:
         - crm-customer-profile
-    affectedSystems:
-      - system:crm-customer-service
-    affectedProcesses:
-      - process:crm-contact-update
-    affectedIntegrations:
-      - integration:crm-contact-sync
     notes:
       - Strongly anonymized CRM example.
     llmToolHints:
@@ -61,7 +54,7 @@ gaps:
 - Keep positive and negative applicability conditions explicit.
 - `references` use catalog IDs grouped by type; do not route directly to a
   team.
-- `affected*` fields preserve source-backed scope descriptions and do not
-  replace typed references.
+- Link affected systems, processes and integrations through `references`;
+  the rule does not maintain a second list of affected targets.
 - Prefer concrete evidence and first actions over generic investigation text.
 - Every test, fixture or example must be strongly anonymized and CRM-only.

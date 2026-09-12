@@ -273,8 +273,10 @@ Bounded context opisuje odpowiedzialnosc domenowa i lokalny jezyk:
 
 Znane pola scope, semantic boundary, evidence i AI hints sa jawnie walidowane,
 indeksowane i projektowane do widoku operatora oraz `opctx_get_entity`.
-Nieznane rozszerzenia sa zachowywane przy round-tripie edycji, ale nie sa
-wysylane do AI. `evidence` nie uruchamia pobrania zrodla ani nie dowodzi root
+Nowe nieznane klucze sa odrzucane przez maintenance API, a istniejace
+nieznane rozszerzenia sa usuwane przy aktualizacji encji. Jawne pola
+preserve-only i dynamiczne nazwy sygnalow pozostaja zachowane. `evidence`
+nie uruchamia pobrania zrodla ani nie dowodzi root
 cause, a `llmToolHints` nie nadaje dostepu, ownershipu ani prawa do pominiecia
 visibility limits.
 
@@ -289,7 +291,7 @@ Integration opisuje zaleznosc systemowa:
 
 - source system i target systems,
 - category, integration style, direction,
-- criticality i data sensitivity,
+- criticality,
 - role uczestnikow,
 - references do procesow, bounded contextow i pojec,
 - limitations.
@@ -544,7 +546,10 @@ zapisuje zmiany. Dla tej wersji kontraktu skrypt dopisuje
 `systemSubtype: unknown` do kanonicznych wpisow `systemType: internal-service`,
 ktore nie maja subtype. Nie klasyfikuje ich jako frontend/backend na podstawie
 nazwy lub kodu. Skrypt usuwa tez cale bloki YAML dla starych struktur i
-raportuje wszystkie zmiany.
+raportuje wszystkie zmiany. Z `handoff-rules.yml` usuwa nieodczytywane pola
+`confidence`, `affectedSystems`, `affectedProcesses` i `affectedIntegrations`
+na poziomie reguly; powiazania pozostaja w `references`. Zmiana lokalnego
+katalogu wymaga jawnego `-Apply` po przegladzie raportu dry-run.
 
 Po wiekszej zmianie katalogu nalezy wykonac:
 

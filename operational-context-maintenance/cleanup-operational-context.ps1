@@ -407,6 +407,65 @@ function Remove-YamlLegacyBlocks {
     return @($result)
 }
 
+function Remove-UnusedHandoffRuleFields {
+    param(
+        [string[]] $Lines,
+        [string] $FileName,
+        [System.Collections.Generic.List[object]] $Changes
+    )
+
+    if ($FileName -ne "handoff-rules.yml") {
+        return $Lines
+    }
+
+    $unusedFields = @("confidence", "affectedSystems", "affectedProcesses", "affectedIntegrations")
+    $result = [System.Collections.Generic.List[string]]::new()
+    $inRules = $false
+    $fieldIndent = -1
+    $index = 0
+
+    while ($index -lt $Lines.Count) {
+        $line = $Lines[$index]
+        if ($line -match '^handoffRules:\s*(?:#.*)?$') {
+            $inRules = $true
+            $fieldIndent = -1
+        } elseif ($inRules -and $line -match '^\S[^:]*:') {
+            $inRules = $false
+            $fieldIndent = -1
+        } elseif ($inRules -and $line -match '^(\s+)-\s+id:') {
+            $fieldIndent = $matches[1].Length + 2
+        }
+
+        if ($inRules -and $fieldIndent -ge 0 -and ($line -match '^\s+([A-Za-z0-9_]+):') -and (Indent-Length $line) -eq $fieldIndent -and $unusedFields -contains $matches[1]) {
+            $key = $matches[1]
+            $start = $index
+            $index++
+            while ($index -lt $Lines.Count) {
+                $candidate = $Lines[$index]
+                if ($candidate.Trim().Length -eq 0) {
+                    $index++
+                    continue
+                }
+                if ((Indent-Length $candidate) -le $fieldIndent) {
+                    break
+                }
+                $index++
+            }
+            $Changes.Add([pscustomobject]@{
+                File = $FileName
+                Action = "remove-unused-handoff-rule-field"
+                Detail = "$key at line $($start + 1)"
+            })
+            continue
+        }
+
+        $result.Add($line)
+        $index++
+    }
+
+    return @($result)
+}
+
 function Remove-MarkdownLegacySections {
     param(
         [string[]] $Lines,
@@ -506,6 +565,7 @@ foreach ($root in $resolvedRoots) {
             $updated = Add-DeterministicOwnership $updated $file.Name $fileChanges
             $updated = Add-ExplicitInternalServiceSubtype $updated $file.Name $fileChanges
             $updated = Remove-YamlLegacyBlocks $updated $file.Name $fileChanges
+            $updated = Remove-UnusedHandoffRuleFields $updated $file.Name $fileChanges
         } elseif ($file.Extension -eq ".md") {
             $updated = Remove-MarkdownLegacySections $updated $file.Name $fileChanges
         }

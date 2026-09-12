@@ -13,7 +13,6 @@ final class OperationalContextCatalogEntitySchema {
 
     private static final Map<OperationalContextCatalogEntityType, Set<String>> EDITABLE = editableFields();
     private static final Map<OperationalContextCatalogEntityType, Set<String>> PRESERVE_ONLY = preserveOnlyFields();
-    private static final Map<OperationalContextCatalogEntityType, Set<String>> ALIASES = aliases();
 
     private OperationalContextCatalogEntitySchema() {
     }
@@ -24,10 +23,6 @@ final class OperationalContextCatalogEntitySchema {
 
     static boolean preserveOnly(OperationalContextCatalogEntityType type, String field) {
         return PRESERVE_ONLY.get(type).contains(field);
-    }
-
-    static boolean known(OperationalContextCatalogEntityType type, String field) {
-        return editable(type, field) || preserveOnly(type, field) || ALIASES.get(type).contains(field);
     }
 
     private static Map<OperationalContextCatalogEntityType, Set<String>> editableFields() {
@@ -44,11 +39,11 @@ final class OperationalContextCatalogEntitySchema {
                 "id", "name", "scopeType", "lifecycleStatus", "summary", "useFor", "limitations", "target", "repositories"
         ));
         result.put(OperationalContextCatalogEntityType.PROCESS, fields(
-                "type", "criticality", "operationalOutcome", "participants", "processBoundary", "lifecycle",
+                "type", "criticality", "participants", "processBoundary", "lifecycle",
                 "completionSignals", "steps", "relations", "failureModes", "dataAndArtifacts", "references", "matchSignals"
         ));
         result.put(OperationalContextCatalogEntityType.INTEGRATION, fields(
-                "category", "integrationStyle", "flowDirection", "criticality", "dataSensitivity", "matchSignals",
+                "category", "integrationStyle", "flowDirection", "criticality", "matchSignals",
                 "relations", "failureModes", "participants", "references"
         ));
         result.put(OperationalContextCatalogEntityType.BOUNDED_CONTEXT, fields(
@@ -62,8 +57,7 @@ final class OperationalContextCatalogEntitySchema {
                 "doNotConfuseWith", "responsibilityHints", "llmToolHints", "notes"
         ));
         result.put(OperationalContextCatalogEntityType.HANDOFF_RULE, Set.of(
-                "id", "title", "confidence", "useWhen", "doNotUseWhen", "requiredEvidence",
-                "expectedFirstAction", "affectedSystems", "affectedProcesses", "affectedIntegrations",
+                "id", "title", "useWhen", "doNotUseWhen", "requiredEvidence", "expectedFirstAction",
                 "references", "notes", "llmToolHints", "limitations"
         ));
         return Map.copyOf(result);
@@ -74,21 +68,12 @@ final class OperationalContextCatalogEntitySchema {
         result.put(OperationalContextCatalogEntityType.SYSTEM, Set.of("dependencies"));
         result.put(OperationalContextCatalogEntityType.REPOSITORY, Set.of("lookupHints", "persistenceHints", "scannedSubtrees"));
         result.put(OperationalContextCatalogEntityType.CODE_SEARCH_SCOPE, Set.of());
-        result.put(OperationalContextCatalogEntityType.PROCESS, Set.of("observability"));
+        result.put(OperationalContextCatalogEntityType.PROCESS, Set.of("observability", "outcomes"));
         result.put(OperationalContextCatalogEntityType.INTEGRATION, Set.of());
         result.put(OperationalContextCatalogEntityType.BOUNDED_CONTEXT, Set.of());
-        result.put(OperationalContextCatalogEntityType.TEAM, Set.of());
+        result.put(OperationalContextCatalogEntityType.TEAM, Set.of("references", "relations"));
         result.put(OperationalContextCatalogEntityType.GLOSSARY_TERM, Set.of());
         result.put(OperationalContextCatalogEntityType.HANDOFF_RULE, Set.of());
-        return Map.copyOf(result);
-    }
-
-    private static Map<OperationalContextCatalogEntityType, Set<String>> aliases() {
-        var result = new EnumMap<OperationalContextCatalogEntityType, Set<String>>(OperationalContextCatalogEntityType.class);
-        for (var type : OperationalContextCatalogEntityType.values()) {
-            result.put(type, Set.of());
-        }
-        result.put(OperationalContextCatalogEntityType.SYSTEM, Set.of("match"));
         return Map.copyOf(result);
     }
 
