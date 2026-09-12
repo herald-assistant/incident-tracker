@@ -180,7 +180,7 @@ Neutralna polityka `aiplatform.copilot.runtime.context` rozstrzyga tier przed
 create/resume:
 
 - przed create/resume konserwatywnie estymuje prompt, opcjonalne durable
-  system instructions, definicje tools i rezerwe; od 70% zwyklego okna
+  system instructions, definicje tools i rezerwe; od 50% zwyklego okna
   ustawia `long_context` dla `AUTO`,
 - dla `LONG_CONTEXT_REQUIRED` ustawia `long_context` niezaleznie od
   kompletnosci metadanych katalogu, a po otwarciu sesji potwierdza efektywny
@@ -204,11 +204,11 @@ Rollbackiem jest
 Dla runtime resume w `AUTO` brak `contextTier` w
 `session.model.getCurrent` nie jest dowodem braku aktywacji. Platforma wysyla
 jedna instrukcje kontynuacji i interpretuje pierwszy kolejny
-`session.usage_info`: wzrost `tokenLimit` potwierdza upgrade, a brak wzrostu
+  `session.usage_info`: wzrost `tokenLimit` potwierdza upgrade, a brak wzrostu
 publikuje ostrzezenie i pozwala SDK dokonczyc turn przez compaction. Druga proba
 resume nie jest wykonywana. Zasada fail-before-send pozostaje ograniczona do
-jawnego `LONG_CONTEXT_REQUIRED`, a Change Verification nadal korzysta z
-`AUTO`.
+jawnego `LONG_CONTEXT_REQUIRED`; UI Explorer i Change Verification korzystaja
+z `AUTO`.
 
 Build przypina Java SDK 1.0.11 i minimalny Copilot CLI 1.0.57, czyli pierwsza
 wersje schematu CLI wystawiajaca `contextTier` dla `model.getCurrent`. Po

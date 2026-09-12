@@ -2677,6 +2677,48 @@ Trzy polskie skille prowadza model przez zapis header/sekcji/meta i koncowy
 PASS; `PackageDependencyGuardTest` PASS; pelny `mvn -q test`: 1319 testow,
 0 failures, 0 errors, 0 skipped; `git diff --check` — PASS.
 
+### 8U. Startowy `long_context` dopiero przy polowie zwyklego okna
+
+Status kroku: completed. Uzytkownik wskazal 2026-09-12 eksport UI Explorer,
+w ktorym `LONG_CONTEXT_REQUIRED` wlaczyl rozszerzone okno dla estymacji
+26 071 tokenow przy zwyklym oknie 400 000 tokenow. Source need pozostaje
+`../needs/ui-explorer.md`.
+
+Baseline: UI Explorer wymusza `LONG_CONTEXT_REQUIRED`, wiec platforma pomija
+prog `AUTO=0.70`. Pozostale feature'y korzystaja z `AUTO`. Platforma estymuje
+prompt, durable system instructions, definicje tools i rezerwe na podstawie
+dynamicznego `models.list`. W trakcie turnu prog `runtime-usage-threshold=0.70`
+moze uruchomic jeden kontrolowany abort/resume. Publiczny request, wynik,
+raport, eksport, skille i tool scope nie zawieraja wyboru tieru.
+
+Conformance delta: UI Explorer przestaje wymuszac tier i korzysta z `AUTO`.
+Platformowy prog initial context staje sie `0.50` zwyklego okna; odpowiada
+za niego nadal wylacznie `aiplatform.copilot.runtime.context`. Ten prog dotyczy
+wszystkich konsumentow `AUTO`; nie trafia do feature'a, requestu ani UI.
+Przy braku metadanych o oknie `AUTO` pozostawia default SDK. Prog runtime
+`0.70` i jeden kontrolowany upgrade pozostaja bez zmian. Wybrany na starcie
+`long_context` nadal wymaga potwierdzenia przez SDK.
+
+Konsumenci: UI Explorer oraz wszystkie feature'y `AUTO` korzystajace ze
+wspolnej polityki. Nie zmieniaja sie ich DTO, prompt, skill, tools, report,
+wynik ani zapisane eksporty. Rollbackiem nadal jest
+`analysis.ai.copilot.context-tier.enabled=false`.
+
+- [x] 8U.1: Ustawic UI Explorer na `AUTO` i platformowy prog 50%, bez
+  feature-specific rozmiarow okna. Weryfikacja: test assemblera i testy
+  graniczne platformowej polityki ponizej/na progu.
+- [x] 8U.2: Zaktualizowac kanoniczna dokumentacje, sprawdzic regresje
+  konsumentow backendu, `PackageDependencyGuardTest`, `mvn -q test` i
+  `git diff --check`. UI i kontrakt backend-frontend pozostaja bez zmian.
+
+Weryfikacja: celowane testy polityki i assemblera przed/po zmianie — PASS;
+pelne `mvn -q test` — PASS, w tym `PackageDependencyGuardTest`;
+`git diff --check` — PASS. Eksport referencyjny potwierdza `FEATURE_REQUIREMENT`
+przy 26 071/400 000 szacowanych tokenow (ok. 6,5%). Po zmianie ten rozmiar
+nie przekracza progu `AUTO=50%`; runtime upgrade pozostaje dostepny od 70%
+rzeczywistego zapelnienia okna. Nie uruchamiano testow Angulara, bo kontrakt
+UI i bundle nie byly zmieniane.
+
 ### 9. Dokumentacja kanoniczna po wdrozeniu
 
 - [ ] Dodac `ui-explorer-runtime-flow.md` dopiero po potwierdzeniu wynikowego

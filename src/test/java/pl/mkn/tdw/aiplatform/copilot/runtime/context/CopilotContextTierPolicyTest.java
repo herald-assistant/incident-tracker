@@ -30,6 +30,40 @@ import static org.mockito.Mockito.when;
 class CopilotContextTierPolicyTest {
 
     @Test
+    void shouldUseHalfOfDefaultWindowAsAutoInitialThreshold() {
+        assertThat(new CopilotSdkProperties().getContextTier().getInitialPromptThreshold()).isEqualTo(0.50D);
+
+        var properties = properties(0.50D, 4D, 0);
+        var belowConfig = new SessionConfig().setModel("gpt-crm-context");
+        var atThresholdConfig = new SessionConfig().setModel("gpt-crm-context");
+
+        var below = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
+                "C".repeat(196),
+                belowConfig,
+                new ResumeSessionConfig(),
+                List.of(),
+                new ArrayList<>(),
+                CopilotContextTierPreference.AUTO
+        ));
+        var atThreshold = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
+                "C".repeat(200),
+                atThresholdConfig,
+                new ResumeSessionConfig(),
+                List.of(),
+                new ArrayList<>(),
+                CopilotContextTierPreference.AUTO
+        ));
+
+        assertThat(below.decision().estimatedInitialTokens()).isEqualTo(49);
+        assertThat(below.decision().initialThresholdTokens()).isEqualTo(50);
+        assertThat(below.decision().useLongContextInitially()).isFalse();
+        assertThat(belowConfig.getContextTier()).isNull();
+        assertThat(atThreshold.decision().estimatedInitialTokens()).isEqualTo(50);
+        assertThat(atThreshold.decision().useLongContextInitially()).isTrue();
+        assertThat(atThresholdConfig.getContextTier()).isEqualTo("long_context");
+    }
+
+    @Test
     void shouldSelectLongContextForNewAndResumedCrmSessionAtAutoThreshold() {
         var properties = properties(0.70D, 1D, 0);
         var activities = new ArrayList<AnalysisAiActivityEvent>();

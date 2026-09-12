@@ -667,8 +667,9 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.tdw.aiplatform.copilot.runtime.context`
   Neutralna polityka context tier. Dla preference `AUTO` estymuje initial
   prompt razem z durable system instructions, definicjami tools i rezerwa oraz
-  ustawia `long_context` przed create/resume po przekroczeniu progu okna z
-  dynamicznego katalogu modeli. Feature z goal-driven researchem moze przekazac
+  ustawia `long_context` przed create/resume od 50% zwyklego okna z
+  dynamicznego katalogu modeli. UI Explorer korzysta z `AUTO`; feature, ktory
+  wymaga rozszerzonego okna od pierwszej wiadomosci, moze przekazac
   `LONG_CONTEXT_REQUIRED`; wtedy platforma ustawia tier przed create/resume bez
   zaleznosci od kompletnosci katalogu i potwierdza go przez typed
   `session.model.getCurrent` przed pierwszym `sendAndWait`. Brak potwierdzenia

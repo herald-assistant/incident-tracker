@@ -79,7 +79,7 @@ public class CopilotSdkProperties {
     public static class ContextTierPolicy {
 
         private boolean enabled = true;
-        private double initialPromptThreshold = 0.70D;
+        private double initialPromptThreshold = 0.50D;
         private double runtimeUsageThreshold = 0.70D;
         private double estimatedCharactersPerToken = 3.5D;
         private int reservedTokens = 16_000;

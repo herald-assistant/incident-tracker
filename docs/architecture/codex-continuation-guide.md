@@ -174,8 +174,9 @@ jest zmiana architektoniczna i wymaga planu, testow oraz rollbacku.
 `long_context`. Rozmiary okien i wsparcie tieru pochodza z cache'owanego typed
 RPC `models.list`; `analysis.ai.copilot.context-tier` zawiera tylko progi,
 estymator, rezerwe i przelacznik. Preflight `AUTO` obejmuje prompt, opcjonalne
-durable system instructions, definicje tools i rezerwe. Feature, ktorego
-kontekst rosnie przez goal-driven research, moze zadeklarowac
+durable system instructions, definicje tools i rezerwe; prog wynosi 50%
+zwyklego okna modelu. UI Explorer uzywa `AUTO`. Feature, ktory wymaga
+rozszerzonego okna od pierwszej wiadomosci, moze zadeklarowac
 `LONG_CONTEXT_REQUIRED`; platforma ustawia wtedy tier w configach create/resume
 i potwierdza efektywny stan przez `session.model.getCurrent` przed pierwszym
 `sendAndWait`. `session.usage_info` steruje jednym bezpiecznym runtime upgradem

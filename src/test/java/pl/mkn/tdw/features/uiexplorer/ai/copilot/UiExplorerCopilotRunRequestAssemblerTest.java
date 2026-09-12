@@ -77,7 +77,7 @@ class UiExplorerCopilotRunRequestAssemblerTest {
         assertThat(assembly.runRequest().sessionConfigRequest().availableToolNames())
                 .doesNotContain("gitlab_list_available_repositories", "db_describe_table");
         assertThat(assembly.runRequest().sessionConfigRequest().contextTierPreference())
-                .isEqualTo(CopilotContextTierPreference.LONG_CONTEXT_REQUIRED);
+                .isEqualTo(CopilotContextTierPreference.AUTO);
         assertThat(assembly.runRequest().artifactContents()).hasSize(7);
         assertThat(assembly.runRequest().artifactContents())
                 .containsKey("ui-explorer/functional-writing-contract.md");

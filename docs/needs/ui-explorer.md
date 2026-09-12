@@ -22,6 +22,12 @@ Brak tej dokumentacji utrudnia:
 - odroznienie zachowania potwierdzonego od przypuszczenia wynikajacego z
   niepelnej widocznosci.
 
+Uruchomienie rozszerzonego okna kontekstowego dla kazdej analizy widoku jest
+nieproporcjonalne, gdy przygotowany kontekst zajmuje tylko niewielka czesc
+zwyklego okna. Rozszerzony kontekst powinien byc wybierany na starcie dopiero
+przy istotnie duzym wejsciu, przy zachowaniu ochrony przed zapelnieniem okna
+w trakcie dluzszej analizy.
+
 ## Kontekst produktu
 
 Docelowym zrodlem jest frontend bedacy duzym monolitem rozwijanym w Angularze,
