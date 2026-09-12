@@ -336,8 +336,7 @@ class FlowExplorerEndpointInventoryServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 
@@ -373,8 +372,7 @@ class FlowExplorerEndpointInventoryServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

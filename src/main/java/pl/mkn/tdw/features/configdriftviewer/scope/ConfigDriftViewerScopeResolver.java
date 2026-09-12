@@ -89,8 +89,7 @@ public class ConfigDriftViewerScopeResolver {
     private OperationalContextCatalog catalog() {
         return operationalContextPort.capture().query(new OperationalContextQuery(
                 Set.of(OperationalContextEntryType.SYSTEM),
-                List.of(),
-                false
+                List.of()
         ));
     }
 

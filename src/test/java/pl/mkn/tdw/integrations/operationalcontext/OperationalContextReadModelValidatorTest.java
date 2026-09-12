@@ -31,8 +31,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "SELF_REFERENCE");
@@ -62,8 +61,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(map("id", "customer-profile-context"), map("id", "notification-context")),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "DUPLICATED_PARTICIPANT_REFERENCE_SYSTEM");
@@ -107,8 +105,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "SYSTEM_DEPENDENCY_DERIVED_FROM_INTEGRATION");
@@ -138,8 +135,7 @@ class OperationalContextReadModelValidatorTest {
                 )),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "BOUNDED_CONTEXT_SYSTEM_REFERENCE_DERIVED");
@@ -165,8 +161,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "PROCESS_PARTICIPANT_REFERENCE_SYSTEM");
@@ -211,8 +206,7 @@ class OperationalContextReadModelValidatorTest {
                         List.of()
                 )),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertFalse(findings.stream().anyMatch(finding -> finding.code().startsWith("CODE_SEARCH_TARGET_")));
@@ -236,8 +230,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "BIDIRECTIONAL_REFERENCE");
@@ -279,8 +272,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "CODE_SEARCH_SCOPE_WITHOUT_INCLUDED_REPOSITORY");
@@ -310,8 +302,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(map("id", "customer-profile-context")),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertFalse(findings.stream().anyMatch(finding ->
@@ -344,8 +335,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasWarning(findings, "INTERNAL_SYSTEM_WITHOUT_CODE_SEARCH_SCOPE");
@@ -379,8 +369,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "SYSTEM_REPOSITORY_REFERENCE_NOT_ALLOWED");
@@ -425,8 +414,7 @@ class OperationalContextReadModelValidatorTest {
                 )),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "OWNERSHIP_OUTSIDE_SYSTEM_OR_BOUNDED_CONTEXT");
@@ -452,8 +440,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasWarning(findings, "INFERRED_OWNERSHIP_IN_CATALOG");
@@ -480,8 +467,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertFalse(findings.stream().anyMatch(finding -> finding.code().startsWith("CODE_SEARCH_SCOPE_")));
@@ -519,8 +505,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "INTERNAL_SERVICE_SUBTYPE_REQUIRED");
@@ -558,8 +543,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertFalse(findings.stream().anyMatch(finding -> finding.code().startsWith("FRONTEND_")));
@@ -609,8 +593,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "FRONTEND_SCOPE_WITHOUT_PRIMARY_REPOSITORY");
@@ -679,8 +662,7 @@ class OperationalContextReadModelValidatorTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertHasError(findings, "CODE_SEARCH_REPOSITORY_WITHOUT_SEARCH_MODE");

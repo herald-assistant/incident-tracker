@@ -56,7 +56,7 @@ public class GitLabSystemBranchesController {
                 Set.of(OperationalContextEntryType.SYSTEM,
                         OperationalContextEntryType.REPOSITORY,
                         OperationalContextEntryType.CODE_SEARCH_SCOPE),
-                List.of(), false));
+                List.of()));
         if (catalog.systems().stream().noneMatch(system -> normalizedSystemId.equals(system.id()))) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "System is not registered.");
         }

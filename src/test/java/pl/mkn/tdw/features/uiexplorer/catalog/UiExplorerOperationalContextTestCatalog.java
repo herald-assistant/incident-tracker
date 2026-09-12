@@ -92,8 +92,7 @@ public final class UiExplorerOperationalContextTestCatalog {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "Synthetic CRM operational context"
+                List.of()
         );
     }
 

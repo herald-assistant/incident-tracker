@@ -59,8 +59,7 @@ class ChangeVerificationOperationalContextMatcherTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         );
     }
 

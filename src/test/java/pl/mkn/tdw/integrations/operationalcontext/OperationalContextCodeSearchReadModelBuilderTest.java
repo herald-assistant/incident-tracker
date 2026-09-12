@@ -82,8 +82,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         List.of()
                 )),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
 
         var processModel = builder.buildForEntity(catalog, "process", "customer-support-process");
@@ -133,8 +132,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
 
         var model = builder.buildForEntity(catalog, "system", "crm-customer-service");
@@ -213,8 +211,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                 )),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

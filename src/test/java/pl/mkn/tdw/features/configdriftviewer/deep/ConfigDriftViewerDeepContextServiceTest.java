@@ -247,8 +247,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         );
     }
 
@@ -266,8 +265,7 @@ class ConfigDriftViewerDeepContextServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         );
     }
 

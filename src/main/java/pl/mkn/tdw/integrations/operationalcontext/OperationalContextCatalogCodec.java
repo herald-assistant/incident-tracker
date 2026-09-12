@@ -30,7 +30,6 @@ final class OperationalContextCatalogCodec {
     private static final String BOUNDED_CONTEXTS = "bounded-contexts.yml";
     private static final String GLOSSARY = "glossary.yml";
     private static final String HANDOFF_RULES = "handoff-rules.yml";
-    private static final String INDEX = "operational-context-index.md";
 
     OperationalContextCatalogDecodeResult decode(OperationalContextRawDocuments rawDocuments) {
         var documents = new LinkedHashMap<String, Map<String, Object>>();
@@ -93,8 +92,7 @@ final class OperationalContextCatalogCodec {
                         rawTeams,
                         rawGlossaryTerms,
                         rawHandoffRules
-                ),
-                rawDocuments.content(INDEX)
+                )
         );
         return new OperationalContextCatalogDecodeResult(catalog, documents);
     }

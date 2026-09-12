@@ -131,6 +131,6 @@ class GitLabSystemBranchesControllerTest {
                                 Map.of("repoId", "outside", "role", "primary", "priority", 1)
                         )
                 )),
-                List.of(), List.of(), List.of(), List.of(), "");
+                List.of(), List.of(), List.of(), List.of());
     }
 }

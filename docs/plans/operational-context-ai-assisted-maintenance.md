@@ -45,6 +45,17 @@ istniejace w YAML byly zachowywane. Zagniezdzone rozszerzenia takze byly
 przepuszczane; teraz podlegaja jawnej walidacji znanych ksztaltow, z
 wyjatkiem celowo dynamicznych nazw sygnalow.
 
+Zatwierdzony krok 0c usunal `operational-context-index.md` z
+runtime katalogu. Tekst indeksu nie trafia do `opctx_*`, evidence ani UI;
+przed zmiana byl tylko kopiowany do `OperationalContextCatalog.indexDocument`
+i opcjonalnie zwracany przez `OperationalContextQuery.includeIndexDocument`.
+Indeks powielal dokumentacje, a jego lista plikow i targetow code-search scope
+byla nieaktualna. Loader wymagal go jako jednego z dokumentow, dlatego krok
+objal tez kontrakt neutralnego adaptera/read DTO i zestaw plikow (L2).
+Lokalna kopia miala tresc identyczna z seedem i zostala usunieta po ponownym
+porownaniu. Pozostale encje YAML, ich relacje, read API oraz formularz nie
+zostaly zmienione w tym kroku.
+
 Obecnie `/operational-context` pokazuje summary, katalog, Signal Resolver,
 Validation i Open Questions. `Add` dziala na zakladce konkretnego typu, a
 `Edit` otwiera kompletny formularz. Read API i `opctx_*` sa tylko do odczytu.
@@ -122,6 +133,7 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 | Handoff-rule maintenance (zatwierdzony krok 0) | Usuniete cztery nieodczytywane pola z zapisu, edytora i instrukcji; starsze lokalne YAML czyszczone tylko po dry-run i jawnym `-Apply`. `references` i read API pozostaja. |
 | Process/integration maintenance (zatwierdzony krok 0b) | Usuniecie `operationalOutcome` i `dataSensitivity` z kanonicznego schematu, formularza i instrukcji; bez osobnej listy dawnych kluczy. Biezace katalogi nie zawieraja tych pol; starsze wpisy sa oczyszczane przy aktualizacji encji. |
 | Nieznane klucze JSON/YAML (zatwierdzony krok 0b) | Nowe klucze poza schematem sa odrzucane. Istniejace nieznane pola sa pomijane przez edytor i usuwane podczas aktualizacji encji; jawne preserve-only pola pozostaja. |
+| Runtime index (zatwierdzony krok 0c) | Usuniety z seeda, loadera, codec, DTO i query. Lokalna kopia zgodna z seedem zostala usunieta po porownaniu; zmieniony plik w innej instalacji pozostanie ignorowany, bez automatycznego kasowania. Unikalne zasady jakosci danych przeniesiono do instrukcji utrzymania. |
 | Publiczny odczyt katalogu i `opctx_*` | Bez zmian. |
 | Maintenance CRUD | Pojedynczy zapis pozostaje atomowy; dodatkowo odrzuca nieznane klucze i nie zachowuje nieznanych rozszerzen przy aktualizacji. W przyszlym przeplywie asysty dodana read-only walidacja propozycji. |
 | AI runtime | Nowy feature-owned prompt, skill, kontrakt draftu i ograniczony run; bez mutation tools. |
@@ -148,6 +160,9 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
   `integration.dataSensitivity` z maintenance payloadu, formularza i
   instrukcji; odrzucanie nowych nieznanych kluczy i usuwanie istniejacych
   nieznanych pol przy aktualizacji encji, bez listy wycofanych kluczy.
+- Usuniecie nieuzywanego runtime indexu i jego pola/flag w neutralnym
+  kontrakcie; zachowanie unikalnych zasad jakosci danych w instrukcjach
+  utrzymania.
 - Jeden pionowy przebieg pierwszego obszaru i kontekstowa poprawa wpisu.
 - Typowane propozycje, zrodla, pytania, diff, walidacja bez zapisu i
   jednoznaczny zapis zaakceptowanej encji.
@@ -174,6 +189,9 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
   katalogu. Nieznane zostaje nieznane.
 - Aktualizacja starszej encji usuwa jej nieznane rozszerzenia z YAML;
   jawnie znane pola preserve-only pozostaja zachowane.
+- W kroku 0c zmienil sie wewnetrzny digest katalogu; lokalny indeks o zmienionej
+  tresci pozostanie na dysku jako ignorowany plik, aby nie usuwac potencjalnych
+  zmian uzytkownika. Testy musza objac start istniejacej lokalnej kopii.
 - Zmiana obejmuje kontrakt backend-frontend, wiec wymaga sekwencji testow
   frontend, build Angulara i `mvn -q -Pbackend-dev clean package`.
 
@@ -220,6 +238,28 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
   `mvn -q -Pbackend-dev clean package` zakonczyly sie powodzeniem. Test
   starszego YAML potwierdza usuniecie nieznanych kluczy i zachowanie
   `process.outcomes`, `team.references`, `team.relations`.
+- [x] Krok 0c (zatwierdzony 2026-09-13): Usunac
+  `operational-context-index.md` z runtime seeda i obowiazkowego zestawu
+  dokumentow; usunac `indexDocument` z `OperationalContextCatalog` i
+  `includeIndexDocument` z `OperationalContextQuery` oraz dostosowac ich
+  konsumentow. Przeniesc do `operational-context-maintenance` unikalne
+  reguly indeksu: zachowywanie potwierdzonych faktow bez kontrdowodu, brak
+  obserwacji jako brak dowodu, wymog silnych sygnalow, `gaps` tylko dla
+  trwalych luk i zakaz sekretow, danych osobowych oraz produkcyjnych
+  payloadow. Poprawic kanoniczna architekture i wzmianki o indeksie.
+  Obecna lokalna kopie identyczna z seedem usunac dopiero po ponownym
+  porownaniu; zmienionych lokalnych kopii nie kasowac automatycznie.
+  Konsumenci: loader, codec, lokalny store, query/DTO i ich testy; `opctx_*`,
+  evidence oraz UI nie odczytuja tekstu indeksu. Weryfikacja: test bootstrap
+  nowej i istniejacej lokalnej kopii bez wymaganego indeksu, test atomowego
+  zapisu YAML i odmowy wielu zmian, test adaptera/query, test guardu pakietow
+  oraz `mvn -q test`. Kryterium akceptacji: brak indeksu w runtime kontrakcie
+  i brak utraty obecnych encji lub zasad jakosci danych.
+  Weryfikacja: testy celowane store/adapter/maintenance 40/40 oraz pelny
+  backend `mvn -o -q test` zakonczyly sie powodzeniem (1388 testow,
+  0 failures/errors, 1 skipped); `git diff --check` bez bledow. Test
+  istniejacej lokalnej kopii potwierdza ladowanie encji i
+  zachowanie zmienionego osieroconego indeksu poza snapshotem.
 - [ ] Krok 1: Zamknac kontrakt pionowego MVP i baseline: trzy scenariusze
   operatora, wybrane zrodla, typowany draft, status runu, granice prywatnosci,
   liste konsumentow, conformance delta i macierz testow. Dowod: review

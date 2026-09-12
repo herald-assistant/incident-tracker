@@ -25,8 +25,7 @@ final class ClasspathOperationalContextDocumentSource implements OperationalCont
             "code-search-scopes.yml",
             "bounded-contexts.yml",
             "glossary.yml",
-            "handoff-rules.yml",
-            "operational-context-index.md"
+            "handoff-rules.yml"
     );
 
     private final OperationalContextProperties properties;

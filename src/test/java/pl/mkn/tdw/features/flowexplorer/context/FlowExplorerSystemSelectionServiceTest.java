@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.CODE_SEARCH_SCOPE;
 import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextEntryType.REPOSITORY;
@@ -45,7 +44,6 @@ class FlowExplorerSystemSelectionServiceTest {
         assertEquals(1, catalog.codeSearchScopeCount());
         assertEquals(List.of("crm-customer-profile-team"), catalog.ownerTeamIds());
 
-        assertFalse(capturedQuery.get().includeIndexDocument());
         assertTrue(capturedQuery.get().includes(SYSTEM));
         assertTrue(capturedQuery.get().includes(REPOSITORY));
         assertTrue(capturedQuery.get().includes(CODE_SEARCH_SCOPE));
@@ -125,8 +123,7 @@ class FlowExplorerSystemSelectionServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

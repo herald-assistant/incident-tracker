@@ -28,7 +28,7 @@ class LocalOperationalContextStoreTest {
         store.initializeLocalCopyAtStartup();
 
         assertTrue(Files.isRegularFile(root.resolve("systems.yml")));
-        assertTrue(Files.isRegularFile(root.resolve("operational-context-index.md")));
+        assertFalse(Files.exists(root.resolve("operational-context-index.md")));
     }
 
     @Test
@@ -50,13 +50,31 @@ class LocalOperationalContextStoreTest {
 
         assertEquals("tdw-data/operational-context", initial.readSnapshot().source());
         assertTrue(Files.isRegularFile(root.resolve("systems.yml")));
-        Files.writeString(root.resolve("operational-context-index.md"), "# Local CRM catalogue\n");
+        var localSystems = "systems: []\ngaps: []\n# Local CRM catalogue\n";
+        Files.writeString(root.resolve("systems.yml"), localSystems);
 
         var restarted = store(root, new OperationalContextAtomicMover()).loadOrBootstrap();
 
-        assertEquals("# Local CRM catalogue\n", restarted.rawDocuments().content("operational-context-index.md"));
+        assertEquals(localSystems, restarted.rawDocuments().content("systems.yml"));
         assertFalse(Files.exists(root.resolve("revisions")));
         assertFalse(Files.exists(root.resolve("manifest.json")));
+    }
+
+    @Test
+    void shouldLoadExistingLocalCopyWithOrphanedIndexWithoutIncludingItInSnapshot() throws Exception {
+        var root = temporaryDirectory.resolve("tdw-data").resolve("operational-context");
+        store(root, new OperationalContextAtomicMover()).loadOrBootstrap();
+        var orphanedIndex = "# Operator-edited legacy index\n";
+        Files.writeString(root.resolve("operational-context-index.md"), orphanedIndex);
+        var localSystems = "systems:\n  - id: crm-local-service\n    name: CRM Local Service\n    systemType: internal-service\ngaps: []\n";
+        Files.writeString(root.resolve("systems.yml"), localSystems);
+
+        var restarted = store(root, new OperationalContextAtomicMover()).loadOrBootstrap();
+
+        assertEquals(localSystems, restarted.rawDocuments().content("systems.yml"));
+        assertEquals("crm-local-service", restarted.readSnapshot().catalog().systems().get(0).id());
+        assertFalse(restarted.rawDocuments().contents().containsKey("operational-context-index.md"));
+        assertEquals(orphanedIndex, Files.readString(root.resolve("operational-context-index.md")));
     }
 
     @Test
@@ -64,14 +82,15 @@ class LocalOperationalContextStoreTest {
         var root = temporaryDirectory.resolve("tdw-data").resolve("operational-context");
         var store = store(root, new OperationalContextAtomicMover());
         var current = store.loadOrBootstrap();
-        var systemsBefore = Files.readString(root.resolve("systems.yml"));
+        var teamsBefore = Files.readString(root.resolve("teams.yml"));
         var candidate = new LinkedHashMap<>(current.rawDocuments().contents());
-        candidate.put("operational-context-index.md", "# Updated local CRM catalogue\n");
+        var updatedSystems = "systems: []\ngaps: []\n# Updated local CRM catalogue\n";
+        candidate.put("systems.yml", updatedSystems);
 
         var updated = store.publishCandidate(candidate);
 
-        assertEquals("# Updated local CRM catalogue\n", updated.rawDocuments().content("operational-context-index.md"));
-        assertEquals(systemsBefore, Files.readString(root.resolve("systems.yml")));
+        assertEquals(updatedSystems, updated.rawDocuments().content("systems.yml"));
+        assertEquals(teamsBefore, Files.readString(root.resolve("teams.yml")));
         assertFalse(Files.exists(root.resolve("revisions")));
     }
 
@@ -81,8 +100,8 @@ class LocalOperationalContextStoreTest {
         var store = store(root, new OperationalContextAtomicMover());
         var current = store.loadOrBootstrap();
         var candidate = new LinkedHashMap<>(current.rawDocuments().contents());
-        candidate.put("operational-context-index.md", "# Changed CRM index\n");
-        candidate.put("systems.yml", "# Changed anonymized CRM systems\nsystems: []\ngaps: []\n");
+        candidate.put("teams.yml", "teams: []\ngaps: []\n# Changed CRM teams\n");
+        candidate.put("systems.yml", "systems: []\ngaps: []\n# Changed CRM systems\n");
 
         var exception = assertThrows(
                 OperationalContextStoreException.class,
@@ -90,7 +109,8 @@ class LocalOperationalContextStoreTest {
         );
 
         assertEquals(OperationalContextStoreException.Code.INVALID_CANDIDATE, exception.code());
-        assertEquals("# CRM operational context\n", Files.readString(root.resolve("operational-context-index.md")));
+        assertEquals("teams: []\ngaps: []\n", Files.readString(root.resolve("teams.yml")));
+        assertEquals("systems: []\ngaps: []\n", Files.readString(root.resolve("systems.yml")));
     }
 
     @Test
@@ -99,7 +119,7 @@ class LocalOperationalContextStoreTest {
         var store = store(root, new OperationalContextAtomicMover());
         var current = store.loadOrBootstrap();
         var candidate = new LinkedHashMap<>(current.rawDocuments().contents());
-        candidate.put("operational-context-index.md", "# Failed CRM update\n");
+        candidate.put("systems.yml", "systems: []\ngaps: []\n# Failed CRM update\n");
         var failingStore = store(root, new FailingDocumentMover());
 
         var exception = assertThrows(
@@ -108,7 +128,7 @@ class LocalOperationalContextStoreTest {
         );
 
         assertEquals(OperationalContextStoreException.Code.LOCAL_COPY_UNAVAILABLE, exception.code());
-        assertEquals("# CRM operational context\n", Files.readString(root.resolve("operational-context-index.md")));
+        assertEquals("systems: []\ngaps: []\n", Files.readString(root.resolve("systems.yml")));
         try (var files = Files.list(root)) {
             assertFalse(files.anyMatch(path -> path.getFileName().toString().endsWith(".tmp")));
         }
@@ -154,7 +174,6 @@ class LocalOperationalContextStoreTest {
         documents.put("bounded-contexts.yml", "boundedContexts: []\ngaps: []\n");
         documents.put("glossary.yml", "terms: []\ngaps: []\n");
         documents.put("handoff-rules.yml", "handoffRules: []\ngaps: []\n");
-        documents.put("operational-context-index.md", "# CRM operational context\n");
         return Map.copyOf(documents);
     }
 

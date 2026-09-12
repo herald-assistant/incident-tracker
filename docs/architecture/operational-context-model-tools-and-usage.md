@@ -150,7 +150,6 @@ Pliki katalogu:
 
 | Plik | Rola |
 | --- | --- |
-| `operational-context-index.md` | opis celu katalogu, zasad modelowania, quality gates i ograniczen |
 | `systems.yml` | kanoniczne systemy, jawne `systemType`/`systemSubtype`, aliasy, status, summary, references, ownership i open questions |
 | `repo-map.yml` | mapa repozytoriow do GitLaba i relacji katalogowych |
 | `code-search-scopes.yml` | semantyczne grupy repozytoriow do wspolnego przeszukania |
@@ -320,11 +319,10 @@ Katalog jest ladowany przez
 Adapter:
 
 1. zapewnia istnienie lokalnej kopii, bootstrapujac ja z seeda tylko raz,
-2. parsuje dokumenty przez wspolny codec,
-3. parsuje strukturalne `glossary.yml`, `handoff-rules.yml` oraz index,
-4. mapuje encje do neutralnych DTO,
-5. buduje open questions i validation findings,
-6. udostepnia filtrowanie przez `OperationalContextQuery`.
+2. parsuje dziewiec strukturalnych dokumentow YAML przez wspolny codec,
+3. mapuje encje do neutralnych DTO,
+4. buduje open questions i validation findings,
+5. udostepnia filtrowanie przez `OperationalContextQuery`.
 
 Read API, tools i feature'y korzystaja z jednego immutable captured snapshotu
 biezacej zawartosci. Logic source references zawieraja nazwe dokumentu i field
@@ -533,6 +531,8 @@ sie wynikiem czesciowym z jawnym visibility limit; `BASIC` pozostaje dostepny.
 Prompty w `operational-context-maintenance` musza generowac tylko aktualny
 kontrakt katalogu. Nie wolno przywracac instrukcji tworzenia technicznego
 inventory.
+Kolejnosc uzupelniania i zasady jakosci danych opisuje
+[`operational-context-fill-order.md`](../../operational-context-maintenance/operational-context-fill-order.md).
 
 Skrypt:
 

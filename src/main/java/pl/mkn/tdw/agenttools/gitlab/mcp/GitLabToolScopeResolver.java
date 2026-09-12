@@ -122,8 +122,7 @@ final class GitLabToolScopeResolver {
         }
         return operationalContextPort.loadContext(new OperationalContextQuery(
                 GITLAB_SCOPE_ENTRY_TYPES,
-                List.of(),
-                false
+                List.of()
         ));
     }
 

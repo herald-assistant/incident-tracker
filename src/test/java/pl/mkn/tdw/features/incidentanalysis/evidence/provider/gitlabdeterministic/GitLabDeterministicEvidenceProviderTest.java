@@ -439,8 +439,7 @@ class GitLabDeterministicEvidenceProviderTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         ));
     }
 

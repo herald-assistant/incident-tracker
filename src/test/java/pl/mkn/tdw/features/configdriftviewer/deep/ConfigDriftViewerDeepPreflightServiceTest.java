@@ -238,8 +238,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         );
     }
 

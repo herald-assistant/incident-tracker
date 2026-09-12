@@ -40,8 +40,7 @@ public class FlowExplorerSystemSelectionService {
     public List<FlowExplorerSystemOptionResponse> systems() {
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
                 SYSTEM_SELECTION_ENTRY_TYPES,
-                List.of(),
-                false
+                List.of()
         ));
 
         return catalog.systems().stream()

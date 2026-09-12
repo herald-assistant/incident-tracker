@@ -5,8 +5,7 @@ import java.util.Set;
 
 public record OperationalContextQuery(
         Set<OperationalContextEntryType> includedEntryTypes,
-        List<OperationalContextFilter> filters,
-        boolean includeIndexDocument
+        List<OperationalContextFilter> filters
 ) {
 
     public OperationalContextQuery {
@@ -17,7 +16,7 @@ public record OperationalContextQuery(
     }
 
     public static OperationalContextQuery all() {
-        return new OperationalContextQuery(Set.of(), List.of(), true);
+        return new OperationalContextQuery(Set.of(), List.of());
     }
 
     public boolean includes(OperationalContextEntryType entryType) {
@@ -25,7 +24,7 @@ public record OperationalContextQuery(
     }
 
     public boolean isUnfiltered() {
-        return includedEntryTypes.isEmpty() && filters.isEmpty() && includeIndexDocument;
+        return includedEntryTypes.isEmpty() && filters.isEmpty();
     }
 
     public List<OperationalContextFilter> filtersFor(OperationalContextEntryType entryType) {

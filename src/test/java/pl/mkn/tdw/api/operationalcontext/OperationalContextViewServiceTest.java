@@ -170,8 +170,7 @@ class OperationalContextViewServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         )), create());
 
         var findings = service.validation();

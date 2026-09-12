@@ -131,8 +131,7 @@ class OperationalContextEvidenceProviderTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         );
 
         var matches = matcher.match(catalog, OperationalContextIncidentSignals.from(context));
@@ -181,8 +180,7 @@ class OperationalContextEvidenceProviderTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         );
 
         var matches = matcher.match(catalog, OperationalContextIncidentSignals.from(context));

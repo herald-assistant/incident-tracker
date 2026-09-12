@@ -1245,7 +1245,6 @@ class OperationalContextCatalogMaintenanceServiceTest {
                 """);
         documents.put("glossary.yml", yaml("operational-context-glossary", "terms"));
         documents.put("handoff-rules.yml", yaml("operational-context-handoff-rules", "handoffRules"));
-        documents.put("operational-context-index.md", "# Anonymous CRM Operational Context\n");
         return Map.copyOf(documents);
     }
 

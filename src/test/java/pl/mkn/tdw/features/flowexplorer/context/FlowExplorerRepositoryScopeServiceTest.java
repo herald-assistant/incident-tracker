@@ -110,8 +110,7 @@ class FlowExplorerRepositoryScopeServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 
@@ -132,8 +131,7 @@ class FlowExplorerRepositoryScopeServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

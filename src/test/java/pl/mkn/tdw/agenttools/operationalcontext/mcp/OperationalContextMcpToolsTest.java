@@ -318,8 +318,7 @@ class OperationalContextMcpToolsTest {
                 List.of(boundedContext()),
                 List.of(glossaryTerm()),
                 List.of(handoffRule()),
-                List.of(openQuestion()),
-                ""
+                List.of(openQuestion())
         );
     }
 

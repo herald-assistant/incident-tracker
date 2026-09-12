@@ -98,8 +98,7 @@ class OperationalContextRepositoryProjectPathResolverTest {
                     List.of(),
                     List.of(),
                     List.of(),
-                    List.of(),
-                    ""
+                    List.of()
             );
         });
     }

@@ -373,8 +373,7 @@ class FlowExplorerContextServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

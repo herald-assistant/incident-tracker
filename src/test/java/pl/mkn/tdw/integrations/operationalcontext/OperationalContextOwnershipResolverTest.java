@@ -194,8 +194,7 @@ class OperationalContextOwnershipResolverTest {
                 ),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

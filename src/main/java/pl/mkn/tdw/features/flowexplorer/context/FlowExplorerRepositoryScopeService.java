@@ -46,8 +46,7 @@ public class FlowExplorerRepositoryScopeService {
     public FlowExplorerRepositoryScope resolve(String systemId, String branch) {
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
                 REPOSITORY_SCOPE_ENTRY_TYPES,
-                List.of(),
-                false
+                List.of()
         ));
         var system = findSystem(catalog, systemId);
         var requestedBranch = normalize(branch);

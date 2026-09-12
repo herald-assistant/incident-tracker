@@ -2270,8 +2270,7 @@ class GitLabMcpToolsTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                ""
+                List.of()
         );
     }
 

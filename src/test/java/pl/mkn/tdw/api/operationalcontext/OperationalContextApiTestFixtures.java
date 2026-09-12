@@ -240,8 +240,7 @@ final class OperationalContextApiTestFixtures {
                         "Clarify consent registry SLA ownership.",
                         "medium",
                         "open"
-                )),
-                "index"
+                ))
         );
     }
 
@@ -281,8 +280,7 @@ final class OperationalContextApiTestFixtures {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

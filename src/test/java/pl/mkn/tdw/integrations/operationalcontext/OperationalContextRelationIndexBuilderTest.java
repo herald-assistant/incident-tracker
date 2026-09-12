@@ -62,8 +62,7 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         var relations = index.entityRelations("system", "crm-customer-service").outgoingRelations().stream()
@@ -93,8 +92,7 @@ class OperationalContextRelationIndexBuilderTest {
                 List.of(),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         assertTrue(index.validationFindings().stream()
@@ -135,8 +133,7 @@ class OperationalContextRelationIndexBuilderTest {
                         List.of()
                 )),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         var relations = index.entityRelations("system", "crm-customer-service").outgoingRelations();
@@ -190,8 +187,7 @@ class OperationalContextRelationIndexBuilderTest {
                         )
                 ),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         var relations = index.entityRelations("term", "customer-profile-term").outgoingRelations();
@@ -243,8 +239,7 @@ class OperationalContextRelationIndexBuilderTest {
                         ),
                         List.of()
                 )),
-                List.of(),
-                "index"
+                List.of()
         ));
 
         var relations = index.entityRelations("handoff-rule", "notification-sync-failure").outgoingRelations();
@@ -347,8 +342,7 @@ class OperationalContextRelationIndexBuilderTest {
                 ), map("id", "support-context", "name", "Support Context")),
                 List.of(),
                 List.of(),
-                List.of(),
-                "index"
+                List.of()
         );
     }
 

@@ -50,7 +50,26 @@ an open question instead of inventing extra ownership or routing fields.
 | Team identifiers, labels and collaboration clues | `teams.yml` |
 | Business terms and disambiguation | `glossary.yml` |
 | Handoff situation, evidence needs and first actions | `handoff-rules.yml` |
-| Catalog rules, quality notes and current open questions | `operational-context-index.md` |
+
+## Data quality rules
+
+- Preserve confirmed, evidence-backed facts until explicit contradictory
+  evidence is available. Merge newly confirmed facts into the owning entry;
+  do not rebuild the whole catalog from one source.
+- Treat absence in one repository or document as "not observed", not proof of
+  global absence. Record incomplete source coverage or a durable open question
+  on the relevant entity when it limits an answer.
+- Require exact or strong, reliably identifying signals before assigning high
+  confidence to deterministic entity matching. Generic words such as
+  `backend`, `service`, `timeout`, `failure`, `database`, `integration` or
+  `queue` alone do not establish a system, owner or handoff route.
+- Use entity-level `gaps` only for durable missing knowledge that affects
+  navigation, interpretation, ownership, code-search scope or handoff. They
+  feed Open Questions and AI visibility limits. Keep temporary scan-order
+  uncertainty in working notes or discovery reports, not in catalog `gaps`.
+- Never store secrets, credentials, tokens, personal contact data, other
+  personal data, full production payloads or sensitive business records in
+  the catalog. Keep only durable descriptions and safe source references.
 
 ## Recommended order
 

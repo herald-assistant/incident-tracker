@@ -316,8 +316,7 @@ public class GitLabMcpTools {
         }
         return operationalContextPort.loadContext(new OperationalContextQuery(
                 BROAD_DISCOVERY_CONTEXT_ENTRY_TYPES,
-                List.of(),
-                false
+                List.of()
         ));
     }
 

@@ -34,8 +34,7 @@ public class OperationalContextRepositoryProjectPathResolver {
 
         var catalog = operationalContextPort.loadContext(new OperationalContextQuery(
                 SYSTEM_REPOSITORY_AND_SCOPE,
-                List.of(),
-                false
+                List.of()
         ));
         var repositoriesById = repositoriesById(catalog.repositories());
         var matchedSystemIds = catalog.systems().stream()

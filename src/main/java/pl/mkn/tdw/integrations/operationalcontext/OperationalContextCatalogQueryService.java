@@ -31,8 +31,7 @@ final class OperationalContextCatalogQueryService {
                 filterEntries(catalog.boundedContexts(), effectiveQuery, OperationalContextEntryType.BOUNDED_CONTEXT),
                 filterGlossaryTerms(catalog.glossaryTerms(), effectiveQuery),
                 filterHandoffRules(catalog.handoffRules(), effectiveQuery),
-                catalog.openQuestions(),
-                effectiveQuery.includeIndexDocument() ? catalog.indexDocument() : ""
+                catalog.openQuestions()
         );
     }
 

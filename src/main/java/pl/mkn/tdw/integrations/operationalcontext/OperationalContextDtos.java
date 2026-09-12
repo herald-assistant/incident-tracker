@@ -76,8 +76,7 @@ public final class OperationalContextDtos {
             List<OperationalContextBoundedContext> boundedContexts,
             List<OperationalContextGlossaryTerm> glossaryTerms,
             List<OperationalContextHandoffRule> handoffRules,
-            List<OperationalContextOpenQuestion> openQuestions,
-            String indexDocument
+            List<OperationalContextOpenQuestion> openQuestions
     ) {
 
         public OperationalContextCatalog {
@@ -91,7 +90,6 @@ public final class OperationalContextDtos {
             glossaryTerms = copyList(glossaryTerms);
             handoffRules = copyList(handoffRules);
             openQuestions = copyList(openQuestions);
-            indexDocument = indexDocument != null ? indexDocument : "";
         }
 
         public OperationalContextCatalog(
@@ -103,8 +101,7 @@ public final class OperationalContextDtos {
                 List<OperationalContextBoundedContext> boundedContexts,
                 List<OperationalContextGlossaryTerm> glossaryTerms,
                 List<OperationalContextHandoffRule> handoffRules,
-                List<OperationalContextOpenQuestion> openQuestions,
-                String indexDocument
+                List<OperationalContextOpenQuestion> openQuestions
         ) {
             this(
                     teams,
@@ -116,8 +113,7 @@ public final class OperationalContextDtos {
                     boundedContexts,
                     glossaryTerms,
                     handoffRules,
-                    openQuestions,
-                    indexDocument
+                    openQuestions
             );
         }
 
@@ -129,8 +125,7 @@ public final class OperationalContextDtos {
                 List<OperationalContextRepository> repositories,
                 List<OperationalContextBoundedContext> boundedContexts,
                 List<OperationalContextGlossaryTerm> glossaryTerms,
-                List<OperationalContextHandoffRule> handoffRules,
-                String indexDocument
+                List<OperationalContextHandoffRule> handoffRules
         ) {
             this(
                     teams,
@@ -142,8 +137,7 @@ public final class OperationalContextDtos {
                     boundedContexts,
                     glossaryTerms,
                     handoffRules,
-                    List.of(),
-                    indexDocument
+                    List.of()
             );
         }
 
@@ -158,8 +152,7 @@ public final class OperationalContextDtos {
                     List.of(),
                     List.of(),
                     List.of(),
-                    List.of(),
-                    ""
+                    List.of()
             );
         }
     }
@@ -1038,8 +1031,7 @@ public final class OperationalContextDtos {
             List<Map<String, Object>> boundedContexts,
             List<OperationalContextGlossaryTerm> glossaryTerms,
             List<OperationalContextHandoffRule> handoffRules,
-            List<OperationalContextOpenQuestion> openQuestions,
-            String indexDocument
+            List<OperationalContextOpenQuestion> openQuestions
     ) {
         return new OperationalContextCatalog(
                 copyList(teams).stream().map(OperationalContextDtos::team).toList(),
@@ -1051,8 +1043,7 @@ public final class OperationalContextDtos {
                 copyList(boundedContexts).stream().map(OperationalContextDtos::boundedContext).toList(),
                 glossaryTerms,
                 handoffRules,
-                openQuestions,
-                indexDocument
+                openQuestions
         );
     }
 
@@ -1065,8 +1056,7 @@ public final class OperationalContextDtos {
             List<Map<String, Object>> boundedContexts,
             List<OperationalContextGlossaryTerm> glossaryTerms,
             List<OperationalContextHandoffRule> handoffRules,
-            List<OperationalContextOpenQuestion> openQuestions,
-            String indexDocument
+            List<OperationalContextOpenQuestion> openQuestions
     ) {
         return catalogFromRaw(
                 teams,
@@ -1078,8 +1068,7 @@ public final class OperationalContextDtos {
                 boundedContexts,
                 glossaryTerms,
                 handoffRules,
-                openQuestions,
-                indexDocument
+                openQuestions
         );
     }
 
@@ -1091,8 +1080,7 @@ public final class OperationalContextDtos {
             List<Map<String, Object>> repositories,
             List<Map<String, Object>> boundedContexts,
             List<OperationalContextGlossaryTerm> glossaryTerms,
-            List<OperationalContextHandoffRule> handoffRules,
-            String indexDocument
+            List<OperationalContextHandoffRule> handoffRules
     ) {
         return catalogFromRaw(
                 teams,
@@ -1103,8 +1091,7 @@ public final class OperationalContextDtos {
                 boundedContexts,
                 glossaryTerms,
                 handoffRules,
-                List.of(),
-                indexDocument
+                List.of()
         );
     }
 

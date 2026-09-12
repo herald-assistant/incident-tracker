@@ -180,8 +180,7 @@ public class OperationalContextMcpTools {
     private pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog loadCatalog() {
         return operationalContextPort.loadContext(new OperationalContextQuery(
                 java.util.Set.of(),
-                List.of(),
-                false
+                List.of()
         ));
     }
 

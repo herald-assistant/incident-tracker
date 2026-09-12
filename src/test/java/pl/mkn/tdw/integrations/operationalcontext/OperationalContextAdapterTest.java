@@ -42,7 +42,6 @@ class OperationalContextAdapterTest {
         assertTrue(catalog.openQuestions().stream()
                 .anyMatch(question -> question.sourceFile().equals("handoff-rules.yml")
                         && question.question().equals("Confirm ownership boundary evidence for the anonymized CRM notification boundary.")));
-        assertFalse(catalog.indexDocument().isBlank());
     }
 
     @Test
@@ -190,8 +189,7 @@ class OperationalContextAdapterTest {
         var adapter = OperationalContextAdapterTestCreator.create(testProperties());
         var query = new OperationalContextQuery(
                 Set.of(OperationalContextEntryType.SYSTEM),
-                List.of(OperationalContextFilter.exact(OperationalContextEntryType.SYSTEM, "id", "crm-customer-service")),
-                false
+                List.of(OperationalContextFilter.exact(OperationalContextEntryType.SYSTEM, "id", "crm-customer-service"))
         );
 
         var catalog = adapter.loadContext(query);
@@ -205,7 +203,6 @@ class OperationalContextAdapterTest {
         assertTrue(catalog.teams().isEmpty());
         assertTrue(catalog.glossaryTerms().isEmpty());
         assertTrue(catalog.handoffRules().isEmpty());
-        assertTrue(catalog.indexDocument().isBlank());
     }
 
     @Test
@@ -217,8 +214,7 @@ class OperationalContextAdapterTest {
                         OperationalContextEntryType.GLOSSARY_TERM,
                         "canonicalReferences",
                         "notification-sync"
-                )),
-                false
+                ))
         );
 
         var catalog = adapter.loadContext(query);
