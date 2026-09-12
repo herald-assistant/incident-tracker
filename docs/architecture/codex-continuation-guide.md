@@ -163,6 +163,15 @@ sprawdz upstream `github/copilot-sdk`, zwlaszcza `nodejs/README.md` oraz
 schemat/protokol `@github/copilot`. Nie zgaduj defaultow, limitow,
 `infiniteSessions`, workspace sesji ani zachowania skill directories.
 
+`analysis.ai.copilot.working-directory` domyslnie wskazuje
+`${user.home}/.tdw/copilot-workspace` poza checkoutem aplikacji, aby Copilot
+CLI nie ladowal root `AGENTS.md` TDW przy starcie sesji. Wspolne CWD trafia do
+klienta oraz create/resume. `skill-resource-project-directory=${user.dir}`
+sluzy tylko deweloperskiemu fallbackowi odczytu `src/main/resources/copilot/skills`;
+nie jest katalogiem roboczym CLI. Nadpisanie CWD sciezka w repo przywraca
+automatyczne ladowanie instrukcji projektu. Po zmianie CWD uruchom aplikacje
+ponownie i sprawdz nowa sesje w Agent Scanner.
+
 Eksport OTLP Copilot CLI jest w `CopilotSessionConfigFactory.clientOptions`,
 sterowany przez `analysis.ai.copilot.telemetry`; dotyczy wspolnego runtime,
 nie konkretnego feature'a. `application.properties` wlacza go dla lokalnego

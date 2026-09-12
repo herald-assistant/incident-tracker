@@ -670,7 +670,11 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `systemMessage` w trybie `APPEND` dla create i resume. Platforma nie buduje
   ich tresci ani nie interpretuje kontraktu feature'a. `CopilotClientOptions`
   moze tez miec opcjonalny exporter OTLP procesu CLI do Agent Scanner;
-  konfiguracja jest platformowa i wspolna dla feature'ow.
+  konfiguracja jest platformowa i wspolna dla feature'ow. CLI oraz sesje
+  create/resume uzywaja dedykowanego katalogu roboczego poza checkoutem TDW,
+  aby projektowy `AGENTS.md` nie trafial do system instructions analiz.
+  Deweloperski fallback zasobow skilli ma osobny katalog projektu; effective
+  skille pozostaja pod `copilot-home`.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.context`
   Neutralna polityka context tier. Dla preference `AUTO` estymuje initial
   prompt razem z durable system instructions, definicjami tools i rezerwa oraz
@@ -929,6 +933,10 @@ Znaczenie grup UI:
   generyczne `shared.ai.AnalysisAiActivityEvent`: turny, komunikaty,
   wywolania tooli, snapshoty context tokens/messages i usage eventy. Frontend
   merge'uje te eventy z `toolEvidenceSections` w jeden timeline analizy.
+  Udane wywolanie wbudowanego toola `skill` zapisuje w activity tresc
+  zaladowanego skilla (z limitem rozmiaru), a wspolny timeline renderuje ja
+  jako Markdown nad surowym payloadem. Starsze eksporty z samym skroconym
+  `resultDetailedContentPreview` pokazuja oznaczony fragment tresci.
 - Wszystkie skille Copilota sa pakowane jako immutable seed. Przy starcie
   loader dopisuje tylko brakujace pliki do persistent effective katalogu
   `${analysis.ai.copilot.copilot-home}/skills`, domyslnie

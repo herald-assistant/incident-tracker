@@ -827,7 +827,8 @@ analysis.database.applications.crm-service.application-patterns=crm-service,CRM_
 analysis.database.environments.sandbox-1.connection=dev
 analysis.database.environments.sandbox-1.application-user-suffix=_1
 
-analysis.ai.copilot.working-directory=${user.dir}
+analysis.ai.copilot.working-directory=${TDW_COPILOT_WORKING_DIRECTORY:${user.home}/.tdw/copilot-workspace}
+analysis.ai.copilot.skill-resource-project-directory=${user.dir}
 analysis.ai.copilot.copilot-home=${tdw.workspace.directory:tdw-data}/copilot
 analysis.ai.copilot.permission-mode=approve-all
 analysis.ai.copilot.send-and-wait-timeout=5m
@@ -837,7 +838,7 @@ analysis.ai.copilot.model-options-cache-ttl=10m
 analysis.ai.copilot.skill-resource-root=copilot/skills
 analysis.ai.copilot.telemetry.enabled=${TDW_COPILOT_OTLP_ENABLED:true}
 analysis.ai.copilot.telemetry.otlp-endpoint=${TDW_COPILOT_OTLP_ENDPOINT:http://127.0.0.1:8081}
-analysis.ai.copilot.telemetry.capture-content=${TDW_COPILOT_OTLP_CAPTURE_CONTENT:false}
+analysis.ai.copilot.telemetry.capture-content=${TDW_COPILOT_OTLP_CAPTURE_CONTENT:true}
 analysis.ai.copilot.telemetry.source-name=${TDW_COPILOT_OTLP_SOURCE_NAME:team-delivery-workspace}
 
 analysis.ai.copilot.tool-budget.enabled=true

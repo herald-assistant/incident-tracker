@@ -379,6 +379,14 @@ mapuje ja bez zmian na `SystemMessageMode.APPEND` zarowno dla create, jak i
 resume, zachowujac guardrails SDK. Nie jest to drugi kanal na source evidence:
 duze artifacts i kod nadal sa osadzane raz w zwyklym prompcie.
 
+Katalog roboczy Copilot CLI i sesji create/resume jest domyslnie
+`${user.home}/.tdw/copilot-workspace`, poza checkoutem aplikacji. Runtime
+tworzy go przy starcie. Dzieki temu CLI nie dolacza projektowego `AGENTS.md`
+TDW do instrukcji systemowych analizowanego systemu. Konfigurowalny katalog
+projektu dla deweloperskiego fallbacku skilli nie zmienia CWD sesji; skille
+effective nadal sa wskazywane przez `skillDirectories`. Jawne nadpisanie CWD
+na sciezke wewnatrz checkoutu moze ponownie wlaczyc `AGENTS.md`.
+
 `InitialAnalysisProvider` nie ma produkcyjnych shortcutow dodanych tylko dla
 testow, takich jak `analyze(request)`, oddzielne `preparePrompt(...)` albo
 domyslne prepared adaptery. Testy tworza wlasne prepared fixtures.

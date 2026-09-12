@@ -1584,6 +1584,22 @@
                     ></app-markdown-content>
                   }
 
+                  @if (item.skillContent; as skillContent) {
+                    <section class="ai-work-item__skill" aria-label="Treść skilla">
+                      <h6 class="ai-work-item__skill-title">Treść skilla</h6>
+                      @if (skillContent.truncated) {
+                        <p class="ai-work-item__skill-notice">
+                          Zapis zdarzenia zawiera tylko fragment treści skilla.
+                        </p>
+                      }
+                      <app-markdown-content
+                        class="ai-work-item__skill-markdown"
+                        [content]="skillContent.markdown"
+                        [compact]="true"
+                      ></app-markdown-content>
+                    </section>
+                  }
+
                   @if (item.toolEvidence; as toolEvidence) {
                     <ng-container
                       [ngTemplateOutlet]="toolEvidenceResult"

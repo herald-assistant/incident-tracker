@@ -8,7 +8,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotAuthMode;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -43,12 +46,15 @@ public class CopilotSdkProperties {
     private Auth auth = new Auth();
     private PermissionMode permissionMode = PermissionMode.APPROVE_ALL;
     private String skillResourceRoot = "copilot/skills";
+    private String skillResourceProjectDirectory = System.getProperty("user.dir");
     private List<String> disabledSkills = List.of();
     private ContextTierPolicy contextTier = new ContextTierPolicy();
     private Telemetry telemetry = new Telemetry();
 
     @PostConstruct
-    public void logTelemetryConfiguration() {
+    public void initializeRuntimeConfiguration() {
+        workingDirectory = prepareWorkingDirectory().toString();
+        log.info("Copilot CLI working directory prepared path={}", workingDirectory);
         if (telemetry == null || !telemetry.isEnabled()) {
             log.info("Copilot OTLP export configured enabled=false");
             return;
@@ -58,6 +64,32 @@ public class CopilotSdkProperties {
                 telemetry.validatedOtlpEndpoint(),
                 telemetry.validatedSourceName(),
                 telemetry.isCaptureContent());
+    }
+
+    Path prepareWorkingDirectory() {
+        if (workingDirectory == null || workingDirectory.isBlank()) {
+            throw new IllegalStateException("analysis.ai.copilot.working-directory must not be blank");
+        }
+
+        final Path directory;
+        try {
+            directory = Path.of(workingDirectory.trim()).toAbsolutePath().normalize();
+        } catch (InvalidPathException exception) {
+            throw new IllegalStateException("Invalid analysis.ai.copilot.working-directory: " + workingDirectory,
+                    exception);
+        }
+        if (directory.getParent() == null) {
+            throw new IllegalStateException("analysis.ai.copilot.working-directory cannot be a filesystem root");
+        }
+        try {
+            Files.createDirectories(directory);
+        } catch (IOException | SecurityException exception) {
+            throw new IllegalStateException(
+                    "Cannot create analysis.ai.copilot.working-directory: " + directory,
+                    exception
+            );
+        }
+        return directory;
     }
 
     public Path resolvedCopilotHome() {

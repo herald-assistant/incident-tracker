@@ -16,13 +16,19 @@ pokazuja przyklady dla 8080, ale faktyczny port wyznacza `PORT` i aktualny
 Domyslne ustawienia w `application.properties` to:
 
 ```properties
-analysis.ai.copilot.telemetry.enabled=${TDW_COPILOT_OTLP_ENABLED:false}
+analysis.ai.copilot.telemetry.enabled=${TDW_COPILOT_OTLP_ENABLED:true}
 analysis.ai.copilot.telemetry.otlp-endpoint=${TDW_COPILOT_OTLP_ENDPOINT:http://127.0.0.1:8081}
 analysis.ai.copilot.telemetry.capture-content=${TDW_COPILOT_OTLP_CAPTURE_CONTENT:true}
+analysis.ai.copilot.working-directory=${TDW_COPILOT_WORKING_DIRECTORY:${user.home}/.tdw/copilot-workspace}
 ```
 
 Po zmianie konfiguracji uruchom ponownie aplikacje i rozpocznij **nowa**
 analize uzywajaca Copilot SDK.
+Katalog roboczy CLI jest domyslnie poza repozytorium TDW, aby jego root
+`AGENTS.md` nie byl automatycznie dolaczany do system instructions. W nowej
+sesji sprawdz `gen_ai.system_instructions`: instrukcje repozytorium hostujacego
+nie powinny tam wystapic. Jawne ustawienie `TDW_COPILOT_WORKING_DIRECTORY`
+wewnatrz repo przywraca to zachowanie.
 Run wymaga takze dzialajacego uwierzytelnienia Copilota (np. lokalnie
 ustawionego `COPILOT_GITHUB_TOKEN` w trybie `LOCAL_TOKEN`); nie zapisuj tokena
 w repo ani w danych telemetrycznych.

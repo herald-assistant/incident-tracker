@@ -457,11 +457,11 @@ public class CopilotSkillRuntimeLoader {
     }
 
     private Path developmentResourceRoot(String resourceRoot) {
-        var workingDirectory = properties.getWorkingDirectory();
-        if (workingDirectory == null || workingDirectory.isBlank()) {
-            workingDirectory = System.getProperty("user.dir");
+        var projectDirectory = properties.getSkillResourceProjectDirectory();
+        if (projectDirectory == null || projectDirectory.isBlank()) {
+            projectDirectory = System.getProperty("user.dir");
         }
-        return Path.of(workingDirectory)
+        return Path.of(projectDirectory)
                 .resolve(Path.of("src", "main", "resources"))
                 .resolve(resourceRoot.replace('/', java.io.File.separatorChar));
     }

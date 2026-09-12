@@ -557,6 +557,17 @@ describe('AnalysisStepsPanelComponent', () => {
           success: true,
           resultContentPreview:
             'Skill "flow-explorer-code-grounding" loaded successfully. Follow the instructions in the skill context.',
+          resultDetailedContentPreview: 'Skill loaded successfully ✅\n\n# Ucięty podgląd...(5000 chars)',
+          skillContent: [
+            'Skill loaded successfully ✅',
+            '',
+            '# Flow Explorer Code Grounding',
+            '',
+            'Czytaj **kod źródłowy** przed odpowiedzią.',
+            '',
+            '- sprawdź endpoint',
+            '- sprawdź implementację'
+          ].join('\n'),
           toolTelemetry: {
             restrictedProperties: {
               skillName: 'flow-explorer-code-grounding'
@@ -580,6 +591,53 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(skillItem?.querySelector('.ai-work-item__details-title')?.textContent).toContain(
       'skill flow-explorer-code-grounding'
     );
+    const skillSection = skillItem?.querySelector('.ai-work-item__skill') as HTMLElement | null;
+    const skillMarkdown = skillSection?.querySelector('.markdown-content') as HTMLElement | null;
+    const payload = skillItem?.querySelector('.ai-work-item__technical') as HTMLElement | null;
+    expect(skillMarkdown?.querySelector('h1')?.textContent).toBe('Flow Explorer Code Grounding');
+    expect(skillMarkdown?.innerHTML).toContain('<strong>kod źródłowy</strong>');
+    expect(skillMarkdown?.querySelectorAll('li')).toHaveLength(2);
+    expect(skillMarkdown?.textContent).not.toContain('Skill loaded successfully');
+    expect(skillSection?.textContent).not.toContain('Zapis zdarzenia zawiera tylko fragment');
+    expect(skillSection).not.toBeNull();
+    expect(payload).not.toBeNull();
+    expect(skillSection!.compareDocumentPosition(payload!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(payload?.textContent).toContain('"skillContent"');
+  });
+
+  it('should render the recorded excerpt of an older skill event and mark it as incomplete', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('aiActivityEvents', [{
+      eventId: 'event-old-skill-complete',
+      parentEventId: '',
+      type: 'tool.execution_complete',
+      category: 'TOOL',
+      status: 'COMPLETED',
+      title: 'Tool koniec',
+      summary: 'Tool zakończył wykonanie poprawnie.',
+      turnId: '',
+      interactionId: '',
+      toolCallId: 'tool-call-old-skill',
+      toolName: 'skill',
+      timestamp: '2026-04-14T12:00:15Z',
+      details: {
+        success: true,
+        resultDetailedContentPreview:
+          'Skill loaded successfully ✅\n\n# Starszy skill\n\n- pierwsza instrukcja...(8000 chars)',
+        toolTelemetry: { restrictedProperties: { skillName: 'old-skill' } }
+      }
+    }]);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const skillItem = (fixture.nativeElement as HTMLElement).querySelector('.ai-work-item--tool');
+    const skillSection = skillItem?.querySelector('.ai-work-item__skill') as HTMLElement | null;
+    expect(skillSection?.querySelector('h1')?.textContent).toBe('Starszy skill');
+    expect(skillSection?.querySelector('li')?.textContent).toBe('pierwsza instrukcja');
+    expect(skillSection?.textContent).toContain('Zapis zdarzenia zawiera tylko fragment treści skilla.');
+    expect(skillSection?.textContent).not.toContain('...(8000 chars)');
   });
 
   it('should show Java class name for GitLab method slice tool details', async () => {

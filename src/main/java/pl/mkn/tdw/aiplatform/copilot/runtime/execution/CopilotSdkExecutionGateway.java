@@ -13,6 +13,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeCompatibility;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeVersionInfo;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierSession;
@@ -43,6 +44,7 @@ public class CopilotSdkExecutionGateway {
             Nie zaczynaj analizy od początku i nie powtarzaj zakończonych wywołań tools.
             Dokończ pierwotne zadanie i zwróć finalną odpowiedź zgodną z obowiązującym kontraktem.
             """;
+    private static final int MAX_CAPTURED_SKILL_CONTENT_LENGTH = 300_000;
 
     private final CopilotSdkProperties properties;
     private final CopilotToolEvidenceSessionStore toolEvidenceSessionStore;
@@ -646,6 +648,9 @@ public class CopilotSdkExecutionGateway {
             put(details, "parentToolCallId", data.parentToolCallId());
             put(details, "resultContentPreview", data.result() != null ? abbreviate(data.result().content(), 1_200) : null);
             put(details, "resultDetailedContentPreview", data.result() != null ? abbreviate(data.result().detailedContent(), 1_200) : null);
+            if (Boolean.TRUE.equals(data.success()) && data.result() != null && isSkillResult(data)) {
+                put(details, "skillContent", abbreviate(data.result().detailedContent(), MAX_CAPTURED_SKILL_CONTENT_LENGTH));
+            }
             put(details, "error", data.error());
             put(details, "toolTelemetry", data.toolTelemetry());
             return activity(
@@ -937,6 +942,17 @@ public class CopilotSdkExecutionGateway {
         return value.length() > maxLength
                 ? value.substring(0, maxLength) + "...(" + value.length() + " chars)"
                 : value;
+    }
+
+    private boolean isSkillResult(ToolExecutionCompleteEvent.ToolExecutionCompleteEventData data) {
+        if (data.toolDescription() != null && StringUtils.hasText(data.toolDescription().name())) {
+            return CopilotSessionConfigRequest.SKILL_TOOL_NAME.equals(data.toolDescription().name());
+        }
+        var toolTelemetry = data.toolTelemetry();
+        if (toolTelemetry == null || !(toolTelemetry.get("restrictedProperties") instanceof Map<?, ?> restrictedProperties)) {
+            return false;
+        }
+        return restrictedProperties.get("skillName") instanceof String skillName && StringUtils.hasText(skillName);
     }
 
     private double numeric(Number value) {

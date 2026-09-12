@@ -201,7 +201,8 @@ class CopilotSkillRuntimeLoaderTest {
         var sourceRoot = projectRoot.resolve(Path.of("src", "main", "resources", "copilot", "dev-skills"));
         writeSkill(sourceRoot.resolve("local-skill"), "local-skill");
         var properties = propertiesWithCopilotHome(tempDirectory.resolve("platform-copilot"));
-        properties.setWorkingDirectory(projectRoot.toString());
+        properties.setWorkingDirectory(tempDirectory.resolve("neutral-cli-workspace").toString());
+        properties.setSkillResourceProjectDirectory(projectRoot.toString());
         properties.setSkillResourceRoot("copilot/dev-skills");
         var loader = new CopilotSkillRuntimeLoader(properties);
 
@@ -218,6 +219,7 @@ class CopilotSkillRuntimeLoaderTest {
     void shouldFailWhenPackagedSkillRootDoesNotExist() {
         var properties = propertiesWithCopilotHome(tempDirectory.resolve("copilot"));
         properties.setWorkingDirectory(tempDirectory.resolve("project").toString());
+        properties.setSkillResourceProjectDirectory(tempDirectory.resolve("project").toString());
         properties.setSkillResourceRoot("copilot/missing-skills");
         var loader = new CopilotSkillRuntimeLoader(properties);
 
@@ -246,7 +248,8 @@ class CopilotSkillRuntimeLoaderTest {
         var sourceRoot = projectRoot.resolve(Path.of("src", "main", "resources", "copilot", "invalid-skills"));
         writeSkill(sourceRoot.resolve("alpha-skill"), "beta-skill");
         var properties = propertiesWithCopilotHome(tempDirectory.resolve("copilot"));
-        properties.setWorkingDirectory(projectRoot.toString());
+        properties.setWorkingDirectory(tempDirectory.resolve("neutral-cli-workspace").toString());
+        properties.setSkillResourceProjectDirectory(projectRoot.toString());
         properties.setSkillResourceRoot("copilot/invalid-skills");
         var loader = new CopilotSkillRuntimeLoader(properties);
 

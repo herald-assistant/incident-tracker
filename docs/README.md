@@ -99,6 +99,9 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `plans/open-work.md`
   jest aktywnym backlogiem. Kazdy element ma wlasne uzasadnienie i checkliste,
   a wykonanie kolejnych krokow podlega bramkom akceptacji z `AGENTS.md`.
+- `plans/copilot-cli-neutral-working-directory.md`
+  dokumentuje zakonczona zmiane neutralnego katalogu sesji Copilota i
+  potwierdzenie jej dzialania w nowym runie przez Agent Scanner.
 
 Rodzina Delivery Complexity nie utrzymuje zakonczonych potrzeb ani planow jako
 archiwum. Aktualny stan Delivery Complexity Assessment, Delivery Scope

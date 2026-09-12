@@ -10,15 +10,20 @@ import com.github.copilot.generated.AssistantReasoningEvent;
 import com.github.copilot.generated.AssistantUsageEvent;
 import com.github.copilot.generated.SessionCompactionStartEvent;
 import com.github.copilot.generated.SessionUsageInfoEvent;
+import com.github.copilot.generated.ToolExecutionCompleteEvent;
+import com.github.copilot.generated.ToolExecutionCompleteResult;
+import com.github.copilot.generated.ToolExecutionCompleteToolDescription;
 import com.github.copilot.rpc.CopilotClientOptions;
 import com.github.copilot.rpc.MessageOptions;
 import com.github.copilot.rpc.ResumeSessionConfig;
 import com.github.copilot.rpc.SessionConfig;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
+import org.springframework.test.util.ReflectionTestUtils;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotPreparedSession;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotClientShutdown;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSdkProperties;
+import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeCompatibility;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeVersionInfo;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
@@ -69,6 +74,49 @@ import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.executionGatewa
 import static pl.mkn.tdw.testsupport.copilot.CopilotTestFixtures.toolEvidenceSessionStore;
 
 class CopilotSdkExecutionGatewayTest {
+
+    @Test
+    void shouldCaptureFullSkillResultButOnlyPreviewsForOtherTools() {
+        var gateway = executionGateway(new CopilotSdkProperties(),
+                toolEvidenceSessionStore(new com.fasterxml.jackson.databind.ObjectMapper()));
+        var detailedContent = "Skill loaded successfully ✅\n\n# Skill\n\n" + "instruction ".repeat(200);
+        var skillEvent = completedToolEvent(detailedContent, Map.of(
+                "restrictedProperties", Map.of("skillName", "flow-explorer-code-grounding")));
+        var describedSkillEvent = completedToolEvent(detailedContent, Map.of(), CopilotSessionConfigRequest.SKILL_TOOL_NAME);
+        var otherEvent = completedToolEvent(detailedContent, Map.of());
+        var describedOtherEvent = completedToolEvent(detailedContent, Map.of(
+                "restrictedProperties", Map.of("skillName", "flow-explorer-code-grounding")), "view");
+
+        var skillActivity = (AnalysisAiActivityEvent) ReflectionTestUtils.invokeMethod(gateway, "toActivityEvent", skillEvent);
+        var describedSkillActivity = (AnalysisAiActivityEvent) ReflectionTestUtils.invokeMethod(gateway, "toActivityEvent", describedSkillEvent);
+        var otherActivity = (AnalysisAiActivityEvent) ReflectionTestUtils.invokeMethod(gateway, "toActivityEvent", otherEvent);
+        var describedOtherActivity = (AnalysisAiActivityEvent) ReflectionTestUtils.invokeMethod(gateway, "toActivityEvent", describedOtherEvent);
+
+        assertThat(skillActivity).isNotNull();
+        assertThat(skillActivity.details()).containsEntry("skillContent", detailedContent);
+        assertThat(skillActivity.details().get("resultDetailedContentPreview").toString())
+                .endsWith("...(" + detailedContent.length() + " chars)");
+        assertThat(describedSkillActivity.details()).containsEntry("skillContent", detailedContent);
+        assertThat(otherActivity).isNotNull();
+        assertThat(otherActivity.details()).doesNotContainKey("skillContent");
+        assertThat(describedOtherActivity.details()).doesNotContainKey("skillContent");
+    }
+
+    private ToolExecutionCompleteEvent completedToolEvent(String detailedContent, Map<String, Object> toolTelemetry) {
+        return completedToolEvent(detailedContent, toolTelemetry, null);
+    }
+
+    private ToolExecutionCompleteEvent completedToolEvent(
+            String detailedContent, Map<String, Object> toolTelemetry, String toolName) {
+        var event = new ToolExecutionCompleteEvent();
+        var result = new ToolExecutionCompleteResult(
+                "Tool completed", detailedContent, null, null, null, null, null, null);
+        event.setData(new ToolExecutionCompleteEvent.ToolExecutionCompleteEventData(
+                "tool-call-1", true, null, null, null, null, null, result, null,
+                toolTelemetry, null, toolName == null ? null : new ToolExecutionCompleteToolDescription(toolName, null, null),
+                null, null));
+        return event;
+    }
 
     @Test
     void shouldUseDefaultSendAndWaitTimeoutFromProperties() {

@@ -103,12 +103,16 @@ Nie obejmuje:
   run. `skill` pozostaje domyslnie dostepny, ale feature moze jawnie wylaczyc
   skills wraz z katalogami dla sesji one-shot, jesli osadza effective tresc
   skilla w jedynym prompcie i konfiguruje pusta allowliste tools.
+- Domyslny katalog roboczy Copilot CLI jest poza checkoutem aplikacji, zeby
+  CLI nie ladowal root `AGENTS.md` TDW do system instructions. Wspolna sciezka
+  trafia do klienta oraz create/resume, a deweloperski fallback zasobow skilli
+  ma odrebny `skill-resource-project-directory`.
 - Platforma nie utrzymuje niewidocznego magazynu telemetryki sesji. Zdarzenia
   SDK usage sa agregowane do `AnalysisAiUsage` w job state/UI. Opt-in
   `analysis.ai.copilot.telemetry` konfiguruje eksport OTLP z procesu CLI do
   osobnego Agent Scanner jako jawna diagnostyke operatora. Obecny
-  `application.properties` wlacza eksport na lokalny port 8081;
-  przechwytywanie tresci pozostaje wylaczone. Nie kopiuj raw OTLP do TDW.
+  `application.properties` wlacza eksport na lokalny port 8081 z
+  `capture-content=true`. Nie kopiuj raw OTLP do TDW.
 - Platforma nie moze zakladac `correlationId`, GitLaba, Database ani
   semantyki incident analysis jako stalego wymogu runtime.
 - Jesli kiedys wydzielasz kolejny runtime element z dawnego obszaru Copilota,

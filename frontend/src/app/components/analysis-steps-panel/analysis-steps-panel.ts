@@ -41,6 +41,8 @@ import { copyTextToClipboard } from '../../core/utils/clipboard.utils';
 import { AttributeNamePipe } from '../../core/pipes/attribute-name.pipe';
 import { MarkdownContentComponent } from '../markdown-content/markdown-content';
 
+const COPILOT_SKILL_TOOL_NAME = 'skill';
+
 interface StepEvidenceLink {
   provider: string;
   category: string;
@@ -277,6 +279,7 @@ interface AiWorkItemView {
   summary: string;
   previewMarkdown: string;
   markdownContent: string;
+  skillContent?: SkillContentView;
   iconName: string;
   meta: string[];
   technicalTooltip: string;
@@ -1132,6 +1135,11 @@ function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean 
     || normalizedStepCode === 'AI_PREPARATION';
 }
 
+interface SkillContentView {
+  markdown: string;
+  truncated: boolean;
+}
+
 function resolvePreparedPrompts(
   stepCode: string | null | undefined,
   preparedPrompts: AnalysisPreparedPrompt[]
@@ -1664,6 +1672,7 @@ function buildToolWorkItem(
     summary: reason,
     previewMarkdown: '',
     markdownContent: '',
+    skillContent: status === 'COMPLETED' ? skillContentFromActivity(toolName, activity) : undefined,
     iconName: toolEvidence?.iconName || toolIconByName(toolName),
     meta,
     technicalTooltip: buildMergedToolTooltip(toolEvidence, request, activity),
@@ -1923,6 +1932,27 @@ function buildTimelineEventMeta(event: AnalysisAiActivityEvent): string[] {
   }
 
   return meta;
+}
+
+function skillContentFromActivity(toolName: string, activity: ToolActivityBundle): SkillContentView | undefined {
+  if (!isSkillTool(toolName) || !activity.complete) {
+    return undefined;
+  }
+
+  const details = activityDetails(activity.complete);
+  const capturedContent =
+    stringFromRecord(details, 'skillContent') ||
+    stringFromRecord(details, 'resultDetailedContentPreview');
+  if (!capturedContent) {
+    return undefined;
+  }
+
+  const withoutStatus = capturedContent
+    .replace(/^Skill loaded successfully\s*✅?\s*\r?\n(?:\r?\n)*/i, '')
+    .trim();
+  const truncated = /\.\.\.\(\d+ chars\)$/.test(withoutStatus);
+  const markdown = withoutStatus.replace(/\.\.\.\(\d+ chars\)$/, '').trim();
+  return markdown ? { markdown, truncated } : undefined;
 }
 
 function buildContextTierMeta(event: AnalysisAiActivityEvent): string[] {
@@ -2227,7 +2257,7 @@ function skillNameFromResultPreview(event: AnalysisAiActivityEvent | null): stri
 }
 
 function isSkillTool(toolName: string): boolean {
-  return toolName.trim().toLowerCase() === 'skill';
+  return toolName.trim().toLowerCase() === COPILOT_SKILL_TOOL_NAME;
 }
 
 function formatGitLabCodeReadTimelineTitle(

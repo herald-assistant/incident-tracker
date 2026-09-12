@@ -3232,6 +3232,34 @@ body.is-column-resizing {
   line-height: 1.35;
 }
 
+.ai-work-item__skill {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ai-work-item__skill-title {
+  margin: 0;
+  color: var(--primary-dark);
+  font-size: 0.82rem;
+}
+
+.ai-work-item__skill-notice {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.ai-work-item__skill-markdown {
+  display: block;
+  max-height: min(60vh, 640px);
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
+
 .ai-work-item__meta {
   display: flex;
   flex-wrap: wrap;
