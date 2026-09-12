@@ -930,19 +930,19 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
     category: 'runtime-signals',
     items: [
       {
-        title: 'Dynatrace matched service CRM @ backend-zt002',
+        title: 'Dynatrace matched service CRM @ crm-backend-test3',
         attributes: [
           {
             name: 'displayName',
             value:
-              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || crm-customer-service'
+              'CRM @ crm-backend-test3 || SpringBoot crm-customer-service app || crm-customer-service'
           },
           { name: 'entityId', value: 'SERVICE-ABC123' },
           { name: 'matchScore', value: '315' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'crm-main-zt002' },
-          { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
+          { name: 'matchedNamespaces', value: 'crm-test3' },
+          { name: 'matchedPods', value: 'crm-backend-test3-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
           { name: 'matchedServiceNames', value: 'crm-customer-service' }
         ]
@@ -953,14 +953,14 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'displayName',
             value:
-              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerController'
+              'CRM @ crm-backend-test3 || SpringBoot crm-customer-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'matchScore', value: '280' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'crm-main-zt002' },
-          { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
+          { name: 'matchedNamespaces', value: 'crm-test3' },
+          { name: 'matchedPods', value: 'crm-backend-test3-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
           { name: 'matchedServiceNames', value: 'crm-customer-service' }
         ]
@@ -971,14 +971,14 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'displayName',
             value:
-              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerProfileController'
+              'CRM @ crm-backend-test3 || SpringBoot crm-customer-service app || CustomerProfileController'
           },
           { name: 'entityId', value: 'SERVICE-ABC125' },
           { name: 'matchScore', value: '240' },
           { name: 'incidentStart', value: '2026-04-11T20:55:00Z' },
           { name: 'incidentEnd', value: '2026-04-11T21:10:00Z' },
-          { name: 'matchedNamespaces', value: 'crm-main-zt002' },
-          { name: 'matchedPods', value: 'backend-zt002-7fcd60f3b2' },
+          { name: 'matchedNamespaces', value: 'crm-test3' },
+          { name: 'matchedPods', value: 'crm-backend-test3-7fcd60f3b2' },
           { name: 'matchedContainers', value: 'backend' },
           { name: 'matchedServiceNames', value: 'crm-customer-service' }
         ]
@@ -993,14 +993,14 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           { name: 'impactLevel', value: 'SERVICE' },
           { name: 'startTime', value: '2026-04-11T20:57:00Z' },
           { name: 'endTime', value: '2026-04-11T21:06:00Z' },
-          { name: 'rootCauseEntityName', value: 'backend-zt002' },
+          { name: 'rootCauseEntityName', value: 'crm-backend-test3' },
           { name: 'signalCategories', value: 'database-connectivity, availability, messaging' },
           {
             name: 'correlationHighlights',
             value:
               'Failed database connects [DATABASE_CONNECTION_FAILURE] (root cause) || Service unavailable [AVAILABILITY_EVIDENCE] || RabbitMQ Queue Listener lag [QUEUE_BACKLOG]'
           },
-          { name: 'affectedEntities', value: 'backend-zt002, crm-notification-service' },
+          { name: 'affectedEntities', value: 'crm-backend-test3, crm-notification-service' },
           { name: 'impactedEntities', value: 'crm-notification-api' },
           {
             name: 'evidenceSummary',
@@ -1033,7 +1033,7 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'entityDisplayName',
             value:
-              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerController'
+              'CRM @ crm-backend-test3 || SpringBoot crm-customer-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'metricId', value: 'builtin:service.response.time' },
@@ -1055,7 +1055,7 @@ function buildDynatraceSection(): AnalysisEvidenceSection {
           {
             name: 'entityDisplayName',
             value:
-              'CRM @ backend-zt002 || SpringBoot crm-customer-service app || CustomerController'
+              'CRM @ crm-backend-test3 || SpringBoot crm-customer-service app || CustomerController'
           },
           { name: 'entityId', value: 'SERVICE-ABC124' },
           { name: 'metricId', value: 'builtin:service.errors.total.count' },
@@ -1265,7 +1265,7 @@ function buildAiPrompt(): string {
   return `You are helping with a software incident analysis.
 
 correlationId: timeout-123
-environment: zt002
+environment: test3
 gitLabBranch: release/2026.04
 gitLabGroup: platform/backend
 
@@ -1324,7 +1324,7 @@ function buildAiToolDatabaseSection(captureOrder = '2'): AnalysisEvidenceSection
           {
             name: 'result',
             value: `{
-  "environment": "zt002",
+  "environment": "test3",
   "databaseAlias": "oracle",
   "table": {
     "schema": "CRM",
@@ -1615,7 +1615,7 @@ function buildAnalysisResult() {
   return {
     status: 'COMPLETED',
     correlationId: 'timeout-123',
-    environment: 'zt002',
+    environment: 'test3',
     gitLabBranch: 'release/2026.04',
     detectedProblem: 'Gateway timeout on backend',
     affectedProcess: 'Obsługa klienta',

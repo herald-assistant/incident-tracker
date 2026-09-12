@@ -238,7 +238,7 @@ describe('App', () => {
       'Default: https://gitlab.example.com',
       'Default: platform/app',
       '',
-      'Default: https://runtime-config.app',
+      'Default: https://runtime-config.crm.example.invalid',
       '',
       'Default: https://elastic.example.com',
       'Default: default',
@@ -827,7 +827,7 @@ describe('App', () => {
     flushUiConfig(http, 'CRM Workspace');
     http.expectOne('/api/config-drift-viewer/v1/input-options').flush({
       modes: ['BASIC', 'DEEP'],
-      branches: ['dev1', 'zt001'],
+      branches: ['dev1', 'test2'],
       repositories: [{ id: 'runtime-config', label: 'Config repository' }],
       systems: [{ id: 'backend', label: 'Backend', configurationDirectory: 'backend' }]
     });
@@ -956,9 +956,9 @@ function workspaceSettingsResponse(): Record<string, unknown> {
       confluence: {
         baseUrl: {
           propertyKey: 'analysis.confluence.base-url',
-          value: 'https://confluence.workspace.example.com',
+          value: 'https://confluence.workspace.example.invalid',
           applicationValue: 'https://confluence.example.com',
-          workspaceValue: 'https://confluence.workspace.example.com',
+          workspaceValue: 'https://confluence.workspace.example.invalid',
           source: 'WORKSPACE_SETTINGS',
           secret: false
         },
@@ -1000,9 +1000,9 @@ function workspaceSettingsResponse(): Record<string, unknown> {
       configDriftViewerGitLab: {
         baseUrl: {
           propertyKey: 'integrations.gitlab.named.connections.runtime-config.base-url',
-          value: 'https://runtime-config.workspace.example.com',
-          applicationValue: 'https://runtime-config.app',
-          workspaceValue: 'https://runtime-config.workspace.example.com',
+          value: 'https://runtime-config.workspace.example.invalid',
+          applicationValue: 'https://runtime-config.crm.example.invalid',
+          workspaceValue: 'https://runtime-config.workspace.example.invalid',
           source: 'WORKSPACE_SETTINGS',
           secret: false
         },
@@ -1018,9 +1018,9 @@ function workspaceSettingsResponse(): Record<string, unknown> {
       elasticsearch: {
         baseUrl: {
           propertyKey: 'analysis.elasticsearch.base-url',
-          value: 'https://elastic.workspace.example.com',
+          value: 'https://elastic.workspace.example.invalid',
           applicationValue: 'https://elastic.example.com',
-          workspaceValue: 'https://elastic.workspace.example.com',
+          workspaceValue: 'https://elastic.workspace.example.invalid',
           source: 'WORKSPACE_SETTINGS',
           secret: false
         },
@@ -1052,9 +1052,9 @@ function workspaceSettingsResponse(): Record<string, unknown> {
       dynatrace: {
         baseUrl: {
           propertyKey: 'analysis.dynatrace.base-url',
-          value: 'https://dynatrace.workspace.example.com',
+          value: 'https://dynatrace.workspace.example.invalid',
           applicationValue: 'https://dynatrace.example.com',
-          workspaceValue: 'https://dynatrace.workspace.example.com',
+          workspaceValue: 'https://dynatrace.workspace.example.invalid',
           source: 'WORKSPACE_SETTINGS',
           secret: false
         },

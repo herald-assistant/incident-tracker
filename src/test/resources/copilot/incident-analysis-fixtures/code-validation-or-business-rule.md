@@ -26,7 +26,7 @@ Fixture testuje kontrakt routingu:
 - failure point: status transition validation
 - log: `BusinessRuleViolationException: notification cannot move from CANCELLED to PUBLISHED`
 - code hint: `NotificationStatusTransitionValidator.validate(from, to)`
-- object: notification `NOTIF-42`
+- object: notification `CRM-NOTIF-42`
 
 ## Oczekiwany Dry Run Orkiestratora
 

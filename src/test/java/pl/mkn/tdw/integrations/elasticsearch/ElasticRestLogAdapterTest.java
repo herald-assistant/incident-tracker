@@ -29,7 +29,7 @@ class ElasticRestLogAdapterTest {
         );
 
         server.expect(requestTo(
-                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                        "https://openshift-test.example.invalid/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("""
                         {
@@ -127,7 +127,7 @@ class ElasticRestLogAdapterTest {
         );
 
         server.expect(requestTo(
-                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                        "https://openshift-test.example.invalid/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("""
                         {
@@ -191,7 +191,7 @@ class ElasticRestLogAdapterTest {
 
     private static ElasticProperties elasticProperties() {
         var properties = new ElasticProperties();
-        properties.setBaseUrl("https://openshift-test.example.internal");
+        properties.setBaseUrl("https://openshift-test.example.invalid");
         properties.setKibanaSpaceId("default");
         properties.setIndexPattern("logs-*");
         return properties;

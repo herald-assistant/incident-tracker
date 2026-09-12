@@ -71,7 +71,7 @@ describe('AnalysisConsoleComponent auth flow', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('GitHub: octocat');
+    expect(fixture.nativeElement.textContent).toContain('GitHub: crm-test-operator');
     expect(fixture.nativeElement.textContent).toContain(
       'Zużycie Copilot będzie przypisane do tego konta GitHub.'
     );
@@ -683,8 +683,8 @@ function connectedStatus(): GitHubAuthStatus {
     mode: 'GITHUB_APP',
     required: true,
     connected: true,
-    githubLogin: 'octocat',
-    displayName: 'octocat',
+    githubLogin: 'crm-test-operator',
+    displayName: 'crm-test-operator',
     tokenExpiresAt: '2026-05-02T18:42:00Z',
     reauthRequired: false,
     authStartUrl: '/api/auth/github/start'

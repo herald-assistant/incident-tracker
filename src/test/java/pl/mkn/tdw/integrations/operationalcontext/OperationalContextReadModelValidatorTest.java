@@ -45,15 +45,15 @@ class OperationalContextReadModelValidatorTest {
         var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
-                List.of(map("id", "crm-customer-service"), map("id", "notification-provider")),
+                List.of(map("id", "crm-customer-service"), map("id", "crm-notification-provider")),
                 List.of(map(
                         "id", "crm-customer-to-notification-sync",
                         "participants", map(
-                                "source", map("system", "notification-provider", "boundedContext", "notification-context"),
+                                "source", map("system", "crm-notification-provider", "boundedContext", "notification-context"),
                                 "targets", List.of(map("system", "crm-customer-service", "boundedContext", "customer-profile-context"))
                         ),
                         "references", map(
-                                "systems", List.of("notification-provider", "crm-customer-service"),
+                                "systems", List.of("crm-notification-provider", "crm-customer-service"),
                                 "boundedContexts", List.of("notification-context", "customer-profile-context")
                         )
                 )),
@@ -80,11 +80,11 @@ class OperationalContextReadModelValidatorTest {
                                 "id", "crm-customer-service",
                                 "dependencies", map(
                                         "upstream", List.of("crm-portal"),
-                                        "downstream", List.of("notification-provider")
+                                        "downstream", List.of("crm-notification-provider")
                                 )
                         ),
                         map("id", "crm-portal"),
-                        map("id", "notification-provider")
+                        map("id", "crm-notification-provider")
                 ),
                 List.of(
                         map(
@@ -98,7 +98,7 @@ class OperationalContextReadModelValidatorTest {
                                 "id", "crm-customer-to-notification-sync",
                                 "participants", map(
                                         "source", map("system", "crm-customer-service"),
-                                        "targets", List.of(map("system", "notification-provider"))
+                                        "targets", List.of(map("system", "crm-notification-provider"))
                                 )
                         )
                 ),
@@ -119,12 +119,12 @@ class OperationalContextReadModelValidatorTest {
         var findings = validator.validate(OperationalContextDtos.catalogFromRaw(
                 List.of(),
                 List.of(),
-                List.of(map("id", "crm-customer-service"), map("id", "notification-provider")),
+                List.of(map("id", "crm-customer-service"), map("id", "crm-notification-provider")),
                 List.of(map(
                         "id", "crm-customer-to-notification-sync",
                         "participants", map(
                                 "source", map("system", "crm-customer-service", "boundedContext", "customer-profile-context"),
-                                "targets", List.of(map("system", "notification-provider"))
+                                "targets", List.of(map("system", "crm-notification-provider"))
                         )
                 )),
                 List.of(),

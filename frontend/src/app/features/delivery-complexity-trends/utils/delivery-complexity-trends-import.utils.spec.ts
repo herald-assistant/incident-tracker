@@ -46,7 +46,7 @@ describe('Delivery Complexity Trends CSV import', () => {
         issueKey: 'CRM-1',
         doneAt: '2026-07-12T09:00:00+02:00',
         mergeRequestAuthorIds: '101 | ',
-        mergeRequestAuthorNames: 'Anna Nowak | Partner zewnętrzny',
+        mergeRequestAuthorNames: 'CRM Author 101 | CRM Reviewer 303',
         deliveredStoryPoints: '13',
         pointsForAggregation: '13'
       }),
@@ -83,11 +83,11 @@ describe('Delivery Complexity Trends CSV import', () => {
       parameterizationComplexity: 3
     });
     expect(result.rows[0].authors).toEqual([
-      { key: 'id:101', id: '101', name: 'Anna Nowak', usesNameFallback: false },
+      { key: 'id:101', id: '101', name: 'CRM Author 101', usesNameFallback: false },
       {
-        key: 'name:partner zewnętrzny',
+        key: 'name:crm reviewer 303',
         id: null,
-        name: 'Partner zewnętrzny',
+        name: 'CRM Reviewer 303',
         usesNameFallback: true
       }
     ]);
@@ -266,7 +266,7 @@ function row(
     teamFieldId: 'customfield_10000',
     mergeRequestUrls: 'https://gitlab.example.com/mr/7',
     mergeRequestAuthorIds: '101',
-    mergeRequestAuthorNames: 'Anna Nowak',
+    mergeRequestAuthorNames: 'CRM Author 101',
     deliveryUnitId: 'DU-CRM-1',
     assessmentStatus: 'COMPLETED',
     outcomeBreadth: '2',

@@ -163,7 +163,7 @@ class WorkspaceSettingsControllerTest {
                                 new WorkspaceSettingsFieldResponse(
                                         "analysis.confluence.base-url",
                                         "https://confluence.example.com",
-                                        "https://confluence.app",
+                                        "https://confluence.crm.example.invalid",
                                         "https://confluence.example.com",
                                         WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                         false
@@ -207,7 +207,7 @@ class WorkspaceSettingsControllerTest {
                                 new WorkspaceSettingsFieldResponse(
                                         "integrations.gitlab.named.connections.runtime-config.base-url",
                                         "https://runtime-config.example.com",
-                                        "https://runtime-config.app",
+                                        "https://runtime-config.crm.example.invalid",
                                         "https://runtime-config.example.com",
                                         WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                         false
@@ -259,7 +259,7 @@ class WorkspaceSettingsControllerTest {
                                 new WorkspaceSettingsFieldResponse(
                                         "analysis.dynatrace.base-url",
                                         "https://dynatrace.example.com",
-                                        "https://dynatrace.app",
+                                        "https://dynatrace.crm.example.invalid",
                                         "https://dynatrace.example.com",
                                         WorkspaceSettingsSource.WORKSPACE_SETTINGS,
                                         false

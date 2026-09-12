@@ -16,8 +16,8 @@ systems:
         projectNames: [crm-customer-service-repo, crm-customer-shared]
         spans: [CustomerNotificationGateway.call]
         markers: [CRM_CUSTOMER]
-  - id: notification-provider
-    name: Notification Provider
+  - id: crm-notification-provider
+    name: CRM Notification Provider
     systemType: external-system
     purpose: Provides data used by the customer support workflow.
     ownership:
@@ -27,7 +27,7 @@ systems:
       source: test
     matchSignals:
       exact:
-        hosts: [api.notifications.local]
+        hosts: [api.crm-notifications.example.invalid]
       strong:
         markers: [CRM_NOTIFICATION]
 gaps: []

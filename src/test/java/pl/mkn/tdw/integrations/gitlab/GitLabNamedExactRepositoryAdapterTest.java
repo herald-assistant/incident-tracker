@@ -34,7 +34,7 @@ class GitLabNamedExactRepositoryAdapterTest {
                 .andExpect(header("PRIVATE-TOKEN", "token-one"))
                 .andRespond(withSuccess("abcdefghij", MediaType.TEXT_PLAIN));
         fixture.server.expect(requestTo(
-                        "https://config-two.example.com/api/v4/projects/team%2Fother-config/repository/files/global.var/raw?ref=zt001"))
+                        "https://config-two.example.com/api/v4/projects/team%2Fother-config/repository/files/global.var/raw?ref=test2"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("PRIVATE-TOKEN", "token-two"))
                 .andRespond(withSuccess("xyz", MediaType.TEXT_PLAIN));
@@ -49,7 +49,7 @@ class GitLabNamedExactRepositoryAdapterTest {
         var second = fixture.adapter.readFile(
                 "config-two",
                 "team/other-config",
-                "zt001",
+                "test2",
                 "global.var",
                 20
         );
@@ -67,7 +67,7 @@ class GitLabNamedExactRepositoryAdapterTest {
         var fixture = fixture(100);
 
         fixture.server.expect(requestTo(
-                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/files/backend%2Flocal.var?ref=zt001"))
+                        "https://config-one.example.com/api/v4/projects/platform%2Fruntime-config/repository/files/backend%2Flocal.var?ref=test2"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
                         {
@@ -92,7 +92,7 @@ class GitLabNamedExactRepositoryAdapterTest {
         var metadata = fixture.adapter.readFileMetadata(
                 "config-one",
                 "platform/runtime-config",
-                "zt001",
+                "test2",
                 "backend/local.var"
         );
 

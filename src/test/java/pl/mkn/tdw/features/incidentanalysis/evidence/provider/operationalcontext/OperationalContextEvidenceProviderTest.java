@@ -60,43 +60,43 @@ class OperationalContextEvidenceProviderTest {
         assertEquals("matched-context", section.category());
         assertFalse(section.items().isEmpty());
         assertFalse(view.isEmpty());
-        assertTrue(titles.contains("Operational system app-core"));
-        assertTrue(titles.contains("Operational integration app-core-to-partner-sync"));
-        assertTrue(titles.contains("Operational process main-process"));
-        assertTrue(titles.contains("Operational repository app-core-repo"));
-        assertTrue(titles.contains("Operational repository app-shared-lib-repo"));
-        assertTrue(titles.contains("Operational bounded context core-context"));
+        assertTrue(titles.contains("Operational system crm-contact-service"));
+        assertTrue(titles.contains("Operational integration crm-contact-to-notification-sync"));
+        assertTrue(titles.contains("Operational process crm-contact-notification-flow"));
+        assertTrue(titles.contains("Operational repository crm-contact-service-repo"));
+        assertTrue(titles.contains("Operational repository crm-contact-rules-repo"));
+        assertTrue(titles.contains("Operational bounded context crm-contact-context"));
         assertTrue(titles.contains("Operational glossary term soap-fault"));
         assertTrue(titles.contains("Operational handoff rule integration-external-sync-failure"));
-        assertEquals("app-core", view.systems().get(0).systemId());
-        assertTrue(view.systems().get(0).ownerTeamIds().contains("core-team"));
-        assertTrue(view.systems().get(0).ownerLabels().contains("core-team"));
+        assertEquals("crm-contact-service", view.systems().get(0).systemId());
+        assertTrue(view.systems().get(0).ownerTeamIds().contains("crm-contact-team"));
+        assertTrue(view.systems().get(0).ownerLabels().contains("crm-contact-team"));
         assertEquals("inside-system", view.systems().get(0).ownershipSituationType());
-        assertTrue(view.systems().get(0).repositoryIds().contains("app-shared-lib-repo"));
-        assertTrue(view.systems().get(0).codeSearchScopeIds().contains("app-core-code-search"));
-        assertTrue(view.systems().get(0).codeSearchRepositoryIds().contains("app-shared-lib-repo"));
-        assertTrue(view.systems().get(0).codeSearchProjects().contains("libs/app-shared-lib"));
+        assertTrue(view.systems().get(0).repositoryIds().contains("crm-contact-rules-repo"));
+        assertTrue(view.systems().get(0).codeSearchScopeIds().contains("crm-contact-code-search"));
+        assertTrue(view.systems().get(0).codeSearchRepositoryIds().contains("crm-contact-rules-repo"));
+        assertTrue(view.systems().get(0).codeSearchProjects().contains("libs/crm-contact-rules"));
         assertTrue(view.systems().get(0).codeSearchRepositoryRoles().contains(
-                "app-core-code-search:app-shared-lib-repo:supporting-library:priority=2"
+                "crm-contact-code-search:crm-contact-rules-repo:supporting-library:priority=2"
         ));
         assertTrue(view.systems().get(0).codeSearchRepositoryReasons().contains(
-                "app-core-code-search:app-shared-lib-repo:Shared domain predicates are used by app-core."
+                "crm-contact-code-search:crm-contact-rules-repo:Shared CRM contact rules are used by crm-contact-service."
         ));
-        assertEquals("app-core-to-partner-sync", view.integrations().get(0).integrationId());
+        assertEquals("crm-contact-to-notification-sync", view.integrations().get(0).integrationId());
         assertEquals("synchronous-request", view.integrations().get(0).integrationStyle());
-        assertTrue(view.integrations().get(0).ownerTeamIds().contains("core-team"));
+        assertTrue(view.integrations().get(0).ownerTeamIds().contains("crm-contact-team"));
         assertTrue(view.integrations().get(0).partnerOwnerLabels().stream()
-                .anyMatch(label -> label.contains("Partner context")));
+                .anyMatch(label -> label.toLowerCase(java.util.Locale.ROOT).contains("crm notification context")));
         assertEquals("bounded-context-boundary", view.integrations().get(0).ownershipSituationType());
-        assertEquals("main-process", view.processes().get(0).processId());
-        assertTrue(view.processes().get(0).ownerTeamIds().contains("core-team"));
-        assertEquals("app-core-repo", view.repositories().get(0).repositoryId());
-        assertTrue(view.repositories().get(0).ownerTeamIds().contains("core-team"));
+        assertEquals("crm-contact-notification-flow", view.processes().get(0).processId());
+        assertTrue(view.processes().get(0).ownerTeamIds().contains("crm-contact-team"));
+        assertEquals("crm-contact-service-repo", view.repositories().get(0).repositoryId());
+        assertTrue(view.repositories().get(0).ownerTeamIds().contains("crm-contact-team"));
         assertTrue(view.repositories().stream()
-                .anyMatch(repository -> repository.repositoryId().equals("app-shared-lib-repo")
-                        && repository.systemIds().contains("app-core")));
-        assertEquals("core-context", view.boundedContexts().get(0).boundedContextId());
-        assertTrue(view.boundedContexts().get(0).ownerTeamIds().contains("core-team"));
+                .anyMatch(repository -> repository.repositoryId().equals("crm-contact-rules-repo")
+                        && repository.systemIds().contains("crm-contact-service")));
+        assertEquals("crm-contact-context", view.boundedContexts().get(0).boundedContextId());
+        assertTrue(view.boundedContexts().get(0).ownerTeamIds().contains("crm-contact-team"));
         assertEquals("soap-fault", view.glossaryTerms().get(0).termId());
         assertEquals("integration-external-sync-failure", view.handoffRules().get(0).ruleId());
         assertTrue(view.handoffRules().get(0).requiredEvidence().contains("host"));
@@ -202,15 +202,15 @@ class OperationalContextEvidenceProviderTest {
                         "elasticsearch",
                         "logs",
                         List.of(new AnalysisEvidenceItem(
-                                "ERROR app-core log entry",
+                                "ERROR crm-contact-service log entry",
                                 List.of(
-                                        attribute("serviceName", "app-core"),
-                                        attribute("containerName", "app-core"),
-                                        attribute("className", "com.example.app.core.SyncGateway"),
-                                        attribute("message", "SOAPFault while calling api.partner.local /partner/resource"),
-                                        attribute("exception", "Read timed out in SyncGateway.call"),
-                                        attribute("host", "api.partner.local"),
-                                        attribute("endpoint", "/partner/resource")
+                                        attribute("serviceName", "crm-contact-service"),
+                                        attribute("containerName", "crm-contact-service"),
+                                        attribute("className", "com.example.crm.contact.CrmNotificationGateway"),
+                                        attribute("message", "SOAPFault while calling api.crm-notification.example.invalid /crm/notifications"),
+                                        attribute("exception", "Read timed out in CrmNotificationGateway.call"),
+                                        attribute("host", "api.crm-notification.example.invalid"),
+                                        attribute("endpoint", "/crm/notifications")
                                 )
                         ))
                 ))
@@ -218,10 +218,10 @@ class OperationalContextEvidenceProviderTest {
                         "gitlab",
                         "resolved-code",
                         List.of(new AnalysisEvidenceItem(
-                                "app-core-repo file SyncGateway.java",
+                                "crm-contact-service-repo file CrmNotificationGateway.java",
                                 List.of(
-                                        attribute("projectName", "app-core-repo"),
-                                        attribute("filePath", "src/main/java/com/example/app/core/SyncGateway.java")
+                                        attribute("projectName", "crm-contact-service-repo"),
+                                        attribute("filePath", "src/main/java/com/example/app/core/CrmNotificationGateway.java")
                                 )
                         ))
                 ));

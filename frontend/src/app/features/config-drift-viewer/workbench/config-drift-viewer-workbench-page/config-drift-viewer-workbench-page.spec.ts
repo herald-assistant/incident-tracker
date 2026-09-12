@@ -66,7 +66,7 @@ describe('ConfigDriftViewerWorkbenchPageComponent', () => {
       repositoryId: 'runtime-config',
       systemId: 'backend',
       sourceBranch: 'dev1',
-      targetBranch: 'zt001'
+      targetBranch: 'test2'
     });
     expect(api.getWorkbenchSource).toHaveBeenCalledWith(PREVIEW_ID);
     expect(api.getWorkbenchConfigurationDiff).not.toHaveBeenCalled();
@@ -97,7 +97,7 @@ describe('ConfigDriftViewerWorkbenchPageComponent', () => {
     const projection = compiled.querySelector(
       'textarea[aria-label="Operator configuration diff"]'
     ) as HTMLTextAreaElement;
-    expect(projection.value).toContain('clients.customer-zt001.password');
+    expect(projection.value).toContain('clients.customer-test2.password');
     expect(projection.value).toContain('${VAULT_DYNAMIC_DEV}');
 
     buttonContaining(compiled, 'AI boundary mapping')?.click();
@@ -128,7 +128,7 @@ describe('ConfigDriftViewerWorkbenchPageComponent', () => {
     fixture.detectChanges();
     expect(api.getWorkbenchMapping).toHaveBeenCalledWith(PREVIEW_ID, 0, 100, true);
     expect(compiled.textContent).toContain('Original → sanitized mapping');
-    expect(compiled.textContent).toContain('clients.customer-zt001.password');
+    expect(compiled.textContent).toContain('clients.customer-test2.password');
     expect(compiled.textContent).toContain('spring.datasource.password');
     expect(compiled.textContent).toContain('difference-1');
     expect(compiled.textContent).toContain('CHANGED');
@@ -206,7 +206,7 @@ describe('ConfigDriftViewerWorkbenchPageComponent', () => {
     expect(api.preview).not.toHaveBeenCalled();
     expect(fixture.nativeElement.textContent).toContain('Wybierz dwa różne branche');
 
-    fixture.componentInstance.form.controls.targetBranch.setValue('zt001');
+    fixture.componentInstance.form.controls.targetBranch.setValue('test2');
     api.preview.mockReturnValue(
       throwError(
         () =>
@@ -236,7 +236,7 @@ const PREVIEW_ID = '019fb000-1f4d-79e0-8de1-daae931197ac';
 function inputOptions(): ConfigDriftViewerInputOptions {
   return {
     modes: ['BASIC', 'DEEP'],
-    branches: ['dev1', 'zt001'],
+    branches: ['dev1', 'test2'],
     repositories: [{ id: 'runtime-config', label: 'Config repository' }],
     systems: [{ id: 'backend', label: 'Backend', configurationDirectory: 'backend' }]
   };
@@ -250,7 +250,7 @@ function previewResponse(deep = false): ConfigDriftViewerWorkbenchPreviewRespons
     repositoryId: 'runtime-config',
     systemId: 'backend',
     sourceBranch: 'dev1',
-    targetBranch: 'zt001',
+    targetBranch: 'test2',
     codeRef: deep ? 'release-42' : null,
     source: {
       configurationDirectory: 'backend',
@@ -300,7 +300,7 @@ function configurationDiffResponse(): ConfigDriftViewerWorkbenchConfigurationDif
     previewId: PREVIEW_ID,
     configurationDiff: {
       sourceBranch: 'dev1',
-      targetBranch: 'zt001',
+      targetBranch: 'test2',
       files: [{
         role: 'APPLICATION_YAML',
         format: 'YAML',
@@ -326,7 +326,7 @@ function configurationDiffResponse(): ConfigDriftViewerWorkbenchConfigurationDif
           },
           root: {
             name: 'password',
-            path: 'clients.customer-zt001.password',
+            path: 'clients.customer-test2.password',
             changeKind: 'CHANGED',
             source: {
               presence: 'PRESENT',
@@ -354,7 +354,7 @@ function sourceResponse(): ConfigDriftViewerWorkbenchSourceResponse {
     previewId: PREVIEW_ID,
     configurationDirectory: 'backend',
     source: coverage('dev1'),
-    target: coverage('zt001')
+    target: coverage('test2')
   };
 }
 
@@ -371,7 +371,7 @@ function mappingPage(): ConfigDriftViewerWorkbenchMappingPage {
       documentIndex: 0,
       depth: 2,
       originalName: 'password',
-      originalPath: 'clients.customer-zt001.password',
+      originalPath: 'clients.customer-test2.password',
       sanitizedName: 'property-1',
       sanitizedPath: 'spring.datasource.password',
       sourceType: 'STRING',

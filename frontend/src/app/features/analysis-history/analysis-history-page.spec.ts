@@ -236,7 +236,7 @@ describe('AnalysisHistoryPageComponent', () => {
     const run: LocalAnalysisRunListItemResponse = {
       analysisId: 'config-drift-viewer-1',
       feature: 'config-drift-viewer',
-      name: 'dev1 to zt001',
+      name: 'dev1 to test2',
       status: 'COMPLETED_WITH_LIMITATIONS',
       createdAt: '2026-07-30T10:00:00Z',
       updatedAt: '2026-07-30T10:01:00Z',

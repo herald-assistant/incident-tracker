@@ -2,30 +2,30 @@ schemaVersion: 1
 catalogKind: operational-context-code-search-scopes
 
 codeSearchScopes:
-  - id: app-core-code-search
-    name: App Core Code Search Scope
+  - id: crm-contact-code-search
+    name: CRM Contact Service Code Search Scope
     scopeType: system
     lifecycleStatus: active
-    summary: Repository scope for the app-core system.
+    summary: Repository scope for the synthetic CRM contact service.
     target:
       type: system
-      id: app-core
+      id: crm-contact-service
     useFor: [code-search, incident-analysis]
     repositories:
-      - repoId: app-core-repo
+      - repoId: crm-contact-service-repo
         role: primary
         priority: 1
         searchMode: path-prefixes
         pathPrefixes:
-          - modules/app-core
-          - shared/domain-core
-        reason: Main service repository for app-core.
+          - modules/crm-contact-service
+          - shared/crm-contact-rules
+        reason: Primary repository for synthetic CRM contact handling.
         readFor: [business-flow, core-behavior]
-      - repoId: app-shared-lib-repo
+      - repoId: crm-contact-rules-repo
         role: supporting-library
         priority: 2
         searchMode: whole-repository
-        reason: Shared domain predicates are used by app-core.
+        reason: Shared CRM contact rules are used by crm-contact-service.
         readFor: [shared-rules]
 
 gaps: []

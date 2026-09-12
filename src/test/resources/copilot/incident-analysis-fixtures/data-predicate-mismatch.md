@@ -22,11 +22,11 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-dpm-001`
-- trigger: HTTP request `GET /cases/CASE-409/active-record`
+- trigger: HTTP request `GET /crm/cases/CRM-CASE-409/active-record`
 - failure point: repository lookup aktywnego rekordu
-- log: `ActiveCaseRecordNotFoundException: Active record not found for caseId=CASE-409`
+- log: `ActiveCaseRecordNotFoundException: Active record not found for caseId=CRM-CASE-409`
 - code hint: `findByCaseIdAndStatusAndDeletedFalse(caseId, ACTIVE)`
-- table/key: `ACTIVE_CASE_RECORD.CASE_ID = CASE-409`
+- table/key: `ACTIVE_CASE_RECORD.CASE_ID = CRM-CASE-409`
 
 ## Oczekiwany Dry Run Orkiestratora
 
@@ -35,8 +35,8 @@ Fixture testuje kontrakt routingu:
 2. Ugruntuj pelny predykat z kodu albo evidence.
 3. Zaladuj `incident-data-diagnostics`.
 4. Wykonaj DB test rozrozniajacy:
-   - key-only check: `CASE_ID = 'CASE-409'`
-   - full-predicate check: `CASE_ID = 'CASE-409' and STATUS = 'ACTIVE' and DELETED = 0`
+   - key-only check: `CASE_ID = 'CRM-CASE-409'`
+   - full-predicate check: `CASE_ID = 'CRM-CASE-409' and STATUS = 'ACTIVE' and DELETED = 0`
 5. Jesli key-only count > `0`, ale full-predicate count = `0`, utrzymaj
    `data_predicate_mismatch`.
 6. Jezeli key-only count = `0`, zmien klase na `data_missing`.

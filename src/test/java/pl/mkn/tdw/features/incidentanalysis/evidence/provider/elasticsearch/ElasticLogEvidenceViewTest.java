@@ -27,7 +27,7 @@ class ElasticLogEvidenceViewTest {
         assertTrue(markdown.contains("Elasticsearch log evidence"));
         assertTrue(markdown.contains("Log entry `1` `ERROR` `svc`"));
         assertTrue(markdown.contains("- message:"));
-        assertTrue(markdown.contains("Deadlock updating order"));
+        assertTrue(markdown.contains("Deadlock updating CRM contact profile"));
         assertTrue(markdown.contains("- exception:"));
         assertTrue(markdown.contains("ActiveCaseRecordDomainRepository.java:74"));
         assertTrue(markdown.contains("- container: `backend`"));

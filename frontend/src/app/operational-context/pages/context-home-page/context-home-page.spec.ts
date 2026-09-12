@@ -49,7 +49,7 @@ describe('ContextHomePageComponent', () => {
     component.selectTab('systems');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('App Core');
+    expect(fixture.nativeElement.textContent).toContain('CRM Contact Service');
     const headers = Array.from(
       fixture.nativeElement.querySelectorAll('.catalog-table__header-cell') as NodeListOf<HTMLElement>
     ).map((element) => element.textContent?.trim());
@@ -60,7 +60,7 @@ describe('ContextHomePageComponent', () => {
     component.localFilterControl.setValue('missing');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).not.toContain('App Core');
+    expect(fixture.nativeElement.textContent).not.toContain('CRM Contact Service');
   });
 
   it('shows Add for both new structured CRM catalogue types only when supported', async () => {
@@ -103,10 +103,10 @@ describe('ContextHomePageComponent', () => {
 
     fixture.detectChanges();
     await fixture.whenStable();
-    component.openEntity({ type: 'system', id: 'app-core' });
+    component.openEntity({ type: 'system', id: 'crm-contact-service' });
     fixture.detectChanges();
 
-    expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
+    expect(api.getEntity).toHaveBeenCalledWith('system', 'crm-contact-service');
     expect(api.getEntityRelationsReadModel).not.toHaveBeenCalled();
     expect(api.getCodeSearchReadModel).not.toHaveBeenCalled();
     expect(api.getAiApiPreviewRequests).not.toHaveBeenCalled();
@@ -128,11 +128,11 @@ describe('ContextHomePageComponent', () => {
 
     fixture.detectChanges();
     await fixture.whenStable();
-    component.openEntity({ type: 'system', id: 'app-core' });
+    component.openEntity({ type: 'system', id: 'crm-contact-service' });
     fixture.detectChanges();
 
-    expect(api.getEntity).toHaveBeenCalledWith('system', 'app-core');
-    expect(maintenanceApi.getEntity).toHaveBeenCalledWith('system', 'app-core');
+    expect(api.getEntity).toHaveBeenCalledWith('system', 'crm-contact-service');
+    expect(maintenanceApi.getEntity).toHaveBeenCalledWith('system', 'crm-contact-service');
     expect(fixture.nativeElement.textContent).toContain('Basic');
     expect(fixture.nativeElement.textContent).toContain('Ownership and references');
     expect(fixture.nativeElement.textContent).not.toContain('Save');
@@ -232,7 +232,7 @@ describe('ContextHomePageComponent', () => {
           'warning',
           'ownership',
           'system',
-          'app-core',
+          'crm-contact-service',
           'Missing owner',
           'systems.yml',
           '$.systems[0].owner'
@@ -258,7 +258,7 @@ describe('ContextHomePageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('systems.yml');
     expect(fixture.nativeElement.textContent).toContain('$.systems[0].owner');
-    expect(fixture.nativeElement.textContent).toContain('system/app-core');
+    expect(fixture.nativeElement.textContent).toContain('system/crm-contact-service');
     expect(fixture.nativeElement.textContent).toContain('code-search-scopes.yml');
     expect(fixture.nativeElement.querySelector('.maintenance-card')).not.toBeNull();
 
@@ -271,7 +271,7 @@ describe('ContextHomePageComponent', () => {
     await fixture.whenStable();
 
     expect(writeText).toHaveBeenCalledWith(
-      'systems.yml $.systems[0].owner | system/app-core | ownership'
+      'systems.yml $.systems[0].owner | system/crm-contact-service | ownership'
     );
 
     component.validationCategoryControl.setValue('ownership');
@@ -295,7 +295,7 @@ describe('ContextHomePageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('systems.yml');
-    expect(fixture.nativeElement.textContent).toContain('system/app-core');
+    expect(fixture.nativeElement.textContent).toContain('system/crm-contact-service');
     expect(fixture.nativeElement.textContent).toContain('glossary.yml');
     expect(fixture.nativeElement.querySelector('.maintenance-card--question')).not.toBeNull();
 
@@ -432,15 +432,15 @@ async function createComponent(
 function editableSystem() {
   return {
     type: 'system',
-    id: 'app-core',
+    id: 'crm-contact-service',
     sourceFile: 'systems.yml',
     payload: {
-      id: 'app-core',
-      name: 'App Core',
+      id: 'crm-contact-service',
+      name: 'CRM Contact Service',
       summary: 'Core system summary',
       ownership: {
         ownershipStatus: 'explicit',
-        ownerTeamIds: ['core-team'],
+        ownerTeamIds: ['crm-contact-team'],
         confidence: 'high'
       }
     }
@@ -463,7 +463,7 @@ function openQuestion(
   question: string,
   sourceFile = 'systems.yml',
   entityType = 'system',
-  entityId: string | null = 'app-core'
+  entityId: string | null = 'crm-contact-service'
 ): OpenQuestionDto {
   return {
     id,
@@ -528,13 +528,13 @@ function readySummary(): OperationalContextSummaryDto {
 
 function systemRow(): OperationalContextSystemRowDto {
   return {
-    id: 'app-core',
-    name: 'App Core',
+    id: 'crm-contact-service',
+    name: 'CRM Contact Service',
     systemType: 'internal-service',
     systemSubtype: 'backend',
     owner: {
-      value: 'core-team',
-      label: 'Core Team',
+      value: 'crm-contact-team',
+      label: 'CRM Contact Team',
       confidence: 'high',
       reasons: [],
       warnings: [],
@@ -557,17 +557,17 @@ function resolvedOwnership() {
     primaryOwners: [
       {
         targetType: 'system',
-        targetId: 'app-core',
-        targetLabel: 'App Core',
-        ownerTeamIds: ['core-team'],
+        targetId: 'crm-contact-service',
+        targetLabel: 'CRM Contact Service',
+        ownerTeamIds: ['crm-contact-team'],
         ownerLabel: null,
         source: 'explicit-ownership',
         confidence: 'high'
       }
     ],
     partnerOwners: [],
-    resolutionPath: ['system:app-core -> ownership'],
-    handoffReason: 'Problem typu `inside-system` prowadzi do core-team.',
+    resolutionPath: ['system:crm-contact-service -> ownership'],
+    handoffReason: 'Problem typu `inside-system` prowadzi do crm-contact-team.',
     visibilityLimits: []
   };
 }
@@ -591,10 +591,10 @@ function aggregate(label: string, count: number): ExplainableAggregateDto {
 function entityDetail(): OperationalContextEntityDetailDto {
   return {
     type: 'system',
-    id: 'app-core',
+    id: 'crm-contact-service',
     title: 'Core detail',
     subtitle: 'internal',
-    overviewSections: [{ title: 'Overview', fields: { id: 'app-core' } }],
+    overviewSections: [{ title: 'Overview', fields: { id: 'crm-contact-service' } }],
     relatedEntities: [],
     recognitionSignals: [],
     explainabilitySections: [],
@@ -609,7 +609,7 @@ function relationsReadModel() {
   return {
     contract: 'operational-context.entity-relations',
     contractVersion: 1,
-    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
+    analysisTarget: { type: 'system', id: 'crm-contact-service', label: 'CRM Contact Service' },
     outgoingRelations: [{ derived: true }],
     incomingRelations: [],
     neighbors: [{ type: 'process', id: 'core-process', label: 'core-process' }],
@@ -621,7 +621,7 @@ function codeSearchReadModel() {
   return {
     contract: 'operational-context.code-search',
     contractVersion: 1,
-    analysisTarget: { type: 'system', id: 'app-core', label: 'App Core' },
+    analysisTarget: { type: 'system', id: 'crm-contact-service', label: 'CRM Contact Service' },
     scopes: [{}],
     repositories: [{}],
     limitations: [],
@@ -635,22 +635,22 @@ function profiledSearchPayload(query: string, profile: OperationalContextReadMod
     contractVersion: 1,
     profile,
     analysisTarget: { query },
-    data: { results: [{ type: 'system', id: 'app-core', label: 'App Core' }] },
+    data: { results: [{ type: 'system', id: 'crm-contact-service', label: 'CRM Contact Service' }] },
     links: [{
       rel: 'entity',
-      href: `/api/operational-context/entities/system?id=app-core&profile=${profile}`,
+      href: `/api/operational-context/entities/system?id=crm-contact-service&profile=${profile}`,
       profile,
       reason: 'Read compact entity detail.'
     }],
     availableExpansions: ['profile=expanded'],
-    suggestedNextReads: [`opctx_search(query=${query})`, 'opctx_get_entity(type=system, id=app-core)'],
+    suggestedNextReads: [`opctx_search(query=${query})`, 'opctx_get_entity(type=system, id=crm-contact-service)'],
     nextReads: [{
       label: 'Entity',
       rel: 'entity',
-      href: `/api/operational-context/entities/system?id=app-core&profile=${profile}`,
+      href: `/api/operational-context/entities/system?id=crm-contact-service&profile=${profile}`,
       profile,
       tool: 'opctx_get_entity',
-      arguments: { type: 'system', id: 'app-core' },
+      arguments: { type: 'system', id: 'crm-contact-service' },
       reason: 'Read top result details before choosing repositories.'
     }],
     suggestedTools: ['opctx_search', 'opctx_get_entity'],

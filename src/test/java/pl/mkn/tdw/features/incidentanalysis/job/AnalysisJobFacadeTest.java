@@ -204,7 +204,7 @@ class AnalysisJobFacadeTest {
     @Test
     void shouldResolveCopilotTokenBeforeCreatingJob() {
         var provider = new CapturingOptionsInitialAnalysisProvider();
-        var authRef = AnalysisAiAuthRef.githubApp("operator-session-1", "octocat");
+        var authRef = AnalysisAiAuthRef.githubApp("operator-session-1", "crm-test-operator");
         var tokenResolver = new CapturingAccessTokenResolver("ghu_secret_operator_token");
         var authTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobFacade(
@@ -218,7 +218,7 @@ class AnalysisJobFacadeTest {
         var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", null, null));
 
         assertEquals("operator-session-1", tokenResolver.lastAuth.principalId());
-        assertEquals("octocat", tokenResolver.lastAuth.githubLogin());
+        assertEquals("crm-test-operator", tokenResolver.lastAuth.githubLogin());
         assertFalse(started.toString().contains("ghu_secret_operator_token"));
 
         authTaskExecutor.runNext();

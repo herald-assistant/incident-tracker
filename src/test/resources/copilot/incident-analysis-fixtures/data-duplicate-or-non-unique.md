@@ -1,11 +1,11 @@
 ---
-name: data-duplicate-or-non-unique-active-contract
+name: data-duplicate-or-non-unique-active-crm-contact-consent
 expectedClassification: data_duplicate_or_non_unique
 starterSkill: incident-analysis-orchestrator
 specializedSkill: incident-data-diagnostics
 ---
 
-# Fixture: Data Duplicate Or Non Unique - Active Contract
+# Fixture: Data Duplicate Or Non Unique - Active CRM Contact Consent
 
 ## Cel
 
@@ -22,16 +22,16 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-dup-001`
-- trigger: HTTP request `GET /contracts/C-100/active-version`
+- trigger: HTTP request `GET /crm/contacts/CRM-CONTACT-100/active-consent`
 - failure point: single-result repository query
 - log: `IncorrectResultSizeDataAccessException: expected 1, actual 2`
-- code hint: `findActiveByContractNumber(contractNumber)`
-- table/key: `CONTRACT_VERSION.CONTRACT_NUMBER = C-100`
+- code hint: `findActiveConsentByContactId(contactId)`
+- table/key: `CONTACT_CONSENT.CONTACT_ID = CRM-CONTACT-100`
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `HTTP request -> active contract version lookup -> non-unique result`.
+   `HTTP request -> active CRM contact consent lookup -> non-unique result`.
 2. Zaladuj `incident-data-diagnostics`.
 3. Wykonaj DB test rozrozniajacy:
    - count aktywnych rekordow po business key,
@@ -45,7 +45,7 @@ Fixture testuje kontrakt routingu:
 
 ### `functionalAnalysis`
 
-- Wyjasnia, ze proces nie wie, ktora wersje kontraktu wybrac.
+- Wyjasnia, ze proces nie wie, ktora zgode kontaktu CRM wybrac.
 - Wskazuje ryzyko blednej decyzji biznesowej albo blokady procesu.
 
 ### `technicalAnalysis`

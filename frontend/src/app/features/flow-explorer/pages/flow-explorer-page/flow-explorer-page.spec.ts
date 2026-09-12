@@ -185,7 +185,7 @@ describe('FlowExplorerPageComponent', () => {
       branch: 'main'
     });
     expect(compiled.querySelector('.flow-explorer-target-metrics')).toBeNull();
-    expect(compiled.textContent).not.toContain('feature/FLOW-42');
+    expect(compiled.textContent).not.toContain('feature/CRM-742');
     expect(compiled.textContent).toContain('1 endpoint');
     expect(compiled.textContent).toContain('Data:');
     openEndpointSelect(compiled);
@@ -1079,7 +1079,7 @@ function endpointInventory(): FlowExplorerEndpointInventoryResponse {
   return {
     systemId: 'crm-service',
     requestedBranch: 'main',
-    resolvedRef: 'feature/FLOW-42',
+    resolvedRef: 'feature/CRM-742',
     gitLabGroup: 'platform/backend',
     endpointPathPrefix: '',
     httpMethod: '',

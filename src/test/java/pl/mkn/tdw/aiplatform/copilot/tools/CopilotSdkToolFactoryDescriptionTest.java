@@ -100,7 +100,7 @@ class CopilotSdkToolFactoryDescriptionTest {
                 "run-1",
                 "analysis-run-1",
                 "corr-123",
-                "zt01",
+                "test1",
                 "main",
                 "CRM/runtime"
         );

@@ -24,19 +24,19 @@ Fixture nie testuje odpowiedzi modelu. Testuje kontrakt oczekiwanego routingu:
 ### Fingerprint
 
 - `correlationId`: `corr-dm-001`
-- `environment`: `dev3`
+- `environment`: `crm-dev-c`
 - trigger: HTTP request
-- entry point: `GET /cases/CASE-404/active-record`
-- failing service: `case-management-api`
-- obiekt: case `CASE-404`
+- entry point: `GET /crm/cases/CRM-CASE-404/active-record`
+- failing service: `crm-case-api`
+- obiekt: case `CRM-CASE-404`
 - widoczny punkt awarii: active case record lookup
 
 ### Log
 
 ```text
-2026-06-06T10:14:23.124Z ERROR case-management-api
+2026-06-06T10:14:23.124Z ERROR crm-case-api
 correlationId=corr-dm-001
-ActiveCaseRecordNotFoundException: Active case record not found for caseId=CASE-404
+ActiveCaseRecordNotFoundException: Active case record not found for caseId=CRM-CASE-404
 at ActiveCaseRecordService.getActiveCaseRecordForCaseId(ActiveCaseRecordService.java:47)
 ```
 
@@ -54,9 +54,9 @@ Key column: CASE_ID
 
 ### Operational Context Hint
 
-- system: `case-management`
-- process: `case servicing`
-- bounded context: `case records`
+- system: `crm-case-management`
+- process: `CRM case servicing`
+- bounded context: `CRM case records`
 - expected handoff: Data / DBA albo wlasciciel zasilania rekordow sprawy
 
 ## Oczekiwany Dry Run Orkiestratora
@@ -69,7 +69,7 @@ Key column: CASE_ID
 5. Sklasyfikuj aktywna hipoteze jako `data_missing`.
 6. Zaladuj `incident-data-diagnostics`.
 7. Wykonaj DB test rozrozniajacy:
-   - key-only check: `count(*) from ACTIVE_CASE_RECORD where CASE_ID = 'CASE-404'`
+   - key-only check: `count(*) from ACTIVE_CASE_RECORD where CASE_ID = 'CRM-CASE-404'`
    - full-predicate check: taki sam jak aplikacyjny predykat, jezeli kod go
      wskazuje
 8. Jesli key-only count = `0`, utrzymaj `data_missing`.
@@ -92,7 +92,7 @@ Key column: CASE_ID
 - Wskazuje service/repository lookup i table/key.
 - Oddziela `data_missing` od `data_predicate_mismatch`.
 - Proponuje pierwsza akcje: sprawdzic albo odtworzyc zasilanie rekordu dla
-  `CASE-404`, a po korekcie powtorzyc request.
+  `CRM-CASE-404`, a po korekcie powtorzyc request.
 - Wymienia visibility limits, jezeli DB evidence albo ownership nie jest
   dostepny.
 

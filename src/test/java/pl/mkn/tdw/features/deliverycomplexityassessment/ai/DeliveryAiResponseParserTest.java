@@ -27,11 +27,11 @@ class DeliveryAiResponseParserTest {
                   },
                   "confidence":0.75,
                   "evidenceSummary":[
-                    "outcomeBreadth | delivery-complexity/issues.md#DCA-1 | API behavior changed",
-                    "domainDecisionComplexity | delivery-complexity/issues.md#DCA-1 | validation rule added",
+                    "outcomeBreadth | delivery-complexity/issues.md#CRM-951 | API behavior changed",
+                    "domainDecisionComplexity | delivery-complexity/issues.md#CRM-951 | validation rule added",
                     "applicationFlowComplexity | delivery-complexity/diffs.md#service!1 | error flow added",
                     "boundaryAndDataComplexity | delivery-complexity/diffs.md#service!1 | request mapping changed",
-                    "verificationStateSpace | delivery-complexity/issues.md#DCA-1 | success and error variants",
+                    "verificationStateSpace | delivery-complexity/issues.md#CRM-951 | success and error variants",
                     "implementedCompatibilityScope | delivery-complexity/diffs.md#service!1 | fallback retained",
                     "parameterizationComplexity | delivery-complexity/diffs.md#service!1 | runtime parameters added"
                   ],
@@ -62,7 +62,7 @@ class DeliveryAiResponseParserTest {
                     "parameterizationComplexity":0
                   },
                   "confidence":0.82,
-                  "evidenceSummary":["outcomeBreadth | issues.md#DCA-1 | visible result"],
+                  "evidenceSummary":["outcomeBreadth | issues.md#CRM-951 | visible result"],
                   "qualityFlags":["feature flag not verified"],
                   "visibilityLimits":["runtime evidence unavailable"]
                 }
@@ -76,7 +76,7 @@ class DeliveryAiResponseParserTest {
         assertThat(response.dimensions().applicationFlowComplexity()).isEqualTo(1);
         assertThat(response.confidence()).isEqualTo(0.82);
         assertThat(response.evidenceSummary()).containsExactly(
-                "outcomeBreadth | issues.md#DCA-1 | visible result"
+                "outcomeBreadth | issues.md#CRM-951 | visible result"
         );
         assertThat(response.qualityFlags()).containsExactly("feature flag not verified");
         assertThat(response.visibilityLimits()).containsExactly("runtime evidence unavailable");
@@ -144,8 +144,8 @@ class DeliveryAiResponseParserTest {
                   "boundaryAndDataComplexity":0,"verificationStateSpace":2,"implementedCompatibilityScope":0,
                   "parameterizationComplexity":0
                 },"confidence":0.93,"evidenceSummary":[
-                  "outcomeBreadth | delivery-complexity/issues.md#CRM-37416 | visible regression",
-                  "domainDecisionComplexity | delivery-complexity/issues.md#CRM-37416 | contact preference rule",
+                  "outcomeBreadth | delivery-complexity/issues.md#CRM-101 | visible regression",
+                  "domainDecisionComplexity | delivery-complexity/issues.md#CRM-101 | contact preference rule",
                   "applicationFlowComplexity | delivery-complexity/diffs.md#CRM_FRONTEND!10413:libs/customer-profile/guard.service.ts | waits for profile availability",
                   "verificationStateSpace | delivery-complexity/diffs.md#CRM_FRONTEND!10413:libs/customer-profile/guard.service.spec.ts | immediate and delayed profile states"
                 ],"qualityFlags":[],"visibilityLimits":[]}
@@ -198,7 +198,7 @@ class DeliveryAiResponseParserTest {
                   "parameterizationComplexity":0
                 },"confidence":0.88,
                   "evidenceSummary":[
-                    "outcomeBreadth | issues.md#CRM-36597 | sekcja „REGULY SEGMENTACJI – OPIS KOMPLETNY" z pelnymi opisami"
+                    "outcomeBreadth | issues.md#CRM-102 | sekcja „REGULY SEGMENTACJI – OPIS KOMPLETNY" z pelnymi opisami"
                   ],"qualityFlags":[],"visibilityLimits":[]}
                 """);
 

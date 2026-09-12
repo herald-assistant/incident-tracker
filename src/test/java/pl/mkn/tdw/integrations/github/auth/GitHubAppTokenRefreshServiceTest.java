@@ -116,7 +116,7 @@ class GitHubAppTokenRefreshServiceTest {
             return store.save(new GitHubAppAuthorization(
                     "operator-session-1",
                     42L,
-                    "octocat",
+                    "crm-test-operator",
                     cipher.encrypt(accessToken),
                     accessTokenExpiresAt,
                     cipher.encrypt(refreshToken),

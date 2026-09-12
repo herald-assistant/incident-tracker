@@ -42,7 +42,7 @@ public class TestElasticLogPort implements ElasticLogPort {
                             "ERROR",
                             "svc",
                             "c.e.s.workflow.ApiHandler",
-                            "Deadlock updating order",
+                            "Deadlock updating CRM contact profile",
                             "ex.MissingRecord: not found\n"
                                     + "\tat com.example.synthetic.workflowstate.domain.core.ActiveCaseRecordDomainRepository.get(ActiveCaseRecordDomainRepository.java:74)\n"
                                     + "\tat com.example.synthetic.workflowstate.services.core.ActiveCaseRecordQueryService.get(ActiveCaseRecordQueryService.java:69)",

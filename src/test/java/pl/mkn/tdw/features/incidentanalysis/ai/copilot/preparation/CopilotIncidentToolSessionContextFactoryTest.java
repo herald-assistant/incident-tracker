@@ -26,7 +26,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
     void shouldCreateInitialAnalysisSessionContextWithIncidentScope() {
         var request = new InitialAnalysisRequest(
                 "corr-123",
-                "zt01",
+                "test1",
                 "release/2026.04",
                 "CRM/runtime",
                 List.of(operationalContextEvidence())
@@ -37,7 +37,7 @@ class CopilotIncidentToolSessionContextFactoryTest {
         assertTrue(context.copilotSessionId().startsWith("analysis-"));
         assertEquals("analysis-" + context.analysisRunId(), context.copilotSessionId());
         assertEquals("corr-123", context.hiddenContext().get(AgentToolContextKeys.CORRELATION_ID));
-        assertEquals("zt01", context.hiddenContext().get(AgentToolContextKeys.ENVIRONMENT));
+        assertEquals("test1", context.hiddenContext().get(AgentToolContextKeys.ENVIRONMENT));
         assertInstanceOf(String.class, context.hiddenContext().get(AgentToolContextKeys.REPORT_ID));
         assertTrue(((String) context.hiddenContext().get(AgentToolContextKeys.REPORT_ID)).startsWith("report-"));
         assertEquals("incident-analysis", context.hiddenContext().get(AgentToolContextKeys.REPORT_FEATURE));

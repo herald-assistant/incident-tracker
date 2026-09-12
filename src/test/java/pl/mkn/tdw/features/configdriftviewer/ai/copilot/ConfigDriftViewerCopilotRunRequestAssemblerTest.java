@@ -141,7 +141,7 @@ class ConfigDriftViewerCopilotRunRequestAssemblerTest {
                 "runtime-config",
                 java.util.List.of("crm-api"),
                 "dev1",
-                "zt001",
+                "test2",
                 "release-1",
                 "gpt-5.4",
                 "medium"

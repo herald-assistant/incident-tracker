@@ -15,7 +15,7 @@ describe('WhyPopoverComponent', () => {
     fixture.componentRef.setInput('summary', 'Matched serviceName.');
     fixture.componentRef.setInput('confidence', 'high');
     fixture.componentRef.setInput('reasons', [
-      { label: 'serviceName', detail: 'app-core matched exactly.', strength: 'strong' }
+      { label: 'serviceName', detail: 'crm-contact-service matched exactly.', strength: 'strong' }
     ]);
     fixture.componentRef.setInput('warnings', ['No partner team found.']);
     fixture.detectChanges();
@@ -23,7 +23,7 @@ describe('WhyPopoverComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Why this?');
     expect(compiled.textContent).toContain('Matched serviceName.');
-    expect(compiled.textContent).toContain('app-core matched exactly.');
+    expect(compiled.textContent).toContain('crm-contact-service matched exactly.');
     expect(compiled.textContent).toContain('No partner team found.');
   });
 });

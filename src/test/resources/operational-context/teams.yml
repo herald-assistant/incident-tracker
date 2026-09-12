@@ -13,5 +13,5 @@ teams:
     purpose: Owns cross-system contracts.
     matchSignals:
       exact:
-        hosts: [api.notifications.local]
+        hosts: [api.crm-notifications.example.invalid]
 gaps: []

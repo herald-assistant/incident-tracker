@@ -22,16 +22,16 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-query-001`
-- trigger: search active entitlement
+- trigger: search active CRM contact preference
 - failure point: repository method returns empty result
-- log: `EntitlementNotFoundException for customerId=C-55 product=P-9`
-- code hint: `findByCustomerIdAndProductCodeAndStatus(customerId, product, ACTIVE)`
-- DB hint: row exists with `product_code = LEGACY-P-9`
+- log: `ContactPreferenceNotFoundException for contactId=CRM-CONTACT-55 segment=CRM-SEG-09`
+- code hint: `findByContactIdAndSegmentCodeAndStatus(contactId, segment, ACTIVE)`
+- DB hint: row exists with `segment_code = CRM-LEGACY-SEG-09`
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `request -> entitlement service -> repository predicate -> no entitlement`.
+   `request -> CRM contact preference service -> repository predicate -> no CRM contact preference`.
 2. Zaladuj `incident-code-grounding`.
 3. Przeczytaj repository method, derived query albo `@Query`.
 4. Porownaj predykat z business key i evidence.
@@ -44,7 +44,7 @@ Fixture testuje kontrakt routingu:
 
 ### `functionalAnalysis`
 
-- Wyjasnia, ze system nie odnajduje uprawnienia przez sposob wyszukiwania.
+- Wyjasnia, ze system nie odnajduje preferencji kontaktu CRM przez sposob wyszukiwania.
 
 ### `technicalAnalysis`
 

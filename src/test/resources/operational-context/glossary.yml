@@ -9,7 +9,7 @@ terms:
       exact:
         keyword:
           - RemoteApiError
-          - api.notifications.local
+          - api.crm-notifications.example.invalid
     canonicalReferences:
       - crm-customer-to-notification-sync
 gaps:

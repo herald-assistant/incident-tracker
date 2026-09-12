@@ -181,7 +181,7 @@ describe('ConfigDriftViewerPageComponent', () => {
       repositoryId: 'runtime-config',
       systemIds: ['backend', 'customer-profile', 'notifications'],
       sourceBranch: 'dev1',
-      targetBranch: 'zt001'
+      targetBranch: 'test2'
     });
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Configuration result');
@@ -189,7 +189,7 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(compiled.textContent).toContain('różnice: 2');
     expect(compiled.textContent).toContain('findings: 1');
     expect(compiled.textContent).toContain('dev1: Complete, 0 plików');
-    expect(compiled.textContent).toContain('zt001: Complete, 0 plików');
+    expect(compiled.textContent).toContain('test2: Complete, 0 plików');
     expect(compiled.querySelector('.metric-grid')).toBeNull();
     expect(compiled.querySelector('.coverage-grid')).toBeNull();
     expect(compiled.textContent).not.toContain('AI second opinion');
@@ -348,7 +348,7 @@ describe('ConfigDriftViewerPageComponent', () => {
       repositoryId: 'runtime-config',
       systemIds: ['backend', 'customer-profile', 'notifications'],
       sourceBranch: 'dev1',
-      targetBranch: 'zt001',
+      targetBranch: 'test2',
       codeRef: 'release/42',
       model: 'gpt-5.4',
       reasoningEffort: 'medium'
@@ -496,10 +496,10 @@ describe('ConfigDriftViewerPageComponent', () => {
     expect(compiled.textContent).toContain('backend/local.var');
     const inlineDiff = compiled.querySelector('.value-comparison--inline-diff');
     expect(inlineDiff?.textContent).toContain('source≠target');
-    expect(inlineDiff?.querySelector('.inline-diff__removed')?.textContent).toBe('dev');
-    expect(inlineDiff?.querySelector('.inline-diff__added')?.textContent).toBe('zt');
+    expect(inlineDiff?.querySelector('.inline-diff__removed')?.textContent).toBe('dev-a');
+    expect(inlineDiff?.querySelector('.inline-diff__added')?.textContent).toBe('test2');
     expect(inlineDiff?.querySelector('code')?.getAttribute('aria-label')).toBe(
-      'source "https://notifications.dev.test", target "https://notifications.zt.test"'
+      'source "https://notifications.crm-dev-a.example.invalid", target "https://notifications.crm-test2.example.invalid"'
     );
     const booleanInlineDiff = Array.from(
       compiled.querySelectorAll<HTMLElement>('.value-comparison--inline-diff')
@@ -563,7 +563,7 @@ describe('ConfigDriftViewerPageComponent', () => {
 function inputOptions(): ConfigDriftViewerInputOptions {
   return {
     modes: ['BASIC', 'DEEP'],
-    branches: ['dev1', 'zt001', 'dev2'],
+    branches: ['dev1', 'test2', 'dev2'],
     repositories: [{ id: 'runtime-config', label: 'Runtime config' }],
     systems: [
       { id: 'backend', label: 'Backend', configurationDirectory: 'backend' },
@@ -694,7 +694,7 @@ function job(
     repositoryId: 'runtime-config',
     systemIds: ['backend'],
     sourceBranch: 'dev1',
-    targetBranch: 'zt001',
+    targetBranch: 'test2',
     codeRef: 'release/42',
     aiModel: 'gpt-5.4',
     reasoningEffort: 'medium',
@@ -743,10 +743,10 @@ function result(): ConfigDriftViewerResult {
       systemLabel: 'Backend',
       configurationDirectory: 'backend',
       sourceBranch: 'dev1',
-      targetBranch: 'zt001',
+      targetBranch: 'test2',
       status: 'REVIEW_REQUIRED',
       sourceCoverage: { branch: 'dev1', branchExists: true, files: [], complete: true },
-      targetCoverage: { branch: 'zt001', branchExists: true, files: [], complete: true },
+      targetCoverage: { branch: 'test2', branchExists: true, files: [], complete: true },
       documents: [],
       references: [],
       differences: [
@@ -931,7 +931,7 @@ function configurationDiffProjection(): ConfigDriftViewerDiffProjection {
   };
   return {
     sourceBranch: 'dev1',
-    targetBranch: 'zt001',
+    targetBranch: 'test2',
     files: [
       {
         role: 'APPLICATION_YAML',
@@ -968,13 +968,13 @@ function configurationDiffProjection(): ConfigDriftViewerDiffProjection {
                   source: {
                     presence: 'PRESENT',
                     type: 'STRING',
-                    value: 'https://notifications.dev.test',
+                    value: 'https://notifications.crm-dev-a.example.invalid',
                     cardinality: null
                   },
                   target: {
                     presence: 'PRESENT',
                     type: 'STRING',
-                    value: 'https://notifications.zt.test',
+                    value: 'https://notifications.crm-test2.example.invalid',
                     cardinality: null
                   },
                   differenceIds: ['difference-1'],

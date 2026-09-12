@@ -78,7 +78,7 @@ class GitHubAuthServiceTest {
 
         assertThrows(
                 GitHubOAuthExchangeException.class,
-                () -> fixture.service.start("https://evil.example/callback", new MockHttpServletRequest(), new MockHttpServletResponse())
+                () -> fixture.service.start("https://evil.example.invalid/callback", new MockHttpServletRequest(), new MockHttpServletResponse())
         );
     }
 
@@ -136,14 +136,14 @@ class GitHubAuthServiceTest {
                         null
                 ));
         when(fixture.userProfileClient.currentUser("ghu_access_token"))
-                .thenReturn(new GitHubUserProfile(42L, "octocat"));
+                .thenReturn(new GitHubUserProfile(42L, "crm-test-operator"));
 
         var redirect = fixture.service.callback("code-123", "state-123", null, request);
 
         assertEquals("/?from=test&githubAuth=connected", redirect.toString());
         var stored = fixture.authorizationStore.findActiveByOperatorSessionId("operator-session-1").orElseThrow();
         assertEquals(42L, stored.githubUserId());
-        assertEquals("octocat", stored.githubLogin());
+        assertEquals("crm-test-operator", stored.githubLogin());
         assertFalse(stored.encryptedAccessToken().contains("ghu_access_token"));
         assertFalse(stored.encryptedRefreshToken().contains("ghr_refresh_token"));
         assertEquals("ghu_access_token", fixture.tokenCipher.decrypt(stored.encryptedAccessToken()));

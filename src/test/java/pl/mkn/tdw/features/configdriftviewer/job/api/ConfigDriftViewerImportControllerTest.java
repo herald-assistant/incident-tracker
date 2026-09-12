@@ -77,7 +77,7 @@ class ConfigDriftViewerImportControllerTest {
                 "runtime-config",
                 List.of("crm-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 null,
                 null,
                 null,

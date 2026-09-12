@@ -236,7 +236,7 @@ function flowExplorerJob(
       systemId: 'crm-service',
       systemName: 'CRM Service',
       requestedBranch: 'main',
-      resolvedRef: 'feature/FLOW-42',
+      resolvedRef: 'feature/CRM-742',
       endpointId: 'crm-api:GET /api/customers/{id}',
       httpMethod: 'GET',
       endpointPath: '/api/customers/{id}',
@@ -245,7 +245,7 @@ function flowExplorerJob(
           repositoryId: 'crm-api',
           projectName: 'crm-api',
           projectPath: 'platform/crm/crm-api',
-          resolvedRef: 'feature/FLOW-42',
+          resolvedRef: 'feature/CRM-742',
           attempted: true,
           selected: true,
           limitations: []
@@ -432,7 +432,7 @@ function flowExplorerJob(
     report: {
       reportId: 'flow-report-1',
       header: 'Flow Explorer: GET /api/customers/{id}',
-      subHeader: 'CRM Service / feature/FLOW-42',
+      subHeader: 'CRM Service / feature/CRM-742',
       markdownSummary: 'Customer lookup pobiera profil klienta bez zapisu stanu.',
       sections: [
         {

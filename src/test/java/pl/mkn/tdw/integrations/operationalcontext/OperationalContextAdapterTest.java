@@ -20,7 +20,7 @@ class OperationalContextAdapterTest {
 
         assertEquals(2, catalog.systems().size());
         assertEquals(1, catalog.integrations().size());
-        assertEquals(List.of("notification-provider"), catalog.integrations().get(0).participants().finalTargetSystems());
+        assertEquals(List.of("crm-notification-provider"), catalog.integrations().get(0).participants().finalTargetSystems());
         assertEquals("server", catalog.integrations().get(0).participants().finalTargets().get(0).role());
         assertEquals(1, catalog.processes().size());
         assertEquals(2, catalog.repositories().size());

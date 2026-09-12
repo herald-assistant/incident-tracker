@@ -22,11 +22,11 @@ describe('config drift viewer import/export utils', () => {
     expect(
       envelope.payload.job.components[0]?.result?.configurationDiff?.files[0]
         ?.documents[0]?.root.children[0]?.source.value
-    ).toBe('https://notifications.dev.test');
+    ).toBe('https://notifications.crm-dev-a.example.invalid');
     expect(envelope.payload.job.components[0]?.result?.configurationDiffAnnotations?.[0]?.comment)
       .toBe('Endpoint kieruje ruch do innego systemu.');
     expect(buildConfigDriftViewerExportFileName(job))
-      .toBe('config-drift-viewer-1-components-dev1-to-zt001.json');
+      .toBe('config-drift-viewer-1-components-dev1-to-test2.json');
   });
 
   it('should reject an unfinished job', () => {
@@ -48,7 +48,7 @@ function portableJob(): ConfigDriftViewerJobStateSnapshot {
     repositoryId: 'runtime-config',
     systemIds: ['backend/system'],
     sourceBranch: 'dev1',
-    targetBranch: 'zt001',
+    targetBranch: 'test2',
     codeRef: null,
     aiModel: null,
     reasoningEffort: null,
@@ -96,7 +96,7 @@ function portableResult(): ConfigDriftViewerResult {
       systemLabel: 'Backend',
       configurationDirectory: 'backend',
       sourceBranch: 'dev1',
-      targetBranch: 'zt001',
+      targetBranch: 'test2',
       status: 'REVIEW_REQUIRED',
       sourceCoverage: null,
       targetCoverage: null,
@@ -118,7 +118,7 @@ function portableResult(): ConfigDriftViewerResult {
     },
     configurationDiff: {
       sourceBranch: 'dev1',
-      targetBranch: 'zt001',
+      targetBranch: 'test2',
       files: [{
         role: 'APPLICATION_YAML',
         format: 'YAML',
@@ -166,13 +166,13 @@ function portableResult(): ConfigDriftViewerResult {
               source: {
                 presence: 'PRESENT',
                 type: 'STRING',
-                value: 'https://notifications.dev.test',
+                value: 'https://notifications.crm-dev-a.example.invalid',
                 cardinality: null
               },
               target: {
                 presence: 'PRESENT',
                 type: 'STRING',
-                value: 'https://notifications.zt.test',
+                value: 'https://notifications.crm-test2.example.invalid',
                 cardinality: null
               },
               differenceIds: ['difference-1'],

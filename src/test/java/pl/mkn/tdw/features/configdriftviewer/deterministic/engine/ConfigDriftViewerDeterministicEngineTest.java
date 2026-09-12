@@ -60,14 +60,14 @@ class ConfigDriftViewerDeterministicEngineTest {
                           endpoint: ${local.endpoints.backend}
                           retries: 3
                           stable: same-value
-                          envHost: dev1.internal
+                          envHost: crm-dev-a.example.invalid
                           tenants:
                             550e8400-e29b-41d4-a716-446655440000:
                               enabled: true
                         """
         );
         var target = snapshot(
-                "zt001",
+                "test2",
                 """
                         locals {
                           endpoints = {
@@ -88,7 +88,7 @@ class ConfigDriftViewerDeterministicEngineTest {
                           endpoint: ${local.endpoints.backend}
                           retries: "3"
                           stable: same-value
-                          envHost: dev1.internal
+                          envHost: crm-dev-a.example.invalid
                           tenants:
                             550e8400-e29b-41d4-a716-446655440000:
                               enabled: true
@@ -99,7 +99,7 @@ class ConfigDriftViewerDeterministicEngineTest {
         var context = engine.build(
                 scope(),
                 coverage("dev1"),
-                coverage("zt001"),
+                coverage("test2"),
                 source,
                 target
         );
@@ -187,7 +187,7 @@ class ConfigDriftViewerDeterministicEngineTest {
                 "app:\n  value: ${local.missing}"
         );
         var malformedTarget = new ParsedConfigurationSnapshot(
-                "zt001",
+                "test2",
                 List.of(
                         varParser.parse(
                                 ConfigDriftViewerFileRole.GLOBAL_VAR,
@@ -206,7 +206,7 @@ class ConfigDriftViewerDeterministicEngineTest {
         var context = engine.build(
                 scope(),
                 coverage("dev1"),
-                coverage("zt001"),
+                coverage("test2"),
                 source,
                 malformedTarget
         );

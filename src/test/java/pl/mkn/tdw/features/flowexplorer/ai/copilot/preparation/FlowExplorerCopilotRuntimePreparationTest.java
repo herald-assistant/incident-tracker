@@ -347,7 +347,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
@@ -363,7 +363,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(),
                 List.of(
@@ -405,8 +405,8 @@ class FlowExplorerCopilotRuntimePreparationTest {
         return new FlowExplorerContextSnapshot(
                 "crm-service",
                 "CRM Service",
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 "GET:/api/customers/{id}",
                 "GET",
@@ -427,7 +427,7 @@ class FlowExplorerCopilotRuntimePreparationTest {
                         "crm-service",
                         "crm-service",
                         "platform/backend/crm-service",
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         true,
                         true,
                         List.of()

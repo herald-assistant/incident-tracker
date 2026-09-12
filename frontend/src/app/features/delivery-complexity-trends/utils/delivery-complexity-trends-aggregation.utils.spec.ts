@@ -214,7 +214,7 @@ describe('Delivery Complexity Trends aggregation', () => {
         teamId: 'team-b',
         teamName: 'Team B',
         authors: [{
-          key: 'id:202', id: '202', name: 'Jan Kowalski', usesNameFallback: false
+          key: 'id:202', id: '202', name: 'CRM Author 202', usesNameFallback: false
         }],
         finalPoints: 8,
         aggregationPoints: null
@@ -547,7 +547,7 @@ function issue(overrides: Partial<AssessmentTrendIssueRow> = {}): AssessmentTren
     teamId: 'team-a',
     teamName: 'Team A',
     teamFieldId: 'customfield_10000',
-    authors: [{ key: 'id:101', id: '101', name: 'Anna Nowak', usesNameFallback: false }],
+    authors: [{ key: 'id:101', id: '101', name: 'CRM Author 101', usesNameFallback: false }],
     deliveryUnitId: 'DU-CRM-1',
     assessmentStatus: 'COMPLETED',
     finalPoints: 8,

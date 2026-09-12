@@ -17,7 +17,7 @@ describe('ExplainableCellComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Repositories: 1');
-    expect(compiled.textContent).toContain('app-core-repo');
+    expect(compiled.textContent).toContain('crm-contact-service-repo');
     expect(compiled.textContent).toContain('Explicit reference');
   });
 });
@@ -35,8 +35,8 @@ function aggregate(): ExplainableAggregateDto {
         count: 1,
         items: [
           {
-            id: 'app-core-repo',
-            label: 'app-core-repo',
+            id: 'crm-contact-service-repo',
+            label: 'crm-contact-service-repo',
             kind: 'repository',
             reason: 'System lists this repository.',
             status: 'verified',
@@ -55,6 +55,6 @@ function aggregate(): ExplainableAggregateDto {
     warnings: [],
     sourceRefs: [],
     detailsType: 'repository',
-    detailsIds: ['app-core-repo']
+    detailsIds: ['crm-contact-service-repo']
   };
 }

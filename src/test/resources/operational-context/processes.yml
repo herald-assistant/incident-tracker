@@ -6,15 +6,15 @@ processes:
     purpose: Handles the customer support workflow.
     participants:
       primarySystems: [crm-customer-service]
-      externalSystems: [notification-provider]
+      externalSystems: [crm-notification-provider]
     processSteps:
-      - id: call-notification-provider
-        name: Call Notification Provider
+      - id: call-crm-notification-provider
+        name: Call CRM Notification Provider
         participants:
-          systems: [crm-customer-service, notification-provider]
+          systems: [crm-customer-service, crm-notification-provider]
         matchSignals:
           exact:
-            hosts: [api.notifications.local]
+            hosts: [api.crm-notifications.example.invalid]
     processBoundary:
       endsWhen: [customer-support-process-completed]
 gaps: []

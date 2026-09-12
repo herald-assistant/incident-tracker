@@ -9,9 +9,9 @@ terms:
     exact:
       keyword:
       - SOAPFault
-      - api.partner.local
+      - api.crm-notification.example.invalid
   canonicalReferences:
-  - app-core-to-partner-sync
+  - crm-contact-to-notification-sync
 gaps:
 - id: confirm-soap-fault-taxonomy
   type: human-confirmation-required

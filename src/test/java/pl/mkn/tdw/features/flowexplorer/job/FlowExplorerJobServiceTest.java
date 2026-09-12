@@ -109,7 +109,7 @@ class FlowExplorerJobServiceTest {
 
         assertNotNull(started.jobId());
         assertEquals("COMPLETED", started.status());
-        assertEquals("feature/FLOW-42", started.branch());
+        assertEquals("feature/CRM-742", started.branch());
         assertEquals(FlowExplorerAnalysisGoal.DEEP_DISCOVERY, started.goal());
         assertEquals(2, started.steps().size());
         assertTrue(started.steps().stream().allMatch(step -> "COMPLETED".equals(step.status())));
@@ -452,7 +452,7 @@ class FlowExplorerJobServiceTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW)
         );
@@ -464,7 +464,7 @@ class FlowExplorerJobServiceTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
@@ -602,7 +602,7 @@ class FlowExplorerJobServiceTest {
         return new AnalysisReport(
                 "report-1",
                 "Flow Explorer: GET /api/customers/{id}",
-                "crm-service | feature/FLOW-42 | DEEP_DISCOVERY",
+                "crm-service | feature/CRM-742 | DEEP_DISCOVERY",
                 "",
                 List.of(
                         new AnalysisReportSection(
@@ -673,8 +673,8 @@ class FlowExplorerJobServiceTest {
         return new FlowExplorerContextSnapshot(
                 "crm-service",
                 "CRM Service",
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 "GET:/api/customers/{id}",
                 "GET",
@@ -695,7 +695,7 @@ class FlowExplorerJobServiceTest {
                         "crm-service",
                         "crm-service",
                         "platform/backend/crm-service",
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         true,
                         true,
                         List.of()

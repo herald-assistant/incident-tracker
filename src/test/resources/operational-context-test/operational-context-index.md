@@ -1,4 +1,4 @@
 # Operational Context Index
 
-Test fixture for compact operational context enrichment.
+Synthetic CRM contact-to-notification fixture for operational context enrichment.
 

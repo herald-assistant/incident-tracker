@@ -41,7 +41,7 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
                 "dev1",
                 """
                         locals {
-                          backend_url = "https://dev1.internal"
+                          backend_url = "https://crm-dev-a.example.invalid"
                           vault_ref = "$VAULT_DB_PASSWORD_DEV$"
                         }
                         """,
@@ -75,10 +75,10 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
                         """
         );
         var target = snapshot(
-                "zt001",
+                "test2",
                 """
                         locals {
-                          backend_url = "https://zt001.internal"
+                          backend_url = "https://crm-test2.example.invalid"
                           vault_ref = "$VAULT_DB_PASSWORD_ZT$"
                         }
                         """,
@@ -115,7 +115,7 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
         var deterministicContext = engine.build(
                 scope(),
                 coverage("dev1"),
-                coverage("zt001"),
+                coverage("test2"),
                 source,
                 target
         );
@@ -123,7 +123,7 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
         var projection = builder.build(source, target, deterministicContext);
 
         assertEquals("dev1", projection.sourceBranch());
-        assertEquals("zt001", projection.targetBranch());
+        assertEquals("test2", projection.targetBranch());
         assertEquals(3, projection.files().size());
 
         var yaml = file(projection, ConfigDriftViewerFileRole.APPLICATION_YAML);
@@ -169,8 +169,8 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
         assertEquals(ConfigDriftViewerChangeKind.EFFECTIVE_CHANGED, effective.changeKind());
         assertEquals("${local.backend_url}", effective.source().value());
         assertEquals("${local.backend_url}", effective.target().value());
-        assertEquals("https://dev1.internal", effective.sourceEffective().value());
-        assertEquals("https://zt001.internal", effective.targetEffective().value());
+        assertEquals("https://crm-dev-a.example.invalid", effective.sourceEffective().value());
+        assertEquals("https://crm-test2.example.invalid", effective.targetEffective().value());
         assertEquals(
                 List.of(differenceId(deterministicContext, 0, "app.endpoint")),
                 effective.differenceIds()
@@ -207,7 +207,7 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
         var global = file(projection, ConfigDriftViewerFileRole.GLOBAL_VAR);
         assertEquals(ConfigDriftViewerDiffFileFormat.VAR, global.format());
         assertEquals(
-                "https://dev1.internal",
+                "https://crm-dev-a.example.invalid",
                 node(global, 0, "local.backend_url").source().value()
         );
         assertEquals(
@@ -218,12 +218,12 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
         var projectionJson = new ObjectMapper().writeValueAsString(projection);
         var deterministicJson = new ObjectMapper().writeValueAsString(deterministicContext);
         assertTrue(projectionJson.contains("source-value"));
-        assertTrue(projectionJson.contains("https://dev1.internal"));
-        assertTrue(projectionJson.contains("https://zt001.internal"));
+        assertTrue(projectionJson.contains("https://crm-dev-a.example.invalid"));
+        assertTrue(projectionJson.contains("https://crm-test2.example.invalid"));
         assertTrue(projectionJson.contains("$VAULT_DB_PASSWORD_DEV$"));
         assertTrue(projectionJson.contains(DYNAMIC_TENANT_KEY));
         assertFalse(deterministicJson.contains("source-value"));
-        assertFalse(deterministicJson.contains("https://dev1.internal"));
+        assertFalse(deterministicJson.contains("https://crm-dev-a.example.invalid"));
         assertFalse(deterministicJson.contains("$VAULT_DB_PASSWORD_DEV$"));
         assertFalse(deterministicJson.contains(DYNAMIC_TENANT_KEY));
         assertFalse(projection.toString().contains("source-value"));
@@ -243,7 +243,7 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
                         """
         );
         var target = yamlOnlySnapshot(
-                "zt002",
+                "test3",
                 """
                         values:
                           empty: ""
@@ -254,7 +254,7 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
         var deterministicContext = engine.build(
                 scope(),
                 yamlCoverage("dev2"),
-                yamlCoverage("zt002"),
+                yamlCoverage("test3"),
                 source,
                 target
         );
@@ -295,11 +295,11 @@ class ConfigDriftViewerDiffProjectionBuilderTest {
                           enabled: true
                         """
         );
-        var target = new ParsedConfigurationSnapshot("zt003", List.of());
+        var target = new ParsedConfigurationSnapshot("test4", List.of());
         var deterministicContext = engine.build(
                 scope(),
                 yamlCoverage("dev3"),
-                new ConfigDriftViewerBranchCoverage("zt003", false, List.of()),
+                new ConfigDriftViewerBranchCoverage("test4", false, List.of()),
                 source,
                 target
         );

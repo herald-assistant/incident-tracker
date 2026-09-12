@@ -201,7 +201,7 @@ class IncidentAnalysisLocalRunPersisterTest {
                 "CRM/runtime",
                 List.of(),
                 AnalysisAiOptions.DEFAULT,
-                AnalysisAiAuthRef.githubApp("operator-session-1", "octocat")
+                AnalysisAiAuthRef.githubApp("operator-session-1", "crm-test-operator")
         );
     }
 

@@ -22,18 +22,18 @@ class ConfigDriftViewerSourceLoaderTest {
     @Test
     void shouldLoadBothApplicationFileNamesWithMetadata() {
         var repository = new FakeRepository();
-        repository.branch("dev1").branch("zt001");
+        repository.branch("dev1").branch("test2");
         repository.file("dev1", "global.var", "locals {}");
         repository.file("dev1", "backend/local.var", "locals {}");
         repository.file("dev1", "backend/application.yml.kv", "feature: true");
-        repository.file("zt001", "global.var", "locals {}");
-        repository.file("zt001", "backend/local.var", "locals {}");
-        repository.file("zt001", "backend/application.yaml.kv", "feature: false");
+        repository.file("test2", "global.var", "locals {}");
+        repository.file("test2", "backend/local.var", "locals {}");
+        repository.file("test2", "backend/application.yaml.kv", "feature: false");
 
         var snapshots = new ConfigDriftViewerSourceLoader(repository).load(
                 scope(),
                 "dev1",
-                "zt001"
+                "test2"
         );
 
         assertTrue(snapshots.source().coverage().complete());
@@ -55,23 +55,23 @@ class ConfigDriftViewerSourceLoaderTest {
     @Test
     void shouldReportMissingAmbiguousTruncatedAndMissingBranchCoverage() {
         var repository = new FakeRepository();
-        repository.branch("dev1").branch("zt001");
+        repository.branch("dev1").branch("test2");
         repository.file("dev1", "global.var", "locals {}");
         repository.file("dev1", "backend/local.var", "locals {}");
         repository.file("dev1", "backend/application.yml.kv", "feature: true");
         repository.file("dev1", "backend/application.yaml.kv", "feature: true");
-        repository.file("zt001", "global.var", "locals {}", true);
-        repository.file("zt001", "backend/local.var", "locals {}");
+        repository.file("test2", "global.var", "locals {}", true);
+        repository.file("test2", "backend/local.var", "locals {}");
 
         var snapshots = new ConfigDriftViewerSourceLoader(repository).load(
                 scope(),
                 "dev1",
-                "zt001"
+                "test2"
         );
         var missingBranch = new ConfigDriftViewerSourceLoader(repository).load(
                 scope(),
                 "dev9",
-                "zt001"
+                "test2"
         );
 
         assertFalse(snapshots.source().coverage().complete());

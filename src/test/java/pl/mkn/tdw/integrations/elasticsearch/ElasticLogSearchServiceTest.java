@@ -24,7 +24,7 @@ class ElasticLogSearchServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                        "https://openshift-test.example.invalid/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("""
                         {
@@ -106,7 +106,7 @@ class ElasticLogSearchServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                        "https://openshift-test.example.invalid/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("""
                         {
@@ -141,7 +141,7 @@ class ElasticLogSearchServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                        "https://openshift-test.example.invalid/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
@@ -154,7 +154,7 @@ class ElasticLogSearchServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals(
-                "Elasticsearch/Kibana endpoint not found for space default at https://openshift-test.example.internal",
+                "Elasticsearch/Kibana endpoint not found for space default at https://openshift-test.example.invalid",
                 exception.getResponse().message()
         );
 
@@ -166,7 +166,7 @@ class ElasticLogSearchServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                        "https://openshift-test.example.invalid/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(containsString("now-7d")))
                 .andExpect(content().string(containsString("*/external/path/*")))
@@ -241,7 +241,7 @@ class ElasticLogSearchServiceTest {
         var serviceFixture = newServiceFixture();
 
         serviceFixture.server.expect(requestTo(
-                        "https://openshift-test.example.internal/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
+                        "https://openshift-test.example.invalid/s/default/api/console/proxy?path=logs-*/_search&method=GET"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().string(containsString("*/external/path/125*")))
                 .andExpect(content().string(containsString("\"query_string\"")))
@@ -299,7 +299,7 @@ class ElasticLogSearchServiceTest {
 
     private ServiceFixture newServiceFixture() {
         var properties = new ElasticProperties();
-        properties.setBaseUrl("https://openshift-test.example.internal");
+        properties.setBaseUrl("https://openshift-test.example.invalid");
         properties.setKibanaSpaceId("default");
         properties.setIndexPattern("logs-*");
         properties.setSearchSize(200);

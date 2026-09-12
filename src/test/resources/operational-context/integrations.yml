@@ -2,20 +2,20 @@ schemaVersion: 1
 
 integrations:
   - id: crm-customer-to-notification-sync
-    name: CRM Customer Service to Notification Provider
-    summary: CRM Customer Service calls Notification Provider synchronously.
+    name: CRM Customer Service to CRM Notification Provider
+    summary: CRM Customer Service calls CRM Notification Provider synchronously.
     integrationStyle: synchronous-request
     participants:
       source:
         system: crm-customer-service
       targets:
-        - system: notification-provider
+        - system: crm-notification-provider
       finalTargets:
-        - system: notification-provider
+        - system: crm-notification-provider
           role: server
     matchSignals:
       exact:
-        hosts: [api.notifications.local]
+        hosts: [api.crm-notifications.example.invalid]
       strong:
         spans: [CustomerNotificationGateway.call]
         markers: [CRM_NOTIFICATION]

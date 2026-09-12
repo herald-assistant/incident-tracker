@@ -53,7 +53,7 @@ class ConfigDriftViewerDeterministicContextServiceTest {
                 "backend"
         );
         var sourceCoverage = new ConfigDriftViewerBranchCoverage("dev1", true, List.of());
-        var targetCoverage = new ConfigDriftViewerBranchCoverage("zt001", true, List.of());
+        var targetCoverage = new ConfigDriftViewerBranchCoverage("test2", true, List.of());
         var sourceRaw = new ConfigDriftViewerRawSnapshot(
                 "dev1",
                 sourceCoverage,
@@ -75,7 +75,7 @@ class ConfigDriftViewerDeterministicContextServiceTest {
                 )
         );
         var targetRaw = new ConfigDriftViewerRawSnapshot(
-                "zt001",
+                "test2",
                 targetCoverage,
                 Map.of(
                         ConfigDriftViewerFileRole.APPLICATION_YAML,
@@ -105,9 +105,9 @@ class ConfigDriftViewerDeterministicContextServiceTest {
         var sourceVar = parsed(ConfigDriftViewerFileRole.LOCAL_VAR, "backend/local.var");
         var targetVar = parsed(ConfigDriftViewerFileRole.LOCAL_VAR, "backend/local.var");
         var deterministic = mock(ConfigDriftViewerDeterministicContext.class);
-        var projection = new ConfigDriftViewerDiffProjection("dev1", "zt001", List.of());
+        var projection = new ConfigDriftViewerDiffProjection("dev1", "test2", List.of());
 
-        when(sourceLoader.load(scope, "dev1", "zt001"))
+        when(sourceLoader.load(scope, "dev1", "test2"))
                 .thenReturn(new ConfigDriftViewerRawSnapshotPair(sourceRaw, targetRaw));
         when(yamlParser.parse("backend/application.yml.kv", "source-yaml")).thenReturn(sourceYaml);
         when(yamlParser.parse("backend/application.yml.kv", "target-yaml")).thenReturn(targetYaml);
@@ -135,11 +135,11 @@ class ConfigDriftViewerDeterministicContextServiceTest {
                 same(deterministic)
         )).thenReturn(projection);
 
-        var result = service.build(scope, "dev1", "zt001", listener);
+        var result = service.build(scope, "dev1", "test2", listener);
 
         assertSame(deterministic, result.context());
         assertSame(projection, result.configurationDiff());
-        verify(sourceLoader).load(scope, "dev1", "zt001");
+        verify(sourceLoader).load(scope, "dev1", "test2");
         var engineSource = ArgumentCaptor.forClass(ParsedConfigurationSnapshot.class);
         var engineTarget = ArgumentCaptor.forClass(ParsedConfigurationSnapshot.class);
         verify(deterministicEngine).build(

@@ -1,11 +1,11 @@
 ---
-name: outside-visibility-or-handoff-partner-rejection
+name: outside-visibility-or-handoff-crm-notification-rejection
 expectedClassification: outside_visibility_or_handoff
 starterSkill: incident-analysis-orchestrator
 specializedSkill: incident-operational-grounding
 ---
 
-# Fixture: Outside Visibility Or Handoff - Partner Rejection
+# Fixture: Outside Visibility Or Handoff - CRM Notification Rejection
 
 ## Cel
 
@@ -22,20 +22,20 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-out-001`
-- trigger: partner submission
-- failure point: partner API rejects request
-- log: `PartnerRejectedException: status=422 reasonCode=EXT-VAL-19`
+- trigger: CRM contact notification submission
+- failure point: CRM notification provider API rejects request
+- log: `CrmNotificationRejectedException: status=422 reasonCode=CRM-VAL-19`
 - local code hint: payload was built and sent successfully
-- missing visibility: partner validation details
+- missing visibility: CRM notification validation details
 
 ## Oczekiwany Dry Run Orkiestratora
 
 1. Zbadaj flow use case'u przed klasyfikacja:
-   `local validation -> payload build -> partner call -> external rejection`.
+   `local validation -> payload build -> CRM notification provider call -> external rejection`.
 2. Zweryfikuj, czy lokalne evidence wystarcza tylko do handoffu.
 3. Zaladuj `incident-operational-grounding` dla downstream owner, route i
    handoff evidence package.
-4. Jesli root cause wymaga danych partnera, utrzymaj
+4. Jesli root cause wymaga danych dostawcy powiadomien CRM, utrzymaj
    `outside_visibility_or_handoff`.
 5. Wypelnij `functionalAnalysis` i `technicalAnalysis` bez legacy pol.
 
@@ -51,7 +51,7 @@ Fixture testuje kontrakt routingu:
 
 ## Antywzorce
 
-- Nie udawaj potwierdzonego root cause po stronie partnera.
+- Nie udawaj potwierdzonego root cause po stronie dostawcy powiadomien CRM.
 - Nie wymuszaj lokalnej poprawki, gdy evidence mowi o handoffie.
 - Nie wypelniaj starych pol `summary`, `recommendedAction`, `rationale`,
   `affectedFunction` ani `evidenceReferences`.

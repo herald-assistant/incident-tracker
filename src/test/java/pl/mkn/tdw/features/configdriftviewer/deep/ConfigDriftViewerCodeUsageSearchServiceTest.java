@@ -154,7 +154,7 @@ class ConfigDriftViewerCodeUsageSearchServiceTest {
                 "Backend",
                 "backend",
                 "dev1",
-                "zt001",
+                "test2",
                 ConfigDriftViewerDeterministicStatus.REVIEW_REQUIRED,
                 null,
                 null,

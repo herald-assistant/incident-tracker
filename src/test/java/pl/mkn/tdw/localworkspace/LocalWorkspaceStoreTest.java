@@ -234,7 +234,7 @@ class LocalWorkspaceStoreTest {
                     "title": "Legacy workspace"
                   },
                   "jira": {
-                    "baseUrl": "https://jira.legacy",
+                    "baseUrl": "https://jira.legacy.example.invalid",
                     "token": "jira-legacy-token"
                   }
                 }
@@ -244,7 +244,7 @@ class LocalWorkspaceStoreTest {
 
         assertEquals(6, settings.version());
         assertEquals("Legacy workspace", settings.appUi().title());
-        assertEquals("https://jira.legacy", settings.jira().baseUrl());
+        assertEquals("https://jira.legacy.example.invalid", settings.jira().baseUrl());
         assertNull(settings.confluence().baseUrl());
         assertNull(settings.confluence().token());
     }

@@ -100,7 +100,7 @@ class CopilotSdkToolFactoryTest {
         assertEquals("corr-123", payload.get("correlationId"));
         assertEquals("CRM/runtime", payload.get("gitLabGroup"));
         assertEquals("release/2026.04", payload.get("gitLabBranch"));
-        assertEquals("zt01", payload.get("environment"));
+        assertEquals("test1", payload.get("environment"));
         assertEquals("analysis-run-1", payload.get("copilotSessionId"));
         assertEquals("analysis-run-1", payload.get("actualCopilotSessionId"));
         assertEquals("tool-call-ctx-1", payload.get("toolCallId"));
@@ -379,7 +379,7 @@ class CopilotSdkToolFactoryTest {
     private CopilotToolSessionContext gitLabSessionContext() {
         var hiddenContext = new LinkedHashMap<String, Object>();
         hiddenContext.put(AgentToolContextKeys.CORRELATION_ID, "corr-123");
-        hiddenContext.put(AgentToolContextKeys.ENVIRONMENT, "zt01");
+        hiddenContext.put(AgentToolContextKeys.ENVIRONMENT, "test1");
         hiddenContext.put(AgentToolContextKeys.GITLAB_BRANCH, "release/2026.04");
         hiddenContext.put(AgentToolContextKeys.GITLAB_GROUP, "CRM/runtime");
 

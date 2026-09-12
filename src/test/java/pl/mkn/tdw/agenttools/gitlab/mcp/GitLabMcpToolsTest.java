@@ -62,7 +62,7 @@ import static org.mockito.Mockito.when;
 class GitLabMcpToolsTest {
 
     private static final String DEFAULT_GROUP = "CRM/backend";
-    private static final String DEFAULT_BRANCH_REF = "feature/INC-123";
+    private static final String DEFAULT_BRANCH_REF = "feature/CRM-923";
     private static final List<String> DEFAULT_APPLICATION_NAMES = List.of("backend");
 
     private final GitLabMcpTools gitLabMcpTools = GitLabMcpToolsTestCreator.create(
@@ -185,7 +185,7 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.searchCandidateFiles(any())).thenReturn(List.of(new GitLabRepositoryFileCandidate(
                 "CRM/backend",
                 "crm-customer-client-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 "Matched timeout-related service and log keywords.",
                 95
@@ -205,7 +205,7 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
                 query.correlationId() == null
                         && "CRM/backend".equals(query.group())
-                        && "feature/INC-123".equals(query.branch())
+                        && "feature/CRM-923".equals(query.branch())
                         && List.of("crm-customer-profile-service", "crm-customer-segment-service").equals(query.projectNames())
                         && List.of("src/main/java/com/example/crm/customer").equals(query.pathPrefixes())
                         && List.of("GET /crm/customers").equals(query.operationNames())
@@ -475,7 +475,7 @@ class GitLabMcpToolsTest {
     void shouldListRepositoryEndpointsUsingSessionBoundScope() {
         var response = gitLabMcpTools.listRepositoryEndpoints(
                 "crm-customer-api",
-                "feature/FLOW-1",
+                "feature/CRM-741",
                 DEFAULT_APPLICATION_NAMES,
                 "/api/customers",
                 "GET",
@@ -486,7 +486,7 @@ class GitLabMcpToolsTest {
 
         assertEquals("CRM/backend", response.group());
         assertEquals("crm-customer-api", response.projectName());
-        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals("feature/CRM-741", response.branch());
         assertEquals("/api/customers", response.endpointPathPrefix());
         assertEquals("GET", response.httpMethod());
         assertEquals(1, response.candidateFileCount());
@@ -553,7 +553,7 @@ class GitLabMcpToolsTest {
                         new GitLabEndpointUseCaseRepositoryContext(
                                 "CRM/backend",
                                 "crm-customer-api",
-                                "feature/FLOW-1"
+                                "feature/CRM-741"
                         ),
                         new GitLabEndpointUseCaseEndpointContext(
                                 "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
@@ -596,7 +596,7 @@ class GitLabMcpToolsTest {
 
         var response = tools.buildEndpointUseCaseContext(
                 "crm-customer-api",
-                "feature/FLOW-1",
+                "feature/CRM-741",
                 DEFAULT_APPLICATION_NAMES,
                 "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer",
                 null,
@@ -609,7 +609,7 @@ class GitLabMcpToolsTest {
 
         verify(endpointUseCaseContextService).buildContext(
                 eq("CRM/backend"),
-                eq("feature/FLOW-1"),
+                eq("feature/CRM-741"),
                 argThat(request -> "crm-customer-api".equals(request.projectName())
                         && "GET /api/customers/{customerId} -> com.example.crm.customer.CustomerController#getCustomer".equals(request.endpointId())
                         && request.httpMethod() == null
@@ -619,7 +619,7 @@ class GitLabMcpToolsTest {
         );
         assertEquals("CRM/backend", response.group());
         assertEquals("crm-customer-api", response.projectName());
-        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals("feature/CRM-741", response.branch());
         assertEquals("getCustomer", response.endpoint().handlerMethod());
         assertEquals(1, response.files().size());
         assertEquals(GitLabEndpointUseCaseFileRole.CONTROLLER, response.files().get(0).role());
@@ -646,7 +646,7 @@ class GitLabMcpToolsTest {
                         new GitLabEndpointUseCaseRepositoryContext(
                                 "CRM/backend",
                                 "crm-customer-api",
-                                "feature/FLOW-1"
+                                "feature/CRM-741"
                         ),
                         new GitLabJavaMethodUseCaseEntryMethod(
                                 GitLabJavaMethodUseCaseEntryStatus.RESOLVED,
@@ -701,7 +701,7 @@ class GitLabMcpToolsTest {
 
         var response = tools.buildJavaMethodUseCaseContext(
                 "crm-customer-api",
-                "feature/FLOW-1",
+                "feature/CRM-741",
                 DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/crm/customer/CustomerService.java",
                 "com.example.crm.customer.CustomerService",
@@ -717,7 +717,7 @@ class GitLabMcpToolsTest {
 
         verify(javaMethodUseCaseContextService).buildContext(
                 eq("CRM/backend"),
-                eq("feature/FLOW-1"),
+                eq("feature/CRM-741"),
                 argThat(request -> "crm-customer-api".equals(request.projectName())
                         && "src/main/java/com/example/crm/customer/CustomerService.java".equals(request.filePath())
                         && "com.example.crm.customer.CustomerService".equals(request.className())
@@ -730,7 +730,7 @@ class GitLabMcpToolsTest {
         );
         assertEquals("CRM/backend", response.group());
         assertEquals("crm-customer-api", response.projectName());
-        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals("feature/CRM-741", response.branch());
         assertEquals(GitLabJavaMethodUseCaseEntryStatus.RESOLVED, response.entryMethod().status());
         assertEquals("getCustomer", response.entryMethod().methodName());
         assertEquals(1, response.files().size());
@@ -748,13 +748,13 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-client-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 120
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM/backend",
                 "crm-customer-client-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 "class CustomerProfileClient {}",
                 false
@@ -773,13 +773,13 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
                 "crm-customer-client-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 120
         );
         assertEquals("CRM/backend", response.group());
         assertEquals("crm-customer-client-service", response.projectName());
-        assertEquals("feature/INC-123", response.branch());
+        assertEquals("feature/CRM-923", response.branch());
         assertEquals("src/main/java/com/example/synthetic/edge/CustomerProfileClient.java", response.filePath());
         assertEquals("class CustomerProfileClient {}", response.content());
         assertFalse(response.truncated());
@@ -1421,7 +1421,7 @@ class GitLabMcpToolsTest {
     void shouldReadJavaMethodSliceUsingSessionScope() {
         var response = gitLabMcpTools.readJavaMethodSlice(
                 "crm-customer-api",
-                "feature/FLOW-1",
+                "feature/CRM-741",
                 DEFAULT_APPLICATION_NAMES,
                 "src/main/java/com/example/crm/customer/api/CustomerProfileController.java",
                 "CustomerController",
@@ -1437,7 +1437,7 @@ class GitLabMcpToolsTest {
         assertEquals("OK", response.status());
         assertEquals("CRM/backend", response.group());
         assertEquals("crm-customer-api", response.projectName());
-        assertEquals("feature/FLOW-1", response.branch());
+        assertEquals("feature/CRM-741", response.branch());
         assertEquals(List.of(new GitLabJavaMethodSliceMethodSelector("getCustomer", null)), response.requestedMethods());
         assertTrue(response.content().contains("public ResponseEntity<CustomerProfileResponse> getCustomer"));
         assertFalse(response.content().contains("public CustomerProfileResponse updateCustomerProfile"));
@@ -1450,20 +1450,20 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/MissingCustomerService.java",
                 10
         )).thenThrow(new IllegalStateException("file not found"));
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerService.java",
                 10
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerService.java",
                 "1234567890",
                 false
@@ -1471,12 +1471,12 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerService.java"
         )).thenReturn(new GitLabRepositoryFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerService.java",
                 "blob-service",
                 "commit-service",
@@ -1488,13 +1488,13 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 5
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 "abcde",
                 true
@@ -1502,12 +1502,12 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerProfileRepository.java"
         )).thenReturn(new GitLabRepositoryFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 "blob-repository",
                 "commit-repository",
@@ -1536,48 +1536,48 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/MissingCustomerService.java",
                 10
         );
         verify(gitLabRepositoryPort).searchRepositoryFilesByContent(
                 eq("CRM/backend"),
                 eq("crm-customer-api"),
-                eq("feature/INC-123"),
+                eq("feature/CRM-923"),
                 argThat(terms -> terms.contains("class MissingCustomerService")),
                 eq(5)
         );
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerService.java",
                 10
         );
         verify(gitLabRepositoryPort).readFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerService.java"
         );
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                 5
         );
         verify(gitLabRepositoryPort).readFileMetadata(
                 "CRM/backend",
                 "crm-customer-api",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customer/CustomerProfileRepository.java"
         );
         verifyNoMoreInteractions(gitLabRepositoryPort);
 
         assertEquals("CRM/backend", response.group());
         assertEquals("crm-customer-api", response.projectName());
-        assertEquals("feature/INC-123", response.branch());
+        assertEquals("feature/CRM-923", response.branch());
         assertEquals(4, response.requestedFileCount());
         assertEquals(3, response.processedFileCount());
         assertEquals(2, response.returnedFileCount());
@@ -1603,7 +1603,7 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM/backend",
                 "crm-customer-client-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 5,
                 12,
@@ -1611,7 +1611,7 @@ class GitLabMcpToolsTest {
         )).thenReturn(new GitLabRepositoryFileChunk(
                 "CRM/backend",
                 "crm-customer-client-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 5,
                 12,
@@ -1637,7 +1637,7 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).readFileChunk(
                 "CRM/backend",
                 "crm-customer-client-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/synthetic/edge/CustomerProfileClient.java",
                 5,
                 12,
@@ -1659,13 +1659,13 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFile(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 30_000
         )).thenReturn(new GitLabRepositoryFileContent(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 """
                         package com.example.crm.customerprofile;
@@ -1711,7 +1711,7 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).readFile(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 30_000
         );
@@ -1782,7 +1782,7 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 10,
                 20,
@@ -1790,7 +1790,7 @@ class GitLabMcpToolsTest {
         )).thenReturn(new GitLabRepositoryFileChunk(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 10,
                 20,
@@ -1803,7 +1803,7 @@ class GitLabMcpToolsTest {
         when(gitLabRepositoryPort.readFileChunk(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileRepository.java",
                 30,
                 40,
@@ -1811,7 +1811,7 @@ class GitLabMcpToolsTest {
         )).thenReturn(new GitLabRepositoryFileChunk(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileRepository.java",
                 30,
                 40,
@@ -1844,7 +1844,7 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).readFileChunk(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileService.java",
                 10,
                 20,
@@ -1853,7 +1853,7 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).readFileChunk(
                 "CRM/backend",
                 "crm-customer-profile-service",
-                "feature/INC-123",
+                "feature/CRM-923",
                 "src/main/java/com/example/crm/customerprofile/CustomerProfileRepository.java",
                 30,
                 40,
@@ -1863,7 +1863,7 @@ class GitLabMcpToolsTest {
 
         assertEquals(2, response.chunks().size());
         assertEquals("CRM/backend", response.group());
-        assertEquals("feature/INC-123", response.branch());
+        assertEquals("feature/CRM-923", response.branch());
         assertTrue(response.chunkCountTruncated());
         assertTrue(response.totalCharacterLimitReached());
         assertEquals("service-or-orchestrator", response.chunks().get(0).inferredRole());
@@ -1878,7 +1878,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-api",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/CustomerProfileController.java",
                         "Controller handling submitCustomer endpoint.",
                         100
@@ -1886,7 +1886,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/CustomerService.java",
                         "Service orchestrates submitCustomer flow.",
                         95
@@ -1894,7 +1894,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/CustomerProfileRepository.java",
                         "Repository predicate used in submitCustomerProfile.",
                         92
@@ -1902,7 +1902,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/LegacyCustomerProfileRepository.java",
                         "Fallback repository path.",
                         80
@@ -1910,7 +1910,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/CustomerProfileMapper.java",
                         "Mapper between API and domain model.",
                         75
@@ -1918,7 +1918,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-client",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/NotificationClient.java",
                         "HTTP client calling notification system.",
                         70
@@ -1947,7 +1947,7 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
                 query.correlationId() == null
                         && "CRM/backend".equals(query.group())
-                        && "feature/INC-123".equals(query.branch())
+                        && "feature/CRM-923".equals(query.branch())
                         && List.of("crm-customer-api", "crm-customer-core").equals(query.projectNames())
                         && query.pathPrefixes().isEmpty()
                         && List.of("POST /crm/customers").equals(query.operationNames())
@@ -1991,7 +1991,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/domain/CustomerEntity.java",
                         "Matched exact import for CustomerEntity and @Entity hint.",
                         100
@@ -1999,7 +1999,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/repository/CustomerProfileRepository.java",
                         "Repository using CustomerEntity in JpaRepository declaration.",
                         95
@@ -2007,7 +2007,7 @@ class GitLabMcpToolsTest {
                 new GitLabRepositoryFileCandidate(
                         "CRM/backend",
                         "crm-customer-core",
-                        "feature/INC-123",
+                        "feature/CRM-923",
                         "src/main/java/com/example/crm/customer/service/CustomerQueryService.java",
                         "Service imports CustomerEntity and loads aggregate state.",
                         90
@@ -2030,7 +2030,7 @@ class GitLabMcpToolsTest {
         verify(gitLabRepositoryPort).searchCandidateFiles(argThat(query ->
                 query.correlationId() == null
                         && "CRM/backend".equals(query.group())
-                        && "feature/INC-123".equals(query.branch())
+                        && "feature/CRM-923".equals(query.branch())
                         && List.of("crm-customer-core").equals(query.projectNames())
                         && query.pathPrefixes().isEmpty()
                         && List.of("GET /crm/customers/{customerId}").equals(query.operationNames())
@@ -2179,7 +2179,7 @@ class GitLabMcpToolsTest {
         );
 
         assertEquals("CRM/backend", response.group());
-        assertEquals("feature/INC-123", response.branch());
+        assertEquals("feature/CRM-923", response.branch());
     }
 
     private ToolContext gitLabToolContext() {

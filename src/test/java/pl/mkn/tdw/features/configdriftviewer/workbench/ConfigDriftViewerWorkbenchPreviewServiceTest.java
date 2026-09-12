@@ -95,7 +95,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
                 store
         );
         when(scopeResolver.resolve("runtime-config", "crm-api")).thenReturn(scope());
-        when(deterministicService.build(scope(), "dev1", "zt001"))
+        when(deterministicService.build(scope(), "dev1", "test2"))
                 .thenReturn(new ConfigDriftViewerDeterministicBuildResult(
                         ConfigDriftViewerAiTestFixtures.deterministic(
                                 ConfigDriftViewerDeterministicStatus.REVIEW_REQUIRED
@@ -146,7 +146,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
         assertThat(operatorProjection.configurationDiff()).isEqualTo(configurationDiff());
         assertThat(objectMapper.writeValueAsString(operatorProjection))
                 .contains(
-                        "clients.customer-zt001.password",
+                        "clients.customer-test2.password",
                         "${VAULT_DYNAMIC_DEV}",
                         "${VAULT_DYNAMIC_ZT}"
                 );
@@ -159,7 +159,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
         assertThat(aiInput.characterCount()).isZero();
         assertThat(aiInput.prompt()).isNull();
 
-        verify(deterministicService).build(scope(), "dev1", "zt001");
+        verify(deterministicService).build(scope(), "dev1", "test2");
         verify(deepService, never()).build(any(), anyString(), anyString(), any(), any());
         verify(promptService, never()).prepare(any(), any(), any());
     }
@@ -193,7 +193,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
         assertThat(changedMapping.totalNodes()).isEqualTo(3);
         assertThat(changedMapping.totalItems()).isEqualTo(2);
         assertThat(changedMapping.items())
-                .filteredOn(item -> "clients.customer-zt001.password".equals(item.originalPath()))
+                .filteredOn(item -> "clients.customer-test2.password".equals(item.originalPath()))
                 .singleElement()
                 .satisfies(item -> {
                     assertThat(item.sanitizedPath()).isEqualTo("datasource.password");
@@ -263,7 +263,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
 
     @Test
     void shouldReplaceUnsafeDeterministicFailureWithStableUserFacingError() {
-        when(deterministicService.build(scope(), "dev1", "zt001"))
+        when(deterministicService.build(scope(), "dev1", "test2"))
                 .thenThrow(new IllegalStateException("password=raw-source-secret"));
 
         assertThatThrownBy(() -> service.preview(request(ConfigDriftViewerMode.BASIC)))
@@ -289,7 +289,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
                 "runtime-config",
                 "crm-api",
                 "dev1",
-                "zt001",
+                "test2",
                 mode == ConfigDriftViewerMode.DEEP ? "release-42" : null
         );
     }
@@ -317,7 +317,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
         );
         var dynamicPassword = new ConfigDriftViewerDiffNode(
                 "password",
-                "clients.customer-zt001.password",
+                "clients.customer-test2.password",
                 ConfigDriftViewerChangeKind.CHANGED,
                 value(ConfigDriftViewerValueType.STRING, "${VAULT_DYNAMIC_DEV}"),
                 value(ConfigDriftViewerValueType.STRING, "${VAULT_DYNAMIC_ZT}"),
@@ -335,7 +335,7 @@ class ConfigDriftViewerWorkbenchPreviewServiceTest {
         );
         return new ConfigDriftViewerDiffProjection(
                 "dev1",
-                "zt001",
+                "test2",
                 List.of(new ConfigDriftViewerDiffFile(
                         ConfigDriftViewerFileRole.APPLICATION_YAML,
                         ConfigDriftViewerDiffFileFormat.YAML,

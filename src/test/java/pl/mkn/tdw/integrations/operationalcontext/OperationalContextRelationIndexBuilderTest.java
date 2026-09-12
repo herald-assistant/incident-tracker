@@ -298,16 +298,16 @@ class OperationalContextRelationIndexBuilderTest {
                                 "references", map("repositories", List.of("crm-customer-service-repo"))
                         ),
                         map("id", "crm-support-service", "name", "Support Service"),
-                        map("id", "notification-provider", "name", "Notification Provider")
+                        map("id", "crm-notification-provider", "name", "CRM Notification Provider")
                 ),
                 List.of(map(
                         "id", "crm-customer-to-notification-sync",
                         "name", "Customer Notification Sync",
                         "participants", map(
                                 "source", map(
-                                        "system", "notification-provider",
+                                        "system", "crm-notification-provider",
                                         "role", "producer",
-                                        "repositories", List.of("notification-provider-repo")
+                                        "repositories", List.of("crm-notification-provider-repo")
                                 ),
                                 "targets", List.of(map(
                                         "system", "crm-customer-service",
@@ -324,7 +324,7 @@ class OperationalContextRelationIndexBuilderTest {
                         "id", "crm-customer-service-repo",
                         "name", "CRM Customer Service Repository",
                         "references", map("systems", List.of("crm-customer-service"))
-                ), map("id", "notification-provider-repo", "name", "Notification Provider Repository")),
+                ), map("id", "crm-notification-provider-repo", "name", "CRM Notification Provider Repository")),
                 List.of(map(
                         "id", "crm-customer-service-scope",
                         "name", "CRM Customer Service Scope",

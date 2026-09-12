@@ -41,37 +41,37 @@ class WorkspaceSettingsServiceTest {
         assertThat(response.values().appUi().title().source()).isEqualTo(WorkspaceSettingsSource.APPLICATION_PROPERTIES);
         assertThat(response.values().copilot().localGithubToken().value()).isEqualTo("copilot-app-token");
         assertThat(response.values().copilot().localGithubToken().secret()).isTrue();
-        assertThat(response.values().jira().baseUrl().value()).isEqualTo("https://jira.app");
+        assertThat(response.values().jira().baseUrl().value()).isEqualTo("https://jira.crm.example.invalid");
         assertThat(response.values().jira().token().value()).isEqualTo("jira-app-token");
         assertThat(response.values().jira().token().secret()).isTrue();
-        assertThat(response.values().confluence().baseUrl().value()).isEqualTo("https://confluence.app");
+        assertThat(response.values().confluence().baseUrl().value()).isEqualTo("https://confluence.crm.example.invalid");
         assertThat(response.values().confluence().token().value()).isEqualTo("confluence-app-token");
         assertThat(response.values().confluence().token().secret()).isTrue();
-        assertThat(response.values().gitLab().baseUrl().value()).isEqualTo("https://gitlab.app");
+        assertThat(response.values().gitLab().baseUrl().value()).isEqualTo("https://gitlab.crm.example.invalid");
         assertThat(response.values().gitLab().group().value()).isEqualTo("app/group");
         assertThat(response.values().gitLab().token().value()).isEqualTo("app-token");
         assertThat(response.values().configDriftViewerGitLab().baseUrl().value())
-                .isEqualTo("https://runtime-config.app");
+                .isEqualTo("https://runtime-config.crm.example.invalid");
         assertThat(response.values().configDriftViewerGitLab().token().value())
                 .isEqualTo("runtime-config-app-token");
         assertThat(response.values().configDriftViewerGitLab().token().secret()).isTrue();
-        assertThat(response.values().elasticsearch().baseUrl().value()).isEqualTo("https://elastic.app");
+        assertThat(response.values().elasticsearch().baseUrl().value()).isEqualTo("https://elastic.crm.example.invalid");
         assertThat(response.values().elasticsearch().kibanaSpaceId().value()).isEqualTo("default");
         assertThat(response.values().elasticsearch().indexPattern().value()).isEqualTo("logs-*");
         assertThat(response.values().elasticsearch().authorizationHeader().value()).isEqualTo("Bearer app-token");
         assertThat(response.values().elasticsearch().authorizationHeader().secret()).isTrue();
-        assertThat(response.values().dynatrace().baseUrl().value()).isEqualTo("https://dynatrace.app");
+        assertThat(response.values().dynatrace().baseUrl().value()).isEqualTo("https://dynatrace.crm.example.invalid");
         assertThat(response.values().dynatrace().apiToken().value()).isEqualTo("dt0c01.app-token");
         assertThat(response.values().dynatrace().apiToken().secret()).isTrue();
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken()).isEqualTo("copilot-app-token");
-        assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.app");
+        assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.crm.example.invalid");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
-        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.app");
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.crm.example.invalid");
         assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-app-token");
-        assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
-        assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
-        assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.app");
-        assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.app");
+        assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.crm.example.invalid");
+        assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.crm.example.invalid");
+        assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.crm.example.invalid");
+        assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.crm.example.invalid");
     }
 
     @Test
@@ -84,7 +84,7 @@ class WorkspaceSettingsServiceTest {
                 null,
                 null,
                 new LocalWorkspaceConfluenceSettings(
-                        "https://confluence.workspace",
+                        "https://confluence.workspace.example.invalid",
                         "confluence-workspace-token"
                 ),
                 null,
@@ -96,10 +96,10 @@ class WorkspaceSettingsServiceTest {
         fixture.service.initialize();
         var response = fixture.service.currentSettings();
 
-        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.workspace");
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.workspace.example.invalid");
         assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-workspace-token");
         assertThat(response.values().confluence().baseUrl().applicationValue())
-                .isEqualTo("https://confluence.app");
+                .isEqualTo("https://confluence.crm.example.invalid");
         assertThat(response.values().confluence().baseUrl().source())
                 .isEqualTo(WorkspaceSettingsSource.WORKSPACE_SETTINGS);
         assertThat(response.values().confluence().token().source())
@@ -115,30 +115,30 @@ class WorkspaceSettingsServiceTest {
                 new WorkspaceSettingsAppUiUpdate("Workspace override"),
                 new WorkspaceSettingsCopilotUpdate("copilot-workspace-token"),
                 new WorkspaceSettingsJiraUpdate(
-                        "https://jira.app",
+                        "https://jira.crm.example.invalid",
                         "jira-workspace-token"
                 ),
                 new WorkspaceSettingsConfluenceUpdate(
-                        "https://confluence.workspace",
+                        "https://confluence.workspace.example.invalid",
                         "confluence-workspace-token"
                 ),
                 new WorkspaceSettingsGitLabUpdate(
-                        "https://gitlab.app",
+                        "https://gitlab.crm.example.invalid",
                         "workspace/group",
                         "workspace-token"
                 ),
                 new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
-                        "https://runtime-config.workspace",
+                        "https://runtime-config.workspace.example.invalid",
                         "runtime-config-workspace-token"
                 ),
                 new WorkspaceSettingsElasticsearchUpdate(
-                        "https://elastic.workspace",
+                        "https://elastic.workspace.example.invalid",
                         "default",
                         "logs-platform-*",
                         "Bearer workspace-token"
                 ),
                 new WorkspaceSettingsDynatraceUpdate(
-                        "https://dynatrace.app",
+                        "https://dynatrace.crm.example.invalid",
                         "dt0c01.workspace-token"
                 )
         ));
@@ -146,16 +146,16 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.store.saved.copilot().localGithubToken()).isEqualTo("copilot-workspace-token");
         assertThat(fixture.store.saved.jira().baseUrl()).isNull();
         assertThat(fixture.store.saved.jira().token()).isEqualTo("jira-workspace-token");
-        assertThat(fixture.store.saved.confluence().baseUrl()).isEqualTo("https://confluence.workspace");
+        assertThat(fixture.store.saved.confluence().baseUrl()).isEqualTo("https://confluence.workspace.example.invalid");
         assertThat(fixture.store.saved.confluence().token()).isEqualTo("confluence-workspace-token");
         assertThat(fixture.store.saved.gitLab().baseUrl()).isNull();
         assertThat(fixture.store.saved.gitLab().group()).isEqualTo("workspace/group");
         assertThat(fixture.store.saved.gitLab().token()).isEqualTo("workspace-token");
         assertThat(fixture.store.saved.configDriftViewerGitLab().baseUrl())
-                .isEqualTo("https://runtime-config.workspace");
+                .isEqualTo("https://runtime-config.workspace.example.invalid");
         assertThat(fixture.store.saved.configDriftViewerGitLab().token())
                 .isEqualTo("runtime-config-workspace-token");
-        assertThat(fixture.store.saved.elasticsearch().baseUrl()).isEqualTo("https://elastic.workspace");
+        assertThat(fixture.store.saved.elasticsearch().baseUrl()).isEqualTo("https://elastic.workspace.example.invalid");
         assertThat(fixture.store.saved.elasticsearch().kibanaSpaceId()).isNull();
         assertThat(fixture.store.saved.elasticsearch().indexPattern()).isEqualTo("logs-platform-*");
         assertThat(fixture.store.saved.elasticsearch().authorizationHeader()).isEqualTo("Bearer workspace-token");
@@ -185,22 +185,22 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.uiConfigProperties.getTitle()).isEqualTo("Workspace override");
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken())
                 .isEqualTo("copilot-workspace-token");
-        assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.app");
+        assertThat(fixture.jiraProperties.getBaseUrl()).isEqualTo("https://jira.crm.example.invalid");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-workspace-token");
-        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.workspace");
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.workspace.example.invalid");
         assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-workspace-token");
-        assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.app");
+        assertThat(fixture.gitLabProperties.getBaseUrl()).isEqualTo("https://gitlab.crm.example.invalid");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("workspace/group");
         assertThat(fixture.gitLabProperties.getToken()).isEqualTo("workspace-token");
         assertThat(fixture.configDriftViewerConnection().getBaseUrl())
-                .isEqualTo("https://runtime-config.workspace");
+                .isEqualTo("https://runtime-config.workspace.example.invalid");
         assertThat(fixture.configDriftViewerConnection().getToken())
                 .isEqualTo("runtime-config-workspace-token");
-        assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.workspace");
+        assertThat(fixture.elasticProperties.getBaseUrl()).isEqualTo("https://elastic.workspace.example.invalid");
         assertThat(fixture.elasticProperties.getKibanaSpaceId()).isEqualTo("default");
         assertThat(fixture.elasticProperties.getIndexPattern()).isEqualTo("logs-platform-*");
         assertThat(fixture.elasticProperties.getAuthorizationHeader()).isEqualTo("Bearer workspace-token");
-        assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.app");
+        assertThat(fixture.dynatraceProperties.getBaseUrl()).isEqualTo("https://dynatrace.crm.example.invalid");
         assertThat(fixture.dynatraceProperties.getApiToken()).isEqualTo("dt0c01.workspace-token");
     }
 
@@ -212,26 +212,26 @@ class WorkspaceSettingsServiceTest {
                 new WorkspaceSettingsAppUiUpdate("Workspace override"),
                 new WorkspaceSettingsCopilotUpdate("copilot-workspace-token"),
                 new WorkspaceSettingsJiraUpdate(
-                        "https://jira.workspace",
+                        "https://jira.workspace.example.invalid",
                         "jira-workspace-token"
                 ),
                 new WorkspaceSettingsConfluenceUpdate(
-                        "https://confluence.workspace",
+                        "https://confluence.workspace.example.invalid",
                         "confluence-workspace-token"
                 ),
-                new WorkspaceSettingsGitLabUpdate("https://gitlab.workspace", "workspace/group", "workspace-token"),
+                new WorkspaceSettingsGitLabUpdate("https://gitlab.workspace.example.invalid", "workspace/group", "workspace-token"),
                 new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
-                        "https://runtime-config.workspace",
+                        "https://runtime-config.workspace.example.invalid",
                         "runtime-config-workspace-token"
                 ),
                 new WorkspaceSettingsElasticsearchUpdate(
-                        "https://elastic.workspace",
+                        "https://elastic.workspace.example.invalid",
                         "observability",
                         "logs-platform-*",
                         "Bearer workspace-token"
                 ),
                 new WorkspaceSettingsDynatraceUpdate(
-                        "https://dynatrace.workspace",
+                        "https://dynatrace.workspace.example.invalid",
                         "dt0c01.workspace-token"
                 )
         ));
@@ -240,26 +240,26 @@ class WorkspaceSettingsServiceTest {
                 new WorkspaceSettingsAppUiUpdate("App workspace"),
                 new WorkspaceSettingsCopilotUpdate("copilot-app-token"),
                 new WorkspaceSettingsJiraUpdate(
-                        "https://jira.app",
+                        "https://jira.crm.example.invalid",
                         "jira-app-token"
                 ),
                 new WorkspaceSettingsConfluenceUpdate(
-                        "https://confluence.app",
+                        "https://confluence.crm.example.invalid",
                         "confluence-app-token"
                 ),
-                new WorkspaceSettingsGitLabUpdate("https://gitlab.app", "app/group", "app-token"),
+                new WorkspaceSettingsGitLabUpdate("https://gitlab.crm.example.invalid", "app/group", "app-token"),
                 new WorkspaceSettingsConfigDriftViewerGitLabUpdate(
-                        "https://runtime-config.app",
+                        "https://runtime-config.crm.example.invalid",
                         "runtime-config-app-token"
                 ),
                 new WorkspaceSettingsElasticsearchUpdate(
-                        "https://elastic.app",
+                        "https://elastic.crm.example.invalid",
                         "default",
                         "logs-*",
                         "Bearer app-token"
                 ),
                 new WorkspaceSettingsDynatraceUpdate(
-                        "https://dynatrace.app",
+                        "https://dynatrace.crm.example.invalid",
                         "dt0c01.app-token"
                 )
         ));
@@ -296,10 +296,10 @@ class WorkspaceSettingsServiceTest {
         assertThat(fixture.copilotSdkProperties.getAuth().getLocal().getGithubToken())
                 .isEqualTo("copilot-app-token");
         assertThat(fixture.jiraProperties.getToken()).isEqualTo("jira-app-token");
-        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.app");
+        assertThat(fixture.confluenceProperties.getBaseUrl()).isEqualTo("https://confluence.crm.example.invalid");
         assertThat(fixture.confluenceProperties.getToken()).isEqualTo("confluence-app-token");
         assertThat(fixture.gitLabProperties.getGroup()).isEqualTo("app/group");
-        assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.app");
+        assertThat(fixture.configDriftViewerConnection().getBaseUrl()).isEqualTo("https://runtime-config.crm.example.invalid");
         assertThat(fixture.configDriftViewerConnection().getToken()).isEqualTo("runtime-config-app-token");
         assertThat(fixture.elasticProperties.getIndexPattern()).isEqualTo("logs-*");
         assertThat(fixture.dynatraceProperties.getApiToken()).isEqualTo("dt0c01.app-token");
@@ -311,27 +311,27 @@ class WorkspaceSettingsServiceTest {
         var copilotSdkProperties = new CopilotSdkProperties();
         copilotSdkProperties.getAuth().getLocal().setGithubToken("copilot-app-token");
         var jiraProperties = new JiraProperties();
-        jiraProperties.setBaseUrl("https://jira.app");
+        jiraProperties.setBaseUrl("https://jira.crm.example.invalid");
         jiraProperties.setToken("jira-app-token");
         var confluenceProperties = new ConfluenceProperties();
-        confluenceProperties.setBaseUrl("https://confluence.app");
+        confluenceProperties.setBaseUrl("https://confluence.crm.example.invalid");
         confluenceProperties.setToken("confluence-app-token");
         var gitLabProperties = new GitLabProperties();
-        gitLabProperties.setBaseUrl("https://gitlab.app");
+        gitLabProperties.setBaseUrl("https://gitlab.crm.example.invalid");
         gitLabProperties.setGroup("app/group");
         gitLabProperties.setToken("app-token");
         var gitLabNamedConnectionsProperties = new GitLabNamedConnectionsProperties();
         var configDriftViewerConnection = new GitLabNamedConnectionsProperties.Connection();
-        configDriftViewerConnection.setBaseUrl("https://runtime-config.app");
+        configDriftViewerConnection.setBaseUrl("https://runtime-config.crm.example.invalid");
         configDriftViewerConnection.setToken("runtime-config-app-token");
         gitLabNamedConnectionsProperties.getConnections().put("runtime-config", configDriftViewerConnection);
         var elasticProperties = new ElasticProperties();
-        elasticProperties.setBaseUrl("https://elastic.app");
+        elasticProperties.setBaseUrl("https://elastic.crm.example.invalid");
         elasticProperties.setKibanaSpaceId("default");
         elasticProperties.setIndexPattern("logs-*");
         elasticProperties.setAuthorizationHeader("Bearer app-token");
         var dynatraceProperties = new DynatraceProperties();
-        dynatraceProperties.setBaseUrl("https://dynatrace.app");
+        dynatraceProperties.setBaseUrl("https://dynatrace.crm.example.invalid");
         dynatraceProperties.setApiToken("dt0c01.app-token");
         var store = new InMemoryLocalWorkspaceSettingsStore();
         return new Fixture(

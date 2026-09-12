@@ -1,34 +1,34 @@
 schemaVersion: 1
 
 boundedContexts:
-  - id: core-context
-    name: Core Context
+  - id: crm-contact-context
+    name: CRM Contact Context
     category: supporting-domain
-    purpose: Owns the main internal semantics.
+    purpose: Owns synthetic CRM contact profile rules.
     references:
-      systems: [app-core]
-      repositories: [app-core-repo]
-      processes: [main-process]
-      integrations: [app-core-to-partner-sync]
-      terms: [work-item]
-      teams: [core-team]
+      systems: [crm-contact-service]
+      repositories: [crm-contact-service-repo]
+      processes: [crm-contact-notification-flow]
+      integrations: [crm-contact-to-notification-sync]
+      terms: [crm-contact]
+      teams: [crm-contact-team]
     ownership:
-      ownerTeamIds: [core-team]
+      ownerTeamIds: [crm-contact-team]
       ownershipStatus: explicit
       confidence: high
       source: test
     matchSignals:
       strong:
-        markers: [APP_CORE]
+        markers: [CRM_CONTACT]
     relations:
-      - target: partner-context
+      - target: crm-notification-context
         type: conformist
-        via: [app-core-to-partner-sync]
+        via: [crm-contact-to-notification-sync]
 gaps:
-  - id: confirm-core-context-boundary
+  - id: confirm-crm-contact-context-boundary
     type: human-confirmation-required
     severity: medium
     status: open
     entityType: bounded-context
-    entityId: core-context
-    description: Confirm whether Core Context should include shared library semantics.
+    entityId: crm-contact-context
+    description: Confirm whether CRM Contact Context should include shared CRM contact rules.

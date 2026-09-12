@@ -52,7 +52,7 @@ class FlowExplorerLocalRunPersisterTest {
 
         persister.persistCompletedInitialRun(
                 completedSnapshot("COMPLETED"),
-                AnalysisAiAuthRef.githubApp("operator-session-1", "octocat"),
+                AnalysisAiAuthRef.githubApp("operator-session-1", "crm-test-operator"),
                 "copilot-session-1"
         );
 

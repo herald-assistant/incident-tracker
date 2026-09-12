@@ -41,7 +41,7 @@ class FlowExplorerSnippetCardServiceTest {
 
         var result = service.buildSnippetCards(
                 "platform/backend",
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 repository(),
                 List.of(
                         node("src/main/java/app/CustomerProfileController.java", "CONTROLLER", "getCustomer", 12, 24),
@@ -64,7 +64,7 @@ class FlowExplorerSnippetCardServiceTest {
         verify(javaMethodSliceService, times(4)).readMethodSlice(argThat(request ->
                 "platform/backend".equals(request.group())
                         && "crm-service".equals(request.projectName())
-                        && "feature/FLOW-42".equals(request.branch())
+                        && "feature/CRM-742".equals(request.branch())
                         && request.methodSelectors().stream().allMatch(selector -> selector.lineStart() == null)
                         && Boolean.TRUE.equals(request.includeDirectPrivateHelpers())
                         && Boolean.TRUE.equals(request.includeRelevantFields())
@@ -83,7 +83,7 @@ class FlowExplorerSnippetCardServiceTest {
 
         var result = service.buildSnippetCards(
                 "platform/backend",
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 repository(),
                 java.util.stream.IntStream.rangeClosed(1, 21)
                         .mapToObj(index -> node(
@@ -283,7 +283,7 @@ class FlowExplorerSnippetCardServiceTest {
                 "crm-service",
                 "crm-service",
                 "platform/backend/crm-service",
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 pathPrefixes.isEmpty() ? "whole-repository" : "path-prefixes",
                 pathPrefixes,
                 true,
@@ -314,7 +314,7 @@ class FlowExplorerSnippetCardServiceTest {
         return new GitLabRepositoryFileChunk(
                 "platform/backend",
                 "crm-service",
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 filePath,
                 startLine,
                 endLine,

@@ -29,9 +29,9 @@ describe('OperationalContextApiService', () => {
   });
 
   it('should build search URL with q parameter', () => {
-    service.search('app-core').subscribe();
+    service.search('crm-contact-service').subscribe();
 
-    const request = http.expectOne('/api/operational-context/search?q=app-core');
+    const request = http.expectOne('/api/operational-context/search?q=crm-contact-service');
     expect(request.request.method).toBe('GET');
     request.flush([]);
   });

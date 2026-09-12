@@ -9,6 +9,8 @@ specializedSkill: incident-code-grounding
 
 ## Cel
 
+To w pelni syntetyczny scenariusz CRM; identyfikatory nie wskazuja rzeczywistych danych ani srodowisk.
+
 Ten fixture opisuje incydent, w ktorym dane wejscia istnieja, ale kod zle mapuje
 typ albo wartosc do modelu aplikacji.
 

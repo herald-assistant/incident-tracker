@@ -16,7 +16,7 @@ final class CopilotIncidentToolAccessPolicyFactoryTestSupport {
 
     static CopilotIncidentToolAccessPolicyFactory policyFactoryWithConfiguredElastic(boolean rawSqlEnabled) {
         var properties = new ElasticProperties();
-        properties.setBaseUrl("https://kibana.example.internal");
+        properties.setBaseUrl("https://kibana.example.invalid");
         properties.setKibanaSpaceId("default");
         properties.setIndexPattern("logs-*");
         properties.setAuthorizationHeader("ApiKey test");

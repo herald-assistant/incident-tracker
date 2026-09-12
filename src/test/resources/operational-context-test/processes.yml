@@ -1,25 +1,25 @@
 schemaVersion: 1
 
 processes:
-  - id: main-process
-    name: Main Process
-    purpose: Handles the primary application flow.
+  - id: crm-contact-notification-flow
+    name: CRM Contact Notification Flow
+    purpose: Routes a synthetic CRM contact update to the notification provider.
     participants:
-      primarySystems: [app-core]
-      externalSystems: [partner-service]
+      primarySystems: [crm-contact-service]
+      externalSystems: [crm-notification-provider]
     references:
-      repositories: [app-core-repo]
-      boundedContexts: [core-context]
-      integrations: [app-core-to-partner-sync]
-      teams: [core-team, integration-team]
+      repositories: [crm-contact-service-repo]
+      boundedContexts: [crm-contact-context]
+      integrations: [crm-contact-to-notification-sync]
+      teams: [crm-contact-team, crm-integration-team]
     processSteps:
-      - id: call-partner-service
-        name: Call Partner Service
+      - id: call-crm-notification-provider
+        name: Call CRM Notification Provider
         participants:
-          systems: [app-core, partner-service]
+          systems: [crm-contact-service, crm-notification-provider]
         matchSignals:
           exact:
-            hosts: [api.partner.local]
+            hosts: [api.crm-notification.example.invalid]
     processBoundary:
-      endsWhen: [main-process-completed]
+      endsWhen: [crm-contact-notification-flow-completed]
 gaps: []

@@ -9,6 +9,8 @@ specializedSkill: none
 
 ## Cel
 
+To w pelni syntetyczny scenariusz CRM; identyfikatory nie wskazuja rzeczywistych danych ani srodowisk.
+
 Ten fixture opisuje incydent, w ktorym evidence nie wystarcza do uczciwej
 klasyfikacji root cause.
 

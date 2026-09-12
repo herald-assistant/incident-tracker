@@ -1,16 +1,16 @@
 schemaVersion: 1
 
 teams:
-  - id: core-team
-    name: Core Team
-    purpose: Owns the main application flow.
+  - id: crm-contact-team
+    name: CRM Contact Team
+    purpose: Owns synthetic CRM contact-profile workflows.
     matchSignals:
       strong:
-        projectNames: [app-core-repo]
-  - id: integration-team
-    name: Integration Team
-    purpose: Owns cross-system contracts.
+        projectNames: [crm-contact-service-repo]
+  - id: crm-integration-team
+    name: CRM Integration Team
+    purpose: Owns the synthetic CRM notification integration.
     matchSignals:
       exact:
-        hosts: [api.partner.local]
+        hosts: [api.crm-notification.example.invalid]
 gaps: []

@@ -124,7 +124,7 @@ class ConfigDriftViewerJobControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemIds": ["crm-backend"],
                                   "sourceBranch": "dev2",
-                                  "targetBranch": "zt004",
+                                  "targetBranch": "test5",
                                   "codeRef": "release/2026.07",
                                   "model": "gpt-5.4",
                                   "reasoningEffort": "medium"
@@ -195,7 +195,7 @@ class ConfigDriftViewerJobControllerTest {
                 "runtime-config",
                 java.util.List.of("crm-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 null,
                 null,
                 null
@@ -212,7 +212,7 @@ class ConfigDriftViewerJobControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemIds": ["crm-backend"],
                                   "sourceBranch": "dev1",
-                                  "targetBranch": "zt001"
+                                  "targetBranch": "test2"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -228,7 +228,7 @@ class ConfigDriftViewerJobControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequest("""
                                 "sourceBranch": "dev@unsafe",
-                                "targetBranch": "zt001"
+                                "targetBranch": "test2"
                                 """)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
@@ -254,7 +254,7 @@ class ConfigDriftViewerJobControllerTest {
                                 {
                                   "mode": "BASIC",
                                   "sourceBranch": "dev3",
-                                  "targetBranch": "zt003"
+                                  "targetBranch": "test4"
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -267,7 +267,7 @@ class ConfigDriftViewerJobControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequest("""
                                 "sourceBranch": "dev3",
-                                "targetBranch": "zt003",
+                                "targetBranch": "test4",
                                 "codeRef": "release/../secret"
                                 """)))
                 .andExpect(status().isBadRequest())
@@ -284,7 +284,7 @@ class ConfigDriftViewerJobControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemIds": ["crm-backend"],
                                   "sourceBranch": "dev3",
-                                  "targetBranch": "zt003"
+                                  "targetBranch": "test4"
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
@@ -315,7 +315,7 @@ class ConfigDriftViewerJobControllerTest {
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.components[0].result.mode").value("BASIC"))
                 .andExpect(jsonPath("$.components[0].result.configurationDiff.sourceBranch").value("dev1"))
-                .andExpect(jsonPath("$.components[0].result.configurationDiff.targetBranch").value("zt001"))
+                .andExpect(jsonPath("$.components[0].result.configurationDiff.targetBranch").value("test2"))
                 .andExpect(jsonPath("$.components[0].result.configurationDiff.files").isEmpty())
                 .andExpect(jsonPath("$.components[0].result.aiSecondOpinion").doesNotExist())
                 .andExpect(jsonPath("$.components[0].result.prompt").doesNotExist());
@@ -348,7 +348,7 @@ class ConfigDriftViewerJobControllerTest {
                 "runtime-config",
                 java.util.List.of("crm-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 null,
                 null,
                 null
@@ -427,7 +427,7 @@ class ConfigDriftViewerJobControllerTest {
                         List.of(),
                         List.of()
                 ),
-                new ConfigDriftViewerDiffProjection("dev1", "zt001", List.of()),
+                new ConfigDriftViewerDiffProjection("dev1", "test2", List.of()),
                 List.of(),
                 null,
                 null,

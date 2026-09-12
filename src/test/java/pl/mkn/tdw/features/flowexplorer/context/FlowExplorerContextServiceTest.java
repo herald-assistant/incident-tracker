@@ -45,16 +45,16 @@ class FlowExplorerContextServiceTest {
 
     @Test
     void shouldBuildCompactFlowManifestForResolvedEndpoint() {
-        when(repositoryScopeService.resolve("crm-customer-profile", "feature/FLOW-42"))
+        when(repositoryScopeService.resolve("crm-customer-profile", "feature/CRM-742"))
                 .thenReturn(scope());
         when(gitLabEndpointUseCaseContextService.buildContext(
                 org.mockito.ArgumentMatchers.eq("platform/backend"),
-                org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
+                org.mockito.ArgumentMatchers.eq("feature/CRM-742"),
                 org.mockito.ArgumentMatchers.any(GitLabEndpointUseCaseContextRequest.class)
         )).thenReturn(resolvedUseCaseContext());
         when(snippetCardService.buildSnippetCards(
                 org.mockito.ArgumentMatchers.eq("platform/backend"),
-                org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
+                org.mockito.ArgumentMatchers.eq("feature/CRM-742"),
                 org.mockito.ArgumentMatchers.any(FlowExplorerRepositoryContext.class),
                 org.mockito.ArgumentMatchers.anyList(),
                 org.mockito.ArgumentMatchers.eq(pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal.DEEP_DISCOVERY),
@@ -67,7 +67,7 @@ class FlowExplorerContextServiceTest {
         ));
         when(openApiContractService.buildEndpointContracts(
                 org.mockito.ArgumentMatchers.eq("platform/backend"),
-                org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
+                org.mockito.ArgumentMatchers.eq("feature/CRM-742"),
                 org.mockito.ArgumentMatchers.any(FlowExplorerRepositoryContext.class),
                 org.mockito.ArgumentMatchers.anyList(),
                 org.mockito.ArgumentMatchers.any(FlowExplorerContextRequest.class)
@@ -81,13 +81,13 @@ class FlowExplorerContextServiceTest {
                 "crm-customer-profile-api:GET /api/crm/customers/{customerId}/profile",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(pl.mkn.tdw.features.flowexplorer.job.api.FlowExplorerFocusArea.PERSISTENCE)
         ));
 
         assertEquals("crm-customer-profile", snapshot.systemId());
-        assertEquals("feature/FLOW-42", snapshot.resolvedRef());
+        assertEquals("feature/CRM-742", snapshot.resolvedRef());
         assertTrue(snapshot.coverage().endpointResolved());
         assertEquals(1, snapshot.coverage().attemptedRepositoryCount());
         assertEquals(2, snapshot.coverage().flowNodeCount());
@@ -118,7 +118,7 @@ class FlowExplorerContextServiceTest {
         var requestCaptor = ArgumentCaptor.forClass(GitLabEndpointUseCaseContextRequest.class);
         verify(gitLabEndpointUseCaseContextService).buildContext(
                 org.mockito.ArgumentMatchers.eq("platform/backend"),
-                org.mockito.ArgumentMatchers.eq("feature/FLOW-42"),
+                org.mockito.ArgumentMatchers.eq("feature/CRM-742"),
                 requestCaptor.capture()
         );
         assertEquals("crm-customer-profile-api", requestCaptor.getValue().projectName());
@@ -178,8 +178,8 @@ class FlowExplorerContextServiceTest {
         var catalog = catalog();
         return new FlowExplorerRepositoryScope(
                 catalog.systems().get(0),
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 1,
                 List.of(new FlowExplorerRepositoryScopeRepository(

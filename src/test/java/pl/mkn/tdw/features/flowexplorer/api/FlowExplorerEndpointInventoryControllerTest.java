@@ -35,20 +35,20 @@ class FlowExplorerEndpointInventoryControllerTest {
     void shouldReturnEndpointInventoryForSystem() throws Exception {
         when(flowExplorerEndpointInventoryService.endpoints(
                 "crm-customer-profile",
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 "/api",
                 "get",
                 false
         )).thenReturn(inventory());
 
         mockMvc.perform(get("/api/flow-explorer/systems/crm-customer-profile/endpoints")
-                        .param("branch", "feature/FLOW-42")
+                        .param("branch", "feature/CRM-742")
                         .param("endpointPathPrefix", "/api")
                         .param("httpMethod", "get"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.systemId").value("crm-customer-profile"))
-                .andExpect(jsonPath("$.requestedBranch").value("feature/FLOW-42"))
-                .andExpect(jsonPath("$.resolvedRef").value("feature/FLOW-42"))
+                .andExpect(jsonPath("$.requestedBranch").value("feature/CRM-742"))
+                .andExpect(jsonPath("$.resolvedRef").value("feature/CRM-742"))
                 .andExpect(jsonPath("$.gitLabGroup").value("platform/backend"))
                 .andExpect(jsonPath("$.repositories", hasSize(1)))
                 .andExpect(jsonPath("$.repositories[0].searchMode").value("path-prefixes"))
@@ -61,7 +61,7 @@ class FlowExplorerEndpointInventoryControllerTest {
 
         verify(flowExplorerEndpointInventoryService).endpoints(
                 "crm-customer-profile",
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 "/api",
                 "get",
                 false
@@ -117,8 +117,8 @@ class FlowExplorerEndpointInventoryControllerTest {
         );
         return new FlowExplorerEndpointInventoryResponse(
                 "crm-customer-profile",
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 "/api",
                 "GET",
@@ -132,7 +132,7 @@ class FlowExplorerEndpointInventoryControllerTest {
                         "crm-customer-profile-api",
                         "crm-customer-profile-api",
                         "platform/backend/crm-customer-profile-api",
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         "path-prefixes",
                         List.of("src/main/java/com/example/crm/customerprofile"),
                         3,

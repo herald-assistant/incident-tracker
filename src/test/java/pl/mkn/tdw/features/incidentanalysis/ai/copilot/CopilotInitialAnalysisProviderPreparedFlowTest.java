@@ -40,7 +40,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new InitialAnalysisRequest("corr-prepared", "zt01", "main", "CRM/runtime", List.of());
+        var request = new InitialAnalysisRequest("corr-prepared", "test1", "main", "CRM/runtime", List.of());
         var preparedSession = new CopilotPreparedSession(
                 request.correlationId(),
                 new CopilotClientOptions(),
@@ -79,7 +79,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new InitialAnalysisRequest("corr-owned", "zt01", "main", "CRM/runtime", List.of());
+        var request = new InitialAnalysisRequest("corr-owned", "test1", "main", "CRM/runtime", List.of());
         var preparedSession = mock(CopilotPreparedSession.class);
         var preparedAnalysis = new CopilotInitialAnalysisPreparation(request, preparedSession);
 
@@ -104,7 +104,7 @@ class CopilotInitialAnalysisProviderPreparedFlowTest {
         var preparationService = mock(CopilotIncidentInitialPreparationService.class);
         var executionGateway = mock(CopilotSdkExecutionGateway.class);
         var provider = provider(preparationService, executionGateway);
-        var request = new InitialAnalysisRequest("corr-caller-owned", "zt01", "main", "CRM/runtime", List.of());
+        var request = new InitialAnalysisRequest("corr-caller-owned", "test1", "main", "CRM/runtime", List.of());
         var preparedSession = spy(new CopilotPreparedSession(
                 request.correlationId(),
                 new CopilotClientOptions(),

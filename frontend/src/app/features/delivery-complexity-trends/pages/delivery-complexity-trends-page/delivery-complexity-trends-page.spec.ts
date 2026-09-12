@@ -378,7 +378,7 @@ function row(headers: readonly string[], overrides: Record<string, string> = {})
     teamFieldId: 'customfield_10000',
     mergeRequestUrls: 'https://gitlab.example.com/mr/7',
     mergeRequestAuthorIds: '101',
-    mergeRequestAuthorNames: 'Anna Nowak',
+    mergeRequestAuthorNames: 'CRM Author 101',
     deliveryUnitId: 'DU-CRM-1',
     assessmentStatus: 'COMPLETED',
     outcomeBreadth: '2',

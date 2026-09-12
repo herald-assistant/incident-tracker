@@ -73,7 +73,7 @@ class ConfigDriftViewerPortabilityTest {
 
         assertEquals("config-drift-viewer", indexCaptor.getValue().feature());
         assertTrue(indexCaptor.getValue().name().startsWith("2 komponentów · "));
-        assertTrue(indexCaptor.getValue().name().contains("dev1 → zt001"));
+        assertTrue(indexCaptor.getValue().name().contains("dev1 → test2"));
         assertFalse(recordCaptor.getValue().continuation().enabled());
         assertFalse(serialized.contains("raw-source-secret"));
         assertFalse(serialized.contains("raw-target-secret"));
@@ -229,7 +229,7 @@ class ConfigDriftViewerPortabilityTest {
                 "CRM Backend",
                 "backend",
                 "dev1",
-                "zt001",
+                "test2",
                 ConfigDriftViewerDeterministicStatus.REVIEW_REQUIRED,
                 null,
                 null,
@@ -287,7 +287,7 @@ class ConfigDriftViewerPortabilityTest {
                 "runtime-config",
                 List.of("crm-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 null,
                 null,
                 null,
@@ -412,6 +412,6 @@ class ConfigDriftViewerPortabilityTest {
                 true,
                 List.of(document)
         );
-        return new ConfigDriftViewerDiffProjection("dev1", "zt001", List.of(file));
+        return new ConfigDriftViewerDiffProjection("dev1", "test2", List.of(file));
     }
 }

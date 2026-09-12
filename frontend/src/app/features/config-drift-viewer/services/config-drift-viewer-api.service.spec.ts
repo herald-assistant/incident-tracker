@@ -42,7 +42,7 @@ describe('ConfigDriftViewerApiService', () => {
       repositoryId: 'runtime-config',
       systemIds: ['backend'],
       sourceBranch: 'dev1',
-      targetBranch: 'zt001'
+      targetBranch: 'test2'
     };
     service.startJob(start).subscribe();
     const startRequest = http.expectOne('/api/config-drift-viewer/v1/jobs');
@@ -67,7 +67,7 @@ describe('ConfigDriftViewerApiService', () => {
       repositoryId: 'runtime-config',
       systemId: 'backend',
       sourceBranch: 'dev1',
-      targetBranch: 'zt001',
+      targetBranch: 'test2',
       codeRef: 'release/42'
     };
 

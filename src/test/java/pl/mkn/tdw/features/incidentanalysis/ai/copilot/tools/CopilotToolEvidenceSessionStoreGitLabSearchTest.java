@@ -383,7 +383,7 @@ class CopilotToolEvidenceSessionStoreGitLabSearchTest {
             String rawResult
     ) {
         listener.onToolInvocationFinished(new CopilotToolInvocationFinishedEvent(
-                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "zt01", "main", "CRM/runtime"),
+                new CopilotToolSessionContext("run-1", sessionId, "corr-123", "test1", "main", "CRM/runtime"),
                 sessionId,
                 toolCallId,
                 toolName,

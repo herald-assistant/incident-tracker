@@ -58,7 +58,7 @@ class ConfigDriftViewerWorkbenchPreviewStoreTest {
         return new ConfigDriftViewerWorkbenchPreviewSnapshot(
                 ConfigDriftViewerMode.BASIC,
                 null,
-                new ConfigDriftViewerDiffProjection("dev1", "zt001", List.of()),
+                new ConfigDriftViewerDiffProjection("dev1", "test2", List.of()),
                 null,
                 null,
                 List.of(),

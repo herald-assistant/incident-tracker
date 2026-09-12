@@ -223,7 +223,7 @@ function projection(): ConfigDriftViewerDiffProjection {
   });
   return {
     sourceBranch: 'dev1',
-    targetBranch: 'zt001',
+    targetBranch: 'test2',
     files: [
       {
         role: 'APPLICATION_YAML',

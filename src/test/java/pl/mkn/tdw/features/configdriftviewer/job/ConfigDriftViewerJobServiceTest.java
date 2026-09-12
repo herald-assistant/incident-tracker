@@ -202,7 +202,7 @@ class ConfigDriftViewerJobServiceTest {
                 "CRM Backend",
                 "backend",
                 "dev1",
-                "zt001",
+                "test2",
                 ConfigDriftViewerDeterministicStatus.INCOMPLETE,
                 null,
                 null,
@@ -257,7 +257,7 @@ class ConfigDriftViewerJobServiceTest {
                 "runtime-config",
                 List.of("crm-backend", "customer-profile-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 null,
                 null,
                 null
@@ -467,7 +467,7 @@ class ConfigDriftViewerJobServiceTest {
                 "CRM Backend",
                 "backend",
                 "dev1",
-                "zt001",
+                "test2",
                 ConfigDriftViewerDeterministicStatus.NO_BLOCKING_ANOMALIES,
                 null,
                 null,
@@ -479,7 +479,7 @@ class ConfigDriftViewerJobServiceTest {
     }
 
     static ConfigDriftViewerDiffProjection configurationDiff() {
-        return new ConfigDriftViewerDiffProjection("dev1", "zt001", List.of());
+        return new ConfigDriftViewerDiffProjection("dev1", "test2", List.of());
     }
 
     static ConfigDriftViewerDeterministicBuildResult deterministicBuild() {
@@ -544,7 +544,7 @@ class ConfigDriftViewerJobServiceTest {
                 "runtime-config",
                 List.of("crm-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 null,
                 null,
                 null
@@ -557,7 +557,7 @@ class ConfigDriftViewerJobServiceTest {
                 "runtime-config",
                 List.of("crm-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 "release-42",
                 null,
                 null
@@ -570,7 +570,7 @@ class ConfigDriftViewerJobServiceTest {
                 "runtime-config",
                 List.of("crm-backend", "customer-profile-backend"),
                 "dev1",
-                "zt001",
+                "test2",
                 null,
                 null,
                 null

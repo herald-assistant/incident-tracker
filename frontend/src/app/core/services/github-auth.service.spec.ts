@@ -35,8 +35,8 @@ describe('GithubAuthService', () => {
       mode: 'GITHUB_APP',
       required: true,
       connected: true,
-      githubLogin: 'octocat',
-      displayName: 'octocat',
+      githubLogin: 'crm-test-operator',
+      displayName: 'crm-test-operator',
       tokenExpiresAt: '2026-05-02T18:42:00Z',
       reauthRequired: false,
       authStartUrl: '/api/auth/github/start'

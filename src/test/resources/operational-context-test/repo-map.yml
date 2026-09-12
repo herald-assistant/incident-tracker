@@ -1,33 +1,33 @@
 schemaVersion: 1
 
 repositories:
-  - id: app-core-repo
-    name: App Core Repository
+  - id: crm-contact-service-repo
+    name: CRM Contact Service Repository
     git:
-      group: example/platform
-      project: app-core-repo
-      projectPath: example/platform/app-core-repo
+      group: synthetic/crm
+      project: crm-contact-service-repo
+      projectPath: synthetic/crm/crm-contact-service-repo
     references:
-      systems: [app-core]
-      processes: [main-process]
-      boundedContexts: [core-context]
-      teams: [core-team]
+      systems: [crm-contact-service]
+      processes: [crm-contact-notification-flow]
+      boundedContexts: [crm-contact-context]
+      teams: [crm-contact-team]
     matchSignals:
       exact:
-        projectNames: [app-core-repo]
+        projectNames: [crm-contact-service-repo]
       strong: {}
-  - id: app-shared-lib-repo
-    name: App Shared Library
+  - id: crm-contact-rules-repo
+    name: CRM Contact Rules Library
     git:
-      group: example/platform
-      project: libs/app-shared-lib
-      projectPath: example/platform/libs/app-shared-lib
+      group: synthetic/crm
+      project: libs/crm-contact-rules
+      projectPath: synthetic/crm/libs/crm-contact-rules
     references:
-      systems: [app-core]
-      processes: [main-process]
-      boundedContexts: [core-context]
-      teams: [core-team]
+      systems: [crm-contact-service]
+      processes: [crm-contact-notification-flow]
+      boundedContexts: [crm-contact-context]
+      teams: [crm-contact-team]
     matchSignals:
       exact:
-        projectNames: [app-shared-lib]
+        projectNames: [crm-contact-rules]
 gaps: []

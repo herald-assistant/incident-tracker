@@ -26,7 +26,7 @@ class GitHubAppCopilotAccessTokenResolverTest {
         var expiresAt = Instant.parse("2026-05-02T18:42:00Z");
         var resolver = new GitHubAppCopilotAccessTokenResolver(principalId -> new CopilotAccessToken(
                 "ghu_user_token",
-                "octocat",
+                "crm-test-operator",
                 expiresAt,
                 true
         ));
@@ -34,12 +34,12 @@ class GitHubAppCopilotAccessTokenResolverTest {
         var token = resolver.resolve(new CopilotRunAuth(
                 CopilotAuthMode.GITHUB_APP,
                 "operator-session-1",
-                "octocat",
+                "crm-test-operator",
                 true
         ));
 
         assertEquals("ghu_user_token", token.value());
-        assertEquals("octocat", token.githubLogin());
+        assertEquals("crm-test-operator", token.githubLogin());
         assertEquals(expiresAt, token.expiresAt());
         assertEquals(true, token.userBound());
     }
@@ -55,7 +55,7 @@ class GitHubAppCopilotAccessTokenResolverTest {
                 () -> resolver.resolve(new CopilotRunAuth(
                         CopilotAuthMode.GITHUB_APP,
                         "operator-session-1",
-                        "octocat",
+                        "crm-test-operator",
                         true
                 ))
         );

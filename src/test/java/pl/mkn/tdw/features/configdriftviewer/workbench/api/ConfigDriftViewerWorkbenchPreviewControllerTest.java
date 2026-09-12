@@ -54,7 +54,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                 "runtime-config",
                 "crm-api",
                 "test12",
-                "zt345",
+                "zt999",
                 null
         );
         when(previewService.preview(request)).thenReturn(response(false));
@@ -67,7 +67,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                                   "repositoryId": " runtime-config ",
                                   "systemId": " crm-api ",
                                   "sourceBranch": " test12 ",
-                                  "targetBranch": " zt345 "
+                                  "targetBranch": " zt999 "
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -96,7 +96,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                 "runtime-config",
                 "crm-api",
                 "dev1",
-                "zt001",
+                "test2",
                 "release-42"
         );
         when(previewService.preview(request)).thenReturn(response(true));
@@ -109,7 +109,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemId": "crm-api",
                                   "sourceBranch": "dev1",
-                                  "targetBranch": "zt001",
+                                  "targetBranch": "test2",
                                   "codeRef": "release-42"
                                 }
                                 """))
@@ -122,7 +122,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
 
     @Test
     void shouldServeOperatorProjectionLazily() throws Exception {
-        var projection = new ConfigDriftViewerDiffProjection("dev1", "zt001", List.of());
+        var projection = new ConfigDriftViewerDiffProjection("dev1", "test2", List.of());
         when(previewService.configurationDiff(PREVIEW_ID)).thenReturn(
                 new ConfigDriftViewerWorkbenchConfigurationDiffResponse(
                         PREVIEW_ID,
@@ -137,7 +137,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.previewId").value(PREVIEW_ID))
                 .andExpect(jsonPath("$.configurationDiff.sourceBranch").value("dev1"))
-                .andExpect(jsonPath("$.configurationDiff.targetBranch").value("zt001"))
+                .andExpect(jsonPath("$.configurationDiff.targetBranch").value("test2"))
                 .andExpect(jsonPath("$.configurationDiff.files").isEmpty());
     }
 
@@ -232,7 +232,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemId": "crm-api",
                                   "sourceBranch": "dev1",
-                                  "targetBranch": "zt001",
+                                  "targetBranch": "test2",
                                   "codeRef": "release/../secret"
                                 }
                                 """))
@@ -250,7 +250,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemId": "crm-api",
                                   "sourceBranch": "dev1",
-                                  "targetBranch": "zt001",
+                                  "targetBranch": "test2",
                                   "codeRef": "release-42"
                                 }
                                 """))
@@ -265,7 +265,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                 "runtime-config",
                 "crm-api",
                 "dev1",
-                "zt001",
+                "test2",
                 null
         );
         when(previewService.preview(request))
@@ -279,7 +279,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                                   "repositoryId": "runtime-config",
                                   "systemId": "crm-api",
                                   "sourceBranch": "dev1",
-                                  "targetBranch": "zt001"
+                                  "targetBranch": "test2"
                                 }
                                 """))
                 .andExpect(status().isServiceUnavailable())
@@ -304,7 +304,7 @@ class ConfigDriftViewerWorkbenchPreviewControllerTest {
                 "runtime-config",
                 "crm-api",
                 "dev1",
-                "zt001",
+                "test2",
                 deep ? "release-42" : null,
                 new ConfigDriftViewerWorkbenchPreviewResponse.SourceSummary(
                         "backend",

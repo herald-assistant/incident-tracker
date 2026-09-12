@@ -27,13 +27,13 @@ class GitHubUserProfileClientTest {
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("Authorization", "Bearer ghu_access"))
                 .andRespond(withSuccess("""
-                        {"id": 42, "login": "octocat"}
+                        {"id": 42, "login": "crm-test-operator"}
                         """, MediaType.APPLICATION_JSON));
 
         var profile = client.currentUser("ghu_access");
 
         assertEquals(42L, profile.id());
-        assertEquals("octocat", profile.login());
+        assertEquals("crm-test-operator", profile.login());
         server.verify();
     }
 

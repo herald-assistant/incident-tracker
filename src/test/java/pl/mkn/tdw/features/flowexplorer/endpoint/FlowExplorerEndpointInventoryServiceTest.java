@@ -95,15 +95,15 @@ class FlowExplorerEndpointInventoryServiceTest {
         when(endpointService.listEndpoints(any())).thenReturn(endpointList("any", List.of(), List.of()));
         var service = service(endpointService, "platform/backend", "release-candidate");
 
-        var response = service.endpoints("crm-customer-profile", "feature/FLOW-42", null, null);
+        var response = service.endpoints("crm-customer-profile", "feature/CRM-742", null, null);
 
-        assertEquals("feature/FLOW-42", response.requestedBranch());
-        assertEquals("feature/FLOW-42", response.resolvedRef());
+        assertEquals("feature/CRM-742", response.requestedBranch());
+        assertEquals("feature/CRM-742", response.resolvedRef());
 
         var requestCaptor = ArgumentCaptor.forClass(GitLabRepositoryEndpointListRequest.class);
         verify(endpointService).listEndpoints(requestCaptor.capture());
         assertTrue(requestCaptor.getAllValues().stream()
-                .allMatch(request -> "feature/FLOW-42".equals(request.branch())));
+                .allMatch(request -> "feature/CRM-742".equals(request.branch())));
     }
 
     @Test

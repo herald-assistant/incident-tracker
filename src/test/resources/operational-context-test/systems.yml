@@ -1,42 +1,42 @@
 schemaVersion: 1
 
 systems:
-  - id: app-core
-    name: App Core
+  - id: crm-contact-service
+    name: CRM Contact Service
     systemType: internal-service
     systemSubtype: backend
-    purpose: Executes the main application behavior.
+    purpose: Maintains synthetic CRM contact profiles and notification requests.
     references:
-      repositories: [app-core-repo, app-shared-lib-repo]
-      processes: [main-process]
-      boundedContexts: [core-context]
-      teams: [core-team]
+      repositories: [crm-contact-service-repo, crm-contact-rules-repo]
+      processes: [crm-contact-notification-flow]
+      boundedContexts: [crm-contact-context]
+      teams: [crm-contact-team]
     ownership:
-      ownerTeamIds: [core-team]
+      ownerTeamIds: [crm-contact-team]
       ownershipStatus: explicit
       confidence: high
       source: test
     matchSignals:
       strong:
-        projectNames: [app-core-repo, app-shared-lib]
-        spans: [SyncGateway.call]
-        markers: [APP_CORE]
-  - id: partner-service
-    name: Partner Service
+        projectNames: [crm-contact-service-repo, crm-contact-rules]
+        spans: [CrmNotificationGateway.call]
+        markers: [CRM_CONTACT]
+  - id: crm-notification-provider
+    name: CRM Notification Provider
     systemType: external-system
-    purpose: Provides data used by the main application flow.
+    purpose: Simulates the external CRM notification API.
     references:
-      processes: [main-process]
-      boundedContexts: [partner-context]
-      teams: [integration-team]
+      processes: [crm-contact-notification-flow]
+      boundedContexts: [crm-notification-context]
+      teams: [crm-integration-team]
     ownership:
-      ownerTeamIds: [integration-team]
+      ownerTeamIds: [crm-integration-team]
       ownershipStatus: explicit
       confidence: medium
       source: test
     matchSignals:
       exact:
-        hosts: [api.partner.local]
+        hosts: [api.crm-notification.example.invalid]
       strong:
-        markers: [PARTNER]
+        markers: [CRM_NOTIFICATION]
 gaps: []

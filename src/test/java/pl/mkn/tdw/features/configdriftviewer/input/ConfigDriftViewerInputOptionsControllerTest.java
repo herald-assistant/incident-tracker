@@ -31,7 +31,7 @@ class ConfigDriftViewerInputOptionsControllerTest {
     void shouldExposeSafeInputOptionsWithoutBackendGitLabScope() throws Exception {
         when(inputOptionsService.getOptions()).thenReturn(new ConfigDriftViewerInputOptions(
                 List.of(ConfigDriftViewerMode.BASIC, ConfigDriftViewerMode.DEEP),
-                List.of("dev1", "zt001"),
+                List.of("dev1", "test2"),
                 List.of(new ConfigDriftViewerInputOptions.RepositoryOption(
                         "runtime-config",
                         "Runtime configuration"
@@ -42,7 +42,7 @@ class ConfigDriftViewerInputOptionsControllerTest {
         mockMvc.perform(get("/api/config-drift-viewer/v1/input-options"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.modes[0]").value("BASIC"))
-                .andExpect(jsonPath("$.branches[1]").value("zt001"))
+                .andExpect(jsonPath("$.branches[1]").value("test2"))
                 .andExpect(jsonPath("$.repositories[0].id").value("runtime-config"))
                 .andExpect(jsonPath("$.systems[0].id").value("backend"))
                 .andExpect(jsonPath("$.systems[0].configurationDirectory").value("backend"))

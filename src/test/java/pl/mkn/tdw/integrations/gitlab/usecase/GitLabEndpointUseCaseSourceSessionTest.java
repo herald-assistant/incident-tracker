@@ -226,16 +226,16 @@ class GitLabEndpointUseCaseSourceSessionTest {
                         """
                                 package com.example.crm;
 
-                                sealed interface Customer permits RetailCustomer {
+                                sealed interface Customer permits CrmContactCustomer {
                                 }
 
-                                record RetailCustomer(String segment) implements Customer {
+                                record CrmContactCustomer(String segment) implements Customer {
                                 }
 
                                 class CustomerClassifier {
                                     String segment(Customer customer) {
                                         return switch (customer) {
-                                            case RetailCustomer retail -> retail.segment();
+                                            case CrmContactCustomer contact -> contact.segment();
                                         };
                                     }
                                 }

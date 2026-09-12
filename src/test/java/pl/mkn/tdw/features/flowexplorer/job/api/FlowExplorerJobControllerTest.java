@@ -60,7 +60,7 @@ class FlowExplorerJobControllerTest {
                                 {
                                   "systemId": "crm-service",
                                   "endpointId": "GET:/api/customers/{id}",
-                                  "branch": "feature/FLOW-42",
+                                  "branch": "feature/CRM-742",
                                   "goal": "DEEP_DISCOVERY",
                                   "focusAreas": ["FUNCTIONAL_FLOW"],
                                   "sectionModes": [
@@ -78,7 +78,7 @@ class FlowExplorerJobControllerTest {
                 .andExpect(jsonPath("$.jobId").value("job-123"))
                 .andExpect(jsonPath("$.systemId").value("crm-service"))
                 .andExpect(jsonPath("$.endpointId").value("GET:/api/customers/{id}"))
-                .andExpect(jsonPath("$.branch").value("feature/FLOW-42"))
+                .andExpect(jsonPath("$.branch").value("feature/CRM-742"))
                 .andExpect(jsonPath("$.goal").value("DEEP_DISCOVERY"))
                 .andExpect(jsonPath("$.focusAreas[0]").value("FUNCTIONAL_FLOW"))
                 .andExpect(jsonPath("$.sectionModes[0].id").value("FUNCTIONAL_FLOW"))
@@ -104,7 +104,7 @@ class FlowExplorerJobControllerTest {
                 "GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 List.of(
@@ -316,7 +316,7 @@ class FlowExplorerJobControllerTest {
                 "GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 FlowExplorerResultSectionModeResolver.resolve(List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW)),
@@ -362,7 +362,7 @@ class FlowExplorerJobControllerTest {
                         "GET:/api/customers/{id}",
                         null,
                         null,
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                         "Flow Explorer canonical prompt",
                         aiResponse(),
@@ -400,8 +400,8 @@ class FlowExplorerJobControllerTest {
         return new FlowExplorerContextSnapshot(
                 "crm-service",
                 "CRM Service",
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 "GET:/api/customers/{id}",
                 "GET",
@@ -422,7 +422,7 @@ class FlowExplorerJobControllerTest {
                         "crm-service",
                         "crm-service",
                         "platform/backend/crm-service",
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         true,
                         true,
                         List.of()

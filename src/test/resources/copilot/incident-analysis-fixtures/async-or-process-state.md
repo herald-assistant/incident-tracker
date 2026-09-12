@@ -9,6 +9,8 @@ specializedSkill: incident-data-diagnostics
 
 ## Cel
 
+To w pelni syntetyczny scenariusz CRM; identyfikatory nie wskazuja rzeczywistych danych ani srodowisk.
+
 Ten fixture opisuje incydent, w ktorym request zakonczyl lokalny zapis, ale
 dalszy etap procesu nie rusza przez stuck event/outbox state.
 

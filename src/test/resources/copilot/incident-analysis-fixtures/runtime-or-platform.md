@@ -22,10 +22,10 @@ Fixture testuje kontrakt routingu:
 ## Minimalne Evidence
 
 - `correlationId`: `corr-run-001`
-- trigger: HTTP request `POST /notifications`
+- trigger: HTTP request `POST /crm/notifications`
 - failure point: request lost during pod restart
 - runtime evidence: `container restart count increased`, `OOMKilled`
-- log: `Request aborted while processing notification NOTIF-123`
+- log: `Request aborted while processing notification CRM-NOTIF-123`
 - deployment: `notification-api`
 
 ## Oczekiwany Dry Run Orkiestratora

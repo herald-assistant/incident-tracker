@@ -44,8 +44,8 @@ class FlowExplorerArtifactServiceTest {
         assertEquals("crm-service", contextJson.get("applicationNames").get(0).asText());
         assertEquals("crm-service", contextJson.get("systemId").asText());
         assertEquals("DEEP_DISCOVERY", contextJson.get("goal").asText());
-        assertEquals("feature/FLOW-42", contextJson.get("branchRef").asText());
-        assertEquals("feature/FLOW-42", contextJson.at("/contextSnapshot/branchRef").asText());
+        assertEquals("feature/CRM-742", contextJson.get("branchRef").asText());
+        assertEquals("feature/CRM-742", contextJson.at("/contextSnapshot/branchRef").asText());
         assertEquals("DEEP", contextJson.at("/sectionModes/0/mode").asText());
         assertTrue(contextJson.at("/contextSnapshot/gitLabGroup").isMissingNode());
         assertEquals("crm-service:src/main/java/com/example/CustomerProfileController.java:L9-L27",
@@ -58,7 +58,7 @@ class FlowExplorerArtifactServiceTest {
         var canonicalToolInputs = artifactContents.get(FlowExplorerArtifactService.CANONICAL_TOOL_INPUTS_ARTIFACT);
         assertTrue(canonicalToolInputs.contains("# Canonical Tool Inputs"));
         assertTrue(canonicalToolInputs.contains("applicationNames: [`crm-service`]"));
-        assertTrue(canonicalToolInputs.contains("branchRef: `feature/FLOW-42`"));
+        assertTrue(canonicalToolInputs.contains("branchRef: `feature/CRM-742`"));
         assertTrue(canonicalToolInputs.contains("selected projectName: `crm-service`"));
         assertTrue(canonicalToolInputs.contains("projectPath: `platform/backend/crm-service`"));
         assertTrue(canonicalToolInputs.contains("searchMode: `path-prefixes`"));
@@ -127,7 +127,7 @@ class FlowExplorerArtifactServiceTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
@@ -141,8 +141,8 @@ class FlowExplorerArtifactServiceTest {
         return new FlowExplorerContextSnapshot(
                 "crm-service",
                 "CRM Service",
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 "GET:/api/customers/{id}",
                 "GET",
@@ -163,7 +163,7 @@ class FlowExplorerArtifactServiceTest {
                         "crm-service",
                         "crm-service",
                         "platform/backend/crm-service",
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         "path-prefixes",
                         List.of("src/main/java/com/example/customer"),
                         true,
@@ -235,8 +235,8 @@ class FlowExplorerArtifactServiceTest {
         return new FlowExplorerContextSnapshot(
                 "crm-service",
                 "CRM Service",
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 "GET:/api/customers/{id}",
                 "GET",
@@ -257,7 +257,7 @@ class FlowExplorerArtifactServiceTest {
                         "crm-service",
                         "crm-service",
                         "platform/backend/crm-service",
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         "path-prefixes",
                         List.of("src/main/java/com/example/customer"),
                         true,

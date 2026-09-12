@@ -41,7 +41,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(preparation.artifactContents().containsKey(FlowExplorerArtifactService.SNIPPET_CARDS_ARTIFACT));
         assertTrue(prompt.contains("userInstructions"));
         assertTrue(prompt.contains("applicationNames: [crm-service]"));
-        assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
+        assertTrue(prompt.contains("branchRef: feature/CRM-742"));
         assertTrue(prompt.contains("Runtime envelope"));
         assertTrue(prompt.contains("Ten prompt przekazuje dane biezacego runu"));
         assertTrue(prompt.contains("Zasady pracy, wybor tools, report tools, fallback JSON i format wyniku pochodza z runtime skilli"));
@@ -154,7 +154,7 @@ class FlowExplorerPromptPreparationServiceTest {
         assertTrue(prompt.contains("Docelowy odbiorca to analityk albo tester"));
         assertTrue(prompt.contains("Nie zaczynaj odpowiedzi od nazw klas, metod, beanow"));
         assertTrue(prompt.contains("systemId: crm-service"));
-        assertTrue(prompt.contains("branchRef: feature/FLOW-42"));
+        assertTrue(prompt.contains("branchRef: feature/CRM-742"));
         assertTrue(prompt.contains("repositories:"));
         assertTrue(prompt.contains("searchMode: `path-prefixes`"));
         assertTrue(prompt.contains("pathPrefixes: `src/main/java/com/example/customer`"));
@@ -174,7 +174,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 null,
@@ -190,7 +190,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.PERSISTENCE),
                 null,
@@ -206,7 +206,7 @@ class FlowExplorerPromptPreparationServiceTest {
                 "crm-service:GET:/api/customers/{id}",
                 null,
                 null,
-                "feature/FLOW-42",
+                "feature/CRM-742",
                 FlowExplorerAnalysisGoal.DEEP_DISCOVERY,
                 List.of(FlowExplorerFocusArea.FUNCTIONAL_FLOW),
                 List.of(
@@ -241,8 +241,8 @@ class FlowExplorerPromptPreparationServiceTest {
         return new FlowExplorerContextSnapshot(
                 "crm-service",
                 "CRM Service",
-                "feature/FLOW-42",
-                "feature/FLOW-42",
+                "feature/CRM-742",
+                "feature/CRM-742",
                 "platform/backend",
                 "GET:/api/customers/{id}",
                 "GET",
@@ -263,7 +263,7 @@ class FlowExplorerPromptPreparationServiceTest {
                         "crm-service",
                         "crm-service",
                         "platform/backend/crm-service",
-                        "feature/FLOW-42",
+                        "feature/CRM-742",
                         "path-prefixes",
                         List.of("src/main/java/com/example/customer"),
                         true,
