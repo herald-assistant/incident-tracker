@@ -724,6 +724,13 @@ describe('App', () => {
     fixture.detectChanges();
     flushUiConfig(http, 'CRM Workspace');
     http.expectOne('/api/ui-explorer/input-options').flush(uiExplorerInputOptions());
+    fixture.detectChanges();
+    http.expectOne('/api/gitlab/systems/crm-agent-portal/branches').flush({
+      systemId: 'crm-agent-portal',
+      branches: [{ name: 'main', isDefault: true }],
+      truncated: false,
+      warnings: []
+    });
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       uiExplorerScreenCatalog()
     );
@@ -868,6 +875,12 @@ describe('App', () => {
     const firstFlowExplorer = flowExplorerComponent(fixture);
     firstFlowExplorer.selectSystem(firstFlowExplorer.systems()[0]);
     fixture.detectChanges();
+    http.expectOne('/api/gitlab/systems/crm-service/branches').flush({
+      systemId: 'crm-service',
+      branches: [{ name: 'main', isDefault: true }],
+      truncated: false,
+      warnings: []
+    });
     http
       .expectOne(
         (request) =>

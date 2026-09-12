@@ -48,6 +48,7 @@ export class UiExplorerFacade {
   private readonly uiConfig = inject(AppUiConfigService);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
+  private screenRequestId = 0;
 
   readonly inputState = signal<UiExplorerLoadingState>('idle');
   readonly screenState = signal<UiExplorerLoadingState>('idle');
@@ -165,9 +166,6 @@ export class UiExplorerFacade {
       return;
     }
     this.branch.set(normalized);
-    if (this.selectedSystemId() && this.inputOptions()) {
-      this.loadScreens();
-    }
   }
 
   loadInputOptions(): void {
@@ -193,9 +191,6 @@ export class UiExplorerFacade {
             this.applyDefaultSectionModes(options.defaultSectionModes);
           }
 
-          if (this.selectedSystemId() && this.branch().trim()) {
-            this.loadScreens();
-          }
         },
         error: (error: HttpErrorResponse) => {
           this.inputState.set('error');
@@ -235,17 +230,19 @@ export class UiExplorerFacade {
     }
     this.selectedSystemId.set(systemId);
     this.clearScreenSelection();
-    if (systemId && this.branch().trim()) {
-      this.loadScreens();
-    }
   }
 
   changeBranch(branch: string): void {
     if (this.controlsLocked()) {
       return;
     }
-    this.branch.set(branch);
-    this.clearScreenSelection();
+    if (branch !== this.branch()) {
+      this.branch.set(branch);
+      this.clearScreenSelection();
+    }
+    if (branch.trim() && this.selectedSystemId() && !this.screenCatalog()) {
+      this.loadScreens();
+    }
   }
 
   loadScreens(refreshCache = false): void {
@@ -261,6 +258,7 @@ export class UiExplorerFacade {
     }
 
     this.clearScreenSelection();
+    const requestId = ++this.screenRequestId;
     this.screenState.set('loading');
     this.screenError.set('');
     this.api
@@ -268,10 +266,18 @@ export class UiExplorerFacade {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (catalog) => {
+          if (requestId !== this.screenRequestId || systemId !== this.selectedSystemId()
+              || branch !== this.branch().trim()) {
+            return;
+          }
           this.screenCatalog.set(catalog);
           this.screenState.set(catalog.screens.length > 0 ? 'ready' : 'empty');
         },
         error: (error: HttpErrorResponse) => {
+          if (requestId !== this.screenRequestId || systemId !== this.selectedSystemId()
+              || branch !== this.branch().trim()) {
+            return;
+          }
           this.screenState.set('error');
           this.screenError.set(readApiError(error, 'Nie udało się rozpoznać ekranów dla tego refa.'));
         }
@@ -564,6 +570,7 @@ export class UiExplorerFacade {
   }
 
   private clearScreenSelection(): void {
+    this.screenRequestId++;
     this.screenCatalog.set(null);
     this.selectedScreenId.set('');
     this.screenState.set('idle');

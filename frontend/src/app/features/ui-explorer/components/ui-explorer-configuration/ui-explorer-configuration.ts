@@ -1,5 +1,6 @@
 import { Component, HostListener, computed, inject, output, signal } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 
 import { UiExplorerSectionId, UiExplorerSectionMode } from '../../models/ui-explorer.models';
 import { UiExplorerFacade } from '../../state/ui-explorer.facade';
@@ -9,7 +10,7 @@ type OpenMenu = 'system' | 'sections' | 'model' | 'reasoning' | null;
 
 @Component({
   selector: 'app-ui-explorer-configuration',
-  imports: [MatTooltipModule, UiExplorerScreenCatalogComponent],
+  imports: [MatTooltipModule, UiExplorerScreenCatalogComponent, GitLabBranchSelectComponent],
   templateUrl: './ui-explorer-configuration.html',
   styleUrl: './ui-explorer-configuration.scss'
 })

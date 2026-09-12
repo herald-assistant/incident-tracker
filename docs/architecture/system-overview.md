@@ -68,8 +68,8 @@ Kosztowny wynik route graph discovery jest utrwalany w local workspace pod
 pelnym kluczem system/ref/repository/search scope/graph limits. Domyslny odczyt
 reuse'uje wpis rowniez po restarcie aplikacji; jawne `refresh=true` omija i
 usuwa tylko dopasowany wpis przed ponownym discovery. Automatyczne ladowanie
-widokow w Angularze korzysta z cache, natomiast Enter w polu ref oraz
-`Load views` wymuszaja refresh.
+widokow w Angularze po wyborze galezi korzysta z cache; przy braku wpisu
+backend wykonuje discovery. Jawne `Load views` wymusza refresh.
 UI Explorer job waliduje katalogowa source revision, buduje wewnetrzny bounded
 screen reachability graph i wystawia publiczny manifest, coverage, diagnostics
 oraz limity bez repository scope. Graf zaczyna od effective route chain i
@@ -449,6 +449,12 @@ Na dzisiaj projekt ma:
   project name. Katalog powstaje z jednego zweryfikowanego root routera i
   targeted traversal; liczba niepowiazanych plikow repozytorium nie zmienia
   wyniku.
+- `GET /api/gitlab/systems/{systemId}/branches?search={filter}`
+  Shared/operator API listy galezi primary repozytoriow GitLab powiazanych z
+  systemem przez Operational Context i ograniczonych skonfigurowana grupa.
+  Zwraca nazwy, znacznik galezi domyslnej, informacje o obcieciu wynikow i
+  bezpieczne ostrzezenia o czesciowym braku dostepnosci. Nie przyjmuje sciezki
+  repozytorium ani tokenu od przegladarki.
 - `POST /api/ui-explorer/jobs`
   Przyjmuje wybrany `systemId`, `branch`, katalogowy `screenId`, obowiazkowa
   `sourceRevision`, tryby sekcji, opis scenariusza i opcjonalne
@@ -501,8 +507,11 @@ Na dzisiaj projekt ma:
   ustawione, wartosc property jest tytulem, a `Team Delivery Workspace`
   podtytulem. Odpowiedz zawiera tez `defaultBranch` z wymaganego
   `platform.source-code.default-branch`; Flow Explorer i UI Explorer uzywaja
-  go tylko do inicjalizacji pustego branch/ref i nie nadpisuja wyboru
-  operatora ani wartosci odtworzonej z historii. Nie istnieje feature-specific
+  go do inicjalizacji pustego wyboru. Wspolny selektor weryfikuje te wartosc
+  wzgledem galezi GitLaba i wybiera galez domyslna repozytorium, gdy
+  inicjalna nie istnieje. Wybor galezi automatycznie laduje katalog przez
+  `refresh=false`; filtrowanie listy nie zmienia wyboru ani katalogu.
+  Odtworzona historia pozostaje read-only. Nie istnieje feature-specific
   config endpoint ani lokalny fallback do `main`.
 - `GET /api/workspace/settings`
   Shared/operator API odczytu efektywnych ustawien workspace'u, wartosci bazowej

@@ -1,0 +1,66 @@
+<div class="branch-select" (click)="$event.stopPropagation()">
+  <span class="branch-select__label">Branch</span>
+  <button
+    class="branch-select__control"
+    type="button"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open()"
+    [attr.aria-busy]="loading()"
+    [disabled]="!systemId() || disabled()"
+    (click)="toggle($event)"
+  >
+    <span>{{ selectedLabel() }}</span>
+    <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+  </button>
+
+  @if (open()) {
+    <div class="branch-select__menu">
+      <label class="branch-select__search">
+        <span>Find branch</span>
+        <input
+          class="text-input"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="master, release/2026"
+          [value]="filter()"
+          (input)="changeFilter($any($event.target).value)"
+          (keydown.arrowdown)="focusOption(0); $event.preventDefault()"
+        />
+      </label>
+
+      @if (loading()) {
+        <p class="branch-select__status" role="status">Pobieranie gałęzi…</p>
+      } @else if (error()) {
+        <div class="branch-select__status" role="alert">
+          <p>{{ error() }}</p>
+          <button type="button" (click)="retry()">Ponów</button>
+        </div>
+      } @else {
+        <div class="branch-select__options" role="listbox" aria-label="Branch options">
+          @for (branch of branches(); track branch.name; let index = $index) {
+            <button
+              class="branch-select__option"
+              type="button"
+              role="option"
+              [attr.aria-selected]="branch.name === selectedBranch()"
+              (click)="select(branch.name, $event)"
+              (keydown)="onOptionKeydown($event, index)"
+            >
+              <span>{{ branch.name }}</span>
+              @if (branch.isDefault) { <small>default</small> }
+            </button>
+          } @empty {
+            <p class="branch-select__status">Brak gałęzi dla aktualnego filtra.</p>
+          }
+        </div>
+        @if (truncated()) {
+          <p class="branch-select__status">Więcej gałęzi: zawęź filtr.</p>
+        }
+        @for (warning of warnings(); track warning) {
+          <p class="branch-select__status">{{ warning }}</p>
+        }
+      }
+    </div>
+  }
+</div>

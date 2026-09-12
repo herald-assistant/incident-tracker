@@ -48,6 +48,7 @@ import { AnalysisFollowUpChatComponent } from '../../../../components/analysis-f
 import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
 import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import {
   AnalysisAiCostEstimate,
@@ -202,6 +203,7 @@ const DEFAULT_SECTION_MODES: FlowExplorerSectionModeRequest[] = [
     AnalysisReportMetaComponent,
     AnalysisReportSectionContentComponent,
     AnalysisStepsPanelComponent,
+    GitLabBranchSelectComponent,
   ],
   templateUrl: './flow-explorer-page.html',
   styleUrl: './flow-explorer-page.scss'
@@ -215,6 +217,7 @@ export class FlowExplorerPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private pollingSubscription?: Subscription;
+  private inventoryRequestId = 0;
   private resultCopyFeedbackHandle: number | null = null;
   private followUpPromptCopyFeedbackHandle: number | null = null;
 
@@ -560,7 +563,9 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedEndpointId.set('');
     this.endpointSearch.set('');
     this.endpointSelectOpen.set(false);
-    this.loadEndpointInventory();
+    this.endpointInventory.set(null);
+    this.endpointState.set('idle');
+    this.inventoryRequestId++;
   }
 
   protected keepCustomSelectOpen(event: Event): void {
@@ -679,7 +684,10 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedReasoningEffort.set(value);
   }
 
-  protected onBranchChanged(value: string): void {
+  protected onBranchSelected(value: string): void {
+    if (this.exportState()) {
+      return;
+    }
     this.resetJobState();
     this.branch.set(value);
     this.selectedEndpointId.set('');
@@ -688,14 +696,22 @@ export class FlowExplorerPageComponent implements OnInit {
     this.endpointSearch.set('');
     this.endpointSelectOpen.set(false);
     this.endpointState.set('idle');
+    this.inventoryRequestId++;
+    if (value && this.selectedSystemId()) {
+      this.loadEndpointInventory();
+    }
   }
 
   protected loadEndpointInventory(refreshCache = false): void {
     const selectedSystem = this.selectedSystem();
-    if (!selectedSystem) {
+    const branch = this.branch().trim();
+    if (!selectedSystem || !branch) {
       this.endpointState.set('idle');
       return;
     }
+
+    const requestId = ++this.inventoryRequestId;
+    const systemId = selectedSystem.systemId;
 
     this.resetJobState();
     this.endpointState.set('loading');
@@ -703,19 +719,25 @@ export class FlowExplorerPageComponent implements OnInit {
     this.selectedEndpointId.set('');
     this.endpointInventory.set(null);
 
-    const query = refreshCache
-      ? { branch: this.branch(), refresh: true }
-      : { branch: this.branch() };
+    const query = refreshCache ? { branch, refresh: true } : { branch };
 
     this.flowExplorerApi
-      .getEndpointInventory(selectedSystem.systemId, query)
+      .getEndpointInventory(systemId, query)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (inventory) => {
+          if (requestId !== this.inventoryRequestId || systemId !== this.selectedSystemId()
+              || branch !== this.branch().trim()) {
+            return;
+          }
           this.endpointInventory.set(inventory);
           this.endpointState.set(inventory.endpoints.length > 0 ? 'ready' : 'empty');
         },
         error: (error: HttpErrorResponse) => {
+          if (requestId !== this.inventoryRequestId || systemId !== this.selectedSystemId()
+              || branch !== this.branch().trim()) {
+            return;
+          }
           this.endpointInventory.set(null);
           this.endpointError.set(this.errorMessage(error, 'Nie udalo sie pobrac endpointow.'));
           this.endpointState.set('error');

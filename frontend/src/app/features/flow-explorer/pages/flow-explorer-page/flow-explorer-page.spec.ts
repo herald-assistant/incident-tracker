@@ -12,6 +12,7 @@ import {
 import { AiOptionsApiService } from '../../../../core/services/ai-options-api.service';
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { AppUiConfigService } from '../../../../core/services/app-ui-config.service';
+import { GitLabSystemBranchesApiService } from '../../../../core/services/gitlab-system-branches-api.service';
 import {
   FlowExplorerEndpointInventoryResponse,
   FlowExplorerJobStateSnapshot,
@@ -86,6 +87,20 @@ describe('FlowExplorerPageComponent', () => {
         { provide: AnalysisRunHistoryApiService, useValue: historyApi },
         { provide: AppUiConfigService, useValue: appUiConfigService },
         {
+          provide: GitLabSystemBranchesApiService,
+          useValue: {
+            getBranches: vi.fn((systemId: string) => of({
+              systemId,
+              branches: [
+                { name: 'main', isDefault: true },
+                { name: 'release-candidate', isDefault: false }
+              ],
+              truncated: false,
+              warnings: []
+            }))
+          }
+        },
+        {
           provide: ActivatedRoute,
           useValue: {
             queryParamMap: of(convertToParamMap({}))
@@ -101,12 +116,12 @@ describe('FlowExplorerPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const branchInput = compiled.querySelector('input[type="text"]') as HTMLInputElement;
+    const branchControl = compiled.querySelector('.branch-select__control') as HTMLButtonElement;
 
     expect(appUiConfigService.load).toHaveBeenCalledTimes(1);
     expect(flowExplorerApi.getSystems).toHaveBeenCalledTimes(1);
     expect(aiOptionsApi.getOptions).toHaveBeenCalledTimes(1);
-    expect(branchInput.value).toBe('main');
+    expect(branchControl.textContent).toContain('main');
     expect(compiled.textContent).toContain('Endpoint documentation workspace');
     expect(compiled.textContent).toContain('Select application');
     expect(compiled.textContent).toContain('2 applications');
@@ -261,10 +276,18 @@ describe('FlowExplorerPageComponent', () => {
 
     fixture.detectChanges();
     selectSystem(fixture, 'CRM Service');
-    setInputValue(fixture.nativeElement, 'input[type="text"]', 'release-candidate');
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    nativeElement.querySelector<HTMLButtonElement>('.branch-select__control')?.click();
+    fixture.detectChanges();
+    const releaseOption = Array.from(
+      nativeElement.querySelectorAll<HTMLButtonElement>('.branch-select__option')
+    ).find((option) => option.textContent?.includes('release-candidate'));
+    releaseOption?.click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Load endpoints for branch/ref');
+    expect(flowExplorerApi.getEndpointInventory).toHaveBeenLastCalledWith('crm-service', {
+      branch: 'release-candidate'
+    });
 
     clickLoadEndpoints(fixture.nativeElement);
     fixture.detectChanges();

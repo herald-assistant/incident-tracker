@@ -132,30 +132,12 @@
             }
           </div>
 
-          <label class="form-field flow-explorer-field">
-            <span class="flow-explorer-field-label">
-              <span class="field-label">Branch / Ref</span>
-              <span
-                class="flow-explorer-label-help"
-                tabindex="0"
-                aria-label="Branch field help"
-                matTooltip="Git ref dla pobrania endpoint inventory. Zmiana ref czysci endpointy; uzyj Load endpoints."
-                matTooltipPosition="right"
-                [matTooltipShowDelay]="120"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">info</span>
-              </span>
-            </span>
-            <input
-              #branchInput
-              class="text-input"
-              type="text"
-              autocomplete="off"
-              spellcheck="false"
-              [value]="branch()"
-              (input)="onBranchChanged(branchInput.value)"
-            />
-          </label>
+          <app-gitlab-branch-select
+            [systemId]="selectedSystemId()"
+            [selectedBranch]="branch()"
+            [disabled]="isJobActive() || isImportedResult() || isHistoryResult()"
+            (branchSelected)="onBranchSelected($event)"
+          />
 
           <div class="flow-explorer-select" (click)="keepCustomSelectOpen($event)">
             <span class="flow-explorer-field-label">

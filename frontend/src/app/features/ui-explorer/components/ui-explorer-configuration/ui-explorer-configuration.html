@@ -108,31 +108,12 @@
           }
         </div>
 
-        <label class="form-field ui-explorer-field">
-          <span class="ui-explorer-field-label">
-            <span class="field-label">Branch / Ref</span>
-            <span
-              class="ui-explorer-label-help"
-              tabindex="0"
-              aria-label="Branch field help"
-              matTooltip="Git ref użyty do rozpoznania widoków. Zmiana refa usuwa wybrany widok i source revision."
-              matTooltipPosition="right"
-            >
-              <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            </span>
-          </span>
-          <input
-            class="text-input"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="160"
-            [disabled]="facade.controlsLocked()"
-            [value]="facade.branch()"
-            (input)="facade.changeBranch($any($event.target).value)"
-            (keydown.enter)="facade.loadScreens(true)"
-          />
-        </label>
+        <app-gitlab-branch-select
+          [systemId]="facade.selectedSystemId()"
+          [selectedBranch]="facade.branch()"
+          [disabled]="facade.controlsLocked()"
+          (branchSelected)="facade.changeBranch($event)"
+        />
 
         <app-ui-explorer-screen-catalog />
 

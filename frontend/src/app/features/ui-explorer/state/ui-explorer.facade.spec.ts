@@ -96,15 +96,17 @@ describe('UiExplorerFacade', () => {
     facade.changeBranch('crm-review');
 
     facade.initialize();
+    facade.changeBranch('crm-review');
 
     expect(facade.branch()).toBe('crm-review');
     expect(api.getScreens).toHaveBeenCalledWith('crm-agent-portal', 'crm-review', false);
   });
 
-  it('builds real defaults and automatically loads screens for the selected CRM frontend', () => {
+  it('builds real defaults and loads screens when the GitLab branch is selected', () => {
     const facade = TestBed.inject(UiExplorerFacade);
 
     facade.initialize();
+    facade.changeBranch('main');
 
     expect(facade.selectedSystemId()).toBe('crm-agent-portal');
     expect(facade.sectionModes()).toEqual({ OVERVIEW: 'DEEP', FORMS_AND_RULES: 'COMPACT' });
@@ -117,6 +119,7 @@ describe('UiExplorerFacade', () => {
   it('bypasses the CRM view cache only for an explicit refresh', () => {
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     vi.clearAllMocks();
 
     facade.loadScreens();
@@ -126,9 +129,11 @@ describe('UiExplorerFacade', () => {
     expect(api.getScreens).toHaveBeenNthCalledWith(2, 'crm-agent-portal', 'main', true);
   });
 
-  it('clears the selected screen and source revision when the ref changes', () => {
+  it('clears the selected screen and source revision while the new branch loads', () => {
+    api.getScreens.mockReturnValueOnce(of(screenCatalog)).mockReturnValueOnce(NEVER);
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
     expect(facade.configurationReady()).toBe(true);
 
@@ -136,13 +141,14 @@ describe('UiExplorerFacade', () => {
 
     expect(facade.selectedScreenId()).toBe('');
     expect(facade.sourceRevision()).toBeNull();
-    expect(facade.screenState()).toBe('idle');
+    expect(facade.screenState()).toBe('loading');
     expect(facade.configurationReady()).toBe(false);
   });
 
   it('requires at least one active documentation section', () => {
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
 
     facade.selectSectionMode('OVERVIEW', 'OFF');
@@ -155,6 +161,7 @@ describe('UiExplorerFacade', () => {
   it('starts and polls a bounded CRM run with the selected source revision', () => {
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
     facade.updateScenarioDescription('Describe the anonymized CRM contact creation flow.');
 
@@ -182,6 +189,7 @@ describe('UiExplorerFacade', () => {
       api.startJob.mockReturnValueOnce(of(crmJobSnapshot(status)));
       const facade = TestBed.inject(UiExplorerFacade);
       facade.initialize();
+      facade.changeBranch('main');
       facade.selectScreen('crm-contact-create');
 
       facade.startJob();
@@ -206,6 +214,7 @@ describe('UiExplorerFacade', () => {
       .mockReturnValueOnce(of(crmJobSnapshot('COMPLETED')));
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
 
     facade.startJob();
@@ -237,6 +246,7 @@ describe('UiExplorerFacade', () => {
     );
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
 
     facade.startJob();
@@ -251,6 +261,7 @@ describe('UiExplorerFacade', () => {
     polling.poll.mockReturnValueOnce(NEVER);
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
 
     facade.startJob();
@@ -271,6 +282,7 @@ describe('UiExplorerFacade', () => {
   it('omits empty optional AI and scenario fields from the start request', () => {
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
     facade.selectModel('');
     facade.selectReasoningEffort('');
@@ -288,6 +300,7 @@ describe('UiExplorerFacade', () => {
     polling.poll.mockReturnValueOnce(pollingStream);
     const facade = TestBed.inject(UiExplorerFacade);
     facade.initialize();
+    facade.changeBranch('main');
     facade.selectScreen('crm-contact-create');
 
     facade.startJob();

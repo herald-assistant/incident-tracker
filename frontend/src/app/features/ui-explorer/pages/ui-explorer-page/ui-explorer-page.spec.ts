@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
@@ -38,6 +38,7 @@ describe('UiExplorerPageComponent', () => {
 
     flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
+    flushBranchOptions(fixture, http);
     http.expectOne(
       (request) =>
         request.url === '/api/ui-explorer/screens' &&
@@ -84,13 +85,14 @@ describe('UiExplorerPageComponent', () => {
     http.verify();
   });
 
-  it('clears a stale screen and reloads the catalog when Enter is pressed in the ref field', async () => {
+  it('clears a stale screen and automatically loads the selected GitLab branch', async () => {
     const fixture = TestBed.createComponent(UiExplorerPageComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
     flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
+    flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
     );
@@ -99,22 +101,27 @@ describe('UiExplorerPageComponent', () => {
     fixture.detectChanges();
 
     fixture.componentInstance.facade.selectScreen('crm-contact-create');
-    const branchInput = fixture.nativeElement.querySelector(
-      'input[autocomplete="off"][maxlength="160"]'
-    ) as HTMLInputElement;
-    branchInput.value = 'crm-review';
-    branchInput.dispatchEvent(new Event('input'));
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    const branchControl = nativeElement.querySelector<HTMLButtonElement>(
+      '.branch-select__control'
+    );
+    branchControl?.click();
+    fixture.detectChanges();
+
+    const reviewOption = Array.from(
+      nativeElement.querySelectorAll<HTMLButtonElement>('.branch-select__option')
+    ).find((option) => option.textContent?.includes('crm-review'));
+    reviewOption?.click();
     fixture.detectChanges();
 
     expect(fixture.componentInstance.facade.selectedScreenId()).toBe('');
     expect(fixture.componentInstance.facade.sourceRevision()).toBeNull();
 
-    branchInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     const request = http.expectOne(
       (candidate) =>
         candidate.url === '/api/ui-explorer/screens' &&
         candidate.params.get('branch') === 'crm-review' &&
-        candidate.params.get('refresh') === 'true'
+        !candidate.params.has('refresh')
     );
     request.flush(crmScreenCatalog('crm-review', 'crm-revision-d4e5f6'));
     fixture.detectChanges();
@@ -130,6 +137,7 @@ describe('UiExplorerPageComponent', () => {
 
     flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
+    flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
     );
@@ -210,6 +218,7 @@ describe('UiExplorerPageComponent', () => {
 
     flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
+    flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
     );
@@ -240,6 +249,7 @@ describe('UiExplorerPageComponent', () => {
 
     flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
+    flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
     );
@@ -280,6 +290,7 @@ describe('UiExplorerPageComponent', () => {
 
     flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
+    flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
     );
@@ -317,6 +328,7 @@ describe('UiExplorerPageComponent', () => {
 
     flushPlatformConfig(http);
     http.expectOne('/api/ui-explorer/input-options').flush(crmInputOptions());
+    flushBranchOptions(fixture, http);
     http.expectOne((request) => request.url === '/api/ui-explorer/screens').flush(
       crmScreenCatalog('main', 'crm-revision-a1b2c3')
     );
@@ -345,6 +357,19 @@ describe('UiExplorerPageComponent', () => {
     http.verify();
   });
 });
+
+function flushBranchOptions(fixture: ComponentFixture<UiExplorerPageComponent>, http: HttpTestingController): void {
+  fixture.detectChanges();
+  http.expectOne('/api/gitlab/systems/crm-agent-portal/branches').flush({
+    systemId: 'crm-agent-portal',
+    branches: [
+      { name: 'main', isDefault: true },
+      { name: 'crm-review', isDefault: false }
+    ],
+    truncated: false,
+    warnings: []
+  });
+}
 
 function flushPlatformConfig(http: HttpTestingController): void {
   http.expectOne('/api/ui/config').flush({
