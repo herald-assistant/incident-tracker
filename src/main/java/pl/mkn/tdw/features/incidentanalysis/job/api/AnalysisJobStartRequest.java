@@ -10,17 +10,29 @@ public record AnalysisJobStartRequest(
         String correlationId,
         MultipartFile logFile,
         String model,
-        String reasoningEffort
+        String reasoningEffort,
+        String problemDescription
 ) {
 
     public AnalysisJobStartRequest {
         correlationId = StringUtils.hasText(correlationId) ? correlationId.trim() : correlationId;
         model = normalize(model);
         reasoningEffort = normalize(reasoningEffort);
+        problemDescription = normalize(problemDescription);
     }
 
     public AnalysisJobStartRequest(String correlationId, String model, String reasoningEffort) {
-        this(AnalysisJobLogSource.ELASTICSEARCH, correlationId, null, model, reasoningEffort);
+        this(AnalysisJobLogSource.ELASTICSEARCH, correlationId, null, model, reasoningEffort, null);
+    }
+
+    public AnalysisJobStartRequest(
+            AnalysisJobLogSource source,
+            String correlationId,
+            MultipartFile logFile,
+            String model,
+            String reasoningEffort
+    ) {
+        this(source, correlationId, logFile, model, reasoningEffort, null);
     }
 
     public static AnalysisJobStartRequest fromMultipart(
@@ -30,12 +42,24 @@ public record AnalysisJobStartRequest(
             String model,
             String reasoningEffort
     ) {
+        return fromMultipart(source, correlationId, logFile, model, reasoningEffort, null);
+    }
+
+    public static AnalysisJobStartRequest fromMultipart(
+            String source,
+            String correlationId,
+            MultipartFile logFile,
+            String model,
+            String reasoningEffort,
+            String problemDescription
+    ) {
         return new AnalysisJobStartRequest(
                 AnalysisJobLogSource.parse(source),
                 correlationId,
                 logFile,
                 model,
-                reasoningEffort
+                reasoningEffort,
+                problemDescription
         );
     }
 
@@ -46,6 +70,7 @@ public record AnalysisJobStartRequest(
     public void validateForStart() {
         validateTextLength(model, 80, "model");
         validateTextLength(reasoningEffort, 40, "reasoningEffort");
+        validateTextLength(problemDescription, 4000, "problemDescription");
 
         if (source == null) {
             throw new AnalysisJobInputException(

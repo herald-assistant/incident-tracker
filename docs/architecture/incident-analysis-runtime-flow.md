@@ -20,7 +20,8 @@ POST /api/analysis/jobs/{analysisId}/chat/messages
 GET /analysis/ai/options
 ```
 
-Job request dla UI jest multipart/form-data. Niesie `source`,
+Job request dla UI jest multipart/form-data. Niesie `source`, opcjonalny opis
+obserwowanego problemu `problemDescription` (maksymalnie 4000 znakow),
 opcjonalne preferencje wykonania AI (`model`, `reasoningEffort`) oraz
 wejscie wymagane przez wybrane zrodlo logow:
 
@@ -28,6 +29,10 @@ wejscie wymagane przez wybrane zrodlo logow:
   Elasticsearch/Kibana,
 - `source=CSV_UPLOAD` wymaga `logFile`; CSV jest walidowany i mapowany
   deterministycznie przed utworzeniem joba.
+
+Opis jest dostepny dla obu zrodel. Pusty tekst albo tekst zlozony z samych
+bialych znakow jest pomijany; nie zastepuje wymaganego wejscia logow i nie
+wyznacza `environment`, `gitLabBranch` ani `gitLabGroup`.
 
 `GET /api/analysis/jobs/input-options` zasila UI informacja, czy sciezka
 Elasticsearch jest dostepna. CSV upload pozostaje dostepny niezaleznie od
@@ -182,7 +187,9 @@ renderingu i konfiguracji SDK:
 - `CopilotIncidentPromptRenderer` renderuje incident prompt initial,
   report-first result contract, fallback JSON contract, available capability
   groups, centralna instrukcje uzycia feedbacku tooli, gdy
-  `record_tool_feedback` jest dostepny, i embedded artifacts,
+  `record_tool_feedback` jest dostepny, i embedded artifacts. Gdy operator
+  podal opis problemu, renderer dodaje osobny paragraf oznaczony jako
+  obserwacja do sprawdzenia wobec evidence,
 - `CopilotIncidentToolSessionContextFactory` tworzy incidentowy
   `CopilotToolSessionContext`: run id, session id i hidden tool context dla
   initial/follow-up,
@@ -798,8 +805,9 @@ miec wlasne `toolEvidenceSections` i `aiActivityEvents` przypisane do
 wiadomosci asystenta.
 
 Job request UI zawiera `source`, wejscie wybranego zrodla logow
-(`correlationId` albo `logFile`) oraz opcjonalne preferencje AI (`model`,
-`reasoningEffort`). `gitLabGroup` pochodzi z konfiguracji, a `environment` i
+(`correlationId` albo `logFile`), opcjonalny `problemDescription` oraz
+opcjonalne preferencje AI (`model`, `reasoningEffort`). `gitLabGroup` pochodzi
+z konfiguracji, a `environment` i
 `gitLabBranch` sa wyprowadzane z evidence.
 
 Job response zawiera tez `chatMessages`. UI pokazuje chat dopiero po

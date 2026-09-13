@@ -55,13 +55,13 @@
               <span class="field-label">Log source</span>
               <p class="field-hint">Run a new analysis or import an exported result.</p>
             </div>
-            <p class="analysis-actions__hint">
-              {{ analysisActionsHint() }}
-            </p>
           </div>
         }
 
-        <div class="analysis-start-grid">
+        <div
+          class="analysis-start-grid"
+          [class.analysis-start-grid--both-sources]="canUseElasticsearchInput() && canUseCsvUploadInput()"
+        >
           @if (canUseElasticsearchInput()) {
             <label class="field-control analysis-start-grid__log-input" for="correlationId">
               <span class="field-label">Correlation ID</span>
@@ -160,6 +160,25 @@
               @if (isAiModelOptionsLoading()) {
                 <span class="select-loader" aria-hidden="true"></span>
               }
+            </span>
+          </label>
+
+          <label
+            class="field-control analysis-start-grid__problem-description"
+            for="problemDescription"
+          >
+            <span class="field-label">Problem description (optional)</span>
+            <textarea
+              id="problemDescription"
+              class="text-input"
+              rows="2"
+              [attr.maxlength]="problemDescriptionMaxLength"
+              [formControl]="problemDescriptionControl"
+              placeholder="For example: the response contains incorrect data or the request is too slow."
+              (input)="clearFormError()"
+            ></textarea>
+            <span class="field-hint">
+              Describe the observed issue or what AI should focus on, even if logs show no error.
             </span>
           </label>
 

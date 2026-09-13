@@ -124,6 +124,52 @@ describe('AnalysisConsoleComponent auth flow', () => {
     expect(JSON.stringify(startAnalysisCalls[0][0])).not.toContain('githubAuthCode');
   });
 
+  it('should send a trimmed problem description for Elasticsearch analysis', async () => {
+    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const description = fixture.nativeElement.querySelector(
+      '#problemDescription'
+    ) as HTMLTextAreaElement;
+    expect(description.maxLength).toBe(4000);
+    expect(fixture.nativeElement.textContent).toContain('Problem description (optional)');
+    expect(fixture.nativeElement.textContent).toContain('even if logs show no error');
+
+    component.correlationIdControl.setValue('corr-123');
+    component.problemDescriptionControl.setValue('  Customer profile shows stale data.  ');
+    component.submit(new Event('submit'));
+
+    expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
+      source: 'ELASTICSEARCH',
+      correlationId: 'corr-123',
+      problemDescription: 'Customer profile shows stale data.',
+      model: undefined,
+      reasoningEffort: 'medium'
+    });
+  });
+
+  it('should reject a problem description longer than 4000 characters', async () => {
+    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.correlationIdControl.setValue('corr-123');
+    component.problemDescriptionControl.setValue('x'.repeat(4001));
+    component.submit(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(analysisApi.startAnalysis).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain(
+      'Opis problemu nie może przekraczać 4000 znaków.'
+    );
+  });
+
   it('should submit listed backend defaults as regular selected AI options', async () => {
     const { fixture, analysisApi } = await createComponent(
       connectedStatus(),
@@ -202,6 +248,43 @@ describe('AnalysisConsoleComponent auth flow', () => {
     component.submit(new Event('submit'));
 
     expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
+      source: 'CSV_UPLOAD',
+      logFile: file,
+      model: undefined,
+      reasoningEffort: 'medium'
+    });
+  });
+
+  it('should send a problem description with CSV upload and omit whitespace-only descriptions', async () => {
+    const { fixture, analysisApi } = await createComponent(connectedStatus());
+    const component = fixture.componentInstance;
+    const file = new File(
+      ['@timestamp,fields.correlationId\n2026-07-04T10:00:00Z,corr-123'],
+      'crm-logs.csv',
+      { type: 'text/csv' }
+    );
+    const input = document.createElement('input');
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.onLogFileSelected({ target: input } as unknown as Event);
+    component.problemDescriptionControl.setValue('  Customer search takes too long.  ');
+    component.submit(new Event('submit'));
+
+    expect(analysisApi.startAnalysis).toHaveBeenCalledWith({
+      source: 'CSV_UPLOAD',
+      logFile: file,
+      problemDescription: 'Customer search takes too long.',
+      model: undefined,
+      reasoningEffort: 'medium'
+    });
+
+    component.problemDescriptionControl.setValue('   ');
+    component.submit(new Event('submit'));
+
+    expect(analysisApi.startAnalysis).toHaveBeenLastCalledWith({
       source: 'CSV_UPLOAD',
       logFile: file,
       model: undefined,

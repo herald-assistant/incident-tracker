@@ -22,9 +22,11 @@ Nie obejmuje:
 - `AnalysisOrchestrator` jest source of truth dla calego runtime flow:
   evidence collection -> AI request -> prompt -> AI response -> final result.
 - Job ma reuse'owac to samo flow. Nie duplikuj tu alternatywnej orkiestracji.
-- `AnalysisJobStartRequest` przyjmuje tylko `correlationId` oraz opcjonalne
-  preferencje AI. Nie przywracaj `branch`, `environment` ani `gitLabGroup` do
-  publicznego requestu startu analizy.
+- `AnalysisJobStartRequest` przyjmuje zrodlo logow, wymagane dla niego
+  `correlationId` albo `logFile`, opcjonalny `problemDescription` i opcjonalne
+  preferencje AI. Opis operatora przekazuj do initial promptu jako obserwacje
+  do weryfikacji, nie jako deterministic evidence. Nie przywracaj `branch`,
+  `environment` ani `gitLabGroup` do publicznego requestu startu analizy.
 - `AnalysisResultResponse` ma zwracac fakty rozwiazane z evidence, glownie
   `environment` i `gitLabBranch`, a nie dane dostarczane przez klienta.
 - Collector jest wlascicielem lifecycle krokow evidence. Flow powinno tylko

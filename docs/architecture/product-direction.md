@@ -85,9 +85,11 @@ komponentu, a nie lokalna kopia.
 ### Incident analysis
 
 Operator wybiera Elasticsearch i podaje `correlationId` albo zalacza plik CSV
-z logami. System zbiera deployment/runtime signals, code evidence i
-operational context, a AI zwraca diagnoze, uzasadnienie oraz rekomendowany
-kolejny krok. Follow-up chat pozwala dopytac o wynik i wykonac dodatkowe,
+z logami. Moze opcjonalnie opisac obserwowany problem, na ktorym AI ma sie
+skupic, rowniez gdy w logach nie ma jawnego bledu. System zbiera
+deployment/runtime signals, code evidence i operational context, a AI zwraca
+diagnoze, uzasadnienie oraz rekomendowany kolejny krok. Follow-up chat pozwala
+dopytac o wynik i wykonac dodatkowe,
 session-bound sprawdzenia przez tools.
 
 Obecny publiczny kontrakt:

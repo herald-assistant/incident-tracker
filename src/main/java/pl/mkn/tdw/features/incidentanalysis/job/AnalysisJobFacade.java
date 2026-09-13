@@ -63,7 +63,13 @@ public class AnalysisJobFacade {
 
         jobs.put(analysisId, job);
         persistRunSnapshot(job);
-        applicationTaskExecutor.execute(() -> runAnalysis(job, logInput, request.aiOptions(), authRef));
+        applicationTaskExecutor.execute(() -> runAnalysis(
+                job,
+                logInput,
+                request.aiOptions(),
+                authRef,
+                request.problemDescription()
+        ));
 
         return job.snapshot();
     }
@@ -92,13 +98,15 @@ public class AnalysisJobFacade {
             AnalysisJobState job,
             AnalysisLogInput logInput,
             AnalysisAiOptions options,
-            AnalysisAiAuthRef authRef
+            AnalysisAiAuthRef authRef,
+            String problemDescription
     ) {
         try {
             var execution = analysisOrchestrator.analyze(
                     logInput,
                     options,
                     authRef,
+                    problemDescription,
                     new AnalysisJobStateListener(job, () -> persistRunSnapshot(job))
             );
             job.markCompleted(execution);

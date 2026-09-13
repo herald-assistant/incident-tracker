@@ -55,7 +55,8 @@ Przed wieksza zmiana zacznij od:
 
 - `POST /api/analysis/jobs` jest kanonicznym publicznym startem analizy;
   przyjmuje `source`, dla `ELASTICSEARCH` wymagany `correlationId`, dla
-  `CSV_UPLOAD` multipart `logFile`, oraz opcjonalne preferencje AI (`model`,
+  `CSV_UPLOAD` multipart `logFile`, opcjonalny opis objawu
+  `problemDescription` oraz opcjonalne preferencje AI (`model`,
   `reasoningEffort`). Legacy aliasy `/analysis/**` pozostaja dostepne tylko dla
   kompatybilnosci.
 - `gitLabBranch` i `environment` sa wyprowadzane z evidence, glownie z logow

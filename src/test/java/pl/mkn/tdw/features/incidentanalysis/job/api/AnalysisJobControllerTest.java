@@ -82,7 +82,8 @@ class AnalysisJobControllerTest {
                         .param("source", "ELASTICSEARCH")
                         .param("correlationId", "timeout-123")
                         .param("model", "gpt-5.4")
-                        .param("reasoningEffort", "high"))
+                        .param("reasoningEffort", "high")
+                        .param("problemDescription", "  Profil klienta CRM zawiera niepoprawny status.  "))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.analysisId").value("job-123"))
                 .andExpect(jsonPath("$.correlationId").value("timeout-123"))
@@ -92,7 +93,14 @@ class AnalysisJobControllerTest {
                 .andExpect(jsonPath("$.steps", hasSize(1)))
                 .andExpect(jsonPath("$.result").doesNotExist());
 
-        verify(analysisJobFacade).startAnalysis(new AnalysisJobStartRequest("timeout-123", "gpt-5.4", "high"));
+        verify(analysisJobFacade).startAnalysis(new AnalysisJobStartRequest(
+                AnalysisJobLogSource.ELASTICSEARCH,
+                "timeout-123",
+                null,
+                "gpt-5.4",
+                "high",
+                "Profil klienta CRM zawiera niepoprawny status."
+        ));
     }
 
     @Test
@@ -240,7 +248,8 @@ class AnalysisJobControllerTest {
 
         mockMvc.perform(multipart("/api/analysis/jobs")
                         .file(csvFile)
-                        .param("source", "CSV_UPLOAD"))
+                        .param("source", "CSV_UPLOAD")
+                        .param("problemDescription", "Odpowiedz profilu CRM trwa zbyt dlugo."))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.analysisId").value("job-csv"));
 
@@ -249,7 +258,8 @@ class AnalysisJobControllerTest {
                 null,
                 csvFile,
                 null,
-                null
+                null,
+                "Odpowiedz profilu CRM trwa zbyt dlugo."
         ));
     }
 

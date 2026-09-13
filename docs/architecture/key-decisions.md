@@ -123,8 +123,10 @@ Konsekwencje UI:
 ## 1. Publiczny request analizy pozostaje minimalny
 
 `POST /api/analysis/jobs` jest kanonicznym publicznym startem analizy.
-Przyjmuje wybor zrodla logow oraz opcjonalne preferencje wykonania AI:
-`model` i `reasoningEffort`.
+Przyjmuje wybor zrodla logow, opcjonalny opis obserwowanego problemu
+`problemDescription` oraz opcjonalne preferencje wykonania AI: `model` i
+`reasoningEffort`. Opis jest hipoteza operatora do weryfikacji wobec evidence;
+nie zmienia scope'u zrodla logow ani tools.
 
 Obslugiwane zrodla logow:
 
@@ -739,8 +741,9 @@ Refaktory w `features.incidentanalysis`, `aiplatform.copilot` i obecnych
 fasadach `features.incidentanalysis.job` / `api.aioptions` nie powinny
 wymagac wiedzy o typach SDK w UI:
 `POST /api/analysis/jobs` przyjmuje feature-owned wybor zrodla logow
-(`ELASTICSEARCH` albo `CSV_UPLOAD`) oraz generyczne preferencje AI (`model`,
-`reasoningEffort`). Response pozostaje mapowany do pol aplikacji, a artefakty
+(`ELASTICSEARCH` albo `CSV_UPLOAD`), opcjonalny `problemDescription` oraz
+generyczne preferencje AI (`model`, `reasoningEffort`). Response pozostaje
+mapowany do pol aplikacji, a artefakty
 Copilota nadal sa embedded inline w promptcie.
 
 Katalog modeli jest osobnym backendowym endpointem opcji AI. UI moze pokazac

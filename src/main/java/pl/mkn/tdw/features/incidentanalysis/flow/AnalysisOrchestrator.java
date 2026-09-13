@@ -52,6 +52,16 @@ public class AnalysisOrchestrator {
             AnalysisAiAuthRef authRef,
             AnalysisExecutionListener listener
     ) {
+        return analyze(logInput, options, authRef, null, listener);
+    }
+
+    public AnalysisExecution analyze(
+            AnalysisLogInput logInput,
+            AnalysisAiOptions options,
+            AnalysisAiAuthRef authRef,
+            String problemDescription,
+            AnalysisExecutionListener listener
+    ) {
         var context = analysisEvidenceCollector.collect(logInput, listener);
         var correlationId = context.correlationId();
 
@@ -67,7 +77,8 @@ public class AnalysisOrchestrator {
                 gitLabProperties.getGroup(),
                 context.evidenceSections(),
                 options,
-                authRef
+                authRef,
+                problemDescription
         );
 
         listener.onAiStarted(aiRequest, context);

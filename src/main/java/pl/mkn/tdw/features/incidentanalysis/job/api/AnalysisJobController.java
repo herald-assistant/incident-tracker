@@ -33,14 +33,16 @@ public class AnalysisJobController {
             @RequestParam(value = "correlationId", required = false) String correlationId,
             @RequestPart(value = "logFile", required = false) MultipartFile logFile,
             @RequestParam(value = "model", required = false) String model,
-            @RequestParam(value = "reasoningEffort", required = false) String reasoningEffort
+            @RequestParam(value = "reasoningEffort", required = false) String reasoningEffort,
+            @RequestParam(value = "problemDescription", required = false) String problemDescription
     ) {
         return analysisJobFacade.startAnalysis(AnalysisJobStartRequest.fromMultipart(
                 source,
                 correlationId,
                 logFile,
                 model,
-                reasoningEffort
+                reasoningEffort,
+                problemDescription
         ));
     }
 

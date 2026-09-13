@@ -187,7 +187,14 @@ class AnalysisJobFacadeTest {
         var optionsTaskExecutor = new CapturingTaskExecutor();
         var service = analysisJobFacade(provider, new TestAnalysisChatProvider(), optionsTaskExecutor);
 
-        var started = service.startAnalysis(new AnalysisJobStartRequest("timeout-123", "gpt-5.4", "high"));
+        var started = service.startAnalysis(new AnalysisJobStartRequest(
+                AnalysisJobLogSource.ELASTICSEARCH,
+                "timeout-123",
+                null,
+                "gpt-5.4",
+                "high",
+                "Status profilu klienta CRM jest niepoprawny."
+        ));
 
         assertEquals("gpt-5.4", started.aiModel());
         assertEquals("high", started.reasoningEffort());
@@ -196,6 +203,7 @@ class AnalysisJobFacadeTest {
 
         assertEquals("gpt-5.4", provider.lastPreparedRequest.options().model());
         assertEquals("high", provider.lastPreparedRequest.options().reasoningEffort());
+        assertEquals("Status profilu klienta CRM jest niepoprawny.", provider.lastPreparedRequest.problemDescription());
         var completed = service.getAnalysis(started.analysisId());
         assertEquals("gpt-5.4", completed.aiModel());
         assertEquals("high", completed.reasoningEffort());
@@ -272,6 +280,31 @@ class AnalysisJobFacadeTest {
     }
 
     @Test
+    void shouldRejectProblemDescriptionOverLimitBeforeQueueing() {
+        var validationTaskExecutor = new CapturingTaskExecutor();
+        var service = analysisJobFacade(
+                new TestInitialAnalysisProvider(),
+                new TestAnalysisChatProvider(),
+                validationTaskExecutor
+        );
+
+        var exception = assertThrows(AnalysisJobInputException.class, () -> service.startAnalysis(
+                new AnalysisJobStartRequest(
+                        AnalysisJobLogSource.ELASTICSEARCH,
+                        "corr-crm-123",
+                        null,
+                        null,
+                        null,
+                        "x".repeat(4001)
+                )
+        ));
+
+        assertEquals("VALIDATION_ERROR", exception.code());
+        assertTrue(exception.getMessage().contains("problemDescription must not exceed 4000 characters"));
+        assertTrue(validationTaskExecutor.isEmpty());
+    }
+
+    @Test
     void shouldRejectCsvWithMissingColumnsBeforeQueueing() {
         assertCsvUploadRejectedBeforeQueueing(
                 csvFile("""
@@ -294,8 +327,8 @@ class AnalysisJobFacadeTest {
     void shouldRejectCsvWithMultipleCorrelationIdsBeforeQueueing() {
         assertCsvUploadRejectedBeforeQueueing(
                 csvFile(csvHeader()
-                        + csvRow("2026-04-11T20:57:33.285Z", "csv-timeout-123", "Catalog call timed out")
-                        + csvRow("2026-04-11T20:57:34.285Z", "csv-timeout-456", "Catalog call timed out")),
+                        + csvRow("2026-04-11T20:57:33.285Z", "crm-profile-corr-123", "CRM profile lookup timed out")
+                        + csvRow("2026-04-11T20:57:34.285Z", "crm-profile-corr-456", "CRM profile lookup timed out")),
                 "INCIDENT_LOG_FILE_MULTIPLE_CORRELATION_IDS"
         );
     }
@@ -303,7 +336,7 @@ class AnalysisJobFacadeTest {
     @Test
     void shouldRejectCsvWithInvalidTimestampBeforeQueueing() {
         assertCsvUploadRejectedBeforeQueueing(
-                csvFile(csvHeader() + csvRow("not-a-timestamp", "csv-timeout-123", "Catalog call timed out")),
+                csvFile(csvHeader() + csvRow("not-a-timestamp", "crm-profile-corr-123", "CRM profile lookup timed out")),
                 "INCIDENT_LOG_FILE_INVALID_TIMESTAMP"
         );
     }
@@ -319,22 +352,25 @@ class AnalysisJobFacadeTest {
     @Test
     void shouldStartCsvUploadWithDerivedCorrelationIdAndRouteUploadedLogs() {
         var csvTaskExecutor = new CapturingTaskExecutor();
+        var persistence = new CapturingLocalRunPersistence();
         var service = analysisJobFacade(
                 new TestInitialAnalysisProvider(),
                 new TestAnalysisChatProvider(),
-                csvTaskExecutor
+                csvTaskExecutor,
+                persistence
         );
-        var csvFile = csvLogFile("csv-timeout-123", "Catalog call timed out");
+        var csvFile = csvLogFile("crm-profile-corr-123", "CRM profile lookup timed out");
 
         var started = service.startAnalysis(new AnalysisJobStartRequest(
                 AnalysisJobLogSource.CSV_UPLOAD,
                 null,
                 csvFile,
                 null,
-                null
+                null,
+                "Odpowiedz profilu klienta CRM trwa zbyt dlugo."
         ));
 
-        assertEquals("csv-timeout-123", started.correlationId());
+        assertEquals("crm-profile-corr-123", started.correlationId());
         assertEquals("QUEUED", started.status());
         assertFalse(csvTaskExecutor.isEmpty());
 
@@ -342,12 +378,13 @@ class AnalysisJobFacadeTest {
 
         var completed = service.getAnalysis(started.analysisId());
         assertEquals("COMPLETED", completed.status());
-        assertEquals("csv-timeout-123", completed.correlationId());
+        assertEquals("crm-profile-corr-123", completed.correlationId());
         assertEquals("dev3", completed.environment());
-        assertEquals("dev/atlas", completed.gitLabBranch());
+        assertEquals("dev/crmprofile", completed.gitLabBranch());
         assertEquals("DOWNSTREAM_TIMEOUT", completed.result().detectedProblem());
+        assertEquals("Odpowiedz profilu klienta CRM trwa zbyt dlugo.", persistence.requests.get(0).problemDescription());
         assertEquals(
-                "Catalog call timed out",
+                "CRM profile lookup timed out",
                 completed.evidenceSections().get(0).items().get(0).attributes().stream()
                         .filter(attribute -> attribute.name().equals("message"))
                         .findFirst()
@@ -752,7 +789,7 @@ class AnalysisJobFacadeTest {
 
     private static String csvRow(String timestamp, String correlationId, String message) {
         return """
-                "%s","csv-doc-1","-","logs-2026","c.e.s.response.TimeoutHandler","%s","-","%s","svc","span-1","main","ERROR","crm-main-dev3","pod","backend","r/crm-main-dev3/backend:20260411-205733-1-dev-atlas-0123456789abcdef0123456789abcdef01234567"
+                "%s","csv-doc-1","-","logs-2026","crm.profile.ProfileTimeoutHandler","%s","-","%s","crm-profile-service","span-1","main","ERROR","crm-main-dev3","pod","backend","r/crm-main-dev3/backend:20260411-205733-1-dev-crmprofile-0123456789abcdef0123456789abcdef01234567"
                 """.formatted(timestamp, correlationId, message);
     }
 

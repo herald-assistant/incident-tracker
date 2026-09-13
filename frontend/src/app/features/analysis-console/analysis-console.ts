@@ -31,7 +31,6 @@ import { AiOptionsApiService } from '../../core/services/ai-options-api.service'
 import { GithubAuthService } from '../../core/services/github-auth.service';
 import { AnalysisRunHistoryApiService } from '../../core/services/analysis-run-history-api.service';
 import {
-  buildAnalysisActionsHint,
   buildJobBannerMessage,
   defaultErrorMessage,
   formatStatus,
@@ -67,6 +66,7 @@ import { AnalysisFollowUpChatComponent } from '../../components/analysis-follow-
 import { AnalysisStepsPanelComponent } from '../../components/analysis-steps-panel/analysis-steps-panel';
 
 const POLL_INTERVAL_MS = 1500;
+const PROBLEM_DESCRIPTION_MAX_LENGTH = 4000;
 type SelectOption = {
   value: string;
   label: string;
@@ -129,6 +129,8 @@ export class AnalysisConsoleComponent {
   });
   readonly aiModelControl = new FormControl('', { nonNullable: true });
   readonly reasoningEffortControl = new FormControl('', { nonNullable: true });
+  readonly problemDescriptionControl = new FormControl('', { nonNullable: true });
+  readonly problemDescriptionMaxLength = PROBLEM_DESCRIPTION_MAX_LENGTH;
 
   readonly isLoading = signal(false);
   readonly isChatSubmitting = signal(false);
@@ -252,7 +254,6 @@ export class AnalysisConsoleComponent {
     () =>
       this.placeholderMode() === 'loading' || this.transportError() !== null || this.job() !== null
   );
-  readonly analysisActionsHint = computed(() => buildAnalysisActionsHint(this.exportState()));
   readonly canUseChat = computed(() => {
     const currentJob = this.job();
     const exportState = this.exportState();
@@ -347,6 +348,14 @@ export class AnalysisConsoleComponent {
       return;
     }
 
+    const problemDescription = this.problemDescriptionControl.value.trim();
+    if (problemDescription.length > PROBLEM_DESCRIPTION_MAX_LENGTH) {
+      this.showFormError(
+        `Opis problemu nie może przekraczać ${PROBLEM_DESCRIPTION_MAX_LENGTH} znaków.`
+      );
+      return;
+    }
+
     if (this.isAnalysisBlockedByAuth()) {
       this.connectGithub();
       return;
@@ -355,6 +364,7 @@ export class AnalysisConsoleComponent {
     if (source === 'ELASTICSEARCH') {
       this.correlationIdControl.setValue(this.correlationIdControl.value.trim());
     }
+    this.problemDescriptionControl.setValue(problemDescription);
     this.clearFormError();
     this.stopPolling();
     this.activeAnalysisId = null;
@@ -380,6 +390,7 @@ export class AnalysisConsoleComponent {
         ...(source === 'ELASTICSEARCH'
           ? { correlationId: this.correlationIdControl.value.trim() }
           : { logFile: this.selectedLogFile() }),
+        ...(problemDescription ? { problemDescription } : {}),
         model: aiModel || undefined,
         reasoningEffort: reasoningEffort || undefined
       })

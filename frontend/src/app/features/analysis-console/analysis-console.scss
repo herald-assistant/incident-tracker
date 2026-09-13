@@ -126,18 +126,30 @@
 
 .analysis-start-grid {
   display: grid;
-  grid-template-columns:
-    minmax(220px, 1fr)
-    minmax(260px, 1.15fr)
-    minmax(180px, 0.78fr)
-    minmax(180px, 0.78fr)
-    auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   align-items: end;
 }
 
+.analysis-start-grid--both-sources {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .analysis-start-grid__log-input {
   min-width: 0;
+}
+
+.analysis-start-grid__problem-description {
+  grid-column: 1 / -1;
+}
+
+.analysis-start-grid__problem-description .text-input {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.analysis-start-grid__problem-description .field-hint {
+  margin-top: 6px;
 }
 
 .analysis-file-control {
@@ -210,6 +222,7 @@
 }
 
 .analysis-start-actions {
+  grid-column: 1 / -1;
   display: inline-flex;
   align-items: end;
   justify-content: flex-end;
@@ -316,12 +329,11 @@
   }
 
   .analysis-start-grid {
-    grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr) minmax(180px, 0.8fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .analysis-start-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
+  .analysis-start-grid--both-sources {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -336,7 +348,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .analysis-start-grid {
+  .analysis-start-grid,
+  .analysis-start-grid--both-sources {
     grid-template-columns: 1fr;
   }
 

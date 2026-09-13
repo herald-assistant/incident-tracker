@@ -28,10 +28,10 @@ Docelowy kierunek platformy:
 Obecny incident flow jest pierwsza realizacja tego modelu:
 
 1. operator wybiera zrodlo logow: Elasticsearch po `correlationId` albo upload
-   CSV,
+   CSV i moze opcjonalnie opisac obserwowany problem,
 2. aplikacja pobiera albo waliduje i mapuje logi do wspolnej sekcji evidence,
 3. aplikacja wzbogaca evidence danymi z systemow zewnetrznych,
-4. AI interpretuje evidence,
+4. AI interpretuje evidence i weryfikuje opis operatora jako obserwacje,
 5. AI moze dociagac dodatkowy kod z GitLaba i opcjonalnie zweryfikowac
    hipotezy danych przez Database tools,
 6. aplikacja zwraca rozdzielony wynik: `functionalAnalysis` dla analityka
@@ -208,7 +208,8 @@ Na dzisiaj projekt ma:
 - w ekranie `GET /incident-analysis` start analizy ma wybor zrodla logow:
   Elasticsearch po `correlationId` albo upload CSV; gdy konfiguracja
   Elasticsearch/Kibana jest niepelna, sciezka `correlationId` jest zablokowana,
-  ale CSV upload pozostaje dostepny,
+  ale CSV upload pozostaje dostepny. Opcjonalne pole opisu problemu pozwala
+  wskazac objaw niewidoczny jako blad w logach,
 - w ekranie `GET /incident-analysis` widok promptu przygotowanego dla AI,
   mozliwy do skopiowania nawet wtedy, gdy sesja Copilota zakonczy sie bledem,
 - w ekranie `GET /incident-analysis` ostatni krok AI pokazuje tez user-facing GitLab/DB evidence
@@ -492,8 +493,8 @@ Na dzisiaj projekt ma:
   continuation, resume i migracji starszych wersji.
 - `POST /api/analysis/jobs`
   Asynchroniczny start analizy wykorzystywany przez UI Angular. Request jest
-  multipart/form-data i niesie `source`, opcjonalne preferencje wykonania AI
-  (`model`, `reasoningEffort`) oraz:
+  multipart/form-data i niesie `source`, opcjonalny `problemDescription`,
+  opcjonalne preferencje wykonania AI (`model`, `reasoningEffort`) oraz:
   `correlationId` dla `source=ELASTICSEARCH` albo `logFile` dla
   `source=CSV_UPLOAD`.
 - `GET /api/analysis/jobs/{analysisId}`

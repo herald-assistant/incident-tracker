@@ -42,12 +42,16 @@ export class AnalysisApiService {
 
   private toStartFormData(request: AnalysisStartRequest): FormData {
     const formData = new FormData();
+    const problemDescription = request.problemDescription?.trim();
     formData.append('source', request.source || 'ELASTICSEARCH');
     if (request.correlationId) {
       formData.append('correlationId', request.correlationId);
     }
     if (request.logFile) {
       formData.append('logFile', request.logFile, request.logFile.name);
+    }
+    if (problemDescription) {
+      formData.append('problemDescription', problemDescription);
     }
     if (request.model) {
       formData.append('model', request.model);

@@ -123,6 +123,7 @@ export interface AnalysisStartRequest {
   source?: AnalysisLogSource;
   correlationId?: string;
   logFile?: File | null;
+  problemDescription?: string;
   model?: string;
   reasoningEffort?: string;
 }

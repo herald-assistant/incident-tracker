@@ -82,6 +82,12 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `plans/operational-context-universal-gitlab-tools.md` opisuje scalenie
   katalogu GitLab MCP tools, odczyt powiazanych projektow z glownej grupy i
   wybor samej galezi w formularzu asysty.
+- `needs/incident-analysis-operator-problem-description.md` i
+  `plans/incident-analysis-operator-problem-description.md`
+  dokumentuja dostarczony opcjonalny opis objawu przy starcie Incident
+  Analysis i jego przekazanie do initial promptu jako obserwacji do
+  weryfikacji. Wynikowy runtime opisuje
+  `architecture/incident-analysis-runtime-flow.md`.
 - `needs/ui-explorer.md`
   opisuje potrzebe generowania funkcjonalnej lub technicznej dokumentacji
   zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez
