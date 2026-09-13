@@ -113,64 +113,64 @@ class OperationalContextGitLabSourceCollectorTest {
 
     @Test
     void shouldDeriveNestedRepositoryIdentityFromFullProjectUrl() {
-        var properties = urlProperties("CLP", "https://gitlab.example.com");
+        var properties = urlProperties("CRM", "https://gitlab.example.com");
         var collector = new OperationalContextGitLabSourceCollector(properties, repositoryPort, treeExplorer);
 
         var snapshot = collector.collectUrl(
-                "https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS", REF);
+                "https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", REF);
 
-        assertEquals("PROCESSES/CLP_AGREEMENT_PROCESS", snapshot.project());
+        assertEquals("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", snapshot.project());
         assertEquals("gitlab", snapshot.repositoryGit().provider());
-        assertEquals("CLP/PROCESSES", snapshot.repositoryGit().group());
-        assertEquals("CLP_AGREEMENT_PROCESS", snapshot.repositoryGit().project());
-        assertEquals("CLP/PROCESSES/CLP_AGREEMENT_PROCESS", snapshot.repositoryGit().projectPath());
-        assertEquals("https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
+        assertEquals("CRM/PROCESSES", snapshot.repositoryGit().group());
+        assertEquals("CRM_CUSTOMER_PROFILE_PROCESS", snapshot.repositoryGit().project());
+        assertEquals("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", snapshot.repositoryGit().projectPath());
+        assertEquals("https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
                 snapshot.repositoryGit().url());
-        verify(repositoryPort).resolveRevision("CLP", "PROCESSES/CLP_AGREEMENT_PROCESS", REF);
+        verify(repositoryPort).resolveRevision("CRM", "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", REF);
     }
 
     @Test
     void resolvesBranchLookupToTheSameNestedProjectAsTheAnalysis() {
         var collector = new OperationalContextGitLabSourceCollector(
-                urlProperties("CLP", "https://gitlab.example.com"), repositoryPort, treeExplorer);
+                urlProperties("CRM", "https://gitlab.example.com"), repositoryPort, treeExplorer);
 
-        assertEquals("CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
-                collector.projectPathForBranchOptions("PROCESSES/CLP_AGREEMENT_PROCESS", null));
-        assertEquals("CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
+        assertEquals("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
+                collector.projectPathForBranchOptions("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", null));
+        assertEquals("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
                 collector.projectPathForBranchOptions(null,
-                        "https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS"));
+                        "https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS"));
         assertThrows(OperationalContextGitLabSourceSelectionException.class,
                 () -> collector.projectPathForBranchOptions(null, "https://gitlab.example.com/OTHER/project"));
         assertThrows(OperationalContextGitLabSourceSelectionException.class,
-                () -> collector.projectPathForBranchOptions("PROCESSES/project", "https://gitlab.example.com/CLP/project"));
+                () -> collector.projectPathForBranchOptions("PROCESSES/project", "https://gitlab.example.com/CRM/project"));
         verifyNoInteractions(repositoryPort);
     }
 
     @Test
     void shouldAcceptCloneUrlSuffixUnderConfiguredBasePath() {
-        var properties = urlProperties("CLP", "https://gitlab.example.com/gitlab/");
+        var properties = urlProperties("CRM", "https://gitlab.example.com/gitlab/");
         var collector = new OperationalContextGitLabSourceCollector(properties, repositoryPort, treeExplorer);
 
         var snapshot = collector.collectUrl(
-                "https://gitlab.example.com/gitlab/CLP/PROCESSES/CLP_AGREEMENT_PROCESS.git/", REF);
+                "https://gitlab.example.com/gitlab/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS.git/", REF);
 
-        assertEquals("PROCESSES/CLP_AGREEMENT_PROCESS", snapshot.project());
-        assertEquals("https://gitlab.example.com/gitlab/CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
+        assertEquals("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", snapshot.project());
+        assertEquals("https://gitlab.example.com/gitlab/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
                 snapshot.repositoryGit().url());
-        verify(repositoryPort).resolveRevision("CLP", "PROCESSES/CLP_AGREEMENT_PROCESS", REF);
+        verify(repositoryPort).resolveRevision("CRM", "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", REF);
     }
 
     @Test
     void shouldRejectOtherHostPortBasePathOrRootGroupBeforeAnyGitLabCall() {
         var collector = new OperationalContextGitLabSourceCollector(
-                urlProperties("CLP", "https://gitlab.example.com/gitlab"), repositoryPort, treeExplorer);
+                urlProperties("CRM", "https://gitlab.example.com/gitlab"), repositoryPort, treeExplorer);
 
         for (var url : new String[]{
-                "https://gitlab.example.com.evil/gitlab/CLP/PROCESSES/project",
-                "https://gitlab.example.com:8443/gitlab/CLP/PROCESSES/project",
-                "http://gitlab.example.com/gitlab/CLP/PROCESSES/project",
-                "https://gitlab.example.com/gitlab-extra/CLP/PROCESSES/project",
-                "https://gitlab.example.com/gitlab/CLPX/PROCESSES/project",
+                "https://gitlab.example.com.evil/gitlab/CRM/PROCESSES/project",
+                "https://gitlab.example.com:8443/gitlab/CRM/PROCESSES/project",
+                "http://gitlab.example.com/gitlab/CRM/PROCESSES/project",
+                "https://gitlab.example.com/gitlab-extra/CRM/PROCESSES/project",
+                "https://gitlab.example.com/gitlab/CRMX/PROCESSES/project",
                 "https://gitlab.example.com/gitlab/OTHER/project"
         }) {
             assertThrows(OperationalContextGitLabSourceSelectionException.class,
@@ -182,18 +182,18 @@ class OperationalContextGitLabSourceCollectorTest {
     @Test
     void shouldRejectAmbiguousOrNonProjectUrl() {
         var collector = new OperationalContextGitLabSourceCollector(
-                urlProperties("CLP", "https://gitlab.example.com"), repositoryPort, treeExplorer);
+                urlProperties("CRM", "https://gitlab.example.com"), repositoryPort, treeExplorer);
 
         for (var url : new String[]{
-                "https://user@gitlab.example.com/CLP/project",
-                "https://gitlab.example.com/CLP/project?ref=main",
-                "https://gitlab.example.com/CLP/project#readme",
-                "https://gitlab.example.com/CLP/project/-/tree/main",
-                "https://gitlab.example.com/CLP/%2e%2e/project",
-                "https://gitlab.example.com/CLP%2FOTHER/project",
-                "https://gitlab.example.com/CLP//project",
-                "https://gitlab.example.com/CLP/../OTHER/project",
-                "https://gitlab.example.com/CLP/"
+                "https://user@gitlab.example.com/CRM/project",
+                "https://gitlab.example.com/CRM/project?ref=main",
+                "https://gitlab.example.com/CRM/project#readme",
+                "https://gitlab.example.com/CRM/project/-/tree/main",
+                "https://gitlab.example.com/CRM/%2e%2e/project",
+                "https://gitlab.example.com/CRM%2FOTHER/project",
+                "https://gitlab.example.com/CRM//project",
+                "https://gitlab.example.com/CRM/../OTHER/project",
+                "https://gitlab.example.com/CRM/"
         }) {
             assertThrows(OperationalContextGitLabSourceSelectionException.class,
                     () -> collector.validateProjectUrl(url), url);

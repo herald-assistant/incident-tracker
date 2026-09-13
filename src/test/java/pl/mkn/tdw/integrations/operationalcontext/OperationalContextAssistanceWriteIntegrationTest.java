@@ -1,5 +1,6 @@
 package pl.mkn.tdw.integrations.operationalcontext;
 
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,6 +65,37 @@ class OperationalContextAssistanceWriteIntegrationTest {
                 .isEqualTo("assisted-repository");
         assertThat(harness.maintenance().entity("code-search-scope", "assisted-scope").id())
                 .isEqualTo("assisted-scope");
+    }
+
+    @Test
+    void publishesManuallyCorrectedValueFromTheReviewedBatch() throws Exception {
+        var harness = harness("corrected-value", proposals());
+        var jobId = harness.startJob();
+        var proposals = harness.job().getJob(jobId).draft().proposals();
+        var decisions = new ArrayList<OperationalContextAssistanceProposalDecisionRequest>();
+        for (var index = 0; index < proposals.size(); index++) {
+            var paths = proposals.get(index).changes().stream()
+                    .map(OperationalContextAssistanceDraft.FieldChange::path).toList();
+            decisions.add(new OperationalContextAssistanceProposalDecisionRequest(
+                    OperationalContextAssistanceProposalDecisionRequest.Action.APPLY, paths, paths,
+                    index == 0 ? Map.of("name", TextNode.valueOf("Corrected System Name")) : Map.of()));
+        }
+        var selection = new OperationalContextAssistanceBatchReviewRequest(decisions, null);
+        var preview = harness.job().previewBatch(jobId, selection);
+        assertThat(preview.valid()).isTrue();
+        assertThat(preview.entities()).filteredOn(entity -> "assisted-system".equals(entity.id()))
+                .singleElement().satisfies(entity ->
+                        assertThat(entity.payload()).containsEntry("name", "Corrected System Name"));
+
+        var applied = harness.job().applyBatch(jobId,
+                new OperationalContextAssistanceBatchReviewRequest(decisions, preview.candidateDigest()));
+
+        assertThat(applied.proposalDecisions().get(0).editedValues().get("name").asText())
+                .isEqualTo("Corrected System Name");
+        assertThat(harness.maintenance().entity("system", "assisted-system").payload())
+                .containsEntry("name", "Corrected System Name");
+        assertThat(Files.readString(temporaryDirectory.resolve("corrected-value/systems.yml")))
+                .contains("Corrected System Name").doesNotContain("Assisted System");
     }
 
     @Test
@@ -270,8 +302,8 @@ class OperationalContextAssistanceWriteIntegrationTest {
         var collector = mock(OperationalContextGitLabSourceCollector.class);
         when(collector.collect(anyString(), anyString())).thenReturn(new OperationalContextGitLabSourceSnapshot(
                 "shared/library", new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                        "gitlab", "CLP/PROCESSES", "SHARED_LIBRARY", "CLP/PROCESSES/SHARED_LIBRARY",
-                        "https://gitlab.example.com/CLP/PROCESSES/SHARED_LIBRARY"),
+                        "gitlab", "CRM/PROCESSES", "SHARED_LIBRARY", "CRM/PROCESSES/SHARED_LIBRARY",
+                        "https://gitlab.example.com/CRM/PROCESSES/SHARED_LIBRARY"),
                 "main", "1111111111111111111111111111111111111111", List.of(), List.of()));
 
         var job = new OperationalContextAssistanceJobService(
@@ -306,11 +338,11 @@ class OperationalContextAssistanceWriteIntegrationTest {
                   - id: primary-consumer-a
                     name: Primary Consumer A
                     repositoryType: service
-                    git: {provider: gitlab, group: CLP, project: CONSUMER_A, projectPath: CLP/CONSUMER_A}
+                    git: {provider: gitlab, group: CRM, project: CONSUMER_A, projectPath: CRM/CONSUMER_A}
                   - id: primary-consumer-b
                     name: Primary Consumer B
                     repositoryType: service
-                    git: {provider: gitlab, group: CLP, project: CONSUMER_B, projectPath: CLP/CONSUMER_B}
+                    git: {provider: gitlab, group: CRM, project: CONSUMER_B, projectPath: CRM/CONSUMER_B}
                 """);
         documents.put("code-search-scopes.yml", """
                 schemaVersion: 1
@@ -339,9 +371,9 @@ class OperationalContextAssistanceWriteIntegrationTest {
                 proposal("repository", "shared-library-repo", Map.of(
                         "name", "Shared Library", "repositoryType", "shared-library",
                         "references", Map.of("systems", List.of("consumer-a", "consumer-b")),
-                        "git", Map.of("provider", "gitlab", "group", "CLP/PROCESSES",
-                                "project", "SHARED_LIBRARY", "projectPath", "CLP/PROCESSES/SHARED_LIBRARY",
-                                "url", "https://gitlab.example.com/CLP/PROCESSES/SHARED_LIBRARY"))),
+                        "git", Map.of("provider", "gitlab", "group", "CRM/PROCESSES",
+                                "project", "SHARED_LIBRARY", "projectPath", "CRM/PROCESSES/SHARED_LIBRARY",
+                                "url", "https://gitlab.example.com/CRM/PROCESSES/SHARED_LIBRARY"))),
                 scopeLibraryUpdate(maintenance, "consumer-a-code"),
                 scopeLibraryUpdate(maintenance, "consumer-b-code")
         );

@@ -70,13 +70,13 @@ class OperationalContextAssistanceDraftParserTest {
     void acceptsOneCatalogRevisionAcrossGlossaryAndIntegrationDocuments() {
         var response = """
                 {"proposals":[
-                  {"operation":"UPDATE","entityType":"glossary-term","entityId":"agreement",
+                  {"operation":"UPDATE","entityType":"glossary-term","entityId":"customer-profile",
                    "changes":[{"path":"definition","before":"Stara definicja","after":"Nowa definicja",
                      "reason":"Istniejący termin wymaga uściślenia.","basis":"SOURCE_OBSERVATION",
                      "sourceRefs":["opctx:glossary.yml"],"confidence":"MEDIUM","requiresConfirmation":true}],
                    "confidence":"MEDIUM","requiresConfirmation":true,"questions":[],"visibilityLimits":[]},
-                  {"operation":"CREATE","entityType":"integration","entityId":"agreement-to-archive",
-                   "changes":[{"path":"name","after":"Archiwizacja umowy",
+                  {"operation":"CREATE","entityType":"integration","entityId":"customer-profile-to-archive",
+                   "changes":[{"path":"name","after":"Archiwizacja profilu klienta",
                      "reason":"Operator wskazał trwałą relację.","basis":"USER_STATEMENT",
                      "sourceRefs":["operator:description","opctx:systems.yml"],"confidence":"MEDIUM","requiresConfirmation":true}],
                    "confidence":"MEDIUM","requiresConfirmation":true,"questions":[],"visibilityLimits":[]}
@@ -218,28 +218,28 @@ class OperationalContextAssistanceDraftParserTest {
     @Test
     void requiresRepositoryGitIdentityToMatchSelectedNestedProject() {
         var selected = new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                "gitlab", "CLP/PROCESSES", "CLP_AGREEMENT_PROCESS",
-                "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
-                "https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS"
+                "gitlab", "CRM/PROCESSES", "CRM_CUSTOMER_PROFILE_PROCESS",
+                "CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
+                "https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS"
         );
         var scope = new OperationalContextAssistanceDraftScope(
-                OperationalContextAssistanceMode.IMPROVE_ENTITY, "repository", "agreement-process",
-                Set.of("operator:description", "gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@"
+                OperationalContextAssistanceMode.IMPROVE_ENTITY, "repository", "customer-profile-process",
+                Set.of("operator:description", "gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@"
                         + "1111111111111111111111111111111111111111:README.md"), selected
         );
         var valid = """
                 {
                   "proposals": [{
-                    "operation":"UPDATE", "entityType":"repository", "entityId":"agreement-process",
+                    "operation":"UPDATE", "entityType":"repository", "entityId":"customer-profile-process",
                     "changes":[{
                       "path":"git", "before":null,
-                      "after":{"provider":"gitlab", "group":"CLP/PROCESSES",
-                               "project":"CLP_AGREEMENT_PROCESS",
-                               "projectPath":"CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
-                               "url":"https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS"},
+                      "after":{"provider":"gitlab", "group":"CRM/PROCESSES",
+                               "project":"CRM_CUSTOMER_PROFILE_PROCESS",
+                               "projectPath":"CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
+                               "url":"https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS"},
                       "reason":"Potwierdzony adres wybranego repozytorium.",
                       "basis":"SOURCE_OBSERVATION",
-                      "sourceRefs":["gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@1111111111111111111111111111111111111111:README.md"],
+                      "sourceRefs":["gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md"],
                       "confidence":"HIGH", "requiresConfirmation":false
                     }],
                     "confidence":"HIGH", "requiresConfirmation":false,
@@ -251,18 +251,18 @@ class OperationalContextAssistanceDraftParserTest {
 
         assertThat(parser.parse(valid, scope).proposals()).hasSize(1);
         assertThatThrownBy(() -> parser.parse(
-                valid.replace("\"projectPath\":\"CLP/PROCESSES/CLP_AGREEMENT_PROCESS\"",
-                        "\"projectPath\":\"CLP/OTHER/CLP_AGREEMENT_PROCESS\""), scope))
+                valid.replace("\"projectPath\":\"CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS\"",
+                        "\"projectPath\":\"CRM/OTHER/CRM_CUSTOMER_PROFILE_PROCESS\""), scope))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("differs from the selected GitLab source");
 
-        var otherRef = "gitlab:CLP/LIBS/shared-client@2222222222222222222222222222222222222222:pom.xml";
+        var otherRef = "gitlab:CRM/LIBS/shared-client@2222222222222222222222222222222222222222:pom.xml";
         var otherOnlyScope = new OperationalContextAssistanceDraftScope(
-                OperationalContextAssistanceMode.IMPROVE_ENTITY, "repository", "agreement-process",
+                OperationalContextAssistanceMode.IMPROVE_ENTITY, "repository", "customer-profile-process",
                 Set.of("operator:description", otherRef), selected);
         assertThat(otherOnlyScope.hasSelectedSource()).isFalse();
         assertThatThrownBy(() -> parser.parse(
-                valid.replace("gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@1111111111111111111111111111111111111111:README.md",
+                valid.replace("gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md",
                         otherRef), otherOnlyScope))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("read GitLab file from the selected project");
@@ -289,17 +289,17 @@ class OperationalContextAssistanceDraftParserTest {
     @Test
     void acceptsRelatedIntegrationAlongsideSelectedRepositoryOnboarding() {
         var scope = onboardingScope(OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
-                "Agreement Service", List.of(), Set.of());
+                "Customer Profile Service", List.of(), Set.of());
         var integration = """
-                {"operation":"CREATE","entityType":"integration","entityId":"agreement-to-archive",
-                 "changes":[{"path":"name","after":"Przekazanie umowy do archiwum",
+                {"operation":"CREATE","entityType":"integration","entityId":"customer-profile-to-archive",
+                 "changes":[{"path":"name","after":"Przekazanie profilu klienta do archiwum",
                    "reason":"Operator opisał relację systemową.","basis":"USER_STATEMENT",
                    "sourceRefs":["operator:description"],"confidence":"MEDIUM","requiresConfirmation":true}],
                  "confidence":"MEDIUM","requiresConfirmation":true,"questions":[],"visibilityLimits":[]}
                 """;
 
-        assertThat(parser.parse(draft(systemProposal("agreement-service", "Agreement Service"),
-                repositoryProposal("agreement-repo", false, "agreement-service"), integration), scope).proposals())
+        assertThat(parser.parse(draft(systemProposal("customer-profile-service", "Customer Profile Service"),
+                repositoryProposal("customer-profile-repo", false, "customer-profile-service"), integration), scope).proposals())
                 .extracting(OperationalContextAssistanceDraft.Proposal::entityType)
                 .containsExactly("system", "repository", "integration");
     }
@@ -309,7 +309,7 @@ class OperationalContextAssistanceDraftParserTest {
         var noFacts = new OperationalContextAssistanceDraftScope(
                 OperationalContextAssistanceMode.CREATE_AREA, null, null,
                 Set.of("operator:description",
-                        "gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@1111111111111111111111111111111111111111:README.md"),
+                        "gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md"),
                 selectedRepositoryGit()
         );
         assertThat(noFacts.repositoryUsage()).isEqualTo(OperationalContextAssistanceRepositoryFacts.Usage.UNKNOWN);
@@ -325,7 +325,7 @@ class OperationalContextAssistanceDraftParserTest {
         var scope = onboardingScope(OperationalContextAssistanceRepositoryFacts.Usage.UNKNOWN,
                 null, List.of(), Set.of());
         var withoutFileRef = repositoryProposal("repo-one", false, null)
-                .replace("\"basis\":\"SOURCE_OBSERVATION\",\"sourceRefs\":[\"gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@1111111111111111111111111111111111111111:README.md\"]",
+                .replace("\"basis\":\"SOURCE_OBSERVATION\",\"sourceRefs\":[\"gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md\"]",
                         "\"basis\":\"USER_STATEMENT\",\"sourceRefs\":[\"operator:repository-facts\"]");
         assertThatThrownBy(() -> parser.parse(draft(withoutFileRef), scope))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
@@ -334,23 +334,23 @@ class OperationalContextAssistanceDraftParserTest {
 
     @Test
     void newSystemCannotAddInferredOrNonExactServiceNames() {
-        var sourceRef = "gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@1111111111111111111111111111111111111111:README.md";
+        var sourceRef = "gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md";
         var selectedGit = selectedRepositoryGit();
         var withRuntime = new OperationalContextAssistanceDraftScope(
                 OperationalContextAssistanceMode.CREATE_AREA, null, null,
                 Set.of("operator:description", "operator:repository-facts", sourceRef), selectedGit,
                 new OperationalContextAssistanceRepositoryFacts(
                         OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
-                        "Agreement Service", "agreement-runtime", List.of()), Set.of()
+                        "Customer Profile Service", "customer-profile-runtime", List.of()), Set.of()
         );
         var withoutRuntime = onboardingScope(OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
-                "Agreement Service", List.of(), Set.of());
+                "Customer Profile Service", List.of(), Set.of());
 
-        assertThat(parser.parse(draft(systemProposalWithSignals("{\"exact\":{\"serviceNames\":[\"agreement-runtime\"]}}")),
+        assertThat(parser.parse(draft(systemProposalWithSignals("{\"exact\":{\"serviceNames\":[\"customer-profile-runtime\"]}}")),
                 withRuntime).proposals()).hasSize(1);
         for (String signals : List.of(
-                "{\"strong\":{\"serviceNames\":[\"agreement-runtime\"]}}",
-                "{\"serviceNames\":[\"agreement-runtime\"]}",
+                "{\"strong\":{\"serviceNames\":[\"customer-profile-runtime\"]}}",
+                "{\"serviceNames\":[\"customer-profile-runtime\"]}",
                 "{\"exact\":{\"serviceNames\":[\"invented-runtime\"]}}"
         )) {
             assertThatThrownBy(() -> parser.parse(draft(systemProposalWithSignals(signals)), withRuntime))
@@ -366,16 +366,16 @@ class OperationalContextAssistanceDraftParserTest {
     @Test
     void deployedSystemRequiresOperatorNameAndSelectedRepoIdentity() {
         var named = onboardingScope(OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
-                "Agreement Service", List.of(), Set.of());
-        assertThat(parser.parse(draft(systemProposal("agreement-service", "Agreement Service"),
-                repositoryProposal("agreement-repo", false, "agreement-service")), named).proposals()).hasSize(2);
-        assertThatThrownBy(() -> parser.parse(draft(systemProposal("agreement-service", "Invented")), named))
+                "Customer Profile Service", List.of(), Set.of());
+        assertThat(parser.parse(draft(systemProposal("customer-profile-service", "Customer Profile Service"),
+                repositoryProposal("customer-profile-repo", false, "customer-profile-service")), named).proposals()).hasSize(2);
+        assertThatThrownBy(() -> parser.parse(draft(systemProposal("customer-profile-service", "Invented")), named))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("must match");
 
         var unnamed = onboardingScope(OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
                 null, List.of(), Set.of());
-        assertThatThrownBy(() -> parser.parse(draft(systemProposal("agreement-service", "Invented")), unnamed))
+        assertThatThrownBy(() -> parser.parse(draft(systemProposal("customer-profile-service", "Invented")), unnamed))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("does not permit a new system");
     }
@@ -453,7 +453,7 @@ class OperationalContextAssistanceDraftParserTest {
         return new OperationalContextAssistanceDraftScope(
                 OperationalContextAssistanceMode.CREATE_AREA, null, null,
                 Set.of("operator:description", "operator:repository-facts",
-                        "gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@1111111111111111111111111111111111111111:README.md"),
+                        "gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md"),
                 selectedRepositoryGit(),
                 new OperationalContextAssistanceRepositoryFacts(usage, systemName, null, systemIds), selectedScopeIds
         );
@@ -461,9 +461,9 @@ class OperationalContextAssistanceDraftParserTest {
 
     private OperationalContextGitLabSourceSnapshot.RepositoryGit selectedRepositoryGit() {
         return new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                "gitlab", "CLP/PROCESSES", "CLP_AGREEMENT_PROCESS",
-                "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
-                "https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS"
+                "gitlab", "CRM/PROCESSES", "CRM_CUSTOMER_PROFILE_PROCESS",
+                "CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
+                "https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS"
         );
     }
 
@@ -478,18 +478,18 @@ class OperationalContextAssistanceDraftParserTest {
     }
 
     private String systemProposalWithSignals(String signals) {
-        var name = "Agreement Service";
-        return "{\"operation\":\"CREATE\",\"entityType\":\"system\",\"entityId\":\"agreement-service\""
+        var name = "Customer Profile Service";
+        return "{\"operation\":\"CREATE\",\"entityType\":\"system\",\"entityId\":\"customer-profile-service\""
                 + ",\"changes\":[" + change("name", "\"" + name + "\"")
                 + "," + change("matchSignals", signals) + "],\"confidence\":\"MEDIUM\""
                 + ",\"requiresConfirmation\":true,\"questions\":[],\"visibilityLimits\":[]}";
     }
 
     private String repositoryProposal(String id, boolean library, String systemId) {
-        var git = "{\"provider\":\"gitlab\",\"group\":\"CLP/PROCESSES\","
-                + "\"project\":\"CLP_AGREEMENT_PROCESS\","
-                + "\"projectPath\":\"CLP/PROCESSES/CLP_AGREEMENT_PROCESS\","
-                + "\"url\":\"https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS\"}";
+        var git = "{\"provider\":\"gitlab\",\"group\":\"CRM/PROCESSES\","
+                + "\"project\":\"CRM_CUSTOMER_PROFILE_PROCESS\","
+                + "\"projectPath\":\"CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS\","
+                + "\"url\":\"https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS\"}";
         var changes = new java.util.ArrayList<String>();
         changes.add(gitChange(git));
         if (library) {
@@ -528,7 +528,7 @@ class OperationalContextAssistanceDraftParserTest {
     private String gitChange(String after) {
         return "{\"path\":\"git\",\"after\":" + after
                 + ",\"reason\":\"Tożsamość wybranego projektu GitLab.\",\"basis\":\"SOURCE_OBSERVATION\","
-                + "\"sourceRefs\":[\"gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@1111111111111111111111111111111111111111:README.md\"],"
+                + "\"sourceRefs\":[\"gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@1111111111111111111111111111111111111111:README.md\"],"
                 + "\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true}";
     }
 

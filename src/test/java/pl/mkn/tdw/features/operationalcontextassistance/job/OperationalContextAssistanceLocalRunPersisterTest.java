@@ -1,5 +1,6 @@
 package pl.mkn.tdw.features.operationalcontextassistance.job;
 
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.junit.jupiter.api.Test;
@@ -7,6 +8,10 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceMode;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceJobStartRequest;
+import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceJobSnapshot;
+import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecision;
+import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecisionRequest;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace.OperationalContextAssistanceLocalRunPersister;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
@@ -17,7 +22,9 @@ import pl.mkn.tdw.localworkspace.storage.LocalWorkspaceJsonFileStore;
 import pl.mkn.tdw.localworkspace.storage.LocalWorkspacePaths;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -92,5 +99,45 @@ class OperationalContextAssistanceLocalRunPersisterTest {
         assertThat(reopened.exportEnvelope().path("job").path("preparedPrompt").asText())
                 .isEqualTo("Prompt do późniejszego wglądu");
         assertThat(reopened.exportEnvelope().path("job").path("status").asText()).isEqualTo("FAILED");
+    }
+
+    @Test
+    void restoresApprovedManualValuesAlongsideTheOriginalAiDraft() throws Exception {
+        var mapper = JsonMapper.builder().findAndAddModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();
+        var properties = new LocalWorkspaceProperties();
+        properties.setDirectory(workspace.toString());
+        var store = new FileSystemLocalAnalysisRunStore(properties,
+                new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
+        var state = new OperationalContextAssistanceJobState("assistance-corrected");
+        state.start();
+        state.contextCollected("digest-1", null, List.of(), 0);
+        state.prepared("Prompt", List.of(), List.of());
+        state.complete(new OperationalContextAssistanceDraft(List.of(
+                new OperationalContextAssistanceDraft.Proposal(
+                        OperationalContextAssistanceDraft.Operation.CREATE, "system", "assisted-system",
+                        List.of(new OperationalContextAssistanceDraft.FieldChange(
+                                "name", null, "AI Name", "From source",
+                                OperationalContextAssistanceDraft.Basis.USER_STATEMENT,
+                                List.of("operator:description"),
+                                OperationalContextAssistanceDraft.Confidence.MEDIUM, false)),
+                        OperationalContextAssistanceDraft.Confidence.MEDIUM, false,
+                        List.of(), List.of())), List.of(), List.of()), List.of(), null, List.of(), false);
+        state.recordDecision(new OperationalContextAssistanceProposalDecision(
+                0, OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                List.of("name"), Map.of("name", TextNode.valueOf("Operator Name")),
+                Instant.now(), "digest-2"));
+        new OperationalContextAssistanceLocalRunPersister(mapper, store).persistRunSnapshot(
+                state.snapshot(), new OperationalContextAssistanceJobStartRequest(
+                        OperationalContextAssistanceMode.CREATE_AREA, "Opis", null, null, null, null, null));
+
+        var reopenedStore = new FileSystemLocalAnalysisRunStore(properties,
+                new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
+        var reopened = reopenedStore.findById("assistance-corrected").orElseThrow();
+        var restored = mapper.treeToValue(reopened.exportEnvelope().path("job"),
+                OperationalContextAssistanceJobSnapshot.class);
+        assertThat(restored.draft().proposals().get(0).changes().get(0).after()).isEqualTo("AI Name");
+        assertThat(restored.proposalDecisions().get(0).editedValues().get("name").asText())
+                .isEqualTo("Operator Name");
     }
 }

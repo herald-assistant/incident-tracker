@@ -88,6 +88,7 @@ export interface OperationalContextAssistanceProposalDecision {
   proposalIndex: number;
   action: 'APPLY' | 'SKIP';
   selectedPaths: string[];
+  editedValues?: Record<string, unknown>;
   completedAt: string;
   catalogDigest?: string | null;
 }
@@ -96,6 +97,7 @@ export interface OperationalContextAssistanceProposalDecisionRequest {
   action: 'APPLY' | 'SKIP';
   selectedPaths: string[];
   confirmedPaths: string[];
+  editedValues?: Record<string, unknown>;
 }
 
 export interface OperationalContextAssistanceBatchReviewRequest {

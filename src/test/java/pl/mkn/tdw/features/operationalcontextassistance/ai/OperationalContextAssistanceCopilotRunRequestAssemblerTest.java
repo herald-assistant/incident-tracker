@@ -77,14 +77,14 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
         properties.setModel("feature-model");
         properties.setReasoningEffort("xhigh");
         var gitLabProperties = new GitLabProperties();
-        gitLabProperties.setGroup("CLP");
+        gitLabProperties.setGroup("CRM");
         var assembler = new OperationalContextAssistanceCopilotRunRequestAssembler(
                 new CopilotRunAuthMapper(), toolFactory, properties, gitLabProperties);
         var source = new OperationalContextGitLabSourceSnapshot(
-                "PROCESSES/CLP_AGREEMENT_PROCESS",
+                "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
                 new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                        "gitlab", "CLP/PROCESSES", "CLP_AGREEMENT_PROCESS",
-                        "CLP/PROCESSES/CLP_AGREEMENT_PROCESS", "https://gitlab.example/CLP/PROCESSES/CLP_AGREEMENT_PROCESS"
+                        "gitlab", "CRM/PROCESSES", "CRM_CUSTOMER_PROFILE_PROCESS",
+                        "CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", "https://gitlab.example/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS"
                 ),
                 "main", "1234567890abcdef1234567890abcdef12345678", List.of(), List.of()
         );
@@ -110,7 +110,7 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
                 .doesNotContain("gitlab_find_flow_context", "opctx_get_entity", "shell", "terminal", "filesystem");
         assertThat(request.sessionConfigRequest().modelSelection().model()).isEqualTo("feature-model");
         assertThat(request.sessionConfigRequest().modelSelection().reasoningEffort()).isEqualTo("xhigh");
-        assertThat(assembly.sourceScope().selectedProjectPath()).isEqualTo("CLP/PROCESSES/CLP_AGREEMENT_PROCESS");
+        assertThat(assembly.sourceScope().selectedProjectPath()).isEqualTo("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
         assertThat(assembly.sourceScope().selectedCommit()).isEqualTo(source.commitId());
         assertThat(context.getValue().hiddenContext().values()).contains(assembly.sourceScope());
         assertThat(context.getValue().hiddenContext().get(AgentToolContextKeys.TOOL_HARD_BUDGET))

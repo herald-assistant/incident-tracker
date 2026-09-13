@@ -97,7 +97,7 @@ class OperationalContextGitLabSourceOptionsServiceTest {
 
     @Test
     void doesNotExposeMalformedConfiguredBaseUrl() {
-        var properties = properties("CLP");
+        var properties = properties("CRM");
         properties.setBaseUrl("https://user:secret@gitlab.example.com/gitlab?token=secret");
         var operationalContextPort = mock(OperationalContextPort.class);
         when(operationalContextPort.loadContext(any())).thenReturn(OperationalContextCatalog.empty());
@@ -105,7 +105,7 @@ class OperationalContextGitLabSourceOptionsServiceTest {
         var options = new OperationalContextGitLabSourceOptionsService(properties, operationalContextPort).getOptions();
 
         assertThat(options.configuredBaseUrl()).isNull();
-        assertThat(options.configuredGroup()).isEqualTo("CLP");
+        assertThat(options.configuredGroup()).isEqualTo("CRM");
     }
 
     private GitLabProperties properties(String group) {

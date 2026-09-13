@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.operationalcontextassistance.api;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -13,6 +14,7 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaint
 import java.time.Instant;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,24 +55,24 @@ class OperationalContextAssistanceJobControllerTest {
         mockMvc.perform(post("/api/operational-context/assistance/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"mode":"CREATE_AREA","description":"Proces umów",
-                                 "gitLabSource":{"projectUrl":"https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS","ref":"main"}}
+                                {"mode":"CREATE_AREA","description":"Proces obsługi profilu klienta",
+                                 "gitLabSource":{"projectUrl":"https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS","ref":"main"}}
                                 """))
                 .andExpect(status().isAccepted());
 
         mockMvc.perform(post("/api/operational-context/assistance/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"mode":"CREATE_AREA","description":"Proces umów",
-                                 "gitLabSource":{"project":"PROCESSES/CLP_AGREEMENT_PROCESS",
-                                                 "projectUrl":"https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS","ref":"main"}}
+                                {"mode":"CREATE_AREA","description":"Proces obsługi profilu klienta",
+                                 "gitLabSource":{"project":"PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
+                                                 "projectUrl":"https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS","ref":"main"}}
                                 """))
                 .andExpect(status().isBadRequest());
 
         mockMvc.perform(post("/api/operational-context/assistance/jobs")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"mode":"CREATE_AREA","description":"Proces umów",
+                                {"mode":"CREATE_AREA","description":"Proces obsługi profilu klienta",
                                  "gitLabSource":{"ref":"main"}}
                                 """))
                 .andExpect(status().isBadRequest());
@@ -82,7 +84,7 @@ class OperationalContextAssistanceJobControllerTest {
 
         for (String facts : List.of(
                 "{\"usage\":\"UNKNOWN\"}",
-                "{\"usage\":\"DEPLOYED_SYSTEM\",\"systemName\":\"Agreement Process\",\"runtimeServiceName\":\"agreement-runtime\"}",
+                "{\"usage\":\"DEPLOYED_SYSTEM\",\"systemName\":\"Customer Profile Process\",\"runtimeServiceName\":\"customer-profile-runtime\"}",
                 "{\"usage\":\"SHARED_LIBRARY\",\"systemIds\":[\"consumer-a\",\"consumer-b\"]}",
                 "{\"usage\":\"EXISTING_SYSTEM\",\"systemIds\":[\"consumer-a\"]}"
         )) {
@@ -192,6 +194,27 @@ class OperationalContextAssistanceJobControllerTest {
 
         verify(jobService).previewBatch(any(), any(OperationalContextAssistanceBatchReviewRequest.class));
         verify(jobService).applyBatch(any(), any(OperationalContextAssistanceBatchReviewRequest.class));
+    }
+
+    @Test
+    void acceptsTypedOperatorCorrectionInBatchPreview() throws Exception {
+        when(jobService.previewBatch(any(), any())).thenReturn(new OperationalContextAssistanceBatchPreview(
+                "digest-1", "edited-digest", true, List.of(), List.of()));
+
+        mockMvc.perform(post("/api/operational-context/assistance/jobs/job-1/batch/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"decisions":[{"action":"APPLY","selectedPaths":["definition"],
+                                  "confirmedPaths":["definition"],
+                                  "editedValues":{"definition":"Poprawiona definicja operatora"}}]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.candidateDigest").value("edited-digest"));
+
+        var request = ArgumentCaptor.forClass(OperationalContextAssistanceBatchReviewRequest.class);
+        verify(jobService).previewBatch(org.mockito.ArgumentMatchers.eq("job-1"), request.capture());
+        assertThat(request.getValue().decisions().get(0).editedValues().get("definition").asText())
+                .isEqualTo("Poprawiona definicja operatora");
     }
 
     @Test

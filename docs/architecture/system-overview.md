@@ -939,7 +939,9 @@ Znaczenie grup UI:
   jako generyczne `shared.ai.AnalysisAiUsage`, bez typow SDK w kontrakcie
   frontendu.
   Frontend liczy orientacyjne GitHub AI Credits/USD z tokenow i modelu jako
-  product-facing estymacje oplacalnosci, nie jako fakture.
+  product-facing estymacje oplacalnosci, nie jako fakture. Statyczny snapshot
+  cennika obejmuje aktualny katalog modeli i stawki Default; z agregatow
+  tokenow runu nie da sie wiarygodnie odtworzyc per-call Long context tier.
 - Diagnostyka OTLP z procesu Copilot CLI jest wlaczona w
   `application.properties` dla lokalnego Agent Scanner na porcie 8081.
   Pelne tresci pozostaja

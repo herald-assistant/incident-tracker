@@ -40,20 +40,20 @@ class OperationalContextRepositoryProjectPathResolverTest {
     @Test
     void shouldResolveRepositoryInNestedGitLabGroupButNotSiblingGroup() {
         var resolver = resolver(
-                List.of(system("agreement-process")),
+                List.of(system("customer-profile-process")),
                 List.of(
-                        repository("agreement-repo", "CLP/PROCESSES/CLP_AGREEMENT_PROCESS", "CLP/PROCESSES", Map.of()),
-                        repository("foreign-repo", "CLP2/PROCESSES/OTHER", "CLP2/PROCESSES", Map.of())
+                        repository("customer-profile-repo", "CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", "CRM/PROCESSES", Map.of()),
+                        repository("foreign-repo", "CRM2/PROCESSES/OTHER", "CRM2/PROCESSES", Map.of())
                 ),
                 List.of(scope(
-                        "agreement-search", "system", "agreement-process",
-                        List.of("agreement-repo", "foreign-repo")
+                        "customer-profile-search", "system", "customer-profile-process",
+                        List.of("customer-profile-repo", "foreign-repo")
                 ))
         );
 
         assertEquals(
-                List.of("PROCESSES/CLP_AGREEMENT_PROCESS"),
-                resolver.resolveProjectPaths("CLP", List.of("agreement-process"))
+                List.of("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS"),
+                resolver.resolveProjectPaths("CRM", List.of("customer-profile-process"))
         );
     }
 

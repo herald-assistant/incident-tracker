@@ -407,6 +407,22 @@ Zasady granic:
 - Testy web przez `MockMvc`, testy integracyjne HTTP przez
   `MockRestServiceServer`.
 
+## Bezwzgledna i nadrzędna zadada - anonimizacja testow i przykladow
+
+- Nigdy nie kopiuj do testow, fixture'ow, mockow, snapshotow ani dokumentacji
+  rzeczywistych danych organizacji lub klienta: nazw grup i projektow GitLab,
+  adresow, nazw systemow i procesow, identyfikatorow, tresci logow, danych
+  osobowych ani szczegolow domeny medycznej, ubezpieczeniowej anifinansowej.
+  Czesciowa podmiana nazw nie jest anonimizacja; scenariusz ma byc w calosci
+  fikcyjny.
+- Domyslna i obowiazkowa domena dla nowych testow oraz przykladow domenowych
+  to CRM: fikcyjna grupa `CRM`, systemy i procesy obslugi klienta oraz
+  neutralne adresy, np. `gitlab.example.com`.
+- Gdy modyfikujesz istniejacy test lub przyklad zawierajacy takie dane,
+  zanonimizuj caly powiazany scenariusz, nie tylko dopisywane linie. Przed
+  przekazaniem zmiany przejrzyj diff i przeszukaj testy oraz dokumentacje pod
+  katem dawnych nazw, sciezek i terminow domenowych.
+
 ## Weryfikacja
 
 Dobieraj weryfikacje do faktycznie zmienionych warstw. Nie uruchamiaj pelnego

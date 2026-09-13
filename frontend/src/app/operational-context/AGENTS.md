@@ -84,7 +84,7 @@ skonfigurowanej grupy przed startem joba.
 
 Po wskazaniu projektu asysta pobiera jego galezie przez
 `source-options/branches` i pokazuje wspolny `app-gitlab-branch-select`
-z filtrem, tak jak Flow Explorer. Reczne wpisanie galezi lub commita pozostaje
+z filtrem, tak jak Flow Explorer. Reczne wpisanie galezi pozostaje
 dostepne. Zmiana projektu musi usunac poprzedni ref, zanim pojawia sie opcje
 nowego projektu; nie wysylaj refa wybranego dla innego repozytorium.
 
@@ -98,23 +98,31 @@ aktualnego katalogu ekranu. Odpowiedzi wysylaj jako typowane
 trybach nie wysylaj tego pola. Zmiana roli lub zrodla nie moze pozostawiac
 ukrytych odpowiedzi w requestcie.
 
-Panel pokazuje status, uzyte zrodla, ograniczenia i uporzadkowane
-propozycje ze zmianami pol `before/after`, podstawa, source refs i pytaniami.
+Panel pokazuje status oraz zwarta liste propozycji. Formularz, zrodla,
+ograniczenia i pelny diff rozwija sie na zadanie; szczegoly jednej propozycji
+pokazuja zmiany pol `before/after`, podstawe, source refs i pytania.
 Wspolny boczny aside pokazuje kroki, bezpieczny przebieg pracy Copilota,
 prompt przygotowany przed sesja i usage/koszt. Runy sa w Analysis History;
 odtworzony run jest tylko do odczytu, bez ponownego batch decision.
 AI widzi pelny katalog i moze doczytac wskazane repozytorium. Operator wybiera
 pola w dowolnych propozycjach, pomija propozycje przez odznaczenie wszystkich
-jej pol, potwierdza wymagane fakty i uruchamia jeden podglad calego zestawu.
+jej pol, poprawia proponowane wartosci i potwierdza wymagane fakty. Wartosc
+tekstowa ma prosty edytor, struktura edytor JSON zachowujacy typ. Korekta
+wybranego pola wymaga osobnego potwierdzenia i nowego podgladu. Tozsamosc
+`repository.git` i lista `code-search-scope.repositories` nie podlegaja
+korekcie w review, bo sa zwiazane ze zweryfikowanym zrodlem/scope'em.
+Operator uruchamia jeden podglad calego zestawu.
 Odpowiedz `batch/preview` jest autorytatywna dla wyboru; wstepne podglady
 pojedynczych propozycji nie blokuja zapisu. Po poprawnym podgladzie operator
 zapisuje caly zestaw jednym `batch/decision`. Nie wysylaj wartosci AI jako
-samodzielnego payloadu do maintenance: decyzje wskazuja tylko sciezki z
-draftu zachowanego w jobie. Po zapisie odswiez katalog, Validation i Open
+samodzielnego payloadu do maintenance: decyzje wskazuja sciezki z draftu
+zachowanego w jobie i opcjonalne poprawki operatora `editedValues`.
+Historia zachowuje obie wartosci: oryginalna propozycje AI i zatwierdzona
+korekte operatora. Po zapisie odswiez katalog, Validation i Open
 Questions jednym odswiezeniem. Po bledzie sieci odczytaj ten sam job, zanim
 pozwolisz ponowic zapis. Konflikt aktualnosci zachowuje wybor i wymaga nowego
 podgladu.
 
-Reczna korekta wartosci jest w edytorze encji, na biezacej wersji danych.
-Edytor domyslnie eksponuje pola podstawowe i rozwija zaawansowane sekcje na
+Reczny edytor encji pozostaje dostepny na biezacej wersji danych. Domyslnie
+eksponuje pola podstawowe i rozwija zaawansowane sekcje na
 zadanie, ale nadal umozliwia edycje calego kanonicznego kontraktu.

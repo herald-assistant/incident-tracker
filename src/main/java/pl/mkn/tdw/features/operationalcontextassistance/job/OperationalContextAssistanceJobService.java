@@ -68,6 +68,8 @@ import static pl.mkn.tdw.features.operationalcontextassistance.draft.Operational
 public class OperationalContextAssistanceJobService {
 
     private static final int MAX_SELECTED_SCOPES_BYTES = 32_000;
+    private static final int MAX_EDITED_VALUE_BYTES = 16_384;
+    private static final int MAX_EDITED_VALUES_BYTES = 65_536;
 
     private final Map<String, OperationalContextAssistanceJobState> jobs = new ConcurrentHashMap<>();
     private final Map<String, OperationalContextAssistanceJobStartRequest> requests = new ConcurrentHashMap<>();
@@ -168,7 +170,7 @@ public class OperationalContextAssistanceJobService {
             for (var index = 0; index < request.decisions().size(); index++) {
                 var choice = request.decisions().get(index);
                 state.recordDecision(new OperationalContextAssistanceProposalDecision(
-                        index, choice.action(), choice.selectedPaths(), Instant.now(),
+                        index, choice.action(), choice.selectedPaths(), choice.editedValues(), Instant.now(),
                         choice.action() == OperationalContextAssistanceProposalDecisionRequest.Action.APPLY
                                 ? resultDigest : null));
             }
@@ -224,9 +226,10 @@ public class OperationalContextAssistanceJobService {
                         "Decyzja operatora jest wymagana dla każdej propozycji.");
             }
             if (choice.action() == OperationalContextAssistanceProposalDecisionRequest.Action.SKIP) {
-                if (!choice.selectedPaths().isEmpty() || !choice.confirmedPaths().isEmpty()) {
+                if (!choice.selectedPaths().isEmpty() || !choice.confirmedPaths().isEmpty()
+                        || !choice.editedValues().isEmpty()) {
                     throw decisionError("OPCTX_ASSISTANCE_INVALID_DECISION", UserFacingErrorType.BAD_REQUEST,
-                            "Pominięcie propozycji nie przyjmuje pól ani potwierdzeń.");
+                            "Pominięcie propozycji nie przyjmuje pól, poprawek ani potwierdzeń.");
                 }
                 continue;
             }
@@ -282,13 +285,58 @@ public class OperationalContextAssistanceJobService {
             throw decisionError("OPCTX_ASSISTANCE_INVALID_SELECTION", UserFacingErrorType.BAD_REQUEST,
                     "Wybór zawiera pole spoza propozycji AI.");
         }
+        var edits = request.editedValues();
+        if (!unique.containsAll(edits.keySet()) || edits.containsKey(null)) {
+            throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.BAD_REQUEST,
+                    "Poprawiać można tylko wybrane pola propozycji AI.");
+        }
         if (selected.stream().anyMatch(change ->
-                (proposal.requiresConfirmation() || change.requiresConfirmation())
+                (proposal.requiresConfirmation() || change.requiresConfirmation() || edits.containsKey(change.path()))
                         && !confirmed.contains(change.path()))) {
             throw decisionError("OPCTX_ASSISTANCE_CONFIRMATION_REQUIRED", UserFacingErrorType.BAD_REQUEST,
                     "Jawnie potwierdź każde wybrane pole wymagające decyzji operatora.");
         }
-        return selected;
+        var editedBytes = 0;
+        var corrected = new ArrayList<OperationalContextAssistanceDraft.FieldChange>(selected.size());
+        for (var change : selected) {
+            var node = edits.get(change.path());
+            if (!edits.containsKey(change.path())) {
+                corrected.add(change);
+                continue;
+            }
+            if ("repository".equals(proposal.entityType()) && "git".equals(change.path())
+                    || "code-search-scope".equals(proposal.entityType()) && "repositories".equals(change.path())) {
+                throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.BAD_REQUEST,
+                        "Tożsamości źródła i zakresu kodu nie można poprawiać w przeglądzie asysty.");
+            }
+            if (node == null || node.isNull() || !sameEditableValueKind(change.after(), node)) {
+                throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.BAD_REQUEST,
+                        "Poprawiona wartość musi zachować typ proponowanego pola i nie może być null.");
+            }
+            var valueBytes = node.toString().getBytes(StandardCharsets.UTF_8).length;
+            editedBytes += valueBytes;
+            if (valueBytes > MAX_EDITED_VALUE_BYTES || editedBytes > MAX_EDITED_VALUES_BYTES) {
+                throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.BAD_REQUEST,
+                        "Poprawione wartości są zbyt duże do przeglądu asysty.");
+            }
+            var after = objectMapper.convertValue(node, Object.class);
+            var fieldErrors = maintenanceService.validatePartialEditablePayload(
+                    proposal.entityType(), Map.of(change.path(), after));
+            if (!fieldErrors.isEmpty()) {
+                throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.UNPROCESSABLE_ENTITY,
+                        "Poprawiona wartość pola " + change.path() + " nie jest poprawna: " + fieldErrors.get(0).message());
+            }
+            corrected.add(new OperationalContextAssistanceDraft.FieldChange(
+                    change.path(), change.before(), after, change.reason(), change.basis(),
+                    change.sourceRefs(), change.confidence(), change.requiresConfirmation()));
+        }
+        return corrected;
+    }
+
+    private boolean sameEditableValueKind(Object original, JsonNode edited) {
+        return original instanceof String && edited.isTextual()
+                || original instanceof List<?> && edited.isArray()
+                || original instanceof Map<?, ?> && edited.isObject();
     }
 
     private OperationalContextAssistanceDecisionException decisionError(

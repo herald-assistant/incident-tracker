@@ -3,7 +3,7 @@
     <div>
       <p class="section-eyebrow">Asysta AI</p>
       <h2>{{ modeLabel() }}</h2>
-      <p>Opisz fakty, które chcesz dodać lub poprawić. AI widzi pełny katalog Operational Context i może doczytać kod wskazanego repozytorium. Wybierzesz pola, sprawdzisz cały zestaw i zapiszesz go jednym krokiem.</p>
+      <p>Opisz fakty, które chcesz dodać lub poprawić. AI widzi pełny katalog Operational Context i może doczytać kod wskazanego repozytorium. Wybierzesz pola, poprawisz propozycje, sprawdzisz cały zestaw i zapiszesz go jednym krokiem.</p>
     </div>
   </div>
 
@@ -19,6 +19,13 @@
   }
 
   @if (!historyReadOnly()) {
+  @if (job() && !composerExpanded()) {
+    <div class="assistance-panel__new-run">
+      <span>Przeglądasz wynik bieżącej analizy. Jej zapis jest także dostępny w historii.</span>
+      <button type="button" class="secondary-button" [disabled]="isRunning() || decisionBusy() || !!pendingDecisionCheck()"
+        (click)="composerExpanded.set(true)">Nowa analiza</button>
+    </div>
+  } @else {
   <form class="assistance-form" (submit)="start($event)">
     <label for="assistance-description">Opis dla AI</label>
     <textarea id="assistance-description" [formControl]="descriptionControl" maxlength="4000" rows="5" placeholder="Co wiadomo o systemie, procesie lub brakującym fakcie?"></textarea>
@@ -86,11 +93,11 @@
                 @switch (repositoryUsageControl.value) {
                   @case ('DEPLOYED_SYSTEM') {
                     <label for="assistance-system-name">Nazwa nowego systemu (jeśli znana)</label>
-                    <input id="assistance-system-name" type="text" [formControl]="systemNameControl" maxlength="160" placeholder="np. Obsługa umów" />
+                    <input id="assistance-system-name" type="text" [formControl]="systemNameControl" maxlength="160" placeholder="np. Obsługa profili klientów" />
                     <details>
                       <summary>Dodaj nazwę usługi widoczną w logach (opcjonalnie)</summary>
                       <label for="assistance-runtime-service">Nazwa usługi w logach</label>
-                      <input id="assistance-runtime-service" type="text" [formControl]="runtimeServiceNameControl" maxlength="160" placeholder="np. agreement-service" />
+                      <input id="assistance-runtime-service" type="text" [formControl]="runtimeServiceNameControl" maxlength="160" placeholder="np. customer-profile-service" />
                     </details>
                   }
                   @case ('EXISTING_SYSTEM') {
@@ -137,6 +144,7 @@
     }
     <button class="primary-button" type="submit" [disabled]="isRunning() || previewBusy() || decisionBusy() || !!pendingDecisionCheck()">{{ isRunning() ? 'Przygotowywanie…' : 'Przygotuj propozycję' }}</button>
   </form>
+  }
   }
 
   @if (error()) { <p class="assistance-panel__error" role="alert">{{ error() }}</p> }
@@ -192,78 +200,127 @@
       @if (currentJob.usage; as usage) {
         <p class="assistance-run__usage">AI: {{ usage.model }} · {{ usage.totalTokens }} tokenów · {{ usageCost(usage) }}</p>
       }
-      @if (currentJob.sourceRefs.length) {
-        <div class="assistance-run__list"><strong>Użyte źródła</strong><ul>@for (ref of currentJob.sourceRefs; track ref) { <li><code>{{ ref }}</code></li> }</ul></div>
-      }
-      @if (currentJob.visibilityLimits.length) {
-        <div class="assistance-run__list"><strong>Ograniczenia widoczności</strong><ul>@for (limit of currentJob.visibilityLimits; track limit) { <li>{{ limit }}</li> }</ul></div>
+      @if (currentJob.sourceRefs.length || currentJob.visibilityLimits.length) {
+        <details class="assistance-run__evidence">
+          <summary>Źródła: {{ currentJob.sourceRefs.length }} · Ograniczenia: {{ currentJob.visibilityLimits.length }}</summary>
+          @if (currentJob.sourceRefs.length) {
+            <div class="assistance-run__list"><strong>Użyte źródła</strong><ul>@for (ref of currentJob.sourceRefs; track ref) { <li><code>{{ ref }}</code></li> }</ul></div>
+          }
+          @if (currentJob.visibilityLimits.length) {
+            <div class="assistance-run__list"><strong>Ograniczenia widoczności</strong><ul>@for (limit of currentJob.visibilityLimits; track limit) { <li>{{ limit }}</li> }</ul></div>
+          }
+        </details>
       }
     </section>
 
     @if (currentJob.draft; as draft) {
       <section class="assistance-review" aria-label="Przegląd propozycji">
         <div class="assistance-review__heading">
-          <h3>Propozycje do przeglądu</h3>
-          <span>Wybierz pola w dowolnych propozycjach. Odznaczenie wszystkich pól pomija daną propozycję.</span>
+          <div><h3>Propozycje do przeglądu</h3><p>{{ draft.proposals.length }} propozycji · {{ selectedProposalCount() }} w zestawie · {{ editedFieldCount() }} poprawek ręcznych</p></div>
+          <span>{{ historyReadOnly() || reviewComplete()
+            ? 'Przejrzyj propozycje i zapisane decyzje.'
+            : 'Wybierz propozycję, popraw wartości i sprawdź zestaw przed zapisem.' }}</span>
         </div>
         @if (!draft.proposals.length) { <p>Nie ma bezpiecznej propozycji zmiany. Sprawdź pytania i ograniczenia poniżej.</p> }
-        @for (proposal of draft.proposals; track $index; let proposalIndex = $index) {
-          <article class="assistance-proposal">
-            <div class="assistance-proposal__heading">
-              <strong>{{ operationLabel(proposal.operation) }} · {{ proposal.entityType }}/{{ proposal.entityId }}</strong>
-              <span>{{ decisionLabel(proposalIndex) }}</span>
-            </div>
-            <p>{{ confidenceLabel(proposal.confidence) }} @if (proposal.requiresConfirmation) { · wymagane potwierdzenie człowieka }</p>
-            @if (!reviewComplete() && !historyReadOnly()) {
-              <button type="button" class="assistance-proposal__toggle" [disabled]="decisionBusy() || !!pendingDecisionCheck()"
-                (click)="setProposalSelected(proposalIndex, proposal, !selectedPaths(proposalIndex, proposal).length)">
-                {{ selectedPaths(proposalIndex, proposal).length ? 'Pomiń całą propozycję' : 'Wybierz całą propozycję' }}
-              </button>
-            }
-            @for (change of proposal.changes; track $index) {
-              <div class="assistance-change">
-                @if (!reviewComplete() && !historyReadOnly()) {
-                  <input type="checkbox" [attr.aria-label]="'Wybierz pole ' + change.path"
-                    [checked]="isSelected(proposalIndex, proposal, change.path)"
-                    [disabled]="decisionBusy() || !!pendingDecisionCheck()"
-                    (change)="setSelected(proposalIndex, proposal, change.path, $any($event.target).checked)" />
-                }
-                <span class="assistance-change__body">
-                  <strong>{{ change.path }}</strong>
-                  <span>Przed: <code>{{ valueText(change.before) }}</code></span>
-                  <span>Po: <code>{{ valueText(change.after) }}</code></span>
-                  <span>Dlaczego: {{ change.reason }}</span>
-                  <small>{{ basisLabel(change.basis) }} · {{ confidenceLabel(change.confidence) }} @if (change.requiresConfirmation) { · potwierdź fakt }</small>
-                  @if (change.sourceRefs.length) { <small>Źródła: {{ change.sourceRefs.join(', ') }}</small> }
-                  @if (!reviewComplete() && !historyReadOnly() && requiresConfirmation(proposal, change) && isSelected(proposalIndex, proposal, change.path)) {
-                    <label class="assistance-change__confirmation">
-                      <input type="checkbox" [checked]="isConfirmed(proposalIndex, change.path)" [disabled]="decisionBusy() || !!pendingDecisionCheck()"
-                        (change)="setConfirmed(proposalIndex, change.path, $any($event.target).checked)" />
-                      Potwierdzam ten fakt przed zapisem
-                    </label>
-                  }
-                </span>
-              </div>
-            }
-            @if (proposal.questions.length) { <div class="assistance-proposal__issues"><strong>Pytania</strong><ul>@for (question of proposal.questions; track question) { <li>{{ question }}</li> }</ul></div> }
-            @if (proposal.visibilityLimits.length) { <div class="assistance-proposal__issues"><strong>Ograniczenia</strong><ul>@for (limit of proposal.visibilityLimits; track limit) { <li>{{ limit }}</li> }</ul></div> }
-          </article>
-        }
         @if (draft.proposals.length) {
+          <div class="assistance-review__workspace">
+            <nav class="assistance-review__list" aria-label="Lista propozycji">
+              @for (proposal of draft.proposals; track $index; let proposalIndex = $index) {
+                <button type="button" class="assistance-review__item"
+                  [attr.aria-current]="activeProposalIndex() === proposalIndex ? 'true' : null"
+                  [attr.data-selected]="selectedPaths(proposalIndex, proposal).length > 0"
+                  (click)="selectProposal(proposalIndex)">
+                  <span class="assistance-review__item-top"><strong>{{ proposalTitle(proposalIndex, proposal) }}</strong><small>{{ selectedPaths(proposalIndex, proposal).length }}/{{ proposal.changes.length }} pól</small></span>
+                  <span>{{ operationLabel(proposal.operation) }} · {{ entityLabel(proposal.entityType) }}</span>
+                  <small>{{ decisionLabel(proposalIndex) }} @if (proposal.requiresConfirmation) { · wymaga potwierdzenia }</small>
+                </button>
+              }
+            </nav>
+            @if (draft.proposals[activeProposalIndex()]; as proposal) {
+              <article class="assistance-proposal" aria-label="Szczegóły wybranej propozycji">
+                <div class="assistance-proposal__heading">
+                  <div><small>{{ operationLabel(proposal.operation) }} · {{ entityLabel(proposal.entityType) }}</small>
+                    <h4>{{ proposalTitle(activeProposalIndex(), proposal) }}</h4>
+                    <code>{{ proposal.entityType }}/{{ proposal.entityId }}</code></div>
+                  <span>{{ decisionLabel(activeProposalIndex()) }}</span>
+                </div>
+                <p>{{ confidenceLabel(proposal.confidence) }} @if (proposal.requiresConfirmation) { · wymagane potwierdzenie człowieka }</p>
+                @if (!reviewComplete() && !historyReadOnly()) {
+                  <button type="button" class="assistance-proposal__toggle" [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                    (click)="setProposalSelected(activeProposalIndex(), proposal, !selectedPaths(activeProposalIndex(), proposal).length)">
+                    {{ selectedPaths(activeProposalIndex(), proposal).length ? 'Pomiń całą propozycję' : 'Wybierz całą propozycję' }}
+                  </button>
+                }
+                @for (change of proposal.changes; track change.path) {
+                  <div class="assistance-change" [attr.data-selected]="isSelected(activeProposalIndex(), proposal, change.path)">
+                    <div class="assistance-change__heading">
+                      @if (!reviewComplete() && !historyReadOnly()) {
+                        <input type="checkbox" [attr.aria-label]="'Wybierz pole ' + change.path"
+                          [checked]="isSelected(activeProposalIndex(), proposal, change.path)"
+                          [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                          (change)="setSelected(activeProposalIndex(), proposal, change.path, $any($event.target).checked)" />
+                      }
+                      <div><strong>{{ fieldLabel(change.path) }}</strong><code>{{ change.path }}</code></div>
+                      @if (isEdited(activeProposalIndex(), change.path)) { <span class="assistance-change__edited">Poprawione ręcznie</span> }
+                    </div>
+                    @if (proposal.operation === 'UPDATE') { <p class="assistance-change__before">Obecnie: {{ valueText(change.before) }}</p> }
+                    @if (isEditing(activeProposalIndex(), change.path)) {
+                      <div class="assistance-change__editor">
+                        <label [for]="'assistance-edit-' + activeProposalIndex() + '-' + change.path">Poprawiona wartość @if (typeof change.after !== 'string') { (JSON) }</label>
+                        <textarea [id]="'assistance-edit-' + activeProposalIndex() + '-' + change.path" [formControl]="editValueControl"
+                          [rows]="typeof change.after === 'string' ? 3 : 7" spellcheck="false"></textarea>
+                        @if (editError()) { <p class="assistance-panel__error" role="alert">{{ editError() }}</p> }
+                        <div class="assistance-change__actions">
+                          <button type="button" class="primary-button" (click)="saveFieldEdit(activeProposalIndex(), proposal, change)">Zastosuj poprawkę</button>
+                          <button type="button" class="secondary-button" (click)="cancelFieldEdit()">Anuluj</button>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="assistance-change__after"><small>{{ isEdited(activeProposalIndex(), change.path) ? 'Wartość operatora' : 'Propozycja AI' }}</small>
+                        <span>{{ valueText(effectiveAfter(activeProposalIndex(), change)) }}</span></div>
+                      @if (!reviewComplete() && !historyReadOnly() && isSelected(activeProposalIndex(), proposal, change.path)) {
+                        <div class="assistance-change__actions">
+                          @if (canEditField(proposal, change)) {
+                            <button type="button" class="assistance-form__switch" [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                              (click)="beginFieldEdit(activeProposalIndex(), proposal, change)">Popraw wartość</button>
+                          } @else {
+                            <small class="assistance-change__locked">To pole pochodzi ze zweryfikowanego źródła lub zakresu kodu.</small>
+                          }
+                          @if (isEdited(activeProposalIndex(), change.path)) {
+                            <button type="button" class="assistance-form__switch" (click)="resetFieldEdit(activeProposalIndex(), change.path)">Przywróć propozycję AI</button>
+                          }
+                        </div>
+                      }
+                    }
+                    <details class="assistance-change__evidence"><summary>Dlaczego i na jakiej podstawie?</summary>
+                      <p>{{ isEdited(activeProposalIndex(), change.path) ? 'Ta wartość została poprawiona przez operatora. Poniższe uzasadnienie i źródła dotyczą oryginalnej propozycji AI.' : change.reason }}</p>
+                      <small>{{ basisLabel(change.basis) }} · {{ confidenceLabel(change.confidence) }}</small>
+                      @if (change.sourceRefs.length) { <small>Źródła AI: {{ change.sourceRefs.join(', ') }}</small> }
+                    </details>
+                    @if (!reviewComplete() && !historyReadOnly() && requiresConfirmation(activeProposalIndex(), proposal, change) && isSelected(activeProposalIndex(), proposal, change.path)) {
+                      <label class="assistance-change__confirmation">
+                        <input type="checkbox" [checked]="isConfirmed(activeProposalIndex(), change.path)" [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                          (change)="setConfirmed(activeProposalIndex(), change.path, $any($event.target).checked)" />
+                        {{ isEdited(activeProposalIndex(), change.path) ? 'Potwierdzam poprawioną wartość' : 'Potwierdzam ten fakt przed zapisem' }}
+                      </label>
+                    }
+                  </div>
+                }
+                @if (proposal.questions.length || proposal.visibilityLimits.length) {
+                  <details class="assistance-proposal__more"><summary>Pytania i ograniczenia tej propozycji</summary>
+                    @if (proposal.questions.length) { <div class="assistance-proposal__issues"><strong>Pytania</strong><ul>@for (question of proposal.questions; track question) { <li>{{ question }}</li> }</ul></div> }
+                    @if (proposal.visibilityLimits.length) { <div class="assistance-proposal__issues"><strong>Ograniczenia</strong><ul>@for (limit of proposal.visibilityLimits; track limit) { <li>{{ limit }}</li> }</ul></div> }
+                  </details>
+                }
+              </article>
+            }
+          </div>
           <section class="assistance-batch" aria-label="Połączony przegląd zmian">
-            <h4>Połączony diff przed/po</h4>
+            <div class="assistance-batch__heading"><h4>Sprawdzenie zestawu</h4><span>{{ selectedProposalCount() }} propozycji · {{ selectedFieldCount() }} pól</span></div>
             @if (historyReadOnly() && !reviewComplete()) {
               <p>To zapis propozycji z chwili analizy. Dla tego runu nie zapisano decyzji operatora.</p>
             }
-            @if (selectedDiff().length) {
-              @for (change of selectedDiff(); track $index) {
-                <div class="assistance-batch__change">
-                  <strong>{{ change.entity }} · {{ change.path }}</strong>
-                  <span>Przed: <code>{{ valueText(change.before) }}</code></span>
-                  <span>Po: <code>{{ valueText(change.after) }}</code></span>
-                </div>
-              }
-            } @else { <p>Wszystkie propozycje są pominięte; katalog pozostanie bez zmian.</p> }
+            @if (!selectedDiff().length) { <p>Wszystkie propozycje są pominięte; katalog pozostanie bez zmian.</p> }
             @if (batchPreview(); as preview) {
               <p class="assistance-batch__validation" [attr.data-valid]="preview.valid" role="status">
                 {{ preview.valid ? 'Cały zestaw jest poprawny.' : 'Cały zestaw wymaga poprawy.' }}
@@ -274,9 +331,6 @@
                     <li>{{ violation.severity }}: {{ violation.ruleCode || violation.code }} ({{ violation.fingerprint }})</li>
                   }
                 </ul></div>
-              }
-              @for (entity of preview.entities; track entity.type + '/' + entity.id) {
-                <details class="assistance-proposal__candidate"><summary>Wynikowy wpis: {{ entity.type }}/{{ entity.id }} · {{ entity.sourceFile }}</summary><pre>{{ valueText(entity.payload) }}</pre></details>
               }
             } @else if (!reviewComplete() && !historyReadOnly()) {
               <p class="assistance-proposal__notice">Sprawdź aktualny wybór przed zapisem. Zmiana pola lub potwierdzenia wymaga nowego podglądu.</p>
@@ -293,6 +347,26 @@
               }
             }
             @if (reviewComplete()) { <p>{{ historyReadOnly() ? 'Zapisane decyzje operatora dla tego runu.' : 'Cały zestaw został rozstrzygnięty. Katalog odświeżono po zapisie.' }}</p> }
+            @if (selectedDiff().length) {
+              <details class="assistance-batch__details"><summary>Pełny diff przed/po · {{ selectedDiff().length }} pól</summary>
+                @for (change of selectedDiff(); track $index) {
+                  <div class="assistance-batch__change">
+                    <strong>{{ change.entity }} · {{ change.path }}</strong>
+                    <span>Przed: <code>{{ valueText(change.before) }}</code></span>
+                    <span>Po: <code>{{ valueText(change.after) }}</code></span>
+                  </div>
+                }
+              </details>
+            }
+            @if (batchPreview(); as preview) {
+              @if (preview.entities.length) {
+                <details class="assistance-batch__details"><summary>Wynikowe wpisy katalogu · {{ preview.entities.length }}</summary>
+                  @for (entity of preview.entities; track entity.type + '/' + entity.id) {
+                    <details class="assistance-proposal__candidate"><summary>{{ entity.type }}/{{ entity.id }} · {{ entity.sourceFile }}</summary><pre>{{ valueText(entity.payload) }}</pre></details>
+                  }
+                </details>
+              }
+            }
           </section>
         }
         @if (draft.questions.length) { <div class="assistance-run__list"><strong>Pytania do operatora</strong><ul>@for (question of draft.questions; track question) { <li>{{ question }}</li> }</ul></div> }

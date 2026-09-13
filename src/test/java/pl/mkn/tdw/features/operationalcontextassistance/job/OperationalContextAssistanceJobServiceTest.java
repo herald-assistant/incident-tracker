@@ -236,10 +236,10 @@ class OperationalContextAssistanceJobServiceTest {
     void readingAnotherProjectDoesNotCountAsReadingTheSelectedRepository() {
         when(sourceCollector.collect("demo-app", "main")).thenReturn(new OperationalContextGitLabSourceSnapshot(
                 "demo-app", new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                        "gitlab", "clp", "demo-app", "clp/demo-app", null
+                        "gitlab", "crm", "demo-app", "crm/demo-app", null
                 ), "main", "a".repeat(40), List.of(), List.of()
         ));
-        var otherSourceRef = "gitlab:clp/library@" + "b".repeat(40) + ":pom.xml";
+        var otherSourceRef = "gitlab:crm/library@" + "b".repeat(40) + ":pom.xml";
         when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{question}", null), Set.of(otherSourceRef)));
@@ -262,13 +262,13 @@ class OperationalContextAssistanceJobServiceTest {
 
     @Test
     void rejectsInvalidProjectUrlBeforeSchedulingAssistanceJob() {
-        var url = "https://other.example.com/CLP/PROCESSES/project";
+        var url = "https://other.example.com/CRM/PROCESSES/project";
         doThrow(new OperationalContextGitLabSourceSelectionException(
                 "Projekt musi znajdować się na skonfigurowanym serwerze GitLab."
         )).when(sourceCollector).validateProjectUrl(url);
 
         assertThatThrownBy(() -> service.startJob(new OperationalContextAssistanceJobStartRequest(
-                OperationalContextAssistanceMode.CREATE_AREA, "Proces umów", null,
+                OperationalContextAssistanceMode.CREATE_AREA, "Proces obsługi profilu klienta", null,
                 new OperationalContextAssistanceJobStartRequest.GitLabSource(null, url, "main"),
                 null, null, null
         ))).isInstanceOf(OperationalContextGitLabSourceSelectionException.class);
@@ -279,9 +279,9 @@ class OperationalContextAssistanceJobServiceTest {
 
     @Test
     void passesValidatedProjectUrlToCollector() {
-        var url = "https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS";
+        var url = "https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS";
         when(sourceCollector.collectUrl(url, "main")).thenReturn(new OperationalContextGitLabSourceSnapshot(
-                "PROCESSES/CLP_AGREEMENT_PROCESS", null, "main", null,
+                "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", null, "main", null,
                 List.of(), List.of("Nie udało się przypiąć ref.")
         ));
         when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
@@ -292,7 +292,7 @@ class OperationalContextAssistanceJobServiceTest {
         ));
 
         service.startJob(new OperationalContextAssistanceJobStartRequest(
-                OperationalContextAssistanceMode.CREATE_AREA, "Proces umów", null,
+                OperationalContextAssistanceMode.CREATE_AREA, "Proces obsługi profilu klienta", null,
                 new OperationalContextAssistanceJobStartRequest.GitLabSource(null, url, "main"),
                 null, null, null
         ));
@@ -321,10 +321,10 @@ class OperationalContextAssistanceJobServiceTest {
                 "digest-1", catalog, Map.of(), Map.of()));
         when(maintenanceService.writablePayloadForUpdate("code-search-scope", "scope-a"))
                 .thenReturn(Map.of("repositories", currentRepositories));
-        var sourceRef = "gitlab:clp/library@" + "a".repeat(40) + ":README.md";
+        var sourceRef = "gitlab:crm/library@" + "a".repeat(40) + ":README.md";
         when(sourceCollector.collect("library", "main")).thenReturn(new OperationalContextGitLabSourceSnapshot(
                 "library", new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                        "gitlab", "clp", "library", "clp/library", null
+                        "gitlab", "crm", "library", "crm/library", null
                 ), "main", "a".repeat(40),
                 List.of(new OperationalContextGitLabSourceFile("README.md", "Library docs", sourceRef)), List.of()
         ));
@@ -533,14 +533,14 @@ class OperationalContextAssistanceJobServiceTest {
 
     @Test
     void sendsOnlyWritableTargetPayloadToAi() {
-        when(maintenanceService.entity("integration", "order-to-payment"))
+        when(maintenanceService.entity("integration", "order-to-crm"))
                 .thenReturn(new OperationalContextEditableEntity(
-                        "integration", "order-to-payment", "integrations.yml",
-                        Map.of("id", "order-to-payment", "participants", List.of(Map.of(
+                        "integration", "order-to-crm", "integrations.yml",
+                        Map.of("id", "order-to-crm", "participants", List.of(Map.of(
                                 "system", "order-intake", "legacyNote", "preserve-only"
                         )))
                 ));
-        when(maintenanceService.writablePayloadForUpdate("integration", "order-to-payment"))
+        when(maintenanceService.writablePayloadForUpdate("integration", "order-to-crm"))
                 .thenReturn(Map.of("participants", List.of(Map.of("system", "order-intake"))));
         when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
@@ -553,7 +553,7 @@ class OperationalContextAssistanceJobServiceTest {
                 OperationalContextAssistanceMode.IMPROVE_ENTITY, "Uzupełnij integrację",
                 new OperationalContextAssistanceJobStartRequest.Target(
                         OperationalContextAssistanceJobStartRequest.Target.Kind.ENTITY,
-                        "integration", "order-to-payment", null
+                        "integration", "order-to-crm", null
                 ), null, null, null, null
         ));
 
@@ -569,7 +569,7 @@ class OperationalContextAssistanceJobServiceTest {
     void previewsAndPublishesAllSelectedEntitiesWithOneCatalogDigest() {
         var jobId = completedCreateJob(List.of(
                 proposal("system", "order-intake", false),
-                proposal("integration", "order-to-payment", false)));
+                proposal("integration", "order-to-crm", false)));
         when(maintenanceService.previewAcceptedBatch(any())).thenReturn(
                 new OperationalContextCatalogBatchMutationPreview(
                         List.of(), "digest-1", "digest-2", List.of()));
@@ -602,6 +602,55 @@ class OperationalContextAssistanceJobServiceTest {
                 OperationalContextCatalogConditionalBatchCommand.Mutation::type)
                 .containsExactly("system", "integration");
         verify(maintenanceService, never()).applyAcceptedChanges(any());
+    }
+
+    @Test
+    void previewsAndStoresOperatorCorrectedValueInsteadOfAiValue() {
+        var jobId = completedCreateJob(List.of(proposal("system", "order-intake", false)));
+        when(maintenanceService.previewAcceptedBatch(any())).thenReturn(
+                new OperationalContextCatalogBatchMutationPreview(List.of(), "digest-1", "edited-digest", List.of()));
+        when(maintenanceService.applyAcceptedBatch(any())).thenReturn(
+                new OperationalContextCatalogBatchMutationResult(List.of(), "edited-digest"));
+        var corrected = objectMapper.valueToTree("Operator name");
+        var choice = new OperationalContextAssistanceProposalDecisionRequest(
+                OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                List.of("name"), List.of("name"), Map.of("name", corrected));
+        var request = new OperationalContextAssistanceBatchReviewRequest(List.of(choice), "edited-digest");
+
+        assertThat(service.previewBatch(jobId, request).valid()).isTrue();
+        var saved = service.applyBatch(jobId, request);
+
+        var command = ArgumentCaptor.forClass(OperationalContextCatalogConditionalBatchCommand.class);
+        verify(maintenanceService).applyAcceptedBatch(command.capture());
+        assertThat(command.getValue().mutations().get(0).changes().get(0).after()).isEqualTo("Operator name");
+        assertThat(saved.draft().proposals().get(0).changes().get(0).after()).isEqualTo("Order Intake");
+        assertThat(saved.proposalDecisions().get(0).editedValues()).containsEntry("name", corrected);
+    }
+
+    @Test
+    void rejectsUnconfirmedUnselectedAndWrongTypeOperatorEdits() {
+        var jobId = completedCreateJob(List.of(proposal("system", "order-intake", false)));
+        var corrected = objectMapper.valueToTree("Operator name");
+
+        assertThatThrownBy(() -> service.previewBatch(jobId, new OperationalContextAssistanceBatchReviewRequest(
+                List.of(new OperationalContextAssistanceProposalDecisionRequest(
+                        OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                        List.of("name"), List.of(), Map.of("name", corrected))), null)))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class)
+                .hasMessageContaining("potwierdź");
+        assertThatThrownBy(() -> service.previewBatch(jobId, new OperationalContextAssistanceBatchReviewRequest(
+                List.of(new OperationalContextAssistanceProposalDecisionRequest(
+                        OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                        List.of("name"), List.of("name"), Map.of("shortName", corrected))), null)))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class)
+                .hasMessageContaining("tylko wybrane");
+        assertThatThrownBy(() -> service.previewBatch(jobId, new OperationalContextAssistanceBatchReviewRequest(
+                List.of(new OperationalContextAssistanceProposalDecisionRequest(
+                        OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                        List.of("name"), List.of("name"), Map.of("name", objectMapper.createArrayNode()))), null)))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class)
+                .hasMessageContaining("zachować typ");
+        verify(maintenanceService, never()).applyAcceptedBatch(any());
     }
 
     @Test

@@ -26,28 +26,28 @@ class OperationalContextAssistanceBranchOptionsControllerTest {
 
     @Test
     void listsFilteredBranchesForSelectedNestedProject() throws Exception {
-        when(sourceCollector.projectPathForBranchOptions("PROCESSES/CLP_AGREEMENT_PROCESS", null))
-                .thenReturn("CLP/PROCESSES/CLP_AGREEMENT_PROCESS");
-        when(branchService.listBranches("CLP/PROCESSES/CLP_AGREEMENT_PROCESS", "release"))
+        when(sourceCollector.projectPathForBranchOptions("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", null))
+                .thenReturn("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
+        when(branchService.listBranches("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", "release"))
                 .thenReturn(new GitLabRepositoryBranchService.BranchPage(
                         List.of(new GitLabRepositoryBranchService.Branch("release/2026.09", false)), true));
 
         mockMvc.perform(get("/api/operational-context/assistance/source-options/branches")
-                        .param("project", "PROCESSES/CLP_AGREEMENT_PROCESS")
+                        .param("project", "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS")
                         .param("search", " release "))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.branches[0].name").value("release/2026.09"))
                 .andExpect(jsonPath("$.truncated").value(true))
                 .andExpect(jsonPath("$.warnings").isEmpty());
-        verify(sourceCollector).projectPathForBranchOptions("PROCESSES/CLP_AGREEMENT_PROCESS", null);
+        verify(sourceCollector).projectPathForBranchOptions("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", null);
     }
 
     @Test
     void acceptsAFullProjectUrlWithoutSplittingSubgroupsInTheBrowser() throws Exception {
-        var url = "https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS";
+        var url = "https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS";
         when(sourceCollector.projectPathForBranchOptions(null, url))
-                .thenReturn("CLP/PROCESSES/CLP_AGREEMENT_PROCESS");
-        when(branchService.listBranches("CLP/PROCESSES/CLP_AGREEMENT_PROCESS", ""))
+                .thenReturn("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
+        when(branchService.listBranches("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", ""))
                 .thenReturn(new GitLabRepositoryBranchService.BranchPage(
                         List.of(new GitLabRepositoryBranchService.Branch("main", true)), false));
 

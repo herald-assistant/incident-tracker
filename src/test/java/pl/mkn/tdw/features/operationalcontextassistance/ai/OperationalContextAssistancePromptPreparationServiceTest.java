@@ -139,16 +139,16 @@ class OperationalContextAssistancePromptPreparationServiceTest {
     void suppliesCanonicalNestedRepositoryGitFieldsToAi() throws Exception {
         effectiveSkill();
         var source = new OperationalContextGitLabSourceSnapshot(
-                "PROCESSES/CLP_AGREEMENT_PROCESS",
+                "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
                 new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                        "gitlab", "CLP/PROCESSES", "CLP_AGREEMENT_PROCESS",
-                        "CLP/PROCESSES/CLP_AGREEMENT_PROCESS",
-                        "https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS"
+                        "gitlab", "CRM/PROCESSES", "CRM_CUSTOMER_PROFILE_PROCESS",
+                        "CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
+                        "https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS"
                 ),
                 "main", "1111111111111111111111111111111111111111",
                 List.of(new OperationalContextGitLabSourceFile(
-                        "README.md", "Agreement process",
-                        "gitlab:CLP/PROCESSES/CLP_AGREEMENT_PROCESS@"
+                        "README.md", "Customer Profile process",
+                        "gitlab:CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS@"
                                 + "1111111111111111111111111111111111111111:README.md"
                 )),
                 List.of()
@@ -156,21 +156,21 @@ class OperationalContextAssistancePromptPreparationServiceTest {
 
         var preparation = service.prepare(new OperationalContextAssistanceAiInput(
                 OperationalContextAssistanceMode.CREATE_AREA,
-                "Proces umów", objectMapper.createObjectNode(), guidance(), null, source, null, List.of()
+                "Proces obsługi profilu klienta", objectMapper.createObjectNode(), guidance(), null, source, null, List.of()
         ));
 
         var material = objectMapper.readTree(preparation.artifacts().get(
                 OperationalContextAssistancePromptPreparationService.INPUT_ARTIFACT));
         assertThat(material.path("selectedSource").path("project").asText())
-                .isEqualTo("PROCESSES/CLP_AGREEMENT_PROCESS");
+                .isEqualTo("PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
         var repositoryGit = material.path("selectedSource").path("repositoryGit");
         assertThat(repositoryGit.path("provider").asText()).isEqualTo("gitlab");
-        assertThat(repositoryGit.path("group").asText()).isEqualTo("CLP/PROCESSES");
-        assertThat(repositoryGit.path("project").asText()).isEqualTo("CLP_AGREEMENT_PROCESS");
+        assertThat(repositoryGit.path("group").asText()).isEqualTo("CRM/PROCESSES");
+        assertThat(repositoryGit.path("project").asText()).isEqualTo("CRM_CUSTOMER_PROFILE_PROCESS");
         assertThat(repositoryGit.path("projectPath").asText())
-                .isEqualTo("CLP/PROCESSES/CLP_AGREEMENT_PROCESS");
+                .isEqualTo("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
         assertThat(repositoryGit.path("url").asText())
-                .isEqualTo("https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS");
+                .isEqualTo("https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
         assertThat(preparation.prompt()).contains("`selectedSource.repositoryGit`");
     }
 
@@ -181,16 +181,16 @@ class OperationalContextAssistancePromptPreparationServiceTest {
         var repositories = catalog.putObject("documents").putObject("repo-map.yml")
                 .putArray("repositories");
         repositories.addObject().putObject("git")
-                .put("provider", "gitlab").put("projectPath", "CLP/PROCESSES/agreement");
+                .put("provider", "gitlab").put("projectPath", "CRM/PROCESSES/customer-profile");
         repositories.addObject().putObject("git")
-                .put("provider", "gitlab").put("projectPath", "CLP/LIBS/shared-client");
+                .put("provider", "gitlab").put("projectPath", "CRM/LIBS/shared-client");
 
         var preparation = service.prepare(new OperationalContextAssistanceAiInput(
                 OperationalContextAssistanceMode.CREATE_AREA, "Sprawdź zależność biblioteki",
                 catalog, guidance(), null, null, null, List.of()));
 
         assertThat(preparation.prompt()).contains("### Projekty GitLab zapisane w Operational Context",
-                "CLP/PROCESSES/agreement", "CLP/LIBS/shared-client",
+                "CRM/PROCESSES/customer-profile", "CRM/LIBS/shared-client",
                 "projekt spoza tej listy także może być odczytany");
     }
 
@@ -224,30 +224,30 @@ class OperationalContextAssistancePromptPreparationServiceTest {
     void keepsExplicitRepositoryFactsSeparateFromDescriptionAndCodeEvidence() throws Exception {
         effectiveSkill();
         var source = new OperationalContextGitLabSourceSnapshot(
-                "PROCESSES/CLP_AGREEMENT_PROCESS",
+                "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
                 new OperationalContextGitLabSourceSnapshot.RepositoryGit(
-                        "gitlab", "CLP/PROCESSES", "CLP_AGREEMENT_PROCESS",
-                        "CLP/PROCESSES/CLP_AGREEMENT_PROCESS", null
+                        "gitlab", "CRM/PROCESSES", "CRM_CUSTOMER_PROFILE_PROCESS",
+                        "CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", null
                 ),
                 "main", "1111111111111111111111111111111111111111", List.of(), List.of()
         );
         var facts = new OperationalContextAssistanceRepositoryFacts(
                 OperationalContextAssistanceRepositoryFacts.Usage.DEPLOYED_SYSTEM,
-                "Agreement Process", "agreement-runtime", List.of()
+                "Customer Profile Process", "customer-profile-runtime", List.of()
         );
 
         var preparation = service.prepare(new OperationalContextAssistanceAiInput(
                 OperationalContextAssistanceMode.CREATE_AREA,
-                "Obsługuje umowy.", objectMapper.createObjectNode(), guidance(), null, source, facts, List.of()
+                "Obsługuje profile klientów.", objectMapper.createObjectNode(), guidance(), null, source, facts, List.of()
         ));
 
         var material = objectMapper.readTree(preparation.artifacts().get(
                 OperationalContextAssistancePromptPreparationService.INPUT_ARTIFACT));
-        assertThat(material.path("description").asText()).isEqualTo("Obsługuje umowy.");
+        assertThat(material.path("description").asText()).isEqualTo("Obsługuje profile klientów.");
         assertThat(material.path("operatorFacts").path("usage").asText()).isEqualTo("DEPLOYED_SYSTEM");
-        assertThat(material.path("operatorFacts").path("systemName").asText()).isEqualTo("Agreement Process");
+        assertThat(material.path("operatorFacts").path("systemName").asText()).isEqualTo("Customer Profile Process");
         assertThat(material.path("operatorFacts").path("runtimeServiceName").asText())
-                .isEqualTo("agreement-runtime");
+                .isEqualTo("customer-profile-runtime");
         assertThat(preparation.allowedSourceRefs())
                 .contains("operator:description", "operator:repository-facts");
         assertThat(preparation.prompt()).contains("nie dowodzi, że odczytano repozytorium");

@@ -437,10 +437,10 @@ o innym origin, poza skonfigurowanym base path lub glowna grupa oraz adres
 niejednoznaczny, zanim powstanie job. Z poprawnego URL wylicza wzgledna
 sciezke do GitLaba i kanoniczne `git.group`, `git.project`, `git.projectPath`
 oraz `git.url` dla propozycji wpisu w `repo-map.yml`. Dla URL projektu
-`CLP/PROCESSES/CLP_AGREEMENT_PROCESS` pod glowna grupa `CLP` odczyt GitLab
-uzywa `PROCESSES/CLP_AGREEMENT_PROCESS`, a wpis katalogu zachowuje
-`group: CLP/PROCESSES`, `project: CLP_AGREEMENT_PROCESS` i pelne
-`projectPath: CLP/PROCESSES/CLP_AGREEMENT_PROCESS`.
+`CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS` pod glowna grupa `CRM` odczyt GitLab
+uzywa `PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS`, a wpis katalogu zachowuje
+`group: CRM/PROCESSES`, `project: CRM_CUSTOMER_PROFILE_PROCESS` i pelne
+`projectPath: CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS`.
 Te pola trafiaja do `selectedSource.repositoryGit`; parser draftu odrzuca
 propozycje `repository.git`, ktora nie odpowiada wybranemu zrodlu.
 
@@ -572,13 +572,20 @@ Snapshot joba zawiera status, kroki, sanitizowany prompt przygotowany przed
 wywolaniem Copilota, bezpieczne metadane jego pracy, usage/cost, source refs,
 ograniczenia, draft, preview i decyzje. Wspolny boczny panel pokazuje przebieg
 analizy, prompt w kroku `PREPARE_AI`, tok pracy AI oraz szacunek kosztu.
-Operator wybiera pola i jawnie
-potwierdza wymagane fakty dla wszystkich propozycji. Jeden batch preview
-pokazuje polaczony diff, candidate digest oraz wyniki walidacji; jeden batch
-decision publikuje wybrane zmiany. Backend bierze wartosci wylacznie z draftu
-zachowanego w jobie, nie z payloadu klienta, i wymaga tego samego candidate
-digesta, ktory operator zobaczyl w podgladzie. Konflikt nie zapisuje zadnej
-decyzji. Aktywne joby i decyzje pozostaja w pamieci procesu na potrzeby
+Operator widzi zwarta liste propozycji i szczegoly jednej pozycji; formularz,
+zrodla, ograniczenia i pelny diff pozostaja rozwijalne. Wybiera pola, moze
+poprawic ich `after` przed zapisem i jawnie potwierdza wymagane fakty oraz
+kazda korekte. Korekta jest oznaczona jako wartosc operatora; uzasadnienie i
+source refs AI dotycza oryginalnej propozycji. `repository.git` i
+`code-search-scope.repositories` nie przyjmuja override w review, poniewaz
+sa zwiazane z weryfikowanym zrodlem i scope'em. Jeden batch preview pokazuje
+wynikowy zestaw, candidate digest oraz wyniki walidacji; jeden batch decision
+publikuje wybrane zmiany. Backend bierze sciezki i bazowe wartosci z draftu
+zachowanego w jobie, przyjmuje tylko poprawki wybranych pol o zgodnym typie,
+sprawdza je neutralna walidacja i wymaga tego samego candidate digesta, ktory
+operator zobaczyl w podgladzie. Konflikt nie zapisuje zadnej decyzji. Historia
+przechowuje draft AI i zatwierdzone poprawki osobno. Aktywne joby i decyzje
+pozostaja w pamieci procesu na potrzeby
 preview i zapisu. Kazdy run jest rownolegle utrwalany przez feature-owned
 persister w neutralnym `LocalAnalysisRunStore`: po starcie, zebraniu kontekstu,
 przygotowaniu promptu, zakonczeniu lub bledzie oraz po decyzji operatora.
@@ -847,16 +854,17 @@ Trzy sciezki operatorskie na tym ekranie:
 
 1. Operator naciska `Uzupelnij z AI`, opisuje obszar i opcjonalnie wybiera projekt
    GitLab lub wkleja jego pelny URL. Wybiera galaz z filtrowanej listy
-   pobranej dla tego projektu albo recznie podaje galaz/commit. Dla GitLaba wybiera jedna role projektu;
+   pobranej dla tego projektu albo recznie podaje galaz. Dla GitLaba wybiera jedna role projektu;
    dopiero wtedy pojawiaja sie potrzebne pytania o nazwe nowego systemu,
    nazwe uslugi w logach albo znane systemy korzystajace z repozytorium.
    Moze otrzymac samo repozytorium, nowy system ze scope'em, repozytorium
    dopiete do scope'u wybranego systemu albo zmiane innych wpisow katalogu.
-   Wybiera pola, sprawdza polaczony diff i zapisuje caly zestaw jedna decyzja.
+   Wybiera pola, ewentualnie poprawia wartosci, sprawdza wynikowy zestaw i
+   zapisuje go jedna decyzja.
 2. Z detail encji operator przechodzi do `IMPROVE_ENTITY`; asysta dostaje
    target, pokazuje diff pol i jego podstawe. Operator wybiera albo pomija
-   proponowane pola. Wartosc wymagajaca recznej korekty jest poprawiana w
-   dostepnym edytorze encji, po odswiezeniu jej biezacej wersji.
+   proponowane pola. Wartosc wymagajaca recznej korekty jest poprawiana
+   w przegladzie asysty przed jednym batch preview i zapisem.
 3. Z Validation lub Open Questions operator przechodzi do `RESOLVE_FINDING`
    dla konkretnego targetu. AI moze zaproponowac powiazana poprawke albo
    pytanie do czlowieka; finding/pytanie znika dopiero, gdy po zapisie

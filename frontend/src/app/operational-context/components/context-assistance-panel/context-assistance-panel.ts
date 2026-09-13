@@ -62,6 +62,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   readonly systemNameControl = new FormControl('', { nonNullable: true });
   readonly runtimeServiceNameControl = new FormControl('', { nonNullable: true });
   readonly existingSystemControl = new FormControl('', { nonNullable: true });
+  readonly editValueControl = new FormControl('', { nonNullable: true });
   readonly librarySystemIds = signal<string[]>([]);
   readonly manualProject = signal(false);
   readonly manualRef = signal(false);
@@ -83,6 +84,11 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   readonly pendingDecisionCheck = signal<PendingDecisionCheck | null>(null);
   readonly selectionByProposal = signal<Record<number, string[]>>({});
   readonly confirmationsByProposal = signal<Record<number, string[]>>({});
+  readonly editedValuesByProposal = signal<Record<number, Record<string, unknown>>>({});
+  readonly activeProposalIndex = signal(0);
+  readonly composerExpanded = signal(true);
+  readonly editingField = signal('');
+  readonly editError = signal('');
   readonly isRunning = computed(() => this.starting() || Boolean(this.job() && !isTerminalAssistanceStatus(this.job()!.status)));
   readonly reviewComplete = computed(() => Boolean(this.job()?.proposalDecisions?.length));
   readonly analysisProgressRunning = computed(() => Boolean(!this.historyReadOnly() && this.job()
@@ -142,6 +148,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     const previousJob = this.initialJob();
     if (previousJob) {
       this.job.set(previousJob);
+      this.composerExpanded.set(false);
       if (!this.historyReadOnly() && !isTerminalAssistanceStatus(previousJob.status)) this.startPolling(previousJob.jobId);
     }
   }
@@ -151,6 +158,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       if (changes['initialJob'] || changes['prefill'] || changes['historyReadOnly']) {
         this.pollSubscription?.unsubscribe();
         this.job.set(this.initialJob());
+        this.composerExpanded.set(false);
+        this.activeProposalIndex.set(0);
+        this.cancelFieldEdit();
         if (changes['prefill']) {
           this.activePrefill.set(this.prefill());
           this.descriptionControl.setValue(this.activePrefill().description ?? '');
@@ -164,10 +174,14 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       if (!incoming) {
         this.pollSubscription?.unsubscribe();
         this.job.set(null);
+        this.composerExpanded.set(true);
       }
       if (incoming && (incoming.jobId !== this.job()?.jobId || incoming.updatedAt !== this.job()?.updatedAt)) {
         this.pollSubscription?.unsubscribe();
         this.job.set(incoming);
+        this.composerExpanded.set(false);
+        this.activeProposalIndex.set(0);
+        this.cancelFieldEdit();
         if (!this.historyReadOnly() && !isTerminalAssistanceStatus(incoming.status)) this.startPolling(incoming.jobId);
       }
     }
@@ -184,10 +198,14 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
         this.jobChanged.emit(null);
         this.selectionByProposal.set({});
         this.confirmationsByProposal.set({});
+        this.editedValuesByProposal.set({});
+        this.activeProposalIndex.set(0);
+        this.cancelFieldEdit();
         this.decisionError.set('');
         this.invalidateBatchPreview();
       }
       this.activePrefill.set(this.prefill());
+      this.composerExpanded.set(true);
       this.resetRepositoryFacts();
       this.contextSwitchNotice.set('');
       this.descriptionControl.setValue(this.activePrefill().description ?? '');
@@ -285,6 +303,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     this.invalidateBatchPreview();
     this.selectionByProposal.set({});
     this.confirmationsByProposal.set({});
+    this.editedValuesByProposal.set({});
+    this.activeProposalIndex.set(0);
+    this.cancelFieldEdit();
     this.starting.set(true);
     this.api.start(request)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -292,6 +313,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
         next: (snapshot) => {
           this.starting.set(false);
           this.job.set(snapshot);
+          this.composerExpanded.set(false);
           this.jobChanged.emit(snapshot);
           if (!isTerminalAssistanceStatus(snapshot.status)) this.startPolling(snapshot.jobId);
         },
@@ -419,6 +441,130 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     this.startPolling(currentJob.jobId);
   }
 
+  selectProposal(index: number): void {
+    this.activeProposalIndex.set(index);
+    this.cancelFieldEdit();
+  }
+
+  proposalTitle(proposalIndex: number, proposal: OperationalContextAssistanceProposal): string {
+    const title = proposal.changes.find((change) => change.path === 'term' || change.path === 'name');
+    const value = title ? this.effectiveAfter(proposalIndex, title) : null;
+    return typeof value === 'string' && value.trim() ? value : proposal.entityId;
+  }
+
+  entityLabel(type: string): string {
+    const labels: Record<string, string> = {
+      system: 'System', repository: 'Repozytorium', 'code-search-scope': 'Zakres kodu',
+      process: 'Proces', integration: 'Integracja', 'bounded-context': 'Kontekst',
+      team: 'Zespół', 'glossary-term': 'Termin', 'handoff-rule': 'Reguła przekazania'
+    };
+    return labels[type] ?? type;
+  }
+
+  fieldLabel(path: string): string {
+    const labels: Record<string, string> = {
+      name: 'Nazwa', term: 'Termin', category: 'Kategoria', definition: 'Definicja',
+      canonicalReferences: 'Powiązania', useFor: 'Kiedy używać', references: 'Powiązania',
+      description: 'Opis', summary: 'Podsumowanie', repositories: 'Repozytoria',
+      git: 'Projekt GitLab', ownership: 'Właściciel', participants: 'Uczestnicy'
+    };
+    return labels[path] ?? path.replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
+
+  selectedFieldCount(): number {
+    return (this.job()?.draft?.proposals ?? []).reduce((count, proposal, index) =>
+      count + this.selectedPaths(index, proposal).length, 0);
+  }
+
+  selectedProposalCount(): number {
+    return (this.job()?.draft?.proposals ?? []).filter((proposal, index) =>
+      this.selectedPaths(index, proposal).length > 0).length;
+  }
+
+  editedFieldCount(): number {
+    return (this.job()?.draft?.proposals ?? []).reduce((count, proposal, index) =>
+      count + proposal.changes.filter((change) => this.isSelected(index, proposal, change.path)
+        && this.isEdited(index, change.path)).length, 0);
+  }
+
+  canEditField(proposal: OperationalContextAssistanceProposal, change: OperationalContextAssistanceFieldChange): boolean {
+    return !((proposal.entityType === 'repository' && change.path === 'git')
+      || (proposal.entityType === 'code-search-scope' && change.path === 'repositories'));
+  }
+
+  isEdited(proposalIndex: number, path: string): boolean {
+    const recorded = this.job()?.proposalDecisions?.find((decision) => decision.proposalIndex === proposalIndex);
+    const values = recorded ? recorded.editedValues : this.editedValuesByProposal()[proposalIndex];
+    return Object.prototype.hasOwnProperty.call(values ?? {}, path);
+  }
+
+  effectiveAfter(proposalIndex: number, change: OperationalContextAssistanceFieldChange): unknown {
+    const recorded = this.job()?.proposalDecisions?.find((decision) => decision.proposalIndex === proposalIndex);
+    const values = recorded ? recorded.editedValues : this.editedValuesByProposal()[proposalIndex];
+    return Object.prototype.hasOwnProperty.call(values ?? {}, change.path)
+      ? values![change.path] : change.after;
+  }
+
+  isEditing(proposalIndex: number, path: string): boolean {
+    return this.editingField() === `${proposalIndex}|${path}`;
+  }
+
+  beginFieldEdit(proposalIndex: number, proposal: OperationalContextAssistanceProposal,
+    change: OperationalContextAssistanceFieldChange): void {
+    if (this.historyReadOnly() || this.reviewComplete() || this.decisionBusy()
+      || this.pendingDecisionCheck() || !this.canEditField(proposal, change)) return;
+    this.editingField.set(`${proposalIndex}|${change.path}`);
+    this.editValueControl.setValue(this.valueText(this.effectiveAfter(proposalIndex, change)));
+    this.editError.set('');
+  }
+
+  cancelFieldEdit(): void {
+    this.editingField.set('');
+    this.editError.set('');
+  }
+
+  saveFieldEdit(proposalIndex: number, proposal: OperationalContextAssistanceProposal,
+    change: OperationalContextAssistanceFieldChange): void {
+    if (!this.isEditing(proposalIndex, change.path) || !this.canEditField(proposal, change)) return;
+    const raw = this.editValueControl.value;
+    let value: unknown = raw;
+    if (typeof change.after !== 'string') {
+      try {
+        value = JSON.parse(raw);
+      } catch {
+        this.editError.set('Podaj poprawny JSON dla tego pola.');
+        return;
+      }
+      if (value === null || Array.isArray(change.after) !== Array.isArray(value)
+        || (!Array.isArray(change.after) && (typeof value !== 'object' || Array.isArray(value)))) {
+        this.editError.set('Zachowaj typ wartości: listę lub obiekt, zgodnie z propozycją.');
+        return;
+      }
+    }
+    if (new TextEncoder().encode(JSON.stringify(value)).length > 16_384) {
+      this.editError.set('Ta poprawka jest zbyt długa. Limit wynosi 16 KiB na pole.');
+      return;
+    }
+    const current = { ...(this.editedValuesByProposal()[proposalIndex] ?? {}) };
+    if (JSON.stringify(value) === JSON.stringify(change.after)) delete current[change.path];
+    else current[change.path] = value;
+    this.editedValuesByProposal.update((all) => ({ ...all, [proposalIndex]: current }));
+    this.setConfirmed(proposalIndex, change.path, false);
+    this.invalidateBatchPreview();
+    this.decisionError.set('');
+    this.cancelFieldEdit();
+  }
+
+  resetFieldEdit(proposalIndex: number, path: string): void {
+    if (this.historyReadOnly() || this.reviewComplete() || this.decisionBusy() || this.pendingDecisionCheck()) return;
+    const current = { ...(this.editedValuesByProposal()[proposalIndex] ?? {}) };
+    delete current[path];
+    this.editedValuesByProposal.update((all) => ({ ...all, [proposalIndex]: current }));
+    this.setConfirmed(proposalIndex, path, false);
+    this.invalidateBatchPreview();
+    this.cancelFieldEdit();
+  }
+
   selectedPaths(proposalIndex: number, proposal: OperationalContextAssistanceProposal): string[] {
     const recorded = this.job()?.proposalDecisions?.find((decision) => decision.proposalIndex === proposalIndex);
     if (recorded) return recorded.selectedPaths;
@@ -450,8 +596,9 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     this.decisionError.set('');
   }
 
-  requiresConfirmation(proposal: OperationalContextAssistanceProposal, change: OperationalContextAssistanceFieldChange): boolean {
-    return proposal.requiresConfirmation || change.requiresConfirmation;
+  requiresConfirmation(proposalIndex: number, proposal: OperationalContextAssistanceProposal,
+    change: OperationalContextAssistanceFieldChange): boolean {
+    return proposal.requiresConfirmation || change.requiresConfirmation || this.isEdited(proposalIndex, change.path);
   }
 
   isConfirmed(proposalIndex: number, path: string): boolean {
@@ -472,9 +619,15 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     return (this.job()?.draft?.proposals ?? []).map((proposal, index) => {
       const selected = this.selectedPaths(index, proposal);
       const selectedPaths = proposal.changes.map((change) => change.path).filter((path) => selected.includes(path));
-      return selectedPaths.length
-        ? { action: 'APPLY', selectedPaths, confirmedPaths: selectedPaths.filter((path) => this.isConfirmed(index, path)) }
-        : { action: 'SKIP', selectedPaths: [], confirmedPaths: [] };
+      if (!selectedPaths.length) return { action: 'SKIP', selectedPaths: [], confirmedPaths: [] };
+      const edits = this.editedValuesByProposal()[index] ?? {};
+      const editedValues = Object.fromEntries(selectedPaths.filter((path) => Object.prototype.hasOwnProperty.call(edits, path))
+        .map((path) => [path, edits[path]]));
+      return {
+        action: 'APPLY', selectedPaths,
+        confirmedPaths: selectedPaths.filter((path) => this.isConfirmed(index, path)),
+        ...(Object.keys(editedValues).length ? { editedValues } : {})
+      };
     });
   }
 
@@ -482,14 +635,15 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     return (this.job()?.draft?.proposals ?? []).flatMap((proposal, index) =>
       proposal.changes.filter((change) => this.isSelected(index, proposal, change.path))
         .map((change) => ({ entity: `${proposal.entityType}/${proposal.entityId}`, path: change.path,
-          before: change.before, after: change.after })));
+          before: change.before, after: this.effectiveAfter(index, change) })));
   }
 
   canPreview(): boolean {
     const snapshot = this.job();
     return Boolean(!this.historyReadOnly() && snapshot?.draft?.proposals.length
       && (snapshot.status === 'COMPLETED' || snapshot.status === 'PARTIAL')
-      && !this.reviewComplete() && !this.previewBusy() && !this.decisionBusy() && !this.pendingDecisionCheck());
+      && !this.reviewComplete() && !this.previewBusy() && !this.decisionBusy()
+      && !this.pendingDecisionCheck() && !this.editingField());
   }
 
   canSave(): boolean {
@@ -500,7 +654,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     return snapshot.draft!.proposals.every((proposal, index) => {
       const selected = this.selectedPaths(index, proposal);
       return proposal.changes.every((change) => !selected.includes(change.path)
-        || !this.requiresConfirmation(proposal, change) || this.isConfirmed(index, change.path));
+        || !this.requiresConfirmation(index, proposal, change) || this.isConfirmed(index, change.path));
     });
   }
 
@@ -611,7 +765,8 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     return actual?.length === expected.length && expected.every((choice, index) => {
       const decision = actual[index];
       return decision.proposalIndex === index && decision.action === choice.action
-        && this.samePaths(decision.selectedPaths, choice.selectedPaths);
+        && this.samePaths(decision.selectedPaths, choice.selectedPaths)
+        && JSON.stringify(decision.editedValues ?? {}) === JSON.stringify(choice.editedValues ?? {});
     });
   }
 

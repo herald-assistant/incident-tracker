@@ -66,9 +66,15 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   niekanoniczne sciezki, wrazliwa tresc, niedozwolone source refs oraz
   potwierdzony ownership albo subtype `frontend` wywnioskowany przez AI.
 - Preview nie zapisuje katalogu. Decyzja operatora moze wskazac tylko pola z
-  draftu przechowywanego w jobie i wymaga jawnego potwierdzenia oznaczonych
-  faktow. Operator przeglada jeden polaczony diff; zapis wykonuj przez neutralna
-  warunkowa operacje batch maintenance. `CREATE` wymaga zgodnego digesta,
+  draftu przechowywanego w jobie. Dla wybranych pol moze podac poprawione
+  `after` w `editedValues`; typ i rozmiar poprawki sprawdza backend, a kazda
+  poprawka wymaga jawnego potwierdzenia. `repository.git` oraz
+  `code-search-scope.repositories` pozostaja zwiazane ze zweryfikowanym
+  zrodlem i zakresem kodu, wiec nie przyjmuja poprawek w review. Uzasadnienie
+  i source refs AI dotycza oryginalnej propozycji, nie korekty operatora.
+  Jeden batch preview pokazuje wynikowy zestaw, a zapis wykonuj przez neutralna
+  warunkowa operacje batch maintenance. Historia zachowuje draft AI oraz
+  faktycznie zatwierdzone poprawki. `CREATE` wymaga zgodnego digesta,
   `UPDATE` zgodnych wartosci `before`, a wszystkie relacje sa walidowane po
   zlozeniu calego zestawu. Konflikt i blad walidacji nie moga pozostawic
   czesciowego katalogu ani decyzji `APPLY`.

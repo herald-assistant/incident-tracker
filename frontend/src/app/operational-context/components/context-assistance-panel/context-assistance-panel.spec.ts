@@ -158,9 +158,10 @@ describe('ContextAssistancePanelComponent', () => {
     updates.next(job('COMPLETED'));
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent || '';
-    expect(text).toContain('Połączony diff przed/po');
+    expect(text).toContain('Pełny diff przed/po');
     expect(text).toContain('Customer API');
-    expect(text).toContain('Dlaczego: Nazwa pochodzi z opisu operatora.');
+    expect(text).toContain('Dlaczego i na jakiej podstawie?');
+    expect(text).toContain('Nazwa pochodzi z opisu operatora.');
     expect(text).toContain('opis operatora');
     expect(text).toContain('operator:description');
     expect(text).toContain('Pytania do operatora');
@@ -171,7 +172,7 @@ describe('ContextAssistancePanelComponent', () => {
 
   it('requires a full GitLab URL and a branch when the project is entered manually', async () => {
     const api = { start: vi.fn(() => of(job('COMPLETED'))), get: vi.fn(),
-      sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CLP', projects: [] })) };
+      sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CRM', projects: [] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
       providers: [
@@ -191,9 +192,9 @@ describe('ContextAssistancePanelComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Pełny adres URL projektu GitLab');
     expect(fixture.nativeElement.textContent).toContain('Podgrupy mogą być częścią adresu');
-    expect(fixture.nativeElement.textContent).toContain('https://gitlab.example.com/CLP/podgrupa/projekt');
+    expect(fixture.nativeElement.textContent).toContain('https://gitlab.example.com/CRM/podgrupa/projekt');
     component.descriptionControl.setValue('Opis obszaru');
-    component.projectUrlControl.setValue('CLP/PROCESSES/CLP_AGREEMENT_PROCESS');
+    component.projectUrlControl.setValue('CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS');
     component.start();
     expect(api.start).not.toHaveBeenCalled();
     expect(component.error()).toContain('gałąź');
@@ -206,7 +207,7 @@ describe('ContextAssistancePanelComponent', () => {
     expect(api.start).not.toHaveBeenCalled();
     expect(component.error()).toContain('pełny adres URL');
 
-    component.projectUrlControl.setValue('https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS');
+    component.projectUrlControl.setValue('https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS');
     component.refControl.setValue('1234567890abcdef1234567890abcdef12345678');
     component.start();
     expect(api.start).not.toHaveBeenCalled();
@@ -217,7 +218,7 @@ describe('ContextAssistancePanelComponent', () => {
       mode: 'CREATE_AREA',
       description: 'Opis obszaru',
       gitLabSource: {
-        projectUrl: 'https://gitlab.example.com/CLP/PROCESSES/CLP_AGREEMENT_PROCESS',
+        projectUrl: 'https://gitlab.example.com/CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS',
         ref: 'release/2026.09'
       },
       repositoryFacts: { usage: 'UNKNOWN' }
@@ -233,8 +234,8 @@ describe('ContextAssistancePanelComponent', () => {
   it('shows a nested catalogue project with its full path and sends its relative path', async () => {
     const api = { start: vi.fn(() => of(job('COMPLETED'))), get: vi.fn(),
       sourceBranches: vi.fn(() => of({ branches: [{ name: 'main', isDefault: true }], truncated: false, warnings: [] })),
-      sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CLP',
-        projects: [{ project: 'PROCESSES/CLP_AGREEMENT_PROCESS', projectPath: 'CLP/PROCESSES/CLP_AGREEMENT_PROCESS' }] })) };
+      sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CRM',
+        projects: [{ project: 'PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS', projectPath: 'CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS' }] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
       providers: [
@@ -254,23 +255,23 @@ describe('ContextAssistancePanelComponent', () => {
     fixture.detectChanges();
 
     expect(api.sourceOptions).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.textContent).toContain('w grupie CLP');
+    expect(fixture.nativeElement.textContent).toContain('w grupie CRM');
     expect(fixture.nativeElement.querySelectorAll('#assistance-catalogue-project option').length).toBe(2);
-    expect(fixture.nativeElement.textContent).toContain('CLP/PROCESSES/CLP_AGREEMENT_PROCESS');
+    expect(fixture.nativeElement.textContent).toContain('CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS');
     component.descriptionControl.setValue('Opis obszaru');
-    component.catalogueProjectControl.setValue('PROCESSES/CLP_AGREEMENT_PROCESS');
+    component.catalogueProjectControl.setValue('PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS');
     fixture.detectChanges();
-    expect(api.sourceBranches).toHaveBeenCalledWith({ project: 'PROCESSES/CLP_AGREEMENT_PROCESS' }, '');
+    expect(api.sourceBranches).toHaveBeenCalledWith({ project: 'PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS' }, '');
     expect(component.refControl.value).toBe('main');
     component.start();
     expect(api.start).toHaveBeenCalledWith({ mode: 'CREATE_AREA', description: 'Opis obszaru',
-      gitLabSource: { project: 'PROCESSES/CLP_AGREEMENT_PROCESS', ref: 'main' },
+      gitLabSource: { project: 'PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS', ref: 'main' },
       repositoryFacts: { usage: 'UNKNOWN' } });
   });
 
   it('loads branches for a pasted project URL and clears a ref from the previous project', async () => {
     const api = { start: vi.fn(() => of(job('COMPLETED'))), get: vi.fn(),
-      sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CLP', projects: [] })),
+      sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CRM', projects: [] })),
       sourceBranches: vi.fn(() => of({ branches: [{ name: 'main', isDefault: true }], truncated: false, warnings: [] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
@@ -288,23 +289,23 @@ describe('ContextAssistancePanelComponent', () => {
     fixture.detectChanges();
 
     const panel = fixture.componentInstance;
-    panel.projectUrlControl.setValue('https://gitlab.example.com/CLP/PROCESSES/first');
+    panel.projectUrlControl.setValue('https://gitlab.example.com/CRM/PROCESSES/first');
     await new Promise((resolve) => setTimeout(resolve, 380));
     fixture.detectChanges();
-    expect(api.sourceBranches).toHaveBeenCalledWith({ projectUrl: 'https://gitlab.example.com/CLP/PROCESSES/first' }, '');
+    expect(api.sourceBranches).toHaveBeenCalledWith({ projectUrl: 'https://gitlab.example.com/CRM/PROCESSES/first' }, '');
     expect(panel.refControl.value).toBe('main');
 
-    panel.projectUrlControl.setValue('https://gitlab.example.com/CLP/PROCESSES/second');
+    panel.projectUrlControl.setValue('https://gitlab.example.com/CRM/PROCESSES/second');
     expect(panel.refControl.value).toBe('');
     await new Promise((resolve) => setTimeout(resolve, 380));
     fixture.detectChanges();
-    expect(api.sourceBranches).toHaveBeenCalledWith({ projectUrl: 'https://gitlab.example.com/CLP/PROCESSES/second' }, '');
+    expect(api.sourceBranches).toHaveBeenCalledWith({ projectUrl: 'https://gitlab.example.com/CRM/PROCESSES/second' }, '');
     expect(panel.refControl.value).toBe('main');
   });
 
   it('blocks GitLab selection when the server URL is missing and still allows an operator-only run', async () => {
     const api = { start: vi.fn(() => of(job('COMPLETED'))), get: vi.fn(),
-      sourceOptions: vi.fn(() => of({ configuredBaseUrl: null, configuredGroup: 'CLP', projects: [] })) };
+      sourceOptions: vi.fn(() => of({ configuredBaseUrl: null, configuredGroup: 'CRM', projects: [] })) };
     await TestBed.configureTestingModule({
       imports: [ContextAssistancePanelComponent],
       providers: [
@@ -340,11 +341,11 @@ describe('ContextAssistancePanelComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('#assistance-system-name')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('#assistance-existing-system')).toBeNull();
-    panel.systemNameControl.setValue('Obsługa umów');
-    panel.runtimeServiceNameControl.setValue('agreement-service');
+    panel.systemNameControl.setValue('Obsługa profili klientów');
+    panel.runtimeServiceNameControl.setValue('customer-profile-service');
     panel.start();
     expect(api.start).toHaveBeenCalledWith(expect.objectContaining({ repositoryFacts: {
-      usage: 'DEPLOYED_SYSTEM', systemName: 'Obsługa umów', runtimeServiceName: 'agreement-service'
+      usage: 'DEPLOYED_SYSTEM', systemName: 'Obsługa profili klientów', runtimeServiceName: 'customer-profile-service'
     } }));
 
     panel.repositoryUsageControl.setValue('UNKNOWN');
@@ -355,7 +356,7 @@ describe('ContextAssistancePanelComponent', () => {
   });
 
   it('requires a catalog system for existing code and sends only selected library consumers', async () => {
-    const systems = [{ id: 'agreement', label: 'Umowy' }, { id: 'billing', label: 'Rozliczenia' }];
+    const systems = [{ id: 'customer-profile', label: 'Profile klientów' }, { id: 'customer-support', label: 'Wsparcie klienta' }];
     const { fixture, api } = await onboardingFixture(systems);
     const panel = fixture.componentInstance;
     panel.repositoryUsageControl.setValue('EXISTING_SYSTEM');
@@ -364,21 +365,21 @@ describe('ContextAssistancePanelComponent', () => {
     panel.start();
     expect(api.start).not.toHaveBeenCalled();
     expect(panel.error()).toContain('Wybierz istniejący system');
-    panel.existingSystemControl.setValue('agreement');
+    panel.existingSystemControl.setValue('customer-profile');
     panel.start();
     expect(api.start).toHaveBeenCalledWith(expect.objectContaining({ repositoryFacts: {
-      usage: 'EXISTING_SYSTEM', systemIds: ['agreement']
+      usage: 'EXISTING_SYSTEM', systemIds: ['customer-profile']
     } }));
 
     panel.repositoryUsageControl.setValue('SHARED_LIBRARY');
     fixture.detectChanges();
     expect(panel.existingSystemControl.value).toBe('');
     expect(fixture.nativeElement.querySelector('#assistance-existing-system')).toBeNull();
-    panel.setLibrarySystemSelected('agreement', true);
-    panel.setLibrarySystemSelected('billing', true);
+    panel.setLibrarySystemSelected('customer-profile', true);
+    panel.setLibrarySystemSelected('customer-support', true);
     panel.start();
     expect(api.start).toHaveBeenLastCalledWith(expect.objectContaining({ repositoryFacts: {
-      usage: 'SHARED_LIBRARY', systemIds: ['agreement', 'billing']
+      usage: 'SHARED_LIBRARY', systemIds: ['customer-profile', 'customer-support']
     } }));
 
     panel.includeGitLabControl.setValue(false);
@@ -408,7 +409,7 @@ describe('ContextAssistancePanelComponent', () => {
     expect(api.start).toHaveBeenLastCalledWith({
       mode: 'IMPROVE_ENTITY', description: 'Uzupełnij opis',
       target: { kind: 'ENTITY', entityType: 'repository', entityId: 'library-repo' },
-      gitLabSource: { projectUrl: 'https://gitlab.example.com/CLP/library-repo', ref: 'main' }
+      gitLabSource: { projectUrl: 'https://gitlab.example.com/CRM/library-repo', ref: 'main' }
     });
   });
 
@@ -493,7 +494,7 @@ describe('ContextAssistancePanelComponent', () => {
     expect(panel.decisionLabel(0)).toBe('Pominięto w wyborze');
     expect(panel.selectedDiff()).toEqual([{ entity: 'repository/customer-api-repository',
       path: 'name', before: undefined, after: 'Customer API repository' }]);
-    expect(fixture.nativeElement.textContent).toContain('Połączony diff przed/po');
+    expect(fixture.nativeElement.textContent).toContain('Pełny diff przed/po');
     expect(panel.canSave()).toBe(false);
 
     panel.previewSelection();
@@ -515,6 +516,97 @@ describe('ContextAssistancePanelComponent', () => {
     expect(refreshed).toHaveBeenCalledTimes(1);
     expect(refreshed).toHaveBeenCalledWith({ type: 'repository', id: 'customer-api-repository' });
     expect(fixture.nativeElement.textContent).toContain('Cały zestaw został rozstrzygnięty');
+  });
+
+  it('reviews one proposal at a time and saves an explicitly confirmed manual correction', async () => {
+    const original = job('COMPLETED');
+    original.draft!.proposals[0].requiresConfirmation = false;
+    original.draft!.proposals.push({
+      operation: 'CREATE', entityType: 'glossary-term', entityId: 'customer-profile',
+      changes: [{ path: 'term', after: 'Profil klienta', basis: 'USER_STATEMENT',
+        reason: 'Termin pochodzi z opisu.', sourceRefs: ['operator:description'],
+        confidence: 'MEDIUM', requiresConfirmation: false }],
+      confidence: 'MEDIUM', requiresConfirmation: false, questions: [], visibilityLimits: []
+    });
+    const preview = { expectedDigest: 'old', candidateDigest: 'corrected', valid: true,
+      entities: [], violations: [] };
+    const updated = { ...original, proposalDecisions: [
+      { proposalIndex: 0, action: 'APPLY' as const, selectedPaths: ['name'],
+        editedValues: { name: 'Customer API v2' }, completedAt: '2026-09-13T10:05:00Z' },
+      { proposalIndex: 1, action: 'SKIP' as const, selectedPaths: [],
+        completedAt: '2026-09-13T10:05:00Z' }
+    ] };
+    const api = { start: vi.fn(), get: vi.fn(), previewBatch: vi.fn(() => of(preview)),
+      decideBatch: vi.fn(() => of(updated)) };
+    const fixture = await batchFixture(original, api);
+    const panel = fixture.componentInstance;
+    const proposals = original.draft!.proposals;
+    const name = proposals[0].changes[0];
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelectorAll('.assistance-review__item')).toHaveLength(2);
+    expect(compiled.querySelectorAll('.assistance-proposal')).toHaveLength(1);
+    expect(compiled.querySelector('.assistance-form')).toBeNull();
+
+    panel.selectProposal(1);
+    fixture.detectChanges();
+    expect(compiled.querySelector('.assistance-proposal')?.textContent).toContain('Profil klienta');
+    panel.selectProposal(0);
+    panel.setProposalSelected(1, proposals[1], false);
+    panel.beginFieldEdit(0, proposals[0], name);
+    panel.editValueControl.setValue('Customer API v2');
+    panel.saveFieldEdit(0, proposals[0], name);
+    fixture.detectChanges();
+    expect(panel.effectiveAfter(0, name)).toBe('Customer API v2');
+    expect(compiled.textContent).toContain('Poprawione ręcznie');
+    expect(panel.reviewDecisions()[0].editedValues).toEqual({ name: 'Customer API v2' });
+    expect(panel.canSave()).toBe(false);
+
+    panel.previewSelection();
+    expect(panel.canSave()).toBe(false);
+    panel.setConfirmed(0, 'name', true);
+    expect(panel.batchPreview()).toBeNull();
+    panel.previewSelection();
+    fixture.detectChanges();
+    expect(api.previewBatch).toHaveBeenLastCalledWith('job-1', { decisions: [
+      { action: 'APPLY', selectedPaths: ['name'], confirmedPaths: ['name'],
+        editedValues: { name: 'Customer API v2' } },
+      { action: 'SKIP', selectedPaths: [], confirmedPaths: [] }
+    ] });
+    expect(panel.canSave()).toBe(true);
+    panel.saveBatch();
+    fixture.detectChanges();
+    expect(api.decideBatch).toHaveBeenCalledWith('job-1', {
+      decisions: [
+        { action: 'APPLY', selectedPaths: ['name'], confirmedPaths: ['name'],
+          editedValues: { name: 'Customer API v2' } },
+        { action: 'SKIP', selectedPaths: [], confirmedPaths: [] }
+      ], candidateDigest: 'corrected'
+    });
+    expect(panel.effectiveAfter(0, name)).toBe('Customer API v2');
+  });
+
+  it('requires valid JSON with the original collection type for a structured correction', async () => {
+    const original = job('COMPLETED');
+    const proposal = original.draft!.proposals[0];
+    const references = { path: 'canonicalReferences', after: ['system/customer-api'],
+      basis: 'USER_STATEMENT' as const, reason: 'Operator wskazał system.',
+      sourceRefs: ['operator:description'], confidence: 'MEDIUM' as const,
+      requiresConfirmation: false };
+    proposal.changes.push(references);
+    const fixture = await batchFixture(original, { start: vi.fn(), get: vi.fn() });
+    const panel = fixture.componentInstance;
+    panel.beginFieldEdit(0, proposal, references);
+    panel.editValueControl.setValue('not json');
+    panel.saveFieldEdit(0, proposal, references);
+    expect(panel.editError()).toContain('poprawny JSON');
+    panel.editValueControl.setValue('{"system":"customer-api"}');
+    panel.saveFieldEdit(0, proposal, references);
+    expect(panel.editError()).toContain('listę lub obiekt');
+    panel.editValueControl.setValue('["system/customer-api", "system/support-api"]');
+    panel.saveFieldEdit(0, proposal, references);
+    expect(panel.effectiveAfter(0, references)).toEqual(['system/customer-api', 'system/support-api']);
+    panel.resetFieldEdit(0, references.path);
+    expect(panel.effectiveAfter(0, references)).toEqual(['system/customer-api']);
   });
 
   it('requires current whole-batch preview and confirmations before saving', async () => {
@@ -676,7 +768,7 @@ async function batchFixture<T extends object>(original: OperationalContextAssist
 
 async function onboardingFixture(systems: { id: string; label: string }[] = []) {
   const api = { start: vi.fn(() => of(job('COMPLETED'))), get: vi.fn(),
-    sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CLP', projects: [] })) };
+    sourceOptions: vi.fn(() => of({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CRM', projects: [] })) };
   await TestBed.configureTestingModule({
     imports: [ContextAssistancePanelComponent],
     providers: [
@@ -694,7 +786,7 @@ async function onboardingFixture(systems: { id: string; label: string }[] = []) 
   await fixture.whenStable();
   fixture.detectChanges();
   fixture.componentInstance.descriptionControl.setValue('Opis projektu');
-  fixture.componentInstance.projectUrlControl.setValue('https://gitlab.example.com/CLP/library-repo');
+  fixture.componentInstance.projectUrlControl.setValue('https://gitlab.example.com/CRM/library-repo');
   fixture.componentInstance.useManualRef();
   fixture.componentInstance.refControl.setValue('main');
   return { fixture, api };
