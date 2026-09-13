@@ -47,12 +47,24 @@ public class CopilotContextTierPolicy {
                 ? preparedSession.contextTierPreference()
                 : CopilotContextTierPreference.AUTO;
         if (!settings.isEnabled()) {
+            if (preference == CopilotContextTierPreference.LONG_CONTEXT_REQUIRED) {
+                throw new CopilotRequiredContextTierException(
+                        "Asysta wymaga `long_context`, ale polityka platformowa "
+                                + "analysis.ai.copilot.context-tier.enabled jest wyłączona."
+                );
+            }
             return unsupported(false, preference, modelId, "Platform context-tier policy is disabled.");
         }
 
         var estimatedTokens = estimateInitialTokens(preparedSession, settings);
         if (preference == CopilotContextTierPreference.LONG_CONTEXT_REQUIRED) {
-            var profile = findProfileBestEffort(preparedSession, modelId);
+            var profile = findAnyProfileBestEffort(preparedSession, modelId);
+            if (profile != null && !profile.supportsLongContext()) {
+                throw new CopilotRequiredContextTierException(
+                        "Wybrany model Copilota `" + profile.id() + "` nie obsługuje wymaganego `long_context`. "
+                                + "Wybierz model obsługujący rozszerzony kontekst."
+                );
+            }
             return new CopilotContextTierDecision(
                     true,
                     preference,
@@ -186,9 +198,16 @@ public class CopilotContextTierPolicy {
                 .orElse(null);
     }
 
-    private CopilotModelOption findProfileBestEffort(CopilotPreparedSession preparedSession, String modelId) {
+    private CopilotModelOption findAnyProfileBestEffort(CopilotPreparedSession preparedSession, String modelId) {
+        if (!StringUtils.hasText(modelId)) {
+            return null;
+        }
         try {
-            return findProfile(preparedSession, modelId);
+            var response = modelOptionsProvider.modelOptions(preparedSession.auth());
+            return response != null ? response.models().stream()
+                    .filter(profile -> profile.id().equalsIgnoreCase(modelId.trim()))
+                    .findFirst()
+                    .orElse(null) : null;
         } catch (RuntimeException ignored) {
             return null;
         }

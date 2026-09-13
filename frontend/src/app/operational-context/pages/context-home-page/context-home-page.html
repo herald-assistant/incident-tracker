@@ -12,16 +12,12 @@
         }
       </div>
 
-      <div class="context-toolbar__note">
-        <span class="material-symbols-outlined" aria-hidden="true">hub</span>
-        @if (maintenance.capabilitiesLoading()) {
-          <span>Loading local catalogue metadata…</span>
-        } @else if (maintenance.capabilities(); as capabilities) {
-          <span>Editable local copy · {{ capabilities.source }}</span>
-        } @else {
-          <span>Local catalogue copy unavailable.</span>
-        }
-      </div>
+      <button
+        type="button"
+        class="primary-button context-toolbar__ai-button"
+        [attr.aria-current]="selectedTab() === 'assistance' ? 'page' : null"
+        (click)="selectTab('assistance')"
+      >Uzupełnij z AI</button>
     </section>
 
     <nav class="context-tabs" aria-label="Operational context sections">
@@ -35,6 +31,22 @@
         </button>
       }
     </nav>
+
+    @if (assistanceMounted()) {
+      <section class="context-panel assistance-host" [hidden]="selectedTab() !== 'assistance'">
+        @if (assistanceHistoryLoading()) { <p role="status">Odczytywanie zapisanej asysty…</p> }
+        @if (assistanceHistoryError()) { <p class="response-error" role="alert">{{ assistanceHistoryError() }}</p> }
+        <app-context-assistance-panel
+          [prefill]="assistancePrefill()"
+          [initialJob]="assistanceJob()"
+          [historyReadOnly]="assistanceHistoryReadOnly()"
+          [systemOptions]="referenceOptions()['system'] || []"
+          (jobChanged)="assistanceJob.set($event)"
+          (catalogChanged)="refreshAfterAssistanceSave($event)"
+          (newRunRequested)="startNewAssistance()"
+        ></app-context-assistance-panel>
+      </section>
+    }
 
     @if (isLoading()) {
       <section class="context-panel">
@@ -59,7 +71,9 @@
 
           @if (isIncomplete()) {
             <div class="empty-state">
-              Operational context catalogue is empty or incomplete. Open a supported catalogue tab and use Add to update the local copy.
+              <p>Operational context catalogue is empty or incomplete. AI can prepare a small draft from your description.</p>
+              <button type="button" class="primary-button" (click)="startAreaAssistance()">Utwórz obszar z pomocą AI</button>
+              <p>Możesz też otworzyć zakładkę katalogu i użyć Add do ręcznej edycji.</p>
             </div>
           }
 
@@ -102,6 +116,8 @@
             </div>
           }
         </section>
+      } @else if (selectedTab() === 'assistance') {
+        <ng-container></ng-container>
       } @else if (selectedTab() === 'signal-resolver') {
         <section class="context-panel">
           <div class="context-panel__header">
@@ -272,7 +288,10 @@
                       </mat-icon>
                     </button>
                     @if (canEditSource(finding.entityType, finding.entityId)) {
-                      <button type="button" class="secondary-button secondary-button--compact" (click)="$event.stopPropagation(); editSource(finding.entityType, finding.entityId)">Edit source</button>
+                      <button type="button" class="secondary-button secondary-button--compact" (click)="$event.stopPropagation(); editValidationSource(finding)">Edit source</button>
+                    }
+                    @if (canAssistSource(finding.entityType, finding.entityId)) {
+                      <button type="button" class="secondary-button secondary-button--compact" (click)="$event.stopPropagation(); assistValidationFinding(finding)">Pomóż rozwiązać</button>
                     }
                     <button
                       type="button"
@@ -376,6 +395,11 @@
                     @if (canEditSource(question.entityType, question.entityId)) {
                       <button type="button" class="secondary-button secondary-button--compact" (click)="editSource(question.entityType, question.entityId)">Edit source</button>
                     }
+                    @if (canAssistSource(question.entityType, question.entityId)) {
+                      <button type="button" class="secondary-button secondary-button--compact" (click)="assistOpenQuestion(question)">Pomóż rozwiązać</button>
+                    } @else if (!question.entityId) {
+                      <small>Wskaż encję, aby skorzystać z asysty AI.</small>
+                    }
                     @if (question.entityId) {
                       <button
                         type="button"
@@ -443,6 +467,9 @@
       [referenceOptions]="referenceOptions()"
       [writable]="selectedEntityWritable()"
       (editEntity)="editSelectedEntity()"
+      (assistEntity)="assistSelectedEntity()"
+      (assistValidationFinding)="assistValidationFinding($event)"
+      (assistOpenQuestion)="assistOpenQuestion($event)"
       (deleteEntity)="deleteSelectedEntity()"
       (closeDrawer)="closeDrawer()"
     ></app-context-entity-drawer>
@@ -454,6 +481,7 @@
         [error]="maintenance.error()"
         [fieldErrors]="maintenance.fieldErrors()"
         [referenceOptions]="referenceOptions()"
+        [focusFieldPath]="editorFocusPath()"
         (dirtyChange)="editorDirty.set($event)"
         (saveEntity)="maintenance.save($event)"
         (cancelEditor)="cancelEditor()"

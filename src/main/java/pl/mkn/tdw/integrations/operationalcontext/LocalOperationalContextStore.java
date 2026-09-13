@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -14,11 +16,17 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
+import java.util.Objects;
+import java.nio.file.LinkOption;
 
 @Component
 @Slf4j
 @RequiredArgsConstructor
 final class LocalOperationalContextStore {
+
+    private static final String BATCH_JOURNAL = ".opctx-batch-journal";
+    private static final String PREPARED = "prepared";
 
     private final OperationalContextProperties properties;
     private final OperationalContextDocumentSource classpathSource;
@@ -38,21 +46,81 @@ final class LocalOperationalContextStore {
         if (!Files.exists(root)) {
             bootstrap(root, classpathSource.loadDocuments().contents());
         }
+        recoverBatch(root);
         return load(root);
     }
 
     synchronized OperationalContextStoredSnapshot publishCandidate(Map<String, String> candidateDocuments) {
         var root = properties.resolvedStorageDirectory();
         var current = loadOrBootstrap();
-        var candidate = normalized(candidateDocuments);
-        var changed = candidate.entrySet().stream()
-                .filter(entry -> !java.util.Objects.equals(current.rawDocuments().content(entry.getKey()), entry.getValue()))
-                .map(Map.Entry::getKey)
-                .toList();
-        if (changed.isEmpty()) {
+        var decision = assess(current, candidateDocuments, false);
+        if (decision.changedDocuments().isEmpty()) {
             return current;
         }
-        if (changed.size() != 1) {
+        if (!decision.assessment().valid()) {
+            throw new OperationalContextStoreException(
+                    OperationalContextStoreException.Code.INVALID_CANDIDATE,
+                    "Operational context candidate violates catalog validation rules"
+            );
+        }
+
+        var changedDocument = decision.changedDocuments().get(0);
+        replace(root, changedDocument, decision.candidateSnapshot().rawDocuments().content(changedDocument));
+        log.info("Operational context local copy updated document={}", changedDocument);
+        return decision.candidateSnapshot();
+    }
+
+    synchronized OperationalContextCandidateAssessment assessCandidate(Map<String, String> candidateDocuments) {
+        return assess(loadOrBootstrap(), candidateDocuments, false).assessment();
+    }
+
+    synchronized OperationalContextStoredSnapshot decodeCandidate(Map<String, String> candidateDocuments) {
+        return snapshot(normalized(candidateDocuments));
+    }
+
+    synchronized OperationalContextCandidateAssessment assessBatchCandidate(Map<String, String> candidateDocuments) {
+        return assess(loadOrBootstrap(), candidateDocuments, true).assessment();
+    }
+
+    synchronized OperationalContextStoredSnapshot publishBatchCandidate(
+            Map<String, String> candidateDocuments, String expectedDigest
+    ) {
+        var root = properties.resolvedStorageDirectory();
+        var current = loadOrBootstrap();
+        if (!Objects.equals(expectedDigest, current.readSnapshot().contentDigest())) {
+            throw new OperationalContextStoreException(
+                    OperationalContextStoreException.Code.STALE_CANDIDATE,
+                    "Operational context local copy changed before batch publication"
+            );
+        }
+        var decision = assess(current, candidateDocuments, true);
+        if (!decision.assessment().valid()) {
+            throw new OperationalContextStoreException(
+                    OperationalContextStoreException.Code.INVALID_CANDIDATE,
+                    "Operational context batch violates catalog validation rules"
+            );
+        }
+        if (decision.changedDocuments().isEmpty()) {
+            return current;
+        }
+        commitBatch(root, current, decision);
+        log.info("Operational context local copy updated batch documents={}", decision.changedDocuments());
+        return decision.candidateSnapshot();
+    }
+
+    private CandidateDecision assess(
+            OperationalContextStoredSnapshot current,
+            Map<String, String> candidateDocuments,
+            boolean allowMultiple
+    ) {
+        var candidate = normalized(candidateDocuments);
+        var changed = ClasspathOperationalContextDocumentSource.DOCUMENT_NAMES.stream()
+                .filter(name -> !Objects.equals(current.rawDocuments().content(name), candidate.get(name)))
+                .toList();
+        if (changed.isEmpty()) {
+            return new CandidateDecision(List.of(), current, new OperationalContextCandidateAssessment(List.of()));
+        }
+        if (!allowMultiple && changed.size() != 1) {
             throw new OperationalContextStoreException(
                     OperationalContextStoreException.Code.INVALID_CANDIDATE,
                     "One maintenance operation must change exactly one operational context document"
@@ -64,16 +132,161 @@ final class LocalOperationalContextStore {
                 candidateSnapshot.readSnapshot().catalog(),
                 current.validationFindings()
         );
-        if (!decision.allowed()) {
+        var violations = decision.violations().stream()
+                .map(violation -> new OperationalContextCatalogPreviewViolation(
+                        violation.code(), violation.fingerprint(), violation.ruleCode(), violation.severity()
+                ))
+                .toList();
+        return new CandidateDecision(
+                changed, candidateSnapshot,
+                new OperationalContextCandidateAssessment(violations)
+        );
+    }
+
+    private record CandidateDecision(
+            List<String> changedDocuments,
+            OperationalContextStoredSnapshot candidateSnapshot,
+            OperationalContextCandidateAssessment assessment
+    ) {
+    }
+
+    /**
+     * The prepared marker is the transaction boundary. Until it is removed, startup restores
+     * every original YAML from the journal. A missing marker means no replacements began, or
+     * all replacements completed and the batch was committed.
+     */
+    private void commitBatch(
+            Path root, OperationalContextStoredSnapshot current, CandidateDecision decision
+    ) {
+        var journal = root.resolve(BATCH_JOURNAL).normalize();
+        try {
+            Files.createDirectory(journal);
+            Files.createDirectory(journal.resolve("backup"));
+            Files.createDirectory(journal.resolve("candidate"));
+            for (var name : ClasspathOperationalContextDocumentSource.DOCUMENT_NAMES) {
+                var backup = journal.resolve("backup").resolve(name);
+                Files.copy(root.resolve(name), backup);
+                forceFile(backup);
+                writeDurable(journal.resolve("candidate").resolve(name),
+                        decision.candidateSnapshot().rawDocuments().content(name));
+            }
+            writeDurable(journal.resolve("prepared.tmp"),
+                    current.readSnapshot().contentDigest() + "\n"
+                            + decision.candidateSnapshot().readSnapshot().contentDigest() + "\n");
+            atomicMover.replaceFile(journal.resolve("prepared.tmp"), journal.resolve(PREPARED));
+            for (var name : decision.changedDocuments()) {
+                replaceFromJournal(root, journal.resolve("candidate").resolve(name), name);
+            }
+            Files.delete(journal.resolve(PREPARED));
+        } catch (IOException exception) {
+            try {
+                recoverBatch(root);
+            } catch (OperationalContextStoreException recoveryFailure) {
+                exception.addSuppressed(recoveryFailure);
+            }
             throw new OperationalContextStoreException(
-                    OperationalContextStoreException.Code.INVALID_CANDIDATE,
-                    "Operational context candidate violates catalog validation rules"
+                    OperationalContextStoreException.Code.LOCAL_COPY_UNAVAILABLE,
+                    "Cannot commit operational context batch; the journal remains for recovery",
+                    exception
             );
         }
+        cleanupJournalQuietly(journal);
+    }
 
-        replace(root, changed.get(0), candidate.get(changed.get(0)));
-        log.info("Operational context local copy updated document={}", changed.get(0));
-        return candidateSnapshot;
+    private void recoverBatch(Path root) {
+        var journal = root.resolve(BATCH_JOURNAL).normalize();
+        if (!Files.exists(journal, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
+        if (!Files.isDirectory(journal, LinkOption.NOFOLLOW_LINKS)) {
+            throw new OperationalContextStoreException(
+                    OperationalContextStoreException.Code.CORRUPT_STORE,
+                    "Operational context batch journal is not a directory"
+            );
+        }
+        var marker = journal.resolve(PREPARED);
+        try {
+            if (Files.exists(marker, LinkOption.NOFOLLOW_LINKS)) {
+                if (!Files.isRegularFile(marker, LinkOption.NOFOLLOW_LINKS)
+                        || !Files.isDirectory(journal.resolve("backup"), LinkOption.NOFOLLOW_LINKS)) {
+                    throw new OperationalContextStoreException(
+                            OperationalContextStoreException.Code.CORRUPT_STORE,
+                            "Operational context batch journal is incomplete"
+                    );
+                }
+                for (var name : ClasspathOperationalContextDocumentSource.DOCUMENT_NAMES) {
+                    var backup = journal.resolve("backup").resolve(name);
+                    if (!Files.isRegularFile(backup, LinkOption.NOFOLLOW_LINKS)) {
+                        throw new OperationalContextStoreException(
+                                OperationalContextStoreException.Code.CORRUPT_STORE,
+                                "Operational context batch backup is incomplete: " + name
+                        );
+                    }
+                }
+                for (var name : ClasspathOperationalContextDocumentSource.DOCUMENT_NAMES) {
+                    replaceFromJournal(root, journal.resolve("backup").resolve(name), name);
+                }
+                Files.delete(marker);
+                log.warn("Recovered interrupted operational context batch from local journal");
+            }
+            cleanupJournal(journal);
+        } catch (IOException exception) {
+            throw new OperationalContextStoreException(
+                    OperationalContextStoreException.Code.LOCAL_COPY_UNAVAILABLE,
+                    "Cannot recover interrupted operational context batch",
+                    exception
+            );
+        }
+    }
+
+    private void replaceFromJournal(Path root, Path source, String name) throws IOException {
+        var temporary = root.resolve("." + name + "." + UUID.randomUUID() + ".tmp").normalize();
+        var target = root.resolve(name).normalize();
+        if (!temporary.getParent().equals(root) || !target.getParent().equals(root)) {
+            throw new IOException("Batch document path escaped the operational context directory");
+        }
+        try {
+            Files.copy(source, temporary);
+            forceFile(temporary);
+            atomicMover.replaceFile(temporary, target);
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
+    }
+
+    private void writeDurable(Path path, String content) throws IOException {
+        try (var channel = FileChannel.open(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+            var bytes = ByteBuffer.wrap(content.getBytes(StandardCharsets.UTF_8));
+            while (bytes.hasRemaining()) {
+                channel.write(bytes);
+            }
+            channel.force(true);
+        }
+    }
+
+    private void forceFile(Path path) throws IOException {
+        try (var channel = FileChannel.open(path, StandardOpenOption.WRITE)) {
+            channel.force(true);
+        }
+    }
+
+    private void cleanupJournal(Path journal) throws IOException {
+        Files.deleteIfExists(journal.resolve("prepared.tmp"));
+        for (var name : ClasspathOperationalContextDocumentSource.DOCUMENT_NAMES) {
+            Files.deleteIfExists(journal.resolve("backup").resolve(name));
+            Files.deleteIfExists(journal.resolve("candidate").resolve(name));
+        }
+        Files.deleteIfExists(journal.resolve("backup"));
+        Files.deleteIfExists(journal.resolve("candidate"));
+        Files.deleteIfExists(journal);
+    }
+
+    private void cleanupJournalQuietly(Path journal) {
+        try {
+            cleanupJournal(journal);
+        } catch (IOException exception) {
+            log.warn("Committed operational context batch left a removable journal directory", exception);
+        }
     }
 
     private void bootstrap(Path root, Map<String, String> seed) {

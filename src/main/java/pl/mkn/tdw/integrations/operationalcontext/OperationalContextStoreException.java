@@ -6,7 +6,8 @@ public class OperationalContextStoreException extends IllegalStateException {
         INVALID_STORAGE_PATH,
         LOCAL_COPY_UNAVAILABLE,
         CORRUPT_STORE,
-        INVALID_CANDIDATE
+        INVALID_CANDIDATE,
+        STALE_CANDIDATE
     }
 
     private final Code code;

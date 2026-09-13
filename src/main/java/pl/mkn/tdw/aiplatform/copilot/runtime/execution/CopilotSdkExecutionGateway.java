@@ -17,6 +17,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierSession;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotRequiredContextTierException;
 import pl.mkn.tdw.aiplatform.copilot.tools.evidence.CopilotToolEvidenceSessionStore;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotToolBudgetRegistry;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportSessionStore;
@@ -208,6 +209,8 @@ public class CopilotSdkExecutionGateway {
                     logDuration("client-stop", runReference, nanosToMillis(clientStop));
                 }
             }
+        } catch (CopilotRequiredContextTierException exception) {
+            throw exception;
         } catch (CopilotSdkInvocationException exception) {
             throw exception;
         } catch (Exception exception) {

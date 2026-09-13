@@ -53,6 +53,9 @@ No supported canonical field requires a raw JSON input in the MVP. New unknown
 keys are rejected by the maintenance API. Existing unknown keys are omitted
 from the edit payload and removed when the entity is updated; documented
 preserve-only fields and dynamic recognition-signal names remain supported.
+AI-assisted drafts must not propose preserve-only fields, even if they occur in
+older runtime YAML; the current maintenance schema and validator decide which
+fields are writable.
 
 ## Strict maintenance validation
 

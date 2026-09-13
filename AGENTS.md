@@ -94,6 +94,14 @@ Przed wieksza zmiana zacznij od:
 - Operational context tools sa neutralna capability pod prefixem `opctx_`.
   Definicje tooli nie moga niesc semantyki incident trackera; incidentowe
   zasady uzycia mieszkaja w feature policy/guidance oraz skillu Copilota.
+- Asysta AI przy utrzymaniu Operational Context jest feature-owned pod
+  `features.operationalcontextassistance`. AI przygotowuje tylko typowany
+  draft bez mutation tools. Dostaje pelny snapshot dziewieciu aktywnych
+  dokumentow i reguly maintenance; opcjonalnie wybrany projekt GitLab jest
+  przypiety do commita, a inne projekty w skonfigurowanej glownej grupie sa
+  czytane przez ten sam neutralny katalog tooli po osobnym przypieciu rewizji.
+  Zapis wybranego zestawu wymaga jednego
+  podgladu, jawnej decyzji operatora i warunkowej operacji batch maintenance.
 
 ## Turbo wazne: docelowy model rozszerzalnosci
 
@@ -285,6 +293,10 @@ Zasady granic:
   Feature porownania runtime configuration pomiedzy branchami: named GitLab
   source, deterministyczny parsing/diff, sanitizowana druga opinia AI,
   ograniczony `DEEP`, job API, historia/import-export i report.
+- `src/main/java/pl/mkn/tdw/features/operationalcontextassistance`
+  Feature prowadzacej asysty AI na ekranie Operational Context: trzy tryby
+  operatora, ograniczone wybrane zrodlo GitLab, typowany draft, read-only
+  preview i jawne decyzje o zapisie pojedynczych propozycji.
 - `src/main/java/pl/mkn/tdw/features/deliverycomplexityassessment`
   Feature oceny dostarczonej zlozonosci: typed Jira JQL i status history,
   Delivery Units issue-MR, pelne inline evidence zwrocone przez integracje,
@@ -455,5 +467,6 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/operationalcontextassistance/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/ai/AGENTS.md`

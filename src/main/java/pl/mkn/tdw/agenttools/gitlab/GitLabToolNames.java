@@ -5,6 +5,10 @@ public final class GitLabToolNames {
     public static final String PREFIX = "gitlab_";
 
     public static final String LIST_AVAILABLE_REPOSITORIES = PREFIX + "list_available_repositories";
+    public static final String LIST_REPOSITORY_BRANCHES = PREFIX + "list_repository_branches";
+    public static final String LIST_REPOSITORY_TREE = PREFIX + "list_repository_tree";
+    public static final String LIST_REPOSITORY_FILES = PREFIX + "list_repository_files";
+    public static final String SEARCH_REPOSITORY_FILES = PREFIX + "search_repository_files";
     public static final String LIST_REPOSITORY_ENDPOINTS = PREFIX + "list_repository_endpoints";
     public static final String BUILD_ENDPOINT_USE_CASE_CONTEXT = PREFIX + "build_endpoint_use_case_context";
     public static final String BUILD_JAVA_METHOD_USE_CASE_CONTEXT = PREFIX + "build_java_method_use_case_context";

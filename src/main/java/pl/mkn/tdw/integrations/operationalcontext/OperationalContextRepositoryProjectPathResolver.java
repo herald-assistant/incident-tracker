@@ -3,6 +3,7 @@ package pl.mkn.tdw.integrations.operationalcontext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepository;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextRepositorySearchScope;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextSystem;
@@ -126,19 +127,10 @@ public class OperationalContextRepositoryProjectPathResolver {
             return true;
         }
 
-        var normalizedConfiguredGroup = normalizeGroupPath(configuredGroup);
-        var repositoryGroups = new LinkedHashSet<String>();
-        if (StringUtils.hasText(repository.git().group())) {
-            repositoryGroups.add(repository.git().group());
-        }
-
-        if (repositoryGroups.isEmpty()) {
+        if (!StringUtils.hasText(repository.git().group())) {
             return true;
         }
-
-        return repositoryGroups.stream()
-                .map(this::normalizeGroupPath)
-                .anyMatch(normalizedConfiguredGroup::equals);
+        return GitLabPathUtils.isSameOrNestedPath(configuredGroup, repository.git().group());
     }
 
     private String relativeProjectPath(String configuredGroup, String rawProjectPath) {
@@ -154,12 +146,6 @@ public class OperationalContextRepositoryProjectPathResolver {
         }
 
         return projectPath;
-    }
-
-    private String normalizeGroupPath(String value) {
-        return StringUtils.hasText(value)
-                ? trimSlashes(value.trim()).toLowerCase(Locale.ROOT)
-                : "";
     }
 
     private String trimSlashes(String value) {

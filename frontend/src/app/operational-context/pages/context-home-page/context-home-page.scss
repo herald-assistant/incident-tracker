@@ -51,23 +51,9 @@
   color: var(--danger-text);
 }
 
-.context-toolbar__note {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-  color: var(--text-soft);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.context-toolbar__note .material-symbols-outlined {
-  width: 20px;
-  height: 20px;
-  color: var(--primary-dark);
-  font-size: 20px;
-  line-height: 20px;
+.context-toolbar__ai-button {
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .context-tabs {
@@ -542,9 +528,12 @@
     grid-template-columns: 1fr;
   }
 
-  .status-strip,
-  .context-toolbar__note {
+  .status-strip {
     justify-content: flex-start;
+  }
+
+  .context-toolbar__ai-button {
+    justify-self: stretch;
   }
 
   .maintenance-card,
@@ -570,3 +559,4 @@
     justify-content: flex-start;
   }
 }
+.assistance-host[hidden] { display: none !important; }

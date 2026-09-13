@@ -15,6 +15,9 @@ import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventor
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventoryRequest;
 
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -163,6 +166,62 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
         return listRepositoryFilesUncached(group, projectName, branch, pathPrefix);
     }
 
+    @Override
+    public GitLabRepositoryFilePage listRepositoryFilesPage(
+            String group,
+            String projectName,
+            String revision,
+            String pathPrefix,
+            String cursor,
+            int maxResults
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(revision)) {
+            throw new IllegalArgumentException("GitLab project and immutable revision are required.");
+        }
+        try {
+            var page = gitLabRepositoryTreeService.fetchRepositoryBlobsPage(
+                    properties.getBaseUrl(), group.trim() + "/" + projectName.trim(), revision.trim(),
+                    pathPrefix, cursor, maxResults);
+            var files = page.nodes().stream()
+                    .filter(node -> StringUtils.hasText(node.path()))
+                    .map(node -> new GitLabRepositoryFile(group, projectName, revision, node.path()))
+                    .toList();
+            return new GitLabRepositoryFilePage(files, page.nextCursor());
+        } catch (GitLabRepositoryTreeException exception) {
+            if (exception.statusCode() == 404) {
+                return new GitLabRepositoryFilePage(List.of(), null);
+            }
+            throw new IllegalStateException("GitLab repository tree request failed for " + group + "/" + projectName,
+                    exception);
+        }
+    }
+
+    @Override
+    public GitLabRepositoryTreePage listRepositoryTreeChildrenPage(
+            String group,
+            String projectName,
+            String revision,
+            String directory,
+            String cursor,
+            int maxEntries
+    ) {
+        if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName) || !StringUtils.hasText(revision)) {
+            throw new IllegalArgumentException("GitLab project and immutable revision are required.");
+        }
+        try {
+            var page = gitLabRepositoryTreeService.fetchRepositoryChildrenPage(
+                    properties.getBaseUrl(), group.trim() + "/" + projectName.trim(), revision.trim(),
+                    directory, cursor, maxEntries);
+            return new GitLabRepositoryTreePage(page.nodes(), page.nextCursor());
+        } catch (GitLabRepositoryTreeException exception) {
+            if (exception.statusCode() == 404) {
+                return new GitLabRepositoryTreePage(List.of(), null);
+            }
+            throw new IllegalStateException("GitLab repository directory request failed for " + group + "/" + projectName,
+                    exception);
+        }
+    }
+
     private List<GitLabRepositoryFile> listRepositoryFilesUncached(
             String group,
             String projectName,
@@ -215,6 +274,64 @@ public class GitLabRestRepositoryAdapter implements GitLabRepositoryPort {
                 limitedContent,
                 truncated
         );
+    }
+
+    @Override
+    public GitLabRepositoryFileContent readFileBounded(
+            String group,
+            String projectName,
+            String revision,
+            String filePath,
+            int maxBytes
+    ) {
+        if (maxBytes < 1 || maxBytes > 1_048_576) {
+            throw new IllegalArgumentException("maxBytes must be between 1 and 1048576.");
+        }
+        try {
+            var content = restClient().get()
+                    .uri(rawFileUri(group, projectName, revision, filePath))
+                    .accept(MediaType.TEXT_PLAIN)
+                    .exchange((request, response) -> {
+                        if (!response.getStatusCode().is2xxSuccessful()) {
+                            throw new IllegalStateException("GitLab bounded file read returned HTTP "
+                                    + response.getStatusCode().value() + ".");
+                        }
+                        if (response.getHeaders().getContentLength() > maxBytes) {
+                            throw new GitLabFileTooLargeException(filePath, maxBytes);
+                        }
+                        var body = response.getBody().readNBytes(maxBytes + 1);
+                        if (body.length > maxBytes) {
+                            throw new GitLabFileTooLargeException(filePath, maxBytes);
+                        }
+                        return decodeTextFile(body, filePath);
+                    });
+            return new GitLabRepositoryFileContent(group, projectName, revision, filePath, content, false);
+        } catch (GitLabFileTooLargeException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException("GitLab bounded file read failed for "
+                    + group + "/" + projectName + "@" + revision + " :: " + filePath, exception);
+        }
+    }
+
+    private String decodeTextFile(byte[] bytes, String filePath) {
+        try {
+            var content = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+            for (var index = 0; index < content.length(); index++) {
+                var character = content.charAt(index);
+                if (character == '\0' || (Character.isISOControl(character)
+                        && character != '\n' && character != '\r' && character != '\t')) {
+                    throw new IllegalStateException("GitLab file is not safe UTF-8 text: " + filePath);
+                }
+            }
+            return content;
+        } catch (CharacterCodingException exception) {
+            throw new IllegalStateException("GitLab file is not valid UTF-8 text: " + filePath, exception);
+        }
     }
 
     @Override

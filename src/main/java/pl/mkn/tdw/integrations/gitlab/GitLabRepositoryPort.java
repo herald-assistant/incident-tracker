@@ -30,6 +30,30 @@ public interface GitLabRepositoryPort {
             String pathPrefix
     );
 
+    /** Lists a bounded tree window without materializing the whole repository. */
+    default GitLabRepositoryFilePage listRepositoryFilesPage(
+            String group,
+            String projectName,
+            String revision,
+            String pathPrefix,
+            String cursor,
+            int maxResults
+    ) {
+        throw new UnsupportedOperationException("Paged GitLab repository tree is not implemented by this port.");
+    }
+
+    /** Lists one bounded directory page, including direct child directories and files. */
+    default GitLabRepositoryTreePage listRepositoryTreeChildrenPage(
+            String group,
+            String projectName,
+            String revision,
+            String directory,
+            String cursor,
+            int maxEntries
+    ) {
+        throw new UnsupportedOperationException("Paged GitLab directory tree is not implemented by this port.");
+    }
+
     GitLabRepositoryFileContent readFile(
             String group,
             String projectName,
@@ -37,6 +61,17 @@ public interface GitLabRepositoryPort {
             String filePath,
             int maxCharacters
     );
+
+    /** Reads an entire small file with a transport-level byte limit; never returns truncated content. */
+    default GitLabRepositoryFileContent readFileBounded(
+            String group,
+            String projectName,
+            String revision,
+            String filePath,
+            int maxBytes
+    ) {
+        throw new UnsupportedOperationException("Bounded GitLab file read is not implemented by this port.");
+    }
 
     default GitLabRepositoryFileMetadata readFileMetadata(
             String group,

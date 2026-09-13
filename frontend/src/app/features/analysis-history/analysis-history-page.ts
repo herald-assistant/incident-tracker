@@ -231,6 +231,9 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'flow-explorer') {
       return 'Flow Explorer';
     }
+    if (feature === 'operational-context-assistance') {
+      return 'Asysta Operational Context';
+    }
     if (feature === 'ui-explorer') {
       return 'UI Explorer';
     }
@@ -261,6 +264,9 @@ export class AnalysisHistoryPageComponent {
     }
     if (feature === 'flow-explorer') {
       return 'account_tree';
+    }
+    if (feature === 'operational-context-assistance') {
+      return 'hub';
     }
     if (feature === 'ui-explorer') {
       return 'screen_search_desktop';
@@ -357,6 +363,9 @@ function routeForFeature(feature: string): string | null {
   }
   if (feature === 'flow-explorer') {
     return '/flow-explorer';
+  }
+  if (feature === 'operational-context-assistance') {
+    return '/operational-context';
   }
   if (feature === 'ui-explorer') {
     return '/ui-explorer';

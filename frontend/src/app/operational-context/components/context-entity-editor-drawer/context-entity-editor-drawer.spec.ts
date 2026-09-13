@@ -3,6 +3,137 @@ import { TestBed } from '@angular/core/testing';
 import { ContextEntityEditorDrawerComponent } from './context-entity-editor-drawer';
 
 describe('ContextEntityEditorDrawerComponent', () => {
+  it('starts with basic fields, expands optional sections and preserves hidden values when saving', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'edit', type: 'system',
+      entity: {
+        type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml',
+        payload: { id: 'crm-contact-core', name: 'CRM Contact Core', notes: ['Anonymized durable note'] }
+      }
+    });
+    const emitted = vi.fn();
+    fixture.componentInstance.saveEntity.subscribe(emitted);
+    fixture.detectChanges();
+
+    const basic = fixture.nativeElement.querySelectorAll('.editor-section')[0] as HTMLElement;
+    const advanced = fixture.nativeElement.querySelectorAll('.editor-section')[1] as HTMLElement;
+    const toggle = fixture.nativeElement.querySelector('.editor-advanced-toggle') as HTMLButtonElement;
+    expect(basic.hidden).toBe(false);
+    expect(advanced.hidden).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(advanced.hidden).toBe(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    fixture.componentInstance.form.controls['name'].setValue('CRM Contact Platform');
+    fixture.componentInstance.submit();
+    expect(emitted).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'CRM Contact Platform', notes: ['Anonymized durable note']
+    }));
+  });
+
+  it('keeps required Git identity visible in the simplified repository form', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'create', type: 'repository',
+      entity: { type: 'repository', id: '', sourceFile: '', payload: { id: '', name: '' } }
+    });
+    fixture.detectChanges();
+    const sections = fixture.nativeElement.querySelectorAll('.editor-section') as NodeListOf<HTMLElement>;
+    expect(sections[1].hidden).toBe(false);
+    expect(sections[2].hidden).toBe(true);
+  });
+
+  it('keeps every section visible in read-only preview', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'edit', type: 'system',
+      entity: { type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml', payload: { id: 'crm-contact-core', name: 'CRM Contact Core' } }
+    });
+    fixture.componentRef.setInput('readonly', true);
+    fixture.detectChanges();
+
+    const sections = fixture.nativeElement.querySelectorAll('.editor-section') as NodeListOf<HTMLElement>;
+    expect(Array.from(sections).every((section) => !section.hidden)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.editor-advanced-toggle')).toBeNull();
+  });
+
+  it('opens an advanced section and focuses a nested field requested by maintenance inbox', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'edit', type: 'system',
+      entity: { type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml', payload: { id: 'crm-contact-core', name: 'CRM Contact Core' } }
+    });
+    fixture.componentRef.setInput('focusFieldPath', '/runtime/configurationDirectory');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.showAdvanced()).toBe(true);
+    expect((fixture.nativeElement.querySelectorAll('.editor-section')[2] as HTMLElement).hidden).toBe(false);
+    expect((document.activeElement as HTMLElement).id).toBe('runtime-configuration-directory');
+  });
+
+  it('reveals an advanced field when server validation points to it', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'edit', type: 'system',
+      entity: { type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml', payload: { id: 'crm-contact-core', name: 'CRM Contact Core' } }
+    });
+    fixture.componentRef.setInput('fieldErrors', [{ field: '/runtime/configurationDirectory', message: 'Invalid directory' }]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.showAdvanced()).toBe(true);
+    expect((fixture.nativeElement.querySelectorAll('.editor-section')[2] as HTMLElement).hidden).toBe(false);
+  });
+
+  it('focuses a new server error instead of replaying the inbox focus request', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'edit', type: 'system',
+      entity: { type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml', payload: { id: 'crm-contact-core', name: 'CRM Contact Core' } }
+    });
+    fixture.componentRef.setInput('focusFieldPath', '/runtime/configurationDirectory');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect((document.activeElement as HTMLElement).id).toBe('runtime-configuration-directory');
+
+    fixture.componentRef.setInput('fieldErrors', [{ field: '/notes', message: 'Needs a durable note' }]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect((document.activeElement as HTMLElement).id).toBe('notes');
+    expect(fixture.componentInstance.showAdvanced()).toBe(true);
+  });
+
+  it('reveals invalid advanced input after Save instead of hiding its error', async () => {
+    await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
+    const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);
+    fixture.componentRef.setInput('state', {
+      mode: 'edit', type: 'system',
+      entity: { type: 'system', id: 'crm-contact-core', sourceFile: 'systems.yml', payload: { id: 'crm-contact-core', name: 'CRM Contact Core' } }
+    });
+    fixture.detectChanges();
+    const emitted = vi.fn();
+    fixture.componentInstance.saveEntity.subscribe(emitted);
+    fixture.componentInstance.form.controls['runtime'].setValue('{invalid');
+    fixture.componentInstance.submit();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.showAdvanced()).toBe(true);
+    expect((fixture.nativeElement.querySelectorAll('.editor-section')[2] as HTMLElement).hidden).toBe(false);
+    expect(emitted).not.toHaveBeenCalled();
+  });
+
   it('keeps the anonymized CRM ID immutable and emits the edited canonical payload', async () => {
     await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ContextEntityEditorDrawerComponent);

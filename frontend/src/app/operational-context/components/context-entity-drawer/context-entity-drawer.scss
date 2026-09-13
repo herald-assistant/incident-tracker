@@ -348,6 +348,23 @@
   line-height: 1.45;
 }
 
+.entity-drawer__issue-action {
+  justify-self: start;
+  margin-top: 5px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--primary-dark);
+  font: inherit;
+  cursor: pointer;
+}
+
+.entity-drawer__issue-action:hover,
+.entity-drawer__issue-action:focus-visible {
+  border-color: var(--primary-dark);
+}
+
 .source-line,
 .entity-drawer pre {
   font-family: var(--font-mono);

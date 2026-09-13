@@ -86,6 +86,30 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('ui-explorer')).toBe('screen_search_desktop');
   });
 
+  it('routes saved Operational Context assistance to its read-only feature view', async () => {
+    const { fixture, router } = await createComponent();
+    const run: LocalAnalysisRunListItemResponse = {
+      analysisId: 'assistance-1', feature: 'operational-context-assistance',
+      name: 'Utwórz lub uzupełnij katalog', status: 'COMPLETED',
+      createdAt: '2026-09-13T10:00:00Z', updatedAt: '2026-09-13T10:01:00Z',
+      completedAt: '2026-09-13T10:01:00Z'
+    };
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const component = fixture.componentInstance as unknown as {
+      featureLabel: (feature: string) => string;
+      featureIcon: (feature: string) => string;
+    };
+
+    fixture.componentInstance.openRun(run);
+    await fixture.whenStable();
+
+    expect(component.featureLabel(run.feature)).toBe('Asysta Operational Context');
+    expect(component.featureIcon(run.feature)).toBe('hub');
+    expect(navigateSpy).toHaveBeenCalledWith(['/operational-context'], {
+      queryParams: { localRunId: 'assistance-1' }
+    });
+  });
+
   it('should keep history action labels in tooltips instead of visible button text', async () => {
     const { fixture } = await createComponent();
 

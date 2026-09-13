@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.io.DefaultResourceLoader;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -16,11 +17,238 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalMutationCommand.Operation.CREATE;
+import static pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogConditionalMutationCommand.Operation.UPDATE;
 
 class OperationalContextCatalogMaintenanceServiceTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void shouldRejectStaleCreateDigestWithoutChangingYaml() throws Exception {
+        try (var harness = harness("accepted-stale-create")) {
+            var originalDigest = harness.digest();
+            var accepted = new OperationalContextCatalogConditionalMutationCommand(
+                    "system", "crm-new-service", CREATE, originalDigest, List.of(
+                    change("name", null, "CRM New Service"),
+                    change("systemType", null, "internal-service"),
+                    change("systemSubtype", null, "unknown")
+            ));
+            var first = harness.service().applyAcceptedChanges(accepted);
+            assertEquals(harness.digest(), first.contentDigest());
+            assertEquals("CRM New Service", first.entity().payload().get("name"));
+            var document = temporaryDirectory.resolve("accepted-stale-create/systems.yml");
+            var beforeRejection = Files.readString(document);
+
+            var stale = new OperationalContextCatalogConditionalMutationCommand(
+                    "system", "crm-second-service", CREATE, originalDigest, List.of(
+                    change("name", null, "CRM Second Service"),
+                    change("systemType", null, "internal-service"),
+                    change("systemSubtype", null, "unknown")
+            ));
+            var exception = assertThrows(OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().applyAcceptedChanges(stale));
+            assertEquals(OperationalContextCatalogMaintenanceException.Code.STALE_PROPOSAL, exception.code());
+            assertEquals(beforeRejection, Files.readString(document));
+            assertEquals(first.contentDigest(), harness.digest());
+        }
+    }
+
+    @Test
+    void shouldRejectOnlyStaleTouchedUpdateFieldsWithoutPartialYaml() throws Exception {
+        try (var harness = harness("accepted-stale-update")) {
+            var originalDigest = harness.digest();
+            var current = harness.service().writablePayloadForUpdate("system", "crm-target-system");
+            var manuallyEdited = new LinkedHashMap<>(current);
+            manuallyEdited.put("name", "CRM Changed In Another Tab");
+            harness.service().update(new OperationalContextCatalogMutationCommand(
+                    "system", "crm-target-system", manuallyEdited));
+            var document = temporaryDirectory.resolve("accepted-stale-update/systems.yml");
+            var beforeRejection = Files.readString(document);
+            var digestBeforeRejection = harness.digest();
+
+            var proposal = new OperationalContextCatalogConditionalMutationCommand(
+                    "system", "crm-target-system", UPDATE, originalDigest,
+                    List.of(change("name", "CRM Target System", "CRM Suggested Name"))
+            );
+            var exception = assertThrows(OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().applyAcceptedChanges(proposal));
+            assertEquals(OperationalContextCatalogMaintenanceException.Code.STALE_PROPOSAL, exception.code());
+            assertEquals("/payload/name", exception.fieldErrors().get(0).pointer());
+            assertEquals(beforeRejection, Files.readString(document));
+            assertEquals(digestBeforeRejection, harness.digest());
+        }
+    }
+
+    @Test
+    void shouldPreserveUnrelatedEditsWhenAcceptedUpdateChangesOneField() {
+        try (var harness = harness("accepted-preserve-unrelated")) {
+            var originalDigest = harness.digest();
+            var current = harness.service().writablePayloadForUpdate("system", "crm-target-system");
+            var manuallyEdited = new LinkedHashMap<>(current);
+            manuallyEdited.put("summary", "Fresh operator note");
+            harness.service().update(new OperationalContextCatalogMutationCommand(
+                    "system", "crm-target-system", manuallyEdited));
+
+            var result = harness.service().applyAcceptedChanges(
+                    new OperationalContextCatalogConditionalMutationCommand(
+                            "system", "crm-target-system", UPDATE, originalDigest,
+                            List.of(change("name", "CRM Target System", "CRM Suggested Name"))
+                    ));
+            assertEquals("CRM Suggested Name", result.entity().payload().get("name"));
+            assertEquals("Fresh operator note", result.entity().payload().get("summary"));
+            assertEquals(harness.digest(), result.contentDigest());
+        }
+    }
+
+    @Test
+    void shouldNotPublishInvalidAcceptedCreate() throws Exception {
+        try (var harness = harness("accepted-invalid-create")) {
+            var document = temporaryDirectory.resolve("accepted-invalid-create/systems.yml");
+            var original = Files.readString(document);
+            var digest = harness.digest();
+            var proposal = new OperationalContextCatalogConditionalMutationCommand(
+                    "system", "crm-unverified-frontend", CREATE, digest, List.of(
+                    change("name", null, "CRM Unverified Frontend"),
+                    change("systemType", null, "internal-service"),
+                    change("systemSubtype", null, "frontend")
+            ));
+
+            assertThrows(OperationalContextStoreException.class,
+                    () -> harness.service().applyAcceptedChanges(proposal));
+            assertEquals(original, Files.readString(document));
+            assertEquals(digest, harness.digest());
+        }
+    }
+
+    @Test
+    void shouldCreateSystemRepositoryAndScopeOneDocumentAtATimeInReferenceOrder() {
+        try (var harness = harness("accepted-reference-order")) {
+            var system = harness.service().applyAcceptedChanges(new OperationalContextCatalogConditionalMutationCommand(
+                    "system", "crm-assisted-system", CREATE, harness.digest(), List.of(
+                    change("name", null, "CRM Assisted System"),
+                    change("systemType", null, "internal-service"),
+                    change("systemSubtype", null, "unknown")
+            )));
+            var repository = harness.service().applyAcceptedChanges(new OperationalContextCatalogConditionalMutationCommand(
+                    "repository", "crm-assisted-repository", CREATE, system.contentDigest(), List.of(
+                    change("name", null, "CRM Assisted Repository"),
+                    change("repositoryType", null, "service"),
+                    change("git", null, map("provider", "gitlab", "projectPath", "crm/assisted-service"))
+            )));
+            var scope = harness.service().applyAcceptedChanges(new OperationalContextCatalogConditionalMutationCommand(
+                    "code-search-scope", "crm-assisted-search", CREATE, repository.contentDigest(), List.of(
+                    change("name", null, "CRM Assisted Search"),
+                    change("scopeType", null, "system"),
+                    change("target", null, map("type", "system", "id", "crm-assisted-system")),
+                    change("repositories", null, List.of(map(
+                            "repoId", "crm-assisted-repository", "role", "primary", "priority", 1,
+                            "searchMode", "whole-repository", "pathPrefixes", List.of()
+                    )))
+            )));
+
+            assertEquals(harness.digest(), scope.contentDigest());
+            assertEquals("crm-assisted-system", ((Map<?, ?>) scope.entity().payload().get("target")).get("id"));
+            assertTrue(harness.service().entity("system", "crm-assisted-system").payload().containsKey("name"));
+            assertTrue(harness.service().entity("repository", "crm-assisted-repository").payload().containsKey("name"));
+        }
+    }
+
+    private OperationalContextCatalogConditionalMutationCommand.FieldChange change(
+            String path, Object before, Object after
+    ) {
+        return new OperationalContextCatalogConditionalMutationCommand.FieldChange(path, before, after);
+    }
+
+    @Test
+    void shouldPreviewWithTheCommitRulesWithoutChangingYaml() throws Exception {
+        try (var harness = harness("preview-valid", crmDocuments())) {
+            var document = temporaryDirectory.resolve("preview-valid/systems.yml");
+            var original = Files.readString(document);
+            var digest = harness.digest();
+            var command = new OperationalContextCatalogMutationCommand(
+                    "system", "crm-preview-service", map(
+                    "id", "crm-preview-service", "name", "CRM Preview Service",
+                    "systemType", "internal-service", "systemSubtype", "unknown"
+            ));
+
+            var preview = harness.service().previewCreate(command);
+
+            assertTrue(preview.valid());
+            assertEquals(digest, preview.baseDigest());
+            assertEquals("CRM Preview Service", preview.candidatePayload().get("name"));
+            assertEquals(original, Files.readString(document));
+            assertEquals(digest, harness.digest());
+            assertThrows(OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().entity("system", "crm-preview-service"));
+
+            harness.service().create(command);
+            assertNotEquals(digest, harness.digest());
+        }
+    }
+
+    @Test
+    void shouldReportCatalogCommitViolationInPreviewWithoutPublishing() throws Exception {
+        try (var harness = harness("preview-invalid", crmDocuments())) {
+            var document = temporaryDirectory.resolve("preview-invalid/systems.yml");
+            var original = Files.readString(document);
+            var digest = harness.digest();
+            var command = new OperationalContextCatalogMutationCommand(
+                    "system", "crm-preview-frontend", map(
+                    "id", "crm-preview-frontend", "name", "CRM Preview Frontend",
+                    "systemType", "internal-service", "systemSubtype", "frontend"
+            ));
+
+            var preview = harness.service().previewCreate(command);
+
+            assertFalse(preview.valid());
+            assertFalse(preview.violations().isEmpty());
+            assertEquals(original, Files.readString(document));
+            assertEquals(digest, harness.digest());
+            assertThrows(OperationalContextStoreException.class, () -> harness.service().create(command));
+        }
+    }
+
+    @Test
+    void shouldPreviewExistingEntityUpdateWithoutChangingCurrentPayload() throws Exception {
+        try (var harness = harness("preview-update", crmDocuments())) {
+            var document = temporaryDirectory.resolve("preview-update/systems.yml");
+            var original = Files.readString(document);
+            var command = new OperationalContextCatalogMutationCommand(
+                    "system", "crm-target-system", map(
+                    "id", "crm-target-system", "name", "CRM Target System",
+                    "systemType", "internal-service", "systemSubtype", "backend",
+                    "summary", "Receives anonymized CRM updates."
+            ));
+
+            var preview = harness.service().previewUpdate(command);
+
+            assertTrue(preview.valid());
+            assertEquals("Receives anonymized CRM updates.", preview.candidatePayload().get("summary"));
+            assertEquals(original, Files.readString(document));
+            assertFalse(harness.service().entity("system", "crm-target-system").payload().containsKey("summary"));
+
+            harness.service().update(command);
+            assertEquals("Receives anonymized CRM updates.",
+                    harness.service().entity("system", "crm-target-system").payload().get("summary"));
+        }
+    }
+
+    @Test
+    void shouldBuildWritableUpdatePayloadWithoutNestedServerOwnedFields() {
+        try (var harness = harness("preview-writable-payload", crmDocuments())) {
+            var current = harness.service().entity("integration", "crm-existing-integration").payload();
+            var currentParticipants = (Map<?, ?>) current.get("participants");
+            assertTrue(((Map<?, ?>) currentParticipants.get("source")).containsKey("repositories"));
+
+            var writable = harness.service().writablePayloadForUpdate("integration", "crm-existing-integration");
+            var participants = (Map<?, ?>) writable.get("participants");
+            assertFalse(((Map<?, ?>) participants.get("source")).containsKey("repositories"));
+            assertEquals("crm-source-system", ((Map<?, ?>) participants.get("source")).get("system"));
+            assertTrue(harness.service().validatePartialEditablePayload("integration", writable).isEmpty());
+        }
+    }
 
     @Test
     void shouldCreateAndCompletePutEveryYamlEntityTypeWithAnonymousCrmFixtures() {

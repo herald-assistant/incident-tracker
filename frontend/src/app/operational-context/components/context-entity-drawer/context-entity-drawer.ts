@@ -2,6 +2,7 @@ import { Component, input, output, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 import {
+  isOperationalContextWritableType,
   OperationalContextEditorState,
   OperationalContextReferenceOptions
 } from '../../models/operational-context-maintenance.models';
@@ -9,7 +10,9 @@ import {
   OperationalContextDetailSectionDto,
   OperationalContextEntityDetailDto,
   OperationalContextResolvedOwnerDto,
-  OperationalContextResolvedOwnershipDto
+  OperationalContextResolvedOwnershipDto,
+  OpenQuestionDto,
+  ValidationFindingDto
 } from '../../models/operational-context.models';
 import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
 import { ContextEntityEditorDrawerComponent } from '../context-entity-editor-drawer/context-entity-editor-drawer';
@@ -35,8 +38,15 @@ export class ContextEntityDrawerComponent {
   readonly closeDrawer = output<void>();
   readonly writable = input(false);
   readonly editEntity = output<void>();
+  readonly assistEntity = output<void>();
+  readonly assistValidationFinding = output<ValidationFindingDto>();
+  readonly assistOpenQuestion = output<OpenQuestionDto>();
   readonly deleteEntity = output<void>();
   readonly copiedEntity = signal(false);
+
+  protected canAssistIssue(type: string, id: string | null | undefined): boolean {
+    return Boolean(id && isOperationalContextWritableType(type));
+  }
 
   protected fieldEntries(fields: Record<string, unknown>): DrawerField[] {
     return Object.entries(fields || {}).map(([key, value]) => ({

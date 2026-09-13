@@ -582,8 +582,8 @@ class CopilotSdkExecutionGatewayTest {
             ));
         })) {
             assertThatThrownBy(() -> gateway.execute(preparedRequest))
-                    .isInstanceOf(CopilotSdkInvocationException.class)
-                    .hasMessageContaining("did not activate long_context");
+                    .isInstanceOf(pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotRequiredContextTierException.class)
+                    .hasMessageContaining("nie aktywował wymaganego `long_context`");
 
             verify(sessionRef.get(), never()).sendAndWait(any(MessageOptions.class), eq(300_000L));
             assertThat(sessionConfig.getContextTier()).isEqualTo("long_context");

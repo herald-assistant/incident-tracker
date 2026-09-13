@@ -60,7 +60,6 @@ repositories:
       url: https://gitlab.example.com/crm/agent-portal
       aliases:
         - crm-agent-portal
-      inferred: false
     references:
       systems:
         - crm-agent-portal
@@ -101,6 +100,8 @@ repositories:
 ## Update rules
 
 - Treat `git.projectPath` as the GitLab link; keep the rest business-readable.
+- `git.inferred` is server-owned preserve-only data; do not propose it in a new
+  repository or as an edited field.
 - Use `repositoryType: frontend` only for a reviewed primary repository of a
   system registered as `internal-service/frontend`. Framework files are
   evidence to inspect, not an automatic classification rule.

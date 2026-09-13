@@ -1132,7 +1132,8 @@ function shouldShowPreparedPrompt(stepCode: string | null | undefined): boolean 
   return normalizedStepCode === 'OPERATIONAL_CONTEXT'
     || normalizedStepCode === 'DETERMINISTIC_CONTEXT'
     || normalizedStepCode === 'INITIAL_SOURCE_SNAPSHOT'
-    || normalizedStepCode === 'AI_PREPARATION';
+    || normalizedStepCode === 'AI_PREPARATION'
+    || normalizedStepCode === 'PREPARE_AI';
 }
 
 interface SkillContentView {
@@ -1151,6 +1152,9 @@ function resolvePreparedPrompts(
 }
 
 function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'PREPARE_AI') {
+    return 'Inicjalny prompt asysty Operational Context';
+  }
   if (String(stepCode || '').toUpperCase() === 'AI_INPUT_PREPARATION') {
     return 'One-shot prompts wysłane do AI';
   }
@@ -1171,6 +1175,9 @@ function buildPreparedPromptTitle(stepCode: string | null | undefined): string {
 }
 
 function buildPreparedPromptDescription(stepCode: string | null | undefined): string {
+  if (String(stepCode || '').toUpperCase() === 'PREPARE_AI') {
+    return 'To jest dokładny sanitizowany prompt przygotowany przed wywołaniem Copilota: instrukcje, reguły maintenance i aktualny katalog.';
+  }
   if (String(stepCode || '').toUpperCase() === 'AI_INPUT_PREPARATION') {
     return 'Każda pozycja zawiera dokładną inicjalną wiadomość zapisaną przed wysłaniem: instrukcję, effective skill, Jira evidence i kod Merge Requestu.';
   }

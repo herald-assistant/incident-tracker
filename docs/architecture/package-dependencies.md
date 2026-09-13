@@ -34,6 +34,13 @@ feature analityczny
 Incident Analysis, Flow Explorer, Change Verification i Config Drift Viewer sa
 rodzenstwem. Zaden z nich nie jest generycznym core dla
 pozostalych.
+Operational Context Assistance jest kolejnym feature-owned use case'em:
+sklada neutralny katalog, ograniczony odczyt GitLaba i platforme AI, ale jego
+job, draft i decyzje operatora nie przechodza do `integrations`, `agenttools`
+ani `aiplatform`. `integrations.operationalcontext` posiada neutralna walidacje
+oraz warunkowy batch zapis kilku dokumentow katalogu z recovery po przerwaniu
+procesu. Neutralny katalog GitLab read tools mieszka w `agenttools`, a
+ograniczony odczyt i nawigacja repozytorium w `integrations.gitlab`.
 
 Mala `common.PlatformSourceCodeProperties` posiada wymagany
 `platform.source-code.default-branch`. Feature'y oraz shared/operator UI config

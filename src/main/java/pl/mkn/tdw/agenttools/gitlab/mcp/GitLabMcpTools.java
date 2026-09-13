@@ -25,6 +25,8 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import pl.mkn.tdw.common.GitLabPathUtils;
+import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
+import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
@@ -34,6 +36,7 @@ import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpointService;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryPort;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositorySearchQuery;
+import pl.mkn.tdw.integrations.gitlab.GitLabVerifiedRepositoryFileReader;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceRequest;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceMethodSelector;
 import pl.mkn.tdw.integrations.gitlab.source.GitLabJavaMethodSliceResponse;
@@ -825,7 +828,10 @@ public class GitLabMcpTools {
             name = READ_REPOSITORY_FILE,
             description = """
                     Read a file from the GitLab repository in the resolved GitLab group and explicit branchRef.
-                    Use only when full class/file context is necessary. Prefer outline/chunk/chunks before full file reads for large files.
+                    In a session with a repository scope, the selected project is pinned to the operator's
+                    branch and other projects in the main group are pinned separately. Such reads return
+                    a sourceRef only after complete content, size, revision and safety verification.
+                    In other sessions, prefer outline/chunk tools before full reads of large files.
                     """
     )
     public GitLabReadRepositoryFileToolResponse readRepositoryFile(
@@ -837,12 +843,28 @@ public class GitLabMcpTools {
             List<String> applicationNames,
             @ToolParam(description = "Repository file path.")
             String filePath,
-            @ToolParam(required = false, description = "Maximum number of characters to return. Defaults to 4000.")
+            @ToolParam(required = false, description = "Maximum characters in ordinary sessions (default 4000); omitted and ignored for verified source reads.")
             Integer maxCharacters,
             @ToolParam(required = false, description = "Krotki powod po polsku: w jakim celu model czyta ten plik.")
             String reason,
             ToolContext toolContext
     ) {
+        var bound = toolContext != null && toolContext.getContext() != null
+                ? toolContext.getContext().get(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE) : null;
+        if (bound instanceof GitLabRepositoryToolScope repositoryScope) {
+            if (reason == null || reason.isBlank() || reason.length() > 500) {
+                throw new IllegalArgumentException("A short reason is required.");
+            }
+            var target = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
+            var verified = GitLabVerifiedRepositoryFileReader.read(
+                    gitLabRepositoryPort, target.group(), target.projectName(), target.commitId(),
+                    filePath, GitLabVerifiedRepositoryFileReader.MAX_FILE_BYTES
+            );
+            return new GitLabReadRepositoryFileToolResponse(
+                    target.group(), target.projectName(), target.commitId(), verified.path(),
+                    verified.content(), false, repositoryScope.recordRead(target, verified.path())
+            );
+        }
         var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);

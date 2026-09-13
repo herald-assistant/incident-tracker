@@ -52,7 +52,6 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextQuery;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.EntityRef;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.SourceRef;
-import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex.ValidationFinding;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndexBuilder;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipRequest;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextOwnershipResolution;
@@ -678,7 +677,7 @@ public class OperationalContextViewService {
         var loaded = session.query(OperationalContextQuery.all());
         var catalog = loaded != null ? loaded : OperationalContextCatalog.empty();
         var relationIndex = relationIndexBuilder.build(catalog);
-        var validation = validationService.validate(catalog).findings().stream()
+        var validation = validationService.validate(catalog).fingerprintedFindings().stream()
                 .map(this::validationFinding)
                 .toList();
         var openQuestions = catalog.openQuestions().stream()
@@ -698,10 +697,13 @@ public class OperationalContextViewService {
         );
     }
 
-    private ValidationFindingDto validationFinding(ValidationFinding finding) {
+    private ValidationFindingDto validationFinding(
+            OperationalContextCatalogValidationService.FingerprintedFinding fingerprinted
+    ) {
+        var finding = fingerprinted.finding();
         var firstRef = finding.sourceRefs().stream().findFirst().orElse(null);
         return new ValidationFindingDto(
-                finding.code() + ":" + (firstRef != null ? firstRef.entityId() : "catalog"),
+                fingerprinted.fingerprint(),
                 normalizeSeverity(finding.severity()),
                 finding.code(),
                 firstRef != null ? firstRef.entityType() : null,

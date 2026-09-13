@@ -7,6 +7,9 @@
       </div>
       <div class="entity-drawer__actions" aria-label="Entity drawer actions">
         @if (writable()) {
+          <button type="button" class="entity-drawer__action" aria-label="Zaproponuj uzupełnienie z AI" title="Zaproponuj uzupełnienie z AI" (click)="assistEntity.emit()">
+            <mat-icon fontSet="material-symbols-outlined">auto_awesome</mat-icon>
+          </button>
           <button type="button" class="entity-drawer__action" aria-label="Edit entity" title="Edit" (click)="editEntity.emit()">
             <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
           </button>
@@ -191,6 +194,9 @@
             @if (finding.suggestedFix) {
               <small>{{ finding.suggestedFix }}</small>
             }
+            @if (writable() && canAssistIssue(finding.entityType, finding.entityId)) {
+              <button type="button" class="entity-drawer__issue-action" (click)="assistValidationFinding.emit(finding)">Pomóż rozwiązać</button>
+            }
           </article>
         }
       </section>
@@ -203,6 +209,9 @@
           <article class="drawer-issue" [attr.data-severity]="question.severity">
             <strong>{{ question.question }}</strong>
             <small>{{ question.sourceFile }} · {{ question.status }}</small>
+            @if (writable() && canAssistIssue(question.entityType, question.entityId)) {
+              <button type="button" class="entity-drawer__issue-action" (click)="assistOpenQuestion.emit(question)">Pomóż rozwiązać</button>
+            }
           </article>
         }
       </section>

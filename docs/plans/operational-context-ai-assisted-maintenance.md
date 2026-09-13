@@ -1,6 +1,6 @@
 # Pomoc AI przy tworzeniu i aktualizacji Operational Context
 
-Status: in-progress
+Status: done
 
 Source need: [Pomoc AI przy tworzeniu i aktualizacji Operational Context](../needs/operational-context-ai-assisted-maintenance.md)
 
@@ -55,6 +55,15 @@ objal tez kontrakt neutralnego adaptera/read DTO i zestaw plikow (L2).
 Lokalna kopia miala tresc identyczna z seedem i zostala usunieta po ponownym
 porownaniu. Pozostale encje YAML, ich relacje, read API oraz formularz nie
 zostaly zmienione w tym kroku.
+
+Audyt po kroku 0c nie wykazal kolejnych istotnych wypelnionych danych do
+usuniecia: lokalne dwa systemy, dwa repozytoria i dwa code-search scopes sa
+wykorzystywane przez `opctx_*` lub Flow Explorer. Nieuzywane pola glowne
+`openQuestions`, `tribe`, `catalogKind` i katalogowe `schemaVersion` nie sa
+czytane przez codec, ale ich usuniecie ma tylko kosmetyczny efekt. Dalsza
+redukcja katalogu nie jest warunkiem rozpoczecia asysty AI. Znane drifty
+projekcji handoff-rule i doboru repozytoriow w incident evidence pozostaja
+poza zakresem pierwszego pionowego MVP.
 
 Obecnie `/operational-context` pokazuje summary, katalog, Signal Resolver,
 Validation i Open Questions. `Add` dziala na zakladce konkretnego typu, a
@@ -113,10 +122,17 @@ aktualna encja, aby nie nadpisac pozniejszej edycji z innej karty.
 Selected-source collector jest read-only i ograniczony do jawnie wskazanego
 projektu/ref oraz limitu plikow i znakow. Musi dzialac, gdy Operational
 Context jest pusty; nie moze polegac na code-search scope z katalogu.
-Pierwszy przyrost moze wykorzystac opis uzytkownika i wskazany projekt GitLab.
-Confluence jest kolejnym zrodlem dopiero po potwierdzeniu potrzeby. Przygotowany
+Pierwszy przyrost wykorzysta opis uzytkownika i najwyzej jeden wskazany
+projekt GitLab z refem w skonfigurowanej grupie. Confluence pozostaje poza
+tym przyrostem. Obecne `listRepositoryFiles` pobiera cale drzewo, a
+`readFile(maxCharacters)` skraca tresc dopiero po jej pobraniu; nie spelniaja
+same wymagania ograniczonego odczytu. Collector bedzie czytac tylko mala
+allowliste dokladnych sciezek po sprawdzeniu rozmiaru i przypieciu commita;
+brak metadanych rozmiaru lub przekroczony limit pomija plik. Przygotowany
 material do AI nie zawiera sekretow ani calych nieograniczonych repozytoriow;
-tresc zrodel jest traktowana jako dane, a nie instrukcje dla modelu.
+tresc zrodel jest traktowana jako dane, a nie instrukcje dla modelu. Opis
+operatora i fragmenty kodu sa sanitizowane przed wyslaniem do AI; niepewny
+fragment jest pomijany z jawnym ograniczeniem widocznosci.
 
 AI orchestration, prompt, polski runtime skill, wynik i budzet naleza do
 dedykowanego use case'u w `features.*`. Uzywaja neutralnego `aiplatform`,
@@ -125,6 +141,107 @@ endpointy asysty sa feature-owned, nawet jezeli sluza temu samemu ekranowi.
 Neutralne `opctx_*` pozostaja read-only i nie otrzymuja semantyki zapisu.
 Asynchroniczny run pokazuje status, uzyte zrodla, widoczne ograniczenia i
 usage/cost zgodnie ze wspolnym wzorcem UI.
+
+## Kontrakt pierwszego MVP i baseline (Krok 1)
+
+Trzy zadania operatora pozostaja osobnymi trybami jednego flow:
+
+| Tryb | Wejscie | Oczekiwany draft |
+| --- | --- | --- |
+| `CREATE_AREA` | Opis obszaru; opcjonalnie jeden wybrany projekt GitLab i ref. Nie wymaga istniejacego katalogu. | Najpierw system z jawnie nieznanym ownerem. Repozytorium i systemowy code-search scope tylko po potwierdzeniu relacji do wybranego projektu. |
+| `IMPROVE_ENTITY` | Typ i ID istniejacej encji, opis brakujacego faktu, opcjonalne zrodlo. | Zmiany konkretnych pol z wartoscia przed/po; pozostale pola nie sa regenerowane. |
+| `RESOLVE_FINDING` | ID findingu Validation albo Open Question oraz powiazana encja, opis lub zrodlo. | Tylko poprawka wynikajaca z evidence albo pytanie do czlowieka. Samo AI nie oznacza findingu jako rozwiazanego. |
+
+Obecnie maintenance przyjmuje pelny payload encji i atomowo wymienia jeden
+dokument YAML po walidacji calego katalogu. Nie ma endpointu walidacji
+kandydata bez zapisu ani precondition chroniacego przed aktualizacja innej
+karty. Katalog udostepnia wewnetrzny `contentDigest` snapshotu, ale obecny
+PUT nie sprawdza go. Nowy feature nie importuje sibling feature'ow i nie
+przenosi job flow, promptu, parsera ani policy do `integrations`, `agenttools`
+lub `aiplatform`.
+
+Lista konsumentow i zasieg zmiany:
+
+| Konsument | Wplyw MVP |
+| --- | --- |
+| Workbench `/operational-context` | Nowe wejscia do asysty, status runu i review propozycji; reczny edytor pozostaje dostepny. |
+| `api.operationalcontext` i `integrations.operationalcontext` | Odczyt bez zmian; pozniejsze read-only preview i atomowy warunek update'u wspoldziela walidacje z obecnym maintenance. |
+| `integrations.gitlab` | Read-only, wybrany projekt/ref i ograniczony body; bez zaleznosci od istniejacego code-search scope. |
+| `opctx_*`, GitLab discovery, Incident Analysis, Flow Explorer, Config Drift Viewer, Change Verification, UI Explorer | Bez zmiany kontraktu; po zaakceptowanym zapisie widza zwykly nowy snapshot katalogu. |
+| `aiplatform` i shared run UI | Reuse sesji, activity, krokow i usage; bez semantyki Operational Context w platformie. |
+
+Planowany feature-owned `POST /api/operational-context/assistance/jobs`
+zwraca `202` i `jobId`; `GET /api/operational-context/assistance/jobs/{jobId}`
+zwraca snapshot runu. Request ma zamkniety `mode`, wymagany opis operatora
+(maksymalnie 4000 znakow), opcjonalny `target` z rodzajem `ENTITY`,
+`VALIDATION_FINDING` albo `OPEN_QUESTION`, opcjonalny `gitLabSource` z
+`project` (wybor z katalogu) albo `projectUrl` (reczny pelny URL projektu)
+oraz `ref`, a takze `model`/`reasoningEffort` zgodne ze wspolnym
+`AnalysisAiOptions`. Dla `CREATE_AREA` target jest pusty; dla pozostalych
+trybow target musi wskazywac istniejacy wpis lub finding. Nieznane pola
+requestu sa odrzucane. Grupa GitLab pochodzi z konfiguracji, a nie z
+parametru modelu lub dowolnej sciezki podanej w request.
+
+Korekta wyboru zrodla po feedbacku operatora: przy projekcie w podgrupie
+reczne wpisanie sciezki wzglednej wymaga rozumienia granicy skonfigurowanej
+grupy. Reczny wariant przyjmuje zatem pelny URL projektu, sprawdzony po
+stronie serwera wobec skonfigurowanego base URL i glownej grupy. Z URL
+wyprowadzamy wzgledna sciezke do odczytu GitLab oraz kanoniczne `git.group`,
+`git.project`, `git.projectPath` do propozycji repozytorium w `repo-map.yml`.
+Alternatywa wpisywania sciezki wzglednej pozostaje tylko dla opcji katalogowej.
+Nie uruchamiamy enumeracji projektow GitLab ani odczytu dowolnej instancji.
+
+Collector przyjmuje najwyzej jeden projekt/ref z tej grupy, przypina ref do
+commita i czyta tylko istniejace dokladne sciezki z allowlisty: `README.md`,
+`pom.xml`, `package.json`, `build.gradle`, `settings.gradle`. Limit to piec
+plikow, 16 KiB na plik i 64 KiB lacznie. Przed odczytem sprawdza rozmiar,
+a warstwa HTTP musi ograniczac rzeczywisty pobrany body; samo skrocenie
+Stringa po GET nie wystarcza. Nie wolno listowac calego drzewa repozytorium
+ani czytac innych projektow. Brak pliku, rozmiaru lub bezpiecznego odczytu
+oznacza pominiecie tego zrodla, nie domysl. W monorepo MVP moze nie znalezc
+modulu; pokazuje wtedy pytanie i limit widocznosci zamiast wymyslac scope.
+
+Snapshot joba pokazuje `QUEUED`, `COLLECTING_CONTEXT`, `AI_PREPARATION`,
+`ANALYZING` i terminalne `COMPLETED`, `PARTIAL`, `BLOCKED`, `FAILED`, a takze
+kroki, czas, zrodla i ich ograniczenia, activity oraz `AnalysisAiUsage`.
+`PARTIAL` oznacza uzyteczny draft mimo niedostepnego lub pominietego zrodla;
+`FAILED` nie zawiera uzytecznego draftu. Run przechowuje bazowy digest
+katalogu i przypiety commit GitLab do review, nie jako automatyczna zgode na
+pozniejszy zapis. Sesja pierwszego MVP dostaje wstepnie zebrany material,
+pusta allowliste tools i polski skill osadzony w prompcie przy wylaczonym
+runtime ladowaniu skills; Copilot nie dostaje mutation tools.
+
+Draft jest zamknieta lista malych, uporzadkowanych propozycji `CREATE` lub
+`UPDATE`. Kazda zawiera `entityType`, `entityId`, zmiany pol z `path`,
+`before`, `after`, krotkie `reason`, `basis` (`USER_STATEMENT`, `SOURCE_OBSERVATION`,
+`AI_INTERPRETATION`), logiczne `sourceRefs`, poziom pewnosci, wymagane
+potwierdzenia czlowieka, pytania i `visibilityLimits`. Backend buduje z nich
+pelny `candidatePayload` i diff do UI, filtruje dane wrazliwe i odrzuca pola
+poza kanonicznym schematem oraz nieznane pola odpowiedzi AI. Preview musi
+uzyc tych samych regul walidacji
+co zapis, ale nie moze wykonac `publishCandidate`. Przed pozniejszym PUT
+backend w jednej operacji sprawdzi wartosci dotknietych pol wobec bazowej
+wersji; nie wystarczy sam ponowny GET w UI. AI nie moze nadac
+`ownershipStatus=explicit` ani `systemSubtype=frontend` bez jawnej decyzji
+operatora. Dla frontendu kolejka najpierw zapisuje system z subtype `unknown`,
+potem repozytorium i scope, a dopiero po ich walidacji pozwala potwierdzic
+subtype `frontend`.
+
+Syntetyczne przypadki kontraktu sa zapisane w
+[`operational-context-ai-assisted-maintenance-fixtures.json`](operational-context-ai-assisted-maintenance-fixtures.json).
+Przypadki obejmuja pusty katalog bez GitLaba, wybrany projekt z przypietym
+commitem, uzupelnienie jednego pola istniejacej encji i nierozstrzygniete
+pytanie po niedostepnym zrodle. Nie zawieraja danych produkcyjnych.
+
+Macierz weryfikacji dalszych krokow: parser odrzuca nieznane pola i
+niepotwierdzony ownership; collector sprawdza pojedynczy wybrany projekt,
+przypiety commit, limity body, sekrety i niedostepne pliki; preview i zapis
+stosuja te same reguly, a preview nie zmienia YAML; atomowy precondition
+odrzuca stale propozycje; job wystawia status, `PARTIAL`, activity i usage;
+UI pokazuje diff i zapisuje tylko wybrane pola po akcji uzytkownika.
+Regresja L2 obejmuje konsumentow maintenance i `PackageDependencyGuardTest`;
+zmiana wspolnego kontraktu UI wymaga testow Angulara, builda Angulara i
+`mvn -q -Pbackend-dev clean package` w tej kolejnosci.
 
 ## Conformance delta
 
@@ -135,9 +252,9 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 | Nieznane klucze JSON/YAML (zatwierdzony krok 0b) | Nowe klucze poza schematem sa odrzucane. Istniejace nieznane pola sa pomijane przez edytor i usuwane podczas aktualizacji encji; jawne preserve-only pola pozostaja. |
 | Runtime index (zatwierdzony krok 0c) | Usuniety z seeda, loadera, codec, DTO i query. Lokalna kopia zgodna z seedem zostala usunieta po porownaniu; zmieniony plik w innej instalacji pozostanie ignorowany, bez automatycznego kasowania. Unikalne zasady jakosci danych przeniesiono do instrukcji utrzymania. |
 | Publiczny odczyt katalogu i `opctx_*` | Bez zmian. |
-| Maintenance CRUD | Pojedynczy zapis pozostaje atomowy; dodatkowo odrzuca nieznane klucze i nie zachowuje nieznanych rozszerzen przy aktualizacji. W przyszlym przeplywie asysty dodana read-only walidacja propozycji. |
-| AI runtime | Nowy feature-owned prompt, skill, kontrakt draftu i ograniczony run; bez mutation tools. |
-| Zrodla | Read-only, operator-selected, ograniczony bootstrap bez zaleznosci od istniejacego scope'u. |
+| Maintenance CRUD | Pojedynczy zapis pozostaje atomowy. Asysta dodaje read-only preview z ta sama walidacja co commit oraz atomowy warunek zgodnosci dotknietych pol przy pozniejszym zapisie; bez mutacji w runie AI. |
+| AI runtime | Feature-owned one-shot prompt, polski skill inline, scisly parser draftu, pusta allowlista tools, status/activity/usage; bez mutation tools. |
+| Zrodla | Opis operatora i najwyzej jeden projekt/ref z konfigurowanej grupy GitLab; przypiety commit, allowlista pieciu sciezek, 16 KiB na plik i 64 KiB lacznie, realnie ograniczony HTTP body; bez pelnego drzewa i Confluence. |
 | UI | Nowe wejscia z empty state, detail i maintenance inbox; field-level review i uproszczony domyslny widok formularza w istniejacym workbench. |
 | Persistence | Brak zmiany lokalnego katalogu, brak historii i batch transaction. Draft asysty jest stanem runu, nie kanonicznym wpisem. |
 | Konsumenci | Po zapisie dotychczasowy refresh i aktualny snapshot; bez migracji DTO odczytu. |
@@ -172,8 +289,10 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
 
 - Autonomiczne przeszukiwanie calego GitLaba, masowe generowanie wszystkich
   dziewieciu typow i kopiowanie inventory technicznego.
-- Automatyczny zapis AI, mutation tools, multi-document transaction, historia,
-  rollback, wspoldzielone uprawnienia i approval workflow.
+- Automatyczny zapis AI, mutation tools, historia wersji katalogu,
+  rollback, wspoldzielone uprawnienia i approval workflow. Historia runow
+  analizy jest opisana osobno w
+  [planie przebiegu i historii asysty](operational-context-assistance-observability-history.md).
 - Potwierdzanie ownershipu lub `systemSubtype=frontend` z nazwy projektu,
   frameworka albo samej odpowiedzi modelu.
 
@@ -194,6 +313,11 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
   zmian uzytkownika. Testy musza objac start istniejacej lokalnej kopii.
 - Zmiana obejmuje kontrakt backend-frontend, wiec wymaga sekwencji testow
   frontend, build Angulara i `mvn -q -Pbackend-dev clean package`.
+- Pelny URL wpisany przez operatora jest niezaufanym identyfikatorem, a nie
+  nowym zrodlem konfiguracji. Porownanie z `analysis.gitlab.base-url` musi
+  obejmowac scheme, host, port i opcjonalny base path; sciezka musi lezec pod
+  skonfigurowana glowna grupa. Odrzucamy userinfo, query, fragment i
+  niejednoznacznie kodowane separatory, zanim powstanie job lub odczyt HTTP.
 
 ## Kryteria akceptacji
 
@@ -207,6 +331,9 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
   przed zapisem; po zapisie Validation, Open Questions i konsumenci widza
   aktualny snapshot.
 - Pusty katalog nie blokuje wybranego przez operatora bootstrap discovery.
+- Projekt w podgrupie moze byc wskazany pelnym URL bez recznego rozbijania
+  sciezki. Obcy adres jest odrzucony przed runem, a propozycja repozytorium
+  otrzymuje kanoniczne `git.group`, `git.project` i `git.projectPath`.
 - Granice pakietow i read-only `opctx_*` sa zachowane.
 
 ## Kroki
@@ -260,26 +387,105 @@ usage/cost zgodnie ze wspolnym wzorcem UI.
   0 failures/errors, 1 skipped); `git diff --check` bez bledow. Test
   istniejacej lokalnej kopii potwierdza ladowanie encji i
   zachowanie zmienionego osieroconego indeksu poza snapshotem.
-- [ ] Krok 1: Zamknac kontrakt pionowego MVP i baseline: trzy scenariusze
+- [x] Krok 1 (zatwierdzony 2026-09-13): Zamknac kontrakt pionowego MVP i baseline: trzy scenariusze
   operatora, wybrane zrodla, typowany draft, status runu, granice prywatnosci,
   liste konsumentow, conformance delta i macierz testow. Dowod: review
-  request/result oraz test fixtures bez danych rzeczywistych.
-- [ ] Krok 2: Dodac ograniczony, read-only collector wybranego zrodla i
+  request/result oraz test fixtures bez danych rzeczywistych. Dowod: sekcja
+  `Kontrakt pierwszego MVP i baseline` oraz cztery syntetyczne przypadki
+  w pliku fixtures (poprawny JSON). Uzytkownik zatwierdzil kontrakt
+  i rozpoczecie Kroku 2 odpowiedzia `ok go`.
+- [x] Krok 2 (zatwierdzony 2026-09-13): Dodac ograniczony, read-only
+  collector wybranego zrodla i
   feature-owned przygotowanie AI/skill oraz parsing typowanego draftu.
+  Collector musi przypiac commit, sprawdzac rozmiar przed odczytem i
+  ograniczac rzeczywisty HTTP body; nie uzywa pelnego drzewa GitLab.
   Dowod: test pustego katalogu, budzetu, sanitizacji, odmowy nieznanego pola,
   braku potwierdzonego ownershipu i braku mutation tools.
-- [ ] Krok 3: Dodac async API asysty i read-only walidacje kandydata; UI
+  Weryfikacja: collector przypina commit, sprawdza HEAD i limituje pobrany
+  body, a testy adaptera obejmuja odpowiedz bez Content-Length. Polski skill
+  jest osadzony inline w sesji bez tools; parser odrzuca nieznane pola,
+  niedozwolone source refs, potwierdzony ownership, frontend i propozycje
+  spoza trybu. Testy celowane i `mvn -q test` przeszly; raporty Surefire:
+  1409 testow, 0 failures/errors, 1 skipped. `git diff --check` bez bledow.
+- [x] Krok 3 (zatwierdzony 2026-09-13): Dodac async API asysty i read-only walidacje kandydata; UI
   wejscia z empty state i przeglad proponowanych encji. Dowod: MockMvc,
-  testy kontraktu FE, field-level diff, zrodla i ograniczenia, brak zapisu
-  przed decyzja uzytkownika.
-- [ ] Krok 4: Dodac prowadzone zapisy pojedynczych, zaakceptowanych encji
-  przez obecny maintenance flow; odswiezanie i kontynuacje po bledzie.
-  Dowod: create/update, referencje w kolejnosci, stale draft, validation,
-  otwarte pytania i brak czesciowego pliku.
-- [ ] Krok 5: Dodac wejscia z detail, Validation i Open Questions oraz
+  testy kontraktu FE, field-level diff, zrodla i ograniczenia, identyczne
+  reguly preview/commit oraz brak zapisu przed decyzja uzytkownika.
+  Weryfikacja: MockMvc obejmuje start/status, niepoprawny request i nieznane
+  pola; testy joba obejmuja pusty katalog, czesciowy wynik, unikalny
+  fingerprint findingu, brak mutacji, redakcje publicznego activity i
+  nieaktualny digest preview. Testy maintenance potwierdzaja identyczna
+  decyzje preview/commit dla create/update oraz brak zmiany YAML i digesta
+  przed zapisem. Draft wymaga uzasadnienia kazdego pola i odrzuca wrazliwa
+  tresc modelu. UI pokazuje diff, zrodla, pytania, limity i walidacje oraz
+  odzyskuje job po bledzie odczytu lub zmianie zakladki. Testy Angulara
+  524/524, build produkcyjny oraz `mvn -q -Pbackend-dev clean package`
+  przeszly; Surefire: 1427 testow, 0 failures/errors, 1 skipped.
+  `git diff --check` bez bledow. Wejscia z detail, Validation i Open
+  Questions pozostaja zakresem Kroku 5.
+- [x] Krok 4: Dodac prowadzone zapisy pojedynczych, zaakceptowanych encji
+  przez obecny maintenance flow z atomowym warunkiem zgodnosci dotknietych
+  pol; odswiezanie i kontynuacje po bledzie. Dowod: create/update, referencje
+  w kolejnosci, stale draft z innej karty, validation, otwarte pytania i brak
+  czesciowego pliku. Zakonczono 2026-09-13: operator wybiera pola i jawnie
+  potwierdza fakty wymagajace decyzji, po czym zapisuje lub pomija kolejna
+  propozycje. Backend korzysta wylacznie z draftu przechowywanego w jobie;
+  sprawdza digest przy create oraz wartosci wybranych pol przy update pod
+  lockiem maintenance, waliduje caly katalog i atomowo publikuje jeden YAML.
+  Konflikt nie zapisuje decyzji ani pliku; UI zachowuje wybor i odswieza job,
+  a przy utraconej odpowiedzi APPLY rozpoznaje zapis przez GET bez drugiego
+  POST. Po zapisie odswieza katalog, Validation i Open Questions. Test realnego
+  joba i store obejmuje system -> repository -> code-search-scope z nowym
+  digestem po kazdym kroku oraz odmowe scope po pominieciu repository bez
+  zmiany YAML. Testy maintenance obejmuja stale create/update, niezalezne
+  pola update i brak czesciowego zapisu przy walidacji. Weryfikacja: Angular
+  530/530, build produkcyjny, `mvn -q -Pbackend-dev clean package` (Surefire:
+  1440 testow, 0 failures/errors, 1 skipped), `git diff --check` bez bledow.
+  Uproszczona korekta reczna oraz wejscia z detail, Validation i Open
+  Questions pozostaja w Kroku 5.
+- [x] Krok 5: Dodac wejscia z detail, Validation i Open Questions oraz
   domyslnie uproszczony formularz, regresje wszystkich konsumentow;
   zaktualizowac kanoniczna architekture,
   lokalne `AGENTS.md` i dokumentacje ekranu. Dowod: testy FE, Angular build,
   backend package, `PackageDependencyGuardTest` i scenariusze uzytkownika.
+  Zakonczono 2026-09-13: detail otwiera `IMPROVE_ENTITY`, Validation i Open
+  Questions otwieraja `RESOLVE_FINDING` z konkretnym targetem; pytanie bez
+  encji nie uruchamia niedozwolonego joba. `Edit source` z Validation
+  otwiera wskazane pole, a formularz domyslnie pokazuje podstawowe sekcje;
+  zaawansowane i bledne pola mozna rozwinac bez utraty wartosci. Testy FE
+  obejmuja pusty katalog, detail, finding/pytanie, przelaczenie targetu,
+  focus, zachowanie wartosci i odswiezenie po zapisie. Zaktualizowano
+  kanoniczna architekture, lokalne `AGENTS.md`, opis ekranu i need.
+  Weryfikacja: Angular 545/545, build produkcyjny,
+  `mvn -q -Pbackend-dev clean package` (Surefire: 1440 testow,
+  0 failures/errors, 1 skipped), `PackageDependencyGuardTest` 4/4,
+  `git diff --check` bez bledow. Pomiar uzytecznosci z operatorami
+  pozostaje osobnym dzialaniem produktowym. Korekta po feedbacku operatora:
+  pole projektu GitLab zastapiono jednoznacznym wyborem unikalnych projektow
+  z katalogu w skonfigurowanej grupie i recznym wpisaniem projektu spoza
+  podpowiedzi. UI pokazuje pochodzenie listy i nazwe grupy, backend wysyla
+  projekt wzgledny wobec grupy i toleruje wklejona pelna sciezke. Weryfikacja
+  po korekcie: Angular 546/546, build produkcyjny,
+  `mvn -q -Pbackend-dev clean package` (Surefire: 1449 testow,
+  0 failures/errors, 1 skipped), `PackageDependencyGuardTest` 4/4,
+  `git diff --check` bez bledow.
+- [x] Krok 6: Przy recznym wskazaniu zrodla przyjac pelny URL projektu GitLab,
+  zweryfikowac jego origin, base path i przynaleznosc do skonfigurowanej
+  glownej grupy, wyliczyc wzgledna sciezke do odczytu oraz kanoniczne pola
+  `git` do propozycji `repo-map.yml`. Uzgodnic GitLab repository resolver z
+  repozytoriami w podgrupach, aby zapisany wpis nadawal sie do code search.
+  Zachowac wybor katalogowy, odrzucac
+  niejednoznaczne i obce URL przed startem joba. Dowod: testy URL w podgrupie,
+  poza grupa, na innym origin i z niebezpiecznym kodowaniem; testy promptu,
+  kontraktu FE, Angular build, backend package i dependency guard.
+  Zakonczono 2026-09-13: `projectUrl` jest walidowany przed utworzeniem joba,
+  a backend wyprowadza wzgledna sciezke do odczytu GitLab oraz kanoniczne
+  `git.group`, `git.project`, `git.projectPath` i `git.url` dla propozycji.
+  Parser odrzuca repozytorium o tozsamosci innej niz wybrane zrodlo, a resolver
+  code search uwzglednia repozytoria w podgrupach i odrzuca obca grupe.
+  Weryfikacja: Angular 547/547, build produkcyjny,
+  `mvn -q -Pbackend-dev clean package` (Surefire: 1460 testow,
+  0 failures/errors, 1 skipped), `PackageDependencyGuardTest` 4/4,
+  `git diff --check` bez bledow.
 
 Wykonanie kazdego kroku wymaga zatwierdzenia zgodnie z `docs/AGENTS.md`.

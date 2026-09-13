@@ -2,7 +2,9 @@ package pl.mkn.tdw.api.operationalcontext;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.api.operationalcontext.dto.OperationalContextDtos.OperationalContextProfiledReadModelDto;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogValidationService;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos;
+import pl.mkn.tdw.integrations.operationalcontext.OperationalContextRelationIndex;
 
 import java.util.List;
 
@@ -10,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.brokenCatalog;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.emptyCatalog;
 import static pl.mkn.tdw.api.operationalcontext.OperationalContextApiTestFixtures.map;
@@ -153,6 +158,39 @@ class OperationalContextViewServiceTest {
         assertTrue(findings.stream().anyMatch(finding ->
                 finding.category().equals("UNKNOWN_RELATION_TARGET")
                         && finding.detail().contains("missing-crm-system")));
+    }
+
+    @Test
+    void shouldExposeDistinctFingerprintsForFindingsWithSameCodeAndEntity() {
+        var first = new OperationalContextRelationIndex.ValidationFinding(
+                "warning", "MISSING_OWNER", "Brak ownera w ownership",
+                List.of(new OperationalContextRelationIndex.SourceRef(
+                        "systems.yml", "system", "order-intake", "$.systems[id=order-intake]", "ownership"
+                ))
+        );
+        var second = new OperationalContextRelationIndex.ValidationFinding(
+                "warning", "MISSING_OWNER", "Brak ownera w handoff",
+                List.of(new OperationalContextRelationIndex.SourceRef(
+                        "systems.yml", "system", "order-intake", "$.systems[id=order-intake].handoff", "handoff"
+                ))
+        );
+        var validationService = mock(OperationalContextCatalogValidationService.class);
+        when(validationService.validate(any())).thenReturn(
+                new OperationalContextCatalogValidationService.ValidationReport(
+                        List.of(first, second), List.of(
+                                new OperationalContextCatalogValidationService.FingerprintedFinding("fingerprint-first", first),
+                                new OperationalContextCatalogValidationService.FingerprintedFinding("fingerprint-second", second)
+                        )
+                )
+        );
+        var service = new OperationalContextViewService(port(emptyCatalog()), validationService);
+
+        var findings = service.validation();
+
+        assertEquals(List.of("fingerprint-first", "fingerprint-second"),
+                findings.stream().map(finding -> finding.id()).toList());
+        assertEquals("order-intake", findings.get(1).entityId());
+        assertEquals("Brak ownera w handoff", findings.get(1).detail());
     }
 
     @Test

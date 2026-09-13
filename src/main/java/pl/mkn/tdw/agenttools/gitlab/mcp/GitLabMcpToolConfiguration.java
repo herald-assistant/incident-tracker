@@ -9,9 +9,12 @@ import org.springframework.context.annotation.Configuration;
 public class GitLabMcpToolConfiguration {
 
     @Bean
-    ToolCallbackProvider gitLabToolCallbackProvider(GitLabMcpTools gitLabMcpTools) {
+    ToolCallbackProvider gitLabToolCallbackProvider(
+            GitLabMcpTools gitLabMcpTools,
+            GitLabRepositoryNavigationMcpTools navigationTools
+    ) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(gitLabMcpTools)
+                .toolObjects(gitLabMcpTools, navigationTools)
                 .build();
     }
 

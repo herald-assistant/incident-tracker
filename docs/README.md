@@ -61,8 +61,27 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   opisuje trudnosc pierwszego utworzenia i pozniejszej aktualizacji katalogu
   przez uzytkownika nieznajacego modelu Operational Context.
 - `plans/operational-context-ai-assisted-maintenance.md`
-  jest szkicem L2 pomocy AI na ekranie katalogu: prowadzone zbieranie
-  informacji, typowane propozycje, review i pojedyncze walidowane zapisy.
+  dokumentuje dostarczony przyrost L2 pomocy AI na ekranie katalogu:
+  prowadzone zbieranie informacji, typowane propozycje, review i pojedyncze
+  warunkowe zapisy. Wynikowy runtime opisuje
+  `architecture/operational-context-model-tools-and-usage.md`.
+- `needs/operational-context-repository-onboarding.md` i
+  `plans/operational-context-repository-onboarding.md`
+  opisuja potrzebe oraz dostarczone prowadzone podlaczanie nowego projektu
+  GitLab jako zrodla analiz, z rozroznieniem wdrazanego systemu, biblioteki i
+  kodu istniejacego systemu. Wynikowy runtime opisuje
+  `architecture/operational-context-model-tools-and-usage.md`.
+- `needs/operational-context-assisted-catalog-revision.md` i
+  `plans/operational-context-assisted-catalog-revision.md`
+  opisuja pelny kontekst katalogu dla AI, przypiete narzedzia odczytu GitLab,
+  zestawy zmian wielu encji i ich zbiorczy przeglad oraz zapis.
+- `plans/operational-context-assistance-gitlab-tree.md` dokumentuje wykonany
+  przyrost nawigacji po drzewie wybranego repozytorium i jasny status zadania
+  bez propozycji. Aktualny runtime opisuje
+  `architecture/operational-context-model-tools-and-usage.md`.
+- `plans/operational-context-universal-gitlab-tools.md` opisuje scalenie
+  katalogu GitLab MCP tools, odczyt powiazanych projektow z glownej grupy i
+  wybor samej galezi w formularzu asysty.
 - `needs/ui-explorer.md`
   opisuje potrzebe generowania funkcjonalnej lub technicznej dokumentacji
   zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez

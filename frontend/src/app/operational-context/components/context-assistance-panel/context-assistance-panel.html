@@ -1,0 +1,302 @@
+<section class="assistance-panel" aria-label="Asysta AI Operational Context">
+  <div class="assistance-panel__heading">
+    <div>
+      <p class="section-eyebrow">Asysta AI</p>
+      <h2>{{ modeLabel() }}</h2>
+      <p>Opisz fakty, które chcesz dodać lub poprawić. AI widzi pełny katalog Operational Context i może doczytać kod wskazanego repozytorium. Wybierzesz pola, sprawdzisz cały zestaw i zapiszesz go jednym krokiem.</p>
+    </div>
+  </div>
+
+  @if (activePrefill().target; as target) {
+    <p class="assistance-panel__target">Cel: <strong>{{ targetKindLabel(target.kind) }} · {{ target.entityType }}/{{ target.entityId }}</strong>@if (target.id) { <span>· {{ target.id }}</span> }</p>
+  }
+  @if (contextSwitchNotice()) { <p class="assistance-panel__error" role="status">{{ contextSwitchNotice() }}</p> }
+  @if (historyReadOnly()) {
+    <div class="assistance-panel__history-bar">
+      <p class="assistance-panel__history-notice" role="status">Zapis analizy z historii. Propozycje i decyzje są tylko do odczytu.</p>
+      <button type="button" class="secondary-button" (click)="newRunRequested.emit()">Nowa asysta na bieżącym katalogu</button>
+    </div>
+  }
+
+  @if (!historyReadOnly()) {
+  <form class="assistance-form" (submit)="start($event)">
+    <label for="assistance-description">Opis dla AI</label>
+    <textarea id="assistance-description" [formControl]="descriptionControl" maxlength="4000" rows="5" placeholder="Co wiadomo o systemie, procesie lub brakującym fakcie?"></textarea>
+    <small>{{ descriptionControl.value.length }}/4000 znaków</small>
+
+    <label class="assistance-form__checkbox" for="assistance-use-gitlab">
+      <input id="assistance-use-gitlab" type="checkbox" [formControl]="includeGitLabControl" />
+      <span>Dołącz projekt GitLab, jeśli AI ma analizować kod</span>
+    </label>
+    @if (includeGitLabControl.value) {
+      <div class="assistance-form__source">
+        @if (sourceOptionsLoading()) {
+          <p role="status">Sprawdzanie skonfigurowanej grupy i projektów…</p>
+        } @else if (sourceOptionsError()) {
+          <p class="assistance-panel__error" role="alert">{{ sourceOptionsError() }}</p>
+          <button type="button" class="secondary-button" (click)="retrySourceOptions()">Spróbuj ponownie</button>
+        } @else if (sourceOptions(); as options) {
+          @if (options.configuredGroup && options.configuredBaseUrl) {
+            <p class="assistance-form__source-intro">Asysta może doczytać potrzebne pliki z projektu w grupie <strong>{{ options.configuredGroup }}</strong> lub jej podgrupach. Podpowiedzi poniżej pochodzą z katalogu Operational Context, nie są pełną listą projektów GitLab.</p>
+            @if (options.projects.length && !manualProject()) {
+              <label for="assistance-catalogue-project">Projekt z katalogu</label>
+              <select id="assistance-catalogue-project" [formControl]="catalogueProjectControl">
+                <option value="">Wybierz projekt</option>
+                @for (project of options.projects; track project.project) {
+                  <option [value]="project.project">{{ project.projectPath }}</option>
+                }
+              </select>
+              <button type="button" class="assistance-form__switch" (click)="useManualProject()">Nie ma tu mojego projektu — wkleję jego adres</button>
+            } @else {
+              <label for="assistance-project">Pełny adres URL projektu GitLab</label>
+              <input id="assistance-project" type="text" inputmode="url" [formControl]="projectUrlControl" placeholder="{{ options.configuredBaseUrl }}/{{ options.configuredGroup }}/moj-projekt" autocomplete="url" />
+              <small>Wklej adres strony projektu z GitLaba. Aplikacja sprawdzi instancję i grupę, a następnie sama ustali ścieżkę projektu. Podgrupy mogą być częścią adresu.</small>
+              <small>Przykład dla tej instalacji: <code>{{ options.configuredBaseUrl }}/{{ options.configuredGroup }}/podgrupa/projekt</code></small>
+              @if (options.projects.length) {
+                <button type="button" class="assistance-form__switch" (click)="useCatalogueProject()">Wybiorę projekt z katalogu</button>
+              }
+            }
+            @if (manualRef()) {
+              <label for="assistance-ref">Gałąź</label>
+              <input id="assistance-ref" type="text" [formControl]="refControl" placeholder="np. main" />
+              <button type="button" class="assistance-form__switch" (click)="useBranchList()">Wybiorę gałąź z listy</button>
+            } @else {
+              <app-gitlab-branch-select
+                [sourceKey]="branchSourceKey()"
+                [branchLoader]="loadProjectBranches"
+                [selectedBranch]="refControl.value"
+                [disabled]="isRunning()"
+                label="Gałąź"
+                emptyLabel="Wybierz gałąź"
+                filterLabel="Filtruj gałęzie"
+                (branchSelected)="selectBranch($event)"
+              />
+              @if (!branchSourceKey()) { <small>Najpierw wybierz projekt, aby pobrać gałęzie.</small> }
+              <button type="button" class="assistance-form__switch" (click)="useManualRef()">Wpiszę gałąź ręcznie</button>
+            }
+            @if (activePrefill().mode === 'CREATE_AREA') {
+              <div class="assistance-form__repository-facts">
+                <label for="assistance-repository-usage">Jak używany jest ten projekt?</label>
+                <select id="assistance-repository-usage" [formControl]="repositoryUsageControl">
+                  <option value="UNKNOWN">Nie wiem</option>
+                  <option value="DEPLOYED_SYSTEM">Nowy wdrażany system</option>
+                  <option value="SHARED_LIBRARY">Niewdrażana biblioteka</option>
+                  <option value="EXISTING_SYSTEM">Kod istniejącego systemu</option>
+                </select>
+                @switch (repositoryUsageControl.value) {
+                  @case ('DEPLOYED_SYSTEM') {
+                    <label for="assistance-system-name">Nazwa nowego systemu (jeśli znana)</label>
+                    <input id="assistance-system-name" type="text" [formControl]="systemNameControl" maxlength="160" placeholder="np. Obsługa umów" />
+                    <details>
+                      <summary>Dodaj nazwę usługi widoczną w logach (opcjonalnie)</summary>
+                      <label for="assistance-runtime-service">Nazwa usługi w logach</label>
+                      <input id="assistance-runtime-service" type="text" [formControl]="runtimeServiceNameControl" maxlength="160" placeholder="np. agreement-service" />
+                    </details>
+                  }
+                  @case ('EXISTING_SYSTEM') {
+                    <label for="assistance-existing-system">Którego systemu dotyczy ten kod?</label>
+                    @if (systemOptions().length) {
+                      <select id="assistance-existing-system" [formControl]="existingSystemControl">
+                        <option value="">Wybierz system z katalogu</option>
+                        @for (system of systemOptions(); track system.id) {
+                          <option [value]="system.id">{{ system.label }} · {{ system.id }}</option>
+                        }
+                      </select>
+                    } @else {
+                      <p class="assistance-form__hint">W katalogu nie ma jeszcze systemów. Wybierz „Nie wiem” lub „Nowy wdrażany system” i opisz projekt.</p>
+                    }
+                  }
+                  @case ('SHARED_LIBRARY') {
+                    @if (systemOptions().length) {
+                      <details>
+                        <summary>Wskaż systemy korzystające z biblioteki (opcjonalnie)</summary>
+                        <div class="assistance-form__system-list" role="group" aria-label="Systemy korzystające z biblioteki">
+                          @for (system of systemOptions(); track system.id) {
+                            <label class="assistance-form__checkbox">
+                              <input type="checkbox" [checked]="librarySystemIds().includes(system.id)"
+                                [disabled]="librarySystemIds().length >= 5 && !librarySystemIds().includes(system.id)"
+                                (change)="setLibrarySystemSelected(system.id, $any($event.target).checked)" />
+                              <span>{{ system.label }} · {{ system.id }}</span>
+                            </label>
+                          }
+                        </div>
+                        <small>Maksymalnie 5 znanych systemów. Możesz zostawić to pole puste.</small>
+                      </details>
+                    } @else {
+                      <p class="assistance-form__hint">W katalogu nie ma jeszcze systemów do powiązania. Możesz opisać bibliotekę i dodać jej repozytorium.</p>
+                    }
+                  }
+                }
+              </div>
+            }
+          } @else {
+            <p class="assistance-panel__error" role="status">Ta instalacja nie ma skonfigurowanego adresu serwera lub głównej grupy GitLab. Wyłącz tę opcję, aby przygotować propozycję tylko z opisu.</p>
+          }
+        }
+      </div>
+    }
+    <button class="primary-button" type="submit" [disabled]="isRunning() || previewBusy() || decisionBusy() || !!pendingDecisionCheck()">{{ isRunning() ? 'Przygotowywanie…' : 'Przygotuj propozycję' }}</button>
+  </form>
+  }
+
+  @if (error()) { <p class="assistance-panel__error" role="alert">{{ error() }}</p> }
+  @if (pollError()) { <button type="button" class="secondary-button assistance-panel__retry" (click)="retryPolling()">Ponów odczyt joba</button> }
+
+  @if (job(); as currentJob) {
+    <section class="assistance-run" aria-label="Przebieg asysty">
+      <div class="assistance-run__status" role="status">
+        <strong>{{ statusLabel(currentJob.status) }}</strong>
+        <span>{{ currentJob.currentStepLabel }}</span>
+        @if (currentJob.errorMessage) { <span>{{ currentJob.errorMessage }}</span> }
+      </div>
+      <app-analysis-feature-aside
+        ariaLabel="Panel pracy asysty Operational Context"
+        [progressActive]="analysisProgressRunning()"
+        [aiActive]="aiWorkRunning()"
+        [progressCount]="currentJob.steps.length"
+        [aiCount]="currentJob.aiActivityEvents.length"
+        [showChat]="false"
+        [showFeedback]="false"
+      >
+        <div progressPanel>
+          <app-analysis-steps-panel
+            [steps]="currentJob.steps || []"
+            [aiActivityEvents]="currentJob.aiActivityEvents || []"
+            [preparedPrompt]="currentJob.preparedPrompt || ''"
+            [showAiWorkflow]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+        <div aiPanel>
+          @if (currentJob.usage; as usage) {
+            <div class="assistance-run__aside-usage" aria-label="Koszt asysty AI">
+              <span class="panel-chip"><span>Model</span> <strong>{{ usage.model }}</strong></span>
+              <span class="panel-chip"><span>Tokeny</span> <strong>{{ usage.totalTokens }}</strong></span>
+              <span class="panel-chip"><span>Kredyty</span> <strong>{{ usageCredits(usage) }}</strong></span>
+              <span class="panel-chip"><span>Koszt</span> <strong>{{ usageCost(usage) }}</strong></span>
+            </div>
+          }
+          <app-analysis-steps-panel
+            [steps]="currentJob.steps || []"
+            [aiActivityEvents]="currentJob.aiActivityEvents || []"
+            [showProgress]="false"
+            [showToolFeedback]="false"
+            [staticPanels]="true"
+          ></app-analysis-steps-panel>
+        </div>
+      </app-analysis-feature-aside>
+      @if (currentJob.sourceRevision; as revision) {
+        <p class="assistance-run__source">GitLab: {{ revision.project }}&#64;{{ revision.requestedRef }} · commit <code>{{ revision.commitId }}</code></p>
+      }
+      @if (currentJob.usage; as usage) {
+        <p class="assistance-run__usage">AI: {{ usage.model }} · {{ usage.totalTokens }} tokenów · {{ usageCost(usage) }}</p>
+      }
+      @if (currentJob.sourceRefs.length) {
+        <div class="assistance-run__list"><strong>Użyte źródła</strong><ul>@for (ref of currentJob.sourceRefs; track ref) { <li><code>{{ ref }}</code></li> }</ul></div>
+      }
+      @if (currentJob.visibilityLimits.length) {
+        <div class="assistance-run__list"><strong>Ograniczenia widoczności</strong><ul>@for (limit of currentJob.visibilityLimits; track limit) { <li>{{ limit }}</li> }</ul></div>
+      }
+    </section>
+
+    @if (currentJob.draft; as draft) {
+      <section class="assistance-review" aria-label="Przegląd propozycji">
+        <div class="assistance-review__heading">
+          <h3>Propozycje do przeglądu</h3>
+          <span>Wybierz pola w dowolnych propozycjach. Odznaczenie wszystkich pól pomija daną propozycję.</span>
+        </div>
+        @if (!draft.proposals.length) { <p>Nie ma bezpiecznej propozycji zmiany. Sprawdź pytania i ograniczenia poniżej.</p> }
+        @for (proposal of draft.proposals; track $index; let proposalIndex = $index) {
+          <article class="assistance-proposal">
+            <div class="assistance-proposal__heading">
+              <strong>{{ operationLabel(proposal.operation) }} · {{ proposal.entityType }}/{{ proposal.entityId }}</strong>
+              <span>{{ decisionLabel(proposalIndex) }}</span>
+            </div>
+            <p>{{ confidenceLabel(proposal.confidence) }} @if (proposal.requiresConfirmation) { · wymagane potwierdzenie człowieka }</p>
+            @if (!reviewComplete() && !historyReadOnly()) {
+              <button type="button" class="assistance-proposal__toggle" [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                (click)="setProposalSelected(proposalIndex, proposal, !selectedPaths(proposalIndex, proposal).length)">
+                {{ selectedPaths(proposalIndex, proposal).length ? 'Pomiń całą propozycję' : 'Wybierz całą propozycję' }}
+              </button>
+            }
+            @for (change of proposal.changes; track $index) {
+              <div class="assistance-change">
+                @if (!reviewComplete() && !historyReadOnly()) {
+                  <input type="checkbox" [attr.aria-label]="'Wybierz pole ' + change.path"
+                    [checked]="isSelected(proposalIndex, proposal, change.path)"
+                    [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                    (change)="setSelected(proposalIndex, proposal, change.path, $any($event.target).checked)" />
+                }
+                <span class="assistance-change__body">
+                  <strong>{{ change.path }}</strong>
+                  <span>Przed: <code>{{ valueText(change.before) }}</code></span>
+                  <span>Po: <code>{{ valueText(change.after) }}</code></span>
+                  <span>Dlaczego: {{ change.reason }}</span>
+                  <small>{{ basisLabel(change.basis) }} · {{ confidenceLabel(change.confidence) }} @if (change.requiresConfirmation) { · potwierdź fakt }</small>
+                  @if (change.sourceRefs.length) { <small>Źródła: {{ change.sourceRefs.join(', ') }}</small> }
+                  @if (!reviewComplete() && !historyReadOnly() && requiresConfirmation(proposal, change) && isSelected(proposalIndex, proposal, change.path)) {
+                    <label class="assistance-change__confirmation">
+                      <input type="checkbox" [checked]="isConfirmed(proposalIndex, change.path)" [disabled]="decisionBusy() || !!pendingDecisionCheck()"
+                        (change)="setConfirmed(proposalIndex, change.path, $any($event.target).checked)" />
+                      Potwierdzam ten fakt przed zapisem
+                    </label>
+                  }
+                </span>
+              </div>
+            }
+            @if (proposal.questions.length) { <div class="assistance-proposal__issues"><strong>Pytania</strong><ul>@for (question of proposal.questions; track question) { <li>{{ question }}</li> }</ul></div> }
+            @if (proposal.visibilityLimits.length) { <div class="assistance-proposal__issues"><strong>Ograniczenia</strong><ul>@for (limit of proposal.visibilityLimits; track limit) { <li>{{ limit }}</li> }</ul></div> }
+          </article>
+        }
+        @if (draft.proposals.length) {
+          <section class="assistance-batch" aria-label="Połączony przegląd zmian">
+            <h4>Połączony diff przed/po</h4>
+            @if (historyReadOnly() && !reviewComplete()) {
+              <p>To zapis propozycji z chwili analizy. Dla tego runu nie zapisano decyzji operatora.</p>
+            }
+            @if (selectedDiff().length) {
+              @for (change of selectedDiff(); track $index) {
+                <div class="assistance-batch__change">
+                  <strong>{{ change.entity }} · {{ change.path }}</strong>
+                  <span>Przed: <code>{{ valueText(change.before) }}</code></span>
+                  <span>Po: <code>{{ valueText(change.after) }}</code></span>
+                </div>
+              }
+            } @else { <p>Wszystkie propozycje są pominięte; katalog pozostanie bez zmian.</p> }
+            @if (batchPreview(); as preview) {
+              <p class="assistance-batch__validation" [attr.data-valid]="preview.valid" role="status">
+                {{ preview.valid ? 'Cały zestaw jest poprawny.' : 'Cały zestaw wymaga poprawy.' }}
+              </p>
+              @if (preview.violations.length) {
+                <div class="assistance-proposal__issues"><strong>Walidacja całego katalogu</strong><ul>
+                  @for (violation of preview.violations; track $index) {
+                    <li>{{ violation.severity }}: {{ violation.ruleCode || violation.code }} ({{ violation.fingerprint }})</li>
+                  }
+                </ul></div>
+              }
+              @for (entity of preview.entities; track entity.type + '/' + entity.id) {
+                <details class="assistance-proposal__candidate"><summary>Wynikowy wpis: {{ entity.type }}/{{ entity.id }} · {{ entity.sourceFile }}</summary><pre>{{ valueText(entity.payload) }}</pre></details>
+              }
+            } @else if (!reviewComplete() && !historyReadOnly()) {
+              <p class="assistance-proposal__notice">Sprawdź aktualny wybór przed zapisem. Zmiana pola lub potwierdzenia wymaga nowego podglądu.</p>
+            }
+            @if (!reviewComplete() && !historyReadOnly() && (currentJob.status === 'COMPLETED' || currentJob.status === 'PARTIAL')) {
+              <div class="assistance-proposal__actions">
+                <button type="button" class="secondary-button" [disabled]="!canPreview()" (click)="previewSelection()">{{ previewBusy() ? 'Sprawdzanie…' : 'Sprawdź cały zestaw' }}</button>
+                <button type="button" class="primary-button" [disabled]="!canSave()" (click)="saveBatch()">{{ decisionBusy() ? 'Zapisywanie…' : 'Zapisz cały zestaw' }}</button>
+              </div>
+              @if (decisionError()) { <p class="assistance-panel__error" role="alert">{{ decisionError() }}</p> }
+              @if (pendingDecisionCheck()) {
+                <button type="button" class="secondary-button assistance-panel__retry" [disabled]="decisionBusy()"
+                  (click)="retryDecisionCheck()">{{ decisionBusy() ? 'Sprawdzanie…' : 'Sprawdź wynik decyzji' }}</button>
+              }
+            }
+            @if (reviewComplete()) { <p>{{ historyReadOnly() ? 'Zapisane decyzje operatora dla tego runu.' : 'Cały zestaw został rozstrzygnięty. Katalog odświeżono po zapisie.' }}</p> }
+          </section>
+        }
+        @if (draft.questions.length) { <div class="assistance-run__list"><strong>Pytania do operatora</strong><ul>@for (question of draft.questions; track question) { <li>{{ question }}</li> }</ul></div> }
+      </section>
+    }
+  }
+</section>

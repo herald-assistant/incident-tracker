@@ -38,6 +38,26 @@ class OperationalContextRepositoryProjectPathResolverTest {
     }
 
     @Test
+    void shouldResolveRepositoryInNestedGitLabGroupButNotSiblingGroup() {
+        var resolver = resolver(
+                List.of(system("agreement-process")),
+                List.of(
+                        repository("agreement-repo", "CLP/PROCESSES/CLP_AGREEMENT_PROCESS", "CLP/PROCESSES", Map.of()),
+                        repository("foreign-repo", "CLP2/PROCESSES/OTHER", "CLP2/PROCESSES", Map.of())
+                ),
+                List.of(scope(
+                        "agreement-search", "system", "agreement-process",
+                        List.of("agreement-repo", "foreign-repo")
+                ))
+        );
+
+        assertEquals(
+                List.of("PROCESSES/CLP_AGREEMENT_PROCESS"),
+                resolver.resolveProjectPaths("CLP", List.of("agreement-process"))
+        );
+    }
+
+    @Test
     void shouldNotResolveRepositoryOnlySignalWithoutMatchingSystemId() {
         var resolver = resolver(
                 List.of(system("crm-customer-service")),

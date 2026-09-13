@@ -1,12 +1,13 @@
 <div class="branch-select" (click)="$event.stopPropagation()">
-  <span class="branch-select__label">Branch</span>
+  <span class="branch-select__label">{{ label() }}</span>
   <button
     class="branch-select__control"
     type="button"
     aria-haspopup="listbox"
+    [attr.aria-label]="label() + ': ' + selectedLabel()"
     [attr.aria-expanded]="open()"
     [attr.aria-busy]="loading()"
-    [disabled]="!systemId() || disabled()"
+    [disabled]="!effectiveSourceKey() || disabled()"
     (click)="toggle($event)"
   >
     <span>{{ selectedLabel() }}</span>
@@ -16,7 +17,7 @@
   @if (open()) {
     <div class="branch-select__menu">
       <label class="branch-select__search">
-        <span>Find branch</span>
+        <span>{{ filterLabel() }}</span>
         <input
           class="text-input"
           type="search"
@@ -37,7 +38,7 @@
           <button type="button" (click)="retry()">Ponów</button>
         </div>
       } @else {
-        <div class="branch-select__options" role="listbox" aria-label="Branch options">
+        <div class="branch-select__options" role="listbox" [attr.aria-label]="label()">
           @for (branch of branches(); track branch.name; let index = $index) {
             <button
               class="branch-select__option"

@@ -37,6 +37,10 @@ Obecnie obejmuje:
   podejmuj drugiej proby resume. Nie przywracaj
   blednego wariantu przez `setModel`. Progi, wykonanie SDK i rollback pozostaja
   mechanika platformy, a semantyczna potrzeba nalezy do feature'a.
+  `LONG_CONTEXT_REQUIRED` jest twardym wymaganiem: znany model bez wsparcia,
+  wylaczona polityka lub brak potwierdzenia tieru przez SDK blokuja run przed
+  pierwszym promptem typowanym bledem. `context-tier.enabled=false` przywraca
+  domyslne zachowanie tylko dla `AUTO`.
 - `copilot/runtime/execution/`
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
   event logging, controlled invocation exception oraz `CopilotExecutionResult`

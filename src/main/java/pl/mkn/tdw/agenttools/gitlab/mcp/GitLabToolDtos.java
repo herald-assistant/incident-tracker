@@ -1,5 +1,7 @@
 package pl.mkn.tdw.agenttools.gitlab.mcp;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import org.springframework.ai.chat.model.ToolContext;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryEndpoint;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
@@ -418,14 +420,22 @@ public final class GitLabToolDtos {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record GitLabReadRepositoryFileToolResponse(
             String group,
             String projectName,
             String branch,
             String filePath,
             String content,
-            boolean truncated
+            boolean truncated,
+            String sourceRef
     ) {
+        public GitLabReadRepositoryFileToolResponse(
+                String group, String projectName, String branch, String filePath,
+                String content, boolean truncated
+        ) {
+            this(group, projectName, branch, filePath, content, truncated, null);
+        }
     }
 
     public record GitLabSearchRepositoryCandidatesToolResponse(

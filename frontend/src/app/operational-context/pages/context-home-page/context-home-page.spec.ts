@@ -1,9 +1,11 @@
 import { provideLocationMocks } from '@angular/common/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter } from '@angular/router';
-import { of, Subject } from 'rxjs';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
+import { BehaviorSubject, of, Subject } from 'rxjs';
 
 import {
   ExplainableAggregateDto,
@@ -17,6 +19,11 @@ import {
 } from '../../models/operational-context.models';
 import { OperationalContextApiService } from '../../services/operational-context-api.service';
 import { OperationalContextMaintenanceApiService } from '../../services/operational-context-maintenance-api.service';
+import { OperationalContextAssistanceApiService } from '../../services/operational-context-assistance-api.service';
+import { AnalysisJobPollingService } from '../../../core/services/analysis-job-polling.service';
+import { OperationalContextAssistanceJob } from '../../models/operational-context-assistance.models';
+import { OperationalContextEditorState } from '../../models/operational-context-maintenance.models';
+import { ContextAssistancePanelComponent } from '../../components/context-assistance-panel/context-assistance-panel';
 import { OperationalContextMaintenanceFacade } from '../../services/operational-context-maintenance.facade';
 import { ContextHomePageComponent } from './context-home-page';
 
@@ -26,6 +33,69 @@ describe('ContextHomePageComponent', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     restoreNavigatorClipboard(navigatorClipboardDescriptor);
+  });
+
+  it('opens a saved assistance run from Analysis History without enabling a second write', async () => {
+    const { fixture, historyApi, routeParams, assistancePolling } = await createComponent(emptySummary(), []);
+    const archived: OperationalContextAssistanceJob = {
+      ...queuedAssistanceJob(), status: 'COMPLETED', currentStepCode: 'ANALYZE',
+      currentStepLabel: 'Przygotuj propozycje', preparedPrompt: 'Sanitizowany prompt asysty',
+      steps: [], completedAt: '2026-09-13T10:02:00Z'
+    };
+    historyApi.getRun.mockReturnValue(of({
+      analysisId: 'assistance-1', feature: 'operational-context-assistance',
+      name: 'Asysta AI', status: 'COMPLETED', createdAt: archived.createdAt,
+      updatedAt: archived.updatedAt, completedAt: archived.completedAt,
+      continuationEnabled: false,
+      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 1,
+        mode: 'CREATE_AREA', target: null, exportedAt: archived.updatedAt, job: archived }
+    }));
+
+    routeParams.next(convertToParamMap({ localRunId: 'assistance-1' }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(historyApi.getRun).toHaveBeenCalledWith('assistance-1');
+    expect(fixture.componentInstance.selectedTab()).toBe('assistance');
+    expect(fixture.componentInstance.assistanceHistoryReadOnly()).toBe(true);
+    expect(fixture.componentInstance.assistanceJob()?.preparedPrompt).toBe('Sanitizowany prompt asysty');
+    expect(fixture.nativeElement.querySelector('.assistance-form')).toBeNull();
+    expect(assistancePolling.poll).not.toHaveBeenCalled();
+  });
+
+  it('keeps the saved result visible when history is opened after the assistance panel was mounted', async () => {
+    const { fixture, historyApi, routeParams } = await createComponent(emptySummary(), []);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.selectTab('assistance');
+    fixture.detectChanges();
+
+    const archived: OperationalContextAssistanceJob = {
+      ...queuedAssistanceJob(), status: 'PARTIAL', currentStepCode: 'ANALYZE',
+      currentStepLabel: 'Przygotuj propozycje', preparedPrompt: 'Zapisany prompt asysty',
+      draft: { proposals: [], questions: ['Który zespół odpowiada za system?'], visibilityLimits: [] },
+      completedAt: '2026-09-13T10:02:00Z'
+    };
+    historyApi.getRun.mockReturnValue(of({
+      analysisId: 'assistance-1', feature: 'operational-context-assistance',
+      name: 'Asysta AI', status: 'PARTIAL', createdAt: archived.createdAt,
+      updatedAt: archived.updatedAt, completedAt: archived.completedAt,
+      continuationEnabled: false,
+      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 1,
+        mode: 'CREATE_AREA', target: null, exportedAt: archived.updatedAt, job: archived }
+    }));
+
+    routeParams.next(convertToParamMap({ localRunId: 'assistance-1' }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.assistance-run')).not.toBeNull();
+    expect(compiled.textContent).toContain('Który zespół odpowiada za system?');
+    expect(compiled.querySelector('.assistance-form')).toBeNull();
+    expect(fixture.componentInstance.assistanceJob()?.jobId).toBe('assistance-1');
   });
 
   it('should render empty catalogue state', async () => {
@@ -118,6 +188,210 @@ describe('ContextHomePageComponent', () => {
       'Open raw source',
       'Close drawer'
     ]);
+  });
+
+  it('opens assistance from the top toolbar without a duplicate tab or local-copy note', async () => {
+    const { fixture } = await createComponent(readySummary(), [systemRow()]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const button = compiled.querySelector('.context-toolbar__ai-button') as HTMLButtonElement;
+    expect(button.textContent?.trim()).toBe('Uzupełnij z AI');
+    expect(compiled.querySelector('.context-toolbar__note')).toBeNull();
+    expect(compiled.querySelector('.context-tabs')?.textContent).not.toContain('Asysta AI');
+    expect(compiled.textContent).not.toContain('Editable local copy');
+
+    button.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedTab()).toBe('assistance');
+    expect(button.getAttribute('aria-current')).toBe('page');
+    expect(compiled.querySelector('.assistance-panel')).not.toBeNull();
+  });
+
+  it('opens AI assistance from an empty catalogue while keeping manual tabs', async () => {
+    const { fixture } = await createComponent(emptySummary(), []);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find((candidate) => candidate.textContent?.includes('Utwórz obszar z pomocą AI'));
+    button?.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedTab()).toBe('assistance');
+    expect(fixture.nativeElement.textContent).toContain('zapiszesz go jednym krokiem');
+    expect(fixture.nativeElement.textContent).toContain('Systems');
+  });
+
+  it('opens entity improvement from the detail drawer with the selected entity target', async () => {
+    const { fixture, maintenance } = await createComponent(readySummary(), [systemRow()]);
+    maintenance.supports.mockReturnValue(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.openEntity({ type: 'system', id: 'crm-contact-service' });
+    fixture.detectChanges();
+
+    const button = fixture.nativeElement.querySelector('[aria-label="Zaproponuj uzupełnienie z AI"]') as HTMLButtonElement;
+    button.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedTab()).toBe('assistance');
+    expect(fixture.componentInstance.assistancePrefill()).toEqual({
+      mode: 'IMPROVE_ENTITY',
+      target: { kind: 'ENTITY', entityType: 'system', entityId: 'crm-contact-service' }
+    });
+    expect(fixture.nativeElement.querySelector('.entity-drawer')).toBeNull();
+  });
+
+  it('closes a pristine manual editor before opening assistance', async () => {
+    const { fixture, maintenance } = await createComponent(readySummary(), [systemRow()]);
+    maintenance.editor.set({ mode: 'edit', type: 'system', entity: editableSystem() });
+    maintenance.closeEditor.mockImplementation(() => maintenance.editor.set(null));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('app-context-entity-editor-drawer')).not.toBeNull();
+
+    fixture.componentInstance.startAreaAssistance();
+    fixture.detectChanges();
+
+    expect(maintenance.closeEditor).toHaveBeenCalled();
+    expect(maintenance.cancelDelete).toHaveBeenCalled();
+    expect(fixture.componentInstance.selectedTab()).toBe('assistance');
+    expect(fixture.nativeElement.querySelector('app-context-entity-editor-drawer')).toBeNull();
+  });
+
+  it('keeps the current operation visible while maintenance is busy', async () => {
+    const { fixture, maintenance } = await createComponent(readySummary(), [systemRow()]);
+    maintenance.busy.set(true);
+    fixture.detectChanges();
+
+    fixture.componentInstance.startAreaAssistance();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedTab()).toBe('overview');
+    expect(maintenance.closeEditor).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Trwa zapis lub usuwanie wpisu');
+  });
+
+  it('passes a validation finding and its exact target to an already mounted assistance form', async () => {
+    const finding = validationFinding('missing-owner', 'warning', 'ownership', 'system',
+      'crm-contact-service', 'Missing owner', 'systems.yml', '$.systems[id=crm-contact-service].ownership.status');
+    const { fixture, maintenance, assistanceApi } = await createComponent(readySummary(), [systemRow()], [], [], [finding]);
+    maintenance.supports.mockReturnValue(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.startAreaAssistance();
+    fixture.detectChanges();
+    const panel = fixture.debugElement.query(By.directive(ContextAssistancePanelComponent))
+      .componentInstance as ContextAssistancePanelComponent;
+    panel.descriptionControl.setValue('Poprzedni opis');
+
+    fixture.componentInstance.selectTab('validation');
+    fixture.detectChanges();
+    const action = Array.from(fixture.nativeElement.querySelectorAll('.maintenance-card__actions button') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.includes('Pomóż rozwiązać'));
+    action?.click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.selectedTab()).toBe('assistance');
+    expect(fixture.componentInstance.assistancePrefill().target).toEqual({
+      kind: 'VALIDATION_FINDING', entityType: 'system', entityId: 'crm-contact-service', id: 'missing-owner'
+    });
+    expect(panel.descriptionControl.value).toContain('Missing owner');
+    expect(panel.descriptionControl.value).not.toBe('Poprzedni opis');
+    expect(fixture.componentInstance.assistanceJob()).toBeNull();
+
+    assistanceApi.start.mockReturnValue(of(queuedAssistanceJob()));
+    panel.start();
+    expect(assistanceApi.start).toHaveBeenCalledWith(expect.objectContaining({
+      mode: 'RESOLVE_FINDING',
+      target: { kind: 'VALIDATION_FINDING', entityType: 'system', entityId: 'crm-contact-service', id: 'missing-owner' }
+    }));
+  });
+
+  it('focuses an editable finding field and only offers question assistance for an entity target', async () => {
+    const finding = validationFinding('missing-owner', 'warning', 'ownership', 'system',
+      'crm-contact-service', 'Missing owner', 'systems.yml', '$.systems[id=crm-contact-service].ownership.status');
+    const question = openQuestion('owner-question', 'warning', 'Who owns this system?');
+    const unresolved = openQuestion('general-question', 'info', 'Which entity is affected?', 'systems.yml', 'system', null);
+    const { fixture, maintenance } = await createComponent(readySummary(), [systemRow()], [question, unresolved], [], [finding]);
+    maintenance.supports.mockReturnValue(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.selectTab('validation');
+    fixture.detectChanges();
+    const edit = Array.from(fixture.nativeElement.querySelectorAll('.maintenance-card__actions button') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.includes('Edit source'));
+    edit?.click();
+    expect(maintenance.openEdit).toHaveBeenCalledWith('system', 'crm-contact-service');
+    expect(fixture.componentInstance.editorFocusPath()).toBe('ownership.status');
+
+    fixture.componentInstance.selectTab('open-questions');
+    fixture.detectChanges();
+    const cards = fixture.nativeElement.querySelectorAll('.maintenance-card--question') as NodeListOf<HTMLElement>;
+    expect(cards[0].textContent).toContain('Pomóż rozwiązać');
+    expect(cards[1].textContent).not.toContain('Pomóż rozwiązać');
+    expect(cards[1].textContent).toContain('Wskaż encję');
+    const assist = Array.from(cards[0].querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find((button) => button.textContent?.includes('Pomóż rozwiązać'));
+    assist?.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.assistancePrefill().target).toEqual({
+      kind: 'OPEN_QUESTION', entityType: 'system', entityId: 'crm-contact-service', id: 'owner-question'
+    });
+    expect(fixture.componentInstance.assistancePrefill().description).toContain(question.question);
+  });
+
+  it('keeps a pending start request and its job when switching away and back to assistance', async () => {
+    const { fixture, assistanceApi, assistancePolling } = await createComponent(emptySummary(), []);
+    const startResponse = new Subject<OperationalContextAssistanceJob>();
+    assistanceApi.start.mockReturnValue(startResponse.asObservable());
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.componentInstance.startAreaAssistance();
+    fixture.detectChanges();
+    const firstPanel = fixture.debugElement.query(By.directive(ContextAssistancePanelComponent))
+      .componentInstance as ContextAssistancePanelComponent;
+    firstPanel.descriptionControl.setValue('System CRM');
+    firstPanel.start();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.assistanceJob()).toBeNull();
+
+    fixture.componentInstance.selectTab('overview');
+    fixture.detectChanges();
+    startResponse.next(queuedAssistanceJob());
+    fixture.detectChanges();
+    expect(fixture.componentInstance.assistanceJob()?.jobId).toBe('assistance-1');
+    expect(assistancePolling.poll).toHaveBeenCalledTimes(1);
+
+    fixture.componentInstance.selectTab('assistance');
+    fixture.detectChanges();
+    const restoredPanel = fixture.debugElement.query(By.directive(ContextAssistancePanelComponent))
+      .componentInstance as ContextAssistancePanelComponent;
+    expect(restoredPanel).toBe(firstPanel);
+    expect(restoredPanel.job()?.jobId).toBe('assistance-1');
+    expect(assistancePolling.poll).toHaveBeenCalledTimes(1);
+    expect(assistanceApi.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes summary, validation and open questions after an assistance save', async () => {
+    const { fixture, api } = await createComponent(emptySummary(), []);
+    fixture.componentInstance.selectTab('assistance');
+    fixture.detectChanges();
+    const panel = fixture.debugElement.query(By.directive(ContextAssistancePanelComponent))
+      .componentInstance as ContextAssistancePanelComponent;
+    const initialSummaryLoads = api.getSummary.mock.calls.length;
+    const initialValidationLoads = api.getValidation.mock.calls.length;
+    const initialQuestionLoads = api.getOpenQuestions.mock.calls.length;
+
+    panel.catalogChanged.emit({ type: 'system', id: 'customer-api' });
+    fixture.detectChanges();
+
+    expect(api.getSummary).toHaveBeenCalledTimes(initialSummaryLoads + 1);
+    expect(api.getValidation).toHaveBeenCalledTimes(initialValidationLoads + 1);
+    expect(api.getOpenQuestions).toHaveBeenCalledTimes(initialQuestionLoads + 1);
   });
 
   it('should render the source editor layout as read-only entity preview', async () => {
@@ -386,7 +660,7 @@ async function createComponent(
     capabilitiesLoading: signal(false),
     capabilitiesError: signal(''),
     writable: signal(false),
-    editor: signal(null),
+    editor: signal<OperationalContextEditorState | null>(null),
     busy: signal(false),
     error: signal(''),
     fieldErrors: signal([]),
@@ -408,6 +682,15 @@ async function createComponent(
   const maintenanceApi = {
     getEntity: vi.fn(() => of(editableSystem()))
   };
+  const assistanceApi = {
+    start: vi.fn(),
+    get: vi.fn(),
+    decide: vi.fn()
+  };
+  const assistanceUpdates = new Subject<OperationalContextAssistanceJob>();
+  const assistancePolling = { poll: vi.fn(() => assistanceUpdates.asObservable()) };
+  const historyApi = { getRun: vi.fn() };
+  const routeParams = new BehaviorSubject(convertToParamMap({}));
 
   await TestBed.configureTestingModule({
     imports: [ContextHomePageComponent],
@@ -417,6 +700,10 @@ async function createComponent(
       provideRouter([]),
       { provide: OperationalContextApiService, useValue: api },
       { provide: OperationalContextMaintenanceApiService, useValue: maintenanceApi },
+      { provide: OperationalContextAssistanceApiService, useValue: assistanceApi },
+      { provide: AnalysisJobPollingService, useValue: assistancePolling },
+      { provide: AnalysisRunHistoryApiService, useValue: historyApi },
+      { provide: ActivatedRoute, useValue: { queryParamMap: routeParams.asObservable() } },
       { provide: OperationalContextMaintenanceFacade, useValue: maintenance }
     ]
   }).compileComponents();
@@ -425,13 +712,25 @@ async function createComponent(
     fixture: TestBed.createComponent(ContextHomePageComponent),
     api,
     maintenanceApi,
-    maintenance
+    maintenance,
+    assistanceApi,
+    assistancePolling,
+    historyApi,
+    routeParams
+  };
+}
+
+function queuedAssistanceJob(): OperationalContextAssistanceJob {
+  return {
+    jobId: 'assistance-1', status: 'QUEUED', currentStepCode: 'QUEUED', currentStepLabel: 'W kolejce',
+    createdAt: '2026-09-13T10:00:00Z', updatedAt: '2026-09-13T10:00:00Z',
+    steps: [], aiActivityEvents: [], sourceRefs: [], visibilityLimits: [], previews: []
   };
 }
 
 function editableSystem() {
   return {
-    type: 'system',
+    type: 'system' as const,
     id: 'crm-contact-service',
     sourceFile: 'systems.yml',
     payload: {

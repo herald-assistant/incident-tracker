@@ -57,6 +57,23 @@ class OperationalContextAdapterTest {
     }
 
     @Test
+    void shouldCaptureAllDecodedRuntimeDocumentsWithTheSameCatalogDigest() {
+        var adapter = OperationalContextAdapterTestCreator.create(testProperties());
+
+        var documents = adapter.currentDocumentSnapshot();
+
+        assertEquals(adapter.currentSnapshot().contentDigest(), documents.contentDigest());
+        assertSame(adapter.currentSnapshot().catalog(), documents.catalog());
+        assertEquals(Set.of(
+                "teams.yml", "processes.yml", "systems.yml", "integrations.yml",
+                "repo-map.yml", "code-search-scopes.yml", "bounded-contexts.yml",
+                "glossary.yml", "handoff-rules.yml"
+        ), documents.documents().keySet());
+        assertEquals(2, ((List<?>) documents.documents().get("systems.yml").get("systems")).size());
+        assertEquals(2, ((List<?>) documents.documents().get("repo-map.yml").get("repositories")).size());
+    }
+
+    @Test
     void shouldLoadTestCatalogWithoutIntegrationParticipantReferenceDuplication() {
         var adapter = OperationalContextAdapterTestCreator.create(testProperties());
 

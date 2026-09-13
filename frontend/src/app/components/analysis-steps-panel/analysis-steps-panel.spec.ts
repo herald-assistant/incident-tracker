@@ -208,6 +208,24 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(promptTextarea?.value).toContain('Provider: dynatrace, category: runtime-signals');
   });
 
+  it('should expose the assistance prompt on the Prepare AI step', async () => {
+    const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
+    fixture.componentRef.setInput('steps', [{
+      code: 'PREPARE_AI', label: 'Przygotuj asystę AI', phase: 'AI_PREPARATION',
+      status: 'COMPLETED', message: 'Prompt gotowy.', itemCount: 1,
+      startedAt: '2026-09-13T10:00:00Z', completedAt: '2026-09-13T10:00:01Z'
+    }]);
+    fixture.componentRef.setInput('preparedPrompt', 'Sanitizowany prompt asysty');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Inicjalny prompt asysty Operational Context');
+    expect((compiled.querySelector('.prepared-prompt__textarea') as HTMLTextAreaElement)?.value)
+      .toBe('Sanitizowany prompt asysty');
+  });
+
   it('should expose the initial Change Verification prompt on the source context step', async () => {
     const fixture = TestBed.createComponent(AnalysisStepsPanelComponent);
     fixture.componentRef.setInput('steps', [buildChangeVerificationSourceContextStep()]);

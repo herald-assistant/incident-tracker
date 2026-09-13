@@ -89,7 +89,7 @@ public class ApiExceptionHandler {
         );
         var status = switch (exception.code()) {
             case ENTITY_NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case DUPLICATE_ID, ID_MISMATCH, DELETE_RESTRICTED -> HttpStatus.CONFLICT;
+            case DUPLICATE_ID, ID_MISMATCH, DELETE_RESTRICTED, STALE_PROPOSAL -> HttpStatus.CONFLICT;
             case ENTITY_TYPE_UNSUPPORTED, VALIDATION_FAILED -> HttpStatus.UNPROCESSABLE_ENTITY;
         };
         return ResponseEntity.status(status).body(response);
@@ -103,6 +103,7 @@ public class ApiExceptionHandler {
         var response = new ApiErrorResponse(exception.code().name(), exception.getMessage(), fieldErrors);
         var status = switch (exception.code()) {
             case INVALID_CANDIDATE -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case STALE_CANDIDATE -> HttpStatus.CONFLICT;
             case INVALID_STORAGE_PATH, LOCAL_COPY_UNAVAILABLE, CORRUPT_STORE ->
                     HttpStatus.SERVICE_UNAVAILABLE;
         };

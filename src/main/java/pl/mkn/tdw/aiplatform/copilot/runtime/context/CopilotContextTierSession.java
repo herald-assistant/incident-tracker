@@ -232,9 +232,8 @@ public final class CopilotContextTierSession {
                     blockedAction + ", ponieważ SDK nie potwierdziło efektywnego tieru sesji.",
                     details
             );
-            throw new IllegalStateException(
-                    "Copilot SDK could not verify long_context before the next message.",
-                    failure
+            throw new CopilotRequiredContextTierException(
+                    "Nie udało się potwierdzić wymaganego `long_context` przed wysłaniem wiadomości do AI."
             );
         }
 
@@ -252,9 +251,9 @@ public final class CopilotContextTierSession {
                     blockedAction + ", ponieważ efektywny tier sesji nie jest równy `long_context`.",
                     details
             );
-            throw new IllegalStateException(
-                    "Copilot SDK did not activate long_context before the next message; effective tier: "
-                            + effectiveTier.contextTier()
+            throw new CopilotRequiredContextTierException(
+                    "Copilot nie aktywował wymaganego `long_context` przed wysłaniem wiadomości do AI "
+                            + "(efektywny tier: " + effectiveTier.contextTier() + ")."
             );
         }
 

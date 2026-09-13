@@ -7,11 +7,14 @@ export interface GitLabBranchOption {
   isDefault: boolean;
 }
 
-export interface GitLabSystemBranchesResponse {
-  systemId: string;
+export interface GitLabBranchesResponse {
   branches: GitLabBranchOption[];
   truncated: boolean;
   warnings: string[];
+}
+
+export interface GitLabSystemBranchesResponse extends GitLabBranchesResponse {
+  systemId: string;
 }
 
 @Injectable({ providedIn: 'root' })

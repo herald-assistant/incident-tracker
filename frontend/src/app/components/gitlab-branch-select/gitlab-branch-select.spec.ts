@@ -66,4 +66,36 @@ describe('GitLabBranchSelectComponent', () => {
 
     expect(selected).toEqual(['release/2026']);
   });
+
+  it('loads branches for a selected project through the shared picker', async () => {
+    const loader = vi.fn((sourceKey: string, search: string) => of({
+      branches: search
+        ? [{ name: 'release/2026', isDefault: false }]
+        : [{ name: 'main', isDefault: true }, { name: 'release/2026', isDefault: false }],
+      truncated: false,
+      warnings: []
+    }));
+    const fixture = TestBed.createComponent(GitLabBranchSelectComponent);
+    const selected: string[] = [];
+    fixture.componentInstance.branchSelected.subscribe((branch) => selected.push(branch));
+    fixture.componentRef.setInput('branchLoader', loader);
+    fixture.componentRef.setInput('sourceKey', 'project:nested/customer-api');
+    fixture.detectChanges();
+
+    expect(loader).toHaveBeenCalledWith('project:nested/customer-api', '');
+    expect(api.getBranches).not.toHaveBeenCalled();
+    expect(selected).toEqual(['main']);
+
+    const nativeElement = fixture.nativeElement as HTMLElement;
+    nativeElement.querySelector<HTMLButtonElement>('.branch-select__control')?.click();
+    fixture.detectChanges();
+    const filter = nativeElement.querySelector<HTMLInputElement>('input[type="search"]')!;
+    filter.value = 'release';
+    filter.dispatchEvent(new Event('input'));
+    await new Promise((resolve) => setTimeout(resolve, 230));
+    fixture.detectChanges();
+    expect(loader).toHaveBeenCalledWith('project:nested/customer-api', 'release');
+    nativeElement.querySelector<HTMLButtonElement>('.branch-select__option')?.click();
+    expect(selected).toEqual(['main', 'release/2026']);
+  });
 });

@@ -44,6 +44,22 @@ startowym dla tej grupy.
   zrodla mozna odroznic obserwacje od interpretacji i wskazac zrodlo.
 - Blad AI, niedostepne zrodlo lub niepoprawna propozycja nie niszcza lokalnego
   katalogu i pozostawiaja reczna edycje dostepna.
+- Przy opcjonalnym zrodle GitLab uzytkownik rozumie, jaka grupa jest
+  skonfigurowana, skad pochodza podpowiedzi projektow i jaka nazwe projektu
+  zostanie wyslana. Ten sam projekt nie pojawia sie wielokrotnie, nawet gdy
+  katalog ma kilka wpisow wskazujacych jedno repozytorium.
+- Gdy projektu nie ma w podpowiedziach, uzytkownik moze wkleic pelny adres
+  projektu GitLab. Nie musi rozkladac go na grupe glowna, podgrupe i nazwe
+  projektu; obcy lub niejednoznaczny adres jest odrzucany przed analiza.
+- Po wskazaniu projektu AI dostaje ograniczona mape jego katalogow i plikow
+  oraz moze zejsc glebiej w tym samym przypietym commicie. Same nazwy nie
+  potwierdzaja znaczenia kodu: wnioski o implementacji wymagaja odczytu
+  odpowiedniego pliku. Zadanie zwracajace tylko pytania nie wyglada jak
+  zakonczony przeglad propozycji.
+- Przy sprawdzaniu integracji lub zaleznosci biblioteki AI moze doczytac inny
+  projekt z tej samej skonfigurowanej glownej grupy GitLab. Katalog podaje
+  znane projekty jako podpowiedzi, ale nie blokuje projektow jeszcze w nim
+  niezapisanych. Odczytane pliki maja rozroznialne projekty i commity w zrodlach.
 
 ## Ograniczenia produktowe
 
@@ -51,8 +67,12 @@ startowym dla tej grupy.
   kodu, runtime, endpointow, tabel ani konfiguracji.
 - `system` pozostaje kanonicznym bytem. Ownership moze byc potwierdzony tylko
   na systemie lub bounded context; brak potwierdzenia pozostaje jawny.
-- Uzytkownik wybiera zakres czytanych zrodel. Dostep do zrodla nie oznacza, ze
+- Uzytkownik wybiera glowny projekt i galaz; powiazane projekty w glownej
+  grupie sa dostepne do uzasadnionego doczytania przez AI. Dostep do zrodla nie oznacza, ze
   kazda wywnioskowana z niego relacja jest faktem katalogowym.
+- Asysta ma najwyzej jeden jawnie wybrany projekt GitLab jako glowny target;
+  inne projekty nie moga go zastapic jako dowodu tozsamosci. Wskazana strona
+  Confluence pozostaje poza tym przyrostem.
 - Dane wrazliwe, sekrety i prywatne dane kontaktowe nie powinny byc
   przenoszone do katalogu ani do materialu wysylanego do AI.
 - Reczna edycja oraz Validation i Open Questions pozostaja dostepne rownolegle
@@ -67,9 +87,9 @@ startowym dla tej grupy.
 - Historia wersji, rollback, wieloosobowy approval workflow i wspoldzielony
   katalog.
 
-## Otwarte decyzje produktowe
+## Walidacja z uzytkownikami
 
-- Czy pierwszy przyrost ma korzystac tylko z opisu uzytkownika i jednego
-  wskazanego projektu GitLab, czy od razu takze ze wskazanej strony Confluence?
-- Jakie trzy scenariusze uzytkownikow posluza do pomiaru czasu, zrozumienia
-  proponowanych zmian i liczby odrzuconych sugestii?
+Do pomiaru czasu, zrozumienia zmian i liczby odrzuconych sugestii sluza trzy
+scenariusze: utworzenie pierwszego obszaru, uzupelnienie istniejacej encji
+oraz rozwiazanie findingu lub otwartego pytania. Ich przebieg jest opisany w
+kanonicznej dokumentacji ekranu. Pomiar z operatorami pozostaje do wykonania.

@@ -47,7 +47,35 @@ class GitLabMcpToolsContextTest {
         assertTrue(toolNames.contains("gitlab_read_openapi_endpoint_slice"));
         assertTrue(toolNames.contains("gitlab_read_frontend_route_branch_slice"));
         assertTrue(toolNames.contains("gitlab_read_frontend_typescript_symbol_slice"));
+        assertTrue(toolNames.contains("gitlab_list_repository_files"));
+        assertTrue(toolNames.contains("gitlab_list_repository_branches"));
+        assertTrue(toolNames.contains("gitlab_list_repository_tree"));
+        assertTrue(toolNames.contains("gitlab_search_repository_files"));
+        assertFalse(toolNames.stream().anyMatch(name -> name.startsWith("gitlab_pinned_")));
         assertFalse(toolNames.contains("gitlab_build_frontend_screen_reachability"));
+    }
+
+    @Test
+    void shouldExposeOneRepositoryNavigationSchemaWithoutGroupOrCommit() throws Exception {
+        var callbacksByName = Arrays.stream(toolCallbackProviders)
+                .flatMap(provider -> Arrays.stream(provider.getToolCallbacks()))
+                .collect(Collectors.toMap(tool -> tool.getToolDefinition().name(), tool -> tool));
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of("projectName", "search", "reason"),
+                schemaProperties(callbacksByName.get("gitlab_list_repository_branches")).keySet());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of("projectName", "branchRef", "pathPrefix", "afterPath", "reason"),
+                schemaProperties(callbacksByName.get("gitlab_list_repository_files")).keySet());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of("projectName", "branchRef", "path", "cursor", "reason"),
+                schemaProperties(callbacksByName.get("gitlab_list_repository_tree")).keySet());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of("projectName", "branchRef", "query", "pathPrefix", "afterPath", "reason"),
+                schemaProperties(callbacksByName.get("gitlab_search_repository_files")).keySet());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                java.util.Set.of("projectName", "branchRef", "applicationNames", "filePath", "maxCharacters", "reason"),
+                schemaProperties(callbacksByName.get("gitlab_read_repository_file")).keySet());
     }
 
     @Test

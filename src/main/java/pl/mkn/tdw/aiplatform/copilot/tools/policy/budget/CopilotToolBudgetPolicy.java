@@ -19,15 +19,30 @@ public class CopilotToolBudgetPolicy implements CopilotToolInvocationPolicy {
 
     @Override
     public void beforeInvocation(CopilotToolInvocationPolicyRequest request) {
-        if (goalDriven(request.sessionContext())) {
-            return;
+        if (!goalDriven(request.sessionContext())) {
+            var decision = beforeInvocation(request.sessionId(), request.toolName(), request.rawArguments());
+            if (decision.denied()) {
+                throw new CopilotToolInvocationRejectedException(
+                        decision.reason(),
+                        CopilotToolBudgetDtos.deniedResult(decision)
+                );
+            }
         }
-        var decision = beforeInvocation(request.sessionId(), request.toolName(), request.rawArguments());
-        if (decision.denied()) {
-            throw new CopilotToolInvocationRejectedException(
-                    decision.reason(),
-                    CopilotToolBudgetDtos.deniedResult(decision)
-            );
+        enforceSessionHardBudget(request);
+    }
+
+    private void enforceSessionHardBudget(CopilotToolInvocationPolicyRequest request) {
+        var hardBudget = request.sessionContext() != null
+                ? request.sessionContext().hiddenContext().get(AgentToolContextKeys.TOOL_HARD_BUDGET)
+                : null;
+        if (hardBudget instanceof CopilotSessionHardToolBudget sessionBudget) {
+            var denial = sessionBudget.acquireOrDenial(request.toolName());
+            if (denial != null) {
+                var decision = CopilotToolBudgetDecision.denied(
+                        request.sessionId(), request.toolName(), java.util.List.of(denial));
+                throw new CopilotToolInvocationRejectedException(
+                        denial, CopilotToolBudgetDtos.deniedResult(decision));
+            }
         }
     }
 

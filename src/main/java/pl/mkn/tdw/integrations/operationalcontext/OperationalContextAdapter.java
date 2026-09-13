@@ -22,6 +22,15 @@ public class OperationalContextAdapter implements OperationalContextPort {
     }
 
     @Override
+    public OperationalContextDocumentSnapshot currentDocumentSnapshot() {
+        var stored = snapshotStore.currentStoredSnapshot();
+        var snapshot = stored.readSnapshot();
+        return new OperationalContextDocumentSnapshot(
+                snapshot.contentDigest(), snapshot.source(), snapshot.catalog(), stored.decodedDocuments()
+        );
+    }
+
+    @Override
     public OperationalContextReadSession capture() {
         var snapshot = snapshotStore.currentStoredSnapshot().readSnapshot();
         return new OperationalContextReadSession(snapshot, queryService);

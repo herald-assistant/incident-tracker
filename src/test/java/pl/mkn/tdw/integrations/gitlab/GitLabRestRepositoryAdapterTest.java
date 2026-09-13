@@ -15,6 +15,7 @@ import pl.mkn.tdw.integrations.gitlab.instructions.InstructionRepositoryInventor
 import pl.mkn.tdw.testsupport.integrations.GitLabIntegrationTestCreator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -327,6 +328,127 @@ class GitLabRestRepositoryAdapterTest {
     }
 
     @Test
+    void listsNonRecursiveDirectoryPagesAndRejectsCursorFromAnotherPathOrCommit() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties,
+                new GitLabRestClientFactory(properties, restClientBuilder));
+        var firstPage = "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api"
+                + "/repository/tree?recursive=false&per_page=100&ref=" + "a".repeat(40)
+                + "&page=1&path=Backend";
+        var secondPage = firstPage.replace("&page=1", "&page=2");
+        var firstBody = """
+                [{"path":"Backend/src","type":"tree"},
+                 {"path":"Backend/pom.xml","type":"blob"}]
+                """;
+
+        server.expect(requestTo(firstPage)).andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(firstBody, MediaType.APPLICATION_JSON).header("X-Next-Page", "2"));
+        server.expect(requestTo(firstPage)).andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(firstBody, MediaType.APPLICATION_JSON).header("X-Next-Page", "2"));
+        server.expect(requestTo(secondPage)).andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[{\"path\":\"Backend/README.md\",\"type\":\"blob\"}]",
+                        MediaType.APPLICATION_JSON));
+
+        var first = adapter.listRepositoryTreeChildrenPage("CRM/runtime", "crm-customer-api",
+                "a".repeat(40), "Backend", "", 1);
+        assertEquals("Backend/src", first.nodes().get(0).path());
+        assertTrue(first.nextCursor() != null);
+        assertThrows(IllegalArgumentException.class, () -> adapter.listRepositoryTreeChildrenPage(
+                "CRM/runtime", "crm-customer-api", "a".repeat(40), "Frontend", first.nextCursor(), 1));
+        assertThrows(IllegalArgumentException.class, () -> adapter.listRepositoryTreeChildrenPage(
+                "CRM/runtime", "crm-customer-api", "b".repeat(40), "Backend", first.nextCursor(), 1));
+        var second = adapter.listRepositoryTreeChildrenPage("CRM/runtime", "crm-customer-api",
+                "a".repeat(40), "Backend", first.nextCursor(), 1);
+        assertEquals("Backend/pom.xml", second.nodes().get(0).path());
+        var third = adapter.listRepositoryTreeChildrenPage("CRM/runtime", "crm-customer-api",
+                "a".repeat(40), "Backend", second.nextCursor(), 1);
+        assertEquals("Backend/README.md", third.nodes().get(0).path());
+        assertEquals(null, third.nextCursor());
+        server.verify();
+    }
+
+    @Test
+    void pagedTreeStopsAfterTwoHundredBlobsAndResumesWithoutLoadingTheWholeRepository() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties,
+                new GitLabRestClientFactory(properties, restClientBuilder));
+        var base = "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api"
+                + "/repository/tree?recursive=true&per_page=100&ref=1234567890abcdef&page=";
+
+        server.expect(requestTo(base + "1"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(treePageBody(0, 100, "blob"), MediaType.APPLICATION_JSON)
+                        .header("X-Next-Page", "2"));
+        server.expect(requestTo(base + "2"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(treePageBody(100, 100, "blob"), MediaType.APPLICATION_JSON)
+                        .header("X-Next-Page", "3"));
+        server.expect(requestTo(base + "3"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(treePageBody(200, 1, "blob"), MediaType.APPLICATION_JSON));
+
+        var first = adapter.listRepositoryFilesPage("CRM/runtime", "crm-customer-api",
+                "1234567890abcdef", "", "", 200);
+
+        assertEquals(200, first.files().size());
+        assertEquals("src/File199.java", first.files().get(199).filePath());
+        assertTrue(first.nextCursor() != null);
+        assertThrows(IllegalArgumentException.class, () -> adapter.listRepositoryFilesPage(
+                "CRM/runtime", "crm-customer-api", "1234567890abcdef", "src",
+                first.nextCursor(), 200));
+        assertThrows(IllegalArgumentException.class, () -> adapter.listRepositoryFilesPage(
+                "CRM/runtime", "crm-customer-api", "different-commit", "",
+                first.nextCursor(), 200));
+        var second = adapter.listRepositoryFilesPage("CRM/runtime", "crm-customer-api",
+                "1234567890abcdef", "", first.nextCursor(), 200);
+        assertEquals(1, second.files().size());
+        assertEquals("src/File200.java", second.files().get(0).filePath());
+        assertEquals(null, second.nextCursor());
+        server.verify();
+    }
+
+    @Test
+    void pagedTreeCapsScanningAtFivePagesEvenWhenTheyContainNoBlobs() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(properties,
+                new GitLabRestClientFactory(properties, restClientBuilder));
+        var base = "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcrm-customer-api"
+                + "/repository/tree?recursive=true&per_page=100&ref=1234567890abcdef&page=";
+        for (var page = 1; page <= 5; page++) {
+            server.expect(requestTo(base + page))
+                    .andExpect(method(HttpMethod.GET))
+                    .andRespond(withSuccess(treePageBody((page - 1) * 100, 100, "tree"), MediaType.APPLICATION_JSON)
+                            .header("X-Next-Page", Integer.toString(page + 1)));
+        }
+        server.expect(requestTo(base + "6"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(treePageBody(500, 1, "blob"), MediaType.APPLICATION_JSON));
+
+        var first = adapter.listRepositoryFilesPage("CRM/runtime", "crm-customer-api",
+                "1234567890abcdef", "", "", 40);
+
+        assertTrue(first.files().isEmpty());
+        assertTrue(first.nextCursor() != null);
+        var second = adapter.listRepositoryFilesPage("CRM/runtime", "crm-customer-api",
+                "1234567890abcdef", "", first.nextCursor(), 40);
+        assertEquals("src/File500.java", second.files().get(0).filePath());
+        assertEquals(null, second.nextCursor());
+        server.verify();
+    }
+
+    private String treePageBody(int start, int count, String type) {
+        return java.util.stream.IntStream.range(start, start + count)
+                .mapToObj(index -> "{\"path\":\"src/File" + index + ".java\",\"type\":\"" + type + "\"}")
+                .collect(java.util.stream.Collectors.joining(",", "[", "]"));
+    }
+
+    @Test
     void shouldReadRawFileAndBuildChunkFromGitLabRestApi() {
         var properties = gitLabProperties("CRM/runtime");
         var restClientBuilder = RestClient.builder();
@@ -520,6 +642,47 @@ class GitLabRestRepositoryAdapterTest {
         assertEquals("release/crm-ui", revision.ref());
         assertEquals("crm-ui-commit-20260816", revision.commitId());
         assertEquals("2026-08-16T09:30:00.000Z", revision.committedAt());
+        server.verify();
+    }
+
+    @Test
+    void shouldReadSmallRawFileOnlyWithinTransportByteLimit() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(
+                properties, new GitLabRestClientFactory(properties, restClientBuilder)
+        );
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcustomer-api/repository/files/README.md/raw?ref=1234567890abcdef1234567890abcdef12345678"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("żółw", MediaType.TEXT_PLAIN));
+
+        var file = adapter.readFileBounded(
+                "CRM/runtime", "customer-api", "1234567890abcdef1234567890abcdef12345678", "README.md", 16
+        );
+
+        assertEquals("żółw", file.content());
+        assertFalse(file.truncated());
+        server.verify();
+    }
+
+    @Test
+    void shouldRejectRawFileWhenBodyExceedsLimitEvenWithoutDeclaredLength() {
+        var properties = gitLabProperties("CRM/runtime");
+        var restClientBuilder = RestClient.builder();
+        var server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        var adapter = GitLabIntegrationTestCreator.repositoryAdapter(
+                properties, new GitLabRestClientFactory(properties, restClientBuilder)
+        );
+        server.expect(requestTo(
+                        "https://gitlab.example.com/api/v4/projects/CRM%2Fruntime%2Fcustomer-api/repository/files/README.md/raw?ref=1234567890abcdef1234567890abcdef12345678"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("123456789", MediaType.TEXT_PLAIN));
+
+        assertThrows(GitLabFileTooLargeException.class, () -> adapter.readFileBounded(
+                "CRM/runtime", "customer-api", "1234567890abcdef1234567890abcdef12345678", "README.md", 8
+        ));
         server.verify();
     }
 

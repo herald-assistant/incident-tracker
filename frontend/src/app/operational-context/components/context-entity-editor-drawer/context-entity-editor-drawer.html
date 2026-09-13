@@ -18,12 +18,12 @@
   @if (!readonly() && structuredError()) { <p class="form-error" role="alert">{{ structuredError() }}</p> }
 
   <form [formGroup]="form" (ngSubmit)="submit()">
-    @for (section of adapter.sections(state().type); track section.title) {
-      <section class="editor-section">
+    @for (section of adapter.sections(state().type); track section.title; let sectionIndex = $index) {
+      <section class="editor-section" [hidden]="!readonly() && isAdvancedSection(section.fields, sectionIndex) && !showAdvanced()">
         <h3>{{ section.title }}</h3>
         <div class="editor-grid">
           @for (field of section.fields; track field.path) {
-            <div class="editor-field" [class.editor-field--wide]="field.kind !== 'text' && field.kind !== 'select'">
+            <div class="editor-field" [attr.data-field-path]="field.path" [class.editor-field--wide]="field.kind !== 'text' && field.kind !== 'select'">
               <div class="editor-field__label-row">
                 <label [for]="controlName(field)">{{ field.label }} @if (field.required) { <strong>*</strong> }</label>
                 <button
@@ -64,6 +64,12 @@
           }
         </div>
       </section>
+      @if (sectionIndex === 0 && !readonly() && hasAdvancedSections()) {
+        <button type="button" class="editor-advanced-toggle" [attr.aria-expanded]="showAdvanced()" (click)="toggleAdvanced()">
+          <mat-icon fontSet="material-symbols-outlined">{{ showAdvanced() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ showAdvanced() ? 'Hide advanced fields' : 'Show advanced fields' }}
+        </button>
+      }
     }
     @if (!readonly()) {
       <footer class="entity-editor__footer">

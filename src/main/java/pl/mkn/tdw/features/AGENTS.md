@@ -28,6 +28,10 @@ natural-language data diagnostics.
   hidden context i kontrakt odpowiedzi.
 - Nowy feature nie powinien importowac `features.incidentanalysis`; reuse ma
   isc przez `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
+- `features.operationalcontextassistance` posiada prowadzenie operatora,
+  prompt, draft i decyzje o propozycjach. Neutralne
+  `integrations.operationalcontext` posiada walidacje i zapis katalogu; AI nie
+  dostaje mutation tools ani prawa do samodzielnej publikacji YAML.
 - Kontrakty zasilajace przekrojowe UI, np. kroki runu, referencje evidence,
   wiadomosci follow-up, usage/cost, aktywnosc AI i feedback tooli, powinny
   mieszkac w `shared` jezeli sa uzywane przez wiecej niz jeden feature. Nowy

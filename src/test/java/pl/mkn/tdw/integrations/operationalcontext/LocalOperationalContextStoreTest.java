@@ -138,6 +138,76 @@ class LocalOperationalContextStoreTest {
         return store(root, mover, true);
     }
 
+    @Test
+    void shouldRollBackAllBatchFilesWhenSecondReplacementFails() throws Exception {
+        var root = temporaryDirectory.resolve("batch-io-failure");
+        var baseline = store(root, new OperationalContextAtomicMover()).loadOrBootstrap();
+        var candidate = twoDocumentCandidate(baseline);
+        var failingStore = store(root, new FailSecondBatchDocumentMover(false));
+
+        var exception = assertThrows(OperationalContextStoreException.class,
+                () -> failingStore.publishBatchCandidate(candidate, baseline.readSnapshot().contentDigest()));
+
+        assertEquals(OperationalContextStoreException.Code.LOCAL_COPY_UNAVAILABLE, exception.code());
+        assertEquals(baseline.rawDocuments().content("systems.yml"), Files.readString(root.resolve("systems.yml")));
+        assertEquals(baseline.rawDocuments().content("repo-map.yml"), Files.readString(root.resolve("repo-map.yml")));
+        assertFalse(Files.exists(root.resolve(".opctx-batch-journal")));
+    }
+
+    @Test
+    void shouldRestorePreparedBatchJournalAfterInterruptedProcess() throws Exception {
+        var root = temporaryDirectory.resolve("batch-interrupted");
+        var baseline = store(root, new OperationalContextAtomicMover()).loadOrBootstrap();
+        var candidate = twoDocumentCandidate(baseline);
+        var interruptedStore = store(root, new FailSecondBatchDocumentMover(true));
+
+        assertThrows(SimulatedProcessInterruption.class,
+                () -> interruptedStore.publishBatchCandidate(candidate, baseline.readSnapshot().contentDigest()));
+        assertTrue(Files.exists(root.resolve(".opctx-batch-journal/prepared")));
+
+        var recovered = store(root, new OperationalContextAtomicMover()).loadOrBootstrap();
+
+        assertEquals(baseline.readSnapshot().contentDigest(), recovered.readSnapshot().contentDigest());
+        assertEquals(baseline.rawDocuments().content("systems.yml"), Files.readString(root.resolve("systems.yml")));
+        assertEquals(baseline.rawDocuments().content("repo-map.yml"), Files.readString(root.resolve("repo-map.yml")));
+        assertFalse(Files.exists(root.resolve(".opctx-batch-journal")));
+    }
+
+    @Test
+    void shouldAssessWholeBatchBeforePublishingAnyYaml() throws Exception {
+        var root = temporaryDirectory.resolve("batch-invalid");
+        var store = store(root, new OperationalContextAtomicMover());
+        var baseline = store.loadOrBootstrap();
+        var candidate = new LinkedHashMap<>(baseline.rawDocuments().contents());
+        candidate.put("systems.yml", candidate.get("systems.yml") + "# concurrent candidate\n");
+        candidate.put("code-search-scopes.yml", """
+                codeSearchScopes:
+                  - id: orphan-scope
+                    name: Orphan Scope
+                    scopeType: system
+                    target: {type: system, id: missing-system}
+                    repositories:
+                      - {repoId: missing-repo, role: primary, priority: 1, searchMode: whole-repository}
+                gaps: []
+                """);
+
+        var assessment = store.assessBatchCandidate(candidate);
+        assertFalse(assessment.valid());
+        assertThrows(OperationalContextStoreException.class,
+                () -> store.publishBatchCandidate(candidate, baseline.readSnapshot().contentDigest()));
+        assertEquals(baseline.rawDocuments().content("systems.yml"), Files.readString(root.resolve("systems.yml")));
+        assertEquals(baseline.rawDocuments().content("code-search-scopes.yml"),
+                Files.readString(root.resolve("code-search-scopes.yml")));
+        assertFalse(Files.exists(root.resolve(".opctx-batch-journal")));
+    }
+
+    private Map<String, String> twoDocumentCandidate(OperationalContextStoredSnapshot baseline) {
+        var candidate = new LinkedHashMap<>(baseline.rawDocuments().contents());
+        candidate.put("systems.yml", candidate.get("systems.yml") + "# batch system change\n");
+        candidate.put("repo-map.yml", candidate.get("repo-map.yml") + "# batch repository change\n");
+        return candidate;
+    }
+
     private LocalOperationalContextStore store(
             Path root,
             OperationalContextAtomicMover mover,
@@ -183,5 +253,30 @@ class LocalOperationalContextStoreTest {
         void replaceFile(Path source, Path target) throws IOException {
             throw new IOException("Anonymous CRM filesystem failure");
         }
+    }
+
+    private static final class FailSecondBatchDocumentMover extends OperationalContextAtomicMover {
+
+        private final boolean crash;
+        private boolean failed;
+
+        private FailSecondBatchDocumentMover(boolean crash) {
+            this.crash = crash;
+        }
+
+        @Override
+        void replaceFile(Path source, Path target) throws IOException {
+            if (!failed && "repo-map.yml".equals(target.getFileName().toString())) {
+                failed = true;
+                if (crash) {
+                    throw new SimulatedProcessInterruption();
+                }
+                throw new IOException("Simulated second batch document failure");
+            }
+            super.replaceFile(source, target);
+        }
+    }
+
+    private static final class SimulatedProcessInterruption extends Error {
     }
 }

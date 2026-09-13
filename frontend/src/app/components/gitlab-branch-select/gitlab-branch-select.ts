@@ -13,16 +13,16 @@ import {
   untracked
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, debounce, map, of, switchMap, timer } from 'rxjs';
+import { Observable, Subject, catchError, debounce, map, of, switchMap, timer } from 'rxjs';
 
 import {
   GitLabBranchOption,
+  GitLabBranchesResponse,
   GitLabSystemBranchesApiService,
-  GitLabSystemBranchesResponse
 } from '../../core/services/gitlab-system-branches-api.service';
 
 interface BranchQuery {
-  systemId: string;
+  sourceKey: string;
   search: string;
   initial: boolean;
 }
@@ -34,8 +34,13 @@ interface BranchQuery {
 })
 export class GitLabBranchSelectComponent {
   readonly systemId = input('');
+  readonly sourceKey = input('');
+  readonly branchLoader = input<((sourceKey: string, search: string) => Observable<GitLabBranchesResponse>) | null>(null);
   readonly selectedBranch = input('');
   readonly disabled = input(false);
+  readonly label = input('Branch');
+  readonly emptyLabel = input('Select branch');
+  readonly filterLabel = input('Find branch');
   readonly branchSelected = output<string>();
 
   private readonly api = inject(GitLabSystemBranchesApiService);
@@ -50,24 +55,27 @@ export class GitLabBranchSelectComponent {
   readonly branches = signal<GitLabBranchOption[]>([]);
   readonly truncated = signal(false);
   readonly warnings = signal<string[]>([]);
-  readonly selectedLabel = computed(() => this.selectedBranch().trim() || 'Select branch');
+  readonly effectiveSourceKey = computed(() => this.sourceKey().trim() || this.systemId().trim());
+  readonly selectedLabel = computed(() => this.selectedBranch().trim() || this.emptyLabel());
 
   constructor() {
     this.queries
       .pipe(
         debounce((query) => query.initial ? of(0) : timer(200)),
         switchMap((query) =>
-          this.api.getBranches(query.systemId, query.search).pipe(
+          (this.branchLoader()
+            ? this.branchLoader()!(query.sourceKey, query.search)
+            : this.api.getBranches(query.sourceKey, query.search)).pipe(
             map((response) => ({ query, response, error: null as HttpErrorResponse | null })),
             catchError((error: HttpErrorResponse) =>
-              of({ query, response: null as GitLabSystemBranchesResponse | null, error })
+              of({ query, response: null as GitLabBranchesResponse | null, error })
             )
           )
         ),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(({ query, response, error }) => {
-        if (query.systemId !== this.systemId() || query.search !== this.filter().trim()) {
+        if (query.sourceKey !== this.effectiveSourceKey() || query.search !== this.filter().trim()) {
           return;
         }
         this.loading.set(false);
@@ -90,7 +98,7 @@ export class GitLabBranchSelectComponent {
       });
 
     effect(() => {
-      const systemId = this.systemId().trim();
+      const sourceKey = this.effectiveSourceKey();
       untracked(() => {
         this.open.set(false);
         this.filter.set('');
@@ -98,8 +106,8 @@ export class GitLabBranchSelectComponent {
         this.error.set('');
         this.truncated.set(false);
         this.warnings.set([]);
-        if (systemId) {
-          this.search(systemId, '', true);
+        if (sourceKey) {
+          this.search(sourceKey, '', true);
         } else {
           this.loading.set(false);
         }
@@ -121,7 +129,7 @@ export class GitLabBranchSelectComponent {
 
   toggle(event: Event): void {
     event.stopPropagation();
-    if (!this.systemId() || this.disabled()) {
+    if (!this.effectiveSourceKey() || this.disabled()) {
       return;
     }
     this.open.update((value) => !value);
@@ -129,11 +137,11 @@ export class GitLabBranchSelectComponent {
 
   changeFilter(value: string): void {
     this.filter.set(value);
-    this.search(this.systemId(), value, false);
+    this.search(this.effectiveSourceKey(), value, false);
   }
 
   retry(): void {
-    this.search(this.systemId(), this.filter(), !this.filter().trim());
+    this.search(this.effectiveSourceKey(), this.filter(), !this.filter().trim());
   }
 
   select(branch: string, event: Event): void {
@@ -156,12 +164,12 @@ export class GitLabBranchSelectComponent {
     options[Math.max(0, Math.min(index, options.length - 1))]?.focus();
   }
 
-  private search(systemId: string, search: string, initial: boolean): void {
-    if (!systemId.trim()) {
+  private search(sourceKey: string, search: string, initial: boolean): void {
+    if (!sourceKey.trim()) {
       return;
     }
     this.loading.set(true);
     this.error.set('');
-    this.queries.next({ systemId: systemId.trim(), search: search.trim(), initial });
+    this.queries.next({ sourceKey: sourceKey.trim(), search: search.trim(), initial });
   }
 }

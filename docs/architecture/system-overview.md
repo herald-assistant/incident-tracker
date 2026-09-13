@@ -405,7 +405,14 @@ Na dzisiaj projekt ma:
   procesow, integracji, bounded contexts, zespolow, glossary, handoff rules,
   validation findings i open questions. Bundled resources sa tylko seedem;
   widok utrzymuje lokalna kopie w `tdw-data/operational-context` i udostepnia
-  Add/Edit/Delete dla dziewieciu typow YAML.
+  Add/Edit/Delete dla dziewieciu typow YAML. `Asysta AI` pozwala zaczac od
+  pustego katalogu, dopelnic encje albo rozpatrzyc konkretny finding/pytanie;
+  zapisuje jedynie pola jawnie przyjete przez operatora, jako jeden zestaw po
+  walidacji calego wynikowego katalogu. Flow asysty nalezy do
+  `features.operationalcontextassistance`, a zapis YAML do neutralnego
+  `integrations.operationalcontext`. Przebieg, prompt i koszt sa widoczne we
+  wspolnym panelu bocznym; runy trafiaja do lokalnej Analysis History i sa
+  otwierane z niej w trybie read-only.
 - `GET /workspace-settings`
   Angularowy ekran `Platform / Workspace Settings` do lokalnej customizacji
   workspace'u. Ekran pokazuje efektywne wartosci z `application.properties`
@@ -584,6 +591,11 @@ Na dzisiaj projekt ma:
   create/complete-PUT, delete impact i RESTRICT delete. Mutacje zapisuja jedna
   lokalna kopie i podlegaja walidacji domenowej; nie maja ETagu, security gate
   ani wersjonowania katalogu.
+- `POST/GET /api/operational-context/assistance/jobs/*`
+  Feature-owned async asysta tworzenia obszaru, dopelniania encji i
+  rozwiazywania konkretnego findingu. Zwraca typowany draft i read-only
+  preview; osobny POST decyzji zapisuje wybrane pola warunkowo przez neutralne
+  maintenance. Sesja AI nie ma mutation tools.
 
 ## Glowny podzial pakietow
 
@@ -658,6 +670,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   classpath seed source, lokalny store biezacych dokumentow, captured snapshot,
   walidacja i neutralna logika maintenance do reuse'u przez API, evidence i
   kolejne capability.
+- `pl.mkn.tdw.features.operationalcontextassistance`
+  Feature-owned async job, wybrany ograniczony source GitLab, prompt i polski
+  skill, parser typowanego draftu, preview oraz decyzje operatora o zapisie
+  propozycji.
 - `pl.mkn.tdw.features.incidentanalysis.ai.copilot`
   Incidentowe initial/chat providery oraz budowanie promptu, artifact digestu,
   guidance do uzycia skilli, tool policy, response parser i initial/follow-up
@@ -1090,8 +1106,8 @@ katalogu systemow:
    `integrations.operationalcontext`,
 3. UI pobiera metadane gotowosci maintenance lokalnej kopii,
 4. UI pokazuje summary, signal resolver, listy encji, validation findings,
-   open questions i szczegoly encji oraz utrzymuje dziewiec typow YAML przez
-   editor drawer i delete impact,
+   open questions, szczegoly encji i `Asysta AI` oraz utrzymuje dziewiec typow
+   YAML przez editor drawer i delete impact,
 5. ten sam captured snapshot katalogu jest reuse'owany przez incident evidence provider,
    `opctx_*` tools, GitLab repository discovery i przyszle feature'y.
 
@@ -1105,6 +1121,14 @@ katalogowe, Signal Resolver, listy encji, inbox `Validation`, inbox
 dostepne tylko na ich zakladkach. Szczegoly encji i raw preview nie
 powinny byc modalem blokujacym prace. Dialog delete jest blokujacy, pokazuje
 inbound references i nie oferuje cascade.
+
+Asysta ma wejscie przy pustym katalogu, z detail writable encji oraz z
+jednoznacznego findingu Validation lub Open Question. Operator opisuje zadanie,
+opcjonalnie wybiera jeden projekt GitLab/ref, przeglada zrodla, ograniczenia i
+diff pol, po czym przyjmuje albo pomija propozycje w kolejnosci. Reczna
+korekta jest dostepna w edytorze encji z domyslnie uproszczonym formularzem.
+Po przyjeciu propozycji katalog i inboxy sa odswiezane. Warunkowy zapis
+odmawia nieaktualnej wartosci wybranego pola i nie zapisuje czesciowego YAML.
 
 `src/main/resources/operational-context` jest bundled, immutable seedem.
 Pierwszy start kopiuje go do `tdw-data/operational-context`; wszystkie kolejne

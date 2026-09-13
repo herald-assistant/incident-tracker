@@ -38,21 +38,6 @@ teams:
       - Recognize the team when returned from system or bounded-context ownership.
       - Understand collaboration language for request intake behavior.
       - Confirm who can review user-facing journey assumptions when already selected as owner.
-    references:
-      systems:
-        - customer-portal
-      repositories:
-        - customer-portal-ui
-      processes:
-        - customer-request-handling
-      boundedContexts:
-        - customer-requests
-      integrations:
-        - portal-to-case-management
-      terms:
-        - customer-request
-      handoffRules:
-        - customer-request-boundary
     matchSignals:
       exact:
         names:
@@ -64,18 +49,14 @@ teams:
       weak:
         phrases:
           - customer request owner
-    relations:
-      - type: collaborates-with
-        targetType: team
-        target: case-management-team
-        evidence: shared request handling process
 ```
 
 ## Update rules
 
 - A team entry should answer "what does this team label mean?".
-- Use `references` for navigation and context only; they do not assign
-  ownership.
+- Existing `references` and `relations` are preserve-only legacy data in team
+  entries. Do not propose them for a new or updated team; use the owning system
+  or bounded context for the relationship.
 - Keep evidence/action guidance in handoff rules, not in team routing hints.
 - Do not duplicate every relationship already described by systems, processes
   or integrations.

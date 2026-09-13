@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyRequest;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationPolicyResult;
+import pl.mkn.tdw.aiplatform.copilot.tools.policy.CopilotToolInvocationRejectedException;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 
 import java.util.Map;
@@ -15,6 +16,46 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CopilotToolBudgetPolicyTest {
+
+    @Test
+    void shouldEnforceSessionHardBudgetWhileOtherSessionsKeepGlobalSoftMode() {
+        var properties = properties(BudgetMode.SOFT);
+        properties.setMaxTotalCalls(0);
+        var registry = new CopilotToolBudgetRegistry(properties);
+        registry.registerSession("pinned-session");
+        registry.registerSession("ordinary-session");
+        var guard = new CopilotToolBudgetPolicy(registry);
+        var hardBudget = new CopilotSessionHardToolBudget(1, Map.of("gitlab_read_repository_file", 1));
+        var pinnedContext = new CopilotToolSessionContext(
+                "pinned-run", "pinned-session", Map.of(AgentToolContextKeys.TOOL_HARD_BUDGET, hardBudget));
+        var first = new CopilotToolInvocationPolicyRequest(
+                pinnedContext, "pinned-session", "call-1", "gitlab_read_repository_file", "{}");
+        var second = new CopilotToolInvocationPolicyRequest(
+                pinnedContext, "pinned-session", "call-2", "gitlab_read_repository_file", "{}");
+
+        assertDoesNotThrow(() -> guard.beforeInvocation(first));
+        var rejection = assertThrows(CopilotToolInvocationRejectedException.class,
+                () -> guard.beforeInvocation(second));
+        assertEquals("denied_by_tool_budget", ((Map<?, ?>) rejection.result()).get("status"));
+
+        var ordinaryContext = new CopilotToolSessionContext("ordinary-run", "ordinary-session", Map.of());
+        assertDoesNotThrow(() -> guard.beforeInvocation(new CopilotToolInvocationPolicyRequest(
+                ordinaryContext, "ordinary-session", "call-1", "gitlab_find_flow_context", "{}")));
+        assertTrue(registry.state("ordinary-session").orElseThrow().snapshot().softLimitExceededCount() > 0);
+    }
+
+    @Test
+    void shouldApplyGitLabNavigationAndReadSubTypeLimits() {
+        var properties = properties(BudgetMode.HARD);
+        properties.setMaxGitlabSearchCalls(0);
+        properties.setMaxGitlabReadFileCalls(0);
+        var guard = guard(properties);
+
+        assertTrue(guard.beforeInvocation("analysis-run-1", "gitlab_list_repository_tree", "{}").denied());
+        assertTrue(guard.beforeInvocation("analysis-run-1", "gitlab_list_repository_files", "{}").denied());
+        assertTrue(guard.beforeInvocation("analysis-run-1", "gitlab_search_repository_files", "{}").denied());
+        assertTrue(guard.beforeInvocation("analysis-run-1", "gitlab_read_repository_file", "{}").denied());
+    }
 
     @Test
     void shouldWarnButAllowInSoftMode() {

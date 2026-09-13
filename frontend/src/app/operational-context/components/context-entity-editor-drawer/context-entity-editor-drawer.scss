@@ -6,7 +6,11 @@
 .entity-editor__header small { color: var(--text-soft); }
 .icon-button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; }
 .editor-section { margin-bottom: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: #fbfcfe; }
+.editor-section[hidden] { display: none; }
 .editor-section h3 { margin: 0 0 12px; font-size: .9rem; }
+.editor-advanced-toggle { display: inline-flex; align-items: center; gap: 5px; margin: 0 0 16px; padding: 5px 0; border: 0; background: transparent; color: var(--text-main); font: inherit; font-size: .84rem; font-weight: 700; cursor: pointer; }
+.editor-advanced-toggle mat-icon { width: 20px; height: 20px; font-size: 20px; }
+.editor-advanced-toggle:hover, .editor-advanced-toggle:focus-visible { color: var(--primary); }
 .editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .editor-field { display: grid; align-content: start; gap: 6px; color: var(--text-muted); font-size: .78rem; font-weight: 700; }
 .editor-field__label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

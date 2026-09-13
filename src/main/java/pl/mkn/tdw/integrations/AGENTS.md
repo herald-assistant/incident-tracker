@@ -18,6 +18,11 @@ Obecnie obejmuje m.in.:
 Operational context jest tutaj query-based capability katalogu operacyjnego.
 Incident-specific matching i mapowanie na evidence pozostaja w
 `features.incidentanalysis.evidence.provider.operationalcontext`.
+Neutralne maintenance zapewnia tez read-only preview kandydata oraz warunkowy,
+atomowy zapis jednej encji po walidacji calego katalogu. W asyscie AI feature
+wybiera propozycje i pola; integracja nie przejmuje promptu, joba ani decyzji
+operatora. Dla `CREATE` sprawdza digest, a dla `UPDATE` wartosci wybranych pol
+`before` pod tym samym lockiem co publikacja YAML.
 W modelu operational context `system` jest kanonicznym bytem dla aplikacji lub
 uslugi. Nazwy deploymentu, kontenera, aplikacji i serwisu sa sygnalami albo
 metadata systemu; nie dodawaj osobnych kontraktow referencyjnych

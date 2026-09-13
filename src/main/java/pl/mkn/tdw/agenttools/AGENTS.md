@@ -65,6 +65,16 @@ Nie obejmuje:
   kanoniczny target repozytoriow i `codeSearchScopes`. Nie dodawaj model-facing
   pol ani odpowiedzi dla osobnego targetu runtime; runtime/deployment names
   moga byc tylko sygnalami dopasowania albo opisem.
+- `gitlab_list_repository_branches`, `gitlab_list_repository_tree`,
+  `gitlab_list_repository_files`, `gitlab_search_repository_files` i
+  `gitlab_read_repository_file` sa jednym
+  neutralnym zestawem read-only dla projektow w glownej grupie GitLab.
+  `projectName` i (dla odczytu tresci) `branchRef` sa jawne w schema, a grupa
+  wynika z konfiguracji. Lista galezi pozwala ustalic ref drugiego projektu.
+  Hidden `GitLabRepositoryToolScope` przypina wybrany projekt do commita
+  operatora i kolejne projekty w tej grupie do osobnych commitow. Tree/list/search
+  zwracaja sciezki, nie `sourceRef`; pelny, bezpieczny odczyt rejestruje ref.
+  Feature wybiera allowliste i budzet z tego wspolnego katalogu.
 - Frontendowe route branch i TypeScript symbol slice tools mieszkaja w
   `gitlab.frontend.mcp` i deleguja do `integrations.gitlab.frontend`. Ich
   model-facing schema ma zawierac tylko

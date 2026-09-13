@@ -10,6 +10,7 @@ public class OperationalContextCatalogMaintenanceException extends RuntimeExcept
         DUPLICATE_ID,
         ID_MISMATCH,
         VALIDATION_FAILED,
+        STALE_PROPOSAL,
         DELETE_RESTRICTED
     }
 

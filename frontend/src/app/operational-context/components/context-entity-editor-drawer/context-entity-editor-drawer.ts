@@ -1,4 +1,4 @@
-import { Component, effect, input, output, signal } from '@angular/core';
+import { Component, ElementRef, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -30,14 +30,19 @@ export class ContextEntityEditorDrawerComponent {
   readonly referenceOptions = input<OperationalContextReferenceOptions>({});
   readonly readonly = input(false);
   readonly chrome = input(true);
+  readonly focusFieldPath = input<string | null>(null);
   readonly saveEntity = output<OperationalContextPayload>();
   readonly cancelEditor = output<void>();
   readonly dirtyChange = output<boolean>();
 
   readonly adapter = new OperationalContextFormAdapter();
   readonly structuredError = signal('');
+  readonly showAdvanced = signal(false);
   form = new FormGroup<Record<string, FormControl<string>>>({});
   private signature = '';
+  private fieldErrorSignature = '';
+  private appliedFocusRequest = '';
+  private readonly elementRef: ElementRef<HTMLElement> = inject(ElementRef);
 
   constructor() {
     effect(() => {
@@ -46,11 +51,26 @@ export class ContextEntityEditorDrawerComponent {
       if (signature !== this.signature) {
         this.signature = signature;
         this.form = this.adapter.build(state.type, state.entity.payload);
+        this.showAdvanced.set(false);
+        this.fieldErrorSignature = '';
+        this.appliedFocusRequest = '';
         this.applyDisabledState(state);
         this.form.valueChanges.subscribe(() => this.dirtyChange.emit(this.form.dirty));
       }
       this.applyDisabledState(state);
       this.applyFieldErrors();
+      const focusFieldPath = this.focusFieldPath();
+      const focusRequest = focusFieldPath ? `${signature}:${focusFieldPath}` : '';
+      if (focusRequest !== this.appliedFocusRequest) {
+        this.appliedFocusRequest = focusRequest;
+        if (focusFieldPath && !this.readonly() && !this.fieldErrors().length) {
+          const field = this.adapter.fieldForPointer(state.type, focusFieldPath);
+          if (field) {
+            if (this.isAdvancedField(field)) this.showAdvanced.set(true);
+            queueMicrotask(() => this.focusField(field.path));
+          }
+        }
+      }
     });
   }
 
@@ -59,7 +79,14 @@ export class ContextEntityEditorDrawerComponent {
     this.structuredError.set('');
     this.validateStructuredControls();
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      const invalidAdvancedField = this.firstInvalidAdvancedField();
+      if (invalidAdvancedField) {
+        this.showAdvanced.set(true);
+        queueMicrotask(() => this.focusField(invalidAdvancedField.path));
+      }
+      return;
+    }
     try {
       const state = this.state();
       const payload = this.adapter.payload(state.type, this.form);
@@ -72,6 +99,37 @@ export class ContextEntityEditorDrawerComponent {
 
   controlName(field: OperationalContextFormField): string {
     return this.adapter.controlName(field.path);
+  }
+
+  hasAdvancedSections(): boolean {
+    return this.adapter.sections(this.state().type).some((section, index) => this.isAdvancedSection(section.fields, index));
+  }
+
+  isAdvancedSection(fields: OperationalContextFormField[], index: number): boolean {
+    return index > 0 && !fields.some((field) => field.required);
+  }
+
+  toggleAdvanced(): void {
+    this.showAdvanced.update((current) => !current);
+  }
+
+  private isAdvancedField(field: OperationalContextFormField): boolean {
+    return this.adapter.sections(this.state().type).some((section, index) =>
+      this.isAdvancedSection(section.fields, index) && section.fields.some((item) => item.path === field.path)
+    );
+  }
+
+  private firstInvalidAdvancedField(): OperationalContextFormField | undefined {
+    return this.adapter.fields(this.state().type).find((field) =>
+      this.isAdvancedField(field) && this.form.controls[this.controlName(field)]?.invalid
+    );
+  }
+
+  private focusField(path: string): void {
+    const field = Array.from(this.elementRef.nativeElement.querySelectorAll<HTMLElement>('[data-field-path]'))
+      .find((element) => element.dataset['fieldPath'] === path);
+    const control = field?.querySelector<HTMLElement>('input:not([type="hidden"]), select, textarea, button:not(.editor-field__help)');
+    control?.focus();
   }
 
   fieldTooltip(field: OperationalContextFormField): string {
@@ -462,10 +520,20 @@ export class ContextEntityEditorDrawerComponent {
 
   private applyFieldErrors(): void {
     if (this.readonly()) return;
-    for (const error of this.fieldErrors()) {
+    const fieldErrors = this.fieldErrors();
+    const errorSignature = JSON.stringify(fieldErrors);
+    for (const error of fieldErrors) {
       const field = this.adapter.fieldForPointer(this.state().type, error.field);
-      if (field) this.form.controls[this.controlName(field)]?.setErrors({ server: error.message });
+      if (field) {
+        this.form.controls[this.controlName(field)]?.setErrors({ server: error.message });
+        if (this.isAdvancedField(field)) this.showAdvanced.set(true);
+      }
     }
+    if (fieldErrors.length && errorSignature !== this.fieldErrorSignature) {
+      const field = this.adapter.fieldForPointer(this.state().type, fieldErrors[0].field);
+      if (field) queueMicrotask(() => this.focusField(field.path));
+    }
+    this.fieldErrorSignature = errorSignature;
   }
 
   private applyDisabledState(state: OperationalContextEditorState): void {

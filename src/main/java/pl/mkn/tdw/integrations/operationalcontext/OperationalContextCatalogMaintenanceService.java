@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -19,6 +20,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class OperationalContextCatalogMaintenanceService {
 
+    private static final int MAX_BATCH_MUTATIONS = 12;
     private static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9][a-z0-9-]*");
     private static final Pattern SAFE_CONFIGURATION_DIRECTORY =
             Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,254}");
@@ -29,6 +31,11 @@ public class OperationalContextCatalogMaintenanceService {
             "rawSourcePreview", "resolvedOwnership", "validationFindings", "sourceReferences",
             "openQuestions", "overviewSections", "relatedEntities", "recognitionSignals", "explainabilitySections"
     );
+    private static final Set<String> SYSTEM_PRESERVED_REFERENCES = Set.of("repositories", "systems");
+    private static final Set<String> REPOSITORY_PRESERVED_GIT = Set.of("inferred");
+    private static final Set<String> PROCESS_PRESERVED_STEP = Set.of("match");
+    private static final Set<String> INTEGRATION_PRESERVED_REFERENCES = Set.of("systems");
+    private static final Set<String> INTEGRATION_PRESERVED_PARTICIPANT = Set.of("repositories");
 
     private final OperationalContextSnapshotStore snapshotStore;
     private final OperationalContextYamlWriter yamlWriter;
@@ -39,6 +46,39 @@ public class OperationalContextCatalogMaintenanceService {
         var type = OperationalContextCatalogEntityType.fromExternalName(typeName);
         var stored = snapshotStore.currentStoredSnapshot();
         return editableEntity(stored, type, id);
+    }
+
+    /** Returns an existing complete payload suitable for a new validated update command. */
+    public Map<String, Object> writablePayloadForUpdate(String typeName, String id) {
+        var type = OperationalContextCatalogEntityType.fromExternalName(typeName);
+        return writablePayloadForUpdate(snapshotStore.currentStoredSnapshot(), type, id);
+    }
+
+    private Map<String, Object> writablePayloadForUpdate(
+            OperationalContextStoredSnapshot stored, OperationalContextCatalogEntityType type, String id
+    ) {
+        var payload = mutableMap(editableEntity(stored, type, id).payload());
+        payload.keySet().removeIf(field -> OperationalContextCatalogEntitySchema.preserveOnly(type, field));
+        removeNestedPreserveOnly(type, payload);
+        return OperationalContextImmutableValues.copyMap(payload);
+    }
+
+    /** Checks the writable shape of a partial entity without reading or publishing catalog state. */
+    public List<OperationalContextCatalogFieldError> validatePartialEditablePayload(
+            String typeName,
+            Map<String, Object> partialPayload
+    ) {
+        var type = OperationalContextCatalogEntityType.fromExternalName(typeName);
+        var errors = new ArrayList<OperationalContextCatalogFieldError>();
+        if (partialPayload == null || partialPayload.isEmpty()) {
+            errors.add(new OperationalContextCatalogFieldError("/payload", "At least one field is required"));
+            return List.copyOf(errors);
+        }
+        var payload = mutableMap(partialPayload);
+        validateValue(payload, "/payload", errors);
+        validateFields(type, payload, errors);
+        OperationalContextCatalogNestedFields.rejectUnknown(type, payload, errors);
+        return List.copyOf(errors);
     }
 
     public synchronized OperationalContextCatalogMutationResult create(OperationalContextCatalogMutationCommand command) {
@@ -68,6 +108,317 @@ public class OperationalContextCatalogMaintenanceService {
         var payload = canonicalPayload(stored, type, command, entities.get(index));
         entities.set(index, payload);
         return publish(stored, type, entities, command.id());
+    }
+
+    /** Publishes one accepted entity after checking its preconditions on the same snapshot used for validation. */
+    public synchronized OperationalContextCatalogMutationResult applyAcceptedChanges(
+            OperationalContextCatalogConditionalMutationCommand command
+    ) {
+        if (command == null) {
+            throw OperationalContextCatalogMaintenanceException.validation("Mutation request is required",
+                    List.of(new OperationalContextCatalogFieldError("/", "Request is required")));
+        }
+        var type = OperationalContextCatalogEntityType.fromExternalName(command.type());
+        var errors = new ArrayList<OperationalContextCatalogFieldError>();
+        if (!StringUtils.hasText(command.id()) || !ID_PATTERN.matcher(command.id()).matches()) {
+            errors.add(new OperationalContextCatalogFieldError("/id", "ID must use lowercase letters, digits and hyphens"));
+        }
+        if (command.operation() == null) {
+            errors.add(new OperationalContextCatalogFieldError("/operation", "Operation is required"));
+        }
+        if (command.operation() == OperationalContextCatalogConditionalMutationCommand.Operation.CREATE
+                && !StringUtils.hasText(command.expectedDigest())) {
+            errors.add(new OperationalContextCatalogFieldError("/expectedDigest", "Catalog digest is required for create"));
+        }
+        if (command.changes().isEmpty()) {
+            errors.add(new OperationalContextCatalogFieldError("/changes", "At least one accepted field is required"));
+        }
+        var paths = new LinkedHashSet<String>();
+        for (var change : command.changes()) {
+            if (change == null) {
+                errors.add(new OperationalContextCatalogFieldError("/changes", "Field change cannot be null"));
+                continue;
+            }
+            var path = change.path();
+            if (!StringUtils.hasText(path) || "id".equals(path)
+                    || !OperationalContextCatalogEntitySchema.editable(type, path)) {
+                errors.add(new OperationalContextCatalogFieldError("/changes", "Change path must be a writable field other than id"));
+            } else if (!paths.add(path)) {
+                errors.add(new OperationalContextCatalogFieldError("/payload/" + path, "Field is selected more than once"));
+            }
+            if (change.after() == null) {
+                errors.add(new OperationalContextCatalogFieldError("/payload/" + path, "Accepted value cannot be null"));
+            }
+        }
+        if (!errors.isEmpty()) {
+            throw OperationalContextCatalogMaintenanceException.validation("Accepted changes are invalid", errors);
+        }
+
+        var stored = snapshotStore.currentStoredSnapshot();
+        var entities = mutableEntities(stored, type);
+        var index = findIndex(entities, command.id());
+        if (command.operation() == OperationalContextCatalogConditionalMutationCommand.Operation.CREATE) {
+            if (!Objects.equals(command.expectedDigest(), stored.readSnapshot().contentDigest())) {
+                throw new OperationalContextCatalogMaintenanceException(
+                        OperationalContextCatalogMaintenanceException.Code.STALE_PROPOSAL,
+                        "Catalog changed after this create proposal was prepared",
+                        List.of(new OperationalContextCatalogFieldError("/expectedDigest", "Catalog changed; review the proposal again"))
+                );
+            }
+            if (index >= 0) {
+                throw new OperationalContextCatalogMaintenanceException(
+                        OperationalContextCatalogMaintenanceException.Code.DUPLICATE_ID,
+                        "Operational context entity already exists: " + command.id(),
+                        List.of(new OperationalContextCatalogFieldError("/id", "Entity ID already exists"))
+                );
+            }
+            var accepted = new LinkedHashMap<String, Object>();
+            accepted.put("id", command.id());
+            command.changes().forEach(change -> accepted.put(change.path(), mutableValue(change.after())));
+            var payload = canonicalPayload(stored, type,
+                    new OperationalContextCatalogMutationCommand(type.externalName(), command.id(), accepted), null);
+            entities.add(payload);
+        } else {
+            if (index < 0) {
+                throw OperationalContextCatalogMaintenanceException.notFound(type, command.id());
+            }
+            var current = writablePayloadForUpdate(stored, type, command.id());
+            var accepted = mutableMap(current);
+            for (var change : command.changes()) {
+                if (!Objects.equals(current.get(change.path()), change.before())) {
+                    throw new OperationalContextCatalogMaintenanceException(
+                            OperationalContextCatalogMaintenanceException.Code.STALE_PROPOSAL,
+                            "Accepted operational context field changed since the proposal was prepared",
+                            List.of(new OperationalContextCatalogFieldError(
+                                    "/payload/" + change.path(), "Field changed; review the proposal again"))
+                    );
+                }
+                accepted.put(change.path(), mutableValue(change.after()));
+            }
+            var payload = canonicalPayload(stored, type,
+                    new OperationalContextCatalogMutationCommand(type.externalName(), command.id(), accepted),
+                    entities.get(index));
+            entities.set(index, payload);
+        }
+        return publish(stored, type, entities, command.id());
+    }
+
+    /** Dry-runs all accepted changes against one captured snapshot, including earlier creates. */
+    public synchronized OperationalContextCatalogBatchMutationPreview previewAcceptedBatch(
+            OperationalContextCatalogConditionalBatchCommand command
+    ) {
+        var stage = stageBatch(command);
+        return new OperationalContextCatalogBatchMutationPreview(
+                stage.entities(), command.expectedDigest(),
+                stage.candidate().readSnapshot().contentDigest(), stage.assessment().violations()
+        );
+    }
+
+    /** Validates and publishes an ordered group of accepted changes as one logical decision. */
+    public synchronized OperationalContextCatalogBatchMutationResult applyAcceptedBatch(
+            OperationalContextCatalogConditionalBatchCommand command
+    ) {
+        var stage = stageBatch(command);
+        if (!stage.assessment().valid()) {
+            throw OperationalContextCatalogMaintenanceException.validation(
+                    "Accepted batch violates catalog validation rules",
+                    stage.assessment().violations().stream()
+                            .map(violation -> new OperationalContextCatalogFieldError(
+                                    "/catalog", "Catalog validation: " + violation.code()))
+                            .toList()
+            );
+        }
+        OperationalContextSnapshot published;
+        try {
+            published = snapshotStore.publishBatchCandidate(
+                    stage.candidate().rawDocuments().contents(), command.expectedDigest());
+        } catch (OperationalContextStoreException exception) {
+            if (exception.code() != OperationalContextStoreException.Code.STALE_CANDIDATE) {
+                throw exception;
+            }
+            throw new OperationalContextCatalogMaintenanceException(
+                    OperationalContextCatalogMaintenanceException.Code.STALE_PROPOSAL,
+                    "Catalog changed before the accepted batch was published",
+                    List.of(new OperationalContextCatalogFieldError(
+                            "/expectedDigest", "Catalog changed; review the batch again"))
+            );
+        }
+        return new OperationalContextCatalogBatchMutationResult(stage.entities(), published.contentDigest());
+    }
+
+    private BatchStage stageBatch(OperationalContextCatalogConditionalBatchCommand command) {
+        if (command == null || !StringUtils.hasText(command.expectedDigest())
+                || command.mutations().isEmpty() || command.mutations().size() > MAX_BATCH_MUTATIONS) {
+            throw OperationalContextCatalogMaintenanceException.validation(
+                    "Accepted batch request is invalid",
+                    List.of(new OperationalContextCatalogFieldError(
+                            "/mutations", "Batch needs a digest and 1-12 mutations"))
+            );
+        }
+        var initial = snapshotStore.currentStoredSnapshot();
+        if (!Objects.equals(command.expectedDigest(), initial.readSnapshot().contentDigest())) {
+            throw new OperationalContextCatalogMaintenanceException(
+                    OperationalContextCatalogMaintenanceException.Code.STALE_PROPOSAL,
+                    "Catalog changed after this batch was prepared",
+                    List.of(new OperationalContextCatalogFieldError(
+                            "/expectedDigest", "Catalog changed; review the batch again"))
+            );
+        }
+        var working = initial;
+        var entities = new ArrayList<OperationalContextEditableEntity>();
+        var keys = new LinkedHashSet<String>();
+        for (var mutation : command.mutations()) {
+            var type = validateBatchMutation(mutation);
+            if (!keys.add(type.externalName() + ":" + mutation.id())) {
+                throw OperationalContextCatalogMaintenanceException.validation(
+                        "An entity is selected more than once in the batch",
+                        List.of(new OperationalContextCatalogFieldError(
+                                "/mutations", "Each entity may occur only once"))
+                );
+            }
+            var candidates = mutableEntities(working, type);
+            var index = findIndex(candidates, mutation.id());
+            Map<String, Object> payload;
+            if (mutation.operation() == OperationalContextCatalogConditionalMutationCommand.Operation.CREATE) {
+                if (index >= 0) {
+                    throw new OperationalContextCatalogMaintenanceException(
+                            OperationalContextCatalogMaintenanceException.Code.DUPLICATE_ID,
+                            "Operational context entity already exists: " + mutation.id(),
+                            List.of(new OperationalContextCatalogFieldError("/id", "Entity ID already exists"))
+                    );
+                }
+                var accepted = new LinkedHashMap<String, Object>();
+                accepted.put("id", mutation.id());
+                mutation.changes().forEach(change -> accepted.put(change.path(), mutableValue(change.after())));
+                payload = canonicalPayload(working, type,
+                        new OperationalContextCatalogMutationCommand(type.externalName(), mutation.id(), accepted), null);
+                candidates.add(payload);
+            } else {
+                if (index < 0) {
+                    throw OperationalContextCatalogMaintenanceException.notFound(type, mutation.id());
+                }
+                var current = writablePayloadForUpdate(working, type, mutation.id());
+                var accepted = mutableMap(current);
+                for (var change : mutation.changes()) {
+                    if (!Objects.equals(current.get(change.path()), change.before())) {
+                        throw new OperationalContextCatalogMaintenanceException(
+                                OperationalContextCatalogMaintenanceException.Code.STALE_PROPOSAL,
+                                "Accepted operational context field changed since the batch was prepared",
+                                List.of(new OperationalContextCatalogFieldError(
+                                        "/payload/" + change.path(), "Field changed; review the batch again"))
+                        );
+                    }
+                    accepted.put(change.path(), mutableValue(change.after()));
+                }
+                payload = canonicalPayload(working, type,
+                        new OperationalContextCatalogMutationCommand(type.externalName(), mutation.id(), accepted),
+                        candidates.get(index));
+                candidates.set(index, payload);
+            }
+            working = snapshotStore.decodeCandidate(candidateDocuments(working, type, candidates));
+            entities.add(editableEntity(working, type, mutation.id()));
+        }
+        var assessment = snapshotStore.assessBatchCandidate(working.rawDocuments().contents());
+        return new BatchStage(working, List.copyOf(entities), assessment);
+    }
+
+    private OperationalContextCatalogEntityType validateBatchMutation(
+            OperationalContextCatalogConditionalBatchCommand.Mutation mutation
+    ) {
+        if (mutation == null) {
+            throw OperationalContextCatalogMaintenanceException.validation(
+                    "Batch mutation is required",
+                    List.of(new OperationalContextCatalogFieldError("/mutations", "Mutation cannot be null"))
+            );
+        }
+        var type = OperationalContextCatalogEntityType.fromExternalName(mutation.type());
+        var errors = new ArrayList<OperationalContextCatalogFieldError>();
+        if (!StringUtils.hasText(mutation.id()) || !ID_PATTERN.matcher(mutation.id()).matches()) {
+            errors.add(new OperationalContextCatalogFieldError("/id", "ID must use lowercase letters, digits and hyphens"));
+        }
+        if (mutation.operation() == null) {
+            errors.add(new OperationalContextCatalogFieldError("/operation", "Operation is required"));
+        }
+        if (mutation.changes().isEmpty()) {
+            errors.add(new OperationalContextCatalogFieldError("/changes", "At least one accepted field is required"));
+        }
+        var paths = new LinkedHashSet<String>();
+        for (var change : mutation.changes()) {
+            if (change == null) {
+                errors.add(new OperationalContextCatalogFieldError("/changes", "Field change cannot be null"));
+                continue;
+            }
+            var path = change.path();
+            if (!StringUtils.hasText(path) || "id".equals(path)
+                    || !OperationalContextCatalogEntitySchema.editable(type, path)) {
+                errors.add(new OperationalContextCatalogFieldError(
+                        "/changes", "Change path must be a writable field other than id"));
+            } else if (!paths.add(path)) {
+                errors.add(new OperationalContextCatalogFieldError(
+                        "/payload/" + path, "Field is selected more than once"));
+            }
+            if (change.after() == null) {
+                errors.add(new OperationalContextCatalogFieldError(
+                        "/payload/" + path, "Accepted value cannot be null"));
+            }
+        }
+        if (!errors.isEmpty()) {
+            throw OperationalContextCatalogMaintenanceException.validation("Accepted batch mutation is invalid", errors);
+        }
+        return type;
+    }
+
+    private record BatchStage(
+            OperationalContextStoredSnapshot candidate,
+            List<OperationalContextEditableEntity> entities,
+            OperationalContextCandidateAssessment assessment
+    ) {
+    }
+
+    public synchronized OperationalContextCatalogMutationPreview previewCreate(
+            OperationalContextCatalogMutationCommand command
+    ) {
+        var type = validateEnvelope(command);
+        var stored = snapshotStore.currentStoredSnapshot();
+        var entities = mutableEntities(stored, type);
+        if (findIndex(entities, command.id()) >= 0) {
+            throw new OperationalContextCatalogMaintenanceException(
+                    OperationalContextCatalogMaintenanceException.Code.DUPLICATE_ID,
+                    "Operational context entity already exists: " + command.id(),
+                    List.of(new OperationalContextCatalogFieldError("/id", "Entity ID already exists"))
+            );
+        }
+        var payload = canonicalPayload(stored, type, command, null);
+        entities.add(payload);
+        return preview(stored, type, command.id(), payload, entities);
+    }
+
+    public synchronized OperationalContextCatalogMutationPreview previewUpdate(
+            OperationalContextCatalogMutationCommand command
+    ) {
+        var type = validateEnvelope(command);
+        var stored = snapshotStore.currentStoredSnapshot();
+        var entities = mutableEntities(stored, type);
+        var index = findIndex(entities, command.id());
+        if (index < 0) {
+            throw OperationalContextCatalogMaintenanceException.notFound(type, command.id());
+        }
+        var payload = canonicalPayload(stored, type, command, entities.get(index));
+        entities.set(index, payload);
+        return preview(stored, type, command.id(), payload, entities);
+    }
+
+    private OperationalContextCatalogMutationPreview preview(
+            OperationalContextStoredSnapshot stored,
+            OperationalContextCatalogEntityType type,
+            String id,
+            Map<String, Object> payload,
+            List<Map<String, Object>> entities
+    ) {
+        var assessment = snapshotStore.assessCandidate(candidateDocuments(stored, type, entities));
+        return new OperationalContextCatalogMutationPreview(
+                type.externalName(), id, stored.readSnapshot().contentDigest(), payload, assessment.violations()
+        );
     }
 
     public OperationalContextDeleteImpact deleteImpact(String typeName, String id) {
@@ -204,21 +555,21 @@ public class OperationalContextCatalogMaintenanceService {
             List<OperationalContextCatalogFieldError> errors
     ) {
         if (type == OperationalContextCatalogEntityType.SYSTEM) {
-            rejectMapKeys(payload.get("references"), "/payload/references", Set.of("repositories", "systems"), errors);
+            rejectMapKeys(payload.get("references"), "/payload/references", SYSTEM_PRESERVED_REFERENCES, errors);
         }
         if (type == OperationalContextCatalogEntityType.REPOSITORY) {
-            rejectMapKeys(payload.get("git"), "/payload/git", Set.of("inferred"), errors);
+            rejectMapKeys(payload.get("git"), "/payload/git", REPOSITORY_PRESERVED_GIT, errors);
         }
         if (type == OperationalContextCatalogEntityType.PROCESS) {
-            rejectListMapKeys(payload.get("steps"), "/payload/steps", Set.of("match"), errors);
+            rejectListMapKeys(payload.get("steps"), "/payload/steps", PROCESS_PRESERVED_STEP, errors);
         }
         if (type == OperationalContextCatalogEntityType.INTEGRATION) {
-            rejectMapKeys(payload.get("references"), "/payload/references", Set.of("systems"), errors);
+            rejectMapKeys(payload.get("references"), "/payload/references", INTEGRATION_PRESERVED_REFERENCES, errors);
             var participants = asMap(payload.get("participants"));
             if (participants != null) {
-                rejectMapKeys(participants.get("source"), "/payload/participants/source", Set.of("repositories"), errors);
+                rejectMapKeys(participants.get("source"), "/payload/participants/source", INTEGRATION_PRESERVED_PARTICIPANT, errors);
                 for (var field : List.of("targets", "intermediaries", "finalTargets")) {
-                    rejectListMapKeys(participants.get(field), "/payload/participants/" + field, Set.of("repositories"), errors);
+                    rejectListMapKeys(participants.get(field), "/payload/participants/" + field, INTEGRATION_PRESERVED_PARTICIPANT, errors);
                 }
             }
         }
@@ -335,6 +686,42 @@ public class OperationalContextCatalogMaintenanceService {
                     "System subtype must be frontend, backend, worker, mixed or unknown"
             ));
         }
+    }
+
+    private void removeNestedPreserveOnly(
+            OperationalContextCatalogEntityType type,
+            Map<String, Object> payload
+    ) {
+        if (type == OperationalContextCatalogEntityType.SYSTEM) {
+            removeMapKeys(payload.get("references"), SYSTEM_PRESERVED_REFERENCES);
+        }
+        if (type == OperationalContextCatalogEntityType.REPOSITORY) {
+            removeMapKeys(payload.get("git"), REPOSITORY_PRESERVED_GIT);
+        }
+        if (type == OperationalContextCatalogEntityType.PROCESS) {
+            removeListMapKeys(payload.get("steps"), PROCESS_PRESERVED_STEP);
+        }
+        if (type == OperationalContextCatalogEntityType.INTEGRATION) {
+            removeMapKeys(payload.get("references"), INTEGRATION_PRESERVED_REFERENCES);
+            var participants = asMap(payload.get("participants"));
+            if (participants != null) {
+                removeMapKeys(participants.get("source"), INTEGRATION_PRESERVED_PARTICIPANT);
+                for (var field : List.of("targets", "intermediaries", "finalTargets")) {
+                    removeListMapKeys(participants.get(field), INTEGRATION_PRESERVED_PARTICIPANT);
+                }
+            }
+        }
+    }
+
+    private void removeMapKeys(Object value, Set<String> fields) {
+        var map = asMap(value);
+        if (map != null) {
+            fields.forEach(map::remove);
+        }
+    }
+
+    private void removeListMapKeys(Object value, Set<String> fields) {
+        mapList(value).forEach(map -> fields.forEach(map::remove));
     }
 
     private void validateSystemParticipants(Object value, List<OperationalContextCatalogFieldError> errors) {
@@ -1437,13 +1824,13 @@ public class OperationalContextCatalogMaintenanceService {
             }
         }
         if (type == OperationalContextCatalogEntityType.SYSTEM) {
-            preserveMapFields(existing, payload, "references", Set.of("repositories", "systems"));
+            preserveMapFields(existing, payload, "references", SYSTEM_PRESERVED_REFERENCES);
         }
         if (type == OperationalContextCatalogEntityType.PROCESS) {
-            preserveListFields(existing, payload, "steps", "id", Set.of("match"));
+            preserveListFields(existing, payload, "steps", "id", PROCESS_PRESERVED_STEP);
         }
         if (type == OperationalContextCatalogEntityType.INTEGRATION) {
-            preserveMapFields(existing, payload, "references", Set.of("systems"));
+            preserveMapFields(existing, payload, "references", INTEGRATION_PRESERVED_REFERENCES);
             preserveParticipantRepositories(existing, payload);
         }
     }
@@ -1454,9 +1841,9 @@ public class OperationalContextCatalogMaintenanceService {
         if (oldParticipants == null || newParticipants == null) {
             return;
         }
-        preserveMapFields(oldParticipants, newParticipants, "source", Set.of("repositories"));
+        preserveMapFields(oldParticipants, newParticipants, "source", INTEGRATION_PRESERVED_PARTICIPANT);
         for (var field : List.of("targets", "intermediaries", "finalTargets")) {
-            preserveListFields(oldParticipants, newParticipants, field, "system", Set.of("repositories"));
+            preserveListFields(oldParticipants, newParticipants, field, "system", INTEGRATION_PRESERVED_PARTICIPANT);
         }
     }
 
@@ -1518,7 +1905,9 @@ public class OperationalContextCatalogMaintenanceService {
         var candidate = candidateDocuments(stored, type, entities);
         snapshotStore.publishCandidate(candidate);
         var published = snapshotStore.currentStoredSnapshot();
-        return new OperationalContextCatalogMutationResult(editableEntity(published, type, entityId));
+        return new OperationalContextCatalogMutationResult(
+                editableEntity(published, type, entityId), published.readSnapshot().contentDigest()
+        );
     }
 
     private Map<String, String> candidateDocuments(

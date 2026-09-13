@@ -263,6 +263,9 @@ public class CopilotToolBudgetState {
 
     private boolean isGitLabSearchTool(String toolName) {
         return GitLabToolNames.LIST_AVAILABLE_REPOSITORIES.equals(toolName)
+                || GitLabToolNames.LIST_REPOSITORY_TREE.equals(toolName)
+                || GitLabToolNames.LIST_REPOSITORY_FILES.equals(toolName)
+                || GitLabToolNames.SEARCH_REPOSITORY_FILES.equals(toolName)
                 || GitLabToolNames.LIST_REPOSITORY_ENDPOINTS.equals(toolName)
                 || GitLabToolNames.BUILD_ENDPOINT_USE_CASE_CONTEXT.equals(toolName)
                 || GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES.equals(toolName)

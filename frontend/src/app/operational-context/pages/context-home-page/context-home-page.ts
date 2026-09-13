@@ -2,6 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { catchError, forkJoin, map, Observable, of } from 'rxjs';
@@ -29,6 +30,7 @@ import {
 import { ContextEntityDrawerComponent } from '../../components/context-entity-drawer/context-entity-drawer';
 import { ContextEntityEditorDrawerComponent } from '../../components/context-entity-editor-drawer/context-entity-editor-drawer';
 import { ContextDeleteConfirmationComponent } from '../../components/context-delete-confirmation/context-delete-confirmation';
+import { ContextAssistancePanelComponent } from '../../components/context-assistance-panel/context-assistance-panel';
 import { WhyPopoverComponent } from '../../components/why-popover/why-popover';
 import { copyTextToClipboard } from '../../../core/utils/clipboard.utils';
 import { OperationalContextMaintenanceFacade } from '../../services/operational-context-maintenance.facade';
@@ -40,9 +42,15 @@ import {
   OperationalContextReferenceOptions,
   OperationalContextWritableType
 } from '../../models/operational-context-maintenance.models';
+import {
+  OperationalContextAssistanceJob,
+  OperationalContextAssistancePrefill
+} from '../../models/operational-context-assistance.models';
+import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 
 type ContextTab =
   | 'overview'
+  | 'assistance'
   | 'signal-resolver'
   | 'systems'
   | 'repositories'
@@ -671,6 +679,7 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
     ContextEntityDrawerComponent,
     ContextEntityEditorDrawerComponent,
     ContextDeleteConfirmationComponent,
+    ContextAssistancePanelComponent,
     WhyPopoverComponent
   ],
   templateUrl: './context-home-page.html',
@@ -679,6 +688,10 @@ const OPEN_QUESTION_COLUMNS: ContextTableHeader[] = [
 export class ContextHomePageComponent {
   private readonly api = inject(OperationalContextApiService);
   private readonly maintenanceApi = inject(OperationalContextMaintenanceApiService);
+  private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private requestedHistoryRunId = '';
   readonly maintenance = inject(OperationalContextMaintenanceFacade);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -688,6 +701,13 @@ export class ContextHomePageComponent {
   readonly validationColumns = VALIDATION_COLUMNS;
   readonly openQuestionColumns = OPEN_QUESTION_COLUMNS;
   readonly selectedTab = signal<ContextTab>('overview');
+  readonly assistancePrefill = signal<OperationalContextAssistancePrefill>({ mode: 'CREATE_AREA' });
+  readonly assistanceJob = signal<OperationalContextAssistanceJob | null>(null);
+  readonly assistanceMounted = signal(false);
+  readonly assistanceHistoryReadOnly = signal(false);
+  readonly assistanceHistoryLoading = signal(false);
+  readonly assistanceHistoryError = signal('');
+  readonly editorFocusPath = signal<string | null>(null);
   readonly summary = signal<OperationalContextSummaryDto | null>(null);
   readonly data = signal<ContextDataState>(EMPTY_STATE);
   readonly isLoading = signal(true);
@@ -812,6 +832,12 @@ export class ContextHomePageComponent {
   });
 
   constructor() {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const localRunId = params.get('localRunId')?.trim();
+        if (localRunId) this.loadAssistanceHistoryRun(localRunId);
+      });
     this.localFilterControl.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((value) => this.localFilter.set(value));
@@ -866,12 +892,14 @@ export class ContextHomePageComponent {
 
   selectTab(tab: ContextTab): void {
     if (!this.confirmDiscard()) return;
+    if (tab === 'assistance') this.assistanceMounted.set(true);
     this.selectedTab.set(tab);
   }
 
   addEntity(): void {
     const type = this.writableTypeForTab();
     if (type && this.confirmDiscard()) {
+      this.editorFocusPath.set(null);
       this.maintenanceNotice.set('');
       this.maintenance.openCreate(type);
     }
@@ -880,6 +908,7 @@ export class ContextHomePageComponent {
   editSelectedEntity(): void {
     const target = this.selectedEntityTarget();
     if (target && isOperationalContextWritableType(target.type) && this.confirmDiscard()) {
+      this.editorFocusPath.set(null);
       this.maintenanceNotice.set('');
       this.maintenance.openEdit(target.type, target.id);
     }
@@ -896,8 +925,9 @@ export class ContextHomePageComponent {
     this.maintenance.closeEditor();
   }
 
-  editSource(type: string, id: string | null | undefined): void {
+  editSource(type: string, id: string | null | undefined, focusPath: string | null = null): void {
     if (id && isOperationalContextWritableType(type) && this.maintenance.supports(type) && this.confirmDiscard()) {
+      this.editorFocusPath.set(focusPath);
       this.maintenanceNotice.set('');
       this.maintenance.openEdit(type, id);
     }
@@ -1031,6 +1061,142 @@ export class ContextHomePageComponent {
           this.detailError.set(`Could not load ${target.type}/${target.id}.`);
         }
       });
+  }
+
+  startAreaAssistance(): void {
+    this.openAssistance({ mode: 'CREATE_AREA' });
+  }
+
+  assistSelectedEntity(): void {
+    const target = this.selectedEntityTarget();
+    if (!target || !isOperationalContextWritableType(target.type)) return;
+    this.openAssistance({
+      mode: 'IMPROVE_ENTITY',
+      target: { kind: 'ENTITY', entityType: target.type, entityId: target.id }
+    });
+  }
+
+  assistValidationFinding(finding: ValidationFindingDto): void {
+    if (!this.canAssistSource(finding.entityType, finding.entityId)) return;
+    this.openAssistance({
+      mode: 'RESOLVE_FINDING',
+      target: {
+        kind: 'VALIDATION_FINDING', entityType: finding.entityType as OperationalContextWritableType,
+        entityId: finding.entityId, id: finding.id
+      },
+      description: `Wyjaśnij finding „${finding.title}”. ${finding.detail} Sugerowana poprawka: ${finding.suggestedFix}`.trim()
+    });
+  }
+
+  assistOpenQuestion(question: OpenQuestionDto): void {
+    if (!this.canAssistSource(question.entityType, question.entityId)) return;
+    this.openAssistance({
+      mode: 'RESOLVE_FINDING',
+      target: {
+        kind: 'OPEN_QUESTION', entityType: question.entityType as OperationalContextWritableType,
+        entityId: question.entityId!, id: question.id
+      },
+      description: `Pomóż odpowiedzieć na otwarte pytanie: ${question.question}`
+    });
+  }
+
+  canAssistSource(type: string, id: string | null | undefined): boolean {
+    return Boolean(id && isOperationalContextWritableType(type));
+  }
+
+  editValidationSource(finding: ValidationFindingDto): void {
+    this.editSource(finding.entityType, finding.entityId, this.findingFieldPath(finding));
+  }
+
+  private openAssistance(prefill: OperationalContextAssistancePrefill): void {
+    if (this.maintenance.busy()) {
+      this.maintenanceNotice.set('Trwa zapis lub usuwanie wpisu. Poczekaj na zakończenie operacji przed otwarciem asysty AI.');
+      return;
+    }
+    if (!this.confirmDiscard()) return;
+    if (this.maintenance.editor()) this.maintenance.closeEditor();
+    this.editorDirty.set(false);
+    this.editorFocusPath.set(null);
+    this.maintenance.cancelDelete();
+    this.closeDrawer();
+    if (this.assistanceHistoryReadOnly()) this.clearAssistanceHistory();
+    this.assistancePrefill.set(prefill);
+    this.assistanceMounted.set(true);
+    this.selectedTab.set('assistance');
+  }
+
+  startNewAssistance(): void {
+    this.clearAssistanceHistory();
+    this.assistancePrefill.set({ mode: 'CREATE_AREA' });
+    this.assistanceMounted.set(true);
+    this.selectedTab.set('assistance');
+  }
+
+  private clearAssistanceHistory(): void {
+    this.requestedHistoryRunId = '';
+    this.assistanceHistoryReadOnly.set(false);
+    this.assistanceHistoryLoading.set(false);
+    this.assistanceHistoryError.set('');
+    this.assistanceJob.set(null);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { localRunId: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  private loadAssistanceHistoryRun(localRunId: string): void {
+    this.requestedHistoryRunId = localRunId;
+    this.assistanceHistoryReadOnly.set(true);
+    this.assistanceJob.set(null);
+    this.assistanceMounted.set(true);
+    this.selectedTab.set('assistance');
+    this.assistanceHistoryLoading.set(true);
+    this.assistanceHistoryError.set('');
+    this.historyApi.getRun(localRunId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detail) => {
+          if (this.requestedHistoryRunId !== localRunId) return;
+          this.assistanceHistoryLoading.set(false);
+          try {
+            if (detail.feature !== 'operational-context-assistance') {
+              throw new Error('Wybrany zapis nie jest analizą asysty Operational Context.');
+            }
+            const restored = restoreAssistanceHistoryRun(detail.exportEnvelope);
+            this.assistancePrefill.set(restored.prefill);
+            this.assistanceJob.set(restored.job);
+            this.assistanceHistoryReadOnly.set(true);
+            this.assistanceMounted.set(true);
+            this.selectedTab.set('assistance');
+          } catch (error) {
+            this.assistanceHistoryError.set(error instanceof Error ? error.message : 'Nie udało się odtworzyć zapisanej asysty.');
+          }
+        },
+        error: () => {
+          if (this.requestedHistoryRunId !== localRunId) return;
+          this.assistanceHistoryLoading.set(false);
+          this.assistanceHistoryError.set('Nie udało się odczytać zapisanej analizy z historii.');
+        }
+      });
+  }
+
+  private findingFieldPath(finding: ValidationFindingDto): string | null {
+    const sourcePath = this.firstSourceRef(finding)?.path?.trim();
+    if (!sourcePath) return null;
+    const path = sourcePath.includes('#') ? sourcePath.substring(sourcePath.indexOf('#') + 1) : sourcePath;
+    const jsonPath = path.match(/^\$\.[A-Za-z][A-Za-z0-9]*\[[^\]]+\]\.(.+)$/);
+    if (jsonPath) return jsonPath[1];
+    if (path.startsWith('$')) return null;
+    return path;
+  }
+
+  refreshAfterAssistanceSave(_target: { type: string; id: string }): void {
+    this.maintenanceNotice.set('Zapisano wybrany zestaw zmian katalogu.');
+    this.searchResults.set([]);
+    this.resetSearchAiApiPreview();
+    this.loadCatalogue();
   }
 
   openSearchResult(result: OperationalContextSearchResultDto): void {
@@ -1427,4 +1593,63 @@ export class ContextHomePageComponent {
 
 function normalize(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function restoreAssistanceHistoryRun(envelopeValue: unknown): {
+  job: OperationalContextAssistanceJob;
+  prefill: OperationalContextAssistancePrefill;
+} {
+  const envelope = asRecord(envelopeValue);
+  const job = asRecord(envelope?.['job']);
+  const mode = envelope?.['mode'];
+  const status = job?.['status'];
+  const validModes = ['CREATE_AREA', 'IMPROVE_ENTITY', 'RESOLVE_FINDING'];
+  const validStatuses = [
+    'QUEUED', 'COLLECTING_CONTEXT', 'AI_PREPARATION', 'ANALYZING',
+    'COMPLETED', 'PARTIAL', 'BLOCKED', 'FAILED'
+  ];
+  if (envelope?.['schema'] !== 'tdw.operational-context-assistance-export'
+    || envelope['version'] !== 1
+    || !validModes.includes(String(mode))
+    || !job
+    || typeof job['jobId'] !== 'string'
+    || !validStatuses.includes(String(status))
+    || typeof job['createdAt'] !== 'string'
+    || typeof job['updatedAt'] !== 'string'
+    || !Array.isArray(job['steps'])
+    || !Array.isArray(job['aiActivityEvents'])
+    || !Array.isArray(job['sourceRefs'])
+    || !Array.isArray(job['visibilityLimits'])
+    || !Array.isArray(job['previews'])
+    || (job['proposalDecisions'] != null && !Array.isArray(job['proposalDecisions']))) {
+    throw new Error('Zapis asysty ma nieobsługiwany lub uszkodzony format.');
+  }
+  const draft = asRecord(job['draft']);
+  if (draft && (!Array.isArray(draft['proposals'])
+    || !Array.isArray(draft['questions'])
+    || !Array.isArray(draft['visibilityLimits']))) {
+    throw new Error('Zapis asysty zawiera uszkodzony draft.');
+  }
+  const targetValue = asRecord(envelope['target']);
+  const target = targetValue
+    && (targetValue['kind'] === 'ENTITY' || targetValue['kind'] === 'VALIDATION_FINDING' || targetValue['kind'] === 'OPEN_QUESTION')
+    && isOperationalContextWritableType(String(targetValue['entityType']))
+    && typeof targetValue['entityId'] === 'string'
+    ? {
+        kind: targetValue['kind'],
+        entityType: targetValue['entityType'],
+        entityId: targetValue['entityId'],
+        ...(typeof targetValue['id'] === 'string' ? { id: targetValue['id'] } : {})
+      } as NonNullable<OperationalContextAssistancePrefill['target']>
+    : undefined;
+  return {
+    job: job as unknown as OperationalContextAssistanceJob,
+    prefill: { mode: mode as OperationalContextAssistancePrefill['mode'], ...(target ? { target } : {}) }
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }

@@ -233,6 +233,9 @@ Repozytorium w scope powinno miec:
 `pathPrefixes` sa relatywnymi sciezkami GitLaba bez wiodacego `/`. Opisuja
 moduly/prefixy katalogow, ktore naleza do semantycznego targetu w duzym
 repozytorium. Nie sa lista klas, endpointow, plikow ani pakietow.
+Przy wyznaczaniu project paths z katalogu repozytorium w podgrupie GitLab
+nalezy do skonfigurowanej glownej grupy; podobnie zaczynajaca sie nazwa
+obcej grupy nie jest dopuszczana.
 
 Dozwolone role powinny opisywac relacje w analizie, np. `primary`, `support`,
 `shared-library`, `migration-peer`, `external-adapter`. Nie uzywamy roli jako
@@ -391,6 +394,202 @@ jest immutable, a delete stosuje `RESTRICT` bez cascade. Field errors uzywaja
 JSON Pointer. API nie wystawia `revision`, ETag ani `If-Match`; zwraca m.in.
 `409` dla konfliktu encji lub referencji, `422` dla walidacji oraz `503` dla
 niedostepnej lokalnej kopii.
+
+Asysta AI korzysta z tej samej neutralnej walidacji katalogu. Batch preview
+buduje w pamieci wynikowy katalog dla wybranych zmian i waliduje go bez
+publikacji plikow. Warunkowy batch maintenance porownuje jeden digest
+wejsciowy, brak duplikatow ID dla `CREATE` i wartosci wybranych pol `before`
+dla `UPDATE`. Pozostale pola zachowuje. Sprawdzenie warunkow, walidacja calego
+wynikowego katalogu i publikacja sa objete jednym lockiem. Dla wielu YAML
+storage przygotowuje `.opctx-batch-journal` z kopiami dziewieciu aktywnych
+dokumentow i kandydatami. Marker `prepared` uruchamia odtworzenie wszystkich
+kopii po przerwaniu procesu; immutable snapshot zmienia sie dopiero po pelnym
+commicie. Nie jest to absolutna gwarancja trwalosci przy utracie zasilania
+Windows przed fizycznym zapisem katalogu na nosniku.
+
+## Asysta AI Przy Utrzymaniu Katalogu
+
+`features.operationalcontextassistance` jest wlascicielem trzech trybow
+operatora: `CREATE_AREA` dla pustego lub niepelnego obszaru, `IMPROVE_ENTITY`
+dla istniejacej encji oraz `RESOLVE_FINDING` dla wskazanego findingu Validation
+albo Open Question. Feature ma wlasne async job API, collector wybranego
+zrodla, prompt, polski runtime skill, parser draftu, preview i decyzje
+operatora. Korzysta z neutralnych `aiplatform`, `integrations.gitlab` oraz
+`integrations.operationalcontext`; nie dodaje mutation tool do `opctx_*`.
+
+```http
+POST /api/operational-context/assistance/jobs
+GET  /api/operational-context/assistance/jobs/{jobId}
+POST /api/operational-context/assistance/jobs/{jobId}/batch/preview
+POST /api/operational-context/assistance/jobs/{jobId}/batch/decision
+GET  /api/operational-context/assistance/source-options
+GET  /api/operational-context/assistance/source-options/branches?project=...&search=...
+```
+
+`source-options` zwraca skonfigurowany base URL i glowna grupe GitLab oraz
+unikalne projekty z aktualnego katalogu nalezace do tej grupy lub jej
+podgrup. `projectPath` jest pelna sciezka pokazywana operatorowi, a `project`
+sciezka wzgledna wobec glownej grupy wysylana w `gitLabSource.project` przy
+wyborze z katalogu. Lista jest podpowiedzia z katalogu, nie odczytem
+wszystkich projektow GitLaba. Gdy projektu nie ma na liscie, operator wkleja
+pelny adres strony projektu w `gitLabSource.projectUrl`. Serwer odrzuca adres
+o innym origin, poza skonfigurowanym base path lub glowna grupa oraz adres
+niejednoznaczny, zanim powstanie job. Z poprawnego URL wylicza wzgledna
+sciezke do GitLaba i kanoniczne `git.group`, `git.project`, `git.projectPath`
+oraz `git.url` dla propozycji wpisu w `repo-map.yml`. Dla URL projektu
+`CLP/PROCESSES/CLP_AGREEMENT_PROCESS` pod glowna grupa `CLP` odczyt GitLab
+uzywa `PROCESSES/CLP_AGREEMENT_PROCESS`, a wpis katalogu zachowuje
+`group: CLP/PROCESSES`, `project: CLP_AGREEMENT_PROCESS` i pelne
+`projectPath: CLP/PROCESSES/CLP_AGREEMENT_PROCESS`.
+Te pola trafiaja do `selectedSource.repositoryGit`; parser draftu odrzuca
+propozycje `repository.git`, ktora nie odpowiada wybranemu zrodlu.
+
+`source-options/branches` pobiera pierwsza strone galezi jednego wskazanego
+projektu GitLab i obsluguje filtr serwerowy `search`. Przyjmuje dokladnie
+jedno z `project` (sciezka wzgledna z katalogu) lub `projectUrl` (pelny URL
+wklejony przez operatora). Obie formy przechodza ta sama walidacje
+skonfigurowanego origin i glownej grupy co zrodlo asysty. Odpowiedz zawiera
+`branches`, `truncated` i `warnings`; lista nie jest katalogiem projektow.
+Frontend korzysta ze wspolnego selektora galezi Flow Explorer, automatycznie
+odczytuje opcje po wyborze projektu i pozwala zawezic je filtrem. Reczne
+wpisanie nazwy galezi pozostaje alternatywa; commit jest przypinany automatycznie,
+a zmiana projektu usuwa
+poprzedni ref przed pobraniem nowej listy.
+
+Start przyjmuje opis operatora, tryb, wymagany dla update'u target, opcjonalny
+jeden projekt GitLab z refem oraz preferencje AI. Target `RESOLVE_FINDING`
+zawiera istniejacy fingerprint findingu albo ID otwartego pytania i powiazana
+encje. Grupa GitLab jest konfigurowana po stronie aplikacji. Collector przypina
+ref do commita i wstepnie czyta dokladne sciezki `README.md`, `pom.xml`,
+`package.json`, `build.gradle`, `settings.gradle`; sprawdza rozmiar przed
+odczytem, limituje rzeczywisty HTTP body do 16 KiB na plik i 64 KiB lacznie
+oraz pomija niedostepna albo potencjalnie wrazliwa tresc. Nie wymaga
+istniejacego code-search scope. Sesja AI moze pozniej doczytac istotne pliki
+przez wspolny neutralny zestaw `gitlab_list_repository_branches`,
+`gitlab_list_repository_tree`, `gitlab_list_repository_files`,
+`gitlab_search_repository_files` i
+`gitlab_read_repository_file`. Model podaje projekt wzgledny wobec
+skonfigurowanej glownej grupy oraz galaz, a hidden scope pilnuje, by wybrany
+projekt uzywal galezi operatora i jej przypietego commita. Powiazany projekt
+z tej samej glownej grupy moze byc odczytany po ustaleniu galezi przez tool
+i osobnym przypieciu jej do commita; nie musi byc juz w katalogu. Po przypieciu commita
+collector pobiera tez poczatkowa, ograniczona
+czteropoziomowa mape sciezek i typow z root repozytorium. Gdy katalog jest
+duzy, material pokazuje niepelnosc i kontynuacje; tool moze odczytac kolejne
+cztery poziomy od wybranej bezpiecznej sciezki lub strony. Tree/list/search
+zwracaja sciezki bez tresci, a dopiero pelny zweryfikowany read
+udostepnia cytowalny `gitlab:` source ref zawierajacy projekt i commit.
+Odczyt ma limit 256 KiB na plik,
+odrzuca pliki nietekstowe, niepelne i potencjalnie wrazliwe. Braki zrodel
+staja sie jawnymi ograniczeniami widocznosci.
+
+Przy `CREATE_AREA` z GitLabem formularz przesyla opcjonalne, typowane
+`repositoryFacts` obok wolnego opisu. `usage` rozroznia `UNKNOWN`,
+`DEPLOYED_SYSTEM`, `SHARED_LIBRARY` i `EXISTING_SYSTEM`. Dla nowego wdrazanego
+systemu operator moze podac `systemName` i jawny `runtimeServiceName` (sygnal
+`system.matchSignals.exact.serviceNames`); dla niewdrazanej biblioteki wskazuje
+0-5 znanych systemow korzystajacych z niej, a dla kodu istniejacego systemu
+dokladnie jedno ID. Backend sprawdza ID w aktualnym katalogu, a odpowiedzi
+przekazuje do AI jako osobne, sanitizowane `operatorFacts` z refem
+`operator:repository-facts`. Ten ref nie potwierdza odczytu GitLaba; do
+propozycji repozytorium potrzebny jest ref rzeczywiscie przeczytanego pliku
+z przypietego commita, a zmiana pola `repository.git` musi ten ref cytowac.
+Bez `repositoryFacts` tryb `CREATE_AREA` jest ogolna rewizja katalogu:
+AI moze zaproponowac `CREATE` i `UPDATE` w dziewieciu kanonicznych typach,
+korzystajac z pelnego biezacego katalogu, takze gdy wybrano GitLaba. Sam
+wybor projektu nie potwierdza jego roli ani wdrozenia; nowe repozytorium
+dalej wymaga refa faktycznie przeczytanego pliku, a nowe scope wybranego
+repozytorium i potwierdzonej granicy kodu.
+
+Dla `SHARED_LIBRARY` AI moze zaproponowac samo repozytorium typu
+`shared-library`, bez sztucznego systemu. Dla `DEPLOYED_SYSTEM` z nazwa moze
+zaproponowac `system -> repository -> code-search-scope`; dla
+`EXISTING_SYSTEM` repozytorium i powiazanie z wybranym systemem. Przy
+powiazaniu biblioteki albo kodu istniejacego systemu job przekazuje tylko
+systemowe scope'y jawnie wybranych systemow, wraz z aktualna lista
+`beforeRepositories`. Dopuszczalny `UPDATE code-search-scope` dodaje jedno
+repozytorium na koncu listy z nizszym priorytetem, zachowujac primary i
+granice wyszukiwania. Brak dokladnie jednego scope'u dla wskazanego systemu,
+niedostepna lista repozytoriow albo zbyt duzy kontekst blokuje asyste przed AI.
+Parser pilnuje wybranego scopeId, a maintenance porownuje `before` z biezacym
+stanem katalogu przed zapisem. Zalezna propozycja nie moze uzyc ID z
+pominiętego `CREATE`; powiazanie z nowym repo wymaga tez wybrania jego pola
+`git`. Przy podlaczaniu nowego repo do wskazanych systemow draft musi zawierac
+`UPDATE repositories` dla kazdego ich scope'u; batch review nie pozwala
+pominac tej zaleznosci. Operator sprawdza caly zestaw i publikuje go jedna
+decyzja.
+
+Sesja AI dostaje sanitizowany opis, pelne decoded mapy dziewieciu aktywnych
+YAML z jednego digesta i 11 aktualnych instrukcji
+`operational-context-maintenance/` z pakietu aplikacji. Prompt przedstawia
+te instrukcje w osobnej sekcji reguł, przed danymi zadania i wybranego GitLaba.
+Metadane projektu i drzewo są oddzielone od odczytanych treści. Projekty GitLab
+zapisane w repo-map.yml sa dodatkowo wyswietlane jako podpowiedzi, nie pelny
+spis dostepnych projektow, a kazdy
+aktywny dokument katalogu jest pokazany jako osobny JSON z refem
+`opctx:<plik>`. Opis operatora, pliki GitLab i wpisy katalogu sa materialem
+do analizy, a nie instrukcjami zmieniajacymi zasady asysty. Skrypty cleanup i raport
+porzadkowy nie sa materialem runtime. Reguly sa sprawdzone wobec biezacego
+schematu zapisu; schemat/validator ma pierwszenstwo przed przykladami.
+Przekroczenie jawnego limitu materialu blokuje job bez cichego obciecia.
+Feature wymaga `LONG_CONTEXT_REQUIRED`; brak aktywnego dlugiego kontekstu
+wybranego modelu blokuje run przed pierwszym promptem. Domyslne model i
+reasoning ustawiaja `analysis.operational-context-assistance.ai.*`, a request
+moze je nadpisac. Polski skill `operational-context-catalog-revision` jest
+osadzony w prompcie. Ma nowa nazwe, bo runtime zachowuje starsze lokalne
+wersje skilli bez nadpisywania; archiwalna wersja
+`operational-context-assistance` nie jest uzywana przez ten feature. Przy wybranym
+GitLabie sesja dostaje piec neutralnych read-only tools ze wspolnego
+katalogu, bez mozliwosci zapisu katalogu lub repozytorium. `list_tree` obejmuje
+najwyzej cztery poziomy, 12 zadan HTTP i 120 wpisow na wywolanie;
+`list_repository_branches` zwraca do 100 galezi z oznaczeniem domyslnej,
+`list_files` pobiera ograniczona strone sciezek z kursorem, a
+`search_repository_files` wykorzystuje wyszukiwanie GitLab na galezi jako
+zrodlo kandydatow, po czym kazda znaleziona sciezke weryfikuje na przypietym
+commicie. Wyniki nawigacji nie sa dowodem
+tresci. Odczyt ogranicza sie do 256 KiB i odrzuca sciezki oraz
+tresci wygladajace na wrazliwe. Dla tych tools obowiazuje twardy limit
+wywolan w sesji, niezalezny od globalnego trybu SOFT.
+Parser traktuje wynik jako niezaufany, typowany draft: odrzuca nieznane pola,
+niekanoniczne sciezki i typy, nieautoryzowane source refs, wrazliwa tresc oraz
+samodzielne potwierdzenie ownershipu albo klasyfikacji `frontend`. Draft ma
+uporzadkowane propozycje `CREATE` lub `UPDATE` ze zmianami pol `before/after`,
+uzasadnieniem, podstawa (`USER_STATEMENT`, `SOURCE_OBSERVATION`,
+`AI_INTERPRETATION`), zrodlami, pewnoscia, pytaniami i limitami widocznosci.
+`opctx:<nazwa-pliku>` cytuje aktywny dokument katalogu; `gitlab:` musi
+pochodzic z wstepnie przeczytanego pliku albo udanego zweryfikowanego read.
+Ref innego projektu moze potwierdzac relacje, ale nie zastepuje refa
+wybranego projektu wymaganego do jego nowego wpisu repozytorium. Preview
+sprawdza caly wynikowy katalog po wszystkich wybranych zmianach, wiec
+referencja do `CREATE` w tym samym zestawie jest dopuszczalna.
+
+Gdy wynik AI zawiera tylko pytania, job zachowuje draft i usage, ale ma
+status `BLOCKED`, zeby nie sugerowac gotowych propozycji. Przy wybranym
+GitLabie brak odczytu pliku jest osobnym ograniczeniem widocznosci; wynik
+z propozycjami jest wtedy co najwyzej `PARTIAL`.
+
+Snapshot joba zawiera status, kroki, sanitizowany prompt przygotowany przed
+wywolaniem Copilota, bezpieczne metadane jego pracy, usage/cost, source refs,
+ograniczenia, draft, preview i decyzje. Wspolny boczny panel pokazuje przebieg
+analizy, prompt w kroku `PREPARE_AI`, tok pracy AI oraz szacunek kosztu.
+Operator wybiera pola i jawnie
+potwierdza wymagane fakty dla wszystkich propozycji. Jeden batch preview
+pokazuje polaczony diff, candidate digest oraz wyniki walidacji; jeden batch
+decision publikuje wybrane zmiany. Backend bierze wartosci wylacznie z draftu
+zachowanego w jobie, nie z payloadu klienta, i wymaga tego samego candidate
+digesta, ktory operator zobaczyl w podgladzie. Konflikt nie zapisuje zadnej
+decyzji. Aktywne joby i decyzje pozostaja w pamieci procesu na potrzeby
+preview i zapisu. Kazdy run jest rownolegle utrwalany przez feature-owned
+persister w neutralnym `LocalAnalysisRunStore`: po starcie, zebraniu kontekstu,
+przygotowaniu promptu, zakonczeniu lub bledzie oraz po decyzji operatora.
+`Analysis History` otwiera zapisany snapshot na ekranie Operational Context
+w trybie read-only, takze po restarcie. Historia analiz nie jest historia
+wersji ani mechanizmem rollbacku katalogu YAML.
+Odczyty katalogu przez ten proces widza jeden snapshot przed albo po
+zatwierdzeniu. Journal przywraca poprzednie dokumenty po przerwaniu zapisu;
+osobny proces czytajacy bezposrednio pliki YAML w trakcie publikacji moze
+chwilowo zobaczyc mieszany stan, wiec nie jest wspieranym czytelnikiem
+transakcyjnym.
 
 ## Etap B: strukturalne glossary i handoff rules
 
@@ -604,7 +803,13 @@ UI pokazuje:
 - relations,
 - code-search scopes,
 - search boundary dla code-search scopes,
-- open questions.
+- open questions,
+- asyste AI ze statusem runu, zrodlami, ograniczeniami i review propozycji.
+
+Przycisk `Uzupelnij z AI` zajmuje prawa strone paska statusu i otwiera widok
+asysty. Nie ma osobnej zakladki asysty ani technicznej informacji o sciezce
+lokalnej kopii w pasku. Wewnetrzny stan `assistance` nadal sluzy wejsciom z
+historii, empty state, detail drawer, Validation i Open Questions.
 
 UI najpierw pobiera metadane maintenance lokalnej kopii. Podczas ladowania albo
 bledu endpointu caly read view pozostaje dostepny, ale akcje zapisu sa
@@ -613,8 +818,10 @@ jest dostepna:
 
 - `Add` jest dostepne tylko na zakladkach dziewieciu wspieranych typow YAML,
 - detail drawer zachowuje `Copy`, `Open raw` i `Close` oraz dodaje `Edit` i
-  `Delete`,
+  `Delete`; dla writable encji prowadzi tez do asysty `IMPROVE_ENTITY`,
 - editor wysyla kanoniczny maintenance payload i zachowuje immutable ID,
+- edytor domyslnie pokazuje podstawowe pola, a pola zaawansowane mozna
+  rozwinac bez utraty dostepu do pelnego kontraktu,
 - system editor udostepnia jawne pola `systemType` oraz zamkniety select
   `systemSubtype`; subtype jest wymagany dla `internal-service` i pomijany dla
   pozostalych typow,
@@ -635,6 +842,30 @@ utrzymaniowego zawsze zostaje; `Edit source` jest tylko dodatkowa akcja dla
 jednoznacznego, writable i wspieranego targetu. UI nie utrzymuje
 kompatybilnosci ze starym payloadem i nie renderuje technicznych read modeli
 usunietych z backendu.
+
+Trzy sciezki operatorskie na tym ekranie:
+
+1. Operator naciska `Uzupelnij z AI`, opisuje obszar i opcjonalnie wybiera projekt
+   GitLab lub wkleja jego pelny URL. Wybiera galaz z filtrowanej listy
+   pobranej dla tego projektu albo recznie podaje galaz/commit. Dla GitLaba wybiera jedna role projektu;
+   dopiero wtedy pojawiaja sie potrzebne pytania o nazwe nowego systemu,
+   nazwe uslugi w logach albo znane systemy korzystajace z repozytorium.
+   Moze otrzymac samo repozytorium, nowy system ze scope'em, repozytorium
+   dopiete do scope'u wybranego systemu albo zmiane innych wpisow katalogu.
+   Wybiera pola, sprawdza polaczony diff i zapisuje caly zestaw jedna decyzja.
+2. Z detail encji operator przechodzi do `IMPROVE_ENTITY`; asysta dostaje
+   target, pokazuje diff pol i jego podstawe. Operator wybiera albo pomija
+   proponowane pola. Wartosc wymagajaca recznej korekty jest poprawiana w
+   dostepnym edytorze encji, po odswiezeniu jej biezacej wersji.
+3. Z Validation lub Open Questions operator przechodzi do `RESOLVE_FINDING`
+   dla konkretnego targetu. AI moze zaproponowac powiazana poprawke albo
+   pytanie do czlowieka; finding/pytanie znika dopiero, gdy po zapisie
+   zmieni sie kanoniczny katalog i ponowna walidacja juz go nie zwroci.
+
+Review nie jest zgoda na automatyczny zapis: operator potwierdza wybrane
+pola, a backend sprawdza warunek aktualnosci w chwili publikacji. Gdy draft
+jest nieaktualny lub kandydat nie przechodzi walidacji, UI pokazuje blad i
+zachowuje wybor do dalszej decyzji; nie nadpisuje nowszego stanu katalogu.
 
 ## Rozwoj Nowych Feature'ow
 

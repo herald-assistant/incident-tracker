@@ -61,14 +61,11 @@ processes:
     processBoundary:
       endsWhen:
         - The request is visible to the case handling context.
-    outcomes:
-      successArtifacts:
-        - customer request accepted
-        - case created for handling
+    completionSignals:
+      successful:
+        - The customer request is accepted.
+        - A case is visible for handling.
     references:
-      systems:
-        - customer-portal
-        - case-management
       repositories:
         - customer-portal-ui
         - case-management-service
@@ -207,8 +204,12 @@ completionSignals:
 
 - Model a process only when it is meaningful to a business or system analyst.
 - Steps should be user, business, system or bounded-context milestones.
-- Use `references` to connect systems, repositories, contexts, integrations,
-  glossary terms and handoff rules.
+- Use `references` for useful navigation to repositories, contexts,
+  integrations, glossary terms and handoff rules. Participant system roles
+  already connect the process to systems; do not duplicate them in
+  `references.systems`.
+- `outcomes` and `observability` from older data are preserve-only; do not
+  propose them in a new or updated process.
 - Keep step `matchSignals` as business words or durable labels.
 - Keep `processBoundary` limited to `businessCapability`, `startsWhen`,
   `endsWhen`, `includes`, `excludes` and `assumptions`. Boundary assumptions

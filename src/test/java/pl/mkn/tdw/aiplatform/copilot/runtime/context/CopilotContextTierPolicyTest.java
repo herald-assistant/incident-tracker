@@ -248,12 +248,59 @@ class CopilotContextTierPolicyTest {
                 new ResumeSessionConfig(),
                 List.of(),
                 activities,
-                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
+                CopilotContextTierPreference.AUTO
         ));
 
         assertThat(controller.decision().policyEnabled()).isFalse();
         assertThat(sessionConfig.getContextTier()).isNull();
         assertThat(activities).isEmpty();
+    }
+
+    @Test
+    void shouldBlockRequiredLongContextWhenPlatformPolicyIsDisabled() {
+        var properties = properties(0.70D, 1D, 0);
+        properties.getContextTier().setEnabled(false);
+        var sessionConfig = new SessionConfig().setModel("gpt-crm-context");
+        var prepared = prepared(
+                "CRM_LONG_CONTEXT_".repeat(20),
+                sessionConfig,
+                new ResumeSessionConfig(),
+                List.of(),
+                new ArrayList<>(),
+                CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
+        );
+
+        assertThatThrownBy(() -> policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared))
+                .isInstanceOf(CopilotRequiredContextTierException.class)
+                .hasMessageContaining("wymaga `long_context`")
+                .hasMessageContaining("context-tier.enabled jest wyłączona");
+        assertThat(sessionConfig.getContextTier()).isNull();
+    }
+
+    @Test
+    void shouldBlockKnownModelWithoutLongContextBeforeOpeningSession() {
+        var properties = properties(0.70D, 1D, 0);
+        var policy = new CopilotContextTierPolicy(
+                properties,
+                auth -> new CopilotModelOptionsResponse(
+                        "gpt-short", "high", List.of("high"),
+                        List.of(new CopilotModelOption(
+                                "gpt-short", "Short model", true, List.of("high"), "high", 100, 0
+                        ))
+                ),
+                mock(CopilotEffectiveContextTierReader.class)
+        );
+        var sessionConfig = new SessionConfig().setModel("gpt-short");
+        var prepared = prepared(
+                "Context", sessionConfig, new ResumeSessionConfig(), List.of(),
+                new ArrayList<>(), CopilotContextTierPreference.LONG_CONTEXT_REQUIRED
+        );
+
+        assertThatThrownBy(() -> policy.prepare(prepared))
+                .isInstanceOf(CopilotRequiredContextTierException.class)
+                .hasMessageContaining("gpt-short")
+                .hasMessageContaining("nie obsługuje");
+        assertThat(sessionConfig.getContextTier()).isNull();
     }
 
     @Test
@@ -347,8 +394,8 @@ class CopilotContextTierPolicyTest {
         ));
 
         assertThatThrownBy(() -> controller.verifyBeforeFirstMessage(session))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("did not activate long_context");
+                .isInstanceOf(CopilotRequiredContextTierException.class)
+                .hasMessageContaining("nie aktywował wymaganego `long_context`");
         assertThat(activities).extracting(AnalysisAiActivityEvent::status)
                 .containsExactly("COMPLETED", "FAILED");
     }

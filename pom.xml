@@ -108,6 +108,24 @@
                     <exclude>copilot-runtime-version.properties</exclude>
                 </excludes>
             </resource>
+            <resource>
+                <directory>${project.basedir}/operational-context-maintenance</directory>
+                <targetPath>operational-context-maintenance</targetPath>
+                <filtering>false</filtering>
+                <includes>
+                    <include>operational-context-fill-order.md</include>
+                    <include>operational-context-field-guidance.md</include>
+                    <include>systems-yml-update-prompt.md</include>
+                    <include>repo-map-yml-update-prompt.md</include>
+                    <include>code-search-scopes-yml-update-prompt.md</include>
+                    <include>processes-yml-update-prompt.md</include>
+                    <include>bounded-contexts-yml-update-prompt.md</include>
+                    <include>integrations-yml-update-prompt.md</include>
+                    <include>teams-yml-update-prompt.md</include>
+                    <include>glossary-yml-update-prompt.md</include>
+                    <include>handoff-rules-yml-update-prompt.md</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
             <plugin>

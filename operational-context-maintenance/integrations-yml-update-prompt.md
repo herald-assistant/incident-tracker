@@ -69,9 +69,6 @@ integrations:
       intermediaries: []
       finalTargets: []
     references:
-      systems:
-        - customer-portal
-        - case-management
       repositories:
         - customer-portal-ui
         - case-management-service
@@ -114,8 +111,8 @@ integrations:
 - Do not add or change `participants.*.repositories`; the backend preserves
   legacy values, while editable repository navigation belongs in top-level
   `references` and code-search scopes.
-- Use `references` for navigation only; do not duplicate every participant
-  unless it helps the UI or AI start analysis.
+- Use editable `references` for navigation only; participant systems already
+  define the system relationship, so do not propose `references.systems`.
 - `integrationStyle` and `flowDirection` are high-level labels, not a detailed
   detail list.
 - Keep `failureModes` as guided cards with required `name` and `type`, plus at
