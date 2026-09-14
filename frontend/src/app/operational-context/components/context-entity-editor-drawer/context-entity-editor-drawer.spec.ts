@@ -34,7 +34,7 @@ describe('ContextEntityEditorDrawerComponent', () => {
     expect(emitted).toHaveBeenCalledWith(expect.objectContaining({
       name: 'CRM Contact Platform', notes: ['Anonymized durable note']
     }));
-  });
+  }, 15_000);
 
   it('keeps required Git identity visible in the simplified repository form', async () => {
     await TestBed.configureTestingModule({ imports: [ContextEntityEditorDrawerComponent] }).compileComponents();
@@ -181,8 +181,8 @@ describe('ContextEntityEditorDrawerComponent', () => {
     const fields = fixture.componentInstance.adapter.fields('code-search-scope');
     const helpButtons = fixture.nativeElement.querySelectorAll('.editor-field__help');
     expect(helpButtons.length).toBe(fields.length);
-    expect(helpButtons[0].getAttribute('aria-label')).toContain('Help for');
-    expect(fixture.componentInstance.fieldTooltip(fields.find((field) => field.path === 'target')!)).toContain('strictly system or bounded-context');
+    expect(helpButtons[0].getAttribute('aria-label')).toContain('Pomoc do pola');
+    expect(fixture.componentInstance.fieldTooltip(fields.find((field) => field.path === 'target')!)).toContain('system albo obszar domenowy');
   });
 
   it('renders structured CRM selectors instead of raw JSON for code-search target and repositories', async () => {

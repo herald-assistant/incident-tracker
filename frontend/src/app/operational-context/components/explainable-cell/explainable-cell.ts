@@ -18,6 +18,7 @@ export class ExplainableCellComponent {
   readonly value = input<ExplainableValueDto<string> | null>(null);
   readonly variant = input<'card' | 'table'>('card');
   readonly active = input(false);
+  readonly tooltipText = input('');
   readonly openDetails = output<{ type: string; id: string }>();
   readonly inspect = output<void>();
 
@@ -66,6 +67,9 @@ export class ExplainableCellComponent {
   }
 
   protected tooltip(): string {
+    if (this.tooltipText()) {
+      return this.tooltipText();
+    }
     const aggregate = this.aggregate();
     if (aggregate?.tooltip) {
       return aggregate.tooltip;
@@ -73,7 +77,7 @@ export class ExplainableCellComponent {
 
     const value = this.value();
     if (!value) {
-      return 'No explanation available.';
+      return 'Brak dodatkowego wyjaśnienia.';
     }
 
     return value.reasons.map((reason) => `${reason.label}: ${reason.detail}`).join('\n');

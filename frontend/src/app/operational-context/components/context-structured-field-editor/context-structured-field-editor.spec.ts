@@ -554,7 +554,7 @@ describe('ContextStructuredFieldEditorComponent', () => {
     expect(helpIcons.length).toBe(labels.length);
     expect(labels.every((label) => label.getAttribute('tabindex') === null)).toBe(true);
     expect(helpIcons.every((icon) => icon.getAttribute('tabindex') === '0')).toBe(true);
-    expect(helpIcons.every((icon) => icon.getAttribute('aria-label') === 'Field guidance')).toBe(true);
+      expect(helpIcons.every((icon) => icon.getAttribute('aria-label') === 'Objaśnienie pola')).toBe(true);
     expect(helpIcons.every((icon) => icon.textContent?.includes('help'))).toBe(true);
   });
 

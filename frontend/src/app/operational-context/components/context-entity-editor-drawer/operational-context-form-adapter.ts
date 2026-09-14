@@ -279,14 +279,80 @@ const TYPE_FIELDS: Record<OperationalContextWritableType, OperationalContextForm
   ]
 };
 
-export function operationalContextFieldTooltip(field: OperationalContextFormField): string {
-  const guidance = field.guidance;
-  return [
-    `What to enter: ${guidance.whatToEnter}`,
-    `Runtime / AI effect: ${guidance.runtimeEffect}`,
-    `Format / values: ${guidance.acceptedValues}`,
-    `CRM example: ${guidance.example}`
-  ].join('\n\n');
+const FIELD_TOOLTIPS_PL: Record<string, string> = {
+  id: 'Wpisz unikalny identyfikator małymi literami, używając myślników. Po utworzeniu wpisu nie można go zmienić.',
+  name: 'Podaj nazwę, po której inni rozpoznają ten wpis w katalogu i wynikach wyszukiwania.',
+  shortName: 'Podaj krótszą, jednoznaczną nazwę używaną tam, gdzie pełna nazwa się nie mieści.',
+  lifecycleStatus: 'Określ, czy wpis jest aktywny, planowany, wycofywany czy wycofany. Ten status opisuje katalog; nie uruchamia ani nie wyłącza systemu.',
+  summary: 'Napisz jednym lub dwoma zdaniami, czego dotyczy ten wpis. Opis ułatwia jego znalezienie i zrozumienie.',
+  purpose: 'Wyjaśnij, po co ten obszar istnieje i jaki rezultat zapewnia. Opisuj trwałą rolę, nie chwilowy stan.',
+  aliases: 'Wpisz inne nazwy lub skróty, po jednym w wierszu. Ułatwią znalezienie tego samego wpisu pod różnymi nazwami.',
+  useFor: 'Wpisz pytania lub sytuacje, w których ten wpis jest przydatny, po jednej w wierszu.',
+  systemType: 'Określ rodzaj systemu, np. usługę wewnętrzną, bramę, bazę danych lub system zewnętrzny.',
+  systemSubtype: 'Dla usługi wewnętrznej wybierz rodzaj: interfejs użytkownika (frontend), zaplecze (backend), proces w tle (worker), połączenie tych ról (mixed) lub nieznany (unknown). W innych rodzajach systemów pozostaw pole puste.',
+  operationalStatus: 'Podaj trwały opis stanu działania systemu. Nie wpisuj tu statusu pojedynczego incydentu.',
+  criticality: 'Określ znaczenie wpisu dla działania organizacji: krytyczne (critical), wysokie (high), średnie (medium), niskie (low) albo nieznane (unknown).',
+  ownership: 'Wskaż odpowiedzialny zespół lub nazwę strony odpowiedzialnej. Przy jawnym przypisaniu właściciela wymagane jest co najmniej jedno z tych pól.',
+  participants: 'Wskaż uczestników i ich role w tym obszarze. Wybieraj istniejące systemy z katalogu, gdy są dostępne.',
+  references: 'Połącz wpis z istniejącymi pozycjami katalogu. Powiązania pojawią się w szczegółach i mogą uniemożliwić usunięcie powiązanej pozycji.',
+  matchSignals: 'Dodaj trwałe nazwy, adresy lub terminy, po których można rozpoznać ten wpis. Określ siłę każdego sygnału; nie wpisuj sekretów ani jednorazowych identyfikatorów.',
+  relations: 'Opisz znaczące powiązania z innymi pozycjami katalogu. Wskaż rodzaj relacji i jej cel; nie powielaj zwykłych referencji bez dodatkowego znaczenia.',
+  runtime: 'Podaj katalog konfiguracji względem głównego katalogu repozytorium. Służy do porównywania konfiguracji tego systemu.',
+  sourceCoverage: 'Zaznacz, które źródła sprawdzono, których jeszcze brakuje i czego nie da się obecnie potwierdzić.',
+  gaps: 'Zapisz konkretne nierozstrzygnięte pytania. Trafią do listy „Otwarte pytania”; samo pytanie nie oznacza błędu systemu.',
+  notes: 'Dodaj trwałe wyjaśnienia, po jednym w wierszu. Nie wpisuj sekretów ani komentarzy dotyczących jednorazowego incydentu.',
+  repositoryType: 'Określ rolę repozytorium, np. aplikacja, repozytorium wieloprojektowe lub wspólna biblioteka.',
+  git: 'Wskaż projekt GitLab. Wymagana jest ścieżka grupy i projektu; opcjonalnie podaj nazwę, domyślną gałąź i adres URL.',
+  evidence: 'Dodaj źródło potwierdzające opis tego wpisu, np. ścieżkę dokumentu i rodzaj potwierdzenia. Aplikacja nie odczytuje dokumentu automatycznie.',
+  llmToolHints: 'Wpisz trwałe wskazówki, kiedy warto sięgnąć do tego obszaru i z czym nie należy go mylić. Nie podawaj tu gotowych odpowiedzi.',
+  limitations: 'Opisz, czego ten wpis lub zakres nie obejmuje. Ograniczenia będą widoczne przy korzystaniu z katalogu.',
+  target: 'Wybierz system albo obszar domenowy, którego kod ma być odnajdywany przez ten zakres.',
+  repositories: 'Wybierz repozytoria, ustal kolejność odczytu i granice przeszukiwania kodu. Każde repozytorium może wystąpić tylko raz.',
+  type: 'Podaj rodzaj wpisu zgodnie ze słownictwem używanym w katalogu.',
+  steps: 'Opisz kolejne etapy procesu. Kolejność kart jest kolejnością etapów; identyfikatory etapów pozostają stałe.',
+  processBoundary: 'Określ, kiedy proces się zaczyna i kończy oraz co należy do jego zakresu, a co pozostaje poza nim.',
+  lifecycle: 'Opisz, co uruchamia proces, przez jakie stany przechodzi i które stany kończą jego przebieg. To opis, a nie wykonywany automat stanów.',
+  completionSignals: 'Wpisz obserwowalne oznaki sukcesu, częściowego wykonania, błędu lub anulowania. Sam opis w katalogu nie potwierdza, że zdarzenie nastąpiło.',
+  failureModes: 'Opisz znane sposoby, w jakie proces lub integracja może się nie powieść. Są to możliwe scenariusze, nie rozpoznanie bieżącej awarii.',
+  dataAndArtifacts: 'Wymień rodzaje danych, wiadomości i dokumentów używanych przez proces. Opisuj typy, nie rzeczywiste dane klientów.',
+  category: 'Określ kategorię zgodnie ze słownictwem katalogu. Ułatwi to rozróżnienie podobnych wpisów.',
+  integrationStyle: 'Opisz sposób komunikacji, np. żądanie synchroniczne, zdarzenie lub przetwarzanie wsadowe.',
+  flowDirection: 'Wskaż kierunek przepływu między stronami integracji z perspektywy systemu źródłowego.',
+  localLanguageSummary: 'Wyjaśnij, co ważne pojęcia znaczą w tym obszarze domenowym, po jednym pełnym zdaniu w wierszu.',
+  scope: 'Opisz, co należy do obszaru domenowego, co jest poza nim oraz jakie decyzje i pojęcia są w nim kluczowe.',
+  semanticBoundary: 'Wymień pojęcia, zdarzenia i reguły należące do tego obszaru oraz te, za które odpowiada inny obszar.',
+  term: 'Wpisz słowo lub zwrot, który użytkownicy rzeczywiście spotykają w pracy.',
+  definition: 'Wyjaśnij znaczenie terminu prostym językiem. Definicja nie powinna zależeć od szczegółów implementacji.',
+  localMeaningAndBoundaries: 'Opisz miejscowe znaczenie terminu i granice jego użycia, po jednej myśli w wierszu.',
+  doNotConfuseWith: 'Wymień podobne pojęcia o innym znaczeniu, po jednym w wierszu.',
+  canonicalReferences: 'Podaj istniejące pozycje katalogu w formacie typ:id, po jednej w wierszu. Łączy to termin z właściwym obszarem.',
+  relatedTerms: 'Podaj identyfikatory powiązanych terminów słownika, po jednym w wierszu.',
+  responsibilityHints: 'Wskaż, który system lub obszar domenowy zwykle wyjaśnia to pojęcie. To wskazówka, nie przypisanie zespołu.',
+  title: 'Nazwij sytuację, w której reguła przekazania sprawy może mieć zastosowanie.',
+  useWhen: 'Wpisz obserwowalne warunki użycia tej reguły, po jednym w wierszu.',
+  doNotUseWhen: 'Wpisz warunki wykluczające tę regułę, nawet jeśli inne sygnały wydają się pasować.',
+  requiredEvidence: 'Wymień informacje, które trzeba zebrać przed przekazaniem sprawy. Nie umieszczaj tu rzeczywistych danych klienta.',
+  expectedFirstAction: 'Opisz pierwsze konkretne działanie oczekiwane od osoby, która przejmie sprawę.'
+};
+
+const FIELD_TOOLTIPS_PL_BY_TYPE: Record<string, string> = {
+  'system.participants': 'Wpisz nazwę zewnętrznej organizacji tylko wtedy, gdy cały system jest obsługiwany poza lokalnym katalogiem zespołów.',
+  'process.participants': 'Wybierz systemy biorące udział w procesie i określ, czy pełnią rolę główną, wspierającą lub zewnętrzną.',
+  'integration.participants': 'Wskaż system źródłowy, cele i ewentualnych pośredników. Ich role określają kierunek komunikacji.',
+  'system.references': 'Połącz system z procesami, obszarami domenowymi, integracjami, zespołami i terminami. Repozytoria przypisuje się przez zakres wyszukiwania kodu.',
+  'code-search-scope.repositories': 'Dodaj repozytoria w kolejności odczytu. Dla każdego wybierz przeszukiwanie całego projektu albo wskazanych ścieżek.',
+  'bounded-context.type': 'Określ rodzaj obszaru domenowego, np. główny lub wspierający.',
+  'process.type': 'Określ rodzaj procesu zgodnie ze słownictwem katalogu.',
+  'team.type': 'Określ rodzaj zespołu. Sam typ nie przypisuje zespołowi odpowiedzialności za system.'
+};
+
+export function operationalContextFieldTooltip(
+  field: OperationalContextFormField,
+  entityType?: OperationalContextWritableType
+): string {
+  return (entityType && FIELD_TOOLTIPS_PL_BY_TYPE[`${entityType}.${field.path}`])
+    || FIELD_TOOLTIPS_PL[field.path]
+    || 'Wartość zostanie zapisana w katalogu i będzie widoczna w szczegółach tego wpisu.';
 }
 
 export class OperationalContextFormAdapter {

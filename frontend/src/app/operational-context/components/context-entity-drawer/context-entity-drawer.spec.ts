@@ -39,11 +39,11 @@ describe('ContextEntityDrawerComponent', () => {
     ).map((button) => button.getAttribute('aria-label'));
     expect(labels).toEqual([
       'Zaproponuj uzupełnienie z AI',
-      'Edit entity',
-      'Delete entity',
-      'Copy entity detail',
-      'Open raw source',
-      'Close drawer'
+      'Edytuj pozycję',
+      'Usuń pozycję',
+      'Kopiuj szczegóły pozycji',
+      'Otwórz dane źródłowe',
+      'Zamknij szczegóły'
     ]);
   });
 

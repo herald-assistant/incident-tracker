@@ -11,10 +11,26 @@ import { ExplanationReasonDto, SourceReferenceDto } from '../../models/operation
   styleUrl: './why-popover.scss'
 })
 export class WhyPopoverComponent {
-  readonly title = input('Why this?');
+  readonly title = input('Dlaczego?');
   readonly summary = input('');
+  readonly tooltipText = input('');
   readonly confidence = input('');
   readonly reasons = input<ExplanationReasonDto[]>([]);
   readonly warnings = input<string[]>([]);
   readonly sourceRefs = input<SourceReferenceDto[]>([]);
+
+  protected confidenceLabel(value: string): string {
+    switch (value.toLowerCase()) {
+      case 'high':
+      case 'strong':
+        return 'wysoka';
+      case 'medium':
+        return 'średnia';
+      case 'low':
+      case 'weak':
+        return 'niska';
+      default:
+        return value;
+    }
+  }
 }

@@ -347,21 +347,21 @@ export const routes: Routes = [
           title: 'Operational Context',
           capabilityInfo: {
             description:
-              'Manualne przegladanie i walidacja Operational Context jako reusable capability dla featureow i tooli, bez logiki konkretnej analizy.',
-            badges: ['Reusable przez AI', 'Catalog'],
+              'Przeglądaj i uzupełniaj katalog systemów, procesów, repozytoriów i odpowiedzialności. Z tych informacji korzystają analizy i narzędzia.',
+            badges: ['Katalog wiedzy', 'Dla analiz'],
             meta: [
-              { label: 'Endpointy', value: 'Read API + capability-driven maintenance API' },
+              { label: 'Dane', value: 'Systemy, procesy, repozytoria, integracje i zespoły' },
               {
-                label: 'Wymagany scope',
-                value: 'Lokalna kopia katalogu w tdw-data/operational-context'
+                label: 'Miejsce zapisu',
+                value: 'Lokalny katalog aplikacji'
               },
               {
-                label: 'Reusable przez AI',
-                value: 'Tak, przez neutralne opctx_* tools bez incidentowego inputu'
+                label: 'Wykorzystanie',
+                value: 'Pomaga analizom powiązać sygnały z właściwym systemem i odpowiedzialnością'
               },
               {
-                label: 'Guardrails',
-                value: 'Walidacja domenowa i delete-impact bez cascade'
+                label: 'Zmiany',
+                value: 'Zapis sprawdza poprawność danych i pokazuje wpływ usuwania powiązań'
               }
             ]
           }

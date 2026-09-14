@@ -59,7 +59,7 @@ describe('OperationalContextFormAdapter', () => {
     });
   });
 
-  it.each(OPERATIONAL_CONTEXT_WRITABLE_TYPES)('provides complete runtime and AI guidance for every anonymized CRM %s input', (type) => {
+  it.each(OPERATIONAL_CONTEXT_WRITABLE_TYPES)('provides a Polish tooltip for every anonymized CRM %s input', (type) => {
     const fields = adapter.fields(type);
     expect(fields.length).toBeGreaterThan(0);
     for (const field of fields) {
@@ -67,9 +67,10 @@ describe('OperationalContextFormAdapter', () => {
       expect(field.guidance.runtimeEffect).toBeTruthy();
       expect(field.guidance.acceptedValues).toBeTruthy();
       expect(field.guidance.example).toBeTruthy();
-      expect(operationalContextFieldTooltip(field)).toContain('Runtime / AI effect:');
-      expect(operationalContextFieldTooltip(field)).toContain('Format / values:');
-      expect(operationalContextFieldTooltip(field)).toContain('CRM example:');
+      const tooltip = operationalContextFieldTooltip(field, type);
+      expect(tooltip).toBeTruthy();
+      expect(tooltip).not.toBe('Wartość zostanie zapisana w katalogu i będzie widoczna w szczegółach tego wpisu.');
+      expect(tooltip).not.toMatch(/What to enter|Runtime \/ AI effect|Format \/ values|CRM example/);
     }
   });
 
@@ -84,6 +85,8 @@ describe('OperationalContextFormAdapter', () => {
     expect(target?.guidance.acceptedValues).toContain('strictly system or bounded-context');
     expect(repositories?.guidance.acceptedValues).toContain('whole-repository or path-prefixes');
     expect(repositories?.guidance.acceptedValues).toContain('positive');
+    expect(target && operationalContextFieldTooltip(target, 'code-search-scope')).toContain('system albo obszar domenowy');
+    expect(repositories && operationalContextFieldTooltip(repositories, 'code-search-scope')).toContain('całego projektu albo wskazanych ścieżek');
   });
 
   it('exposes lifecycle status for every canonical CRM entity that supports the field', () => {

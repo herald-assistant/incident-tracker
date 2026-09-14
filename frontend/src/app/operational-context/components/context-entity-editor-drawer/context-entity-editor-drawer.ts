@@ -133,7 +133,7 @@ export class ContextEntityEditorDrawerComponent {
   }
 
   fieldTooltip(field: OperationalContextFormField): string {
-    return operationalContextFieldTooltip(field);
+    return operationalContextFieldTooltip(field, this.state().type);
   }
 
   isStructuredField(field: OperationalContextFormField): boolean {

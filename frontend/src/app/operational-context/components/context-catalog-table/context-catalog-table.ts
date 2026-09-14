@@ -153,15 +153,21 @@ export class ContextCatalogTableComponent {
   protected itemStatusLabel(status: string): string {
     switch (status) {
       case 'needs-review':
-        return 'Needs review';
+        return 'Wymaga sprawdzenia';
       case 'missing':
-        return 'Missing';
+        return 'Brak danych';
       case 'conflicting':
-        return 'Conflicting';
+        return 'Sprzeczne dane';
       case 'verified':
-        return 'Verified';
+        return 'Potwierdzone';
+      case 'known':
+        return 'Znalezione w katalogu';
+      case 'catalog':
+        return 'Zapisane w katalogu';
+      case 'unknown':
+        return 'Nieustalone';
       default:
-        return status || 'Unknown';
+        return 'Nieznany status';
     }
   }
 

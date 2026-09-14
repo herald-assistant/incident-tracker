@@ -3,6 +3,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { MatTooltip } from '@angular/material/tooltip';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
 import { BehaviorSubject, of, Subject } from 'rxjs';
@@ -33,6 +34,21 @@ describe('ContextHomePageComponent', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     restoreNavigatorClipboard(navigatorClipboardDescriptor);
+  });
+
+  it('explains overview counts in Polish without presenting them as a quality check', async () => {
+    const card = { ...aggregate('Systems', 1), detailsType: 'system', severity: 'info', tooltip: 'Backend count.' };
+    const { fixture } = await createComponent({ ...readySummary(), healthCards: [card] }, [systemRow()]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.overview-table__readiness')?.textContent).toContain('Są wpisy');
+    const tooltip = fixture.debugElement.query(By.css('.overview-table .why-popover summary'))
+      .injector.get(MatTooltip).message;
+    expect(tooltip).toBe('Liczba systemów: 1.');
+    expect(tooltip).not.toContain('Backend count.');
   });
 
   it('opens a saved assistance run from Analysis History without enabling a second write', async () => {
@@ -219,9 +235,9 @@ describe('ContextHomePageComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Read model projections');
     expect(fixture.nativeElement.textContent).not.toContain('AI API Preview');
     expect(drawerActionLabels(fixture.nativeElement)).toEqual([
-      'Copy entity detail',
-      'Open raw source',
-      'Close drawer'
+      'Kopiuj szczegóły pozycji',
+      'Otwórz dane źródłowe',
+      'Zamknij szczegóły'
     ]);
   });
 

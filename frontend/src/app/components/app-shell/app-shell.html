@@ -113,9 +113,9 @@
             <button
               class="app-shell__info-trigger"
               type="button"
-              aria-label="Pokaż informacje o capability"
+              aria-label="Pokaż informacje o tym widoku"
               aria-describedby="appShellCapabilityInfo"
-              title="Informacje o capability"
+              title="O tym widoku"
             >
               <span class="material-symbols-outlined" aria-hidden="true">info</span>
             </button>
@@ -126,7 +126,7 @@
               role="tooltip"
             >
               <div class="app-shell__info-copy">
-                <p class="app-shell__info-kicker">Capability context</p>
+                <p class="app-shell__info-kicker">O tym widoku</p>
                 <h2>{{ title() }}</h2>
                 @if (info.description) {
                   <p>{{ info.description }}</p>
@@ -134,7 +134,7 @@
               </div>
 
               @if (info.badges.length > 0) {
-                <div class="app-shell__info-badges" aria-label="Capability labels">
+                <div class="app-shell__info-badges" aria-label="Cechy widoku">
                   @for (badge of info.badges; track badge) {
                     <span>{{ badge }}</span>
                   }

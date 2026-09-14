@@ -10,14 +10,14 @@
           <button type="button" class="entity-drawer__action" aria-label="Zaproponuj uzupełnienie z AI" title="Zaproponuj uzupełnienie z AI" (click)="assistEntity.emit()">
             <mat-icon fontSet="material-symbols-outlined">auto_awesome</mat-icon>
           </button>
-          <button type="button" class="entity-drawer__action" aria-label="Edit entity" title="Edit" (click)="editEntity.emit()">
+          <button type="button" class="entity-drawer__action" aria-label="Edytuj pozycję" title="Edytuj pozycję katalogu" (click)="editEntity.emit()">
             <mat-icon fontSet="material-symbols-outlined">edit</mat-icon>
           </button>
-          <button type="button" class="entity-drawer__action entity-drawer__action--danger" aria-label="Delete entity" title="Delete" (click)="deleteEntity.emit()">
+          <button type="button" class="entity-drawer__action entity-drawer__action--danger" aria-label="Usuń pozycję" title="Usuń pozycję katalogu" (click)="deleteEntity.emit()">
             <mat-icon fontSet="material-symbols-outlined">delete</mat-icon>
           </button>
         }
-        <button type="button" class="entity-drawer__action" aria-label="Copy entity detail" title="Copy" (click)="copyEntityDetail()">
+        <button type="button" class="entity-drawer__action" aria-label="Kopiuj szczegóły pozycji" title="Kopiuj szczegóły pozycji" (click)="copyEntityDetail()">
           <mat-icon fontSet="material-symbols-outlined">
             {{ copiedEntity() ? 'task_alt' : 'content_copy' }}
           </mat-icon>
@@ -25,14 +25,14 @@
         <button
           type="button"
           class="entity-drawer__action"
-          aria-label="Open raw source"
-          title="Open raw"
+          aria-label="Otwórz dane źródłowe"
+          title="Otwórz dane źródłowe"
           [disabled]="!entity.rawSourcePreview"
           (click)="openRawSource()"
         >
           <mat-icon fontSet="material-symbols-outlined">data_object</mat-icon>
         </button>
-        <button type="button" class="entity-drawer__action" aria-label="Close drawer" title="Close" (click)="closeDrawer.emit()">
+        <button type="button" class="entity-drawer__action" aria-label="Zamknij szczegóły" title="Zamknij szczegóły" (click)="closeDrawer.emit()">
           <mat-icon fontSet="material-symbols-outlined">close</mat-icon>
         </button>
       </div>
@@ -175,6 +175,7 @@
           <app-why-popover
             [title]="section.title"
             [summary]="section.summary"
+            tooltipText="Pokaż źródło i uzasadnienie informacji o tej pozycji."
             [confidence]="section.confidence"
             [reasons]="section.reasons"
             [warnings]="section.warnings"

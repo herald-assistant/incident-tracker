@@ -96,18 +96,19 @@
               @for (card of summary()?.healthCards || []; track card.label) {
                 <div class="overview-table__row" role="row">
                   <strong>{{ card.label }}</strong>
-                  <span>{{ card.count }} indexed</span>
+                  <span>{{ overviewCountLabel(card) }}</span>
                   <span
                     class="overview-table__readiness"
                     [attr.data-severity]="card.severity"
                   >
-                    {{ healthReadinessLabel(card.severity) }}
+                    {{ healthReadinessLabel(card) }}
                   </span>
                   <app-why-popover
-                    title="Why this?"
-                    [summary]="card.tooltip"
+                    title="Dlaczego?"
+                    [summary]="overviewCardDescription(card)"
+                    [tooltipText]="overviewCardDescription(card)"
                     [confidence]="card.confidence || ''"
-                    [reasons]="card.reasons"
+                    [reasons]="[]"
                     [warnings]="card.warnings"
                     [sourceRefs]="card.sourceRefs"
                   ></app-why-popover>
@@ -174,10 +175,11 @@
                   <span>{{ result.type }}</span>
                   <span class="confidence-chip">{{ result.confidence }}</span>
                   <app-why-popover
-                    title="Why this?"
-                    [summary]="result.why"
+                    title="Dlaczego?"
+                    summary="Pozycja pasuje do wyszukiwanego tekstu. Sprawdź dopasowane pola i szczegóły wpisu."
+                    tooltipText="Pokaż podstawę dopasowania do wyszukiwanego tekstu."
                     [confidence]="result.confidence"
-                    [reasons]="[{ label: 'Matched fields', detail: result.matchedFields.join(', '), strength: 'strong' }]"
+                    [reasons]="[{ label: 'Dopasowane pola', detail: result.matchedFields.join(', '), strength: 'strong' }]"
                     [warnings]="[]"
                     [sourceRefs]="[]"
                   ></app-why-popover>

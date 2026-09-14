@@ -844,19 +844,19 @@ function buildUsageTooltip(
   const lines = [
     'Szacowany koszt analizy AI',
     '',
-    `Tokens: ${formatTokenCount(usage.totalTokens)} - łączna ilość tekstu odczytanego przez model i wygenerowanej odpowiedzi.`,
-    `Credits: ${formatCredits(estimate.credits)} - przeliczenie tokenów na GitHub AI Credits.`,
-    `Dollars: ${formatDollars(estimate.dollars)} - orientacyjny koszt dodatkowego użycia po wykorzystaniu pakietu.`,
+    `Tokeny: ${formatTokenCount(usage.totalTokens)} - miara tekstu odczytanego i wygenerowanego przez AI.`,
+    `Kredyty GitHub AI: ${formatCredits(estimate.credits)} - szacowane zużycie pakietu.`,
+    `Koszt w USD: ${formatDollars(estimate.dollars)} - szacowany koszt po wykorzystaniu pakietu.`,
     '',
     'Jak to liczymy:',
     `Nowy kontekst wysłany do AI: ${formatTokenCount(
       estimate.newInputTokens
     )} tokenów × ${formatUsdRate(estimate.inputUsdPerMillion)} / 1M.`,
-    `Kontekst odczytany z cache: ${formatTokenCount(
+    `Ponownie użyty kontekst: ${formatTokenCount(
       estimate.cachedInputTokens
     )} tokenów × ${formatUsdRate(
       estimate.cachedInputUsdPerMillion
-    )} / 1M. To ponownie użyty kontekst rozmowy/evidence, zwykle dużo tańszy niż nowy input.`,
+    )} / 1M. To wcześniejsza część rozmowy, za którą zwykle nalicza się niższą stawkę.`,
     `Odpowiedź AI: ${formatTokenCount(estimate.outputTokens)} tokenów × ${formatUsdRate(
       estimate.outputUsdPerMillion
     )} / 1M.`
@@ -865,15 +865,15 @@ function buildUsageTooltip(
   if (estimate.cacheWriteTokens > 0) {
     if (estimate.cacheWriteUsdPerMillion !== null) {
       lines.push(
-        `Zapis do cache: ${formatTokenCount(estimate.cacheWriteTokens)} tokenów × ${formatUsdRate(
+        `Zapis do pamięci podręcznej: ${formatTokenCount(estimate.cacheWriteTokens)} tokenów × ${formatUsdRate(
           estimate.cacheWriteUsdPerMillion
         )} / 1M.`
       );
     } else {
       lines.push(
-        `Zapis do cache: ${formatTokenCount(
+        `Zapis do pamięci podręcznej: ${formatTokenCount(
           estimate.cacheWriteTokens
-        )} tokenów. Ten model nie ma osobnej stawki cache-write w tabeli, więc pokazujemy to informacyjnie.`
+        )} tokenów. Nie znamy osobnej stawki za ten zapis, więc pokazujemy go informacyjnie.`
       );
     }
   }
@@ -882,14 +882,14 @@ function buildUsageTooltip(
   lines.push(
     `Stawki: ${estimate.pricingModel}${
       estimate.usedFallbackPricing ? ' (model nierozpoznany, użyty domyślny przelicznik)' : ''
-    }, 1 credit = ${formatDollars(GITHUB_AI_CREDIT_USD)}.`
+    }, 1 kredyt = ${formatDollars(GITHUB_AI_CREDIT_USD)}.`
   );
 
   if (usage.apiCallCount > 0) {
     lines.push(
       `Wywołania modelu: ${formatTokenCount(
         usage.apiCallCount
-      )}. Jedna analiza może mieć kilka rund, zwłaszcza gdy AI pobiera dodatkowe dane przez tools.`
+      )}. Jedna analiza może mieć kilka rund, zwłaszcza gdy AI pobiera dodatkowe dane.`
     );
   }
 
@@ -898,7 +898,7 @@ function buildUsageTooltip(
   }
 
   if (usage.model) {
-    lines.push(`Model zgłoszony przez SDK: ${usage.model}.`);
+    lines.push(`Użyty model: ${usage.model}.`);
   }
 
   if (usage.contextCurrentTokens !== null && usage.contextTokenLimit !== null) {
@@ -907,7 +907,7 @@ function buildUsageTooltip(
         usage.contextCurrentTokens
       )} / ${formatTokenCount(
         usage.contextTokenLimit
-      )} tokenów. To snapshot pamięci rozmowy, a nie osobna pozycja do doliczenia.`
+      )} tokenów. To bieżąca wielkość rozmowy, a nie dodatkowy koszt.`
     );
   }
 
@@ -915,13 +915,13 @@ function buildUsageTooltip(
     lines.push(
       `Wiadomości w sesji: ${formatTokenCount(
         usage.contextMessages
-      )}; obejmują też techniczne komunikaty SDK i wyniki tools.`
+      )}; obejmują również komunikaty techniczne i wyniki narzędzi.`
     );
   }
 
   lines.push('');
   lines.push(
-    'To uproszczona estymacja do oceny opłacalności, nie faktura. Rzeczywisty billing zależy od planu, dostępnego pakietu credits i aktualnego cennika GitHub.'
+    'To przybliżenie, a nie kwota na fakturze. Rzeczywisty koszt zależy od planu, pozostałych kredytów i cennika GitHub.'
   );
 
   return lines.join('\n');
@@ -2344,7 +2344,7 @@ function toolStatusTooltip(status: string, completeEvent: AnalysisAiActivityEven
   }
 
   if (!completeEvent) {
-    return 'Tool zakończył się błędem.';
+    return 'Narzędzie zakończyło się błędem.';
   }
 
   const details = activityDetails(completeEvent);
@@ -2353,7 +2353,7 @@ function toolStatusTooltip(status: string, completeEvent: AnalysisAiActivityEven
     stringFromRecord(details, 'message') ||
     stringFromRecord(details, 'error') ||
     completeEvent.summary ||
-    'Tool zakończył się błędem.'
+    'Narzędzie zakończyło się błędem.'
   );
 }
 

@@ -451,9 +451,9 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(usagePill?.textContent).toContain('$0.01');
     expect(tooltip).toContain('Szacowany koszt analizy AI');
     expect(tooltip).toContain('Nowy kontekst wysłany do AI: 2 100');
-    expect(tooltip).toContain('Kontekst odczytany z cache: 300');
+    expect(tooltip).toContain('Ponownie użyty kontekst: 300');
     expect(tooltip).toContain('Odpowiedź AI: 420');
-    expect(tooltip).toContain('Model zgłoszony przez SDK: gpt-5.4');
+    expect(tooltip).toContain('Użyty model: gpt-5.4');
   });
 
   it('should render Copilot activity and tool evidence in one timeline', async () => {

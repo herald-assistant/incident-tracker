@@ -27,7 +27,7 @@ const ASIDE_TABS: AnalysisFeatureAsideTab[] = [
     id: 'chat',
     icon: 'forum',
     label: 'Follow-up chat',
-    tooltip: 'Follow-up chat'
+    tooltip: 'Dalsza rozmowa o wyniku'
   },
   {
     id: 'feedback',
