@@ -19,6 +19,8 @@ tworzenia oraz aktualizowania dokumentow sa w `AGENTS.md`.
   roznicy pomiedzy local workspace i exportem.
 - `copilot-sdk-otlp-agent-scanner.md`
   instrukcja opt-in diagnostyki sesji Copilot SDK w lokalnym Agent Scanner.
+- `operational-context-assistance-diagnostics.md`
+  diagnostyka asysty Operational Context i scenariusze recznej weryfikacji.
 - `presentations/`
   materialy prezentacyjne i ich zrodla.
 
@@ -57,31 +59,6 @@ implementacje niezatwierdzonego planu.
 trwale decyzje oraz wynikowy stan powinny byc przeniesione do `architecture/`,
 a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 
-- `needs/operational-context-ai-assisted-maintenance.md`
-  opisuje trudnosc pierwszego utworzenia i pozniejszej aktualizacji katalogu
-  przez uzytkownika nieznajacego modelu Operational Context.
-- `plans/operational-context-ai-assisted-maintenance.md`
-  dokumentuje dostarczony przyrost L2 pomocy AI na ekranie katalogu:
-  prowadzone zbieranie informacji, typowane propozycje, review i pojedyncze
-  warunkowe zapisy. Wynikowy runtime opisuje
-  `architecture/operational-context-model-tools-and-usage.md`.
-- `needs/operational-context-repository-onboarding.md` i
-  `plans/operational-context-repository-onboarding.md`
-  opisuja potrzebe oraz dostarczone prowadzone podlaczanie nowego projektu
-  GitLab jako zrodla analiz, z rozroznieniem wdrazanego systemu, biblioteki i
-  kodu istniejacego systemu. Wynikowy runtime opisuje
-  `architecture/operational-context-model-tools-and-usage.md`.
-- `needs/operational-context-assisted-catalog-revision.md` i
-  `plans/operational-context-assisted-catalog-revision.md`
-  opisuja pelny kontekst katalogu dla AI, przypiete narzedzia odczytu GitLab,
-  zestawy zmian wielu encji i ich zbiorczy przeglad oraz zapis.
-- `plans/operational-context-assistance-gitlab-tree.md` dokumentuje wykonany
-  przyrost nawigacji po drzewie wybranego repozytorium i jasny status zadania
-  bez propozycji. Aktualny runtime opisuje
-  `architecture/operational-context-model-tools-and-usage.md`.
-- `plans/operational-context-universal-gitlab-tools.md` opisuje scalenie
-  katalogu GitLab MCP tools, odczyt powiazanych projektow z glownej grupy i
-  wybor samej galezi w formularzu asysty.
 - `needs/incident-analysis-operator-problem-description.md` i
   `plans/incident-analysis-operator-problem-description.md`
   dokumentuja dostarczony opcjonalny opis objawu przy starcie Incident
@@ -142,7 +119,8 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `architecture/package-dependencies.md`
   definiuje dozwolony graf zaleznosci i odpowiedzialnosc warstw.
 - `architecture/operational-context-model-tools-and-usage.md`
-  definiuje katalog Operational Context, jego API, tools i zasady uzycia.
+  definiuje katalog Operational Context, jego API, tools i zasady uzycia;
+  diagnostyke asysty opisuje `operational-context-assistance-diagnostics.md`.
 - `architecture/codex-continuation-guide.md`
   wskazuje kanoniczne miejsca w kodzie oraz bezpieczny sposob kontynuowania
   rozwoju.
@@ -156,7 +134,10 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `../src/main/resources/copilot/skills`
   skille Copilota pakowane do runtime aplikacji.
 - `../src/main/resources/operational-context`
-  realny katalog operacyjny czytany przez integracje, tools i feature'y.
+  niezmienny seed katalogu; runtime czyta lokalna kopie w
+  `${tdw.workspace.directory}/operational-context`.
+- `../operational-context-maintenance`
+  pakowane reguly merytoryczne asysty AI oraz skrypty utrzymaniowe.
 - `../frontend`
   zrodlowy workspace Angular dla aplikacji operatorskiej.
 - `../src/main/resources/static`

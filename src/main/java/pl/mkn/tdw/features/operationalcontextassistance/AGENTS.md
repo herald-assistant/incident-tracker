@@ -110,6 +110,13 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
 
 ## Weryfikacja
 
+Przy diagnozie runu zacznij od
+`docs/operational-context-assistance-diagnostics.md`: przygotowanego promptu
+w `PREPARE_AI`, przypietego commita i faktycznych source refs, statusu joba,
+`fieldErrors` podgladu oraz zapisanego review w historii. Nie odtwarzaj
+starego kontraktu z zakonczonych planow; porownuj kod i testy z
+`docs/architecture/operational-context-model-tools-and-usage.md`.
+
 Przy zmianie kontraktu request/draft/decyzji sprawdz MockMvc, parser, job,
 maintenance oraz kontrakt Angulara. Dla zmian zrodla sprawdz przypiecie
 commita, rozmiar przed odczytem, limit rzeczywistego body i zachowanie tresci

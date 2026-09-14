@@ -38,6 +38,8 @@ Przed wieksza zmiana zacznij od:
    Analysis
 6. `docs/architecture/package-dependencies.md`
 7. `docs/architecture/operational-context-model-tools-and-usage.md`
+   oraz `docs/operational-context-assistance-diagnostics.md` przy diagnozie
+   lub zmianie asysty Operational Context
 8. `docs/architecture/codex-continuation-guide.md`
 9. `docs/architecture/analysis-feature-delivery-playbook.md` przy tworzeniu
     feature'a oraz zmianach L1-L3 istniejacego feature'a lub mechanizmu
@@ -296,8 +298,9 @@ Zasady granic:
   ograniczony `DEEP`, job API, historia/import-export i report.
 - `src/main/java/pl/mkn/tdw/features/operationalcontextassistance`
   Feature prowadzacej asysty AI na ekranie Operational Context: trzy tryby
-  operatora, ograniczone wybrane zrodlo GitLab, typowany draft, read-only
-  preview i jawne decyzje o zapisie pojedynczych propozycji.
+  operatora, jeden glowny projekt GitLab przypiety do commita, opcjonalny
+  odczyt innych projektow w skonfigurowanej grupie, typowany draft, roboczy
+  review w historii oraz read-only preview i warunkowy zapis calego zestawu.
 - `src/main/java/pl/mkn/tdw/features/deliverycomplexityassessment`
   Feature oceny dostarczonej zlozonosci: typed Jira JQL i status history,
   Delivery Units issue-MR, pelne inline evidence zwrocone przez integracje,
@@ -329,8 +332,9 @@ Zasady granic:
   Skille Copilota pakowane do runtime. Incidentowe playbooki uzycia tools, np.
   operational context, sa zasobami tutaj, a nie logika neutralnych tooli.
 - `src/main/resources/operational-context`
-  Runtime catalog systemow, procesow, repozytoriow i regul handoffu. System
-  jest tu kanonicznym targetem relacji i code-search scope'ow.
+  Niezmienny seed katalogu. Efektywna kopia uzywana przez runtime jest w
+  `${tdw.workspace.directory}/operational-context`; system pozostaje
+  kanonicznym targetem relacji i code-search scope'ow.
 
 ## Zasady rozwoju
 
@@ -487,3 +491,4 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/tdw/features/operationalcontextassistance/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/ai/AGENTS.md`
+- `operational-context-maintenance/AGENTS.md`

@@ -3,6 +3,8 @@
 Ten dokument jest kanonicznym opisem `operational-context` w projekcie.
 Opisuje aktualny model katalogu, sposob jego uzycia przez API, tools, AI
 runtime i feature'y analityczne oraz granice, ktorych nie wolno odbudowywac.
+Przebieg diagnozy asysty i scenariusze recznej weryfikacji opisuje
+[`operational-context-assistance-diagnostics.md`](../operational-context-assistance-diagnostics.md).
 
 ## Cel
 

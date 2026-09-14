@@ -18,11 +18,16 @@ Obecnie obejmuje m.in.:
 Operational context jest tutaj query-based capability katalogu operacyjnego.
 Incident-specific matching i mapowanie na evidence pozostaja w
 `features.incidentanalysis.evidence.provider.operationalcontext`.
-Neutralne maintenance zapewnia tez read-only preview kandydata oraz warunkowy,
-atomowy zapis jednej encji po walidacji calego katalogu. W asyscie AI feature
-wybiera propozycje i pola; integracja nie przejmuje promptu, joba ani decyzji
-operatora. Dla `CREATE` sprawdza digest, a dla `UPDATE` wartosci wybranych pol
-`before` pod tym samym lockiem co publikacja YAML.
+Neutralne maintenance zapewnia read-only preview pojedynczej encji i calego
+wybranego zestawu oraz warunkowy zapis. Batch sklada wszystkie mutacje na
+jednym snapshocie, dopuszcza referencje do pozniejszego `CREATE` z tego samego
+zestawu, waliduje wynikowy katalog i publikuje dotkniete YAML jako jedna
+logiczna decyzje z recovery po przerwaniu. Referencja do pominietej propozycji
+pozostaje bledem. W asyscie AI feature wybiera propozycje i pola; integracja
+nie przejmuje promptu, joba ani decyzji operatora. Przy zapisie zestawu
+sprawdza digest oraz wartosci `before` wybranych pol pod tym samym lockiem co
+publikacja. Bledy strukturalne batcha zachowuja wskaznik
+`/mutations/{index}/payload/...`.
 W modelu operational context `system` jest kanonicznym bytem dla aplikacji lub
 uslugi. Nazwy deploymentu, kontenera, aplikacji i serwisu sa sygnalami albo
 metadata systemu; nie dodawaj osobnych kontraktow referencyjnych
