@@ -165,7 +165,7 @@ class OperationalContextOwnershipResolverTest {
                 List.of(map(
                         "id", "crm-customer-service-repo",
                         "name", "CRM Customer Service Repository",
-                        "git", map("projectPath", "CRM/customer-platform/crm-customer-service-repo"),
+                        "git", map("provider", "gitlab", "projectPath", "CRM/customer-platform/crm-customer-service-repo"),
                         "references", map(
                                 "systems", List.of("crm-customer-service"),
                                 "boundedContexts", List.of("customer-profile-context")

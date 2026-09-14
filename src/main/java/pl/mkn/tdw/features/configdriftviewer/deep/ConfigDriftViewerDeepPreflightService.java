@@ -190,12 +190,11 @@ public class ConfigDriftViewerDeepPreflightService {
         for (var repository : codeSearch.repositories()) {
             var repositoryLimits = new LinkedHashSet<String>();
             var git = repository.git();
-            var projectPath = firstNonBlank(git.projectPath(), git.project());
+            var projectPath = git.projectPath();
             var projectName = relativeProjectName(projectPath);
             var structurallyReady = true;
 
-            if (StringUtils.hasText(git.provider())
-                    && !"gitlab".equalsIgnoreCase(git.provider())) {
+            if (!"gitlab".equals(git.provider())) {
                 addBlocker(
                         blockers,
                         "DEEP_CODE_REPOSITORY_PROVIDER_UNSUPPORTED",

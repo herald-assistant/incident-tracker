@@ -69,7 +69,6 @@ public class ConfigDriftViewerScopeResolver {
 
         var candidates = new LinkedHashSet<String>();
         addAll(candidates, system.values("runtime.configurationDirectory"));
-        addAll(candidates, system.values("deployment.configurationDirectory"));
         addAll(candidates, system.matchSignals().exact().values(CONFIGURATION_DIRECTORIES_SIGNAL));
 
         if (candidates.isEmpty()) {

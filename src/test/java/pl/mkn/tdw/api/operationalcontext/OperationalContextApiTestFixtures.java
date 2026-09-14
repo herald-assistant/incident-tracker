@@ -52,12 +52,12 @@ final class OperationalContextApiTestFixtures {
                                 "boundedContexts", List.of("customer-consent-context"),
                                 "teams", List.of("team-a")
                         ),
-                        "processSteps", List.of(map(
+                        "steps", List.of(map(
                                 "id", "capture",
                                 "name", "Capture customer consent",
                                 "summary", "Validates customer consent and passes it to registry handoff."
                         )),
-                        "processBoundary", map("successArtifacts", List.of("customer consent captured"))
+                        "processBoundary", map("endsWhen", List.of("customer consent captured"))
                 )),
                 List.of(
                         map(

@@ -96,7 +96,7 @@ public class OperationalContextGitLabSourceOptionsService {
     }
 
     private boolean isGitLabInConfiguredGroup(String configuredGroup, OperationalContextGit git) {
-        if (StringUtils.hasText(git.provider()) && !"gitlab".equalsIgnoreCase(git.provider().trim())) {
+        if (!"gitlab".equals(git.provider())) {
             return false;
         }
         if (StringUtils.hasText(git.group())) {
@@ -112,7 +112,7 @@ public class OperationalContextGitLabSourceOptionsService {
     }
 
     private String relativeProject(String configuredGroup, OperationalContextGit git) {
-        var rawPath = StringUtils.hasText(git.projectPath()) ? git.projectPath() : git.project();
+        var rawPath = git.projectPath();
         if (!StringUtils.hasText(rawPath)) {
             return null;
         }

@@ -4,13 +4,17 @@ Status: done
 
 Source need: [Pomoc AI przy tworzeniu i aktualizacji Operational Context](../needs/operational-context-ai-assisted-maintenance.md)
 
+Pozniejsza decyzja usunela filtrowanie nazw sugerujacych wrazliwa zawartosc;
+aktualne zachowanie jest opisane w
+[planie odczytu bez redakcji](operational-context-assistance-unfiltered-gitlab.md).
+
 ## Potrzeba / dlaczego
 
 Test operatora z 2026-09-13 wykazal, ze wybranie projektu GitLab nie daje AI
 uzytecznego punktu startu w monorepo. Collector sprawdzal tylko piec plikow
-w katalogu glownym; dla `unicam-group/Unicam-project` nie przeczytal zadnego.
+w katalogu glownym; dla fikcyjnego `CRM/customer-api` nie przeczytal zadnego.
 Model nie wywolal narzedzi GitLab i zwrocil same pytania mimo dostepnych
-sciezek `Backend/hackhub-backend` i `Frontend/hackhub-frontend` w katalogu.
+sciezek `Backend/crm-customer-api` i `Frontend/crm-customer-ui` w katalogu.
 
 ## Baseline i zakres zmiany
 
@@ -58,8 +62,9 @@ przy stalej liczbie requestow i zejsc dalej kolejnym wywolaniem toola.
 ## Ograniczenia i ryzyka
 
 Kazdy odczyt jest przypiety do wybranego commita. Sciezka i kursor musza byc
-walidowane; odpowiedz jest ograniczona pod katem liczby requestow, wpisow,
-dlugosci i potencjalnie wrazliwych nazw. Czesc drzewa moze byc pominieta;
+walidowane; odpowiedz jest ograniczona pod katem liczby requestow, wpisow i
+dlugosci. Nazwy sugerujace wrazliwa zawartosc pozostaja widoczne. Czesc
+drzewa moze byc pominieta;
 wynik oznacza niepelnosc i podaje mozliwosc dalszej eksploracji. Zmiana
 allowlisty tools wymaga testu rejestracji callbackow i policy sesji.
 

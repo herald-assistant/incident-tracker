@@ -21,10 +21,13 @@ import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecision;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecisionRequest;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalPreview;
+import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceReviewDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceSourceRevision;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftParser;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftPreflight;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftScope;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftValidationTools;
 import pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace.OperationalContextAssistanceLocalRunPersistence;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceCollector;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
@@ -81,6 +84,7 @@ public class OperationalContextAssistanceJobService {
     private final OperationalContextAssistancePromptPreparationService promptPreparationService;
     private final OperationalContextAssistanceCopilotProvider copilotProvider;
     private final OperationalContextAssistanceDraftParser draftParser;
+    private final OperationalContextAssistanceDraftPreflight draftPreflight;
     private final ObjectMapper objectMapper;
     private final TaskExecutor applicationTaskExecutor;
     private final AnalysisAiAuthRefResolver authRefResolver;
@@ -110,11 +114,29 @@ public class OperationalContextAssistanceJobService {
     }
 
     public OperationalContextAssistanceJobSnapshot getJob(String jobId) {
-        var state = jobs.get(jobId);
-        if (state == null) {
-            throw new OperationalContextAssistanceJobNotFoundException(jobId);
+        return requireJob(jobId).snapshot();
+    }
+
+    public OperationalContextAssistanceJobSnapshot saveReview(
+            String jobId, OperationalContextAssistanceReviewDraft reviewDraft
+    ) {
+        var state = requireJob(jobId);
+        synchronized (state) {
+            var current = reviewableSnapshot(state);
+            validateReviewDraft(current, reviewDraft);
+            var previous = current.reviewDraft();
+            state.saveReview(reviewDraft);
+            try {
+                localRunPersistence.persistRunSnapshot(state.snapshot(), requests.get(jobId),
+                        state.requiredRepositoryScopeIds());
+            } catch (RuntimeException exception) {
+                state.saveReview(previous);
+                log.warn("Operational Context assistance review save failed jobId={}", jobId, exception);
+                throw decisionError("OPCTX_ASSISTANCE_REVIEW_SAVE_FAILED", UserFacingErrorType.SERVICE_UNAVAILABLE,
+                        "Nie udało się zachować roboczego przeglądu. Spróbuj ponownie.");
+            }
+            return state.snapshot();
         }
-        return state.snapshot();
     }
 
     public OperationalContextAssistanceBatchPreview previewBatch(
@@ -183,9 +205,66 @@ public class OperationalContextAssistanceJobService {
     private OperationalContextAssistanceJobState requireJob(String jobId) {
         var state = jobs.get(jobId);
         if (state == null) {
-            throw new OperationalContextAssistanceJobNotFoundException(jobId);
+            var stored = localRunPersistence.findRestorable(jobId).orElse(null);
+            if (stored == null) {
+                throw new OperationalContextAssistanceJobNotFoundException(jobId);
+            }
+            state = jobs.computeIfAbsent(jobId, ignored -> OperationalContextAssistanceJobState.restore(
+                    stored.snapshot(), stored.requiredRepositoryScopeIds()));
         }
         return state;
+    }
+
+    private void validateReviewDraft(
+            OperationalContextAssistanceJobSnapshot current,
+            OperationalContextAssistanceReviewDraft reviewDraft
+    ) {
+        if (reviewDraft == null || reviewDraft.selections() == null
+                || reviewDraft.selections().size() != current.draft().proposals().size()) {
+            throw decisionError("OPCTX_ASSISTANCE_INVALID_SELECTION", UserFacingErrorType.BAD_REQUEST,
+                    "Zapis roboczy musi zawierać wybór dla każdej propozycji.");
+        }
+        for (var index = 0; index < reviewDraft.selections().size(); index++) {
+            var editedBytes = 0;
+            var selection = reviewDraft.selections().get(index);
+            if (selection == null || selection.selectedPaths() == null
+                    || selection.confirmedPaths() == null || selection.editedValues() == null) {
+                throw decisionError("OPCTX_ASSISTANCE_INVALID_SELECTION", UserFacingErrorType.BAD_REQUEST,
+                        "Wybór propozycji jest niepoprawny.");
+            }
+            var proposal = current.draft().proposals().get(index);
+            var available = proposal.changes().stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            OperationalContextAssistanceDraft.FieldChange::path, change -> change));
+            var selected = new LinkedHashSet<>(selection.selectedPaths());
+            var confirmed = new LinkedHashSet<>(selection.confirmedPaths());
+            if (selected.size() != selection.selectedPaths().size() || selected.contains(null)
+                    || !available.keySet().containsAll(selected)
+                    || confirmed.size() != selection.confirmedPaths().size() || confirmed.contains(null)
+                    || !selected.containsAll(confirmed)
+                    || selection.editedValues().containsKey(null)
+                    || !available.keySet().containsAll(selection.editedValues().keySet())) {
+                throw decisionError("OPCTX_ASSISTANCE_INVALID_SELECTION", UserFacingErrorType.BAD_REQUEST,
+                        "Zapis roboczy zawiera pole spoza propozycji AI.");
+            }
+            for (var edit : selection.editedValues().entrySet()) {
+                var path = edit.getKey();
+                var value = edit.getValue();
+                if ("repository".equals(proposal.entityType()) && "git".equals(path)
+                        || "code-search-scope".equals(proposal.entityType()) && "repositories".equals(path)
+                        || value == null || value.isNull()
+                        || !sameEditableValueKind(available.get(path).after(), value)) {
+                    throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.BAD_REQUEST,
+                            "Poprawka robocza ma niedozwolone pole lub niezgodny typ.");
+                }
+                var bytes = value.toString().getBytes(StandardCharsets.UTF_8).length;
+                editedBytes += bytes;
+                if (bytes > MAX_EDITED_VALUE_BYTES || editedBytes > MAX_EDITED_VALUES_BYTES) {
+                    throw decisionError("OPCTX_ASSISTANCE_INVALID_EDIT", UserFacingErrorType.BAD_REQUEST,
+                            "Poprawione wartości są zbyt duże do przeglądu asysty.");
+                }
+            }
+        }
     }
 
     private OperationalContextAssistanceJobSnapshot reviewableSnapshot(OperationalContextAssistanceJobState state) {
@@ -389,15 +468,23 @@ public class OperationalContextAssistanceJobService {
             state.prepared(preparation.prompt(), preparation.allowedSourceRefs().stream().sorted().toList(), preparedLimits);
             persistSnapshot(state.snapshot(), request);
 
+            var target = request.target();
+            var initialScope = new OperationalContextAssistanceDraftScope(
+                    request.mode(), target != null ? target.entityType() : null,
+                    target != null ? target.entityId() : null, preparation.allowedSourceRefs(),
+                    source != null ? source.repositoryGit() : null,
+                    request.repositoryFacts(), selectedScopeIds
+            );
             var copilotResult = copilotProvider.execute(
-                    jobId, request.aiOptions(), authRef, preparation, source, state::activity
+                    jobId, request.aiOptions(), authRef, preparation, source,
+                    new OperationalContextAssistanceDraftValidationTools.ValidationSession(
+                            catalogSnapshot.contentDigest(), initialScope, null), state::activity
             );
             var execution = copilotResult.executionResult();
             state.usage(execution.usage());
             var allSourceRefs = new LinkedHashSet<>(preparation.allowedSourceRefs());
             allSourceRefs.addAll(copilotResult.readSourceRefs());
             state.sourceRefs(allSourceRefs.stream().sorted().toList());
-            var target = request.target();
             var scope = new OperationalContextAssistanceDraftScope(
                     request.mode(), target != null ? target.entityType() : null,
                     target != null ? target.entityId() : null, allSourceRefs,
@@ -405,39 +492,49 @@ public class OperationalContextAssistanceJobService {
                     request.repositoryFacts(), selectedScopeIds
             );
             var draft = draftParser.parse(execution.content(), scope);
-            if (draft.proposals().isEmpty() && draft.questions().isEmpty()) {
-                throw new BlockedRun("AI nie przygotowało propozycji ani pytania do operatora.");
+            var preflight = draftPreflight.validateParsed(draft, catalogSnapshot.contentDigest());
+            if (!preflight.valid() && !preflight.stale() && !preflight.issues().isEmpty()) {
+                var issue = preflight.issues().get(0);
+                limits.add("Wstępna walidacja propozycji wykryła błąd " + issue.pointer()
+                        + ": " + issue.message() + ". Sprawdź zestaw przed zapisem.");
             }
-
             var selectedCodeRead = scope.hasSelectedSource();
             if (request.gitLabSource() != null && !selectedCodeRead) {
                 limits.add("AI nie odczytało żadnego pliku kodu z wybranego projektu GitLab; drzewo ścieżek nie jest dowodem treści.");
             }
             if (draft.proposals().isEmpty()) {
+                if (draft.visibilityLimits().isEmpty()) {
+                    limits.add("AI nie wskazało zmiany z wystarczającą podstawą w dostępnych źródłach.");
+                }
                 state.blockedWithDraft("OPCTX_ASSISTANCE_NO_PROPOSALS",
                         request.gitLabSource() != null && !selectedCodeRead
-                                ? "Nie przygotowano propozycji, ponieważ nie odczytano kodu. Sprawdź pytania i ograniczenia."
-                                : "Nie przygotowano propozycji. Sprawdź pytania do operatora i ograniczenia.",
+                                ? "Nie przygotowano propozycji, ponieważ nie odczytano kodu. Sprawdź ograniczenia analizy."
+                                : "Nie przygotowano propozycji możliwych do przeglądu. Sprawdź ograniczenia analizy.",
                         draft, limits);
                 return;
             }
 
             List<OperationalContextAssistanceProposalPreview> previews;
+            var catalogChangedDuringPreview = false;
             if (!Objects.equals(catalogSnapshot.contentDigest(), operationalContextPort.currentSnapshot().contentDigest())) {
                 limits.add("Katalog zmienił się podczas analizy; ponów asystę przed zapisem propozycji.");
                 previews = deferredPreviews(draft);
+                catalogChangedDuringPreview = true;
             } else {
-                previews = preview(draft, catalogSnapshot.contentDigest());
+                var previewResult = preview(draft, catalogSnapshot.contentDigest());
+                previews = previewResult.previews();
+                catalogChangedDuringPreview = previewResult.stale();
                 if (!Objects.equals(catalogSnapshot.contentDigest(), operationalContextPort.currentSnapshot().contentDigest())) {
                     limits.add("Katalog zmienił się podczas podglądu propozycji; ponów asystę przed zapisem.");
                     previews = deferredPreviews(draft);
+                    catalogChangedDuringPreview = true;
                 }
             }
             var partial = request.gitLabSource() != null && source != null && !source.visibilityLimits().isEmpty();
             partial |= request.gitLabSource() != null && !selectedCodeRead;
             partial |= request.repositoryFacts() != null
                     && selectedScopeIds.size() < request.repositoryFacts().systemIds().size();
-            partial |= previews.stream().anyMatch(preview -> !preview.valid());
+            partial |= !preflight.valid() || catalogChangedDuringPreview;
             state.complete(draft, previews, execution.usage(), limits, partial);
         } catch (BlockedRun exception) {
             state.blocked("OPCTX_ASSISTANCE_CONTEXT_BLOCKED", exception.getMessage());
@@ -458,7 +555,9 @@ public class OperationalContextAssistanceJobService {
             OperationalContextAssistanceJobStartRequest request
     ) {
         try {
-            localRunPersistence.persistRunSnapshot(snapshot, request);
+            var state = jobs.get(snapshot.jobId());
+            localRunPersistence.persistRunSnapshot(snapshot, request,
+                    state != null ? state.requiredRepositoryScopeIds() : Set.of());
         } catch (RuntimeException exception) {
             log.warn("Operational Context assistance history save failed jobId={}", snapshot.jobId(), exception);
         }
@@ -593,12 +692,13 @@ public class OperationalContextAssistanceJobService {
         }
     }
 
-    private List<OperationalContextAssistanceProposalPreview> preview(
+    private PreviewResult preview(
             OperationalContextAssistanceDraft draft,
             String expectedDigest
     ) {
         var result = new ArrayList<OperationalContextAssistanceProposalPreview>();
         var earlierCreates = new LinkedHashSet<String>();
+        var stale = false;
         for (int index = 0; index < draft.proposals().size(); index++) {
             var proposal = draft.proposals().get(index);
             Map<String, Object> candidate;
@@ -611,6 +711,7 @@ public class OperationalContextAssistanceJobService {
                         ? maintenanceService.previewCreate(command) : maintenanceService.previewUpdate(command);
                 if (!Objects.equals(expectedDigest, assessment.baseDigest())) {
                     result.add(deferredPreview(index, proposal));
+                    stale = true;
                     if (proposal.operation() == Operation.CREATE) {
                         earlierCreates.add(proposal.entityId());
                     }
@@ -627,6 +728,7 @@ public class OperationalContextAssistanceJobService {
             } catch (OperationalContextCatalogMaintenanceException exception) {
                 if (!Objects.equals(expectedDigest, operationalContextPort.currentSnapshot().contentDigest())) {
                     result.add(deferredPreview(index, proposal));
+                    stale = true;
                     if (proposal.operation() == Operation.CREATE) {
                         earlierCreates.add(proposal.entityId());
                     }
@@ -643,6 +745,7 @@ public class OperationalContextAssistanceJobService {
             } catch (StaleModelValue exception) {
                 if (!Objects.equals(expectedDigest, operationalContextPort.currentSnapshot().contentDigest())) {
                     result.add(deferredPreview(index, proposal));
+                    stale = true;
                     if (proposal.operation() == Operation.CREATE) {
                         earlierCreates.add(proposal.entityId());
                     }
@@ -659,7 +762,10 @@ public class OperationalContextAssistanceJobService {
                 earlierCreates.add(proposal.entityId());
             }
         }
-        return List.copyOf(result);
+        return new PreviewResult(List.copyOf(result), stale);
+    }
+
+    private record PreviewResult(List<OperationalContextAssistanceProposalPreview> previews, boolean stale) {
     }
 
     private Map<String, Object> candidatePayload(OperationalContextAssistanceDraft.Proposal proposal) {

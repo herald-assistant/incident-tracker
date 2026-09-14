@@ -16,10 +16,12 @@ describe('ContextAssistancePanelComponent', () => {
     TestBed.configureTestingModule({ providers: [provideHttpClient()] });
   });
 
+  afterEach(() => localStorage.removeItem('tdw.opctx-assistance.review.job-1'));
+
   it('shows progress, Copilot activity, prompt and cost in the shared aside', async () => {
     const completed: OperationalContextAssistanceJob = {
       ...job('COMPLETED'),
-      preparedPrompt: 'Sanitizowany prompt asysty',
+      preparedPrompt: 'Opis CRM: apiToken=fictional-example',
       steps: [{ code: 'PREPARE_AI', label: 'Przygotuj asystę AI', phase: 'AI_PREPARATION',
         status: 'COMPLETED', message: 'Prompt gotowy.', itemCount: 1,
         startedAt: '2026-09-13T10:00:00Z', completedAt: '2026-09-13T10:00:01Z' }],
@@ -34,6 +36,8 @@ describe('ContextAssistancePanelComponent', () => {
     expect(compiled.querySelector('.assistance-run__aside-usage')?.textContent).toContain('Koszt');
     expect(compiled.querySelector('app-analysis-feature-aside')?.textContent)
       .toContain('Inicjalny prompt asysty Operational Context');
+    expect(compiled.querySelector<HTMLTextAreaElement>('.prepared-prompt__textarea')?.value)
+      .toBe('Opis CRM: apiToken=fictional-example');
   });
 
   it('keeps a restored history run read-only', async () => {
@@ -48,18 +52,17 @@ describe('ContextAssistancePanelComponent', () => {
     expect(fixture.componentInstance.canPreview()).toBe(false);
   });
 
-  it('shows questions and the missing-code limit for a blocked result without proposals', async () => {
+  it('shows the missing-code limit for a blocked result without proposals', async () => {
     const blocked: OperationalContextAssistanceJob = {
       ...job('BLOCKED'), currentStepLabel: 'Przygotuj propozycje',
       errorMessage: 'Nie przygotowano propozycji, ponieważ nie odczytano kodu.',
       visibilityLimits: ['AI nie odczytało żadnego pliku kodu z wybranego projektu GitLab.'],
-      draft: { proposals: [], questions: ['Który plik opisuje domenę?'], visibilityLimits: [] }
+      draft: { proposals: [], visibilityLimits: [] }
     };
     const fixture = await initialJobFixture(blocked);
 
     expect(fixture.nativeElement.textContent).toContain('Zablokowano');
     expect(fixture.nativeElement.textContent).toContain('Nie przygotowano propozycji');
-    expect(fixture.nativeElement.textContent).toContain('Który plik opisuje domenę?');
     expect(fixture.nativeElement.textContent).toContain('AI nie odczytało żadnego pliku kodu');
     expect(fixture.componentInstance.canPreview()).toBe(false);
   });
@@ -69,7 +72,10 @@ describe('ContextAssistancePanelComponent', () => {
       imports: [ContextAssistancePanelComponent],
       providers: [
         provideAnimationsAsync('noop'),
-        { provide: OperationalContextAssistanceApiService, useValue: { start: vi.fn(), get: vi.fn() } },
+        { provide: OperationalContextAssistanceApiService, useValue: {
+          start: vi.fn(), get: vi.fn(),
+          saveReview: vi.fn((_jobId: string, reviewDraft: unknown) => of({ ...job('COMPLETED'), reviewDraft }))
+        } },
         { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } },
         { provide: AppUiConfigService, useValue: { config: signal({ defaultBranch: '' }) } }
       ]
@@ -164,7 +170,6 @@ describe('ContextAssistancePanelComponent', () => {
     expect(text).toContain('Nazwa pochodzi z opisu operatora.');
     expect(text).toContain('opis operatora');
     expect(text).toContain('operator:description');
-    expect(text).toContain('Pytania do operatora');
     expect(text).toContain('Sprawdź cały zestaw');
     expect(fixture.nativeElement.querySelector('.assistance-change input[type="checkbox"]')).not.toBeNull();
     expect(fixture.componentInstance.canSave()).toBe(false);
@@ -472,7 +477,7 @@ describe('ContextAssistancePanelComponent', () => {
       changes: [{ path: 'name', after: 'Customer API repository', basis: 'SOURCE_OBSERVATION',
         reason: 'Nazwa repozytorium pochodzi z GitLab.', sourceRefs: ['gitlab:README.md'],
         confidence: 'MEDIUM', requiresConfirmation: false }],
-      confidence: 'MEDIUM', requiresConfirmation: false, questions: [], visibilityLimits: []
+      confidence: 'MEDIUM', requiresConfirmation: false, visibilityLimits: []
     });
     const preview = {
       expectedDigest: 'old-digest', candidateDigest: 'candidate-digest', valid: true,
@@ -526,7 +531,7 @@ describe('ContextAssistancePanelComponent', () => {
       changes: [{ path: 'term', after: 'Profil klienta', basis: 'USER_STATEMENT',
         reason: 'Termin pochodzi z opisu.', sourceRefs: ['operator:description'],
         confidence: 'MEDIUM', requiresConfirmation: false }],
-      confidence: 'MEDIUM', requiresConfirmation: false, questions: [], visibilityLimits: []
+      confidence: 'MEDIUM', requiresConfirmation: false, visibilityLimits: []
     });
     const preview = { expectedDigest: 'old', candidateDigest: 'corrected', valid: true,
       entities: [], violations: [] };
@@ -585,6 +590,177 @@ describe('ContextAssistancePanelComponent', () => {
     expect(panel.effectiveAfter(0, name)).toBe('Customer API v2');
   });
 
+  it('restores saved manual edits and can approve them after reopening the review', async () => {
+    const original = job('COMPLETED');
+    const api = {
+      start: vi.fn(), get: vi.fn(),
+      saveReview: vi.fn((_jobId: string, reviewDraft: unknown) => of({ ...original, reviewDraft })),
+      previewBatch: vi.fn(() => of({ expectedDigest: 'old', candidateDigest: 'crm-candidate',
+        valid: true, entities: [], violations: [] })),
+      decideBatch: vi.fn(() => of({ ...original, proposalDecisions: [{
+        proposalIndex: 0, action: 'APPLY' as const, selectedPaths: ['name'],
+        editedValues: { name: 'CRM Customer API' }, completedAt: '2026-09-13T10:05:00Z'
+      }] }))
+    };
+    const first = await batchFixture(original, api);
+    const proposal = original.draft!.proposals[0];
+    first.componentInstance.beginFieldEdit(0, proposal, proposal.changes[0]);
+    first.componentInstance.editValueControl.setValue('CRM Customer API');
+    first.componentInstance.saveFieldEdit(0, proposal, proposal.changes[0]);
+    first.componentInstance.setConfirmed(0, 'name', true);
+    expect(api.saveReview).toHaveBeenCalledWith('job-1', {
+      selections: [{ selectedPaths: ['name'], confirmedPaths: ['name'],
+        editedValues: { name: 'CRM Customer API' } }]
+    });
+    first.destroy();
+
+    const reopened = TestBed.createComponent(ContextAssistancePanelComponent);
+    reopened.componentRef.setInput('prefill', { mode: 'CREATE_AREA' });
+    reopened.componentRef.setInput('initialJob', { ...original, reviewDraft: {
+      selections: [{ selectedPaths: ['name'], confirmedPaths: ['name'],
+        editedValues: { name: 'CRM Customer API' } }]
+    } });
+    reopened.detectChanges();
+    const panel = reopened.componentInstance;
+    expect(panel.effectiveAfter(0, proposal.changes[0])).toBe('CRM Customer API');
+    expect(panel.isConfirmed(0, 'name')).toBe(true);
+    panel.previewSelection();
+    expect(panel.canSave()).toBe(true);
+    panel.saveBatch();
+    expect(api.decideBatch).toHaveBeenCalledWith('job-1', { decisions: [{
+      action: 'APPLY', selectedPaths: ['name'], confirmedPaths: ['name'],
+      editedValues: { name: 'CRM Customer API' }
+    }], candidateDigest: 'crm-candidate' });
+    expect(panel.reviewComplete()).toBe(true);
+  });
+
+  it('keeps the last manual edit when navigation happens before the server confirms it', async () => {
+    const original = job('COMPLETED');
+    const pending = new Subject<OperationalContextAssistanceJob>();
+    const api = { start: vi.fn(), get: vi.fn(), saveReview: vi.fn(() => pending.asObservable()) };
+    const first = await batchFixture(original, api);
+    const proposal = original.draft!.proposals[0];
+    first.componentInstance.beginFieldEdit(0, proposal, proposal.changes[0]);
+    first.componentInstance.editValueControl.setValue('CRM Customer API');
+    first.componentInstance.saveFieldEdit(0, proposal, proposal.changes[0]);
+    first.destroy();
+
+    const reopened = TestBed.createComponent(ContextAssistancePanelComponent);
+    reopened.componentRef.setInput('prefill', { mode: 'CREATE_AREA' });
+    reopened.componentRef.setInput('initialJob', original);
+    reopened.detectChanges();
+    expect(reopened.componentInstance.effectiveAfter(0, proposal.changes[0])).toBe('CRM Customer API');
+    expect(reopened.componentInstance.isConfirmed(0, 'name')).toBe(false);
+    pending.next({ ...original, reviewDraft: { selections: [{ selectedPaths: ['name'],
+      confirmedPaths: [], editedValues: { name: 'CRM Customer API' } }] } });
+    pending.complete();
+  });
+
+  it('approves every unchanged field from one list item without approving another item or manual edits', async () => {
+    const original = job('COMPLETED');
+    const first = original.draft!.proposals[0];
+    first.changes.push({ path: 'description', after: 'Obsługuje profile klientów.',
+      basis: 'USER_STATEMENT', reason: 'Opis pochodzi od operatora.',
+      sourceRefs: ['operator:description'], confidence: 'MEDIUM', requiresConfirmation: true });
+    original.draft!.proposals.push({
+      operation: 'CREATE', entityType: 'glossary-term', entityId: 'customer-profile',
+      changes: [{ path: 'term', after: 'Profil klienta', basis: 'USER_STATEMENT',
+        reason: 'Termin pochodzi z opisu.', sourceRefs: ['operator:description'],
+        confidence: 'MEDIUM', requiresConfirmation: false }],
+      confidence: 'MEDIUM', requiresConfirmation: false, visibilityLimits: []
+    });
+    const fixture = await batchFixture(original, { start: vi.fn(), get: vi.fn() });
+    const panel = fixture.componentInstance;
+    panel.setSelected(0, first, 'description', false);
+    panel.setProposalSelected(1, original.draft!.proposals[1], false);
+    panel.selectProposal(1);
+    fixture.detectChanges();
+
+    const approve = (fixture.nativeElement as HTMLElement)
+      .querySelectorAll<HTMLButtonElement>('.assistance-review__approve')[0];
+    const firstEntry = (fixture.nativeElement as HTMLElement)
+      .querySelectorAll<HTMLElement>('.assistance-review__entry')[0];
+    expect(firstEntry.contains(approve)).toBe(true);
+    expect(firstEntry.querySelector('.assistance-review__item')?.contains(approve)).toBe(false);
+    expect(approve.disabled).toBe(false);
+    approve.click();
+    fixture.detectChanges();
+    expect(panel.activeProposalIndex()).toBe(1);
+    expect(panel.reviewDecisions()).toEqual([
+      { action: 'APPLY', selectedPaths: ['name', 'description'], confirmedPaths: ['name', 'description'] },
+      { action: 'SKIP', selectedPaths: [], confirmedPaths: [] }
+    ]);
+    expect(approve.disabled).toBe(true);
+    expect(panel.canSave()).toBe(false);
+
+    panel.beginFieldEdit(0, first, first.changes[0]);
+    panel.editValueControl.setValue('Customer API CRM');
+    panel.saveFieldEdit(0, first, first.changes[0]);
+    fixture.detectChanges();
+    expect(panel.reviewDecisions()[0]).toEqual({
+      action: 'APPLY', selectedPaths: ['name', 'description'], confirmedPaths: ['description'],
+      editedValues: { name: 'Customer API CRM' }
+    });
+    expect(approve.textContent).toContain('Potwierdź poprawki w szczegółach');
+  });
+
+  it('points to unconfirmed and omitted fields after preview without blocking an intentional omission', async () => {
+    const original = job('COMPLETED');
+    original.draft!.proposals.push({
+      operation: 'CREATE', entityType: 'glossary-term', entityId: 'customer-profile',
+      changes: [{ path: 'term', after: 'Profil klienta', basis: 'USER_STATEMENT',
+        reason: 'Termin pochodzi z opisu.', sourceRefs: ['operator:description'],
+        confidence: 'MEDIUM', requiresConfirmation: false }],
+      confidence: 'MEDIUM', requiresConfirmation: false, visibilityLimits: []
+    });
+    const api = { start: vi.fn(), get: vi.fn(), previewBatch: vi.fn(() => of({
+      expectedDigest: 'old', candidateDigest: 'crm-candidate', valid: true, entities: [], violations: []
+    })) };
+    const fixture = await batchFixture(original, api);
+    const panel = fixture.componentInstance;
+    const compiled = fixture.nativeElement as HTMLElement;
+    panel.setProposalSelected(1, original.draft!.proposals[1], false);
+    panel.selectProposal(1);
+    fixture.detectChanges();
+    expect(compiled.querySelector('[data-review-issue]')).toBeNull();
+
+    panel.previewSelection();
+    fixture.detectChanges();
+    const entries = compiled.querySelectorAll<HTMLElement>('.assistance-review__entry');
+    expect(entries[0].getAttribute('data-review-issue')).toBe('confirmation');
+    expect(entries[0].textContent).toContain('Pola bez potwierdzenia: 1');
+    expect(entries[1].getAttribute('data-review-issue')).toBe('omitted');
+    expect(entries[1].textContent).toContain('Pola pominięte: 1');
+    expect(compiled.querySelector('.assistance-batch__review-issue[data-kind="confirmation"]')?.textContent)
+      .toContain('Zapis jest zablokowany');
+    expect(compiled.querySelector('.assistance-batch__review-issue[data-kind="omitted"]')?.textContent)
+      .toContain('nie blokuje zapisu');
+    expect(panel.canSave()).toBe(false);
+
+    compiled.querySelector<HTMLButtonElement>('.assistance-batch__show-issue')!.click();
+    fixture.detectChanges();
+    expect(panel.activeProposalIndex()).toBe(0);
+    expect(document.activeElement).toBe(entries[0].querySelector('.assistance-review__item'));
+    const confirmation = compiled.querySelector<HTMLElement>('.assistance-change[data-review-issue="confirmation"]');
+    expect(confirmation?.textContent).toContain('Brakuje potwierdzenia tego pola');
+    expect(confirmation?.querySelector('.assistance-change__confirmation input')?.getAttribute('aria-invalid'))
+      .toBe('true');
+
+    panel.setConfirmed(0, 'name', true);
+    fixture.detectChanges();
+    expect(entries[0].hasAttribute('data-review-issue')).toBe(false);
+    expect(panel.batchPreview()).toBeNull();
+    panel.selectProposal(1);
+    fixture.detectChanges();
+    const omitted = compiled.querySelector<HTMLElement>('.assistance-change[data-review-issue="omitted"]');
+    expect(omitted?.textContent).toContain('To pole jest pominięte');
+    expect(omitted?.querySelector('input[type="checkbox"]')?.getAttribute('aria-describedby'))
+      .toBe('assistance-review-issue-1-0');
+    panel.previewSelection();
+    fixture.detectChanges();
+    expect(panel.canSave()).toBe(true);
+  });
+
   it('requires valid JSON with the original collection type for a structured correction', async () => {
     const original = job('COMPLETED');
     const proposal = original.draft!.proposals[0];
@@ -641,7 +817,7 @@ describe('ContextAssistancePanelComponent', () => {
       changes: [{ path: 'references.systems', after: ['customer-api'], basis: 'AI_INTERPRETATION',
         reason: 'Repozytorium należy do proponowanego systemu.', sourceRefs: ['operator:description'],
         confidence: 'MEDIUM', requiresConfirmation: false }],
-      confidence: 'MEDIUM', requiresConfirmation: false, questions: [], visibilityLimits: []
+      confidence: 'MEDIUM', requiresConfirmation: false, visibilityLimits: []
     });
     original.previews.push({ proposalIndex: 1, validationStatus: 'DEFERRED', valid: false,
       candidatePayload: null, violations: [], fieldErrors: [] });
@@ -677,6 +853,50 @@ describe('ContextAssistancePanelComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('OPCTX_REF');
     panel.saveBatch();
     expect(api.decideBatch).not.toHaveBeenCalled();
+  });
+
+  it('pinpoints a missing related term after skipped proposals and clears the error after editing', async () => {
+    const original = job('COMPLETED');
+    original.draft!.proposals.push({
+      operation: 'CREATE', entityType: 'glossary-term', entityId: 'crm-customer-profile',
+      changes: [
+        { path: 'term', after: 'CRM Customer Profile', basis: 'USER_STATEMENT',
+          reason: 'Termin z opisu.', sourceRefs: ['operator:description'], confidence: 'MEDIUM', requiresConfirmation: false },
+        { path: 'relatedTerms', after: ['crm-missing-term'], basis: 'USER_STATEMENT',
+          reason: 'Powiązanie z opisu.', sourceRefs: ['operator:description'], confidence: 'MEDIUM', requiresConfirmation: false }
+      ], confidence: 'MEDIUM', requiresConfirmation: false, visibilityLimits: []
+    });
+    const api = { start: vi.fn(), get: vi.fn(), previewBatch: vi.fn(() => throwError(() => new HttpErrorResponse({
+      status: 422, error: { code: 'VALIDATION_FAILED', message: 'Invalid batch entity', fieldErrors: [
+        { field: '/mutations/0/payload/relatedTerms/0', message: 'Referenced entity does not exist' }
+      ] }
+    }))), decideBatch: vi.fn() };
+    const fixture = await batchFixture(original, api);
+    const panel = fixture.componentInstance;
+    panel.setProposalSelected(0, original.draft!.proposals[0], false);
+    panel.previewSelection();
+    fixture.detectChanges();
+
+    expect(panel.batchIssuesForProposal(0)).toHaveLength(0);
+    expect(panel.batchIssuesForProposal(1)).toHaveLength(1);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('crm-missing-term');
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.assistance-review__entry[data-batch-error="true"]')).toHaveLength(1);
+    expect(panel.canSave()).toBe(false);
+
+    const issue = panel.batchFieldIssues()[0];
+    panel.showBatchIssue(issue);
+    fixture.detectChanges();
+    expect(panel.activeProposalIndex()).toBe(1);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.assistance-change[data-batch-error="true"]')?.textContent)
+      .toContain('pozycja 1');
+
+    const proposal = original.draft!.proposals[1];
+    panel.beginFieldEdit(1, proposal, proposal.changes[1]);
+    panel.editValueControl.setValue('["crm-contact-preference"]');
+    panel.saveFieldEdit(1, proposal, proposal.changes[1]);
+    fixture.detectChanges();
+    expect(panel.batchFieldIssues()).toEqual([]);
+    expect(panel.effectiveAfter(1, proposal.changes[1])).toEqual(['crm-contact-preference']);
   });
 
   it('recovers a lost batch response through GET without sending another write', async () => {
@@ -754,7 +974,9 @@ async function batchFixture<T extends object>(original: OperationalContextAssist
     imports: [ContextAssistancePanelComponent],
     providers: [
       provideAnimationsAsync('noop'),
-      { provide: OperationalContextAssistanceApiService, useValue: api },
+      { provide: OperationalContextAssistanceApiService, useValue: {
+        saveReview: vi.fn((_jobId: string, reviewDraft: unknown) => of({ ...original, reviewDraft })), ...api
+      } },
       { provide: AnalysisJobPollingService, useValue: { poll: vi.fn() } },
       { provide: AppUiConfigService, useValue: { config: signal({ defaultBranch: '' }) } }
     ]
@@ -810,9 +1032,9 @@ function job(status: OperationalContextAssistanceJob['status']): OperationalCont
               reason: 'Nazwa pochodzi z opisu operatora.', sourceRefs: ['operator:description'],
               confidence: 'MEDIUM', requiresConfirmation: false }],
             confidence: 'MEDIUM', requiresConfirmation: true,
-            questions: [], visibilityLimits: []
+            visibilityLimits: []
           }],
-          questions: ['Kto jest właścicielem systemu?'], visibilityLimits: []
+          visibilityLimits: []
         }
       : null
   };

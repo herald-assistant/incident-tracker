@@ -18,10 +18,13 @@ import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceBatchReviewRequest;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceJobStatus;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecisionRequest;
+import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceReviewDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftParser;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftPreflight;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftScope;
 import pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace.OperationalContextAssistanceLocalRunPersistence;
+import pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace.OperationalContextAssistanceStoredRun;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceCollector;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceFile;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSelectionException;
@@ -49,6 +52,7 @@ import pl.mkn.tdw.shared.ai.AnalysisAiUsage;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -76,6 +80,7 @@ class OperationalContextAssistanceJobServiceTest {
     private final OperationalContextAssistanceCopilotProvider copilotProvider =
             mock(OperationalContextAssistanceCopilotProvider.class);
     private final OperationalContextAssistanceDraftParser parser = mock(OperationalContextAssistanceDraftParser.class);
+    private final OperationalContextAssistanceDraftPreflight preflight = mock(OperationalContextAssistanceDraftPreflight.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final TaskExecutor directExecutor = Runnable::run;
     private final AnalysisAiAuthRefResolver authResolver = () -> AnalysisAiAuthRef.localToken("test");
@@ -87,7 +92,7 @@ class OperationalContextAssistanceJobServiceTest {
     void setUp() {
         service = new OperationalContextAssistanceJobService(
                 catalogPort, catalogMaterialService, maintenanceService, validationService, sourceCollector,
-                promptService, copilotProvider, parser, objectMapper, directExecutor, authResolver,
+                promptService, copilotProvider, parser, preflight, objectMapper, directExecutor, authResolver,
                 localRunPersistence
         );
         when(catalogPort.currentSnapshot()).thenReturn(new OperationalContextSnapshot(
@@ -98,12 +103,14 @@ class OperationalContextAssistanceJobServiceTest {
         when(promptService.prepare(any())).thenReturn(new OperationalContextAssistancePromptPreparation(
                 "sanitized prompt", Map.of("input.json", "{\"visibilityLimits\":[]}"), Set.of("operator:description")
         ));
+        when(preflight.validateParsed(any(), anyString())).thenReturn(
+                new OperationalContextAssistanceDraftPreflight.Result(true, false, List.of()));
     }
 
     @Test
     void createsReadOnlyReviewedDraftFromEmptyCatalog() {
         var usage = new AnalysisAiUsage(100, 50, 0, 0, 150, 0.01, 1000, 1, "test-model", null, null, null);
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{draft}", usage), Set.of()));
         var draft = new OperationalContextAssistanceDraft(
@@ -115,8 +122,8 @@ class OperationalContextAssistanceJobServiceTest {
                                 List.of("operator:description"),
                                 OperationalContextAssistanceDraft.Confidence.HIGH, false
                         )),
-                        OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of(), List.of()
-                )), List.of(), List.of()
+                        OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of()
+                )), List.of()
         );
         when(parser.parse(anyString(), any())).thenReturn(draft);
         when(maintenanceService.previewCreate(any())).thenReturn(new OperationalContextCatalogMutationPreview(
@@ -138,7 +145,7 @@ class OperationalContextAssistanceJobServiceTest {
         assertThat(finalState.preparedPrompt()).isEqualTo("sanitized prompt");
         var persisted = ArgumentCaptor.forClass(pl.mkn.tdw.features.operationalcontextassistance.api
                 .OperationalContextAssistanceJobSnapshot.class);
-        verify(localRunPersistence, atLeast(3)).persistRunSnapshot(persisted.capture(), any());
+        verify(localRunPersistence, atLeast(3)).persistRunSnapshot(persisted.capture(), any(), any());
         assertThat(persisted.getAllValues()).anySatisfy(snapshot -> {
             assertThat(snapshot.status()).isEqualTo(OperationalContextAssistanceJobStatus.ANALYZING);
             assertThat(snapshot.preparedPrompt()).isEqualTo("sanitized prompt");
@@ -147,13 +154,14 @@ class OperationalContextAssistanceJobServiceTest {
                 .isEqualTo(OperationalContextAssistanceJobStatus.COMPLETED);
         assertThat(finalState.steps()).extracting(step -> step.status())
                 .containsExactly("COMPLETED", "COMPLETED", "COMPLETED");
+        verify(preflight).validateParsed(draft, "digest-1");
         verify(maintenanceService, never()).create(any());
         verify(maintenanceService, never()).update(any());
     }
 
     @Test
     void blocksRunWhenRequiredLongContextCannotBeEstablished() {
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new CopilotRequiredContextTierException(
                         "Wybrany model nie udostępnia wymaganego długiego kontekstu."));
 
@@ -169,7 +177,7 @@ class OperationalContextAssistanceJobServiceTest {
 
     @Test
     void defersPreviewWhenMaintenanceAssessmentUsedAnotherCatalogDigest() {
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{draft}", null), Set.of()));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
@@ -181,8 +189,8 @@ class OperationalContextAssistanceJobServiceTest {
                                 List.of("operator:description"),
                                 OperationalContextAssistanceDraft.Confidence.HIGH, false
                         )),
-                        OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of(), List.of()
-                )), List.of(), List.of()
+                        OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of()
+                )), List.of()
         ));
         when(maintenanceService.previewCreate(any())).thenReturn(new OperationalContextCatalogMutationPreview(
                 "system", "order-intake", "digest-2",
@@ -205,20 +213,20 @@ class OperationalContextAssistanceJobServiceTest {
     }
 
     @Test
-    void unavailableSelectedSourceLeavesQuestionAndBlockedStatusWithoutFakeRevision() {
-        when(sourceCollector.collect("demo-app", "main")).thenReturn(new OperationalContextGitLabSourceSnapshot(
-                "demo-app", null, "main", null, List.of(), List.of("Nie udało się przypiąć ref.")
+    void unavailableSelectedSourcePreservesNonConversationalBlockedResultAndUsage() {
+        when(sourceCollector.collect("crm-contact-api", "main")).thenReturn(new OperationalContextGitLabSourceSnapshot(
+                "crm-contact-api", null, "main", null, List.of(), List.of("Nie udało się przypiąć ref.")
         ));
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{question}", null), Set.of()));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                List.of(), List.of("Kto potwierdzi ownera?"), List.of()
+                List.of(), List.of("Brak potwierdzonej treści projektu CRM.")
         ));
 
         var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
-                OperationalContextAssistanceMode.CREATE_AREA, "Kto odpowiada za Order Intake?",
-                null, new OperationalContextAssistanceJobStartRequest.GitLabSource("demo-app", null, "main"),
+                OperationalContextAssistanceMode.CREATE_AREA, "Uzupełnij dane CRM Contact API.",
+                null, new OperationalContextAssistanceJobStartRequest.GitLabSource("crm-contact-api", null, "main"),
                 null, null, null
         ));
         var finalState = service.getJob(accepted.jobId());
@@ -228,8 +236,29 @@ class OperationalContextAssistanceJobServiceTest {
         assertThat(finalState.errorMessage()).contains("nie odczytano kodu");
         assertThat(finalState.sourceRevision()).isNull();
         assertThat(finalState.visibilityLimits()).contains("Nie udało się przypiąć ref.");
+        assertThat(finalState.visibilityLimits()).contains("Brak potwierdzonej treści projektu CRM.");
         assertThat(finalState.draft().proposals()).isEmpty();
         verify(maintenanceService, never()).create(any());
+    }
+
+    @Test
+    void emptyNonConversationalDraftKeepsAUsefulLimitationInsteadOfFailing() {
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new OperationalContextAssistanceCopilotResult(
+                        new CopilotExecutionResult("{\"proposals\":[],\"visibilityLimits\":[]}", null),
+                        Set.of()));
+        when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
+                List.of(), List.of()));
+
+        var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
+                OperationalContextAssistanceMode.CREATE_AREA,
+                "Uzupełnij dane CRM Contact API.", null, null, null, null, null));
+        var finalState = service.getJob(accepted.jobId());
+
+        assertThat(finalState.status()).isEqualTo(OperationalContextAssistanceJobStatus.BLOCKED);
+        assertThat(finalState.errorCode()).isEqualTo("OPCTX_ASSISTANCE_NO_PROPOSALS");
+        assertThat(finalState.visibilityLimits()).contains(
+                "AI nie wskazało zmiany z wystarczającą podstawą w dostępnych źródłach.");
     }
 
     @Test
@@ -240,11 +269,11 @@ class OperationalContextAssistanceJobServiceTest {
                 ), "main", "a".repeat(40), List.of(), List.of()
         ));
         var otherSourceRef = "gitlab:crm/library@" + "b".repeat(40) + ":pom.xml";
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{question}", null), Set.of(otherSourceRef)));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                List.of(), List.of("Który system używa tej biblioteki?"), List.of()
+                List.of(), List.of()
         ));
 
         var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
@@ -274,7 +303,7 @@ class OperationalContextAssistanceJobServiceTest {
         ))).isInstanceOf(OperationalContextGitLabSourceSelectionException.class);
 
         verify(sourceCollector, never()).collectUrl(url, "main");
-        verify(copilotProvider, never()).execute(anyString(), any(), any(), any(), any(), any());
+        verify(copilotProvider, never()).execute(anyString(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -284,11 +313,11 @@ class OperationalContextAssistanceJobServiceTest {
                 "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS", null, "main", null,
                 List.of(), List.of("Nie udało się przypiąć ref.")
         ));
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{question}", null), Set.of()));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                List.of(), List.of("Kto potwierdza proces?"), List.of()
+                List.of(), List.of()
         ));
 
         service.startJob(new OperationalContextAssistanceJobStartRequest(
@@ -332,11 +361,11 @@ class OperationalContextAssistanceJobServiceTest {
                 "sanitized prompt", Map.of("input.json", "{\"visibilityLimits\":[]}"),
                 Set.of("operator:description", "operator:repository-facts", sourceRef)
         ));
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{question}", null), Set.of()));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                List.of(), List.of("Czy biblioteka ma innych odbiorców?"), List.of()
+                List.of(), List.of()
         ));
 
         var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
@@ -382,7 +411,7 @@ class OperationalContextAssistanceJobServiceTest {
         assertThat(finalState.status()).isEqualTo(OperationalContextAssistanceJobStatus.BLOCKED);
         assertThat(finalState.errorMessage()).contains("system-a", "0 zakresów");
         verify(promptService, never()).prepare(any());
-        verify(copilotProvider, never()).execute(anyString(), any(), any(), any(), any(), any());
+        verify(copilotProvider, never()).execute(anyString(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -506,11 +535,11 @@ class OperationalContextAssistanceJobServiceTest {
                         )
                 )
         );
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{question}", null), Set.of()));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                List.of(), List.of("Kto potwierdzi ownera?"), List.of()
+                List.of(), List.of()
         ));
 
         var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
@@ -542,11 +571,11 @@ class OperationalContextAssistanceJobServiceTest {
                 ));
         when(maintenanceService.writablePayloadForUpdate("integration", "order-to-crm"))
                 .thenReturn(Map.of("participants", List.of(Map.of("system", "order-intake"))));
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{question}", null), Set.of()));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                List.of(), List.of("Czy powiązanie jest aktualne?"), List.of()
+                List.of(), List.of()
         ));
 
         var accepted = service.startJob(new OperationalContextAssistanceJobStartRequest(
@@ -589,7 +618,7 @@ class OperationalContextAssistanceJobServiceTest {
         var decided = service.applyBatch(jobId, request);
         var savedDecision = ArgumentCaptor.forClass(pl.mkn.tdw.features.operationalcontextassistance.api
                 .OperationalContextAssistanceJobSnapshot.class);
-        verify(localRunPersistence, atLeast(1)).persistRunSnapshot(savedDecision.capture(), any());
+        verify(localRunPersistence, atLeast(1)).persistRunSnapshot(savedDecision.capture(), any(), any());
         assertThat(savedDecision.getAllValues()).anySatisfy(snapshot ->
                 assertThat(snapshot.proposalDecisions()).hasSize(2));
         assertThat(decided.proposalDecisions()).hasSize(2);
@@ -625,6 +654,74 @@ class OperationalContextAssistanceJobServiceTest {
         assertThat(command.getValue().mutations().get(0).changes().get(0).after()).isEqualTo("Operator name");
         assertThat(saved.draft().proposals().get(0).changes().get(0).after()).isEqualTo("Order Intake");
         assertThat(saved.proposalDecisions().get(0).editedValues()).containsEntry("name", corrected);
+    }
+
+    @Test
+    void savesUnfinishedReviewWithoutWritingCatalogAndRejectsInvalidPaths() {
+        var jobId = completedCreateJob(List.of(crmProposal()));
+        var review = new OperationalContextAssistanceReviewDraft(List.of(
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        List.of("name"), List.of(), Map.of("name", objectMapper.valueToTree("CRM Customer API"))
+                )));
+
+        var saved = service.saveReview(jobId, review);
+        assertThat(saved.reviewDraft()).isEqualTo(review);
+        assertThat(saved.proposalDecisions()).isEmpty();
+        verify(maintenanceService, never()).applyAcceptedBatch(any());
+
+        assertThatThrownBy(() -> service.saveReview(jobId, new OperationalContextAssistanceReviewDraft(List.of(
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        List.of("unknown"), List.of(), Map.of())))))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class);
+        assertThatThrownBy(() -> service.saveReview(jobId, new OperationalContextAssistanceReviewDraft(List.of(
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        List.of("name"), List.of(), Map.of("name", objectMapper.createArrayNode()))))))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class);
+        assertThat(service.getJob(jobId).reviewDraft()).isEqualTo(review);
+    }
+
+    @Test
+    void resumesUnresolvedReviewInAnotherJobServiceAndRequiresFreshPreview() {
+        var saved = new java.util.concurrent.atomic.AtomicReference<OperationalContextAssistanceStoredRun>();
+        var persistence = new OperationalContextAssistanceLocalRunPersistence() {
+            @Override public void persistRunSnapshot(
+                    pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceJobSnapshot snapshot,
+                    OperationalContextAssistanceJobStartRequest request, Set<String> scopes) {
+                saved.set(new OperationalContextAssistanceStoredRun(snapshot, scopes));
+            }
+
+            @Override public Optional<OperationalContextAssistanceStoredRun> findRestorable(String jobId) {
+                return Optional.ofNullable(saved.get()).filter(run -> run.snapshot().jobId().equals(jobId));
+            }
+        };
+        service = new OperationalContextAssistanceJobService(
+                catalogPort, catalogMaterialService, maintenanceService, validationService, sourceCollector,
+                promptService, copilotProvider, parser, preflight, objectMapper, directExecutor, authResolver, persistence);
+        var jobId = completedCreateJob(List.of(crmProposal()));
+        var review = new OperationalContextAssistanceReviewDraft(List.of(
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        List.of("name"), List.of("name"), Map.of("name", objectMapper.valueToTree("CRM Customer API"))
+                )));
+        service.saveReview(jobId, review);
+
+        var reopened = new OperationalContextAssistanceJobService(
+                catalogPort, catalogMaterialService, maintenanceService, validationService, sourceCollector,
+                promptService, copilotProvider, parser, preflight, objectMapper, directExecutor, authResolver, persistence);
+        assertThat(reopened.getJob(jobId).reviewDraft()).isEqualTo(review);
+        when(maintenanceService.previewAcceptedBatch(any())).thenReturn(
+                new OperationalContextCatalogBatchMutationPreview(List.of(), "digest-1", "digest-2", List.of()));
+        var choice = new OperationalContextAssistanceBatchReviewRequest(List.of(
+                new OperationalContextAssistanceProposalDecisionRequest(
+                        OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
+                        List.of("name"), List.of("name"), Map.of("name", objectMapper.valueToTree("CRM Customer API")))) , null);
+        assertThat(reopened.previewBatch(jobId, choice).candidateDigest()).isEqualTo("digest-2");
+        when(maintenanceService.applyAcceptedBatch(any())).thenReturn(
+                new OperationalContextCatalogBatchMutationResult(List.of(), "digest-2"));
+        var decided = reopened.applyBatch(jobId,
+                new OperationalContextAssistanceBatchReviewRequest(choice.decisions(), "digest-2"));
+        assertThat(decided.proposalDecisions()).hasSize(1);
+        assertThatThrownBy(() -> reopened.saveReview(jobId, review))
+                .isInstanceOf(OperationalContextAssistanceDecisionException.class);
     }
 
     @Test
@@ -746,7 +843,7 @@ class OperationalContextAssistanceJobServiceTest {
                 "sanitized prompt", Map.of("input.json", "{\"visibilityLimits\":[]}"),
                 Set.of("operator:description", "gitlab:group/new-repo@" + commit + ":README.md")
         ));
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{draft}", null), Set.of()));
         var repo = proposal("repository", "new-repo", false);
@@ -764,9 +861,9 @@ class OperationalContextAssistanceJobServiceTest {
                                 OperationalContextAssistanceDraft.Basis.USER_STATEMENT,
                                 List.of("operator:description"),
                                 OperationalContextAssistanceDraft.Confidence.MEDIUM, false)),
-                OperationalContextAssistanceDraft.Confidence.MEDIUM, false, List.of(), List.of());
+                OperationalContextAssistanceDraft.Confidence.MEDIUM, false, List.of());
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                List.of(repo, scopeUpdate), List.of(), List.of()));
+                List.of(repo, scopeUpdate), List.of()));
         org.mockito.Mockito.doAnswer(invocation -> {
             var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext
                     .OperationalContextCatalogMutationCommand.class);
@@ -791,11 +888,11 @@ class OperationalContextAssistanceJobServiceTest {
     }
 
     private String completedCreateJob(List<OperationalContextAssistanceDraft.Proposal> proposals) {
-        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilotProvider.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{draft}", null), Set.of()));
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                proposals, List.of(), List.of()
+                proposals, List.of()
         ));
         org.mockito.Mockito.doAnswer(invocation -> {
             var command = invocation.getArgument(0, pl.mkn.tdw.integrations.operationalcontext
@@ -840,9 +937,18 @@ class OperationalContextAssistanceJobServiceTest {
                         OperationalContextAssistanceDraft.Basis.USER_STATEMENT,
                         List.of("operator:description"),
                         OperationalContextAssistanceDraft.Confidence.HIGH, confirmation
-                )), OperationalContextAssistanceDraft.Confidence.HIGH, false,
-                List.of(), List.of()
+                )), OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of()
         );
     }
-}
 
+    private OperationalContextAssistanceDraft.Proposal crmProposal() {
+        return new OperationalContextAssistanceDraft.Proposal(
+                OperationalContextAssistanceDraft.Operation.CREATE, "system", "crm-customer-api",
+                List.of(new OperationalContextAssistanceDraft.FieldChange(
+                        "name", null, "CRM API", "Nazwa podana przez operatora.",
+                        OperationalContextAssistanceDraft.Basis.USER_STATEMENT,
+                        List.of("operator:description"),
+                        OperationalContextAssistanceDraft.Confidence.HIGH, false
+                )), OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of());
+    }
+}

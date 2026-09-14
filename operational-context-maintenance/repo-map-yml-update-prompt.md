@@ -4,9 +4,8 @@ Field formats, constrained values and runtime/AI effects are defined in
 [`operational-context-field-guidance.md`](operational-context-field-guidance.md).
 
 The maintenance UI edits `git`, `evidence` and `llmToolHints` through guided
-fields rather than raw JSON. It preserves server-owned `git.inferred`, while
-`projectPath` remains the canonical provider-relative path used by runtime
-discovery and code tools.
+fields rather than raw JSON. `projectPath` is the required provider-relative
+path used by runtime discovery and code tools.
 
 ## Purpose
 
@@ -100,8 +99,8 @@ repositories:
 ## Update rules
 
 - Treat `git.projectPath` as the GitLab link; keep the rest business-readable.
-- `git.inferred` is server-owned preserve-only data; do not propose it in a new
-  repository or as an edited field.
+- Use only the documented `git` fields; `git.inferred` is not part of the
+  repository contract.
 - Use `repositoryType: frontend` only for a reviewed primary repository of a
   system registered as `internal-service/frontend`. Framework files are
   evidence to inspect, not an automatic classification rule.

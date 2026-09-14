@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
@@ -27,21 +28,16 @@ import java.util.regex.Pattern;
 public class OperationalContextGitLabSourceCollector {
 
     private static final int MAX_FILE_BYTES = 16 * 1024;
-    private static final int MAX_TOTAL_BYTES = 64 * 1024;
+    private static final int MAX_INSTRUCTION_FILE_BYTES = 32 * 1024;
+    private static final int MAX_TOTAL_BYTES = 96 * 1024;
+    private static final String COPILOT_INSTRUCTIONS = ".github/copilot-instructions.md";
     private static final List<String> ALLOWED_FILES = List.of(
+            "AGENTS.md", COPILOT_INSTRUCTIONS,
             "README.md", "pom.xml", "package.json", "build.gradle", "settings.gradle"
     );
     private static final Pattern SAFE_PROJECT = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,511}");
     private static final Pattern SAFE_REF = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,254}");
     private static final Pattern COMMIT_ID = Pattern.compile("(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})");
-    private static final Pattern SENSITIVE_ASSIGNMENT = Pattern.compile(
-            "(?im)(?:password|passwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|client[_-]?secret|authorization)"
-                    + "[\\w.-]*\\s*(?:[=:]|>\\s*|\\\"\\s*:)\\s*[^\\s<]{2,}"
-    );
-    private static final Pattern SENSITIVE_TOKEN = Pattern.compile(
-            "(?i)-----BEGIN [A-Z ]*PRIVATE KEY-----|glpat-[A-Za-z0-9_-]{8,}|gh[opusr]_[A-Za-z0-9]{8,}"
-                    + "|xox[baprs]-[A-Za-z0-9-]{8,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{16,}\\.eyJ"
-    );
 
     private final GitLabProperties properties;
     private final GitLabRepositoryPort repositoryPort;
@@ -108,8 +104,10 @@ public class OperationalContextGitLabSourceCollector {
         }
 
         GitLabRepositoryTreeSlice tree;
+        boolean treeComplete = false;
         try {
             tree = treeExplorer.explore(group, normalizedProject, revision.commitId(), "", "");
+            treeComplete = !tree.truncated();
             if (tree.truncated()) {
                 limits.add("Początkowe drzewo GitLab jest częściowe; AI może doczytać katalogi narzędziem.");
             }
@@ -120,12 +118,25 @@ public class OperationalContextGitLabSourceCollector {
 
         var files = new ArrayList<OperationalContextGitLabSourceFile>();
         var totalBytes = 0;
+        Set<String> visibleRootFiles = tree.entries().stream()
+                .filter(entry -> "blob".equals(entry.type()))
+                .map(GitLabRepositoryTreeSlice.Entry::path)
+                .collect(java.util.stream.Collectors.toSet());
         for (var path : ALLOWED_FILES) {
+            boolean presentInTree = visibleRootFiles.contains(path);
+            if (treeComplete && !presentInTree && !COPILOT_INSTRUCTIONS.equals(path)) {
+                continue;
+            }
             GitLabRepositoryFileMetadata metadata;
             try {
                 metadata = repositoryPort.readFileMetadata(group, normalizedProject, revision.commitId(), path);
             } catch (RuntimeException exception) {
-                limits.add("Pominięto " + path + ": plik lub jego metadane są niedostępne.");
+                if (presentInTree) {
+                    limits.add("Pominięto " + path + ": plik lub jego metadane są niedostępne.");
+                }
+                continue;
+            }
+            if (metadata == null && !presentInTree) {
                 continue;
             }
             if (!matchesMetadata(metadata, group, normalizedProject, revision.commitId(), path)
@@ -133,7 +144,8 @@ public class OperationalContextGitLabSourceCollector {
                 limits.add("Pominięto " + path + ": brak wiarygodnych metadanych rozmiaru.");
                 continue;
             }
-            if (metadata.sizeBytes() > MAX_FILE_BYTES || metadata.sizeBytes() > MAX_TOTAL_BYTES - totalBytes) {
+            int fileLimit = isInstructionPath(path) ? MAX_INSTRUCTION_FILE_BYTES : MAX_FILE_BYTES;
+            if (metadata.sizeBytes() > fileLimit || metadata.sizeBytes() > MAX_TOTAL_BYTES - totalBytes) {
                 limits.add("Pominięto " + path + ": plik przekracza limit odczytu.");
                 continue;
             }
@@ -142,7 +154,7 @@ public class OperationalContextGitLabSourceCollector {
             try {
                 file = repositoryPort.readFileBounded(
                         group, normalizedProject, revision.commitId(), path,
-                        Math.min(MAX_FILE_BYTES, MAX_TOTAL_BYTES - totalBytes)
+                        Math.min(fileLimit, MAX_TOTAL_BYTES - totalBytes)
                 );
             } catch (RuntimeException exception) {
                 limits.add("Pominięto " + path + ": nie udało się bezpiecznie odczytać pliku w limicie.");
@@ -154,14 +166,10 @@ public class OperationalContextGitLabSourceCollector {
             }
             var content = file.content();
             var actualBytes = content.getBytes(StandardCharsets.UTF_8).length;
-            if (actualBytes > MAX_FILE_BYTES || actualBytes > MAX_TOTAL_BYTES - totalBytes
+            if (actualBytes > fileLimit || actualBytes > MAX_TOTAL_BYTES - totalBytes
                     || actualBytes != metadata.sizeBytes()
                     || !matchesContentHash(content, metadata.contentSha256())) {
                 limits.add("Pominięto " + path + ": treść nie zgadza się z metadanymi lub limitem.");
-                continue;
-            }
-            if (containsSensitiveMaterial(content)) {
-                limits.add("Pominięto " + path + ": wykryto potencjalnie wrażliwą treść.");
                 continue;
             }
             totalBytes += actualBytes;
@@ -171,11 +179,12 @@ public class OperationalContextGitLabSourceCollector {
                     "gitlab:" + group + "/" + normalizedProject + "@" + revision.commitId() + ":" + path
             ));
         }
-        if (files.isEmpty()) {
-            limits.add("Nie znaleziono bezpiecznych plików z allowlisty w wybranym repozytorium.");
-        }
         return new OperationalContextGitLabSourceSnapshot(
                 normalizedProject, repositoryGit, normalizedRef, revision.commitId(), files, tree, limits);
+    }
+
+    private boolean isInstructionPath(String path) {
+        return "AGENTS.md".equals(path) || COPILOT_INSTRUCTIONS.equals(path);
     }
 
     private OperationalContextGitLabSourceSnapshot snapshot(
@@ -338,7 +347,4 @@ public class OperationalContextGitLabSourceCollector {
         }
     }
 
-    private boolean containsSensitiveMaterial(String content) {
-        return SENSITIVE_ASSIGNMENT.matcher(content).find() || SENSITIVE_TOKEN.matcher(content).find();
-    }
 }

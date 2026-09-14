@@ -567,7 +567,7 @@ public class OperationalContextEvidenceMapper {
     private List<String> completionSignals(OperationalContextProcess process) {
         var values = new ArrayList<String>();
         values.addAll(process.processBoundary().endsWhen());
-        values.addAll(process.outcomes().successArtifacts());
+        values.addAll(process.values("completionSignals.successful"));
         return deduplicate(values);
     }
 

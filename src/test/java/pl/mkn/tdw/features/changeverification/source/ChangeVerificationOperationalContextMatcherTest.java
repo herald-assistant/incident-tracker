@@ -82,8 +82,7 @@ class ChangeVerificationOperationalContextMatcherTest {
                         "CRM/PROCESSING/CRM_CASE_PROCESS",
                         "main",
                         null,
-                        List.of(),
-                        false
+                        List.of()
                 ),
                 null,
                 null,

@@ -146,7 +146,10 @@ public class UiExplorerFrontendCatalogService {
 
     private Optional<GitLabCoordinates> gitLabCoordinates(OperationalContextRepository repository) {
         var git = repository.git();
-        if (StringUtils.hasText(git.provider()) && !"gitlab".equals(normalize(git.provider()))) {
+        if (!"gitlab".equals(git.provider())) {
+            return Optional.empty();
+        }
+        if (!StringUtils.hasText(git.projectPath())) {
             return Optional.empty();
         }
         var projectPath = git.projectPath().trim().replace('\\', '/');
@@ -159,9 +162,6 @@ public class UiExplorerFrontendCatalogService {
                 group = trimSlashes(projectPath.substring(0, separator));
                 projectName = trimSlashes(projectPath.substring(separator + 1));
             }
-        }
-        if (!StringUtils.hasText(projectName) && StringUtils.hasText(git.project())) {
-            projectName = trimSlashes(git.project());
         }
         if (!StringUtils.hasText(group) || !StringUtils.hasText(projectName)) {
             return Optional.empty();

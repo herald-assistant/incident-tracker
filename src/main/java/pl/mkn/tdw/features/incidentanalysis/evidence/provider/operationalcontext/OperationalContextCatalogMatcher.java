@@ -279,7 +279,7 @@ public class OperationalContextCatalogMatcher {
         addSignalMatches(score, signals, process.references().repositories(), 6, 3, "repository");
         addSignalMatches(score, signals, process.references().boundedContexts(), 5, 3, "context");
         addSignalMatches(score, signals, process.processBoundary().endsWhen(), 7, 4, "completionSignal");
-        addSignalMatches(score, signals, process.outcomes().successArtifacts(), 5, 3, "successArtifact");
+        addSignalMatches(score, signals, process.values("completionSignals.successful"), 5, 3, "completionSignal");
 
         for (var step : process.steps()) {
             addSignalMatch(score, signals, step.id(), 10, 5, "stepId");

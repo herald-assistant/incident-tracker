@@ -17,22 +17,21 @@ final class OperationalContextCatalogNestedFields {
             "ownerTeamIds", "ownerLabel", "ownershipStatus", "confidence", "source", "notes"
     );
     private static final Shape RELATIONS = array(object(
-            "type", "targetType", "target", "targetContextId", "targetProcessId", "externalSystem", "via", "evidence"
+            "type", "targetType", "target", "externalSystem", "via", "evidence"
     ));
     private static final Shape SOURCE_COVERAGE = object(
-            "status", "scannedSources", "sources", "expectedSources", "limitations"
+            "status", "scannedSources", "expectedSources", "limitations"
     );
     private static final Shape GAPS = array(object(
             "id", "type", "summary", "question", "description", "impact", "severity", "status", "suggestedNextSources"
     ));
-    private static final Shape SIGNALS = new Shape(Set.of(), Map.of(), null, true, false);
+    private static final Shape SIGNALS = new Shape(Set.of(), Map.of(), null, true);
     private static final Shape EVIDENCE = array(object("sourceRef", "evidenceType", "note"));
-    private static final Shape PARTICIPANT = object("system", "boundedContext", "repositories", "role", "externalOwner", "notes");
+    private static final Shape PARTICIPANT = object("system", "boundedContext", "role", "externalOwner", "notes");
     private static final Shape PROCESS_STEP = object(Map.of(
             "references", REFERENCES,
-            "participants", object("systems", "boundedContexts", "integrations"),
             "matchSignals", SIGNALS
-    ), "id", "name", "type", "summary", "match");
+    ), "id", "name", "type", "summary");
     private static final Shape LIFECYCLE = object(Map.of(
             "triggers", array(object("type", "name", "exchange")),
             "transitions", array(object("from", "to", "trigger"))
@@ -72,8 +71,6 @@ final class OperationalContextCatalogNestedFields {
                 for (var item : collection) {
                     inspect(item, shape.items(), path + "/" + index++, errors, remove);
                 }
-            } else if (shape.objectOrArray()) {
-                inspectObject(value, shape.items(), path, errors, remove);
             }
             return;
         }
@@ -94,9 +91,6 @@ final class OperationalContextCatalogNestedFields {
         var map = (Map<String, Object>) raw;
         if (shape.signals()) {
             var strengths = Set.of("exact", "strong", "medium", "weak");
-            if (map.keySet().stream().noneMatch(strengths::contains)) {
-                return; // Legacy untiered signal names are part of the contract.
-            }
             for (var key : List.copyOf(map.keySet())) {
                 if (!strengths.contains(key)) {
                     unknown(map, key, path, errors, remove);
@@ -132,21 +126,17 @@ final class OperationalContextCatalogNestedFields {
     }
 
     private static Shape object(String... keys) {
-        return new Shape(Set.of(keys), Map.of(), null, false, false);
+        return new Shape(Set.of(keys), Map.of(), null, false);
     }
 
     private static Shape object(Map<String, Shape> children, String... keys) {
         var allowed = new LinkedHashSet<>(Set.of(keys));
         allowed.addAll(children.keySet());
-        return new Shape(Set.copyOf(allowed), children, null, false, false);
+        return new Shape(Set.copyOf(allowed), children, null, false);
     }
 
     private static Shape array(Shape item) {
-        return new Shape(Set.of(), Map.of(), item, false, false);
-    }
-
-    private static Shape objectOrArray(Shape item) {
-        return new Shape(Set.of(), Map.of(), item, false, true);
+        return new Shape(Set.of(), Map.of(), item, false);
     }
 
     private static Map<OperationalContextCatalogEntityType, Map<String, Shape>> schemas() {
@@ -155,7 +145,7 @@ final class OperationalContextCatalogNestedFields {
                 "ownership", OWNERSHIP,
                 "relations", RELATIONS,
                 "matchSignals", SIGNALS,
-                "sourceCoverage", objectOrArray(SOURCE_COVERAGE),
+                "sourceCoverage", SOURCE_COVERAGE,
                 "gaps", GAPS
         );
         var result = new EnumMap<OperationalContextCatalogEntityType, Map<String, Shape>>(OperationalContextCatalogEntityType.class);
@@ -167,7 +157,7 @@ final class OperationalContextCatalogNestedFields {
                 "runtime", object("configurationDirectory")
         ));
         result.get(OperationalContextCatalogEntityType.REPOSITORY).putAll(Map.of(
-                "git", object("provider", "group", "project", "projectPath", "defaultBranch", "url", "aliases", "inferred"),
+                "git", object("provider", "group", "project", "projectPath", "defaultBranch", "url", "aliases"),
                 "evidence", EVIDENCE,
                 "llmToolHints", object("answerWhenUserMentions", "disambiguateFrom")
         ));
@@ -178,7 +168,6 @@ final class OperationalContextCatalogNestedFields {
         result.get(OperationalContextCatalogEntityType.PROCESS).putAll(Map.of(
                 "participants", object("actors", "primarySystems", "supportingSystems", "externalSystems", "platformComponents"),
                 "processBoundary", object("businessCapability", "startsWhen", "endsWhen", "includes", "excludes", "assumptions"),
-                "outcomes", object("successArtifacts"),
                 "lifecycle", LIFECYCLE,
                 "completionSignals", object("successful", "partial", "failed", "cancelled"),
                 "steps", array(PROCESS_STEP),
@@ -207,8 +196,7 @@ final class OperationalContextCatalogNestedFields {
             Set<String> keys,
             Map<String, Shape> children,
             Shape items,
-            boolean signals,
-            boolean objectOrArray
+            boolean signals
     ) {
     }
 }

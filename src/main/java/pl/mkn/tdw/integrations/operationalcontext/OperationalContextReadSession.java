@@ -17,7 +17,7 @@ public final class OperationalContextReadSession {
         this.queryService = Objects.requireNonNull(queryService, "queryService");
     }
 
-    static OperationalContextReadSession legacy(OperationalContextSnapshot snapshot) {
+    static OperationalContextReadSession fromSnapshot(OperationalContextSnapshot snapshot) {
         return new OperationalContextReadSession(snapshot, new OperationalContextCatalogQueryService());
     }
 

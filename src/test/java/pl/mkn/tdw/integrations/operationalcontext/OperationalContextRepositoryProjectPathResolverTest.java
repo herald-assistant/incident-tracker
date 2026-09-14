@@ -153,8 +153,9 @@ class OperationalContextRepositoryProjectPathResolverTest {
         var repository = new LinkedHashMap<String, Object>();
         repository.put("id", id);
         repository.put("git", Map.of(
-                "projectPath", List.of(projectPath),
-                "group", List.of(groupPath)
+                "provider", "gitlab",
+                "projectPath", projectPath,
+                "group", groupPath
         ));
         repository.put("matchSignals", Map.of("strong", matchSignals));
         return repository;

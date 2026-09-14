@@ -138,8 +138,7 @@ public final class UiExplorerOperationalContextTestCatalog {
                         projectPath,
                         "main",
                         "https://gitlab.example.com/crm/agent-portal",
-                        List.of(),
-                        false
+                        List.of()
                 ),
                 null,
                 null,

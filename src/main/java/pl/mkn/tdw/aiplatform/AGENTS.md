@@ -50,6 +50,8 @@ Obecnie obejmuje:
   `CopilotToolSessionContext` przekazywany przez feature.
 - `copilot/tools/CopilotSdkToolFactory`
   platformowa rejestracja Spring `ToolCallback` jako Copilot `ToolDefinition`.
+  Przyjmuje tez dodatkowe callbacki jednej sesji, bez rejestracji ich jako
+  globalnych `ToolCallbackProvider` i bez ekspozycji przez MCP server.
 - `copilot/tools/CopilotToolInvocationHandler`
   neutralna granica wykonania Spring `ToolCallback`: policies, hidden context,
   eventy invocation, kontrolowany rejection i parsing wyniku dla SDK.

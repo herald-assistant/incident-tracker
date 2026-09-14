@@ -12,17 +12,12 @@ final class OperationalContextCatalogEntitySchema {
     );
 
     private static final Map<OperationalContextCatalogEntityType, Set<String>> EDITABLE = editableFields();
-    private static final Map<OperationalContextCatalogEntityType, Set<String>> PRESERVE_ONLY = preserveOnlyFields();
 
     private OperationalContextCatalogEntitySchema() {
     }
 
     static boolean editable(OperationalContextCatalogEntityType type, String field) {
         return EDITABLE.get(type).contains(field);
-    }
-
-    static boolean preserveOnly(OperationalContextCatalogEntityType type, String field) {
-        return PRESERVE_ONLY.get(type).contains(field);
     }
 
     private static Map<OperationalContextCatalogEntityType, Set<String>> editableFields() {
@@ -60,20 +55,6 @@ final class OperationalContextCatalogEntitySchema {
                 "id", "title", "useWhen", "doNotUseWhen", "requiredEvidence", "expectedFirstAction",
                 "references", "notes", "llmToolHints", "limitations"
         ));
-        return Map.copyOf(result);
-    }
-
-    private static Map<OperationalContextCatalogEntityType, Set<String>> preserveOnlyFields() {
-        var result = new EnumMap<OperationalContextCatalogEntityType, Set<String>>(OperationalContextCatalogEntityType.class);
-        result.put(OperationalContextCatalogEntityType.SYSTEM, Set.of("dependencies"));
-        result.put(OperationalContextCatalogEntityType.REPOSITORY, Set.of("lookupHints", "persistenceHints", "scannedSubtrees"));
-        result.put(OperationalContextCatalogEntityType.CODE_SEARCH_SCOPE, Set.of());
-        result.put(OperationalContextCatalogEntityType.PROCESS, Set.of("observability", "outcomes"));
-        result.put(OperationalContextCatalogEntityType.INTEGRATION, Set.of());
-        result.put(OperationalContextCatalogEntityType.BOUNDED_CONTEXT, Set.of());
-        result.put(OperationalContextCatalogEntityType.TEAM, Set.of("references", "relations"));
-        result.put(OperationalContextCatalogEntityType.GLOSSARY_TERM, Set.of());
-        result.put(OperationalContextCatalogEntityType.HANDOFF_RULE, Set.of());
         return Map.copyOf(result);
     }
 

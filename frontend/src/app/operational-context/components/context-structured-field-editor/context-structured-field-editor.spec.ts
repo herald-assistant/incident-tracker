@@ -141,11 +141,11 @@ describe('ContextStructuredFieldEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('#repository-answer-when-mentioned')).toBeTruthy();
   });
 
-  it('normalizes legacy CRM local-language text only after guided editing', async () => {
+  it('edits canonical CRM local-language entries', async () => {
     const fixture = await createFixture(
       'bounded-context',
       'localLanguageSummary',
-      'In CRM, contact means the communication profile, not an authentication account.'
+      ['In CRM, contact means the communication profile, not an authentication account.']
     );
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
@@ -277,16 +277,14 @@ describe('ContextStructuredFieldEditorComponent', () => {
 
     fixture.componentInstance.updateSignalValues(1, '/crm/contacts\n/crm/contact-preferences');
     expect(emitted).toHaveBeenLastCalledWith({
-      futureCrmSignalMetadata: { reviewed: true },
       exact: { serviceNames: ['crm-contact-service'] },
       strong: { routes: ['/crm/contacts', '/crm/contact-preferences'] }
     });
   });
 
-  it('reads legacy CRM signals as strong rows and writes the guided tiered shape', async () => {
+  it('edits canonical CRM team signals by confidence', async () => {
     const fixture = await createFixture('team', 'matchSignals', {
-      emailAliases: ['crm-team@example.invalid'],
-      futureCrmSignalMetadata: { reviewed: true }
+      strong: { emailAliases: ['crm-team@example.invalid'] }
     });
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
@@ -296,15 +294,15 @@ describe('ContextStructuredFieldEditorComponent', () => {
     ]);
     fixture.componentInstance.updateSignalValues(0, 'crm-team@example.invalid\ncrm-operations@example.invalid');
     expect(emitted).toHaveBeenLastCalledWith({
-      futureCrmSignalMetadata: { reviewed: true },
       strong: { emailAliases: ['crm-team@example.invalid', 'crm-operations@example.invalid'] }
     });
   });
 
-  it('guides canonical CRM relations, recognizes legacy targets and excludes self references', async () => {
+  it('guides canonical CRM relations and excludes self references', async () => {
     const fixture = await createFixture('bounded-context', 'relations', [{
       type: 'hands-off-to',
-      targetContextId: 'crm-engagement-context',
+      targetType: 'bounded-context',
+      target: 'crm-engagement-context',
       relationship: 'Anonymized CRM handoff',
       futureCrmRelationHint: 'preserve'
     }], 'crm-customer-context');
@@ -331,7 +329,7 @@ describe('ContextStructuredFieldEditorComponent', () => {
       relationship: 'Anonymized CRM handoff',
       futureCrmRelationHint: 'preserve'
     })]);
-    expect(emitted.mock.calls.at(-1)?.[0][0]).not.toHaveProperty('targetContextId');
+    expect(emitted.mock.calls.at(-1)?.[0][0]).toHaveProperty('targetType', 'process');
   });
 
   it('edits structured CRM process failure modes and preserves unknown extensions', async () => {
@@ -355,8 +353,10 @@ describe('ContextStructuredFieldEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('#process-failure-id-0')).toBeTruthy();
   });
 
-  it('normalizes a legacy CRM integration failure description into guided fields', async () => {
-    const fixture = await createFixture('integration', 'failureModes', ['CRM profile response timeout']);
+  it('edits canonical CRM integration failure details', async () => {
+    const fixture = await createFixture('integration', 'failureModes', [{
+      name: 'CRM profile response timeout', symptom: 'CRM profile response timeout'
+    }]);
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
 
@@ -385,13 +385,13 @@ describe('ContextStructuredFieldEditorComponent', () => {
     });
   });
 
-  it('reads legacy CRM source coverage and writes the canonical guided object', async () => {
-    const fixture = await createFixture('bounded-context', 'sourceCoverage', [{
+  it('edits canonical CRM source coverage', async () => {
+    const fixture = await createFixture('bounded-context', 'sourceCoverage', {
       status: 'partial',
-      sources: ['Anonymized CRM domain notes'],
+      scannedSources: ['Anonymized CRM domain notes'],
       limitations: ['CRM consent boundary not reviewed'],
       futureCrmCoverageHint: true
-    }]);
+    });
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
 
@@ -448,8 +448,10 @@ describe('ContextStructuredFieldEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('#process-boundary-endsWhen')).toBeTruthy();
   });
 
-  it('normalizes a legacy CRM process boundary only after guided editing', async () => {
-    const fixture = await createFixture('process', 'processBoundary', ['CRM contact confirmation is visible.']);
+  it('edits canonical CRM process boundary lists', async () => {
+    const fixture = await createFixture('process', 'processBoundary', {
+      endsWhen: ['CRM contact confirmation is visible.']
+    });
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
 
@@ -492,8 +494,8 @@ describe('ContextStructuredFieldEditorComponent', () => {
     expect(fixture.nativeElement.querySelector('#lifecycle-transition-to-0')).toBeTruthy();
   });
 
-  it('reads a legacy CRM lifecycle list as statuses and writes the canonical guided object', async () => {
-    const fixture = await createFixture('process', 'lifecycle', ['requested', 'applied']);
+  it('edits canonical CRM lifecycle statuses', async () => {
+    const fixture = await createFixture('process', 'lifecycle', { statuses: ['requested', 'applied'] });
     const emitted = vi.fn();
     fixture.componentInstance.valueChange.subscribe(emitted);
 

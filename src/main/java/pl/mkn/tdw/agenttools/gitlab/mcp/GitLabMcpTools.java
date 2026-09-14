@@ -830,7 +830,7 @@ public class GitLabMcpTools {
                     Read a file from the GitLab repository in the resolved GitLab group and explicit branchRef.
                     In a session with a repository scope, the selected project is pinned to the operator's
                     branch and other projects in the main group are pinned separately. Such reads return
-                    a sourceRef only after complete content, size, revision and safety verification.
+                    a sourceRef only after complete text, size and revision verification.
                     In other sessions, prefer outline/chunk tools before full reads of large files.
                     """
     )

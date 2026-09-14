@@ -34,7 +34,7 @@ class OperationalContextCatalogNestedFieldsTest {
     }
 
     @Test
-    void cleansNestedProcessCardsAndKeepsKnownLegacyKeys() {
+    void cleansNestedProcessCardsIncludingObsoleteKeys() {
         var payload = object(
                 "lifecycle", object(
                         "statuses", List.of("accepted"),
@@ -52,18 +52,19 @@ class OperationalContextCatalogNestedFieldsTest {
 
         assertEquals(Set.of(
                 "/payload/lifecycle/triggers/0/oldFlag",
+                "/payload/steps/0/match",
                 "/payload/steps/0/references/unused",
                 "/payload/failureModes/0/obsoleteSeverity"
         ), errors.stream().map(OperationalContextCatalogFieldError::pointer).collect(java.util.stream.Collectors.toSet()));
         OperationalContextCatalogNestedFields.removeUnknown(OperationalContextCatalogEntityType.PROCESS, payload);
         var step = castMap(((List<?>) payload.get("steps")).get(0));
-        assertTrue(step.containsKey("match"));
+        assertFalse(step.containsKey("match"));
         assertFalse(castMap(step.get("references")).containsKey("unused"));
         assertFalse(castMap(((List<?>) payload.get("failureModes")).get(0)).containsKey("obsoleteSeverity"));
     }
 
     @Test
-    void cleansIntegrationParticipantCardsWithoutRemovingKnownServerOwnedRepositories() {
+    void cleansIntegrationParticipantCardsIncludingObsoleteRepositories() {
         var payload = object("participants", object(
                 "source", object("system", "crm", "repositories", List.of("crm-repo"), "unusedScope", "old"),
                 "targets", List.of(object("system", "profiles", "role", "server", "debugNotes", "old"))
@@ -72,12 +73,12 @@ class OperationalContextCatalogNestedFieldsTest {
 
         OperationalContextCatalogNestedFields.rejectUnknown(OperationalContextCatalogEntityType.INTEGRATION, payload, errors);
 
-        assertEquals(Set.of("/payload/participants/source/unusedScope", "/payload/participants/targets/0/debugNotes"),
+        assertEquals(Set.of("/payload/participants/source/repositories", "/payload/participants/source/unusedScope", "/payload/participants/targets/0/debugNotes"),
                 errors.stream().map(OperationalContextCatalogFieldError::pointer).collect(java.util.stream.Collectors.toSet()));
         OperationalContextCatalogNestedFields.removeUnknown(OperationalContextCatalogEntityType.INTEGRATION, payload);
         var participants = castMap(payload.get("participants"));
         var source = castMap(participants.get("source"));
-        assertEquals(List.of("crm-repo"), source.get("repositories"));
+        assertFalse(source.containsKey("repositories"));
         assertFalse(source.containsKey("unusedScope"));
         assertFalse(castMap(((List<?>) participants.get("targets")).get(0)).containsKey("debugNotes"));
     }

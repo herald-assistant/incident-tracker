@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftValidationTools;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
@@ -23,9 +24,11 @@ public class OperationalContextAssistanceCopilotProvider {
             AnalysisAiAuthRef authRef,
             OperationalContextAssistancePromptPreparation preparation,
             OperationalContextGitLabSourceSnapshot source,
+            OperationalContextAssistanceDraftValidationTools.ValidationSession validationSession,
             AnalysisAiActivityListener activityListener
     ) {
-        var assembly = runRequestAssembler.assemble(runReference, options, authRef, preparation, source);
+        var assembly = runRequestAssembler.assemble(runReference, options, authRef, preparation, source,
+                validationSession);
         var session = runPreparationService.prepare(assembly.runRequest());
         if (activityListener != null && activityListener != AnalysisAiActivityListener.NO_OP) {
             session = session.withActivitySink(activityListener::onAiActivity);

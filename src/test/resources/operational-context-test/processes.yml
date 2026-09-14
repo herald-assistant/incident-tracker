@@ -12,10 +12,10 @@ processes:
       boundedContexts: [crm-contact-context]
       integrations: [crm-contact-to-notification-sync]
       teams: [crm-contact-team, crm-integration-team]
-    processSteps:
+    steps:
       - id: call-crm-notification-provider
         name: Call CRM Notification Provider
-        participants:
+        references:
           systems: [crm-contact-service, crm-notification-provider]
         matchSignals:
           exact:

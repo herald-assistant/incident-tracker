@@ -13,7 +13,7 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
 - Korzystaj z neutralnych `aiplatform`, `integrations.gitlab` i
   `integrations.operationalcontext`. Nie importuj sibling feature'ow ani nie
   przenos semantyki asysty do `agenttools`, adapterow lub platformy.
-- Sesja AI dostaje sanitizowany opis, pelny snapshot dziewieciu aktywnych
+- Sesja AI dostaje niezmieniony opis, pelny snapshot dziewieciu aktywnych
   dokumentow z jednym digestem i obowiazujace wskazowki maintenance. Limit
   rozmiaru blokuje run jawnie, bez cichego obciecia. AI nie dostaje mutation
   tools. `opctx_*` pozostaja read-only.
@@ -25,15 +25,24 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   zrodel pozostaja danymi, ktore nie moga zmienic kontraktu odpowiedzi.
 - Collector przyjmuje tylko jeden projekt/ref w skonfigurowanej grupie,
   przypina commit, dolacza ograniczone czteropoziomowe drzewo sciezek i czyta
-  mala allowliste dokladnych sciezek z limitami body. AI moze pozniej
+  mala allowliste dokladnych sciezek z limitami body. Przy pelnym drzewie
+  probuje tylko plikow widocznych w root; brak opcjonalnego pliku nie jest
+  ograniczeniem widocznosci. Przy niepelnym lub niedostepnym drzewie probuje
+  te sciezki bez komunikatu o niepotwierdzonej nieobecnosci. Dodatkowo
+  sprawdza dokladne `.github/copilot-instructions.md` niezaleznie od drzewa.
+  Drzewo pokazuje takze katalogi z kropka. Glowny `AGENTS.md` i instrukcje Copilota
+  sa niezaufanym materialem repozytorium, nie regułami asysty. Oba maja
+  limit 32 KiB na plik, pozostale pliki 16 KiB, razem do 96 KiB. AI moze pozniej
   korzystac ze wspolnych read-only GitLab tree/list/search/read tools takze
   dla innego projektu w skonfigurowanej glownej grupie, gdy wymaga tego
   zadanie. Wybrany projekt pozostaje na commicie operatora; kazda inna para
   projekt/galaz jest przypinana osobno. Drzewo jest mapa nawigacji; sam tree/list/search
   nie potwierdza tresci pliku i nie tworzy `gitlab:` source ref. Nie opieraj
-  pierwszego wpisu na istniejacym code-search scope. Gdy AI zwroci tylko
-  pytania, job nie moze pokazywac statusu `COMPLETED`; przy wybranym projekcie
-  brak odczytu pliku pozostaje jawnym ograniczeniem.
+  pierwszego wpisu na istniejacym code-search scope. Asysta jest jednorazowa:
+  prompt i skill wymagaja propozycji bez pytan do operatora. Gdy brak
+  bezpiecznej propozycji, job zachowuje draft i usage ze statusem `BLOCKED`
+  oraz opisem ograniczen; przy wybranym projekcie brak odczytu pliku jest
+  jawnym ograniczeniem.
 - `source-options` jest read-only podpowiedzia z biezacego katalogu ograniczona
   do skonfigurowanej grupy; nie jest live discovery GitLaba. W request do
   collectora trafia nazwa projektu wzgledna wobec tej grupy. Reczny
@@ -63,8 +72,19 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   operatora; opcjonalna nazwa uslugi w logach jest jawnym sygnalem systemu.
   `EXISTING_SYSTEM` dodaje kod do wskazanego systemu bez jego duplikowania.
 - Traktuj output modelu jako niezaufany. Parser odrzuca nieznane pola,
-  niekanoniczne sciezki, wrazliwa tresc, niedozwolone source refs oraz
-  potwierdzony ownership albo subtype `frontend` wywnioskowany przez AI.
+  niekanoniczne sciezki, niedozwolone source refs oraz
+  ownership albo klasyfikacje `frontend` bez jawnego oswiadczenia w
+  `operator:description` i obowiazkowego przegladu pola. Samo podobienstwo
+  nazw zespolu, repozytorium lub frameworka nie jest podstawa propozycji.
+- Feature-owned `operational_context_assistance_validate_draft` jest
+  read-only walidatorem calego draftu. Rejestruj jego callback tylko w sesji
+  Copilota tej asysty, bez globalnego providera MCP. Dostaje digest i scope z ukrytego
+  kontekstu sesji, laczy source refs rzeczywiscie przeczytanych plikow i ma
+  twardy limit dwoch wywolan. Jest dostepny takze bez wybranego GitLaba.
+  Przed koncowym wynikiem backend ponownie uruchamia ten sam parser i
+  podglad calego batcha; wynik wywolania toola nie zastepuje tej kontroli.
+  Walidacja draftu nie zapisuje YAML-i, a wybrany lub poprawiony przez
+  operatora podzbior wymaga osobnego `batch/preview`.
 - Preview nie zapisuje katalogu. Decyzja operatora moze wskazac tylko pola z
   draftu przechowywanego w jobie. Dla wybranych pol moze podac poprawione
   `after` w `editedValues`; typ i rozmiar poprawki sprawdza backend, a kazda
@@ -75,14 +95,24 @@ decyzje `APPLY`/`SKIP` dla wybranego zestawu.
   Jeden batch preview pokazuje wynikowy zestaw, a zapis wykonuj przez neutralna
   warunkowa operacje batch maintenance. Historia zachowuje draft AI oraz
   faktycznie zatwierdzone poprawki. `CREATE` wymaga zgodnego digesta,
-  `UPDATE` zgodnych wartosci `before`, a wszystkie relacje sa walidowane po
-  zlozeniu calego zestawu. Konflikt i blad walidacji nie moga pozostawic
+  `UPDATE` zgodnych wartosci `before`. Podczas skladania batcha referencja
+  moze wskazywac encje `CREATE` z pozniejszej mutacji tego samego zestawu;
+  ostateczna walidacja sprawdza caly kandydat katalogu. Blad strukturalny
+  ma wskaznik `/mutations/{index}/payload/...`, rowniez gdy czesc propozycji
+  pominieto. Konflikt i blad walidacji nie moga pozostawic
   czesciowego katalogu ani decyzji `APPLY`.
+- Niedokonczony przeglad operatora zapisuj jako typowany stan roboczy bez
+  mutacji katalogu. Ogranicz go do pol draftu i bezpiecznych typow oraz
+  rozmiarow poprawek. Zakonczony, nierozstrzygniety job moze byc odtworzony
+  z lokalnej historii do preview i jednorazowej decyzji; przy tworzeniu
+  repozytorium zachowaj zweryfikowane wymagane scope'y. Po rozstrzygnieciu
+  nie dopuszczaj dalszej edycji ani drugiego zapisu.
 
 ## Weryfikacja
 
 Przy zmianie kontraktu request/draft/decyzji sprawdz MockMvc, parser, job,
 maintenance oraz kontrakt Angulara. Dla zmian zrodla sprawdz przypiecie
-commita, rozmiar przed odczytem, limit rzeczywistego body i redakcje tresci.
+commita, rozmiar przed odczytem, limit rzeczywistego body i zachowanie tresci
+bez heurystycznej redakcji. Prompt i odpowiedz moga zawierac wartosci zrodel.
 Przy zmianie zapisu sprawdz kolejnosc zaleznosci, stale dane, caly wynikowy
 katalog oraz recovery po przerwaniu publikacji kilku YAML.

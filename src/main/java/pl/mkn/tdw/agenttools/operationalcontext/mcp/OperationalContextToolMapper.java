@@ -457,7 +457,6 @@ public class OperationalContextToolMapper {
                 "processBoundary", processBoundary(process),
                 "lifecycle", processLifecycle(process),
                 "completionSignals", completionSignals(process),
-                "successArtifacts", process.outcomes().successArtifacts(),
                 "dataAndArtifacts", dataAndArtifacts(process)
         );
         var relations = values(
@@ -1605,7 +1604,6 @@ public class OperationalContextToolMapper {
                 .map(relation -> values(
                         "type", relation.type(),
                         "targetType", relation.targetType(),
-                        "targetContextId", relation.targetContextId(),
                         "target", relation.target(),
                         "via", relation.via(),
                         "evidence", relation.evidence()
@@ -1621,8 +1619,7 @@ public class OperationalContextToolMapper {
                 "projectPath", git.projectPath(),
                 "defaultBranch", git.defaultBranch(),
                 "url", git.url(),
-                "aliases", git.aliases(),
-                "inferred", git.inferred()
+                "aliases", git.aliases()
         );
     }
 
@@ -1641,7 +1638,6 @@ public class OperationalContextToolMapper {
         return values(
                 "system", participant.system(),
                 "boundedContext", participant.boundedContext(),
-                "repositories", participant.repositories(),
                 "role", participant.role(),
                 "externalOwner", participant.externalOwner(),
                 "notes", participant.notes()

@@ -65,13 +65,11 @@ export interface OperationalContextAssistanceProposal {
   changes: OperationalContextAssistanceFieldChange[];
   confidence: 'LOW' | 'MEDIUM' | 'HIGH';
   requiresConfirmation: boolean;
-  questions: string[];
   visibilityLimits: string[];
 }
 
 export interface OperationalContextAssistanceDraft {
   proposals: OperationalContextAssistanceProposal[];
-  questions: string[];
   visibilityLimits: string[];
 }
 
@@ -103,6 +101,14 @@ export interface OperationalContextAssistanceProposalDecisionRequest {
 export interface OperationalContextAssistanceBatchReviewRequest {
   decisions: OperationalContextAssistanceProposalDecisionRequest[];
   candidateDigest?: string;
+}
+
+export interface OperationalContextAssistanceReviewDraft {
+  selections: {
+    selectedPaths: string[];
+    confirmedPaths: string[];
+    editedValues: Record<string, unknown>;
+  }[];
 }
 
 export interface OperationalContextAssistanceBatchPreview {
@@ -139,6 +145,7 @@ export interface OperationalContextAssistanceJob {
   previews: OperationalContextAssistancePreview[];
   proposalDecisions?: OperationalContextAssistanceProposalDecision[];
   preparedPrompt?: string | null;
+  reviewDraft?: OperationalContextAssistanceReviewDraft | null;
 }
 
 export function isTerminalAssistanceStatus(status: OperationalContextAssistanceStatus): boolean {

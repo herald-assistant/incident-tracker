@@ -81,6 +81,10 @@
 .assistance-batch__change code { white-space: pre-wrap; overflow-wrap: anywhere; }
 .assistance-batch__validation[data-valid='true'] { color: #17643d; font-weight: 600; }
 .assistance-batch__validation[data-valid='false'] { color: var(--color-danger, #a72b31); font-weight: 600; }
+.assistance-batch__review-issue { padding: .55rem .7rem; border-radius: .4rem; font-size: .88rem; font-weight: 600; }
+.assistance-batch__review-issue[data-kind='confirmation'] { background: var(--color-danger-soft, #ffebe6); color: var(--color-danger, #ae2e24); }
+.assistance-batch__review-issue[data-kind='omitted'] { background: var(--color-warning-soft, #fff4d6); color: var(--color-warning, #b76e00); }
+.assistance-batch__show-issue { justify-self: start; }
 
 .assistance-panel__new-run { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .7rem; padding: .65rem .8rem; background: var(--color-surface-muted, #f2f5f8); border-radius: .5rem; }
 .assistance-panel__new-run span { color: var(--color-text-muted, #526174); font-size: .9rem; }
@@ -92,23 +96,45 @@
 .assistance-review__heading p { margin: .15rem 0 0; color: var(--color-text-muted, #526174); font-size: .9rem; }
 .assistance-review__workspace { display: grid; grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr); align-items: start; gap: .85rem; min-width: 0; }
 .assistance-review__list { display: grid; gap: .4rem; position: sticky; top: 5rem; max-height: calc(100vh - 6rem); overflow-y: auto; padding: .1rem .3rem .1rem .1rem; }
-.assistance-review__item { display: grid; gap: .3rem; width: 100%; padding: .7rem .75rem; border: 1px solid var(--color-border, #cbd5e1); border-radius: .5rem; background: var(--color-surface, #fff); color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.assistance-review__item:hover { border-color: var(--primary, #165fd0); }
-.assistance-review__item:focus-visible { outline: 2px solid var(--primary, #165fd0); outline-offset: 2px; }
-.assistance-review__item[aria-current='true'] { border-color: var(--primary, #165fd0); background: #f0f6ff; box-shadow: inset 3px 0 0 var(--primary, #165fd0); }
+.assistance-review__entry { display: grid; gap: .1rem; min-width: 0; border: 1px solid var(--color-border, #cbd5e1); border-radius: .5rem; background: var(--color-surface, #fff); }
+.assistance-review__entry:hover { border-color: var(--primary, #165fd0); }
+.assistance-review__entry[data-active='true'] { border-color: var(--primary, #165fd0); background: #f0f6ff; box-shadow: inset 3px 0 0 var(--primary, #165fd0); }
+.assistance-review__entry[data-review-issue='confirmation'] { border-color: var(--color-danger, #ae2e24); background: var(--color-danger-soft, #ffebe6); }
+.assistance-review__entry[data-review-issue='omitted'] { border-color: var(--color-warning, #b76e00); background: var(--color-warning-soft, #fff4d6); }
+.assistance-review__entry[data-batch-error='true'] { border-color: var(--color-danger, #ae2e24); background: var(--color-danger-soft, #ffebe6); }
+.assistance-review__entry[data-active='true'][data-review-issue='confirmation'] { box-shadow: inset 3px 0 0 var(--color-danger, #ae2e24); }
+.assistance-review__entry[data-active='true'][data-review-issue='omitted'] { box-shadow: inset 3px 0 0 var(--color-warning, #b76e00); }
+.assistance-review__item { display: grid; gap: .3rem; width: 100%; padding: .7rem .75rem .45rem; border: 0; border-radius: .5rem; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.assistance-review__item:focus-visible { outline: 2px solid var(--primary, #165fd0); outline-offset: -2px; }
 .assistance-review__item[data-selected='false'] { opacity: .7; }
+.assistance-review__entry[data-review-issue] .assistance-review__item { opacity: 1; }
 .assistance-review__item-top { display: flex; align-items: baseline; justify-content: space-between; gap: .45rem; }
 .assistance-review__item-top strong { overflow-wrap: anywhere; }
 .assistance-review__item-top small { white-space: nowrap; }
 .assistance-review__item > span:not(.assistance-review__item-top),
 .assistance-review__item > small { color: var(--color-text-muted, #526174); font-size: .82rem; }
+.assistance-review__issues { display: grid; gap: .15rem; padding: 0 .75rem .35rem; font-size: .8rem; font-weight: 700; }
+.assistance-review__issues [data-kind='confirmation'] { color: var(--color-danger, #ae2e24); }
+.assistance-review__issues [data-kind='omitted'] { color: var(--color-warning, #b76e00); }
+.assistance-review__batch-errors { padding: 0 .75rem .35rem; color: var(--color-danger, #ae2e24); font-size: .8rem; font-weight: 700; }
+.assistance-review__approve { justify-self: stretch; margin: .1rem .65rem .65rem; padding: .4rem .6rem; border: 1px solid var(--primary, #165fd0); border-radius: .4rem; background: #f0f6ff; color: #1652a4; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+.assistance-review__approve:hover:not(:disabled) { background: #e4efff; }
+.assistance-review__approve:focus-visible { outline: 2px solid var(--primary, #165fd0); outline-offset: 2px; }
+.assistance-review__approve:disabled { border-color: var(--color-border, #cbd5e1); background: var(--color-surface-muted, #f2f5f8); color: var(--color-text-muted, #526174); cursor: default; }
 .assistance-review__workspace .assistance-proposal { align-content: start; min-width: 0; }
 .assistance-proposal__heading h4 { margin: .15rem 0; font-size: 1.1rem; }
 .assistance-proposal__heading small { color: var(--color-text-muted, #526174); }
 .assistance-proposal__heading code { color: var(--color-text-muted, #526174); font-size: .78rem; overflow-wrap: anywhere; }
 .assistance-change { display: grid; gap: .55rem; padding: .7rem; border: 1px solid transparent; border-radius: .4rem; background: var(--color-surface, #fff); }
 .assistance-change[data-selected='true'] { border-color: var(--color-border, #cbd5e1); }
-.assistance-change[data-selected='false'] { opacity: .7; }
+.assistance-change[data-selected='false']:not([data-review-issue]) { opacity: .7; }
+.assistance-change[data-review-issue='confirmation'] { border-color: var(--color-danger, #ae2e24); background: var(--color-danger-soft, #ffebe6); }
+.assistance-change[data-review-issue='omitted'] { border-color: var(--color-warning, #b76e00); background: var(--color-warning-soft, #fff4d6); }
+.assistance-change[data-batch-error='true'] { border-color: var(--color-danger, #ae2e24); background: var(--color-danger-soft, #ffebe6); opacity: 1; }
+.assistance-change__batch-error { margin: 0; color: var(--color-danger, #ae2e24); font-size: .83rem; font-weight: 600; overflow-wrap: anywhere; }
+.assistance-change__review-issue { margin: 0; font-size: .83rem; font-weight: 600; }
+.assistance-change__review-issue[data-kind='confirmation'] { color: var(--color-danger, #ae2e24); }
+.assistance-change__review-issue[data-kind='omitted'] { color: var(--color-warning, #b76e00); }
 .assistance-change__heading { display: flex; align-items: center; gap: .6rem; }
 .assistance-change__heading > div { display: grid; gap: .05rem; min-width: 0; }
 .assistance-change__heading code { color: var(--color-text-muted, #526174); font-size: .74rem; }
@@ -135,6 +161,10 @@
 .assistance-proposal__more[open] { display: grid; gap: .55rem; }
 .assistance-batch__heading { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
 .assistance-batch__heading span { color: var(--color-text-muted, #526174); font-size: .88rem; }
+.assistance-batch__field-errors { padding: .65rem .75rem; border: 1px solid var(--color-danger, #ae2e24); border-radius: .45rem; background: var(--color-danger-soft, #ffebe6); color: var(--color-danger, #ae2e24); }
+.assistance-batch__field-errors ul { margin: .4rem 0 0; padding-left: 1.3rem; }
+.assistance-batch__field-errors li + li { margin-top: .3rem; }
+.assistance-batch__field-errors button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
 .assistance-batch__details { border-top: 1px solid var(--color-border, #cbd5e1); padding-top: .65rem; }
 .assistance-batch__details > summary { cursor: pointer; font-weight: 600; }
 .assistance-batch__details[open] { max-height: 25rem; overflow-y: auto; }

@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.operationalcontextassistance.ai;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.stereotype.Component;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotModelSelection;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunRequest;
@@ -16,12 +17,13 @@ import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.agenttools.gitlab.GitLabRepositoryToolScope;
 import pl.mkn.tdw.common.GitLabPathUtils;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftValidationTools;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,15 +41,18 @@ public class OperationalContextAssistanceCopilotRunRequestAssembler {
             LIST_REPOSITORY_BRANCHES, LIST_REPOSITORY_TREE, LIST_REPOSITORY_FILES,
             SEARCH_REPOSITORY_FILES, READ_REPOSITORY_FILE
     );
+    private static final String VALIDATE_DRAFT = OperationalContextAssistanceDraftValidationTools.NAME;
     private static final CopilotToolDescriptionContext DESCRIPTION_CONTEXT =
             CopilotToolDescriptionContext.profile("operational-context-assistance");
     private static final String DENIED_TOOL_MESSAGE =
-            "Dozwolone są tylko narzędzia odczytu projektów i gałęzi w skonfigurowanej głównej grupie GitLab. "
+            "Dozwolony jest tylko walidator propozycji oraz, gdy wybrano źródło, "
+                    + "narzędzia odczytu projektów i gałęzi w skonfigurowanej głównej grupie GitLab. "
                     + "Wybrany projekt musi używać gałęzi operatora i przypiętego commita. "
                     + "Filesystem, shell, terminal i mutation tools są zabronione.";
 
     private final CopilotRunAuthMapper runAuthMapper;
     private final CopilotSdkToolFactory toolFactory;
+    private final OperationalContextAssistanceDraftValidationTools validationTools;
     private final OperationalContextAssistanceAiProperties aiProperties;
     private final GitLabProperties gitLabProperties;
 
@@ -56,9 +61,11 @@ public class OperationalContextAssistanceCopilotRunRequestAssembler {
             AnalysisAiOptions options,
             AnalysisAiAuthRef authRef,
             OperationalContextAssistancePromptPreparation preparation,
-            OperationalContextGitLabSourceSnapshot source
+            OperationalContextGitLabSourceSnapshot source,
+            OperationalContextAssistanceDraftValidationTools.ValidationSession validationSession
     ) {
         if (runReference == null || runReference.isBlank() || preparation == null
+                || validationSession == null
                 || preparation.prompt() == null || preparation.prompt().isBlank()) {
             throw new IllegalArgumentException("Assistance run reference and prepared prompt are required.");
         }
@@ -70,28 +77,34 @@ public class OperationalContextAssistanceCopilotRunRequestAssembler {
         );
         var sessionId = "operational-context-assistance-" + UUID.randomUUID();
         var sourceScope = selectedScope(source);
-        var hardBudget = sourceScope != null
-                ? new CopilotSessionHardToolBudget(18, Map.of(
-                        LIST_REPOSITORY_BRANCHES, 3,
-                        LIST_REPOSITORY_TREE, 6,
-                        LIST_REPOSITORY_FILES, 6,
-                        SEARCH_REPOSITORY_FILES, 6,
-                        READ_REPOSITORY_FILE, 4
-                )) : null;
-        var registeredTools = sourceScope != null
-                ? toolFactory.createToolDefinitions(new CopilotToolSessionContext(
-                        runReference,
-                        sessionId,
-                        Map.of(
-                                AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, sourceScope,
-                                AgentToolContextKeys.TOOL_HARD_BUDGET, hardBudget
-                        )
-                ), DESCRIPTION_CONTEXT).stream()
-                .filter(tool -> SOURCE_TOOL_NAMES.contains(tool.name()))
-                .toList()
-                : List.<com.github.copilot.rpc.ToolDefinition>of();
-        if (sourceScope != null && registeredTools.size() != SOURCE_TOOL_NAMES.size()) {
-            throw new IllegalStateException("GitLab repository read tools are not fully registered.");
+        var budgets = new LinkedHashMap<String, Integer>();
+        budgets.put(VALIDATE_DRAFT, 2);
+        if (sourceScope != null) {
+            budgets.put(LIST_REPOSITORY_BRANCHES, 3);
+            budgets.put(LIST_REPOSITORY_TREE, 6);
+            budgets.put(LIST_REPOSITORY_FILES, 6);
+            budgets.put(SEARCH_REPOSITORY_FILES, 6);
+            budgets.put(READ_REPOSITORY_FILE, 4);
+        }
+        var hardBudget = new CopilotSessionHardToolBudget(sourceScope != null ? 20 : 2, budgets);
+        var hiddenContext = new LinkedHashMap<String, Object>();
+        hiddenContext.put(AgentToolContextKeys.TOOL_HARD_BUDGET, hardBudget);
+        hiddenContext.put(OperationalContextAssistanceDraftValidationTools.CONTEXT_KEY,
+                new OperationalContextAssistanceDraftValidationTools.ValidationSession(
+                        validationSession.catalogDigest(), validationSession.initialScope(), sourceScope));
+        if (sourceScope != null) {
+            hiddenContext.put(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE, sourceScope);
+        }
+        var validationCallbacks = MethodToolCallbackProvider.builder().toolObjects(validationTools)
+                .build().getToolCallbacks();
+        var registeredTools = toolFactory.createToolDefinitions(new CopilotToolSessionContext(
+                        runReference, sessionId, hiddenContext), DESCRIPTION_CONTEXT,
+                        Arrays.asList(validationCallbacks)).stream()
+                .filter(tool -> VALIDATE_DRAFT.equals(tool.name())
+                        || sourceScope != null && SOURCE_TOOL_NAMES.contains(tool.name()))
+                .toList();
+        if (registeredTools.size() != 1 + (sourceScope != null ? SOURCE_TOOL_NAMES.size() : 0)) {
+            throw new IllegalStateException("Operational Context assistance tools are not fully registered.");
         }
         var sessionConfig = new CopilotSessionConfigRequest(
                 sessionId,

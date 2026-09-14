@@ -77,10 +77,7 @@ final class GitLabAvailableRepositoryMapper {
             OperationalContextRepository repository
     ) {
         var rawProjectPath = repository.git().projectPath();
-        var projectName = firstNonBlank(
-                relativeProjectPath(sessionGroup, rawProjectPath),
-                relativeProjectPath(sessionGroup, repository.git().project())
-        );
+        var projectName = relativeProjectPath(sessionGroup, rawProjectPath);
         if (!StringUtils.hasText(projectName)) {
             return null;
         }
@@ -169,7 +166,7 @@ final class GitLabAvailableRepositoryMapper {
 
     private static boolean isGitLabRepository(OperationalContextRepository repository) {
         var provider = repository.git().provider();
-        return !StringUtils.hasText(provider) || "gitlab".equalsIgnoreCase(provider.trim());
+        return "gitlab".equals(provider);
     }
 
     private static boolean groupMatches(String sessionGroup, OperationalContextRepository repository) {

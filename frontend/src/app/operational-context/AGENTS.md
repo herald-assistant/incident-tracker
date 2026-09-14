@@ -103,15 +103,26 @@ ograniczenia i pelny diff rozwija sie na zadanie; szczegoly jednej propozycji
 pokazuja zmiany pol `before/after`, podstawe, source refs i pytania.
 Wspolny boczny aside pokazuje kroki, bezpieczny przebieg pracy Copilota,
 prompt przygotowany przed sesja i usage/koszt. Runy sa w Analysis History;
-odtworzony run jest tylko do odczytu, bez ponownego batch decision.
+nierozstrzygniety run wznawiaj do edycji i zatwierdzenia po odtworzeniu joba
+przez backend. Zapisany wybor pol, potwierdzenia i reczne poprawki musza
+przetrwac wyjscie z ekranu. Rozstrzygniety run pozostaje tylko do odczytu.
 AI widzi pelny katalog i moze doczytac wskazane repozytorium. Operator wybiera
 pola w dowolnych propozycjach, pomija propozycje przez odznaczenie wszystkich
-jej pol, poprawia proponowane wartosci i potwierdza wymagane fakty. Wartosc
+jej pol, poprawia proponowane wartosci i potwierdza wymagane fakty. Akcja na
+pozycji listy moze zaznaczyc i potwierdzic wszystkie zwykle pola tej propozycji;
+recznie poprawione wartosci nadal wymagaja osobnego potwierdzenia. Wartosc
 tekstowa ma prosty edytor, struktura edytor JSON zachowujacy typ. Korekta
 wybranego pola wymaga osobnego potwierdzenia i nowego podgladu. Tozsamosc
 `repository.git` i lista `code-search-scope.repositories` nie podlegaja
 korekcie w review, bo sa zwiazane ze zweryfikowanym zrodlem/scope'em.
 Operator uruchamia jeden podglad calego zestawu.
+Po uruchomieniu podgladu wskazuj na zwartej liscie i przy konkretnych polach
+brak wymaganego potwierdzenia oraz pola pominięte w wyborze. Brak potwierdzenia
+blokuje zapis; świadome pominięcie jest dozwolone i nie moze wygladac jak
+blad blokujacy. Z podsumowania podgladu operator powinien przejsc do pierwszej
+propozycji wymagajacej uwagi. Akcja zatwierdzajaca pola jednej propozycji musi
+byc wizualnie wewnatrz jej karty, ale jako osobny przycisk, bez zagniezdzania
+interaktywnych elementow.
 Odpowiedz `batch/preview` jest autorytatywna dla wyboru; wstepne podglady
 pojedynczych propozycji nie blokuja zapisu. Po poprawnym podgladzie operator
 zapisuje caly zestaw jednym `batch/decision`. Nie wysylaj wartosci AI jako
@@ -122,6 +133,12 @@ korekte operatora. Po zapisie odswiez katalog, Validation i Open
 Questions jednym odswiezeniem. Po bledzie sieci odczytaj ten sam job, zanim
 pozwolisz ponowic zapis. Konflikt aktualnosci zachowuje wybor i wymaga nowego
 podgladu.
+
+Blad `batch/preview` z `fieldErrors` mapuj przez indeks `/mutations/{index}`
+na wybrane propozycje `APPLY`, pomijajac `SKIP`. Wskaz konkretny item,
+pole, pozycje na liscie i jej wartosc oraz daj przejscie do poprawki.
+Nieznane wskazniki pokazuj jako ogolny blad; zmiana wyboru lub poprawka
+uniewaznia poprzedni podglad i jego oznaczenia.
 
 Reczny edytor encji pozostaje dostepny na biezacej wersji danych. Domyslnie
 eksponuje pola podstawowe i rozwija zaawansowane sekcje na

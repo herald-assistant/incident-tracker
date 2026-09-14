@@ -4,12 +4,10 @@ import java.util.List;
 
 public record OperationalContextAssistanceDraft(
         List<Proposal> proposals,
-        List<String> questions,
         List<String> visibilityLimits
 ) {
     public OperationalContextAssistanceDraft {
         proposals = List.copyOf(proposals);
-        questions = List.copyOf(questions);
         visibilityLimits = List.copyOf(visibilityLimits);
     }
 
@@ -20,12 +18,10 @@ public record OperationalContextAssistanceDraft(
             List<FieldChange> changes,
             Confidence confidence,
             boolean requiresConfirmation,
-            List<String> questions,
             List<String> visibilityLimits
     ) {
         public Proposal {
             changes = List.copyOf(changes);
-            questions = List.copyOf(questions);
             visibilityLimits = List.copyOf(visibilityLimits);
         }
     }

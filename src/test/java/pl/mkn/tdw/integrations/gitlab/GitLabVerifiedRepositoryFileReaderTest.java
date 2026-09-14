@@ -25,20 +25,35 @@ class GitLabVerifiedRepositoryFileReaderTest {
     }
 
     @Test
-    void rejectsSensitiveTextAndMismatchedRevisionWithoutCitableContent() {
-        var content = "apiToken = exposed-value";
-        stub("package.json", content, COMMIT, (long) content.length());
-        assertThatThrownBy(() -> GitLabVerifiedRepositoryFileReader.read(
-                port, "CRM", "lib", COMMIT, "package.json", 1024))
-                .isInstanceOf(IllegalStateException.class);
+    void includesTextRegardlessOfPathOrContentKeywords() {
+        var content = "apiToken = fictional-example";
+        stub(".env", content, COMMIT, (long) content.length());
+        var file = GitLabVerifiedRepositoryFileReader.read(port, "CRM", "lib", COMMIT, ".env", 1024);
 
+        assertThat(file.content()).isEqualTo(content);
+        assertThat(GitLabVerifiedRepositoryFileReader.isSafePath("config/secrets.xml", false)).isTrue();
+        assertThat(GitLabVerifiedRepositoryFileReader.isSafePath(".github/copilot-instructions.md", false)).isTrue();
+        assertThat(GitLabVerifiedRepositoryFileReader.isSafePath("keys/example.pem", false)).isTrue();
+        assertThat(GitLabVerifiedRepositoryFileReader.isSafePath("../outside.xml", false)).isFalse();
+    }
+
+    @Test
+    void rejectsMismatchedRevisionWithoutCitableContent() {
         var other = "<project />";
         stub("pom.xml", other, "abcdef1234567890abcdef1234567890abcdef12", (long) other.length());
         assertThatThrownBy(() -> GitLabVerifiedRepositoryFileReader.read(
                 port, "CRM", "lib", COMMIT, "pom.xml", 1024))
                 .isInstanceOf(IllegalStateException.class);
-        assertThat(GitLabVerifiedRepositoryFileReader.isReadablePath(".env")).isFalse();
-        assertThat(GitLabVerifiedRepositoryFileReader.isReadablePath("config/secrets.xml")).isFalse();
+    }
+
+    @Test
+    void rejectsNonTextBodyDespiteValidPathAndRevision() {
+        var binary = "CRM\u0000data";
+        stub("artifacts/sample.bin", binary, COMMIT, (long) binary.length());
+
+        assertThatThrownBy(() -> GitLabVerifiedRepositoryFileReader.read(
+                port, "CRM", "lib", COMMIT, "artifacts/sample.bin", 1024))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private void stub(String path, String content, String revision, Long sizeBytes) {

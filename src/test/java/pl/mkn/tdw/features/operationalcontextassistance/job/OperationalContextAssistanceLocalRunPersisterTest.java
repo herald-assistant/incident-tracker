@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.operationalcontextassistance.job;
 
 import com.fasterxml.jackson.databind.node.TextNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.junit.jupiter.api.Test;
@@ -11,8 +12,10 @@ import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceJobSnapshot;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecision;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecisionRequest;
+import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceReviewDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace.OperationalContextAssistanceLocalRunPersister;
+import pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace.OperationalContextAssistanceExportEnvelope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
@@ -25,10 +28,13 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class OperationalContextAssistanceLocalRunPersisterTest {
 
@@ -51,7 +57,7 @@ class OperationalContextAssistanceLocalRunPersisterTest {
                 null, null, null, null, null
         );
 
-        persister.persistRunSnapshot(state.snapshot(), request);
+        persister.persistRunSnapshot(state.snapshot(), request, Set.of());
 
         var indexCaptor = ArgumentCaptor.forClass(LocalAnalysisRunIndexEntry.class);
         var recordCaptor = ArgumentCaptor.forClass(LocalAnalysisRunRecord.class);
@@ -89,7 +95,7 @@ class OperationalContextAssistanceLocalRunPersisterTest {
                 null, null, null, null, null);
 
         new OperationalContextAssistanceLocalRunPersister(mapper, store)
-                .persistRunSnapshot(state.snapshot(), request);
+                .persistRunSnapshot(state.snapshot(), request, Set.of());
 
         var reopenedStore = new FileSystemLocalAnalysisRunStore(
                 properties, new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
@@ -122,14 +128,14 @@ class OperationalContextAssistanceLocalRunPersisterTest {
                                 List.of("operator:description"),
                                 OperationalContextAssistanceDraft.Confidence.MEDIUM, false)),
                         OperationalContextAssistanceDraft.Confidence.MEDIUM, false,
-                        List.of(), List.of())), List.of(), List.of()), List.of(), null, List.of(), false);
+                        List.of())), List.of()), List.of(), null, List.of(), false);
         state.recordDecision(new OperationalContextAssistanceProposalDecision(
                 0, OperationalContextAssistanceProposalDecisionRequest.Action.APPLY,
                 List.of("name"), Map.of("name", TextNode.valueOf("Operator Name")),
                 Instant.now(), "digest-2"));
         new OperationalContextAssistanceLocalRunPersister(mapper, store).persistRunSnapshot(
                 state.snapshot(), new OperationalContextAssistanceJobStartRequest(
-                        OperationalContextAssistanceMode.CREATE_AREA, "Opis", null, null, null, null, null));
+                        OperationalContextAssistanceMode.CREATE_AREA, "Opis", null, null, null, null, null), Set.of());
 
         var reopenedStore = new FileSystemLocalAnalysisRunStore(properties,
                 new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
@@ -139,5 +145,81 @@ class OperationalContextAssistanceLocalRunPersisterTest {
         assertThat(restored.draft().proposals().get(0).changes().get(0).after()).isEqualTo("AI Name");
         assertThat(restored.proposalDecisions().get(0).editedValues().get("name").asText())
                 .isEqualTo("Operator Name");
+    }
+
+    @Test
+    void restoresUnfinishedReviewAndVerifiedScopeAfterStoreReconstruction() {
+        var mapper = JsonMapper.builder().findAndAddModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();
+        var properties = new LocalWorkspaceProperties();
+        properties.setDirectory(workspace.toString());
+        var store = new FileSystemLocalAnalysisRunStore(properties,
+                new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
+        var state = new OperationalContextAssistanceJobState("crm-assistance-run");
+        state.start();
+        state.contextCollected("crm-digest", null, List.of(), 0);
+        state.prepared("Sanitizowany prompt CRM", List.of(), List.of());
+        state.complete(new OperationalContextAssistanceDraft(List.of(
+                new OperationalContextAssistanceDraft.Proposal(
+                        OperationalContextAssistanceDraft.Operation.CREATE, "system", "crm-api",
+                        List.of(new OperationalContextAssistanceDraft.FieldChange(
+                                "name", null, "CRM API", "Opis operatora",
+                                OperationalContextAssistanceDraft.Basis.USER_STATEMENT,
+                                List.of("operator:description"),
+                                OperationalContextAssistanceDraft.Confidence.HIGH, false)),
+                        OperationalContextAssistanceDraft.Confidence.HIGH, false,
+                        List.of())), List.of()), List.of(), null, List.of(), false);
+        var review = new OperationalContextAssistanceReviewDraft(List.of(
+                new OperationalContextAssistanceReviewDraft.Selection(
+                        List.of("name"), List.of("name"), Map.of("name", TextNode.valueOf("CRM Customer API")))));
+        state.saveReview(review);
+        var request = new OperationalContextAssistanceJobStartRequest(
+                OperationalContextAssistanceMode.CREATE_AREA, "CRM customer API", null, null, null, null, null);
+        new OperationalContextAssistanceLocalRunPersister(mapper, store).persistRunSnapshot(
+                state.snapshot(), request, Set.of("crm-scope"));
+
+        var reopenedStore = new FileSystemLocalAnalysisRunStore(properties,
+                new LocalWorkspacePaths(properties), new LocalWorkspaceJsonFileStore(mapper));
+        var reopenedPersister = new OperationalContextAssistanceLocalRunPersister(mapper, reopenedStore);
+        var resumed = reopenedPersister.findRestorable("crm-assistance-run").orElseThrow();
+        assertThat(resumed.snapshot().reviewDraft()).isEqualTo(review);
+        assertThat(resumed.requiredRepositoryScopeIds()).containsExactly("crm-scope");
+        reopenedPersister.persistRunSnapshot(resumed.snapshot(), null, resumed.requiredRepositoryScopeIds());
+        assertThat(reopenedStore.findById("crm-assistance-run").orElseThrow().exportEnvelope().path("mode").asText())
+                .isEqualTo("CREATE_AREA");
+    }
+
+    @Test
+    void doesNotResumeLegacyRepositoryCreationWithoutVerifiedScopeMetadata() {
+        var mapper = JsonMapper.builder().findAndAddModules().build();
+        var store = mock(LocalAnalysisRunStore.class);
+        var state = new OperationalContextAssistanceJobState("crm-legacy-run");
+        state.start();
+        state.contextCollected("crm-digest", null, List.of(), 0);
+        state.prepared("Sanitizowany prompt CRM", List.of(), List.of());
+        state.complete(new OperationalContextAssistanceDraft(List.of(
+                new OperationalContextAssistanceDraft.Proposal(
+                        OperationalContextAssistanceDraft.Operation.CREATE, "repository", "crm-repository",
+                        List.of(new OperationalContextAssistanceDraft.FieldChange(
+                                "name", null, "CRM Repository", "Opis operatora",
+                                OperationalContextAssistanceDraft.Basis.USER_STATEMENT,
+                                List.of("operator:description"),
+                                OperationalContextAssistanceDraft.Confidence.HIGH, false)),
+                        OperationalContextAssistanceDraft.Confidence.HIGH, false,
+                        List.of())), List.of()), List.of(), null, List.of(), false);
+        var request = new OperationalContextAssistanceJobStartRequest(
+                OperationalContextAssistanceMode.CREATE_AREA, "CRM repository", null, null, null, null, null);
+        var legacy = (ObjectNode) mapper.valueToTree(OperationalContextAssistanceExportEnvelope.from(
+                state.snapshot(), request, Set.of(), null));
+        legacy.remove("requiredRepositoryScopeIds");
+        when(store.listRuns()).thenReturn(List.of(new LocalAnalysisRunIndexEntry(
+                "crm-legacy-run", LocalAnalysisRunRecord.SCHEMA, LocalAnalysisRunRecord.VERSION,
+                "runs/crm-legacy-run/run.json", OperationalContextAssistanceLocalRunPersister.FEATURE,
+                "CRM assistance", "COMPLETED", state.snapshot().createdAt(),
+                state.snapshot().updatedAt(), state.snapshot().completedAt())));
+        when(store.findById("crm-legacy-run")).thenReturn(Optional.of(LocalAnalysisRunRecord.v1(legacy, null)));
+
+        assertThat(new OperationalContextAssistanceLocalRunPersister(mapper, store)
+                .findRestorable("crm-legacy-run")).isEmpty();
     }
 }

@@ -7,10 +7,10 @@ processes:
     participants:
       primarySystems: [crm-customer-service]
       externalSystems: [crm-notification-provider]
-    processSteps:
+    steps:
       - id: call-crm-notification-provider
         name: Call CRM Notification Provider
-        participants:
+        references:
           systems: [crm-customer-service, crm-notification-provider]
         matchSignals:
           exact:

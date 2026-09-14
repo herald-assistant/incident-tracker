@@ -100,14 +100,13 @@
                 </details>
               }
 
-              @if (nextReads(endpoint).length || legacyNextReads(endpoint).length) {
+              @if (nextReads(endpoint).length) {
                 <details class="preview-section" open>
                   <summary>
                     <span>Next reads</span>
-                    <small>{{ nextReads(endpoint).length || legacyNextReads(endpoint).length }} actions</small>
+                    <small>{{ nextReads(endpoint).length }} actions</small>
                   </summary>
-                  @if (nextReads(endpoint).length) {
-                    <div class="read-list">
+                  <div class="read-list">
                       @for (read of nextReads(endpoint); track nextReadKey(read)) {
                         <article class="read">
                           <div>
@@ -145,14 +144,7 @@
                           </div>
                         </article>
                       }
-                    </div>
-                  } @else {
-                    <ul class="simple-list">
-                      @for (read of legacyNextReads(endpoint); track read) {
-                        <li>{{ read }}</li>
-                      }
-                    </ul>
-                  }
+                  </div>
                 </details>
               }
 

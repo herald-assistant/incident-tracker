@@ -72,7 +72,9 @@ class ConfigDriftViewerScopeResolverTest {
                                 "internal-service",
                                 Map.of(
                                         "runtime", Map.of("configurationDirectory", "crm/customer-service"),
-                                        "deployment", Map.of("configurationDirectory", "crm/contact-worker")
+                                        "matchSignals", Map.of("exact", Map.of(
+                                                "configurationDirectories", List.of("crm/contact-worker")
+                                        ))
                                 )
                         ))).resolve("crm-runtime-config", "crm-ambiguous")
                 ).code()

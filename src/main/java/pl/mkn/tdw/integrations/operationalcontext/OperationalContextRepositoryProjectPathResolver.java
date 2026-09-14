@@ -123,6 +123,9 @@ public class OperationalContextRepositoryProjectPathResolver {
     }
 
     private boolean groupMatches(String configuredGroup, OperationalContextRepository repository) {
+        if (!"gitlab".equals(repository.git().provider())) {
+            return false;
+        }
         if (!StringUtils.hasText(configuredGroup)) {
             return true;
         }

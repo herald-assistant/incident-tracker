@@ -11,7 +11,7 @@ public interface OperationalContextPort {
     }
 
     default OperationalContextReadSession capture() {
-        return OperationalContextReadSession.legacy(currentSnapshot());
+        return OperationalContextReadSession.fromSnapshot(currentSnapshot());
     }
 
     /** Captures all logical YAML documents and the catalog from one immutable runtime snapshot. */

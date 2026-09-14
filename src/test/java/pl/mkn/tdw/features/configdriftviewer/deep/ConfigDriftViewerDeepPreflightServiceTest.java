@@ -291,8 +291,7 @@ class ConfigDriftViewerDeepPreflightServiceTest {
                         "platform/backend",
                         "main",
                         null,
-                        List.of(),
-                        false
+                        List.of()
                 ),
                 new OperationalContextReferences(
                         List.of("backend"),

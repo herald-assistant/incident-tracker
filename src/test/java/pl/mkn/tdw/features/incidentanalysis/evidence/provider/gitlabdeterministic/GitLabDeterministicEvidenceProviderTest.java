@@ -474,9 +474,10 @@ class GitLabDeterministicEvidenceProviderTest {
         var repository = new LinkedHashMap<String, Object>();
         repository.put("id", id);
         repository.put("git", Map.of(
+                "provider", "gitlab",
                 "project", projectPath,
-                "projectPath", List.of(group + "/" + projectPath),
-                "group", List.of(group)
+                "projectPath", group + "/" + projectPath,
+                "group", group
         ));
         repository.put("matchSignals", Map.of(
                 "strong", Map.of(

@@ -325,7 +325,7 @@ public class OperationalContextViewService {
         var resolvedOwnership = resolvedOwnership(view, ownershipRequest(repository));
         return new OperationalContextRepositoryRowDto(
                 repository.id(),
-                firstNonBlank(repository.git().projectPath(), repository.git().project()),
+                repository.git().projectPath(),
                 repository.git().group(),
                 ownerValue(resolvedOwnership, REPOSITORY, repository.id()),
                 resolvedOwnership,
@@ -367,7 +367,7 @@ public class OperationalContextViewService {
                 idAggregate("Repositories", PROCESS, process.id(), REPOSITORY, process.references().repositories(), view.repositoriesById()),
                 idAggregate("Contexts", PROCESS, process.id(), BOUNDED_CONTEXT, process.references().boundedContexts(), view.contextsById()),
                 valueAggregate("Steps", PROCESS, process.id(), process.steps().stream().map(step -> firstNonBlank(step.name(), step.id())).toList(), "Process steps listed in catalog.", "step"),
-                valueAggregate("Completion signals", PROCESS, process.id(), process.outcomes().successArtifacts(), "Success artifacts listed in catalog.", "outcome"),
+                valueAggregate("Completion signals", PROCESS, process.id(), process.values("completionSignals.successful"), "Successful completion signals listed in catalog.", "completion-signal"),
                 validationAggregate(PROCESS, process.id(), view.validationFindings())
         );
     }
@@ -553,7 +553,7 @@ public class OperationalContextViewService {
                 "processBoundary", payloadValue(process, "processBoundary", map("endsWhen", process.processBoundary().endsWhen())),
                 "lifecycle", payloadValue(process, "lifecycle", Map.of()),
                 "completionSignals", payloadValue(process, "completionSignals", Map.of()),
-                "failureModes", payloadValue(process, "failureModes", process.failureModes()),
+                "failureModes", payloadValue(process, "failureModes", List.of()),
                 "dataAndArtifacts", payloadValue(process, "dataAndArtifacts", Map.of())
         )));
         return replaceSections(detail, sections);
@@ -570,7 +570,7 @@ public class OperationalContextViewService {
                 "targets", integration.participants().targets().stream().map(this::participantMap).toList(),
                 "intermediaries", integration.participants().intermediaries().stream().map(this::participantMap).toList(),
                 "finalTargets", integration.participants().finalTargets().stream().map(this::participantMap).toList(),
-                "failureModes", payloadValue(integration, "failureModes", integration.failureModes())
+                "failureModes", payloadValue(integration, "failureModes", List.of())
         )));
         return replaceSections(detail, sections);
     }
@@ -1398,7 +1398,6 @@ public class OperationalContextViewService {
         return map(
                 "system", participant.system(),
                 "boundedContext", participant.boundedContext(),
-                "repositories", participant.repositories(),
                 "role", participant.role(),
                 "externalOwner", participant.externalOwner(),
                 "notes", participant.notes()
@@ -1680,7 +1679,7 @@ public class OperationalContextViewService {
     }
 
     private String relationLabel(OperationalContextRelation relation) {
-        return firstNonBlank(relation.type(), relation.targetType()) + " -> " + firstNonBlank(relation.target(), relation.targetContextId());
+        return firstNonBlank(relation.type(), relation.targetType()) + " -> " + relation.target();
     }
 
     private String codeSearchRepositoryRoleLabel(OperationalContextRepositorySearchRepository repository) {

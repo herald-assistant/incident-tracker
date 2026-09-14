@@ -22,19 +22,19 @@ class GitLabRepositoryTreeExplorerTest {
     void traversesFourLevelsFromMonorepoRootWithoutReadingFileContents() {
         page("", "", node("Backend", "tree"), node("README.md", "blob"),
                 node(".env", "blob"), node("Backend/nested.txt", "blob"));
-        page("Backend", "", node("Backend/hackhub-backend", "tree"));
-        page("Backend/hackhub-backend", "", node("Backend/hackhub-backend/src", "tree"));
-        page("Backend/hackhub-backend/src", "", node("Backend/hackhub-backend/src/main", "tree"));
+        page("Backend", "", node("Backend/crm-customer-api", "tree"));
+        page("Backend/crm-customer-api", "", node("Backend/crm-customer-api/src", "tree"));
+        page("Backend/crm-customer-api/src", "", node("Backend/crm-customer-api/src/main", "tree"));
 
         var tree = explorer.explore("group", "project", "1".repeat(40), "", "");
 
         assertThat(tree.depth()).isEqualTo(4);
         assertThat(tree.entries()).extracting(GitLabRepositoryTreeSlice.Entry::path)
-                .containsExactly("Backend", "README.md", "Backend/hackhub-backend",
-                        "Backend/hackhub-backend/src", "Backend/hackhub-backend/src/main");
+                .containsExactly("Backend", "README.md", ".env", "Backend/crm-customer-api",
+                        "Backend/crm-customer-api/src", "Backend/crm-customer-api/src/main");
         assertThat(tree.truncated()).isFalse();
         verify(port).listRepositoryTreeChildrenPage(eq("group"), eq("project"), eq("1".repeat(40)),
-                eq("Backend/hackhub-backend/src"), eq(""), anyInt());
+                eq("Backend/crm-customer-api/src"), eq(""), anyInt());
     }
 
     @Test
@@ -55,14 +55,25 @@ class GitLabRepositoryTreeExplorerTest {
     }
 
     @Test
-    void rejectsUnsafePathsAndCursorBeforeCallingGitLab() {
+    void rejectsTraversalPathsAndInvalidCursorBeforeCallingGitLab() {
         assertThatThrownBy(() -> explorer.explore("group", "project", "commit", "../other", ""))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> explorer.explore("group", "project", "commit", "secrets", ""))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> explorer.explore("group", "project", "commit", "", "wrong/cursor"))
                 .isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(port);
+    }
+
+    @Test
+    void navigatesDotDirectoriesAndPathsNamedSecrets() {
+        page(".github", "", node(".github/copilot-instructions.md", "blob"));
+        page("secrets", "", node("secrets/example.pem", "blob"));
+
+        assertThat(explorer.explore("group", "project", "commit", ".github", "").entries())
+                .extracting(GitLabRepositoryTreeSlice.Entry::path)
+                .containsExactly(".github/copilot-instructions.md");
+        assertThat(explorer.explore("group", "project", "commit", "secrets", "").entries())
+                .extracting(GitLabRepositoryTreeSlice.Entry::path)
+                .containsExactly("secrets/example.pem");
     }
 
     @Test

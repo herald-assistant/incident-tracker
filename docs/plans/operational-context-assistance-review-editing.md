@@ -56,7 +56,9 @@ kompaktowy panel review, testy API/job/UI oraz dokumentacja aktualnego flow.
 Operator moze poprawic tylko wybrane `after`; `before`, typ encji, ID i sciezka
 sa niezmienne. Backend sprawdza rozmiar, typ i potwierdzenie poprawki, a
 maintenance waliduje wynikowy katalog i stale `before`. Digest podgladu
-odrzuca pozniejsza zmiane wartosci. Odtworzona historia pozostaje read-only.
+odrzuca pozniejsza zmiane wartosci. Rozstrzygnieta historia pozostaje read-only;
+nierozstrzygniety przeglad wznawia sie wedlug
+[planu wznawialnego przegladu](operational-context-assistance-resumable-review.md).
 Rollback kodu przywraca dawny formularz i request; opcjonalne pole jest
 kompatybilne wstecz z dotychczasowymi klientami.
 

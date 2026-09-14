@@ -1,8 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnChanges, OnDestroy, OnInit, SimpleChanges, computed, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild, computed, inject, input, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Subscription, debounceTime } from 'rxjs';
+import { Subject, Subscription, catchError, concatMap, debounceTime, map, of } from 'rxjs';
 
 import { AnalysisStepsPanelComponent } from '../../../components/analysis-steps-panel/analysis-steps-panel';
 import { AnalysisFeatureAsideComponent } from '../../../components/analysis-feature-aside/analysis-feature-aside';
@@ -18,6 +18,7 @@ import {
   OperationalContextAssistanceProposal,
   OperationalContextAssistancePrefill,
   OperationalContextAssistanceRequest,
+  OperationalContextAssistanceReviewDraft,
   OperationalContextAssistanceSourceOptions,
   OperationalContextRepositoryUsage,
   isTerminalAssistanceStatus
@@ -32,6 +33,15 @@ interface PendingDecisionCheck {
   errorMessage: string;
 }
 
+interface BatchFieldIssue {
+  proposalIndex: number;
+  path: string;
+  pointer: string;
+  message: string;
+  valueLabel: string;
+  position: number | null;
+}
+
 @Component({
   selector: 'app-context-assistance-panel',
   imports: [ReactiveFormsModule, AnalysisStepsPanelComponent, AnalysisFeatureAsideComponent, GitLabBranchSelectComponent],
@@ -39,10 +49,12 @@ interface PendingDecisionCheck {
   styleUrl: './context-assistance-panel.scss'
 })
 export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDestroy {
+  @ViewChild('reviewList') private reviewList?: ElementRef<HTMLElement>;
   private readonly api = inject(OperationalContextAssistanceApiService);
   private readonly polling = inject(AnalysisJobPollingService);
   private readonly destroyRef = inject(DestroyRef);
   private pollSubscription?: Subscription;
+  private readonly reviewSaves = new Subject<{ jobId: string; draft: OperationalContextAssistanceReviewDraft; serialized: string }>();
 
   readonly prefill = input.required<OperationalContextAssistancePrefill>();
   readonly systemOptions = input<OperationalContextReferenceOption[]>([]);
@@ -81,6 +93,10 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   readonly batchPreview = signal<OperationalContextAssistanceBatchPreview | null>(null);
   readonly reviewedSelection = signal('');
   readonly decisionError = signal('');
+  readonly batchFieldIssues = signal<BatchFieldIssue[]>([]);
+  readonly batchGeneralErrors = signal<string[]>([]);
+  readonly reviewSaveError = signal('');
+  readonly reviewValidationVisible = signal(false);
   readonly pendingDecisionCheck = signal<PendingDecisionCheck | null>(null);
   readonly selectionByProposal = signal<Record<number, string[]>>({});
   readonly confirmationsByProposal = signal<Record<number, string[]>>({});
@@ -99,6 +115,25 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     : this.api.sourceBranches({ project: sourceKey.slice(8) }, search);
 
   ngOnInit(): void {
+    this.reviewSaves.pipe(concatMap(({ jobId, draft, serialized }) =>
+      this.api.saveReview(jobId, draft).pipe(
+        map((saved) => ({ saved, serialized })),
+        catchError(() => {
+          if (this.job()?.jobId === jobId && !this.reviewComplete()) {
+            this.reviewSaveError.set('Nie udało się zachować roboczych poprawek. Pozostały w tej przeglądarce; spróbuj ponownie zmienić wybór.');
+          }
+          return of(null);
+        })
+      )
+    )).subscribe((result) => {
+      if (!result) return;
+      const key = this.reviewStorageKey(result.saved.jobId);
+      try {
+        const pending = localStorage.getItem(key);
+        if (pending === result.serialized) localStorage.removeItem(key);
+      } catch { /* The server has still persisted the review. */ }
+      if (this.job()?.jobId === result.saved.jobId) this.reviewSaveError.set('');
+    });
     this.activePrefill.set(this.prefill());
     this.descriptionControl.setValue(this.activePrefill().description ?? '');
     this.includeGitLabControl.valueChanges
@@ -148,6 +183,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     const previousJob = this.initialJob();
     if (previousJob) {
       this.job.set(previousJob);
+      this.restoreReviewDraft(previousJob);
       this.composerExpanded.set(false);
       if (!this.historyReadOnly() && !isTerminalAssistanceStatus(previousJob.status)) this.startPolling(previousJob.jobId);
     }
@@ -158,6 +194,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       if (changes['initialJob'] || changes['prefill'] || changes['historyReadOnly']) {
         this.pollSubscription?.unsubscribe();
         this.job.set(this.initialJob());
+        if (this.initialJob()) this.restoreReviewDraft(this.initialJob()!);
         this.composerExpanded.set(false);
         this.activeProposalIndex.set(0);
         this.cancelFieldEdit();
@@ -174,11 +211,14 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       if (!incoming) {
         this.pollSubscription?.unsubscribe();
         this.job.set(null);
+        this.reviewValidationVisible.set(false);
         this.composerExpanded.set(true);
       }
       if (incoming && (incoming.jobId !== this.job()?.jobId || incoming.updatedAt !== this.job()?.updatedAt)) {
+        const changedJob = incoming.jobId !== this.job()?.jobId;
         this.pollSubscription?.unsubscribe();
         this.job.set(incoming);
+        if (changedJob) this.restoreReviewDraft(incoming);
         this.composerExpanded.set(false);
         this.activeProposalIndex.set(0);
         this.cancelFieldEdit();
@@ -215,6 +255,66 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
 
   ngOnDestroy(): void {
     this.pollSubscription?.unsubscribe();
+    this.reviewSaves.complete();
+  }
+
+  private reviewStorageKey(jobId: string): string {
+    return `tdw.opctx-assistance.review.${jobId}`;
+  }
+
+  private restoreReviewDraft(snapshot: OperationalContextAssistanceJob): void {
+    this.reviewSaveError.set('');
+    this.reviewValidationVisible.set(false);
+    this.selectionByProposal.set({});
+    this.confirmationsByProposal.set({});
+    this.editedValuesByProposal.set({});
+    if (snapshot.proposalDecisions?.length) {
+      try { localStorage.removeItem(this.reviewStorageKey(snapshot.jobId)); } catch { /* Storage can be unavailable. */ }
+      return;
+    }
+    let draft = snapshot.reviewDraft;
+    let local = false;
+    try {
+      const pending = localStorage.getItem(this.reviewStorageKey(snapshot.jobId));
+      if (pending) {
+        draft = JSON.parse(pending) as OperationalContextAssistanceReviewDraft;
+        local = true;
+      }
+    } catch { /* Fall back to the server's saved review. */ }
+    if (!draft || !Array.isArray(draft.selections) || draft.selections.length !== snapshot.draft?.proposals.length) return;
+    const selected: Record<number, string[]> = {};
+    const confirmed: Record<number, string[]> = {};
+    const edited: Record<number, Record<string, unknown>> = {};
+    snapshot.draft.proposals.forEach((proposal, index) => {
+      const entry = draft!.selections[index];
+      const allowed = new Set(proposal.changes.map((change) => change.path));
+      const paths = Array.isArray(entry?.selectedPaths) ? entry.selectedPaths.filter((path) => allowed.has(path)) : [];
+      selected[index] = paths;
+      confirmed[index] = Array.isArray(entry?.confirmedPaths)
+        ? entry.confirmedPaths.filter((path) => paths.includes(path)) : [];
+      edited[index] = Object.fromEntries(Object.entries(entry?.editedValues ?? {})
+        .filter(([path]) => allowed.has(path)));
+    });
+    this.selectionByProposal.set(selected);
+    this.confirmationsByProposal.set(confirmed);
+    this.editedValuesByProposal.set(edited);
+    if (local && !this.historyReadOnly()) this.persistReviewDraft();
+  }
+
+  private persistReviewDraft(): void {
+    const snapshot = this.job();
+    if (!snapshot || this.historyReadOnly() || this.reviewComplete()
+      || (snapshot.status !== 'COMPLETED' && snapshot.status !== 'PARTIAL') || !snapshot.draft?.proposals.length) return;
+    const draft: OperationalContextAssistanceReviewDraft = {
+      selections: snapshot.draft.proposals.map((proposal, index) => ({
+        selectedPaths: this.selectedPaths(index, proposal),
+        confirmedPaths: this.confirmationsByProposal()[index] ?? [],
+        editedValues: this.editedValuesByProposal()[index] ?? {}
+      }))
+    };
+    const serialized = JSON.stringify(draft);
+    try { localStorage.setItem(this.reviewStorageKey(snapshot.jobId), serialized); } catch { /* Server persistence still runs. */ }
+    this.reviewSaves.next({ jobId: snapshot.jobId, draft, serialized });
   }
 
   start(event?: Event): void {
@@ -295,6 +395,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     this.pollSubscription?.unsubscribe();
     this.job.set(null);
     this.jobChanged.emit(null);
+    this.reviewValidationVisible.set(false);
     this.contextSwitchNotice.set('');
     this.pollError.set(false);
     this.error.set('');
@@ -465,6 +566,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     const labels: Record<string, string> = {
       name: 'Nazwa', term: 'Termin', category: 'Kategoria', definition: 'Definicja',
       canonicalReferences: 'Powiązania', useFor: 'Kiedy używać', references: 'Powiązania',
+      relatedTerms: 'Powiązane terminy',
       description: 'Opis', summary: 'Podsumowanie', repositories: 'Repozytoria',
       git: 'Projekt GitLab', ownership: 'Właściciel', participants: 'Uczestnicy'
     };
@@ -581,7 +683,10 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     if (selected) paths.add(path);
     else paths.delete(path);
     this.selectionByProposal.update((current) => ({ ...current, [proposalIndex]: [...paths] }));
-    if (!selected) this.setConfirmed(proposalIndex, path, false);
+    if (!selected) this.confirmationsByProposal.update((current) => ({
+      ...current, [proposalIndex]: (current[proposalIndex] ?? []).filter((confirmed) => confirmed !== path)
+    }));
+    this.persistReviewDraft();
     this.invalidateBatchPreview();
     this.decisionError.set('');
   }
@@ -592,6 +697,117 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       ...current, [proposalIndex]: selected ? proposal.changes.map((change) => change.path) : []
     }));
     if (!selected) this.confirmationsByProposal.update((current) => ({ ...current, [proposalIndex]: [] }));
+    this.persistReviewDraft();
+    this.invalidateBatchPreview();
+    this.decisionError.set('');
+  }
+
+  missingConfirmationCount(proposalIndex: number, proposal: OperationalContextAssistanceProposal): number {
+    return proposal.changes.filter((change) => this.isSelected(proposalIndex, proposal, change.path)
+      && this.requiresConfirmation(proposalIndex, proposal, change)
+      && !this.isConfirmed(proposalIndex, change.path)).length;
+  }
+
+  omittedFieldCount(proposalIndex: number, proposal: OperationalContextAssistanceProposal): number {
+    return proposal.changes.filter((change) => !this.isSelected(proposalIndex, proposal, change.path)).length;
+  }
+
+  totalMissingConfirmationCount(): number {
+    return this.job()?.draft?.proposals.reduce((total, proposal, index) =>
+      total + this.missingConfirmationCount(index, proposal), 0) ?? 0;
+  }
+
+  totalOmittedFieldCount(): number {
+    return this.job()?.draft?.proposals.reduce((total, proposal, index) =>
+      total + this.omittedFieldCount(index, proposal), 0) ?? 0;
+  }
+
+  reviewIssueForProposal(proposalIndex: number, proposal: OperationalContextAssistanceProposal): 'confirmation' | 'omitted' | null {
+    if (!this.reviewValidationVisible() || this.historyReadOnly() || this.reviewComplete()) return null;
+    if (this.missingConfirmationCount(proposalIndex, proposal)) return 'confirmation';
+    return this.omittedFieldCount(proposalIndex, proposal) ? 'omitted' : null;
+  }
+
+  reviewIssueForChange(proposalIndex: number, proposal: OperationalContextAssistanceProposal,
+    change: OperationalContextAssistanceFieldChange): 'confirmation' | 'omitted' | null {
+    if (!this.reviewValidationVisible() || this.historyReadOnly() || this.reviewComplete()) return null;
+    if (!this.isSelected(proposalIndex, proposal, change.path)) return 'omitted';
+    return this.requiresConfirmation(proposalIndex, proposal, change)
+      && !this.isConfirmed(proposalIndex, change.path) ? 'confirmation' : null;
+  }
+
+  firstReviewIssueIndex(): number {
+    const proposals = this.job()?.draft?.proposals ?? [];
+    const unconfirmed = proposals.findIndex((proposal, index) => this.missingConfirmationCount(index, proposal) > 0);
+    return unconfirmed >= 0 ? unconfirmed
+      : proposals.findIndex((proposal, index) => this.omittedFieldCount(index, proposal) > 0);
+  }
+
+  showFirstReviewIssue(): void {
+    const index = this.firstReviewIssueIndex();
+    if (index < 0) return;
+    this.selectProposal(index);
+    const item = this.reviewList?.nativeElement.querySelectorAll<HTMLButtonElement>('.assistance-review__item')[index];
+    item?.focus();
+    item?.scrollIntoView?.({ block: 'nearest' });
+  }
+
+  batchIssuesForProposal(proposalIndex: number): BatchFieldIssue[] {
+    return this.batchFieldIssues().filter((issue) => issue.proposalIndex === proposalIndex);
+  }
+
+  batchIssuesForChange(proposalIndex: number, path: string): BatchFieldIssue[] {
+    return this.batchFieldIssues().filter((issue) => issue.proposalIndex === proposalIndex && issue.path === path);
+  }
+
+  showBatchIssue(issue: BatchFieldIssue): void {
+    this.selectProposal(issue.proposalIndex);
+    setTimeout(() => {
+      const field = document.getElementById(`assistance-change-${issue.proposalIndex}-${issue.path}`);
+      field?.scrollIntoView?.({ block: 'center' });
+    });
+  }
+
+  batchIssueText(issue: BatchFieldIssue): string {
+    const location = issue.position === null ? this.fieldLabel(issue.path)
+      : `${this.fieldLabel(issue.path)}, pozycja ${issue.position + 1}`;
+    const detail = issue.message === 'Referenced entity does not exist'
+      ? 'Wskazany identyfikator nie istnieje w wynikowym katalogu. Popraw lub usuń odwołanie albo dołącz propozycję tworzącą ten wpis.'
+      : issue.message;
+    return `${location}${issue.valueLabel ? `: ${issue.valueLabel}` : ''} — ${detail}`;
+  }
+
+  hasBulkApprovableChanges(proposalIndex: number, proposal: OperationalContextAssistanceProposal): boolean {
+    const selected = this.selectedPaths(proposalIndex, proposal);
+    return proposal.changes.some((change) => !selected.includes(change.path)
+      || (this.requiresConfirmation(proposalIndex, proposal, change)
+        && !this.isEdited(proposalIndex, change.path) && !this.isConfirmed(proposalIndex, change.path)));
+  }
+
+  hasUnconfirmedEdits(proposalIndex: number, proposal: OperationalContextAssistanceProposal): boolean {
+    return proposal.changes.some((change) => this.isSelected(proposalIndex, proposal, change.path)
+      && this.isEdited(proposalIndex, change.path) && !this.isConfirmed(proposalIndex, change.path));
+  }
+
+  bulkApprovalLabel(proposalIndex: number, proposal: OperationalContextAssistanceProposal): string {
+    if (this.hasBulkApprovableChanges(proposalIndex, proposal)) return 'Zatwierdź wszystkie pola';
+    return this.hasUnconfirmedEdits(proposalIndex, proposal)
+      ? 'Potwierdź poprawki w szczegółach' : 'Pola gotowe do sprawdzenia';
+  }
+
+  approveProposalChanges(proposalIndex: number, proposal: OperationalContextAssistanceProposal): void {
+    if (this.historyReadOnly() || this.reviewComplete() || this.previewBusy() || this.decisionBusy()
+      || this.pendingDecisionCheck() || !this.hasBulkApprovableChanges(proposalIndex, proposal)) return;
+    const paths = proposal.changes.map((change) => change.path);
+    const confirmed = new Set(this.confirmationsByProposal()[proposalIndex] ?? []);
+    for (const change of proposal.changes) {
+      if (this.requiresConfirmation(proposalIndex, proposal, change) && !this.isEdited(proposalIndex, change.path)) {
+        confirmed.add(change.path);
+      }
+    }
+    this.selectionByProposal.update((current) => ({ ...current, [proposalIndex]: paths }));
+    this.confirmationsByProposal.update((current) => ({ ...current, [proposalIndex]: [...confirmed] }));
+    this.persistReviewDraft();
     this.invalidateBatchPreview();
     this.decisionError.set('');
   }
@@ -611,6 +827,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
     if (confirmed) paths.add(path);
     else paths.delete(path);
     this.confirmationsByProposal.update((current) => ({ ...current, [proposalIndex]: [...paths] }));
+    this.persistReviewDraft();
     this.invalidateBatchPreview();
     this.decisionError.set('');
   }
@@ -669,6 +886,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   previewSelection(): void {
     const snapshot = this.job();
     if (!snapshot || !this.canPreview()) return;
+    this.reviewValidationVisible.set(true);
     const decisions = this.reviewDecisions();
     const selection = JSON.stringify(decisions);
     this.previewBusy.set(true);
@@ -685,8 +903,8 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
         },
         error: (error: HttpErrorResponse) => {
           this.previewBusy.set(false);
-          this.decisionError.set(typeof error.error?.message === 'string' ? error.error.message
-            : 'Nie udało się sprawdzić całego zestawu zmian. Wybór pól pozostał zachowany.');
+          if (selection !== JSON.stringify(this.reviewDecisions()) || this.job()?.jobId !== snapshot.jobId) return;
+          this.captureBatchErrors(error, decisions);
         }
       });
   }
@@ -703,6 +921,7 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
       .subscribe({
         next: (updated) => {
           this.decisionBusy.set(false);
+          try { localStorage.removeItem(this.reviewStorageKey(updated.jobId)); } catch { /* Storage can be unavailable. */ }
           this.job.set(updated);
           this.jobChanged.emit(updated);
           this.notifyCatalogChanged(updated);
@@ -779,6 +998,47 @@ export class ContextAssistancePanelComponent implements OnInit, OnChanges, OnDes
   private invalidateBatchPreview(): void {
     this.batchPreview.set(null);
     this.reviewedSelection.set('');
+    this.batchFieldIssues.set([]);
+    this.batchGeneralErrors.set([]);
+  }
+
+  private captureBatchErrors(error: HttpErrorResponse, decisions: OperationalContextAssistanceProposalDecisionRequest[]): void {
+    const rawErrors: unknown[] = Array.isArray(error.error?.fieldErrors) ? error.error.fieldErrors : [];
+    const appliedIndexes = decisions.flatMap((decision, index) => decision.action === 'APPLY' ? [index] : []);
+    const proposals = this.job()?.draft?.proposals ?? [];
+    const mapped: BatchFieldIssue[] = [];
+    const general: string[] = [];
+    for (const raw of rawErrors) {
+      const field = typeof raw === 'object' && raw !== null ? raw as Record<string, unknown> : {};
+      const pointer = typeof field['field'] === 'string' ? field['field'] : '';
+      const message = typeof field['message'] === 'string' ? field['message'] : 'Niepoprawna wartość';
+      const match = /^\/mutations\/(\d+)\/payload\/([^/]+)(?:\/(.*))?$/.exec(pointer);
+      const proposalIndex = match ? appliedIndexes[Number(match[1])] : undefined;
+      const path = match?.[2].replace(/~1/g, '/').replace(/~0/g, '~');
+      const proposal = proposalIndex === undefined ? undefined : proposals[proposalIndex];
+      const change = proposal?.changes.find((item) => item.path === path && this.isSelected(proposalIndex!, proposal, item.path));
+      if (!change || !path) {
+        general.push(`${pointer || 'Zestaw'}: ${message}`);
+        continue;
+      }
+      const segments = match?.[3]?.split('/').map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~')) ?? [];
+      const value = segments.reduce<unknown>((current, segment) => {
+        if (Array.isArray(current) && /^\d+$/.test(segment)) return current[Number(segment)];
+        if (current && typeof current === 'object' && Object.prototype.hasOwnProperty.call(current, segment))
+          return (current as Record<string, unknown>)[segment];
+        return undefined;
+      }, this.effectiveAfter(proposalIndex!, change));
+      const valueLabel = typeof value === 'string' || typeof value === 'number' ? `„${String(value)}”` : '';
+      mapped.push({ proposalIndex: proposalIndex!, path, pointer, message, valueLabel,
+        position: segments.length && /^\d+$/.test(segments[0]) ? Number(segments[0]) : null });
+    }
+    this.batchFieldIssues.set(mapped);
+    this.batchGeneralErrors.set(general);
+    const errorNoun = mapped.length === 1 ? 'błąd' : mapped.length >= 2 && mapped.length <= 4 ? 'błędy' : 'błędów';
+    this.decisionError.set(mapped.length
+      ? `Zestaw zawiera ${mapped.length} ${errorNoun} walidacji. Otwórz wskazaną propozycję i popraw pole.`
+      : typeof error.error?.message === 'string' ? error.error.message
+        : 'Nie udało się sprawdzić całego zestawu zmian. Wybór pól pozostał zachowany.');
   }
 
   valueText(value: unknown): string {

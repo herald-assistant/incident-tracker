@@ -77,7 +77,7 @@ public class GitLabSystemBranchesController {
                 if (repository == null || !gitLabRepository(repository)) {
                     continue;
                 }
-                var path = projectPath(repository, configuredGroup);
+                var path = projectPath(repository);
                 if (StringUtils.hasText(path)
                         && GitLabPathUtils.isSameOrNestedPath(configuredGroup, path)) {
                     projectPaths.putIfAbsent(path.toLowerCase(Locale.ROOT), path);
@@ -129,20 +129,13 @@ public class GitLabSystemBranchesController {
 
     private boolean gitLabRepository(OperationalContextRepository repository) {
         var provider = normalize(repository.git().provider());
-        return provider.isEmpty() || "gitlab".equals(provider);
+        return "gitlab".equals(provider);
     }
 
-    private String projectPath(OperationalContextRepository repository, String configuredGroup) {
-        if (StringUtils.hasText(repository.git().projectPath())) {
-            return GitLabPathUtils.trimSlashes(repository.git().projectPath().trim());
-        }
-        if (StringUtils.hasText(repository.git().project())) {
-            var group = StringUtils.hasText(repository.git().group())
-                    ? repository.git().group().trim() : configuredGroup.trim();
-            return GitLabPathUtils.trimSlashes(group) + "/"
-                    + GitLabPathUtils.trimSlashes(repository.git().project().trim());
-        }
-        return null;
+    private String projectPath(OperationalContextRepository repository) {
+        return StringUtils.hasText(repository.git().projectPath())
+                ? GitLabPathUtils.trimSlashes(repository.git().projectPath().trim())
+                : null;
     }
 
     private String normalize(String value) {

@@ -147,10 +147,6 @@ export class AiApiPreviewPanelComponent {
     return endpoint.payload?.nextReads || [];
   }
 
-  protected legacyNextReads(endpoint: OperationalContextAiApiPreviewEndpoint): string[] {
-    return this.nextReads(endpoint).length ? [] : endpoint.payload?.suggestedNextReads || [];
-  }
-
   protected linkLabel(link: OperationalContextReadModelLinkDto): string {
     return this.titleCase(link.rel || 'read');
   }

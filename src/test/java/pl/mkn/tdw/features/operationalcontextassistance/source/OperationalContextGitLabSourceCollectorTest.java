@@ -16,7 +16,6 @@ import java.util.HexFormat;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -32,6 +31,7 @@ class OperationalContextGitLabSourceCollectorTest {
     private static final String REF = "main";
     private static final String COMMIT = "1234567890abcdef1234567890abcdef12345678";
     private static final String README = "# Customer API\nHandles customer lookups.\n";
+    private static final String COPILOT_INSTRUCTIONS = ".github/copilot-instructions.md";
 
     private final GitLabRepositoryPort repositoryPort = mock(GitLabRepositoryPort.class);
     private final GitLabRepositoryTreeExplorer treeExplorer = mock(GitLabRepositoryTreeExplorer.class);
@@ -41,6 +41,7 @@ class OperationalContextGitLabSourceCollectorTest {
     @Test
     void shouldPinRequestedRefAndReadOnlyExactAllowedPathWithVerifiedHash() {
         when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(rootReadmeTree());
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(metadata("README.md", README));
         when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "README.md", 16 * 1024))
@@ -59,9 +60,11 @@ class OperationalContextGitLabSourceCollectorTest {
     @Test
     void capturesNavigationTreeEvenWhenNoRootAllowlistFileCanBeRead() {
         when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, COPILOT_INSTRUCTIONS))
+                .thenThrow(new IllegalStateException("CRM test file absent"));
         var tree = new GitLabRepositoryTreeSlice("", 4, List.of(
                 new GitLabRepositoryTreeSlice.Entry("Backend", "tree"),
-                new GitLabRepositoryTreeSlice.Entry("Backend/hackhub-backend", "tree"),
+                new GitLabRepositoryTreeSlice.Entry("Backend/crm-customer-api", "tree"),
                 new GitLabRepositoryTreeSlice.Entry("Frontend", "tree")
         ), List.of(), false);
         when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(tree);
@@ -69,22 +72,105 @@ class OperationalContextGitLabSourceCollectorTest {
         var snapshot = collector.collect(PROJECT, REF);
 
         assertTrue(snapshot.files().isEmpty());
+        assertTrue(snapshot.visibilityLimits().isEmpty());
         assertEquals(tree, snapshot.tree());
         assertEquals(COMMIT, snapshot.commitId());
         verify(treeExplorer).explore(GROUP, PROJECT, COMMIT, "", "");
+        verify(repositoryPort).readFileMetadata(GROUP, PROJECT, COMMIT, COPILOT_INSTRUCTIONS);
+        verify(repositoryPort, never()).readFileMetadata(GROUP, PROJECT, COMMIT, "README.md");
+        verify(repositoryPort, never()).readFileMetadata(GROUP, PROJECT, COMMIT, "AGENTS.md");
+    }
+
+    @Test
+    void readsRootAgentsAndCopilotInstructionsFromPinnedCommitEvenWhenInstructionsAreNotInTree() {
+        var agents = "# CRM repository guidance\n".repeat(1_200);
+        var copilot = "# CRM customer API conventions\n";
+        when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", ""))
+                .thenReturn(new GitLabRepositoryTreeSlice("", 4,
+                        List.of(new GitLabRepositoryTreeSlice.Entry("AGENTS.md", "blob")), List.of(), false));
+        when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "AGENTS.md"))
+                .thenReturn(metadata("AGENTS.md", agents));
+        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "AGENTS.md", 32 * 1024))
+                .thenReturn(content("AGENTS.md", agents));
+        when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, COPILOT_INSTRUCTIONS))
+                .thenReturn(metadata(COPILOT_INSTRUCTIONS, copilot));
+        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, COPILOT_INSTRUCTIONS, 32 * 1024))
+                .thenReturn(content(COPILOT_INSTRUCTIONS, copilot));
+
+        var snapshot = collector.collect(PROJECT, REF);
+
+        assertEquals(List.of("AGENTS.md", COPILOT_INSTRUCTIONS),
+                snapshot.files().stream().map(OperationalContextGitLabSourceFile::path).toList());
+        assertEquals(agents, snapshot.files().get(0).content());
+        assertEquals("gitlab:" + GROUP + "/" + PROJECT + "@" + COMMIT + ":" + COPILOT_INSTRUCTIONS,
+                snapshot.files().get(1).sourceRef());
+        assertTrue(snapshot.visibilityLimits().isEmpty());
+    }
+
+    @Test
+    void skipsInstructionLargerThanItsDedicatedLimitBeforeReadingBody() {
+        when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", ""))
+                .thenReturn(new GitLabRepositoryTreeSlice("", 4,
+                        List.of(new GitLabRepositoryTreeSlice.Entry("AGENTS.md", "blob")), List.of(), false));
+        when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "AGENTS.md"))
+                .thenReturn(new GitLabRepositoryFileMetadata(
+                        GROUP, PROJECT, COMMIT, "AGENTS.md", null, COMMIT,
+                        null, null, null, 32_769L));
+
+        var snapshot = collector.collect(PROJECT, REF);
+
+        assertTrue(snapshot.files().isEmpty());
+        assertTrue(snapshot.visibilityLimits().stream().anyMatch(limit -> limit.contains("AGENTS.md")
+                && limit.contains("limit")));
+        verify(repositoryPort, never()).readFileBounded(GROUP, PROJECT, COMMIT, "AGENTS.md", 32 * 1024);
+    }
+
+    @Test
+    void reportsFailedMetadataOnlyForAFilePresentInTheTree() {
+        when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(rootReadmeTree());
+        when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
+                .thenThrow(new IllegalStateException("CRM test metadata failure"));
+
+        var snapshot = collector.collect(PROJECT, REF);
+
+        assertTrue(snapshot.files().isEmpty());
+        assertEquals(1, snapshot.visibilityLimits().size());
+        assertTrue(snapshot.visibilityLimits().get(0).contains("README.md"));
+        verify(repositoryPort, never()).readFileMetadata(GROUP, PROJECT, COMMIT, "pom.xml");
+    }
+
+    @Test
+    void keepsReadingKnownRootFilesWhenTheInitialTreeIsIncomplete() {
+        when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", ""))
+                .thenReturn(new GitLabRepositoryTreeSlice("", 4, List.of(), List.of(), true));
+        when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
+                .thenReturn(metadata("README.md", README));
+        when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "README.md", 16 * 1024))
+                .thenReturn(content("README.md", README));
+
+        var snapshot = collector.collect(PROJECT, REF);
+
+        assertEquals(1, snapshot.files().size());
+        assertEquals("README.md", snapshot.files().get(0).path());
+        assertEquals(1, snapshot.visibilityLimits().size());
+        assertTrue(snapshot.visibilityLimits().get(0).contains("drzewo GitLab jest częściowe"));
     }
 
     @Test
     void shouldStripOnlyTheConfiguredGroupFromManuallyEnteredFullProjectPath() {
         var properties = new GitLabProperties();
-        properties.setGroup("unicam-group");
+        properties.setGroup("CRM");
         var collector = new OperationalContextGitLabSourceCollector(properties, repositoryPort, treeExplorer);
 
-        var snapshot = collector.collect("unicam-group/Unicam-project", REF);
+        var snapshot = collector.collect("CRM/crm-customer-api", REF);
 
-        assertEquals("Unicam-project", snapshot.project());
-        verify(repositoryPort).resolveRevision("unicam-group", "Unicam-project", REF);
-        verify(repositoryPort, never()).resolveRevision("unicam-group", "unicam-group/Unicam-project", REF);
+        assertEquals("crm-customer-api", snapshot.project());
+        verify(repositoryPort).resolveRevision("CRM", "crm-customer-api", REF);
+        verify(repositoryPort, never()).resolveRevision("CRM", "CRM/crm-customer-api", REF);
     }
 
     @Test
@@ -204,6 +290,7 @@ class OperationalContextGitLabSourceCollectorTest {
     @Test
     void shouldSkipOversizeFileBeforeAnyBodyRead() {
         when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(rootReadmeTree());
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
                 .thenReturn(new GitLabRepositoryFileMetadata(
                         GROUP, PROJECT, COMMIT, "README.md", null, COMMIT, null, null, null, 16_385L
@@ -218,19 +305,20 @@ class OperationalContextGitLabSourceCollectorTest {
     }
 
     @Test
-    void shouldOmitWholeFileWhenItContainsPossibleSecret() {
-        var sensitive = "# Setup\npassword=real-secret-value\n";
+    void shouldIncludeCompleteFileWithoutFilteringItsContent() {
+        var content = "# CRM setup\npassword=fictional-example\n";
         when(repositoryPort.resolveRevision(GROUP, PROJECT, REF)).thenReturn(revision());
+        when(treeExplorer.explore(GROUP, PROJECT, COMMIT, "", "")).thenReturn(rootReadmeTree());
         when(repositoryPort.readFileMetadata(GROUP, PROJECT, COMMIT, "README.md"))
-                .thenReturn(metadata("README.md", sensitive));
+                .thenReturn(metadata("README.md", content));
         when(repositoryPort.readFileBounded(GROUP, PROJECT, COMMIT, "README.md", 16 * 1024))
-                .thenReturn(content("README.md", sensitive));
+                .thenReturn(content("README.md", content));
 
         var snapshot = collector.collect(PROJECT, REF);
 
-        assertTrue(snapshot.files().isEmpty());
-        assertTrue(snapshot.visibilityLimits().stream().anyMatch(limit -> limit.contains("wrażliwą")));
-        assertFalse(snapshot.toString().contains("real-secret-value"));
+        assertEquals(1, snapshot.files().size());
+        assertEquals(content, snapshot.files().get(0).content());
+        assertTrue(snapshot.visibilityLimits().isEmpty());
     }
 
     @Test
@@ -263,6 +351,11 @@ class OperationalContextGitLabSourceCollectorTest {
 
     private GitLabRepositoryRevision revision() {
         return new GitLabRepositoryRevision(GROUP, PROJECT, REF, COMMIT, null);
+    }
+
+    private GitLabRepositoryTreeSlice rootReadmeTree() {
+        return new GitLabRepositoryTreeSlice("", 4,
+                List.of(new GitLabRepositoryTreeSlice.Entry("README.md", "blob")), List.of(), false);
     }
 
     private GitLabRepositoryFileMetadata metadata(String path, String content) {

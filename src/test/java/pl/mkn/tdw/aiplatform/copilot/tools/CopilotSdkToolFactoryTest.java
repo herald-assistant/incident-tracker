@@ -42,6 +42,19 @@ class CopilotSdkToolFactoryTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
+    void sessionCallbackIsAvailableOnlyWhenExplicitlyIncluded() {
+        var factory = factory(List.of());
+        var context = gitLabSessionContext();
+        var callback = contextEchoToolProvider().getToolCallbacks()[0];
+
+        assertTrue(createToolDefinitions(factory, context).isEmpty());
+        assertEquals(List.of("context_echo"), factory.createToolDefinitions(
+                context, CopilotToolDescriptionContext.empty(), List.of(callback))
+                .stream().map(ToolDefinition::name).toList());
+        assertTrue(createToolDefinitions(factory, context).isEmpty());
+    }
+
+    @Test
     void shouldExposeSpringToolsAsCopilotToolDefinitions() {
         var factory = factory(List.of(gitLabToolProvider()));
         var analysisRunId = UUID.randomUUID().toString();

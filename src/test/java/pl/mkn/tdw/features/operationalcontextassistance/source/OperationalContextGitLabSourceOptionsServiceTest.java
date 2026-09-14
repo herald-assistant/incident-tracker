@@ -24,7 +24,7 @@ class OperationalContextGitLabSourceOptionsServiceTest {
         var operationalContextPort = mock(OperationalContextPort.class);
         when(operationalContextPort.loadContext(any())).thenReturn(catalog(
                 repository("a", "gitlab", "CRM/runtime/libs", "a", "CRM/runtime/libs/a"),
-                repository("a-duplicate", "GitLab", "crm/RUNTIME/libs", "a", "crm/runtime/libs/a"),
+                repository("a-duplicate", "gitlab", "crm/RUNTIME/libs", "a", "crm/runtime/libs/a"),
                 repository("b", "gitlab", "CRM/runtime", "b", "CRM/runtime/b"),
                 repository("other-group", "gitlab", "CRM/other", "other", "CRM/other/other"),
                 repository("other-provider", "github", "CRM/runtime", "github", "CRM/runtime/github"),
@@ -44,12 +44,14 @@ class OperationalContextGitLabSourceOptionsServiceTest {
     }
 
     @Test
-    void usesNestedRepositoryGroupWhenOnlyProjectNameIsKnown() {
+    void usesCanonicalProjectPathsForNestedRepositoryGroups() {
         var properties = properties("CRM");
         var operationalContextPort = mock(OperationalContextPort.class);
         when(operationalContextPort.loadContext(any())).thenReturn(catalog(
-                repository("nested", "gitlab", "CRM/runtime", "customer-api", null),
-                repository("root", null, "CRM", "portal", null)
+                repository("nested", "gitlab", "CRM/runtime", "customer-api", "CRM/runtime/customer-api"),
+                repository("root", "gitlab", "CRM", "portal", "CRM/portal"),
+                repository("name-only", "gitlab", "CRM", "ignored", null),
+                repository("provider-missing", null, "CRM", "ignored", "CRM/ignored")
         ));
 
         var options = new OperationalContextGitLabSourceOptionsService(properties, operationalContextPort).getOptions();
@@ -128,7 +130,7 @@ class OperationalContextGitLabSourceOptionsServiceTest {
         return new OperationalContextRepository(
                 id, id, null, "application", "active", null, null, null,
                 List.of(), List.of(),
-                new OperationalContextGit(provider, group, project, projectPath, "main", null, List.of(), false),
+                new OperationalContextGit(provider, group, project, projectPath, "main", null, List.of()),
                 null, null, List.of(), Map.of()
         );
     }

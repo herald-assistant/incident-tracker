@@ -1005,6 +1005,16 @@ odzyskanie poprzedniego stanu sa odpowiedzialnoscia uzytkownika. Deployment
 wspoldzielony albo sieciowy wymaga osobnej decyzji obejmujacej security,
 concurrency i persistence.
 
+## 27a. Asysta Operational Context zachowuje niezmieniony material zrodlowy
+
+Wybrany przez operatora opis, aktywny katalog i zweryfikowane pliki GitLab
+trafiaja do promptu bez heurystycznej redakcji. Wspolne drzewo i czytnik GitLab
+nie odrzucaja nazw ani tekstu na podstawie wzorcow danych wrazliwych. Rozmiar,
+tekstowy format, sciezka wzgledna, projekt w skonfigurowanej grupie oraz
+przypiety commit nadal ograniczaja odczyt. Prompt jest widoczny w jobie i
+zachowywany w lokalnej historii; dane z repozytorium pozostaja niezaufanym
+materialem, a nie instrukcjami zmieniajacymi zasady asysty.
+
 ## 28. Delivery Complexity Assessment rozdziela discovery, interpretacje i scoring
 
 Operator podaje typowane kryteria `projectKey`, `fromDate` i `toDate`, a nie

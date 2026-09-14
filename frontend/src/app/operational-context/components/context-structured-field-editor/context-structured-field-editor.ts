@@ -194,7 +194,7 @@ const BOUNDED_SEMANTIC_GROUPS: StructuredListGroup[] = [
 
 const PROCESS_TRIGGER_TYPES = ['api', 'event', 'command'];
 
-const SOURCE_COVERAGE_STATUSES = ['complete', 'partial', 'unknown', 'full', 'scanned', 'fully-scanned'];
+const SOURCE_COVERAGE_STATUSES = ['complete', 'partial', 'unknown'];
 const GAP_SEVERITIES = ['error', 'warning', 'info'];
 const GAP_STATUSES = ['open', 'resolved'];
 
@@ -248,9 +248,9 @@ const FIELD_TOOLTIPS: Record<string, string> = {
   participantRole: 'Describe the participant role, for example client, server, producer, consumer or mediator. It explains direction but does not define ownership.',
   participantExternalOwner: 'Use a durable external owner label only when the participant is outside the local catalogue. It is descriptive, not a local team assignment.',
   participantNotes: 'Enter one participant-specific clarification per line. Notes do not replace the system/context selection.',
-  gitProvider: 'Enter the Git provider name. Runtime accepts an empty provider as GitLab-compatible, while gitlab is the explicit current convention used by code tools.',
+  gitProvider: 'Enter gitlab. Operational Context repository tools use this provider identity.',
   gitGroup: 'Enter the provider-relative group or namespace. GitLab repository discovery uses it to check whether the project belongs to the configured session group.',
-  gitProject: 'Enter the project slug or name. It is a fallback repository candidate for GitLab tools and satisfies maintenance validation when projectPath is unavailable.',
+  gitProject: 'Enter the project slug or name for readable labels and recognition signals. The projectPath is required for repository lookup.',
   gitProjectPath: 'Enter the full provider-relative group/project path without a host URL. Repository discovery, ownership resolution and deterministic GitLab lookup use this value directly.',
   gitDefaultBranch: 'Enter the durable default branch advertised in code-search read models. It provides context to AI and operators; runtime branch evidence can still select another branch.',
   gitUrl: 'Optionally enter a navigable repository URL. It is exposed in read models for operators but projectPath remains the canonical lookup identity.',
@@ -312,7 +312,7 @@ const FIELD_TOOLTIPS: Record<string, string> = {
   dataReadModels: 'Enter durable projections or views read or produced by the process, one per line. AI uses them to distinguish read-side evidence from source-of-truth entities.',
   dataAuditArtifacts: 'Enter audit record or metadata kinds created by the process, one per line. Do not include real usernames, customer IDs or timestamps.',
   dataArtifactNotes: 'Enter one durable clarification about artifact semantics per line. Notes are exposed to AI but are not matching rules or executable workflow instructions.',
-  coverageStatus: 'Choose how completely the maintained entry is grounded. Prefer complete, partial or unknown for new data. Legacy full, scanned and fully-scanned remain selectable without changing their meaning.',
+  coverageStatus: 'Choose how completely the maintained entry is grounded: complete, partial or unknown.',
   coverageScanned: 'Enter one durable source or repository area actually reviewed per line. opctx_get_entity exposes these as provenance; a name here does not create a catalogue reference.',
   coverageExpected: 'Enter one expected but not yet reviewed source per line. AI treats these as places where additional evidence may exist, not as confirmed facts.',
   coverageLimitations: 'Enter one concrete visibility limit per line. opctx_get_entity promotes these values to tool limitations, so AI must expose incomplete knowledge instead of assuming full coverage.',
@@ -388,7 +388,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   boundedLocalLanguage(): string[] {
-    return legacyTextList(this.value());
+    return stringList(this.value());
   }
 
   updateBoundedLocalLanguage(raw: string): void {
@@ -493,12 +493,6 @@ export class ContextStructuredFieldEditorComponent {
 
   signalRows(): MatchSignalRow[] {
     const source = this.object();
-    const tiered = SIGNAL_STRENGTHS.some((strength) => Object.hasOwn(source, strength.key));
-    if (!tiered) {
-      return Object.entries(source)
-        .filter(([, value]) => value === null || typeof value !== 'object' || Array.isArray(value))
-        .map(([key, value]) => ({ strength: 'strong', key, values: stringList(value) }));
-    }
     return SIGNAL_STRENGTHS.flatMap((strength) =>
       Object.entries(asObject(source[strength.key])).map(([key, value]) => ({
         strength: strength.key,
@@ -542,13 +536,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   failureModes(): JsonObject[] {
-    const value = this.value();
-    if (!Array.isArray(value)) return [];
-    return value.map((item) => {
-      if (item !== null && typeof item === 'object' && !Array.isArray(item)) return item as JsonObject;
-      const summary = text(item);
-      return this.entityType() === 'process' ? { name: summary, summary } : { name: summary, symptom: summary };
-    });
+    return objectList(this.value());
   }
 
   addFailureMode(): void {
@@ -573,10 +561,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   processBoundary(): JsonObject {
-    const value = this.value();
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
-    const legacy = legacyTextList(value);
-    return legacy.length ? { endsWhen: legacy } : {};
+    return asObject(this.value());
   }
 
   processBoundaryGroups(): StructuredListGroup[] {
@@ -602,10 +587,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   processLifecycle(): JsonObject {
-    const value = this.value();
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
-    const legacy = legacyTextList(value);
-    return legacy.length ? { statuses: legacy } : {};
+    return asObject(this.value());
   }
 
   lifecycleListGroups(): StructuredListGroup[] {
@@ -669,10 +651,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   completionSignals(): JsonObject {
-    const value = this.value();
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
-    const legacy = legacyTextList(value);
-    return legacy.length ? { successful: legacy } : {};
+    return asObject(this.value());
   }
 
   completionSignalList(key: string): string[] {
@@ -700,9 +679,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   sourceCoverage(): JsonObject {
-    const value = this.value();
-    if (Array.isArray(value)) return asObject(value[0]);
-    return asObject(value);
+    return asObject(this.value());
   }
 
   sourceCoverageText(key: string): string {
@@ -710,9 +687,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   sourceCoverageList(key: string): string[] {
-    const coverage = this.sourceCoverage();
-    if (key === 'scannedSources' && !coverage[key] && coverage['sources']) return stringList(coverage['sources']);
-    return stringList(coverage[key]);
+    return stringList(this.sourceCoverage()[key]);
   }
 
   sourceCoverageStatuses(): string[] {
@@ -721,7 +696,6 @@ export class ContextStructuredFieldEditorComponent {
 
   updateSourceCoverage(key: string, value: unknown): void {
     const next = { ...this.sourceCoverage() };
-    if (key === 'scannedSources') delete next['sources'];
     assignOrDelete(next, key, value);
     this.valueChange.emit(next);
   }
@@ -731,11 +705,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   gaps(): JsonObject[] {
-    const value = this.value();
-    if (!Array.isArray(value)) return value ? [asObject(value)] : [];
-    return value.map((item) => item !== null && typeof item === 'object' && !Array.isArray(item)
-      ? item as JsonObject
-      : { summary: text(item) });
+    return objectList(this.value());
   }
 
   gapSeverities(): string[] {
@@ -790,15 +760,12 @@ export class ContextStructuredFieldEditorComponent {
 
   relationTargetType(index: number): string {
     const relation = this.relations()[index] || {};
-    if (text(relation['targetContextId'])) return 'bounded-context';
-    if (text(relation['targetProcessId'])) return 'process';
-    const declaredType = normalizeEntityType(text(relation['targetType']));
-    return declaredType || (text(relation['target']) ? 'system' : '');
+    return text(relation['targetType']);
   }
 
   relationTargetId(index: number): string {
     const relation = this.relations()[index] || {};
-    return text(relation['target'] || relation['targetContextId'] || relation['targetProcessId']);
+    return text(relation['target']);
   }
 
   relationTargetOptions(index: number): OperationalContextReferenceOption[] {
@@ -812,8 +779,6 @@ export class ContextStructuredFieldEditorComponent {
     const relation = relations[index];
     if (!relation) return;
     delete relation['target'];
-    delete relation['targetContextId'];
-    delete relation['targetProcessId'];
     delete relation['externalSystem'];
     assignOrDelete(relation, 'targetType', eventValue(event));
     this.valueChange.emit(relations);
@@ -823,8 +788,6 @@ export class ContextStructuredFieldEditorComponent {
     const relations = this.relations().map((relation) => ({ ...relation }));
     const relation = relations[index];
     if (!relation) return;
-    delete relation['targetContextId'];
-    delete relation['targetProcessId'];
     delete relation['externalSystem'];
     assignOrDelete(relation, 'target', eventValue(event));
     this.valueChange.emit(relations);
@@ -837,8 +800,6 @@ export class ContextStructuredFieldEditorComponent {
     if (value.trim()) {
       delete relation['targetType'];
       delete relation['target'];
-      delete relation['targetContextId'];
-      delete relation['targetProcessId'];
     }
     assignOrDelete(relation, 'externalSystem', value.trim());
     this.valueChange.emit(relations);
@@ -1060,11 +1021,7 @@ export class ContextStructuredFieldEditorComponent {
   }
 
   private emitSignals(rows: MatchSignalRow[]): void {
-    const source = this.object();
-    const tiered = SIGNAL_STRENGTHS.some((strength) => Object.hasOwn(source, strength.key));
-    const next: JsonObject = Object.fromEntries(Object.entries(source).filter(([key, value]) =>
-      tiered ? !isSignalStrength(key) : value !== null && typeof value === 'object' && !Array.isArray(value)
-    ));
+    const next: JsonObject = {};
     for (const strength of SIGNAL_STRENGTHS) {
       const bucket: JsonObject = {};
       for (const row of rows.filter((candidate) => candidate.strength === strength.key && candidate.key)) {
@@ -1092,12 +1049,6 @@ function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
 }
 
-function legacyTextList(value: unknown): string[] {
-  if (Array.isArray(value)) return stringList(value);
-  const item = text(value).trim();
-  return item ? [item] : [];
-}
-
 function lines(value: string): string[] {
   return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 }
@@ -1108,17 +1059,6 @@ function unique(values: string[]): string[] {
 
 function isSignalStrength(value: string): value is SignalStrength {
   return SIGNAL_STRENGTHS.some((strength) => strength.key === value);
-}
-
-function normalizeEntityType(value: string): string {
-  const normalized = value.trim().replaceAll('_', '-');
-  const aliases: Record<string, string> = {
-    systems: 'system', repositories: 'repository', processes: 'process', integrations: 'integration', teams: 'team',
-    boundedcontext: 'bounded-context', boundedcontexts: 'bounded-context', 'bounded-contexts': 'bounded-context',
-    codesearchscope: 'code-search-scope', codesearchscopes: 'code-search-scope', 'code-search-scopes': 'code-search-scope',
-    terms: 'glossary-term', 'glossary-terms': 'glossary-term', handoffrules: 'handoff-rule', 'handoff-rules': 'handoff-rule'
-  };
-  return aliases[normalized.toLowerCase()] || normalized;
 }
 
 function defaultRelationTargetType(sourceType: OperationalContextWritableType): OperationalContextWritableType {

@@ -19,9 +19,6 @@ public class GitLabRepositoryTreeExplorer {
     private static final int PAGE_ENTRIES = 40;
     private static final int MAX_CONTINUATIONS = 48;
     private static final Pattern CURSOR = Pattern.compile("[A-Za-z0-9_-]{1,2048}");
-    private static final Pattern SENSITIVE_PATH = Pattern.compile(
-            "(?i)(?:^|/)(?:\\.[^/]+|[^/]*(?:secret|credential|password|passwd|token|private[-_]?key|keystore|keyring|cert|vault)[^/]*)(?:/|$)"
-    );
 
     private final GitLabRepositoryPort repositoryPort;
 
@@ -80,7 +77,7 @@ public class GitLabRepositoryTreeExplorer {
         if (path.length() > 1_024 || !path.equals(path.trim()) || path.startsWith("/")
                 || path.endsWith("/") || path.contains("//") || path.contains("\\")
                 || path.contains("?") || path.contains("#") || path.contains("%")
-                || path.contains(":") || path.contains("@{") || SENSITIVE_PATH.matcher(path).find()) {
+                || path.contains(":") || path.contains("@{")) {
             throw new IllegalArgumentException("A safe relative GitLab directory is required.");
         }
         for (var segment : path.split("/", -1)) {

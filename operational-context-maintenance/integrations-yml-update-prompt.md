@@ -5,9 +5,8 @@ Field formats, constrained values and runtime/AI effects are defined in
 
 The maintenance UI uses structured participant cards for `source`, `targets`,
 `intermediaries` and `finalTargets`; it serializes the same canonical YAML
-shape shown below. Participant-level `repositories` from older data are
-preserve-only and are not shown as editable controls; use top-level
-`references.repositories` and code-search scopes for code navigation.
+shape shown below. Use top-level `references.repositories` and code-search
+scopes for code navigation; participants have no repository field.
 
 ## Purpose
 
@@ -108,9 +107,8 @@ integrations:
 ## Update rules
 
 - Use `participants` as the source of source/target relationships.
-- Do not add or change `participants.*.repositories`; the backend preserves
-  legacy values, while editable repository navigation belongs in top-level
-  `references` and code-search scopes.
+- Participants have no `repositories` field. Repository navigation belongs in
+  top-level `references` and code-search scopes.
 - Use editable `references` for navigation only; participant systems already
   define the system relationship, so do not propose `references.systems`.
 - `integrationStyle` and `flowDirection` are high-level labels, not a detailed

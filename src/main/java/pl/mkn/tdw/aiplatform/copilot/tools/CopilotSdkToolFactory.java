@@ -29,18 +29,36 @@ public class CopilotSdkToolFactory {
             CopilotToolSessionContext sessionContext,
             CopilotToolDescriptionContext descriptionContext
     ) {
-        return toolCallbacksByName().values().stream()
+        return createToolDefinitions(sessionContext, descriptionContext, List.of());
+    }
+
+    /** Includes callbacks owned by one Copilot session without publishing them as application MCP tools. */
+    public List<ToolDefinition> createToolDefinitions(
+            CopilotToolSessionContext sessionContext,
+            CopilotToolDescriptionContext descriptionContext,
+            List<ToolCallback> sessionCallbacks
+    ) {
+        return toolCallbacksByName(sessionCallbacks).values().stream()
                 .sorted(Comparator.comparing(callback -> callback.getToolDefinition().name()))
                 .map(callback -> toCopilotToolDefinition(callback, sessionContext, descriptionContext))
                 .toList();
     }
 
-    private Map<String, ToolCallback> toolCallbacksByName() {
+    private Map<String, ToolCallback> toolCallbacksByName(List<ToolCallback> sessionCallbacks) {
         var callbacksByName = new LinkedHashMap<String, ToolCallback>();
 
         for (var provider : toolCallbackProviders) {
             for (var callback : provider.getToolCallbacks()) {
                 callbacksByName.putIfAbsent(callback.getToolDefinition().name(), callback);
+            }
+        }
+
+        if (sessionCallbacks != null) {
+            for (var callback : sessionCallbacks) {
+                if (callback == null || callbacksByName.putIfAbsent(
+                        callback.getToolDefinition().name(), callback) != null) {
+                    throw new IllegalArgumentException("A session tool callback is missing or duplicates a registered tool.");
+                }
             }
         }
 

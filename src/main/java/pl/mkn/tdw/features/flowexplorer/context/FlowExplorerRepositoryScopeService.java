@@ -218,7 +218,7 @@ public class FlowExplorerRepositoryScopeService {
 
     private boolean gitLabRepository(OperationalContextRepository repository) {
         var provider = normalizeComparable(repository.git().provider());
-        return !StringUtils.hasText(provider) || "gitlab".equals(provider);
+        return "gitlab".equals(provider);
     }
 
     private boolean groupMatches(String configuredGroup, OperationalContextRepository repository) {
@@ -228,17 +228,14 @@ public class FlowExplorerRepositoryScopeService {
     }
 
     private String projectName(String configuredGroup, OperationalContextRepository repository) {
-        var projectPath = firstDefined(
-                repository.git().projectPath(),
-                firstDefined(repository.git().project(), repository.id())
-        );
+        var projectPath = repository.git().projectPath();
         return StringUtils.hasText(projectPath)
                 ? relativeProjectPath(configuredGroup, projectPath)
                 : null;
     }
 
     private String projectPath(OperationalContextRepository repository) {
-        return firstDefined(repository.git().projectPath(), repository.git().project());
+        return repository.git().projectPath();
     }
 
     private String relativeProjectPath(String configuredGroup, String rawProjectPath) {

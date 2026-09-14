@@ -14,7 +14,8 @@ boundedContexts:
       strong:
         markers: [CRM_CUSTOMER]
     relations:
-      - targetContextId: notification-context
+      - targetType: bounded-context
+        target: notification-context
         type: conformist
         via: [crm-customer-to-notification-sync]
   - id: notification-context

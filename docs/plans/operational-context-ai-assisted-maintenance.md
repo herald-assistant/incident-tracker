@@ -4,6 +4,12 @@ Status: done
 
 Source need: [Pomoc AI przy tworzeniu i aktualizacji Operational Context](../needs/operational-context-ai-assisted-maintenance.md)
 
+Pozniejsza decyzja o usunieciu heurystycznej redakcji materialu AI i filtrow
+wspolnego odczytu GitLab jest opisana w
+[osobnym planie](operational-context-assistance-unfiltered-gitlab.md).
+Ponizsze wzmianki o sanitizacji i blokowaniu sekretow opisuja pierwotny zakres
+tego ukonczonego przyrostu, nie aktualna polityke runtime.
+
 ## Potrzeba / dlaczego
 
 Pusty katalog wymaga dzis od operatora recznego wyboru typow i kolejnosci
@@ -247,9 +253,9 @@ zmiana wspolnego kontraktu UI wymaga testow Angulara, builda Angulara i
 
 | Obszar | Zamierzona zmiana |
 | --- | --- |
-| Handoff-rule maintenance (zatwierdzony krok 0) | Usuniete cztery nieodczytywane pola z zapisu, edytora i instrukcji; starsze lokalne YAML czyszczone tylko po dry-run i jawnym `-Apply`. `references` i read API pozostaja. |
+| Handoff-rule maintenance (zatwierdzony krok 0) | Usuniete cztery nieodczytywane pola z zapisu, edytora i instrukcji; `references` i read API pozostaja. Jednorazowy skrypt migracyjny zostal usuniety. |
 | Process/integration maintenance (zatwierdzony krok 0b) | Usuniecie `operationalOutcome` i `dataSensitivity` z kanonicznego schematu, formularza i instrukcji; bez osobnej listy dawnych kluczy. Biezace katalogi nie zawieraja tych pol; starsze wpisy sa oczyszczane przy aktualizacji encji. |
-| Nieznane klucze JSON/YAML (zatwierdzony krok 0b) | Nowe klucze poza schematem sa odrzucane. Istniejace nieznane pola sa pomijane przez edytor i usuwane podczas aktualizacji encji; jawne preserve-only pola pozostaja. |
+| Nieznane klucze JSON/YAML (zatwierdzony krok 0b) | Nowe klucze poza schematem sa odrzucane. Istniejace nieznane pola sa pomijane przez edytor i usuwane podczas aktualizacji encji; wyjatkiem sa dynamiczne nazwy sygnalow w kanonicznych poziomach. |
 | Runtime index (zatwierdzony krok 0c) | Usuniety z seeda, loadera, codec, DTO i query. Lokalna kopia zgodna z seedem zostala usunieta po porownaniu; zmieniony plik w innej instalacji pozostanie ignorowany, bez automatycznego kasowania. Unikalne zasady jakosci danych przeniesiono do instrukcji utrzymania. |
 | Publiczny odczyt katalogu i `opctx_*` | Bez zmian. |
 | Maintenance CRUD | Pojedynczy zapis pozostaje atomowy. Asysta dodaje read-only preview z ta sama walidacja co commit oraz atomowy warunek zgodnosci dotknietych pol przy pozniejszym zapisie; bez mutacji w runie AI. |
@@ -306,8 +312,7 @@ zmiana wspolnego kontraktu UI wymaga testow Angulara, builda Angulara i
 - `ownershipStatus=explicit` wymaga jawnego potwierdzenia czlowieka.
   Klasyfikacja frontendu wymaga osobnego potwierdzenia zgodnego z kontraktem
   katalogu. Nieznane zostaje nieznane.
-- Aktualizacja starszej encji usuwa jej nieznane rozszerzenia z YAML;
-  jawnie znane pola preserve-only pozostaja zachowane.
+- Aktualizacja encji usuwa jej nieznane rozszerzenia z YAML.
 - W kroku 0c zmienil sie wewnetrzny digest katalogu; lokalny indeks o zmienionej
   tresci pozostanie na dysku jako ignorowany plik, aby nie usuwac potencjalnych
   zmian uzytkownika. Testy musza objac start istniejacej lokalnej kopii.
@@ -327,7 +332,7 @@ zmiana wspolnego kontraktu UI wymaga testow Angulara, builda Angulara i
   tylko wybrane pola, bez utraty pozostalych znanych danych.
 - AI nie zapisuje bez decyzji uzytkownika; niepoprawny lub nieaktualny draft
   nie zmienia katalogu.
-- Walidacja propozycji, provenance, pytania i visibility limits sa widoczne
+- Walidacja propozycji, provenance i visibility limits sa widoczne
   przed zapisem; po zapisie Validation, Open Questions i konsumenci widza
   aktualny snapshot.
 - Pusty katalog nie blokuje wybranego przez operatora bootstrap discovery.
@@ -357,7 +362,7 @@ zmiana wspolnego kontraktu UI wymaga testow Angulara, builda Angulara i
   schematu, edytora oraz instrukcji. Nie utrzymywac listy dawnych kluczy.
   Odrzucac nowe nieznane klucze i oczyszczac istniejace wpisy z nieznanych
   pol przy aktualizacji, we wszystkich typach, zachowujac pola jawnie
-  preserve-only i dynamiczne nazwy sygnalow. Dowod: testy walidacji zapisu,
+  tylko dynamiczne nazwy sygnalow w kanonicznych poziomach. Dowod: testy walidacji zapisu,
   starszego YAML i zagniezdzonych struktur, testy formularza, probny cleanup
   zachowujacy znane pola oraz weryfikacja backendu i frontendu dla zmiany
   wspolnego kontraktu. Weryfikacja: celowane testy maintenance i nested schema

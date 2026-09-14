@@ -4,6 +4,7 @@ repositories:
   - id: crm-contact-service-repo
     name: CRM Contact Service Repository
     git:
+      provider: gitlab
       group: synthetic/crm
       project: crm-contact-service-repo
       projectPath: synthetic/crm/crm-contact-service-repo
@@ -19,6 +20,7 @@ repositories:
   - id: crm-contact-rules-repo
     name: CRM Contact Rules Library
     git:
+      provider: gitlab
       group: synthetic/crm
       project: libs/crm-contact-rules
       projectPath: synthetic/crm/libs/crm-contact-rules

@@ -247,7 +247,7 @@ export class ContextEntityEditorDrawerComponent {
         if (object[key] !== undefined && !isNonBlankTextList(object[key])) return `${key} must be a list of non-blank guidance phrases.`;
       }
     }
-    if (field.kind === 'bounded-local-language' && !isLegacyTextShape(value)) {
+    if (field.kind === 'bounded-local-language' && !isNonBlankTextList(value)) {
       return 'Local-language summary must contain non-blank guided statements.';
     }
     if (field.kind === 'bounded-scope') {
@@ -326,8 +326,11 @@ export class ContextEntityEditorDrawerComponent {
       }
     }
     if (field.kind === 'repository-git') {
-      if (!String(object['project'] || '').trim() && !String(object['projectPath'] || '').trim()) {
-        return 'Enter a Git project or provider-relative project path.';
+      if (String(object['provider'] || '').trim() !== 'gitlab') {
+        return 'Enter gitlab as the Git provider.';
+      }
+      if (!String(object['projectPath'] || '').trim()) {
+        return 'Enter the provider-relative Git project path.';
       }
     }
     if (field.kind === 'process-steps') {
@@ -366,10 +369,8 @@ export class ContextEntityEditorDrawerComponent {
       const relationKeys = new Set<string>();
       for (const relation of relations) {
         const relationType = String(relation['type'] || '').trim();
-        const targetType = normalizeRelationTargetType(String(
-          relation['targetType'] || (relation['targetContextId'] ? 'bounded-context' : relation['targetProcessId'] ? 'process' : '')
-        ));
-        const target = String(relation['target'] || relation['targetContextId'] || relation['targetProcessId'] || '').trim();
+        const targetType = String(relation['targetType'] || '').trim();
+        const target = String(relation['target'] || '').trim();
         const externalTarget = String(relation['externalSystem'] || '').trim();
         if (!relationType) return 'Every relation requires a semantic relation type.';
         if (!externalTarget && (!supportedTypes.has(targetType) || !target)) {
@@ -384,7 +385,6 @@ export class ContextEntityEditorDrawerComponent {
       }
     }
     if (field.kind === 'process-boundary') {
-      if (isLegacyTextShape(value)) return '';
       if (!value || typeof value !== 'object' || Array.isArray(value)) return 'Process boundary must use the guided boundary fields.';
       if (object['businessCapability'] !== undefined && !isNonBlankText(object['businessCapability'])) {
         return 'Business capability must be non-blank text.';
@@ -394,7 +394,6 @@ export class ContextEntityEditorDrawerComponent {
       }
     }
     if (field.kind === 'process-lifecycle') {
-      if (isLegacyTextShape(value)) return '';
       if (!value || typeof value !== 'object' || Array.isArray(value)) return 'Process lifecycle must use the guided lifecycle fields.';
       for (const key of [
         'entryCriteria', 'statuses', 'terminalStates', 'successOutcomes', 'partialOutcomes',
@@ -420,7 +419,6 @@ export class ContextEntityEditorDrawerComponent {
       }
     }
     if (field.kind === 'completion-signals') {
-      if (isLegacyTextShape(value)) return '';
       if (!value || typeof value !== 'object' || Array.isArray(value)) return 'Completion signals must use the guided evidence categories.';
       for (const key of ['successful', 'partial', 'failed', 'cancelled']) {
         if (object[key] !== undefined && !isNonBlankTextList(object[key])) return `${key} must be a list of non-blank observable signals.`;
@@ -435,8 +433,7 @@ export class ContextEntityEditorDrawerComponent {
         const steps = stepsRaw ? JSON.parse(stepsRaw) as Array<Record<string, unknown>> : [];
         const stepIds = new Set(steps.map((step) => String(step['id'] || '').trim()).filter(Boolean));
         for (const item of modes) {
-          if (typeof item === 'string' && item.trim()) continue;
-          if (!item || typeof item !== 'object' || Array.isArray(item)) return 'Every process failure mode must be a card or a non-blank legacy description.';
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return 'Every process failure mode must be a card.';
           const mode = item as Record<string, unknown>;
           const id = String(mode['id'] || '').trim();
           if (!id || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return 'Every process failure mode requires a lowercase kebab-case ID.';
@@ -450,8 +447,7 @@ export class ContextEntityEditorDrawerComponent {
         }
       } else {
         for (const item of modes) {
-          if (typeof item === 'string' && item.trim()) continue;
-          if (!item || typeof item !== 'object' || Array.isArray(item)) return 'Every integration failure mode must be a card or a non-blank legacy description.';
+          if (!item || typeof item !== 'object' || Array.isArray(item)) return 'Every integration failure mode must be a card.';
           const mode = item as Record<string, unknown>;
           if (!String(mode['name'] || '').trim()) return 'Every integration failure mode requires a name.';
           if (!String(mode['type'] || '').trim()) return 'Every integration failure mode requires a type.';
@@ -468,10 +464,10 @@ export class ContextEntityEditorDrawerComponent {
       }
     }
     if (field.kind === 'source-coverage') {
-      const coverage = Array.isArray(value) ? value[0] as Record<string, unknown> : object;
-      if (!coverage || typeof coverage !== 'object' || Array.isArray(coverage)) return 'Source coverage must use one guided coverage object.';
+      const coverage = object;
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return 'Source coverage must use one guided coverage object.';
       const status = String(coverage['status'] || '').trim();
-      if (status && !['complete', 'partial', 'unknown', 'full', 'scanned', 'fully-scanned'].includes(status)) {
+      if (status && !['complete', 'partial', 'unknown'].includes(status)) {
         return 'Choose a supported source coverage status.';
       }
       for (const key of ['scannedSources', 'expectedSources', 'limitations']) {
@@ -482,8 +478,7 @@ export class ContextEntityEditorDrawerComponent {
       if (!Array.isArray(value)) return 'Gaps must be a list of guided cards.';
       const ids = new Set<string>();
       for (const item of value as unknown[]) {
-        if (typeof item === 'string' && item.trim()) continue;
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return 'Every gap must be a card or a non-blank legacy description.';
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return 'Every gap must be a card.';
         const gap = item as Record<string, unknown>;
         const id = String(gap['id'] || '').trim();
         if (id && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return 'Gap IDs must use lowercase kebab-case.';
@@ -548,17 +543,12 @@ export class ContextEntityEditorDrawerComponent {
     }
   }
 }
-
 function isNonBlankTextList(value: unknown): boolean {
   return Array.isArray(value) && value.every((item) => typeof item === 'string' && item.trim().length > 0);
 }
 
 function isNonBlankText(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0;
-}
-
-function isLegacyTextShape(value: unknown): boolean {
-  return isNonBlankText(value) || isNonBlankTextList(value);
 }
 
 function isSafeConfigurationDirectory(value: unknown): boolean {
@@ -570,15 +560,4 @@ function isSafeConfigurationDirectory(value: unknown): boolean {
     && !directory.includes('//')
     && !directory.includes('..')
     && !directory.includes('@{');
-}
-
-function normalizeRelationTargetType(value: string): string {
-  const normalized = value.trim().replaceAll('_', '-').toLowerCase();
-  const aliases: Record<string, string> = {
-    systems: 'system', repositories: 'repository', processes: 'process', integrations: 'integration', teams: 'team',
-    boundedcontext: 'bounded-context', boundedcontexts: 'bounded-context', 'bounded-contexts': 'bounded-context',
-    codesearchscope: 'code-search-scope', codesearchscopes: 'code-search-scope', 'code-search-scopes': 'code-search-scope',
-    terms: 'glossary-term', 'glossary-terms': 'glossary-term', handoffrules: 'handoff-rule', 'handoff-rules': 'handoff-rule'
-  };
-  return aliases[normalized] || normalized;
 }

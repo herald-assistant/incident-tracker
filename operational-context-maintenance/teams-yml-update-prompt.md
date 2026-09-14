@@ -54,9 +54,8 @@ teams:
 ## Update rules
 
 - A team entry should answer "what does this team label mean?".
-- Existing `references` and `relations` are preserve-only legacy data in team
-  entries. Do not propose them for a new or updated team; use the owning system
-  or bounded context for the relationship.
+- Team entries do not contain `references` or `relations`. Use the owning
+  system or bounded context for relationships.
 - Keep evidence/action guidance in handoff rules, not in team routing hints.
 - Do not duplicate every relationship already described by systems, processes
   or integrations.

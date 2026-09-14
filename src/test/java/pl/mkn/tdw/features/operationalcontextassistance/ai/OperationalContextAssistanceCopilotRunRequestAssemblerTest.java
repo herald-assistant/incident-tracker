@@ -10,6 +10,9 @@ import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.aiplatform.copilot.tools.policy.budget.CopilotSessionHardToolBudget;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftScope;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftPreflight;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftValidationTools;
 import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 import pl.mkn.tdw.shared.ai.AnalysisAiOptions;
@@ -20,6 +23,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,11 +36,18 @@ import static pl.mkn.tdw.agenttools.gitlab.GitLabToolNames.READ_REPOSITORY_FILE;
 
 class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
 
+    private final OperationalContextAssistanceDraftValidationTools.ValidationSession validationSession =
+            new OperationalContextAssistanceDraftValidationTools.ValidationSession(
+                    "digest-1", new OperationalContextAssistanceDraftScope(
+                    OperationalContextAssistanceMode.CREATE_AREA, null, null, Set.of("operator:description")), null);
+
     @Test
     void assemblesNoSourceSessionWithRequiredLongContext() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
+        when(toolFactory.createToolDefinitions(any(), any(), any())).thenReturn(List.of(
+                tool(OperationalContextAssistanceDraftValidationTools.NAME)));
         var assembler = new OperationalContextAssistanceCopilotRunRequestAssembler(
-                new CopilotRunAuthMapper(), toolFactory, new OperationalContextAssistanceAiProperties(),
+                new CopilotRunAuthMapper(), toolFactory, validationTools(), new OperationalContextAssistanceAiProperties(),
                 new GitLabProperties());
         var assembly = assembler.assemble(
                 "opctx-job-1",
@@ -47,14 +58,17 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
                         Map.of("operational-context-assistance/input.json", "{}"),
                         Set.of("operator:description")
                 ),
-                null
+                null, validationSession
         );
         var request = assembly.runRequest();
 
         assertThat(request.sessionTarget().existing()).isFalse();
-        assertThat(request.sessionConfigRequest().tools()).isEmpty();
-        assertThat(request.sessionConfigRequest().availableToolNames()).isEmpty();
-        assertThat(request.sessionConfigRequest().effectiveAvailableToolNames()).isEmpty();
+        assertThat(request.sessionConfigRequest().tools()).extracting(ToolDefinition::name)
+                .containsExactly(OperationalContextAssistanceDraftValidationTools.NAME);
+        assertThat(request.sessionConfigRequest().availableToolNames())
+                .containsExactly(OperationalContextAssistanceDraftValidationTools.NAME);
+        assertThat(request.sessionConfigRequest().effectiveAvailableToolNames())
+                .containsExactly(OperationalContextAssistanceDraftValidationTools.NAME);
         assertThat(request.sessionConfigRequest().skillsEnabled()).isFalse();
         assertThat(request.sessionConfigRequest().skillToolAvailable()).isFalse();
         assertThat(request.sessionConfigRequest().contextTierPreference())
@@ -62,16 +76,26 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
         assertThat(request.initialReport()).isNull();
         assertThat(request.artifactContents()).containsEntry("operational-context-assistance/input.json", "{}");
         assertThat(assembly.sourceScope()).isNull();
-        org.mockito.Mockito.verifyNoInteractions(toolFactory);
+        var hidden = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
+        verify(toolFactory).createToolDefinitions(hidden.capture(), any(), argThat(callbacks ->
+                callbacks.size() == 1 && callbacks.get(0).getToolDefinition().name()
+                        .equals(OperationalContextAssistanceDraftValidationTools.NAME)));
+        var budget = (CopilotSessionHardToolBudget) hidden.getValue().hiddenContext()
+                .get(AgentToolContextKeys.TOOL_HARD_BUDGET);
+        assertThat(budget.acquireOrDenial(OperationalContextAssistanceDraftValidationTools.NAME)).isNull();
+        assertThat(budget.acquireOrDenial(OperationalContextAssistanceDraftValidationTools.NAME)).isNull();
+        assertThat(budget.acquireOrDenial(OperationalContextAssistanceDraftValidationTools.NAME))
+                .contains("budget exceeded");
     }
 
     @Test
     void bindsGeneralGitLabToolsToSelectedProjectAndMainGroup() {
         var toolFactory = mock(CopilotSdkToolFactory.class);
-        when(toolFactory.createToolDefinitions(any(), any())).thenReturn(List.of(
+        when(toolFactory.createToolDefinitions(any(), any(), any())).thenReturn(List.of(
                 tool(LIST_REPOSITORY_BRANCHES), tool(LIST_REPOSITORY_TREE), tool(LIST_REPOSITORY_FILES),
                 tool(SEARCH_REPOSITORY_FILES),
-                tool(READ_REPOSITORY_FILE), tool("gitlab_find_flow_context"), tool("opctx_get_entity")
+                tool(READ_REPOSITORY_FILE), tool(OperationalContextAssistanceDraftValidationTools.NAME),
+                tool("gitlab_find_flow_context"), tool("opctx_get_entity")
         ));
         var properties = new OperationalContextAssistanceAiProperties();
         properties.setModel("feature-model");
@@ -79,7 +103,7 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
         var gitLabProperties = new GitLabProperties();
         gitLabProperties.setGroup("CRM");
         var assembler = new OperationalContextAssistanceCopilotRunRequestAssembler(
-                new CopilotRunAuthMapper(), toolFactory, properties, gitLabProperties);
+                new CopilotRunAuthMapper(), toolFactory, validationTools(), properties, gitLabProperties);
         var source = new OperationalContextGitLabSourceSnapshot(
                 "PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS",
                 new OperationalContextGitLabSourceSnapshot.RepositoryGit(
@@ -91,28 +115,34 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
 
         var assembly = assembler.assemble(
                 "opctx-job-2", AnalysisAiOptions.DEFAULT, AnalysisAiAuthRef.localToken("test"),
-                new OperationalContextAssistancePromptPreparation("prompt", Map.of(), Set.of()), source
+                new OperationalContextAssistancePromptPreparation("prompt", Map.of(), Set.of()), source,
+                validationSession
         );
         var request = assembly.runRequest();
         var context = ArgumentCaptor.forClass(CopilotToolSessionContext.class);
-        verify(toolFactory).createToolDefinitions(context.capture(), any());
+        verify(toolFactory).createToolDefinitions(context.capture(), any(), any());
 
         assertThat(request.sessionConfigRequest().tools()).extracting(ToolDefinition::name)
                 .containsExactlyInAnyOrder(LIST_REPOSITORY_BRANCHES, LIST_REPOSITORY_TREE, LIST_REPOSITORY_FILES,
-                        SEARCH_REPOSITORY_FILES, READ_REPOSITORY_FILE);
+                        SEARCH_REPOSITORY_FILES, READ_REPOSITORY_FILE,
+                        OperationalContextAssistanceDraftValidationTools.NAME);
         assertThat(request.sessionConfigRequest().availableToolNames())
                 .containsExactlyInAnyOrder(LIST_REPOSITORY_BRANCHES, LIST_REPOSITORY_TREE, LIST_REPOSITORY_FILES,
-                        SEARCH_REPOSITORY_FILES, READ_REPOSITORY_FILE);
+                        SEARCH_REPOSITORY_FILES, READ_REPOSITORY_FILE,
+                        OperationalContextAssistanceDraftValidationTools.NAME);
         assertThat(request.sessionConfigRequest().skillsEnabled()).isTrue();
         assertThat(request.sessionConfigRequest().effectiveAvailableToolNames())
                 .containsExactlyInAnyOrder(LIST_REPOSITORY_BRANCHES, LIST_REPOSITORY_TREE, LIST_REPOSITORY_FILES,
-                        SEARCH_REPOSITORY_FILES, READ_REPOSITORY_FILE, "skill")
+                        SEARCH_REPOSITORY_FILES, READ_REPOSITORY_FILE,
+                        OperationalContextAssistanceDraftValidationTools.NAME, "skill")
                 .doesNotContain("gitlab_find_flow_context", "opctx_get_entity", "shell", "terminal", "filesystem");
         assertThat(request.sessionConfigRequest().modelSelection().model()).isEqualTo("feature-model");
         assertThat(request.sessionConfigRequest().modelSelection().reasoningEffort()).isEqualTo("xhigh");
         assertThat(assembly.sourceScope().selectedProjectPath()).isEqualTo("CRM/PROCESSES/CRM_CUSTOMER_PROFILE_PROCESS");
         assertThat(assembly.sourceScope().selectedCommit()).isEqualTo(source.commitId());
         assertThat(context.getValue().hiddenContext().values()).contains(assembly.sourceScope());
+        assertThat(context.getValue().hiddenContext().get(OperationalContextAssistanceDraftValidationTools.CONTEXT_KEY))
+                .isInstanceOf(OperationalContextAssistanceDraftValidationTools.ValidationSession.class);
         assertThat(context.getValue().hiddenContext().get(AgentToolContextKeys.TOOL_HARD_BUDGET))
                 .isInstanceOf(CopilotSessionHardToolBudget.class);
     }
@@ -122,5 +152,10 @@ class OperationalContextAssistanceCopilotRunRequestAssemblerTest {
                 name, "test", Map.of("type", "object", "properties", Map.of()),
                 invocation -> java.util.concurrent.CompletableFuture.completedFuture(Map.of())
         );
+    }
+
+    private OperationalContextAssistanceDraftValidationTools validationTools() {
+        return new OperationalContextAssistanceDraftValidationTools(
+                mock(OperationalContextAssistanceDraftPreflight.class));
     }
 }

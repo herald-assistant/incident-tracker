@@ -41,7 +41,7 @@ public enum OperationalContextCatalogEntityType {
         if (!StringUtils.hasText(value)) {
             throw OperationalContextCatalogMaintenanceException.invalidType(value);
         }
-        var normalized = value.trim().replace('_', '-');
+        var normalized = value.trim();
         return Arrays.stream(values())
                 .filter(type -> type.externalName.equals(normalized))
                 .findFirst()

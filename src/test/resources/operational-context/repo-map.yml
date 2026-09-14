@@ -4,6 +4,7 @@ repositories:
   - id: crm-customer-service-repo
     name: CRM Customer Service Repository
     git:
+      provider: gitlab
       group: CRM/customer-platform
       project: crm-customer-service-repo
       projectPath: CRM/customer-platform/crm-customer-service-repo
@@ -19,6 +20,7 @@ repositories:
   - id: crm-customer-shared-repo
     name: CRM Customer Shared Library
     git:
+      provider: gitlab
       group: CRM/customer-platform
       project: crm-customer-shared
       projectPath: CRM/customer-platform/crm-customer-shared

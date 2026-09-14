@@ -28,7 +28,8 @@ public record OperationalContextAssistanceJobSnapshot(
         OperationalContextAssistanceDraft draft,
         List<OperationalContextAssistanceProposalPreview> previews,
         List<OperationalContextAssistanceProposalDecision> proposalDecisions,
-        String preparedPrompt
+        String preparedPrompt,
+        OperationalContextAssistanceReviewDraft reviewDraft
 ) {
     public OperationalContextAssistanceJobSnapshot {
         steps = steps != null ? List.copyOf(steps) : List.of();

@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,6 +47,28 @@ class OperationalContextAssistanceJobControllerTest {
                 .andExpect(jsonPath("$.preparedPrompt").doesNotExist());
 
         verify(jobService).startJob(any(OperationalContextAssistanceJobStartRequest.class));
+    }
+
+    @Test
+    void savesTypedUnfinishedReviewWithoutAcceptingUnknownFields() throws Exception {
+        when(jobService.saveReview(any(), any())).thenReturn(snapshot("crm-job"));
+
+        mockMvc.perform(put("/api/operational-context/assistance/jobs/crm-job/review")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"selections":[{"selectedPaths":["name"],"confirmedPaths":[],
+                                  "editedValues":{"name":"CRM Customer API"}}]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.jobId").value("crm-job"));
+
+        mockMvc.perform(put("/api/operational-context/assistance/jobs/crm-job/review")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"selections":[{"selectedPaths":["name"],"confirmedPaths":[],
+                                  "editedValues":{},"archived":true}]}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -265,7 +288,7 @@ class OperationalContextAssistanceJobControllerTest {
                         "COLLECT_CONTEXT", "Zbierz kontekst", "CONTEXT", "PENDING", null,
                         null, null, null, List.of(), List.of(), null
                 )),
-                List.of(), null, null, null, List.of(), List.of(), null, List.of(), List.of(), null
+                List.of(), null, null, null, List.of(), List.of(), null, List.of(), List.of(), null, null
         );
     }
 }

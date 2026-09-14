@@ -78,7 +78,7 @@ class GitLabRepositoryNavigationMcpToolsTest {
         assertThat(tree.projectPath()).isEqualTo("CRM/PROCESSES/customer-profile");
         assertThat(tree.commitId()).isEqualTo(SELECTED_COMMIT);
         assertThat(tree.entries()).extracting(entry -> entry.path()).containsExactly("pom.xml");
-        assertThat(files.paths()).containsExactly("pom.xml");
+        assertThat(files.paths()).containsExactly("pom.xml", "secrets.xml");
         verify(port, never()).resolveRevision("CRM", "PROCESSES/customer-profile", "main");
         assertThat(scope.readSourceRefs()).isEmpty();
     }
@@ -101,12 +101,19 @@ class GitLabRepositoryNavigationMcpToolsTest {
         when(port.readFileBounded("CRM", "LIBS/shared", OTHER_COMMIT, "pom.xml", 256 * 1024))
                 .thenReturn(new GitLabRepositoryFileContent("CRM", "LIBS/shared", OTHER_COMMIT,
                         "pom.xml", content, false));
+        var configuration = "customer-profile-client=fictional-example";
+        when(port.readFileMetadata("CRM", "LIBS/shared", OTHER_COMMIT, "credentials.json"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "LIBS/shared", OTHER_COMMIT,
+                        "credentials.json", null, OTHER_COMMIT, null, null, null, (long) configuration.length()));
+        when(port.readFileBounded("CRM", "LIBS/shared", OTHER_COMMIT, "credentials.json", 256 * 1024))
+                .thenReturn(new GitLabRepositoryFileContent("CRM", "LIBS/shared", OTHER_COMMIT,
+                        "credentials.json", configuration, false));
 
         var result = tools.searchRepositoryFiles("LIBS/shared", "release/1", "customer-profile-client", "", "",
                 "Sprawdzam zależność biblioteki.", context());
         assertThat(result.projectPath()).isEqualTo("CRM/LIBS/shared");
         assertThat(result.commitId()).isEqualTo(OTHER_COMMIT);
-        assertThat(result.paths()).containsExactly("pom.xml");
+        assertThat(result.paths()).containsExactly("pom.xml", "credentials.json");
         assertThat(scope.readSourceRefs()).isEmpty();
         scope.resolve("LIBS/shared", "release/1", port);
         verify(port).resolveRevision("CRM", "LIBS/shared", "release/1");
@@ -155,13 +162,26 @@ class GitLabRepositoryNavigationMcpToolsTest {
                 "gitlab:CRM/PROCESSES/customer-profile@" + SELECTED_COMMIT + ":pom.xml");
         assertThat(scope.readSourceRefs()).containsExactly(result.sourceRef());
 
+        var configuration = "apiToken=fictional-example";
+        when(port.readFileMetadata("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, ".env"))
+                .thenReturn(new GitLabRepositoryFileMetadata("CRM", "PROCESSES/customer-profile",
+                        SELECTED_COMMIT, ".env", null, SELECTED_COMMIT, null, null,
+                        null, (long) configuration.length()));
+        when(port.readFileBounded("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT,
+                ".env", 256 * 1024)).thenReturn(new GitLabRepositoryFileContent(
+                "CRM", "PROCESSES/customer-profile", SELECTED_COMMIT, ".env", configuration, false));
+        var raw = gitlab.readRepositoryFile("PROCESSES/customer-profile", "main", List.of(),
+                ".env", null, "Sprawdzam konfigurację CRM.", context());
+        assertThat(raw.content()).isEqualTo(configuration);
+        assertThat(raw.sourceRef()).endsWith(":.env");
+
         assertThatThrownBy(() -> gitlab.readRepositoryFile("PROCESSES/customer-profile", "other", List.of(),
                 "pom.xml", null, "Zmieniam gałąź.", context()))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> gitlab.readRepositoryFile("../outside", "main", List.of(),
                 "pom.xml", null, "Próbuję wyjść poza grupę.", context()))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThat(scope.readSourceRefs()).containsExactly(result.sourceRef());
+        assertThat(scope.readSourceRefs()).containsExactlyInAnyOrder(result.sourceRef(), raw.sourceRef());
     }
 
     private ToolContext context() {

@@ -240,7 +240,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
         try (var harness = harness("preview-writable-payload", crmDocuments())) {
             var current = harness.service().entity("integration", "crm-existing-integration").payload();
             var currentParticipants = (Map<?, ?>) current.get("participants");
-            assertTrue(((Map<?, ?>) currentParticipants.get("source")).containsKey("repositories"));
+            assertFalse(((Map<?, ?>) currentParticipants.get("source")).containsKey("repositories"));
 
             var writable = harness.service().writablePayloadForUpdate("integration", "crm-existing-integration");
             var participants = (Map<?, ?>) writable.get("participants");
@@ -502,7 +502,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
     }
 
     @Test
-    void shouldKeepRuntimeConsumedPreserveOnlyFieldsWhileRemovingUnknownExtensions() {
+    void shouldRemoveObsoleteFieldsAndUnknownExtensionsOnUpdate() {
         var documents = new LinkedHashMap<>(crmDocuments());
         documents.put("processes.yml", """
                 schemaVersion: 1
@@ -530,23 +530,23 @@ class OperationalContextCatalogMaintenanceServiceTest {
 
             var processYaml = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content("processes.yml");
             var teamYaml = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content("teams.yml");
-            assertTrue(processYaml.contains("successArtifacts:"));
+            assertFalse(processYaml.contains("successArtifacts:"));
+            assertFalse(processYaml.contains("outcomes:"));
             assertFalse(processYaml.contains("oldProcessHint:"));
-            assertTrue(teamYaml.contains("systems:"));
-            assertTrue(teamYaml.contains("type: supports"));
+            assertFalse(teamYaml.contains("systems:"));
+            assertFalse(teamYaml.contains("type: supports"));
             assertFalse(teamYaml.contains("oldTeamHint:"));
         }
     }
 
     @Test
-    void shouldExposeLegacySystemMatchAsCanonicalRecognitionSignalsForEditing() {
-        try (var harness = harness("crm-legacy-match-signals")) {
+    void shouldExposeCanonicalSystemRecognitionSignalsForEditing() {
+        try (var harness = harness("crm-canonical-match-signals")) {
             var current = harness.service().entity("system", "crm-source-system");
 
-            assertFalse(current.payload().containsKey("match"));
             var matchSignals = (Map<?, ?>) current.payload().get("matchSignals");
-            var strong = (Map<?, ?>) matchSignals.get("strong");
-            assertEquals(List.of("crm-source-service"), strong.get("serviceNames"));
+            var exact = (Map<?, ?>) matchSignals.get("exact");
+            assertEquals(List.of("crm-source-service"), exact.get("serviceNames"));
 
             var replacement = map(
                     "id", "crm-source-system",
@@ -565,7 +565,6 @@ class OperationalContextCatalogMaintenanceServiceTest {
             assertFalse(updated.entity().payload().containsKey("match"));
             assertEquals("Anonymous CRM source service update", updated.entity().payload().get("summary"));
             var rawSystems = harness.snapshotStore().currentStoredSnapshot().rawDocuments().content("systems.yml");
-            assertFalse(rawSystems.contains("\n    match:\n"));
             assertTrue(rawSystems.contains("matchSignals:"));
         }
     }
@@ -882,6 +881,22 @@ class OperationalContextCatalogMaintenanceServiceTest {
             assertTrue(invalidRelations.fieldErrors().stream().anyMatch(
                     error -> error.pointer().equals("/payload/relations/1/targetType")
             ));
+
+            var missingTargetType = assertThrows(
+                    OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().create(new OperationalContextCatalogMutationCommand(
+                            "system", "crm-relation-without-type", map(
+                                    "id", "crm-relation-without-type",
+                                    "name", "CRM Relation Without Type",
+                                    "systemType", "internal-service",
+                                    "systemSubtype", "backend",
+                                    "relations", List.of(map("type", "supports", "target", "crm-contact-update"))
+                            )
+                    ))
+            );
+            assertTrue(missingTargetType.fieldErrors().stream().anyMatch(
+                    error -> error.pointer().equals("/payload/relations/0/targetType")
+            ));
         }
     }
 
@@ -1014,7 +1029,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                     map(
                             "id", "crm-contact-platform-repository",
                             "name", "CRM Contact Platform Repository",
-                            "git", map("projectPath", "crm/contact-platform"),
+                            "git", map("provider", "gitlab", "projectPath", "crm/contact-platform"),
                             "evidence", List.of(map(
                                     "sourceRef", "crm/contact-platform/pom.xml",
                                     "evidenceType", "build-definition",
@@ -1061,7 +1076,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
                             map(
                                     "id", "crm-invalid-repository-metadata",
                                     "name", "CRM Invalid Repository Metadata",
-                                    "git", map("projectPath", "crm/invalid-repository"),
+                                    "git", map("provider", "gitlab", "projectPath", "crm/invalid-repository"),
                                     "evidence", List.of(map("sourceRef", "", "evidenceType", "")),
                                     "llmToolHints", map("answerWhenUserMentions", "CRM contact validation")
                             )
@@ -1075,6 +1090,34 @@ class OperationalContextCatalogMaintenanceServiceTest {
             ));
             assertTrue(invalidRepository.fieldErrors().stream().anyMatch(
                     error -> error.pointer().equals("/payload/llmToolHints/answerWhenUserMentions")
+            ));
+
+            var missingProjectPath = assertThrows(
+                    OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().create(new OperationalContextCatalogMutationCommand(
+                            "repository", "crm-project-name-only", map(
+                                    "id", "crm-project-name-only",
+                                    "name", "CRM Project Name Only",
+                                    "git", map("provider", "gitlab", "project", "crm-project-name-only")
+                            )
+                    ))
+            );
+            assertTrue(missingProjectPath.fieldErrors().stream().anyMatch(
+                    error -> error.pointer().equals("/payload/git/projectPath")
+            ));
+
+            var missingProvider = assertThrows(
+                    OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().create(new OperationalContextCatalogMutationCommand(
+                            "repository", "crm-provider-missing", map(
+                                    "id", "crm-provider-missing",
+                                    "name", "CRM Provider Missing",
+                                    "git", map("projectPath", "crm/provider-missing")
+                            )
+                    ))
+            );
+            assertTrue(missingProvider.fieldErrors().stream().anyMatch(
+                    error -> error.pointer().equals("/payload/git/provider")
             ));
         }
     }
@@ -1203,18 +1246,21 @@ class OperationalContextCatalogMaintenanceServiceTest {
             assertTrue(((Map<?, ?>) created.entity().payload().get("processBoundary")).containsKey("endsWhen"));
             assertTrue(((Map<?, ?>) created.entity().payload().get("lifecycle")).containsKey("transitions"));
 
-            var legacy = harness.service().create(new OperationalContextCatalogMutationCommand(
+            var obsolete = assertThrows(OperationalContextCatalogMaintenanceException.class,
+                    () -> harness.service().create(new OperationalContextCatalogMutationCommand(
                     "process",
-                    "crm-legacy-contact-process",
+                    "crm-obsolete-contact-process",
                     map(
-                            "id", "crm-legacy-contact-process",
-                            "name", "CRM Legacy Contact Process",
+                            "id", "crm-obsolete-contact-process",
+                            "name", "CRM Obsolete Contact Process",
                             "processBoundary", List.of("CRM contact confirmation is visible."),
                             "lifecycle", List.of("requested", "applied"),
                             "completionSignals", "CRM contact confirmation is recorded."
                     )
-            ));
-            assertEquals(List.of("requested", "applied"), legacy.entity().payload().get("lifecycle"));
+            )));
+            assertTrue(obsolete.fieldErrors().stream().anyMatch(error -> error.pointer().equals("/payload/processBoundary")));
+            assertTrue(obsolete.fieldErrors().stream().anyMatch(error -> error.pointer().equals("/payload/lifecycle")));
+            assertTrue(obsolete.fieldErrors().stream().anyMatch(error -> error.pointer().equals("/payload/completionSignals")));
 
             var invalid = assertThrows(
                     OperationalContextCatalogMaintenanceException.class,
@@ -1246,7 +1292,7 @@ class OperationalContextCatalogMaintenanceServiceTest {
     }
 
     @Test
-    void shouldKeepParticipantRepositoriesServerOwnedForAnonymousCrmIntegration() {
+    void shouldRemoveObsoleteParticipantRepositoriesForAnonymousCrmIntegration() {
         try (var harness = harness("crm-participant-repositories")) {
             var replacement = map(
                     "id", "crm-existing-integration",
@@ -1261,11 +1307,8 @@ class OperationalContextCatalogMaintenanceServiceTest {
                     "integration", "crm-existing-integration", replacement
             ));
             var participants = (Map<?, ?>) updated.entity().payload().get("participants");
-            assertEquals(List.of("crm-source-repository"), ((Map<?, ?>) participants.get("source")).get("repositories"));
-            assertEquals(
-                    List.of("crm-source-repository"),
-                    ((Map<?, ?>) ((List<?>) participants.get("targets")).get(0)).get("repositories")
-            );
+            assertFalse(((Map<?, ?>) participants.get("source")).containsKey("repositories"));
+            assertFalse(((Map<?, ?>) ((List<?>) participants.get("targets")).get(0)).containsKey("repositories"));
 
             var rejected = assertThrows(
                     OperationalContextCatalogMaintenanceException.class,
@@ -1422,9 +1465,10 @@ class OperationalContextCatalogMaintenanceServiceTest {
                     name: CRM Source System
                     systemType: internal-service
                     systemSubtype: backend
-                    match:
-                      serviceNames:
-                        - crm-source-service
+                    matchSignals:
+                      exact:
+                        serviceNames:
+                          - crm-source-service
                     xCrmExtension:
                       label: anonymous-crm-extension
                   - id: crm-target-system
@@ -1454,13 +1498,9 @@ class OperationalContextCatalogMaintenanceServiceTest {
                       source:
                         system: crm-source-system
                         role: producer
-                        repositories:
-                          - crm-source-repository
                       targets:
                         - system: crm-target-system
                           role: consumer
-                          repositories:
-                            - crm-source-repository
                 """);
         documents.put("code-search-scopes.yml", yaml("operational-context-code-search-scopes", "codeSearchScopes"));
         documents.put("bounded-contexts.yml", """

@@ -181,8 +181,8 @@ deploymentow i aplikacji pozostaja sygnalami w `matchSignals`, a nie druga
 prawda w `runtime`. Code discovery dla systemu zaczyna sie od code-search
 scope'u targetujacego ten system.
 
-`systemType` jest jedynym kanonicznym polem klasyfikacji; legacy `type` i
-`kind` nie sa parsowane ani przyjmowane przez maintenance API. Kazdy
+`systemType` jest jedynym polem klasyfikacji systemu; `type` i `kind`
+nie sa parsowane ani przyjmowane przez maintenance API. Kazdy
 `systemType=internal-service` musi miec dokladnie jeden `systemSubtype` z
 vocabulary `frontend`, `backend`, `worker`, `mixed`, `unknown`. Dla pozostalych
 typow `systemSubtype` jest pomijany. `unknown` oznacza jawnie przejrzany brak
@@ -276,8 +276,8 @@ Bounded context opisuje odpowiedzialnosc domenowa i lokalny jezyk:
 Znane pola scope, semantic boundary, evidence i AI hints sa jawnie walidowane,
 indeksowane i projektowane do widoku operatora oraz `opctx_get_entity`.
 Nowe nieznane klucze sa odrzucane przez maintenance API, a istniejace
-nieznane rozszerzenia sa usuwane przy aktualizacji encji. Jawne pola
-preserve-only i dynamiczne nazwy sygnalow pozostaja zachowane. `evidence`
+nieznane rozszerzenia sa usuwane przy aktualizacji encji. Dynamiczne nazwy
+sygnalow sa dozwolone tylko wewnatrz kanonicznych poziomow. `evidence`
 nie uruchamia pobrania zrodla ani nie dowodzi root
 cause, a `llmToolHints` nie nadaje dostepu, ownershipu ani prawa do pominiecia
 visibility limits.
@@ -460,11 +460,22 @@ Start przyjmuje opis operatora, tryb, wymagany dla update'u target, opcjonalny
 jeden projekt GitLab z refem oraz preferencje AI. Target `RESOLVE_FINDING`
 zawiera istniejacy fingerprint findingu albo ID otwartego pytania i powiazana
 encje. Grupa GitLab jest konfigurowana po stronie aplikacji. Collector przypina
-ref do commita i wstepnie czyta dokladne sciezki `README.md`, `pom.xml`,
-`package.json`, `build.gradle`, `settings.gradle`; sprawdza rozmiar przed
-odczytem, limituje rzeczywisty HTTP body do 16 KiB na plik i 64 KiB lacznie
-oraz pomija niedostepna albo potencjalnie wrazliwa tresc. Nie wymaga
-istniejacego code-search scope. Sesja AI moze pozniej doczytac istotne pliki
+ref do commita i wstepnie czyta widoczne w pelnym drzewie root pliki z listy
+`AGENTS.md`, `README.md`, `pom.xml`, `package.json`, `build.gradle`,
+`settings.gradle`. Dokladna sciezke `.github/copilot-instructions.md` sprawdza
+takze osobno, niezaleznie od widocznosci w ograniczonym drzewie. Drzewo
+pokazuje rowniez katalogi z kropka i nazwy sugerujace poufna zawartosc.
+Tresc obu plikow instrukcji jest materialem o repozytorium, nie regułami
+tej sesji; AI ma
+zweryfikowac w kodzie wnioski o implementacji.
+Przy niepelnym lub niedostepnym drzewie moze sprobowac tych sciezek bez
+raportowania niepotwierdzonego braku jako ograniczenia. Brak opcjonalnego
+pliku w katalogu glownym nie jest ograniczeniem widocznosci; rzeczywisty
+problem z odczytem widocznego pliku pozostaje jawny. Collector sprawdza
+rozmiar przed odczytem, limituje rzeczywisty HTTP body do 32 KiB na plik
+instrukcji, 16 KiB na inny plik i 96 KiB lacznie. Nie filtruje tresci wedlug
+slow kluczowych ani formatow sekretow. Nie wymaga istniejacego code-search
+scope. Sesja AI moze pozniej doczytac istotne pliki
 przez wspolny neutralny zestaw `gitlab_list_repository_branches`,
 `gitlab_list_repository_tree`, `gitlab_list_repository_files`,
 `gitlab_search_repository_files` i
@@ -479,9 +490,9 @@ duzy, material pokazuje niepelnosc i kontynuacje; tool moze odczytac kolejne
 cztery poziomy od wybranej bezpiecznej sciezki lub strony. Tree/list/search
 zwracaja sciezki bez tresci, a dopiero pelny zweryfikowany read
 udostepnia cytowalny `gitlab:` source ref zawierajacy projekt i commit.
-Odczyt ma limit 256 KiB na plik,
-odrzuca pliki nietekstowe, niepelne i potencjalnie wrazliwe. Braki zrodel
-staja sie jawnymi ograniczeniami widocznosci.
+Odczyt ma limit 256 KiB na plik i odrzuca pliki nietekstowe lub niepelne,
+bez blokowania nazw plikow, rozszerzen i tresci wygladajacych na wrazliwe.
+Braki zrodel staja sie jawnymi ograniczeniami widocznosci.
 
 Przy `CREATE_AREA` z GitLabem formularz przesyla opcjonalne, typowane
 `repositoryFacts` obok wolnego opisu. `usage` rozroznia `UNKNOWN`,
@@ -490,7 +501,7 @@ systemu operator moze podac `systemName` i jawny `runtimeServiceName` (sygnal
 `system.matchSignals.exact.serviceNames`); dla niewdrazanej biblioteki wskazuje
 0-5 znanych systemow korzystajacych z niej, a dla kodu istniejacego systemu
 dokladnie jedno ID. Backend sprawdza ID w aktualnym katalogu, a odpowiedzi
-przekazuje do AI jako osobne, sanitizowane `operatorFacts` z refem
+przekazuje do AI jako osobne `operatorFacts` z refem
 `operator:repository-facts`. Ten ref nie potwierdza odczytu GitLaba; do
 propozycji repozytorium potrzebny jest ref rzeczywiscie przeczytanego pliku
 z przypietego commita, a zmiana pola `repository.git` musi ten ref cytowac.
@@ -519,7 +530,7 @@ pominiętego `CREATE`; powiazanie z nowym repo wymaga tez wybrania jego pola
 pominac tej zaleznosci. Operator sprawdza caly zestaw i publikuje go jedna
 decyzja.
 
-Sesja AI dostaje sanitizowany opis, pelne decoded mapy dziewieciu aktywnych
+Sesja AI dostaje niezmieniony opis, pelne decoded mapy dziewieciu aktywnych
 YAML z jednego digesta i 11 aktualnych instrukcji
 `operational-context-maintenance/` z pakietu aplikacji. Prompt przedstawia
 te instrukcje w osobnej sekcji reguł, przed danymi zadania i wybranego GitLaba.
@@ -528,8 +539,7 @@ zapisane w repo-map.yml sa dodatkowo wyswietlane jako podpowiedzi, nie pelny
 spis dostepnych projektow, a kazdy
 aktywny dokument katalogu jest pokazany jako osobny JSON z refem
 `opctx:<plik>`. Opis operatora, pliki GitLab i wpisy katalogu sa materialem
-do analizy, a nie instrukcjami zmieniajacymi zasady asysty. Skrypty cleanup i raport
-porzadkowy nie sa materialem runtime. Reguly sa sprawdzone wobec biezacego
+do analizy, a nie instrukcjami zmieniajacymi zasady asysty. Reguly sa sprawdzone wobec biezacego
 schematu zapisu; schemat/validator ma pierwszenstwo przed przykladami.
 Przekroczenie jawnego limitu materialu blokuje job bez cichego obciecia.
 Feature wymaga `LONG_CONTEXT_REQUIRED`; brak aktywnego dlugiego kontekstu
@@ -547,31 +557,55 @@ najwyzej cztery poziomy, 12 zadan HTTP i 120 wpisow na wywolanie;
 `search_repository_files` wykorzystuje wyszukiwanie GitLab na galezi jako
 zrodlo kandydatow, po czym kazda znaleziona sciezke weryfikuje na przypietym
 commicie. Wyniki nawigacji nie sa dowodem
-tresci. Odczyt ogranicza sie do 256 KiB i odrzuca sciezki oraz
-tresci wygladajace na wrazliwe. Dla tych tools obowiazuje twardy limit
+tresci. Odczyt ogranicza sie do 256 KiB i sprawdza wzgledna sciezke, tekstowy
+format, kompletnosc oraz zgodnosc z przypietym commitem. Nie filtruje tresci
+ani nazw wedlug heurystyk wrazliwosci. Dla tych tools obowiazuje twardy limit
 wywolan w sesji, niezalezny od globalnego trybu SOFT.
 Parser traktuje wynik jako niezaufany, typowany draft: odrzuca nieznane pola,
-niekanoniczne sciezki i typy, nieautoryzowane source refs, wrazliwa tresc oraz
-samodzielne potwierdzenie ownershipu albo klasyfikacji `frontend`. Draft ma
+niekanoniczne sciezki i typy, nieautoryzowane source refs oraz
+ownership albo klasyfikacje `frontend` bez `USER_STATEMENT`, refa
+`operator:description` i wymaganego recznego przegladu zmiany. Draft ma
 uporzadkowane propozycje `CREATE` lub `UPDATE` ze zmianami pol `before/after`,
 uzasadnieniem, podstawa (`USER_STATEMENT`, `SOURCE_OBSERVATION`,
-`AI_INTERPRETATION`), zrodlami, pewnoscia, pytaniami i limitami widocznosci.
+`AI_INTERPRETATION`), zrodlami, pewnoscia i limitami widocznosci. Pola
+Draft nie ma pola `questions`; niewystarczajace dane trafiaja do
+`visibilityLimits`.
 `opctx:<nazwa-pliku>` cytuje aktywny dokument katalogu; `gitlab:` musi
 pochodzic z wstepnie przeczytanego pliku albo udanego zweryfikowanego read.
 Ref innego projektu moze potwierdzac relacje, ale nie zastepuje refa
 wybranego projektu wymaganego do jego nowego wpisu repozytorium. Preview
 sprawdza caly wynikowy katalog po wszystkich wybranych zmianach, wiec
 referencja do `CREATE` w tym samym zestawie jest dopuszczalna.
+Podczas skladania batcha neutralny maintenance uznaje rowniez referencje do
+encji tworzonej w pozniejszej mutacji; ostateczna walidacja sprawdza gotowy
+katalog. Brakujaca referencja daje `fieldErrors` ze sciezka
+`/mutations/{index}/payload/{field}/{position}`, ktora pozwala wskazac
+dokladna propozycje i wartosc nawet po pominieciu innych propozycji.
 
-Gdy wynik AI zawiera tylko pytania, job zachowuje draft i usage, ale ma
-status `BLOCKED`, zeby nie sugerowac gotowych propozycji. Przy wybranym
+Sesja Copilota asysty udostepnia tylko temu feature'owi read-only tool
+`operational_context_assistance_validate_draft`. Model przekazuje kompletny
+JSON propozycji, a tool sprawdza go tym samym parserem i neutralnym batch
+preview z przypietym digestem oraz source refs odczytanych w sesji plikow.
+Tool dziala tez bez GitLaba, ma limit dwoch wywolan i zwraca ograniczona
+liste wskaznikow bledow. Callback jest dolaczany do jednej sesji Copilota i
+nie jest publikowany jako globalny MCP tool. Nie zapisuje YAML-i. Backend zawsze ponawia
+walidacje po koncowej odpowiedzi modelu; wybrany i ewentualnie poprawiony
+przez operatora podzbior przechodzi jeszcze osobne `batch/preview`.
+
+Asysta jest jednorazowa i nie prowadzi dialogu z operatorem. Prompt i skill
+wymagaja propozycji na podstawie dostepnych faktow; brakujace dane trafiaja
+do `visibilityLimits`.
+Gdy brak bezpiecznej propozycji, job zachowuje draft i usage, ale ma
+status `BLOCKED`, zeby nie sugerowac gotowych zmian. Przy wybranym
 GitLabie brak odczytu pliku jest osobnym ograniczeniem widocznosci; wynik
 z propozycjami jest wtedy co najwyzej `PARTIAL`.
 
-Snapshot joba zawiera status, kroki, sanitizowany prompt przygotowany przed
-wywolaniem Copilota, bezpieczne metadane jego pracy, usage/cost, source refs,
-ograniczenia, draft, preview i decyzje. Wspolny boczny panel pokazuje przebieg
+Snapshot joba zawiera status, kroki, prompt przygotowany przed
+wywolaniem Copilota, metadane jego pracy, usage/cost, source refs,
+ograniczenia, draft, preview, roboczy przeglad i decyzje. Wspolny boczny panel pokazuje przebieg
 analizy, prompt w kroku `PREPARE_AI`, tok pracy AI oraz szacunek kosztu.
+Prompt moze zawierac bez zmian wartosci z opisu, katalogu i odczytanych plikow;
+jest przekazywany dostawcy AI oraz utrwalany w lokalnej historii analizy.
 Operator widzi zwarta liste propozycji i szczegoly jednej pozycji; formularz,
 zrodla, ograniczenia i pelny diff pozostaja rozwijalne. Wybiera pola, moze
 poprawic ich `after` przed zapisem i jawnie potwierdza wymagane fakty oraz
@@ -580,17 +614,31 @@ source refs AI dotycza oryginalnej propozycji. `repository.git` i
 `code-search-scope.repositories` nie przyjmuja override w review, poniewaz
 sa zwiazane z weryfikowanym zrodlem i scope'em. Jeden batch preview pokazuje
 wynikowy zestaw, candidate digest oraz wyniki walidacji; jeden batch decision
-publikuje wybrane zmiany. Backend bierze sciezki i bazowe wartosci z draftu
-zachowanego w jobie, przyjmuje tylko poprawki wybranych pol o zgodnym typie,
+publikuje wybrane zmiany. Po uruchomieniu podgladu UI wskazuje bledy
+strukturalne `batch/preview` na liscie i przy polach: mapuje indeks mutacji na
+wybrane propozycje `APPLY`, wyswietla wskazana wartosc i ulatwia przejscie do
+poprawki. Nieznany wskaznik pozostaje ogolnym bledem API. UI pokazuje tez
+brak wymaganego potwierdzenia jako przeszkode w zapisie oraz
+pominiete pola jako ostrzezenie; podsumowanie prowadzi do pierwszej propozycji
+wymagajacej uwagi. Akcja zatwierdzania wszystkich zwyklych pol jest wewnatrz
+karty swojej propozycji. Celowe pominiecie pola nie blokuje zapisu. Backend
+bierze sciezki i bazowe wartosci z draftu zachowanego w jobie, przyjmuje tylko
+poprawki wybranych pol o zgodnym typie,
 sprawdza je neutralna walidacja i wymaga tego samego candidate digesta, ktory
 operator zobaczyl w podgladzie. Konflikt nie zapisuje zadnej decyzji. Historia
-przechowuje draft AI i zatwierdzone poprawki osobno. Aktywne joby i decyzje
-pozostaja w pamieci procesu na potrzeby
-preview i zapisu. Kazdy run jest rownolegle utrwalany przez feature-owned
+przechowuje draft AI, roboczy wybor i zatwierdzone poprawki osobno. Zapis
+roboczego przegladu przez `PUT /jobs/{jobId}/review` nie mutuje katalogu;
+backend sprawdza sciezki, typy, rozmiary i niedozwolone pola. UI zachowuje
+ostatnie niepotwierdzone przez serwer poprawki w lokalnej przegladarce.
+Aktywne joby sa w pamieci procesu, a zakonczone nierozstrzygniete joby moga
+byc wznowione z lokalnego zapisu wraz z wczesniej zweryfikowanym zakresem
+repozytoriow. Kazdy run jest rownolegle utrwalany przez feature-owned
 persister w neutralnym `LocalAnalysisRunStore`: po starcie, zebraniu kontekstu,
-przygotowaniu promptu, zakonczeniu lub bledzie oraz po decyzji operatora.
-`Analysis History` otwiera zapisany snapshot na ekranie Operational Context
-w trybie read-only, takze po restarcie. Historia analiz nie jest historia
+przygotowaniu promptu, zakonczeniu lub bledzie, po zmianie roboczego przegladu
+oraz po decyzji operatora. `Analysis History` otwiera nierozstrzygniety wynik
+do dalszej edycji i zatwierdzenia, rowniez po restarcie; rozstrzygniety wynik
+jest tylko do odczytu. Starszy zapis bez zweryfikowanego zakresu dla tworzenia
+repozytorium nie jest wznawiany do zapisu. Historia analiz nie jest historia
 wersji ani mechanizmem rollbacku katalogu YAML.
 Odczyty katalogu przez ten proces widza jeden snapshot przed albo po
 zatwierdzeniu. Journal przywraca poprzednie dokumenty po przerwaniu zapisu;
@@ -716,8 +764,7 @@ dowodem root cause ani zamiennikiem deterministic evidence.
 
 Publicznym targetem weryfikacji jest kanoniczny `system` o
 `systemType=internal-service`. Configuration directory jest rozstrzygany z
-`runtime.configurationDirectory` systemu (z tolerancja zastanego legacy
-`deployment.configurationDirectory`); nie jest swobodnym inputem operatora
+`runtime.configurationDirectory` systemu; nie jest swobodnym inputem operatora
 uruchamiajacego analize.
 
 Tryb `BASIC` nie laduje katalogu do interpretacji i nie wykonuje code search.
@@ -740,31 +787,9 @@ inventory.
 Kolejnosc uzupelniania i zasady jakosci danych opisuje
 [`operational-context-fill-order.md`](../../operational-context-maintenance/operational-context-fill-order.md).
 
-Skrypt:
-
-```powershell
-operational-context-maintenance/cleanup-operational-context.ps1
-```
-
-ma sluzyc do czyszczenia istniejacych katalogow z usunietych pol i sekcji oraz
-do deterministycznych migracji kontraktu. Domyslny tryb jest dry-run; `-Apply`
-zapisuje zmiany. Dla tej wersji kontraktu skrypt dopisuje
-`systemSubtype: unknown` do kanonicznych wpisow `systemType: internal-service`,
-ktore nie maja subtype. Nie klasyfikuje ich jako frontend/backend na podstawie
-nazwy lub kodu. Skrypt usuwa tez cale bloki YAML dla starych struktur i
-raportuje wszystkie zmiany. Z `handoff-rules.yml` usuwa nieodczytywane pola
-`confidence`, `affectedSystems`, `affectedProcesses` i `affectedIntegrations`
-na poziomie reguly; powiazania pozostaja w `references`. Zmiana lokalnego
-katalogu wymaga jawnego `-Apply` po przegladzie raportu dry-run.
-
-Po wiekszej zmianie katalogu nalezy wykonac:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\operational-context-maintenance\cleanup-operational-context.ps1
-```
-
-Komenda powinna pokazac `Changes: 0` po zakonczonej migracji. Dodatkowy `rg`
-dobieraj do konkretnej migracji albo listy usuwanych pol z planu.
+Maintenance API przyjmuje tylko biezacy schemat. Przy aktualizacji encji usuwa
+nieznane pola z jej YAML; nie uruchamia migracji starych ksztaltow. Po wiekszej
+zmianie katalogu sprawdz walidacje i diff dokumentow.
 
 ## Validation
 
@@ -866,9 +891,10 @@ Trzy sciezki operatorskie na tym ekranie:
    proponowane pola. Wartosc wymagajaca recznej korekty jest poprawiana
    w przegladzie asysty przed jednym batch preview i zapisem.
 3. Z Validation lub Open Questions operator przechodzi do `RESOLVE_FINDING`
-   dla konkretnego targetu. AI moze zaproponowac powiazana poprawke albo
-   pytanie do czlowieka; finding/pytanie znika dopiero, gdy po zapisie
-   zmieni sie kanoniczny katalog i ponowna walidacja juz go nie zwroci.
+   dla konkretnego targetu. AI proponuje powiazana poprawke, jesli dostepne
+   fakty ja uzasadniaja; w przeciwnym razie podaje ograniczenie widocznosci.
+   Finding/pytanie znika dopiero, gdy po zapisie zmieni sie kanoniczny katalog
+   i ponowna walidacja juz go nie zwroci.
 
 Review nie jest zgoda na automatyczny zapis: operator potwierdza wybrane
 pola, a backend sprawdza warunek aktualnosci w chwili publikacji. Gdy draft

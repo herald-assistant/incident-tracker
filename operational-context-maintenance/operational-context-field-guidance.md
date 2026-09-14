@@ -51,17 +51,15 @@ not raw JSON:
 These controls serialize the canonical YAML/JSON shapes described below.
 No supported canonical field requires a raw JSON input in the MVP. New unknown
 keys are rejected by the maintenance API. Existing unknown keys are omitted
-from the edit payload and removed when the entity is updated; documented
-preserve-only fields and dynamic recognition-signal names remain supported.
-AI-assisted drafts must not propose preserve-only fields, even if they occur in
-older runtime YAML; the current maintenance schema and validator decide which
-fields are writable.
+from the edit payload and removed when the entity is updated. Recognition-signal
+names within canonical strength buckets remain dynamic. AI-assisted drafts may
+propose only fields in the current maintenance schema.
 
 ## Strict maintenance validation
 
 - Every entity requires a stable `id` and its display field: `name`, `term` or
   `title`. IDs are immutable after creation.
-- A repository requires `git.project` or `git.projectPath`.
+- A repository requires `git.provider: gitlab` and `git.projectPath`.
 - `system.participants`, when present, is an object and its `externalOwner` is
   non-blank text. `system.runtime.configurationDirectory`, when present, is a
   safe repository-relative path of at most 255 characters without a leading or
@@ -85,12 +83,9 @@ fields are writable.
   ownership.
 - Reference IDs and typed references must resolve to existing catalogue
   entities and must not create prohibited self-references.
-- Recognition-signal buckets are `exact`, `strong`, `medium` or `weak`; every signal
-  key contains a non-empty list of non-blank values. Legacy flat signal maps
-  remain readable and are written as guided `strong` rows when changed.
-- Bounded-context `localLanguageSummary` is non-blank text or a list of
-  non-blank statements. The UI reads the legacy scalar and normalizes it to a
-  list only after the operator changes the field.
+- Recognition-signal buckets are `exact`, `strong`, `medium` or `weak`; every
+  signal key contains a non-empty list of non-blank values.
+- Bounded-context `localLanguageSummary` is a list of non-blank statements.
 - Bounded-context `scope` and `semanticBoundary` are objects. Every known field
   is a list of non-blank text; unknown extensions are removed on update.
 - Bounded-context `evidence` is a list of objects with required non-blank
@@ -214,19 +209,14 @@ edge.
 
 Relations become graph edges for related-entity reads, ownership/navigation
 inference and delete-impact checks. Avoid duplicating a reference without
-adding semantic meaning. Legacy `targetContextId`, `targetProcessId` and a
-missing `targetType` for a system target remain readable; changing their target
-through the UI writes canonical `targetType` plus `target`; unknown relation
-extensions are removed on update.
+adding semantic meaning. `targetType` and `target` are required together for
+catalogue targets; unknown relation extensions are removed on update.
 
 ### `sourceCoverage`
 
 The UI writes one object with `status`, `scannedSources`, `expectedSources` and
-`limitations`. Prefer `complete`, `partial` or `unknown` for new entries.
-Existing `full`, `scanned` and `fully-scanned` values remain readable and
-selectable so an unrelated edit does not silently change established meaning.
-Legacy `sources` is shown as `scannedSources` and normalized only when that list
-is edited.
+`limitations`. The accepted status values are `complete`, `partial` and
+`unknown`.
 
 `opctx_get_entity` exposes the maintained status and source lists. Its
 affordances also promote `limitations` to explicit AI visibility limits.
@@ -253,8 +243,8 @@ to inspect but does not fetch or trust it automatically.
 
 The codec turns every actionable card into an Open Questions inbox item and
 `opctx_get_entity` returns it to AI. A gap constrains conclusions; it is never
-evidence that a production defect exists. Legacy non-blank string items remain
-accepted for compatibility, but new maintenance should use cards.
+evidence that a production defect exists. Each item must use the documented
+card shape.
 
 ```json
 [
@@ -289,7 +279,7 @@ accepted for compatibility, but new maintenance should use cards.
 | --- | --- | --- |
 | `repositoryType` | Backend free text. Current vocabulary includes `service`, `frontend`, `monorepo`, `shared-library`. Use `frontend` for the reviewed primary repository of an `internal-service/frontend` system. | Distinguishes application repositories and reusable code sources before exploration; UI Explorer requires a frontend primary repository. |
 | `criticality` | Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Contextual prioritization; actual read order comes from code-search `priority`. |
-| `git` | Guided fields for `provider`, `group`, `project`, `projectPath`, `defaultBranch`, `url` and one `aliases` value per line; `project` or `projectPath` is required. `inferred` is server-owned and not editable. | Connects the catalogue ID to GitLab discovery, code tools and technical ownership resolution. `projectPath` is the canonical provider-relative lookup identity; project and aliases are fallback candidates. |
+| `git` | Guided fields for required `provider: gitlab` and `projectPath`, plus `group`, `project`, `defaultBranch`, `url` and one `aliases` value per line. | Connects the catalogue ID to GitLab discovery, code tools and technical ownership resolution. `projectPath` is the provider-relative lookup identity; project and aliases help recognition and display. |
 | `evidence` | Guided cards with required `sourceRef`, required `evidenceType` and optional `note`. Use stable relative paths or durable document labels, never source contents, credentials or customer data. | Operator detail and `opctx_get_entity` expose the known fields as explainable provenance; the application does not fetch the reference automatically. |
 | `sourceCoverage` | Guided status plus checked/expected repository areas and limitations. | Exposed by `opctx_get_entity`; prevents a partial mapping from appearing exhaustive. |
 | `gaps` | Guided missing Git identity or semantic-mapping questions. | Feeds Open Questions; AI may request targeted evidence instead of inventing a link. |
@@ -308,9 +298,8 @@ CRM `git` example:
 }
 ```
 
-The UI preserves an existing server-owned `git.inferred` value during update,
-but never sends or creates that field. `projectPath` contains `group/project`,
-not a host URL; use `url` only as a navigable operator link.
+`projectPath` contains `group/project`, not a host URL; use `url` only as a
+navigable operator link.
 
 CRM provenance and exploration example:
 
@@ -386,18 +375,16 @@ satisfy frontend eligibility.
 | `criticality` | Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Prioritizes affected functional paths. |
 | `participants` | Guided actor lines plus role-specific selectors for existing `primarySystems`, `supportingSystems`, `externalSystems` and `platformComponents`. A system should have one role in a process. | Creates typed system graph edges used by related-entity views, Flow Explorer and AI to reconstruct the functional path. Actors explain human roles but do not create ownership. |
 | `steps` | Ordered cards with a unique lowercase kebab-case `id`, required `name`, optional `type`/`summary`, canonical `references` and optional strong business terms stored as `matchSignals.strong.terms`. | The array order is the process sequence. Step identity, text and recognition signals are searchable; references create step graph edges and give AI an explainable flow. |
-| `processBoundary` | Guided object with optional `businessCapability` and non-blank text lists `startsWhen`, `endsWhen`, `includes`, `excludes`, `assumptions`. Legacy non-blank string/list values remain readable as `endsWhen`. | The full known boundary is indexed and exposed by `opctx_get_entity`; it tells AI where the functional flow starts and ends and which adjacent responsibilities must not be attributed to this process. Assumptions remain explicit limitations, not evidence. |
-| `lifecycle` | Guided object with trigger cards (`type`, `name`, optional `exchange`), `entryCriteria`, `statuses`, transition cards (`from`, `to`, `trigger`), `terminalStates` and success/partial/failed/cancellation outcome lists. Trigger type and name plus transition target and trigger are required. Legacy non-blank string/list values remain readable as `statuses`. | The known lifecycle is indexed and exposed by `opctx_get_entity` so AI can reconstruct state progress and distinguish not-started, in-progress, terminal, failed and cancelled paths. It is descriptive context and never configures an executable workflow engine. |
-| `completionSignals` | Guided non-blank evidence lists `successful`, `partial`, `failed`, `cancelled`. Legacy non-blank string/list values remain readable as `successful`. | Observable evidence categories are indexed and exposed by `opctx_get_entity`; AI compares actual evidence with them but the maintained text alone never proves the current process state or root cause. |
-| `failureModes` | Guided cards with unique kebab-case `id`, required `name` and `summary`, optional existing `affectedStep`, and observable `signals`. Legacy non-blank strings remain readable. | Structured cards are exposed by catalogue detail and `opctx_get_entity`; their leaf text is indexed as process signals and supplies hypotheses, never proof of root cause. |
+| `processBoundary` | Guided object with optional `businessCapability` and non-blank text lists `startsWhen`, `endsWhen`, `includes`, `excludes`, `assumptions`. | The full known boundary is indexed and exposed by `opctx_get_entity`; it tells AI where the functional flow starts and ends and which adjacent responsibilities must not be attributed to this process. Assumptions remain explicit limitations, not evidence. |
+| `lifecycle` | Guided object with trigger cards (`type`, `name`, optional `exchange`), `entryCriteria`, `statuses`, transition cards (`from`, `to`, `trigger`), `terminalStates` and success/partial/failed/cancellation outcome lists. Trigger type and name plus transition target and trigger are required. | The known lifecycle is indexed and exposed by `opctx_get_entity` so AI can reconstruct state progress and distinguish not-started, in-progress, terminal, failed and cancelled paths. It is descriptive context and never configures an executable workflow engine. |
+| `completionSignals` | Guided non-blank evidence lists `successful`, `partial`, `failed`, `cancelled`. | Observable evidence categories are indexed and exposed by `opctx_get_entity`; AI compares actual evidence with them but the maintained text alone never proves the current process state or root cause. |
+| `failureModes` | Guided cards with unique kebab-case `id`, required `name` and `summary`, optional existing `affectedStep`, and observable `signals`. | Structured cards are exposed by catalogue detail and `opctx_get_entity`; their leaf text is indexed as process signals and supplies hypotheses, never proof of root cause. |
 | `dataAndArtifacts` | Guided lists: `primaryObjects`, `inputArtifacts`, `outputArtifacts`, `persistedEntities`, `readModels`, `auditArtifacts`, `notes`. Artifact kinds only; never customer data or payloads. | `opctx_get_entity` exposes and indexes the categories, connecting evidence and milestones to business artifacts. |
-| `relations` | Guided semantic edges using canonical `targetType` plus an existing non-self `target`; legacy `targetProcessId` remains readable. | Builds process and cross-entity navigation. |
+| `relations` | Guided semantic edges using `targetType` plus an existing non-self `target`. | Builds process and cross-entity navigation. |
 
 The process-step picker supports systems, repositories, bounded contexts,
 integrations, glossary terms and handoff rules. Every selected ID must already
-exist. Legacy `steps[].match` is server-owned: the UI does not edit or send it,
-and the backend preserves it for an existing step matched by `id`. New signal
-maintenance uses `matchSignals`; the first guided MVP control writes durable
+exist. Signal maintenance uses `matchSignals`; the guided control writes durable
 business phrases to `matchSignals.strong.terms` while preserving other
 existing signal buckets and keys.
 
@@ -408,9 +395,8 @@ existing signal buckets and keys.
 - completion signals describe facts an operator can observe when evaluating a
   concrete execution.
 
-Editing any legacy string/list shape writes the canonical object while leaving
-an untouched legacy value unchanged. Unknown object fields are removed when
-the entity is updated. AI tools receive only the known projection.
+Unknown object fields are removed when the entity is updated. AI tools receive
+only the known projection.
 
 CRM process-boundary example:
 
@@ -507,14 +493,13 @@ CRM step example:
 | `flowDirection` | Current vocabulary includes `source-to-target`, `request-response`, `bidirectional`, `fanout`. | Explains information flow; bidirectional-like values are interpreted as both-sided context. |
 | `criticality` | Current vocabulary: `critical`, `high`, `medium`, `low`, `unknown`. | Prioritizes boundary impact. |
 | `participants` | Required source and target structure described below. | Produces directed graph edges and identifies boundary start, intermediaries and destination. |
-| `failureModes` | Guided cards with required `name` and `type`, plus at least `symptom` or `impact`. Stable type examples: `timeout`, `upstream-error`, `rejected-message`, `unavailable`, `contract-mismatch`, `delivery-failure`. Legacy non-blank strings remain readable. | Structured cards are exposed by catalogue detail and `opctx_get_entity`; their leaf text is indexed as integration signals and grounds hypotheses/handoff without proving diagnosis. |
+| `failureModes` | Guided cards with required `name` and `type`, plus at least `symptom` or `impact`. Stable type examples: `timeout`, `upstream-error`, `rejected-message`, `unavailable`, `contract-mismatch`, `delivery-failure`. | Structured cards are exposed by catalogue detail and `opctx_get_entity`; their leaf text is indexed as integration signals and grounds hypotheses/handoff without proving diagnosis. |
 
 The UI renders participant cards. `participants.source` is required. At least
 one `targets` or `finalTargets` item is required. `intermediaries` is optional.
 A participant supports existing `system`, existing `boundedContext`, plus
-`role`, `externalOwner` and `notes`. Participant-level `repositories` from
-older data are server-owned and preserved but are not editable. Link code
-through top-level `references` and canonical code-search scopes instead.
+`role`, `externalOwner` and `notes`. Link code through top-level `references`
+and canonical code-search scopes.
 
 ```json
 {
@@ -539,7 +524,7 @@ through top-level `references` and canonical code-search scopes instead.
 | Field | What to enter and accepted values | Runtime / AI effect |
 | --- | --- | --- |
 | `type` | Established domain vocabulary such as `core-domain`, `supporting-domain`, `domain`, `subdomain`; backend free text. | Classifies the semantic boundary for search and AI. |
-| `localLanguageSummary` | One non-blank local-language statement per line. A legacy non-blank scalar remains readable and is normalized to a list only after editing. | Indexed as bounded-context signals and exposed to `opctx_get_entity`; helps AI translate evidence using the context's meaning rather than a global guess. |
+| `localLanguageSummary` | One non-blank local-language statement per list item. | Indexed as bounded-context signals and exposed to `opctx_get_entity`; helps AI translate evidence using the context's meaning rather than a global guess. |
 | `scope.includes` | Responsibilities and behaviours that belong to this boundary, one per line. | Included in search signals and the explicit AI scope projection; positive evidence can be attributed to this context. |
 | `scope.excludes` | Nearby responsibilities that do not belong here, one per line. | Gives AI a negative boundary and prevents incorrect attribution or ownership fallback. |
 | `scope.businessCapabilities` | Durable business capabilities owned by the boundary, one per line. | Improves semantic search and explains why a process or question belongs to this context. |
@@ -553,7 +538,7 @@ through top-level `references` and canonical code-search scopes instead.
 | `semanticBoundary.invariants` | Business truths that must remain valid, one per line. | Grounds functional diagnosis and explanation; entries are context, not executable validation. |
 | `semanticBoundary.ownsLanguage` | Phrases whose authoritative meaning belongs here, one per line. | Strengthens attribution when the same phrase occurs across contexts. |
 | `semanticBoundary.doesNotOwn` | Phrases or concepts deliberately owned elsewhere, one per line. | Prevents AI from assigning responsibility based on wording alone. |
-| `relations` | Guided semantic edges using canonical `targetType` plus an existing non-self `target`; legacy `targetContextId` remains readable. | Builds context navigation and supports ownership inference. |
+| `relations` | Guided semantic edges using `targetType` plus an existing non-self `target`. | Builds context navigation and supports ownership inference. |
 | `evidence[].sourceRef` | Required non-blank logical reference to a stable source, never a customer record or payload. | Exposes explainable provenance; it does not automatically fetch or trust the source. |
 | `evidence[].evidenceType` | Required non-blank source classification such as `domain-note`, `process-description` or `repository-documentation`. | Helps operators and AI judge what kind of support the source provides; it is not a confidence score. |
 | `evidence[].note` | Optional non-blank explanation of what the source supports. | Keeps provenance interpretable without turning evidence into a root-cause claim. |
@@ -624,7 +609,7 @@ Guided, strongly anonymized CRM example:
 | `aliases` | One alternate phrase per item. | Improves glossary matching and AI resolution. |
 | `useFor` | One appropriate question/use per item. | Guides selection of glossary context. |
 | `doNotConfuseWith` | Nearby concepts or explicit contrasts. | Prevents semantic conflation. |
-| `canonicalReferences` | One existing `type:id` per item. Supported canonical types include system, repository, code-search-scope, process, integration, bounded-context, team, glossary-term/term and handoff-rule. | Creates typed graph navigation from language to operational entities. |
+| `canonicalReferences` | One existing `type:id` per item. Supported types are system, repository, code-search-scope, process, integration, bounded-context, team, glossary-term and handoff-rule. | Creates typed graph navigation from language to operational entities. |
 | `relatedTerms` | Existing glossary IDs; no self-reference. | Creates term-to-term navigation. |
 | `responsibilityHints` | Descriptive system/context clue, never team routing. | Helps AI continue discovery while ownership resolution remains canonical. |
 | `llmToolHints` | Terminology and evidence interpretation guidance. | Directly grounds AI tool use. |

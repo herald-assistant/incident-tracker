@@ -13,7 +13,7 @@ describe('OperationalContextAssistanceApiService', () => {
     api.sourceOptions().subscribe();
     const options = http.expectOne('/api/operational-context/assistance/source-options');
     expect(options.request.method).toBe('GET');
-    options.flush({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'unicam-group', projects: [] });
+    options.flush({ configuredBaseUrl: 'https://gitlab.example.com', configuredGroup: 'CRM', projects: [] });
 
     api.sourceBranches({ project: 'nested/customer-api' }, ' release ').subscribe();
     const branches = http.expectOne((request) => request.url === '/api/operational-context/assistance/source-options/branches');
@@ -22,9 +22,9 @@ describe('OperationalContextAssistanceApiService', () => {
     expect(branches.request.params.get('search')).toBe('release');
     branches.flush({ branches: [{ name: 'release/2026', isDefault: false }], truncated: false, warnings: [] });
 
-    api.sourceBranches({ projectUrl: 'https://gitlab.example.com/unicam-group/nested/customer-api' }).subscribe();
+    api.sourceBranches({ projectUrl: 'https://gitlab.example.com/CRM/nested/customer-api' }).subscribe();
     const urlBranches = http.expectOne((request) => request.url === '/api/operational-context/assistance/source-options/branches');
-    expect(urlBranches.request.params.get('projectUrl')).toBe('https://gitlab.example.com/unicam-group/nested/customer-api');
+    expect(urlBranches.request.params.get('projectUrl')).toBe('https://gitlab.example.com/CRM/nested/customer-api');
     expect(urlBranches.request.params.has('project')).toBe(false);
     urlBranches.flush({ branches: [], truncated: false, warnings: [] });
 
@@ -44,6 +44,14 @@ describe('OperationalContextAssistanceApiService', () => {
     const get = http.expectOne('/api/operational-context/assistance/jobs/job%2Fa');
     expect(get.request.method).toBe('GET');
     get.flush({ jobId: 'job/a', status: 'COMPLETED' });
+
+    const reviewDraft = { selections: [{ selectedPaths: ['name'], confirmedPaths: [],
+      editedValues: { name: 'CRM Customer API' } }] };
+    api.saveReview('job/a', reviewDraft).subscribe();
+    const review = http.expectOne('/api/operational-context/assistance/jobs/job%2Fa/review');
+    expect(review.request.method).toBe('PUT');
+    expect(review.request.body).toEqual(reviewDraft);
+    review.flush({ jobId: 'job/a', reviewDraft });
 
     const decisions = [
       { action: 'APPLY' as const, selectedPaths: ['name'], confirmedPaths: ['name'] },

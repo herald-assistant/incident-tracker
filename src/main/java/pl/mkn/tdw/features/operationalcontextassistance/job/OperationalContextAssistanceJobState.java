@@ -4,6 +4,7 @@ import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceJobStatus;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalPreview;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecision;
+import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceReviewDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceSourceRevision;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraft;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
@@ -30,7 +31,7 @@ final class OperationalContextAssistanceJobState {
     );
 
     private final String jobId;
-    private final Instant createdAt = Instant.now();
+    private Instant createdAt = Instant.now();
     private final Map<String, MutableStep> steps = new LinkedHashMap<>();
     private OperationalContextAssistanceJobStatus status = OperationalContextAssistanceJobStatus.QUEUED;
     private String currentStepCode = COLLECT_CONTEXT;
@@ -49,6 +50,7 @@ final class OperationalContextAssistanceJobState {
     private OperationalContextAssistanceDraft draft;
     private List<OperationalContextAssistanceProposalPreview> previews = List.of();
     private final List<OperationalContextAssistanceProposalDecision> proposalDecisions = new ArrayList<>();
+    private OperationalContextAssistanceReviewDraft reviewDraft;
     private boolean executionClaimed;
 
     OperationalContextAssistanceJobState(String jobId) {
@@ -56,6 +58,36 @@ final class OperationalContextAssistanceJobState {
         steps.put(COLLECT_CONTEXT, new MutableStep(COLLECT_CONTEXT, "Zbierz kontekst", "CONTEXT"));
         steps.put(PREPARE_AI, new MutableStep(PREPARE_AI, "Przygotuj asystę AI", "AI_PREPARATION"));
         steps.put(ANALYZE, new MutableStep(ANALYZE, "Przygotuj propozycje", "AI"));
+    }
+
+    static OperationalContextAssistanceJobState restore(
+            OperationalContextAssistanceJobSnapshot snapshot, Set<String> requiredRepositoryScopeIds
+    ) {
+        var state = new OperationalContextAssistanceJobState(snapshot.jobId());
+        state.createdAt = snapshot.createdAt();
+        state.updatedAt = snapshot.updatedAt();
+        state.completedAt = snapshot.completedAt();
+        state.status = snapshot.status();
+        state.currentStepCode = snapshot.currentStepCode();
+        state.errorCode = snapshot.errorCode();
+        state.errorMessage = snapshot.errorMessage();
+        state.catalogDigest = snapshot.catalogDigest();
+        state.preparedPrompt = snapshot.preparedPrompt();
+        state.sourceRevision = snapshot.sourceRevision();
+        state.sourceRefs = snapshot.sourceRefs();
+        state.requiredRepositoryScopeIds = Set.copyOf(requiredRepositoryScopeIds);
+        state.visibilityLimits.addAll(snapshot.visibilityLimits());
+        state.aiActivityEvents.addAll(snapshot.aiActivityEvents());
+        state.usage = snapshot.usage();
+        state.draft = snapshot.draft();
+        state.previews = snapshot.previews();
+        state.proposalDecisions.addAll(snapshot.proposalDecisions());
+        state.reviewDraft = snapshot.reviewDraft();
+        for (var step : snapshot.steps()) {
+            state.steps.put(step.code(), MutableStep.restore(step));
+        }
+        state.executionClaimed = true;
+        return state;
     }
 
     synchronized boolean start() {
@@ -300,6 +332,11 @@ final class OperationalContextAssistanceJobState {
         updatedAt = Instant.now();
     }
 
+    synchronized void saveReview(OperationalContextAssistanceReviewDraft value) {
+        reviewDraft = value;
+        updatedAt = Instant.now();
+    }
+
     synchronized OperationalContextAssistanceJobSnapshot snapshot() {
         return new OperationalContextAssistanceJobSnapshot(
                 jobId, status, currentStepCode, steps.get(currentStepCode).label,
@@ -307,7 +344,7 @@ final class OperationalContextAssistanceJobState {
                 steps.values().stream().map(MutableStep::snapshot).toList(),
                 List.copyOf(aiActivityEvents), usage, catalogDigest, sourceRevision,
                 sourceRefs, List.copyOf(visibilityLimits), draft, previews,
-                List.copyOf(proposalDecisions), preparedPrompt
+                List.copyOf(proposalDecisions), preparedPrompt, reviewDraft
         );
     }
 
@@ -326,6 +363,17 @@ final class OperationalContextAssistanceJobState {
             this.code = code;
             this.label = label;
             this.phase = phase;
+        }
+
+        private static MutableStep restore(AnalysisJobStepResponse snapshot) {
+            var step = new MutableStep(snapshot.code(), snapshot.label(), snapshot.phase());
+            step.status = snapshot.status();
+            step.message = snapshot.message();
+            step.itemCount = snapshot.itemCount();
+            step.startedAt = snapshot.startedAt();
+            step.completedAt = snapshot.completedAt();
+            step.usage = snapshot.usage();
+            return step;
         }
 
         private void start() {

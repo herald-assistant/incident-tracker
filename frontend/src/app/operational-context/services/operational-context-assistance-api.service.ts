@@ -8,6 +8,7 @@ import {
   OperationalContextAssistanceBatchPreview,
   OperationalContextAssistanceBatchReviewRequest,
   OperationalContextAssistanceRequest,
+  OperationalContextAssistanceReviewDraft,
   OperationalContextAssistanceSourceOptions
 } from '../models/operational-context-assistance.models';
 
@@ -35,6 +36,12 @@ export class OperationalContextAssistanceApiService {
 
   get(jobId: string): Observable<OperationalContextAssistanceJob> {
     return this.http.get<OperationalContextAssistanceJob>(`${this.baseUrl}/${encodeURIComponent(jobId)}`);
+  }
+
+  saveReview(jobId: string, reviewDraft: OperationalContextAssistanceReviewDraft): Observable<OperationalContextAssistanceJob> {
+    return this.http.put<OperationalContextAssistanceJob>(
+      `${this.baseUrl}/${encodeURIComponent(jobId)}/review`, reviewDraft
+    );
   }
 
   previewBatch(jobId: string, request: OperationalContextAssistanceBatchReviewRequest): Observable<OperationalContextAssistanceBatchPreview> {

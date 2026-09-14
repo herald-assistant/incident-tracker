@@ -134,8 +134,7 @@ boundedContexts:
 - Maintain `localLanguageSummary`, `scope`, `semanticBoundary`, `evidence` and
   `llmToolHints` through the guided UI fields. No supported bounded-context
   field requires raw JSON.
-- A legacy scalar `localLanguageSummary` remains readable and is normalized to
-  a list only after it is edited.
+- `localLanguageSummary` is a list of non-blank local-language statements.
 - Treat `scope` and `semanticBoundary` as semantic descriptions, never as an
   inventory of Java classes, tables, endpoints or executable workflow rules.
 - Treat `evidence` as provenance only. It does not fetch a source or prove a

@@ -47,6 +47,7 @@ import {
   OperationalContextAssistancePrefill
 } from '../../models/operational-context-assistance.models';
 import { AnalysisRunHistoryApiService } from '../../../core/services/analysis-run-history-api.service';
+import { OperationalContextAssistanceApiService } from '../../services/operational-context-assistance-api.service';
 
 type ContextTab =
   | 'overview'
@@ -689,6 +690,7 @@ export class ContextHomePageComponent {
   private readonly api = inject(OperationalContextApiService);
   private readonly maintenanceApi = inject(OperationalContextMaintenanceApiService);
   private readonly historyApi = inject(AnalysisRunHistoryApiService);
+  private readonly assistanceApi = inject(OperationalContextAssistanceApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private requestedHistoryRunId = '';
@@ -1119,7 +1121,7 @@ export class ContextHomePageComponent {
     this.editorFocusPath.set(null);
     this.maintenance.cancelDelete();
     this.closeDrawer();
-    if (this.assistanceHistoryReadOnly()) this.clearAssistanceHistory();
+    if (this.requestedHistoryRunId) this.clearAssistanceHistory();
     this.assistancePrefill.set(prefill);
     this.assistanceMounted.set(true);
     this.selectedTab.set('assistance');
@@ -1170,6 +1172,25 @@ export class ContextHomePageComponent {
             this.assistanceHistoryReadOnly.set(true);
             this.assistanceMounted.set(true);
             this.selectedTab.set('assistance');
+            if (localRunId === restored.job.jobId
+              && (restored.job.status === 'COMPLETED' || restored.job.status === 'PARTIAL')
+              && !!restored.job.draft?.proposals.length && !restored.job.proposalDecisions?.length) {
+              this.assistanceApi.get(restored.job.jobId)
+                .pipe(takeUntilDestroyed(this.destroyRef))
+                .subscribe({
+                  next: (live) => {
+                    if (this.requestedHistoryRunId !== localRunId) return;
+                    this.assistanceJob.set(live);
+                    this.assistanceHistoryReadOnly.set(Boolean(live.proposalDecisions?.length)
+                      || !live.draft?.proposals.length
+                      || (live.status !== 'COMPLETED' && live.status !== 'PARTIAL'));
+                  },
+                  error: () => {
+                    if (this.requestedHistoryRunId !== localRunId) return;
+                    this.assistanceHistoryError.set('Nie można wznowić decyzji dla tego zapisu. Wynik pozostaje do odczytu.');
+                  }
+                });
+            }
           } catch (error) {
             this.assistanceHistoryError.set(error instanceof Error ? error.message : 'Nie udało się odtworzyć zapisanej asysty.');
           }
@@ -1609,7 +1630,7 @@ function restoreAssistanceHistoryRun(envelopeValue: unknown): {
     'COMPLETED', 'PARTIAL', 'BLOCKED', 'FAILED'
   ];
   if (envelope?.['schema'] !== 'tdw.operational-context-assistance-export'
-    || envelope['version'] !== 1
+    || envelope['version'] !== 2
     || !validModes.includes(String(mode))
     || !job
     || typeof job['jobId'] !== 'string'
@@ -1626,7 +1647,6 @@ function restoreAssistanceHistoryRun(envelopeValue: unknown): {
   }
   const draft = asRecord(job['draft']);
   if (draft && (!Array.isArray(draft['proposals'])
-    || !Array.isArray(draft['questions'])
     || !Array.isArray(draft['visibilityLimits']))) {
     throw new Error('Zapis asysty zawiera uszkodzony draft.');
   }

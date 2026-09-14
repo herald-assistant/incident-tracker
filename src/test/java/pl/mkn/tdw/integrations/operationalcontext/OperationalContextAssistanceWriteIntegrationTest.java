@@ -18,6 +18,7 @@ import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAs
 import pl.mkn.tdw.features.operationalcontextassistance.api.OperationalContextAssistanceProposalDecisionRequest;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraft;
 import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftParser;
+import pl.mkn.tdw.features.operationalcontextassistance.draft.OperationalContextAssistanceDraftPreflight;
 import pl.mkn.tdw.features.operationalcontextassistance.job.OperationalContextAssistanceJobService;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceCollector;
 import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContextGitLabSourceSnapshot;
@@ -43,6 +44,51 @@ class OperationalContextAssistanceWriteIntegrationTest {
 
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void resolvesGlossaryReferencesToTermsCreatedLaterInTheSameBatch() {
+        var harness = harness("crm-forward-glossary", List.of(
+                proposal("glossary-term", "crm-customer-profile", Map.of(
+                        "term", "CRM Customer Profile", "category", "domain-term",
+                        "definition", "A CRM profile used for customer support.",
+                        "relatedTerms", List.of("crm-contact-preference"))),
+                proposal("glossary-term", "crm-contact-preference", Map.of(
+                        "term", "CRM Contact Preference", "category", "domain-term",
+                        "definition", "A customer's preferred CRM contact channel."))));
+        var jobId = harness.startJob();
+        var initialDigest = harness.digest();
+
+        assertThat(harness.preview(jobId, Set.of(0, 1)).valid()).isTrue();
+        assertThat(harness.digest()).isEqualTo(initialDigest);
+        harness.apply(jobId, Set.of(0, 1));
+
+        assertThat(harness.maintenance().entity("glossary-term", "crm-customer-profile").payload())
+                .containsEntry("relatedTerms", List.of("crm-contact-preference"));
+    }
+
+    @Test
+    void reportsTheMutationAndListPositionWhenASelectedReferenceIsMissing() throws Exception {
+        var harness = harness("crm-missing-glossary", List.of(
+                proposal("glossary-term", "crm-customer-profile", Map.of(
+                        "term", "CRM Customer Profile", "category", "domain-term",
+                        "definition", "A CRM profile used for customer support.",
+                        "relatedTerms", List.of("crm-contact-preference"))),
+                proposal("glossary-term", "crm-contact-preference", Map.of(
+                        "term", "CRM Contact Preference", "category", "domain-term",
+                        "definition", "A customer's preferred CRM contact channel."))));
+        var jobId = harness.startJob();
+        var originalGlossary = Files.readString(temporaryDirectory.resolve("crm-missing-glossary/glossary.yml"));
+
+        assertThatThrownBy(() -> harness.preview(jobId, Set.of(0)))
+                .isInstanceOfSatisfying(OperationalContextCatalogMaintenanceException.class, error -> {
+                    assertThat(error.fieldErrors()).anySatisfy(field -> {
+                        assertThat(field.pointer()).isEqualTo("/mutations/0/payload/relatedTerms/0");
+                        assertThat(field.message()).isEqualTo("Referenced entity does not exist");
+                    });
+                });
+        assertThat(Files.readString(temporaryDirectory.resolve("crm-missing-glossary/glossary.yml")))
+                .isEqualTo(originalGlossary);
+    }
 
     @Test
     void savesDependentProposalsTogetherWithOneCatalogDigest() {
@@ -218,7 +264,7 @@ class OperationalContextAssistanceWriteIntegrationTest {
                 OperationalContextAssistanceDraft.Confidence.HIGH, false);
         var staleScope = new OperationalContextAssistanceDraft.Proposal(
                 firstScope.operation(), firstScope.entityType(), firstScope.entityId(), List.of(wrongBefore),
-                firstScope.confidence(), firstScope.requiresConfirmation(), firstScope.questions(),
+                firstScope.confidence(), firstScope.requiresConfirmation(),
                 firstScope.visibilityLimits());
         var staleChanges = List.of(changes.get(0), staleScope, changes.get(2));
         assertThatThrownBy(() -> harness.maintenance().previewAcceptedBatch(batch(digest, staleChanges)))
@@ -292,12 +338,12 @@ class OperationalContextAssistanceWriteIntegrationTest {
         when(prompt.prepare(any())).thenReturn(new OperationalContextAssistancePromptPreparation(
                 "prompt", Map.of("input.json", "{\"visibilityLimits\":[]}"), Set.of("operator:description")));
         var copilot = mock(OperationalContextAssistanceCopilotProvider.class);
-        when(copilot.execute(anyString(), any(), any(), any(), any(), any()))
+        when(copilot.execute(anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new OperationalContextAssistanceCopilotResult(
                         new CopilotExecutionResult("{draft}", null), Set.of()));
         var parser = mock(OperationalContextAssistanceDraftParser.class);
         when(parser.parse(anyString(), any())).thenReturn(new OperationalContextAssistanceDraft(
-                proposals.apply(maintenance), List.of(), List.of()));
+                proposals.apply(maintenance), List.of()));
 
         var collector = mock(OperationalContextGitLabSourceCollector.class);
         when(collector.collect(anyString(), anyString())).thenReturn(new OperationalContextGitLabSourceSnapshot(
@@ -309,7 +355,9 @@ class OperationalContextAssistanceWriteIntegrationTest {
         var job = new OperationalContextAssistanceJobService(
                 port, new OperationalContextAssistanceCatalogMaterialService(port, mapper),
                 maintenance, validation, collector,
-                prompt, copilot, parser, mapper, Runnable::run,
+                prompt, copilot, parser,
+                new OperationalContextAssistanceDraftPreflight(parser, maintenance, port),
+                mapper, Runnable::run,
                 () -> AnalysisAiAuthRef.localToken("test"),
                 pl.mkn.tdw.features.operationalcontextassistance.job.localworkspace
                         .OperationalContextAssistanceLocalRunPersistence.NO_OP);
@@ -396,7 +444,7 @@ class OperationalContextAssistanceWriteIntegrationTest {
         return new OperationalContextAssistanceDraft.Proposal(
                 OperationalContextAssistanceDraft.Operation.UPDATE, "code-search-scope", scopeId,
                 List.of(change), OperationalContextAssistanceDraft.Confidence.HIGH,
-                false, List.of(), List.of());
+                false, List.of());
     }
 
     private Map<String, String> emptyDocuments() {
@@ -445,7 +493,7 @@ class OperationalContextAssistanceWriteIntegrationTest {
                 )).toList();
         return new OperationalContextAssistanceDraft.Proposal(
                 OperationalContextAssistanceDraft.Operation.CREATE, type, id, changes,
-                OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of(), List.of());
+                OperationalContextAssistanceDraft.Confidence.HIGH, false, List.of());
     }
 
     private record Harness(

@@ -21,7 +21,8 @@ boundedContexts:
       strong:
         markers: [CRM_CONTACT]
     relations:
-      - target: crm-notification-context
+      - targetType: bounded-context
+        target: crm-notification-context
         type: conformist
         via: [crm-contact-to-notification-sync]
 gaps:

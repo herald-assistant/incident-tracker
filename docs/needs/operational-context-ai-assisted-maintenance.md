@@ -23,11 +23,17 @@ startowym dla tej grupy.
   musi wybierac typu encji ani samodzielnie ukladac referencji.
 - Dostaje maly, uzyteczny zestaw propozycji do sprawdzenia, z wyjasnieniem
   wartosci kazdej zmiany dla nastepnej analizy, zrodlami, niepewnoscia i
-  pytaniami wymagajacymi decyzji czlowieka.
+  ograniczeniami widocznosci. Asysta nie oczekuje odpowiedzi w trakcie runu.
 - Moze poprawic, przyjac lub odrzucic poszczegolne propozycje przed zapisem.
   Po zapisie widzi aktualny stan katalogu i pozostale luki.
+- Przy sprawdzaniu calego zestawu widzi, ktore pola pominal i ktore wybrane
+  pola nadal wymagaja potwierdzenia, bez zgadywania zakresu akcji na liscie.
+- Moze przerwac przeglad niezapisanego zestawu, wrocic do niego z historii,
+  zobaczyc swoje poprawki i dokonczyc zatwierdzenie bez ponownej analizy AI.
 - Gdy zrodla sa niepelne, wynik pozostaje czesciowy. Brak danych jest
-  widoczny, a nie zastepowany prawdopodobnie brzmiacym faktem.
+  widoczny, a nie zastepowany prawdopodobnie brzmiacym faktem. Jawne
+  przypisanie ownera w opisie moze stac sie propozycja do recznego przegladu;
+  model nie prosi o kolejne potwierdzenie w rozmowie.
 
 ## Kryteria sukcesu
 
@@ -44,6 +50,14 @@ startowym dla tej grupy.
   zrodla mozna odroznic obserwacje od interpretacji i wskazac zrodlo.
 - Blad AI, niedostepne zrodlo lub niepoprawna propozycja nie niszcza lokalnego
   katalogu i pozostawiaja reczna edycje dostepna.
+- Przed odpowiedzia AI moze sprawdzic caly draft read-only walidatorem, ktory
+  wskazuje brakujaca referencje do konkretnej propozycji i pola. Backend
+  ponawia te kontrole po odpowiedzi, a podglad wybranego podzbioru pokazuje
+  operatorowi ID brakujacego wpisu przy edytowanym polu. Referencja do encji
+  tworzonej pozniej w tym samym zestawie jest prawidlowa.
+- Powrot do nierozstrzygnietej analizy przywraca wybor pol, potwierdzenia i
+  reczne poprawki; ponowny podglad poprzedza zapis katalogu. Rozstrzygnieta
+  analiza nie moze zostac zatwierdzona drugi raz.
 - Przy opcjonalnym zrodle GitLab uzytkownik rozumie, jaka grupa jest
   skonfigurowana, skad pochodza podpowiedzi projektow i jaka nazwe projektu
   zostanie wyslana. Ten sam projekt nie pojawia sie wielokrotnie, nawet gdy
@@ -54,8 +68,8 @@ startowym dla tej grupy.
 - Po wskazaniu projektu AI dostaje ograniczona mape jego katalogow i plikow
   oraz moze zejsc glebiej w tym samym przypietym commicie. Same nazwy nie
   potwierdzaja znaczenia kodu: wnioski o implementacji wymagaja odczytu
-  odpowiedniego pliku. Zadanie zwracajace tylko pytania nie wyglada jak
-  zakonczony przeglad propozycji.
+  odpowiedniego pliku. Zadanie bez bezpiecznej propozycji zachowuje wynik
+  i koszt, ale nie wyglada jak zakonczony przeglad zmian.
 - Przy sprawdzaniu integracji lub zaleznosci biblioteki AI moze doczytac inny
   projekt z tej samej skonfigurowanej glownej grupy GitLab. Katalog podaje
   znane projekty jako podpowiedzi, ale nie blokuje projektow jeszcze w nim
@@ -73,8 +87,10 @@ startowym dla tej grupy.
 - Asysta ma najwyzej jeden jawnie wybrany projekt GitLab jako glowny target;
   inne projekty nie moga go zastapic jako dowodu tozsamosci. Wskazana strona
   Confluence pozostaje poza tym przyrostem.
-- Dane wrazliwe, sekrety i prywatne dane kontaktowe nie powinny byc
-  przenoszone do katalogu ani do materialu wysylanego do AI.
+- Asysta przekazuje do AI pelna tresc wybranych i doczytanych plikow GitLab,
+  opis operatora oraz aktywny katalog bez heurystycznej redakcji danych.
+  Przygotowany prompt i wynik sa widoczne w jobie oraz lokalnej historii.
+  Reguly maintenance nadal okreslaja, jakie fakty nalezy utrwalac w katalogu.
 - Reczna edycja oraz Validation i Open Questions pozostaja dostepne rownolegle
   z pomoca AI.
 

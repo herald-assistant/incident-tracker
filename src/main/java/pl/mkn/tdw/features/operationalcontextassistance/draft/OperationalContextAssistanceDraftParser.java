@@ -11,7 +11,6 @@ import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogEntit
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceException;
 import pl.mkn.tdw.integrations.operationalcontext.OperationalContextCatalogMaintenanceService;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceMode;
-import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistancePromptSanitizer;
 import pl.mkn.tdw.features.operationalcontextassistance.ai.OperationalContextAssistanceRepositoryFacts;
 
 import java.util.ArrayList;
@@ -46,10 +45,10 @@ public class OperationalContextAssistanceDraftParser {
             "\\A[ \\t\\r\\n]*```(?:json)?[ \\t]*\\r?\\n(.*?)\\r?\\n```[ \\t\\r\\n]*\\z",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL
     );
-    private static final Set<String> ROOT_FIELDS = Set.of("proposals", "questions", "visibilityLimits");
+    private static final Set<String> ROOT_FIELDS = Set.of("proposals", "visibilityLimits");
     private static final Set<String> PROPOSAL_FIELDS = Set.of(
             "operation", "entityType", "entityId", "changes", "confidence", "requiresConfirmation",
-            "questions", "visibilityLimits"
+            "visibilityLimits"
     );
     private static final Set<String> CHANGE_FIELDS = Set.of(
             "path", "before", "after", "reason", "basis", "sourceRefs", "confidence", "requiresConfirmation"
@@ -77,9 +76,6 @@ public class OperationalContextAssistanceDraftParser {
         } catch (JsonProcessingException exception) {
             throw new OperationalContextAssistanceDraftParseException("Response is not strict JSON", exception);
         }
-        if (OperationalContextAssistancePromptSanitizer.containsSensitiveContent(root, objectMapper)) {
-            throw invalid("Draft contains sensitive content");
-        }
         requireObject(root, "$", ROOT_FIELDS);
         var proposalsNode = requireArray(root, "proposals", "$", MAX_PROPOSALS);
         var proposals = new ArrayList<Proposal>();
@@ -89,7 +85,6 @@ public class OperationalContextAssistanceDraftParser {
         validateScope(proposals, scope);
         return new OperationalContextAssistanceDraft(
                 proposals,
-                textList(root, "questions", "$", MAX_LIST),
                 textList(root, "visibilityLimits", "$", MAX_LIST)
         );
     }
@@ -374,14 +369,18 @@ public class OperationalContextAssistanceDraftParser {
             }
             changes.add(change);
         }
+        var requiresConfirmation = booleanValue(node, "requiresConfirmation", location);
+        if (!requiresConfirmation && changes.stream().anyMatch(change ->
+                requiresDirectOperatorReview(entityType, change.path(), change.after()))) {
+            throw invalid(location + " requires manual review for ownership or frontend classification");
+        }
         return new Proposal(
                 operation,
                 entityType,
                 entityId,
                 changes,
                 enumValue(Confidence.class, text(node, "confidence", location), location + ".confidence"),
-                booleanValue(node, "requiresConfirmation", location),
-                textList(node, "questions", location, MAX_LIST),
+                requiresConfirmation,
                 textList(node, "visibilityLimits", location, MAX_LIST)
         );
     }
@@ -415,19 +414,6 @@ public class OperationalContextAssistanceDraftParser {
         if (before != null && !maintenanceService.validatePartialEditablePayload(entityType, Map.of(path, before)).isEmpty()) {
             throw invalid(location + ".before has an invalid catalog shape");
         }
-        if ("system".equals(entityType) && "systemSubtype".equals(path)
-                && after instanceof String subtype && "frontend".equalsIgnoreCase(subtype)) {
-            throw invalid(location + " cannot confirm frontend subtype");
-        }
-        if ("ownership".equals(path) && after instanceof Map<?, ?> ownership
-                && ("explicit".equalsIgnoreCase(String.valueOf(ownership.get("ownershipStatus")))
-                || ownership.containsKey("ownerTeamIds") || ownership.containsKey("ownerLabel"))) {
-            throw invalid(location + " cannot confirm ownership");
-        }
-        if ("repository".equals(entityType) && "repositoryType".equals(path)
-                && after instanceof String repositoryType && "frontend".equalsIgnoreCase(repositoryType)) {
-            throw invalid(location + " cannot confirm frontend repository type");
-        }
         var basis = enumValue(Basis.class, text(node, "basis", location), location + ".basis");
         var reason = text(node, "reason", location);
         var sourceRefs = textList(node, "sourceRefs", location, MAX_LIST);
@@ -441,6 +427,12 @@ public class OperationalContextAssistanceDraftParser {
                 ref.startsWith("gitlab:") || ref.startsWith("opctx:"))) {
             throw invalid(location + ".sourceRefs needs a catalog document or GitLab file for SOURCE_OBSERVATION");
         }
+        var requiresConfirmation = booleanValue(node, "requiresConfirmation", location);
+        if (requiresDirectOperatorReview(entityType, path, after)
+                && (basis != Basis.USER_STATEMENT || !sourceRefs.contains("operator:description")
+                || !requiresConfirmation)) {
+            throw invalid(location + " requires an explicit operator description and manual review");
+        }
         return new FieldChange(
                 path,
                 before,
@@ -449,8 +441,18 @@ public class OperationalContextAssistanceDraftParser {
                 basis,
                 sourceRefs,
                 enumValue(Confidence.class, text(node, "confidence", location), location + ".confidence"),
-                booleanValue(node, "requiresConfirmation", location)
+                requiresConfirmation
         );
+    }
+
+    private boolean requiresDirectOperatorReview(String entityType, String path, Object after) {
+        if ("ownership".equals(path) && after instanceof Map<?, ?> ownership) {
+            return "explicit".equalsIgnoreCase(String.valueOf(ownership.get("ownershipStatus")))
+                    || ownership.containsKey("ownerTeamIds") || ownership.containsKey("ownerLabel");
+        }
+        return ("system".equals(entityType) && "systemSubtype".equals(path)
+                || "repository".equals(entityType) && "repositoryType".equals(path))
+                && after instanceof String value && "frontend".equalsIgnoreCase(value);
     }
 
     private void requireObject(JsonNode node, String location, Set<String> allowedFields) {

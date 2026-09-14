@@ -91,7 +91,7 @@ class OperationalContextMaintenanceInstructionsTest {
         var processPrompt = read("operational-context-maintenance/processes-yml-update-prompt.md");
 
         assertTrue(guidance.contains("repository Git identity uses explicit"));
-        assertTrue(guidance.contains("`projectPath` is the canonical provider-relative lookup identity"));
+        assertTrue(guidance.contains("`projectPath` is the provider-relative lookup identity"));
         assertTrue(guidance.contains("process participants use actor lines and role-specific system pickers"));
         assertTrue(guidance.contains("matchSignals.strong.terms"));
         assertTrue(guidance.contains("crm-contact-core"));
@@ -100,16 +100,16 @@ class OperationalContextMaintenanceInstructionsTest {
     }
 
     @Test
-    void shouldDocumentGuidedSignalsRelationsAndPreserveOnlyParticipantRepositories() throws IOException {
+    void shouldDocumentCanonicalSignalsRelationsAndParticipantRepositoryBoundary() throws IOException {
         var guidance = read("operational-context-maintenance/operational-context-field-guidance.md");
         var integrationPrompt = read("operational-context-maintenance/integrations-yml-update-prompt.md");
 
         assertTrue(guidance.contains("recognition signals use repeatable confidence/key/value rows"));
         assertTrue(guidance.contains("relations use repeatable semantic-edge cards"));
         assertTrue(guidance.contains("Recognition-signal buckets are `exact`, `strong`, `medium` or `weak`"));
-        assertTrue(guidance.contains("canonical `targetType` plus `target`"));
-        assertTrue(guidance.contains("Participant-level `repositories` from"));
-        assertTrue(integrationPrompt.contains("preserve-only"));
+        assertTrue(guidance.contains("`targetType` and `target` are required together"));
+        assertTrue(guidance.contains("Link code through top-level `references`"));
+        assertTrue(integrationPrompt.contains("participants have no repository field"));
         assertTrue(integrationPrompt.contains("code-search scopes"));
     }
 
@@ -136,15 +136,15 @@ class OperationalContextMaintenanceInstructionsTest {
         var processPrompt = read("operational-context-maintenance/processes-yml-update-prompt.md");
 
         assertTrue(guidance.contains("`processBoundary`, `lifecycle` and `completionSignals` have separate jobs"));
-        assertTrue(guidance.contains("Legacy non-blank string/list values remain readable as `endsWhen`"));
-        assertTrue(guidance.contains("Legacy non-blank string/list values remain readable as `statuses`"));
+        assertTrue(guidance.contains("`processBoundary` | Guided object"));
+        assertTrue(guidance.contains("`lifecycle` | Guided object"));
         assertTrue(guidance.contains("CRM process-boundary example"));
         assertTrue(guidance.contains("CRM lifecycle example"));
         assertTrue(guidance.contains("CRM completion-signal example"));
         assertTrue(processPrompt.contains("Guided CRM process semantics"));
         assertTrue(processPrompt.contains("CRM Contact Preference Management"));
         assertTrue(processPrompt.contains("Lifecycle is descriptive operational context, not workflow configuration"));
-        assertTrue(processPrompt.contains("completion signals to `successful`"));
+        assertTrue(processPrompt.contains("`processBoundary`, `lifecycle` and `completionSignals` are objects"));
     }
 
     @Test

@@ -73,7 +73,9 @@ Nie obejmuje:
   wynika z konfiguracji. Lista galezi pozwala ustalic ref drugiego projektu.
   Hidden `GitLabRepositoryToolScope` przypina wybrany projekt do commita
   operatora i kolejne projekty w tej grupie do osobnych commitow. Tree/list/search
-  zwracaja sciezki, nie `sourceRef`; pelny, bezpieczny odczyt rejestruje ref.
+  zwracaja sciezki, nie `sourceRef`; pelny odczyt z przypietego commita
+  rejestruje ref. Nawigacja i odczyt nie filtruja nazw ani tresci na podstawie
+  wzorcow danych wrazliwych; pozostaja walidacja sciezki, rozmiaru i tekstu.
   Feature wybiera allowliste i budzet z tego wspolnego katalogu.
 - Frontendowe route branch i TypeScript symbol slice tools mieszkaja w
   `gitlab.frontend.mcp` i deleguja do `integrations.gitlab.frontend`. Ich

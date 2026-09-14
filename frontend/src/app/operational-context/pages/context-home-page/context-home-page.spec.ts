@@ -39,7 +39,7 @@ describe('ContextHomePageComponent', () => {
     const { fixture, historyApi, routeParams, assistancePolling } = await createComponent(emptySummary(), []);
     const archived: OperationalContextAssistanceJob = {
       ...queuedAssistanceJob(), status: 'COMPLETED', currentStepCode: 'ANALYZE',
-      currentStepLabel: 'Przygotuj propozycje', preparedPrompt: 'Sanitizowany prompt asysty',
+      currentStepLabel: 'Przygotuj propozycje', preparedPrompt: 'Opis CRM: apiToken=fictional-example',
       steps: [], completedAt: '2026-09-13T10:02:00Z'
     };
     historyApi.getRun.mockReturnValue(of({
@@ -47,7 +47,7 @@ describe('ContextHomePageComponent', () => {
       name: 'Asysta AI', status: 'COMPLETED', createdAt: archived.createdAt,
       updatedAt: archived.updatedAt, completedAt: archived.completedAt,
       continuationEnabled: false,
-      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 1,
+      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 2,
         mode: 'CREATE_AREA', target: null, exportedAt: archived.updatedAt, job: archived }
     }));
 
@@ -59,9 +59,44 @@ describe('ContextHomePageComponent', () => {
     expect(historyApi.getRun).toHaveBeenCalledWith('assistance-1');
     expect(fixture.componentInstance.selectedTab()).toBe('assistance');
     expect(fixture.componentInstance.assistanceHistoryReadOnly()).toBe(true);
-    expect(fixture.componentInstance.assistanceJob()?.preparedPrompt).toBe('Sanitizowany prompt asysty');
+    expect(fixture.componentInstance.assistanceJob()?.preparedPrompt)
+      .toBe('Opis CRM: apiToken=fictional-example');
     expect(fixture.nativeElement.querySelector('.assistance-form')).toBeNull();
     expect(assistancePolling.poll).not.toHaveBeenCalled();
+  });
+
+  it('resumes an undecided saved assistance run from Analysis History', async () => {
+    const { fixture, historyApi, routeParams, assistanceApi } = await createComponent(emptySummary(), []);
+    const archived: OperationalContextAssistanceJob = {
+      ...queuedAssistanceJob(), status: 'COMPLETED', currentStepCode: 'ANALYZE',
+      completedAt: '2026-09-13T10:02:00Z',
+      draft: { proposals: [{ operation: 'CREATE', entityType: 'system', entityId: 'crm-api',
+        changes: [{ path: 'name', after: 'CRM API', reason: 'Opis operatora', basis: 'USER_STATEMENT',
+          sourceRefs: ['operator:description'], confidence: 'HIGH', requiresConfirmation: false }],
+        confidence: 'HIGH', requiresConfirmation: false, visibilityLimits: [] }],
+        visibilityLimits: [] },
+      reviewDraft: { selections: [{ selectedPaths: ['name'], confirmedPaths: [], editedValues: { name: 'CRM Customer API' } }] }
+    };
+    historyApi.getRun.mockReturnValue(of({
+      analysisId: 'assistance-1', feature: 'operational-context-assistance',
+      name: 'CRM assistance', status: 'COMPLETED', createdAt: archived.createdAt,
+      updatedAt: archived.updatedAt, completedAt: archived.completedAt,
+      continuationEnabled: false,
+      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 2,
+        mode: 'CREATE_AREA', target: null, exportedAt: archived.updatedAt, job: archived }
+    }));
+    assistanceApi.get.mockReturnValue(of(archived));
+
+    routeParams.next(convertToParamMap({ localRunId: 'assistance-1' }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(assistanceApi.get).toHaveBeenCalledWith('assistance-1');
+    expect(fixture.componentInstance.assistanceHistoryReadOnly()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.assistance-proposal__actions')).not.toBeNull();
+    expect(fixture.componentInstance.assistanceJob()?.reviewDraft?.selections[0].editedValues['name'])
+      .toBe('CRM Customer API');
   });
 
   it('keeps the saved result visible when history is opened after the assistance panel was mounted', async () => {
@@ -74,7 +109,7 @@ describe('ContextHomePageComponent', () => {
     const archived: OperationalContextAssistanceJob = {
       ...queuedAssistanceJob(), status: 'PARTIAL', currentStepCode: 'ANALYZE',
       currentStepLabel: 'Przygotuj propozycje', preparedPrompt: 'Zapisany prompt asysty',
-      draft: { proposals: [], questions: ['Który zespół odpowiada za system?'], visibilityLimits: [] },
+      draft: { proposals: [], visibilityLimits: ['Brak potwierdzenia właściciela systemu.'] },
       completedAt: '2026-09-13T10:02:00Z'
     };
     historyApi.getRun.mockReturnValue(of({
@@ -82,7 +117,7 @@ describe('ContextHomePageComponent', () => {
       name: 'Asysta AI', status: 'PARTIAL', createdAt: archived.createdAt,
       updatedAt: archived.updatedAt, completedAt: archived.completedAt,
       continuationEnabled: false,
-      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 1,
+      exportEnvelope: { schema: 'tdw.operational-context-assistance-export', version: 2,
         mode: 'CREATE_AREA', target: null, exportedAt: archived.updatedAt, job: archived }
     }));
 
@@ -93,7 +128,7 @@ describe('ContextHomePageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.assistance-run')).not.toBeNull();
-    expect(compiled.textContent).toContain('Który zespół odpowiada za system?');
+    expect(compiled.textContent).toContain('Brak potwierdzenia właściciela systemu.');
     expect(compiled.querySelector('.assistance-form')).toBeNull();
     expect(fixture.componentInstance.assistanceJob()?.jobId).toBe('assistance-1');
   });

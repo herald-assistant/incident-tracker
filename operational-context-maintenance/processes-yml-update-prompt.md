@@ -5,8 +5,7 @@ Field formats, constrained values and runtime/AI effects are defined in
 
 The maintenance UI uses actor/system selectors for `participants` and ordered
 cards for `steps`. Step references use the canonical `references` object read
-by the runtime relation graph; legacy `match` is preserved by the backend but
-new guided signals are written to `matchSignals.strong.terms`.
+by the runtime relation graph; guided signals use `matchSignals.strong.terms`.
 
 ## Purpose
 
@@ -208,8 +207,7 @@ completionSignals:
   integrations, glossary terms and handoff rules. Participant system roles
   already connect the process to systems; do not duplicate them in
   `references.systems`.
-- `outcomes` and `observability` from older data are preserve-only; do not
-  propose them in a new or updated process.
+- Do not use `outcomes` or `observability`; they are outside the process schema.
 - Keep step `matchSignals` as business words or durable labels.
 - Keep `processBoundary` limited to `businessCapability`, `startsWhen`,
   `endsWhen`, `includes`, `excludes` and `assumptions`. Boundary assumptions
@@ -220,10 +218,8 @@ completionSignals:
 - Keep `completionSignals` as observable evidence grouped into `successful`,
   `partial`, `failed` and `cancelled`. Do not copy lifecycle outcomes into this
   field unless they are independently observable facts.
-- Legacy non-blank string/list shapes remain readable. Normalize them only
-  after actual editing: boundary to `endsWhen`, lifecycle to `statuses` and
-  completion signals to `successful`. Unknown object keys are removed when
-  the entity is updated.
+- `processBoundary`, `lifecycle` and `completionSignals` are objects with the
+  documented fields. Unknown keys are removed when the entity is updated.
 - Keep process `failureModes` as guided cards with unique kebab-case `id`,
   required `name` and `summary`, optional existing `affectedStep`, and
   observable `signals`; they are hypotheses, not confirmed root causes.

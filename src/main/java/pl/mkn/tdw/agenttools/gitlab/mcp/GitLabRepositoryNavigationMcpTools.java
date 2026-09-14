@@ -94,7 +94,7 @@ public class GitLabRepositoryNavigationMcpTools {
     }
 
     @Tool(name = LIST_REPOSITORY_FILES, description = """
-            List bounded code and documentation file paths in one GitLab project and branch.
+            List bounded file paths in one GitLab project and branch.
             projectName is relative to the configured main group and may include subgroups.
             Use nextCursor to continue a partial page. Paths are navigation, not source citations.
             """)
@@ -113,7 +113,7 @@ public class GitLabRepositoryNavigationMcpTools {
                 target.commitId(), prefix, safeCursor(afterPath), MAX_LIST_RESULTS);
         var paths = page.files().stream()
                 .filter(file -> matches(file, target) && withinPrefix(file.filePath(), prefix)
-                        && GitLabVerifiedRepositoryFileReader.isReadablePath(file.filePath()))
+                        && GitLabVerifiedRepositoryFileReader.isSafePath(file.filePath(), false))
                 .map(GitLabRepositoryFile::filePath).distinct().toList();
         return new FilePathsResult(target.projectPath(), target.branch(), target.commitId(), paths,
                 page.nextCursor() != null, page.nextCursor());
@@ -154,7 +154,7 @@ public class GitLabRepositoryNavigationMcpTools {
                     target.group(), target.projectName(), target.branch(), List.of(query), MAX_SEARCH_RESULTS);
             var paths = candidates.stream()
                     .filter(candidate -> matches(candidate, target) && withinPrefix(candidate.filePath(), prefix)
-                            && GitLabVerifiedRepositoryFileReader.isReadablePath(candidate.filePath()))
+                            && GitLabVerifiedRepositoryFileReader.isSafePath(candidate.filePath(), false))
                     .map(GitLabRepositoryFileCandidate::filePath).distinct().limit(MAX_SEARCH_RESULTS).toList();
             var verifiedPaths = paths.stream().filter(path -> matchesPinnedContent(target, path, query)).toList();
             if (!verifiedPaths.isEmpty()) {
@@ -253,7 +253,7 @@ public class GitLabRepositoryNavigationMcpTools {
                 target.commitId(), prefix, cursor, MAX_SEARCH_SCAN_FILES);
         var paths = page.files().stream()
                 .filter(file -> matches(file, target) && withinPrefix(file.filePath(), prefix)
-                        && GitLabVerifiedRepositoryFileReader.isReadablePath(file.filePath()))
+                        && GitLabVerifiedRepositoryFileReader.isSafePath(file.filePath(), false))
                 .map(GitLabRepositoryFile::filePath).distinct()
                 .filter(path -> matchesPinnedContent(target, path, query)).toList();
         return new FilePathsResult(target.projectPath(), target.branch(), target.commitId(), paths,

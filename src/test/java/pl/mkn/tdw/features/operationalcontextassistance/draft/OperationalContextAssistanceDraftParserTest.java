@@ -9,6 +9,7 @@ import pl.mkn.tdw.features.operationalcontextassistance.source.OperationalContex
 
 import java.util.Set;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,24 +29,23 @@ class OperationalContextAssistanceDraftParserTest {
             assertThat(proposal.entityType()).isEqualTo("system");
             assertThat(proposal.changes()).singleElement().satisfies(change -> {
                 assertThat(change.path()).isEqualTo("name");
-                assertThat(change.after()).isEqualTo("Order Intake");
-                assertThat(change.reason()).isEqualTo("Operator nazwał ten obszar Order Intake.");
+                assertThat(change.after()).isEqualTo("CRM Contact Intake");
+                assertThat(change.reason()).isEqualTo("Operator nazwał ten obszar CRM Contact Intake.");
                 assertThat(change.sourceRefs()).containsExactly("operator:description");
             });
         });
     }
 
     @Test
-    void acceptsOneJsonCodeFenceAndPreservesQuestionOnlyModelAnswer() {
-        var questionOnly = """
-                {"proposals":[],"questions":["Które repozytorium mam przeczytać?"],
+    void acceptsOneJsonCodeFenceWithVisibilityLimit() {
+        var result = """
+                {"proposals":[],
                  "visibilityLimits":["Nie wybrano źródła GitLab."]}
                 """;
 
-        var draft = parser.parse("```json\n" + questionOnly + "```", createScope());
+        var draft = parser.parse("```json\n" + result + "```", createScope());
 
         assertThat(draft.proposals()).isEmpty();
-        assertThat(draft.questions()).containsExactly("Które repozytorium mam przeczytać?");
         assertThat(draft.visibilityLimits()).containsExactly("Nie wybrano źródła GitLab.");
         assertThat(parser.parse("```\n" + validDraft() + "\n```", createScope()).proposals())
                 .hasSize(1);
@@ -74,13 +74,13 @@ class OperationalContextAssistanceDraftParserTest {
                    "changes":[{"path":"definition","before":"Stara definicja","after":"Nowa definicja",
                      "reason":"Istniejący termin wymaga uściślenia.","basis":"SOURCE_OBSERVATION",
                      "sourceRefs":["opctx:glossary.yml"],"confidence":"MEDIUM","requiresConfirmation":true}],
-                   "confidence":"MEDIUM","requiresConfirmation":true,"questions":[],"visibilityLimits":[]},
+                   "confidence":"MEDIUM","requiresConfirmation":true,"visibilityLimits":[]},
                   {"operation":"CREATE","entityType":"integration","entityId":"customer-profile-to-archive",
                    "changes":[{"path":"name","after":"Archiwizacja profilu klienta",
                      "reason":"Operator wskazał trwałą relację.","basis":"USER_STATEMENT",
                      "sourceRefs":["operator:description","opctx:systems.yml"],"confidence":"MEDIUM","requiresConfirmation":true}],
-                   "confidence":"MEDIUM","requiresConfirmation":true,"questions":[],"visibilityLimits":[]}
-                ],"questions":[],"visibilityLimits":[]}
+                   "confidence":"MEDIUM","requiresConfirmation":true,"visibilityLimits":[]}
+                ],"visibilityLimits":[]}
                 """;
         var scope = new OperationalContextAssistanceDraftScope(
                 OperationalContextAssistanceMode.CREATE_AREA, null, null,
@@ -93,12 +93,16 @@ class OperationalContextAssistanceDraftParserTest {
 
     @Test
     void rejectsUnknownEnvelopeAndNestedCatalogFields() {
-        assertThatThrownBy(() -> parser.parse(validDraft().replace("\"questions\": []", "\"unknown\": true, \"questions\": []"),
+        assertThatThrownBy(() -> parser.parse(validDraft().replace("\"visibilityLimits\": []", "\"unknown\": true, \"visibilityLimits\": []"),
+                createScope()))
+                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
+                .hasMessageContaining("unknown field");
+        assertThatThrownBy(() -> parser.parse(validDraft().replace("\"visibilityLimits\": []", "\"questions\": [], \"visibilityLimits\": []"),
                 createScope()))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("unknown field");
 
-        var nested = validDraft().replace("\"path\": \"name\", \"after\": \"Order Intake\"",
+        var nested = validDraft().replace("\"path\": \"name\", \"after\": \"CRM Contact Intake\"",
                 "\"path\": \"runtime\", \"after\": {\"configurationDirectory\": \"config\", \"obsolete\": \"x\"}");
         assertThatThrownBy(() -> parser.parse(nested, createScope()))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
@@ -108,25 +112,21 @@ class OperationalContextAssistanceDraftParserTest {
     @Test
     void rejectsChangeWithoutReviewableReason() {
         assertThatThrownBy(() -> parser.parse(
-                validDraft().replace("\"reason\": \"Operator nazwał ten obszar Order Intake.\", ", ""),
+                validDraft().replace("\"reason\": \"Operator nazwał ten obszar CRM Contact Intake.\", ", ""),
                 createScope()))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("reason");
     }
 
     @Test
-    void rejectsSensitiveModelOutputBeforeItCanReachTheReview() {
-        assertThatThrownBy(() -> parser.parse(
-                validDraft().replace("\"after\": \"Order Intake\"", "\"after\": \"apiKey=top-secret\""),
-                createScope()))
-                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
-                .hasMessageContaining("sensitive content");
+    void keepsModelOutputWithoutSensitiveContentHeuristics() {
+        var draft = parser.parse(validDraft().replace(
+                "Operator nazwał ten obszar CRM Contact Intake.",
+                "Operator podał kontakt crm@example.com i apiKey=fictional-example."), createScope());
 
-        assertThatThrownBy(() -> parser.parse(
-                validDraft().replace("Operator nazwał ten obszar Order Intake.", "Kontakt: user@example.com"),
-                createScope()))
-                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
-                .hasMessageContaining("sensitive content");
+        assertThat(draft.proposals()).singleElement().satisfies(proposal ->
+                assertThat(proposal.changes()).singleElement().satisfies(change ->
+                        assertThat(change.reason()).contains("crm@example.com", "apiKey=fictional-example")));
     }
 
     @Test
@@ -144,18 +144,70 @@ class OperationalContextAssistanceDraftParserTest {
     }
 
     @Test
-    void rejectsAiConfirmedOwnershipAndFrontendClassification() {
-        var ownership = validDraft().replace("\"path\": \"name\", \"after\": \"Order Intake\"",
-                "\"path\": \"ownership\", \"after\": {\"ownershipStatus\": \"explicit\", \"ownerLabel\": \"Team A\"}");
-        assertThatThrownBy(() -> parser.parse(ownership, createScope()))
-                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
-                .hasMessageContaining("cannot confirm ownership");
+    void acceptsExplicitOperatorOwnershipAsReviewableSystemUpdate() {
+        var scope = new OperationalContextAssistanceDraftScope(
+                OperationalContextAssistanceMode.IMPROVE_ENTITY, "system", "crm-contact-api",
+                Set.of("operator:description", "opctx:systems.yml", "opctx:teams.yml"));
 
-        var frontend = validDraft().replace("\"path\": \"name\", \"after\": \"Order Intake\"",
-                "\"path\": \"systemSubtype\", \"after\": \"frontend\"");
-        assertThatThrownBy(() -> parser.parse(frontend, createScope()))
+        var result = parser.parse(ownershipUpdate("USER_STATEMENT",
+                "\"operator:description\",\"opctx:teams.yml\"", true, true), scope);
+
+        assertThat(result.proposals()).singleElement().satisfies(proposal -> {
+            assertThat(proposal.requiresConfirmation()).isTrue();
+            assertThat(proposal.changes()).singleElement().satisfies(change -> {
+                assertThat(change.path()).isEqualTo("ownership");
+                assertThat(change.after()).isEqualTo(Map.of(
+                        "ownershipStatus", "explicit", "ownerTeamIds", List.of("crm-contact-team")));
+                assertThat(change.basis()).isEqualTo(OperationalContextAssistanceDraft.Basis.USER_STATEMENT);
+                assertThat(change.requiresConfirmation()).isTrue();
+            });
+        });
+    }
+
+    @Test
+    void rejectsOwnershipWithoutDirectOperatorProvenanceOrManualReview() {
+        var scope = new OperationalContextAssistanceDraftScope(
+                OperationalContextAssistanceMode.IMPROVE_ENTITY, "system", "crm-contact-api",
+                Set.of("operator:description", "operator:repository-facts", "opctx:teams.yml"));
+        for (var invalid : List.of(
+                ownershipUpdate("AI_INTERPRETATION", "\"operator:description\"", true, true),
+                ownershipUpdate("USER_STATEMENT", "\"operator:repository-facts\"", true, true),
+                ownershipUpdate("USER_STATEMENT", "\"operator:description\"", false, true),
+                ownershipUpdate("USER_STATEMENT", "\"operator:description\"", true, false)
+        )) {
+            assertThatThrownBy(() -> parser.parse(invalid, scope))
+                    .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
+                    .hasMessageContaining("manual review");
+        }
+    }
+
+    @Test
+    void frontendClassificationRequiresDirectOperatorProvenanceAndReview() {
+        var direct = validDraft().replace("\"path\": \"name\", \"after\": \"CRM Contact Intake\"",
+                "\"path\": \"systemSubtype\", \"after\": \"frontend\"")
+                .replace("\"requiresConfirmation\": false", "\"requiresConfirmation\": true");
+        assertThat(parser.parse(direct, createScope()).proposals()).hasSize(1);
+
+        var unreviewed = direct.replace("\"requiresConfirmation\": true", "\"requiresConfirmation\": false");
+        assertThatThrownBy(() -> parser.parse(unreviewed, createScope()))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
-                .hasMessageContaining("cannot confirm frontend");
+                .hasMessageContaining("manual review");
+        var inferred = direct.replace("\"basis\": \"USER_STATEMENT\"", "\"basis\": \"AI_INTERPRETATION\"");
+        assertThatThrownBy(() -> parser.parse(inferred, createScope()))
+                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
+                .hasMessageContaining("explicit operator description");
+    }
+
+    private String ownershipUpdate(String basis, String sourceRefs, boolean changeReview, boolean proposalReview) {
+        return "{\"proposals\":[{\"operation\":\"UPDATE\",\"entityType\":\"system\","
+                + "\"entityId\":\"crm-contact-api\",\"changes\":[{\"path\":\"ownership\","
+                + "\"before\":null,\"after\":{\"ownershipStatus\":\"explicit\","
+                + "\"ownerTeamIds\":[\"crm-contact-team\"]},"
+                + "\"reason\":\"Operator przypisał system do zespołu CRM Contact.\","
+                + "\"basis\":\"" + basis + "\",\"sourceRefs\":[" + sourceRefs + "],"
+                + "\"confidence\":\"HIGH\",\"requiresConfirmation\":" + changeReview + "}],"
+                + "\"confidence\":\"HIGH\",\"requiresConfirmation\":" + proposalReview + ","
+                + "\"visibilityLimits\":[]}],\"visibilityLimits\":[]}";
     }
 
     @Test
@@ -165,8 +217,8 @@ class OperationalContextAssistanceDraftParserTest {
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("before is required");
 
-        var duplicate = validDraft().replace("\"entityId\": \"order-intake\"",
-                "\"entityId\": \"order-intake\", \"entityId\": \"other\"");
+        var duplicate = validDraft().replace("\"entityId\": \"crm-contact-intake\"",
+                "\"entityId\": \"crm-contact-intake\", \"entityId\": \"other\"");
         assertThatThrownBy(() -> parser.parse(duplicate, createScope()))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                 .hasMessageContaining("strict JSON");
@@ -180,7 +232,7 @@ class OperationalContextAssistanceDraftParserTest {
                 .hasMessageContaining("read file from the selected GitLab project");
         var sourceScope = new OperationalContextAssistanceDraftScope(
                 OperationalContextAssistanceMode.CREATE_AREA, null, null,
-                Set.of("operator:description", "gitlab:demo-group/demo-app@1111111111111111111111111111111111111111:README.md")
+                Set.of("operator:description", "gitlab:CRM/crm-contact-api@1111111111111111111111111111111111111111:README.md")
         );
         assertThatThrownBy(() -> parser.parse(repository, sourceScope))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
@@ -197,22 +249,22 @@ class OperationalContextAssistanceDraftParserTest {
     }
 
     @Test
-    void acceptsTargetedUpdateAndQuestionOnlyFinding() {
+    void acceptsTargetedUpdateAndEmptyFindingWithVisibilityLimit() {
         var update = validDraft().replace("\"operation\": \"CREATE\"", "\"operation\": \"UPDATE\"")
                 .replace("\"path\": \"name\"", "\"path\": \"summary\", \"before\": null");
         var scope = new OperationalContextAssistanceDraftScope(
-                OperationalContextAssistanceMode.IMPROVE_ENTITY, "system", "order-intake", Set.of("operator:description")
+                OperationalContextAssistanceMode.IMPROVE_ENTITY, "system", "crm-contact-intake", Set.of("operator:description")
         );
         assertThat(parser.parse(update, scope).proposals()).singleElement()
                 .satisfies(proposal -> assertThat(proposal.changes().get(0).before()).isNull());
 
-        var questionOnly = """
-                {"proposals":[],"questions":["Kto potwierdza ownera?"],"visibilityLimits":["Brak źródła."]}
+        var noProposal = """
+                {"proposals":[],"visibilityLimits":["Brak źródła."]}
                 """;
         var findingScope = new OperationalContextAssistanceDraftScope(
-                OperationalContextAssistanceMode.RESOLVE_FINDING, "system", "order-intake", Set.of("operator:description")
+                OperationalContextAssistanceMode.RESOLVE_FINDING, "system", "crm-contact-intake", Set.of("operator:description")
         );
-        assertThat(parser.parse(questionOnly, findingScope).proposals()).isEmpty();
+        assertThat(parser.parse(noProposal, findingScope).proposals()).isEmpty();
     }
 
     @Test
@@ -243,9 +295,9 @@ class OperationalContextAssistanceDraftParserTest {
                       "confidence":"HIGH", "requiresConfirmation":false
                     }],
                     "confidence":"HIGH", "requiresConfirmation":false,
-                    "questions":[], "visibilityLimits":[]
+                     "visibilityLimits":[]
                   }],
-                  "questions":[], "visibilityLimits":[]
+                   "visibilityLimits":[]
                 }
                 """;
 
@@ -295,7 +347,7 @@ class OperationalContextAssistanceDraftParserTest {
                  "changes":[{"path":"name","after":"Przekazanie profilu klienta do archiwum",
                    "reason":"Operator opisał relację systemową.","basis":"USER_STATEMENT",
                    "sourceRefs":["operator:description"],"confidence":"MEDIUM","requiresConfirmation":true}],
-                 "confidence":"MEDIUM","requiresConfirmation":true,"questions":[],"visibilityLimits":[]}
+                 "confidence":"MEDIUM","requiresConfirmation":true,"visibilityLimits":[]}
                 """;
 
         assertThat(parser.parse(draft(systemProposal("customer-profile-service", "Customer Profile Service"),
@@ -350,13 +402,16 @@ class OperationalContextAssistanceDraftParserTest {
                 withRuntime).proposals()).hasSize(1);
         for (String signals : List.of(
                 "{\"strong\":{\"serviceNames\":[\"customer-profile-runtime\"]}}",
-                "{\"serviceNames\":[\"customer-profile-runtime\"]}",
                 "{\"exact\":{\"serviceNames\":[\"invented-runtime\"]}}"
         )) {
             assertThatThrownBy(() -> parser.parse(draft(systemProposalWithSignals(signals)), withRuntime))
                     .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
                     .hasMessageContaining("Service names");
         }
+        assertThatThrownBy(() -> parser.parse(draft(systemProposalWithSignals(
+                "{\"serviceNames\":[\"customer-profile-runtime\"]}")), withRuntime))
+                .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
+                .hasMessageContaining("is not writable");
         assertThatThrownBy(() -> parser.parse(draft(systemProposalWithSignals(
                 "{\"exact\":{\"serviceNames\":[\"invented-runtime\"]}}")), withoutRuntime))
                 .isInstanceOf(OperationalContextAssistanceDraftParseException.class)
@@ -468,13 +523,13 @@ class OperationalContextAssistanceDraftParserTest {
     }
 
     private String draft(String... proposals) {
-        return "{\"proposals\":[" + String.join(",", proposals) + "],\"questions\":[],\"visibilityLimits\":[]}";
+        return "{\"proposals\":[" + String.join(",", proposals) + "],\"visibilityLimits\":[]}";
     }
 
     private String systemProposal(String id, String name) {
         return "{\"operation\":\"CREATE\",\"entityType\":\"system\",\"entityId\":\"" + id
                 + "\",\"changes\":[" + change("name", "\"" + name + "\"")
-                + "],\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true,\"questions\":[],\"visibilityLimits\":[]}";
+                + "],\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true,\"visibilityLimits\":[]}";
     }
 
     private String systemProposalWithSignals(String signals) {
@@ -482,7 +537,7 @@ class OperationalContextAssistanceDraftParserTest {
         return "{\"operation\":\"CREATE\",\"entityType\":\"system\",\"entityId\":\"customer-profile-service\""
                 + ",\"changes\":[" + change("name", "\"" + name + "\"")
                 + "," + change("matchSignals", signals) + "],\"confidence\":\"MEDIUM\""
-                + ",\"requiresConfirmation\":true,\"questions\":[],\"visibilityLimits\":[]}";
+                + ",\"requiresConfirmation\":true,\"visibilityLimits\":[]}";
     }
 
     private String repositoryProposal(String id, boolean library, String systemId) {
@@ -500,7 +555,7 @@ class OperationalContextAssistanceDraftParserTest {
         }
         return "{\"operation\":\"CREATE\",\"entityType\":\"repository\",\"entityId\":\"" + id
                 + "\",\"changes\":[" + String.join(",", changes)
-                + "],\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true,\"questions\":[],\"visibilityLimits\":[]}";
+                + "],\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true,\"visibilityLimits\":[]}";
     }
 
     private String scopeUpdateProposal(String scopeId, String repoId, boolean preserveExisting) {
@@ -515,7 +570,7 @@ class OperationalContextAssistanceDraftParserTest {
                 + ",\"after\":" + after + ",\"reason\":\"Operator wskazał system korzystający z biblioteki.\","
                 + "\"basis\":\"USER_STATEMENT\",\"sourceRefs\":[\"operator:repository-facts\"],"
                 + "\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true}],"
-                + "\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true,\"questions\":[],\"visibilityLimits\":[]}";
+                + "\"confidence\":\"MEDIUM\",\"requiresConfirmation\":true,\"visibilityLimits\":[]}";
     }
 
     private String change(String path, String after) {
@@ -542,16 +597,16 @@ class OperationalContextAssistanceDraftParserTest {
         return """
                 {
                   "proposals": [{
-                    "operation": "CREATE", "entityType": "system", "entityId": "order-intake",
+                    "operation": "CREATE", "entityType": "system", "entityId": "crm-contact-intake",
                     "changes": [{
-                      "path": "name", "after": "Order Intake", "reason": "Operator nazwał ten obszar Order Intake.", "basis": "USER_STATEMENT",
+                      "path": "name", "after": "CRM Contact Intake", "reason": "Operator nazwał ten obszar CRM Contact Intake.", "basis": "USER_STATEMENT",
                       "sourceRefs": ["operator:description"], "confidence": "HIGH",
                       "requiresConfirmation": false
                     }],
                     "confidence": "HIGH", "requiresConfirmation": false,
-                    "questions": [], "visibilityLimits": []
+                     "visibilityLimits": []
                   }],
-                  "questions": [], "visibilityLimits": []
+                   "visibilityLimits": []
                 }
                 """;
     }

@@ -446,11 +446,14 @@ public class OperationalContextRelationIndexBuilder {
             String fieldPath
     ) {
         for (var relation : relations) {
-            var targetId = firstNonBlank(relation.targetContextId(), relation.target());
+            var targetId = relation.target();
             if (!StringUtils.hasText(targetId)) {
                 continue;
             }
-            var targetType = firstNonBlank(relation.targetType(), relation.targetContextId() != null ? BOUNDED_CONTEXT : null, SYSTEM);
+            var targetType = relation.targetType();
+            if (!StringUtils.hasText(targetType)) {
+                continue;
+            }
             relation(
                     state,
                     source,
@@ -660,7 +663,6 @@ public class OperationalContextRelationIndexBuilder {
                     sourceRef("integrations.yml", INTEGRATION, integration.id(), "$.integrations[id=" + integration.id() + "].participants." + selectedParticipantPath + ".boundedContext", "participant-bounded-context")
             );
         }
-        referenceList(state, source, "participant-repository", REPOSITORY, participant.repositories(), "integrations.yml", integration.id(), "$.integrations[id=" + integration.id() + "].participants." + selectedParticipantPath + ".repositories", true);
     }
 
     private void dependencyRelations(
@@ -809,21 +811,7 @@ public class OperationalContextRelationIndexBuilder {
     }
 
     private String normalizeTargetType(String targetType) {
-        var normalized = targetType.trim()
-                .replace("_", "-")
-                .replace(" ", "-");
-        return switch (normalized) {
-            case "systems" -> SYSTEM;
-            case "repositories" -> REPOSITORY;
-            case "code-search-scopes", "codeSearchScope", "codeSearchScopes" -> CODE_SEARCH_SCOPE;
-            case "processes" -> PROCESS;
-            case "integrations" -> INTEGRATION;
-            case "boundedContext", "boundedContexts", "bounded-contexts" -> BOUNDED_CONTEXT;
-            case "teams" -> TEAM;
-            case "terms", "glossary-term", "glossary-terms" -> TERM;
-            case "handoffRules", "handoff-rules" -> HANDOFF_RULE;
-            default -> normalized;
-        };
+        return targetType;
     }
 
     private TypedReference typedReference(String value) {
@@ -831,8 +819,7 @@ public class OperationalContextRelationIndexBuilder {
             return null;
         }
 
-        var normalized = value.trim()
-                .replace("`", "");
+        var normalized = value.trim();
         var separator = normalized.indexOf(':');
         if (separator < 1) {
             return null;
@@ -843,9 +830,7 @@ public class OperationalContextRelationIndexBuilder {
             return null;
         }
 
-        var id = normalized.substring(separator + 1).trim()
-                .replaceFirst("\\s+.*$", "")
-                .replaceAll("[,.;]+$", "");
+        var id = normalized.substring(separator + 1).trim();
         if (!StringUtils.hasText(id)) {
             return null;
         }
@@ -854,19 +839,16 @@ public class OperationalContextRelationIndexBuilder {
     }
 
     private String typedReferenceTargetType(String targetType) {
-        var normalized = targetType.trim()
-                .replace("_", "-")
-                .replace(" ", "-");
-        return switch (normalized) {
-            case "system", "systems" -> SYSTEM;
-            case "repository", "repositories", "repo", "repos" -> REPOSITORY;
-            case "code-search-scope", "code-search-scopes", "codeSearchScope", "codeSearchScopes" -> CODE_SEARCH_SCOPE;
-            case "process", "processes" -> PROCESS;
-            case "integration", "integrations" -> INTEGRATION;
-            case "bounded-context", "bounded-contexts", "boundedContext", "boundedContexts" -> BOUNDED_CONTEXT;
-            case "team", "teams" -> TEAM;
-            case "term", "terms", "glossary-term", "glossary-terms" -> TERM;
-            case "handoff-rule", "handoff-rules", "handoffRule", "handoffRules" -> HANDOFF_RULE;
+        return switch (targetType) {
+            case "system" -> SYSTEM;
+            case "repository" -> REPOSITORY;
+            case "code-search-scope" -> CODE_SEARCH_SCOPE;
+            case "process" -> PROCESS;
+            case "integration" -> INTEGRATION;
+            case "bounded-context" -> BOUNDED_CONTEXT;
+            case "team" -> TEAM;
+            case "glossary-term" -> TERM;
+            case "handoff-rule" -> HANDOFF_RULE;
             default -> null;
         };
     }

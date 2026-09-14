@@ -169,7 +169,7 @@ class OperationalContextCodeSearchReadModelBuilderTest {
                         map(
                                 "id", "crm-customer-shared-repo",
                                 "name", "CRM Customer Shared Repository",
-                                "git", map("projectPath", "CRM/customer-platform/crm-customer-shared")
+                                "git", map("provider", "gitlab", "projectPath", "CRM/customer-platform/crm-customer-shared")
                         )
                 ),
                 List.of(map(
