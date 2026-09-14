@@ -7,7 +7,7 @@
       </div>
       <div class="entity-drawer__actions" aria-label="Entity drawer actions">
         @if (writable()) {
-          <button type="button" class="entity-drawer__action" aria-label="Zaproponuj uzupełnienie z AI" title="Zaproponuj uzupełnienie z AI" (click)="assistEntity.emit()">
+          <button type="button" class="entity-drawer__action entity-drawer__action--ai" aria-label="Zaproponuj uzupełnienie z AI" title="Zaproponuj uzupełnienie z AI" (click)="assistEntity.emit()">
             <mat-icon fontSet="material-symbols-outlined">auto_awesome</mat-icon>
           </button>
           <button type="button" class="entity-drawer__action" aria-label="Edytuj pozycję" title="Edytuj pozycję katalogu" (click)="editEntity.emit()">

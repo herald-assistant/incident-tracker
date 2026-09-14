@@ -249,7 +249,8 @@ describe('ContextHomePageComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const button = compiled.querySelector('.context-toolbar__ai-button') as HTMLButtonElement;
-    expect(button.textContent?.trim()).toBe('Uzupełnij z AI');
+    expect(button.querySelector('span')?.textContent?.trim()).toBe('Uzupełnij z AI');
+    expect(button.lastElementChild?.textContent?.trim()).toBe('auto_awesome');
     expect(compiled.querySelector('.context-toolbar__note')).toBeNull();
     expect(compiled.querySelector('.context-tabs')?.textContent).not.toContain('Asysta AI');
     expect(compiled.textContent).not.toContain('Editable local copy');

@@ -77,6 +77,10 @@
   outline-offset: 2px;
 }
 
+.entity-drawer__action--ai {
+  color: var(--primary);
+}
+
 .entity-drawer__action--danger {
   color: var(--danger-text);
 }

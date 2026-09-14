@@ -17,7 +17,10 @@
         class="primary-button context-toolbar__ai-button"
         [attr.aria-current]="selectedTab() === 'assistance' ? 'page' : null"
         (click)="selectTab('assistance')"
-      >Uzupełnij z AI</button>
+      >
+        <span>Uzupełnij z AI</span>
+        <mat-icon fontSet="material-symbols-outlined" aria-hidden="true">auto_awesome</mat-icon>
+      </button>
     </section>
 
     <nav class="context-tabs" aria-label="Operational context sections">
