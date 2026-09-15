@@ -14,7 +14,7 @@ describe('change-verification-import-export utils', () => {
     const imported = parseImportedChangeVerificationResult(envelope);
 
     expect(envelope.schema).toBe('tdw.change-verification-export');
-    expect(envelope.version).toBe(4);
+    expect(envelope.version).toBe(5);
     expect(envelope.payload.type).toBe('change-verification-analysis');
     expect(envelope.payload.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
     expect(envelope.payload.diagnostics.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
@@ -22,6 +22,13 @@ describe('change-verification-import-export utils', () => {
     expect(envelope.payload.diagnostics.result.findingCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.contextEvidenceItemCount).toBe(1);
     expect(envelope.payload.diagnostics.workflow.toolEvidenceItemCount).toBe(1);
+    expect(envelope.payload.diagnostics.copilotRuntime).toEqual({
+      sdkVersion: '1.0.11',
+      cliVersion: '1.0.57-5',
+      protocolVersion: 3,
+      minimumCliVersion: '1.0.57',
+      compatible: true
+    });
     expect(imported.exportedAt).toBe(exportedAt);
     expect(imported.job.jobId).toBe('change-job-1');
     expect(imported.job.result?.compliance.findings[0]?.summary).toBe('Story alignment confirmed');
@@ -34,12 +41,12 @@ describe('change-verification-import-export utils', () => {
     );
   });
 
-  it('should reject the previous v3 contract without migration', () => {
+  it('should reject the previous v4 format without migration', () => {
     const envelope = buildChangeVerificationExportEnvelope(
       changeVerificationJob(),
       '2026-07-26T10:00:00Z'
     ) as unknown as { version: number };
-    envelope.version = 3;
+    envelope.version = 4;
 
     expect(() => parseImportedChangeVerificationResult(envelope)).toThrow(
       'Ten plik eksportu Change Verification ma nieobsługiwaną wersję formatu.'
@@ -64,16 +71,23 @@ describe('change-verification-import-export utils', () => {
     ).toThrow('Change Verification export wymaga kanonicznego raportu analizy.');
   });
 
-  it('should parse a running local history envelope when completed result is not required', () => {
+  it('should parse a backend v5 local history envelope when completed result is not required', () => {
     const envelope = {
       schema: 'tdw.change-verification-export',
-      version: 4,
+      version: 5,
       exportedAt: '2026-07-26T09:02:00Z',
       payload: {
         type: 'change-verification-analysis',
         resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT,
         diagnostics: {
-          resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT
+          resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT,
+          copilotRuntime: {
+            sdkVersion: '1.0.11',
+            cliVersion: '1.0.57-5',
+            protocolVersion: 3,
+            minimumCliVersion: '1.0.57',
+            compatible: true
+          }
         },
         job: changeVerificationJob({
           status: 'ANALYZING',
@@ -161,6 +175,27 @@ function changeVerificationJob(
         toolName: 'gitlab_search',
         timestamp: '2026-07-26T09:02:00Z',
         details: {}
+      },
+      {
+        eventId: 'runtime-event-1',
+        parentEventId: '',
+        type: 'platform.copilot_runtime',
+        category: 'PLATFORM',
+        status: 'COMPLETED',
+        title: 'Copilot runtime',
+        summary: 'Runtime compatibility verified',
+        turnId: '',
+        interactionId: '',
+        toolCallId: '',
+        toolName: '',
+        timestamp: '2026-07-26T09:02:30Z',
+        details: {
+          sdkVersion: '1.0.11',
+          cliVersion: '1.0.57-5',
+          protocolVersion: 3,
+          minimumCliVersion: '1.0.57',
+          compatible: true
+        }
       }
     ],
     preparedPrompt: 'Prompt',

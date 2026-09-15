@@ -18,7 +18,7 @@ import {
 } from '../models/change-verification.models';
 
 export const CHANGE_VERIFICATION_EXPORT_SCHEMA = 'tdw.change-verification-export';
-export const CHANGE_VERIFICATION_EXPORT_VERSION = 4;
+export const CHANGE_VERIFICATION_EXPORT_VERSION = 5;
 export const CHANGE_VERIFICATION_EXPORT_PAYLOAD_TYPE = 'change-verification-analysis';
 export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v4';
 
@@ -59,7 +59,16 @@ export interface ChangeVerificationExportDiagnostics {
     aiActivityEventCount: number;
     usageIncluded: boolean;
   };
+  copilotRuntime: ChangeVerificationCopilotRuntimeDiagnostics | null;
   artifacts: ChangeVerificationDiagnosticArtifactSummary[];
+}
+
+export interface ChangeVerificationCopilotRuntimeDiagnostics {
+  sdkVersion: string | null;
+  cliVersion: string | null;
+  protocolVersion: number | null;
+  minimumCliVersion: string | null;
+  compatible: boolean;
 }
 
 export interface ChangeVerificationDiagnosticArtifactSummary {
@@ -131,6 +140,7 @@ export function buildChangeVerificationExportDiagnostics(
       aiActivityEventCount: job.aiActivityEvents.length,
       usageIncluded: Boolean(job.result.usage)
     },
+    copilotRuntime: buildCopilotRuntimeDiagnostics(job.aiActivityEvents),
     artifacts: [
       {
         name: 'change-verification-result',
@@ -511,6 +521,27 @@ function normalizeUsage(usage: unknown): AnalysisAiUsage | null {
 
 function evidenceItemCount(sections: AnalysisEvidenceSection[]): number {
   return sections.reduce((count, section) => count + section.items.length, 0);
+}
+
+function buildCopilotRuntimeDiagnostics(
+  events: AnalysisAiActivityEvent[]
+): ChangeVerificationCopilotRuntimeDiagnostics | null {
+  const runtimeEvent = events.reduce<AnalysisAiActivityEvent | null>(
+    (latest, event) => event.type === 'platform.copilot_runtime' ? event : latest,
+    null
+  );
+  if (!runtimeEvent) {
+    return null;
+  }
+
+  const details = runtimeEvent.details;
+  return {
+    sdkVersion: normalizeNullableString(details['sdkVersion']),
+    cliVersion: normalizeNullableString(details['cliVersion']),
+    protocolVersion: normalizeNullableNumber(details['protocolVersion']),
+    minimumCliVersion: normalizeNullableString(details['minimumCliVersion']),
+    compatible: normalizeBoolean(details['compatible'])
+  };
 }
 
 function uniqueValues(values: string[]): string[] {

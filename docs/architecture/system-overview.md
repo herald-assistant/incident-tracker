@@ -184,7 +184,8 @@ Na dzisiaj projekt ma:
   `STORY_COMPLIANCE`, `INSTRUCTION_COMPLIANCE` oraz maksymalnie piec
   `INFERRED_CRITICAL_CHECKS`; sugestie AI sa oceniane wobec tego samego evidence,
   ale nie zmieniaja werdyktu source-defined compliance. Import/eksport uzywa
-  tylko aktualnego `change-verification-result-v4` i odrzuca starsze wersje,
+  koperty `tdw.change-verification-export/v5` z aktualnym
+  `change-verification-result-v4` i odrzuca starsze wersje,
 - ekran `GET /flow-explorer` do endpoint-first dokumentacji flow; nowe runy,
   kontrakt API i runtime obsluguja obecnie tylko `DEEP_DISCOVERY`, a
   `Test scenarios` oraz `Risk detection` sa widoczne jako disabled z oznaczeniem
