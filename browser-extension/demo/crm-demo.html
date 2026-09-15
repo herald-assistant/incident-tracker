@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CRM Demo · Profil klienta</title>
+    <style>
+      :root {
+        color: #172b4d;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #f4f5f7;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 32px;
+        color: white;
+        background: linear-gradient(120deg, #071d49, #0747a6 55%, #0c66e4);
+      }
+      header strong { font-size: 20px; letter-spacing: -0.02em; }
+      header span { color: #deebff; }
+      main { max-width: 1040px; margin: 34px auto; padding: 0 24px 80px; }
+      .hint {
+        margin-bottom: 22px;
+        padding: 16px 18px;
+        border: 1px solid #b3d4ff;
+        border-radius: 14px;
+        background: #deebff;
+      }
+      .grid { display: grid; grid-template-columns: 1fr 0.8fr; gap: 22px; }
+      .card {
+        padding: 24px;
+        border: 1px solid #dfe1e6;
+        border-radius: 18px;
+        background: white;
+        box-shadow: 0 12px 34px rgba(9, 30, 66, 0.08);
+      }
+      h1, h2 { margin-top: 0; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 18px; }
+      label { display: grid; gap: 8px; margin: 18px 0; font-weight: 650; }
+      input, select {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #b6c2cf;
+        border-radius: 8px;
+        font: inherit;
+      }
+      .actions { display: flex; align-items: center; gap: 12px; margin-top: 24px; }
+      button, a.action {
+        border: 0;
+        border-radius: 9px;
+        padding: 11px 17px;
+        font: inherit;
+        font-weight: 750;
+      }
+      button { color: white; background: #0c66e4; cursor: pointer; }
+      button:disabled { color: #626f86; background: #dfe1e6; cursor: not-allowed; }
+      a.action { color: #0747a6; background: #deebff; text-decoration: none; }
+      .status { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+      .status li { padding: 14px; border-radius: 12px; background: #f7f8f9; }
+      .status strong { display: block; margin-bottom: 4px; }
+      #activity { min-height: 24px; margin-top: 20px; color: #44546f; }
+      @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>CRM Example</strong>
+      <span>Kontrolowana strona demonstracyjna</span>
+    </header>
+    <main>
+      <section class="hint" role="note">
+        Przytrzymaj <strong>Ctrl + Alt</strong>, wskaz element i kliknij. Klik nie powinien
+        wykonac normalnej akcji strony.
+      </section>
+      <div class="grid">
+        <form class="card" id="customer-form">
+          <h1>Profil klienta</h1>
+          <p>Fikcyjny formularz do sprawdzenia selektora UI Explorer.</p>
+          <label>
+            Nazwa wyswietlana
+            <input
+              aria-describedby="name-help"
+              data-testid="customer-display-name"
+              name="displayName"
+              required
+              value="Przykladowy klient"
+            />
+          </label>
+          <small id="name-help">Pole wymagane, maksymalnie 80 znakow.</small>
+          <label>
+            Segment
+            <select data-testid="customer-segment" name="segment">
+              <option>Standard</option>
+              <option>Premium</option>
+            </select>
+          </label>
+          <div class="actions">
+            <button data-testid="customer-save" disabled type="submit">Zapisz zmiany</button>
+            <a class="action" href="?navigated=true" id="history-link">Historia kontaktu</a>
+          </div>
+          <p id="activity" aria-live="polite">Strona nie wykonala jeszcze zadnej akcji.</p>
+        </form>
+        <aside class="card" aria-labelledby="status-title">
+          <h2 id="status-title">Stan obslugi</h2>
+          <ul class="status">
+            <li data-testid="service-owner">
+              <strong>Opiekun</strong>
+              Zespol obslugi klienta
+            </li>
+            <li>
+              <strong>Ostatnia synchronizacja</strong>
+              15 minut temu
+            </li>
+            <li>
+              <strong>Status danych</strong>
+              Oczekuje na potwierdzenie
+            </li>
+          </ul>
+        </aside>
+      </div>
+    </main>
+    <script>
+      const activity = document.querySelector('#activity');
+      document.querySelector('#customer-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        activity.textContent = 'Formularz wykonal submit.';
+      });
+      document.querySelector('#history-link').addEventListener('click', () => {
+        activity.textContent = 'Link zostal aktywowany.';
+      });
+    </script>
+  </body>
+</html>

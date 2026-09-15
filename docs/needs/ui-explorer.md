@@ -247,7 +247,8 @@ MVP nie ma:
 
 Po zweryfikowaniu wartosci statycznego MVP mozna rozwazyc:
 
-- polaczenie analizy kodu z kontrolowana sesja przegladarki,
+- [pytania o wskazany element uruchomionej strony](ui-explorer-browser-element-analysis.md),
+  opisane jako osobna potrzeba z wlasna granica bezpieczenstwa i planem,
 - porownanie raportow pomiedzy wersjami zrodla,
 - follow-up chat korzystajacy z zamrozonego kontekstu analizy,
 - generowanie scenariuszy testowych i kryteriow akceptacji,
