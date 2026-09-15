@@ -13,13 +13,15 @@ kanoniczny opis i kod.
 3. Przeczytaj `product-direction.md`, `system-overview.md`,
    `key-decisions.md` i `package-dependencies.md`.
 4. Dla Incident Analysis przeczytaj `incident-analysis-runtime-flow.md`.
-5. Dla Operational Context przeczytaj
+5. Dla Change Verification przeczytaj
+   `change-verification-runtime-flow.md`.
+6. Dla Operational Context przeczytaj
    `operational-context-model-tools-and-usage.md`.
-6. Dla nowego feature'a albo zmiany L1-L3 przeczytaj
+7. Dla nowego feature'a albo zmiany L1-L3 przeczytaj
    `analysis-feature-delivery-playbook.md`.
-7. Odszukaj odpowiadajacy dokument w `../needs/` i zatwierdzony plan w
+8. Odszukaj odpowiadajacy dokument w `../needs/` i zatwierdzony plan w
    `../plans/`, jesli zmiana ma aktywny albo wymagany zakres wykonawczy.
-8. Przeczytaj lokalne `AGENTS.md` dla wszystkich dotykanych katalogow.
+9. Przeczytaj lokalne `AGENTS.md` dla wszystkich dotykanych katalogow.
 
 Brak planu nie jest zgoda na wyprowadzenie rozwiazania bezposrednio z business
 need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
@@ -34,6 +36,9 @@ need. Zasady tworzenia i zatwierdzania planow sa w `../AGENTS.md`.
   trwale decyzje i konsekwencje.
 - `incident-analysis-runtime-flow.md`
   szczegolowy runtime pierwszego feature'a referencyjnego.
+- `change-verification-runtime-flow.md`
+  source discovery, rule-ledger contract, prompt/runtime, report, import/export
+  i UI Change Verification.
 - `package-dependencies.md`
   dozwolony graf zaleznosci backendu i frontendu.
 - `operational-context-model-tools-and-usage.md`
@@ -61,7 +66,9 @@ zatwierdzony invariant trafia do architektury.
 - `src/main/java/pl/mkn/tdw/features/flowexplorer`
   Flow Explorer: discovery, run, wynik i feature-owned AI behavior.
 - `src/main/java/pl/mkn/tdw/features/changeverification`
-  Change Verification: zgodnosc zmiany i jego wlasny kontrakt feature'a.
+  Change Verification: source discovery, rule-first wynik, deterministyczna
+  decyzja, feature-owned Copilot runtime i import/export v6/v5. Szczegoly sa w
+  `docs/architecture/change-verification-runtime-flow.md`.
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer`
   Config Drift Viewer: deterministic diff i oddzielona interpretacja DEEP.
 - `src/main/java/pl/mkn/tdw/features/deliverycomplexityassessment`

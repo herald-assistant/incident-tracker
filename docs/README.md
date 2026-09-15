@@ -36,18 +36,19 @@ Przed wieksza zmiana przeczytaj:
 3. `architecture/system-overview.md`
 4. `architecture/key-decisions.md`
 5. `architecture/incident-analysis-runtime-flow.md`
-6. `architecture/config-drift-viewer-runtime-flow.md`
-7. `architecture/delivery-complexity-assessment-runtime-flow.md`
-8. `architecture/delivery-scope-complexity-runtime-flow.md`
-9. `architecture/delivery-complexity-trends-runtime-flow.md`
-10. `architecture/package-dependencies.md`
-11. `architecture/operational-context-model-tools-and-usage.md`
-12. `architecture/codex-continuation-guide.md`
+6. `architecture/change-verification-runtime-flow.md`
+7. `architecture/config-drift-viewer-runtime-flow.md`
+8. `architecture/delivery-complexity-assessment-runtime-flow.md`
+9. `architecture/delivery-scope-complexity-runtime-flow.md`
+10. `architecture/delivery-complexity-trends-runtime-flow.md`
+11. `architecture/package-dependencies.md`
+12. `architecture/operational-context-model-tools-and-usage.md`
+13. `architecture/codex-continuation-guide.md`
 
 Przy tworzeniu nowego feature'a albo zmianie L1-L3 istniejacego feature'a lub
 mechanizmu wspolnego przeczytaj dodatkowo:
 
-13. `architecture/analysis-feature-delivery-playbook.md`
+14. `architecture/analysis-feature-delivery-playbook.md`
 
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
@@ -103,6 +104,9 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `architecture/incident-analysis-runtime-flow.md`
   opisuje wykonanie glownych sciezek Incident Analysis oraz jego uzycie
   neutralnego runtime Copilota.
+- `architecture/change-verification-runtime-flow.md`
+  opisuje source scope, rule ledger, deterministyczna decyzje, prompt, skille,
+  tools, report, import/export i UI Change Verification.
 - `architecture/config-drift-viewer-runtime-flow.md`
   opisuje deterministic/AI flow, tryby `BASIC/DEEP`, scope, limity i granice
   bezpieczenstwa Config Drift Viewer.

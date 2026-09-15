@@ -46,11 +46,13 @@ Przed wieksza zmiana zacznij od:
     wspolnego
 10. `docs/architecture/config-drift-viewer-runtime-flow.md`
     dla zmian Config Drift Viewer
-11. `docs/architecture/delivery-complexity-assessment-runtime-flow.md`
+11. `docs/architecture/change-verification-runtime-flow.md`
+    dla zmian Change Verification
+12. `docs/architecture/delivery-complexity-assessment-runtime-flow.md`
     dla zmian Delivery Complexity Assessment
-12. `docs/architecture/delivery-scope-complexity-runtime-flow.md`
+13. `docs/architecture/delivery-scope-complexity-runtime-flow.md`
     dla zmian eksperymentalnego Delivery Scope Complexity
-13. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
+14. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
 
 ## Najwazniejsze niezmienniki
@@ -296,6 +298,10 @@ Zasady granic:
   Feature porownania runtime configuration pomiedzy branchami: named GitLab
   source, deterministyczny parsing/diff, sanitizowana druga opinia AI,
   ograniczony `DEEP`, job API, historia/import-export i report.
+- `src/main/java/pl/mkn/tdw/features/changeverification`
+  Feature rule-first review zmiany wzgledem regul Jira/Confluence i instrukcji
+  repozytorium: source discovery, Copilot prompt/tools policy, scisly ledger,
+  deterministyczna decyzja i report oraz breaking import/export v6/v5.
 - `src/main/java/pl/mkn/tdw/features/operationalcontextassistance`
   Feature prowadzacej asysty AI na ekranie Operational Context: trzy tryby
   operatora, jeden glowny projekt GitLab przypiety do commita, opcjonalny
@@ -488,6 +494,7 @@ granice modulow byly czytelne i stabilne po refaktorach.
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/ai/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/incidentanalysis/flow/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/configdriftviewer/AGENTS.md`
+- `src/main/java/pl/mkn/tdw/features/changeverification/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/features/operationalcontextassistance/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/AGENTS.md`
 - `src/main/java/pl/mkn/tdw/shared/ai/AGENTS.md`
