@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Capture · TDW Inspector Lite</title>
+    <link rel="stylesheet" href="./capture.css" />
+    <script src="./protocol.js" defer></script>
+    <script src="./capture.js" defer></script>
+  </head>
+  <body>
+    <header class="app-bar">
+      <a class="brand" href="/ui-explorer" aria-label="Przejdź do UI Explorera">
+        <img src="../assets/brand/main-logo.png" alt="" />
+        <span>
+          <strong>Team Delivery Workspace</strong>
+          <small>UI Explorer capture</small>
+        </span>
+      </a>
+      <span class="trust-badge">Zaufany ekran TDW</span>
+    </header>
+
+    <main class="page-shell">
+      <section class="page-heading" aria-labelledby="page-title">
+        <p class="eyebrow">Inspector Lite · capture v1</p>
+        <h1 id="page-title">Zapytaj o wskazany element</h1>
+        <p>
+          Dane z badanej strony nie uruchamiają analizy automatycznie. Najpierw
+          sprawdź podsumowanie i dopiero potem podaj pytanie.
+        </p>
+      </section>
+
+      <div id="bridge-status" class="status-card" role="status" aria-live="polite">
+        Oczekuję na zredagowany capture…
+      </div>
+
+      <details id="manual-import" class="manual-card">
+        <summary>Transfer automatyczny nie działa? Wklej capture ręcznie</summary>
+        <div class="manual-card__body">
+          <p>
+            Skopiuj JSON z panelu na badanej stronie. Dane zostaną zwalidowane i
+            ponownie znormalizowane przed wyświetleniem.
+          </p>
+          <label>
+            <span>JSON capture</span>
+            <textarea
+              id="manual-json"
+              maxlength="70000"
+              spellcheck="false"
+              placeholder='{"captureVersion": 1, ...}'
+            ></textarea>
+          </label>
+          <p id="manual-error" class="field-error" role="alert"></p>
+          <button id="import-capture" class="button button--secondary" type="button">
+            Wczytaj capture
+          </button>
+        </div>
+      </details>
+
+      <section id="capture-workspace" class="workspace-card" hidden>
+        <header class="selection-header">
+          <div class="selection-icon" aria-hidden="true">⌖</div>
+          <div>
+            <p class="eyebrow">Wybrany element</p>
+            <h2 id="target-heading">—</h2>
+            <p id="target-description"></p>
+          </div>
+          <span id="capture-size" class="size-badge"></span>
+        </header>
+
+        <dl class="selection-grid">
+          <div>
+            <dt>Strona</dt>
+            <dd id="page-origin">—</dd>
+          </div>
+          <div>
+            <dt>Trasa</dt>
+            <dd id="page-path">—</dd>
+          </div>
+          <div>
+            <dt>DOM ancestry</dt>
+            <dd id="ancestry-summary">—</dd>
+          </div>
+          <div>
+            <dt>Stan</dt>
+            <dd id="state-summary">—</dd>
+          </div>
+        </dl>
+
+        <form id="analysis-form">
+          <label class="field field--question">
+            <span>Pytanie lub polecenie</span>
+            <textarea
+              id="question"
+              name="question"
+              maxlength="4000"
+              required
+              placeholder="Np. Dlaczego ten przycisk jest wyszarzony?"
+            ></textarea>
+          </label>
+
+          <div class="preference-grid">
+            <label class="field">
+              <span>Model AI</span>
+              <select id="model" name="model">
+                <option value="tdw-default">Domyślny model TDW (demo)</option>
+                <option value="demo-fast">Szybki model demonstracyjny</option>
+                <option value="demo-deep">Model demonstracyjny do głębszej analizy</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Reasoning effort</span>
+              <select id="reasoning-effort" name="reasoningEffort">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+          </div>
+
+          <details class="capture-preview">
+            <summary>Sprawdź dane, które trafiłyby do analizy</summary>
+            <div class="capture-preview__toolbar">
+              <span>Wartości formularzy, cookies i storage nie są zbierane.</span>
+              <button id="copy-capture" class="text-button" type="button">Kopiuj JSON</button>
+            </div>
+            <pre id="capture-json"></pre>
+          </details>
+
+          <div class="demo-banner" role="note">
+            <strong>Tryb demonstracyjny</strong>
+            Ten ekran nie wywołuje jeszcze REST ani AI. Zatwierdzenie pokaże lokalny
+            dummy status i nie utworzy wpisu w historii.
+          </div>
+
+          <div id="dummy-result" class="result-card" role="status" aria-live="polite" hidden>
+            <strong id="result-title"></strong>
+            <span id="result-detail"></span>
+            <span class="result-note">
+              Produkcyjny job będzie w tym miejscu zapisany w Analysis History.
+            </span>
+          </div>
+
+          <div class="form-actions">
+            <a class="button button--quiet" href="/ui-explorer">Anuluj</a>
+            <button id="start-analysis" class="button button--primary" type="submit">
+              Rozpocznij analizę demo
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <span>Capture pozostaje niezaufanym evidence do ponownej walidacji przez backend.</span>
+      <a href="./install.html">Instrukcja Inspector Lite</a>
+    </footer>
+
+    <noscript>Do obsługi capture wymagany jest JavaScript.</noscript>
+  </body>
+</html>

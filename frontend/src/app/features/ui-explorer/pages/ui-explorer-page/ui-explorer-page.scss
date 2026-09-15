@@ -12,6 +12,57 @@
   gap: 16px;
 }
 
+.ui-explorer-inspector-entry {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 16px;
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--primary) 11%, transparent), transparent 38%),
+    var(--surface);
+}
+
+.ui-explorer-inspector-entry__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: white;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #0747a6, #0c66e4);
+  box-shadow: 0 8px 20px rgb(12 102 228 / 22%);
+}
+
+.ui-explorer-inspector-entry__copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.ui-explorer-inspector-entry__copy h2,
+.ui-explorer-inspector-entry__copy p {
+  margin: 0;
+}
+
+.ui-explorer-inspector-entry__copy h2 {
+  margin-top: 2px;
+  font-size: 0.98rem;
+}
+
+.ui-explorer-inspector-entry__copy p:not(.section-eyebrow) {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.ui-explorer-inspector-entry__action {
+  flex: 0 0 auto;
+}
+
 .ui-explorer-file-input {
   display: none;
 }
@@ -259,9 +310,14 @@
   .ui-explorer-run__header,
   .ui-explorer-read-only__header,
   .ui-explorer-run__header-actions,
-  .ui-explorer-run__message {
+  .ui-explorer-run__message,
+  .ui-explorer-inspector-entry {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .ui-explorer-inspector-entry__action {
+    margin-left: 53px;
   }
 
   .ui-explorer-read-only__grid {

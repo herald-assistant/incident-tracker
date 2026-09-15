@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>CRM Agent Portal · Inspector Lite demo</title>
+    <link rel="stylesheet" href="./demo.css" />
+  </head>
+  <body>
+    <header class="top-bar">
+      <div class="brand-mark">C</div>
+      <div>
+        <strong>CRM Agent Portal</strong>
+        <span>Kontrolowana strona demonstracyjna</span>
+      </div>
+      <a href="./install.html">Instrukcja Inspectora</a>
+    </header>
+
+    <div class="application-shell">
+      <nav aria-label="Główna nawigacja CRM">
+        <strong>Workspace</strong>
+        <a href="#">Pulpit</a>
+        <a class="active" href="#">Kontakty</a>
+        <a href="#">Zadania</a>
+        <a href="#">Raporty</a>
+      </nav>
+
+      <main>
+        <header class="page-heading">
+          <div>
+            <span class="eyebrow">Kontakty CRM</span>
+            <h1>Nowy kontakt</h1>
+            <p>Fikcyjny formularz do sprawdzenia selektora i redakcji danych.</p>
+          </div>
+          <span class="draft-badge">Wersja robocza</span>
+        </header>
+
+        <section class="hint" aria-label="Instrukcja testu">
+          <strong>Test Inspector Lite</strong>
+          Uruchom zapisaną zakładkę lub DevTools Snippet, najedź na dowolny element
+          i kliknij. Dobrym celem jest wyszarzony przycisk „Utwórz kontakt”.
+        </section>
+
+        <div class="content-grid">
+          <form class="card contact-form" data-testid="crm-contact-form">
+            <header>
+              <div>
+                <span class="eyebrow">Dane podstawowe</span>
+                <h2>Profil kontaktu</h2>
+              </div>
+              <span class="required-note">* pola wymagane</span>
+            </header>
+
+            <label>
+              <span>Nazwa kontaktu *</span>
+              <input
+                id="crm-contact-name"
+                name="contactName"
+                type="text"
+                value="WARTOŚĆ_FORMULARZA_NIE_MOŻE_TRAFIĆ_DO_CAPTURE"
+                required
+                aria-invalid="true"
+                aria-describedby="name-error"
+              />
+              <small id="name-error" class="error">Nazwa musi mieć od 3 do 80 znaków.</small>
+            </label>
+
+            <label>
+              <span>Segment *</span>
+              <select id="crm-contact-segment" name="segment" required>
+                <option value="">Wybierz segment</option>
+                <option value="standard">Standard</option>
+                <option value="priority">Priorytet</option>
+              </select>
+            </label>
+
+            <label class="checkbox-row">
+              <input name="marketingConsent" type="checkbox" />
+              <span>Zgoda na komunikację demonstracyjną</span>
+            </label>
+
+            <div class="form-footer">
+              <span id="validation-hint">Uzupełnij wymagane pola, aby aktywować zapis.</span>
+              <button
+                type="submit"
+                class="primary-action"
+                data-testid="create-contact-button"
+                aria-describedby="validation-hint"
+                disabled
+              >
+                Utwórz kontakt
+              </button>
+            </div>
+          </form>
+
+          <aside class="card context-card" aria-labelledby="context-title">
+            <span class="eyebrow">Podgląd danych</span>
+            <h2 id="context-title">Kontekst obsługi</h2>
+            <dl>
+              <div>
+                <dt>Proces</dt>
+                <dd>Rejestracja kontaktu CRM</dd>
+              </div>
+              <div>
+                <dt>Zespół</dt>
+                <dd>CRM Example Team</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd><span class="status-pill">Niekompletny</span></dd>
+              </div>
+            </dl>
+            <button class="secondary-action" type="button">Skąd biorą się te dane?</button>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

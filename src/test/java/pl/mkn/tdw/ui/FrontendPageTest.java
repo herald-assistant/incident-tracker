@@ -111,6 +111,40 @@ class FrontendPageTest {
     }
 
     @Test
+    void shouldServePackagedInspectorLiteAssets() throws Exception {
+        mockMvc.perform(get("/tdw-inspector/install.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("TDW Inspector Lite")))
+                .andExpect(content().string(containsString("Bez rozszerzenia")));
+
+        mockMvc.perform(get("/tdw-inspector/capture.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("Zaufany ekran TDW")));
+
+        mockMvc.perform(get("/tdw-inspector/runtime.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("ui-explorer-inspector")))
+                .andExpect(content().string(containsString("data-tdw-browser-tool-root")));
+
+        mockMvc.perform(get("/tdw-inspector/loader.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Remote runtime loading failed")))
+                .andExpect(content().string(containsString("protocol.js")))
+                .andExpect(content().string(containsString("runtime.js")));
+
+        mockMvc.perform(get("/tdw-inspector/demo.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("CRM Agent Portal")));
+
+        mockMvc.perform(get("/tdw-inspector/missing.js"))
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
+    }
+
+    @Test
     void shouldServeConfigDriftViewerRoute() throws Exception {
         mockMvc.perform(get("/config-drift-viewer"))
                 .andExpect(status().isOk())

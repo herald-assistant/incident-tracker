@@ -6,8 +6,8 @@ Status: draft
 
 Uzytkownik pracujacy w uruchomionej aplikacji widzi konkretny przycisk, pole
 formularza, wartosc, sekcje albo komunikat i chce szybko zrozumiec jego
-zachowanie. Nie zna jednak route'a katalogowego, nazwy komponentu, sciezki
-pliku, powiazanych serwisow ani sposobu poruszania sie po repozytorium.
+zachowanie. Nie zna route'a katalogowego, nazwy komponentu, sciezki pliku,
+powiazanych serwisow ani sposobu poruszania sie po repository.
 
 Obecny UI Explorer rozpoczyna analize od wybranego systemu, refa i ekranu oraz
 tworzy dokumentacje calego widoku. To dobre wejscie do poznania ekranu, ale
@@ -20,8 +20,9 @@ jest zbyt szerokie dla pytan wynikajacych z obserwacji jednego elementu, np.:
 
 Uzytkownik potrzebuje wskazac element bezposrednio na aktualnie ogladanej
 stronie, zadac pytanie naturalnym jezykiem i otrzymac w Team Delivery
-Workspace odpowiedz ugruntowana w kodzie. Nie powinien recznie tlumaczyc
-obserwacji z UI na techniczne identyfikatory zrodel.
+Workspace odpowiedz ugruntowana w kodzie. Rozwiazanie nie moze wymagac
+instalacji rozszerzenia przegladarki, poniewaz czesc organizacji blokuje
+rozszerzenia politykami stacji roboczych.
 
 ## Uzytkownicy i moment uzycia
 
@@ -29,35 +30,38 @@ Glownym uzytkownikiem jest analityk biznesowo-systemowy pracujacy na srodowisku
 testowym albo innym kontrolowanym srodowisku aplikacji. Z tego samego wejscia
 moze korzystac tester, developer, product owner lub osoba utrzymujaca system.
 
-Potrzeba pojawia sie w chwili, gdy uzytkownik:
+Potrzeba pojawia sie, gdy uzytkownik:
 
 - ma przed soba konkretny stan uruchomionej strony,
 - potrafi wskazac element wizualnie, ale nie zna jego implementacji,
 - potrzebuje odpowiedzi o warunku, danych, stanie albo skutku akcji,
-- chce zachowac wynik jako zwykla analize UI Explorer, a nie jednorazowa
-  odpowiedz znikajaca wraz z zamknieciem strony.
+- chce zachowac wynik jako zwykla analize UI Explorer w platformie.
 
 ## Oczekiwane doswiadczenie
 
-1. Na wspieranej stronie uzytkownik przytrzymuje `Ctrl` + `Alt`. Ruch myszy
-   wlacza lokalne sledzenie elementu pod kursorem i efektowne podswietlenie w
-   granatowo-niebieskiej palecie Team Delivery Workspace.
-2. Klikniecie podczas aktywnego wyboru zatrzymuje element, nie wykonuje jego
-   normalnej akcji i otwiera modal nad badana strona.
-3. Modal pokazuje zrozumiale podsumowanie wyboru i pozwala podac pytanie lub
-   polecenie, wybrac model AI oraz zgodny z nim `reasoningEffort`.
-4. System sam rozpoznaje zrodlo aplikacji, wersje kodu i ekran albo jawnie
-   wyjasnia, dlaczego nie moze ich bezpiecznie rozstrzygnac. Uzytkownik nie
-   podaje repository, grupy GitLab, brancha, commita, pliku ani komponentu.
-5. Po zatwierdzeniu uzytkownik od razu dostaje informacje, ze job zostal
-   przyjety, identyfikator analizy i akcje otwarcia Team Delivery Workspace.
-   Run jest od razu widoczny w `Analysis History`.
-6. Rozszerzenie nie czeka na wynik i nie prezentuje odpowiedzi AI. Pelny
-   przebieg, evidence, usage, wynik i ograniczenia sa dostepne w dedykowanej
-   analizie UI Explorer w platformie.
-7. Anulowanie, `Escape`, zwolnienie klawiszy przed kliknieciem albo blad
-   polaczenia przywracaja strone do poprzedniego stanu bez pozostawienia
-   overlayow i listenerow.
+1. Uzytkownik jednorazowo dodaje do zakladek przygotowany przez TDW maly
+   launcher, ktory przy jawnym uruchomieniu pobiera publiczny statyczny runtime
+   z przypietego originu TDW. Alternatywnie zapisuje pelny, samowystarczalny kod
+   jako DevTools Snippet. Nie instaluje rozszerzenia i nie nadaje stalego
+   dostepu do odwiedzanych originow.
+2. Na badanej stronie uruchamia launcher. Od razu wlacza sie sledzenie myszy i
+   efektowne podswietlenie elementu w granatowo-niebieskiej palecie TDW.
+3. Klikniecie zatrzymuje element, nie wykonuje jego zwyklej akcji i otwiera
+   zaufany ekran capture w TDW.
+4. Ekran TDW pokazuje zrozumiale podsumowanie i zredagowany payload. Dopiero
+   tam uzytkownik podaje pytanie lub polecenie, wybiera model AI i zgodny z
+   nim `reasoningEffort`.
+5. Po zatwierdzeniu TDW przyjmuje asynchroniczny job, pokazuje identyfikator i
+   zapisuje run w `Analysis History`. Wynik, evidence, usage i ograniczenia sa
+   prezentowane w platformie, nie na badanej stronie.
+6. `Escape`, ponowne uruchomienie launchera albo anulowanie usuwa overlay i
+   listenery bez zmiany stanu biznesowego strony.
+7. Jezeli przegladarka blokuje popup lub odcina `window.opener`, uzytkownik
+   moze skopiowac zredagowany capture i wkleic go recznie na ekranie TDW.
+
+`Ctrl` + `Alt` nie jest uzywany w pierwszym wydaniu. Jawne uruchomienie
+bookmarkleta lub snippetu eliminuje konflikt z `AltGr` i przypadkowe
+nasluchiwanie na wszystkich stronach.
 
 ## Jednostka analizy
 
@@ -65,7 +69,7 @@ Jednostka tego trybu jest **pytanie o wskazany element w konkretnym stanie
 strony i przypietej rewizji zrodla**. Obejmuje:
 
 - pytanie lub polecenie uzytkownika,
-- wskazany element i jego stan dostepny w DOM,
+- wskazany element i jego obserwowalny stan DOM,
 - semantyczna sciezke przodkow od elementu do root dokumentu,
 - kontekst strony i routingu potrzebny do rozpoznania ekranu,
 - zweryfikowany albo jawnie niezweryfikowany zwiazek uruchomionej strony z
@@ -77,24 +81,21 @@ powiazania z komponentem, template'em, handlerem, stanem i usluga w kodzie.
 
 ## Oczekiwany kontekst
 
-Kontekst przekazywany do analizy powinien byc wystarczajacy do znalezienia
-wlasciwego miejsca w kodzie, ale nie moze byc kopia calej strony. Powinien
-obejmowac w szczegolnosci:
+Capture powinien byc wystarczajacy do znalezienia wlasciwego miejsca w kodzie,
+ale nie moze byc kopia calej strony. Obejmuje:
 
-- bezpieczna charakterystyke elementu: typ, role, dostepna nazwe, ograniczony
-  tekst, stabilne identyfikatory i obserwowalny stan,
-- przejscie po przodkach do root wraz z granicami Shadow DOM albo ramki, gdy sa
-  widoczne,
-- origin, znormalizowana trase, tytul, jezyk i ograniczone sygnaly buildu lub
-  zasobow strony,
-- informacje pozwalajace odroznic `disabled`, `readonly`, ukrycie, blad
-  walidacji i inne obserwowalne stany bez przesylania wartosci pola,
-- jawne informacje o obcieciu, redakcji, niedostepnej ramce albo
-  niejednoznacznym dopasowaniu.
+- typ, role, dostepna nazwe, ograniczony tekst, stabilne identyfikatory i
+  obserwowalny stan elementu,
+- ograniczony lancuch przodkow wraz z informacja o kompakcji, Shadow DOM i
+  ramce,
+- origin, znormalizowana trase, tytul, jezyk i nazwy parametrow query,
+- rozroznienie `disabled`, `readonly`, `required`, `invalid`, `checked`,
+  `expanded` i `hidden`, gdy sa obserwowalne,
+- jawne informacje o obcieciu, redakcji albo niedostepnej granicy.
 
-Kontekst nie obejmuje hasel, tokenow, cookies, zawartosci `localStorage` ani
-`sessionStorage`, pelnego DOM, wartosci pol formularza, historii sieciowej ani
-automatycznego zrzutu ekranu.
+Capture nie obejmuje hasel, tokenow, cookies, zawartosci `localStorage` ani
+`sessionStorage`, pelnego DOM, wartosci pol formularza, historii sieciowej,
+schowka ani automatycznego zrzutu ekranu.
 
 ## Oczekiwany wynik
 
@@ -107,7 +108,7 @@ Wynik ma przede wszystkim odpowiedziec na zadane pytanie. Powinien zawierac:
 - source references do potwierdzonego materialu,
 - poziom pewnosci osobno dla obserwacji runtime i powiazania ze zrodlem,
 - visibility limits i otwarte pytania dla zachowan zaleznych od danych,
-  backendu, uprawnien, zewnetrznej biblioteki albo niezweryfikowanej rewizji.
+  backendu, uprawnien albo niezweryfikowanej rewizji.
 
 Warunek widocznosci albo `disabled` w przegladarce nie moze byc przedstawiony
 jako dowod backendowej autoryzacji. Tekst strony i atrybuty DOM sa niezaufanym
@@ -115,87 +116,91 @@ evidence, a nie instrukcjami dla AI.
 
 ## Zakres pierwszego wydania
 
-- Chrome desktop i zwykle strony `http`/`https`, dla ktorych uzytkownik
-  przyznal rozszerzeniu dostep do originu.
-- Jeden wskazany element w top-level dokumencie albo wspieranej ramce.
-- Automatyczne mapowanie strony do jednego zarejestrowanego frontendu i jednej
-  przypietej rewizji kodu.
+- Chrome desktop i zwykle strony `http`/`https`, na ktorych polityka
+  przegladarki pozwala uruchomic bookmarklet albo DevTools Snippet.
+- Maly bookmarklet ladujacy wersjonowane zasoby statyczne z dokladnego originu
+  TDW oraz funkcjonalnie rownowazny, samowystarczalny snippet dla developerow.
+- Jeden wskazany element w top-level dokumencie; otwarte Shadow DOM jest
+  obserwowane w zakresie dostepnym dla skryptu.
+- Efemeryczny runtime bez magazynu ustawien, stalego dostepu do originu i
+  sekretow TDW.
+- Zaufany ekran TDW do podgladu, pytania, modelu, `reasoningEffort` i startu
+  joba.
+- Reczny transfer zredagowanego JSON jako fallback transportu.
+- Automatyczne mapowanie strony do zarejestrowanego frontendu i przypietej
+  rewizji kodu po stronie backendu.
 - Obecna rodzina Angular/Nx wspierana przez UI Explorer; kontrakt capture
-  pozostaje framework-neutralny, aby pozniejsze adaptery nie wymagaly zmiany
-  rozszerzenia.
-- Asynchroniczny job, natychmiastowa historia, report-first wynik, source
-  evidence, confidence, visibility limits i usage w istniejacym UX platformy.
+  pozostaje framework-neutralny.
 
-„Dziala na dowolnej stronie” oznacza dostepnosc interakcji na zwyklej stronie
-`http`/`https` po przyznaniu uprawnienia. Analiza kodu moze wystartowac tylko
-dla strony, ktora backend jednoznacznie mapuje do zarejestrowanego frontendu i
-kontrolowanego repository scope. Brak mapowania jest jawnym stanem blokujacym,
-a nie powodem do zgadywania repozytorium przez AI.
+„Dziala na dowolnej stronie” oznacza dostepnosc selektora na zwyklej stronie
+`http`/`https`, o ile browser i polityka organizacji dopuszczaja wykonanie
+bookmarkleta/snippetu. Analiza kodu moze wystartowac tylko dla strony, ktora
+backend jednoznacznie mapuje do zarejestrowanego frontendu i kontrolowanego
+repository scope. Brak mapowania jest jawnym stanem blokujacym.
 
 ## Kryteria sukcesu
 
-- Uzytkownik uruchamia pytanie o element bez znajomosci Angulara, GitLaba,
-  sciezek plikow i katalogu ekranow.
-- Sam hover nie wykonuje requestu do TDW, nie pobiera kodu i nie zmienia stanu
-  biznesowego strony.
+- Uzytkownik uruchamia selektor bez rozszerzenia i bez znajomosci Angulara,
+  GitLaba, sciezek plikow ani katalogu ekranow.
+- Sam hover nie wykonuje requestu do TDW i nie zmienia stanu biznesowego.
 - Klikniecie wyboru nie uruchamia akcji badanego elementu i tworzy dokladnie
   jeden capture.
-- Modal korzysta z aktualnego katalogu modeli i dopuszczalnych reasoning
-  efforts z backendu; nie utrzymuje lokalnej listy.
-- Backend sam rozstrzyga system, ref, immutable source revision i ekran albo
+- Obca strona nie otrzymuje tokenu, cookie TDW, listy modeli ani klienta REST.
+- Adres bookmarkleta pozostaje wyraznie ponizej 2 KiB i nie osadza pelnego
+  runtime.
+- Ekran TDW waliduje origin, `event.source`, nonce, schemat i limit payloadu,
+  a przed startem pokazuje dane operatorowi.
+- Formularz korzysta z aktualnego katalogu modeli i dopuszczalnych
+  `reasoningEffort` z backendu, gdy podlaczony zostanie produkcyjny transport.
+- Backend rozstrzyga system, ref, immutable source revision i ekran albo
   zwraca zrozumialy powod blokady.
-- Run pojawia sie w `Analysis History` juz jako `QUEUED`, a kolejne snapshoty
-  aktualizuja ten sam wpis.
-- Dla pola, przycisku i wartosci danych wynik odpowiada na pytanie, pokazuje
-  potwierdzona sciezke zrodlowa i nie uzupelnia luk runtime domyslem.
-- Brak dostepu do strony, TDW, zrodla albo AI daje bezpieczny, naprawialny blad
-  bez utraty kontroli nad badana strona.
-- Payload, logi, job snapshot, historia i export nie zawieraja zabronionych
-  sekretow ani surowych wartosci formularza.
+- Run pojawia sie w `Analysis History` juz jako `QUEUED`.
+- Payload, logi, historia i export nie zawieraja sekretow ani surowych
+  wartosci formularza.
+- Zamkniecie albo blad usuwa runtime z badanej strony bez przeladowania.
 
 ## Non-goals pierwszego wydania
 
-- Odpowiadanie przez AI wewnatrz rozszerzenia albo polling wyniku przez
-  rozszerzenie.
+- Rozszerzenie Chrome, publikacja w Chrome Web Store, instalator binarny lub
+  obchodzenie polityk organizacji blokujacych wykonywanie skryptow.
+- Odpowiadanie przez AI na badanej stronie albo polling wyniku przez runtime
+  bookmarkleta.
 - Wykonywanie akcji biznesowych, automatyczne wypelnianie formularzy,
   modyfikowanie kodu albo obchodzenie autoryzacji badanego systemu.
 - Nagrywanie sesji, przechwytywanie requestow sieciowych, cookies, storage,
   schowka, mikrofonu albo kamery.
-- Screenshot i analiza pixel-perfect; moze to byc osobny, jawnie zatwierdzony
-  inkrement po ocenie wartosci i ryzyka danych.
+- Screenshot i analiza pixel-perfect.
 - Zaleznosc od `window.ng`, Angular DevTools, source maps albo debug buildu.
-- Pelne wsparcie stron `chrome://`, Chrome Web Store, PDF viewer, `file://`,
-  incognito i cross-origin iframe bez dodatkowych uprawnien platformy.
-- Zgadywanie repository albo rewizji na podstawie nazwy hosta, tekstu strony
-  lub podobienstwa nazw.
+- Pelne wsparcie `chrome://`, Chrome Web Store, PDF viewer, `file://`,
+  cross-origin iframe i stron blokujacych `javascript:` lub DevTools.
+- Zgadywanie repository albo rewizji z nazwy hosta lub tekstu strony.
 - Zastapienie obecnej screen-centered dokumentacji widoku.
 
 ## Ograniczenia i ryzyka
 
-- `Ctrl` + `Alt` moze kolidowac z `AltGr`, skrotami systemu i skrotami strony;
-  wybor nie moze aktywowac sie dla stanu `AltGraph` i wymaga testow na
-  docelowych klawiaturach.
+- Bookmarklet i snippet dzialaja w main world badanej strony. Strona moze
+  obserwowac, zmodyfikowac albo zaklocic runtime; dlatego nie wolno umieszczac
+  w nim sekretow ani ufnie traktowac capture po stronie backendu.
+- CSP, Chrome Local Network Access, polityki enterprise, blokada `javascript:`
+  lub wylaczone DevTools moga uniemozliwic jedna albo obie metody uruchomienia.
+- Popup blocker oraz Cross-Origin-Opener-Policy moga przerwac automatyczny
+  `postMessage`; wymagany jest jawny fallback copy/paste.
 - DOM, Shadow DOM, portale, overlaye i iframe nie zawsze odzwierciedlaja
   logiczne ownership komponentu. Niejednoznacznosc musi pozostac widoczna.
 - Origin i route nie dowodza wersji wdrozonego artefaktu. Brak wiarygodnego
-  build revision musi obnizac confidence i tworzyc visibility limit.
+  build revision obniza confidence i tworzy visibility limit.
 - Nawet ograniczony tekst, route i atrybuty moga zawierac dane klienta.
-  Minimalizacja, redakcja, limity rozmiaru i krotki lifecycle surowego capture
-  sa wymaganiem, nie optymalizacja.
-- Rozszerzenie dzialajace na wielu originach ma szerokie uprawnienia. Dostep
-  powinien byc przyznawany per origin, a nie bezwarunkowo przy instalacji.
-- Badana strona jest niezaufana. Nie moze wskazac adresu TDW, endpointu,
-  repository scope ani wywolac dowolnego requestu przez service worker.
+  Minimalizacja, redakcja, limity rozmiaru i ponowna walidacja backendowa sa
+  wymaganiem.
+- Pobranie runtime z lokalnego TDW moze zostac zablokowane przez CSP albo
+  wymagac zgody Chrome na Local Network Access. DevTools Snippet pozostaje
+  pelnym fallbackiem uruchomieniowym bez pobierania zewnetrznego skryptu.
 
-## Decyzje produktowe do zatwierdzenia
+## Decyzje produktowe do zatwierdzenia przed backendem
 
-- Czy pierwsze wydanie ma wymagac jawnego nadania dostepu dla kazdego originu,
-  zgodnie z rekomendowanym modelem, czy organizacja dopuszcza centralnie
-  zarzadzana allowliste hostow.
-- Jak strona jest mapowana na `systemId` i ref oraz czy wdrozenie publikuje
+- Jak origin i route sa mapowane na `systemId` i czy deployment publikuje
   wiarygodny identyfikator commita.
-- Jak rozszerzenie jest parowane z operatorska sesja TDW i jak dlugo zyje
-  ograniczony credential rozszerzenia.
-- Czy top-level dokument i same-origin iframe wystarcza w pierwszym wydaniu.
-- Czy portable export pytania elementowego jest wymagany od razu, czy
-  wystarcza lokalna historia i copy/download raportu Markdown.
+- Czy niejednoznaczny ekran zawsze blokuje start joba.
+- Jak dlugo przechowywany jest zredagowany capture w historii i exporcie.
+- Czy obok bookmarkleta i snippetu organizacja chce udostepnic wariant
+  userscriptu dla zarzadzanych srodowisk, jezeli polityka na to pozwala.

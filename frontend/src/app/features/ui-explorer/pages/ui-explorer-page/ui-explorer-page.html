@@ -43,6 +43,28 @@
         }
       </section>
     } @else {
+      <aside class="analysis-card ui-explorer-inspector-entry" aria-labelledby="uiExplorerInspectorTitle">
+        <div class="ui-explorer-inspector-entry__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">select_window</span>
+        </div>
+        <div class="ui-explorer-inspector-entry__copy">
+          <p class="section-eyebrow">Live page · bez rozszerzenia</p>
+          <h2 id="uiExplorerInspectorTitle">Inspect a running page</h2>
+          <p>
+            Dodaj Inspector Lite do zakładek lub DevTools Snippets, a potem wskaż element
+            bezpośrednio w uruchomionej aplikacji.
+          </p>
+        </div>
+        <a
+          class="secondary-button secondary-button--compact ui-explorer-inspector-entry__action"
+          href="/tdw-inspector/install.html"
+          target="_blank"
+          rel="noopener"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+          <span>Open Inspector Lite</span>
+        </a>
+      </aside>
       <section class="analysis-card ui-explorer-composer">
         <app-ui-explorer-configuration (importRequested)="triggerImport(importInput)" />
       </section>

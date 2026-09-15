@@ -73,9 +73,10 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
 - `needs/ui-explorer-browser-element-analysis.md` i
   `plans/ui-explorer-element-inspection-and-ai-context.md`
   opisuja proponowany, osobno zatwierdzany tryb pytania o element wskazany na
-  uruchomionej stronie przez rozszerzenie Chrome. Plan jest `in-progress` tylko
-  dla zatwierdzonego startera rozszerzenia i UX demo; browser REST, auth oraz
-  analiza backendowa nadal wymagaja osobnej akceptacji.
+  uruchomionej stronie bez instalowania rozszerzenia. Plan jest `in-progress`
+  dla Inspector Lite: bookmarkleta/DevTools Snippetu, selektora i zaufanego
+  ekranu capture z dummy accepted; browser ingress i analiza AI pozostaja
+  kolejnymi checkpointami.
 - `plans/ui-explorer.md`
   jest zatwierdzonym planem L2 w realizacji dla statycznego, screen-centered MVP z katalogiem
   ekranow wybieranych przez jawnie zarejestrowany system
