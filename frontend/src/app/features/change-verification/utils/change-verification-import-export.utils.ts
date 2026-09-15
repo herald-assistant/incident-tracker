@@ -10,17 +10,20 @@ import {
 import { normalizeAnalysisReport } from '../../../core/utils/analysis-import-export.utils';
 import { formatFileTimestamp, sanitizeFileNamePart } from '../../../core/utils/json-file.utils';
 import {
-  ChangeVerificationCompliance,
-  ChangeVerificationFinding,
-  ChangeVerificationFindingSeverity,
+  ChangeVerificationDecision,
+  ChangeVerificationDecisionStatus,
   ChangeVerificationJobStateSnapshot,
+  ChangeVerificationRuleEvidence,
+  ChangeVerificationRuleLedger,
+  ChangeVerificationRuleResult,
+  ChangeVerificationRuleSource,
   ChangeVerificationResult
 } from '../models/change-verification.models';
 
 export const CHANGE_VERIFICATION_EXPORT_SCHEMA = 'tdw.change-verification-export';
-export const CHANGE_VERIFICATION_EXPORT_VERSION = 5;
+export const CHANGE_VERIFICATION_EXPORT_VERSION = 6;
 export const CHANGE_VERIFICATION_EXPORT_PAYLOAD_TYPE = 'change-verification-analysis';
-export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v4';
+export const CHANGE_VERIFICATION_RESULT_CONTRACT = 'change-verification-result-v5';
 
 export interface ChangeVerificationExportEnvelope {
   schema: string;
@@ -48,8 +51,9 @@ export interface ChangeVerificationExportDiagnostics {
   };
   result: {
     status: string;
-    complianceStatus: string;
-    findingCount: number;
+    decisionStatus: string;
+    totalRules: number;
+    needsAttentionCount: number;
     visibilityLimitCount: number;
   };
   workflow: {
@@ -113,7 +117,7 @@ export function buildChangeVerificationExportDiagnostics(
 ): ChangeVerificationExportDiagnostics {
   assertCompletedExportableJob(job);
 
-  const compliance = job.result.compliance;
+  const ledger = job.result.ruleLedger;
 
   return {
     resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT,
@@ -129,9 +133,10 @@ export function buildChangeVerificationExportDiagnostics(
     },
     result: {
       status: job.result.status,
-      complianceStatus: compliance.status,
-      findingCount: compliance.findings.length,
-      visibilityLimitCount: uniqueValues(compliance.visibilityLimits).length
+      decisionStatus: ledger.decision.status,
+      totalRules: ledger.decision.totalRules,
+      needsAttentionCount: ledger.decision.notSatisfied + ledger.decision.notVerified,
+      visibilityLimitCount: ledger.visibilityLimits.length
     },
     workflow: {
       stepCount: job.steps.length,
@@ -300,21 +305,12 @@ function assertCompletedExportableJob(
   if (!job.report) {
     throw new Error('Change Verification export wymaga kanonicznego raportu analizy.');
   }
-  const inferredChecks = job.result.compliance.verificationChecks.filter(
-    (check) => check.origin === 'INFERRED_CRITICAL'
-  );
-  if (inferredChecks.length > 5) {
-    throw new Error('Change Verification obsługuje maksymalnie 5 krytycznych sugestii AI.');
+  if (job.result.ruleLedger.additionalChecks.length > 5) {
+    throw new Error('Change Verification obsługuje maksymalnie 5 dodatkowych kontroli AI.');
   }
   const sectionIds = new Set(job.report.sections.map((section) => normalizeString(section.id).toUpperCase()));
-  if (job.checkStoryCompliance && (
-    !sectionIds.has('STORY_COMPLIANCE')
-    || !sectionIds.has('INFERRED_CRITICAL_CHECKS')
-  )) {
-    throw new Error('Raport Change Verification nie zawiera kompletu sekcji aktualnego kontraktu.');
-  }
-  if (job.checkInstructionCompliance && !sectionIds.has('INSTRUCTION_COMPLIANCE')) {
-    throw new Error('Raport Change Verification nie zawiera sekcji Instruction Compliance.');
+  if (!sectionIds.has('RULE_LEDGER')) {
+    throw new Error('Raport Change Verification nie zawiera projekcji rule ledger.');
   }
 }
 
@@ -397,95 +393,153 @@ function normalizeAiActivityEvent(event: unknown): AnalysisAiActivityEvent {
 
 function normalizeResult(result: unknown): ChangeVerificationResult {
   const resultObject = asObject(result);
+  if (!resultObject) {
+    throw new Error('Wynik Change Verification nie jest poprawnym obiektem.');
+  }
   return {
-    status: normalizeString(resultObject?.['status']),
-    issueKey: normalizeString(resultObject?.['issueKey']),
-    issueUrl: normalizeString(resultObject?.['issueUrl']),
-    prompt: normalizeString(resultObject?.['prompt']),
-    compliance: normalizeCompliance(resultObject?.['compliance']),
-    usage: normalizeUsage(resultObject?.['usage'])
+    status: normalizeString(resultObject['status']),
+    issueKey: normalizeString(resultObject['issueKey']),
+    issueUrl: normalizeString(resultObject['issueUrl']),
+    prompt: normalizeString(resultObject['prompt']),
+    ruleLedger: normalizeRuleLedger(resultObject['ruleLedger']),
+    usage: normalizeUsage(resultObject['usage'])
   };
 }
 
-function normalizeCompliance(compliance: unknown): ChangeVerificationCompliance {
-  const complianceObject = asObject(compliance);
+function normalizeRuleLedger(value: unknown): ChangeVerificationRuleLedger {
+  const object = asObject(value);
+  if (!object || !Array.isArray(object['rules']) || !Array.isArray(object['additionalChecks'])
+    || !Array.isArray(object['visibilityLimits'])) {
+    throw new Error('Wynik Change Verification nie zawiera pełnego rule ledger.');
+  }
+  const rules = object['rules'].map((rule) => normalizeRule(rule, false));
+  const additionalChecks = object['additionalChecks'].map((rule) => normalizeRule(rule, true));
+  if (additionalChecks.length > 5) {
+    throw new Error('Rule ledger zawiera więcej niż 5 dodatkowych kontroli AI.');
+  }
+  const ids = [...rules, ...additionalChecks].map((rule) => rule.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('Rule ledger zawiera powtórzone identyfikatory reguł.');
+  }
+  const knownIds = new Set(ids);
+  const visibilityLimits = object['visibilityLimits'].map((value) => {
+    const limit = asObject(value);
+    const message = requiredString(limit?.['message'], 'Visibility limit nie zawiera opisu.');
+    const affectedRuleIds = requiredStringArray(limit?.['affectedRuleIds'], 'Visibility limit nie zawiera affectedRuleIds.');
+    if (affectedRuleIds.some((id) => !knownIds.has(id))) {
+      throw new Error('Visibility limit wskazuje nieistniejącą regułę.');
+    }
+    return { message, affectedRuleIds };
+  });
+  const derived = deriveDecision(rules);
+  const supplied = normalizeDecision(object['decision']);
+  if (JSON.stringify(derived) !== JSON.stringify(supplied)) {
+    throw new Error('Decyzja w imporcie nie odpowiada outcome reguł źródłowych.');
+  }
   return {
-    storyComplianceRequested: normalizeBoolean(complianceObject?.['storyComplianceRequested']),
-    instructionComplianceRequested: normalizeBoolean(complianceObject?.['instructionComplianceRequested']),
-    status: normalizeString(complianceObject?.['status']),
-    verificationChecks: Array.isArray(complianceObject?.['verificationChecks'])
-      ? complianceObject['verificationChecks'].map(normalizeVerificationCheck)
-      : [],
-    findings: Array.isArray(complianceObject?.['findings'])
-      ? complianceObject['findings'].map(normalizeFinding)
-      : [],
-    suggestedActions: normalizeStringArray(complianceObject?.['suggestedActions']),
-    visibilityLimits: normalizeStringArray(complianceObject?.['visibilityLimits'])
+    storyComplianceRequested: normalizeBoolean(object['storyComplianceRequested']),
+    instructionComplianceRequested: normalizeBoolean(object['instructionComplianceRequested']),
+    decision: derived,
+    rules,
+    additionalChecks,
+    visibilityLimits
   };
 }
 
-function normalizeVerificationCheck(check: unknown) {
-  const checkObject = asObject(check);
-  if (!checkObject) {
-    throw new Error('Check Change Verification nie jest poprawnym obiektem aktualnego kontraktu.');
+function normalizeDecision(value: unknown): ChangeVerificationDecision {
+  const object = asObject(value);
+  if (!object) {
+    throw new Error('Rule ledger nie zawiera decyzji.');
   }
-  const origin = normalizeString(checkObject['origin']).toUpperCase();
-  const scope = normalizeString(checkObject['scope']).toUpperCase();
-  if (!['DEFINED', 'INFERRED_CRITICAL'].includes(origin)) {
-    throw new Error('Check Change Verification nie zawiera obsługiwanego pola origin.');
-  }
-  if (origin === 'DEFINED' && !['STORY_COMPLIANCE', 'INSTRUCTION_COMPLIANCE'].includes(scope)) {
-    throw new Error('Zdefiniowany check Change Verification ma nieobsługiwany scope.');
-  }
-  if (origin === 'INFERRED_CRITICAL' && scope !== 'INFERRED_CRITICAL_CHECKS') {
-    throw new Error('Krytyczna sugestia AI ma nieobsługiwany scope.');
-  }
+  return {
+    status: enumValue(object['status'], ['READY', 'NEEDS_ACTION', 'NEEDS_EVIDENCE', 'INCONCLUSIVE'], 'Nieobsługiwany status decyzji.'),
+    totalRules: requiredNumber(object['totalRules'], 'Decyzja nie zawiera totalRules.'),
+    satisfied: requiredNumber(object['satisfied'], 'Decyzja nie zawiera satisfied.'),
+    notSatisfied: requiredNumber(object['notSatisfied'], 'Decyzja nie zawiera notSatisfied.'),
+    notVerified: requiredNumber(object['notVerified'], 'Decyzja nie zawiera notVerified.')
+  };
+}
 
-  const normalized = {
-    id: normalizeString(checkObject?.['id']),
-    origin,
+function deriveDecision(rules: ChangeVerificationRuleResult[]): ChangeVerificationDecision {
+  const satisfied = rules.filter((rule) => rule.outcome === 'SATISFIED').length;
+  const notSatisfied = rules.filter((rule) => rule.outcome === 'NOT_SATISFIED').length;
+  const notVerified = rules.filter((rule) => rule.outcome === 'NOT_VERIFIED').length;
+  const status: ChangeVerificationDecisionStatus = rules.length === 0
+    ? 'INCONCLUSIVE'
+    : notSatisfied > 0
+      ? 'NEEDS_ACTION'
+      : notVerified > 0
+        ? 'NEEDS_EVIDENCE'
+        : 'READY';
+  return { status, totalRules: rules.length, satisfied, notSatisfied, notVerified };
+}
+
+function normalizeRule(value: unknown, additional: boolean): ChangeVerificationRuleResult {
+  const object = asObject(value);
+  if (!object || !Array.isArray(object['evidence']) || !Array.isArray(object['missingEvidence'])
+    || !Array.isArray(object['signals'])) {
+    throw new Error('Reguła Change Verification nie spełnia aktualnego kontraktu.');
+  }
+  const scope = enumValue(object['scope'], ['STORY', 'INSTRUCTION', 'ADDITIONAL'], 'Reguła ma nieobsługiwany scope.');
+  const source = normalizeRuleSource(object['source']);
+  const outcome = enumValue(object['outcome'], ['SATISFIED', 'NOT_SATISFIED', 'NOT_VERIFIED'], 'Reguła ma nieobsługiwany outcome.');
+  const releaseImpact = enumValue(object['releaseImpact'], ['NONE', 'REVIEW', 'BLOCKER'], 'Reguła ma nieobsługiwany releaseImpact.');
+  const interpretationType = enumValue(object['interpretationType'], ['EXPLICIT', 'NORMALIZED', 'CONFLICTING', 'NOT_VERIFIABLE', 'INFERRED'], 'Reguła ma nieobsługiwany typ interpretacji.');
+  const evidence = object['evidence'].map(normalizeRuleEvidence);
+  const missingEvidence = requiredStringArray(object['missingEvidence'], 'Reguła ma niepoprawne missingEvidence.');
+  const signals = requiredStringArray(object['signals'], 'Reguła ma niepoprawne signals.');
+  const rule: ChangeVerificationRuleResult = {
+    id: requiredString(object['id'], 'Reguła nie zawiera id.'),
     scope,
-    criterionSource: normalizeString(checkObject?.['criterionSource']),
-    criterionQuote: normalizeString(checkObject?.['criterionQuote']),
-    interpretationType: normalizeString(checkObject?.['interpretationType']),
-    criticality: normalizeNullableString(checkObject?.['criticality']),
-    inferenceRationale: normalizeNullableString(checkObject?.['inferenceRationale']),
-    inferenceSignals: normalizeStringArray(checkObject?.['inferenceSignals']),
-    riskIfOmitted: normalizeNullableString(checkObject?.['riskIfOmitted']),
-    confidence: normalizeNullableString(checkObject?.['confidence']),
-    expectedCriterion: normalizeString(checkObject?.['expectedCriterion']),
-    verificationStatus: normalizeString(checkObject?.['verificationStatus']),
-    verifiedAgainst: normalizeString(checkObject?.['verifiedAgainst']),
-    analysis: normalizeString(checkObject?.['analysis']),
-    evidenceRefs: normalizeStringArray(checkObject?.['evidenceRefs']),
-    gaps: normalizeStringArray(checkObject?.['gaps']),
-    suggestedAction: normalizeString(checkObject?.['suggestedAction'])
+    source,
+    normalizedRule: requiredString(object['normalizedRule'], 'Reguła nie zawiera interpretacji.'),
+    interpretationType,
+    outcome,
+    releaseImpact,
+    conclusion: requiredString(object['conclusion'], 'Reguła nie zawiera wniosku.'),
+    evidence,
+    missingEvidence,
+    action: normalizeNullableString(object['action']),
+    rationale: normalizeNullableString(object['rationale']),
+    riskIfOmitted: normalizeNullableString(object['riskIfOmitted']),
+    signals,
+    confidence: normalizeNullableString(object['confidence'])
   };
-  if (!normalized.id || !normalized.verificationStatus) {
-    throw new Error('Check Change Verification nie zawiera wymaganych pól aktualnego kontraktu.');
+  if ((additional && (scope !== 'ADDITIONAL' || source.type !== 'AI_SUGGESTION'))
+    || (!additional && (scope === 'ADDITIONAL' || source.type === 'AI_SUGGESTION' || interpretationType === 'INFERRED'))) {
+    throw new Error('Reguła znajduje się w niewłaściwej części ledgeru.');
   }
-  if (origin === 'INFERRED_CRITICAL' && (
-    !normalized.criticality
-    || !normalized.inferenceRationale
-    || normalized.inferenceSignals.length === 0
-    || !normalized.riskIfOmitted
-    || !normalized.confidence
-  )) {
-    throw new Error('Krytyczna sugestia AI nie zawiera pełnych metadanych aktualnego kontraktu.');
+  if (additional && (interpretationType !== 'INFERRED' || !rule.rationale || !rule.riskIfOmitted
+    || signals.length === 0 || !['HIGH', 'MEDIUM', 'LOW'].includes((rule.confidence ?? '').toUpperCase()))) {
+    throw new Error('Dodatkowa kontrola AI nie zawiera wymaganych metadanych.');
   }
-  return normalized;
+  if (outcome === 'SATISFIED' && (evidence.length === 0 || releaseImpact !== 'NONE')) {
+    throw new Error('Spełniona reguła wymaga dowodu i releaseImpact NONE.');
+  }
+  if (outcome !== 'SATISFIED' && !rule.action) {
+    throw new Error('Reguła wymagająca uwagi nie zawiera action.');
+  }
+  if (outcome === 'NOT_VERIFIED' && missingEvidence.length === 0) {
+    throw new Error('Niezweryfikowana reguła nie zawiera missingEvidence.');
+  }
+  return rule;
 }
 
-function normalizeFinding(finding: unknown): ChangeVerificationFinding {
-  const findingObject = asObject(finding);
+function normalizeRuleSource(value: unknown): ChangeVerificationRuleSource {
+  const object = asObject(value);
   return {
-    id: normalizeString(findingObject?.['id']),
-    severity: normalizeSeverity(findingObject?.['severity']),
-    source: normalizeString(findingObject?.['source']),
-    summary: normalizeString(findingObject?.['summary']),
-    details: normalizeString(findingObject?.['details']),
-    references: normalizeStringArray(findingObject?.['references']),
-    suggestedAction: normalizeString(findingObject?.['suggestedAction'])
+    type: enumValue(object?.['type'], ['ACCEPTANCE_CRITERION', 'JIRA_DESCRIPTION', 'JIRA_COMMENT', 'CONFLUENCE', 'REPOSITORY_INSTRUCTION', 'OPERATOR_INSTRUCTION', 'AI_SUGGESTION'], 'Nieobsługiwany typ źródła reguły.'),
+    label: requiredString(object?.['label'], 'Źródło reguły nie zawiera label.'),
+    reference: requiredString(object?.['reference'], 'Źródło reguły nie zawiera reference.'),
+    quote: requiredString(object?.['quote'], 'Źródło reguły nie zawiera quote.')
+  };
+}
+
+function normalizeRuleEvidence(value: unknown): ChangeVerificationRuleEvidence {
+  const object = asObject(value);
+  return {
+    summary: requiredString(object?.['summary'], 'Evidence nie zawiera summary.'),
+    reference: requiredString(object?.['reference'], 'Evidence nie zawiera reference.')
   };
 }
 
@@ -544,16 +598,33 @@ function buildCopilotRuntimeDiagnostics(
   };
 }
 
-function uniqueValues(values: string[]): string[] {
-  return Array.from(new Set(values.filter((value) => Boolean(value?.trim()))));
+function requiredString(value: unknown, message: string): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(message);
+  }
+  return value.trim();
 }
 
-function normalizeSeverity(value: unknown): ChangeVerificationFindingSeverity {
-  const normalized = normalizeString(value).toUpperCase();
-  if (['INFO', 'LOW', 'MEDIUM', 'HIGH', 'BLOCKER'].includes(normalized)) {
-    return normalized as ChangeVerificationFindingSeverity;
+function requiredStringArray(value: unknown, message: string): string[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || !item.trim())) {
+    throw new Error(message);
   }
-  return 'INFO';
+  return value.map((item) => (item as string).trim());
+}
+
+function requiredNumber(value: unknown, message: string): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new Error(message);
+  }
+  return value;
+}
+
+function enumValue<const T extends string>(value: unknown, allowed: readonly T[], message: string): T {
+  const normalized = normalizeString(value).trim().toUpperCase();
+  if (!allowed.includes(normalized as T)) {
+    throw new Error(message);
+  }
+  return normalized as T;
 }
 
 function normalizeString(value: unknown): string {
@@ -561,11 +632,7 @@ function normalizeString(value: unknown): string {
 }
 
 function normalizeNullableString(value: unknown): string | null {
-  return typeof value === 'string' ? value : null;
-}
-
-function normalizeStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function normalizeBoolean(value: unknown): boolean {

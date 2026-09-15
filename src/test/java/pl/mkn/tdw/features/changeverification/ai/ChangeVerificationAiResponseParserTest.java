@@ -2,199 +2,164 @@ package pl.mkn.tdw.features.changeverification.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleOutcome;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleScope;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ChangeVerificationAiResponseParserTest {
 
-    private final ChangeVerificationAiResponseParser parser = new ChangeVerificationAiResponseParser(new ObjectMapper());
+    private final ChangeVerificationAiResponseParser parser =
+            new ChangeVerificationAiResponseParser(new ObjectMapper());
 
     @Test
-    void shouldParseJsonResponseFromMarkdownFence() {
-        var response = parser.parse("""
-                ```json
-                {
-                  "status": "FAILED",
-                  "verificationChecks": [
-                    {
-                      "id": "story-001",
-                      "origin": "DEFINED",
-                      "scope": "STORY_COMPLIANCE",
-                      "criterionSource": "acceptance criteria",
-                      "criterionQuote": "Status is returned.",
-                      "interpretationType": "explicit",
-                      "expectedCriterion": "Status endpoint returns current customer status.",
-                      "verificationStatus": "FAILED",
-                      "verifiedAgainst": "MR changed files and controller implementation",
-                      "analysis": "Controller change does not expose the status field.",
-                      "evidenceRefs": ["change-verification/jira-issue.md", "src/main/java/CustomerController.java"],
-                      "gaps": [],
-                      "suggestedAction": "Expose status in the response DTO."
-                    }
-                  ],
-                  "findings": [
-                    {
-                      "id": "cv-001",
-                      "severity": "HIGH",
-                      "source": "ACCEPTANCE_CRITERIA",
-                      "summary": "Missing cleanup",
-                      "details": "Acceptance criteria mention cleanup, but MR metadata does not show it.",
-                      "references": ["change-verification/jira-issue.md"],
-                      "suggestedAction": "Add cleanup endpoint or update story."
-                    }
-                  ],
-                  "suggestedActions": ["Clarify cleanup path."],
-                  "visibilityLimits": ["No diff content available."],
-                  "confidence": "medium"
-                }
-                ```
-                """);
+    void shouldParseOneCanonicalLedgerWithLinkedVisibilityLimit() {
+        var response = parser.parse(validLedger());
 
-        assertThat(response.status()).isEqualTo("FAILED");
-        assertThat(response.verificationChecks()).singleElement()
-                .satisfies(check -> {
-                    assertThat(check.scope()).isEqualTo("STORY_COMPLIANCE");
-                    assertThat(check.origin()).isEqualTo("DEFINED");
-                    assertThat(check.interpretationType()).isEqualTo("explicit");
-                    assertThat(check.criterionQuote()).isEqualTo("Status is returned.");
-                });
-        assertThat(response.findings()).singleElement()
-                .satisfies(finding -> {
-                    assertThat(finding.id()).isEqualTo("cv-001");
-                    assertThat(finding.source()).isEqualTo("ACCEPTANCE_CRITERIA");
-                });
-        assertThat(response.visibilityLimits()).contains("No diff content available.");
-    }
-
-    @Test
-    void shouldReturnInconclusiveFallbackWhenJsonIsMissing() {
-        var response = parser.parse("Compliance looks fine.");
-
-        assertThat(response.status()).isEqualTo("INCONCLUSIVE");
+        assertThat(response.rules()).singleElement().satisfies(rule -> {
+            assertThat(rule.id()).isEqualTo("story-001");
+            assertThat(rule.scope()).isEqualTo(ChangeVerificationRuleScope.STORY);
+            assertThat(rule.outcome()).isEqualTo(ChangeVerificationRuleOutcome.SATISFIED);
+            assertThat(rule.source().quote()).isEqualTo("Klient jest widoczny po zapisie.");
+            assertThat(rule.evidence()).singleElement()
+                    .satisfies(evidence -> assertThat(evidence.reference()).contains("CustomerFlowTest"));
+        });
+        assertThat(response.additionalChecks()).singleElement()
+                .satisfies(rule -> assertThat(rule.scope()).isEqualTo(ChangeVerificationRuleScope.ADDITIONAL));
         assertThat(response.visibilityLimits()).singleElement()
-                .asString()
-                .contains("did not contain JSON");
+                .satisfies(limit -> assertThat(limit.affectedRuleIds()).containsExactly("additional-001"));
     }
 
     @Test
-    void shouldRejectPreviousCheckContractWithoutOrigin() {
-        var response = parser.parse("""
-                {
-                  "status": "PASSED",
-                  "verificationChecks": [{
-                    "id": "story-001",
-                    "scope": "STORY_COMPLIANCE",
-                    "verificationStatus": "PASSED"
-                  }],
-                  "findings": [],
-                  "suggestedActions": [],
-                  "visibilityLimits": [],
-                  "confidence": "high"
-                }
-                """);
+    void shouldRejectWholeResponseInsteadOfSilentlyDroppingInvalidRule() {
+        var response = parser.parse(validLedger().replace(
+                "\"releaseImpact\": \"NONE\"",
+                "\"releaseImpact\": \"WARNING\""
+        ));
 
-        assertThat(response.status()).isEqualTo("INCONCLUSIVE");
-        assertThat(response.verificationChecks()).isEmpty();
+        assertThat(response.rules()).isEmpty();
+        assertThat(response.additionalChecks()).isEmpty();
         assertThat(response.visibilityLimits()).singleElement()
-                .asString()
-                .contains("supported origin");
+                .satisfies(limit -> assertThat(limit.message()).contains("invalid or duplicate rule"));
     }
 
     @Test
-    void shouldKeepValidDefinedCheckWhenAnotherCheckViolatesCurrentContract() {
-        var response = parser.parse("""
-                {
-                  "status": "PASSED",
-                  "verificationChecks": [
-                    {
-                      "id": "story-001",
-                      "origin": "DEFINED",
-                      "scope": "STORY_COMPLIANCE",
-                      "verificationStatus": "PASSED",
-                      "evidenceRefs": [],
-                      "gaps": []
-                    },
-                    {
-                      "id": "critical-invalid",
-                      "origin": "INFERRED_CRITICAL",
-                      "scope": "INFERRED_CRITICAL_CHECKS",
-                      "verificationStatus": "WARNING",
-                      "inferenceSignals": []
-                    }
-                  ],
-                  "findings": [],
-                  "suggestedActions": [],
-                  "visibilityLimits": [],
-                  "confidence": "medium"
-                }
-                """);
+    void shouldRejectVisibilityLimitThatIsNotLinkedToAnExistingRule() {
+        var response = parser.parse(validLedger().replace("additional-001\"]", "missing-rule\"]"));
 
-        assertThat(response.status()).isEqualTo("PASSED");
-        assertThat(response.verificationChecks()).singleElement()
-                .extracting(check -> check.id())
-                .isEqualTo("story-001");
+        assertThat(response.rules()).isEmpty();
         assertThat(response.visibilityLimits()).singleElement()
-                .asString()
-                .contains("critical-invalid", "ignored", "incomplete");
+                .satisfies(limit -> assertThat(limit.message()).contains("unlinked visibility limit"));
     }
 
     @Test
-    void shouldCapInferredChecksAndExcludeThemFromComplianceStatus() {
-        var inferredChecks = java.util.stream.IntStream.rangeClosed(1, 6)
-                .mapToObj(index -> """
-                        {
-                          "id": "critical-%d",
-                          "origin": "INFERRED_CRITICAL",
-                          "scope": "INFERRED_CRITICAL_CHECKS",
-                          "criterionSource": "AI_SUGGESTION",
-                          "criterionQuote": "n/a",
-                          "interpretationType": "inferred",
-                          "criticality": "HIGH",
-                          "inferenceRationale": "Release-critical signal %d",
-                          "inferenceSignals": ["signal-%d"],
-                          "riskIfOmitted": "Risk %d",
-                          "confidence": "medium",
-                          "expectedCriterion": "Critical check %d",
-                          "verificationStatus": "FAILED",
-                          "verifiedAgainst": "file-%d",
-                          "analysis": "Not implemented.",
-                          "evidenceRefs": ["file-%d"],
-                          "gaps": [],
-                          "suggestedAction": "Confirm."
-                        }
-                        """.formatted(index, index, index, index, index, index, index))
+    void shouldApplyOutcomeValidationToAdditionalChecks() {
+        var response = parser.parse(validLedger().replace(
+                "\"outcome\": \"NOT_VERIFIED\"",
+                "\"outcome\": \"SATISFIED\""
+        ));
+
+        assertThat(response.rules()).isEmpty();
+        assertThat(response.additionalChecks()).isEmpty();
+        assertThat(response.visibilityLimits()).singleElement()
+                .satisfies(limit -> assertThat(limit.message()).contains("invalid or duplicate rule"));
+    }
+
+    @Test
+    void shouldRejectInferredInterpretationForSourceRule() {
+        var response = parser.parse(validLedger().replace(
+                "\"interpretationType\": \"EXPLICIT\"",
+                "\"interpretationType\": \"INFERRED\""
+        ));
+
+        assertThat(response.rules()).isEmpty();
+        assertThat(response.additionalChecks()).isEmpty();
+    }
+
+    @Test
+    void shouldRejectMoreThanFiveAdditionalChecks() {
+        var additionalCheck = additionalCheck();
+        var sixAdditionalChecks = java.util.stream.IntStream.rangeClosed(1, 6)
+                .mapToObj(index -> additionalCheck.replace("additional-001", "additional-00" + index))
                 .collect(java.util.stream.Collectors.joining(","));
-        var response = parser.parse("""
-                {
-                  "status": "FAILED",
-                  "verificationChecks": [
-                    {
-                      "id": "story-001",
-                      "origin": "DEFINED",
-                      "scope": "STORY_COMPLIANCE",
-                      "criterionSource": "acceptance criteria",
-                      "criterionQuote": "Status is returned.",
-                      "interpretationType": "explicit",
-                      "expectedCriterion": "Status endpoint returns status.",
-                      "verificationStatus": "PASSED",
-                      "verifiedAgainst": "StatusController.java",
-                      "analysis": "Implemented.",
-                      "evidenceRefs": ["StatusController.java"],
-                      "gaps": [],
-                      "suggestedAction": ""
-                    },
-                    %s
-                  ],
-                  "findings": [],
-                  "suggestedActions": [],
-                  "visibilityLimits": [],
-                  "confidence": "medium"
-                }
-                """.formatted(inferredChecks));
+        var response = parser.parse(validLedger().replace(additionalCheck, sixAdditionalChecks));
 
-        assertThat(response.status()).isEqualTo("PASSED");
-        assertThat(response.verificationChecks())
-                .filteredOn(check -> "INFERRED_CRITICAL".equals(check.origin()))
-                .hasSize(5);
+        assertThat(response.rules()).isEmpty();
+        assertThat(response.additionalChecks()).isEmpty();
+        assertThat(response.visibilityLimits()).singleElement()
+                .satisfies(limit -> assertThat(limit.message()).contains("more than five additional checks"));
+    }
+
+    @Test
+    void shouldFallbackWhenRequiredCollectionsAreMissing() {
+        var response = parser.parse("{\"rules\":[]}");
+
+        assertThat(response.rules()).isEmpty();
+        assertThat(response.visibilityLimits()).singleElement()
+                .satisfies(limit -> assertThat(limit.message()).contains("required rule ledger collections"));
+    }
+
+    static String validLedger() {
+        return """
+                {
+                  "rules": [{
+                    "id": "story-001",
+                    "scope": "STORY",
+                    "source": {
+                      "type": "ACCEPTANCE_CRITERION",
+                      "label": "CRM-123 AC",
+                      "reference": "CRM-123#ac-1",
+                      "quote": "Klient jest widoczny po zapisie."
+                    },
+                    "normalizedRule": "Zapisany klient pojawia sie na liscie.",
+                    "interpretationType": "EXPLICIT",
+                    "outcome": "SATISFIED",
+                    "releaseImpact": "NONE",
+                    "conclusion": "Test potwierdza widocznosc klienta.",
+                    "evidence": [{
+                      "summary": "Test scenariusza zapisu przechodzi.",
+                      "reference": "src/test/java/example/CustomerFlowTest.java"
+                    }],
+                    "missingEvidence": [],
+                    "action": null,
+                    "rationale": null,
+                    "riskIfOmitted": null,
+                    "signals": [],
+                    "confidence": null
+                  }],
+                  "additionalChecks": [%s],
+                  "visibilityLimits": [{
+                    "message": "Brak testu integracyjnego ponowienia.",
+                    "affectedRuleIds": ["additional-001"]
+                  }]
+                }
+                """.formatted(additionalCheck());
+    }
+
+    private static String additionalCheck() {
+        return """
+                {
+                  "id": "additional-001",
+                  "scope": "ADDITIONAL",
+                  "source": {
+                    "type": "AI_SUGGESTION",
+                    "label": "AI-suggested check",
+                    "reference": "AI",
+                    "quote": "Sprawdz idempotencje zapisu klienta."
+                  },
+                  "normalizedRule": "Ponowienie nie tworzy duplikatu.",
+                  "interpretationType": "INFERRED",
+                  "outcome": "NOT_VERIFIED",
+                  "releaseImpact": "REVIEW",
+                  "conclusion": "Brak testu ponowienia.",
+                  "evidence": [],
+                  "missingEvidence": ["Brak testu idempotencji."],
+                  "action": "Dodaj test ponowienia.",
+                  "rationale": "Zmiana dotyka zapisu.",
+                  "riskIfOmitted": "Moze powstac duplikat.",
+                  "signals": ["CustomerService.save"],
+                  "confidence": "MEDIUM"
+                }
+                """.trim();
     }
 }

@@ -35,24 +35,25 @@ class ChangeVerificationPromptPreparationServiceTest {
 
         assertThat(preparation.prompt()).contains(
                 "change-verification-orchestrator",
-                "change-verification-compliance-check",
-                "change-verification-write-report",
+                "change-verification/response-contract.md",
                 "interpretationType",
-                "INFERRED_CRITICAL_CHECKS",
-                "maksymalnie 5",
-                "nie moga zmieniac statusu source-defined compliance",
+                "additionalChecks",
+                "affectedRuleIds",
                 "Focus cleanup.",
                 "Customer profile status",
-                "Source interpretation contract",
                 "target issue",
-                "Confluence pages",
                 "feature/CRM-123-status",
                 "CRM/runtime/customer-api",
                 "src/main/java/CustomerController.java",
                 "AGENTS.md",
-                "Limity discovery platformy nie sa kryteriami zgodnosci projektu",
-                "nie tworz z nich checkow, findings, gaps, open questions ani suggested actions",
                 "Response Contract"
+        );
+        assertThat(preparation.prompt()).doesNotContain(
+                "change-verification-write-report",
+                "\"verificationChecks\"",
+                "\"findings\"",
+                "\"suggestedActions\"",
+                "\"status\": \"PASSED"
         );
         assertThat(preparation.artifactContents().keySet()).containsExactly(
                 "change-verification/source-discovery.md",
@@ -64,6 +65,8 @@ class ChangeVerificationPromptPreparationServiceTest {
         );
         assertThat(preparation.artifactContents().get("change-verification/repository-scope.md"))
                 .contains("Repository Scope", "sourceRef: feature/CRM-123-status", "instructionSources:");
+        assertThat(preparation.artifactContents().get("change-verification/merge-requests.md"))
+                .doesNotContain("changedFiles:", "src/main/java/CustomerController.java");
     }
 
     private ChangeVerificationSourceDiscoveryResult sourceDiscovery() {

@@ -55,8 +55,7 @@ public class ChangeVerificationCopilotComplianceAnalysisProvider implements Chan
                 responseParser.parse(executionResult.content()),
                 executionResult.usage(),
                 preparation.prompt(),
-                executionResult.sessionId(),
-                executionResult.report()
+                executionResult.sessionId()
         );
     }
 }

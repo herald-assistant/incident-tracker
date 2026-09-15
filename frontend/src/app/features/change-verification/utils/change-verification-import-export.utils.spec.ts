@@ -7,94 +7,55 @@ import {
 } from './change-verification-import-export.utils';
 
 describe('change-verification-import-export utils', () => {
-  it('should build and parse a completed Change Verification export envelope', () => {
+  it('builds and parses only the v6 rule-ledger envelope', () => {
     const exportedAt = '2026-07-26T10:00:00Z';
     const envelope = buildChangeVerificationExportEnvelope(changeVerificationJob(), exportedAt);
-
     const imported = parseImportedChangeVerificationResult(envelope);
 
-    expect(envelope.schema).toBe('tdw.change-verification-export');
-    expect(envelope.version).toBe(5);
-    expect(envelope.payload.type).toBe('change-verification-analysis');
-    expect(envelope.payload.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
-    expect(envelope.payload.diagnostics.resultContract).toBe(CHANGE_VERIFICATION_RESULT_CONTRACT);
-    expect(envelope.payload.diagnostics.target.issueKey).toBe('CRM-123');
-    expect(envelope.payload.diagnostics.result.findingCount).toBe(1);
-    expect(envelope.payload.diagnostics.workflow.contextEvidenceItemCount).toBe(1);
-    expect(envelope.payload.diagnostics.workflow.toolEvidenceItemCount).toBe(1);
-    expect(envelope.payload.diagnostics.copilotRuntime).toEqual({
-      sdkVersion: '1.0.11',
-      cliVersion: '1.0.57-5',
-      protocolVersion: 3,
-      minimumCliVersion: '1.0.57',
-      compatible: true
+    expect(envelope.version).toBe(6);
+    expect(envelope.payload.resultContract).toBe('change-verification-result-v5');
+    expect(envelope.payload.diagnostics.result).toEqual({
+      status: 'COMPLETED',
+      decisionStatus: 'READY',
+      totalRules: 1,
+      needsAttentionCount: 0,
+      visibilityLimitCount: 0
     });
-    expect(imported.exportedAt).toBe(exportedAt);
-    expect(imported.job.jobId).toBe('change-job-1');
-    expect(imported.job.result?.compliance.findings[0]?.summary).toBe('Story alignment confirmed');
-    expect(imported.job.report?.header).toBe('Change Verification: CRM-123');
+    expect(imported.job.result?.ruleLedger.rules[0]?.source.quote)
+      .toBe('Po zapisaniu klient jest widoczny na liście.');
   });
 
-  it('should reject non Change Verification payloads', () => {
-    expect(() => parseImportedChangeVerificationResult({ schema: 'tdw.flow-explorer-export' })).toThrow(
-      'Wybierz plik wyeksportowany z Change Verification.'
-    );
-  });
-
-  it('should reject the previous v4 format without migration', () => {
+  it('rejects the previous export version without migration', () => {
     const envelope = buildChangeVerificationExportEnvelope(
       changeVerificationJob(),
       '2026-07-26T10:00:00Z'
     ) as unknown as { version: number };
-    envelope.version = 4;
+    envelope.version = 5;
 
     expect(() => parseImportedChangeVerificationResult(envelope)).toThrow(
       'Ten plik eksportu Change Verification ma nieobsługiwaną wersję formatu.'
     );
   });
 
-  it('should reject non-completed jobs', () => {
-    expect(() =>
-      buildChangeVerificationExportEnvelope(
-        changeVerificationJob({ status: 'ANALYZING', result: null }),
-        '2026-07-26T10:00:00Z'
-      )
-    ).toThrow('Import i eksport wspiera tylko zakończone Change Verification runy COMPLETED.');
+  it('rejects a decision tampered independently from rule outcomes', () => {
+    const envelope = buildChangeVerificationExportEnvelope(changeVerificationJob(), '2026-07-26T10:00:00Z');
+    (envelope.payload.job.result!.ruleLedger.decision as { status: string }).status = 'NEEDS_ACTION';
+
+    expect(() => parseImportedChangeVerificationResult(envelope)).toThrow(
+      'Decyzja w imporcie nie odpowiada outcome reguł źródłowych.'
+    );
   });
 
-  it('should reject completed jobs without a canonical report', () => {
-    expect(() =>
-      buildChangeVerificationExportEnvelope(
-        changeVerificationJob({ report: null }),
-        '2026-07-26T10:00:00Z'
-      )
-    ).toThrow('Change Verification export wymaga kanonicznego raportu analizy.');
-  });
-
-  it('should parse a backend v5 local history envelope when completed result is not required', () => {
+  it('parses an unfinished local v6 snapshot when completion is not required', () => {
     const envelope = {
       schema: 'tdw.change-verification-export',
-      version: 5,
+      version: 6,
       exportedAt: '2026-07-26T09:02:00Z',
       payload: {
         type: 'change-verification-analysis',
         resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT,
-        diagnostics: {
-          resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT,
-          copilotRuntime: {
-            sdkVersion: '1.0.11',
-            cliVersion: '1.0.57-5',
-            protocolVersion: 3,
-            minimumCliVersion: '1.0.57',
-            compatible: true
-          }
-        },
-        job: changeVerificationJob({
-          status: 'ANALYZING',
-          completedAt: null,
-          result: null,
-          report: null
-        })
+        diagnostics: { resultContract: CHANGE_VERIFICATION_RESULT_CONTRACT },
+        job: changeVerificationJob({ status: 'ANALYZING', completedAt: null, result: null, report: null })
       }
     };
 
@@ -102,13 +63,11 @@ describe('change-verification-import-export utils', () => {
 
     expect(imported.job.status).toBe('ANALYZING');
     expect(imported.job.result).toBeNull();
-    expect(imported.job.report).toBeNull();
   });
 
-  it('should build a stable export file name', () => {
-    expect(
-      buildChangeVerificationExportFileName(changeVerificationJob(), '2026-07-26T10:00:00Z')
-    ).toBe('change-verification-CRM-123-completed-20260726-120000.json');
+  it('builds a stable export file name', () => {
+    expect(buildChangeVerificationExportFileName(changeVerificationJob(), '2026-07-26T10:00:00Z'))
+      .toBe('change-verification-CRM-123-completed-20260726-120000.json');
   });
 });
 
@@ -124,185 +83,67 @@ function changeVerificationJob(
     aiModel: 'gpt-test',
     reasoningEffort: 'medium',
     status: 'COMPLETED',
-    currentStepCode: 'AI_ANALYSIS',
-    currentStepLabel: 'AI analysis',
+    currentStepCode: null,
+    currentStepLabel: null,
     errorCode: null,
     errorMessage: null,
     createdAt: '2026-07-26T09:00:00Z',
     updatedAt: '2026-07-26T09:05:00Z',
     completedAt: '2026-07-26T09:05:00Z',
-    steps: [
-      {
-        code: 'AI_ANALYSIS',
-        label: 'AI analysis',
-        phase: 'AI',
-        status: 'COMPLETED',
-        message: 'Done',
-        itemCount: 1,
-        startedAt: '2026-07-26T09:01:00Z',
-        completedAt: '2026-07-26T09:05:00Z',
-        consumesEvidence: [],
-        producesEvidence: [],
-        usage: null
-      }
-    ],
-    contextSections: [
-      {
-        provider: 'jira',
-        category: 'issue',
-        items: [{ title: 'CRM-123', attributes: [{ name: 'status', value: 'Ready' }] }]
-      }
-    ],
-    toolEvidenceSections: [
-      {
-        provider: 'gitlab',
-        category: 'merge-requests',
-        items: [{ title: 'MR !1', attributes: [{ name: 'repo', value: 'customer-api' }] }]
-      }
-    ],
-    aiActivityEvents: [
-      {
-        eventId: 'event-1',
-        parentEventId: '',
-        type: 'TOOL_CALL',
-        category: 'AI',
-        status: 'COMPLETED',
-        title: 'Read source',
-        summary: 'Source inspected',
-        turnId: 'turn-1',
-        interactionId: 'interaction-1',
-        toolCallId: 'tool-1',
-        toolName: 'gitlab_search',
-        timestamp: '2026-07-26T09:02:00Z',
-        details: {}
-      },
-      {
-        eventId: 'runtime-event-1',
-        parentEventId: '',
-        type: 'platform.copilot_runtime',
-        category: 'PLATFORM',
-        status: 'COMPLETED',
-        title: 'Copilot runtime',
-        summary: 'Runtime compatibility verified',
-        turnId: '',
-        interactionId: '',
-        toolCallId: '',
-        toolName: '',
-        timestamp: '2026-07-26T09:02:30Z',
-        details: {
-          sdkVersion: '1.0.11',
-          cliVersion: '1.0.57-5',
-          protocolVersion: 3,
-          minimumCliVersion: '1.0.57',
-          compatible: true
-        }
-      }
-    ],
+    steps: [],
+    contextSections: [],
+    toolEvidenceSections: [],
+    aiActivityEvents: [],
     preparedPrompt: 'Prompt',
     result: {
-      status: 'READY',
+      status: 'COMPLETED',
       issueKey: 'CRM-123',
       issueUrl: 'https://jira.example.com/browse/CRM-123',
       prompt: 'Prompt',
-      compliance: {
+      ruleLedger: {
         storyComplianceRequested: true,
         instructionComplianceRequested: true,
-        status: 'READY',
-        verificationChecks: [
-          {
-            id: 'story-001',
-            origin: 'DEFINED',
-            scope: 'STORY_COMPLIANCE',
-            criterionSource: 'acceptance criteria',
-            criterionQuote: 'Customer can be created.',
-            interpretationType: 'explicit',
-            criticality: null,
-            inferenceRationale: null,
-            inferenceSignals: [],
-            riskIfOmitted: null,
-            confidence: null,
-            expectedCriterion: 'Customer creation endpoint persists the requested customer.',
-            verificationStatus: 'PASSED',
-            verifiedAgainst: 'CustomerController',
-            analysis: 'The endpoint implementation covers the creation path.',
-            evidenceRefs: ['CRM-123', 'CustomerController'],
-            gaps: [],
-            suggestedAction: 'Proceed with release verification.'
-          }
-        ],
-        findings: [
-          {
-            id: 'finding-1',
-            severity: 'INFO',
-            source: 'story',
-            summary: 'Story alignment confirmed',
-            details: 'The implementation follows acceptance criteria.',
-            references: ['CRM-123'],
-            suggestedAction: 'Proceed with release verification.'
-          }
-        ],
-        suggestedActions: ['Proceed with release verification.'],
-        visibilityLimits: ['No runtime logs were checked.']
+        decision: { status: 'READY', totalRules: 1, satisfied: 1, notSatisfied: 0, notVerified: 0 },
+        rules: [{
+          id: 'story-001',
+          scope: 'STORY',
+          source: {
+            type: 'ACCEPTANCE_CRITERION',
+            label: 'CRM-123 AC',
+            reference: 'CRM-123#ac-1',
+            quote: 'Po zapisaniu klient jest widoczny na liście.'
+          },
+          normalizedRule: 'Zapisany klient pojawia się na liście.',
+          interpretationType: 'EXPLICIT',
+          outcome: 'SATISFIED',
+          releaseImpact: 'NONE',
+          conclusion: 'Test przepływu potwierdza regułę.',
+          evidence: [{ summary: 'Test przechodzi.', reference: 'CustomerFlowTest' }],
+          missingEvidence: [],
+          action: null,
+          rationale: null,
+          riskIfOmitted: null,
+          signals: [],
+          confidence: null
+        }],
+        additionalChecks: [],
+        visibilityLimits: []
       },
       usage: null
     },
     report: {
       reportId: 'change-verification-CRM-123',
       header: 'Change Verification: CRM-123',
-      subHeader: 'Compliance READY',
-      markdownSummary: '- Compliance: `READY` with 1 finding.',
-      sections: [
-        {
-          id: 'STORY_COMPLIANCE',
-          title: 'Story compliance',
-          order: 0,
-          markdown: 'Story alignment confirmed.',
-          meta: {
-            references: [{ type: 'jira', label: 'CRM-123', target: 'CRM-123', description: 'Target issue.' }],
-            visibilityLimits: ['No runtime logs were checked.'],
-            openQuestions: [],
-            gaps: [],
-            confidence: 'MEDIUM',
-            warnings: []
-          }
-        },
-        {
-          id: 'INSTRUCTION_COMPLIANCE',
-          title: 'Instruction compliance',
-          order: 1,
-          markdown: 'Instruction alignment confirmed.',
-          meta: {
-            references: [],
-            visibilityLimits: [],
-            openQuestions: [],
-            gaps: [],
-            confidence: 'MEDIUM',
-            warnings: []
-          }
-        },
-        {
-          id: 'INFERRED_CRITICAL_CHECKS',
-          title: 'AI-suggested critical checks',
-          order: 2,
-          markdown: 'No additional critical checks identified.',
-          meta: {
-            references: [],
-            visibilityLimits: [],
-            openQuestions: [],
-            gaps: [],
-            confidence: 'MEDIUM',
-            warnings: []
-          }
-        }
-      ],
-      meta: {
-        references: [{ type: 'jira', label: 'CRM-123', target: 'https://jira.example.com/browse/CRM-123', description: 'Target issue.' }],
-        visibilityLimits: ['No runtime logs were checked.'],
-        openQuestions: [],
-        gaps: [],
-        confidence: 'MEDIUM',
-        warnings: []
-      }
+      subHeader: 'Decision READY',
+      markdownSummary: 'Source rules: 1; satisfied: 1.',
+      sections: [{
+        id: 'RULE_LEDGER',
+        title: 'Source-defined rules',
+        order: 0,
+        markdown: 'Reguła spełniona.',
+        meta: { references: [], visibilityLimits: [], openQuestions: [], gaps: [], confidence: '', warnings: [] }
+      }],
+      meta: { references: [], visibilityLimits: [], openQuestions: [], gaps: [], confidence: '', warnings: [] }
     },
     ...overrides
   };

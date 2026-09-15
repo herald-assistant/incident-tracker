@@ -5,7 +5,6 @@ import org.springframework.util.StringUtils;
 import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.aiplatform.copilot.tools.context.CopilotToolSessionContext;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportSectionIds;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
@@ -57,14 +56,6 @@ public class ChangeVerificationCopilotToolSessionContextFactory {
         var allowedApplicationNames = allowedApplicationNames(repositories);
         if (!allowedApplicationNames.isEmpty()) {
             context.put(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES, allowedApplicationNames);
-        }
-        if (ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE.equals(normalizeRunKind(runKind))) {
-            context.put(AgentToolContextKeys.REPORT_ID, "report-" + UUID.randomUUID());
-            context.put(AgentToolContextKeys.REPORT_FEATURE, ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE);
-            context.put(
-                    AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS,
-                    ChangeVerificationReportSectionIds.activeComplianceSectionIds(request)
-            );
         }
         return context;
     }

@@ -1,0 +1,136 @@
+@if (ledger(); as result) {
+  <div class="rule-ledger">
+    <header [attr.class]="decisionClass(result.decision.status)">
+      <div>
+        <span class="field-label">Decyzja dla reguł autora</span>
+        <h3>{{ decisionLabel(result.decision.status) }}</h3>
+        <p>{{ decisionHint(result.decision.status) }}</p>
+      </div>
+      <dl class="rule-ledger__counts" aria-label="Podsumowanie reguł">
+        <div><dt>Reguły</dt><dd>{{ result.decision.totalRules }}</dd></div>
+        <div><dt>Spełnione</dt><dd>{{ result.decision.satisfied }}</dd></div>
+        <div><dt>Niespełnione</dt><dd>{{ result.decision.notSatisfied }}</dd></div>
+        <div><dt>Brak dowodu</dt><dd>{{ result.decision.notVerified }}</dd></div>
+      </dl>
+    </header>
+
+    @if (globalLimits().length) {
+      <aside class="rule-ledger__global-limit" role="status">
+        <span class="material-symbols-outlined" aria-hidden="true">visibility_off</span>
+        <div>
+          @for (limit of globalLimits(); track limit.message) {
+            <p>{{ limit.message }}</p>
+          }
+        </div>
+      </aside>
+    }
+
+    @if (result.decision.totalRules) {
+      <nav class="rule-ledger__filters" aria-label="Filtr reguł">
+        <button type="button" [class.is-active]="filter() === 'attention'" [attr.aria-pressed]="filter() === 'attention'" (click)="selectFilter('attention')">
+          Wymagają działania
+          <span>{{ result.decision.notSatisfied + result.decision.notVerified }}</span>
+        </button>
+        <button type="button" [class.is-active]="filter() === 'satisfied'" [attr.aria-pressed]="filter() === 'satisfied'" (click)="selectFilter('satisfied')">
+          Spełnione <span>{{ result.decision.satisfied }}</span>
+        </button>
+        <button type="button" [class.is-active]="filter() === 'all'" [attr.aria-pressed]="filter() === 'all'" (click)="selectFilter('all')">
+          Wszystkie <span>{{ result.decision.totalRules }}</span>
+        </button>
+      </nav>
+
+      @for (scope of ['STORY', 'INSTRUCTION']; track scope) {
+        @if (sourceRuleCount($any(scope))) {
+          <section class="rule-ledger__group">
+            <div class="rule-ledger__group-heading">
+              <div>
+                <span class="field-label">{{ scope === 'STORY' ? 'Jira i Confluence' : 'Repozytorium' }}</span>
+                <h4>{{ scope === 'STORY' ? 'Reguły story' : 'Instrukcje' }}</h4>
+              </div>
+              <span>{{ rulesForScope($any(scope)).length }} / {{ sourceRuleCount($any(scope)) }}</span>
+            </div>
+
+            @if (rulesForScope($any(scope)).length) {
+              <div class="rule-ledger__rules">
+                @for (rule of rulesForScope($any(scope)); track rule.id) {
+                  <ng-container [ngTemplateOutlet]="ruleCard" [ngTemplateOutletContext]="{ rule: rule, additional: false }"></ng-container>
+                }
+              </div>
+            } @else {
+              <p class="rule-ledger__filter-empty">Brak reguł w tym filtrze.</p>
+            }
+          </section>
+        }
+      }
+    } @else {
+      <div class="rule-ledger__empty">
+        <span class="material-symbols-outlined" aria-hidden="true">rule</span>
+        <div><h4>Brak reguł źródłowych</h4><p>Sprawdź materiał Jira/Confluence i instrukcje w panelu przebiegu.</p></div>
+      </div>
+    }
+
+    @if (result.additionalChecks.length) {
+      <details class="rule-ledger__additional">
+        <summary>
+          <span class="material-symbols-outlined" aria-hidden="true">lightbulb</span>
+          <span><strong>Dodatkowe kontrole AI</strong><small>Nie zmieniają decyzji dla reguł autora.</small></span>
+          <b>{{ result.additionalChecks.length }}</b>
+          <span class="material-symbols-outlined rule-ledger__expand" aria-hidden="true">expand_more</span>
+        </summary>
+        <div class="rule-ledger__rules">
+          @for (rule of result.additionalChecks; track rule.id) {
+            <ng-container [ngTemplateOutlet]="ruleCard" [ngTemplateOutletContext]="{ rule: rule, additional: true }"></ng-container>
+          }
+        </div>
+      </details>
+    }
+  </div>
+}
+
+<ng-template #ruleCard let-rule="rule" let-additional="additional">
+  <details class="rule-ledger__rule" [open]="isAttention(rule)">
+    <summary>
+      <span [attr.class]="outcomeClass(rule.outcome)">{{ outcomeLabel(rule.outcome) }}</span>
+      <span class="rule-ledger__rule-title">
+        <strong>{{ rule.source.quote }}</strong>
+        <small>{{ rule.source.label }} · {{ rule.source.reference }}</small>
+        <span>{{ rule.conclusion }}</span>
+        @if (isAttention(rule) && hasText(rule.action)) {
+          <em><b>Następny krok:</b> {{ rule.action }}</em>
+        }
+      </span>
+      @if (rule.releaseImpact !== 'NONE') {
+        <span class="rule-ledger__impact" [class.rule-ledger__impact--blocker]="rule.releaseImpact === 'BLOCKER'">
+          {{ impactLabel(rule.releaseImpact) }}
+        </span>
+      }
+      <span class="material-symbols-outlined rule-ledger__expand" aria-hidden="true">expand_more</span>
+    </summary>
+
+    <div class="rule-ledger__detail">
+      <dl>
+        <div><dt>Interpretacja AI</dt><dd>{{ rule.normalizedRule }}</dd></div>
+        <div><dt>Typ interpretacji</dt><dd>{{ sourceTypeLabel(rule.interpretationType) }}</dd></div>
+        @if (additional && hasText(rule.rationale)) {
+          <div><dt>Dlaczego warto sprawdzić</dt><dd>{{ rule.rationale }}</dd></div>
+        }
+        @if (additional && hasText(rule.riskIfOmitted)) {
+          <div><dt>Ryzyko pominięcia</dt><dd>{{ rule.riskIfOmitted }}</dd></div>
+        }
+      </dl>
+
+      @if (rule.evidence.length) {
+        <section><h5>Dowody</h5><ul>@for (evidence of rule.evidence; track evidence.reference + evidence.summary) {<li>{{ evidence.summary }} <code>{{ evidence.reference }}</code></li>}</ul></section>
+      }
+      @if (rule.missingEvidence.length) {
+        <section><h5>Brakujący materiał</h5><ul>@for (gap of rule.missingEvidence; track gap) {<li>{{ gap }}</li>}</ul></section>
+      }
+      @if (additional && rule.signals.length) {
+        <section><h5>Sygnały</h5><ul>@for (signal of rule.signals; track signal) {<li>{{ signal }}</li>}</ul></section>
+      }
+      @if (limitsFor(rule).length) {
+        <section class="rule-ledger__limits"><h5>Ograniczenia widoczności</h5><ul>@for (limit of limitsFor(rule); track limit.message) {<li>{{ limit.message }}</li>}</ul></section>
+      }
+    </div>
+  </details>
+</ng-template>

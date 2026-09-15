@@ -6,10 +6,8 @@ import { ActivatedRoute } from '@angular/router';
 import { finalize, Subscription } from 'rxjs';
 
 import {
-  ChangeVerificationCompliance,
   ChangeVerificationJobStartRequest,
-  ChangeVerificationJobStateSnapshot,
-  ChangeVerificationVerificationCheck
+  ChangeVerificationJobStateSnapshot
 } from '../../models/change-verification.models';
 import { ChangeVerificationApiService } from '../../services/change-verification-api.service';
 import {
@@ -26,11 +24,8 @@ import { AnalysisJobPollingService } from '../../../../core/services/analysis-jo
 import { AnalysisRunHistoryApiService } from '../../../../core/services/analysis-run-history-api.service';
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
-import { AnalysisReportMetaComponent } from '../../../../components/analysis-report-meta/analysis-report-meta';
-import { AnalysisReportSectionContentComponent } from '../../../../components/analysis-report-section-content/analysis-report-section-content';
 import { AnalysisResultHeaderComponent } from '../../../../components/analysis-result-header/analysis-result-header';
-import { AnalysisResultTabsComponent } from '../../../../components/analysis-result-tabs/analysis-result-tabs';
-import { ChangeVerificationComplianceResultComponent } from '../../components/change-verification-compliance-result/change-verification-compliance-result';
+import { ChangeVerificationRuleLedgerComponent } from '../../components/change-verification-rule-ledger/change-verification-rule-ledger';
 import { formatStatus, statusClassName } from '../../../../core/utils/analysis-display.utils';
 import { copyTextToClipboard } from '../../../../core/utils/clipboard.utils';
 import { downloadJsonFile, readJsonFile } from '../../../../core/utils/json-file.utils';
@@ -54,36 +49,13 @@ type SelectOption = {
   disabled?: boolean;
 };
 
-interface ChangeVerificationReportDisplay {
-  report: AnalysisReport;
-  title: string;
-  confidence: string;
-  sections: ChangeVerificationReportSectionDisplay[];
-  appendix: AnalysisReportMeta;
-}
-
-interface ChangeVerificationReportSectionDisplay {
-  id: string;
-  title: string;
-  tabLabel: string;
-  markdown: string;
-  emptyText: string;
-  meta: AnalysisReportMeta;
-  complianceChecks: ChangeVerificationVerificationCheck[];
-  isComplianceSection: boolean;
-  complianceVariant: 'defined' | 'inferred-critical';
-}
-
 @Component({
   selector: 'app-change-verification-page',
   imports: [
     AnalysisFeatureAsideComponent,
     AnalysisStepsPanelComponent,
-    AnalysisReportMetaComponent,
-    AnalysisReportSectionContentComponent,
     AnalysisResultHeaderComponent,
-    AnalysisResultTabsComponent,
-    ChangeVerificationComplianceResultComponent,
+    ChangeVerificationRuleLedgerComponent,
     ReactiveFormsModule
   ],
   templateUrl: './change-verification-page.html',
@@ -113,7 +85,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   readonly aiModelOptionsError = signal('');
   readonly aiModelCatalog = signal<AnalysisAiModelOptionsResponse>(EMPTY_ANALYSIS_AI_MODEL_OPTIONS);
   readonly exportState = signal<ChangeVerificationExportState | null>(null);
-  readonly activeResultTab = signal('STORY_COMPLIANCE');
+  readonly composerExpanded = signal(true);
   readonly resultCopied = signal(false);
   readonly resultCopyError = signal('');
   private resultCopyFeedbackHandle: number | null = null;
@@ -172,12 +144,10 @@ export class ChangeVerificationPageComponent implements OnDestroy {
       label: this.reasoningEffortLabel(effort)
     }));
   });
-  readonly reportDisplay = computed(() =>
-    changeVerificationReportDisplay(
-      this.job()?.report ?? null,
-      this.job()?.result?.compliance ?? null
-    )
-  );
+  readonly composerCollapsed = computed(() => {
+    const currentJob = this.job();
+    return Boolean(currentJob && this.isTerminalStatus(currentJob.status) && !this.composerExpanded());
+  });
   readonly workflowIsRunning = computed(() => {
     const currentJob = this.job();
     return Boolean(currentJob && !this.isTerminalStatus(currentJob.status));
@@ -248,13 +218,8 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     this.selectedReasoningEffort.set((value || '').trim());
   }
 
-  protected selectResultTab(tabId: string): void {
-    this.activeResultTab.set(cleanText(tabId));
-  }
-
-  protected activeResultTabId(sections: ChangeVerificationReportSectionDisplay[]): string {
-    const active = this.activeResultTab();
-    return sections.some((section) => section.id === active) ? active : sections[0]?.id ?? '';
+  protected expandComposer(): void {
+    this.composerExpanded.set(true);
   }
 
   protected startJob(): void {
@@ -265,6 +230,7 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     this.jobError.set('');
     this.isSubmitting.set(true);
     this.exportState.set(null);
+    this.composerExpanded.set(true);
 
     this.changeVerificationApi
       .startJob(this.jobStartRequest())
@@ -294,12 +260,12 @@ export class ChangeVerificationPageComponent implements OnDestroy {
   }
 
   protected async copyResultMarkdown(): Promise<void> {
-    const display = this.reportDisplay();
-    if (!display) {
+    const report = this.job()?.report;
+    if (!report) {
       return;
     }
 
-    const copied = await copyTextToClipboard(buildChangeVerificationReportMarkdown(display.report));
+    const copied = await copyTextToClipboard(buildChangeVerificationReportMarkdown(report));
     if (!copied) {
       this.resultCopyError.set('Nie udało się skopiować wyniku weryfikacji do schowka.');
       return;
@@ -412,6 +378,9 @@ export class ChangeVerificationPageComponent implements OnDestroy {
     exportState?: Omit<ChangeVerificationExportState, 'job'>
   ): void {
     this.job.set(job);
+    if (this.isTerminalStatus(job.status)) {
+      this.composerExpanded.set(false);
+    }
 
     if (exportState) {
       this.exportState.set({ ...exportState, job });
@@ -622,77 +591,6 @@ function looksLikeUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
-function changeVerificationReportDisplay(
-  report: AnalysisReport | null,
-  compliance: ChangeVerificationCompliance | null
-): ChangeVerificationReportDisplay | null {
-  if (!report) {
-    return null;
-  }
-
-  return {
-    report,
-    title: cleanText(report.header) || 'Change Verification result',
-    confidence: cleanText(report.meta?.confidence),
-    sections: changeVerificationReportSections(report.sections, compliance),
-    appendix: normalizedMeta(report.meta)
-  };
-}
-
-function changeVerificationReportSections(
-  sections: AnalysisReportSection[] | null | undefined,
-  compliance: ChangeVerificationCompliance | null
-): ChangeVerificationReportSectionDisplay[] {
-  return sortedSections(sections).map((section) => {
-    const id = cleanText(section.id) || cleanText(section.title) || 'SECTION';
-    const normalizedId = id.toUpperCase();
-    return {
-      id,
-      title: cleanText(section.title) || id,
-      tabLabel: changeVerificationTabLabel(id, section.title),
-      markdown: cleanText(section.markdown),
-      emptyText: `No confirmed details for ${changeVerificationTabLabel(id, section.title)}.`,
-      meta: normalizedMeta(section.meta),
-      complianceChecks: complianceChecksForSection(compliance, normalizedId),
-      isComplianceSection: ['STORY_COMPLIANCE', 'INSTRUCTION_COMPLIANCE', 'INFERRED_CRITICAL_CHECKS'].includes(normalizedId),
-      complianceVariant: normalizedId === 'INFERRED_CRITICAL_CHECKS' ? 'inferred-critical' : 'defined'
-    };
-  });
-}
-
-function complianceChecksForSection(
-  compliance: ChangeVerificationCompliance | null,
-  sectionId: string
-): ChangeVerificationVerificationCheck[] {
-  return [...(compliance?.verificationChecks ?? [])].filter((check) => {
-    const scope = cleanText(check.scope).toUpperCase();
-    const origin = cleanText(check.origin).toUpperCase();
-    if (sectionId === 'STORY_COMPLIANCE') {
-      return origin === 'DEFINED' && scope === 'STORY_COMPLIANCE';
-    }
-    if (sectionId === 'INSTRUCTION_COMPLIANCE') {
-      return origin === 'DEFINED' && scope === 'INSTRUCTION_COMPLIANCE';
-    }
-    if (sectionId === 'INFERRED_CRITICAL_CHECKS') {
-      return origin === 'INFERRED_CRITICAL' && scope === 'INFERRED_CRITICAL_CHECKS';
-    }
-    return false;
-  });
-}
-
-function changeVerificationTabLabel(id: string, title: string | null | undefined): string {
-  switch (cleanText(id).toUpperCase()) {
-    case 'STORY_COMPLIANCE':
-      return 'Story compliance';
-    case 'INSTRUCTION_COMPLIANCE':
-      return 'Instruction compliance';
-    case 'INFERRED_CRITICAL_CHECKS':
-      return 'AI-suggested critical checks';
-    default:
-      return cleanText(title) || cleanText(id) || 'Result';
-  }
-}
-
 function buildChangeVerificationReportMarkdown(report: AnalysisReport): string {
   const lines = [
     `# ${cleanText(report.header) || 'Change Verification result'}`,
@@ -737,27 +635,12 @@ function referenceText(reference: AnalysisReportReference): string {
     .join(' | ');
 }
 
-function normalizedMeta(meta: AnalysisReportMeta | null | undefined): AnalysisReportMeta {
-  return {
-    references: [...(meta?.references ?? [])],
-    visibilityLimits: uniqueText(meta?.visibilityLimits ?? []),
-    openQuestions: uniqueText(meta?.openQuestions ?? []),
-    gaps: uniqueText(meta?.gaps ?? []),
-    confidence: cleanText(meta?.confidence),
-    warnings: uniqueText(meta?.warnings ?? [])
-  };
-}
-
 function sortedSections(sections: AnalysisReportSection[] | null | undefined): AnalysisReportSection[] {
   return [...(sections ?? [])].sort((left, right) => {
     const leftOrder = typeof left.order === 'number' ? left.order : Number.MAX_SAFE_INTEGER;
     const rightOrder = typeof right.order === 'number' ? right.order : Number.MAX_SAFE_INTEGER;
     return leftOrder - rightOrder;
   });
-}
-
-function uniqueText(values: string[]): string[] {
-  return Array.from(new Set(values.map(cleanText).filter(hasText)));
 }
 
 function cleanText(value: string | null | undefined): string {

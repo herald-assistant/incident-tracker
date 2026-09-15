@@ -23,6 +23,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.ledger;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.sourceRule;
 
 @WebMvcTest(ChangeVerificationJobController.class)
 class ChangeVerificationJobControllerTest {
@@ -63,11 +65,11 @@ class ChangeVerificationJobControllerTest {
                 .andExpect(jsonPath("$.steps", hasSize(2)))
                 .andExpect(jsonPath("$.steps[0].code").value("SOURCE_DISCOVERY"))
                 .andExpect(jsonPath("$.steps[0].producesEvidence[0].provider").value("change-verification"))
-                .andExpect(jsonPath("$.result.compliance.status").value("PASSED_WITH_WARNINGS"))
+                .andExpect(jsonPath("$.result.ruleLedger.decision.status").value("READY"))
+                .andExpect(jsonPath("$.result.compliance").doesNotExist())
                 .andExpect(jsonPath("$.report.header").value("Change Verification: CRM-123"))
-                .andExpect(jsonPath("$.report.sections[0].id").value("STORY_COMPLIANCE"))
-                .andExpect(jsonPath("$.report.sections[1].id").value("INSTRUCTION_COMPLIANCE"))
-                .andExpect(jsonPath("$.report.meta.references[0].type").value("jira"));
+                .andExpect(jsonPath("$.report.sections[0].id").value("RULE_LEDGER"))
+                .andExpect(jsonPath("$.report.meta.references[0].type").value("ACCEPTANCE_CRITERION"));
 
         verify(changeVerificationJobService).startJob(new ChangeVerificationJobStartRequest(
                 "CRM-123",
@@ -140,15 +142,12 @@ class ChangeVerificationJobControllerTest {
                 "CRM-123",
                 "https://jira.example.com/browse/CRM-123",
                 "Change Verification skeleton prompt",
-                new ChangeVerificationComplianceResponse(
-                        true,
-                        true,
-                        "PASSED_WITH_WARNINGS",
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        List.of()
-                ),
+                ledger(List.of(
+                        sourceRule("story-001", ChangeVerificationRuleScope.STORY,
+                                ChangeVerificationRuleOutcome.SATISFIED),
+                        sourceRule("instruction-001", ChangeVerificationRuleScope.INSTRUCTION,
+                                ChangeVerificationRuleOutcome.SATISFIED)
+                ), List.of()),
                 null
         );
         return new ChangeVerificationJobStateSnapshot(

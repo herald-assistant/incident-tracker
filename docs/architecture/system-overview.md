@@ -179,13 +179,15 @@ Na dzisiaj projekt ma:
   platforma oszczedza czas w codziennej pracy,
 - ekran `GET /incident-analysis` serwowany przez Spring Boot z mozliwoscia
   importu i eksportu zapisu zakonczonej analizy jako JSON,
-- ekran `GET /change-verification` dla compliance-only review Jira/Confluence,
-  instrukcji repozytorium i implementacji z MR. Wynik rozdziela source-defined
-  `STORY_COMPLIANCE`, `INSTRUCTION_COMPLIANCE` oraz maksymalnie piec
-  `INFERRED_CRITICAL_CHECKS`; sugestie AI sa oceniane wobec tego samego evidence,
-  ale nie zmieniaja werdyktu source-defined compliance. Import/eksport uzywa
-  koperty `tdw.change-verification-export/v5` z aktualnym
-  `change-verification-result-v4` i odrzuca starsze wersje,
+- ekran `GET /change-verification` dla rule-first review Jira/Confluence,
+  instrukcji repozytorium i implementacji z MR. Wynik jest jednym ledgerem, w
+  ktorym kazda regula autora wystepuje raz z cytatem, zrodlem, interpretacja,
+  outcome, release impact, evidence, brakami i dzialaniem. Decyzja
+  `READY`/`NEEDS_EVIDENCE`/`NEEDS_ACTION`/`INCONCLUSIVE` jest wyliczana
+  deterministycznie tylko z regul zrodlowych; maksymalnie piec dodatkowych
+  kontroli AI pozostaje poza nia. Import/eksport uzywa koperty
+  `tdw.change-verification-export/v6` z aktualnym
+  `change-verification-result-v5` i odrzuca starsze wersje,
 - ekran `GET /flow-explorer` do endpoint-first dokumentacji flow; nowe runy,
   kontrakt API i runtime obsluguja obecnie tylko `DEEP_DISCOVERY`, a
   `Test scenarios` oraz `Risk detection` sa widoczne jako disabled z oznaczeniem
@@ -316,12 +318,15 @@ Na dzisiaj projekt ma:
 - `GET /change-verification`
   Angularowy ekran `Analysis Features / Change Verification`. Operator podaje
   Jira key albo URL i wybiera Story Compliance oraz Instruction Compliance.
-  Raport pokazuje wymagania zrodlowe osobno od niekontraktowych kontroli
-  krytycznych zasugerowanych przez AI.
+  Wynik zaczyna sie od deterministycznej decyzji i filtrowalnego ledgeru regul
+  autora pogrupowanych wedlug Story i Instruction. Kazda regula jest jednym
+  rozwijanym elementem; doslowny cytat jest widoczny przed interpretacja,
+  evidence i brakami. Niecontractowe kontrole AI sa osobna, domyslnie zwinieta
+  kolekcja.
 - `POST /api/change-verification/jobs`
   Uruchamia asynchroniczna weryfikacje. `GET` z `/{jobId}` zwraca snapshot
-  krokow, source/tool evidence, activity, prompt, usage, strukturalne checki i
-  kanoniczny `AnalysisReport`.
+  krokow, source/tool evidence, activity, prompt, usage, rule ledger i
+  deterministyczna projekcje `AnalysisReport`.
 - `GET /config-drift-viewer`
   Angularowy workspace porownania konfiguracji runtime. Formularz wybiera
   repozytorium, wiele `internal-service` oraz branch zrodlowy/docelowy.

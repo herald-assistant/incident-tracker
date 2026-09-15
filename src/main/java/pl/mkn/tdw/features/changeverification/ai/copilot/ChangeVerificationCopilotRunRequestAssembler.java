@@ -12,7 +12,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
 import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparation;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportFactory;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.shared.ai.AnalysisAiAuthRef;
 
@@ -29,7 +28,6 @@ public class ChangeVerificationCopilotRunRequestAssembler {
     private final CopilotSdkToolFactory toolFactory;
     private final ChangeVerificationCopilotToolSessionContextFactory toolSessionContextFactory;
     private final CopilotRunAuthMapper runAuthMapper;
-    private final ChangeVerificationReportFactory reportFactory;
 
     public CopilotRunRequest assemble(
             String runReference,
@@ -54,19 +52,17 @@ public class ChangeVerificationCopilotRunRequestAssembler {
                 ChangeVerificationCopilotToolContextKeys.RUN_KIND_COMPLIANCE
         );
         var toolAccessPolicy = ChangeVerificationCopilotToolAccessPolicy.fromRegisteredTools(
-                toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT),
-                true
+                toolFactory.createToolDefinitions(toolSessionContext, TOOL_DESCRIPTION_CONTEXT)
         );
 
         log.info(
-                "Change Verification Copilot session prepared runReference={} sessionId={} gitLabToolsRegistered={} gitLabToolsEnabled={} operationalContextToolsRegistered={} operationalContextToolsEnabled={} reportToolsEnabled={}",
+                "Change Verification Copilot session prepared runReference={} sessionId={} gitLabToolsRegistered={} gitLabToolsEnabled={} operationalContextToolsRegistered={} operationalContextToolsEnabled={}",
                 runReference,
                 toolSessionContext.copilotSessionId(),
                 toolAccessPolicy.gitLabToolsRegistered(),
                 toolAccessPolicy.gitLabToolsEnabled(),
                 toolAccessPolicy.operationalContextToolsRegistered(),
-                toolAccessPolicy.operationalContextToolsEnabled(),
-                toolAccessPolicy.reportToolsEnabled()
+                toolAccessPolicy.operationalContextToolsEnabled()
         );
 
         var sessionConfigRequest = new CopilotSessionConfigRequest(
@@ -77,7 +73,7 @@ public class ChangeVerificationCopilotRunRequestAssembler {
                 DENIED_TOOL_MESSAGE
         );
 
-        var runRequest = new CopilotRunRequest(
+        return new CopilotRunRequest(
                 toolSessionContext.analysisRunId(),
                 runAuthMapper.toRunAuth(authRef),
                 CopilotSessionTarget.newSession(),
@@ -86,11 +82,6 @@ public class ChangeVerificationCopilotRunRequestAssembler {
                 preparation.artifactContents(),
                 null
         );
-        return runRequest.withInitialReport(reportFactory.createInitialReport(
-                request,
-                sourceDiscovery,
-                toolSessionContext
-        ));
     }
 
     private CopilotModelSelection modelSelection(ChangeVerificationJobStartRequest request) {

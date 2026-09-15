@@ -1,107 +1,50 @@
 ---
 name: change-verification-orchestrator
-description: Orkiestruje Change Verification - buduje ledger wymagan, uruchamia aktywne skille sekcyjne, wykonuje readiness gate i przekazuje wynik do write-report.
+description: Orkiestruje Change Verification i zwraca jeden kanoniczny rejestr regul zrodlowych.
 ---
 
 # Change Verification Orchestrator
 
 ## Cel
 
-Poprowadz initial Change Verification od materialu zrodlowego do kompletnego
-raportu. Nie jestes wlascicielem tresci sekcji ani finalnego formatu raportu.
+Przeprowadz jedna, spojna ocene regul autora i zwroc wylacznie JSON zgodny z
+`change-verification/response-contract.md`. Nie tworz raportu Markdown,
+findings, globalnego statusu ani globalnej listy dzialan.
 
-## Wejscia
-
-Zacznij od artefaktow `change-verification/*` osadzonych w promptcie. Target
-issue jest glownym zakresem. Parent, subtaski i Confluence sa materialem
-kontekstowym, chyba ze target issue jawnie wlacza ich fragment do swojego
-zakresu.
-
-## Algorytm
+## Workflow
 
 1. Zaladuj `change-verification-compliance-check`.
-2. Zbuduj `RequirementLedger` obejmujacy:
-   - kazde jawne acceptance criterion,
-   - wymagania z opisu i komentarzy,
-   - reguly z aktywnych instrukcji repozytorium,
-   - od zera do pieciu osobnych `INFERRED_CRITICAL` checks wynikajacych z
-     konkretnych sygnalow Jira, Confluence, MR, kodu albo operational context.
-3. Dla `checkStoryCompliance=true` zaladuj
-   `change-verification-story-compliance-section`.
-4. Dla `checkInstructionCompliance=true` zaladuj
-   `change-verification-instruction-compliance-section`.
-5. Dla `checkStoryCompliance=true` zaladuj
-   `change-verification-inferred-critical-checks-section`.
-6. Po kazdej sekcji wykonaj readiness gate.
-7. Gdy brak jest rozstrzygalny jednym focused odczytem GitLab albo Operational
-   Context, wykonaj go i ponow tylko odpowiednia czesc analizy.
-8. Gdy brak nie jest rozstrzygalny, oznacz go jako `visibility_limited`.
-9. Zaladuj `change-verification-write-report` i przekaz mu ledger, aktywne
-   drafty sekcji, findings, actions, source refs, gaps, open questions,
-   visibility limits i confidence.
-10. Przed handoffem usun z ledgeru, findings, gaps, open questions i actions
-   wpisy utworzone wylacznie z limitow `source-discovery-limits` albo
-   `instruction-source-limits`. Takie wpisy zachowaj tylko jako
-   `visibilityLimits`.
+2. Zacznij od target issue i artefaktow `change-verification/*`.
+3. Wyodrebnij kazda obowiazujaca regule zrodlowa dokladnie raz. Zachowaj jej
+   doslowny cytat, typ i referencje; osobno zapisz precyzyjna normalizacje.
+4. Powiaz regule z widoczna implementacja i evidence. Gdy jeden celowany
+   odczyt GitLab albo Operational Context moze rozstrzygnac konkretny brak,
+   wykonaj go. Nie eksploruj kodu bez zwiazku z regula.
+5. Po jednym celowanym retry wybierz `NOT_VERIFIED`, jezeli nadal brakuje
+   materialu. Nie zgaduj.
+6. Oddziel od zera do pieciu uzasadnionych `additionalChecks`. Nie przedstawiaj
+   ich jako regul Jira, Confluence ani repozytorium.
+7. Wykonaj finalna kontrole ledgeru i zwroc jeden obiekt JSON bez tekstu przed
+   nim ani po nim.
 
-## Readiness Gate
+## Finalna kontrola
 
-Status kazdego materialu ustaw jako:
-
-- `ready`,
-- `needs_deeper_evidence`,
-- `visibility_limited`,
-- `not_applicable`.
-
-Nie przekazuj sekcji do write-report, gdy ma status
-`needs_deeper_evidence`. Dopuszczalny jest jeden targeted retry dla konkretnej
-luki. Po nim zapisz jawny limit widocznosci zamiast petlic albo zgadywac.
-
-Przed write-report potwierdz:
-
-- target issue pozostaje glownym zakresem,
-- kazde jawne acceptance criterion ma osobny check,
-- opis, komentarze, Confluence i implementacja zostaly przejrzane pod katem
-  brakujacych kontroli release-critical,
-- istnienie jawnego AC nie zatrzymalo dalszej dedukcji z innych zrodel,
-- kazdy check ma `interpretationType`,
-- kazdy `INFERRED_CRITICAL` check ma `interpretationType=inferred`, maksymalnie
-  piec pozycji, konkretne `inferenceSignals`, `inferenceRationale`,
-  `riskIfOmitted` i `confidence`,
-- zadna kontrola `INFERRED_CRITICAL` nie znajduje sie w Story Compliance ani
-  Instruction Compliance,
-- instrukcje zostaly powiazane z plikami albo elementami zmiany, do ktorych
-  maja zastosowanie,
-- mocne twierdzenia maja source refs,
-- sprzecznosci i braki widocznosci nie zostaly ukryte.
-- limity techniczne platformy nie zostaly przedstawione jako wymagania,
-  checki, findings ani problemy projektu.
-
-## Handoff
-
-Przekaz do `change-verification-write-report`:
-
-```text
-RequirementLedger
-StoryComplianceSectionDraft?
-InstructionComplianceSectionDraft?
-InferredCriticalChecksSectionDraft?
-findings
-suggestedActions
-references
-visibilityLimits
-openQuestions
-gaps
-warnings
-confidence
-```
+- kazda regula autora wystepuje raz i ma unikalne `id`,
+- cytat autora nie zostal zastapiony interpretacja AI,
+- `rules` zawiera tylko scope `STORY` lub `INSTRUCTION`,
+- `additionalChecks` zawiera tylko scope `ADDITIONAL` i source
+  `AI_SUGGESTION`,
+- wynik reguly jest jednym z `SATISFIED`, `NOT_SATISFIED`, `NOT_VERIFIED`,
+- `releaseImpact` jest niezalezny od wyniku,
+- `SATISFIED` ma evidence i `releaseImpact=NONE`,
+- `NOT_SATISFIED` ma konkretne action,
+- `NOT_VERIFIED` ma missingEvidence i action,
+- kazdy visibility limit wskazuje istniejace `affectedRuleIds`,
+- techniczne limity discovery nie staly sie samodzielnymi regulami ani
+  problemami projektu.
 
 ## Antywzorce
 
-Nie:
-
-- zapisuj finalnych sekcji samodzielnie,
-- traktuj acceptance criteria jako zamknietej listy wymagan,
-- zamieniaj parenta albo calego Confluence w zakres target issue,
-- ukrywaj inferencji pod etykieta `explicit`,
-- koncz bez `change-verification-write-report`.
+Nie uruchamiaj report tools. Nie dziel wyniku na priority review, confirmed
+scope i full material. Nie kopiuj tej samej reguly do kilku list. Nie wyliczaj
+globalnego werdyktu; zrobi to deterministycznie backend.

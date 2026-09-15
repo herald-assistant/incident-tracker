@@ -12,8 +12,6 @@ import pl.mkn.tdw.aiplatform.copilot.tools.description.CopilotToolDescriptionCon
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparation;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportFactory;
-import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportSectionIds;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFileSnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatch;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
@@ -44,8 +42,7 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         var assembler = new ChangeVerificationCopilotRunRequestAssembler(
                 toolFactory,
                 new ChangeVerificationCopilotToolSessionContextFactory(),
-                new CopilotRunAuthMapper(),
-                new ChangeVerificationReportFactory()
+                new CopilotRunAuthMapper()
         );
         var gitLabReadTool = tool(GitLabToolNames.READ_REPOSITORY_FILE);
         var gitLabSearchTool = tool(GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES);
@@ -79,15 +76,13 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
         assertEquals("Change Verification prompt", runRequest.prompt());
         assertEquals(preparation().artifactContents(), runRequest.artifactContents());
         assertEquals(
-                List.of(gitLabReadTool, gitLabSearchTool, reportUpsertTool, reportGetTool),
+                List.of(gitLabReadTool, gitLabSearchTool),
                 sessionConfig.tools()
         );
         assertEquals(
                 List.of(
                         GitLabToolNames.READ_REPOSITORY_FILE,
-                        GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES,
-                        CopilotReportToolNames.UPSERT_SECTION,
-                        CopilotReportToolNames.GET_CURRENT
+                        GitLabToolNames.SEARCH_REPOSITORY_CANDIDATES
                 ),
                 sessionConfig.availableToolNames()
         );
@@ -109,24 +104,12 @@ class ChangeVerificationCopilotRunRequestAssemblerTest {
                 List.of("crm-entry", "crm-support"),
                 hiddenContext.get(AgentToolContextKeys.GITLAB_ALLOWED_APPLICATION_NAMES)
         );
-        assertThat(hiddenContext.get(AgentToolContextKeys.REPORT_ID)).isInstanceOf(String.class);
-        assertEquals(
-                ChangeVerificationCopilotToolContextKeys.FEATURE_VALUE,
-                hiddenContext.get(AgentToolContextKeys.REPORT_FEATURE)
+        assertThat(hiddenContext).doesNotContainKeys(
+                AgentToolContextKeys.REPORT_ID,
+                AgentToolContextKeys.REPORT_FEATURE,
+                AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS
         );
-        assertEquals(
-                List.of(
-                        ChangeVerificationReportSectionIds.STORY_COMPLIANCE,
-                        ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE,
-                        ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS
-                ),
-                hiddenContext.get(AgentToolContextKeys.ALLOWED_REPORT_SECTION_IDS)
-        );
-        assertThat(runRequest.initialReport()).isNotNull();
-        assertEquals(
-                hiddenContext.get(AgentToolContextKeys.REPORT_ID),
-                runRequest.initialReport().reportId()
-        );
+        assertThat(runRequest.initialReport()).isNull();
 
         assertThat((List<?>) hiddenContext.get(ChangeVerificationCopilotToolContextKeys.ALLOWED_REPOSITORIES))
                 .singleElement()

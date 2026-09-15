@@ -7,13 +7,28 @@ import {
 } from '../../../core/models/analysis.models';
 
 export type ChangeVerificationJobStatus = 'QUEUED' | 'COMPLETED' | 'FAILED' | string;
-
-export type ChangeVerificationFindingSeverity =
-  | 'INFO'
-  | 'LOW'
-  | 'MEDIUM'
-  | 'HIGH'
-  | 'BLOCKER';
+export type ChangeVerificationDecisionStatus =
+  | 'READY'
+  | 'NEEDS_ACTION'
+  | 'NEEDS_EVIDENCE'
+  | 'INCONCLUSIVE';
+export type ChangeVerificationRuleScope = 'STORY' | 'INSTRUCTION' | 'ADDITIONAL';
+export type ChangeVerificationRuleOutcome = 'SATISFIED' | 'NOT_SATISFIED' | 'NOT_VERIFIED';
+export type ChangeVerificationReleaseImpact = 'NONE' | 'REVIEW' | 'BLOCKER';
+export type ChangeVerificationInterpretationType =
+  | 'EXPLICIT'
+  | 'NORMALIZED'
+  | 'CONFLICTING'
+  | 'NOT_VERIFIABLE'
+  | 'INFERRED';
+export type ChangeVerificationRuleSourceType =
+  | 'ACCEPTANCE_CRITERION'
+  | 'JIRA_DESCRIPTION'
+  | 'JIRA_COMMENT'
+  | 'CONFLUENCE'
+  | 'REPOSITORY_INSTRUCTION'
+  | 'OPERATOR_INSTRUCTION'
+  | 'AI_SUGGESTION';
 
 export interface ChangeVerificationJobStartRequest {
   issueKey?: string;
@@ -25,45 +40,56 @@ export interface ChangeVerificationJobStartRequest {
   reasoningEffort?: string;
 }
 
-export interface ChangeVerificationFinding {
-  id: string;
-  severity: ChangeVerificationFindingSeverity;
-  source: string;
+export interface ChangeVerificationRuleSource {
+  type: ChangeVerificationRuleSourceType;
+  label: string;
+  reference: string;
+  quote: string;
+}
+
+export interface ChangeVerificationRuleEvidence {
   summary: string;
-  details: string;
-  references: string[];
-  suggestedAction: string;
+  reference: string;
 }
 
-export interface ChangeVerificationVerificationCheck {
+export interface ChangeVerificationRuleResult {
   id: string;
-  origin: 'DEFINED' | 'INFERRED_CRITICAL' | string;
-  scope: string;
-  criterionSource: string;
-  criterionQuote: string;
-  interpretationType: string;
-  criticality: string | null;
-  inferenceRationale: string | null;
-  inferenceSignals: string[];
+  scope: ChangeVerificationRuleScope;
+  source: ChangeVerificationRuleSource;
+  normalizedRule: string;
+  interpretationType: ChangeVerificationInterpretationType;
+  outcome: ChangeVerificationRuleOutcome;
+  releaseImpact: ChangeVerificationReleaseImpact;
+  conclusion: string;
+  evidence: ChangeVerificationRuleEvidence[];
+  missingEvidence: string[];
+  action: string | null;
+  rationale: string | null;
   riskIfOmitted: string | null;
+  signals: string[];
   confidence: string | null;
-  expectedCriterion: string;
-  verificationStatus: string;
-  verifiedAgainst: string;
-  analysis: string;
-  evidenceRefs: string[];
-  gaps: string[];
-  suggestedAction: string;
 }
 
-export interface ChangeVerificationCompliance {
+export interface ChangeVerificationVisibilityLimit {
+  message: string;
+  affectedRuleIds: string[];
+}
+
+export interface ChangeVerificationDecision {
+  status: ChangeVerificationDecisionStatus;
+  totalRules: number;
+  satisfied: number;
+  notSatisfied: number;
+  notVerified: number;
+}
+
+export interface ChangeVerificationRuleLedger {
   storyComplianceRequested: boolean;
   instructionComplianceRequested: boolean;
-  status: string;
-  verificationChecks: ChangeVerificationVerificationCheck[];
-  findings: ChangeVerificationFinding[];
-  suggestedActions: string[];
-  visibilityLimits: string[];
+  decision: ChangeVerificationDecision;
+  rules: ChangeVerificationRuleResult[];
+  additionalChecks: ChangeVerificationRuleResult[];
+  visibilityLimits: ChangeVerificationVisibilityLimit[];
 }
 
 export interface ChangeVerificationResult {
@@ -71,7 +97,7 @@ export interface ChangeVerificationResult {
   issueKey: string;
   issueUrl: string;
   prompt: string;
-  compliance: ChangeVerificationCompliance;
+  ruleLedger: ChangeVerificationRuleLedger;
   usage: AnalysisAiUsage | null;
 }
 

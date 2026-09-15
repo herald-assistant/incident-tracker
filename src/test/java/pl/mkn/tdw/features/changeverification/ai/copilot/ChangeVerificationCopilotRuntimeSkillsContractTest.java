@@ -15,11 +15,7 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
     void shouldDeclareFeatureSkillNamesUsedByThePromptWorkflow() {
         assertThat(ChangeVerificationCopilotRuntimeSkillNames.featureSkillNames()).containsExactly(
                 "change-verification-orchestrator",
-                "change-verification-compliance-check",
-                "change-verification-story-compliance-section",
-                "change-verification-instruction-compliance-section",
-                "change-verification-inferred-critical-checks-section",
-                "change-verification-write-report"
+                "change-verification-compliance-check"
         );
     }
 
@@ -35,54 +31,26 @@ class ChangeVerificationCopilotRuntimeSkillsContractTest {
         }
 
         assertThat(skill("change-verification-orchestrator")).contains(
-                "RequirementLedger",
-                "Readiness Gate",
-                "change-verification-write-report"
+                "jeden kanoniczny rejestr",
+                "additionalChecks",
+                "Nie uruchamiaj report tools"
         );
-        assertThat(skill("change-verification-story-compliance-section")).contains(
-                "STORY_COMPLIANCE",
-                "interpretationType",
-                "INFERRED_CRITICAL",
-                "Wymaga uwagi",
-                "Potwierdzone wymagania"
-        );
-        assertThat(skill("change-verification-instruction-compliance-section")).contains(
-                "INSTRUCTION_COMPLIANCE",
-                "applicableChangedFiles",
-                "interpretationType",
-                "Markdown ma byc raportem dla czlowieka",
-                "metadanymi pokrycia platformy",
-                "nie uwzgledniaj ich przy wyznaczaniu statusu sekcji"
-        );
-        assertThat(skill("change-verification-inferred-critical-checks-section")).contains(
-                "INFERRED_CRITICAL_CHECKS",
-                "maksymalnie pieciu",
-                "inferenceSignals",
-                "nie zmieniaja Story Compliance"
-        );
-        assertThat(skill("change-verification-write-report")).contains(
-                "report_upsert_section",
-                "report_update_meta",
-                "report_get_current",
-                "human-first Markdown",
-                "## Szczegoly kryteriow",
-                "Limity discovery platformy sa wylacznie `visibilityLimits`"
+        assertThat(skill("change-verification-compliance-check")).contains(
+                "source.quote",
+                "SATISFIED",
+                "NOT_SATISFIED",
+                "NOT_VERIFIED",
+                "affectedRuleIds"
         );
     }
 
     @Test
     void shouldKeepRuntimeSkillsFeatureScopedAndFreeFromDatabaseChecks() throws Exception {
-        for (var skillName : List.of(
-                "change-verification-orchestrator",
-                "change-verification-compliance-check",
-                "change-verification-story-compliance-section",
-                "change-verification-instruction-compliance-section",
-                "change-verification-inferred-critical-checks-section",
-                "change-verification-write-report"
-        )) {
+        for (var skillName : ChangeVerificationCopilotRuntimeSkillNames.featureSkillNames()) {
             var content = skill(skillName);
             assertThat(content).doesNotContain("features.incidentanalysis", "features.flowexplorer");
             assertThat(content).doesNotContain("C:\\", "/Users/");
+            assertThat(content).doesNotContain("report_upsert_section", "report_get_current");
         }
     }
 

@@ -30,6 +30,29 @@
   line-height: 1.25;
 }
 
+.change-verification-composer--compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding-block: 14px;
+}
+
+.change-verification-composer__compact-context {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.change-verification-composer__compact-context > .material-symbols-outlined {
+  color: var(--primary);
+  font-size: 28px;
+}
+
+.change-verification-composer__compact-context h2,
+.change-verification-composer__compact-context p {
+  margin: 0;
+}
+
 .change-verification-source-grid {
   display: grid;
   grid-template-columns: minmax(240px, 0.8fr) minmax(440px, 1.2fr);
@@ -173,6 +196,7 @@
   }
 
   .change-verification-composer__heading,
+  .change-verification-composer--compact,
   .change-verification-run {
     grid-template-columns: 1fr;
   }

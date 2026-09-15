@@ -1,7 +1,7 @@
 package pl.mkn.tdw.features.changeverification.job.export;
 
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleLedgerResponse;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityEvent;
 import pl.mkn.tdw.shared.evidence.AnalysisEvidenceSection;
 
@@ -15,9 +15,9 @@ public record ChangeVerificationExportEnvelope(
         Payload payload
 ) {
     public static final String SCHEMA = "tdw.change-verification-export";
-    public static final int VERSION = 5;
+    public static final int VERSION = 6;
     public static final String PAYLOAD_TYPE = "change-verification-analysis";
-    public static final String RESULT_CONTRACT = "change-verification-result-v4";
+    public static final String RESULT_CONTRACT = "change-verification-result-v5";
 
     public static ChangeVerificationExportEnvelope from(
             ChangeVerificationJobStateSnapshot snapshot,
@@ -82,8 +82,9 @@ public record ChangeVerificationExportEnvelope(
 
     public record Result(
             String status,
-            String complianceStatus,
-            int findingCount,
+            String decisionStatus,
+            int totalRules,
+            int needsAttentionCount,
             int visibilityLimitCount
     ) {
     }
@@ -133,12 +134,15 @@ public record ChangeVerificationExportEnvelope(
 
     private static Result result(ChangeVerificationJobStateSnapshot snapshot) {
         var result = snapshot != null ? snapshot.result() : null;
-        var compliance = result != null ? result.compliance() : null;
+        var ledger = result != null ? result.ruleLedger() : null;
         return new Result(
                 text(result != null ? result.status() : snapshot != null ? snapshot.status() : null),
-                text(compliance != null ? compliance.status() : null),
-                compliance != null ? safeList(compliance.findings()).size() : 0,
-                visibilityLimitCount(compliance)
+                text(ledger != null && ledger.decision() != null ? ledger.decision().status().name() : null),
+                ledger != null && ledger.decision() != null ? ledger.decision().totalRules() : 0,
+                ledger != null && ledger.decision() != null
+                        ? ledger.decision().notSatisfied() + ledger.decision().notVerified()
+                        : 0,
+                visibilityLimitCount(ledger)
         );
     }
 
@@ -236,8 +240,8 @@ public record ChangeVerificationExportEnvelope(
         );
     }
 
-    private static int visibilityLimitCount(ChangeVerificationComplianceResponse compliance) {
-        return safeList(compliance != null ? compliance.visibilityLimits() : List.of()).size();
+    private static int visibilityLimitCount(ChangeVerificationRuleLedgerResponse ledger) {
+        return safeList(ledger != null ? ledger.visibilityLimits() : List.of()).size();
     }
 
     private static int evidenceItemCount(List<AnalysisEvidenceSection> sections) {

@@ -119,17 +119,24 @@ prompt, result DTO, policy i UI powinny byc lokalne dla `features.flow...`.
 ### Change Verification
 
 Uzytkownik wskazuje zmiane i wybiera zakres weryfikacji. Feature laczy
-material zadania, instrukcje repozytorium oraz evidence implementacyjne, aby
-pokazac zgodnosc, rozbieznosci i ograniczenia widocznosci. Source-defined
-Story Compliance i Instruction Compliance sa oddzielone od maksymalnie pieciu
-`INFERRED_CRITICAL_CHECKS`, ktore AI moze zaproponowac na podstawie konkretnych
-sygnalow, gdy dokumentacja pomija istotny aspekt release'u. Sugestie sa od razu
-oceniane wobec tego samego evidence, ale nie sa wymaganiami kontraktowymi i nie
-zmieniaja werdyktu source-defined compliance.
+material zadania, instrukcje repozytorium oraz evidence implementacyjne w jeden
+kanoniczny rule ledger. Kazda regula autora wystepuje w wyniku dokladnie raz:
+doslowny cytat i zrodlo sa nadrzedne, a normalizacja AI, outcome, evidence,
+brakujacy dowod i rekomendowane dzialanie sa jej atrybutami. Reguly maja tylko
+`SATISFIED`, `NOT_SATISFIED` albo `NOT_VERIFIED`; niezalezny `releaseImpact`
+rozroznia brak wplywu, review i blocker.
+
+Decyzja release jest wyliczana deterministycznie wyłącznie z regul zrodlowych:
+`NEEDS_ACTION` ma pierwszenstwo przed `NEEDS_EVIDENCE`, komplet regul
+spelnionych daje `READY`, a brak regul daje `INCONCLUSIVE`. Maksymalnie piec
+dodatkowych kontroli AI mieszka w osobnej, domyslnie zwinietej kolekcji i nie
+zmienia tej decyzji. Report jest deterministyczna projekcja tego samego ledgeru,
+a nie drugim modelem wyniku tworzonym przez AI.
 
 Change Verification utrzymuje jeden aktualny kontrakt eksportu/importu. W
 fazie V1 zmiana tego kontraktu nie utrzymuje migratorow ani odczytu starszych
-wersji feature'a; nieaktualny eksport jest jawnie odrzucany.
+wersji feature'a; aktualna koperta `tdw.change-verification-export/v6` zawiera
+`change-verification-result-v5`, a nieaktualny eksport jest jawnie odrzucany.
 
 Dalsze inkrementy powinny wynikac z aktualnej, osobno opisanej potrzeby oraz
 zatwierdzonego planu, a nie z kopiowania Incident Analysis albo Flow Explorera.

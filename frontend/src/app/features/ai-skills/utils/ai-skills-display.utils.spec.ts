@@ -20,7 +20,7 @@ describe('AI Skills display projection', () => {
   it('should classify responsibilities without changing runtime semantics', () => {
     expect(aiSkillResponsibility('flow-explorer-orchestrator')).toBe('Orchestration');
     expect(aiSkillResponsibility('incident-operational-grounding')).toBe('Grounding');
-    expect(aiSkillResponsibility('change-verification-write-report')).toBe('Result composition');
+    expect(aiSkillResponsibility('ui-explorer-write-report')).toBe('Result composition');
     expect(aiSkillResponsibility('delivery-complexity-assessment-evaluator')).toBe(
       'Assessment'
     );

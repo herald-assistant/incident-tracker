@@ -7,7 +7,7 @@ public record ChangeVerificationResultResponse(
         String issueKey,
         String issueUrl,
         String prompt,
-        ChangeVerificationComplianceResponse compliance,
+        ChangeVerificationRuleLedgerResponse ruleLedger,
         AnalysisAiUsage usage
 ) {
 }

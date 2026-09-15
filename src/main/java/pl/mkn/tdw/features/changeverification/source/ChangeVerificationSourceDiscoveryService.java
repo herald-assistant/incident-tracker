@@ -153,17 +153,6 @@ public class ChangeVerificationSourceDiscoveryService {
                     .filter(StringUtils::hasText)
                     .map(String::trim)
                     .forEach(issueKeys::add);
-            if (jiraIssue.parentIssue() != null) {
-                var parentIssue = jiraIssue.parentIssue();
-                if (StringUtils.hasText(parentIssue.issueKey())) {
-                    issueKeys.add(parentIssue.issueKey().trim());
-                }
-                parentIssue.subTasks().stream()
-                        .map(JiraIssueMaterial::issueKey)
-                        .filter(StringUtils::hasText)
-                        .map(String::trim)
-                        .forEach(issueKeys::add);
-            }
         }
         return List.copyOf(issueKeys);
     }
@@ -195,16 +184,7 @@ public class ChangeVerificationSourceDiscoveryService {
         try {
             var refsByKey = refSelectionsByKey(refSelections);
             return instructionContextDiscoveryService.discover(new InstructionContextRequest(
-                    mergeRequests.mergeRequests().stream()
-                            .map(mergeRequest -> new InstructionRepositoryScope(
-                                    mergeRequest.projectPath(),
-                                    analysisRef(mergeRequest, refsByKey),
-                                    mergeRequest.changedFiles().stream()
-                                            .map(file -> StringUtils.hasText(file.newPath()) ? file.newPath() : file.oldPath())
-                                            .filter(StringUtils::hasText)
-                                            .toList()
-                            ))
-                            .toList()
+                    instructionRepositoryScopes(mergeRequests, refsByKey)
             ));
         } catch (RuntimeException exception) {
             log.warn("Change Verification instruction context discovery failed reason={}", exception.getMessage());
@@ -298,6 +278,34 @@ public class ChangeVerificationSourceDiscoveryService {
         return result;
     }
 
+    private List<InstructionRepositoryScope> instructionRepositoryScopes(
+            GitLabMergeRequestSearchResult mergeRequests,
+            Map<String, ChangeVerificationRepositoryRefSelection> refsByKey
+    ) {
+        var scopes = new LinkedHashMap<String, InstructionScopeAccumulator>();
+        for (var mergeRequest : mergeRequests.mergeRequests()) {
+            var projectPath = value(mergeRequest.projectPath());
+            var ref = analysisRef(mergeRequest, refsByKey);
+            var key = projectPath + "|" + ref;
+            var accumulator = scopes.computeIfAbsent(
+                    key,
+                    ignored -> new InstructionScopeAccumulator(projectPath, ref)
+            );
+            mergeRequest.changedFiles().stream()
+                    .map(file -> StringUtils.hasText(file.newPath()) ? file.newPath() : file.oldPath())
+                    .filter(StringUtils::hasText)
+                    .map(String::trim)
+                    .forEach(accumulator.changedFilePaths::add);
+        }
+        return scopes.values().stream()
+                .map(accumulator -> new InstructionRepositoryScope(
+                        accumulator.projectPath,
+                        accumulator.ref,
+                        List.copyOf(accumulator.changedFilePaths)
+                ))
+                .toList();
+    }
+
     private String analysisRef(
             pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest mergeRequest,
             Map<String, ChangeVerificationRepositoryRefSelection> refsByKey
@@ -336,5 +344,16 @@ public class ChangeVerificationSourceDiscoveryService {
 
     private String value(String value) {
         return StringUtils.hasText(value) ? value.trim() : "";
+    }
+
+    private static final class InstructionScopeAccumulator {
+        private final String projectPath;
+        private final String ref;
+        private final LinkedHashSet<String> changedFilePaths = new LinkedHashSet<>();
+
+        private InstructionScopeAccumulator(String projectPath, String ref) {
+            this.projectPath = projectPath;
+            this.ref = ref;
+        }
     }
 }

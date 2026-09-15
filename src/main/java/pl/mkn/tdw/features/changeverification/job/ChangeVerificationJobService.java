@@ -7,10 +7,9 @@ import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationAiResponse;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysisProvider;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparationService;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVisibilityLimitResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
 import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.job.state.ChangeVerificationJobState;
@@ -198,22 +197,13 @@ public class ChangeVerificationJobService {
             );
             return new ChangeVerificationComplianceAnalysis(
                     new ChangeVerificationAiResponse(
-                            "INCONCLUSIVE",
                             List.of(),
-                            List.of(new ChangeVerificationFindingResponse(
-                                    "cv-ai-unavailable",
-                                    ChangeVerificationFindingSeverity.MEDIUM,
-                                    "VISIBILITY",
-                                    "AI compliance check was not completed.",
-                                    "Copilot compliance analysis failed before returning a usable result.",
-                                    List.of("change-verification/source-discovery"),
-                                    "Inspect collected evidence manually or retry the verification run."
-                            )),
-                            List.of("Retry AI compliance verification after checking Copilot runtime availability."),
-                            List.of("AI compliance check failed: " + safeMessage(exception)),
-                            "low"
+                            List.of(),
+                            List.of(new ChangeVerificationVisibilityLimitResponse(
+                                    "AI rule verification failed: " + safeMessage(exception),
+                                    List.of()
+                            ))
                     ),
-                    null,
                     null,
                     null,
                     null

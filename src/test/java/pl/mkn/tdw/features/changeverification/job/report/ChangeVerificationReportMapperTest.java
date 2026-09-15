@@ -1,245 +1,70 @@
 package pl.mkn.tdw.features.changeverification.job.report;
 
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
-import pl.mkn.tdw.shared.ai.report.AnalysisReport;
-import pl.mkn.tdw.shared.ai.report.AnalysisReportMeta;
-import pl.mkn.tdw.shared.ai.report.AnalysisReportReference;
-import pl.mkn.tdw.shared.ai.report.AnalysisReportSection;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleLedgerResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleOutcome;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleScope;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVisibilityLimitResponse;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.additionalRule;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.result;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.sourceRule;
 
 class ChangeVerificationReportMapperTest {
 
     @Test
-    void shouldPreferAiAuthoredComplianceSectionAndKeepDeterministicComplianceFallback() {
-        var result = new ChangeVerificationResultResponse(
-                "COMPLETED",
-                "CRM-123",
-                "https://jira.example.com/browse/CRM-123",
-                "prompt",
-                new ChangeVerificationComplianceResponse(
-                        true,
-                        true,
-                        "PASSED_WITH_WARNINGS",
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        List.of("Diff visibility is partial.")
-                ),
-                null
-        );
-        var aiReport = new AnalysisReport(
-                "runtime-report",
-                "AI header",
+    void shouldCreateDeterministicProjectionOfTheRuleLedger() {
+        var storyRule = sourceRule("story-001", ChangeVerificationRuleScope.STORY,
+                ChangeVerificationRuleOutcome.NOT_SATISFIED);
+        var instructionRule = sourceRule("instruction-001", ChangeVerificationRuleScope.INSTRUCTION,
+                ChangeVerificationRuleOutcome.SATISFIED);
+        var ledger = new ChangeVerificationRuleLedgerResponse(
+                true,
+                true,
                 null,
-                null,
-                List.of(new AnalysisReportSection(
-                        ChangeVerificationReportSectionIds.STORY_COMPLIANCE,
-                        "Story compliance",
-                        0,
-                        "## Wynik weryfikacji\nAI-authored story report.",
-                        new AnalysisReportMeta(
-                                List.of(new AnalysisReportReference(
-                                        "jira",
-                                        "CRM-123",
-                                        "https://jira.example.com/browse/CRM-123",
-                                        "Target issue"
-                                )),
-                                List.of(),
-                                List.of("Confirm inferred retry semantics."),
-                                List.of(),
-                                "high",
-                                List.of()
-                        )
-                )),
-                new AnalysisReportMeta(
-                        List.of(),
-                        List.of("Repository dependency was not visible."),
-                        List.of(),
-                        List.of(),
-                        "high",
-                        List.of()
-                )
+                List.of(storyRule, instructionRule),
+                List.of(additionalRule("additional-001")),
+                List.of(new ChangeVerificationVisibilityLimitResponse(
+                        "Brak testu przegladarkowego dla story-001.",
+                        List.of("story-001")
+                ))
         );
 
-        var report = ChangeVerificationReportMapper.toReport(result, aiReport);
+        var report = ChangeVerificationReportMapper.toReport(result(ledger));
 
-        assertThat(report.header()).isEqualTo("Change Verification: CRM-123");
-        assertThat(report.sections()).hasSize(3);
-        assertThat(section(report, ChangeVerificationReportSectionIds.STORY_COMPLIANCE).markdown())
-                .contains("AI-authored story report");
-        assertThat(section(report, ChangeVerificationReportSectionIds.INSTRUCTION_COMPLIANCE).markdown())
-                .contains("Brak strukturalnych kryteriów")
-                .contains("aktualny kontrakt")
-                .doesNotContain("Dodatkowe ustalenia")
-                .doesNotContain("fallback")
-                .doesNotContain("verificationChecks");
-        assertThat(section(report, ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS).markdown())
-                .contains("nie zidentyfikowalo dodatkowej kontroli krytycznej");
-        assertThat(report.meta().visibilityLimits()).contains(
-                "Repository dependency was not visible.",
-                "Diff visibility is partial."
-        );
-        assertThat(report.meta().confidence()).isEqualTo("high");
+        assertThat(report.subHeader()).isEqualTo("Decision NEEDS_ACTION");
+        assertThat(report.sections()).extracting(section -> section.id())
+                .containsExactly(
+                        ChangeVerificationReportSectionIds.RULE_LEDGER,
+                        ChangeVerificationReportSectionIds.ADDITIONAL_CHECKS
+                );
+        assertThat(report.sections().get(0).markdown())
+                .contains(storyRule.source().quote())
+                .contains(storyRule.action())
+                .contains(instructionRule.source().reference());
+        assertThat(report.meta().visibilityLimits())
+                .containsExactly("Brak testu przegladarkowego dla story-001.");
     }
 
     @Test
-    void shouldKeepInferredCriticalChecksSeparateFromStoryCompliance() {
-        var result = new ChangeVerificationResultResponse(
-                "COMPLETED",
-                "CRM-123",
-                "https://jira.example.com/browse/CRM-123",
-                "prompt",
-                new ChangeVerificationComplianceResponse(
-                        true,
-                        false,
-                        "PASSED",
-                        List.of(
-                                check(
-                                        "story-001",
-                                        "PASSED",
-                                        "Status klienta jest zwracany.",
-                                        "DTO zawiera status.",
-                                        ""
-                                ),
-                                inferredCheck()
-                        ),
-                        List.of(),
-                        List.of(),
-                        List.of()
-                ),
-                null
-        );
-
-        var report = ChangeVerificationReportMapper.toReport(result);
-        var storyMarkdown = section(report, ChangeVerificationReportSectionIds.STORY_COMPLIANCE).markdown();
-        var inferredMarkdown = section(report, ChangeVerificationReportSectionIds.INFERRED_CRITICAL_CHECKS).markdown();
-
-        assertThat(storyMarkdown)
-                .contains("Status klienta jest zwracany")
-                .doesNotContain("Idempotencja publikacji");
-        assertThat(inferredMarkdown)
-                .contains("nie sa wymaganiami zapisanymi")
-                .contains("Idempotencja publikacji")
-                .contains("Ponowienie moze utworzyc duplikat")
-                .contains("event publisher i retry path");
-    }
-
-    @Test
-    void shouldBuildHumanFirstFallbackWithAttentionBeforeConfirmedChecks() {
-        var result = new ChangeVerificationResultResponse(
-                "COMPLETED",
-                "CRM-123",
-                "https://jira.example.com/browse/CRM-123",
-                "prompt",
-                new ChangeVerificationComplianceResponse(
-                        true,
-                        false,
-                        "PASSED_WITH_WARNINGS",
-                        List.of(
-                                check(
-                                        "story-001",
-                                        "PASSED",
-                                        "Event uruchamia inicjalizację.",
-                                        "Przepływ został potwierdzony testem integracyjnym.",
-                                        ""
-                                ),
-                                check(
-                                        "story-002",
-                                        "WARNING",
-                                        "Błąd publikacji nie może zostać pominięty.",
-                                        "Wyjątek jest logowany, ale nie jest propagowany.",
-                                        "Dodać retry albo zaakceptować ryzyko."
-                                )
-                        ),
-                        List.of(),
-                        List.of(),
-                        List.of()
-                ),
-                null
-        );
-
-        var markdown = section(
-                ChangeVerificationReportMapper.toReport(result),
-                ChangeVerificationReportSectionIds.STORY_COMPLIANCE
-        ).markdown();
-
-        assertThat(markdown)
-                .contains("## Wynik weryfikacji")
-                .contains("**Potwierdzone:** 1")
-                .contains("**Wymaga uwagi:** 1")
-                .contains("## Wymaga uwagi")
-                .contains("| Status | Kryterium | Wniosek | Rekomendowane działanie |")
-                .contains("## Potwierdzone wymagania")
-                .contains("## Szczegóły kryteriów")
-                .doesNotContain("criterionSource")
-                .doesNotContain("evidenceRefs")
-                .doesNotContain("gaps: []");
-        assertThat(markdown.indexOf("## Wymaga uwagi"))
-                .isLessThan(markdown.indexOf("## Potwierdzone wymagania"));
-    }
-
-    private ChangeVerificationVerificationCheckResponse check(
-            String id,
-            String status,
-            String criterion,
-            String analysis,
-            String suggestedAction
-    ) {
-        return new ChangeVerificationVerificationCheckResponse(
-                id,
-                "DEFINED",
-                "STORY_COMPLIANCE",
-                "Jira acceptance criteria",
-                "System powinien opublikować event.",
-                "explicit",
+    void shouldNotCreateAdditionalSectionWhenAiAddedNoChecks() {
+        var ledger = new ChangeVerificationRuleLedgerResponse(
+                true,
+                false,
                 null,
-                null,
+                List.of(sourceRule("story-001", ChangeVerificationRuleScope.STORY,
+                        ChangeVerificationRuleOutcome.SATISFIED)),
                 List.of(),
-                null,
-                null,
-                criterion,
-                status,
-                "backend/src/EventPublisher.java",
-                analysis,
-                List.of("backend/src/EventPublisher.java"),
-                List.of(),
-                suggestedAction
+                List.of()
         );
-    }
 
-    private ChangeVerificationVerificationCheckResponse inferredCheck() {
-        return new ChangeVerificationVerificationCheckResponse(
-                "critical-001",
-                "INFERRED_CRITICAL",
-                "INFERRED_CRITICAL_CHECKS",
-                "AI_SUGGESTION",
-                "n/a",
-                "inferred",
-                "HIGH",
-                "Zmiana publikuje event w sciezce z retry.",
-                List.of("event publisher i retry path"),
-                "Ponowienie moze utworzyc duplikat.",
-                "medium",
-                "Idempotencja publikacji",
-                "NOT_VERIFIED",
-                "backend/src/EventPublisher.java",
-                "Nie znaleziono klucza idempotencji.",
-                List.of("backend/src/EventPublisher.java"),
-                List.of("Brak widocznego testu retry."),
-                "Potwierdz wymaganie z ownerem."
-        );
-    }
+        var report = ChangeVerificationReportMapper.toReport(result(ledger));
 
-    private AnalysisReportSection section(AnalysisReport report, String id) {
-        return report.sections().stream()
-                .filter(section -> id.equals(section.id()))
-                .findFirst()
-                .orElseThrow();
+        assertThat(report.sections()).singleElement()
+                .satisfies(section -> assertThat(section.id())
+                        .isEqualTo(ChangeVerificationReportSectionIds.RULE_LEDGER));
     }
 }

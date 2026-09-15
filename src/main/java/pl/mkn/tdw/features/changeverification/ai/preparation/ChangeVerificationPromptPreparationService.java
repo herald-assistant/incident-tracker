@@ -7,7 +7,6 @@ import pl.mkn.tdw.features.changeverification.source.ChangeVerificationChangedFi
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationSourceDiscoveryResult;
 import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequest;
-import pl.mkn.tdw.integrations.gitlab.GitLabMergeRequestChangedFile;
 import pl.mkn.tdw.integrations.gitlab.instructions.InstructionSource;
 import pl.mkn.tdw.integrations.jira.JiraIssueMaterial;
 
@@ -31,27 +30,17 @@ public class ChangeVerificationPromptPreparationService {
         artifacts.put("change-verification/response-contract.md", responseContract());
 
         var prompt = """
-                # Change Verification canonical prompt
+                # Change Verification
 
-                ## Runtime envelope
-                - Ten run sprawdza zgodnosc zmiany z materialem Jira oraz instrukcjami repozytorium.
-                - Najpierw zaladuj skill `change-verification-orchestrator` przez built-in tool `skill` i wykonaj opisany w nim workflow.
-                - Orkiestrator ma przygotowac ledger przez `change-verification-compliance-check`, przekazac go do aktywnych skilli sekcyjnych, a finalny wynik zapisac przez `change-verification-write-report`.
-                - Pracuj artifact-first. Nie probuj czytac lokalnego filesystemu ani zgadywac materialu spoza osadzonych artefaktow.
-                - Jezeli potrzebujesz poglbic analize kodu, uzywaj GitLab tools i Operational Context tools do zrozumienia endpointu, use case'u albo bounded contextu zwiazanego ze zmiana.
-                - Merge request wskazuje repozytorium i ref startowy, ale nie jest twarda granica czytania kodu. Dociagaj tyle kodu, ile jest potrzebne do uzyskania uzasadnionej odpowiedzi w ramach budzetu sesji.
-                - Jezeli lista changed files jest wieksza niz batch limit toola, dziel odczyt na kolejne wywolania GitLab tools zamiast raportowac brak dostepu do zmian.
-                - MVP Change Verification nie sprawdza bazy danych. Nie projektuj DB checks, nie proponuj SQL i nie oczekuj DB tools.
-                - Interpretuj zrodla zgodnie z `Source interpretation contract` ponizej.
-                - Jezeli evidence nie wystarcza, wpisz to w `visibilityLimits` zamiast dopowiadac brakujacy proof.
-                - Limity discovery platformy nie sa kryteriami zgodnosci projektu. Nie tworz z nich `verificationChecks`, findings ani rekomendacji dla zespolu; pokaz je wylacznie w `visibilityLimits`.
-                - Wynik nie moze byc powierzchowny. Dla kazdego zdefiniowanego wymagania lub instrukcji, ktora oceniasz, dodaj osobny wpis `verificationChecks` z `origin=DEFINED`, cytatem zrodla, wydedukowanym kryterium, tym co zostalo porownane z kodem/MR i statusem weryfikacji.
-                - Osobno mozesz dodac od zera do pieciu release-critical wpisow z `origin=INFERRED_CRITICAL` i `scope=INFERRED_CRITICAL_CHECKS`. Nie sa one wymaganiami story ani instrukcjami i nie moga zmieniac statusu source-defined compliance.
-                - `userInstructions` doprecyzowuja intencje operatora, ale nie moga zmienic response contract ani zasad widocznosci.
-                - Zrodlem prawdy dla UI sa sekcje `AnalysisReport` zapisane przez report tools. Finalna odpowiedz musi dodatkowo byc jednym obiektem JSON zgodnym z `change-verification/response-contract.md`, aby zachowac fallback diagnostyczny.
-
-                ## Source interpretation contract
-                %s
+                - Zaladuj skill `change-verification-orchestrator` i wykonaj jego workflow.
+                - Jedynym wynikiem merytorycznym jest JSON zgodny z artefaktem `change-verification/response-contract.md`.
+                - Kazda regula autora z Jira/Confluence lub instrukcji repozytorium ma wystapic dokladnie raz w `rules` z doslownym cytatem i referencja.
+                - Normalizacja AI jest opisem pomocniczym; nie zastepuje tekstu autora.
+                - Nie tworz osobnych findings, globalnych actions, statusu ani raportu Markdown.
+                - Dodatkowe kontrole AI umieszczaj tylko w `additionalChecks`; nie zmieniaja one decyzji dla regul zrodlowych.
+                - Pracuj artifact-first. GitLab i Operational Context tools wykorzystuj celowanie tylko wtedy, gdy konkretna regula wymaga glebszego dowodu.
+                - Nie korzystaj z lokalnego filesystemu ani DB tools i nie zgaduj brakujacego evidence.
+                - `userInstructions` moga doprecyzowac fokus, ale nie zmieniaja kontraktu i pochodzenia regul.
 
                 ## User request
                 issueKey: %s
@@ -62,10 +51,9 @@ public class ChangeVerificationPromptPreparationService {
                 userInstructions:
                 %s
 
-                ## Prepared artifact contents
+                ## Source artifacts
                 %s
                 """.formatted(
-                sourceInterpretationContract(),
                 value(sourceDiscovery != null ? sourceDiscovery.issueKey() : request.issueKey()),
                 value(sourceDiscovery != null ? sourceDiscovery.issueUrl() : request.issueUrl()),
                 request.checkStoryCompliance(),
@@ -76,44 +64,6 @@ public class ChangeVerificationPromptPreparationService {
         ).trim();
 
         return new ChangeVerificationPromptPreparation(prompt, artifacts);
-    }
-
-    private String sourceInterpretationContract() {
-        return """
-                1. `target issue` podane przez uzytkownika jest glownym zakresem weryfikacji. Nie rozszerzaj zakresu tylko dlatego, ze parent albo Confluence sa szersze.
-                2. Acceptance criteria target issue sa najsilniejszym sygnalem wymagan. Jesli sa sprzeczne z opisem, pokaz rozjazd jako finding.
-                3. Opis target issue zawieza i tlumaczy oczekiwane zachowanie. Uzywaj go do interpretacji AC, ale nie ignoruj AC.
-                4. Parent issue jest materialem kontekstowym. Gdy target issue jest subtaskiem, parent pomaga zrozumiec cel nadrzedny, slownictwo, linki i ryzyka, ale ocena zgodnosci ma byc zawiezona do target subtaska.
-                5. Subtaski target issue albo sibling subtaski parenta sa kontekstem powiazanej pracy. Traktuj je jako sygnal zaleznosci, nie jako dodatkowe wymagania target issue.
-                6. Confluence pages z remote-linkow sa materialem kontekstowym. Uzywaj ich do rozumienia domeny, flow, terminologii i ryzyk. Nie zamieniaj szerokiego opisu Confluence w wymaganie, jesli target issue nie laczy go jawnie ze zmiana.
-                7. Merge requests i changed files pokazuja widoczna implementacje. Jesli MR nalezy do parenta albo sibling subtaska, wykorzystuj go tylko tam, gdzie pomaga ocenic target issue albo zaleznosc target issue.
-                8. Repository Scope pokazuje repozytoria z MR, rozbicie projectPath na rootGroup/groupPath/repositoryName oraz dopasowania repo -> code search scope -> target. Nie interpretuj tego jako bezposredniej relacji repo -> system albo repo -> bounded-context.
-                9. Dla GitLab tools uzywaj pola `projectName` z Repository Scope jako kanonicznego inputu. Nie przekazuj `projectPath`, `rootGroup/projectName` ani pelnej sciezki MR jako parametru `projectName`.
-                10. Dla GitLab tools uzywaj pola `analysisRef` jako `branchRef`. `sourceRef` i `targetRef` sa kontekstem MR; po merge'u source branch moze byc usuniety i wtedy `analysisRef` wskazuje target branch.
-                11. Code search scope z operational context jest wskazowka, jaki system lub bounded context moze byc potrzebny do zrozumienia zmiany. Uzywaj Operational Context tools, gdy potrzebujesz doprecyzowac proces, system, bounded context, integracje albo slownictwo domenowe.
-                12. Instruction context opisuje oczekiwania architektoniczne i repozytoryjne. Stosuj je do widocznej implementacji, ale nie uzywaj ich jako zastepstwa dla brakujacych wymagan biznesowych.
-                13. Gdy zrodla sa sprzeczne, nie wybieraj po cichu. Raportuj rozbieznosc, wskaz ktore zrodla konfliktuja i zaproponuj doprecyzowanie story, AC albo implementacji.
-                14. Gdy zrodlo jest szersze niz target issue, ocen tylko czesc powiazana z target issue, a reszte opisz jako out of scope albo visibility limit.
-                15. Buduj szczegolowy raport jako liste `verificationChecks`:
-                    - `origin=DEFINED`, `scope=STORY_COMPLIANCE` dla wymagan zapisanych w AC, opisie, komentarzach albo jawnie wlaczonym fragmencie Confluence,
-                    - `origin=DEFINED`, `scope=INSTRUCTION_COMPLIANCE` dla regul z `AGENTS.md`, `.github/copilot-instructions.md`, plikow instructions i plikow przez nie wskazanych,
-                    - `origin=INFERRED_CRITICAL`, `scope=INFERRED_CRITICAL_CHECKS` dla krytycznych kontroli, ktore nie zostaly zdefiniowane w materialach, ale wynikaja z konkretnych sygnalow domenowych lub implementacyjnych.
-                16. Acceptance criteria nie sa zamknieta lista materialu do analizy. Po rozpisaniu wszystkich jawnych AC przejrzyj opis, komentarze, parent context, subtaski, Confluence, instrukcje i kod. Jezeli odkryjesz brakujaca kontrole istotna dla release'u, umiesc ja w `INFERRED_CRITICAL_CHECKS`, nigdy w Story Compliance.
-                17. Dla checka `DEFINED` ustaw `interpretationType`: `explicit`, `normalized`, `conflicting` albo `not_verifiable`. `inferred` jest dozwolone tylko dla `INFERRED_CRITICAL`; nie przedstawiaj takiej kontroli jako literalnego wymagania story albo instrukcji.
-                18. `criterionQuote` ma zawierac krotki cytat albo nazwe pliku i fragment instrukcji; gdy cytatu brak, wpisz `n/a` i uzasadnij w `gaps`.
-                19. `verifiedAgainst` musi wskazywac konkretne MR-y, sciezki plikow, klasy, endpointy, use case'y albo instrukcje, z ktorymi porownano kryterium.
-                20. Wpisy `limitations` z `source-discovery.md`, `source-discovery-limits` i `instruction-source-limits` sa metadanymi pokrycia platformy, a nie wymaganiami story lub repozytorium. Przenos je wylacznie do `visibilityLimits`; nie tworz z nich checkow, findings, gaps, open questions ani suggested actions i nie zmieniaj przez nie statusu compliance.
-                21. `NOT_VERIFIED` stosuj tylko do konkretnego, zidentyfikowanego wymagania lub reguly projektu. Sam komunikat o limicie, truncation albo niepelnej kolekcji zrodel nie jest regula projektu.
-                22. Utworz maksymalnie 5 `INFERRED_CRITICAL` checks. Kazdy musi:
-                    - dotyczyc ryzyka istotnego dla poprawnosci, bezpieczenstwa, integralnosci danych, kompatybilnosci kontraktu albo gotowosci release'u,
-                    - wynikac z konkretnych `inferenceSignals` widocznych w Jira, Confluence, MR, kodzie albo operational context,
-                    - wyjasniac `inferenceRationale` i `riskIfOmitted`,
-                    - miec status zweryfikowany wobec aktualnego evidence oraz `confidence`,
-                    - nie byc ogolna best practice ani estetyczna sugestia code review.
-                23. Jezeli nie ma uzasadnionej brakujacej kontroli krytycznej, zwroc zero `INFERRED_CRITICAL` checks. Nie wypelniaj limitu na sile.
-                24. Uporzadkuj `INFERRED_CRITICAL` checks od najwyzszego ryzyka; backend zachowa maksymalnie pierwsze piec.
-                25. Top-level `status`, Story Compliance i Instruction Compliance wyznaczaj tylko z checkow `origin=DEFINED`. `FAILED` albo `NOT_VERIFIED` w `INFERRED_CRITICAL_CHECKS` jest sygnalem do manualnej decyzji, nie dowodem niezgodnosci z udokumentowanymi wymaganiami.
-                """.trim();
     }
 
     private String renderSourceDiscovery(
@@ -127,14 +77,11 @@ public class ChangeVerificationPromptPreparationService {
                 issueUrl: %s
                 storyComplianceRequested: %s
                 instructionComplianceRequested: %s
-                limitations:
-                %s
                 """.formatted(
                 value(sourceDiscovery != null ? sourceDiscovery.issueKey() : request.issueKey()),
                 value(sourceDiscovery != null ? sourceDiscovery.issueUrl() : request.issueUrl()),
                 request.checkStoryCompliance(),
-                request.checkInstructionCompliance(),
-                bulletList(sourceDiscovery != null ? sourceDiscovery.limitations() : List.of())
+                request.checkInstructionCompliance()
         ).trim();
     }
 
@@ -309,8 +256,7 @@ public class ChangeVerificationPromptPreparationService {
                 .map(this::renderMergeRequest)
                 .reduce((left, right) -> left + "\n\n" + right)
                 .orElse("- none");
-        return "# Merge Requests\n\n" + body + "\n\n## Limitations\n"
-                + bulletList(sourceDiscovery.mergeRequests().limitations());
+        return "# Merge Requests\n\n" + body;
     }
 
     private String renderRepositoryScope(ChangeVerificationSourceDiscoveryResult sourceDiscovery) {
@@ -353,8 +299,6 @@ public class ChangeVerificationPromptPreparationService {
                 operationalContextMatches:
                 %s
 
-                limitations:
-                %s
                 """.formatted(
                 value(repository.projectPath()),
                 value(repository.repositoryKey()),
@@ -390,8 +334,7 @@ public class ChangeVerificationPromptPreparationService {
                 repository.operationalContextMatches().stream()
                         .map(this::renderOperationalContextMatch)
                         .reduce((left, right) -> left + "\n" + right)
-                        .orElse("- none"),
-                bulletList(repository.limitations())
+                        .orElse("- none")
         ).trim();
     }
 
@@ -435,11 +378,6 @@ public class ChangeVerificationPromptPreparationService {
                 commits:
                 %s
 
-                changedFiles:
-                %s
-
-                limitations:
-                %s
                 """.formatted(
                 value(mergeRequest.title()),
                 value(mergeRequest.projectPath()),
@@ -452,22 +390,8 @@ public class ChangeVerificationPromptPreparationService {
                 mergeRequest.commits().stream()
                         .map(commit -> "- %s %s".formatted(value(commit.shortId()), value(commit.title())))
                         .reduce((left, right) -> left + "\n" + right)
-                        .orElse("- none"),
-                mergeRequest.changedFiles().stream()
-                        .map(this::renderChangedFile)
-                        .reduce((left, right) -> left + "\n" + right)
-                        .orElse("- none"),
-                bulletList(mergeRequest.limitations())
+                        .orElse("- none")
         ).trim();
-    }
-
-    private String renderChangedFile(GitLabMergeRequestChangedFile file) {
-        return "- %s%s%s%s".formatted(
-                value(StringUtils.hasText(file.newPath()) ? file.newPath() : file.oldPath()),
-                file.newFile() ? " [new]" : "",
-                file.renamedFile() ? " [renamed]" : "",
-                file.deletedFile() ? " [deleted]" : ""
-        );
     }
 
     private String renderInstructionContext(ChangeVerificationSourceDiscoveryResult sourceDiscovery) {
@@ -480,8 +404,7 @@ public class ChangeVerificationPromptPreparationService {
                 .map(this::renderInstructionSource)
                 .reduce((left, right) -> left + "\n\n" + right)
                 .orElse("- none");
-        return "# Instruction Context\n\n" + sources + "\n\n## Limitations\n"
-                + bulletList(sourceDiscovery.instructionContext().limitations());
+        return "# Instruction Context\n\n" + sources;
     }
 
     private String renderInstructionSource(InstructionSource source) {
@@ -516,44 +439,61 @@ public class ChangeVerificationPromptPreparationService {
                 Return exactly one JSON object:
 
                 {
-                  "status": "PASSED | PASSED_WITH_WARNINGS | FAILED | INCONCLUSIVE",
-                  "verificationChecks": [
+                  "rules": [
                     {
-                      "id": "stable id such as story-001 or instruction-001",
-                      "origin": "DEFINED | INFERRED_CRITICAL",
-                      "scope": "STORY_COMPLIANCE | INSTRUCTION_COMPLIANCE | INFERRED_CRITICAL_CHECKS",
-                      "criterionSource": "acceptance criteria | jira description | confluence page | AGENTS.md | copilot-instructions | other source",
-                      "criterionQuote": "short source quote, file instruction excerpt or n/a",
-                      "interpretationType": "explicit | inferred | normalized | conflicting | not_verifiable",
-                      "criticality": "HIGH | BLOCKER | null; required only for INFERRED_CRITICAL",
-                      "inferenceRationale": "why this missing check is release-critical; required only for INFERRED_CRITICAL",
-                      "inferenceSignals": ["specific Jira, Confluence, MR, code or operational-context signals; required only for INFERRED_CRITICAL"],
-                      "riskIfOmitted": "concrete release risk; required only for INFERRED_CRITICAL",
-                      "confidence": "high | medium | low; required only for INFERRED_CRITICAL",
-                      "expectedCriterion": "the concrete criterion being verified",
-                      "verificationStatus": "PASSED | WARNING | FAILED | NOT_VERIFIED",
-                      "verifiedAgainst": "specific MR/file/class/endpoint/use case/instruction used for verification",
-                      "analysis": "detailed evidence-based explanation; separate confirmed facts from inference",
-                      "evidenceRefs": ["artifact, MR URL, file path or tool evidence reference"],
-                      "gaps": ["missing evidence or ambiguity for this criterion"],
-                      "suggestedAction": "code/story/instruction/question recommendation"
+                      "id": "story-001 or instruction-001",
+                      "scope": "STORY | INSTRUCTION",
+                      "source": {
+                        "type": "ACCEPTANCE_CRITERION | JIRA_DESCRIPTION | JIRA_COMMENT | CONFLUENCE | REPOSITORY_INSTRUCTION | OPERATOR_INSTRUCTION",
+                        "label": "human-readable source",
+                        "reference": "issue/page/file reference",
+                        "quote": "exact author-written rule"
+                      },
+                      "normalizedRule": "precise interpretation without replacing the quote",
+                      "interpretationType": "EXPLICIT | NORMALIZED | CONFLICTING | NOT_VERIFIABLE",
+                      "outcome": "SATISFIED | NOT_SATISFIED | NOT_VERIFIED",
+                      "releaseImpact": "NONE | REVIEW | BLOCKER",
+                      "conclusion": "one evidence-based sentence",
+                      "evidence": [{"summary": "confirmed fact", "reference": "MR/file/class/test"}],
+                      "missingEvidence": [],
+                      "action": null,
+                      "rationale": null,
+                      "riskIfOmitted": null,
+                      "signals": [],
+                      "confidence": null
                     }
                   ],
-                  "findings": [
+                  "additionalChecks": [
                     {
-                      "id": "stable id such as cv-001",
-                      "severity": "INFO | LOW | MEDIUM | HIGH | BLOCKER",
-                      "source": "STORY | ACCEPTANCE_CRITERIA | INSTRUCTIONS | IMPLEMENTATION | VISIBILITY",
-                      "summary": "short finding",
-                      "details": "what evidence shows and what is inferred",
-                      "references": ["artifact or source reference"],
-                      "suggestedAction": "code/story/question recommendation"
+                      "id": "additional-001",
+                      "scope": "ADDITIONAL",
+                      "source": {"type": "AI_SUGGESTION", "label": "AI-suggested check", "reference": "AI", "quote": "the proposed check"},
+                      "normalizedRule": "the proposed check",
+                      "interpretationType": "INFERRED",
+                      "outcome": "SATISFIED | NOT_SATISFIED | NOT_VERIFIED",
+                      "releaseImpact": "NONE | REVIEW | BLOCKER",
+                      "conclusion": "one evidence-based sentence",
+                      "evidence": [{"summary": "confirmed fact", "reference": "MR/file/class/test"}],
+                      "missingEvidence": [],
+                      "action": "concrete next step",
+                      "rationale": "why this is release-critical",
+                      "riskIfOmitted": "concrete risk",
+                      "signals": ["specific source signal"],
+                      "confidence": "HIGH | MEDIUM | LOW"
                     }
                   ],
-                  "suggestedActions": ["prioritized operator actions"],
-                  "visibilityLimits": ["what could not be verified"],
-                  "confidence": "high | medium | low"
+                  "visibilityLimits": [
+                    {"message": "what could not be seen", "affectedRuleIds": ["story-001"]}
+                  ]
                 }
+
+                `rules`, `additionalChecks`, `visibilityLimits`, a takze `evidence`,
+                `missingEvidence` i `signals` w kazdym wpisie sa wymaganymi tablicami.
+                Dla `SATISFIED` wymagany jest co najmniej jeden evidence i impact
+                `NONE`. Dla `NOT_SATISFIED` wymagane jest action. Dla
+                `NOT_VERIFIED` wymagane sa missingEvidence oraz action.
+                Kazdy visibility limit musi wskazywac istniejace rule id. Maksymalnie
+                piec additionalChecks. Nie zwracaj tekstu poza obiektem JSON.
                 """.trim();
     }
 

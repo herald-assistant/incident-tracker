@@ -1,11 +1,11 @@
 package pl.mkn.tdw.features.changeverification.job.state;
 
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleLedgerResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleOutcome;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVisibilityLimitResponse;
 import pl.mkn.tdw.features.changeverification.job.report.ChangeVerificationReportMapper;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationRepositorySnapshot;
@@ -283,10 +283,10 @@ public final class ChangeVerificationJobState {
                 resolvedIssueKey(),
                 resolvedIssueUrl(),
                 preparedPrompt,
-                complianceResult(),
+                ruleLedgerResult(),
                 complianceAnalysis != null ? complianceAnalysis.usage() : null
         );
-        report = ChangeVerificationReportMapper.toReport(result, complianceReport());
+        report = ChangeVerificationReportMapper.toReport(result);
     }
 
     public synchronized void markFailed(String errorCode, String errorMessage) {
@@ -326,10 +326,6 @@ public final class ChangeVerificationJobState {
                 result,
                 report
         );
-    }
-
-    private AnalysisReport complianceReport() {
-        return complianceAnalysis != null ? complianceAnalysis.report() : null;
     }
 
     private List<AnalysisJobStepResponse> steps(Instant completedAt) {
@@ -827,36 +823,29 @@ public final class ChangeVerificationJobState {
                 .toList();
     }
 
-    private ChangeVerificationComplianceResponse complianceResult() {
+    private ChangeVerificationRuleLedgerResponse ruleLedgerResult() {
         if (complianceAnalysis != null && complianceAnalysis.response() != null) {
             var response = complianceAnalysis.response();
-            return new ChangeVerificationComplianceResponse(
+            return new ChangeVerificationRuleLedgerResponse(
                     request.checkStoryCompliance(),
                     request.checkInstructionCompliance(),
-                    response.status(),
-                    response.verificationChecks(),
-                    response.findings(),
-                    response.suggestedActions(),
-                    combinedComplianceVisibilityLimits(response.visibilityLimits())
+                    null,
+                    response.rules(),
+                    response.additionalChecks(),
+                    response.visibilityLimits()
             );
         }
 
-        return new ChangeVerificationComplianceResponse(
+        return new ChangeVerificationRuleLedgerResponse(
                 request.checkStoryCompliance(),
                 request.checkInstructionCompliance(),
-                "INCONCLUSIVE",
+                null,
                 List.of(),
-                List.of(new ChangeVerificationFindingResponse(
-                        "cv-ai-not-run",
-                        ChangeVerificationFindingSeverity.MEDIUM,
-                        "platform",
-                        "AI compliance check did not run.",
-                        "Source context is available, but no AI compliance response was produced.",
-                        List.of("change-verification/jira-issue", "change-verification/merge-requests"),
-                        "Retry verification or inspect source evidence manually."
-                )),
-                List.of("Run AI compliance against Jira material, MR metadata and repository instructions again."),
-                combinedComplianceVisibilityLimits()
+                List.of(),
+                List.of(new ChangeVerificationVisibilityLimitResponse(
+                        "AI verification did not produce a rule ledger. Retry the run or inspect source evidence.",
+                        List.of()
+                ))
         );
     }
 
@@ -1068,34 +1057,23 @@ public final class ChangeVerificationJobState {
         return sourceDiscovery.instructionContext().sources().size();
     }
 
-    private List<String> combinedComplianceVisibilityLimits() {
-        return combinedComplianceVisibilityLimits(List.of());
-    }
-
-    private List<String> combinedComplianceVisibilityLimits(List<String> aiVisibilityLimits) {
-        var limitations = new ArrayList<String>();
-        limitations.addAll(sourceLimitations(sourceDiscovery));
-        limitations.addAll(instructionLimitations(sourceDiscovery));
-        limitations.addAll(aiVisibilityLimits != null ? aiVisibilityLimits : List.of());
-        return limitations.stream()
-                .filter(java.util.Objects::nonNull)
-                .filter(org.springframework.util.StringUtils::hasText)
-                .distinct()
-                .toList();
-    }
-
     private String aiVerificationMessage() {
         if (complianceAnalysis != null && complianceAnalysis.response() != null) {
-            return "AI compliance check completed with status " + complianceAnalysis.response().status() + ".";
+            var decision = pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationDecisionResponse.from(
+                    complianceAnalysis.response().rules()
+            );
+            return "AI rule verification completed with decision " + decision.status() + ".";
         }
-        return "AI compliance check did not produce a result.";
+        return "AI rule verification did not produce a result.";
     }
 
     private Integer aiFindingCount() {
         if (complianceAnalysis == null || complianceAnalysis.response() == null) {
             return null;
         }
-        return complianceAnalysis.response().findings().size();
+        return (int) complianceAnalysis.response().rules().stream()
+                .filter(rule -> rule.outcome() != ChangeVerificationRuleOutcome.SATISFIED)
+                .count();
     }
 
     private String preparedPrompt(ChangeVerificationComplianceAnalysis complianceAnalysis) {

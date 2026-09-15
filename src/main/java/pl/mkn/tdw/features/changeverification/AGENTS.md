@@ -14,10 +14,12 @@ porownywac zmiane z materialem z Jira/Confluence i instrukcjami repozytorium.
   `shared` i `common`.
 - Prompt, response parser, result contract, tool policy, hidden context,
   skills, job API i UI contract sa wlasnoscia Change Verification.
-- `verificationChecks.origin` jest kanonicznym rozdzieleniem wyniku:
-  `DEFINED` zasila Story/Instruction Compliance, a maksymalnie piec
-  `INFERRED_CRITICAL` zasila osobna sekcje `INFERRED_CRITICAL_CHECKS`.
-  Inferred critical checks nie moga zmieniac statusu source-defined compliance.
+- `ruleLedger.rules` jest jedynym zrodlem prawdy wyniku. Kazda regula autora
+  wystepuje raz, zachowuje cytat i source reference, a backend wylicza decyzje
+  wylacznie z jej outcome. Maksymalnie piec `additionalChecks` pozostaje jawnie
+  oddzielone i nie moze zmieniac decyzji source-defined.
+- Report jest deterministyczna projekcja ledgeru. Sesja AI Change Verification
+  nie uzywa report tools i nie tworzy konkurencyjnego Markdown.
 - W fazie V1 Change Verification utrzymuje tylko aktualny kontrakt
   request/result/report/export/import. Nie dodawaj aliasow, migratorow,
   przeciazen ani normalizacji istniejacych wylacznie dla kompatybilnosci

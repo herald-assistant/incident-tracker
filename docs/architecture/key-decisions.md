@@ -216,7 +216,7 @@ Build przypina Java SDK 1.0.11 i minimalny Copilot CLI 1.0.57, czyli pierwsza
 wersje schematu CLI wystawiajaca `contextTier` dla `model.getCurrent`. Po
 `client.start()` runtime odczytuje `status.get`, odrzuca starszy CLI i
 publikuje neutralne activity `platform.copilot_runtime` z wersjami SDK, CLI i
-protokolu. Change Verification zapisuje te pola w diagnostyce eksportu v5.
+protokolu. Change Verification zapisuje te pola w diagnostyce eksportu v6.
 
 `session.model.getCurrent` potwierdza stan tieru zapisany przez sesje, ale nie
 jest samodzielnym dowodem rozmiaru aktywnego okna. Platforma publikuje dlatego

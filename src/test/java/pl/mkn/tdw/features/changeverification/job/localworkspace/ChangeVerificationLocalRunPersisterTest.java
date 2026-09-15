@@ -5,9 +5,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationComplianceResponse;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStateSnapshot;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationResultResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleOutcome;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleScope;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunIndexEntry;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunRecord;
 import pl.mkn.tdw.localworkspace.analysisruns.LocalAnalysisRunStore;
@@ -25,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.ledger;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.sourceRule;
 
 class ChangeVerificationLocalRunPersisterTest {
 
@@ -61,11 +64,11 @@ class ChangeVerificationLocalRunPersisterTest {
 
         var exportEnvelope = store.savedRecord.exportEnvelope();
         assertEquals("tdw.change-verification-export", exportEnvelope.path("schema").asText());
-        assertEquals(5, exportEnvelope.path("version").asInt());
+        assertEquals(6, exportEnvelope.path("version").asInt());
         assertEquals(COMPLETED_AT.toString(), exportEnvelope.path("exportedAt").asText());
         assertEquals("change-verification-analysis", exportEnvelope.at("/payload/type").asText());
-        assertEquals("change-verification-result-v4", exportEnvelope.at("/payload/resultContract").asText());
-        assertEquals("change-verification-result-v4", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
+        assertEquals("change-verification-result-v5", exportEnvelope.at("/payload/resultContract").asText());
+        assertEquals("change-verification-result-v5", exportEnvelope.at("/payload/diagnostics/resultContract").asText());
         assertEquals("change-job-1", exportEnvelope.at("/payload/job/jobId").asText());
         assertEquals("CRM-123", exportEnvelope.at("/payload/job/issueKey").asText());
         assertEquals("change-report-1", exportEnvelope.at("/payload/job/report/reportId").asText());
@@ -88,7 +91,7 @@ class ChangeVerificationLocalRunPersisterTest {
         assertNull(store.savedEntry.completedAt());
         assertEquals(UPDATED_AT.toString(), store.savedRecord.exportEnvelope().path("exportedAt").asText());
         assertEquals("RUNNING", store.savedRecord.exportEnvelope().at("/payload/job/status").asText());
-        assertEquals("change-verification-result-v4",
+        assertEquals("change-verification-result-v5",
                 store.savedRecord.exportEnvelope().at("/payload/diagnostics/resultContract").asText());
         assertFalse(store.savedRecord.continuation().enabled());
     }
@@ -99,15 +102,11 @@ class ChangeVerificationLocalRunPersisterTest {
                 "CRM-123",
                 "https://jira.example.com/browse/CRM-123",
                 "Prepared prompt",
-                new ChangeVerificationComplianceResponse(
-                        true,
-                        true,
-                        "PASS_WITH_NOTES",
-                        List.of(),
-                        List.of(),
-                        List.of("Keep acceptance criteria updated."),
-                        List.of()
-                ),
+                ledger(List.of(sourceRule(
+                        "story-001",
+                        ChangeVerificationRuleScope.STORY,
+                        ChangeVerificationRuleOutcome.SATISFIED
+                )), List.of()),
                 null
         );
         return new ChangeVerificationJobStateSnapshot(
@@ -170,8 +169,8 @@ class ChangeVerificationLocalRunPersisterTest {
                 "CRM-123",
                 "Summary",
                 List.of(new AnalysisReportSection(
-                        "COMPLIANCE",
-                        "Compliance",
+                        "RULE_LEDGER",
+                        "Source-defined rules",
                         0,
                         "No blockers.",
                         AnalysisReportMeta.empty()

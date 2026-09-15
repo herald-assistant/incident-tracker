@@ -1,245 +1,138 @@
 <div class="page-shell change-verification-page">
   <main class="change-verification-workspace" aria-labelledby="changeVerificationWorkspaceTitle">
-    <section class="change-verification-composer analysis-card">
-      <div class="section-heading change-verification-composer__heading">
-        <div>
-          <p class="section-eyebrow">Change Verification</p>
-          <h2 id="changeVerificationWorkspaceTitle">Verify a change before release</h2>
-          <p class="field-hint">
-            Verify the change against Jira, Confluence context and repository instructions in one
-            release-focused workflow.
-          </p>
-        </div>
-      </div>
+    <input
+      #changeVerificationImportFileInput
+      type="file"
+      accept=".json,application/json"
+      hidden
+      (change)="importChangeVerificationResult($event)"
+    />
 
-      <div class="change-verification-source-grid">
-        <label class="field-control change-verification-field">
-          <span class="field-label">Jira key or link</span>
-          <input
-            class="text-input"
-            type="text"
-            [value]="issueInput()"
-            placeholder="CRM-123 or https://jira.example.com/browse/CRM-123"
-            autocomplete="off"
-            spellcheck="false"
-            (input)="updateIssueInput($any($event.target).value)"
-          />
-        </label>
-
-        <fieldset class="change-verification-options">
-          <legend class="field-label">Verification scope</legend>
-          <div class="change-verification-option-grid">
-            <label>
-              <input
-                type="checkbox"
-                [checked]="checkStoryCompliance()"
-                (change)="toggleStoryCompliance($any($event.target).checked)"
-              />
-              <span>Story compliance</span>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                [checked]="checkInstructionCompliance()"
-                (change)="toggleInstructionCompliance($any($event.target).checked)"
-              />
-              <span>Instruction compliance</span>
-            </label>
+    @if (composerCollapsed() && job(); as completedJob) {
+      <section class="change-verification-composer change-verification-composer--compact analysis-card">
+        <div class="change-verification-composer__compact-context">
+          <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
+          <div>
+            <p class="section-eyebrow">Change Verification · {{ statusLabel(completedJob.status) }}</p>
+            <h2 id="changeVerificationWorkspaceTitle">{{ completedJob.issueKey || completedJob.issueUrl }}</h2>
+            <p class="field-hint">
+              {{ completedJob.checkStoryCompliance ? 'Reguły story' : '' }}
+              @if (completedJob.checkStoryCompliance && completedJob.checkInstructionCompliance) { <span> · </span> }
+              {{ completedJob.checkInstructionCompliance ? 'Instrukcje repozytorium' : '' }}
+            </p>
           </div>
-        </fieldset>
-      </div>
-
-      <div class="change-verification-ai-grid">
-        <label class="field-control change-verification-field" for="changeVerificationAiModel">
-          <span class="field-label">Model AI</span>
-          <span class="select-loading-control">
-            <select
-              id="changeVerificationAiModel"
-              class="select-input"
-              [class.select-input--loading]="isAiModelOptionsLoading()"
-              [formControl]="aiModelControl"
-              [attr.aria-busy]="isAiModelOptionsLoading()"
-            >
-              @for (option of aiModelOptions(); track option.value) {
-                <option [value]="option.value" [disabled]="option.disabled">
-                  {{ option.label }}
-                </option>
-              }
-            </select>
-            @if (isAiModelOptionsLoading()) {
-              <span class="select-loader" aria-hidden="true"></span>
-            }
-          </span>
-        </label>
-
-        <label class="field-control change-verification-field" for="changeVerificationReasoningEffort">
-          <span class="field-label">Reasoning effort</span>
-          <span class="select-loading-control">
-            <select
-              id="changeVerificationReasoningEffort"
-              class="select-input"
-              [class.select-input--loading]="isAiModelOptionsLoading()"
-              [formControl]="reasoningEffortControl"
-              [attr.aria-busy]="isAiModelOptionsLoading()"
-            >
-              @for (option of reasoningEffortOptions(); track option.value) {
-                <option [value]="option.value" [disabled]="option.disabled">
-                  {{ option.label }}
-                </option>
-              }
-            </select>
-            @if (isAiModelOptionsLoading()) {
-              <span class="select-loader" aria-hidden="true"></span>
-            }
-          </span>
-        </label>
-      </div>
-      @if (aiModelOptionsError()) {
-        <p class="field-hint change-verification-warning">{{ aiModelOptionsError() }}</p>
-      }
-
-      <label class="field-control change-verification-field">
-        <span class="field-label">Operator notes</span>
-        <textarea
-          class="text-input change-verification-textarea"
-          [value]="userInstructions()"
-          rows="4"
-          placeholder="Optional focus, release context or known risk."
-          (input)="updateUserInstructions($any($event.target).value)"
-        ></textarea>
-      </label>
-
-      <div class="change-verification-run-actions">
-        <input
-          #changeVerificationImportFileInput
-          type="file"
-          accept=".json,application/json"
-          hidden
-          (change)="importChangeVerificationResult($event)"
-        />
-        <button
-          type="button"
-          class="secondary-button"
-          [disabled]="isSubmitting() || workflowIsRunning()"
-          (click)="triggerImport(changeVerificationImportFileInput)"
-        >
-          <span class="material-symbols-outlined" aria-hidden="true">upload_file</span>
-          <span>Import</span>
-        </button>
-        @if (canExportResult()) {
-          <button
-            type="button"
-            class="secondary-button"
-            (click)="exportChangeVerificationResult()"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">download</span>
-            <span>Export</span>
+        </div>
+        <div class="change-verification-run-actions">
+          <button type="button" class="secondary-button" (click)="triggerImport(changeVerificationImportFileInput)">
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span><span>Import</span>
           </button>
-        }
-        <button
-          type="button"
-          class="primary-button"
-          [disabled]="!canStartJob()"
-          (click)="startJob()"
-        >
-          <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
-          <span>{{ isSubmitting() ? 'Starting...' : 'Run Verification' }}</span>
-        </button>
-      </div>
-      @if (importExportHint()) {
-        <p class="field-hint change-verification-import-hint">{{ importExportHint() }}</p>
-      }
+          @if (canExportResult()) {
+            <button type="button" class="secondary-button" (click)="exportChangeVerificationResult()">
+              <span class="material-symbols-outlined" aria-hidden="true">download</span><span>Export</span>
+            </button>
+          }
+          <button type="button" class="primary-button" (click)="expandComposer()">
+            <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span><span>Nowa weryfikacja</span>
+          </button>
+        </div>
+      </section>
+    } @else {
+      <section class="change-verification-composer analysis-card">
+        <div class="section-heading change-verification-composer__heading">
+          <div>
+            <p class="section-eyebrow">Change Verification</p>
+            <h2 id="changeVerificationWorkspaceTitle">Verify a change before release</h2>
+            <p class="field-hint">Sprawdź każdą regułę z Jira, Confluence i instrukcji repozytorium względem zmiany.</p>
+          </div>
+        </div>
 
-      @if (jobError()) {
-        <p class="change-verification-error">{{ jobError() }}</p>
-      }
-    </section>
+        <div class="change-verification-source-grid">
+          <label class="field-control change-verification-field">
+            <span class="field-label">Jira key or link</span>
+            <input class="text-input" type="text" [value]="issueInput()" placeholder="CRM-123 or https://jira.example.com/browse/CRM-123" autocomplete="off" spellcheck="false" (input)="updateIssueInput($any($event.target).value)" />
+          </label>
+          <fieldset class="change-verification-options">
+            <legend class="field-label">Verification scope</legend>
+            <div class="change-verification-option-grid">
+              <label><input type="checkbox" [checked]="checkStoryCompliance()" (change)="toggleStoryCompliance($any($event.target).checked)" /><span>Story rules</span></label>
+              <label><input type="checkbox" [checked]="checkInstructionCompliance()" (change)="toggleInstructionCompliance($any($event.target).checked)" /><span>Repository instructions</span></label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="change-verification-ai-grid">
+          <label class="field-control change-verification-field" for="changeVerificationAiModel">
+            <span class="field-label">Model AI</span>
+            <span class="select-loading-control">
+              <select id="changeVerificationAiModel" class="select-input" [class.select-input--loading]="isAiModelOptionsLoading()" [formControl]="aiModelControl" [attr.aria-busy]="isAiModelOptionsLoading()">
+                @for (option of aiModelOptions(); track option.value) { <option [value]="option.value" [disabled]="option.disabled">{{ option.label }}</option> }
+              </select>
+              @if (isAiModelOptionsLoading()) { <span class="select-loader" aria-hidden="true"></span> }
+            </span>
+          </label>
+          <label class="field-control change-verification-field" for="changeVerificationReasoningEffort">
+            <span class="field-label">Reasoning effort</span>
+            <span class="select-loading-control">
+              <select id="changeVerificationReasoningEffort" class="select-input" [class.select-input--loading]="isAiModelOptionsLoading()" [formControl]="reasoningEffortControl" [attr.aria-busy]="isAiModelOptionsLoading()">
+                @for (option of reasoningEffortOptions(); track option.value) { <option [value]="option.value" [disabled]="option.disabled">{{ option.label }}</option> }
+              </select>
+              @if (isAiModelOptionsLoading()) { <span class="select-loader" aria-hidden="true"></span> }
+            </span>
+          </label>
+        </div>
+        @if (aiModelOptionsError()) { <p class="field-hint change-verification-warning">{{ aiModelOptionsError() }}</p> }
+
+        <label class="field-control change-verification-field">
+          <span class="field-label">Operator notes</span>
+          <textarea class="text-input change-verification-textarea" [value]="userInstructions()" rows="4" placeholder="Optional focus, release context or known risk." (input)="updateUserInstructions($any($event.target).value)"></textarea>
+        </label>
+
+        <div class="change-verification-run-actions">
+          <button type="button" class="secondary-button" [disabled]="isSubmitting() || workflowIsRunning()" (click)="triggerImport(changeVerificationImportFileInput)">
+            <span class="material-symbols-outlined" aria-hidden="true">upload_file</span><span>Import</span>
+          </button>
+          @if (canExportResult()) {
+            <button type="button" class="secondary-button" (click)="exportChangeVerificationResult()">
+              <span class="material-symbols-outlined" aria-hidden="true">download</span><span>Export</span>
+            </button>
+          }
+          <button type="button" class="primary-button" [disabled]="!canStartJob()" (click)="startJob()">
+            <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span><span>{{ isSubmitting() ? 'Starting...' : 'Run Verification' }}</span>
+          </button>
+        </div>
+        @if (importExportHint()) { <p class="field-hint change-verification-import-hint">{{ importExportHint() }}</p> }
+      </section>
+    }
+
+    @if (jobError()) { <p class="change-verification-error analysis-card">{{ jobError() }}</p> }
 
     @if (job(); as currentJob) {
-      <section class="change-verification-run analysis-card">
-        <div>
-          <p class="section-eyebrow">Run {{ currentJob.status }}</p>
-          <h2>{{ currentJob.issueKey || currentJob.issueUrl }}</h2>
-          <p class="field-hint">
-            {{ currentJob.checkStoryCompliance ? 'Story compliance' : '' }}
-            @if (currentJob.checkStoryCompliance && currentJob.checkInstructionCompliance) {
-              <span> / </span>
-            }
-            {{ currentJob.checkInstructionCompliance ? 'Instruction compliance' : '' }}
-          </p>
-        </div>
-        <span [attr.class]="statusPillClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
-      </section>
-
-      <section class="change-verification-result-grid">
-        @if (reportDisplay(); as resultReport) {
+      @if (currentJob.result; as verificationResult) {
+        <section class="change-verification-result-grid">
           <article class="change-verification-report panel-card">
             <app-analysis-result-header
-              [title]="currentJob.status === 'COMPLETED' ? 'Finalna analiza' : 'Ostatnia dostępna analiza'"
-              [context]="resultReport.title"
-              [confidence]="resultReport.confidence"
+              title="Wynik weryfikacji"
+              [context]="currentJob.issueKey || currentJob.issueUrl"
+              confidence=""
               [copied]="resultCopied()"
               copyAriaLabel="Kopiuj wynik Change Verification"
               copiedAriaLabel="Skopiowano wynik Change Verification"
               (copyRequested)="copyResultMarkdown()"
             ></app-analysis-result-header>
-
-            @if (resultCopyError()) {
-              <p class="change-verification-error">{{ resultCopyError() }}</p>
-            }
-
-            @if (hasText(resultReport.report.markdownSummary)) {
-              <app-analysis-report-section-content
-                [markdown]="resultReport.report.markdownSummary"
-                emptyText="No high-level summary was produced."
-                [meta]="null"
-                metaAlign="start"
-              ></app-analysis-report-section-content>
-            }
-
-            <app-analysis-result-tabs
-              [tabs]="resultReport.sections"
-              [activeTabId]="activeResultTabId(resultReport.sections)"
-              idPrefix="change-verification"
-              ariaLabel="Change Verification result sections"
-              (tabSelected)="selectResultTab($event)"
-            ></app-analysis-result-tabs>
-
-            @for (section of resultReport.sections; track section.id) {
-              @if (activeResultTabId(resultReport.sections) === section.id) {
-                <section
-                  [id]="'change-verification-panel-' + section.id"
-                  class="analysis-summary analysis-result-tab-panel change-verification-report-section"
-                  role="tabpanel"
-                  [attr.aria-labelledby]="'change-verification-tab-' + section.id"
-                  tabindex="0"
-                >
-                  @if (section.isComplianceSection) {
-                    <app-change-verification-compliance-result
-                      [checks]="section.complianceChecks"
-                      [meta]="section.meta"
-                      [variant]="section.complianceVariant"
-                    ></app-change-verification-compliance-result>
-                  } @else {
-                    <app-analysis-report-section-content
-                      [markdown]="section.markdown"
-                      [emptyText]="section.emptyText"
-                      [meta]="section.meta"
-                      metaAlign="start"
-                    ></app-analysis-report-section-content>
-                  }
-                </section>
-              }
-            }
-
-            <app-analysis-report-meta
-              [meta]="resultReport.appendix"
-              variant="appendix"
-            ></app-analysis-report-meta>
+            @if (resultCopyError()) { <p class="change-verification-error">{{ resultCopyError() }}</p> }
+            <app-change-verification-rule-ledger [ledger]="verificationResult.ruleLedger"></app-change-verification-rule-ledger>
           </article>
-        }
-
-      </section>
+        </section>
+      } @else {
+        <section class="change-verification-run analysis-card">
+          <div>
+            <p class="section-eyebrow">{{ currentJob.status === 'FAILED' ? 'Run failed' : 'Run in progress' }}</p>
+            <h2>{{ currentJob.issueKey || currentJob.issueUrl }}</h2>
+            <p class="field-hint">{{ currentJob.currentStepLabel || currentJob.errorMessage || 'Preparing verification' }}</p>
+          </div>
+          <span [attr.class]="statusPillClass(currentJob.status)">{{ statusLabel(currentJob.status) }}</span>
+        </section>
+      }
 
       <app-analysis-feature-aside
         ariaLabel="Panel pracy Change Verification"
@@ -250,39 +143,12 @@
         [showChat]="false"
         [showFeedback]="false"
       >
-        <div progressPanel>
-          <app-analysis-steps-panel
-            [steps]="currentJob.steps"
-            [evidenceSections]="currentJob.contextSections"
-            [toolEvidenceSections]="currentJob.toolEvidenceSections"
-            [aiActivityEvents]="currentJob.aiActivityEvents"
-            [preparedPrompt]="currentJob.preparedPrompt"
-            [showAiWorkflow]="false"
-            [showToolFeedback]="false"
-            [staticPanels]="true"
-          ></app-analysis-steps-panel>
-        </div>
-
-        <div aiPanel>
-          <app-analysis-steps-panel
-            [steps]="currentJob.steps"
-            [evidenceSections]="currentJob.contextSections"
-            [toolEvidenceSections]="currentJob.toolEvidenceSections"
-            [aiActivityEvents]="currentJob.aiActivityEvents"
-            [preparedPrompt]="currentJob.preparedPrompt"
-            [showProgress]="false"
-            [showToolFeedback]="false"
-            [staticPanels]="true"
-          ></app-analysis-steps-panel>
-        </div>
+        <div progressPanel><app-analysis-steps-panel [steps]="currentJob.steps" [evidenceSections]="currentJob.contextSections" [toolEvidenceSections]="currentJob.toolEvidenceSections" [aiActivityEvents]="currentJob.aiActivityEvents" [preparedPrompt]="currentJob.preparedPrompt" [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true"></app-analysis-steps-panel></div>
+        <div aiPanel><app-analysis-steps-panel [steps]="currentJob.steps" [evidenceSections]="currentJob.contextSections" [toolEvidenceSections]="currentJob.toolEvidenceSections" [aiActivityEvents]="currentJob.aiActivityEvents" [preparedPrompt]="currentJob.preparedPrompt" [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true"></app-analysis-steps-panel></div>
       </app-analysis-feature-aside>
     } @else {
       <section class="change-verification-empty-state analysis-card analysis-empty-state">
-        <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
-        <h2>Ready for the first Change Verification run</h2>
-        <p>
-          Waiting for Jira source and verification scope.
-        </p>
+        <span class="material-symbols-outlined" aria-hidden="true">fact_check</span><h2>Ready for the first Change Verification run</h2><p>Waiting for Jira source and verification scope.</p>
       </section>
     }
   </main>

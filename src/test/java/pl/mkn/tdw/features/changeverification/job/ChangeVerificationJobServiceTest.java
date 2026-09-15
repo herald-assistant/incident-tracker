@@ -5,10 +5,11 @@ import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationAiResponse;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysis;
 import pl.mkn.tdw.features.changeverification.ai.ChangeVerificationComplianceAnalysisProvider;
 import pl.mkn.tdw.features.changeverification.ai.preparation.ChangeVerificationPromptPreparationService;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingResponse;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationFindingSeverity;
 import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationJobStartRequest;
-import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVerificationCheckResponse;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationDecisionStatus;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleOutcome;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationRuleScope;
+import pl.mkn.tdw.features.changeverification.job.api.ChangeVerificationVisibilityLimitResponse;
 import pl.mkn.tdw.features.changeverification.job.error.ChangeVerificationJobNotFoundException;
 import pl.mkn.tdw.features.changeverification.job.localworkspace.ChangeVerificationLocalRunPersistence;
 import pl.mkn.tdw.features.changeverification.source.ChangeVerificationOperationalContextMatcher;
@@ -42,6 +43,7 @@ import java.util.Queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static pl.mkn.tdw.features.changeverification.ChangeVerificationTestFixtures.sourceRule;
 
 class ChangeVerificationJobServiceTest {
 
@@ -127,10 +129,11 @@ class ChangeVerificationJobServiceTest {
                 .isEqualTo("Source context ready");
         assertThat(snapshot.preparedPrompt()).isEqualTo("Change Verification test prompt");
         assertThat(snapshot.result()).isNotNull();
-        assertThat(snapshot.result().compliance().status()).isEqualTo("PASSED_WITH_WARNINGS");
-        assertThat(snapshot.result().compliance().findings()).singleElement()
-                .extracting(ChangeVerificationFindingResponse::source)
-                .isEqualTo("INSTRUCTIONS");
+        assertThat(snapshot.result().ruleLedger().decision().status())
+                .isEqualTo(ChangeVerificationDecisionStatus.NEEDS_EVIDENCE);
+        assertThat(snapshot.result().ruleLedger().rules()).singleElement()
+                .extracting(rule -> rule.source().type().name())
+                .isEqualTo("REPOSITORY_INSTRUCTION");
         assertThat(service.getJob(snapshot.jobId())).isEqualTo(snapshot);
     }
 
@@ -199,44 +202,20 @@ class ChangeVerificationJobServiceTest {
             activityListener.onAiActivity(aiActivity("TOOL", "COMPLETED", "gitlab_read_file"));
             return new ChangeVerificationComplianceAnalysis(
                     new ChangeVerificationAiResponse(
-                            "PASSED_WITH_WARNINGS",
-                            List.of(new ChangeVerificationVerificationCheckResponse(
+                            List.of(sourceRule(
                                     "instruction-001",
-                                    "DEFINED",
-                                    "INSTRUCTION_COMPLIANCE",
-                                    "AGENTS.md",
-                                    "Review local instructions.",
-                                    "explicit",
-                                    null,
-                                    null,
-                                    List.of(),
-                                    null,
-                                    null,
-                                    "Local instructions apply to the changed files.",
-                                    "WARNING",
-                                    "AGENTS.md and changed files",
-                                    "Instruction context is available but requires manual confirmation.",
-                                    List.of("change-verification/instruction-context"),
-                                    List.of(),
-                                    "Review local AGENTS.md before approving the change."
+                                    ChangeVerificationRuleScope.INSTRUCTION,
+                                    ChangeVerificationRuleOutcome.NOT_VERIFIED
                             )),
-                            List.of(new ChangeVerificationFindingResponse(
-                                    "cv-001",
-                                    ChangeVerificationFindingSeverity.LOW,
-                                    "INSTRUCTIONS",
-                                    "Instruction context was considered.",
-                                    "The change has instruction evidence available for AI verification.",
-                                    List.of("change-verification/instruction-context"),
-                                    "Use instruction evidence in detailed review."
-                            )),
-                            List.of("Review local AGENTS.md before approving the change."),
-                            List.of("No diff content was available in this stage."),
-                            "medium"
+                            List.of(),
+                            List.of(new ChangeVerificationVisibilityLimitResponse(
+                                    "Brak testu integracyjnego dla reguly instrukcji.",
+                                    List.of("instruction-001")
+                            ))
                     ),
                     null,
                     "Change Verification test prompt",
-                    "session-test",
-                    null
+                    "session-test"
             );
         }
     }
