@@ -8,6 +8,8 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparationService;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryGuidanceArtifactService;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryTreeArtifact;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryTreeArtifactService;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorTargetToolSetFactory;
 import pl.mkn.tdw.features.uxinspector.ai.tools.UxInspectorToolNames;
@@ -39,9 +41,14 @@ class UxInspectorCopilotRunRequestAssemblerTest {
                 capture(), "gpt-5.6-terra", "medium"
         );
         var treeArtifactService = mock(UxInspectorRepositoryTreeArtifactService.class);
-        when(treeArtifactService.render(any())).thenReturn("complete: true\npaths:\n- [file] README.md");
+        when(treeArtifactService.prepare(any())).thenReturn(new UxInspectorRepositoryTreeArtifact(
+                "complete: true\npaths:\n- [file] README.md", List.of("README.md")));
+        var guidanceArtifactService = mock(UxInspectorRepositoryGuidanceArtifactService.class);
+        when(guidanceArtifactService.render(any(), anyList())).thenReturn("""
+                {"copilotInstructions":{"present":false},"projectSkills":[]}
+                """);
         var preparation = new UxInspectorPromptPreparationService(
-                new ObjectMapper().findAndRegisterModules(), treeArtifactService)
+                new ObjectMapper().findAndRegisterModules(), treeArtifactService, guidanceArtifactService)
                 .prepare(request, targetContext);
         var assembler = new UxInspectorCopilotRunRequestAssembler(
                 toolFactory,

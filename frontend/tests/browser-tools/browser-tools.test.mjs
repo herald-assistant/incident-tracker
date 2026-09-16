@@ -282,6 +282,12 @@ test('capture exposes useful button state and compacts ancestry to safe bounds',
   assert.equal(capture.target.state.disabled, true);
   assert.equal(capture.target.state.expanded, false);
   assert.equal('classes' in capture.target, false);
+  assert.ok(capture.target.domFingerprint.selectorCandidates.includes(
+    'button[class~="primary-action"]'
+  ));
+  assert.equal(capture.target.domFingerprint.selectorCandidates.some(
+    (candidate) => candidate.includes('build-123456789')
+  ), false);
   assert.ok(capture.ancestors.length <= 24);
   assert.ok(capture.traversal.omittedNodeCount > 0);
   assert.equal(capture.ancestors.at(-1).tag, 'html');

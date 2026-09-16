@@ -176,11 +176,14 @@ pary model/effort.
 context w pinned revision i klasyfikuje wynik jako `RESOLVED`, `AMBIGUOUS` albo
 `NOT_FOUND`. Copilot dostaje focused source slice, kompletna adaptacyjna
 procedure w prompcie, session-bound target refs, waskie frontend slice tools,
-komplet nazw sciezek pierwszych czterech poziomow oraz neutralne GitLab
-navigation/search/read tools dla calego wybranego repozytorium pod pinned
-policy. Repository scope nie korzysta z Operational Context `pathPrefixes` i
-nie ma feature-specific limitu liczby wywolan; inny projekt lub branch jest
-odrzucany. Sesja ma `skillsEnabled=false`. Initial
+komplet nazw sciezek pierwszych czterech poziomow, pelna tresc obecnego
+repository-wide Copilot instructions i katalog naglowkow project skills oraz
+neutralne GitLab navigation/search/read tools dla calego wybranego repozytorium
+pod pinned policy. Model musi doczytac materialny project skill i sprawdzic
+mechanizmy przekrojowe przed wnioskiem. Repository scope nie korzysta z
+Operational Context `pathPrefixes` i nie ma feature-specific limitu liczby
+wywolan; inny projekt lub branch jest odrzucany. Sesja ma
+`skillsEnabled=false`; zdalne skille nie sa instalowane w TDW. Initial
 report dopuszcza tylko sekcje `answer`; finalna wiadomosc modelu nie jest
 wynikiem ani fallbackiem. Run jest zapisywany jako `QUEUED` przed dispatch,
 trafia do Analysis History i uzywa scislego

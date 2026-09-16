@@ -29,6 +29,7 @@ maja pelnic role dowodow.
 | Backend | `features.uiexplorer` | `features.uxinspector` |
 | Publiczne API | `/api/ui-explorer/**` | `/api/ux-inspector/**` |
 | Source preparation | reachability wielu sekcji | target resolution + focused slice |
+| Repository guidance | feature-owned skille UI Explorera | inline Copilot instructions + katalog naglowkow project skills |
 | Source research | feature policy UI Explorera | cale jedno repo na pinned commit |
 | Report | do osmiu sekcji | dokladnie jedna sekcja `answer` |
 | Historia/export | osobny kontrakt UI Explorera | `tdw.ux-inspector-export` v1 |
@@ -99,16 +100,23 @@ wlasnego formatu cache. UI Explorer zachowuje ten sam kontrakt odswiezenia.
 1. Request zawiera capture v1, Application, Branch, View, oczekiwana immutable
    revision, pytanie, model i reasoning effort.
 2. `QUEUED` jest zapisane przed dispatch.
-3. `UxInspectorTargetResolver` buduje ranked candidates i `sourceBinding`.
-4. `NOT_FOUND` blokuje AI; `AMBIGUOUS` pozostaje jawne w odpowiedzi.
+3. `UxInspectorTargetResolver` buduje ranked candidates i `sourceBinding` z
+   deduplikowanych selector signals, zachowujac odleglosc component boundaries
+   i nie zgadujac zakresu po pierwszym ogolnym tagu.
+4. `NOT_FOUND` blokuje AI; `AMBIGUOUS` pozostaje jawne w odpowiedzi i przekazuje
+   ograniczone evidence 2-3 najlepszych kandydatow wraz z bindingami.
 5. Initial context zawiera focused slice oraz komplet nazw sciezek pierwszych
-   czterech poziomow jednego wybranego repozytorium.
+   czterech poziomow jednego wybranego repozytorium, pelna tresc obecnego
+   `.github/copilot-instructions.md` oraz naglowki `name` i `description`
+   skilli wykrytych w `.github/skills`, `.claude/skills` i `.agents/skills`.
 6. Hidden context przypina neutralne GitLab tools do jednego projektu,
    Branch i commita, bez ograniczenia do Operational Context path prefixes.
 7. AI moze listowac, wyszukiwac i czytac dowolna bezpieczna sciezke w tym repo,
    ale cytowac moze tylko plik rzeczywiscie odczytany na pinned commit.
 8. Prompt rozroznia pytanie operatora, runtime observation i source evidence,
-   wymaga domkniecia lancucha potrzebnego do odpowiedzi i narracji biznesowej.
+   wymaga doczytania kazdego skilla materialnego dla researchu, sprawdzenia
+   mechanizmow przekrojowych oraz domkniecia lancucha potrzebnego do odpowiedzi
+   i narracji biznesowej.
 9. Report tools zapisuja naglowek, jedna sekcje oraz metadata; finalny tekst
    modelu nie jest fallbackiem wyniku.
 
@@ -196,6 +204,13 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
   wyniku i statycznego routingu.
 - [x] Wlaczyc do diagnostyki formularza kontrolki `type=hidden` i zachowac dla
   nich te same reguly redakcji wartosci wrazliwych co dla pozostalych pol.
+- [x] Naprawic target resolver: uzyc selector candidates bez podwojnego
+  scoringu, zachowac kolejnosc component boundaries, usunac fallback do
+  pierwszego ogolnego tagu i ugruntowac `AMBIGUOUS` 2-3 candidate slices z
+  bindingami.
+- [x] Dodac do initial prompt zweryfikowana tresc repository-wide Copilot
+  instructions, katalog naglowkow project skills oraz obowiazek doczytania
+  istotnych skilli i sprawdzenia mechanizmow przekrojowych.
 - [x] Uruchomic pelne testy Angulara, produkcyjny build frontendu oraz
   `mvn -q -Pbackend-dev clean package` i zapisac wynik ponizej.
 
@@ -211,9 +226,16 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
   - PASS dla `FileSystemFrontendViewCatalogCacheTest`,
     `UxInspectorInputOptionsControllerTest`,
     `UxInspectorInputOptionsServiceTest`, `UxInspectorCaptureContractTest`,
-    `UxInspectorJobControllerTest`, `UxInspectorImportServiceTest`,
-    `UiExplorerScreenCatalogServiceTest` i `FrontendPageTest`.
+    `UxInspectorTargetResolverTest`, `UxInspectorPromptAndSkillsTest`,
+    `UxInspectorRepositoryTreeArtifactServiceTest`,
+    `UxInspectorRepositoryGuidanceArtifactServiceTest`,
+    `UxInspectorCopilotRunRequestAssemblerTest`,
+    `UxInspectorTargetToolsTest`, `UxInspectorJobControllerTest`,
+    `UxInspectorImportServiceTest`, `UiExplorerScreenCatalogServiceTest` i
+    `FrontendPageTest`.
 - Pelny pakiet: `mvn -q -Pbackend-dev clean package`
+  - PASS.
+- Pelna regresja backendu po dodaniu repository guidance: `mvn -q test`
   - PASS.
 
 Pilot jakosciowy z rzeczywistym Copilot/GitLab pozostaje osobnym kryterium

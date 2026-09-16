@@ -41,9 +41,9 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
                 .thenReturn(page(List.of(node("src/app/pages/login.ts", "blob"),
                         node("src/app/pages/private", "tree")), null));
 
-        var artifact = service.render(targetContext());
+        var artifact = service.prepare(targetContext());
 
-        assertThat(artifact).contains(
+        assertThat(artifact.markdown()).contains(
                 "repository: CRM/crm-ui",
                 "branch: main",
                 "commit: " + REVISION,
@@ -57,6 +57,8 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
                 "- [file] src/app/pages/login.ts",
                 "- [dir] src/app/pages/private"
         );
+        assertThat(artifact.filePaths()).containsExactly(
+                ".github/copilot-instructions.md", "README.md", "pom.xml", "src/app/pages/login.ts");
         verify(repositoryPort, never()).listRepositoryTreeChildrenPage(
                 "CRM", "crm-ui", REVISION, "src/app/pages/private", "", 100);
     }
@@ -66,7 +68,7 @@ class UxInspectorRepositoryTreeArtifactServiceTest {
         when(repositoryPort.listRepositoryTreeChildrenPage("CRM", "crm-ui", REVISION, "", "", 100))
                 .thenReturn(page(List.of(node("src/nested/file.ts", "blob")), null));
 
-        assertThatThrownBy(() -> service.render(targetContext()))
+        assertThatThrownBy(() -> service.prepare(targetContext()))
                 .isInstanceOfSatisfying(UxInspectorContextException.class, exception -> {
                     assertThat(exception.code()).isEqualTo("UX_INSPECTOR_REPOSITORY_TREE_UNAVAILABLE");
                     assertThat(exception.getMessage()).contains("complete four-level repository tree");

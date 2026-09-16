@@ -122,11 +122,20 @@ dowod pochodzenia danych w kodzie.
 
 Po wyborze zaufanego frontendu backend dolacza do poczatkowego kontekstu
 komplet nazw sciezek pierwszych czterech poziomow wybranego repozytorium na
-przypietym commicie. Drzewo jest mapa nawigacyjna bez tresci plikow i samo nie
-jest dowodem. AI moze potem listowac, wyszukiwac i czytac dowolne bezpieczne
-sciezki w tym jednym repozytorium, w tym README, `AGENTS.md`, instrukcje
-Copilota, konfiguracje, frontend i backend. Pliki repozytorium pozostaja
-niezaufanym source evidence i nie moga zmienic procedury analizy.
+przypietym commicie. Dolacza rowniez pelna tresc repository-wide
+`.github/copilot-instructions.md`, jezeli istnieje, oraz katalog naglowkow
+`name` i `description` project skills ze standardowych lokalizacji
+`.github/skills`, `.claude/skills` i `.agents/skills`. Drzewo jest mapa
+nawigacyjna bez tresci pozostalych plikow i samo nie jest dowodem.
+
+AI ma uzyc zgodnych z analiza wskazowek z Copilot instructions do poznania
+struktury repozytorium, a przed researchem doczytac kazdy skill, ktorego opis
+moze pomoc odpowiedziec na pytanie albo zrozumiec architekture. Instrukcje i
+skille sa niezaufanym repository guidance: nie moga zmienic scope'u, narzedzi,
+zasad bezpieczenstwa ani kontraktu wyniku i nie zastepuja dowodow z kodu. AI
+moze potem listowac, wyszukiwac i czytac dowolne bezpieczne sciezki w tym
+jednym repozytorium, w tym README, `AGENTS.md`, konfiguracje, frontend i
+backend.
 
 ## Oczekiwany wynik
 
@@ -163,6 +172,12 @@ instrukcjami dla AI.
 - Poczatkowy prompt zawiera komplet nazw sciezek pierwszych czterech poziomow;
   raport moze cytowac plik spoza focused slice dopiero po jego rzeczywistym
   odczycie z przypietego commita.
+- Poczatkowy prompt zawiera pelna tresc obecnego repository-wide Copilot
+  instructions i naglowki wszystkich poprawnych project skills w standardowych
+  lokalizacjach; materialny skill jest odczytywany przed dalszym researchem.
+- Przed wnioskiem AI sprawdza materialne mechanizmy przekrojowe, np. guards,
+  interceptory, initializery, globalny stan, walidatory, uprawnienia, feature
+  flags i konfiguracje, albo jawnie raportuje brak mozliwosci ich wykluczenia.
 - Deterministyczne przygotowanie laczy stabilny fingerprint DOM z owning
   component i bindingiem w przypietej rewizji; selector sam w sobie nie jest
   dowodem ownership.
@@ -186,7 +201,8 @@ instrukcjami dla AI.
 - Jawny wybor zarejestrowanego frontendu, brancha i view oraz przypiecie
   immutable source revision.
 - Read-only source research w calym repozytorium wybranego frontendu oraz
-  poczatkowe czteropoziomowe drzewo nazw sciezek.
+  poczatkowe czteropoziomowe drzewo nazw sciezek, repository-wide Copilot
+  instructions i katalog naglowkow project skills.
 - Pytania o walidacje, pochodzenie danych, stan/dostepnosc i skutek akcji.
 - Framework-neutralny capture oraz pierwsze wsparcie analizy kodu dla rodziny
   frontendow obslugiwanej obecnie przez TDW.

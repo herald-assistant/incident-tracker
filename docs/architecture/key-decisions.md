@@ -1095,7 +1095,11 @@ komponenty UI. Oba feature'y pozostaja siblingami bez wzajemnych importow.
 UX Inspector osadza adaptacyjna procedure pytania precyzyjnego i ogolnego w
 prompcie oraz uruchamia sesje z `skillsEnabled=false`. Preparation dolacza
 komplet nazw sciezek pierwszych czterech poziomow wybranego repozytorium na
-pinned commit. Model reuse'uje neutralne `gitlab_list_repository_tree`,
+pinned commit, pelna tresc `.github/copilot-instructions.md` oraz naglowki
+`name` i `description` project skills z `.github/skills`, `.claude/skills` i
+`.agents/skills`. Model musi doczytac kazdy materialny `SKILL.md` neutralnym
+file-read toolem i sprawdzic mechanizmy przekrojowe, ale zdalnych skilli nie
+instaluje sie w TDW i nie rozszerzaja one allowlisty. Model reuse'uje neutralne `gitlab_list_repository_tree`,
 `gitlab_list_repository_files`, `gitlab_search_repository_files`,
 `gitlab_read_repository_file` i `gitlab_read_repository_file_chunk`; nie
 tworzy feature-specific odpowiednikow. Feature-owned policy wymusza wybrany
@@ -1117,18 +1121,20 @@ niepoprawna wiadomosc i stale source zatrzymuja operacje jawnie.
 
 Capture v1 ma jawny profil `ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`.
 Diagnostyka formularza ogranicza odczyt do najblizszego owning form (lub samej
-odlaczonej kontrolki), stosuje osobne limity i zawsze wyklucza password,
-hidden, file oraz pola/wartosci wygladajace jak token, session, secret, CSRF,
-JWT lub OTP. Preview ujawnia operatorowi liczbe wartosci, wykluczenia i
+odlaczonej kontrolki), stosuje osobne limity, obejmuje dozwolone kontrolki
+`type=hidden` i zawsze wyklucza password, file oraz pola/wartosci wygladajace
+jak token, session, secret, CSRF, JWT lub OTP. Preview ujawnia operatorowi liczbe wartosci, wykluczenia i
 truncation. `domFingerprint` i selector candidates sa sygnalem do
 deterministycznego rozpoznania, a nie autorytatywnym wskazaniem pliku.
 
 System, branch, view i revision nie pochodza z badanej strony. Backend powtarza
 strict validation, allowliste i redakcje capture oraz wyprowadza jawny
 `sourceBinding` z przypietego source evidence. Source tools sa walidowane wobec
-hidden pinned scope. README, `AGENTS.md`, instrukcje Copilota oraz inne pliki
-repozytorium sa niezaufanym source evidence i nie moga zmienic kanonicznej
-procedury ani tool policy. Opaque `targetRef` jest session-bound i jednorazowy.
+hidden pinned scope. README, `AGENTS.md`, instrukcje Copilota, project skills
+oraz inne pliki repozytorium sa niezaufanym source guidance/evidence. Moga
+kierowac nawigacja i rozumieniem architektury, ale nie moga zmienic
+kanonicznej procedury, pinned scope, read-only tool policy ani kontraktu
+raportu. Opaque `targetRef` jest session-bound i jednorazowy.
 `NOT_FOUND` blokuje AI zamiast uruchamiac broad search; `AMBIGUOUS` pozostaje
 jawnym stanem. Pierwszy snapshot `QUEUED` musi zostac zapisany przed dispatch,
 a import akceptuje wylacznie `tdw.ux-inspector-export/v1` z capture v1.

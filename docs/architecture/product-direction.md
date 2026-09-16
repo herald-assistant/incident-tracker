@@ -235,10 +235,12 @@ sekcja `answer`. Oba feature'y reuse'uja neutralny katalog frontendu,
 GitLab frontend capability, platformowy report runtime i wspolny uklad run UI.
 UX Inspector reuse'uje tez ogolne GitLab file-read tools; nie tworzy ich
 feature-specific odpowiednikow. Poczatkowy prompt dostaje nazwy sciezek z
-pierwszych czterech poziomow, a neutralne navigation/search/read tools maja
-read-only dostep do calego wybranego repozytorium. Polityka sesji wymusza
-project i branch, hidden scope przypina commit, a raport dopuszcza tylko
-initial evidence lub pliki rzeczywiscie odczytane z tego commita.
+pierwszych czterech poziomow, pelna tresc repository-wide Copilot instructions
+i katalog naglowkow project skills. Materialne skille sa doczytywane przez
+neutralne file-read tools, ktore wraz z navigation/search maja read-only
+dostep do calego wybranego repozytorium. Polityka sesji wymusza project i
+branch, hidden scope przypina commit, a raport dopuszcza tylko initial evidence
+lub pliki rzeczywiscie odczytane z tego commita.
 Browser Tools nie zawiera sekretow, nie ma uprawnien w tle i nie przekazuje
 capture przez URL, storage lub kanal reczny.
 

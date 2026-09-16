@@ -80,6 +80,19 @@ class UxInspectorCaptureContractTest {
     }
 
     @Test
+    void shouldAcceptSafeClassTokenSelectorCandidate() throws Exception {
+        ObjectNode node = objectMapper.valueToTree(capture());
+        node.put("capturedAt", "2026-09-15T10:00:00Z");
+        node.withObject("target").withObject("domFingerprint").withArray("selectorCandidates")
+                .removeAll().add("button[class~=\"crm-primary-action\"]");
+
+        var normalized = normalizer.normalize(objectMapper.treeToValue(node, UxInspectorCapture.class));
+
+        assertEquals(List.of("button[class~=\"crm-primary-action\"]"),
+                normalized.target().domFingerprint().selectorCandidates());
+    }
+
+    @Test
     void shouldKeepAllowedFormValuesIncludingHiddenControlsAndRejectSensitiveControlsFromTheValuesPayload() {
         var valid = capture();
         var validity = new UxInspectorCapture.Validity(false, true, false, false, false, false,

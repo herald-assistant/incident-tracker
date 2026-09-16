@@ -8,11 +8,12 @@ import pl.mkn.tdw.agenttools.context.AgentToolContextKeys;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetCandidate;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class UxInspectorTargetTools {
@@ -28,7 +29,7 @@ public final class UxInspectorTargetTools {
         for (var candidate : context.candidates()) {
             refs.put("uxi_" + UUID.randomUUID().toString().replace("-", ""), candidate);
         }
-        candidatesByRef = Map.copyOf(refs);
+        candidatesByRef = Collections.unmodifiableMap(new LinkedHashMap<>(refs));
     }
 
     @Tool(name = UxInspectorToolNames.LIST_TARGET_CANDIDATES,

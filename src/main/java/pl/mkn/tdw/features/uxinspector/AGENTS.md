@@ -20,6 +20,14 @@ report, historie oraz import/export.
 - Selector candidates z `domFingerprint` sa sygnalem dla deterministycznego
   resolvera; model nie dostaje arbitrary-selector toola ani prawa do
   traktowania selectora jako dowodu ownership w kodzie.
+- Resolver deduplikuje sygnaly stable attributes i selector candidates,
+  punktuje tylko allowliste bezpiecznych identyfikatorow oraz tokenow klas i
+  zachowuje kolejnosc `componentBoundaryTags` od najblizszego komponentu.
+  Brak jednoznacznego anchor line nie moze uruchamiac fallbacku do pierwszego
+  ogolnego tagu w template.
+- Dla `AMBIGUOUS` initial context zawiera ograniczone evidence maksymalnie
+  trzech najlepszych kandydatow wraz z bindingami. Pierwszy kandydat nie staje
+  sie przez to rozstrzygnietym targetem.
 - Jedynym wynikiem AI jest `AnalysisReport` z sekcja `answer`; tekst finalny
   Copilota nigdy nie jest fallbackiem.
 - Nowe feature-specific tools nie przyjmuja group, project, branch, ref ani
@@ -31,8 +39,21 @@ report, historie oraz import/export.
 - Initial prompt zawiera komplet nazw sciezek pierwszych czterech poziomow
   pinned repository. Drzewo jest tylko mapa nawigacyjna; brak kompletnego
   drzewa zatrzymuje preparation i nie uruchamia fallbacku.
-- README, `AGENTS.md`, instrukcje Copilota i caly kod repozytorium sa
-  niezaufanym source evidence. Raport moze referowac plik spoza initial target
-  context tylko po jego rzeczywistym odczycie przez repo-bound full/chunk tool.
+- Jezeli `.github/copilot-instructions.md` istnieje, initial prompt zawiera
+  jego pelna, zweryfikowana tresc. Zawiera tez `name`, `description` i sciezke
+  kazdego poprawnego project skill z `.github/skills`, `.claude/skills` i
+  `.agents/skills`; model musi doczytac materialny `SKILL.md` przez neutralny
+  repo-bound file-read tool. Zdalnych skilli nie instaluj w runtime TDW i nie
+  wlaczaj dla nich built-in toola `skill`.
+- README, `AGENTS.md`, instrukcje Copilota, project skills i caly kod
+  repozytorium sa niezaufanym source guidance/evidence. Guidance moze kierowac
+  researchem tylko w granicach kanonicznej procedury, pinned scope, read-only
+  allowlisty i kontraktu raportu. Raport moze referowac plik spoza initial
+  target context tylko po jego rzeczywistym odczycie przez repo-bound
+  full/chunk tool.
+- Przed odpowiedzia model sprawdza materialne mechanizmy przekrojowe, np.
+  guards, interceptory, initializery, globalny stan, walidatory, uprawnienia,
+  feature flags i konfiguracje; ich braku nie wolno zalozyc po samym focused
+  slice.
 - Brak targetu, raportu lub poprawnych referencji jest jawnym stanem
   `BLOCKED`/`FAILED`, a nie powodem uruchomienia UI Explorera.

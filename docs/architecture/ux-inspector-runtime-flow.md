@@ -122,22 +122,28 @@ dispatch do executora; brak persistence zatrzymuje utworzenie runu.
 `UxInspectorTargetResolver` rozwiazuje zarejestrowany frontend do ukrytego
 GitLab scope, przypina branch do oczekiwanej rewizji i buduje screen
 reachability dla wybranego view. Ranking korzysta ze stabilnych atrybutow,
-selector candidates, accessible name, tekstu, tagu, role, custom-element
-ancestry oraz route. Dla targetu wyprowadza `sourceBinding`: komponent/symbol,
+znormalizowanych selector candidates, accessible name, tekstu, tagu, role,
+uporzadkowanego custom-element ancestry oraz route. Te same `id`, `data-*`,
+`formControlName`, `name` albo `aria-label` nie sa naliczane drugi raz, gdy
+wystepuja jednoczesnie w stable attributes i selector candidate. Bezpieczne
+tokeny klas maja nizsza wage, a najblizszy `componentBoundaryTag` ma wage
+najwyzsza. Dla targetu resolver wyprowadza `sourceBinding`: komponent/symbol,
 template, ograniczony element slice, bindingi elementu i formularza oraz
-symbole referencyjne.
+symbole referencyjne. Brak jednoznacznego anchor line pozostawia element range
+pusty; resolver nigdy nie wybiera pierwszego wystapienia ogolnego tagu.
 
 Rezultat ma jeden ze stanow:
 
 - `RESOLVED` - jeden kandydat ma wystarczajaca przewage,
-- `AMBIGUOUS` - kilku kandydatow jest porownywalnych; odpowiedz zachowuje
-  niejednoznacznosc i moze uzyc target tools,
+- `AMBIGUOUS` - kilku kandydatow jest porownywalnych; initial context zawiera
+  ograniczone evidence maksymalnie trzech najlepszych kandydatow wraz z ich
+  bindingami, odpowiedz zachowuje niejednoznacznosc i moze uzyc target tools,
 - `NOT_FOUND` - brak zweryfikowanego celu blokuje sesje.
 
 Zmiana source revision, brak refa albo nieaktualny View sa jawnym bledem.
 Feature nie przelacza sie na inny branch i nie zgaduje targetu.
 
-## Prompt, repository map i tools
+## Prompt, repository guidance, repository map i tools
 
 Prompt oddziela pytanie operatora, `UNTRUSTED_RUNTIME_OBSERVATION` oraz
 `UNTRUSTED_SOURCE_EVIDENCE`. Zawiera capture, `sourceBinding`, target context,
@@ -148,6 +154,32 @@ Osobny logical artifact zawiera kompletny, posortowany spis nazw sciezek z
 pierwszych czterech poziomow wybranego repozytorium na pinned commit. Drzewo
 jest mapa nawigacyjna, nie dowodem tresci. Brak kompletnego drzewa blokuje
 przygotowanie zamiast dostarczyc modelowi cichy, obciety wynik.
+
+Z tego samego drzewa preparation wykrywa repository-wide
+`.github/copilot-instructions.md` oraz project skills zapisane zgodnie z
+konwencja Copilota w `.github/skills/<skill>/SKILL.md`,
+`.claude/skills/<skill>/SKILL.md` albo `.agents/skills/<skill>/SKILL.md`.
+Instrukcje sa weryfikowane i osadzane w initial prompt w pelnej tresci.
+`SKILL.md` jest weryfikowany na pinned commit i parsowany bezpiecznym parserem
+YAML, ale initial prompt dostaje tylko `path`, `name` i `description`. Brak
+pliku jest dozwolony; plik obecny w drzewie, ktorego nie da sie w calosci
+zweryfikowac, niepoprawny naglowek, duplikat nazwy albo przekroczenie limitu
+100 skilli blokuje preparation zamiast tworzyc niepelny katalog.
+
+Model najpierw stosuje kompatybilne wskazowki nawigacyjne z osadzonych Copilot
+instructions, a nastepnie porownuje pytanie i target z opisami wszystkich
+skilli. Kazdy potencjalnie materialny skill musi odczytac w calosci istniejacym
+neutralnym file-read toolem przed rozszerzeniem researchu. Zdalne skille nie sa
+instalowane w runtime TDW, nie wlaczaja built-in toola `skill` i nie moga
+rozszerzyc allowlisty ani uruchomic skryptu. Caly repository guidance jest
+niezaufany: moze kierowac nawigacja i rozumieniem architektury tylko w granicach
+kanonicznej procedury, pinned repo, read-only tools i kontraktu raportu.
+
+Przed finalizacja model ma sprawdzic materialny wplyw mechanizmow
+przekrojowych, m.in. routingu i guards, interceptorow lub middleware,
+initializerow, globalnego stanu, walidatorow, uprawnien, feature flags i
+konfiguracji. Brak takiego wplywu nie moze byc zalozeniem opartym tylko na
+focused slice; wymaga adekwatnego wyszukania albo jawnego visibility limit.
 
 Sesja ma read-only dostep do calego jednego wybranego repozytorium przez
 neutralne GitLab tools do listowania, wyszukiwania i czytania plikow. Hidden
@@ -200,6 +232,8 @@ Minimalna macierz obejmuje:
 - target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale revision,
 - origin/source/nonce/replay/popup failure w Browser Tools i receiverze,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
+- pinned Copilot instructions, trzy standardowe korzenie project skills,
+  walidacje frontmatter, katalog naglowkow i fail-closed guidance preparation,
 - jednosekcyjny report oraz pojedyncza prezentacje scalonych metadata,
 - `QUEUED` przed dispatch, strict import/export v1 i odrzucenie obcych wersji,
 - modal bookmarkleta, brak alternatywnego launchera i brak osobnej karty

@@ -10,6 +10,7 @@ import pl.mkn.tdw.shared.error.UserFacingErrorType;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -21,6 +22,14 @@ import java.util.regex.Pattern;
 public class UxInspectorTargetResolver {
     private static final int MAX_CANDIDATES = 8;
     private static final int MAX_SOURCE_SLICE = 16_000;
+    private static final int MAX_AMBIGUOUS_CANDIDATES = 3;
+    private static final int MAX_AMBIGUOUS_CANDIDATE_EVIDENCE = 8_000;
+    private static final List<String> SELECTOR_ATTRIBUTE_PRIORITY = List.of(
+            "id", "data-testid", "data-test", "data-cy", "formcontrolname", "name", "aria-label"
+    );
+    private static final Pattern ID_SELECTOR = Pattern.compile("^#([A-Za-z][A-Za-z0-9_.:-]*)$");
+    private static final Pattern ATTRIBUTE_SELECTOR = Pattern.compile(
+            "^[a-z][a-z0-9-]{0,39}\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label|class)(~=|=)\"([A-Za-z][A-Za-z0-9_.:-]*)\"\\]$");
     private final FrontendApplicationCatalogService applicationCatalogService;
     private final GitLabFrontendScreenReachabilityService screenReachabilityService;
 
@@ -43,8 +52,9 @@ public class UxInspectorTargetResolver {
             throw error("UX_INSPECTOR_SOURCE_REVISION_CHANGED", UserFacingErrorType.CONFLICT,
                     "Source revision changed. Reload views and select the target again.");
         }
+        var selectorSignals = selectorSignals(capture);
         var candidates = graph.componentLevels().stream().flatMap(level -> level.components().stream())
-                .map(component -> candidate(component, capture, graph)).filter(value -> value.score() > 0)
+                .map(component -> candidate(component, capture, graph, selectorSignals)).filter(value -> value.score() > 0)
                 .sorted(Comparator.comparingInt(UxInspectorTargetCandidate::score).reversed()
                         .thenComparing(UxInspectorTargetCandidate::componentId))
                 .limit(MAX_CANDIDATES).toList();
@@ -62,14 +72,17 @@ public class UxInspectorTargetResolver {
         });
         graph.dependencies().forEach(dependency -> addPath(paths, dependency.sourcePath()));
         addPath(paths, graph.screenNode().routeSource().path());
-        var focused = status == UxInspectorTargetResolutionStatus.RESOLVED && !candidates.isEmpty()
-                ? candidates.get(0).sourceSlice() : "";
-        var sourceBinding = status == UxInspectorTargetResolutionStatus.RESOLVED && !candidates.isEmpty()
-                ? graph.componentLevels().stream().flatMap(level -> level.components().stream())
-                    .filter(component -> component.componentId().equals(candidates.get(0).componentId()))
-                    .findFirst().map(component -> sourceBinding(component, capture, candidates.get(0).templateLine()))
-                    .orElse(null)
-                : null;
+        var focused = "";
+        UxInspectorSourceBinding sourceBinding = null;
+        if (status == UxInspectorTargetResolutionStatus.RESOLVED && !candidates.isEmpty()) {
+            focused = candidates.get(0).sourceSlice();
+            var component = component(graph, candidates.get(0).componentId());
+            if (component != null) {
+                sourceBinding = sourceBinding(component, capture, candidates.get(0).templateLine());
+            }
+        } else if (status == UxInspectorTargetResolutionStatus.AMBIGUOUS) {
+            focused = ambiguousCandidateEvidence(candidates, graph, capture);
+        }
         return new UxInspectorTargetContext(frontend.systemId(), frontend.label(),
                 new UxInspectorSourceScope(scope.group(), scope.projectName(), scope.ref(), scope.pathPrefixes()),
                 new UxInspectorViewIdentity(viewId,
@@ -81,27 +94,28 @@ public class UxInspectorTargetResolver {
 
     private UxInspectorTargetCandidate candidate(GitLabFrontendReachabilityComponent component,
                                                   UxInspectorCapture capture,
-                                                  GitLabFrontendScreenReachabilityGraph graph) {
+                                                  GitLabFrontendScreenReachabilityGraph graph,
+                                                  List<SelectorSignal> selectorSignals) {
         var reasons = new ArrayList<String>();
         var searchable = (component.templateContent() + "\n" + component.sliceContent()).toLowerCase(Locale.ROOT);
         var score = 0;
-        for (var entry : capture.target().domFingerprint().stableAttributes().entrySet()) {
-            var value = entry.getValue().toLowerCase(Locale.ROOT);
-            if (containsStableValue(searchable, value)) {
-                score += switch (entry.getKey()) {
-                    case "data-testid", "data-test", "data-cy", "id", "formcontrolname" -> 55;
-                    default -> 35;
-                };
-                reasons.add("stable attribute " + entry.getKey() + " matched");
+        var matchedValues = new LinkedHashSet<String>();
+        for (var signal : selectorSignals) {
+            if (containsStableValue(searchable, signal.value())) {
+                score += signal.weight();
+                matchedValues.add(signal.value());
+                reasons.add("selector " + signal.kind() + " matched");
             }
         }
         var name = normalized(capture.target().accessibleName());
-        if (StringUtils.hasText(name) && searchable.contains(name)) {
+        if (StringUtils.hasText(name) && !matchedValues.contains(name) && searchable.contains(name)) {
             score += 28;
+            matchedValues.add(name);
             reasons.add("accessible name matched");
         }
         var text = normalized(capture.target().text());
-        if (StringUtils.hasText(text) && text.length() >= 3 && searchable.contains(text)) {
+        if (StringUtils.hasText(text) && text.length() >= 3 && !matchedValues.contains(text)
+                && searchable.contains(text)) {
             score += 20;
             reasons.add("visible text matched");
         }
@@ -115,21 +129,19 @@ public class UxInspectorTargetResolver {
             score += 9;
             reasons.add("explicit role matched");
         }
-        var customTags = new LinkedHashSet<String>();
-        capture.target().domFingerprint().componentBoundaryTags().stream()
-                .map(value -> value.toLowerCase(Locale.ROOT)).forEach(customTags::add);
-        capture.ancestors().stream().map(UxInspectorCapture.Ancestor::tag)
-                .filter(tag -> tag != null && tag.contains("-"))
-                .map(value -> value.toLowerCase(Locale.ROOT)).forEach(customTags::add);
-        if (StringUtils.hasText(component.selector()) && customTags.contains(component.selector().toLowerCase(Locale.ROOT))) {
-            score += 18;
-            reasons.add("custom-element ancestry matched component selector");
+        var boundaries = orderedComponentBoundaries(capture);
+        var boundaryIndex = StringUtils.hasText(component.selector())
+                ? boundaries.indexOf(component.selector().toLowerCase(Locale.ROOT)) : -1;
+        if (boundaryIndex >= 0) {
+            var boundaryScore = componentBoundaryScore(boundaryIndex);
+            score += boundaryScore;
+            reasons.add("component boundary matched at distance " + (boundaryIndex + 1));
         }
         if (routeMatches(graph.screenNode().routePattern(), capture.page().path())) {
             score += 6;
             reasons.add("runtime path matches selected view route");
         }
-        var line = matchingLine(component.templateContent(), capture);
+        var line = matchingLine(component.templateContent(), capture, selectorSignals);
         var related = new LinkedHashSet<String>();
         addPath(related, component.templatePath());
         addPath(related, component.sourcePath());
@@ -139,6 +151,77 @@ public class UxInspectorTargetResolver {
         return new UxInspectorTargetCandidate(component.componentId(), score, reasons, component.componentId(),
                 component.symbol(), component.selector(), component.sourcePath(), component.templatePath(), line,
                 sourceSlice(component, line), List.copyOf(related));
+    }
+
+    private List<SelectorSignal> selectorSignals(UxInspectorCapture capture) {
+        var signalsByValue = new LinkedHashMap<String, SelectorSignal>();
+        var attributes = capture.target().domFingerprint().stableAttributes();
+        for (var attribute : SELECTOR_ATTRIBUTE_PRIORITY) {
+            addSelectorSignal(signalsByValue, attribute, attributes.get(attribute));
+        }
+        for (var selector : capture.target().domFingerprint().selectorCandidates()) {
+            var id = ID_SELECTOR.matcher(selector);
+            if (id.matches()) {
+                addSelectorSignal(signalsByValue, "id", id.group(1));
+                continue;
+            }
+            var attribute = ATTRIBUTE_SELECTOR.matcher(selector);
+            if (!attribute.matches()) continue;
+            var kind = attribute.group(1);
+            var operator = attribute.group(2);
+            if (("class".equals(kind) && !"~=".equals(operator))
+                    || (!"class".equals(kind) && !"=".equals(operator))) continue;
+            addSelectorSignal(signalsByValue, kind, attribute.group(3));
+        }
+        return signalsByValue.values().stream()
+                .sorted(Comparator.comparingInt(SelectorSignal::weight).reversed()
+                        .thenComparing(SelectorSignal::kind).thenComparing(SelectorSignal::value))
+                .toList();
+    }
+
+    private void addSelectorSignal(LinkedHashMap<String, SelectorSignal> signalsByValue, String kind, String rawValue) {
+        var value = normalized(rawValue);
+        var weight = selectorSignalWeight(kind);
+        if (!StringUtils.hasText(value) || weight <= 0) return;
+        var signal = new SelectorSignal(kind, value, weight);
+        signalsByValue.merge(value, signal, (current, candidate) ->
+                candidate.weight() > current.weight() ? candidate : current);
+    }
+
+    private int selectorSignalWeight(String kind) {
+        return switch (kind) {
+            case "id", "data-testid", "data-test", "data-cy", "formcontrolname" -> 55;
+            case "name" -> 36;
+            case "aria-label" -> 28;
+            case "class" -> 18;
+            default -> 0;
+        };
+    }
+
+    private List<String> orderedComponentBoundaries(UxInspectorCapture capture) {
+        var boundaries = new ArrayList<String>();
+        capture.target().domFingerprint().componentBoundaryTags().stream()
+                .map(this::normalized).filter(StringUtils::hasText)
+                .forEach(value -> addDistinct(boundaries, value));
+        capture.ancestors().stream().sorted(Comparator.comparingInt(UxInspectorCapture.Ancestor::depth))
+                .map(UxInspectorCapture.Ancestor::tag).filter(tag -> tag != null && tag.contains("-"))
+                .map(this::normalized).filter(StringUtils::hasText)
+                .forEach(value -> addDistinct(boundaries, value));
+        return List.copyOf(boundaries);
+    }
+
+    private void addDistinct(List<String> values, String value) {
+        if (!values.contains(value)) values.add(value);
+    }
+
+    private int componentBoundaryScore(int boundaryIndex) {
+        return switch (boundaryIndex) {
+            case 0 -> 36;
+            case 1 -> 18;
+            case 2 -> 12;
+            case 3 -> 8;
+            default -> Math.max(2, 7 - boundaryIndex);
+        };
     }
 
     private UxInspectorTargetResolutionStatus resolutionStatus(List<UxInspectorTargetCandidate> candidates) {
@@ -166,6 +249,66 @@ public class UxInspectorTargetResolver {
         return value.length() <= MAX_SOURCE_SLICE ? value : value.substring(0, MAX_SOURCE_SLICE);
     }
 
+    private String ambiguousCandidateEvidence(
+            List<UxInspectorTargetCandidate> candidates,
+            GitLabFrontendScreenReachabilityGraph graph,
+            UxInspectorCapture capture
+    ) {
+        var builder = new StringBuilder();
+        var selected = candidates.stream().limit(MAX_AMBIGUOUS_CANDIDATES).toList();
+        for (var index = 0; index < selected.size(); index++) {
+            var candidate = selected.get(index);
+            var component = component(graph, candidate.componentId());
+            if (component == null) continue;
+            var binding = sourceBinding(component, capture, candidate.templateLine());
+            var evidence = renderCandidateEvidence(index + 1, candidate, binding);
+            if (!builder.isEmpty()) builder.append("\n\n");
+            builder.append(evidence, 0, Math.min(evidence.length(), MAX_AMBIGUOUS_CANDIDATE_EVIDENCE));
+        }
+        return builder.toString();
+    }
+
+    private String renderCandidateEvidence(
+            int rank,
+            UxInspectorTargetCandidate candidate,
+            UxInspectorSourceBinding binding
+    ) {
+        var builder = new StringBuilder();
+        builder.append("AMBIGUOUS_CANDIDATE ").append(rank).append('\n');
+        builder.append("component: ").append(candidate.componentId()).append('\n');
+        builder.append("score: ").append(candidate.score()).append('\n');
+        builder.append("matchReasons: ").append(String.join(", ", candidate.matchReasons())).append('\n');
+        builder.append("sourceReference: ").append(binding.sourceReference()).append('\n');
+        builder.append("elementBindings:");
+        if (binding.elementBindings().isEmpty()) {
+            builder.append(" []\n");
+        } else {
+            builder.append('\n');
+            binding.elementBindings().forEach(value -> builder.append("- ").append(value.kind()).append(' ')
+                    .append(value.target()).append(" = ").append(value.expression()).append(" @L")
+                    .append(value.templateLine()).append('\n'));
+        }
+        builder.append("formSubmitBinding: ");
+        if (binding.formSubmitBinding() == null) {
+            builder.append("null\n");
+        } else {
+            var submit = binding.formSubmitBinding();
+            builder.append(submit.target()).append(" = ").append(submit.expression()).append(" @L")
+                    .append(submit.templateLine()).append('\n');
+        }
+        builder.append("referencedSymbols: ").append(String.join(", ", binding.referencedSymbols())).append('\n');
+        builder.append("SOURCE_SLICE\n").append(candidate.sourceSlice());
+        return builder.toString();
+    }
+
+    private GitLabFrontendReachabilityComponent component(
+            GitLabFrontendScreenReachabilityGraph graph,
+            String componentId
+    ) {
+        return graph.componentLevels().stream().flatMap(level -> level.components().stream())
+                .filter(value -> value.componentId().equals(componentId)).findFirst().orElse(null);
+    }
+
     private String excerpt(String content, Integer line) {
         if (!StringUtils.hasText(content)) return "";
         var lines = content.split("\\R", -1);
@@ -179,19 +322,39 @@ public class UxInspectorTargetResolver {
         return builder.toString().trim();
     }
 
-    private Integer matchingLine(String template, UxInspectorCapture capture) {
+    private Integer matchingLine(
+            String template,
+            UxInspectorCapture capture,
+            List<SelectorSignal> selectorSignals
+    ) {
         if (!StringUtils.hasText(template)) return null;
-        var needles = new ArrayList<String>();
-        needles.addAll(capture.target().domFingerprint().stableAttributes().values());
-        if (StringUtils.hasText(capture.target().accessibleName())) needles.add(capture.target().accessibleName());
-        if (StringUtils.hasText(capture.target().text())) needles.add(capture.target().text());
         var lines = template.split("\\R", -1);
-        for (var index = 0; index < lines.length; index++) {
-            var lower = lines[index].toLowerCase(Locale.ROOT);
-            if (needles.stream().filter(StringUtils::hasText)
-                    .map(value -> value.toLowerCase(Locale.ROOT)).anyMatch(lower::contains)) return index + 1;
+        for (var signal : selectorSignals) {
+            var line = uniqueMatchingLine(lines, signal.value());
+            if (line != null) return line;
         }
+        var accessibleName = normalized(capture.target().accessibleName());
+        var line = uniqueMatchingLine(lines, accessibleName);
+        if (line != null) return line;
+        var text = normalized(capture.target().text());
+        if (StringUtils.hasText(text) && !text.equals(accessibleName)) {
+            line = uniqueMatchingLine(lines, text);
+            if (line != null) return line;
+        }
+        var role = normalized(capture.target().role());
+        if (StringUtils.hasText(role)) return uniqueMatchingLine(lines, "role=\"" + role + "\"");
         return null;
+    }
+
+    private Integer uniqueMatchingLine(String[] lines, String needle) {
+        if (!StringUtils.hasText(needle)) return null;
+        Integer match = null;
+        for (var index = 0; index < lines.length; index++) {
+            if (!containsStableValue(lines[index].toLowerCase(Locale.ROOT), needle)) continue;
+            if (match != null) return null;
+            match = index + 1;
+        }
+        return match;
     }
 
     private UxInspectorSourceBinding sourceBinding(
@@ -234,26 +397,25 @@ public class UxInspectorTargetResolver {
     }
 
     private SourceRange elementRange(String template, String targetTag, Integer matchingLine) {
-        if (!StringUtils.hasText(template) || !StringUtils.hasText(targetTag)) return null;
+        if (!StringUtils.hasText(template) || !StringUtils.hasText(targetTag) || matchingLine == null) return null;
         var lines = template.split("\\R", -1);
-        var anchor = matchingLine != null ? Math.max(0, Math.min(lines.length - 1, matchingLine - 1)) : 0;
+        var anchor = Math.max(0, Math.min(lines.length - 1, matchingLine - 1));
         var tagNeedle = "<" + targetTag.toLowerCase(Locale.ROOT);
         var start = -1;
-        for (var index = anchor; index >= Math.max(0, anchor - 12); index--) {
-            if (lines[index].toLowerCase(Locale.ROOT).contains(tagNeedle)) {
+        var bestDistance = Integer.MAX_VALUE;
+        var tied = false;
+        for (var index = Math.max(0, anchor - 12); index <= Math.min(lines.length - 1, anchor + 12); index++) {
+            if (!lines[index].toLowerCase(Locale.ROOT).contains(tagNeedle)) continue;
+            var distance = Math.abs(index - anchor);
+            if (distance < bestDistance) {
                 start = index;
-                break;
+                bestDistance = distance;
+                tied = false;
+            } else if (distance == bestDistance) {
+                tied = true;
             }
         }
-        if (start < 0) {
-            for (var index = 0; index < lines.length; index++) {
-                if (lines[index].toLowerCase(Locale.ROOT).contains(tagNeedle)) {
-                    start = index;
-                    break;
-                }
-            }
-        }
-        if (start < 0) return null;
+        if (start < 0 || tied) return null;
         var end = start;
         var snippet = new StringBuilder();
         while (end < lines.length && end <= start + 16 && snippet.length() < 2_000) {
@@ -350,5 +512,6 @@ public class UxInspectorTargetResolver {
                 .matcher(searchable).find();
     }
     private void addPath(Set<String> paths, String path) { if (StringUtils.hasText(path)) paths.add(path.trim().replace('\\', '/')); }
+    private record SelectorSignal(String kind, String value, int weight) {}
     private record SourceRange(int startLine, int endLine, String snippet) {}
 }

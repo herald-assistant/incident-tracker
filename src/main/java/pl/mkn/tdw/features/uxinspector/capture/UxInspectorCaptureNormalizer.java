@@ -26,7 +26,7 @@ public class UxInspectorCaptureNormalizer {
     private static final Pattern SAFE_IDENTIFIER = Pattern.compile("^[A-Za-z][A-Za-z0-9_.:-]*$");
     private static final Pattern SENSITIVE = Pattern.compile("(authorization|bearer|cookie|csrf|jwt|pass(word|wd)?|secret|session|token|one[-_ ]?time|otp|cvv|cvc)", Pattern.CASE_INSENSITIVE);
     private static final Pattern JWT = Pattern.compile("^[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}$");
-    private static final Pattern SELECTOR = Pattern.compile("^(#[A-Za-z][A-Za-z0-9_.:-]*|[a-z][a-z0-9-]{0,39}\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label)=\"[A-Za-z][A-Za-z0-9_.:-]*\"\\])$");
+    private static final Pattern SELECTOR = Pattern.compile("^(#[A-Za-z][A-Za-z0-9_.:-]*|[a-z][a-z0-9-]{0,39}\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label)=\"[A-Za-z][A-Za-z0-9_.:-]*\"\\]|[a-z][a-z0-9-]{0,39}\\[class~=\"[A-Za-z][A-Za-z0-9_.:-]*\"\\])$");
     private static final Set<String> FORM_SOURCES = Set.of("NEAREST_FORM", "SELECTED_CONTROL_ONLY");
     private static final Set<String> EXCLUSION_REASONS = Set.of("SENSITIVE_TYPE", "FILE_CONTROL",
             "SENSITIVE_AUTOCOMPLETE", "SENSITIVE_NAME", "SENSITIVE_VALUE");

@@ -226,6 +226,9 @@
     if (attributes['aria-label']) {
       push(`${tag}[aria-label="${attributes['aria-label']}"]`);
     }
+    for (const className of safeClasses(element).slice(0, 2)) {
+      push(`${tag}[class~="${className}"]`);
+    }
     return result;
   }
 
@@ -917,7 +920,10 @@
     if (typeof value !== 'string' || value.length > 240) return null;
     const idSelector = /^#[A-Za-z][A-Za-z0-9_.:-]*$/;
     const attributeSelector = /^[a-z][a-z0-9-]{0,39}\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label)="[A-Za-z][A-Za-z0-9_.:-]*"\]$/;
-    return idSelector.test(value) || attributeSelector.test(value) ? value : null;
+    const classTokenSelector = /^[a-z][a-z0-9-]{0,39}\[class~="[A-Za-z][A-Za-z0-9_.:-]*"\]$/;
+    return idSelector.test(value) || attributeSelector.test(value) || classTokenSelector.test(value)
+      ? value
+      : null;
   }
 
   function normalizeDomFingerprint(value) {

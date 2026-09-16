@@ -2,12 +2,16 @@ package pl.mkn.tdw.features.uxinspector.context;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityService;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBinding;
+import pl.mkn.tdw.integrations.gitlab.frontend.GitLabTypeScriptTemplateBindingKind;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,8 +61,8 @@ class UxInspectorTargetResolverTest {
         var reachability = mock(GitLabFrontendScreenReachabilityService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
         when(reachability.build(any())).thenReturn(graph(List.of(
-                component("contact-primary", "primary-action", "Wykonaj", 1),
-                component("contact-secondary", "secondary-action", "Wykonaj", 2)
+                actionComponent("contact-primary", "primary-action", "doPrimary", 1),
+                actionComponent("contact-secondary", "secondary-action", "doSecondary", 2)
         )));
         var resolver = new UxInspectorTargetResolver(applications, reachability);
 
@@ -68,9 +72,78 @@ class UxInspectorTargetResolverTest {
                 capture("cap_crm_missing", "canvas", "Wykres bez odpowiednika", null));
 
         assertEquals(UxInspectorTargetResolutionStatus.AMBIGUOUS, ambiguous.status());
-        assertEquals("", ambiguous.focusedSourceSlice());
+        assertNull(ambiguous.sourceBinding());
+        assertTrue(ambiguous.focusedSourceSlice().contains("AMBIGUOUS_CANDIDATE 1"));
+        assertTrue(ambiguous.focusedSourceSlice().contains("AMBIGUOUS_CANDIDATE 2"));
+        assertTrue(ambiguous.focusedSourceSlice().contains("click = doPrimary()"));
+        assertTrue(ambiguous.focusedSourceSlice().contains("click = doSecondary()"));
         assertEquals(UxInspectorTargetResolutionStatus.NOT_FOUND, notFound.status());
         assertEquals("", notFound.focusedSourceSlice());
+    }
+
+    @Test
+    void shouldRankSafeClassSelectorCandidateWithoutDuplicatingStableAttributeEvidence() {
+        var applications = mock(FrontendApplicationCatalogService.class);
+        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
+        when(applications.loadCatalog()).thenReturn(frontendCatalog());
+        when(reachability.build(any())).thenReturn(graph(List.of(
+                actionComponent("contact-primary", "crm-primary-action", "doPrimary", 1),
+                actionComponent("contact-secondary", "crm-secondary-action", "doSecondary", 2)
+        )));
+        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var selected = withFingerprint(capture("cap_crm_selector", "button", "Wykonaj", null),
+                Map.of(), List.of("button[class~=\"crm-primary-action\"]"), List.of());
+
+        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION, selected);
+
+        assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, context.status());
+        assertEquals("contact-primary", context.candidates().get(0).componentId());
+        assertTrue(context.candidates().get(0).matchReasons().contains("selector class matched"));
+        assertEquals(1, context.candidates().get(0).matchReasons().stream()
+                .filter(reason -> reason.contains("selector class")).count());
+    }
+
+    @Test
+    void shouldPreferTheNearestComponentBoundaryAndPreserveItsOrder() {
+        var applications = mock(FrontendApplicationCatalogService.class);
+        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
+        when(applications.loadCatalog()).thenReturn(frontendCatalog());
+        when(reachability.build(any())).thenReturn(graph(List.of(
+                actionComponent("inner", "inner-action", "inside", 1),
+                actionComponent("outer", "outer-action", "outside", 2)
+        )));
+        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var base = capture("cap_crm_boundary", "div", "Runtime only", null);
+
+        var innerFirst = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+                withFingerprint(base, Map.of(), List.of(), List.of("crm-inner", "crm-outer")));
+        var outerFirst = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION,
+                withFingerprint(base, Map.of(), List.of(), List.of("crm-outer", "crm-inner")));
+
+        assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, innerFirst.status());
+        assertEquals("inner", innerFirst.candidates().get(0).componentId());
+        assertEquals("outer", outerFirst.candidates().get(0).componentId());
+        assertTrue(innerFirst.candidates().get(0).matchReasons().contains(
+                "component boundary matched at distance 1"));
+    }
+
+    @Test
+    void shouldNotUseTheFirstGenericTagWhenNoElementAnchorWasMatched() {
+        var applications = mock(FrontendApplicationCatalogService.class);
+        var reachability = mock(GitLabFrontendScreenReachabilityService.class);
+        when(applications.loadCatalog()).thenReturn(frontendCatalog());
+        when(reachability.build(any())).thenReturn(graph(List.of(genericDivComponent())));
+        var resolver = new UxInspectorTargetResolver(applications, reachability);
+        var selected = withFingerprint(capture("cap_crm_generic", "div", "Runtime only", null),
+                Map.of(), List.of(), List.of("crm-container"));
+
+        var context = resolver.resolve("crm-agent-portal", "main", VIEW_ID, REVISION, selected);
+
+        assertEquals(UxInspectorTargetResolutionStatus.RESOLVED, context.status());
+        assertNotNull(context.sourceBinding());
+        assertEquals("", context.sourceBinding().elementSnippet());
+        assertTrue(context.sourceBinding().elementBindings().isEmpty());
+        assertFalse(context.sourceBinding().sourceReference().contains("#L"));
     }
 
     @Test
@@ -145,5 +218,51 @@ class UxInspectorTargetResolverTest {
 
         assertEquals("UX_INSPECTOR_SOURCE_REVISION_CHANGED", error.code());
         assertTrue(error.getMessage().contains("Reload views"));
+    }
+
+    private GitLabFrontendReachabilityComponent actionComponent(
+            String id,
+            String className,
+            String handler,
+            int order
+    ) {
+        var symbol = "Crm" + id.replaceAll("[^A-Za-z0-9]", "") + "Component";
+        var templatePath = "src/app/contacts/" + id + ".component.html";
+        var sourcePath = "src/app/contacts/" + id + ".component.ts";
+        var template = "<button class=\"" + className + "\" (click)=\"" + handler
+                + "()\">Wykonaj</button>";
+        return new GitLabFrontendReachabilityComponent(id, order, 0, true, "ROUTE_TARGET", symbol,
+                "crm-" + id, sourcePath, templatePath, template, "RESOLVED",
+                List.of(new GitLabTypeScriptTemplateBinding(GitLabTypeScriptTemplateBindingKind.EVENT,
+                        "click", handler + "()", List.of(handler), 1)),
+                List.of(), List.of(), List.of(), List.of(),
+                "export class " + symbol + " { " + handler + "() {} }", 120, 120, false, List.of());
+    }
+
+    private GitLabFrontendReachabilityComponent genericDivComponent() {
+        return new GitLabFrontendReachabilityComponent("container", 1, 0, true, "ROUTE_TARGET",
+                "CrmContainerComponent", "crm-container", "src/app/contacts/container.component.ts",
+                "src/app/contacts/container.component.html",
+                "<div (click)=\"wrongTarget()\">Pierwszy</div>\n<div>Drugi</div>", "RESOLVED",
+                List.of(new GitLabTypeScriptTemplateBinding(GitLabTypeScriptTemplateBindingKind.EVENT,
+                        "click", "wrongTarget()", List.of("wrongTarget"), 1)),
+                List.of(), List.of(), List.of(), List.of(),
+                "export class CrmContainerComponent { wrongTarget() {} }", 120, 120, false, List.of());
+    }
+
+    private UxInspectorCapture withFingerprint(
+            UxInspectorCapture capture,
+            Map<String, String> stableAttributes,
+            List<String> selectorCandidates,
+            List<String> componentBoundaryTags
+    ) {
+        var original = capture.target();
+        var fingerprint = new UxInspectorCapture.DomFingerprint(stableAttributes, selectorCandidates,
+                componentBoundaryTags, original.domFingerprint().labelFor());
+        var target = new UxInspectorCapture.Target(original.tag(), original.role(), original.accessibleName(),
+                original.text(), fingerprint, original.state(), original.bounds());
+        return new UxInspectorCapture(capture.schema(), capture.version(), capture.captureId(), capture.capturedAt(),
+                capture.captureProfile(), capture.page(), target, capture.ancestors(), capture.formSnapshot(),
+                capture.traversal(), capture.signals(), capture.limits(), capture.client());
     }
 }

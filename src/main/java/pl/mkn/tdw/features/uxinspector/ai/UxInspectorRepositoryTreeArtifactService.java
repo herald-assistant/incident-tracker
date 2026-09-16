@@ -25,7 +25,7 @@ public class UxInspectorRepositoryTreeArtifactService {
 
     private final GitLabRepositoryPort repositoryPort;
 
-    public String render(UxInspectorTargetContext context) {
+    public UxInspectorRepositoryTreeArtifact prepare(UxInspectorTargetContext context) {
         if (context == null || context.sourceScope() == null || context.sourceRevision() == null) {
             throw unavailable();
         }
@@ -63,7 +63,10 @@ public class UxInspectorRepositoryTreeArtifactService {
                         .append("] ").append(entry.path());
             }
         }
-        return builder.toString();
+        return new UxInspectorRepositoryTreeArtifact(
+                builder.toString(),
+                entries.stream().filter(entry -> "blob".equals(entry.type())).map(TreeEntry::path).toList()
+        );
     }
 
     private List<TreeEntry> load(String group, String project, String commit) {
