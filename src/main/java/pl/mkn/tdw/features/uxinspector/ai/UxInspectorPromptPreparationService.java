@@ -67,11 +67,12 @@ public class UxInspectorPromptPreparationService {
                 ## Initial component source pack
                 `%s`
                 %s
-                To nieblokujacy pakiet wszystkich komponentow odnalezionych przez statyczny screen reachability graph.
-                Zawiera uporzadkowany manifest, jawne relacje i pelne zweryfikowane pliki TS/HTML, ktore udalo sie
-                odczytac na pinned commit. `UNAVAILABLE`, `NOT_DISCOVERED`, nierozwiazane diagnostics i brak boundary
-                w grafie sa informacja do dalszego researchu, a nie powodem przerwania analizy. Pakiet nie jest dowodem
-                runtime ancestry; overlaye, portale, dynamiczne outlet'y i projekcja tresci moga zmieniac runtime stack.
+                To nieblokujacy indeks wszystkich komponentow odnalezionych przez statyczny screen reachability graph.
+                Pelne zweryfikowane pliki TS/HTML sa dolaczone tylko dla wybranej sciezki target -> komponent widoku;
+                pozostale komponenty sa `INDEX_ONLY` i zachowuja metadane oraz relacje potrzebne do celowanego doczytania.
+                `UNAVAILABLE`, `INDEX_ONLY`, `NOT_DISCOVERED`, nierozwiazane diagnostics i brak boundary w grafie sa
+                informacja do dalszego researchu, a nie powodem przerwania analizy. Pakiet nie jest dowodem runtime
+                ancestry; overlaye, portale, dynamiczne outlet'y i projekcja tresci moga zmieniac runtime stack.
 
                 ## Selected repository tree
                 `%s`
@@ -108,9 +109,12 @@ public class UxInspectorPromptPreparationService {
                 9. Nie opisuj calego widoku i nie rozszerzaj odpowiedzi o obszary niezwiazane z pytaniem.
 
                 ## Research
-                - Zacznij od focused evidence oraz przeczytaj w calosci manifest i dostepne pliki z `%s`.
+                - Zacznij od focused evidence oraz przeczytaj w calosci manifest i dostepne pelne pliki z `%s`.
                   Uzyj `depth`, `breadthFirstOrder`, jawnych edge kinds i runtime component boundaries do ustalenia
                   mozliwego lancucha komponentow, ale nie przedstawiaj statycznej relacji jako pewnego runtime stacku.
+                  Dla `RESOLVED` sekcja `Selected full-source paths` jest najkrotsza deterministyczna sciezka od targetu
+                  do komponentu wybranego widoku. Nie jest to sciezka do bootstrap root calej aplikacji. Relacja
+                  `COMPONENT_REFERENCE` nie dowodzi rodzicielstwa i nie jest uzywana do skrocenia tej sciezki.
                   Dla `AMBIGUOUS` porownaj dolaczone, ograniczone evidence 2-3
                   najlepszych kandydatow wraz z bindingami i nie traktuj pierwszego jako rozstrzygnietego targetu.
                   `uxi_list_target_candidates` oraz `uxi_read_target_slice` wywolaj, gdy potrzebujesz pozostalych
@@ -118,12 +122,15 @@ public class UxInspectorPromptPreparationService {
                 - Dla `RESOLVED` zacznij od deterministycznego `sourceBinding`: owning component,
                   element bindings, referenced symbols i form submit binding. Selector jest tylko sygnalem lokalizacji.
                 - Dla `NOT_FOUND` nie przerywaj analizy. Potraktuj brak dopasowania jako jawna hipoteze/luke,
-                  zacznij od wszystkich komponentow i relacji w component source pack, a nastepnie wykonaj celowane
+                  zacznij od indeksu wszystkich komponentow i relacji w component source pack oraz pelnego zrodla
+                  komponentu widoku, a nastepnie wykonaj celowane
                   wyszukiwanie po sygnalach capture w calym przypietym repozytorium. Nie twierdz, ze znaleziony pozniej
                   komponent jest runtime ownerem bez potwierdzajacego evidence.
                 - `uxi_read_target_slice` przyjmuje tylko `targetRef` z tej sesji.
-                - Nie czytaj ponownie pliku oznaczonego w component source pack jako `AVAILABLE_FULL`. Dla pliku lub
-                  component boundary oznaczonego jako `UNAVAILABLE`, `NOT_DISCOVERED` albo
+                - Nie czytaj ponownie pliku oznaczonego w component source pack jako `AVAILABLE_FULL`. Plik
+                  `INDEX_ONLY` doczytaj neutralnym repository toolem tylko wtedy, gdy komponent lub jego relacja sa
+                  materialne dla pytania. Dla pliku lub component boundary oznaczonego jako `UNAVAILABLE`,
+                  `NOT_DISCOVERED` albo
                   `NOT_FOUND_IN_STATIC_GRAPH` wykonaj celowany research neutralnymi repository tools, jezeli jest
                   materialny dla pytania. Brak ogniwa nazwij w odpowiedzi tylko wtedy, gdy pozostaje istotna luka.
                 - Nie czytaj ponownie kodu, ktory jest juz kompletny w focused slice.

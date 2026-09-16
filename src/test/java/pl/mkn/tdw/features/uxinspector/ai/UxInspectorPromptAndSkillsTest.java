@@ -71,7 +71,7 @@ class UxInspectorPromptAndSkillsTest {
                         componentId: contact-create
                         sourceFile: src/app/contacts/contact-create.component.ts [AVAILABLE_FULL]
                         templateFile: src/app/contacts/contact-create.component.html [AVAILABLE_FULL]
-                        """, 1, 2, 2, 0, java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
+                        """, 1, 1, 0, 2, 2, 0, java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
     }
 
     @Test
@@ -89,7 +89,8 @@ class UxInspectorPromptAndSkillsTest {
                         "pinnedCommit: " + REVISION)
                 .contains("DETERMINISTIC_SOURCE_BINDING", "sourceReference", "Selector jest tylko sygnalem lokalizacji")
                 .contains("tdw.ux-inspector-component-source-pack", "STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY",
-                        "AVAILABLE_FULL", "NOT_FOUND_IN_STATIC_GRAPH", "nie przedstawiaj statycznej relacji")
+                        "AVAILABLE_FULL", "INDEX_ONLY", "NOT_FOUND_IN_STATIC_GRAPH",
+                        "najkrotsza deterministyczna sciezka", "nie przedstawiaj statycznej relacji")
                 .contains("formSnapshot", "zamrozona obserwacja runtime")
                 .contains("README", "AGENTS.md", ".github/copilot-instructions.md", "complete: true")
                 .contains("Search shared CRM guards before concluding.", "crm-architecture",

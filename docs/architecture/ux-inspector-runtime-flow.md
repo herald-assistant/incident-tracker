@@ -152,12 +152,15 @@ Prompt oddziela pytanie operatora, `UNTRUSTED_RUNTIME_OBSERVATION` oraz
 focused source slice, procedure dla pytan precyzyjnych i ogolnych oraz
 kontrakt raportu.
 
-Osobny, nieblokujacy logical artifact zawiera wszystkie komponenty odnalezione
+Osobny, nieblokujacy logical artifact indeksuje wszystkie komponenty odnalezione
 przez screen reachability graph w kolejnosci depth i breadth-first discovery.
 Dla kazdego komponentu przekazuje symbol, selector, status discovery, relacje
-grafu, dependency/child ids oraz pelna tresc kazdego unikalnego pliku TS i
-zewnetrznego HTML, ktory udalo sie zweryfikowac na pinned commit. Inline
-template pozostaje czescia pelnego TS. Brak pliku, nierozwiazany diagnostic
+grafu i dependency/child ids. Pelna tresc unikalnych plikow TS i zewnetrznych
+HTML jest dolaczana tylko dla deterministycznie wybranej sciezki target ->
+komponent widoku: jednej dla `RESOLVED`, unii maksymalnie trzech sciezek dla
+`AMBIGUOUS`, a dla `NOT_FOUND` tylko komponentu widoku. `COMPONENT_REFERENCE`
+nie jest relacja ancestry. Inline template pozostaje czescia pelnego TS. Brak
+pliku lub sciezki, nierozwiazany diagnostic
 albo runtime component boundary bez odpowiednika w grafie jest zapisany w
 artefakcie i nie blokuje preparation. Model czyta pack przed dodatkowymi
 odczytami, nie pobiera ponownie plikow oznaczonych jako kompletne i nie
@@ -243,8 +246,9 @@ Minimalna macierz obejmuje:
 
 - oba profile capture, shape, limity, redakcje, form values i wykluczenia,
 - target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale revision,
-- component source pack: wszystkie komponenty, deterministyczna kolejnosc,
-  deduplikacja pelnych plikow oraz nieblokujace braki,
+- component source pack: indeks wszystkich komponentow, deterministyczny wybor
+  sciezki target -> komponent widoku, deduplikacja pelnych plikow tej sciezki
+  oraz nieblokujace braki,
 - origin/source/nonce/replay/popup failure w Browser Tools i receiverze,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
 - pinned Copilot instructions, trzy standardowe korzenie project skills,

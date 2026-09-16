@@ -110,8 +110,11 @@ Przed wieksza zmiana zacznij od:
   Zapis wybranego zestawu wymaga jednego
   podgladu, jawnej decyzji operatora i warunkowej operacji batch maintenance.
 - UX Inspector initial context zawiera nieblokujacy component source pack:
-  wszystkie komponenty odnalezione przez screen reachability graph, relacje
-  grafu oraz pelne zweryfikowane pliki TS i zewnetrzne HTML. Brak dopasowanego
+  indeks wszystkich komponentow odnalezionych przez screen reachability graph,
+  relacje grafu oraz pelne zweryfikowane pliki TS i zewnetrzne HTML tylko dla
+  wybranej sciezki target -> komponent widoku. Komponenty rownolegle pozostaja
+  `INDEX_ONLY` i sa doczytywane neutralnymi repository tools tylko w razie
+  potrzeby. Brak dopasowanego
   targetu, component boundary albo pojedynczego pliku jest jawna luka dla
   modelu i nie zatrzymuje sesji AI; statyczny graph nie jest dowodem runtime
   ancestry.

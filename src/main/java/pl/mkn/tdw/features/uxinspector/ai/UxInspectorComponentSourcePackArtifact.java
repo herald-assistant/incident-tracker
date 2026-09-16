@@ -5,6 +5,8 @@ import java.util.Set;
 public record UxInspectorComponentSourcePackArtifact(
         String markdown,
         int componentCount,
+        int fullSourceComponentCount,
+        int indexOnlyComponentCount,
         int fileCount,
         int availableFileCount,
         int unavailableFileCount,

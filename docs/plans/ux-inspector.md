@@ -217,7 +217,7 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
   istotnych skilli i sprawdzenia mechanizmow przekrojowych.
 - [x] Dodac nieblokujacy initial component source pack: uporzadkowany manifest
   wszystkich komponentow odnalezionych w screen reachability graph, relacje
-  grafu, pelne zweryfikowane pliki TS/HTML oraz jawne braki plikow, granic
+  grafu, pelne zweryfikowane pliki TS/HTML wybranej sciezki oraz jawne braki plikow, granic
   komponentow i nierozwiazane diagnostics. Brak pojedynczego komponentu albo
   pliku nie zatrzymuje analizy i nie uruchamia alternatywnego flow.
 - [x] Rozszerzyc kanoniczny prompt o zasady wykorzystania component source
@@ -227,6 +227,16 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
 - [x] Pokryc source pack testami kolejnosci, deduplikacji, pelnych plikow,
   nieblokujacych brakow i integracji z promptem, a nastepnie uruchomic pelna
   regresje backendu.
+- [x] Ograniczyc pelne pliki component source packu: dla `RESOLVED` wysylac
+  tylko deterministycznie najlepsza sciezke target -> selected view po
+  `TEMPLATE_CHILD`/`ROUTED_CHILD`, z warunkowym `DYNAMIC_COMPONENT` i bez
+  `COMPONENT_REFERENCE` jako ancestry; pozostale komponenty zachowac w
+  lekkim indeksie grafu.
+- [x] Dla `AMBIGUOUS` wysylac unie najlepszych sciezek maksymalnie trzech
+  kandydatow, a dla `NOT_FOUND` tylko component selected view; brak sciezki
+  oznaczyc jawnie bez blokowania analizy.
+- [x] Zaktualizowac prompt, dokumentacje i testy source packu oraz ponownie
+  uruchomic pelna regresje backendu.
 - [x] Uruchomic pelne testy Angulara, produkcyjny build frontendu oraz
   `mvn -q -Pbackend-dev clean package` i zapisac wynik ponizej.
 
@@ -263,6 +273,16 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
     `UxInspectorImportServiceTest`.
 - Pelna regresja backendu po dodaniu component source packu: `mvn -q test`
   - PASS, 341 raportow test suites bez failures/errors.
+- Testy celowane hybrydowego component source packu, promptu i integracji
+  Copilot/report: `mvn -q
+  "-Dtest=UxInspectorComponentSourcePackArtifactServiceTest,UxInspectorPromptAndSkillsTest,UxInspectorCopilotRunRequestAssemblerTest,UxInspectorCopilotAnalysisProviderTest,UxInspectorReportMapperTest"
+  test`
+  - PASS; pokryto `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND`, brak komponentu widoku,
+    indeks komponentow rownoleglych i odrzucenie `COMPONENT_REFERENCE` jako
+    ancestry.
+- Pelna regresja backendu po ograniczeniu pelnych zrodel do wybranych sciezek:
+  `mvn -q test`
+  - PASS, exit code 0; 341 raportow test suites bez failures/errors.
 
 Pilot jakosciowy z rzeczywistym Copilot/GitLab pozostaje osobnym kryterium
 produktowym. Powinien objac pytania o walidacje, pochodzenie danych,

@@ -56,7 +56,8 @@ report, historie oraz import/export.
   feature flags i konfiguracje; ich braku nie wolno zalozyc po samym focused
   slice.
 - Brak dopasowanego targetu nie blokuje sesji: initial component source pack
-  przekazuje wszystkie komponenty odnalezione w statycznym graphie, a prompt
+  przekazuje indeks wszystkich komponentow odnalezionych w statycznym graphie
+  i pelne pliki tylko dla wybranej sciezki target -> komponent widoku, a prompt
   oznacza brak i wymaga celowanego researchu. Brak poprawnego raportu,
   wymaganych tools, scope'u albo rewizji pozostaje jawnym stanem
   `BLOCKED`/`FAILED`, a nie powodem uruchomienia UI Explorera.
