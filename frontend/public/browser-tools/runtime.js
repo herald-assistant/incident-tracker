@@ -121,7 +121,7 @@
       element(
         'p',
         'tdw-capture-profile__note',
-        'Hasła, tokeny, pola hidden i pliki są zawsze wykluczone.'
+        'Hasła, tokeny i pliki są zawsze wykluczone. Pola hidden są dołączane.'
       )
     );
 

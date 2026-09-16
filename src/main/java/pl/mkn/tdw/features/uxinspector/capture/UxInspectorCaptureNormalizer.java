@@ -28,7 +28,7 @@ public class UxInspectorCaptureNormalizer {
     private static final Pattern JWT = Pattern.compile("^[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}\\.[A-Za-z0-9_-]{16,}$");
     private static final Pattern SELECTOR = Pattern.compile("^(#[A-Za-z][A-Za-z0-9_.:-]*|[a-z][a-z0-9-]{0,39}\\[(data-testid|data-test|data-cy|formcontrolname|name|aria-label)=\"[A-Za-z][A-Za-z0-9_.:-]*\"\\])$");
     private static final Set<String> FORM_SOURCES = Set.of("NEAREST_FORM", "SELECTED_CONTROL_ONLY");
-    private static final Set<String> EXCLUSION_REASONS = Set.of("SENSITIVE_TYPE", "HIDDEN_CONTROL", "FILE_CONTROL",
+    private static final Set<String> EXCLUSION_REASONS = Set.of("SENSITIVE_TYPE", "FILE_CONTROL",
             "SENSITIVE_AUTOCOMPLETE", "SENSITIVE_NAME", "SENSITIVE_VALUE");
     private static final Pattern EMAIL = Pattern.compile("\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern UUID = Pattern.compile("\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b", Pattern.CASE_INSENSITIVE);
@@ -244,7 +244,7 @@ public class UxInspectorCaptureNormalizer {
     }
 
     private boolean isSensitiveControl(String type, String name, String formControlName) {
-        return Set.of("password", "hidden", "file").contains(type != null ? type.toLowerCase(Locale.ROOT) : "")
+        return Set.of("password", "file").contains(type != null ? type.toLowerCase(Locale.ROOT) : "")
                 || SENSITIVE.matcher(String.join(" ", nullToEmpty(name), nullToEmpty(formControlName))).find();
     }
 

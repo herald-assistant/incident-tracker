@@ -65,7 +65,11 @@
                   <dl>
                     @for (control of form.controls; track $index) {
                       <div>
-                        <dt>{{ formControlLabel(control) }} @if (control.selectedTarget) { <span>· wskazane</span> }</dt>
+                        <dt>
+                          {{ formControlLabel(control) }}
+                          @if (control.type === 'hidden') { <span>· hidden</span> }
+                          @if (control.selectedTarget) { <span>· wskazane</span> }
+                        </dt>
                         <dd><code>{{ formControlValue(control) }}</code>@if (control.valueTruncated) { <span> · obcięto</span> }</dd>
                       </div>
                     }

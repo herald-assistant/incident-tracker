@@ -69,8 +69,9 @@ narzedzia, ale pierwsza akcja to UX Inspector.
 Runtime tworzy jeden capture v1 w profilu `ELEMENT_CONTEXT` albo
 `FORM_DIAGNOSTICS`. Capture zawiera ograniczony fingerprint targetu, stany,
 przodkow i metadata strony. Diagnostyka formularza zamraza dozwolone wartosci
-najblizszego formularza oraz `ValidityState`, ale bez hasel, tokenow, hidden
-controls, plikow, cookies, storage i ruchu sieciowego.
+najblizszego formularza, wlacznie z kontrolkami `type=hidden`, oraz
+`ValidityState`, ale bez hasel, tokenow, plikow, cookies, storage i ruchu
+sieciowego.
 
 Transfer uzywa exact `origin`, exact `source`, nonce i protocol v1. Klik nie
 wykonuje akcji badanej strony. Popup failure, timeout, COOP/CSP albo zly
@@ -193,6 +194,8 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
   uruchomienia Browser Tools.
 - [x] Dodac testy Browser Tools, bookmarkleta, formularza, cache, strict v1,
   wyniku i statycznego routingu.
+- [x] Wlaczyc do diagnostyki formularza kontrolki `type=hidden` i zachowac dla
+  nich te same reguly redakcji wartosci wrazliwych co dla pozostalych pol.
 - [x] Uruchomic pelne testy Angulara, produkcyjny build frontendu oraz
   `mvn -q -Pbackend-dev clean package` i zapisac wynik ponizej.
 

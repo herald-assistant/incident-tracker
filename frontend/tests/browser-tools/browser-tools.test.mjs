@@ -192,7 +192,7 @@ test('element context capture redacts identifiers and never reads form values or
   dom.window.close();
 });
 
-test('form diagnostics freezes allowed nearest-form values and excludes sensitive controls', () => {
+test('form diagnostics freezes allowed nearest-form values, including hidden controls, and excludes sensitive controls', () => {
   const dom = createDom(
     `<!doctype html><html><body>
       <crm-login>
@@ -203,7 +203,7 @@ test('form diagnostics freezes allowed nearest-form values and excludes sensitiv
           <input id="reference" name="reference" value="" required>
           <input name="password" type="password" value="DO_NOT_CAPTURE_PASSWORD">
           <input name="csrfToken" type="text" value="DO_NOT_CAPTURE_TOKEN">
-          <input name="internal" type="hidden" value="DO_NOT_CAPTURE_HIDDEN">
+          <input name="internalReference" type="hidden" value="crm-contact-42">
           <input name="attachment" type="file">
           <button type="submit" disabled>Sign in</button>
         </form>
@@ -229,20 +229,24 @@ test('form diagnostics freezes allowed nearest-form values and excludes sensitiv
   assert.equal(capture.captureProfile, 'FORM_DIAGNOSTICS');
   assert.equal(capture.formSnapshot.source, 'NEAREST_FORM');
   assert.equal(capture.formSnapshot.valid, false);
-  assert.equal(capture.formSnapshot.controls.length, 2);
+  assert.equal(capture.formSnapshot.controls.length, 3);
   assert.equal(capture.formSnapshot.controls[0].selectedTarget, true);
   assert.equal(capture.formSnapshot.controls[0].value, 'customer@example.test');
   assert.equal(capture.formSnapshot.controls[1].validity.valueMissing, true);
+  assert.equal(capture.formSnapshot.controls[2].type, 'hidden');
+  assert.equal(capture.formSnapshot.controls[2].name, 'internalReference');
+  assert.equal(capture.formSnapshot.controls[2].value, 'crm-contact-42');
   assert.equal(capture.formSnapshot.submitters[0].disabled, true);
   assert.deepEqual(
     Array.from(capture.formSnapshot.excludedControls, (control) => control.reason).sort(),
-    ['FILE_CONTROL', 'HIDDEN_CONTROL', 'SENSITIVE_NAME', 'SENSITIVE_TYPE']
+    ['FILE_CONTROL', 'SENSITIVE_NAME', 'SENSITIVE_TYPE']
   );
   assert.deepEqual(
     Array.from(capture.target.domFingerprint.componentBoundaryTags),
     ['crm-login']
   );
   assert.match(capture.target.domFingerprint.selectorCandidates[0], /#email|input\[formcontrolname/);
+  assert.match(serialized, /crm-contact-42/);
   assert.doesNotMatch(serialized, /DO_NOT_CAPTURE_/);
   assert.ok(protocol.serializedSize(capture) <= protocol.MAX_CAPTURE_BYTES);
   dom.window.close();

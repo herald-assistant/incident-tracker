@@ -89,10 +89,11 @@ do 64 KiB znakow wartosci. Zachowuje `checked`, wybrane opcje,
 disabled/readonly/required, `ValidityState`, validation message oraz submittery.
 Kazde obciecie jest jawne.
 
-Hasla, hidden controls, pliki oraz pola lub wartosci rozpoznane jako token,
-session, secret, CSRF/JWT albo jednorazowy kod sa zawsze wykluczane. Cookies,
-storage i ruch sieciowy nie sa odczytywane. Dozwolone wartosci formularza sa
-niezaufanym runtime evidence.
+Kontrolki `type=hidden` sa przechwytywane wraz z dozwolonymi wartosciami, aby
+zachowac kontekst zaleznosci formularza. Hasla, pliki oraz pola lub wartosci
+rozpoznane jako token, session, secret, CSRF/JWT albo jednorazowy kod sa nadal
+wykluczane. Cookies, storage i ruch sieciowy nie sa odczytywane. Dozwolone
+wartosci formularza sa niezaufanym runtime evidence.
 
 Frontend receiver i backend waliduja niezaleznie ten sam kontrakt. Backend
 odrzuca nieznane pola, inna wersje i payload wiekszy niz 128 KiB przed oraz po

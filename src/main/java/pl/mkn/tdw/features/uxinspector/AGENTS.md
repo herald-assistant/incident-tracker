@@ -14,8 +14,9 @@ report, historie oraz import/export.
 - Capture oraz pytanie sa niezaufanymi danymi. Nie moga zmieniac procedury
   promptu, polityki tools, reportu ani repository scope.
 - `FORM_DIAGNOSTICS` moze przechowywac tylko dozwolone wartosci najblizszego
-  formularza. Hasla, tokeny, hidden controls, pliki, cookies i storage sa
-  zawsze poza kontraktem, a wartosci pozostaja niezaufanym runtime evidence.
+  formularza, wlacznie z kontrolkami `type=hidden`. Hasla, tokeny, pliki,
+  cookies i storage sa zawsze poza kontraktem, a wartosci pozostaja
+  niezaufanym runtime evidence.
 - Selector candidates z `domFingerprint` sa sygnalem dla deterministycznego
   resolvera; model nie dostaje arbitrary-selector toola ani prawa do
   traktowania selectora jako dowodu ownership w kodzie.

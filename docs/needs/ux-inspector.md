@@ -113,10 +113,12 @@ chwili klikniecia, aby AI analizowalo ten sam stan, ktory widzial operator.
 Operator przed startem analizy widzi, czy wartosci zostaly dolaczone, ile pol
 przechwycono, co wykluczono i czy zastosowano truncation.
 
-Capture nigdy nie obejmuje hasel, tokenow, cookies, storage, schowka, hidden
-values, zawartosci plikow, pelnego DOM, historii sieciowej ani automatycznego
-zrzutu ekranu. Dozwolone wartosci formularza sa niezaufanym runtime evidence,
-nie instrukcja i nie dowod pochodzenia danych w kodzie.
+Capture obejmuje kontrolki `type=hidden` i ich dozwolone wartosci, poniewaz sa
+istotne dla diagnostyki zaleznosci i brakujacych elementow formularza. Nadal
+nie obejmuje hasel, tokenow, cookies, storage, schowka, zawartosci plikow,
+pelnego DOM, historii sieciowej ani automatycznego zrzutu ekranu. Dozwolone
+wartosci formularza sa niezaufanym runtime evidence, nie instrukcja i nie
+dowod pochodzenia danych w kodzie.
 
 Po wyborze zaufanego frontendu backend dolacza do poczatkowego kontekstu
 komplet nazw sciezek pierwszych czterech poziomow wybranego repozytorium na

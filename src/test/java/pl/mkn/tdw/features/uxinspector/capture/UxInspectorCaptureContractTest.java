@@ -80,18 +80,21 @@ class UxInspectorCaptureContractTest {
     }
 
     @Test
-    void shouldKeepAllowedFormValuesAndRejectSensitiveControlsFromTheValuesPayload() {
+    void shouldKeepAllowedFormValuesIncludingHiddenControlsAndRejectSensitiveControlsFromTheValuesPayload() {
         var valid = capture();
         var validity = new UxInspectorCapture.Validity(false, true, false, false, false, false,
                 false, false, false, false, false, "Uzupełnij adres e-mail");
         var email = new UxInspectorCapture.FormControl(true, "input", "email", "email", "email",
                 "E-mail", Map.of("name", "email", "formcontrolname", "email"),
                 "customer@example.test", false, null, List.of(), List.of(), false, false, true, validity);
+        var hiddenReference = new UxInspectorCapture.FormControl(false, "input", "hidden", "internalReference", null,
+                null, Map.of("name", "internalReference", "type", "hidden"),
+                "crm-contact-42", false, null, List.of(), List.of(), false, false, false, null);
         var excluded = new UxInspectorCapture.ExcludedFormControl("input", "password", null, null,
                 "SENSITIVE_TYPE");
         var form = new UxInspectorCapture.FormSnapshot("NEAREST_FORM", Map.of("id", "login-form"),
-                List.of("#login-form"), false, 2, 1, 0, List.of(email), List.of(), List.of(excluded),
-                "customer@example.test".length(), false);
+                List.of("#login-form"), false, 3, 2, 0, List.of(email, hiddenReference), List.of(), List.of(excluded),
+                "customer@example.test".length() + "crm-contact-42".length(), false);
         var raw = new UxInspectorCapture(valid.schema(), valid.version(), valid.captureId(), valid.capturedAt(),
                 UxInspectorCapture.CaptureProfile.FORM_DIAGNOSTICS, valid.page(), valid.target(), valid.ancestors(),
                 form, valid.traversal(), valid.signals(), valid.limits(), valid.client());
@@ -99,6 +102,8 @@ class UxInspectorCaptureContractTest {
         var normalized = normalizer.normalize(raw);
 
         assertEquals("customer@example.test", normalized.formSnapshot().controls().get(0).value());
+        assertEquals("hidden", normalized.formSnapshot().controls().get(1).type());
+        assertEquals("crm-contact-42", normalized.formSnapshot().controls().get(1).value());
         assertFalse(normalized.formSnapshot().valid());
         assertEquals("SENSITIVE_TYPE", normalized.formSnapshot().excludedControls().get(0).reason());
         assertTrue(normalized.signals().redactions().contains("BACKEND_SENSITIVE_FORM_CONTROLS_EXCLUDED"));

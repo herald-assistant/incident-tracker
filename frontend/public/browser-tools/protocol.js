@@ -461,7 +461,6 @@
     const tag = control.tagName.toLowerCase();
     const type = (control.getAttribute('type') || tag).toLowerCase();
     if (type === 'password') return 'SENSITIVE_TYPE';
-    if (type === 'hidden') return 'HIDDEN_CONTROL';
     if (type === 'file') return 'FILE_CONTROL';
     if (SENSITIVE_AUTOCOMPLETE_PATTERN.test(control.getAttribute('autocomplete') || '')) {
       return 'SENSITIVE_AUTOCOMPLETE';
@@ -1028,7 +1027,7 @@
     const validity = normalizeValidity(value.validity);
     if (!tag || !/^[a-z][a-z0-9-]*$/.test(tag) || name === undefined ||
         formControlName === undefined || validity === undefined) return null;
-    if (['password', 'hidden', 'file'].includes(String(type || '').toLowerCase()) ||
+    if (['password', 'file'].includes(String(type || '').toLowerCase()) ||
         SENSITIVE_PATTERN.test([type, name, formControlName].filter(Boolean).join(' '))) return null;
     const selectedValues = normalizeStringValues(value.selectedValues, remainingCharacters);
     if (!selectedValues) return null;
@@ -1072,7 +1071,7 @@
     const type = value.type === null ? null : normalizeText(value.type, 40);
     const name = normalizeNullableIdentifier(value.name);
     const formControlName = normalizeNullableIdentifier(value.formControlName);
-    const reasons = new Set(['SENSITIVE_TYPE', 'HIDDEN_CONTROL', 'FILE_CONTROL', 'SENSITIVE_AUTOCOMPLETE', 'SENSITIVE_NAME', 'SENSITIVE_VALUE']);
+    const reasons = new Set(['SENSITIVE_TYPE', 'FILE_CONTROL', 'SENSITIVE_AUTOCOMPLETE', 'SENSITIVE_NAME', 'SENSITIVE_VALUE']);
     if (!tag || name === undefined || formControlName === undefined || !reasons.has(value.reason)) return null;
     return { tag, type, name, formControlName, reason: value.reason };
   }

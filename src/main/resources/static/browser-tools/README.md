@@ -30,8 +30,9 @@ badanej strony.
 - Badana strona nie otrzymuje cookies, tokenow, katalogu modeli ani klienta
   REST.
 - Profil `Element` nie czyta wartosci formularza. Profil `Formularz` zamraza
-  dozwolone wartosci najblizszego formularza i jego `ValidityState`, ale zawsze
-  wyklucza hasla, tokeny, hidden controls, pliki, cookies i storage.
+  dozwolone wartosci najblizszego formularza i jego `ValidityState`, wlacznie
+  z kontrolkami `type=hidden`. Nadal wyklucza hasla, tokeny, pliki, cookies i
+  storage.
 - Runtime nie czyta requestow ani screenshotow.
 - Transfer wymaga zgodnosci `event.origin`, `event.source`, nonce, protokolu v1
   oraz limitu 128 KiB.
