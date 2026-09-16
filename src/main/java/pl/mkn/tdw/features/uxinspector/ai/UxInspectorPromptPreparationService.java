@@ -15,18 +15,22 @@ import java.util.LinkedHashMap;
 public class UxInspectorPromptPreparationService {
     public static final String CAPTURE_ARTIFACT = "ux-inspector/runtime-observation.json";
     public static final String TARGET_ARTIFACT = "ux-inspector/target-context.md";
+    public static final String COMPONENT_SOURCE_PACK_ARTIFACT = "ux-inspector/component-source-pack.md";
     public static final String REPOSITORY_TREE_ARTIFACT = "ux-inspector/repository-tree.md";
     public static final String REPOSITORY_GUIDANCE_ARTIFACT = "ux-inspector/repository-guidance.json";
     public static final String REPORT_ARTIFACT = "ux-inspector/report-contract.md";
     private final ObjectMapper objectMapper;
     private final UxInspectorRepositoryTreeArtifactService repositoryTreeArtifactService;
     private final UxInspectorRepositoryGuidanceArtifactService repositoryGuidanceArtifactService;
+    private final UxInspectorComponentSourcePackArtifactService componentSourcePackArtifactService;
 
     public UxInspectorPromptPreparation prepare(UxInspectorJobStartRequest request, UxInspectorTargetContext context) {
         var repositoryTree = repositoryTreeArtifactService.prepare(context);
         var artifacts = new LinkedHashMap<String, String>();
         artifacts.put(CAPTURE_ARTIFACT, json(request.capture()));
         artifacts.put(TARGET_ARTIFACT, targetContext(context));
+        var componentSourcePack = componentSourcePackArtifactService.prepare(context, request.capture());
+        artifacts.put(COMPONENT_SOURCE_PACK_ARTIFACT, componentSourcePack.markdown());
         artifacts.put(REPOSITORY_TREE_ARTIFACT, repositoryTree.markdown());
         artifacts.put(REPOSITORY_GUIDANCE_ARTIFACT,
                 repositoryGuidanceArtifactService.render(context, repositoryTree.filePaths()));
@@ -59,6 +63,15 @@ public class UxInspectorPromptPreparationService {
                 ## Deterministic target context
                 `%s`
                 %s
+
+                ## Initial component source pack
+                `%s`
+                %s
+                To nieblokujacy pakiet wszystkich komponentow odnalezionych przez statyczny screen reachability graph.
+                Zawiera uporzadkowany manifest, jawne relacje i pelne zweryfikowane pliki TS/HTML, ktore udalo sie
+                odczytac na pinned commit. `UNAVAILABLE`, `NOT_DISCOVERED`, nierozwiazane diagnostics i brak boundary
+                w grafie sa informacja do dalszego researchu, a nie powodem przerwania analizy. Pakiet nie jest dowodem
+                runtime ancestry; overlaye, portale, dynamiczne outlet'y i projekcja tresci moga zmieniac runtime stack.
 
                 ## Selected repository tree
                 `%s`
@@ -95,13 +108,24 @@ public class UxInspectorPromptPreparationService {
                 9. Nie opisuj calego widoku i nie rozszerzaj odpowiedzi o obszary niezwiazane z pytaniem.
 
                 ## Research
-                - Zacznij od focused evidence. Dla `AMBIGUOUS` porownaj dolaczone, ograniczone evidence 2-3
+                - Zacznij od focused evidence oraz przeczytaj w calosci manifest i dostepne pliki z `%s`.
+                  Uzyj `depth`, `breadthFirstOrder`, jawnych edge kinds i runtime component boundaries do ustalenia
+                  mozliwego lancucha komponentow, ale nie przedstawiaj statycznej relacji jako pewnego runtime stacku.
+                  Dla `AMBIGUOUS` porownaj dolaczone, ograniczone evidence 2-3
                   najlepszych kandydatow wraz z bindingami i nie traktuj pierwszego jako rozstrzygnietego targetu.
                   `uxi_list_target_candidates` oraz `uxi_read_target_slice` wywolaj, gdy potrzebujesz pozostalych
                   kandydatow albo pelniejszego slice do rozstrzygniecia pytania.
                 - Dla `RESOLVED` zacznij od deterministycznego `sourceBinding`: owning component,
                   element bindings, referenced symbols i form submit binding. Selector jest tylko sygnalem lokalizacji.
+                - Dla `NOT_FOUND` nie przerywaj analizy. Potraktuj brak dopasowania jako jawna hipoteze/luke,
+                  zacznij od wszystkich komponentow i relacji w component source pack, a nastepnie wykonaj celowane
+                  wyszukiwanie po sygnalach capture w calym przypietym repozytorium. Nie twierdz, ze znaleziony pozniej
+                  komponent jest runtime ownerem bez potwierdzajacego evidence.
                 - `uxi_read_target_slice` przyjmuje tylko `targetRef` z tej sesji.
+                - Nie czytaj ponownie pliku oznaczonego w component source pack jako `AVAILABLE_FULL`. Dla pliku lub
+                  component boundary oznaczonego jako `UNAVAILABLE`, `NOT_DISCOVERED` albo
+                  `NOT_FOUND_IN_STATIC_GRAPH` wykonaj celowany research neutralnymi repository tools, jezeli jest
+                  materialny dla pytania. Brak ogniwa nazwij w odpowiedzi tylko wtedy, gdy pozostaje istotna luka.
                 - Nie czytaj ponownie kodu, ktory jest juz kompletny w focused slice.
                 - Dalsze frontend slice tools stosuj tylko dla konkretnej luki wymaganej przez pytanie.
                 - Masz read-only dostep do calego repozytorium z `sourceToolScope`, zawsze na ukrytym pinned commit.
@@ -131,12 +155,13 @@ public class UxInspectorPromptPreparationService {
                 Finalna wiadomosc tekstowa ma byc tylko krotkim potwierdzeniem. Nie jest wynikiem i nie zwracaj w niej JSON.
                 """.formatted(CAPTURE_ARTIFACT, REPOSITORY_GUIDANCE_ARTIFACT,
                 escapeQuestion(request.question()), CAPTURE_ARTIFACT, artifacts.get(CAPTURE_ARTIFACT),
-                TARGET_ARTIFACT, artifacts.get(TARGET_ARTIFACT), REPOSITORY_TREE_ARTIFACT,
+                TARGET_ARTIFACT, artifacts.get(TARGET_ARTIFACT), COMPONENT_SOURCE_PACK_ARTIFACT,
+                artifacts.get(COMPONENT_SOURCE_PACK_ARTIFACT), REPOSITORY_TREE_ARTIFACT,
                 artifacts.get(REPOSITORY_TREE_ARTIFACT), REPOSITORY_GUIDANCE_ARTIFACT,
                 artifacts.get(REPOSITORY_GUIDANCE_ARTIFACT), REPOSITORY_GUIDANCE_ARTIFACT,
-                REPOSITORY_GUIDANCE_ARTIFACT, REPOSITORY_TREE_ARTIFACT,
+                REPOSITORY_GUIDANCE_ARTIFACT, COMPONENT_SOURCE_PACK_ARTIFACT, REPOSITORY_TREE_ARTIFACT,
                 REPORT_ARTIFACT, artifacts.get(REPORT_ARTIFACT)).trim();
-        return new UxInspectorPromptPreparation(prompt, artifacts);
+        return new UxInspectorPromptPreparation(prompt, artifacts, componentSourcePack.availableSourcePaths());
     }
 
     private String targetContext(UxInspectorTargetContext context) {

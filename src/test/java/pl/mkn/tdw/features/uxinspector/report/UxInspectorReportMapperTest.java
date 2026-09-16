@@ -23,7 +23,7 @@ class UxInspectorReportMapperTest {
         var report = report("Walidacja formularza blokuje zapis.",
                 "Przycisk jest zablokowany, dopoki formularz nie jest poprawny.", sectionMeta, AnalysisReportMeta.empty());
 
-        var mapping = mapper.map(report, capture(), targetContext(), Set.of(), null);
+        var mapping = mapper.map(report, capture(), targetContext(), initialPaths(), Set.of(), null);
 
         assertThat(mapping.complete()).isTrue();
         assertThat(mapping.limitations()).isEmpty();
@@ -46,9 +46,9 @@ class UxInspectorReportMapperTest {
         var missingHeader = new AnalysisReport("report-crm", "", "CRM", "",
                 List.of(new AnalysisReportSection("answer", "Odpowiedz", 1, "Odpowiedz", meta)), meta);
 
-        assertThat(mapper.map(extra, capture(), targetContext(), Set.of(), null).result()).isNull();
-        assertThat(mapper.map(json, capture(), targetContext(), Set.of(), null).result()).isNull();
-        assertThat(mapper.map(missingHeader, capture(), targetContext(), Set.of(), null).result()).isNull();
+        assertThat(mapper.map(extra, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
+        assertThat(mapper.map(json, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
+        assertThat(mapper.map(missingHeader, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
     }
 
     @Test
@@ -57,15 +57,17 @@ class UxInspectorReportMapperTest {
                 "src/app/admin/secrets.ts#L1", "Niezweryfikowany plik")), List.of(), List.of(), List.of(), "high", List.of());
         var empty = AnalysisReportMeta.empty();
 
-        assertThat(mapper.map(report("Teza", "Odpowiedz", outside, empty), capture(), targetContext(), Set.of(), null).result())
+        assertThat(mapper.map(report("Teza", "Odpowiedz", outside, empty), capture(), targetContext(),
+                initialPaths(), Set.of(), null).result())
                 .isNull();
-        assertThat(mapper.map(report("Teza", "Odpowiedz", empty, empty), capture(), targetContext(), Set.of(), null).result())
+        assertThat(mapper.map(report("Teza", "Odpowiedz", empty, empty), capture(), targetContext(),
+                initialPaths(), Set.of(), null).result())
                 .isNull();
 
         var gap = new AnalysisReportMeta(List.of(), List.of(), List.of(),
                 List.of("Brak implementacji API w zakresie przypietego frontendu."), "low", List.of());
         var partial = mapper.map(report("Teza", "Nie mozna tego potwierdzic w dostepnym kodzie.", gap, gap),
-                capture(), targetContext(), Set.of(), null);
+                capture(), targetContext(), initialPaths(), Set.of(), null);
         assertThat(partial.result()).isNotNull();
         assertThat(partial.complete()).isFalse();
         assertThat(partial.result().visibilityLimits()).contains("Brak implementacji API w zakresie przypietego frontendu.");
@@ -81,12 +83,25 @@ class UxInspectorReportMapperTest {
         var sourceReport = report("Regula wymaga aktywnego klienta.", "Kontakt mozna zapisac dla aktywnego klienta.",
                 meta, AnalysisReportMeta.empty());
 
-        assertThat(mapper.map(sourceReport, capture(), targetContext(), Set.of(), null).result()).isNull();
-        assertThat(mapper.map(sourceReport, capture(), targetContext(), Set.of(sourceRef), null).result())
+        assertThat(mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
+        assertThat(mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(sourceRef), null).result())
                 .isNotNull();
         assertThat(mapper.map(sourceReport, capture(), targetContext(),
-                Set.of("gitlab:CRM/crm-ui@0000000000000000000000000000000000000000:" + path), null).result())
+                initialPaths(), Set.of("gitlab:CRM/crm-ui@0000000000000000000000000000000000000000:" + path),
+                null).result())
                 .isNull();
+    }
+
+    @Test
+    void shouldNotAllowAComponentFileThatTheInitialPackCouldNotVerify() {
+        var meta = groundedMeta();
+        var sourceReport = report("Teza", "Odpowiedz oparta na template.", meta, AnalysisReportMeta.empty());
+        var verifiedByTool = "gitlab:CRM/crm-ui@" + REVISION + ":" + TEMPLATE_PATH;
+
+        assertThat(mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH), Set.of(), null).result())
+                .isNull();
+        assertThat(mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH),
+                Set.of(verifiedByTool), null).result()).isNotNull();
     }
 
     private AnalysisReport report(String thesis, String answer, AnalysisReportMeta sectionMeta, AnalysisReportMeta reportMeta) {
@@ -97,5 +112,9 @@ class UxInspectorReportMapperTest {
     private AnalysisReportMeta groundedMeta() {
         return new AnalysisReportMeta(List.of(new AnalysisReportReference("source", "Target", TEMPLATE_PATH + "#L1",
                 "Zweryfikowany template")), List.of(), List.of(), List.of(), "high", List.of());
+    }
+
+    private Set<String> initialPaths() {
+        return Set.of(SOURCE_PATH, TEMPLATE_PATH);
     }
 }

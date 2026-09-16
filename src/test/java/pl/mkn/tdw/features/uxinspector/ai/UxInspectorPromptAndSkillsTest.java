@@ -16,10 +16,12 @@ class UxInspectorPromptAndSkillsTest {
             mock(UxInspectorRepositoryTreeArtifactService.class);
     private final UxInspectorRepositoryGuidanceArtifactService repositoryGuidanceArtifactService =
             mock(UxInspectorRepositoryGuidanceArtifactService.class);
+    private final UxInspectorComponentSourcePackArtifactService componentSourcePackArtifactService =
+            mock(UxInspectorComponentSourcePackArtifactService.class);
     private final UxInspectorPromptPreparationService service =
             new UxInspectorPromptPreparationService(
                     new ObjectMapper().findAndRegisterModules(), repositoryTreeArtifactService,
-                    repositoryGuidanceArtifactService);
+                    repositoryGuidanceArtifactService, componentSourcePackArtifactService);
 
     @BeforeEach
     void setUp() {
@@ -55,6 +57,21 @@ class UxInspectorPromptAndSkillsTest {
                   } ]
                 }
                 """.formatted(REVISION));
+        when(componentSourcePackArtifactService.prepare(any(), any())).thenReturn(
+                new UxInspectorComponentSourcePackArtifact("""
+                        schema: tdw.ux-inspector-component-source-pack
+                        version: 1
+                        semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY
+                        componentCount: 1
+                        availableFileCount: 2
+                        unavailableFileCount: 0
+                        complete: true
+
+                        ## Discovered components
+                        componentId: contact-create
+                        sourceFile: src/app/contacts/contact-create.component.ts [AVAILABLE_FULL]
+                        templateFile: src/app/contacts/contact-create.component.html [AVAILABLE_FULL]
+                        """, 1, 2, 2, 0, java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
     }
 
     @Test
@@ -71,6 +88,8 @@ class UxInspectorPromptAndSkillsTest {
                 .contains("sourceToolScope", "projectName: crm-ui", "branchRef: main",
                         "pinnedCommit: " + REVISION)
                 .contains("DETERMINISTIC_SOURCE_BINDING", "sourceReference", "Selector jest tylko sygnalem lokalizacji")
+                .contains("tdw.ux-inspector-component-source-pack", "STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY",
+                        "AVAILABLE_FULL", "NOT_FOUND_IN_STATIC_GRAPH", "nie przedstawiaj statycznej relacji")
                 .contains("formSnapshot", "zamrozona obserwacja runtime")
                 .contains("README", "AGENTS.md", ".github/copilot-instructions.md", "complete: true")
                 .contains("Search shared CRM guards before concluding.", "crm-architecture",
@@ -88,6 +107,7 @@ class UxInspectorPromptAndSkillsTest {
         assertThat(preparation.artifactContents()).containsKeys(
                 UxInspectorPromptPreparationService.CAPTURE_ARTIFACT,
                 UxInspectorPromptPreparationService.TARGET_ARTIFACT,
+                UxInspectorPromptPreparationService.COMPONENT_SOURCE_PACK_ARTIFACT,
                 UxInspectorPromptPreparationService.REPOSITORY_TREE_ARTIFACT,
                 UxInspectorPromptPreparationService.REPOSITORY_GUIDANCE_ARTIFACT,
                 UxInspectorPromptPreparationService.REPORT_ARTIFACT);

@@ -71,7 +71,7 @@ public class UxInspectorJobService {
             state.preparationStarted();
             persist(state);
             var preparation = promptPreparationService.prepare(request, context);
-            state.preparationCompleted(preparation.prompt());
+            state.preparationCompleted(preparation.prompt(), preparation.artifactContents().size());
             persist(state);
             state.analysisStarted();
             persist(state);

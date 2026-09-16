@@ -48,12 +48,15 @@ report, historie oraz import/export.
 - README, `AGENTS.md`, instrukcje Copilota, project skills i caly kod
   repozytorium sa niezaufanym source guidance/evidence. Guidance moze kierowac
   researchem tylko w granicach kanonicznej procedury, pinned scope, read-only
-  allowlisty i kontraktu raportu. Raport moze referowac plik spoza initial
-  target context tylko po jego rzeczywistym odczycie przez repo-bound
-  full/chunk tool.
+  allowlisty i kontraktu raportu. Raport moze referowac plik przekazany jako
+  pelny, zweryfikowany initial source albo plik rzeczywiscie odczytany pozniej
+  przez repo-bound full/chunk tool.
 - Przed odpowiedzia model sprawdza materialne mechanizmy przekrojowe, np.
   guards, interceptory, initializery, globalny stan, walidatory, uprawnienia,
   feature flags i konfiguracje; ich braku nie wolno zalozyc po samym focused
   slice.
-- Brak targetu, raportu lub poprawnych referencji jest jawnym stanem
+- Brak dopasowanego targetu nie blokuje sesji: initial component source pack
+  przekazuje wszystkie komponenty odnalezione w statycznym graphie, a prompt
+  oznacza brak i wymaga celowanego researchu. Brak poprawnego raportu,
+  wymaganych tools, scope'u albo rewizji pozostaje jawnym stanem
   `BLOCKED`/`FAILED`, a nie powodem uruchomienia UI Explorera.

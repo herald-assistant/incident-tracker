@@ -77,10 +77,12 @@ public final class UxInspectorJobState {
         updatedAt = Instant.now();
     }
 
-    public synchronized void preparationStarted() { start(PREPARATION_STEP, "Focused artifacts and report contract are being prepared."); }
-    public synchronized void preparationCompleted(String prompt) {
+    public synchronized void preparationStarted() { start(PREPARATION_STEP, "Focused context, component source pack and report contract are being prepared."); }
+    public synchronized void preparationCompleted(String prompt, int artifactCount) {
         preparedPrompt = prompt;
-        complete(PREPARATION_STEP, "COMPLETED", "Focused runtime observation and pinned source context prepared.", 3, null);
+        complete(PREPARATION_STEP, "COMPLETED",
+                "Pinned runtime, repository guidance and component source pack prepared.",
+                artifactCount, null);
         currentStepCode = ANALYSIS_STEP;
         currentStepLabel = steps.get(ANALYSIS_STEP).label;
         updatedAt = Instant.now();

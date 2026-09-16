@@ -138,7 +138,9 @@ Rezultat ma jeden ze stanow:
 - `AMBIGUOUS` - kilku kandydatow jest porownywalnych; initial context zawiera
   ograniczone evidence maksymalnie trzech najlepszych kandydatow wraz z ich
   bindingami, odpowiedz zachowuje niejednoznacznosc i moze uzyc target tools,
-- `NOT_FOUND` - brak zweryfikowanego celu blokuje sesje.
+- `NOT_FOUND` - brak zweryfikowanego celu pozostaje jawna luka; sesja dostaje
+  wszystkie komponenty odnalezione dla widoku oraz repository tools i
+  kontynuuje celowany research.
 
 Zmiana source revision, brak refa albo nieaktualny View sa jawnym bledem.
 Feature nie przelacza sie na inny branch i nie zgaduje targetu.
@@ -149,6 +151,17 @@ Prompt oddziela pytanie operatora, `UNTRUSTED_RUNTIME_OBSERVATION` oraz
 `UNTRUSTED_SOURCE_EVIDENCE`. Zawiera capture, `sourceBinding`, target context,
 focused source slice, procedure dla pytan precyzyjnych i ogolnych oraz
 kontrakt raportu.
+
+Osobny, nieblokujacy logical artifact zawiera wszystkie komponenty odnalezione
+przez screen reachability graph w kolejnosci depth i breadth-first discovery.
+Dla kazdego komponentu przekazuje symbol, selector, status discovery, relacje
+grafu, dependency/child ids oraz pelna tresc kazdego unikalnego pliku TS i
+zewnetrznego HTML, ktory udalo sie zweryfikowac na pinned commit. Inline
+template pozostaje czescia pelnego TS. Brak pliku, nierozwiazany diagnostic
+albo runtime component boundary bez odpowiednika w grafie jest zapisany w
+artefakcie i nie blokuje preparation. Model czyta pack przed dodatkowymi
+odczytami, nie pobiera ponownie plikow oznaczonych jako kompletne i nie
+traktuje statycznych relacji jako pewnego runtime stacku.
 
 Osobny logical artifact zawiera kompletny, posortowany spis nazw sciezek z
 pierwszych czterech poziomow wybranego repozytorium na pinned commit. Drzewo
@@ -230,6 +243,8 @@ Minimalna macierz obejmuje:
 
 - oba profile capture, shape, limity, redakcje, form values i wykluczenia,
 - target resolution `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i stale revision,
+- component source pack: wszystkie komponenty, deterministyczna kolejnosc,
+  deduplikacja pelnych plikow oraz nieblokujace braki,
 - origin/source/nonce/replay/popup failure w Browser Tools i receiverze,
 - model/effort, cache/refresh widokow, czteropoziomowe drzewo i tool scope,
 - pinned Copilot instructions, trzy standardowe korzenie project skills,

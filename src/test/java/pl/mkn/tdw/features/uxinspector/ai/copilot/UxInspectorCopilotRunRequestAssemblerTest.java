@@ -8,6 +8,8 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.auth.CopilotRunAuthMapper;
 import pl.mkn.tdw.aiplatform.copilot.tools.CopilotSdkToolFactory;
 import pl.mkn.tdw.aiplatform.copilot.tools.report.CopilotReportToolNames;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorPromptPreparationService;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorComponentSourcePackArtifact;
+import pl.mkn.tdw.features.uxinspector.ai.UxInspectorComponentSourcePackArtifactService;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryGuidanceArtifactService;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryTreeArtifact;
 import pl.mkn.tdw.features.uxinspector.ai.UxInspectorRepositoryTreeArtifactService;
@@ -47,8 +49,12 @@ class UxInspectorCopilotRunRequestAssemblerTest {
         when(guidanceArtifactService.render(any(), anyList())).thenReturn("""
                 {"copilotInstructions":{"present":false},"projectSkills":[]}
                 """);
+        var componentPackService = mock(UxInspectorComponentSourcePackArtifactService.class);
+        when(componentPackService.prepare(any(), any())).thenReturn(new UxInspectorComponentSourcePackArtifact(
+                "componentCount: 1\ncomplete: true", 1, 2, 2, 0, java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
         var preparation = new UxInspectorPromptPreparationService(
-                new ObjectMapper().findAndRegisterModules(), treeArtifactService, guidanceArtifactService)
+                new ObjectMapper().findAndRegisterModules(), treeArtifactService, guidanceArtifactService,
+                componentPackService)
                 .prepare(request, targetContext);
         var assembler = new UxInspectorCopilotRunRequestAssembler(
                 toolFactory,

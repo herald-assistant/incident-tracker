@@ -236,7 +236,10 @@ GitLab frontend capability, platformowy report runtime i wspolny uklad run UI.
 UX Inspector reuse'uje tez ogolne GitLab file-read tools; nie tworzy ich
 feature-specific odpowiednikow. Poczatkowy prompt dostaje nazwy sciezek z
 pierwszych czterech poziomow, pelna tresc repository-wide Copilot instructions
-i katalog naglowkow project skills. Materialne skille sa doczytywane przez
+i katalog naglowkow project skills. Dostaje rowniez nieblokujacy pack
+wszystkich komponentow odnalezionych dla widoku wraz z relacjami i pelnymi
+dostepnymi plikami TS/HTML; braki sa jawne i kieruja dalszym researchem.
+Materialne skille sa doczytywane przez
 neutralne file-read tools, ktore wraz z navigation/search maja read-only
 dostep do calego wybranego repozytorium. Polityka sesji wymusza project i
 branch, hidden scope przypina commit, a raport dopuszcza tylko initial evidence

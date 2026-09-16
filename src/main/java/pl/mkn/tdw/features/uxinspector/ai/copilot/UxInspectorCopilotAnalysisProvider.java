@@ -6,7 +6,6 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRunPreparationService;
 import pl.mkn.tdw.aiplatform.copilot.runtime.execution.CopilotSdkExecutionGateway;
 import pl.mkn.tdw.features.uxinspector.ai.*;
 import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetContext;
-import pl.mkn.tdw.features.uxinspector.context.UxInspectorTargetResolutionStatus;
 import pl.mkn.tdw.features.uxinspector.job.api.UxInspectorJobStartRequest;
 import pl.mkn.tdw.features.uxinspector.report.UxInspectorReportMapper;
 import pl.mkn.tdw.shared.ai.AnalysisAiActivityListener;
@@ -28,10 +27,6 @@ public class UxInspectorCopilotAnalysisProvider implements UxInspectorAnalysisPr
                                          UxInspectorTargetContext context, UxInspectorPromptPreparation preparation,
                                          AnalysisAiAuthRef authRef, AnalysisAiToolEvidenceListener evidenceListener,
                                          AnalysisAiActivityListener activityListener) {
-        if (context.status() == UxInspectorTargetResolutionStatus.NOT_FOUND) {
-            return new UxInspectorAiAnalysis(UxInspectorAiAnalysisStatus.BLOCKED, null, null, null, null,
-                    List.of("No verified source target exists in the selected view and pinned revision."));
-        }
         var assembly = assembler.assemble(runReference, request, context, preparation, authRef);
         if (!assembly.toolAccessPolicy().reportToolsAvailable()
                 || !assembly.toolAccessPolicy().targetToolsAvailable()
@@ -44,7 +39,7 @@ public class UxInspectorCopilotAnalysisProvider implements UxInspectorAnalysisPr
         });
         if (activityListener != null) prepared = prepared.withActivitySink(activityListener::onAiActivity);
         var execution = executionGateway.execute(prepared);
-        var mapping = reportMapper.map(execution.report(), request.capture(), context,
+        var mapping = reportMapper.map(execution.report(), request.capture(), context, preparation.initialSourcePaths(),
                 assembly.repositoryToolScope().readSourceRefs(), execution.usage());
         if (mapping.result() == null || mapping.report() == null) {
             return new UxInspectorAiAnalysis(UxInspectorAiAnalysisStatus.FAILED, null, null, execution.usage(),

@@ -24,7 +24,8 @@ public class UxInspectorReportMapper {
     private static final Pattern SOURCE_TARGET = Pattern.compile("^(?<path>[^#]+?)(?:#L(?<start>\\d+)(?:-L(?<end>\\d+))?)?$");
 
     public UxInspectorReportMapping map(AnalysisReport report, UxInspectorCapture capture,
-                                        UxInspectorTargetContext context, Set<String> toolReadSourceRefs,
+                                        UxInspectorTargetContext context, Set<String> initialSourcePaths,
+                                        Set<String> toolReadSourceRefs,
                                         AnalysisAiUsage usage) {
         var errors = new LinkedHashSet<String>();
         if (report == null) return failed("UX Inspector session did not save an AnalysisReport through report tools.");
@@ -38,7 +39,7 @@ public class UxInspectorReportMapper {
         if (!StringUtils.hasText(report.header()) || !StringUtils.hasText(report.markdownSummary())) {
             return failed("UX Inspector report thesis was not saved through report_update_header.");
         }
-        var allowedSourcePaths = allowedSourcePaths(context, toolReadSourceRefs);
+        var allowedSourcePaths = allowedSourcePaths(context, initialSourcePaths, toolReadSourceRefs);
         var sectionMeta = validateMeta(sourceSection.meta(), allowedSourcePaths, errors);
         var reportMeta = validateMeta(report.meta(), allowedSourcePaths, errors);
         if (!errors.isEmpty()) return new UxInspectorReportMapping(null, null, false, List.copyOf(errors));
@@ -100,8 +101,15 @@ public class UxInspectorReportMapper {
                 target, StringUtils.hasText(value.description()) ? value.description().trim() : "Pinned frontend source");
     }
 
-    private Set<String> allowedSourcePaths(UxInspectorTargetContext context, Set<String> toolReadSourceRefs) {
-        var paths = new LinkedHashSet<>(context.allowedSourcePaths());
+    private Set<String> allowedSourcePaths(
+            UxInspectorTargetContext context,
+            Set<String> initialSourcePaths,
+            Set<String> toolReadSourceRefs
+    ) {
+        var paths = new LinkedHashSet<String>();
+        for (var path : initialSourcePaths != null ? initialSourcePaths : Set.<String>of()) {
+            if (GitLabVerifiedRepositoryFileReader.isSafePath(path, false)) paths.add(path);
+        }
         var prefix = "gitlab:" + context.sourceScope().group() + "/" + context.sourceScope().projectName()
                 + "@" + context.sourceRevision().revision() + ":";
         for (var sourceRef : toolReadSourceRefs != null ? toolReadSourceRefs : Set.<String>of()) {

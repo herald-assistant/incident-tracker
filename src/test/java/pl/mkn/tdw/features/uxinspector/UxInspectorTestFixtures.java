@@ -92,7 +92,6 @@ public final class UxInspectorTestFixtures {
                 List.of(candidate), new UxInspectorSourceBinding(component.componentId(), component.symbol(),
                 component.selector(), component.sourcePath(), component.templatePath(), "EXTERNAL", 1, 1,
                 component.templatePath() + "#L1-L1", component.templateContent(), List.of(), null, List.of()),
-                candidate.sourceSlice(), Set.of(component.templatePath(), component.sourcePath(),
-                "src/app/app.routes.ts"), List.of(), graph);
+                candidate.sourceSlice(), List.of(), graph);
     }
 }

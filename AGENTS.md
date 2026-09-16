@@ -109,6 +109,12 @@ Przed wieksza zmiana zacznij od:
   czytane przez ten sam neutralny katalog tooli po osobnym przypieciu rewizji.
   Zapis wybranego zestawu wymaga jednego
   podgladu, jawnej decyzji operatora i warunkowej operacji batch maintenance.
+- UX Inspector initial context zawiera nieblokujacy component source pack:
+  wszystkie komponenty odnalezione przez screen reachability graph, relacje
+  grafu oraz pelne zweryfikowane pliki TS i zewnetrzne HTML. Brak dopasowanego
+  targetu, component boundary albo pojedynczego pliku jest jawna luka dla
+  modelu i nie zatrzymuje sesji AI; statyczny graph nie jest dowodem runtime
+  ancestry.
 
 ## Turbo wazne: docelowy model rozszerzalnosci
 

@@ -86,7 +86,7 @@ class UxInspectorImportServiceTest {
         state.tryStart();
         state.targetResolved(targetContext(), List.of());
         state.preparationStarted();
-        state.preparationCompleted("Focused CRM prompt");
+        state.preparationCompleted("Focused CRM prompt", 6);
         state.analysisStarted();
         var reference = new AnalysisReportReference("source", "Target", TEMPLATE_PATH + "#L1", "CRM target");
         var meta = new AnalysisReportMeta(List.of(reference), List.of(), List.of(), List.of(), "high", List.of());

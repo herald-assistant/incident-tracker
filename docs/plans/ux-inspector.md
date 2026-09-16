@@ -28,7 +28,7 @@ maja pelnic role dowodow.
 | Wejscie runtime | reczny wybor View | capture v1 + jawnie potwierdzony View |
 | Backend | `features.uiexplorer` | `features.uxinspector` |
 | Publiczne API | `/api/ui-explorer/**` | `/api/ux-inspector/**` |
-| Source preparation | reachability wielu sekcji | target resolution + focused slice |
+| Source preparation | reachability wielu sekcji | target resolution + focused slice + nieblokujacy component source pack |
 | Repository guidance | feature-owned skille UI Explorera | inline Copilot instructions + katalog naglowkow project skills |
 | Source research | feature policy UI Explorera | cale jedno repo na pinned commit |
 | Report | do osmiu sekcji | dokladnie jedna sekcja `answer` |
@@ -103,9 +103,13 @@ wlasnego formatu cache. UI Explorer zachowuje ten sam kontrakt odswiezenia.
 3. `UxInspectorTargetResolver` buduje ranked candidates i `sourceBinding` z
    deduplikowanych selector signals, zachowujac odleglosc component boundaries
    i nie zgadujac zakresu po pierwszym ogolnym tagu.
-4. `NOT_FOUND` blokuje AI; `AMBIGUOUS` pozostaje jawne w odpowiedzi i przekazuje
-   ograniczone evidence 2-3 najlepszych kandydatow wraz z bindingami.
-5. Initial context zawiera focused slice oraz komplet nazw sciezek pierwszych
+4. `NOT_FOUND` nie blokuje AI: pozostaje jawna luka i uruchamia celowany
+   research z component source pack oraz repository tools. `AMBIGUOUS`
+   pozostaje jawne w odpowiedzi i przekazuje ograniczone evidence 2-3
+   najlepszych kandydatow wraz z bindingami.
+5. Initial context zawiera focused slice, nieblokujacy pack wszystkich
+   odnalezionych komponentow z pelnymi dostepnymi plikami TS/HTML oraz komplet
+   nazw sciezek pierwszych
    czterech poziomow jednego wybranego repozytorium, pelna tresc obecnego
    `.github/copilot-instructions.md` oraz naglowki `name` i `description`
    skilli wykrytych w `.github/skills`, `.claude/skills` i `.agents/skills`.
@@ -211,6 +215,18 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
 - [x] Dodac do initial prompt zweryfikowana tresc repository-wide Copilot
   instructions, katalog naglowkow project skills oraz obowiazek doczytania
   istotnych skilli i sprawdzenia mechanizmow przekrojowych.
+- [x] Dodac nieblokujacy initial component source pack: uporzadkowany manifest
+  wszystkich komponentow odnalezionych w screen reachability graph, relacje
+  grafu, pelne zweryfikowane pliki TS/HTML oraz jawne braki plikow, granic
+  komponentow i nierozwiazane diagnostics. Brak pojedynczego komponentu albo
+  pliku nie zatrzymuje analizy i nie uruchamia alternatywnego flow.
+- [x] Rozszerzyc kanoniczny prompt o zasady wykorzystania component source
+  packu przed dodatkowymi odczytami, bez traktowania statycznego grafu jako
+  dowodu runtime ancestry, oraz pokazac rzeczywista liczbe przygotowanych
+  artefaktow w kroku preparation.
+- [x] Pokryc source pack testami kolejnosci, deduplikacji, pelnych plikow,
+  nieblokujacych brakow i integracji z promptem, a nastepnie uruchomic pelna
+  regresje backendu.
 - [x] Uruchomic pelne testy Angulara, produkcyjny build frontendu oraz
   `mvn -q -Pbackend-dev clean package` i zapisac wynik ponizej.
 
@@ -237,6 +253,16 @@ Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
   - PASS.
 - Pelna regresja backendu po dodaniu repository guidance: `mvn -q test`
   - PASS.
+- Testy celowane component source packu, promptu, provider flow, referencji,
+  joba i importu:
+  - PASS dla `UxInspectorComponentSourcePackArtifactServiceTest`,
+    `UxInspectorPromptAndSkillsTest`,
+    `UxInspectorCopilotRunRequestAssemblerTest`,
+    `UxInspectorCopilotAnalysisProviderTest`,
+    `UxInspectorReportMapperTest`, `UxInspectorJobServiceTest` oraz
+    `UxInspectorImportServiceTest`.
+- Pelna regresja backendu po dodaniu component source packu: `mvn -q test`
+  - PASS, 341 raportow test suites bez failures/errors.
 
 Pilot jakosciowy z rzeczywistym Copilot/GitLab pozostaje osobnym kryterium
 produktowym. Powinien objac pytania o walidacje, pochodzenie danych,

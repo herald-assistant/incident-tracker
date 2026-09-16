@@ -137,6 +137,14 @@ moze potem listowac, wyszukiwac i czytac dowolne bezpieczne sciezki w tym
 jednym repozytorium, w tym README, `AGENTS.md`, konfiguracje, frontend i
 backend.
 
+Backend dolacza rowniez nieblokujacy pakiet wszystkich komponentow
+odnalezionych w statycznym screen reachability graph. Pakiet zawiera
+uporzadkowany manifest, jawne typy relacji oraz pelne zweryfikowane pliki TS i
+zewnetrzne HTML z przypietego commita. Nieodnaleziony component boundary,
+nierozwiazana relacja albo plik, ktorego nie udalo sie zweryfikowac, pozostaje
+jawnie opisanym brakiem i nie zatrzymuje analizy. Statyczny graph pomaga
+nawigowac po kodzie, ale nie jest dowodem runtime ancestry.
+
 ## Oczekiwany wynik
 
 Wynik ma odpowiadac na pytanie, zamiast opisywac caly ekran. Jedyna sekcja
@@ -170,8 +178,8 @@ instrukcjami dla AI.
 - AI ma read-only dostep do calego wybranego repozytorium na jednym
   przypietym commicie, ale nie moze przejsc do innego projektu ani brancha.
 - Poczatkowy prompt zawiera komplet nazw sciezek pierwszych czterech poziomow;
-  raport moze cytowac plik spoza focused slice dopiero po jego rzeczywistym
-  odczycie z przypietego commita.
+  raport moze cytowac plik przekazany w pelnym zweryfikowanym component source
+  pack albo rzeczywiscie odczytany pozniej z przypietego commita.
 - Poczatkowy prompt zawiera pelna tresc obecnego repository-wide Copilot
   instructions i naglowki wszystkich poprawnych project skills w standardowych
   lokalizacjach; materialny skill jest odczytywany przed dalszym researchem.
@@ -181,6 +189,10 @@ instrukcjami dla AI.
 - Deterministyczne przygotowanie laczy stabilny fingerprint DOM z owning
   component i bindingiem w przypietej rewizji; selector sam w sobie nie jest
   dowodem ownership.
+- Poczatkowy prompt zawiera wszystkie komponenty odnalezione dla wybranego
+  widoku wraz z pelnymi dostepnymi plikami TS/HTML. Brak dopasowanego targetu,
+  boundary albo pojedynczego pliku jest przekazywany modelowi jako luka do
+  celowanego researchu i sam nie blokuje sesji AI.
 - W trybie diagnostyki formularza model dostaje zamrozony stan najblizszego
   formularza, a operator widzi zakres przekazywanych wartosci przed startem.
 - W pilocie mediana czasu i zuzycia tokenow jest istotnie nizsza niz dla

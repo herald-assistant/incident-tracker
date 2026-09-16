@@ -65,13 +65,6 @@ public class UxInspectorTargetResolver {
         } else if (status == UxInspectorTargetResolutionStatus.NOT_FOUND) {
             limitations.add("No source target could be verified in the selected view and pinned revision.");
         }
-        var paths = new LinkedHashSet<String>();
-        graph.componentLevels().stream().flatMap(level -> level.components().stream()).forEach(component -> {
-            addPath(paths, component.sourcePath());
-            addPath(paths, component.templatePath());
-        });
-        graph.dependencies().forEach(dependency -> addPath(paths, dependency.sourcePath()));
-        addPath(paths, graph.screenNode().routeSource().path());
         var focused = "";
         UxInspectorSourceBinding sourceBinding = null;
         if (status == UxInspectorTargetResolutionStatus.RESOLVED && !candidates.isEmpty()) {
@@ -89,7 +82,7 @@ public class UxInspectorTargetResolver {
                         StringUtils.hasText(graph.screenNode().label()) ? graph.screenNode().label() : graph.screenNode().routePattern(),
                         graph.screenNode().routePattern()),
                 new UxInspectorSourceRevision(graph.sourceRevision().ref(), graph.sourceRevision().commitId()),
-                status, candidates, sourceBinding, focused, paths, List.copyOf(limitations), graph);
+                status, candidates, sourceBinding, focused, List.copyOf(limitations), graph);
     }
 
     private UxInspectorTargetCandidate candidate(GitLabFrontendReachabilityComponent component,
