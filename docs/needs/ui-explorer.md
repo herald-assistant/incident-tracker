@@ -247,8 +247,9 @@ MVP nie ma:
 
 Po zweryfikowaniu wartosci statycznego MVP mozna rozwazyc:
 
-- [pytania o wskazany element uruchomionej strony](ui-explorer-browser-element-analysis.md),
-  opisane jako osobna potrzeba z wlasna granica bezpieczenstwa i planem,
+- [pytania o wskazany element uruchomionej strony](ux-inspector.md),
+  obslugiwane przez osobny feature UX Inspector z wlasna granica
+  bezpieczenstwa i planem,
 - porownanie raportow pomiedzy wersjami zrodla,
 - follow-up chat korzystajacy z zamrozonego kontekstu analizy,
 - generowanie scenariuszy testowych i kryteriow akceptacji,

@@ -446,11 +446,11 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(usagePill?.textContent).toContain('Tokens');
     expect(usagePill?.textContent).toContain('2 820');
     expect(usagePill?.textContent).toContain('Credits');
-    expect(usagePill?.textContent).toContain('1,16');
+    expect(usagePill?.textContent).toContain('1,15');
     expect(usagePill?.textContent).toContain('Dollars');
     expect(usagePill?.textContent).toContain('$0.01');
     expect(tooltip).toContain('Szacowany koszt analizy AI');
-    expect(tooltip).toContain('Nowy kontekst wysłany do AI: 2 100');
+    expect(tooltip).toContain('Nowy kontekst wysłany do AI: 2 050');
     expect(tooltip).toContain('Ponownie użyty kontekst: 300');
     expect(tooltip).toContain('Odpowiedź AI: 420');
     expect(tooltip).toContain('Użyty model: gpt-5.4');

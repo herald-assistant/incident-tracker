@@ -86,6 +86,17 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(component.featureIcon('ui-explorer')).toBe('screen_search_desktop');
   });
 
+  it('should use the UX Inspector product mapping', async () => {
+    const { fixture } = await createComponent();
+    const component = fixture.componentInstance as unknown as {
+      featureLabel: (feature: string) => string;
+      featureIcon: (feature: string) => string;
+    };
+
+    expect(component.featureLabel('ux-inspector')).toBe('UX Inspector');
+    expect(component.featureIcon('ux-inspector')).toBe('ads_click');
+  });
+
   it('routes saved Operational Context assistance to its read-only feature view', async () => {
     const { fixture, router } = await createComponent();
     const run: LocalAnalysisRunListItemResponse = {
@@ -338,6 +349,28 @@ describe('AnalysisHistoryPageComponent', () => {
     expect(historyApi.getRun).not.toHaveBeenCalled();
     expect(navigateSpy).toHaveBeenCalledWith(['/ui-explorer'], {
       queryParams: { localRunId: 'crm-ui-history-1' }
+    });
+  });
+
+  it('should route a UX Inspector run to its read-only feature screen', async () => {
+    const { fixture, historyApi, router } = await createComponent();
+    const run: LocalAnalysisRunListItemResponse = {
+      analysisId: 'ux-inspector-run-1',
+      feature: 'ux-inspector',
+      name: 'Zapisz kontakt',
+      status: 'COMPLETED',
+      createdAt: '2026-09-15T10:00:00Z',
+      updatedAt: '2026-09-15T10:02:00Z',
+      completedAt: '2026-09-15T10:02:00Z'
+    };
+    const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    fixture.componentInstance.openRun(run);
+    await fixture.whenStable();
+
+    expect(historyApi.getRun).not.toHaveBeenCalled();
+    expect(navigateSpy).toHaveBeenCalledWith(['/ux-inspector'], {
+      queryParams: { localRunId: 'ux-inspector-run-1' }
     });
   });
 

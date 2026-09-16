@@ -55,13 +55,6 @@ describe('UiExplorerPageComponent', () => {
     expect(compiled.querySelector('.ui-explorer-scope-grid')).not.toBeNull();
     expect(compiled.querySelector('.ui-explorer-workspace__catalog')).toBeNull();
     expect(compiled.textContent).toContain('Prepare the first UI Explorer run');
-    const inspectorLink = compiled.querySelector<HTMLAnchorElement>(
-      '.ui-explorer-inspector-entry__action'
-    );
-    expect(inspectorLink?.getAttribute('href')).toBe('/tdw-inspector/install.html');
-    expect(inspectorLink?.getAttribute('target')).toBe('_blank');
-    expect(compiled.textContent).toContain('bez rozszerzenia');
-
     const sectionModesControl = compiled.querySelector<HTMLButtonElement>(
       'button[aria-haspopup="dialog"]'
     );

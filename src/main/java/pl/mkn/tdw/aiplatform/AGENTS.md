@@ -96,7 +96,7 @@ Nie obejmuje:
 - Platforma moze zalezec od malych neutralnych kontraktow `shared.*`,
   `common.*`, neutralnych keys/nazw z `agenttools.*` oraz bibliotek
   SDK/technicznych.
-- Feature ma dostarczac prompt, guidance do uzycia skilli, available tools,
+- Feature ma dostarczac prompt, opcjonalne guidance do uzycia skilli, available tools,
   hidden context, evidence sink i response handling jako parametry
   uruchomienia.
 - `CopilotSkillRuntimeLoader` traktuje packaged resources jako immutable seed i
@@ -107,8 +107,9 @@ Nie obejmuje:
   domyslnie dostaja ten sam pojedynczy root. Feature nie przekazuje katalogow
   ani list wybranych skilli; nie przywracaj selected roots ani selekcji per
   run. `skill` pozostaje domyslnie dostepny, ale feature moze jawnie wylaczyc
-  skills wraz z katalogami dla sesji one-shot, jesli osadza effective tresc
-  skilla w jedynym prompcie i konfiguruje pusta allowliste tools.
+  skills wraz z katalogami, jesli osadza kompletna procedure w prompcie.
+  Neutralne tools moga pozostac dostepne przez jawna allowliste; wylaczenie
+  skills nie wylacza policy, hidden scope ani budzetow tych tools.
 - Domyslny katalog roboczy Copilot CLI jest poza checkoutem aplikacji, zeby
   CLI nie ladowal root `AGENTS.md` TDW do system instructions. Wspolna sciezka
   trafia do klienta oraz create/resume, a deweloperski fallback zasobow skilli

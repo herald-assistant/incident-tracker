@@ -86,6 +86,14 @@ zatwierdzony invariant trafia do architektury.
   platformowe report tools bez parsowania finalnej odpowiedzi, job,
   business-first report bez osobnego appendixu zaleznosci oraz breaking
   import/export v5.
+- `src/main/java/pl/mkn/tdw/features/uxinspector`
+  UX Inspector: strict capture v3, deterministic target resolution i source
+  binding, opcjonalny ograniczony snapshot najblizszego formularza, focused
+  Copilot prompt bez runtime skilli, session-bound `uxi_*` target tools,
+  czteropoziomowa mape nazw sciezek i neutralne GitLab
+  navigation/search/read tools dla calego wybranego repozytorium pod pinned
+  policy, jednosekcyjny report, job/history oraz import/export v2. Runtime opisuje
+  `docs/architecture/ux-inspector-runtime-flow.md`.
 
 Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
 
@@ -108,6 +116,9 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
   iteracyjny BFS komponentow oraz
   route/symbol slices z deduplikowanymi funkcjonalnymi zaleznosciami; bez
   repository inventory, pelnego snapshotu plikow i zaleznosci od UI Explorer.
+- `src/main/java/pl/mkn/tdw/frontendcatalog`
+  neutralny katalog zarejestrowanych frontendow oraz widokow, konsumowany przez
+  UX Inspector i mapowany przez adaptery UI Explorera.
 - `src/main/java/pl/mkn/tdw/api`
   shared/operator API niezalezne od jednego feature'a.
 - `src/main/java/pl/mkn/tdw/shared`
@@ -128,6 +139,9 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
   reusable komponenty workflow operatora.
 - `frontend/src/app/features`
   strony i prezentacja specyficzna dla feature'ow.
+- `frontend/public/browser-tools`
+  statyczny installer, demo, loader, protocol v3 i efemeryczny runtime akcji na
+  badanej stronie; bez klienta REST, storage i starego `/tdw-inspector/**`.
 - shell i routing aplikacji
   composition root nawigacji oraz rejestracji feature'ow.
 
@@ -187,11 +201,14 @@ widocznym miejscem odczytu;
 `../copilot-sdk-otlp-agent-scanner.md` opisuje uruchomienie i rollback.
 
 `SessionConfig.skillDirectories` i `ResumeSessionConfig.skillDirectories`
-otrzymuja dokladnie jeden wspolny root `${copilot-home}/skills` zawierajacy
-wszystkie podkatalogi skilli z `SKILL.md`. Feature nie przekazuje katalogow ani
-podzbioru nazw skilli. Runtime przekazuje do `MessageOptions` tylko wykonany
-prompt. Zmiana delivery mode, session semantics, allowlisty albo hidden scope
-jest zmiana architektoniczna i wymaga planu, testow oraz rollbacku.
+domyslnie otrzymuja dokladnie jeden wspolny root `${copilot-home}/skills`
+zawierajacy wszystkie podkatalogi skilli z `SKILL.md`. Feature nie przekazuje
+katalogow ani podzbioru nazw skilli. Moze jawnie ustawic
+`skillsEnabled=false`, gdy kompletna procedura znajduje sie w prompcie; inne
+allowlistowane tools pozostaja wtedy dostepne. Runtime przekazuje do
+`MessageOptions` tylko wykonany prompt. Zmiana delivery mode, session
+semantics, allowlisty albo hidden scope jest zmiana architektoniczna i wymaga
+planu, testow oraz rollbacku.
 
 `CopilotContextTierPolicy` jest jedynym wlascicielem automatycznego wyboru
 `long_context`. Rozmiary okien i wsparcie tieru pochodza z cache'owanego typed

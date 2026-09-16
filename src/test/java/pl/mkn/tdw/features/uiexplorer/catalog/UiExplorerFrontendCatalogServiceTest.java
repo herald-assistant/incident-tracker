@@ -1,6 +1,7 @@
 package pl.mkn.tdw.features.uiexplorer.catalog;
 
 import org.junit.jupiter.api.Test;
+import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.crmCatalogWithUnknownSubtype;
@@ -13,7 +14,7 @@ class UiExplorerFrontendCatalogServiceTest {
 
     @Test
     void shouldExposeOnlyCompletelyRegisteredCrmFrontend() {
-        var catalog = new UiExplorerFrontendCatalogService(port(eligibleCrmCatalog())).loadCatalog();
+        var catalog = service(eligibleCrmCatalog()).loadCatalog();
 
         assertThat(catalog.contentDigest()).isEqualTo("crm-catalog-digest");
         assertThat(catalog.frontends()).singleElement().satisfies(frontend -> {
@@ -30,7 +31,7 @@ class UiExplorerFrontendCatalogServiceTest {
 
     @Test
     void shouldOmitFrontendWithoutPrimaryRepositoryAndReturnFinding() {
-        var catalog = new UiExplorerFrontendCatalogService(port(crmCatalogWithoutPrimary())).loadCatalog();
+        var catalog = service(crmCatalogWithoutPrimary()).loadCatalog();
 
         assertThat(catalog.frontends()).isEmpty();
         assertThat(catalog.configurationFindings())
@@ -40,7 +41,7 @@ class UiExplorerFrontendCatalogServiceTest {
 
     @Test
     void shouldOmitUnknownSubtypeAndReturnFinding() {
-        var catalog = new UiExplorerFrontendCatalogService(port(crmCatalogWithUnknownSubtype())).loadCatalog();
+        var catalog = service(crmCatalogWithUnknownSubtype()).loadCatalog();
 
         assertThat(catalog.frontends()).isEmpty();
         assertThat(catalog.configurationFindings())
@@ -50,11 +51,17 @@ class UiExplorerFrontendCatalogServiceTest {
 
     @Test
     void shouldRequireCanonicalProjectPath() {
-        var catalog = new UiExplorerFrontendCatalogService(port(crmCatalogWithoutProjectPath())).loadCatalog();
+        var catalog = service(crmCatalogWithoutProjectPath()).loadCatalog();
 
         assertThat(catalog.frontends()).isEmpty();
         assertThat(catalog.configurationFindings())
                 .extracting(UiExplorerConfigurationFinding::code)
                 .contains("FRONTEND_PRIMARY_REPOSITORY_PROJECT_PATH_REQUIRED");
+    }
+
+    private UiExplorerFrontendCatalogService service(
+            pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog
+    ) {
+        return new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog)));
     }
 }

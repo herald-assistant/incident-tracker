@@ -161,6 +161,32 @@ Portable JSON jest importowany przez backendowa granice walidacji, a wynik live,
 history albo imported jest eksportowany przez kanoniczny endpoint feature'a.
 UI jawnie rozroznia wszystkie trzy pochodzenia, zachowuje copy/download Markdown
 i odrzuca obca, starsza, nowsza lub uszkodzona koperta bez fallbacku.
+UX Inspector jest osobnym pionem dla jednego pytania o element wskazany przez
+TDW Browser Tools. Statyczne zasoby sa dostepne tylko pod `/browser-tools/**`;
+selection runtime tworzy capture v3 w jawnym profilu `ELEMENT_CONTEXT` albo
+`FORM_DIAGNOSTICS` i przekazuje go do `/ux-inspector` przez
+exact-origin/source/nonce handshake. Profil formularza zamraza ograniczone,
+dozwolone wartosci najblizszego formularza i zawsze wyklucza dane wrazliwe.
+Receiver czysci fragment URL i przechowuje capture tylko w pamieci. Zaufany
+formularz wymaga
+systemu, branch/ref, view, katalogowej source revision, pytania oraz poprawnej
+pary model/effort.
+
+`features.uxinspector` normalizuje capture ponownie, buduje ranked target
+context w pinned revision i klasyfikuje wynik jako `RESOLVED`, `AMBIGUOUS` albo
+`NOT_FOUND`. Copilot dostaje focused source slice, kompletna adaptacyjna
+procedure w prompcie, session-bound target refs, waskie frontend slice tools,
+komplet nazw sciezek pierwszych czterech poziomow oraz neutralne GitLab
+navigation/search/read tools dla calego wybranego repozytorium pod pinned
+policy. Repository scope nie korzysta z Operational Context `pathPrefixes` i
+nie ma feature-specific limitu liczby wywolan; inny projekt lub branch jest
+odrzucany. Sesja ma `skillsEnabled=false`. Initial
+report dopuszcza tylko sekcje `answer`; finalna wiadomosc modelu nie jest
+wynikiem ani fallbackiem. Run jest zapisywany jako `QUEUED` przed dispatch,
+trafia do Analysis History i uzywa scislego
+`tdw.ux-inspector-export/v2`. Workspace reuse'uje layout UI Explorera oraz
+wspolny aside/report renderer, ale nie importuje jego modeli ani workflow.
+Szczegoly sa w `ux-inspector-runtime-flow.md`.
 Kolejne rodziny moga obejmowac functional logic explorer oraz
 natural-language data diagnostics. Szczegolowy kierunek produktu jest opisany
 w `product-direction.md`.
@@ -225,7 +251,9 @@ Na dzisiaj projekt ma:
   status i rozwijane szczegoly,
 - w ekranie `GET /incident-analysis` ostatni krok AI pokazuje sumaryczne tokeny oraz
   uproszczona estymacje GitHub AI Credits i kosztu USD; tooltip tlumaczy
-  nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy,
+  nietechnicznie szczegoly z eventow Copilota i przelicznik tokenowy. Wycena
+  traktuje zwykly input, cache read, cache write i output jako rozlaczne
+  kategorie; zwykly input odejmuje oba rodzaje tokenow cache,
 - ekrany Tool Workbench: `GET /elastic`, `GET /gitlab`, `GET /jira`,
   `GET /confluence`, `GET /config-drift-viewer-tools`, `GET /database` i
   `GET /operational-context` do recznego
@@ -965,8 +993,10 @@ Znaczenie grup UI:
 - Wszystkie skille Copilota sa pakowane jako immutable seed. Przy starcie
   loader dopisuje tylko brakujace pliki do persistent effective katalogu
   `${analysis.ai.copilot.copilot-home}/skills`, domyslnie
-  `tdw-data/copilot/skills`, bez nadpisywania istniejacej tresci. Kazda nowa i
-  wznawiana sesja dostaje ten sam root; feature wskazuje workflow w prompcie.
+  `tdw-data/copilot/skills`, bez nadpisywania istniejacej tresci. Domyslnie
+  nowa i wznawiana sesja dostaje ten sam root; feature bez runtime skilli moze
+  jawnie wylaczyc root i built-in `skill`, zachowujac inne allowlistowane tools.
+  Feature korzystajacy ze skilli wskazuje workflow w prompcie.
   Loader utrzymuje immutable snapshot metadata i Markdown, oblicza
   `DEFAULT/CUSTOM` oraz atomowo publikuje zapis lub restore jednego skilla.
 - Frontend Angular jest buildowany w tym samym repo i serwowany z tego samego

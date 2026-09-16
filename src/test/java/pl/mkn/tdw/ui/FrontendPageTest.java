@@ -111,35 +111,59 @@ class FrontendPageTest {
     }
 
     @Test
-    void shouldServePackagedInspectorLiteAssets() throws Exception {
-        mockMvc.perform(get("/tdw-inspector/install.html"))
+    void shouldServeUxInspectorRoute() throws Exception {
+        mockMvc.perform(get("/ux-inspector"))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/index.html"));
+    }
+
+    @Test
+    void shouldServePackagedBrowserToolsAssets() throws Exception {
+        mockMvc.perform(get("/browser-tools/install.html"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(containsString("TDW Inspector Lite")))
+                .andExpect(content().string(containsString("TDW Browser Tools")))
                 .andExpect(content().string(containsString("Bez rozszerzenia")));
 
-        mockMvc.perform(get("/tdw-inspector/capture.html"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(containsString("Zaufany ekran TDW")));
+        mockMvc.perform(get("/browser-tools/capture.html"))
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
 
-        mockMvc.perform(get("/tdw-inspector/runtime.js"))
+        mockMvc.perform(get("/browser-tools/runtime.js"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("ui-explorer-inspector")))
+                .andExpect(content().string(containsString("ux-inspector")))
+                .andExpect(content().string(containsString("TDW UX Inspector")))
+                .andExpect(content().string(containsString("/ux-inspector")))
+                .andExpect(content().string(containsString("tdw-tools-launcher")))
                 .andExpect(content().string(containsString("data-tdw-browser-tool-root")));
 
-        mockMvc.perform(get("/tdw-inspector/loader.js"))
+        mockMvc.perform(get("/browser-tools/protocol.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("__TDW_BROWSER_TOOLS_PROTOCOL_V3__")))
+                .andExpect(content().string(containsString("tdw.ux-inspector-capture")))
+                .andExpect(content().string(containsString("TDW UX Inspector")));
+
+        mockMvc.perform(get("/browser-tools/loader.js"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Remote runtime loading failed")))
                 .andExpect(content().string(containsString("protocol.js")))
                 .andExpect(content().string(containsString("runtime.js")));
 
-        mockMvc.perform(get("/tdw-inspector/demo.html"))
+        mockMvc.perform(get("/browser-tools/demo.html"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(containsString("CRM Agent Portal")));
+                .andExpect(content().string(containsString("CRM Agent Portal")))
+                .andExpect(content().string(containsString("demo-launcher.js")));
 
-        mockMvc.perform(get("/tdw-inspector/missing.js"))
+        mockMvc.perform(get("/browser-tools/demo-launcher.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("featureId: 'ux-inspector'")));
+
+        mockMvc.perform(get("/browser-tools/missing.js"))
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
+
+        mockMvc.perform(get("/tdw-inspector/install.html"))
                 .andExpect(status().isNotFound())
                 .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
     }

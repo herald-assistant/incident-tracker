@@ -2,7 +2,7 @@
 
 ## Zakres
 
-Ten katalog zawiera runtime skille Copilota pakowane z aplikacja. Skille sa
+Ten katalog zawiera opcjonalne runtime skille Copilota pakowane z aplikacja. Skille sa
 zasobem runtime, a nie dokumentacja `.github` ani kod Javy. Ten katalog jest
 immutable packaged seedem. Platforma przy starcie dopisuje pod
 `${copilot-home}/skills` tylko brakujace pliki, zachowuje istniejaca effective
@@ -148,10 +148,13 @@ Prompt powinien zlecac zaladowanie skilli sekcyjnych wtedy, gdy sekcja nie jest
 - Platforma kopiuje pelny packaged katalog do stalego
   `${analysis.ai.copilot.copilot-home}/skills` przy starcie aplikacji.
 - `SessionConfig` i `ResumeSessionConfig` dostaja ten sam pojedynczy root, a
-  `skill` zawsze jest w effective `availableTools`.
+  `skill` jest domyslnie w effective `availableTools`.
 - Feature nie przekazuje do runtime listy nazw ani katalogow skilli.
 - Prompt albo manifest powinien mowic modelowi, ktory starter skill zaladowac
   i kiedy dociagac pozostale skille.
+- Feature bez runtime skilli moze jawnie wylaczyc katalogi oraz built-in
+  `skill`, jesli cala procedura jest w jego prompcie. Nie usuwa to innych
+  allowlistowanych tools ani ich policy i hidden scope.
 - Model nie powinien twierdzic, ze zna szczegoly `SKILL.md`, dopoki nie
   zaladuje skilla przez tool `skill`.
 - Nie instruuj modelu, zeby czytal lokalny filesystem w celu poznania skilli.

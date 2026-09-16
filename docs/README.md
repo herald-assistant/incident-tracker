@@ -41,14 +41,15 @@ Przed wieksza zmiana przeczytaj:
 8. `architecture/delivery-complexity-assessment-runtime-flow.md`
 9. `architecture/delivery-scope-complexity-runtime-flow.md`
 10. `architecture/delivery-complexity-trends-runtime-flow.md`
-11. `architecture/package-dependencies.md`
-12. `architecture/operational-context-model-tools-and-usage.md`
-13. `architecture/codex-continuation-guide.md`
+11. `architecture/ux-inspector-runtime-flow.md`
+12. `architecture/package-dependencies.md`
+13. `architecture/operational-context-model-tools-and-usage.md`
+14. `architecture/codex-continuation-guide.md`
 
 Przy tworzeniu nowego feature'a albo zmianie L1-L3 istniejacego feature'a lub
 mechanizmu wspolnego przeczytaj dodatkowo:
 
-14. `architecture/analysis-feature-delivery-playbook.md`
+15. `architecture/analysis-feature-delivery-playbook.md`
 
 Nastepnie sprawdz dokument potrzeby i zatwierdzony plan dotyczacy konkretnej
 zmiany. Dokument architektoniczny ani business need nie sa zgoda na
@@ -70,13 +71,12 @@ a niepotrzebny plan moze zostac usuniety; historie zachowuje Git.
   opisuje potrzebe generowania funkcjonalnej lub technicznej dokumentacji
   zlozonego widoku frontendu oraz materialu do przygotowania zmiany przez
   analityka, ktory nie musi znac repozytorium ani mechaniki AI.
-- `needs/ui-explorer-browser-element-analysis.md` i
-  `plans/ui-explorer-element-inspection-and-ai-context.md`
-  opisuja proponowany, osobno zatwierdzany tryb pytania o element wskazany na
-  uruchomionej stronie bez instalowania rozszerzenia. Plan jest `in-progress`
-  dla Inspector Lite: bookmarkleta/DevTools Snippetu, selektora i zaufanego
-  ekranu capture z dummy accepted; browser ingress i analiza AI pozostaja
-  kolejnymi checkpointami.
+- `needs/ux-inspector.md` i `plans/ux-inspector.md`
+  opisuja osobny feature do skupionych pytan o element wskazany na
+  uruchomionej stronie. UX Inspector korzysta z Browser Tools, wlasnego joba,
+  skilli i pojedynczej sekcji raportu; nie jest trybem UI Explorera. Wynikowy
+  runtime opisuje `architecture/ux-inspector-runtime-flow.md`; otwarta pozostaje
+  decyzja rolloutowa po kontrolowanym pilocie.
 - `plans/ui-explorer.md`
   jest zatwierdzonym planem L2 w realizacji dla statycznego, screen-centered MVP z katalogiem
   ekranow wybieranych przez jawnie zarejestrowany system
@@ -114,6 +114,9 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
 - `architecture/change-verification-runtime-flow.md`
   opisuje source scope, rule ledger, deterministyczna decyzje, prompt, skille,
   tools, report, import/export i UI Change Verification.
+- `architecture/ux-inspector-runtime-flow.md`
+  opisuje Browser Tools, capture v3, transport postMessage, target resolution,
+  focused Copilot workflow, jednosekcyjny report, job/history i security model.
 - `architecture/config-drift-viewer-runtime-flow.md`
   opisuje deterministic/AI flow, tryby `BASIC/DEEP`, scope, limity i granice
   bezpieczenstwa Config Drift Viewer.

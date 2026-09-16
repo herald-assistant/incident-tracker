@@ -54,6 +54,8 @@ Przed wieksza zmiana zacznij od:
     dla zmian eksperymentalnego Delivery Scope Complexity
 14. odpowiedni dokument z `docs/needs/` i zatwierdzony plan z `docs/plans/`
     dla realizowanej zmiany
+15. `docs/architecture/ux-inspector-runtime-flow.md`
+    dla zmian UX Inspectora albo TDW Browser Tools
 
 ## Najwazniejsze niezmienniki
 
@@ -146,7 +148,7 @@ Zasady granic:
   Agent Scanner na porcie 8081. `capture-content=true` pozostaje wartoscia
   domyslna. Konfiguracja i rollback sa opisane w
   `docs/copilot-sdk-otlp-agent-scanner.md`.
-- Dedykowane feature'y analityczne dostarczaja prompt, evidence, skille,
+- Dedykowane feature'y analityczne dostarczaja prompt, evidence, opcjonalne skille,
   hidden tool context, polityke uzycia capability i kontrakt odpowiedzi.
   Feature moze zalezec od platformy, tools i adapterow; platforma, tools i
   adaptery nie moga zalezec od feature'a.
@@ -189,13 +191,15 @@ Zasady granic:
   `tdw-data/copilot/skills`, tylko brakujace pliki i nie nadpisuje istniejacej
   effective tresci. `SessionConfig.skillDirectories` i
   `ResumeSessionConfig.skillDirectories` domyslnie dostaja ten jeden wspolny
-  root. Built-in tool `skill` jest domyslnie w effective allowliscie; jawna
-  sesja one-shot moze wylaczyc skills wraz z katalogami tylko wtedy, gdy feature
-  osadza effective tresc skilla w prompcie i nie dopuszcza zadnych tool calls.
+  root. Built-in tool `skill` jest domyslnie w effective allowliscie. Feature
+  moze jawnie wylaczyc skills wraz z katalogami, gdy kompletna procedura jest
+  osadzona w prompcie; pozostale neutralne tools moga wtedy pozostac w jawnej
+  allowliscie i podlegaja zwyklemu hidden scope, policy oraz budzetowi.
 - Feature nie przekazuje katalogow ani podzbioru nazw skilli do platformy.
-  Feature posiada tresc i workflow swoich skilli oraz wskazuje w prompcie,
-  ktory starter albo skill follow-up warto zaladowac. Nie przywracaj selected
-  roots, bezposrednich katalogow pojedynczych skilli ani selekcji per run.
+  Gdy feature korzysta ze skilli, posiada ich tresc i workflow oraz wskazuje w
+  prompcie, ktory starter albo skill follow-up warto zaladowac. Nie przywracaj
+  selected roots, bezposrednich katalogow pojedynczych skilli ani selekcji per
+  run.
 - Docelowa platforma Copilot ma byc parametryzowana przez feature. Aktualnym
   pierwszym inputem runtime jest `CopilotRunRequest`; prompt, guidance do
   uzycia skilli, available tools, hidden context, evidence sink i response
@@ -316,6 +320,13 @@ Zasady granic:
   Niezalezny eksperymentalny feature score x scope: wlasny skill, kontrakt
   `0-200`, job, historia/import-export i UI bez importow do drugiego
   assessmentu.
+- `src/main/java/pl/mkn/tdw/features/uxinspector`
+  Focused analiza jednego elementu wskazanego przez Browser Tools: capture v2,
+  deterministic target resolution, session-bound tools, one-section report,
+  job, historia i import/export v1.
+- `src/main/java/pl/mkn/tdw/frontendcatalog`
+  Neutralny katalog zarejestrowanych frontendow i widokow, konsumowany przez
+  UX Inspector oraz mapowany przez adaptery UI Explorera.
 - `src/main/java/pl/mkn/tdw/shared/evidence`
   Neutralny model evidence wspolny dla pipeline, flow, job UI i AI:
   `AnalysisEvidenceSection`, `AnalysisEvidenceItem`, `AnalysisEvidenceAttribute`
@@ -334,6 +345,9 @@ Zasady granic:
   Workbench, ustawienia oraz podglad i edycja effective `/ai-skills`.
 - `src/main/resources/static`
   Wygenerowany produkcyjny bundle Angulara serwowany przez Spring Boot.
+- `frontend/public/browser-tools`
+  Statyczny installer, demo, loader, capture protocol v2 i efemeryczny runtime
+  Browser Tools. Stary `/tdw-inspector/**` nie ma aliasu ani redirectu.
 - `src/main/resources/copilot/skills`
   Skille Copilota pakowane do runtime. Incidentowe playbooki uzycia tools, np.
   operational context, sa zasobami tutaj, a nie logika neutralnych tooli.
@@ -367,7 +381,7 @@ Zasady granic:
 - Utworz dedykowany pakiet `features.<feature>`.
 - Nie reuse'uj `features.incidentanalysis.flow/job/evidence` jako generycznego
   core.
-- Dostarcz wlasny request/response, prompt, skille, tool policy, hidden
+- Dostarcz wlasny request/response, prompt, opcjonalne skille, tool policy, hidden
   context i result contract.
 - Reuse'uj `aiplatform`, `agenttools`, `integrations`, `shared` i `common`.
 

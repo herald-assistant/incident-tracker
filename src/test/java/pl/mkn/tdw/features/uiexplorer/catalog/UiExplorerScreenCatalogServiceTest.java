@@ -5,6 +5,8 @@ import org.mockito.ArgumentCaptor;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerFrontendNotEligibleException;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerScreenCatalogInputException;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundException;
+import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
+import pl.mkn.tdw.frontendcatalog.FrontendViewCatalogService;
 import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.util.List;
@@ -105,7 +107,7 @@ class UiExplorerScreenCatalogServiceTest {
         var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         var service = new UiExplorerScreenCatalogService(
                 frontendCatalog,
-                discovery,
+                mock(FrontendViewCatalogService.class),
                 UiExplorerScreenCatalogCache.disabled()
         );
         assertThatThrownBy(() -> service.loadCatalog(" ", "main"))
@@ -179,8 +181,8 @@ class UiExplorerScreenCatalogServiceTest {
             UiExplorerScreenCatalogCache cache
     ) {
         return new UiExplorerScreenCatalogService(
-                new UiExplorerFrontendCatalogService(port(catalog)),
-                discovery,
+                new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog))),
+                new FrontendViewCatalogService(new FrontendApplicationCatalogService(port(catalog)), discovery),
                 cache
         );
     }

@@ -131,16 +131,16 @@ class CopilotSessionConfigFactoryTest {
     }
 
     @Test
-    void shouldAllowOneShotSessionToDisableTheBuiltInSkillTool() {
+    void shouldDisableSkillDirectoriesWithoutRemovingOtherFeatureTools() {
         var properties = new CopilotSdkProperties();
         properties.setWorkingDirectory("C:\\workspace");
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
         var request = new CopilotSessionConfigRequest(
                 sessionId(),
                 List.of(),
-                List.of(),
+                List.of("gitlab_read_repository_file"),
                 CopilotModelSelection.DEFAULT,
-                "No tools are available for this one-shot session.",
+                "Only the feature allowlist is available.",
                 false
         );
 
@@ -153,11 +153,11 @@ class CopilotSessionConfigFactoryTest {
                 .handle(new PreToolUseHookInput().setToolName("skill"), null)
                 .join();
 
-        assertEquals(List.of(), request.effectiveAvailableToolNames());
+        assertEquals(List.of("gitlab_read_repository_file"), request.effectiveAvailableToolNames());
         assertFalse(request.skillToolAvailable());
-        assertEquals(List.of(), sessionConfig.getAvailableTools());
+        assertEquals(List.of("gitlab_read_repository_file"), sessionConfig.getAvailableTools());
         assertEquals(List.of(), sessionConfig.getSkillDirectories());
-        assertEquals(List.of(), resumeSessionConfig.getAvailableTools());
+        assertEquals(List.of("gitlab_read_repository_file"), resumeSessionConfig.getAvailableTools());
         assertEquals(List.of(), resumeSessionConfig.getSkillDirectories());
         assertEquals("deny", deniedSkillDecision.permissionDecision());
         assertEquals("deny", resumeDeniedSkillDecision.permissionDecision());

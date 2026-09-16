@@ -1586,6 +1586,34 @@ public class GitLabMcpTools {
             String reason,
             ToolContext toolContext
     ) {
+        var bound = toolContext != null && toolContext.getContext() != null
+                ? toolContext.getContext().get(AgentToolContextKeys.GITLAB_REPOSITORY_SCOPE) : null;
+        if (bound instanceof GitLabRepositoryToolScope repositoryScope) {
+            if (reason == null || reason.isBlank() || reason.length() > 500) {
+                throw new IllegalArgumentException("A short reason is required.");
+            }
+            if (!GitLabVerifiedRepositoryFileReader.isSafePath(filePath, false)) {
+                throw new IllegalArgumentException("Only relative text file paths can be read.");
+            }
+            var target = repositoryScope.resolve(projectName, branchRef, gitLabRepositoryPort);
+            var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);
+            var fileChunk = gitLabRepositoryPort.readFileChunk(
+                    target.group(), target.projectName(), target.commitId(), filePath,
+                    startLine, endLine, effectiveMaxCharacters
+            );
+            if (fileChunk == null || !target.group().equals(fileChunk.group())
+                    || !target.projectName().equals(fileChunk.projectName())
+                    || !target.commitId().equals(fileChunk.branch())
+                    || !filePath.equals(fileChunk.filePath()) || fileChunk.content() == null) {
+                throw new IllegalStateException("GitLab file chunk does not match the pinned commit or requested path.");
+            }
+            repositoryScope.recordRead(target, fileChunk.filePath());
+            return new GitLabReadRepositoryFileChunkToolResponse(
+                    fileChunk.group(), fileChunk.projectName(), fileChunk.branch(), fileChunk.filePath(),
+                    fileChunk.requestedStartLine(), fileChunk.requestedEndLine(), fileChunk.returnedStartLine(),
+                    fileChunk.returnedEndLine(), fileChunk.totalLines(), fileChunk.content(), fileChunk.truncated()
+            );
+        }
         var scope = scope(projectName, applicationNames, branchRef, toolContext);
         var effectiveProjectName = canonicalProjectName(scope, projectName);
         var effectiveMaxCharacters = normalizePositiveLimit(maxCharacters, DEFAULT_MAX_CHARACTERS);

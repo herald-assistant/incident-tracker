@@ -98,6 +98,17 @@ export const routes: Routes = [
         }
       },
       {
+        path: 'ux-inspector',
+        loadComponent: () =>
+          import('./features/ux-inspector/pages/ux-inspector-page/ux-inspector-page').then(
+            (module) => module.UxInspectorPageComponent
+          ),
+        data: {
+          section: 'Analysis Features',
+          title: 'UX Inspector'
+        }
+      },
+      {
         path: 'change-verification',
         loadComponent: () =>
           import(

@@ -35,9 +35,25 @@ describe('estimateAnalysisAiCost', () => {
     }));
 
     expect(estimate?.pricingModel).toBe('GPT-5.6 Sol');
+    expect(estimate?.newInputTokens).toBe(65_000);
     expect(estimate?.cacheWriteUsdPerMillion).toBe(5);
-    expect(estimate?.dollars).toBeCloseTo(1.36, 6);
-    expect(estimate?.credits).toBeCloseTo(136, 6);
+    expect(estimate?.dollars).toBeCloseTo(1.32, 6);
+    expect(estimate?.credits).toBeCloseTo(132, 6);
+  });
+
+  it('should count cache writes once in the UX Inspector run estimate', () => {
+    const estimate = estimateAnalysisAiCost(usageForModel('claude-sonnet-5', {
+      apiCallCount: 9,
+      inputTokens: 203_559,
+      cacheReadTokens: 170_861,
+      cacheWriteTokens: 32_680,
+      outputTokens: 4_227,
+      totalTokens: 207_786
+    }));
+
+    expect(estimate?.newInputTokens).toBe(18);
+    expect(estimate?.dollars).toBeCloseTo(0.1581782, 7);
+    expect(estimate?.credits).toBeCloseTo(15.81782, 5);
   });
 
   [

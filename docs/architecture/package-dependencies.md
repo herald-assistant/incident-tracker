@@ -31,9 +31,9 @@ feature analityczny
   -> local workspace
 ```
 
-Incident Analysis, Flow Explorer, Change Verification i Config Drift Viewer sa
-rodzenstwem. Zaden z nich nie jest generycznym core dla
-pozostalych.
+Incident Analysis, Flow Explorer, Change Verification, Config Drift Viewer,
+UI Explorer i UX Inspector sa rodzenstwem. Zaden z nich nie jest generycznym
+core dla pozostalych.
 Operational Context Assistance jest kolejnym feature-owned use case'em:
 sklada neutralny katalog, ograniczony odczyt GitLaba i platforme AI, ale jego
 job, draft i decyzje operatora nie przechodza do `integrations`, `agenttools`
@@ -156,6 +156,23 @@ katalogu widokow. Zalezy jednokierunkowo od neutralnych
 `localworkspace.storage` i `integrations.gitlab.frontend`; local workspace ani
 integracja GitLaba nie znaja kontraktu UI Explorer. Cache przechowuje publiczny
 katalog po zakonczonym discovery, a nie wewnetrzny route graph.
+
+`frontendcatalog` posiada neutralne rozpoznanie zarejestrowanego frontendu z
+Operational Context oraz katalog widokow nad `integrations.gitlab.frontend`.
+Nie importuje feature'ow, API, tools ani platformy AI. UI Explorer mapuje ten
+katalog na zachowany publiczny kontrakt przez swoje adaptery, a UX Inspector
+korzysta z niego bez importowania UI Explorera.
+
+`features.uxinspector` posiada capture v3, target resolution, source binding,
+kanoniczny prompt, feature-owned builder czteropoziomowego drzewa nazw sciezek,
+session-bound `uxi_*` target tools oraz policy dla neutralnych GitLab
+navigation/search/read tools nad calym wybranym repozytorium. Posiada report z
+jedna sekcja, job i scisly import/export. Nie posiada runtime skilli ani
+feature-specific narzedzia do nawigacji lub czytania pliku z repozytorium.
+Moze zalezec od `frontendcatalog`, `integrations`, `agenttools`, `aiplatform`,
+`shared` i `localworkspace`; zadna z tych warstw nie importuje UX Inspectora.
+Publiczny kontrakt wyniku nie importuje integracji. Sibling guard zabrania
+obu kierunkow zaleznosci pomiedzy UX Inspectorem i UI Explorerem.
 
 Warstwa nie posiada:
 
@@ -418,6 +435,9 @@ Zasady:
 - feature nie importuje komponentow ani modeli rodzenstwa,
 - shell jest composition rootem routingu i nawigacji; nie przenosi semantyki
   jednego feature'a do wspolnego serwisu,
+- `frontend/public/browser-tools` jest framework-neutralnym, statycznym shellem
+  akcji uruchamianych na badanej stronie; nie importuje Angulara ani klienta
+  API i przekazuje capture tylko do dedykowanego receivera feature'a,
 - podobny wyglad nie jest wystarczajacym powodem ekstrakcji; wspolny komponent
   musi miec wspolna semantyke, input i lifecycle.
 

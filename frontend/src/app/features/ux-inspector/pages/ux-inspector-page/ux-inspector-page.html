@@ -1,0 +1,279 @@
+<div class="page-shell ux-inspector-page">
+  <main class="ux-inspector-workspace" aria-labelledby="uxInspectorTitle">
+    <input
+      #importInput
+      class="ux-inspector-file-input"
+      type="file"
+      aria-label="Importuj wynik UX Inspectora"
+      accept="application/json,.json"
+      (change)="importResult($event)"
+    />
+
+    @if (!facade.isReadOnlyResult()) {
+      <section class="analysis-card ux-inspector-composer">
+        <header class="ux-inspector-heading">
+          <div>
+            <p class="section-eyebrow">UX Inspector</p>
+            <h2 id="uxInspectorTitle">Zapytaj o wskazany element</h2>
+            <p>Wskaż element przez Browser Tools, potwierdź kod źródłowy i zadaj jedno konkretne pytanie.</p>
+          </div>
+          <span [class]="facade.configurationReady() ? 'status-pill status-pill--done' : 'status-pill status-pill--queued'">
+            {{ facade.configurationReady() ? 'configured' : 'setup' }}
+          </span>
+        </header>
+
+        @if (facade.capture(); as capture) {
+          <article class="ux-inspector-capture" aria-label="Przejęty element">
+            <span class="ux-inspector-capture__icon material-symbols-outlined" aria-hidden="true">select_check_box</span>
+            <div class="ux-inspector-capture__body">
+              <span class="field-label">Element z Browser Tools</span>
+              <h3>{{ targetLabel() }}</h3>
+              <p><code>&lt;{{ capture.target.tag }}&gt;</code> · {{ capture.page.origin }}{{ capture.page.path }}</p>
+              <div class="ux-inspector-capture__chips">
+                <span class="panel-chip">
+                  {{ capture.captureProfile === 'FORM_DIAGNOSTICS' ? 'diagnostyka formularza' : 'kontekst elementu' }}
+                </span>
+                @if (capture.target.role) { <span class="panel-chip">role: {{ capture.target.role }}</span> }
+                @if (capture.target.state.disabled || capture.target.state.ariaDisabled) { <span class="panel-chip">disabled</span> }
+                @if (capture.target.state.required) { <span class="panel-chip">required</span> }
+                @if (capture.signals.shadowBoundaryCount) { <span class="panel-chip">shadow DOM</span> }
+                @for (entry of stableAttributeEntries(); track entry[0]) {
+                  <span class="panel-chip">{{ entry[0] }}={{ entry[1] }}</span>
+                }
+              </div>
+              @if (capture.formSnapshot; as form) {
+                <details class="ux-inspector-form-snapshot">
+                  <summary>
+                    Dane formularza: {{ form.controls.length }} pól ·
+                    {{ form.excludedControls.length }} wykluczonych
+                    @if (form.valuesTruncated) { · część danych obcięta }
+                  </summary>
+                  <p>
+                    Stan zamrożony przy wskazaniu elementu.
+                    @if (form.valid !== null) { Formularz: {{ form.valid ? 'valid' : 'invalid' }}. }
+                  </p>
+                  <dl>
+                    @for (control of form.controls; track $index) {
+                      <div>
+                        <dt>{{ formControlLabel(control) }} @if (control.selectedTarget) { <span>· wskazane</span> }</dt>
+                        <dd><code>{{ formControlValue(control) }}</code>@if (control.valueTruncated) { <span> · obcięto</span> }</dd>
+                      </div>
+                    }
+                  </dl>
+                  @if (form.excludedControls.length) {
+                    <p>Wykluczono:</p>
+                    <ul>
+                      @for (control of form.excludedControls; track $index) {
+                        <li>{{ control.formControlName || control.name || control.type || control.tag }} — {{ control.reason }}</li>
+                      }
+                    </ul>
+                  }
+                </details>
+              }
+              @if (capture.limits.length || capture.signals.redactions.length) {
+                <details>
+                  <summary>Redakcje i ograniczenia ({{ capture.limits.length + capture.signals.redactions.length }})</summary>
+                  <ul>
+                    @for (limit of capture.limits; track limit) { <li>{{ limit }}</li> }
+                    @for (redaction of capture.signals.redactions; track redaction) { <li>{{ redaction }}</li> }
+                  </ul>
+                </details>
+              }
+            </div>
+          </article>
+        } @else {
+          <div class="ux-inspector-message ux-inspector-message--warning" role="status">
+            <span class="material-symbols-outlined" aria-hidden="true">ads_click</span>
+            <div>
+              <strong>Brak wskazanego elementu</strong>
+              <p>Otwórz badaną stronę, uruchom TDW Browser Tools i wybierz akcję UX Inspector.</p>
+            </div>
+            <a class="secondary-button secondary-button--compact" href="/browser-tools/install.html" target="_blank" rel="noopener">Instalacja Browser Tools</a>
+          </div>
+        }
+
+        @if (facade.captureError()) {
+          <div class="ux-inspector-message ux-inspector-message--error" role="alert">
+            <span class="material-symbols-outlined" aria-hidden="true">error</span>
+            <p>{{ facade.captureError() }}</p>
+          </div>
+        }
+
+        @switch (facade.inputState()) {
+          @case ('loading') { <p class="field-hint">Pobieranie zarejestrowanych frontendów…</p> }
+          @case ('error') {
+            <div class="ux-inspector-message ux-inspector-message--error" role="alert">
+              <p>{{ facade.inputError() }}</p>
+              <button class="secondary-button secondary-button--compact" type="button" (click)="facade.loadInputOptions()">Ponów</button>
+            </div>
+          }
+          @case ('empty') {
+            <div class="ux-inspector-message ux-inspector-message--warning" role="status">
+              <p>Brak frontendów z primary repository w Operational Context.</p>
+            </div>
+          }
+        }
+
+        @if (facade.inputOptions(); as options) {
+          <div class="ux-inspector-grid ux-inspector-grid--target">
+            <label class="form-field">
+              <span class="field-label">Frontend system</span>
+              <select class="text-input" [disabled]="facade.controlsLocked()" [value]="facade.selectedSystemId()" (change)="facade.selectSystem($any($event.target).value)">
+                <option value="">Wybierz frontend</option>
+                @for (system of options.systems; track system.systemId) {
+                  <option [value]="system.systemId">{{ system.label }}</option>
+                }
+              </select>
+              <span class="field-hint">{{ facade.selectedSystem()?.summary }}</span>
+            </label>
+
+            <app-gitlab-branch-select
+              [systemId]="facade.selectedSystemId()"
+              [selectedBranch]="facade.branch()"
+              [disabled]="facade.controlsLocked()"
+              (branchSelected)="facade.changeBranch($event)"
+            />
+
+            <label class="form-field">
+              <span class="field-label">View</span>
+              <select class="text-input" [disabled]="facade.controlsLocked() || facade.viewState() !== 'ready'" [value]="facade.selectedViewId()" (change)="facade.selectView($any($event.target).value)">
+                <option value="">Wybierz widok</option>
+                @for (view of facade.viewCatalog()?.views ?? []; track view.viewId) {
+                  <option [value]="view.viewId">{{ view.label }} · {{ view.routePattern }}</option>
+                }
+              </select>
+              <span class="field-hint">Rewizja: {{ facade.sourceRevision()?.revision || 'wczytaj widoki' }}</span>
+            </label>
+
+            <button class="secondary-button ux-inspector-load" type="button" [disabled]="facade.controlsLocked() || !facade.selectedSystemId() || !facade.branch() || facade.viewState() === 'loading'" (click)="facade.loadViews()">
+              <span class="material-symbols-outlined" aria-hidden="true">sync</span>
+              {{ facade.viewState() === 'loading' ? 'Pobieranie…' : 'Wczytaj widoki' }}
+            </button>
+          </div>
+        }
+
+        @if (facade.viewError()) {
+          <div class="ux-inspector-message ux-inspector-message--error" role="alert"><p>{{ facade.viewError() }}</p></div>
+        }
+        @if (facade.viewCatalog(); as catalog) {
+          @if (catalog.limitations.length || catalog.diagnostics.length) {
+            <details class="ux-inspector-limitations">
+              <summary>Ograniczenia katalogu ({{ catalog.limitations.length + catalog.diagnostics.length }})</summary>
+              <ul>
+                @for (limit of catalog.limitations; track limit) { <li>{{ limit }}</li> }
+                @for (diagnostic of catalog.diagnostics; track diagnostic.code + diagnostic.sourcePath) { <li>{{ diagnostic.message }}</li> }
+              </ul>
+            </details>
+          }
+        }
+
+        <label class="form-field">
+          <span class="field-label">Pytanie lub polecenie</span>
+          <textarea
+            class="text-input ux-inspector-question"
+            rows="5"
+            maxlength="4000"
+            [disabled]="facade.controlsLocked()"
+            [value]="facade.question()"
+            placeholder="Np. Dlaczego ten przycisk jest zablokowany i jakie warunki go odblokowują?"
+            (input)="facade.updateQuestion($any($event.target).value)"
+          ></textarea>
+          <span class="field-hint">Jedno pytanie, jeden element. {{ facade.question().length }}/4000</span>
+        </label>
+
+        <div class="ux-inspector-grid ux-inspector-grid--ai">
+          <label class="form-field">
+            <span class="field-label">Model AI</span>
+            <select class="text-input" [disabled]="facade.controlsLocked() || facade.aiOptionsState() !== 'ready'" [value]="facade.selectedModel()" (change)="facade.selectModel($any($event.target).value)">
+              <option value="">Wybierz model</option>
+              @for (model of facade.aiOptions().models; track model.id) { <option [value]="model.id">{{ model.name }}</option> }
+            </select>
+          </label>
+          <label class="form-field">
+            <span class="field-label">Reasoning effort</span>
+            <select class="text-input" [disabled]="facade.controlsLocked() || facade.reasoningEfforts().length === 0" [value]="facade.selectedReasoningEffort()" (change)="facade.selectReasoningEffort($any($event.target).value)">
+              @if (facade.reasoningEfforts().length === 0) { <option value="">Nie dotyczy</option> }
+              @for (effort of facade.reasoningEfforts(); track effort) { <option [value]="effort">{{ effort }}</option> }
+            </select>
+          </label>
+        </div>
+
+        @if (facade.aiOptionsError()) {
+          <div class="ux-inspector-message ux-inspector-message--error" role="alert"><p>{{ facade.aiOptionsError() }}</p></div>
+        }
+
+        <footer class="ux-inspector-actions" aria-live="polite">
+          <div>
+            <button class="primary-button" type="button" [disabled]="!facade.canStartJob()" (click)="facade.startJob()">
+              <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+              {{ facade.isSubmitting() ? 'Uruchamianie…' : 'Uruchom UX Inspector' }}
+            </button>
+            <button class="secondary-button" type="button" [disabled]="facade.isJobActive() || facade.portabilityBusy()" (click)="triggerImport(importInput)">
+              <span class="material-symbols-outlined" aria-hidden="true">upload_file</span> Import
+            </button>
+          </div>
+          <span>{{ facade.configurationReady() ? 'Konfiguracja gotowa.' : 'Wskaż element i uzupełnij wszystkie pola.' }}</span>
+        </footer>
+      </section>
+    } @else if (facade.job(); as readOnly) {
+      <section class="analysis-card ux-inspector-read-only">
+        <p class="section-eyebrow">UX Inspector · read-only</p>
+        <h2 id="uxInspectorTitle">{{ resultSourceLabel() }}</h2>
+        <dl>
+          <div><dt>Target</dt><dd>{{ readOnly.result?.targetLabel || targetLabel() }}</dd></div>
+          <div><dt>System</dt><dd>{{ readOnly.request.systemLabel }}</dd></div>
+          <div><dt>Branch / revision</dt><dd>{{ readOnly.request.branch }} · {{ readOnly.sourceRevision?.revision || readOnly.request.sourceRevision }}</dd></div>
+          <div><dt>View</dt><dd>{{ readOnly.result?.view?.label || readOnly.request.viewId }}</dd></div>
+        </dl>
+        <div class="ux-inspector-read-only__question"><span class="field-label">Pytanie</span><p>{{ readOnly.request.question }}</p></div>
+      </section>
+    }
+
+    @if (facade.portabilityError()) {
+      <div class="analysis-card ux-inspector-message ux-inspector-message--error" role="alert"><p>{{ facade.portabilityError() }}</p></div>
+    }
+
+    @if (facade.job(); as snapshot) {
+      <section class="analysis-card ux-inspector-run" aria-live="polite">
+        <header>
+          <div><p class="section-eyebrow">{{ resultSourceLabel() }}</p><h2>{{ snapshot.result?.targetLabel || targetLabel() }}</h2><p>{{ snapshot.request.systemLabel }} · {{ snapshot.request.viewId }}</p></div>
+          <div class="ux-inspector-run__actions">
+            @if (snapshot.exportAvailable) {
+              <button class="secondary-button secondary-button--compact" type="button" [disabled]="facade.portabilityBusy()" (click)="facade.exportCurrentResult()"><span class="material-symbols-outlined" aria-hidden="true">download</span> Export JSON</button>
+            }
+            <span [class]="statusClass(snapshot.status)">{{ statusLabel(snapshot.status) }}</span>
+          </div>
+        </header>
+        @if (facade.jobError()) {
+          <div class="ux-inspector-message ux-inspector-message--error" role="alert">
+            <p>{{ facade.jobError() }}</p>
+            @if (facade.canRetryPolling()) { <button class="secondary-button secondary-button--compact" type="button" (click)="facade.retryPolling()">Ponów status</button> }
+          </div>
+        }
+        @if (!facade.isJobTerminal()) {
+          <div class="ux-inspector-run__progress"><span class="ux-inspector-spinner" aria-hidden="true"></span><h3>{{ snapshot.currentStepLabel || 'Przygotowanie analizy' }}</h3><p>Postęp, praca AI, tools i usage aktualizują się automatycznie.</p></div>
+        } @else if (!snapshot.report) {
+          <div class="ux-inspector-run__progress ux-inspector-run__progress--terminal"><span class="material-symbols-outlined" aria-hidden="true">error</span><h3>Raport nie jest dostępny</h3><p>{{ snapshot.errorMessage || snapshot.outputAvailability.message }}</p></div>
+        }
+      </section>
+
+      @if (snapshot.report && (snapshot.status === 'COMPLETED' || snapshot.status === 'PARTIAL')) {
+        <app-analysis-report-panel [report]="snapshot.report" />
+      }
+
+      <app-analysis-feature-aside
+        ariaLabel="Panel pracy UX Inspectora"
+        [progressActive]="facade.workflowIsRunning()"
+        [aiActive]="facade.aiWorkflowIsRunning()"
+        [progressCount]="progressCount()"
+        [aiCount]="aiCount()"
+        [feedbackCount]="feedbackCount()"
+        [showChat]="false"
+      >
+        <div progressPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showAiWorkflow]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
+        <div aiPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showToolFeedback]="false" [staticPanels]="true" /></div>
+        <div feedbackPanel><app-analysis-steps-panel [steps]="snapshot.steps" [evidenceSections]="snapshot.contextSections" [toolEvidenceSections]="snapshot.toolEvidenceSections" [aiActivityEvents]="snapshot.aiActivityEvents" [toolFeedback]="snapshot.toolFeedback" [preparedPrompt]="snapshot.preparedPrompt || ''" [result]="null" [finalResultAvailable]="!!snapshot.report" [showProgress]="false" [showAiWorkflow]="false" [staticPanels]="true" /></div>
+      </app-analysis-feature-aside>
+    }
+  </main>
+</div>

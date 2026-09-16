@@ -2,6 +2,7 @@ package pl.mkn.tdw.features.uiexplorer.api;
 
 import org.junit.jupiter.api.Test;
 import pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerFrontendCatalogService;
+import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mkn.tdw.features.uiexplorer.catalog.UiExplorerOperationalContextTestCatalog.eligibleCrmCatalog;
@@ -11,7 +12,9 @@ class UiExplorerInputOptionsServiceTest {
 
     @Test
     void shouldReturnCrmFrontendAndCompleteUiExplorerContractOptions() {
-        var catalogService = new UiExplorerFrontendCatalogService(port(eligibleCrmCatalog()));
+        var catalogService = new UiExplorerFrontendCatalogService(
+                new FrontendApplicationCatalogService(port(eligibleCrmCatalog()))
+        );
         var response = new UiExplorerInputOptionsService(catalogService).inputOptions();
 
         assertThat(response.featureId()).isEqualTo("ui-explorer");

@@ -73,8 +73,11 @@ export function estimateAnalysisAiCost(usage: AnalysisAiUsage | null): AnalysisA
   const pricing = findPricing(usage.model);
   const inputTokens = safeTokenCount(usage.inputTokens);
   const cachedInputTokens = Math.min(safeTokenCount(usage.cacheReadTokens), inputTokens);
-  const newInputTokens = Math.max(inputTokens - cachedInputTokens, 0);
-  const cacheWriteTokens = safeTokenCount(usage.cacheWriteTokens);
+  const cacheWriteTokens = Math.min(
+    safeTokenCount(usage.cacheWriteTokens),
+    Math.max(inputTokens - cachedInputTokens, 0)
+  );
+  const newInputTokens = Math.max(inputTokens - cachedInputTokens - cacheWriteTokens, 0);
   const outputTokens = safeTokenCount(usage.outputTokens);
   const cacheWriteUsdPerMillion = pricing.pricing.cacheWriteUsdPerMillion ?? null;
 

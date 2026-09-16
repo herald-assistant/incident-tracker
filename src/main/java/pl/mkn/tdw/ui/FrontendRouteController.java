@@ -11,8 +11,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 class FrontendRouteController {
 
     @GetMapping({
-            "/{route:^(?!api$|assets$|actuator$|error$|mcp$|sse$|tdw-inspector$)[^.]+$}",
-            "/{route:^(?!api$|assets$|actuator$|error$|mcp$|sse$|tdw-inspector$)[^.]+$}/{*remaining}"
+            "/{route:^(?!api$|assets$|actuator$|error$|mcp$|sse$|browser-tools$|tdw-inspector$)[^.]+$}",
+            "/{route:^(?!api$|assets$|actuator$|error$|mcp$|sse$|browser-tools$|tdw-inspector$)[^.]+$}/{*remaining}"
     })
     String forwardFrontendRoute(HttpServletRequest request) {
         if (request.getRequestURI().contains(".")) {

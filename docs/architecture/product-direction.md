@@ -31,8 +31,8 @@ Glowny shell UI jest zorganizowany wokol trzech grup:
 - `Analysis Features` - dedykowane feature'y pracy operatora/zespolu:
   `Incident Analysis`, `Flow Explorer`, `Change Verification`,
   `Config Drift Viewer`, `Delivery Complexity Assessment`, eksperymentalny
-  `Delivery Scope Complexity`, `Delivery Complexity Trends` oraz przyszle
-  miejsce na Data Diagnostics.
+  `Delivery Scope Complexity`, `Delivery Complexity Trends`, `UI Explorer`,
+  `UX Inspector` oraz przyszle miejsce na Data Diagnostics.
 - `Tool Workbench` - operator-facing laboratorium reusable capability:
   Elastic Logs, GitLab Source, Jira Source, Confluence Source, Database Tools
   i Operational Context. Te widoki sluza do testow, debugowania i recznego
@@ -215,6 +215,32 @@ To frontendowy konsument obu niezaleznych assessmentow, a nie wspolna domena
 ich scoringu. Jeden zestaw nie miesza algorytmow. Filtr autora oznacza udzial
 w co najmniej jednym MR jednostki i pokazuje jej pelna zlozonosc; nie
 przypisuje punktow osobie ani nie mierzy produktywnosci.
+
+### UX Inspector
+
+Uzytkownik wskazuje element na uruchomionej stronie przez efemeryczne TDW
+Browser Tools, a nastepnie zadaje jedno konkretne pytanie, np. o walidacje,
+pochodzenie danych, stan `disabled` albo skutek klikniecia. Na zaufanym ekranie
+TDW potwierdza frontend, branch, view, model i reasoning effort. Feature
+przypina immutable source revision, deterministycznie rozpoznaje target,
+wyprowadza jego source binding i rozszerza source research tylko w kierunku
+wymaganym przez pytanie. Operator przed wskazaniem wybiera kontekst elementu
+albo diagnostyke najblizszego formularza; drugi profil zamraza ograniczone
+wartosci i stan walidacji, zawsze bez hasel, hidden/file fields i sekretow.
+
+UX Inspector jest rodzenstwem UI Explorera, nie jego profilem. UI Explorer
+tworzy wielosekcyjna dokumentacje calego widoku, natomiast UX Inspector ma
+wlasny job, kanoniczny prompt, tool policy, historie i report z dokladnie jedna
+sekcja `answer`. Oba feature'y reuse'uja neutralny katalog frontendu,
+GitLab frontend capability, platformowy report runtime i wspolny uklad run UI.
+UX Inspector reuse'uje tez ogolne GitLab file-read tools; nie tworzy ich
+feature-specific odpowiednikow. Poczatkowy prompt dostaje nazwy sciezek z
+pierwszych czterech poziomow, a neutralne navigation/search/read tools maja
+read-only dostep do calego wybranego repozytorium. Polityka sesji wymusza
+project i branch, hidden scope przypina commit, a raport dopuszcza tylko
+initial evidence lub pliki rzeczywiscie odczytane z tego commita.
+Browser Tools nie zawiera sekretow, nie ma uprawnien w tle i nie przekazuje
+capture przez URL, storage lub kanal reczny.
 
 ### Functional logic explorer
 

@@ -190,8 +190,8 @@ Przed zmiana L1-L3 potwierdz:
 - [ ] zmiana wspolnego kontraktu ma liste wszystkich konsumentow BE i FE,
 - [ ] publiczne DTO, export schema i local continuation maja plan
   kompatybilnosci,
-- [ ] prompt, skill i tool policy sa zmieniane jako jeden spojny runtime
-  kontrakt, jesli zmiana dotyka AI,
+- [ ] prompt, opcjonalny skill workflow i tool policy sa zmieniane jako jeden
+  spojny runtime kontrakt, jesli zmiana dotyka AI,
 - [ ] hidden scope nie wraca przypadkiem do model-facing schema,
 - [ ] report factory, hidden report scope, mapper i UI pozostaja zgodne,
 - [ ] shared UX jest rozszerzany przed skopiowaniem lokalnego komponentu,
@@ -284,7 +284,7 @@ Nowy feature analityczny powinien miec:
 - jasno nazwanego uzytkownika i decyzje, ktora wynik wspiera,
 - wlasny request, wynik, prompt, policy i publiczne API,
 - wlasny lifecycle joba oraz stan potrzebny UI,
-- wlasny wybor sources, artifacts, workflow runtime skilli i tools,
+- wlasny wybor sources, artifacts, opcjonalny workflow runtime skilli i tools,
 - jawne visibility limits i sposob prezentacji niepewnosci,
 - brak importow do lub z innych feature'ow.
 
@@ -302,8 +302,9 @@ feature'em.
    klasy Incident Analysis.
 5. Nie przenos feature-specific DTO do `shared` tylko po to, by usunac cykl.
 6. Deterministic context/evidence i AI-guided tool reads to dwa rozne kanaly.
-7. Prompt, policy, artifacts, hidden context, guidance do uzycia skilli i
-   result mapping sa skladane przez feature i przekazywane do platformy.
+7. Prompt, policy, artifacts, hidden context, opcjonalne guidance do uzycia
+   skilli i result mapping sa skladane przez feature i przekazywane do
+   platformy.
 8. Publiczny wynik jest report-first; finalny tekst modelu jest co najwyzej
    fallbackiem diagnostycznym.
 9. Scope znany aplikacji pozostaje w hidden context, a nie w model-facing
@@ -392,7 +393,7 @@ Kazdy blok ma jednego wlasciciela:
 | --- | --- |
 | potrzeba, request, wynik, steps i workflow | feature |
 | deterministic source/context pipeline | feature korzystajacy z `integrations` |
-| prompt, artifacts, skille i tool policy | feature |
+| prompt, artifacts, opcjonalne skille i tool policy | feature |
 | sesja Copilota, execution, hooks i report/tool mechanics | `aiplatform` |
 | neutralne callbacki AI | `agenttools` |
 | komunikacja z systemami zewnetrznymi | `integrations` |
@@ -790,7 +791,7 @@ Assembler feature'a powinien kolejno zbudowac:
 2. `CopilotToolSessionContext`,
 3. zarejestrowane tool definitions,
 4. feature-owned allowliste/policy,
-5. wybrane runtime skills,
+5. jawny tryb runtime skills: domyslny katalog albo `skillsEnabled=false`,
 6. artifacts,
 7. prompt,
 8. poczatkowy report,
@@ -812,6 +813,11 @@ upstream `github/copilot-sdk`, szczegolnie dokumentacje Node/CLI i schemat
 `@github/copilot`. Nie zgaduj defaultow.
 
 ## Runtime skills
+
+Runtime skills sa opcjonalne. Feature moze zamiast nich osadzic kompletna,
+testowalna procedure w kanonicznym prompcie i ustawic `skillsEnabled=false`.
+Nie wymaga to pustej allowlisty: neutralne tools moga pozostac dostepne pod
+feature-owned policy, hidden scope i budzetem.
 
 Skille wykonawcze feature'a:
 
@@ -844,10 +850,12 @@ pliki do persistent effective katalogu
 `${analysis.ai.copilot.copilot-home}/skills`; istniejace pliki zachowuje.
 Operator moze walidowanie zapisac albo przywrocic pojedynczy effective
 `SKILL.md` z ekranu AI Skills.
-`SessionConfig` i `ResumeSessionConfig` zawsze dostaja ten root, a
-`CopilotSessionConfigRequest` zawsze dodaje built-in `skill` do efektywnej
-allowlisty. Feature nie przekazuje nazw ani katalogow skilli do session
-requestu; potrzebny starter i kolejnosc pracy sa kontraktem promptu.
+`SessionConfig` i `ResumeSessionConfig` domyslnie dostaja ten root, a
+`CopilotSessionConfigRequest` domyslnie dodaje built-in `skill` do efektywnej
+allowlisty. Dla `skillsEnabled=false` oba katalogi sa puste, a built-in `skill`
+jest usuwany bez usuwania pozostalych allowlistowanych tools. Feature nie
+przekazuje nazw ani katalogow skilli do session requestu; gdy korzysta ze
+skilli, potrzebny starter i kolejnosc pracy sa kontraktem promptu.
 
 ## Tools, scope i polityki
 

@@ -310,10 +310,10 @@ Nie traktujemy ich jako plikow `.github` repozytorium hosta.
 `tdw-data/copilot/skills`; istniejace effective pliki nie sa nadpisywane ani
 usuwane. Ten sam pojedynczy root trafia do kazdego
 `SessionConfig` i `ResumeSessionConfig`, a built-in tool `skill` jest domyslnie
-w effective allowliscie. Jawna sesja one-shot moze wylaczyc skills wraz z
-katalogami, gdy feature osadza effective tresc skilla w jedynym prompcie i
-konfiguruje pusta allowliste tools. Nie tworzymy selected roots ani katalogow
-per feature lub per analiza.
+w effective allowliscie. Feature moze jawnie wylaczyc skills wraz z katalogami,
+gdy kompletna procedura jest osadzona w prompcie. Pozostale neutralne tools
+moga zachowac jawna allowliste, hidden scope, policy i budzet. Nie tworzymy
+selected roots ani katalogow per feature lub per analiza.
 
 Skill przechowuje stale zasady pracy modelu. Dane konkretnego incydentu
 niesie prompt i artefakty przygotowane w runtime. Feature posiada tresc i
@@ -452,10 +452,14 @@ publiczny kontrakt:
   `UiExplorerResultResponse`, waliduje source references wobec deterministic
   context i captured tool evidence oraz zachowuje poprawne sekcje, gdy
   pojedyncza sekcja jest niekompletna.
+- UX Inspector dopuszcza dokladnie jedna sekcje `answer`, waliduje referencje
+  wobec initial target context albo plikow rzeczywiscie odczytanych z
+  wybranego repozytorium na pinned commit i wymaga jawnego evidence gap, gdy
+  odpowiedz nie ma source reference.
 
-UI Explorer nie posiada JSON fallbacku ani parsera finalnej odpowiedzi. Brak
-zapisanego raportu jest bledem runu, a finalna proza z `sendAndWait` jest tylko
-statusem wykonania. Inne feature'y moga utrzymywac wlasny fallback
+UI Explorer i UX Inspector nie posiadaja JSON fallbacku ani parsera finalnej
+odpowiedzi. Brak zapisanego raportu jest bledem runu, a finalna proza z
+`sendAndWait` jest tylko statusem wykonania. Inne feature'y moga utrzymywac wlasny fallback
 diagnostyczny, ale nie jest on mechanizmem platformowego report runtime.
 
 `AnalysisReport` jest neutralny i nie zna semantyki incydentu, Flow Explorera
@@ -736,6 +740,11 @@ uproszczone GitHub AI Credits/USD oraz szczegoly sesji AI bez znajomosci
 mechaniki event streamu. Estymacja kosztu jest liczona w frontendzie z tokenow
 i tabeli stawek modelu, bo sluzy do pokazania rzedu wielkosci oplacalnosci
 analizy, a nie do rozliczen finansowych.
+
+Kategorie tokenow sa rozlaczne przy wycenie: zwykly input to
+`max(inputTokens - cacheReadTokens - cacheWriteTokens, 0)`. Cache read, cache
+write i output sa wyceniane osobno po swoich stawkach. `cacheWriteTokens` nie
+moze byc jednoczesnie policzone jako nowy input i zapis cache.
 
 Refaktory w `features.incidentanalysis`, `aiplatform.copilot` i obecnych
 fasadach `features.incidentanalysis.job` / `api.aioptions` nie powinny
@@ -1074,3 +1083,51 @@ Eksperyment nie mapuje wyniku na DSP i nie mierzy produktywnosci. Aggregate
 zawiera sume i srednia final score, liczniki statusow, confidence oraz
 usage/cost. Wspolny dashboard porownawczy nie jest czescia pierwszej wersji;
 uzytkownik uruchamia oba niezalezne runy na tym samym zakresie.
+
+## 30. UX Inspector jest osobnym focused feature'em i uzywa fail-closed transportu
+
+Pytanie o pojedynczy element uruchomionej strony nie jest profilem UI
+Explorera. Ma osobny endpoint, job, kanoniczny prompt, tool policy,
+jednosekcyjny report, historie i kontrakt eksportu. Wspoldzielone sa tylko
+neutralny katalog frontendu, GitLab frontend capability, platformowy runtime i
+komponenty UI. Oba feature'y pozostaja siblingami bez wzajemnych importow.
+
+UX Inspector osadza adaptacyjna procedure pytania precyzyjnego i ogolnego w
+prompcie oraz uruchamia sesje z `skillsEnabled=false`. Preparation dolacza
+komplet nazw sciezek pierwszych czterech poziomow wybranego repozytorium na
+pinned commit. Model reuse'uje neutralne `gitlab_list_repository_tree`,
+`gitlab_list_repository_files`, `gitlab_search_repository_files`,
+`gitlab_read_repository_file` i `gitlab_read_repository_file_chunk`; nie
+tworzy feature-specific odpowiednikow. Feature-owned policy wymusza wybrany
+project i branch, bezpieczne sciezki oraz powod, a hidden
+`GitLabRepositoryToolScope` przypina commit. Nie obowiazuja Operational Context
+`pathPrefixes`, `codeSearchScopes` ani feature-specific limit liczby wywolan.
+Report header, sekcja i meta sa zlecane w jednym turnie przed pojedynczym
+odczytem finalnego raportu. Referencja spoza initial target context jest
+poprawna dopiero po rzeczywistym full/chunk read tego pliku z pinned commit;
+wynik tree/list/search sam nie jest dowodem tresci.
+
+TDW Browser Tools jest efemerycznym statycznym shellem bookmarkleta/Snippetu,
+nie rozszerzeniem Chrome. Capture jest przenoszony tylko protokolem v3 do
+`/ux-inspector`, z exact `origin`, `source`, nonce i potwierdzeniem capture id.
+Nie istnieje payload w URL, browser storage, clipboard transfer, dummy receiver,
+alias v1 ani redirect ze starego `/tdw-inspector/**`. CSP, popup blocker, COOP,
+niepoprawna wiadomosc i stale source zatrzymuja operacje jawnie.
+
+Capture v3 ma jawny profil `ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`.
+Diagnostyka formularza ogranicza odczyt do najblizszego owning form (lub samej
+odlaczonej kontrolki), stosuje osobne limity i zawsze wyklucza password,
+hidden, file oraz pola/wartosci wygladajace jak token, session, secret, CSRF,
+JWT lub OTP. Preview ujawnia operatorowi liczbe wartosci, wykluczenia i
+truncation. `domFingerprint` i selector candidates sa sygnalem do
+deterministycznego rozpoznania, a nie autorytatywnym wskazaniem pliku.
+
+System, branch, view i revision nie pochodza z badanej strony. Backend powtarza
+strict validation, allowliste i redakcje capture oraz wyprowadza jawny
+`sourceBinding` z przypietego source evidence. Source tools sa walidowane wobec
+hidden pinned scope. README, `AGENTS.md`, instrukcje Copilota oraz inne pliki
+repozytorium sa niezaufanym source evidence i nie moga zmienic kanonicznej
+procedury ani tool policy. Opaque `targetRef` jest session-bound i jednorazowy.
+`NOT_FOUND` blokuje AI zamiast uruchamiac broad search; `AMBIGUOUS` pozostaje
+jawnym stanem. Pierwszy snapshot `QUEUED` musi zostac zapisany przed dispatch,
+a import akceptuje wylacznie `tdw.ux-inspector-export/v2` z capture v3.

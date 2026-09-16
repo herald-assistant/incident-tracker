@@ -40,7 +40,9 @@ const SECTION_TITLES: Record<string, string> = {
   'ui-explorer|section-coverage': 'UI Explorer · Pokrycie sekcji',
   'ui-explorer|reachability-boundary': 'UI Explorer · Zakres i rozmiar researchu',
   'ui-explorer|reachability-diagnostics': 'UI Explorer · Diagnostyka researchu',
-  'ui-explorer|ai-artifacts': 'UI Explorer · Artefakty AI'
+  'ui-explorer|ai-artifacts': 'UI Explorer · Artefakty AI',
+  'ux-inspector|target-resolution': 'UX Inspector · Rozpoznanie elementu',
+  'ux-inspector|ai-artifacts': 'UX Inspector · Skupiony kontekst AI'
 };
 
 const LARGE_TEXT_ATTRIBUTES = new Set([

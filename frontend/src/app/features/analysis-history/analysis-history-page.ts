@@ -237,6 +237,9 @@ export class AnalysisHistoryPageComponent {
     if (feature === 'ui-explorer') {
       return 'UI Explorer';
     }
+    if (feature === 'ux-inspector') {
+      return 'UX Inspector';
+    }
     if (feature === 'change-verification') {
       return 'Change Verification';
     }
@@ -270,6 +273,9 @@ export class AnalysisHistoryPageComponent {
     }
     if (feature === 'ui-explorer') {
       return 'screen_search_desktop';
+    }
+    if (feature === 'ux-inspector') {
+      return 'ads_click';
     }
     if (feature === 'change-verification') {
       return 'fact_check';
@@ -369,6 +375,9 @@ function routeForFeature(feature: string): string | null {
   }
   if (feature === 'ui-explorer') {
     return '/ui-explorer';
+  }
+  if (feature === 'ux-inspector') {
+    return '/ux-inspector';
   }
   if (feature === 'change-verification') {
     return '/change-verification';

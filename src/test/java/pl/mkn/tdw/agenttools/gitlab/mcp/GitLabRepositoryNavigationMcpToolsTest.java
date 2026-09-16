@@ -8,6 +8,7 @@ import pl.mkn.tdw.integrations.gitlab.GitLabProperties;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryBranchService;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFile;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileCandidate;
+import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileChunk;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileContent;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFileMetadata;
 import pl.mkn.tdw.integrations.gitlab.GitLabRepositoryFilePage;
@@ -182,6 +183,32 @@ class GitLabRepositoryNavigationMcpToolsTest {
                 "pom.xml", null, "Próbuję wyjść poza grupę.", context()))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(scope.readSourceRefs()).containsExactlyInAnyOrder(result.sourceRef(), raw.sourceRef());
+    }
+
+    @Test
+    void pinnedChunkReadRegistersTheReadFileWithoutOperationalContextScope() {
+        var chunk = new GitLabRepositoryFileChunk(
+                "CRM", "PROCESSES/customer-profile", SELECTED_COMMIT,
+                "src/main/java/example/crm/CustomerPolicy.java",
+                20, 40, 20, 40, 120, "boolean active = customer.isActive();", false
+        );
+        when(port.readFileChunk("CRM", "PROCESSES/customer-profile", SELECTED_COMMIT,
+                "src/main/java/example/crm/CustomerPolicy.java", 20, 40, 8000)).thenReturn(chunk);
+        var gitlab = GitLabMcpToolsTestCreator.create(port);
+
+        var result = gitlab.readRepositoryFileChunk(
+                "PROCESSES/customer-profile", "main", List.of(),
+                "src/main/java/example/crm/CustomerPolicy.java", 20, 40, 8000,
+                "Potwierdzam regule aktywnego klienta.", context()
+        );
+
+        assertThat(result.branch()).isEqualTo(SELECTED_COMMIT);
+        assertThat(result.content()).contains("customer.isActive");
+        assertThat(scope.readSourceRefs()).containsExactly(
+                "gitlab:CRM/PROCESSES/customer-profile@" + SELECTED_COMMIT
+                        + ":src/main/java/example/crm/CustomerPolicy.java"
+        );
+        verify(port, never()).resolveRevision("CRM", "PROCESSES/customer-profile", "main");
     }
 
     private ToolContext context() {

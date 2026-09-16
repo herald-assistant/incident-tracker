@@ -8,6 +8,7 @@ import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundE
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerScreenSelectionStaleException;
 import pl.mkn.tdw.features.uiexplorer.context.error.UiExplorerSourceRevisionChangedException;
 import pl.mkn.tdw.features.uiexplorer.contract.*;
+import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
 import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
 import java.util.List;
@@ -140,7 +141,7 @@ class UiExplorerScreenReachabilityContextServiceTest {
             GitLabFrontendScreenReachabilityService discovery
     ) {
         return new UiExplorerScreenReachabilityContextService(
-                new UiExplorerFrontendCatalogService(port(catalog)), discovery
+                new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog))), discovery
         );
     }
 
