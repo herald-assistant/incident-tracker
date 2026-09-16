@@ -100,6 +100,7 @@ class UxInspectorPromptAndSkillsTest {
                 .contains("report_update_header", "report_upsert_section", "report_update_meta", "report_get_current")
                 .contains("W jednym turnie wywolaj rownolegle")
                 .contains("jedynej sekcji `answer`")
+                .contains("source-unverified", "nie przedstawiaj jej jako bezposrednio potwierdzonego dowodu")
                 .doesNotContain("pathPrefixes")
                 .doesNotContain("ui-explorer-")
                 .doesNotContain("ux-inspector-orchestrator")

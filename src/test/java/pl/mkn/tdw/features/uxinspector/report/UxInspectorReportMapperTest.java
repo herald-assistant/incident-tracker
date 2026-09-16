@@ -52,14 +52,23 @@ class UxInspectorReportMapperTest {
     }
 
     @Test
-    void shouldRejectOutOfScopeReferencesAndRequireReferenceOrGap() {
+    void shouldPreserveOutOfScopeReferenceAsUnverifiedAndStillRequireSomeEvidenceSignal() {
         var outside = new AnalysisReportMeta(List.of(new AnalysisReportReference("source", "Poza scope",
                 "src/app/admin/secrets.ts#L1", "Niezweryfikowany plik")), List.of(), List.of(), List.of(), "high", List.of());
         var empty = AnalysisReportMeta.empty();
 
-        assertThat(mapper.map(report("Teza", "Odpowiedz", outside, empty), capture(), targetContext(),
-                initialPaths(), Set.of(), null).result())
-                .isNull();
+        var inferred = mapper.map(report("Teza", "Odpowiedz", outside, empty), capture(), targetContext(),
+                initialPaths(), Set.of(), null);
+        assertThat(inferred.result()).isNotNull();
+        assertThat(inferred.complete()).isFalse();
+        assertThat(inferred.result().confidence()).isEqualTo("medium");
+        assertThat(inferred.result().sourceReferences()).singleElement().satisfies(reference -> {
+            assertThat(reference.type()).isEqualTo("source-unverified");
+            assertThat(reference.target()).isEqualTo("src/app/admin/secrets.ts#L1");
+            assertThat(reference.description()).contains("Niezweryfikowana referencja");
+        });
+        assertThat(inferred.report().sections().get(0).meta().warnings())
+                .containsExactly("Nie zweryfikowano odczytu pliku wskazanego przez model: src/app/admin/secrets.ts");
         assertThat(mapper.map(report("Teza", "Odpowiedz", empty, empty), capture(), targetContext(),
                 initialPaths(), Set.of(), null).result())
                 .isNull();
@@ -74,7 +83,7 @@ class UxInspectorReportMapperTest {
     }
 
     @Test
-    void shouldAcceptOnlyRepositoryFilesActuallyReadAtThePinnedCommit() {
+    void shouldDistinguishRepositoryFilesReadAtThePinnedCommitFromInferredReferences() {
         var path = "src/main/java/example/crm/ContactPolicy.java";
         var sourceRef = "gitlab:CRM/crm-ui@" + REVISION + ":" + path;
         var meta = new AnalysisReportMeta(List.of(new AnalysisReportReference(
@@ -83,25 +92,65 @@ class UxInspectorReportMapperTest {
         var sourceReport = report("Regula wymaga aktywnego klienta.", "Kontakt mozna zapisac dla aktywnego klienta.",
                 meta, AnalysisReportMeta.empty());
 
-        assertThat(mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(), null).result()).isNull();
-        assertThat(mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(sourceRef), null).result())
-                .isNotNull();
-        assertThat(mapper.map(sourceReport, capture(), targetContext(),
+        var inferred = mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(), null);
+        assertThat(inferred.result()).isNotNull();
+        assertThat(inferred.complete()).isFalse();
+        assertThat(inferred.result().sourceReferences()).singleElement()
+                .extracting(AnalysisReportReference::type).isEqualTo("source-unverified");
+
+        var verified = mapper.map(sourceReport, capture(), targetContext(), initialPaths(), Set.of(sourceRef), null);
+        assertThat(verified.result()).isNotNull();
+        assertThat(verified.complete()).isTrue();
+        assertThat(verified.result().sourceReferences()).singleElement()
+                .extracting(AnalysisReportReference::type).isEqualTo("source");
+
+        var wrongCommit = mapper.map(sourceReport, capture(), targetContext(),
                 initialPaths(), Set.of("gitlab:CRM/crm-ui@0000000000000000000000000000000000000000:" + path),
-                null).result())
-                .isNull();
+                null);
+        assertThat(wrongCommit.result()).isNotNull();
+        assertThat(wrongCommit.complete()).isFalse();
+        assertThat(wrongCommit.result().sourceReferences()).singleElement()
+                .extracting(AnalysisReportReference::type).isEqualTo("source-unverified");
     }
 
     @Test
-    void shouldNotAllowAComponentFileThatTheInitialPackCouldNotVerify() {
+    void shouldMarkAnUnavailableComponentFileAsUnverifiedUntilARepositoryToolReadsIt() {
         var meta = groundedMeta();
         var sourceReport = report("Teza", "Odpowiedz oparta na template.", meta, AnalysisReportMeta.empty());
         var verifiedByTool = "gitlab:CRM/crm-ui@" + REVISION + ":" + TEMPLATE_PATH;
 
-        assertThat(mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH), Set.of(), null).result())
-                .isNull();
-        assertThat(mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH),
-                Set.of(verifiedByTool), null).result()).isNotNull();
+        var inferred = mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH), Set.of(), null);
+        assertThat(inferred.result()).isNotNull();
+        assertThat(inferred.complete()).isFalse();
+        assertThat(inferred.result().sourceReferences()).singleElement()
+                .extracting(AnalysisReportReference::type).isEqualTo("source-unverified");
+
+        var verified = mapper.map(sourceReport, capture(), targetContext(), Set.of(SOURCE_PATH),
+                Set.of(verifiedByTool), null);
+        assertThat(verified.result()).isNotNull();
+        assertThat(verified.complete()).isTrue();
+        assertThat(verified.result().sourceReferences()).singleElement()
+                .extracting(AnalysisReportReference::type).isEqualTo("source");
+    }
+
+    @Test
+    void shouldKeepTheReportAndMarkMalformedSourceReferenceAsUnverified() {
+        var malformed = new AnalysisReportMeta(List.of(new AnalysisReportReference(
+                "source", "Niepewna sciezka", "../../outside.txt#L9-L2", "Wniosek modelu")),
+                List.of(), List.of(), List.of(), "high", List.of());
+
+        var mapping = mapper.map(report("Teza", "Odpowiedz", malformed, AnalysisReportMeta.empty()),
+                capture(), targetContext(), initialPaths(), Set.of(), null);
+
+        assertThat(mapping.result()).isNotNull();
+        assertThat(mapping.complete()).isFalse();
+        assertThat(mapping.result().confidence()).isEqualTo("medium");
+        assertThat(mapping.result().sourceReferences()).singleElement().satisfies(reference -> {
+            assertThat(reference.type()).isEqualTo("source-unverified");
+            assertThat(reference.target()).isEqualTo("../../outside.txt#L9-L2");
+        });
+        assertThat(mapping.report().sections().get(0).meta().warnings()).singleElement()
+                .asString().contains("bezpiecznej sciezki albo poprawnego zakresu linii");
     }
 
     private AnalysisReport report(String thesis, String answer, AnalysisReportMeta sectionMeta, AnalysisReportMeta reportMeta) {

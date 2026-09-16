@@ -307,8 +307,12 @@ public class UxInspectorPromptPreparationService {
                      title `Odpowiedz`, order `1` oraz section meta,
                    - `report_update_meta` z globalnymi ograniczeniami i confidence.
                 2. Po zakonczeniu tych trzech zapisow wywolaj raz `report_get_current` i sprawdz finalny stan.
-                Dodatkowe section ids sa zabronione. Reference target musi wskazywac plik z pinned revision `%s`
-                w formacie `path` albo `path#Lstart-Lend`. Materialne twierdzenie bez reference wymaga jawnego gap.
+                Dodatkowe section ids sa zabronione. Reference target podawaj w formacie `path` albo
+                `path#Lstart-Lend` dla pinned revision `%s`. Preferuj pliki dostarczone jako initial evidence albo
+                rzeczywiscie odczytane repository toolem. Sciezka wywnioskowana z potwierdzonych importow lub
+                konwencji repozytorium moze pozostac referencja, ale mapper oznaczy ja jako `source-unverified`;
+                nie przedstawiaj jej jako bezposrednio potwierdzonego dowodu. Materialne twierdzenie bez reference
+                wymaga jawnego gap.
                 """.formatted(context.sourceRevision().revision()).trim();
     }
 

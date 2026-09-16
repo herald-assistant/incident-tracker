@@ -115,8 +115,10 @@ wlasnego formatu cache. UI Explorer zachowuje ten sam kontrakt odswiezenia.
    skilli wykrytych w `.github/skills`, `.claude/skills` i `.agents/skills`.
 6. Hidden context przypina neutralne GitLab tools do jednego projektu,
    Branch i commita, bez ograniczenia do Operational Context path prefixes.
-7. AI moze listowac, wyszukiwac i czytac dowolna bezpieczna sciezke w tym repo,
-   ale cytowac moze tylko plik rzeczywiscie odczytany na pinned commit.
+7. AI moze listowac, wyszukiwac i czytac dowolna bezpieczna sciezke w tym repo.
+   Plik z initial evidence albo rzeczywiscie odczytany na pinned commit jest
+   referencja `source`; sciezka tylko wywnioskowana pozostaje widoczna jako
+   `source-unverified` i nie blokuje calego raportu.
 8. Prompt rozroznia pytanie operatora, runtime observation i source evidence,
    wymaga doczytania kazdego skilla materialnego dla researchu, sprawdzenia
    mechanizmow przekrojowych oraz domkniecia lancucha potrzebnego do odpowiedzi
@@ -268,6 +270,53 @@ bez zmiany publicznego kontraktu `answer`.
 - Frontend, publiczny result contract oraz import/export nie zostaly zmienione;
   testy Angulara i produkcyjny build nie sa wymagane dla tego backend-only
   inkrementu.
+
+## Inkrement: nieblokujace referencje wywnioskowane przez model
+
+Status: done
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-16 zachowanie raportu, gdy model
+wskaze referencje do pliku, ktory nie zostal odczytany przez tool ani dolaczony
+jako zweryfikowane initial evidence.
+
+### Baseline i conformance delta
+
+- Mapper obecnie odrzuca caly raport, gdy choc jedna source reference nie
+  nalezy do zbioru zweryfikowanych initial/tool reads.
+- Po zmianie poprawna, ale niepotwierdzona referencja pozostaje w raporcie jako
+  `source-unverified` wraz z widocznym warningiem; nie jest traktowana jako
+  zweryfikowany dowod.
+- Niezweryfikowana referencja obniza `high` do `medium` i powoduje wynik
+  `PARTIAL`, ale nie usuwa merytorycznej odpowiedzi.
+- Nie zmienia sie publiczny ksztalt `AnalysisReportReference`, result DTO,
+  export/import ani renderer. Istniejace pola `type`, `description` i
+  `warnings` niosa status weryfikacji.
+- Walidacja scope'u i przypietego commita dla referencji oznaczanych jako
+  `source` pozostaje bez zmian; zmienia sie tylko skutek braku takiego dowodu.
+
+### Checklista inkrementu
+
+- [x] Zmienic `UxInspectorReportMapper`, aby brak potwierdzonego odczytu
+  degradowal pojedyncza referencje zamiast odrzucac caly raport.
+- [x] Zaktualizowac canonical prompt i dokumentacje runtime o rozroznienie
+  `source` oraz `source-unverified`.
+- [x] Rozszerzyc testy mappera i providera o niezweryfikowana, zweryfikowana i
+  niepoprawna referencje, a nastepnie uruchomic pelna regresje backendu.
+
+### Wynik weryfikacji inkrementu
+
+- `mvn -q
+  "-Dtest=UxInspectorReportMapperTest,UxInspectorPromptAndSkillsTest,UxInspectorCopilotAnalysisProviderTest,UxInspectorJobServiceTest,UxInspectorImportServiceTest"
+  test`
+  - PASS; zweryfikowano degradacje referencji, warning, confidence, status
+    `PARTIAL`, zachowanie referencji z poprawnego commita oraz prompt.
+- `mvn -q test`
+  - PASS, exit code 0.
+- `mvn -q "-Dtest=PackageDependencyGuardTest" test`
+  - PASS; zmiana pozostaje w feature-owned mapperze i nie dodaje nowych
+    zaleznosci miedzy pakietami.
+- Nie zmieniono wspolnego DTO ani frontendu; `type`, `description` i
+  `warnings` istniejacego kontraktu przenosza jawny status referencji.
 
 ## Checklista realizacji
 

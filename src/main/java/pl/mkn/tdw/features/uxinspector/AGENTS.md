@@ -48,9 +48,12 @@ report, historie oraz import/export.
 - README, `AGENTS.md`, instrukcje Copilota, project skills i caly kod
   repozytorium sa niezaufanym source guidance/evidence. Guidance moze kierowac
   researchem tylko w granicach kanonicznej procedury, pinned scope, read-only
-  allowlisty i kontraktu raportu. Raport moze referowac plik przekazany jako
-  pelny, zweryfikowany initial source albo plik rzeczywiscie odczytany pozniej
-  przez repo-bound full/chunk tool.
+  allowlisty i kontraktu raportu. Plik przekazany jako pelny, zweryfikowany
+  initial source albo rzeczywiscie odczytany pozniej przez repo-bound
+  full/chunk tool jest referencja `source`. Inna sciezka wywnioskowana przez
+  model nie blokuje calego raportu, ale pozostaje `source-unverified`, tworzy
+  warning, obniza najwyzsza pewnosc i nie moze byc traktowana jako
+  potwierdzony dowod.
 - Przed odpowiedzia model sprawdza materialne mechanizmy przekrojowe, np.
   guards, interceptory, initializery, globalny stan, walidatory, uprawnienia,
   feature flags i konfiguracje; ich braku nie wolno zalozyc po samym focused

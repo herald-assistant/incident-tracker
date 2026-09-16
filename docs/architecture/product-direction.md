@@ -244,8 +244,10 @@ a braki sa jawne i kieruja dalszym researchem.
 Materialne skille sa doczytywane przez
 neutralne file-read tools, ktore wraz z navigation/search maja read-only
 dostep do calego wybranego repozytorium. Polityka sesji wymusza project i
-branch, hidden scope przypina commit, a raport dopuszcza tylko initial evidence
-lub pliki rzeczywiscie odczytane z tego commita.
+branch, hidden scope przypina commit. Referencje z initial evidence lub plikow
+rzeczywiscie odczytanych z tego commita sa zweryfikowanym `source`; sciezki
+tylko wywnioskowane przez model pozostaja jawnie oznaczone jako
+`source-unverified` i nie uniewazniaja calego raportu.
 Browser Tools nie zawiera sekretow, nie ma uprawnien w tle i nie przekazuje
 capture przez URL, storage lub kanal reczny.
 

@@ -206,6 +206,9 @@ instrukcjami dla AI.
   wymaganie; kandydackie kryteria akceptacji i kwestie wymagajace decyzji sa
   jawnie oznaczone.
 - Twierdzenia o implementacji maja source references; brak dowodu jest jawny.
+  Referencja poprawnie wywnioskowana przez model moze pozostac w wyniku nawet
+  bez odczytu pliku, ale musi byc jednoznacznie oznaczona jako
+  niezweryfikowana i nie moze sama uzasadniac najwyzszej pewnosci odpowiedzi.
 - Analiza zaczyna od wskazanego targetu i rozszerza zakres tylko wtedy, gdy
   wymaga tego pytanie.
 - AI ma read-only dostep do calego wybranego repozytorium na jednym

@@ -201,8 +201,13 @@ Sesja ma read-only dostep do calego jednego wybranego repozytorium przez
 neutralne GitLab tools do listowania, wyszukiwania i czytania plikow. Hidden
 scope przypina projekt, branch oraz commit. Feature nie tworzy tooli o nazwach
 specyficznych dla UX Inspectora. Model moze czytac m.in. README, `AGENTS.md`,
-instrukcje repozytorium, konfiguracje, frontend i backend, ale tylko plik
-rzeczywiscie odczytany na przypietym commicie moze stac sie source reference.
+instrukcje repozytorium, konfiguracje, frontend i backend. Plik rzeczywiscie
+odczytany na przypietym commicie albo przekazany jako zweryfikowane initial
+evidence staje sie referencja `source`. Poprawna skladniowo sciezka
+wywnioskowana przez model bez takiego odczytu nie uniewaznia calego raportu:
+mapper zachowuje ja jako `source-unverified`, dodaje warning, obniza najwyzsza
+pewnosc i oznacza run jako `PARTIAL`. Taka referencja nie jest potwierdzonym
+dowodem tresci pliku.
 
 Report tools sa jedynym kanalem wyniku. AI przygotowuje w jednej rundzie
 naglowek, jedna sekcje `answer` i metadata, a nastepnie sprawdza stan raportu.
