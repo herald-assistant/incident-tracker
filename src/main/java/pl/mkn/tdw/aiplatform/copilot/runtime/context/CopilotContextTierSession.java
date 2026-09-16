@@ -25,25 +25,30 @@ public final class CopilotContextTierSession {
     private final CopilotContextTierDecision decision;
     private final Consumer<AnalysisAiActivityEvent> activitySink;
     private final CopilotEffectiveContextTierReader effectiveContextTierReader;
+    private final CopilotContextTierActivator contextTierActivator;
     private final String lifecycleId = UUID.randomUUID().toString();
     private final String initialRequestEventId = eventId("initial-requested");
     private final String runtimeRequestEventId = eventId("runtime-requested");
     private final AtomicBoolean effectiveWindowPublished = new AtomicBoolean();
     private final AtomicBoolean runtimeUpgradeRequested = new AtomicBoolean();
     private final AtomicBoolean runtimeAbortOutcomePublished = new AtomicBoolean();
+    private final AtomicBoolean runtimeWindowOutcomePublished = new AtomicBoolean();
     private final AtomicReference<CompletableFuture<Void>> runtimeAbortFuture = new AtomicReference<>();
     private volatile CopilotEffectiveContextTier verifiedTier;
     private volatile WindowObservation runtimeUpgradeSource;
+    private volatile WindowObservation runtimeLatestObservation;
     private volatile boolean runtimeResumeActive;
 
     CopilotContextTierSession(
             CopilotContextTierDecision decision,
             Consumer<AnalysisAiActivityEvent> activitySink,
-            CopilotEffectiveContextTierReader effectiveContextTierReader
+            CopilotEffectiveContextTierReader effectiveContextTierReader,
+            CopilotContextTierActivator contextTierActivator
     ) {
         this.decision = decision;
         this.activitySink = activitySink;
         this.effectiveContextTierReader = effectiveContextTierReader;
+        this.contextTierActivator = contextTierActivator;
         if (decision.useLongContextInitially()) {
             var details = details("TIER_REQUESTED", initialTrigger());
             details.put("observationSource", "SESSION_CONFIGURATION");
@@ -107,7 +112,7 @@ public final class CopilotContextTierSession {
         publish(
                 runtimeRequestEventId,
                 null,
-                "COMPLETED",
+                "STARTED",
                 "Przełączenie na rozszerzony kontekst",
                 "Wykorzystanie bieżącego okna przekroczyło próg "
                         + percentage(decision.runtimeUsageThreshold())
@@ -180,11 +185,29 @@ public final class CopilotContextTierSession {
     public void verifyAfterRuntimeResume(CopilotSession session) {
         runtimeResumeActive = true;
         if (decision.preference() == CopilotContextTierPreference.AUTO) {
-            var effectiveTier = effectiveContextTierReader.read(session);
-            if (effectiveTier.contextTier() == null) {
+            CopilotEffectiveContextTier effectiveTier;
+            try {
+                effectiveTier = effectiveContextTierReader.read(session);
+            } catch (RuntimeException failure) {
+                var details = details("MODEL_STATE_VERIFICATION", "RUNTIME_USAGE_THRESHOLD");
+                details.put("observationSource", "SESSION_MODEL_GET_CURRENT");
+                details.put("verification", "TIER_UNCONFIRMED");
+                details.put("failureType", rootCause(failure).getClass().getSimpleName());
+                publish(
+                        eventId("runtime-model-state-failed"),
+                        runtimeRequestEventId,
+                        "WARNING",
+                        "Tier sesji niepotwierdzony",
+                        "Nie udało się odczytać `contextTier`; platforma zweryfikuje rzeczywisty limit po kontynuacji.",
+                        details
+                );
+                return;
+            }
+            if (!CopilotContextTierPolicy.LONG_CONTEXT.equals(effectiveTier.contextTier())) {
                 verifiedTier = effectiveTier;
                 var details = details("MODEL_STATE_VERIFICATION", "RUNTIME_USAGE_THRESHOLD");
                 details.put("observationSource", "SESSION_MODEL_GET_CURRENT");
+                details.put("effectiveTier", effectiveTier.contextTier());
                 details.put("effectiveModel", effectiveTier.modelId());
                 details.put("effectiveReasoningEffort", effectiveTier.reasoningEffort());
                 details.put("verification", "TIER_UNCONFIRMED");
@@ -193,11 +216,27 @@ public final class CopilotContextTierSession {
                         runtimeRequestEventId,
                         "WARNING",
                         "Tier sesji niepotwierdzony",
-                        "SDK nie zwróciło `contextTier`; platforma wyśle jedną wiadomość kontynuującą i zweryfikuje pierwszy `session.usage_info`.",
+                        "SDK nie potwierdziło `long_context`; platforma wyśle jedną wiadomość kontynuującą i zweryfikuje pierwszy `session.usage_info`.",
                         details
                 );
                 return;
             }
+            verifiedTier = effectiveTier;
+            var details = details("MODEL_STATE_VERIFICATION", "RUNTIME_USAGE_THRESHOLD");
+            details.put("observationSource", "SESSION_MODEL_GET_CURRENT");
+            details.put("effectiveTier", effectiveTier.contextTier());
+            details.put("effectiveModel", effectiveTier.modelId());
+            details.put("effectiveReasoningEffort", effectiveTier.reasoningEffort());
+            details.put("verification", "TIER_CONFIRMED");
+            publish(
+                    eventId("runtime-model-state-confirmed"),
+                    runtimeRequestEventId,
+                    "COMPLETED",
+                    "Tier przyjęty przez sesję",
+                    "Wznowiona sesja raportuje `long_context`; rzeczywisty limit zostanie potwierdzony przez `session.usage_info`.",
+                    details
+            );
+            return;
         }
         verifyExpectedLongContext(
                 session,
@@ -207,6 +246,48 @@ public final class CopilotContextTierSession {
                 "Instrukcja kontynuacji nie została wysłana",
                 "Wznowiona sesja raportuje `long_context`; rzeczywisty limit zostanie potwierdzony przez `session.usage_info`."
         );
+    }
+
+    public void activateAfterRuntimeResume(CopilotSession session) {
+        if (!runtimeUpgradeRequested()) {
+            throw new IllegalStateException("Runtime context-tier activation requires a requested upgrade.");
+        }
+        runtimeResumeActive = true;
+
+        var details = runtimeDetails("RUNTIME_TIER_ACTIVATION", runtimeUpgradeSource);
+        details.put("observationSource", "SESSION_OPTIONS_UPDATE");
+        try {
+            var accepted = contextTierActivator.activateLongContext(session, decision.switchTimeoutMillis());
+            details.put("rpcSuccess", accepted);
+            publish(
+                    eventId("runtime-tier-activation"),
+                    runtimeRequestEventId,
+                    accepted ? "COMPLETED" : "WARNING",
+                    accepted ? "Aktywacja rozszerzonego kontekstu przyjęta" : "Aktywacja rozszerzonego kontekstu odrzucona",
+                    accepted
+                            ? "Copilot przyjął `session.options.update(contextTier=long_context)`; rzeczywisty limit zostanie potwierdzony po kontynuacji."
+                            : "Copilot nie przyjął aktywacji `long_context`; platforma zweryfikuje limit i w razie braku wzrostu pozostawi compaction.",
+                    details
+            );
+        } catch (RuntimeException failure) {
+            details.put("rpcSuccess", false);
+            details.put("failureType", rootCause(failure).getClass().getSimpleName());
+            publish(
+                    eventId("runtime-tier-activation-failed"),
+                    runtimeRequestEventId,
+                    "WARNING",
+                    "Nie udało się zastosować rozszerzonego kontekstu",
+                    "Wywołanie `session.options.update` nie powiodło się; platforma zweryfikuje limit i w razie braku wzrostu pozostawi compaction.",
+                    details
+            );
+        }
+    }
+
+    public void finalizeRuntimeUpgradeVerification() {
+        if (!runtimeResumeActive || runtimeWindowOutcomePublished.get()) {
+            return;
+        }
+        publishRuntimeWindowOutcome(runtimeLatestObservation, false);
     }
 
     private void verifyExpectedLongContext(
@@ -243,6 +324,7 @@ public final class CopilotContextTierSession {
         details.put("effectiveModel", effectiveTier.modelId());
         details.put("effectiveReasoningEffort", effectiveTier.reasoningEffort());
         if (!CopilotContextTierPolicy.LONG_CONTEXT.equals(effectiveTier.contextTier())) {
+            details.put("verification", "TIER_REJECTED");
             publish(
                     eventId(eventScope + "-model-state-rejected"),
                     parentEventId,
@@ -258,6 +340,7 @@ public final class CopilotContextTierSession {
         }
 
         verifiedTier = effectiveTier;
+        details.put("verification", "TIER_CONFIRMED");
         publish(
                 eventId(eventScope + "-model-state-confirmed"),
                 parentEventId,
@@ -271,7 +354,19 @@ public final class CopilotContextTierSession {
     private void publishEffectiveWindowWhenExpected(WindowObservation observation) {
         var expectedLongContext = decision.useLongContextInitially() && !runtimeUpgradeRequested()
                 || runtimeResumeActive;
-        if (!expectedLongContext || !effectiveWindowPublished.compareAndSet(false, true)) {
+        if (!expectedLongContext) {
+            return;
+        }
+
+        if (runtimeResumeActive) {
+            runtimeLatestObservation = observation;
+            if (runtimeUpgradeSource != null && observation.tokenLimit() > runtimeUpgradeSource.tokenLimit()) {
+                publishRuntimeWindowOutcome(observation, true);
+            }
+            return;
+        }
+
+        if (!effectiveWindowPublished.compareAndSet(false, true)) {
             return;
         }
 
@@ -284,25 +379,46 @@ public final class CopilotContextTierSession {
             details.put("effectiveReasoningEffort", verifiedTier.reasoningEffort());
         }
         addWindowDetails(details, observation);
-        var runtimeWindowIncreased = runtimeResumeActive
-                && runtimeUpgradeSource != null
-                && observation.tokenLimit() > runtimeUpgradeSource.tokenLimit();
-        details.put("verification", runtimeResumeActive
-                ? runtimeWindowIncreased ? "TOKEN_LIMIT_INCREASED" : "TOKEN_LIMIT_NOT_INCREASED"
-                : "TOKEN_LIMIT_OBSERVED");
-        if (runtimeResumeActive) {
-            details.put("runtimeUpgradeConfirmed", runtimeWindowIncreased);
-        }
+        details.put("verification", "TOKEN_LIMIT_OBSERVED");
         publish(
-                eventId(runtimeResumeActive ? "runtime-effective-window" : "initial-effective-window"),
-                runtimeResumeActive ? runtimeRequestEventId : initialRequestEventId,
-                runtimeResumeActive && !runtimeWindowIncreased ? "WARNING" : "COMPLETED",
+                eventId("initial-effective-window"),
+                initialRequestEventId,
+                "COMPLETED",
                 "Rzeczywisty limit kontekstu",
-                runtimeResumeActive && !runtimeWindowIncreased
-                        ? "Po resume Copilot nadal zgłasza limit " + observation.tokenLimit()
-                        + " tokenów; kolejna próba resume nie zostanie wykonana, a SDK może dokończyć przez compaction."
-                        : "Copilot zgłosił efektywny limit " + observation.tokenLimit()
+                "Copilot zgłosił efektywny limit " + observation.tokenLimit()
                         + " tokenów przy aktualnym użyciu " + observation.currentTokens() + " tokenów.",
+                details
+        );
+    }
+
+    private void publishRuntimeWindowOutcome(WindowObservation observation, boolean increased) {
+        if (!runtimeWindowOutcomePublished.compareAndSet(false, true)) {
+            return;
+        }
+        var details = details("EFFECTIVE_WINDOW_OBSERVED", "RUNTIME_USAGE_THRESHOLD");
+        details.put("observationSource", "SESSION_USAGE_INFO");
+        if (verifiedTier != null) {
+            details.put("effectiveTier", verifiedTier.contextTier());
+            details.put("effectiveModel", verifiedTier.modelId());
+            details.put("effectiveReasoningEffort", verifiedTier.reasoningEffort());
+        }
+        if (observation != null) {
+            addWindowDetails(details, observation);
+        }
+        details.put("verification", increased ? "TOKEN_LIMIT_INCREASED" : "TOKEN_LIMIT_NOT_INCREASED");
+        details.put("runtimeUpgradeConfirmed", increased);
+        publish(
+                eventId("runtime-effective-window"),
+                runtimeRequestEventId,
+                increased ? "COMPLETED" : "WARNING",
+                "Rzeczywisty limit kontekstu",
+                increased
+                        ? "Copilot zwiększył efektywny limit do " + observation.tokenLimit()
+                        + " tokenów przy aktualnym użyciu " + observation.currentTokens() + " tokenów."
+                        : observation != null
+                        ? "Po kontynuacji Copilot nadal zgłasza limit " + observation.tokenLimit()
+                        + " tokenów; kolejna próba nie zostanie wykonana, a SDK może dokończyć przez compaction."
+                        : "Po kontynuacji Copilot nie zgłosił nowego limitu; kolejna próba nie zostanie wykonana, a SDK może dokończyć przez compaction.",
                 details
         );
     }

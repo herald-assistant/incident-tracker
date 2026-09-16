@@ -80,6 +80,8 @@ public class UiExplorerLocalRunSnapshotSanitizer {
             "messagesLength",
             "utilizationPercent",
             "verification",
+            "rpcSuccess",
+            "runtimeUpgradeConfirmed",
             "failureType",
             "sessionId"
     );

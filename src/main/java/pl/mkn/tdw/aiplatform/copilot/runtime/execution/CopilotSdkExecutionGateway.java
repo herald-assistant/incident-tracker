@@ -115,6 +115,7 @@ public class CopilotSdkExecutionGateway {
                                         contextTierSession
                                 ));
                                 if (runtimeResume) {
+                                    contextTierSession.activateAfterRuntimeResume(session);
                                     contextTierSession.verifyAfterRuntimeResume(session);
                                 } else {
                                     contextTierSession.verifyBeforeFirstMessage(session);
@@ -149,9 +150,15 @@ public class CopilotSdkExecutionGateway {
                                             runtimeResume
                                     );
                                     response = session.sendAndWait(messageOptions, timeoutMs).join();
+                                    if (runtimeResume) {
+                                        contextTierSession.finalizeRuntimeUpgradeVerification();
+                                    }
                                     logDuration("send-and-wait", runReference, nanosToMillis(sendAndWaitStart));
                                 } catch (RuntimeException failure) {
                                     sendFailure = failure;
+                                    if (runtimeResume) {
+                                        contextTierSession.finalizeRuntimeUpgradeVerification();
+                                    }
                                 }
                                 if (!runtimeResume && contextTierSession.runtimeUpgradeRequested()) {
                                     contextTierSession.awaitRuntimeAbort();

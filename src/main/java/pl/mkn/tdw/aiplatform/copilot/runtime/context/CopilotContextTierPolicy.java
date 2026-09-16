@@ -21,6 +21,7 @@ public class CopilotContextTierPolicy {
     private final CopilotSdkProperties properties;
     private final CopilotModelOptionsProvider modelOptionsProvider;
     private final CopilotEffectiveContextTierReader effectiveContextTierReader;
+    private final CopilotContextTierActivator contextTierActivator;
 
     public CopilotContextTierSession prepare(CopilotPreparedSession preparedSession) {
         var decision = decide(preparedSession);
@@ -35,7 +36,8 @@ public class CopilotContextTierPolicy {
         return new CopilotContextTierSession(
                 decision,
                 preparedSession.activitySink(),
-                effectiveContextTierReader
+                effectiveContextTierReader,
+                contextTierActivator
         );
     }
 

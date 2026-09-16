@@ -195,18 +195,21 @@ efektywnego `long_context` przerywa run przed wyslaniem promptu. Polityka nie
 uzywa `setModel` do zmiany tieru i nie wywoluje eksperymentalnego `preCompact`.
 Obserwuje natomiast rzeczywiste zapelnienie okna z `session.usage_info` i po
 przekroczeniu `runtime-usage-threshold` wykonuje najwyzej jeden kontrolowany
-upgrade: abort aktywnego turnu, zamkniecie uchwytu i resume tego samego
-`sessionId` z `long_context`. Resume nie powtarza initial promptu, zachowuje
-session history oraz wspolne report/tool evidence/tool budget stores i wysyla
-tylko neutralna instrukcje kontynuacji. Prompt, tools, hidden scope i kontrakt
-wyniku nie zmieniaja sie. W properties nie ma listy nazw ani limitow modeli.
+upgrade: abort aktywnego turnu, zamkniecie uchwytu, resume tego samego
+`sessionId` z `long_context` oraz waskie
+`session.options.update(contextTier=long_context)` przed `model.getCurrent` i
+continuation. Resume nie powtarza initial promptu, zachowuje session history
+oraz wspolne report/tool evidence/tool budget stores i wysyla tylko neutralna
+instrukcje kontynuacji. Prompt, tools, hidden scope i kontrakt wyniku nie
+zmieniaja sie. W properties nie ma listy nazw ani limitow modeli.
 Rollbackiem jest
 `analysis.ai.copilot.context-tier.enabled=false`.
 
 Dla runtime resume w `AUTO` brak `contextTier` w
-`session.model.getCurrent` nie jest dowodem braku aktywacji. Platforma wysyla
+`session.model.getCurrent` nie jest dowodem braku aktywacji. Wynik
+`session.options.update` potwierdza jedynie przyjecie zmiany; platforma wysyla
 jedna instrukcje kontynuacji i interpretuje pierwszy kolejny
-  `session.usage_info`: wzrost `tokenLimit` potwierdza upgrade, a brak wzrostu
+`session.usage_info`: wzrost `tokenLimit` potwierdza upgrade, a brak wzrostu
 publikuje ostrzezenie i pozwala SDK dokonczyc turn przez compaction. Druga proba
 resume nie jest wykonywana. Zasada fail-before-send pozostaje ograniczona do
 jawnego `LONG_CONTEXT_REQUIRED`; UI Explorer i Change Verification korzystaja

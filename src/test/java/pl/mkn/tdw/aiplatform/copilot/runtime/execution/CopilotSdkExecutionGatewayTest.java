@@ -27,6 +27,7 @@ import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionConfigRequest;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeCompatibility;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotRuntimeVersionInfo;
 import pl.mkn.tdw.aiplatform.copilot.runtime.CopilotSessionTarget;
+import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierActivator;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPolicy;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotContextTierPreference;
 import pl.mkn.tdw.aiplatform.copilot.runtime.context.CopilotEffectiveContextTier;
@@ -418,13 +419,15 @@ class CopilotSdkExecutionGatewayTest {
         var budgetRegistry = mock(CopilotToolBudgetRegistry.class);
         when(budgetRegistry.unregisterSession("crm-runtime-session")).thenReturn(Optional.empty());
         var effectiveTierReader = mock(CopilotEffectiveContextTierReader.class);
+        var contextTierActivator = mock(CopilotContextTierActivator.class);
+        when(contextTierActivator.activateLongContext(any(), eq(20_000L))).thenReturn(true);
         var gateway = new CopilotSdkExecutionGateway(
                 properties,
                 evidenceStore,
                 budgetRegistry,
                 new CopilotReportSessionStore(),
                 new CopilotClientShutdown(properties),
-                contextTierPolicy(properties, effectiveTierReader),
+                contextTierPolicy(properties, effectiveTierReader, contextTierActivator),
                 compatibleRuntime()
         );
         var activities = new ArrayList<AnalysisAiActivityEvent>();
@@ -480,7 +483,7 @@ class CopilotSdkExecutionGatewayTest {
         when(effectiveTierReader.read(resumedSession)).thenReturn(new CopilotEffectiveContextTier(
                 "gpt-synthetic-crm",
                 "medium",
-                null
+                "long_context"
         ));
 
         try (MockedConstruction<CopilotClient> mockedClients = mockConstruction(
@@ -507,6 +510,15 @@ class CopilotSdkExecutionGatewayTest {
                     .contains("Kontynuuj przerwany turn")
                     .doesNotContain(initialMessage.getPrompt());
             verify(firstSession).abort();
+            verify(contextTierActivator).activateLongContext(resumedSession, 20_000L);
+            var runtimeOrdering = org.mockito.Mockito.inOrder(
+                    contextTierActivator,
+                    effectiveTierReader,
+                    resumedSession
+            );
+            runtimeOrdering.verify(contextTierActivator).activateLongContext(resumedSession, 20_000L);
+            runtimeOrdering.verify(effectiveTierReader).read(resumedSession);
+            runtimeOrdering.verify(resumedSession).sendAndWait(any(MessageOptions.class), eq(300_000L));
             verify(evidenceStore).registerSession(eq("crm-runtime-session"), any());
             verify(evidenceStore).unregisterSession("crm-runtime-session");
             verify(budgetRegistry).registerSession("crm-runtime-session");
@@ -519,17 +531,24 @@ class CopilotSdkExecutionGatewayTest {
                             "RUNTIME_TIER_SWITCH_REQUESTED",
                             "RUNTIME_SESSION_ABORTED",
                             "RUNTIME_RESUME_REQUESTED",
+                            "RUNTIME_TIER_ACTIVATION",
                             "MODEL_STATE_VERIFICATION",
                             "EFFECTIVE_WINDOW_OBSERVED"
                     );
             assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
                     .element(3)
                     .satisfies(activity -> {
-                        assertThat(activity.status()).isEqualTo("WARNING");
-                        assertThat(activity.details()).containsEntry("verification", "TIER_UNCONFIRMED");
+                        assertThat(activity.status()).isEqualTo("COMPLETED");
+                        assertThat(activity.details()).containsEntry("rpcSuccess", true);
                     });
             assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
                     .element(4)
+                    .satisfies(activity -> {
+                        assertThat(activity.status()).isEqualTo("COMPLETED");
+                        assertThat(activity.details()).containsEntry("verification", "TIER_CONFIRMED");
+                    });
+            assertThat(activities).filteredOn(activity -> "platform.context_tier".equals(activity.type()))
+                    .element(5)
                     .satisfies(activity -> assertThat(activity.details())
                             .containsEntry("verification", "TOKEN_LIMIT_INCREASED")
                             .containsEntry("runtimeUpgradeConfirmed", true));
@@ -979,6 +998,16 @@ class CopilotSdkExecutionGatewayTest {
             CopilotSdkProperties properties,
             CopilotEffectiveContextTierReader effectiveTierReader
     ) {
+        var contextTierActivator = mock(CopilotContextTierActivator.class);
+        when(contextTierActivator.activateLongContext(any(), org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+        return contextTierPolicy(properties, effectiveTierReader, contextTierActivator);
+    }
+
+    private CopilotContextTierPolicy contextTierPolicy(
+            CopilotSdkProperties properties,
+            CopilotEffectiveContextTierReader effectiveTierReader,
+            CopilotContextTierActivator contextTierActivator
+    ) {
         return new CopilotContextTierPolicy(
                 properties,
                 auth -> new CopilotModelOptionsResponse(
@@ -995,7 +1024,8 @@ class CopilotSdkExecutionGatewayTest {
                                 1_000
                         ))
                 ),
-                effectiveTierReader
+                effectiveTierReader,
+                contextTierActivator
         );
     }
 

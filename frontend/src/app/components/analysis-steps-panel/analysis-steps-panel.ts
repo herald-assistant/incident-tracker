@@ -1885,6 +1885,15 @@ function buildRuntimeSummary(event: AnalysisAiActivityEvent): string {
     if (phase === 'EFFECTIVE_WINDOW_OBSERVED' && tokenLimit !== null) {
       return `Copilot zgłosił rzeczywisty limit ${formatTokenCount(tokenLimit)} tokenów przy użyciu ${formatTokenCount(currentTokens ?? 0)} tokenów.`;
     }
+    if (phase === 'RUNTIME_TIER_SWITCH_REQUESTED') {
+      return 'Wykorzystanie okna przekroczyło próg; platforma rozpoczyna przełączenie tej samej sesji na long_context.';
+    }
+    if (phase === 'RUNTIME_TIER_ACTIVATION') {
+      const rpcSuccess = booleanFromRecord(details, 'rpcSuccess');
+      return rpcSuccess
+        ? 'Copilot przyjął aktywację long_context; rzeczywisty limit zostanie potwierdzony po kontynuacji.'
+        : 'Copilot nie potwierdził aktywacji long_context; sesja może dokończyć przez compaction.';
+    }
     if (requestedTier) {
       return `Platforma zażądała tieru ${requestedTier} przed otwarciem sesji.`;
     }
@@ -1978,6 +1987,9 @@ function buildContextTierMeta(event: AnalysisAiActivityEvent): string[] {
   const tokenLimit = numberFromRecord(details, 'tokenLimit');
   const currentTokens = numberFromRecord(details, 'currentTokens');
   const utilizationPercent = numberFromRecord(details, 'utilizationPercent');
+  const rpcSuccess = booleanFromRecord(details, 'rpcSuccess');
+  const verification = stringFromRecord(details, 'verification');
+  const runtimeUpgradeConfirmed = booleanFromRecord(details, 'runtimeUpgradeConfirmed');
 
   return [
     trigger ? contextTierTriggerLabel(trigger) : '',
@@ -1997,7 +2009,12 @@ function buildContextTierMeta(event: AnalysisAiActivityEvent): string[] {
       : '',
     tokenLimit !== null ? `Rzeczywisty limit: ${formatTokenCount(tokenLimit)} tokenów` : '',
     currentTokens !== null ? `Aktualnie: ${formatTokenCount(currentTokens)} tokenów` : '',
-    utilizationPercent !== null ? `Wykorzystanie: ${utilizationPercent.toLocaleString('pl-PL')}%` : ''
+    utilizationPercent !== null ? `Wykorzystanie: ${utilizationPercent.toLocaleString('pl-PL')}%` : '',
+    rpcSuccess !== null ? `Aktywacja RPC: ${rpcSuccess ? 'przyjęta' : 'odrzucona'}` : '',
+    verification ? `Weryfikacja: ${verification}` : '',
+    runtimeUpgradeConfirmed !== null
+      ? `Wzrost okna: ${runtimeUpgradeConfirmed ? 'potwierdzony' : 'niepotwierdzony'}`
+      : ''
   ].filter(Boolean);
 }
 

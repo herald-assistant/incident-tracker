@@ -519,7 +519,7 @@ describe('AnalysisStepsPanelComponent', () => {
       compiled.querySelectorAll('.ai-work-item--runtime .ai-work-item__technical pre')
     ).map((element) => element.textContent ?? '');
 
-    expect(runtimeItems).toHaveLength(3);
+    expect(runtimeItems).toHaveLength(5);
     expect(compiled.textContent).toContain('Platforma ustawiła `long_context` przed otwarciem sesji');
     expect(compiled.textContent).toContain('Copilot zgłosił efektywny limit 272000 tokenów');
     expect(compiled.textContent).toContain('Powód: wymaganie feature’a');
@@ -529,6 +529,8 @@ describe('AnalysisStepsPanelComponent', () => {
     expect(compiled.textContent).toContain('Powód: wykorzystanie okna przekroczyło próg');
     expect(compiled.textContent).toContain('Próg runtime: 70%');
     expect(compiled.textContent).toMatch(/Przełączenie od: 190\s400 tokenów/);
+    expect(compiled.textContent).toContain('Aktywacja RPC: przyjęta');
+    expect(compiled.textContent).toContain('Wzrost okna: potwierdzony');
     expect(payloads.join('\n')).toContain('"trigger": "FEATURE_REQUIREMENT"');
     expect(payloads.join('\n')).toContain('"tokenLimit": 272000');
   });
@@ -1614,7 +1616,7 @@ function buildContextTierActivityEvents(): AnalysisAiActivityEvent[] {
       parentEventId: '',
       type: 'platform.context_tier',
       category: 'CONTEXT',
-      status: 'COMPLETED',
+      status: 'STARTED',
       title: 'Przełączenie na rozszerzony kontekst',
       summary:
         'Wykorzystanie bieżącego okna przekroczyło próg 70%; platforma przerwie turn i wznowi tę samą sesję z `long_context`.',
@@ -1636,6 +1638,58 @@ function buildContextTierActivityEvents(): AnalysisAiActivityEvent[] {
         currentTokens: 195840,
         messagesLength: 11,
         utilizationPercent: 72
+      }
+    },
+    {
+      eventId: 'context-tier-crm-runtime-activation',
+      parentEventId: 'context-tier-crm-runtime-requested',
+      type: 'platform.context_tier',
+      category: 'CONTEXT',
+      status: 'COMPLETED',
+      title: 'Aktywacja rozszerzonego kontekstu przyjęta',
+      summary:
+        'Copilot przyjął `session.options.update(contextTier=long_context)`; rzeczywisty limit zostanie potwierdzony po kontynuacji.',
+      turnId: '',
+      interactionId: '',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-08-22T18:00:03Z',
+      details: {
+        phase: 'RUNTIME_TIER_ACTIVATION',
+        trigger: 'RUNTIME_USAGE_THRESHOLD',
+        observationSource: 'SESSION_OPTIONS_UPDATE',
+        model: 'gpt-synthetic-crm',
+        preference: 'AUTO',
+        requestedTier: 'long_context',
+        rpcSuccess: true
+      }
+    },
+    {
+      eventId: 'context-tier-crm-runtime-effective-window',
+      parentEventId: 'context-tier-crm-runtime-requested',
+      type: 'platform.context_tier',
+      category: 'CONTEXT',
+      status: 'COMPLETED',
+      title: 'Rzeczywisty limit kontekstu',
+      summary: 'Copilot zwiększył efektywny limit do 1000000 tokenów.',
+      turnId: '',
+      interactionId: '',
+      toolCallId: '',
+      toolName: '',
+      timestamp: '2026-08-22T18:00:04Z',
+      details: {
+        phase: 'EFFECTIVE_WINDOW_OBSERVED',
+        trigger: 'RUNTIME_USAGE_THRESHOLD',
+        observationSource: 'SESSION_USAGE_INFO',
+        model: 'gpt-synthetic-crm',
+        preference: 'AUTO',
+        requestedTier: 'long_context',
+        effectiveTier: 'long_context',
+        tokenLimit: 1000000,
+        currentTokens: 196100,
+        utilizationPercent: 19.61,
+        verification: 'TOKEN_LIMIT_INCREASED',
+        runtimeUpgradeConfirmed: true
       }
     }
   ];

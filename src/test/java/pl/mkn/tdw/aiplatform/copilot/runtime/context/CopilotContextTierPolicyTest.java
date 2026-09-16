@@ -288,7 +288,8 @@ class CopilotContextTierPolicyTest {
                                 "gpt-short", "Short model", true, List.of("high"), "high", 100, 0
                         ))
                 ),
-                mock(CopilotEffectiveContextTierReader.class)
+                mock(CopilotEffectiveContextTierReader.class),
+                mock(CopilotContextTierActivator.class)
         );
         var sessionConfig = new SessionConfig().setModel("gpt-short");
         var prepared = prepared(
@@ -429,6 +430,7 @@ class CopilotContextTierPolicyTest {
         controller.observeEffectiveWindow(session, 100, 85, 8);
         controller.awaitRuntimeAbort();
         controller.prepareRuntimeResume(resumeConfig, "crm-runtime-tier-session");
+        controller.activateAfterRuntimeResume(resumedSession);
         controller.verifyAfterRuntimeResume(resumedSession);
         controller.observeEffectiveWindow(resumedSession, 1_000, 90, 9);
 
@@ -441,6 +443,7 @@ class CopilotContextTierPolicyTest {
                         "RUNTIME_TIER_SWITCH_REQUESTED",
                         "RUNTIME_SESSION_ABORTED",
                         "RUNTIME_RESUME_REQUESTED",
+                        "RUNTIME_TIER_ACTIVATION",
                         "MODEL_STATE_VERIFICATION",
                         "EFFECTIVE_WINDOW_OBSERVED"
                 );
@@ -450,12 +453,12 @@ class CopilotContextTierPolicyTest {
                 .containsEntry("runtimeThresholdTokens", 70L)
                 .containsEntry("tokenLimit", 100L)
                 .containsEntry("currentTokens", 70L);
-        assertThat(activities.get(4).details())
+        assertThat(activities.get(5).details())
                 .containsEntry("tokenLimit", 1_000L)
                 .containsEntry("verification", "TOKEN_LIMIT_INCREASED")
                 .containsEntry("runtimeUpgradeConfirmed", true);
-        assertThat(activities.get(3).status()).isEqualTo("WARNING");
-        assertThat(activities.get(3).details()).containsEntry("verification", "TIER_UNCONFIRMED");
+        assertThat(activities.get(4).status()).isEqualTo("WARNING");
+        assertThat(activities.get(4).details()).containsEntry("verification", "TIER_UNCONFIRMED");
     }
 
     @Test
@@ -485,15 +488,17 @@ class CopilotContextTierPolicyTest {
         controller.observeEffectiveWindow(session, 100, 70, 7);
         controller.awaitRuntimeAbort();
         controller.prepareRuntimeResume(resumeConfig, "crm-runtime-tier-session");
+        controller.activateAfterRuntimeResume(resumedSession);
         controller.verifyAfterRuntimeResume(resumedSession);
         controller.observeEffectiveWindow(resumedSession, 100, 71, 8);
         controller.observeEffectiveWindow(resumedSession, 100, 72, 9);
+        controller.finalizeRuntimeUpgradeVerification();
 
         verify(session).abort();
         verify(resumedSession, org.mockito.Mockito.never()).abort();
-        assertThat(activities.get(4).status()).isEqualTo("WARNING");
-        assertThat(activities.get(4).summary()).contains("compaction");
-        assertThat(activities.get(4).details())
+        assertThat(activities.get(5).status()).isEqualTo("WARNING");
+        assertThat(activities.get(5).summary()).contains("compaction");
+        assertThat(activities.get(5).details())
                 .containsEntry("tokenLimit", 100L)
                 .containsEntry("verification", "TOKEN_LIMIT_NOT_INCREASED")
                 .containsEntry("runtimeUpgradeConfirmed", false);
@@ -501,6 +506,43 @@ class CopilotContextTierPolicyTest {
                         activity.details().get("phase")
                 ))
                 .hasSize(1);
+    }
+
+    @Test
+    void shouldPublishWarningAndContinueWhenRuntimeActivationFails() {
+        var properties = properties(0.70D, 4D, 0);
+        properties.getContextTier().setRuntimeUsageThreshold(0.70D);
+        var activities = new ArrayList<AnalysisAiActivityEvent>();
+        var session = mock(CopilotSession.class);
+        var resumedSession = mock(CopilotSession.class);
+        var activator = mock(CopilotContextTierActivator.class);
+        when(session.abort()).thenReturn(CompletableFuture.completedFuture(null));
+        when(activator.activateLongContext(resumedSession, 20_000L))
+                .thenThrow(new IllegalStateException("Synthetic CRM activation failure"));
+        var resumeConfig = new ResumeSessionConfig().setModel("gpt-crm-context");
+        var controller = policy(
+                properties,
+                mock(CopilotEffectiveContextTierReader.class),
+                activator
+        ).prepare(prepared(
+                "Small synthetic CRM prompt",
+                new SessionConfig().setModel("gpt-crm-context"),
+                resumeConfig,
+                List.of(),
+                activities,
+                CopilotContextTierPreference.AUTO
+        ));
+
+        controller.observeEffectiveWindow(session, 100, 70, 7);
+        controller.awaitRuntimeAbort();
+        controller.prepareRuntimeResume(resumeConfig, "crm-runtime-tier-session");
+        controller.activateAfterRuntimeResume(resumedSession);
+
+        assertThat(activities.get(3).status()).isEqualTo("WARNING");
+        assertThat(activities.get(3).details())
+                .containsEntry("phase", "RUNTIME_TIER_ACTIVATION")
+                .containsEntry("rpcSuccess", false)
+                .containsEntry("failureType", "IllegalStateException");
     }
 
     @Test
@@ -566,6 +608,20 @@ class CopilotContextTierPolicyTest {
             CopilotSdkProperties properties,
             CopilotEffectiveContextTierReader reader
     ) {
+        var activator = mock(CopilotContextTierActivator.class);
+        when(activator.activateLongContext(
+                org.mockito.ArgumentMatchers.any(CopilotSession.class),
+                org.mockito.ArgumentMatchers.anyLong()
+        ))
+                .thenReturn(true);
+        return policy(properties, reader, activator);
+    }
+
+    private CopilotContextTierPolicy policy(
+            CopilotSdkProperties properties,
+            CopilotEffectiveContextTierReader reader,
+            CopilotContextTierActivator activator
+    ) {
         return new CopilotContextTierPolicy(
                 properties,
                 auth -> new CopilotModelOptionsResponse(
@@ -582,7 +638,8 @@ class CopilotContextTierPolicyTest {
                                 1_000
                         ))
                 ),
-                reader
+                reader,
+                activator
         );
     }
 }

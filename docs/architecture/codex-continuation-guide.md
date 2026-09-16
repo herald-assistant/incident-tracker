@@ -222,9 +222,11 @@ rozszerzonego okna od pierwszej wiadomosci, moze zadeklarowac
 `LONG_CONTEXT_REQUIRED`; platforma ustawia wtedy tier w configach create/resume
 i potwierdza efektywny stan przez `session.model.getCurrent` przed pierwszym
 `sendAndWait`. `session.usage_info` steruje jednym bezpiecznym runtime upgradem
-przed kompaktowaniem: `abort`, zamkniecie uchwytu i resume tego samego
-`sessionId` z `long_context`. Initial prompt nie moze byc wyslany ponownie;
-resume dostaje tylko neutralna instrukcje kontynuacji, a rejestracje report,
+przed kompaktowaniem: `abort`, zamkniecie uchwytu, resume tego samego
+`sessionId` z `long_context` i waskie
+`session.options.update(contextTier=long_context)` przed `model.getCurrent`.
+Initial prompt nie moze byc wyslany ponownie; resume dostaje tylko neutralna
+instrukcje kontynuacji, a rejestracje report,
 tool evidence i tool budget pozostaja aktywne przez oba uchwyty. Nie przywracaj
 wariantu opartego o `CopilotSession.setModel`: dotyczy on nastepnej wiadomosci,
 a trzeci `String` jest `reasoningSummary`, nie context tier. Durable

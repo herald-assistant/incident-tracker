@@ -742,15 +742,18 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   zatrzymuje run przed wyslaniem promptu. Podczas turnu platforma obserwuje
   `session.usage_info`; po przekroczeniu konfigurowalnego progu wykonuje najwyzej
   jeden kontrolowany upgrade `abort -> close handle -> resume same sessionId`
-  z `contextTier=long_context`. Initial prompt nie jest wysylany ponownie, a
-  wznowiona sesja dostaje tylko krotka instrukcje kontynuacji zachowanego planu.
+  z `contextTier=long_context`, po czym przed odczytem modelu i continuation
+  jawnie wykonuje waskie `session.options.update(contextTier=long_context)`.
+  Initial prompt nie jest wysylany ponownie, a wznowiona sesja dostaje tylko
+  krotka instrukcje kontynuacji zachowanego planu.
   W `AUTO` brak `contextTier` po resume jest stanem niepotwierdzonym, nie
   terminalnym: pierwsze kolejne `session.usage_info` potwierdza upgrade przez
   wzrost `tokenLimit` albo publikuje ostrzezenie i pozwala SDK dokonczyc przez
   compaction, bez kolejnej proby resume.
   User-visible lifecycle
-  `platform.context_tier` rozdziela zazadanie tieru, stan raportowany przez
-  model RPC i pierwszy rzeczywisty `tokenLimit/currentTokens` z
+  `platform.context_tier` rozdziela zazadanie tieru, wynik aktywacji przez
+  `session.options.update`, stan raportowany przez model RPC i pierwszy
+  rzeczywisty `tokenLimit/currentTokens` z
   `session.usage_info` oraz fazy abort/resume; wszystkie zdarzenia zachowuja
   parametry decyzji i sa renderowane jako `AnalysisAiActivityEvent` kategorii
   `CONTEXT`.

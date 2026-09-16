@@ -261,6 +261,8 @@ Zasady granic:
   dynamicznego `models.list`; konfiguracja `analysis.ai.copilot.context-tier`
   zawiera tylko zasady platformowe. Polityka moze ustawic tier przed
   create/resume lub wykonac jedna probe upgrade'u po `session.usage_info`;
+  po runtime resume jawnie aktywuje tier waskim `session.options.update`, a
+  wzrost rzeczywistego okna potwierdza dopiero kolejne `session.usage_info`;
   rollbackiem jest `analysis.ai.copilot.context-tier.enabled=false`.
 
 ## Gdzie czego szukac

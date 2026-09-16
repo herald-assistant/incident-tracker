@@ -28,7 +28,9 @@ Obecnie obejmuje:
   koreluje zazadanie i stan modelu z pierwszym rzeczywistym `tokenLimit` z
   `session.usage_info`. Po przekroczeniu runtime threshold platforma moze
   wykonac najwyzej jeden upgrade `abort -> close handle -> resume same
-  sessionId` z `long_context`; initial prompt nie jest wysylany drugi raz, a
+  sessionId -> session.options.update(contextTier=long_context)`; jawna,
+  waska aktualizacja opcji nastepuje przed `model.getCurrent` i continuation.
+  Initial prompt nie jest wysylany drugi raz, a
   report/tool evidence/tool budget stores pozostaja wspolne. Dla runtime
   resume w `AUTO` wartosc `contextTier=null` z `model.getCurrent` oznacza stan
   niepotwierdzony: continuation jest wysylane raz, a pierwszy
@@ -133,4 +135,5 @@ Nie obejmuje:
 - Rzeczywisty test pary SDK/CLI uruchamia sie jawnie przez
   `COPILOT_SDK_LIVE_TEST=true` oraz opcjonalne `COPILOT_CLI_PATH`,
   `COPILOT_GITHUB_TOKEN` i `COPILOT_TEST_MODEL`; pokrywa sekwencje
-  `create -> abort -> resume(long_context) -> model.getCurrent`.
+  `create + send -> abort -> resume(long_context) -> options.update ->
+  model.getCurrent -> continuation` oraz potwierdza wzrost `tokenLimit`.
