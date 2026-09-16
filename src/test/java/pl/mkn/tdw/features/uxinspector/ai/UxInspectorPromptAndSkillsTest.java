@@ -122,6 +122,19 @@ class UxInspectorPromptAndSkillsTest {
                 .contains("cel biznesowy", "skad pochodza wyswietlane lub wpisywane dane",
                         "biznesowe i techniczne obowiazuja", "gdzie dane sa przekazywane albo")
                 .contains("elementu przez binding, komponent, stan, serwis, klienta lub persistence")
+                .contains("## Kontrakt odpowiedzi biznesowej")
+                .contains("Kod jest dowodem aktualnego zachowania `as-is`")
+                .contains("`potwierdzone zachowanie`", "`regula odtworzona z implementacji`",
+                        "`kandydackie kryterium akceptacji`", "`wymaga potwierdzenia biznesowego`",
+                        "`nieustalone`")
+                .contains("nie uzywaj ogolnego slowa `system` jako wykonawcy zachowania")
+                .contains("`Frontend` wyswietla dane", "`Backend` przyjmuje request")
+                .contains("obserwowalny kontrakt sieciowy", "metode HTTP i path",
+                        "`GET/POST/PUT/DELETE /path`")
+                .contains("{productId}", "gatewaya albo proxy", "`Network/Siec`", "`Fetch/XHR`")
+                .contains("Nie generuj automatycznie wszystkich ponizszych formatow")
+                .contains("Zakladajac, ze", "Gdy uzytkownik", "Wtedy frontend")
+                .contains("warunki rozpoczecia", "moment wyslania danych do backendu")
                 .doesNotContain("specialistSkill");
     }
 

@@ -214,6 +214,26 @@ Kanoniczny wynik to `AnalysisReport` z dokladnie jedna sekcja `answer`.
 Odpowiedz jest biznesowo czytelna; kod i symbole sa dowodami, nie glownym
 jezykiem narracji.
 
+Canonical initial prompt zawiera staly kontrakt tlumaczenia source evidence
+na zachowanie zrozumiale dla analityka. UX Inspector nie uruchamia w tym celu
+runtime skilla ani dodatkowego turnu. Kontrakt:
+
+- rozdziela potwierdzone zachowanie `as-is`, regule odtworzona z
+  implementacji, kandydackie kryterium akceptacji, kwestie wymagajaca decyzji
+  biznesowej i brak widocznosci,
+- dobiera do pytania wyjasnienie, reguly, scenariusze akceptacyjne albo
+  instrukcje obslugi zamiast zawsze generowac wszystkie formaty,
+- nazywa odpowiedzialna warstwe `frontend` albo `backend` i nie uzywa
+  ogolnego slowa "system" jako wykonawcy zachowania,
+- pozostawia klasy, metody, guardy, DTO, store i inne nazwy implementacyjne w
+  source references zamiast w glownej narracji,
+- opisuje materialna interakcje HTTP przez zweryfikowane `METHOD path`,
+  trigger, cel i efekt we frontendzie; dynamiczne wartosci sa placeholderami,
+  a relatywny path nie dowodzi konkretnej uslugi backendowej bez konfiguracji
+  gatewaya, proxy albo base URL,
+- nie wyprowadza backendowej walidacji, autoryzacji ani persistence z samego
+  frontendu i zachowuje te granice jako jawny gap lub visibility limit.
+
 Ekran pokazuje:
 
 - wspolny aside z przebiegiem, aktywnoscia AI, tool evidence i usage,
@@ -254,6 +274,8 @@ Minimalna macierz obejmuje:
 - pinned Copilot instructions, trzy standardowe korzenie project skills,
   walidacje frontmatter, katalog naglowkow i fail-closed guidance preparation,
 - jednosekcyjny report oraz pojedyncza prezentacje scalonych metadata,
+- business-first answer contract: zachowanie `as-is` versus wymaganie,
+  frontend/backend, obserwowalne scenariusze oraz zweryfikowane `METHOD path`,
 - `QUEUED` przed dispatch, strict import/export v1 i odrzucenie obcych wersji,
 - modal bookmarkleta, brak alternatywnego launchera i brak osobnej karty
   read-only,

@@ -191,6 +191,84 @@ routing oraz finalny bundle w `src/main/resources/static`.
 
 Wszystkie nowe fixture'y uzywaja fikcyjnej domeny CRM.
 
+## Inkrement: staly kontrakt tlumaczenia odpowiedzi na jezyk biznesowy
+
+Status: done
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-16 umieszczenie kompletnego
+kontraktu bezposrednio w canonical initial prompt, bez nowego runtime skilla i
+bez zmiany publicznego kontraktu `answer`.
+
+### Baseline
+
+- Prompt wymaga biznesowo czytelnej odpowiedzi, ale nie definiuje procedury
+  przejscia od source evidence do zachowania, regul, testow akceptacyjnych ani
+  instrukcji obslugi.
+- Techniczne nazwy mechanizmow przekrojowych sa potrzebne w researchu, lecz
+  moga przenikac do finalnej narracji.
+- Interakcje HTTP moga byc opisywane nazwami wygenerowanych metod zamiast
+  obserwowalnym kontraktem `metoda + path`.
+- Runtime skills sa celowo wylaczone dla UX Inspectora; pozostaja wylaczone.
+
+### Conformance delta
+
+- Canonical initial prompt otrzymuje staly business-first writing contract.
+- Finalna narracja rozdziela odpowiedzialnosc `frontend` i `backend`; nie
+  uzywa ogolnego slowa "system" jako wykonawcy zachowania.
+- Kod potwierdza aktualne zachowanie, ale sam nie ustanawia wymagania. Prompt
+  rozroznia zachowanie potwierdzone, regule odtworzona z implementacji,
+  kandydackie kryterium akceptacji, decyzje wymagajaca potwierdzenia i brak.
+- Materialna interakcja HTTP jest opisywana przez zweryfikowane `METHOD path`,
+  trigger, cel oraz efekt we frontendzie. Nazwa implementacji klienta pozostaje
+  tylko evidence; frontend nie dowodzi backendowej walidacji ani persistence.
+- Odpowiedz dobiera forme do pytania: wyjasnienie, reguly, kandydackie kryteria
+  akceptacji, scenariusze testowe albo instrukcje obslugi. Nie generuje
+  automatycznie wszystkich formatow.
+
+### Konsumenci i kompatybilnosc
+
+- `UxInspectorPromptPreparationService` jest jedynym zmienianym runtime
+  konsumentem.
+- `UxInspectorCopilotAnalysisProvider`, report tools, mapper wyniku, job,
+  historia oraz import/export nadal transportuja jedna sekcje Markdown
+  `answer`; ich DTO i wersje pozostaja bez zmian.
+- Frontend renderuje ten sam kontrakt raportu i nie wymaga zmiany ani rebuilda.
+- `UxInspectorCopilotRunRequestAssembler` nadal przekazuje
+  `skillsEnabled=false`; nie dochodzi dodatkowy turn ani tool call `skill`.
+
+### Macierz testow inkrementu
+
+| Warstwa | Weryfikacja |
+|---|---|
+| Prompt | staly kontrakt zachowania, statusow ustalen, terminologii frontend/backend i zakazu "system" jako aktora |
+| HTTP | metoda + zweryfikowany path, placeholdery, trigger, efekt, gateway oraz granica backend evidence |
+| Wynik | adaptacyjne wyjasnienie/reguly/testy/instrukcja i obserwowalne scenariusze |
+| Runtime | brak feature runtime skilla i zachowane `skillsEnabled=false` |
+| Regresja | celowany test promptu, a przed przekazaniem pelne `mvn -q test` |
+
+### Checklista inkrementu
+
+- [x] Zaktualizowac need, runtime flow i lokalne niezmienniki UX Inspectora o
+  staly business-first answer contract.
+- [x] Dodac kompletny kontrakt do canonical initial prompt bez runtime skilla i
+  bez zmiany publicznego reportu.
+- [x] Rozszerzyc test promptu o semantyczne inwarianty translacji,
+  frontend/backend oraz `METHOD path`.
+- [x] Uruchomic test celowany i pelna regresje backendu, przejrzec diff oraz
+  potwierdzic brak zmiany kontraktu frontend/import/export.
+
+### Wynik weryfikacji inkrementu
+
+- `mvn -q "-Dtest=UxInspectorPromptAndSkillsTest,UxInspectorCopilotRunRequestAssemblerTest" test`
+  - PASS; 3 testy, zachowany `skillsEnabled=false`.
+- `mvn -q test`
+  - PASS; 341 raportow testowych, 1628 testow, 0 failures, 0 errors, 1 skipped.
+- `git diff --check`
+  - PASS; brak bledow whitespace.
+- Frontend, publiczny result contract oraz import/export nie zostaly zmienione;
+  testy Angulara i produkcyjny build nie sa wymagane dla tego backend-only
+  inkrementu.
+
 ## Checklista realizacji
 
 - [x] Dodac modal Browser Tools z przeciaganym bookmarkletem na ekranie UX

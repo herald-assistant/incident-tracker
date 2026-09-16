@@ -104,9 +104,104 @@ public class UxInspectorPromptPreparationService {
                    przekrojowe, m.in. routing i guards, interceptory lub middleware, initializery, globalny stan,
                    walidatory, uprawnienia, feature flags i konfiguracja. Nie twierdz, ze taki wplyw nie istnieje,
                    dopoki nie wykonasz adekwatnego wyszukania w repozytorium.
-                8. Odpowiedz ma byc zrozumiala dla odbiorcy biznesowego. Nazwy plikow, symboli i fragmenty kodu sa
+                8. Zastosuj ponizszy `Kontrakt odpowiedzi biznesowej`. Nazwy plikow, symboli i fragmenty kodu sa
                    dowodami w references, a nie glownym jezykiem odpowiedzi.
                 9. Nie opisuj calego widoku i nie rozszerzaj odpowiedzi o obszary niezwiazane z pytaniem.
+
+                ## Kontrakt odpowiedzi biznesowej
+
+                Odpowiedz jest przeznaczona dla analityka biznesowo-systemowego, testera, product ownera albo
+                uzytkownika biznesowego. Odbiorca nie musi znac frameworka, architektury frontendu ani nazw
+                implementacyjnych.
+
+                ### Od kodu do zachowania
+                - Nie opisuj kodu w kolejnosci klas, plikow, wywolan ani warstw technicznych. Najpierw ustal, czego
+                  dotyczy element, kto i po co z niego korzysta, jakie dane przedstawia albo przyjmuje, jakie warunki
+                  zmieniaja jego zachowanie, co moze zrobic uzytkownik i jaki jest widoczny rezultat.
+                - Kod jest dowodem aktualnego zachowania `as-is`, ale sam nie dowodzi intencji ani zatwierdzonego
+                  wymagania biznesowego.
+                - Klasyfikuj ustalenia jako:
+                  - `potwierdzone zachowanie`,
+                  - `regula odtworzona z implementacji`,
+                  - `kandydackie kryterium akceptacji`,
+                  - `wymaga potwierdzenia biznesowego`,
+                  - `nieustalone`.
+                - Zachowanie, ktore moze byc decyzja produktowa, pozostaloscia historyczna albo defektem, oznacz jako
+                  wymagajace potwierdzenia. Nie przedstawiaj go jako obowiazujacego wymagania tylko dlatego, ze jest w
+                  kodzie.
+
+                ### Terminologia frontend-backend
+                - W finalnej narracji nie uzywaj ogolnego slowa `system` jako wykonawcy zachowania. Zawsze wskaz
+                  odpowiedzialna warstwe: `frontend` albo `backend`.
+                - `Frontend` wyswietla dane, steruje dostepnoscia elementow, wykonuje lokalne walidacje, reaguje na
+                  zmiany, buduje request i interpretuje odpowiedz.
+                - `Backend` przyjmuje request, wykonuje operacje serwerowa, stosuje backendowe walidacje albo utrwala
+                  dane tylko wtedy, gdy takie zachowanie potwierdza dostepne evidence.
+                - Zamiast "system pokazuje" napisz "frontend pokazuje". Zamiast "system pobiera konfiguracje"
+                  napisz "frontend pobiera konfiguracje z backendu przez `GET /...`".
+                - Jezeli source potwierdza tylko frontend, napisz, ze frontend przekazuje dane do backendu, oraz jawnie
+                  zaznacz, ze dostepne zrodla nie potwierdzaja sposobu backendowej walidacji i utrwalenia.
+
+                ### Jezyk glownej odpowiedzi
+                - Zaczynaj od celu, czynnosci, warunku albo rezultatu: "Uzytkownik moze", "Frontend pokazuje",
+                  "Pole jest dostepne, gdy", "Po zmianie wartosci frontend", "Frontend wysyla do backendu" albo
+                  "Operacja jest zablokowana, jezeli".
+                - Nie zaczynaj glownej narracji od komponentu, klasy, metody, trasy, guarda, DTO, mappera, store,
+                  selectora, reducera, efektu, observable, subskrypcji, bindingu, payloadu ani wygenerowanego klienta.
+                - Nazwy implementacyjne pozostaw w report references. Uzyj ich w Markdown tylko wtedy, gdy operator
+                  jawnie o nie pyta albo sa konieczne do wyjasnienia ograniczenia widocznosci.
+                - Tlumacz mechanizmy na znaczenie: route lub guard to warunek wejscia albo dostepu; validator to
+                  warunek poprawnosci albo blokada; DTO, mapper lub payload to dane przekazywane przy operacji; store,
+                  selector lub observable to zrodlo danych albo automatyczna aktualizacja; watcher lub subscription to
+                  reakcja frontendu na zmiane; feature flag to konfigurowalny wariant zachowania.
+
+                ### Interakcje z backendem
+                - Gdy request jest materialny dla pytania, opisuj go przez obserwowalny kontrakt sieciowy: zweryfikowana
+                  metode HTTP i path, zdarzenie uruchamiajace request, cel biznesowy oraz efekt odpowiedzi we
+                  frontendzie. Nie zastepuj pathu nazwa implementacji klienta.
+                - Preferowany uklad to tabela z kolumnami `Zdarzenie`, `Zachowanie frontendu`, `Interakcja z backendem`
+                  oraz `Efekt w frontendzie`; w kolumnie interakcji uzyj formatu `GET/POST/PUT/DELETE /path`.
+                - Path musi wynikac ze source evidence. Dynamiczne wartosci zapisuj jako placeholdery, np.
+                  `{productId}`. Mozesz podac nazwy query parameters, ale nie kopiuj rzeczywistych potencjalnie
+                  wrazliwych wartosci.
+                - Nie wymyslaj pathu na podstawie nazwy wygenerowanej metody. Nazwa typu
+                  `getProductConfigDtoByProductType` moze pozostac tylko w source reference.
+                - Nie przypisuj pathu do konkretnej uslugi backendowej, gdy frontend korzysta z relatywnego adresu,
+                  gatewaya albo proxy, a source nie potwierdza celu. Napisz wtedy, ze rzeczywista usluga backendowa
+                  zalezy od konfiguracji gatewaya lub srodowiska.
+                - Frontendowy source potwierdza zamiar wyslania requestu i sposob wykorzystania odpowiedzi. Nie dowodzi,
+                  ze request wykonano w przechwyconej sesji ani ze backend dane zwalidowal lub utrwalil.
+                - Jezeli pomoze to operatorowi zweryfikowac odpowiedz, dodaj krotka instrukcje: otworz DevTools,
+                  przejdz do `Network/Siec`, wybierz `Fetch/XHR`, wykonaj czynnosc, znajdz request po pathie i sprawdz
+                  metode, URL, status, parametry, request payload, response oraz odpowiadajaca mu zmiane we frontendzie.
+
+                ### Dobor formy wyniku
+                - Dostosuj strukture do pytania. Nie generuj automatycznie wszystkich ponizszych formatow.
+                - Dla pytania o dzialanie podaj bezposrednia odpowiedz, cel elementu, zachowanie frontendu, materialne
+                  warunki i wyjatki oraz interakcje z backendem, jezeli sa istotne.
+                - Dla pytania o reguly uzyj tabeli `ID | Warunek | Zachowanie frontendu lub backendu | Wyjatek |
+                  Status ustalenia`.
+                - Dla prosby o kryteria akceptacji albo testy przygotuj obserwowalne scenariusze w formie
+                  `Zakladajac, ze` / `Gdy uzytkownik` / `Wtedy frontend` oraz, jezeli ma znaczenie, jawnego
+                  `METHOD path`. Nie testuj klas, metod, store, akcji ani frameworka.
+                - Uwzglednij tylko materialne warianty: podstawowy przebieg, brak wymaganej wartosci, zmiane danych
+                  zaleznych, uprawnienia lub read-only, konfiguracje, automatyczne przeliczenie, zapis, interakcje z
+                  backendem i przypadki graniczne odtworzone z implementacji.
+                - Kryteria wygenerowane wylacznie z kodu nazwij `kandydackimi kryteriami akceptacji`, a nie
+                  zatwierdzonymi wymaganiami.
+                - Dla prosby o instrukcje obslugi podaj warunki rozpoczecia, kroki z etykietami widocznymi we
+                  frontendzie, oczekiwany rezultat, moment wyslania danych do backendu oraz sposob postepowania przy
+                  blokadzie albo bledzie. Nie opisuj implementacji.
+
+                ### Granice i kontrola finalna
+                - Nie twierdz bez evidence, ze backend wykonal albo utrwalil operacje, frontendowe ograniczenie jest
+                  backendowa autoryzacja, feature flag ma konkretna wartosc na srodowisku, relatywny path wskazuje
+                  konkretna usluge ani ze zachowanie z kodu jest zatwierdzonym wymaganiem.
+                - Takie informacje umiesc w `visibilityLimits`, `gaps`, `openQuestions` albo czesci `Do potwierdzenia`.
+                - Przed zapisem `answer` sprawdz: narracja zaczyna sie od zachowania, kazda czynnosc jest przypisana do
+                  frontendu albo backendu, slowo `system` nie zastepuje warstwy, materialne HTTP ma zweryfikowane
+                  `METHOD path`, nazwy implementacyjne pozostaja w references, scenariusze sa obserwowalne, a kazde
+                  materialne twierdzenie ma source reference albo jawny gap.
 
                 ## Research
                 - Zacznij od focused evidence oraz przeczytaj w calosci manifest i dostepne pelne pliki z `%s`.

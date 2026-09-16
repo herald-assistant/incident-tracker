@@ -55,6 +55,16 @@ report, historie oraz import/export.
   guards, interceptory, initializery, globalny stan, walidatory, uprawnienia,
   feature flags i konfiguracje; ich braku nie wolno zalozyc po samym focused
   slice.
+- Canonical initial prompt posiada staly business-first answer contract; UX
+  Inspector nie wlacza w tym celu runtime skilli ani dodatkowego turnu.
+  Glowna narracja rozdziela `frontend` i `backend`, nie uzywa ogolnego slowa
+  "system" jako wykonawcy, traktuje kod jako dowod zachowania `as-is`, a nie
+  zatwierdzonego wymagania, oraz pozostawia nazwy implementacyjne w source
+  references.
+- Materialna interakcja HTTP w odpowiedzi jest opisana przez zweryfikowane
+  `METHOD path`, trigger, cel i efekt we frontendzie. Nie zastapuj pathu nazwa
+  wygenerowanej metody klienta i nie wyprowadzaj uslugi backendowej,
+  autoryzacji, walidacji ani persistence bez potwierdzajacego evidence.
 - Brak dopasowanego targetu nie blokuje sesji: initial component source pack
   przekazuje indeks wszystkich komponentow odnalezionych w statycznym graphie
   i pelne pliki tylko dla wybranej sciezki target -> komponent widoku, a prompt
