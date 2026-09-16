@@ -9,10 +9,10 @@ import {
 } from '../../../core/models/analysis.models';
 
 export const UX_INSPECTOR_CAPTURE_SCHEMA = 'tdw.ux-inspector-capture' as const;
-export const UX_INSPECTOR_CAPTURE_VERSION = 3 as const;
+export const UX_INSPECTOR_CAPTURE_VERSION = 1 as const;
 export const UX_INSPECTOR_CLIENT_NAME = 'TDW UX Inspector' as const;
 export const UX_INSPECTOR_FEATURE_ID = 'ux-inspector' as const;
-export const UX_INSPECTOR_PROTOCOL_VERSION = 3 as const;
+export const UX_INSPECTOR_PROTOCOL_VERSION = 1 as const;
 export const UX_INSPECTOR_MAX_CAPTURE_BYTES = 128 * 1024;
 export type UxInspectorCaptureProfile = 'ELEMENT_CONTEXT' | 'FORM_DIAGNOSTICS';
 
@@ -268,7 +268,7 @@ export interface UxInspectorJobStateSnapshot {
 
 export interface UxInspectorExportEnvelope {
   schema: 'tdw.ux-inspector-export';
-  version: 2;
+  version: 1;
   exportedAt: string;
   payload: {
     type: 'ux-inspector-analysis';

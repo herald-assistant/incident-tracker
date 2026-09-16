@@ -1,31 +1,31 @@
-package pl.mkn.tdw.features.uiexplorer.catalog;
+package pl.mkn.tdw.frontendcatalog;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface UiExplorerScreenCatalogCache {
+public interface FrontendViewCatalogCache {
 
-    Optional<UiExplorerScreenCatalog> find(Key key);
+    Optional<FrontendViewCatalog> find(Key key);
 
-    void save(Key key, UiExplorerScreenCatalog catalog);
+    void save(Key key, FrontendViewCatalog catalog);
 
     void evict(Key key);
 
-    static UiExplorerScreenCatalogCache disabled() {
-        return new UiExplorerScreenCatalogCache() {
+    static FrontendViewCatalogCache disabled() {
+        return new FrontendViewCatalogCache() {
             @Override
-            public Optional<UiExplorerScreenCatalog> find(Key key) {
+            public Optional<FrontendViewCatalog> find(Key key) {
                 return Optional.empty();
             }
 
             @Override
-            public void save(Key key, UiExplorerScreenCatalog catalog) {
-                // No-op test/default cache.
+            public void save(Key key, FrontendViewCatalog catalog) {
+                // No-op cache for isolated unit tests.
             }
 
             @Override
             public void evict(Key key) {
-                // No-op test/default cache.
+                // No-op cache for isolated unit tests.
             }
         };
     }
@@ -46,7 +46,6 @@ public interface UiExplorerScreenCatalogCache {
             int maxAliasResolutions,
             int maxImportDepth
     ) {
-
         public Key {
             pathPrefixes = pathPrefixes != null ? List.copyOf(pathPrefixes) : List.of();
         }

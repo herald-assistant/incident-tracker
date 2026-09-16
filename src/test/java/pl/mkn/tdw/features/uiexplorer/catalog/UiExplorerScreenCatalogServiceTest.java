@@ -6,6 +6,8 @@ import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerFrontendNotEligibl
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerScreenCatalogInputException;
 import pl.mkn.tdw.features.uiexplorer.catalog.error.UiExplorerSourceRefNotFoundException;
 import pl.mkn.tdw.frontendcatalog.FrontendApplicationCatalogService;
+import pl.mkn.tdw.frontendcatalog.FrontendViewCatalog;
+import pl.mkn.tdw.frontendcatalog.FrontendViewCatalogCache;
 import pl.mkn.tdw.frontendcatalog.FrontendViewCatalogService;
 import pl.mkn.tdw.integrations.gitlab.frontend.*;
 
@@ -107,8 +109,7 @@ class UiExplorerScreenCatalogServiceTest {
         var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         var service = new UiExplorerScreenCatalogService(
                 frontendCatalog,
-                mock(FrontendViewCatalogService.class),
-                UiExplorerScreenCatalogCache.disabled()
+                mock(FrontendViewCatalogService.class)
         );
         assertThatThrownBy(() -> service.loadCatalog(" ", "main"))
                 .isInstanceOf(UiExplorerScreenCatalogInputException.class);
@@ -119,7 +120,7 @@ class UiExplorerScreenCatalogServiceTest {
     void shouldReuseCatalogForTheSameCrmScopeAndRefreshOnlyTheMatchingEntry() {
         var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         when(discovery.discover(any(), any())).thenReturn(graph(false));
-        var cache = new InMemoryScreenCatalogCache();
+        var cache = new InMemoryFrontendViewCatalogCache();
         var service = service(eligibleCrmCatalog(), discovery, cache);
 
         var first = service.loadCatalog("crm-agent-portal", "release/2026.08");
@@ -142,7 +143,7 @@ class UiExplorerScreenCatalogServiceTest {
                         "Synthetic CRM route discovery failed"
                 ))
                 .thenReturn(graph(false));
-        var cache = new InMemoryScreenCatalogCache();
+        var cache = new InMemoryFrontendViewCatalogCache();
         var service = service(eligibleCrmCatalog(), discovery, cache);
 
         assertThatThrownBy(() -> service.loadCatalog("crm-agent-portal", "crm-review"))
@@ -157,7 +158,7 @@ class UiExplorerScreenCatalogServiceTest {
     void shouldNotReuseCatalogAcrossDifferentCrmRepositoryScopes() {
         var discovery = mock(GitLabFrontendRouteGraphDiscoveryService.class);
         when(discovery.discover(any(), any())).thenReturn(graph(false));
-        var cache = new InMemoryScreenCatalogCache();
+        var cache = new InMemoryFrontendViewCatalogCache();
 
         service(eligibleCrmCatalog(), discovery, cache)
                 .loadCatalog("crm-agent-portal", "release/2026.08");
@@ -172,18 +173,18 @@ class UiExplorerScreenCatalogServiceTest {
             pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
             GitLabFrontendRouteGraphDiscoveryService discovery
     ) {
-        return service(catalog, discovery, UiExplorerScreenCatalogCache.disabled());
+        return service(catalog, discovery, FrontendViewCatalogCache.disabled());
     }
 
     private UiExplorerScreenCatalogService service(
             pl.mkn.tdw.integrations.operationalcontext.OperationalContextDtos.OperationalContextCatalog catalog,
             GitLabFrontendRouteGraphDiscoveryService discovery,
-            UiExplorerScreenCatalogCache cache
+            FrontendViewCatalogCache cache
     ) {
         return new UiExplorerScreenCatalogService(
                 new UiExplorerFrontendCatalogService(new FrontendApplicationCatalogService(port(catalog))),
-                new FrontendViewCatalogService(new FrontendApplicationCatalogService(port(catalog)), discovery),
-                cache
+                new FrontendViewCatalogService(new FrontendApplicationCatalogService(port(catalog)), discovery,
+                        cache)
         );
     }
 
@@ -229,18 +230,18 @@ class UiExplorerScreenCatalogServiceTest {
         );
     }
 
-    private static final class InMemoryScreenCatalogCache implements UiExplorerScreenCatalogCache {
+    private static final class InMemoryFrontendViewCatalogCache implements FrontendViewCatalogCache {
 
-        private final Map<Key, UiExplorerScreenCatalog> entries = new LinkedHashMap<>();
+        private final Map<Key, FrontendViewCatalog> entries = new LinkedHashMap<>();
         private int evictions;
 
         @Override
-        public Optional<UiExplorerScreenCatalog> find(Key key) {
+        public Optional<FrontendViewCatalog> find(Key key) {
             return Optional.ofNullable(entries.get(key));
         }
 
         @Override
-        public void save(Key key, UiExplorerScreenCatalog catalog) {
+        public void save(Key key, FrontendViewCatalog catalog) {
             entries.put(key, catalog);
         }
 

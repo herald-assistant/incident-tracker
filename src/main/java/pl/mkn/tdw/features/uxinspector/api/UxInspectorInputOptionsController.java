@@ -18,7 +18,8 @@ public class UxInspectorInputOptionsController {
     }
 
     @GetMapping("/views")
-    public UxInspectorViewCatalogResponse views(@RequestParam String systemId, @RequestParam String branch) {
-        return service.views(systemId, branch);
+    public UxInspectorViewCatalogResponse views(@RequestParam String systemId, @RequestParam String branch,
+                                                @RequestParam(defaultValue = "false") boolean refresh) {
+        return service.views(systemId, branch, refresh);
     }
 }

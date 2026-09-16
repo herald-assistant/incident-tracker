@@ -25,7 +25,7 @@ class UxInspectorInputOptionsControllerTest {
         when(service.inputOptions()).thenReturn(new UxInspectorInputOptionsResponse("ux-inspector",
                 List.of(new UxInspectorInputOptionsResponse.SystemOption(
                         "crm-agent-portal", "CRM Agent Portal", "Fikcyjny frontend CRM", "main")), List.of()));
-        when(service.views("crm-agent-portal", "main")).thenReturn(new UxInspectorViewCatalogResponse(
+        when(service.views("crm-agent-portal", "main", false)).thenReturn(new UxInspectorViewCatalogResponse(
                 "crm-agent-portal", "CRM Agent Portal",
                 new UxInspectorViewCatalogResponse.SourceRevision("main", "abc123crm"), "READY",
                 List.of(new UxInspectorViewCatalogResponse.ViewOption(
@@ -41,14 +41,24 @@ class UxInspectorInputOptionsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sourceRevision.revision").value("abc123crm"))
                 .andExpect(jsonPath("$.views[0].viewId").value("crm-contact-create"));
+
+        when(service.views("crm-agent-portal", "main", true)).thenReturn(new UxInspectorViewCatalogResponse(
+                "crm-agent-portal", "CRM Agent Portal",
+                new UxInspectorViewCatalogResponse.SourceRevision("main", "fresh456crm"), "READY",
+                List.of(), List.of(), List.of()));
+        mockMvc.perform(get("/api/ux-inspector/views")
+                        .param("systemId", "crm-agent-portal").param("branch", "main")
+                        .param("refresh", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sourceRevision.revision").value("fresh456crm"));
     }
 
     @Test
     void shouldMapUnknownFrontendAndStaleRefToPublicErrors() throws Exception {
-        when(service.views("unknown-crm", "main")).thenThrow(new UxInspectorContextException(
+        when(service.views("unknown-crm", "main", false)).thenThrow(new UxInspectorContextException(
                 "UX_INSPECTOR_FRONTEND_NOT_FOUND", UserFacingErrorType.NOT_FOUND,
                 "Selected frontend is not registered for source analysis."));
-        when(service.views("crm-agent-portal", "stale")).thenThrow(new UxInspectorContextException(
+        when(service.views("crm-agent-portal", "stale", false)).thenThrow(new UxInspectorContextException(
                 "UX_INSPECTOR_SOURCE_REVISION_CHANGED", UserFacingErrorType.CONFLICT,
                 "Source revision changed. Reload views and select the target again."));
 

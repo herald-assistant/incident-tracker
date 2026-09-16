@@ -87,12 +87,12 @@ zatwierdzony invariant trafia do architektury.
   business-first report bez osobnego appendixu zaleznosci oraz breaking
   import/export v5.
 - `src/main/java/pl/mkn/tdw/features/uxinspector`
-  UX Inspector: strict capture v3, deterministic target resolution i source
+  UX Inspector: strict capture v1, deterministic target resolution i source
   binding, opcjonalny ograniczony snapshot najblizszego formularza, focused
   Copilot prompt bez runtime skilli, session-bound `uxi_*` target tools,
   czteropoziomowa mape nazw sciezek i neutralne GitLab
   navigation/search/read tools dla calego wybranego repozytorium pod pinned
-  policy, jednosekcyjny report, job/history oraz import/export v2. Runtime opisuje
+  policy, jednosekcyjny report, job/history oraz import/export v1. Runtime opisuje
   `docs/architecture/ux-inspector-runtime-flow.md`.
 
 Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
@@ -117,8 +117,9 @@ Feature'y sa rodzenstwem. Nie importuja siebie wzajemnie.
   route/symbol slices z deduplikowanymi funkcjonalnymi zaleznosciami; bez
   repository inventory, pelnego snapshotu plikow i zaleznosci od UI Explorer.
 - `src/main/java/pl/mkn/tdw/frontendcatalog`
-  neutralny katalog zarejestrowanych frontendow oraz widokow, konsumowany przez
-  UX Inspector i mapowany przez adaptery UI Explorera.
+  neutralny katalog zarejestrowanych frontendow oraz widokow z cache per
+  repository scope/ref i jawnym refresh, konsumowany przez UX Inspector i
+  mapowany przez adaptery UI Explorera.
 - `src/main/java/pl/mkn/tdw/api`
   shared/operator API niezalezne od jednego feature'a.
 - `src/main/java/pl/mkn/tdw/shared`
@@ -140,8 +141,9 @@ Zawsze potwierdz kierunek importu w `package-dependencies.md` i
 - `frontend/src/app/features`
   strony i prezentacja specyficzna dla feature'ow.
 - `frontend/public/browser-tools`
-  statyczny installer, demo, loader, protocol v3 i efemeryczny runtime akcji na
-  badanej stronie; bez klienta REST, storage i starego `/tdw-inspector/**`.
+  loader, protocol v1 i efemeryczny runtime akcji na badanej stronie;
+  bookmarklet jest generowany przez modal UX Inspectora, bez klienta REST i
+  storage.
 - shell i routing aplikacji
   composition root nawigacji oraz rejestracji feature'ow.
 

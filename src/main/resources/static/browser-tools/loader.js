@@ -3,7 +3,7 @@
 
   const LOAD_KEY = '__TDW_BROWSER_TOOL_REMOTE_LOAD__';
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
-  const LOADER_VERSION = '3.0.0';
+  const LOADER_VERSION = '1.0.0';
   const LOAD_TIMEOUT_MS = 8000;
   const document = global.document;
   const loaderScript = document.currentScript;
@@ -48,7 +48,7 @@
       await loadScript('protocol.js');
       global[CONFIG_KEY] = Object.freeze({
         schema: 'tdw.browser-tool-launcher',
-        version: 3,
+        version: 1,
         featureId,
         tdwOrigin
       });
@@ -61,7 +61,7 @@
       }
       console.error('[TDW Browser Tools] Remote runtime loading failed.', error);
       reportFailure(
-        'Nie udalo sie pobrac runtime z TDW. Strona mogla zablokowac CSP lub dostep do sieci lokalnej. Uzyj pelnego DevTools Snippetu.'
+        'Nie udalo sie pobrac Browser Tools z TDW. Strona mogla zablokowac CSP lub dostep do sieci lokalnej.'
       );
     } finally {
       loaderScript.remove();

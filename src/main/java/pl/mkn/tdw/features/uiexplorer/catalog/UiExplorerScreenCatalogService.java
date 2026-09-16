@@ -10,7 +10,6 @@ import pl.mkn.tdw.features.uiexplorer.contract.UiExplorerSourceRevision;
 import pl.mkn.tdw.frontendcatalog.FrontendViewCatalog;
 import pl.mkn.tdw.frontendcatalog.FrontendViewCatalogService;
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendDiscoveryException;
-import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendGraphLimits;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +19,6 @@ public class UiExplorerScreenCatalogService {
 
     private final UiExplorerFrontendCatalogService frontendCatalogService;
     private final FrontendViewCatalogService frontendViewCatalogService;
-    private final UiExplorerScreenCatalogCache screenCatalogCache;
 
     public UiExplorerScreenCatalog loadCatalog(String systemId, String ref) {
         return loadCatalog(systemId, ref, false);
@@ -31,22 +29,9 @@ public class UiExplorerScreenCatalogService {
         var normalizedRef = required(ref, "branch", MAX_REF_LENGTH);
         var frontend = frontendCatalogService.loadCatalog().findFrontend(normalizedSystemId)
                 .orElseThrow(() -> new UiExplorerFrontendNotEligibleException(normalizedSystemId));
-        var limits = GitLabFrontendGraphLimits.defaults();
-        var key = new UiExplorerScreenCatalogCache.Key(
-                frontend.systemId(), frontend.label(), normalizedRef, frontend.gitLabGroup(),
-                frontend.gitLabProjectName(), frontend.repositoryId(), frontend.projectPath(), frontend.searchMode(),
-                frontend.pathPrefixes(), limits.maxRouteNodes(), limits.maxRouteFiles(), limits.maxSourceReads(),
-                limits.maxAliasResolutions(), limits.maxImportDepth());
-        if (refreshCache) {
-            screenCatalogCache.evict(key);
-        } else {
-            var cached = screenCatalogCache.find(key);
-            if (cached.isPresent()) return cached.get();
-        }
         try {
-            var mapped = map(frontendViewCatalogService.loadCatalog(normalizedSystemId, normalizedRef));
-            screenCatalogCache.save(key, mapped);
-            return mapped;
+            return map(frontendViewCatalogService.loadCatalog(
+                    frontend.systemId(), normalizedRef, refreshCache));
         } catch (GitLabFrontendDiscoveryException exception) {
             if ("FRONTEND_REF_NOT_FOUND".equals(exception.code())) {
                 throw new UiExplorerSourceRefNotFoundException(normalizedSystemId, normalizedRef);

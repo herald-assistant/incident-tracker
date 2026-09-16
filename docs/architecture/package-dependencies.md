@@ -151,19 +151,16 @@ po restarcie. `features.uiexplorer.job.importing` waliduje i sanitizuje
 niezaufany portable payload, po czym zapisuje nowy read-only run przez port
 persistence feature'a; nie importuje shared `api.analysisruns`.
 
-`features.uiexplorer.catalog` posiada rowniez feature-owned trwaly cache
-katalogu widokow. Zalezy jednokierunkowo od neutralnych
-`localworkspace.storage` i `integrations.gitlab.frontend`; local workspace ani
-integracja GitLaba nie znaja kontraktu UI Explorer. Cache przechowuje publiczny
-katalog po zakonczonym discovery, a nie wewnetrzny route graph.
-
 `frontendcatalog` posiada neutralne rozpoznanie zarejestrowanego frontendu z
-Operational Context oraz katalog widokow nad `integrations.gitlab.frontend`.
-Nie importuje feature'ow, API, tools ani platformy AI. UI Explorer mapuje ten
-katalog na zachowany publiczny kontrakt przez swoje adaptery, a UX Inspector
-korzysta z niego bez importowania UI Explorera.
+Operational Context, katalog widokow nad `integrations.gitlab.frontend` oraz
+trwaly cache publicznego neutralnego katalogu po zakonczonym discovery. Cache
+zalezy od `localworkspace.storage`, jest kluczowany przez repository scope,
+ref i limity oraz obsluguje jawny scoped refresh. Pakiet nie importuje
+feature'ow, API, tools ani platformy AI. UI Explorer mapuje ten katalog na
+swoj publiczny kontrakt przez adapter, a UX Inspector korzysta z niego bez
+importowania UI Explorera.
 
-`features.uxinspector` posiada capture v3, target resolution, source binding,
+`features.uxinspector` posiada capture v1, target resolution, source binding,
 kanoniczny prompt, feature-owned builder czteropoziomowego drzewa nazw sciezek,
 session-bound `uxi_*` target tools oraz policy dla neutralnych GitLab
 navigation/search/read tools nad calym wybranym repozytorium. Posiada report z

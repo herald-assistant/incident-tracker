@@ -18,16 +18,16 @@ class UxInspectorCaptureContractTest {
     private final UxInspectorCaptureNormalizer normalizer = new UxInspectorCaptureNormalizer(objectMapper);
 
     @Test
-    void shouldRejectUnknownNestedFieldsLegacyVersionAndPayloadBombsBeforeNormalization() throws Exception {
+    void shouldRejectUnknownNestedFieldsUnsupportedVersionAndPayloadBombsBeforeNormalization() throws Exception {
         var node = objectMapper.valueToTree(capture());
         node.withObject("target").put("value", "FORM_VALUE_MUST_NOT_ENTER_CAPTURE");
         assertThrows(Exception.class, () -> objectMapper.treeToValue(node, UxInspectorCapture.class));
 
-        ObjectNode legacy = objectMapper.valueToTree(capture());
-        legacy.put("capturedAt", "2026-09-15T10:00:00Z");
-        legacy.put("version", 1);
-        var legacyCapture = objectMapper.treeToValue(legacy, UxInspectorCapture.class);
-        assertThrows(IllegalArgumentException.class, () -> normalizer.normalize(legacyCapture));
+        ObjectNode unsupported = objectMapper.valueToTree(capture());
+        unsupported.put("capturedAt", "2026-09-15T10:00:00Z");
+        unsupported.put("version", 3);
+        var unsupportedCapture = objectMapper.treeToValue(unsupported, UxInspectorCapture.class);
+        assertThrows(IllegalArgumentException.class, () -> normalizer.normalize(unsupportedCapture));
 
         ObjectNode oversized = objectMapper.valueToTree(capture());
         oversized.put("capturedAt", "2026-09-15T10:00:00Z");
@@ -47,7 +47,7 @@ class UxInspectorCaptureContractTest {
         attributes.put("formcontrolname", "contactName");
         attributes.put("onclick", "stealSecret()");
         attributes.put("data-customer-value", "FORM_VALUE_MUST_NOT_SURVIVE");
-        var raw = new UxInspectorCapture(UxInspectorCapture.SCHEMA, 3, "cap_crm_redaction",
+        var raw = new UxInspectorCapture(UxInspectorCapture.SCHEMA, UxInspectorCapture.VERSION, "cap_crm_redaction",
                 Instant.parse("2026-09-15T10:00:00Z"),
                 UxInspectorCapture.CaptureProfile.ELEMENT_CONTEXT,
                 new UxInspectorCapture.Page("https://crm.example.com", "/contacts/:value", "CRM 1234567", "pl",
@@ -60,7 +60,7 @@ class UxInspectorCaptureContractTest {
                         new UxInspectorCapture.Bounds(10, 20, 200, 40)),
                 ancestors, null, new UxInspectorCapture.Traversal(31, 25, 6, true),
                 new UxInspectorCapture.Signals(0, "TOP_LEVEL", List.of("FORM_VALUES_NOT_REQUESTED")),
-                List.of(), new UxInspectorCapture.Client("TDW UX Inspector", "3.0.0", "ux-inspector"));
+                List.of(), new UxInspectorCapture.Client("TDW UX Inspector", "1.0.0", "ux-inspector"));
 
         var normalized = normalizer.normalize(raw);
         var json = objectMapper.writeValueAsString(normalized);

@@ -2,9 +2,9 @@
   'use strict';
 
   const CONFIG_KEY = '__TDW_BROWSER_TOOL_CONFIG__';
-  const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V3__';
+  const PROTOCOL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
   const SINGLETON_KEY = '__TDW_BROWSER_TOOL_ACTIVE_INSTANCE__';
-  const RUNTIME_VERSION = '3.0.0';
+  const RUNTIME_VERSION = '1.0.0';
   const BRIDGE_TIMEOUT_MS = 15000;
   const testMode = global.__TDW_BROWSER_TOOLS_TEST_MODE__ === true;
   const protocol = global[PROTOCOL_KEY];

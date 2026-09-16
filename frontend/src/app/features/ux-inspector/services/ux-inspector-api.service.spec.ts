@@ -24,6 +24,12 @@ describe('UxInspectorApiService', () => {
     const views = http.expectOne('/api/ux-inspector/views?systemId=crm-agent-portal&branch=review/crm');
     expect(views.request.method).toBe('GET');
 
+    service.getViews('crm-agent-portal', 'review/crm', true).subscribe();
+    const refreshedViews = http.expectOne(
+      '/api/ux-inspector/views?systemId=crm-agent-portal&branch=review/crm&refresh=true'
+    );
+    expect(refreshedViews.request.method).toBe('GET');
+
     const body = { question: 'Dlaczego przycisk jest zablokowany?' } as never;
     service.startJob(body).subscribe();
     const start = http.expectOne('/api/ux-inspector/jobs');

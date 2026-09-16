@@ -176,7 +176,7 @@ instrukcjami dla AI.
 ## Zakres pierwszego wydania
 
 - Chrome desktop oraz zwykle strony `http`/`https`, na ktorych organizacja
-  dopuszcza bookmarklet albo DevTools Snippet.
+  dopuszcza bookmarklet.
 - Jeden element w top-level dokumencie; otwarte Shadow DOM jest obslugiwane w
   zakresie dostepnym dla skryptu.
 - Efemeryczny TDW Browser Tools z launcherem i akcja `UX Inspector`.
@@ -211,9 +211,9 @@ instrukcjami dla AI.
 
 ## Ograniczenia i ryzyka
 
-- Bookmarklet i snippet dzialaja w main world badanej strony. Strona moze
-  obserwowac albo zaklocic runtime, dlatego nie wolno umieszczac w nim sekretow
-  ani traktowac capture jako zaufanego.
+- Bookmarklet dziala w main world badanej strony. Strona moze obserwowac albo
+  zaklocic runtime, dlatego nie wolno umieszczac w nim sekretow ani traktowac
+  capture jako zaufanego.
 - CSP, Local Network Access, polityki enterprise, popup blocker lub
   Cross-Origin-Opener-Policy moga zatrzymac uruchomienie albo transfer. Pierwsze
   wydanie ma wtedy zakonczyc operacje czytelnym bledem, bez alternatywnego

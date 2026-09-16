@@ -7,7 +7,7 @@ import {
 } from './ux-inspector-capture-ingress.service';
 
 describe('UxInspectorCaptureIngressService', () => {
-  it('clears the fragment and accepts one exact-origin capture v3', () => {
+  it('clears the fragment and accepts one exact-origin capture v1', () => {
     const harness = createWindowHarness();
     const service = createService(harness.window);
 
@@ -17,7 +17,7 @@ describe('UxInspectorCaptureIngressService', () => {
     expect(harness.posted[0]).toEqual({
       message: {
         type: 'TDW_UX_INSPECTOR_READY',
-        protocolVersion: 3,
+        protocolVersion: 1,
         nonce: VALID_NONCE
       },
       targetOrigin: 'https://crm.example.com'
@@ -26,7 +26,7 @@ describe('UxInspectorCaptureIngressService', () => {
     const capture = captureFixture();
     harness.dispatch('https://crm.example.com', harness.opener, {
       type: 'TDW_UX_INSPECTOR_CAPTURE',
-      protocolVersion: 3,
+      protocolVersion: 1,
       nonce: VALID_NONCE,
       captureId: capture.captureId,
       capture
@@ -37,7 +37,7 @@ describe('UxInspectorCaptureIngressService', () => {
     expect(harness.posted.at(-1)).toEqual({
       message: {
         type: 'TDW_UX_INSPECTOR_RECEIVED',
-        protocolVersion: 3,
+        protocolVersion: 1,
         nonce: VALID_NONCE,
         captureId: capture.captureId
       },
@@ -53,14 +53,14 @@ describe('UxInspectorCaptureIngressService', () => {
     const capture = captureFixture();
 
     harness.dispatch('https://evil.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 3, nonce: VALID_NONCE,
+      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
       captureId: capture.captureId, capture
     });
     expect(service.status()).toBe('waiting');
     expect(service.capture()).toBeNull();
 
     harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 3, nonce: 'n_invalid_invalid_invalid_123',
+      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: 'n_invalid_invalid_invalid_123',
       captureId: capture.captureId, capture
     });
     expect(service.status()).toBe('invalid');
@@ -77,7 +77,7 @@ describe('UxInspectorCaptureIngressService', () => {
     const capture = { ...captureFixture(), unknown: 'rejected' };
 
     harness.dispatch('https://crm.example.com', harness.opener, {
-      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 3, nonce: VALID_NONCE,
+      type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: VALID_NONCE,
       captureId: capture.captureId, capture
     });
 
@@ -151,7 +151,7 @@ function createWindowHarness() {
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 3, captureId: 'cap_crm_contact_save',
+    schema: 'tdw.ux-inspector-capture', version: 1, captureId: 'cap_crm_contact_save',
     capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'ELEMENT_CONTEXT',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
@@ -170,6 +170,6 @@ function captureFixture(): UxInspectorCapture {
     traversal: { observedDepth: 2, emittedNodeCount: 1, omittedNodeCount: 1, reachedDocumentRoot: true },
     signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] },
     limits: [],
-    client: { name: 'TDW UX Inspector', version: '3.0.0', featureId: 'ux-inspector' }
+    client: { name: 'TDW UX Inspector', version: '1.0.0', featureId: 'ux-inspector' }
   };
 }

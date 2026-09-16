@@ -12,5 +12,7 @@ zarejestrowane systemy, widoki oraz przypiete rewizje feature'om analitycznym.
 - Kontrakty nie niosa semantyki konkretnego feature'a.
 - Repository scope pochodzi wylacznie z Operational Context.
 - Kazdy widok jest zwracany razem z immutable commit id.
+- Katalog widokow jest cache'owany jako neutralny kontrakt per system, ref,
+  repository scope i limity discovery. Feature moze jawnie wymusic refresh,
+  ale nie utrzymuje wlasnego formatu tego cache'a.
 - Publiczne API feature'ow mapuje te neutralne modele na wlasne DTO.
-

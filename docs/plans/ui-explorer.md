@@ -2242,7 +2242,7 @@ dotychczas wykonywal pelny route graph discovery przy kazdym wejsciu, zmianie
 aplikacji i ponownym zaladowaniu tego samego refa.
 
 Delta reuse'uje ten sam wzorzec bez zmiany odpowiedzi katalogu ani kontraktu
-joba: feature-owned cache jest kluczowany `systemId`, znormalizowanym refem,
+joba: neutralny cache `frontendcatalog` jest kluczowany `systemId`, znormalizowanym refem,
 GitLab group/project, repository/search scope oraz limitami traversal. Zwykle
 zaladowanie uzywa cache, natomiast Enter w polu ref i przycisk `Load views`
 wysylaja jawne `refresh=true`, usuwaja tylko dokladnie dopasowany wpis i
@@ -2251,7 +2251,7 @@ poprawnego wpisu. Konsumenci: `UiExplorerScreenCatalogController`,
 `UiExplorerApiService`, `UiExplorerFacade` i konfigurator ekranu. Wszystkie
 nowe testy i przyklady pozostaja silnie zanonimizowanym, syntetycznym CRM.
 
-- [x] 8M.1: Dodac trwaly feature-owned cache katalogu widokow wzorowany na
+- [x] 8M.1: Dodac trwaly neutralny cache katalogu widokow wzorowany na
   `FlowExplorerEndpointInventoryCache`, z pelnym cache key, bezpiecznym
   odczytem/zapisem, precyzyjna invalidacja i testem odtworzenia po restarcie.
 - [x] 8M.2: Rozszerzyc `/api/ui-explorer/screens` o opcjonalne
@@ -2262,8 +2262,9 @@ nowe testy i przyklady pozostaja silnie zanonimizowanym, syntetycznym CRM.
   cache, a Enter i `Load views` jawnie odswiezaja; zweryfikowac kontrakt HTTP,
   fasade, testy Angulara, produkcyjny build i adekwatny pion backendu.
 
-Checkpoint 8M (2026-08-22): UI Explorer utrwala publiczny screen catalog w
-`tdw-data/ui-explorer/screen-catalog-cache`. Cache key obejmuje identyfikator i
+Checkpoint 8M (zaktualizowany przy dostawie UX Inspectora): UI Explorer oraz
+UX Inspector wspoldziela neutralny view catalog cache w
+`tdw-data/frontend-catalog/view-cache`. Cache key obejmuje identyfikator i
 etykiete systemu, znormalizowany ref, GitLab group/project, repository,
 search mode, path prefixes oraz wszystkie limity route graph traversal.
 Automatyczne ladowanie po wejsciu lub wyborze frontendu wysyla request bez

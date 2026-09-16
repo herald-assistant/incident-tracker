@@ -1,0 +1,140 @@
+:host {
+  display: contents;
+}
+
+.browser-tools-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(18, 38, 72, 0.34);
+  backdrop-filter: blur(4px);
+}
+
+.browser-tools-modal__dialog {
+  display: grid;
+  gap: 18px;
+  width: min(620px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(18, 38, 72, 0.24);
+}
+
+.browser-tools-modal__header {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.browser-tools-modal__header > img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.browser-tools-modal__header h2,
+.browser-tools-modal__header p,
+.browser-tools-modal__description,
+.browser-tools-modal__note {
+  margin: 0;
+}
+
+.browser-tools-modal__header h2 {
+  margin-top: 2px;
+  font-size: 1.15rem;
+}
+
+.browser-tools-modal__description,
+.browser-tools-modal__note,
+.browser-tools-modal__steps {
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.browser-tools-modal__grab-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 116px;
+  padding: 18px;
+  border: 1px dashed rgba(12, 102, 228, 0.42);
+  border-radius: var(--radius-lg);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.browser-tools-modal__grab-zone > .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.browser-tools-modal__bookmarklet {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 9px 16px;
+  border: 1px solid rgba(12, 102, 228, 0.35);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px rgba(12, 102, 228, 0.14);
+  color: var(--primary-dark);
+  font-weight: 850;
+  text-decoration: none;
+  cursor: grab;
+}
+
+.browser-tools-modal__bookmarklet:active {
+  cursor: grabbing;
+}
+
+.browser-tools-modal__bookmarklet:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), 0 10px 24px rgba(12, 102, 228, 0.14);
+}
+
+.browser-tools-modal__bookmarklet img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.browser-tools-modal__steps {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.browser-tools-modal__note {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 560px) {
+  .browser-tools-modal__dialog {
+    padding: 16px;
+  }
+
+  .browser-tools-modal__header {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+  }
+
+  .browser-tools-modal__header > img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .browser-tools-modal__grab-zone {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

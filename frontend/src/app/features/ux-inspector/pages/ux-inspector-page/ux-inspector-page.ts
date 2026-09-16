@@ -1,23 +1,29 @@
-import { Component, DestroyRef, OnInit, computed, inject } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AnalysisFeatureAsideComponent } from '../../../../components/analysis-feature-aside/analysis-feature-aside';
-import { AnalysisReportPanelComponent } from '../../../../components/analysis-report-panel/analysis-report-panel';
 import { AnalysisStepsPanelComponent } from '../../../../components/analysis-steps-panel/analysis-steps-panel';
+import { BrowserToolsSetupModalComponent } from '../../../../components/browser-tools-setup-modal/browser-tools-setup-modal';
 import { GitLabBranchSelectComponent } from '../../../../components/gitlab-branch-select/gitlab-branch-select';
 import { readJsonFile } from '../../../../core/utils/json-file.utils';
 import { UxInspectorCapture, UxInspectorJobStatus } from '../../models/ux-inspector.models';
 import { UxInspectorCaptureIngressService } from '../../services/ux-inspector-capture-ingress.service';
 import { UxInspectorFacade } from '../../state/ux-inspector.facade';
+import { UxInspectorResultComponent } from '../../components/ux-inspector-result/ux-inspector-result';
+
+type OpenMenu = 'system' | 'view' | 'model' | 'reasoning' | null;
 
 @Component({
   selector: 'app-ux-inspector-page',
   imports: [
     AnalysisFeatureAsideComponent,
-    AnalysisReportPanelComponent,
     AnalysisStepsPanelComponent,
-    GitLabBranchSelectComponent
+    BrowserToolsSetupModalComponent,
+    GitLabBranchSelectComponent,
+    MatTooltipModule,
+    UxInspectorResultComponent
   ],
   providers: [UxInspectorCaptureIngressService, UxInspectorFacade],
   templateUrl: './ux-inspector-page.html',
@@ -32,6 +38,63 @@ export class UxInspectorPageComponent implements OnInit {
   readonly progressCount = computed(() => this.facade.job()?.steps.length ?? 0);
   readonly aiCount = computed(() => this.facade.job()?.aiActivityEvents.length ?? 0);
   readonly feedbackCount = computed(() => this.facade.job()?.toolFeedback.length ?? 0);
+  readonly browserToolsModalOpen = signal(false);
+  readonly openMenu = signal<OpenMenu>(null);
+  readonly systemSearch = signal('');
+  readonly viewSearch = signal('');
+  readonly filteredSystems = computed(() => {
+    const query = this.systemSearch().trim().toLocaleLowerCase();
+    const systems = this.facade.inputOptions()?.systems ?? [];
+    return query
+      ? systems.filter((system) =>
+          [system.label, system.summary, system.systemId]
+            .join(' ')
+            .toLocaleLowerCase()
+            .includes(query)
+        )
+      : systems;
+  });
+  readonly filteredViews = computed(() => {
+    const query = this.viewSearch().trim().toLocaleLowerCase();
+    const views = this.facade.viewCatalog()?.views ?? [];
+    return query
+      ? views.filter((view) =>
+          [view.label, view.routePattern, view.viewId]
+            .join(' ')
+            .toLocaleLowerCase()
+            .includes(query)
+        )
+      : views;
+  });
+  readonly selectedModelLabel = computed(
+    () =>
+      this.facade.aiOptions().models.find((model) => model.id === this.facade.selectedModel())
+        ?.name ?? 'No model selected'
+  );
+  readonly selectedReasoningLabel = computed(
+    () => this.facade.selectedReasoningEffort() || 'No effort selected'
+  );
+  readonly viewControlLabel = computed(() => {
+    const selected = this.facade.selectedView();
+    if (selected) return selected.routePattern || selected.label;
+    switch (this.facade.viewState()) {
+      case 'loading': return 'Loading views…';
+      case 'error': return 'Unable to load views';
+      case 'empty': return 'No selectable views';
+      default: return this.facade.selectedSystemId() ? 'Load view inventory' : 'Select application first';
+    }
+  });
+  readonly viewControlMeta = computed(() => {
+    const selected = this.facade.selectedView();
+    if (selected) return selected.label;
+    const catalog = this.facade.viewCatalog();
+    if (catalog) return `${catalog.views.length} views · ${catalog.sourceRevision.revision}`;
+    switch (this.facade.viewState()) {
+      case 'loading': return 'discovering Angular routes';
+      case 'error': return 'retry view inventory';
+      default: return 'waiting for application';
+    }
+  });
   readonly targetLabel = computed(() => {
     const capture = this.facade.capture();
     return capture?.target.accessibleName || capture?.target.text || capture?.target.tag || 'Wskazany element';
@@ -49,6 +112,51 @@ export class UxInspectorPageComponent implements OnInit {
       const localRunId = params.get('localRunId')?.trim() ?? '';
       if (localRunId) this.facade.loadLocalRun(localRunId);
     });
+  }
+
+  @HostListener('document:click')
+  closeMenus(): void {
+    this.openMenu.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeMenusOnEscape(): void {
+    this.openMenu.set(null);
+  }
+
+  keepMenuOpen(event: Event): void {
+    event.stopPropagation();
+  }
+
+  toggleMenu(menu: Exclude<OpenMenu, null>, event: Event): void {
+    event.stopPropagation();
+    if (!this.facade.controlsLocked()) {
+      this.openMenu.update((current) => (current === menu ? null : menu));
+    }
+  }
+
+  selectSystem(systemId: string, event: Event): void {
+    event.stopPropagation();
+    this.facade.selectSystem(systemId);
+    this.openMenu.set(null);
+  }
+
+  selectView(viewId: string, event: Event): void {
+    event.stopPropagation();
+    this.facade.selectView(viewId);
+    this.openMenu.set(null);
+  }
+
+  selectModel(model: string, event: Event): void {
+    event.stopPropagation();
+    this.facade.selectModel(model);
+    this.openMenu.set(null);
+  }
+
+  selectReasoning(effort: string, event: Event): void {
+    event.stopPropagation();
+    this.facade.selectReasoningEffort(effort);
+    this.openMenu.set(null);
   }
 
   async importResult(event: Event): Promise<void> {

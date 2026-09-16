@@ -115,7 +115,7 @@ odtwarzac usuniete roadmapy zakonczonych albo porzuconych prac.
   opisuje source scope, rule ledger, deterministyczna decyzje, prompt, skille,
   tools, report, import/export i UI Change Verification.
 - `architecture/ux-inspector-runtime-flow.md`
-  opisuje Browser Tools, capture v3, transport postMessage, target resolution,
+  opisuje Browser Tools, capture v1, transport postMessage, target resolution,
   focused Copilot workflow, jednosekcyjny report, job/history i security model.
 - `architecture/config-drift-viewer-runtime-flow.md`
   opisuje deterministic/AI flow, tryby `BASIC/DEEP`, scope, limity i granice

@@ -1,0 +1,55 @@
+<section class="analysis-card ux-inspector-result" aria-label="Wynik UX Inspectora">
+  <app-analysis-result-header
+    [title]="report().header || 'UX Inspector result'"
+    [context]="report().subHeader"
+    [confidence]="resultMeta().confidence"
+    [copied]="copied()"
+    [downloadVisible]="true"
+    copyAriaLabel="Kopiuj odpowiedź UX Inspectora"
+    copiedAriaLabel="Skopiowano odpowiedź UX Inspectora"
+    downloadAriaLabel="Pobierz odpowiedź UX Inspectora jako Markdown"
+    (copyRequested)="copyResult()"
+    (downloadRequested)="downloadResult()"
+  />
+
+  <div class="ux-inspector-result__status-line">
+    <span [class]="statusClass()">
+      {{ status() === 'PARTIAL' ? 'wynik częściowy' : 'wynik kompletny' }}
+    </span>
+  </div>
+
+  @if (status() === 'PARTIAL') {
+    <div class="ux-inspector-result__notice" role="status">
+      <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+      <p>Odpowiedź jest częściowa. Ograniczenia i brakujące dowody są wskazane pod wynikiem.</p>
+    </div>
+  }
+
+  @if (actionError()) {
+    <p class="form-error" role="alert">{{ actionError() }}</p>
+  }
+
+  @if (report().markdownSummary) {
+    <section class="ux-inspector-result__summary" aria-label="Podsumowanie odpowiedzi">
+      <app-markdown-content [content]="report().markdownSummary" />
+    </section>
+  }
+
+  @if (answerSection(); as answer) {
+    <section class="ux-inspector-result__answer" aria-label="Odpowiedź UX Inspectora">
+      <div class="ux-inspector-result__answer-heading">
+        <span class="material-symbols-outlined" aria-hidden="true">task</span>
+        <div>
+          <span class="field-label">Odpowiedź</span>
+          <h3>{{ answer.title || 'Odpowiedź' }}</h3>
+        </div>
+      </div>
+      <app-analysis-report-section-content
+        [markdown]="answer.markdown"
+        emptyText="Brak bezpiecznie potwierdzonej odpowiedzi."
+        [meta]="resultMeta()"
+        metaAlign="end"
+      />
+    </section>
+  }
+</section>

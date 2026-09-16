@@ -1,0 +1,57 @@
+@if (open()) {
+  <div class="browser-tools-modal" (click)="closeFromBackdrop($event)">
+    <section
+      class="browser-tools-modal__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="browserToolsModalTitle"
+      aria-describedby="browserToolsModalDescription"
+    >
+      <header class="browser-tools-modal__header">
+        <img src="/assets/brand/main-logo.png" alt="" />
+        <div>
+          <p class="section-eyebrow">Team Delivery Workspace</p>
+          <h2 id="browserToolsModalTitle">Dodaj Browser Tools do Chrome</h2>
+        </div>
+        <button
+          class="icon-button"
+          type="button"
+          aria-label="Zamknij konfigurację Browser Tools"
+          (click)="closed.emit()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </header>
+
+      <p id="browserToolsModalDescription" class="browser-tools-modal__description">
+        Pokaż pasek zakładek w Chrome, a następnie przeciągnij na niego poniższy element.
+        Na badanej stronie uruchom zapisaną zakładkę i wybierz UX Inspector.
+      </p>
+
+      <div class="browser-tools-modal__grab-zone">
+        <span class="material-symbols-outlined" aria-hidden="true">drag_indicator</span>
+        <a
+          class="browser-tools-modal__bookmarklet"
+          [href]="bookmarkletHref"
+          draggable="true"
+          title="Przeciągnij na pasek zakładek Chrome"
+          (click)="$event.preventDefault()"
+        >
+          <img src="/assets/brand/main-logo.png" alt="" />
+          <span>TDW Browser Tools</span>
+        </a>
+      </div>
+
+      <ol class="browser-tools-modal__steps">
+        <li><strong>Ctrl+Shift+B</strong> — pokaż pasek zakładek.</li>
+        <li>Przeciągnij przycisk <strong>TDW Browser Tools</strong> na pasek.</li>
+        <li>Otwórz badaną stronę HTTP(S) i kliknij zapisaną zakładkę.</li>
+      </ol>
+
+      <p class="browser-tools-modal__note">
+        Zakładka uruchamia efemeryczny kod z tej instancji TDW. Nie otrzymuje tokenów,
+        nie działa w tle i znika po zamknięciu narzędzia.
+      </p>
+    </section>
+  </div>
+}

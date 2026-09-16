@@ -40,7 +40,7 @@ public final class UxInspectorTestFixtures {
                 null,
                 new UxInspectorCapture.Traversal(4, 2, 2, true),
                 new UxInspectorCapture.Signals(0, "TOP_LEVEL", List.of()), List.of(),
-                new UxInspectorCapture.Client("TDW UX Inspector", "3.0.0", "ux-inspector"));
+                new UxInspectorCapture.Client("TDW UX Inspector", "1.0.0", "ux-inspector"));
     }
 
     public static FrontendApplicationCatalog frontendCatalog() {

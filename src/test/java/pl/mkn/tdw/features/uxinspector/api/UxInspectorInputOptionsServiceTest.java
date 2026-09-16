@@ -19,17 +19,31 @@ class UxInspectorInputOptionsServiceTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var views = mock(FrontendViewCatalogService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(views.loadCatalog("crm-agent-portal", "main")).thenReturn(viewCatalog());
+        when(views.loadCatalog("crm-agent-portal", "main", false)).thenReturn(viewCatalog());
         var service = new UxInspectorInputOptionsService(applications, views);
 
         assertThat(service.inputOptions().systems()).singleElement().satisfies(system -> {
             assertThat(system.systemId()).isEqualTo("crm-agent-portal");
             assertThat(system.defaultBranch()).isEqualTo("main");
         });
-        var result = service.views("crm-agent-portal", "main");
+        var result = service.views("crm-agent-portal", "main", false);
         assertThat(result.sourceRevision().revision()).isEqualTo("abc123crm");
         assertThat(result.views()).singleElement().extracting(UxInspectorViewCatalogResponse.ViewOption::viewId)
                 .isEqualTo("crm-contact-create");
+        verify(views).loadCatalog("crm-agent-portal", "main", false);
+    }
+
+    @Test
+    void shouldForwardAnExplicitCacheRefreshToTheSharedCatalog() {
+        var applications = mock(FrontendApplicationCatalogService.class);
+        var views = mock(FrontendViewCatalogService.class);
+        when(applications.loadCatalog()).thenReturn(frontendCatalog());
+        when(views.loadCatalog("crm-agent-portal", "main", true)).thenReturn(viewCatalog());
+        var service = new UxInspectorInputOptionsService(applications, views);
+
+        service.views("crm-agent-portal", "main", true);
+
+        verify(views).loadCatalog("crm-agent-portal", "main", true);
     }
 
     @Test
@@ -37,15 +51,15 @@ class UxInspectorInputOptionsServiceTest {
         var applications = mock(FrontendApplicationCatalogService.class);
         var views = mock(FrontendViewCatalogService.class);
         when(applications.loadCatalog()).thenReturn(frontendCatalog());
-        when(views.loadCatalog("crm-agent-portal", "missing"))
+        when(views.loadCatalog("crm-agent-portal", "missing", false))
                 .thenThrow(new GitLabFrontendDiscoveryException("FRONTEND_REF_NOT_FOUND", "Synthetic GitLab detail"));
         var service = new UxInspectorInputOptionsService(applications, views);
 
-        assertThatThrownBy(() -> service.views(" ", "main"))
+        assertThatThrownBy(() -> service.views(" ", "main", false))
                 .isInstanceOf(UxInspectorContextException.class).hasMessageContaining("required");
-        assertThatThrownBy(() -> service.views("unknown-crm", "main"))
+        assertThatThrownBy(() -> service.views("unknown-crm", "main", false))
                 .isInstanceOf(UxInspectorContextException.class).hasMessageContaining("not registered");
-        assertThatThrownBy(() -> service.views("crm-agent-portal", "missing"))
+        assertThatThrownBy(() -> service.views("crm-agent-portal", "missing", false))
                 .isInstanceOf(UxInspectorContextException.class).hasMessageContaining("does not exist")
                 .hasMessageNotContaining("Synthetic GitLab detail");
     }

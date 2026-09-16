@@ -197,9 +197,12 @@ export class UxInspectorFacade {
       this.branch.set(normalized);
       this.clearViewSelection();
     }
+    if (normalized && this.selectedSystemId() && !this.viewCatalog()) {
+      this.loadViews();
+    }
   }
 
-  loadViews(): void {
+  loadViews(refreshCache = false): void {
     if (this.controlsLocked()) return;
     const systemId = this.selectedSystemId();
     const branch = this.branch().trim();
@@ -210,7 +213,7 @@ export class UxInspectorFacade {
     this.clearViewSelection();
     const requestId = ++this.viewRequestId;
     this.viewState.set('loading');
-    this.api.getViews(systemId, branch).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.api.getViews(systemId, branch, refreshCache).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (catalog) => {
         if (requestId !== this.viewRequestId || systemId !== this.selectedSystemId() || branch !== this.branch()) return;
         this.viewCatalog.set(catalog);
@@ -413,7 +416,7 @@ function isReadable(snapshot: UxInspectorJobStateSnapshot): boolean {
 function isUxInspectorExport(value: unknown): value is UxInspectorExportEnvelope {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const envelope = value as Partial<UxInspectorExportEnvelope>;
-  return envelope.schema === 'tdw.ux-inspector-export' && envelope.version === 2 &&
+  return envelope.schema === 'tdw.ux-inspector-export' && envelope.version === 1 &&
     envelope.payload?.type === 'ux-inspector-analysis' &&
     envelope.payload?.resultContract === 'ux-inspector-result-v1' && Boolean(envelope.payload.job);
 }

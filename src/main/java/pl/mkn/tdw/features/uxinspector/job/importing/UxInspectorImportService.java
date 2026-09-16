@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCapture;
 import pl.mkn.tdw.features.uxinspector.capture.UxInspectorCaptureNormalizer;
 import pl.mkn.tdw.features.uxinspector.job.api.*;
 import pl.mkn.tdw.features.uxinspector.job.error.UxInspectorJobException;
@@ -64,8 +65,9 @@ public class UxInspectorImportService {
                 || job.result().sourceRevision() == null || job.result().view() == null
                 || (job.status() != UxInspectorJobStatus.COMPLETED && job.status() != UxInspectorJobStatus.PARTIAL)
                 || job.report().sections().size() != 1 || !"answer".equals(job.report().sections().get(0).id())
-                || job.request().capture() == null || job.request().capture().version() != 3) {
-            throw invalid("Only a completed UX Inspector export v2 result with capture v3 can be imported.");
+                || job.request().capture() == null
+                || job.request().capture().version() != UxInspectorCapture.VERSION) {
+            throw invalid("Only a completed UX Inspector export v1 result with capture v1 can be imported.");
         }
         try {
             if (!captureNormalizer.normalize(job.request().capture()).equals(job.request().capture())) {

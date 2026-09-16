@@ -35,7 +35,7 @@ class UxInspectorImportServiceTest {
             new UxInspectorCaptureNormalizer(objectMapper));
 
     @Test
-    void shouldImportOnlyStrictUxInspectorV2AsReadOnlyHistoricalResult() {
+    void shouldImportOnlyStrictUxInspectorV1AsReadOnlyHistoricalResult() {
         var document = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
 
         var imported = service.importReadOnly(document);
@@ -48,7 +48,7 @@ class UxInspectorImportServiceTest {
     }
 
     @Test
-    void shouldRejectUiExplorerSchemaUnknownVersionUnknownFieldsAndCaptureV2() {
+    void shouldRejectUiExplorerSchemaUnknownVersionUnknownFieldsAndCaptureV3() {
         ObjectNode uiExplorer = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         uiExplorer.put("schema", "tdw.ui-explorer-export");
         ObjectNode future = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
@@ -57,8 +57,8 @@ class UxInspectorImportServiceTest {
         unknown.put("legacy", true);
         ObjectNode unknownNested = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         unknownNested.withObject("/payload/job").put("legacy", true);
-        ObjectNode captureV2 = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
-        captureV2.withObject("/payload/job/request/capture").put("version", 2);
+        ObjectNode captureV3 = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
+        captureV3.withObject("/payload/job/request/capture").put("version", 3);
         ObjectNode nonCanonicalCapture = objectMapper.valueToTree(UxInspectorExportEnvelope.from(completedSnapshot(), Instant.now()));
         nonCanonicalCapture.withObject("/payload/job/request/capture/target/domFingerprint/stableAttributes")
                 .put("data-testid", "secret-token");
@@ -69,7 +69,7 @@ class UxInspectorImportServiceTest {
         assertInvalid(future);
         assertInvalid(unknown);
         assertInvalid(unknownNested);
-        assertInvalid(captureV2);
+        assertInvalid(captureV3);
         assertInvalid(nonCanonicalCapture);
         assertInvalid(mismatchedResult);
     }

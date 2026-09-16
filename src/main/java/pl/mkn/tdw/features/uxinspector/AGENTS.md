@@ -2,7 +2,7 @@
 
 ## Zakres
 
-Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v3,
+Ten katalog jest wlascicielem dedykowanego feature'a UX Inspector: capture v1,
 wybor scope'u, resolver targetu, kanoniczny prompt, session-bound tools, job,
 report, historie oraz import/export.
 

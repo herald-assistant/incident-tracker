@@ -58,7 +58,7 @@ describe('UxInspectorFacade', () => {
     ] });
   });
 
-  it('requires capture and sends the exact capture v3 with confirmed source selection', () => {
+  it('requires capture and sends the exact capture v1 with confirmed source selection', () => {
     const facade = TestBed.inject(UxInspectorFacade);
     facade.initialize();
     facade.loadViews();
@@ -93,11 +93,25 @@ describe('UxInspectorFacade', () => {
     expect(api.startJob).not.toHaveBeenCalled();
     expect(facade.jobError()).toContain('TDW Browser Tools');
   });
+
+  it('loads the cached view catalog after branch confirmation and explicitly refreshes it on demand', () => {
+    const facade = TestBed.inject(UxInspectorFacade);
+    facade.initialize();
+
+    facade.changeBranch('main');
+
+    expect(api.getViews).toHaveBeenCalledWith('crm-agent-portal', 'main', false);
+    expect(facade.viewState()).toBe('ready');
+
+    facade.loadViews(true);
+
+    expect(api.getViews).toHaveBeenLastCalledWith('crm-agent-portal', 'main', true);
+  });
 });
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 3, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
+    schema: 'tdw.ux-inspector-capture', version: 1, captureId: 'cap_crm_contact_save', capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'ELEMENT_CONTEXT',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
     target: { tag: 'button', role: 'button', accessibleName: 'Zapisz kontakt', text: 'Zapisz kontakt',
@@ -108,7 +122,7 @@ function captureFixture(): UxInspectorCapture {
     ancestors: [], formSnapshot: null,
     traversal: { observedDepth: 2, emittedNodeCount: 1, omittedNodeCount: 1, reachedDocumentRoot: true },
     signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] }, limits: [],
-    client: { name: 'TDW UX Inspector', version: '3.0.0', featureId: 'ux-inspector' }
+    client: { name: 'TDW UX Inspector', version: '1.0.0', featureId: 'ux-inspector' }
   };
 }
 

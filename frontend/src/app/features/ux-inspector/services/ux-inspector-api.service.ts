@@ -18,8 +18,15 @@ export class UxInspectorApiService {
     return this.http.get<UxInspectorInputOptionsResponse>('/api/ux-inspector/input-options');
   }
 
-  getViews(systemId: string, branch: string): Observable<UxInspectorViewCatalogResponse> {
-    const params = new HttpParams().set('systemId', systemId).set('branch', branch);
+  getViews(
+    systemId: string,
+    branch: string,
+    refreshCache = false
+  ): Observable<UxInspectorViewCatalogResponse> {
+    let params = new HttpParams().set('systemId', systemId).set('branch', branch);
+    if (refreshCache) {
+      params = params.set('refresh', 'true');
+    }
     return this.http.get<UxInspectorViewCatalogResponse>('/api/ux-inspector/views', { params });
   }
 

@@ -15,16 +15,33 @@ import java.util.Map;
 public class FrontendViewCatalogService {
     private final FrontendApplicationCatalogService applicationCatalogService;
     private final GitLabFrontendRouteGraphDiscoveryService routeGraphDiscoveryService;
+    private final FrontendViewCatalogCache viewCatalogCache;
 
     public FrontendViewCatalog loadCatalog(String systemId, String ref) {
+        return loadCatalog(systemId, ref, false);
+    }
+
+    public FrontendViewCatalog loadCatalog(String systemId, String ref, boolean refreshCache) {
         var system = required(systemId, "systemId", 160);
         var sourceRef = required(ref, "branch", 255);
         var frontend = applicationCatalogService.loadCatalog().findFrontend(system)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown or ineligible frontend system: " + system));
         var limits = GitLabFrontendGraphLimits.defaults();
+        var key = new FrontendViewCatalogCache.Key(frontend.systemId(), frontend.label(), sourceRef,
+                frontend.gitLabGroup(), frontend.gitLabProjectName(), frontend.repositoryId(), frontend.projectPath(),
+                frontend.searchMode(), frontend.pathPrefixes(), limits.maxRouteNodes(), limits.maxRouteFiles(),
+                limits.maxSourceReads(), limits.maxAliasResolutions(), limits.maxImportDepth());
+        if (refreshCache) {
+            viewCatalogCache.evict(key);
+        } else {
+            var cached = viewCatalogCache.find(key);
+            if (cached.isPresent()) return cached.get();
+        }
         var scope = new GitLabFrontendRepositoryScope(frontend.gitLabGroup(), frontend.gitLabProjectName(),
                 sourceRef, frontend.pathPrefixes());
-        return map(frontend, routeGraphDiscoveryService.discover(scope, limits), limits);
+        var catalog = map(frontend, routeGraphDiscoveryService.discover(scope, limits), limits);
+        viewCatalogCache.save(key, catalog);
+        return catalog;
     }
 
     public FrontendApplicationRegistration requireFrontend(String systemId) {

@@ -163,7 +163,7 @@ UI jawnie rozroznia wszystkie trzy pochodzenia, zachowuje copy/download Markdown
 i odrzuca obca, starsza, nowsza lub uszkodzona koperta bez fallbacku.
 UX Inspector jest osobnym pionem dla jednego pytania o element wskazany przez
 TDW Browser Tools. Statyczne zasoby sa dostepne tylko pod `/browser-tools/**`;
-selection runtime tworzy capture v3 w jawnym profilu `ELEMENT_CONTEXT` albo
+selection runtime tworzy capture v1 w jawnym profilu `ELEMENT_CONTEXT` albo
 `FORM_DIAGNOSTICS` i przekazuje go do `/ux-inspector` przez
 exact-origin/source/nonce handshake. Profil formularza zamraza ograniczone,
 dozwolone wartosci najblizszego formularza i zawsze wyklucza dane wrazliwe.
@@ -184,8 +184,9 @@ odrzucany. Sesja ma `skillsEnabled=false`. Initial
 report dopuszcza tylko sekcje `answer`; finalna wiadomosc modelu nie jest
 wynikiem ani fallbackiem. Run jest zapisywany jako `QUEUED` przed dispatch,
 trafia do Analysis History i uzywa scislego
-`tdw.ux-inspector-export/v2`. Workspace reuse'uje layout UI Explorera oraz
-wspolny aside/report renderer, ale nie importuje jego modeli ani workflow.
+`tdw.ux-inspector-export/v1`. Workspace reuse'uje layout UI Explorera oraz
+wspolny aside; jednosekcyjny renderer pokazuje scalone metadata raz pod
+odpowiedzia, ale feature nie importuje modeli ani workflow UI Explorera.
 Szczegoly sa w `ux-inspector-runtime-flow.md`.
 Kolejne rodziny moga obejmowac functional logic explorer oraz
 natural-language data diagnostics. Szczegolowy kierunek produktu jest opisany

@@ -130,7 +130,7 @@ export class UxInspectorCaptureIngressService implements OnDestroy {
       // Validation below produces the user-facing error.
     }
     if (bytes > UX_INSPECTOR_MAX_CAPTURE_BYTES || !isUxInspectorCapture(candidate)) {
-      this.rejectExpectedSource('CAPTURE_INVALID', 'Capture v3 jest niepoprawny albo przekracza limit 128 KiB.');
+      this.rejectExpectedSource('CAPTURE_INVALID', 'Capture v1 jest niepoprawny albo przekracza limit 128 KiB.');
       return;
     }
     if (

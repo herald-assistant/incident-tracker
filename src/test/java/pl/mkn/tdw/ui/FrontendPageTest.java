@@ -118,12 +118,10 @@ class FrontendPageTest {
     }
 
     @Test
-    void shouldServePackagedBrowserToolsAssets() throws Exception {
+    void shouldServeOnlyPackagedBrowserToolsRuntimeAssets() throws Exception {
         mockMvc.perform(get("/browser-tools/install.html"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(containsString("TDW Browser Tools")))
-                .andExpect(content().string(containsString("Bez rozszerzenia")));
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
 
         mockMvc.perform(get("/browser-tools/capture.html"))
                 .andExpect(status().isNotFound())
@@ -139,7 +137,7 @@ class FrontendPageTest {
 
         mockMvc.perform(get("/browser-tools/protocol.js"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("__TDW_BROWSER_TOOLS_PROTOCOL_V3__")))
+                .andExpect(content().string(containsString("__TDW_BROWSER_TOOLS_PROTOCOL_V1__")))
                 .andExpect(content().string(containsString("tdw.ux-inspector-capture")))
                 .andExpect(content().string(containsString("TDW UX Inspector")));
 
@@ -150,14 +148,16 @@ class FrontendPageTest {
                 .andExpect(content().string(containsString("runtime.js")));
 
         mockMvc.perform(get("/browser-tools/demo.html"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(containsString("CRM Agent Portal")))
-                .andExpect(content().string(containsString("demo-launcher.js")));
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
 
         mockMvc.perform(get("/browser-tools/demo-launcher.js"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(containsString("featureId: 'ux-inspector'")));
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
+
+        mockMvc.perform(get("/browser-tools/install.js"))
+                .andExpect(status().isNotFound())
+                .andExpect(result -> assertNull(result.getResponse().getForwardedUrl()));
 
         mockMvc.perform(get("/browser-tools/missing.js"))
                 .andExpect(status().isNotFound())

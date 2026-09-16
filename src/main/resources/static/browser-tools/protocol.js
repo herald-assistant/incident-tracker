@@ -1,11 +1,10 @@
 (function installTdwBrowserToolsProtocol(global) {
   'use strict';
 
-  const GLOBAL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V3__';
-  const PROTOCOL_VERSION = 3;
-  const CAPTURE_VERSION = 3;
+  const GLOBAL_KEY = '__TDW_BROWSER_TOOLS_PROTOCOL_V1__';
+  const PROTOCOL_VERSION = 1;
+  const CAPTURE_VERSION = 1;
   const CAPTURE_SCHEMA = 'tdw.ux-inspector-capture';
-  const REMOTE_LOADER_VERSION = '3.0.0';
   const MAX_CAPTURE_BYTES = 128 * 1024;
   const MAX_TEXT_LENGTH = 180;
   const MAX_ACCESSIBLE_NAME_LENGTH = 140;
@@ -827,7 +826,7 @@
       ],
       client: {
         name: 'TDW UX Inspector',
-        version: options?.clientVersion || '3.0.0',
+        version: options?.clientVersion || '1.0.0',
         featureId: 'ux-inspector'
       }
     };
@@ -1305,7 +1304,7 @@
     if (
       !hasExactKeys(input, ['schema', 'version', 'featureId', 'tdwOrigin']) ||
       input.schema !== 'tdw.browser-tool-launcher' ||
-      input.version !== 3 ||
+      input.version !== 1 ||
       input.featureId !== 'ux-inspector'
     ) {
       return failure('Unsupported launcher configuration.');
@@ -1316,7 +1315,7 @@
     }
     return success({
       schema: 'tdw.browser-tool-launcher',
-      version: 3,
+      version: 1,
       featureId: 'ux-inspector',
       tdwOrigin
     });
@@ -1345,60 +1344,6 @@
     });
   }
 
-  function buildLauncherSource(config, protocolSource, runtimeSource) {
-    const normalized = normalizeLauncherConfig(config);
-    if (!normalized.ok) {
-      throw new Error(normalized.error);
-    }
-    if (
-      typeof protocolSource !== 'string' ||
-      !protocolSource.trim() ||
-      typeof runtimeSource !== 'string' ||
-      !runtimeSource.trim()
-    ) {
-      throw new Error('Launcher sources are missing.');
-    }
-    if (protocolSource.length + runtimeSource.length > 300000) {
-      throw new Error('Launcher sources are unexpectedly large.');
-    }
-    const serializedConfig = JSON.stringify(normalized.value);
-    return [
-      ';try{delete globalThis.__TDW_BROWSER_TOOL_CONFIG__;}catch(_error){}',
-      `globalThis.__TDW_BROWSER_TOOL_CONFIG__=Object.freeze(${serializedConfig});`,
-      protocolSource,
-      runtimeSource,
-      '//# sourceURL=tdw-browser-tools.js'
-    ].join('\n');
-  }
-
-  function buildRemoteLauncherSource(config) {
-    const normalized = normalizeLauncherConfig(config);
-    if (!normalized.ok) {
-      throw new Error(normalized.error);
-    }
-    const loaderUrl = new URL('/browser-tools/loader.js', normalized.value.tdwOrigin);
-    loaderUrl.searchParams.set('v', REMOTE_LOADER_VERSION);
-    const serializedLoaderUrl = JSON.stringify(loaderUrl.toString());
-    const serializedFeatureId = JSON.stringify(normalized.value.featureId);
-    return [
-      ';(function(d){',
-      "var s=d.createElement('script');",
-      `s.src=${serializedLoaderUrl};`,
-      `s.dataset.tdwFeatureId=${serializedFeatureId};`,
-      "s.referrerPolicy='no-referrer';",
-      "s.onerror=function(){s.remove();alert('TDW Browser Tools: skrypt zostal zablokowany. Uzyj DevTools Snippetu.');};",
-      '(d.head||d.documentElement).appendChild(s);',
-      '}(document));'
-    ].join('');
-  }
-
-  function toBookmarkUrl(source) {
-    if (typeof source !== 'string' || !source.trim()) {
-      throw new Error('Launcher source is empty.');
-    }
-    return `javascript:${encodeURIComponent(source)}`;
-  }
-
   const api = Object.freeze({
     PROTOCOL_VERSION,
     CAPTURE_VERSION,
@@ -1424,10 +1369,7 @@
     isCaptureMessage: (data, nonce) =>
       isProtocolMessage(data, 'TDW_UX_INSPECTOR_CAPTURE', nonce),
     isErrorMessage: (data, nonce) =>
-      isProtocolMessage(data, 'TDW_UX_INSPECTOR_ERROR', nonce),
-    buildLauncherSource,
-    buildRemoteLauncherSource,
-    toBookmarkUrl
+      isProtocolMessage(data, 'TDW_UX_INSPECTOR_ERROR', nonce)
   });
 
   try {

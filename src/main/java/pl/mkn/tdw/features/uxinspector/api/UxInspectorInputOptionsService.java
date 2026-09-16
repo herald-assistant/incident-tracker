@@ -25,7 +25,7 @@ public class UxInspectorInputOptionsService {
                         value.severity(), value.code(), value.message(), value.entityType(), value.entityId())).toList());
     }
 
-    public UxInspectorViewCatalogResponse views(String systemId, String branch) {
+    public UxInspectorViewCatalogResponse views(String systemId, String branch, boolean refreshCache) {
         if (!StringUtils.hasText(systemId) || systemId.trim().length() > 160
                 || !StringUtils.hasText(branch) || branch.trim().length() > 255) {
             throw new UxInspectorContextException("UX_INSPECTOR_VIEW_SCOPE_INVALID", UserFacingErrorType.BAD_REQUEST,
@@ -37,7 +37,7 @@ public class UxInspectorInputOptionsService {
         }
         pl.mkn.tdw.frontendcatalog.FrontendViewCatalog catalog;
         try {
-            catalog = viewCatalogService.loadCatalog(systemId.trim(), branch.trim());
+            catalog = viewCatalogService.loadCatalog(systemId.trim(), branch.trim(), refreshCache);
         } catch (GitLabFrontendDiscoveryException exception) {
             if ("FRONTEND_REF_NOT_FOUND".equals(exception.code())) {
                 throw new UxInspectorContextException("UX_INSPECTOR_SOURCE_REF_NOT_FOUND", UserFacingErrorType.NOT_FOUND,

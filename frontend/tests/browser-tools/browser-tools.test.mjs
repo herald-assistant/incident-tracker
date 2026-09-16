@@ -9,8 +9,6 @@ const assetRoot = new URL('../../public/browser-tools/', import.meta.url);
 const protocolSource = await readFile(new URL('protocol.js', assetRoot), 'utf8');
 const loaderSource = await readFile(new URL('loader.js', assetRoot), 'utf8');
 const runtimeSource = await readFile(new URL('runtime.js', assetRoot), 'utf8');
-const installSource = await readFile(new URL('install.js', assetRoot), 'utf8');
-const installHtml = await readFile(new URL('install.html', assetRoot), 'utf8');
 
 function createDom(html, url) {
   const dom = new JSDOM(html, {
@@ -26,13 +24,13 @@ function createDom(html, url) {
 }
 
 function protocolFor(dom) {
-  return dom.window.__TDW_BROWSER_TOOLS_PROTOCOL_V3__;
+  return dom.window.__TDW_BROWSER_TOOLS_PROTOCOL_V1__;
 }
 
 function config(tdwOrigin = 'https://tdw.example.com') {
   return {
     schema: 'tdw.browser-tool-launcher',
-    version: 3,
+    version: 1,
     featureId: 'ux-inspector',
     tdwOrigin
   };
@@ -41,7 +39,7 @@ function config(tdwOrigin = 'https://tdw.example.com') {
 function captureFixture(overrides = {}) {
   return {
     schema: 'tdw.ux-inspector-capture',
-    version: 3,
+    version: 1,
     captureId: 'cap_0123456789abcdef',
     capturedAt: '2026-09-15T10:00:00.000Z',
     captureProfile: 'ELEMENT_CONTEXT',
@@ -108,7 +106,7 @@ function captureFixture(overrides = {}) {
     limits: [],
     client: {
       name: 'TDW UX Inspector',
-      version: '3.0.0',
+      version: '1.0.0',
       featureId: 'ux-inspector'
     },
     ...overrides
@@ -164,7 +162,7 @@ test('element context capture redacts identifiers and never reads form values or
   const serialized = JSON.stringify(capture);
 
   assert.equal(capture.schema, 'tdw.ux-inspector-capture');
-  assert.equal(capture.version, 3);
+  assert.equal(capture.version, 1);
   assert.equal(capture.captureProfile, 'ELEMENT_CONTEXT');
   assert.equal(capture.page.path, '/customers/:value');
   assert.deepEqual(Array.from(capture.page.queryParameterNames), ['view']);
@@ -221,7 +219,7 @@ test('form diagnostics freezes allowed nearest-form values and excludes sensitiv
   });
 
   const capture = protocol.captureElement(input, {
-    clientVersion: '3.0.0',
+    clientVersion: '1.0.0',
     featureId: 'ux-inspector',
     captureProfile: 'FORM_DIAGNOSTICS',
     capturedAt: '2026-09-15T10:00:00.000Z'
@@ -309,7 +307,7 @@ test('protocol rejects forged, unknown-field or oversized captures', () => {
   );
 
   assert.equal(
-    protocol.normalizeCapture({ ...captureFixture(), version: 99 }).ok,
+    protocol.normalizeCapture({ ...captureFixture(), version: 3 }).ok,
     false
   );
   assert.equal(
@@ -329,75 +327,12 @@ test('protocol rejects forged, unknown-field or oversized captures', () => {
   dom.window.close();
 });
 
-test('remote bookmarklet is small and both launcher variants have valid JavaScript', () => {
-  const dom = createDom('<!doctype html><html><body></body></html>', 'https://tdw.example.com/');
-  const protocol = protocolFor(dom);
-  const snippetSource = protocol.buildLauncherSource(
-    config(),
-    '(function(){globalThis.protocolLoaded=true;}());',
-    '(function(){globalThis.runtimeLoaded=true;}());'
-  );
-  const remoteSource = protocol.buildRemoteLauncherSource(config());
-  const bookmarkUrl = protocol.toBookmarkUrl(remoteSource);
-  const decodedBookmark = decodeURIComponent(bookmarkUrl.slice('javascript:'.length));
-
-  assert.match(bookmarkUrl, /^javascript:/);
-  assert.match(decodedBookmark, /https:\/\/tdw\.example\.com\/browser-tools\/loader\.js\?v=3\.0\.0/);
-  assert.doesNotMatch(decodedBookmark, /installTdwBrowserToolsProtocol|bootstrapTdwBrowserTools/);
-  assert.ok(new TextEncoder().encode(bookmarkUrl).byteLength < 2048);
-  assert.doesNotThrow(() => new Function(decodedBookmark));
-  assert.doesNotThrow(() => new Function(snippetSource));
-  assert.match(snippetSource, /\n\(function\(\)\{globalThis\.protocolLoaded/);
-  assert.doesNotMatch(snippetSource, /fetch\s*\(/);
-  assert.equal(protocol.normalizeLauncherConfig(config('javascript:alert(1)')).ok, false);
-  assert.equal(protocol.normalizeLauncherConfig(config('https://tdw.example.com/path')).ok, false);
-  dom.window.close();
-});
-
-test('installer prepares a draggable bookmarklet and a complete snippet for its own TDW origin', async () => {
-  const dom = new JSDOM(installHtml, {
-    url: 'https://tdw.example.com/browser-tools/install.html',
-    runScripts: 'outside-only',
-    pretendToBeVisual: true
-  });
-  const { window } = dom;
-  if (!window.TextEncoder) {
-    window.TextEncoder = TextEncoder;
-  }
-  window.fetch = async (path) => ({
-    ok: true,
-    status: 200,
-    text: async () => (String(path).endsWith('protocol.js') ? protocolSource : runtimeSource)
-  });
-  window.eval(protocolSource);
-  window.eval(installSource);
-  await new Promise((resolve) => window.setTimeout(resolve, 20));
-
-  const link = window.document.getElementById('bookmarklet-link');
-  const snippet = window.document.getElementById('snippet-source');
-  const bookmarkSource = decodeURIComponent(
-    link.getAttribute('href').slice('javascript:'.length)
-  );
-  assert.equal(link.getAttribute('aria-disabled'), 'false');
-  assert.match(link.getAttribute('href'), /^javascript:/);
-  assert.match(bookmarkSource, /https:\/\/tdw\.example\.com\/browser-tools\/loader\.js/);
-  assert.doesNotThrow(() => new Function(bookmarkSource));
-  assert.match(snippet.value, /"tdwOrigin":"https:\/\/tdw\.example\.com"/);
-  assert.match(snippet.value, /data-tdw-browser-tool-root/);
-  assert.doesNotThrow(() => new Function(snippet.value));
-  assert.ok(new TextEncoder().encode(link.getAttribute('href')).byteLength < 2048);
-  assert.equal(window.document.getElementById('copy-bookmark-url').disabled, false);
-  assert.equal(window.document.getElementById('copy-snippet').disabled, false);
-  assert.match(window.document.getElementById('loader-status').textContent, /pobierze runtime tylko/);
-  dom.window.close();
-});
-
 test('remote loader derives TDW origin and loads protocol before runtime', async () => {
   const dom = new JSDOM(
     `<!doctype html><html><head></head><body>
       <script
         id="tdw-loader"
-        src="https://tdw.example.com/browser-tools/loader.js?v=3.0.0"
+        src="https://tdw.example.com/browser-tools/loader.js?v=1.0.0"
         data-tdw-feature-id="ux-inspector"
       ></script>
     </body></html>`,
@@ -465,7 +400,7 @@ test('runtime mounts a bottom-right Browser Tools menu and starts the light UX I
     '[data-tdw-browser-tool-root="browser-tools-shell"]'
   );
   assert.ok(shell?.shadowRoot);
-  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '3.0.0');
+  assert.equal(shell.getAttribute('data-tdw-browser-tool-version'), '1.0.0');
   assert.equal(
     window.document.querySelector('[data-tdw-browser-tool-root="ux-inspector"]'),
     null

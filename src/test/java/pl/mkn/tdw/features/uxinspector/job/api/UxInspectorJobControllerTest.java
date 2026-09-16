@@ -37,7 +37,7 @@ class UxInspectorJobControllerTest {
 
         var request = ArgumentCaptor.forClass(UxInspectorJobStartRequest.class);
         verify(jobService).startJob(request.capture());
-        assertThat(request.getValue().capture().version()).isEqualTo(3);
+        assertThat(request.getValue().capture().version()).isEqualTo(1);
         assertThat(request.getValue().model()).isEqualTo("gpt-crm");
     }
 

@@ -1107,14 +1107,15 @@ odczytem finalnego raportu. Referencja spoza initial target context jest
 poprawna dopiero po rzeczywistym full/chunk read tego pliku z pinned commit;
 wynik tree/list/search sam nie jest dowodem tresci.
 
-TDW Browser Tools jest efemerycznym statycznym shellem bookmarkleta/Snippetu,
-nie rozszerzeniem Chrome. Capture jest przenoszony tylko protokolem v3 do
+TDW Browser Tools jest efemerycznym statycznym shellem uruchamianym przez
+bookmarklet z modala UX Inspectora, nie rozszerzeniem Chrome. Capture jest
+przenoszony tylko protokolem v1 do
 `/ux-inspector`, z exact `origin`, `source`, nonce i potwierdzeniem capture id.
 Nie istnieje payload w URL, browser storage, clipboard transfer, dummy receiver,
-alias v1 ani redirect ze starego `/tdw-inspector/**`. CSP, popup blocker, COOP,
+inna wersja kontraktu ani redirect ze starego `/tdw-inspector/**`. CSP, popup blocker, COOP,
 niepoprawna wiadomosc i stale source zatrzymuja operacje jawnie.
 
-Capture v3 ma jawny profil `ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`.
+Capture v1 ma jawny profil `ELEMENT_CONTEXT` albo `FORM_DIAGNOSTICS`.
 Diagnostyka formularza ogranicza odczyt do najblizszego owning form (lub samej
 odlaczonej kontrolki), stosuje osobne limity i zawsze wyklucza password,
 hidden, file oraz pola/wartosci wygladajace jak token, session, secret, CSRF,
@@ -1130,4 +1131,4 @@ repozytorium sa niezaufanym source evidence i nie moga zmienic kanonicznej
 procedury ani tool policy. Opaque `targetRef` jest session-bound i jednorazowy.
 `NOT_FOUND` blokuje AI zamiast uruchamiac broad search; `AMBIGUOUS` pozostaje
 jawnym stanem. Pierwszy snapshot `QUEUED` musi zostac zapisany przed dispatch,
-a import akceptuje wylacznie `tdw.ux-inspector-export/v2` z capture v3.
+a import akceptuje wylacznie `tdw.ux-inspector-export/v1` z capture v1.

@@ -46,7 +46,15 @@ describe('UxInspectorPageComponent', () => {
     expect(page.textContent).toContain('customer@example.test');
     expect(page.textContent).toContain('SENSITIVE_TYPE');
     expect(page.textContent).not.toContain('Wklej capture');
+    expect(page.querySelector('.ux-inspector-read-only')).toBeNull();
+    expect(page.querySelector('a[href="/browser-tools/install.html"]')).toBeNull();
     expect(page.querySelector('textarea')?.closest('label')?.textContent).toContain('Pytanie lub polecenie');
+    const modelControl = Array.from(page.querySelectorAll<HTMLElement>('.ux-inspector-select'))
+      .find((element) => element.textContent?.includes('Model AI'));
+    const question = page.querySelector('textarea');
+    expect(modelControl).toBeDefined();
+    expect(modelControl!.compareDocumentPosition(question as Node) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
     expect(page.querySelector<HTMLInputElement>('input[type="file"]')?.getAttribute('aria-label'))
       .toBe('Importuj wynik UX Inspectora');
     expect(page.querySelector<HTMLButtonElement>('button.primary-button')?.disabled).toBe(true);
@@ -56,6 +64,17 @@ describe('UxInspectorPageComponent', () => {
     expect(harness.posted.at(-1)?.message).toMatchObject({
       type: 'TDW_UX_INSPECTOR_RECEIVED', captureId: 'cap_crm_contact_save'
     });
+
+    const browserToolsButton = Array.from(page.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('Browser Tools'));
+    browserToolsButton?.click();
+    fixture.detectChanges();
+    const dialog = page.querySelector<HTMLElement>('[role="dialog"]');
+    const bookmarklet = dialog?.querySelector<HTMLAnchorElement>('.browser-tools-modal__bookmarklet');
+    expect(dialog?.textContent).toContain('Dodaj Browser Tools do Chrome');
+    expect(bookmarklet?.draggable).toBe(true);
+    expect(bookmarklet?.getAttribute('href')).toMatch(/^javascript:/);
+    expect(dialog?.textContent).not.toContain('Snippet');
     http.verify();
   });
 });
@@ -96,7 +115,7 @@ function createWindowHarness() {
       listener?.({
         origin: 'https://crm.example.com', source: opener,
         data: {
-          type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 3, nonce: NONCE,
+          type: 'TDW_UX_INSPECTOR_CAPTURE', protocolVersion: 1, nonce: NONCE,
           captureId: capture.captureId, capture
         }
       } as unknown as MessageEvent<unknown>);
@@ -106,7 +125,7 @@ function createWindowHarness() {
 
 function captureFixture(): UxInspectorCapture {
   return {
-    schema: 'tdw.ux-inspector-capture', version: 3, captureId: 'cap_crm_contact_save',
+    schema: 'tdw.ux-inspector-capture', version: 1, captureId: 'cap_crm_contact_save',
     capturedAt: '2026-09-15T10:00:00Z',
     captureProfile: 'FORM_DIAGNOSTICS',
     page: { origin: 'https://crm.example.com', path: '/contacts/new', title: 'CRM', language: 'pl', queryParameterNames: [] },
@@ -139,6 +158,6 @@ function captureFixture(): UxInspectorCapture {
     traversal: { observedDepth: 2, emittedNodeCount: 1, omittedNodeCount: 1, reachedDocumentRoot: true },
     signals: { shadowBoundaryCount: 0, frame: 'TOP_LEVEL', redactions: [] },
     limits: [],
-    client: { name: 'TDW UX Inspector', version: '3.0.0', featureId: 'ux-inspector' }
+    client: { name: 'TDW UX Inspector', version: '1.0.0', featureId: 'ux-inspector' }
   };
 }
