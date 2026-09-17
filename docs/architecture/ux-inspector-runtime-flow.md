@@ -154,13 +154,16 @@ kontrakt raportu.
 
 Osobny, nieblokujacy logical artifact indeksuje wszystkie komponenty odnalezione
 przez screen reachability graph w kolejnosci depth i breadth-first discovery.
-Dla kazdego komponentu przekazuje symbol, selector, status discovery, relacje
-grafu i dependency/child ids. Pelna tresc unikalnych plikow TS i zewnetrznych
-HTML jest dolaczana tylko dla deterministycznie wybranej sciezki target ->
-komponent widoku: jednej dla `RESOLVED`, unii maksymalnie trzech sciezek dla
-`AMBIGUOUS`, a dla `NOT_FOUND` tylko komponentu widoku. `COMPONENT_REFERENCE`
-nie jest relacja ancestry. Inline template pozostaje czescia pelnego TS. Brak
-pliku lub sciezki, nierozwiazany diagnostic
+Dla kazdego komponentu przekazuje w zwartej tabeli symbol, selector, status
+discovery, tryb source, sciezki i ograniczenia. Relacje grafu sa renderowane
+raz w jednej deterministycznej, deduplikowanej liscie; dependency/child ids,
+ktore nie maja odpowiednika w graph edges, pozostaja jawne jako relacje
+deklarowane. Pelna tresc unikalnych plikow TS i zewnetrznych HTML jest
+dolaczana tylko dla deterministycznie wybranej sciezki target -> komponentu
+widoku: jednej dla `RESOLVED`, unii maksymalnie trzech sciezek dla `AMBIGUOUS`,
+a dla `NOT_FOUND` tylko komponentu widoku. `COMPONENT_REFERENCE` nie jest
+relacja ancestry. Inline template pozostaje czescia pelnego TS. Brak pliku lub
+sciezki, nierozwiazany diagnostic
 albo runtime component boundary bez odpowiednika w grafie jest zapisany w
 artefakcie i nie blokuje preparation. Model czyta pack przed dodatkowymi
 odczytami, nie pobiera ponownie plikow oznaczonych jako kompletne i nie

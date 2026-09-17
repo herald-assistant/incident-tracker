@@ -42,7 +42,13 @@ Obecnie obejmuje:
   `LONG_CONTEXT_REQUIRED` jest twardym wymaganiem: znany model bez wsparcia,
   wylaczona polityka lub brak potwierdzenia tieru przez SDK blokuja run przed
   pierwszym promptem typowanym bledem. `context-tier.enabled=false` przywraca
-  domyslne zachowanie tylko dla `AUTO`.
+  domyslny wybor tieru tylko dla `AUTO`; pelny rollback progow CLI wymaga tez
+  jawnego ustawienia infinite sessions na background 80% i buffer 95%.
+  Create i resume musza dostawac ten sam jawny `InfiniteSessionConfig`.
+  Zachowaj kolejnosc: runtime upgrade 90%, background compaction 95% i
+  `bufferExhaustionThreshold` 98%; walidacja ma odrzucac konfiguracje, w ktorej
+  compaction moze wyprzedzic upgrade. Nie przywracaj `infiniteSessions=null`,
+  bo oznacza to zaleznosc od zmiennych domyslow CLI.
 - `copilot/runtime/execution/`
   platformowe uruchamianie `CopilotPreparedSession`: lifecycle klienta/sesji,
   event logging, controlled invocation exception oraz `CopilotExecutionResult`

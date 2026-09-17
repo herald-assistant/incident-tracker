@@ -367,6 +367,100 @@ jako zweryfikowane initial evidence.
 - [x] Uruchomic pelne testy Angulara, produkcyjny build frontendu oraz
   `mvn -q -Pbackend-dev clean package` i zapisac wynik ponizej.
 
+## Inkrement: kompaktowy component source pack
+
+Status: done
+
+Zatwierdzenie: uzytkownik zatwierdzil 2026-09-17 wykonanie pierwszego kroku
+optymalizacji kosztu UX Inspectora: bezstratna kompakcje indeksu komponentow i
+relacji, bez ograniczania liczby komponentow albo pelnych plikow wybranej
+sciezki.
+
+Klasyfikacja: **L1**. Zmienia sie model-facing format feature-owned artifactu,
+ale nie publiczne API, DTO, export v1, source selection, tool schema, hidden
+scope, report ani UI.
+
+### Baseline
+
+- Component source pack zawiera wszystkie komponenty statycznego screen
+  reachability graphu w kolejnosci depth/BFS.
+- `RESOLVED`, `AMBIGUOUS` i `NOT_FOUND` zachowuja obecna strategie wyboru
+  pelnych plikow; pozostale komponenty sa `INDEX_ONLY`.
+- Kazdy komponent powtarza `dependencyIds`, `childComponentIds`,
+  `incomingEdges` i `outgoingEdges`, przez co ta sama relacja moze wystapic
+  kilkukrotnie, a komponenty bez relacji nadal emituja puste pola.
+- Testy baseline
+  `UxInspectorComponentSourcePackArtifactServiceTest` i
+  `UxInspectorPromptAndSkillsTest` przechodza przed zmiana.
+
+### Conformance delta
+
+- Wlasciciel: bez zmian, `features.uxinspector.ai`.
+- Publiczne API/DTO, job state, persistence/export, report i frontend: bez
+  zmian.
+- Context/evidence: ten sam komplet komponentow, plikow, brakow i relacji.
+- Prompt/artifacts: `component-source-pack.md` dostaje zwarta tabele wszystkich
+  komponentow oraz jedna deterministyczna, deduplikowana liste relacji.
+- Relacje obecne tylko w `childComponentIds` albo `dependencyIds` pozostaja
+  widoczne jako jawne relacje deklarowane; relacje juz obecne w grafie nie sa
+  powtarzane.
+- Tools/policy/hidden scope/budzet: bez zmian.
+- Zaleznosci pakietowe: bez zmian; nie powstaje shared abstraction ani import
+  sibling feature'a.
+- Konsumenci: canonical prompt UX Inspectora, diagnostyczna mapa artifactow i
+  testy feature'a. Publiczny wynik i UI nie parsują wewnetrznego formatu packu.
+- Kompatybilnosc: artifact jest przygotowywany od nowa dla kazdego runu i nie
+  ma publicznej wersjonowanej migracji; schema/version pozostaja bez zmian,
+  poniewaz semantyka danych sie nie zmienia.
+- Znany drift: brak nowego driftu; zakres nie dotyka source selection ani
+  budzetu researchu.
+
+### Macierz testow
+
+| Zakres | Dowod |
+|---|---|
+| komplet i kolejnosc komponentow | test tabeli dla `RESOLVED` z siblingiem `INDEX_ONLY` |
+| deduplikacja relacji grafu | jedna reprezentacja relacji mimo powtorzenia w graph/adjacency |
+| zachowanie relacji tylko deklarowanych | osobne `DECLARED_CHILD` i `DECLARED_DEPENDENCY` |
+| strategie pelnych plikow | istniejace testy `RESOLVED`, `AMBIGUOUS`, `NOT_FOUND` i brak view |
+| prompt contract | `UxInspectorPromptAndSkillsTest` |
+| granice pakietow | `PackageDependencyGuardTest` oraz diff importow |
+| regresja backendu | `mvn -q test` |
+
+### Kroki
+
+- [x] Zastapic per-component bloki zwarta tabela i jedna znormalizowana lista
+  relacji, zachowujac wszystkie komponenty, statusy plikow, limitations oraz
+  relacje niewystepujace w graph edges.
+- [x] Rozszerzyc testy o brak duplikatow, relacje deklarowane i kontrakt
+  promptu, a nastepnie uruchomic testy celowane i pelna regresje backendu.
+- [x] Zaktualizowac kanoniczny runtime flow, wykonac architecture diff i
+  zapisac wynik weryfikacji.
+
+### Wynik weryfikacji inkrementu
+
+- Baseline przed zmiana:
+  `mvn -q "-Dtest=UxInspectorComponentSourcePackArtifactServiceTest,UxInspectorPromptAndSkillsTest" test`
+  - PASS.
+- Testy celowane po zmianie:
+  `mvn -q "-Dtest=PackageDependencyGuardTest,UxInspectorComponentSourcePackArtifactServiceTest,UxInspectorPromptAndSkillsTest,UxInspectorCopilotRunRequestAssemblerTest" test`
+  - PASS.
+- Pelna regresja backendu: pierwszy przyrostowy `mvn -q test` wykryl
+  zanieczyszczony `target/test-classes` i zakonczyl sie bledami ladowania
+  fixture'ow innych feature'ow. Powtorzenie zgodnie z procedura dla stale
+  output, `mvn -q clean test`, przeszlo: 1640 testow, 0 failures, 0 errors,
+  1 skipped.
+- Architecture diff: bez zmian zaleznosci pakietowych, publicznego API, DTO,
+  persistence/export, UI, tool schema, hidden scope i strategii wyboru pelnych
+  plikow.
+- Pomiar na zalaczonym eksporcie z 104 komponentami: sekcja indeksu i relacji
+  maleje z 167863 do 91903 znakow, czyli o 45,3%. Zachowanych jest wszystkich
+  104 komponentow i 654 unikalnych relacji; poczatkowy prompt maleje
+  szacunkowo o 75960 znakow, czyli o 24,8% wzgledem 306391 znakow.
+- Nie uruchamiano testow ani builda Angulara, poniewaz zmiana jest wylacznie
+  backendowym, wewnetrznym formatem logical artifactu i nie zmienia kontraktu
+  ani integracji z frontendem.
+
 ## Wynik weryfikacji
 
 - Browser Tools: `node --test frontend/tests/browser-tools/browser-tools.test.mjs`

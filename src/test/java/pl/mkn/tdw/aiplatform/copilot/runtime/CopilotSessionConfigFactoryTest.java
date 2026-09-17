@@ -68,7 +68,11 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("gpt-5.4", sessionConfig.getModel());
         assertEquals("medium", sessionConfig.getReasoningEffort());
         assertNull(sessionConfig.getSystemMessage());
-        assertNull(sessionConfig.getInfiniteSessions());
+        assertEquals(true, sessionConfig.getInfiniteSessions().getEnabled().orElseThrow());
+        assertEquals(0.95D, sessionConfig.getInfiniteSessions()
+                .getBackgroundCompactionThreshold().orElseThrow());
+        assertEquals(0.98D, sessionConfig.getInfiniteSessions()
+                .getBufferExhaustionThreshold().orElseThrow());
         assertEquals(PermissionHandler.APPROVE_ALL, sessionConfig.getOnPermissionRequest());
         assertNotNull(sessionConfig.getHooks());
         assertEquals("incidenttracker-test", resumeSessionConfig.getClientName());
@@ -84,7 +88,11 @@ class CopilotSessionConfigFactoryTest {
         assertEquals("gpt-5.4", resumeSessionConfig.getModel());
         assertEquals("medium", resumeSessionConfig.getReasoningEffort());
         assertNull(resumeSessionConfig.getSystemMessage());
-        assertNull(resumeSessionConfig.getInfiniteSessions());
+        assertEquals(true, resumeSessionConfig.getInfiniteSessions().getEnabled().orElseThrow());
+        assertEquals(0.95D, resumeSessionConfig.getInfiniteSessions()
+                .getBackgroundCompactionThreshold().orElseThrow());
+        assertEquals(0.98D, resumeSessionConfig.getInfiniteSessions()
+                .getBufferExhaustionThreshold().orElseThrow());
         assertEquals(PermissionHandler.APPROVE_ALL, resumeSessionConfig.getOnPermissionRequest());
         assertNotNull(resumeSessionConfig.getHooks());
 
@@ -171,6 +179,54 @@ class CopilotSessionConfigFactoryTest {
         var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
 
         assertThrows(IllegalStateException.class, factory::clientOptions);
+    }
+
+    @Test
+    void shouldRejectCompactionThresholdThatDoesNotLeaveRoomForRuntimeUpgrade() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.getContextTier().setRuntimeUsageThreshold(0.95D);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+
+        var failure = assertThrows(IllegalStateException.class, () -> factory.sessionConfig(
+                new CopilotSessionConfigRequest(
+                        sessionId(),
+                        List.of(),
+                        List.of(),
+                        CopilotModelSelection.DEFAULT,
+                        null
+                )
+        ));
+
+        assertEquals(
+                "analysis.ai.copilot.context-tier.runtime-usage-threshold must be lower than "
+                        + "analysis.ai.copilot.infinite-sessions.background-compaction-threshold",
+                failure.getMessage()
+        );
+    }
+
+    @Test
+    void shouldRejectBufferThresholdThatDoesNotFollowBackgroundCompaction() {
+        var properties = new CopilotSdkProperties();
+        properties.setWorkingDirectory("C:\\workspace");
+        properties.getInfiniteSessions().setBufferExhaustionThreshold(0.95D);
+        var factory = CopilotSessionConfigFactoryTestCreator.create(properties);
+
+        var failure = assertThrows(IllegalStateException.class, () -> factory.resumeSessionConfig(
+                new CopilotSessionConfigRequest(
+                        sessionId(),
+                        List.of(),
+                        List.of(),
+                        CopilotModelSelection.DEFAULT,
+                        null
+                )
+        ));
+
+        assertEquals(
+                "analysis.ai.copilot.infinite-sessions.background-compaction-threshold must be lower than "
+                        + "analysis.ai.copilot.infinite-sessions.buffer-exhaustion-threshold",
+                failure.getMessage()
+        );
     }
 
     @Test

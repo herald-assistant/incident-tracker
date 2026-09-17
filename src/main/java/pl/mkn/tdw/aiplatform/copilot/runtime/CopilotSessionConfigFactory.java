@@ -2,6 +2,7 @@ package pl.mkn.tdw.aiplatform.copilot.runtime;
 
 import com.github.copilot.SystemMessageMode;
 import com.github.copilot.rpc.CopilotClientOptions;
+import com.github.copilot.rpc.InfiniteSessionConfig;
 import com.github.copilot.rpc.PermissionHandler;
 import com.github.copilot.rpc.PermissionRequestResult;
 import com.github.copilot.rpc.PermissionRequestResultKind;
@@ -70,6 +71,7 @@ public class CopilotSessionConfigFactory {
                 .setSkillDirectories(effectiveSkillDirectories(request))
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
                 .setOnPermissionRequest(permissionHandler())
+                .setInfiniteSessions(infiniteSessionConfig())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
 
         var model = selectedModel(request.modelSelection());
@@ -99,6 +101,7 @@ public class CopilotSessionConfigFactory {
                 .setSkillDirectories(effectiveSkillDirectories(request))
                 .setHooks(toolAccessHooks(availableToolNames, request.deniedToolUseMessage()))
                 .setOnPermissionRequest(permissionHandler())
+                .setInfiniteSessions(infiniteSessionConfig())
                 .setDisabledSkills(safeList(properties.getDisabledSkills()));
 
         var model = selectedModel(request.modelSelection());
@@ -154,6 +157,15 @@ public class CopilotSessionConfigFactory {
             );
             case APPROVE_ALL -> PermissionHandler.APPROVE_ALL;
         };
+    }
+
+    private InfiniteSessionConfig infiniteSessionConfig() {
+        properties.validateContextManagementConfiguration();
+        var settings = properties.getInfiniteSessions();
+        return new InfiniteSessionConfig()
+                .setEnabled(settings.isEnabled())
+                .setBackgroundCompactionThreshold(settings.getBackgroundCompactionThreshold())
+                .setBufferExhaustionThreshold(settings.getBufferExhaustionThreshold());
     }
 
     private SessionHooks toolAccessHooks(List<String> availableToolNames, String deniedToolUseMessage) {

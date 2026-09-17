@@ -49,10 +49,12 @@ public class CopilotSdkProperties {
     private String skillResourceProjectDirectory = System.getProperty("user.dir");
     private List<String> disabledSkills = List.of();
     private ContextTierPolicy contextTier = new ContextTierPolicy();
+    private InfiniteSessions infiniteSessions = new InfiniteSessions();
     private Telemetry telemetry = new Telemetry();
 
     @PostConstruct
     public void initializeRuntimeConfiguration() {
+        validateContextManagementConfiguration();
         workingDirectory = prepareWorkingDirectory().toString();
         log.info("Copilot CLI working directory prepared path={}", workingDirectory);
         if (telemetry == null || !telemetry.isEnabled()) {
@@ -108,6 +110,69 @@ public class CopilotSdkProperties {
         return resolvedCopilotHome().resolve("skills");
     }
 
+    public void validateContextManagementConfiguration() {
+        if (contextTier == null) {
+            throw new IllegalStateException("analysis.ai.copilot.context-tier must be configured");
+        }
+        if (contextTier.getInitialPromptThreshold() <= 0D || contextTier.getInitialPromptThreshold() > 1D) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.context-tier.initial-prompt-threshold must be in (0, 1]"
+            );
+        }
+        if (contextTier.getRuntimeUsageThreshold() <= 0D || contextTier.getRuntimeUsageThreshold() >= 1D) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.context-tier.runtime-usage-threshold must be in (0, 1)"
+            );
+        }
+        if (contextTier.getEstimatedCharactersPerToken() <= 0D) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.context-tier.estimated-characters-per-token must be positive"
+            );
+        }
+        if (contextTier.getReservedTokens() < 0) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.context-tier.reserved-tokens must not be negative"
+            );
+        }
+        if (contextTier.getVerificationTimeout() == null
+                || contextTier.getVerificationTimeout().isZero()
+                || contextTier.getVerificationTimeout().isNegative()) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.context-tier.verification-timeout must be positive"
+            );
+        }
+        if (infiniteSessions == null) {
+            throw new IllegalStateException("analysis.ai.copilot.infinite-sessions must be configured");
+        }
+        if (infiniteSessions.getBackgroundCompactionThreshold() <= 0D
+                || infiniteSessions.getBackgroundCompactionThreshold() >= 1D) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.infinite-sessions.background-compaction-threshold must be in (0, 1)"
+            );
+        }
+        if (infiniteSessions.getBufferExhaustionThreshold() <= 0D
+                || infiniteSessions.getBufferExhaustionThreshold() >= 1D) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.infinite-sessions.buffer-exhaustion-threshold must be in (0, 1)"
+            );
+        }
+        if (contextTier.isEnabled()
+                && infiniteSessions.isEnabled()
+                && contextTier.getRuntimeUsageThreshold() >= infiniteSessions.getBackgroundCompactionThreshold()) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.context-tier.runtime-usage-threshold must be lower than "
+                            + "analysis.ai.copilot.infinite-sessions.background-compaction-threshold"
+            );
+        }
+        if (infiniteSessions.getBackgroundCompactionThreshold()
+                >= infiniteSessions.getBufferExhaustionThreshold()) {
+            throw new IllegalStateException(
+                    "analysis.ai.copilot.infinite-sessions.background-compaction-threshold must be lower than "
+                            + "analysis.ai.copilot.infinite-sessions.buffer-exhaustion-threshold"
+            );
+        }
+    }
+
     @Getter
     @Setter
     public static class Auth {
@@ -129,11 +194,20 @@ public class CopilotSdkProperties {
     public static class ContextTierPolicy {
 
         private boolean enabled = true;
-        private double initialPromptThreshold = 0.50D;
-        private double runtimeUsageThreshold = 0.70D;
+        private double initialPromptThreshold = 0.70D;
+        private double runtimeUsageThreshold = 0.90D;
         private double estimatedCharactersPerToken = 3.5D;
         private int reservedTokens = 16_000;
         private Duration verificationTimeout = Duration.ofSeconds(20);
+    }
+
+    @Getter
+    @Setter
+    public static class InfiniteSessions {
+
+        private boolean enabled = true;
+        private double backgroundCompactionThreshold = 0.95D;
+        private double bufferExhaustionThreshold = 0.98D;
     }
 
     @Getter

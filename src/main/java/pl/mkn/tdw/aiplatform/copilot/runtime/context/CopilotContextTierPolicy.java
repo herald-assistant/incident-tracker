@@ -43,7 +43,7 @@ public class CopilotContextTierPolicy {
 
     CopilotContextTierDecision decide(CopilotPreparedSession preparedSession) {
         var settings = properties.getContextTier();
-        validate(settings);
+        properties.validateContextManagementConfiguration();
         var modelId = selectedModel(preparedSession);
         var preference = preparedSession.contextTierPreference() != null
                 ? preparedSession.contextTierPreference()
@@ -230,29 +230,6 @@ public class CopilotContextTierPolicy {
 
     private int length(Object value) {
         return value != null ? String.valueOf(value).length() : 0;
-    }
-
-    private void validate(CopilotSdkProperties.ContextTierPolicy settings) {
-        if (settings == null) {
-            throw new IllegalStateException("analysis.ai.copilot.context-tier must be configured");
-        }
-        if (settings.getInitialPromptThreshold() <= 0D || settings.getInitialPromptThreshold() > 1D) {
-            throw new IllegalStateException("analysis.ai.copilot.context-tier.initial-prompt-threshold must be in (0, 1]");
-        }
-        if (settings.getRuntimeUsageThreshold() <= 0D || settings.getRuntimeUsageThreshold() >= 1D) {
-            throw new IllegalStateException("analysis.ai.copilot.context-tier.runtime-usage-threshold must be in (0, 1)");
-        }
-        if (settings.getEstimatedCharactersPerToken() <= 0D) {
-            throw new IllegalStateException("analysis.ai.copilot.context-tier.estimated-characters-per-token must be positive");
-        }
-        if (settings.getReservedTokens() < 0) {
-            throw new IllegalStateException("analysis.ai.copilot.context-tier.reserved-tokens must not be negative");
-        }
-        if (settings.getVerificationTimeout() == null
-                || settings.getVerificationTimeout().isZero()
-                || settings.getVerificationTimeout().isNegative()) {
-            throw new IllegalStateException("analysis.ai.copilot.context-tier.verification-timeout must be positive");
-        }
     }
 
 }

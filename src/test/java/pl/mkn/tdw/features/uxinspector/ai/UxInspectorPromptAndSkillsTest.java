@@ -68,9 +68,13 @@ class UxInspectorPromptAndSkillsTest {
                         complete: true
 
                         ## Discovered components
-                        componentId: contact-create
-                        sourceFile: src/app/contacts/contact-create.component.ts [AVAILABLE_FULL]
-                        templateFile: src/app/contacts/contact-create.component.html [AVAILABLE_FULL]
+                        | # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode | sourceFile | templateFile | truncated | limitations |
+                        |---:|---|---:|---:|---|---|---|---|---|---|---|---|---|
+                        | 1 | contact-create | 0 | 1 | CrmContactCreateComponent | crm-contact-create | ROUTE_TARGET | RESOLVED | FULL_SOURCE | src/app/contacts/contact-create.component.ts [AVAILABLE_FULL] | src/app/contacts/contact-create.component.html [AVAILABLE_FULL] | false | - |
+
+                        ## Component relations
+                        relationCount: 0
+                        - none reported by static discovery
                         """, 1, 1, 0, 2, 2, 0, java.util.Set.of(SOURCE_PATH, TEMPLATE_PATH)));
     }
 

@@ -12,6 +12,7 @@ import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityEdgeKin
 import pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendScreenReachabilityGraph;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,17 +63,77 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
                 .contains("semantics: STATIC_SCREEN_REACHABILITY_NOT_RUNTIME_ANCESTRY")
                 .contains("fullSourceStrategy: RESOLVED_SHORTEST_TARGET_TO_VIEW_PATH")
                 .contains("targetToView=contact-editor -> contact-create")
-                .contains("componentId: contact-create", "componentId: contact-editor", "componentId: contact-summary")
+                .contains("| # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode")
+                .contains("| 1 | contact-create |", "| 2 | contact-editor |", "| 3 | contact-summary |")
+                .contains("## Component relations", "relationCount: 2")
                 .contains("contact-create --TEMPLATE_CHILD--> contact-editor")
                 .contains("BEGIN_UNTRUSTED_COMPONENT_FILE " + root.sourcePath())
                 .contains(contents.get(root.sourcePath()), contents.get(child.templatePath()))
                 .contains(sibling.sourcePath() + " [INDEX_ONLY]")
                 .doesNotContain(contents.get(sibling.sourcePath()))
+                .doesNotContain("dependencyIds:", "childComponentIds:", "incomingEdges:", "outgoingEdges:")
                 .contains("status: AVAILABLE", "complete: true");
-        assertThat(artifact.markdown().indexOf("componentId: contact-create"))
-                .isLessThan(artifact.markdown().indexOf("componentId: contact-editor"));
+        assertThat(artifact.markdown().indexOf("| 1 | contact-create |"))
+                .isLessThan(artifact.markdown().indexOf("| 2 | contact-editor |"));
         verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.sourcePath());
         verify(repositoryPort, never()).readFileMetadata("CRM", "crm-ui", REVISION, sibling.templatePath());
+    }
+
+    @Test
+    void shouldRenderEachGraphRelationOnceAndKeepOnlyUnrepresentedDeclaredRelations() {
+        var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
+        var root = withRelations(component("contact-create", "contact-form", "Formularz kontaktu", 1),
+                List.of("dependency-contact-api"), List.of(target.componentId(), "contact-help"));
+        var duplicatedEdge = edge(root, target, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD);
+        var context = contextWithGraph(List.of(root, target), List.of(duplicatedEdge, duplicatedEdge), target,
+                UxInspectorTargetResolutionStatus.RESOLVED);
+        var contents = new LinkedHashMap<String, String>();
+        for (var component : List.of(root, target)) {
+            contents.put(component.sourcePath(), "export class " + component.symbol() + " {}");
+            contents.put(component.templatePath(), "<p>" + component.componentId() + "</p>");
+        }
+        stubFiles(contents);
+
+        var artifact = service.prepare(context, capture());
+
+        assertThat(artifact.markdown())
+                .contains("relationCount: 3")
+                .containsOnlyOnce("contact-create --TEMPLATE_CHILD--> contact-editor")
+                .containsOnlyOnce("contact-create --DECLARED_CHILD--> contact-help")
+                .containsOnlyOnce("contact-create --DECLARED_DEPENDENCY--> dependency-contact-api")
+                .doesNotContain("contact-create --DECLARED_CHILD--> contact-editor");
+    }
+
+    @Test
+    void shouldKeepALargeComponentGraphCompactWhileIndexingEveryComponent() {
+        var root = component("contact-create", "contact-form", "Formularz kontaktu", 1);
+        var target = component("contact-editor", "contact-save", "Zapisz kontakt", 2);
+        var components = new ArrayList<pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent>();
+        var edges = new ArrayList<GitLabFrontendReachabilityEdge>();
+        components.add(root);
+        components.add(target);
+        edges.add(edge(root, target, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD));
+        for (var index = 3; index <= 101; index++) {
+            var sibling = component("contact-section-" + index, "contact-section-" + index,
+                    "Sekcja kontaktu " + index, index);
+            components.add(sibling);
+            edges.add(edge(root, sibling, GitLabFrontendReachabilityEdgeKind.TEMPLATE_CHILD));
+        }
+        var context = contextWithGraph(components, edges, target, UxInspectorTargetResolutionStatus.RESOLVED);
+        var contents = new LinkedHashMap<String, String>();
+        for (var component : List.of(root, target)) {
+            contents.put(component.sourcePath(), "export class " + component.symbol() + " {}");
+            contents.put(component.templatePath(), "<p>" + component.componentId() + "</p>");
+        }
+        stubFiles(contents);
+
+        var artifact = service.prepare(context, capture());
+
+        assertThat(artifact.componentCount()).isEqualTo(101);
+        assertThat(artifact.markdown())
+                .contains("componentCount: 101", "| 101 | contact-section-101 |", "relationCount: 100")
+                .containsOnlyOnce("contact-create --TEMPLATE_CHILD--> contact-editor");
+        assertThat(artifact.markdown().length()).isLessThan(80_000);
     }
 
     @Test
@@ -235,6 +296,20 @@ class UxInspectorComponentSourcePackArtifactServiceTest {
     ) {
         return new GitLabFrontendReachabilityEdge(parent.componentId(), child.componentId(), kind,
                 child.selector(), parent.templatePath(), parent.symbol(), null);
+    }
+
+    private pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent withRelations(
+            pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent component,
+            List<String> dependencyIds,
+            List<String> childComponentIds
+    ) {
+        return new pl.mkn.tdw.integrations.gitlab.frontend.GitLabFrontendReachabilityComponent(
+                component.componentId(), component.breadthFirstOrder(), component.depth(),
+                component.connectedToSelectedScreen(), component.discoveryKind(), component.symbol(),
+                component.selector(), component.sourcePath(), component.templatePath(), component.templateContent(),
+                component.status(), component.templateBindings(), component.entrySymbols(), component.includedSymbols(),
+                dependencyIds, childComponentIds, component.sliceContent(), component.sourceCharacters(),
+                component.returnedCharacters(), component.truncated(), component.limitations());
     }
 
     private void stubFiles(Map<String, String> contents) {

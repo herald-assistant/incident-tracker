@@ -30,15 +30,17 @@ import static org.mockito.Mockito.when;
 class CopilotContextTierPolicyTest {
 
     @Test
-    void shouldUseHalfOfDefaultWindowAsAutoInitialThreshold() {
-        assertThat(new CopilotSdkProperties().getContextTier().getInitialPromptThreshold()).isEqualTo(0.50D);
+    void shouldUseSeventyPercentOfDefaultWindowAsAutoInitialThreshold() {
+        var defaults = new CopilotSdkProperties();
+        assertThat(defaults.getContextTier().getInitialPromptThreshold()).isEqualTo(0.70D);
+        assertThat(defaults.getContextTier().getRuntimeUsageThreshold()).isEqualTo(0.90D);
 
-        var properties = properties(0.50D, 4D, 0);
+        var properties = properties(0.70D, 4D, 0);
         var belowConfig = new SessionConfig().setModel("gpt-crm-context");
         var atThresholdConfig = new SessionConfig().setModel("gpt-crm-context");
 
         var below = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
-                "C".repeat(196),
+                "C".repeat(276),
                 belowConfig,
                 new ResumeSessionConfig(),
                 List.of(),
@@ -46,7 +48,7 @@ class CopilotContextTierPolicyTest {
                 CopilotContextTierPreference.AUTO
         ));
         var atThreshold = policy(properties, mock(CopilotEffectiveContextTierReader.class)).prepare(prepared(
-                "C".repeat(200),
+                "C".repeat(280),
                 atThresholdConfig,
                 new ResumeSessionConfig(),
                 List.of(),
@@ -54,11 +56,11 @@ class CopilotContextTierPolicyTest {
                 CopilotContextTierPreference.AUTO
         ));
 
-        assertThat(below.decision().estimatedInitialTokens()).isEqualTo(49);
-        assertThat(below.decision().initialThresholdTokens()).isEqualTo(50);
+        assertThat(below.decision().estimatedInitialTokens()).isEqualTo(69);
+        assertThat(below.decision().initialThresholdTokens()).isEqualTo(70);
         assertThat(below.decision().useLongContextInitially()).isFalse();
         assertThat(belowConfig.getContextTier()).isNull();
-        assertThat(atThreshold.decision().estimatedInitialTokens()).isEqualTo(50);
+        assertThat(atThreshold.decision().estimatedInitialTokens()).isEqualTo(70);
         assertThat(atThreshold.decision().useLongContextInitially()).isTrue();
         assertThat(atThresholdConfig.getContextTier()).isEqualTo("long_context");
     }
@@ -239,6 +241,8 @@ class CopilotContextTierPolicyTest {
     void shouldRestoreSdkDefaultsWhenPlatformPolicyIsDisabled() {
         var properties = properties(0.70D, 1D, 0);
         properties.getContextTier().setEnabled(false);
+        properties.getInfiniteSessions().setBackgroundCompactionThreshold(0.80D);
+        properties.getInfiniteSessions().setBufferExhaustionThreshold(0.95D);
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var sessionConfig = new SessionConfig().setModel("gpt-crm-context");
 
@@ -404,7 +408,7 @@ class CopilotContextTierPolicyTest {
     @Test
     void shouldAbortAndPrepareSingleCrmRuntimeResumeWhenActualWindowCrossesThreshold() {
         var properties = properties(0.70D, 4D, 0);
-        properties.getContextTier().setRuntimeUsageThreshold(0.70D);
+        properties.getContextTier().setRuntimeUsageThreshold(0.90D);
         var activities = new ArrayList<AnalysisAiActivityEvent>();
         var reader = mock(CopilotEffectiveContextTierReader.class);
         var session = mock(CopilotSession.class);
@@ -425,9 +429,9 @@ class CopilotContextTierPolicyTest {
                 CopilotContextTierPreference.AUTO
         ));
 
-        controller.observeEffectiveWindow(session, 100, 69, 6);
-        controller.observeEffectiveWindow(session, 100, 70, 7);
-        controller.observeEffectiveWindow(session, 100, 85, 8);
+        controller.observeEffectiveWindow(session, 100, 89, 6);
+        controller.observeEffectiveWindow(session, 100, 90, 7);
+        controller.observeEffectiveWindow(session, 100, 95, 8);
         controller.awaitRuntimeAbort();
         controller.prepareRuntimeResume(resumeConfig, "crm-runtime-tier-session");
         controller.activateAfterRuntimeResume(resumedSession);
@@ -449,10 +453,10 @@ class CopilotContextTierPolicyTest {
                 );
         assertThat(activities.get(0).details())
                 .containsEntry("trigger", "RUNTIME_USAGE_THRESHOLD")
-                .containsEntry("runtimeUsageThreshold", 0.70D)
-                .containsEntry("runtimeThresholdTokens", 70L)
+                .containsEntry("runtimeUsageThreshold", 0.90D)
+                .containsEntry("runtimeThresholdTokens", 90L)
                 .containsEntry("tokenLimit", 100L)
-                .containsEntry("currentTokens", 70L);
+                .containsEntry("currentTokens", 90L);
         assertThat(activities.get(5).details())
                 .containsEntry("tokenLimit", 1_000L)
                 .containsEntry("verification", "TOKEN_LIMIT_INCREASED")

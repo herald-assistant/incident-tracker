@@ -182,7 +182,7 @@ Neutralna polityka `aiplatform.copilot.runtime.context` rozstrzyga tier przed
 create/resume:
 
 - przed create/resume konserwatywnie estymuje prompt, opcjonalne durable
-  system instructions, definicje tools i rezerwe; od 50% zwyklego okna
+  system instructions, definicje tools i rezerwe; od 70% zwyklego okna
   ustawia `long_context` dla `AUTO`,
 - dla `LONG_CONTEXT_REQUIRED` ustawia `long_context` niezaleznie od
   kompletnosci metadanych katalogu, a po otwarciu sesji potwierdza efektywny
@@ -193,8 +193,8 @@ podaje domyslne okno i wieksze okno maksymalne; niepelne metadata pozostawiaja
 default SDK. W trybie wymaganym SDK jest autorytatywnym zrodlem: brak
 efektywnego `long_context` przerywa run przed wyslaniem promptu. Polityka nie
 uzywa `setModel` do zmiany tieru i nie wywoluje eksperymentalnego `preCompact`.
-Obserwuje natomiast rzeczywiste zapelnienie okna z `session.usage_info` i po
-przekroczeniu `runtime-usage-threshold` wykonuje najwyzej jeden kontrolowany
+Obserwuje natomiast rzeczywiste zapelnienie okna z `session.usage_info` i od
+90% wykorzystania wykonuje najwyzej jeden kontrolowany
 upgrade: abort aktywnego turnu, zamkniecie uchwytu, resume tego samego
 `sessionId` z `long_context` oraz waskie
 `session.options.update(contextTier=long_context)` przed `model.getCurrent` i
@@ -202,8 +202,18 @@ continuation. Resume nie powtarza initial promptu, zachowuje session history
 oraz wspolne report/tool evidence/tool budget stores i wysyla tylko neutralna
 instrukcje kontynuacji. Prompt, tools, hidden scope i kontrakt wyniku nie
 zmieniaja sie. W properties nie ma listy nazw ani limitow modeli.
-Rollbackiem jest
-`analysis.ai.copilot.context-tier.enabled=false`.
+Rollbackiem wyboru tieru jest
+`analysis.ai.copilot.context-tier.enabled=false`; pelny powrot do progow SDK
+wymaga dodatkowo ustawienia background compaction 80% i buffer exhaustion 95%.
+
+Platforma jawnie konfiguruje tez `InfiniteSessionConfig` dla create i resume.
+Background compaction zaczyna sie od 95%, a blokujacy
+`bufferExhaustionThreshold` od 98%. Walidacja wymusza kolejnosc
+`runtime-usage-threshold < background-compaction-threshold <
+buffer-exhaustion-threshold`, dzieki czemu platformowy upgrade przy 90% ma
+pierwszenstwo, a compaction pozostaje fallbackiem SDK. Nie pozostawiaj tych
+wartosci jako niejawnych domyslow CLI i nie konfiguruj inaczej create oraz
+resume.
 
 Dla runtime resume w `AUTO` brak `contextTier` w
 `session.model.getCurrent` nie jest dowodem braku aktywacji. Wynik

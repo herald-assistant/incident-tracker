@@ -300,11 +300,8 @@ public class UxInspectorComponentSourcePackArtifactService {
             }
         }
 
-        builder.append("\n## Discovered components\n");
-        if (components.isEmpty()) builder.append("- none; the static graph did not expose a component\n");
-        for (var index = 0; index < components.size(); index++) {
-            renderComponent(builder, index + 1, components.get(index), context, selection.componentIds(), files);
-        }
+        renderComponentIndex(builder, components, selection.componentIds(), files);
+        renderComponentRelations(builder, context, components);
 
         builder.append("\n## Unresolved discovery information\n");
         var unresolved = unresolved(context, components, selection);
@@ -331,42 +328,90 @@ public class UxInspectorComponentSourcePackArtifactService {
         return builder.toString().trim();
     }
 
-    private void renderComponent(
+    private void renderComponentIndex(
             StringBuilder builder,
-            int ordinal,
-            GitLabFrontendReachabilityComponent component,
-            UxInspectorTargetContext context,
+            List<GitLabFrontendReachabilityComponent> components,
             Set<String> fullSourceComponentIds,
             Map<String, PackFile> files
     ) {
-        builder.append("\n### Component ").append(ordinal).append('\n');
-        builder.append("componentId: ").append(component.componentId()).append('\n');
-        builder.append("depth: ").append(component.depth()).append('\n');
-        builder.append("breadthFirstOrder: ").append(component.breadthFirstOrder()).append('\n');
-        builder.append("symbol: ").append(text(component.symbol())).append('\n');
-        builder.append("selector: ").append(text(component.selector())).append('\n');
-        builder.append("discoveryKind: ").append(text(component.discoveryKind())).append('\n');
-        builder.append("discoveryStatus: ").append(text(component.status())).append('\n');
-        var fullSource = fullSourceComponentIds.contains(component.componentId());
-        builder.append("sourceMode: ").append(fullSource ? "FULL_SOURCE" : "INDEX_ONLY").append('\n');
-        builder.append("sourceFile: ").append(fileStatus(component.sourcePath(), files, fullSource)).append('\n');
-        builder.append("templateFile: ").append(StringUtils.hasText(component.templatePath())
-                ? fileStatus(component.templatePath(), files, fullSource) : "INLINE_OR_NOT_DISCOVERED").append('\n');
-        builder.append("sourceSliceTruncatedByGraph: ").append(component.truncated()).append('\n');
-        builder.append("dependencyIds: ").append(component.dependencyIds().isEmpty()
-                ? "[]" : String.join(", ", component.dependencyIds())).append('\n');
-        builder.append("childComponentIds: ").append(component.childComponentIds().isEmpty()
-                ? "[]" : String.join(", ", component.childComponentIds())).append('\n');
-        var edges = context != null && context.graph() != null ? context.graph().edges() : List.<GitLabFrontendReachabilityEdge>of();
-        var incoming = edges.stream().filter(edge -> component.componentId().equals(edge.toId()))
-                .map(edge -> edge.fromId() + " --" + edge.kind() + "--> " + edge.toId()).toList();
-        var outgoing = edges.stream().filter(edge -> component.componentId().equals(edge.fromId()))
-                .map(edge -> edge.fromId() + " --" + edge.kind() + "--> " + edge.toId()).toList();
-        builder.append("incomingEdges: ").append(incoming.isEmpty() ? "[]" : String.join(" | ", incoming)).append('\n');
-        builder.append("outgoingEdges: ").append(outgoing.isEmpty() ? "[]" : String.join(" | ", outgoing)).append('\n');
-        if (!component.limitations().isEmpty()) {
-            builder.append("limitations: ").append(String.join(" | ", component.limitations())).append('\n');
+        builder.append("\n## Discovered components\n");
+        if (components.isEmpty()) {
+            builder.append("- none; the static graph did not expose a component\n");
+            return;
         }
+        builder.append("| # | componentId | depth | bfs | symbol | selector | discovery | status | sourceMode | sourceFile | templateFile | truncated | limitations |\n");
+        builder.append("|---:|---|---:|---:|---|---|---|---|---|---|---|---|---|\n");
+        for (var index = 0; index < components.size(); index++) {
+            var component = components.get(index);
+            var fullSource = fullSourceComponentIds.contains(component.componentId());
+            builder.append("| ").append(index + 1)
+                    .append(" | ").append(tableText(component.componentId()))
+                    .append(" | ").append(component.depth())
+                    .append(" | ").append(component.breadthFirstOrder())
+                    .append(" | ").append(tableText(component.symbol()))
+                    .append(" | ").append(tableText(component.selector()))
+                    .append(" | ").append(tableText(component.discoveryKind()))
+                    .append(" | ").append(tableText(component.status()))
+                    .append(" | ").append(fullSource ? "FULL_SOURCE" : "INDEX_ONLY")
+                    .append(" | ").append(tableText(fileStatus(component.sourcePath(), files, fullSource)))
+                    .append(" | ").append(tableText(StringUtils.hasText(component.templatePath())
+                            ? fileStatus(component.templatePath(), files, fullSource) : "INLINE_OR_NOT_DISCOVERED"))
+                    .append(" | ").append(component.truncated())
+                    .append(" | ").append(tableText(component.limitations().isEmpty()
+                            ? "-" : String.join("; ", component.limitations())))
+                    .append(" |\n");
+        }
+    }
+
+    private void renderComponentRelations(
+            StringBuilder builder,
+            UxInspectorTargetContext context,
+            List<GitLabFrontendReachabilityComponent> components
+    ) {
+        var relations = componentRelations(context, components);
+        builder.append("\n## Component relations\n");
+        builder.append("relationCount: ").append(relations.size()).append('\n');
+        if (relations.isEmpty()) {
+            builder.append("- none reported by static discovery\n");
+            return;
+        }
+        for (var relation : relations) {
+            builder.append("- ").append(relation.fromId())
+                    .append(" --").append(relation.kind()).append("--> ")
+                    .append(relation.toId()).append('\n');
+        }
+    }
+
+    private List<ComponentRelation> componentRelations(
+            UxInspectorTargetContext context,
+            List<GitLabFrontendReachabilityComponent> components
+    ) {
+        var relations = new LinkedHashMap<String, ComponentRelation>();
+        var graphEdges = context != null && context.graph() != null
+                ? context.graph().edges() : List.<GitLabFrontendReachabilityEdge>of();
+        graphEdges.stream()
+                .filter(edge -> edge != null && StringUtils.hasText(edge.fromId())
+                        && StringUtils.hasText(edge.toId()) && edge.kind() != null)
+                .map(edge -> new ComponentRelation(edge.fromId(), edge.kind().name(), edge.toId()))
+                .sorted(ComponentRelation.ORDER)
+                .forEach(relation -> relations.putIfAbsent(relation.key(), relation));
+
+        var representedPairs = relations.values().stream()
+                .map(ComponentRelation::pairKey)
+                .collect(java.util.stream.Collectors.toSet());
+        for (var component : components) {
+            component.childComponentIds().stream().filter(StringUtils::hasText).distinct().sorted()
+                    .map(childId -> new ComponentRelation(
+                            component.componentId(), "DECLARED_CHILD", childId))
+                    .filter(relation -> !representedPairs.contains(relation.pairKey()))
+                    .forEach(relation -> relations.putIfAbsent(relation.key(), relation));
+            component.dependencyIds().stream().filter(StringUtils::hasText).distinct().sorted()
+                    .map(dependencyId -> new ComponentRelation(
+                            component.componentId(), "DECLARED_DEPENDENCY", dependencyId))
+                    .filter(relation -> !representedPairs.contains(relation.pairKey()))
+                    .forEach(relation -> relations.putIfAbsent(relation.key(), relation));
+        }
+        return relations.values().stream().sorted(ComponentRelation.ORDER).toList();
     }
 
     private List<String> unresolved(
@@ -406,6 +451,10 @@ public class UxInspectorComponentSourcePackArtifactService {
         return StringUtils.hasText(value) ? value.trim().replace('\n', ' ').replace('\r', ' ') : "null";
     }
 
+    private String tableText(String value) {
+        return text(value).replace("|", "\\|");
+    }
+
     private void addPath(LinkedHashSet<String> paths, String path) {
         if (StringUtils.hasText(path)) paths.add(path.trim().replace('\\', '/'));
     }
@@ -424,6 +473,21 @@ public class UxInspectorComponentSourcePackArtifactService {
     private record SelectedPath(String candidateId, List<String> componentIds, int cost, boolean complete) {}
 
     private record PathResult(List<String> componentIds, int cost) {}
+
+    private record ComponentRelation(String fromId, String kind, String toId) {
+        private static final Comparator<ComponentRelation> ORDER = Comparator
+                .comparing(ComponentRelation::fromId)
+                .thenComparing(ComponentRelation::kind)
+                .thenComparing(ComponentRelation::toId);
+
+        private String key() {
+            return fromId + '\u0000' + kind + '\u0000' + toId;
+        }
+
+        private String pairKey() {
+            return fromId + '\u0000' + toId;
+        }
+    }
 
     private record PackFile(String path, String content, int sizeBytes, String reason) {
         static PackFile available(String path, String content, int sizeBytes) {

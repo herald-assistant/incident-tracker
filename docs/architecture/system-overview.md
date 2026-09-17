@@ -733,14 +733,14 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
 - `pl.mkn.tdw.aiplatform.copilot.runtime.context`
   Neutralna polityka context tier. Dla preference `AUTO` estymuje initial
   prompt razem z durable system instructions, definicjami tools i rezerwa oraz
-  ustawia `long_context` przed create/resume od 50% zwyklego okna z
+  ustawia `long_context` przed create/resume od 70% zwyklego okna z
   dynamicznego katalogu modeli. UI Explorer korzysta z `AUTO`; feature, ktory
   wymaga rozszerzonego okna od pierwszej wiadomosci, moze przekazac
   `LONG_CONTEXT_REQUIRED`; wtedy platforma ustawia tier przed create/resume bez
   zaleznosci od kompletnosci katalogu i potwierdza go przez typed
   `session.model.getCurrent` przed pierwszym `sendAndWait`. Brak potwierdzenia
   zatrzymuje run przed wyslaniem promptu. Podczas turnu platforma obserwuje
-  `session.usage_info`; po przekroczeniu konfigurowalnego progu wykonuje najwyzej
+  `session.usage_info`; od 90% wykorzystania wykonuje najwyzej
   jeden kontrolowany upgrade `abort -> close handle -> resume same sessionId`
   z `contextTier=long_context`, po czym przed odczytem modelu i continuation
   jawnie wykonuje waskie `session.options.update(contextTier=long_context)`.
@@ -757,6 +757,10 @@ Szczegolowy diagram runtime/data-flow i compile-time importow jest w
   `session.usage_info` oraz fazy abort/resume; wszystkie zdarzenia zachowuja
   parametry decyzji i sa renderowane jako `AnalysisAiActivityEvent` kategorii
   `CONTEXT`.
+  Create i resume dostaja ten sam jawny `InfiniteSessionConfig`: background
+  compaction od 95% i blokujacy fallback od 98%. Konfiguracja startowa wymusza
+  kolejnosc 90% runtime upgrade, 95% compaction i 98% buffer exhaustion, wiec
+  domyslny prog CLI nie moze wyprzedzic platformowego przelaczenia tieru.
 - `pl.mkn.tdw.aiplatform.copilot.runtime.auth`
   Platformowe rozstrzyganie tokena Copilot tuz przed zbudowaniem
   `CopilotClientOptions`. Runtime zawsze przekazuje `githubToken` jawnie i

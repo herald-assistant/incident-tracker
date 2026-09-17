@@ -216,7 +216,7 @@ planu, testow oraz rollbacku.
 `long_context`. Rozmiary okien i wsparcie tieru pochodza z cache'owanego typed
 RPC `models.list`; `analysis.ai.copilot.context-tier` zawiera tylko progi,
 estymator, rezerwe i przelacznik. Preflight `AUTO` obejmuje prompt, opcjonalne
-durable system instructions, definicje tools i rezerwe; prog wynosi 50%
+durable system instructions, definicje tools i rezerwe; prog wynosi 70%
 zwyklego okna modelu. UI Explorer uzywa `AUTO`. Feature, ktory wymaga
 rozszerzonego okna od pierwszej wiadomosci, moze zadeklarowac
 `LONG_CONTEXT_REQUIRED`; platforma ustawia wtedy tier w configach create/resume
@@ -233,8 +233,16 @@ a trzeci `String` jest `reasoningSummary`, nie context tier. Durable
 instructions sa feature-owned, platforma mapuje je na `SystemMessageMode.APPEND`
 dla create i resume; nie umieszczaj w nich duzych source artifacts. Nie dodawaj
 list identyfikatorow modeli ani logiki po nazwie modelu. W razie regresji wylacz
-cala polityke przez
-`analysis.ai.copilot.context-tier.enabled=false`.
+wybor tieru przez `analysis.ai.copilot.context-tier.enabled=false`; aby razem z
+nim przywrocic progi SDK, ustaw infinite sessions na background 80% i buffer
+95%.
+
+`CopilotSessionConfigFactory` musi przekazywac identyczny
+`InfiniteSessionConfig` do create i resume: background compaction 95% oraz
+`bufferExhaustionThreshold` 98%. Platformowy runtime upgrade pozostaje na 90%.
+Walidacja konfiguracji wymusza scisla kolejnosc tych trzech progow; nie
+pozostawiaj `infiniteSessions` jako `null`, bo wtedy CLI moze zastosowac
+domyslne background compaction przed platformowym upgradem.
 
 Packaged resources sa immutable seedem tego katalogu. Startup dopisuje tylko
 brakujace pliki effective, a zapis i restore z `Platform / AI Skills` atomowo
